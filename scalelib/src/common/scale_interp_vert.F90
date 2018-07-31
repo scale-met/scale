@@ -459,12 +459,12 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-2,         & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          MD (KS+1:KE-1), & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          V  (KS+1:KE-1), & ! [IN]
-                                          U  (KS+1:KE-1)  ) ! [OUT]
+          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          MD (:), & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          V  (:), & ! [IN]
+                                          U  (:)  ) ! [OUT]
 
           U(KS) = U(KS+1)
           U(KE) = U(KE-1)
@@ -567,12 +567,12 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-2,         & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          MD (KS+1:KE-1), & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          V  (KS+1:KE-1), & ! [IN]
-                                          U  (KS+1:KE-1)  ) ! [OUT]
+          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          MD (:), & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          V  (:), & ! [IN]
+                                          U  (:)  ) ! [OUT]
 
           U(KS) = U(KS+1)
           U(KE) = U(KE-1)
@@ -675,7 +675,7 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-1,         & ! [IN]
+          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
                                           MD (KS  :KE-1), & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
@@ -783,7 +783,7 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-1,         & ! [IN]
+          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
                                           MD (KS  :KE-1), & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
