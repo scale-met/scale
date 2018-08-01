@@ -242,6 +242,8 @@ contains
     do j = 1, nLATH
     do i = 1, nLONH
        DATA(i,j) = UNDEF
+       LATH(i,j) = UNDEF
+       LONH(i,j) = UNDEF
     end do
     end do
 
@@ -278,8 +280,8 @@ contains
                 else
                    DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                 end if
-                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
+                LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
              end if
              i = i - GLOBAL_IA
              if ( ish <= i .and. i <= ieh ) then
@@ -288,8 +290,8 @@ contains
                 else
                    DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                 end if
-                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
+                LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
              end if
           end if
        end do

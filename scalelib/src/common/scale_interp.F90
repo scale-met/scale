@@ -819,6 +819,8 @@ contains
                             lon_ref, lat_ref, &
                             i,                &
                             dist, idx_i       )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_sort, only: &
        SORT_exec
 
@@ -831,6 +833,8 @@ contains
     integer,  intent(inout) :: idx_i(npoints)
     
     real(RP) :: distance
+
+    if ( lon_ref == UNDEF .or. lat_ref == UNDEF ) return
 
     distance = haversine( lon, lat, lon_ref, lat_ref )
 
@@ -854,6 +858,8 @@ contains
                               lon_min, lon_max, &
                               lat_min, lat_max, &
                               dlon, dlat        )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     integer,  intent(in) :: nsize
@@ -870,10 +876,10 @@ contains
 
     integer :: i, ii, jj, n
 
-    lon_min = minval(lon_ref(:))
-    lon_max = maxval(lon_ref(:))
-    lat_min = minval(lat_ref(:))
-    lat_max = maxval(lat_ref(:))
+    lon_min = minval(lon_ref(:), mask=lon_ref.ne.UNDEF)
+    lon_max = maxval(lon_ref(:), mask=lon_ref.ne.UNDEF)
+    lat_min = minval(lat_ref(:), mask=lon_ref.ne.UNDEF)
+    lat_max = maxval(lat_ref(:), mask=lon_ref.ne.UNDEF)
 
     dlon = ( lon_max - lon_min ) / psize
     dlat = ( lat_max - lat_min ) / psize
@@ -882,19 +888,21 @@ contains
     !$omp parallel do &
     !$omp private(ii,jj,n)
     do i = 1, nsize
+       if ( lon_ref(i) == UNDEF .or. lat_ref(i) == UNDEF ) cycle
        ii = min(int((lon_ref(i) - lon_min) / dlon) + 1, psize)
        jj = min(int((lat_ref(i) - lat_min) / dlat) + 1, psize)
-       if ( nidx(ii,jj) >= nidx_max ) then
-          LOG_ERROR("INTERP_search_horiz",*) 'Buffer size is not enough'
-          LOG_ERROR_CONT(*)                  '   Use larger INTERP_buffer_size_fact: ', INTERP_buffer_size_fact
-          call PRC_abort
-       end if
        !$omp critical
        n = nidx(ii,jj) + 1
        nidx(ii,jj) = n
        !$omp end critical
-       idx(n,ii,jj) = i
+       if ( n <= nidx_max ) idx(n,ii,jj) = i
     end do
+
+    if ( maxval(nidx) > nidx_max ) then
+       LOG_ERROR("INTERP_search_horiz",*) 'Buffer size is not enough'
+       LOG_ERROR_CONT(*)                  '   Use larger INTERP_buffer_size_fact: ', INTERP_buffer_size_fact * maxval(nidx)/nidx_max
+       call PRC_abort
+    end if
 
     return
   end subroutine INTERP_div_block

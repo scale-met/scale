@@ -565,6 +565,8 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
                                  nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
 
+    if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
+
     allocate( HEIGHT(nLONH,nLATH) )
     allocate( LATH  (nLONH,nLATH) )
     allocate( LONH  (nLONH,nLATH) )
