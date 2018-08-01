@@ -219,7 +219,10 @@ contains
        lon, lat,            &
        idx_i, idx_j, hfact, &
        search_limit,        &
+       latlon_structure,    &
        weight_order         )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -238,67 +241,206 @@ contains
     real(RP), intent(out) :: hfact(IA,JA,npoints)   ! horizontal interp factor (target)
 
     real(RP), intent(in), optional :: search_limit
+    logical,  intent(in), optional :: latlon_structure
     integer,  intent(in), optional :: weight_order
 
-    integer :: nsize, psize, nidx_max
-    integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
+    logical :: ll_struct_
+
     real(RP) :: lon_min, lon_max
     real(RP) :: lat_min, lat_max
     real(RP) :: dlon, dlat
+
+    ! for structure grid
+    integer  :: is, ie, js, je
+    integer  :: psizex, psizey
+    real(RP) :: lon1d(IA_ref), lat1d(JA_ref)
+    real(RP) :: lon0, lat0
+    integer, allocatable :: i0(:), i1(:), j0(:), j1(:)
+
+    ! for unstructure grid
+    integer :: nsize, psize, nidx_max
+    integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
     integer  :: idx_ref(npoints)
 
-    integer  :: i, j, n
+
+    integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_fact',3)
 
-    nsize = IA_ref * JA_ref
-    if ( nsize > 100 ) then
-       psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
-       nidx_max = nsize / psize * INTERP_buffer_size_fact
+    if ( present(latlon_structure) ) then
+       ll_struct_ = latlon_structure
     else
-       psize = 1
-       nidx_max = nsize
+       ll_struct_ = .false.
     end if
-
-    allocate(idx_blk(nidx_max,psize,psize))
-    allocate(nidx   (         psize,psize))
-
-    call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
-                          lon_ref(:,:), lat_ref(:,:), & ! [IN]
-                          idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
-                          lon_min, lon_max,           & ! [OUT]
-                          lat_min, lat_max,           & ! [OUT]
-                          dlon, dlat                  ) ! [OUT]
 
     hfact(:,:,:) = 0.0_RP
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(idx_ref)
-    do j = 1, JA
-    do i = 1, IA
-       ! main search
-       call INTERP_search_horiz( npoints,                     & ! [IN]
-                                 nsize,                       & ! [IN]
-                                 lon_ref(:,:), lat_ref(:,:),  & ! [IN]
-                                 lon_min, lon_max,            & ! [IN]
-                                 lat_min, lat_max,            & ! [IN]
-                                 psize, nidx_max,             & ! [IN]
-                                 dlon, dlat,                  & ! [IN]
-                                 idx_blk(:,:,:), nidx(:,:),   & ! [IN]
-                                 lon(i,j), lat(i,j),          & ! [IN]
-                                 idx_ref(:),                  & ! [OUT]
-                                 hfact(i,j,:),                & ! [OUT]
-                                 search_limit = search_limit, & ! [IN]
-                                 weight_order = weight_order  ) ! [IN]
-       do n = 1, npoints
-          idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
-          idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
-       end do
-    enddo
-    enddo
 
-    deallocate(idx_blk, nidx)
+    if ( ll_struct_ ) then
+
+       lon1d(:) = UNDEF
+       lon_min  = UNDEF
+       do i = 1, IA_ref
+          do j = 1, JA_ref
+             if ( lon_ref(i,j) .ne. UNDEF ) then
+                lon1d(i) = lon_ref(i,j)
+                exit
+             end if
+          end do
+          if ( lon_min == UNDEF .and. lon1d(i) .ne. UNDEF ) then
+             lon_min = lon1d(i)
+             is = i
+          endif
+          if ( lon_min .ne. UNDEF ) then
+             if ( lon1d(i) .ne. UNDEF ) then
+                lon_max = lon1d(i)
+                ie = i
+             else
+                exit
+             end if
+          end if
+       end do
+
+       lat1d(:) = UNDEF
+       lat_min  = UNDEF
+       do j = 1, JA_ref
+          do i = 1, IA_ref
+             if ( lat_ref(i,j) .ne. UNDEF ) then
+                lat1d(j) = lat_ref(i,j)
+                exit
+             end if
+          end do
+          if ( lat_min == UNDEF .and. lat1d(j) .ne. UNDEF ) then
+             lat_min = lat1d(j)
+             js = j
+          endif
+          if ( lat_min .ne. UNDEF ) then
+             if ( lat1d(j) .ne. UNDEF ) then
+                lat_max = lat1d(j)
+                je = j
+             else
+                exit
+             end if
+          end if
+       end do
+
+       if ( ie-is > 10 ) then
+          psizex = int( 2.0_RP*sqrt(real(ie-is+1,RP)) )
+       else
+          psizex = 1
+       end if
+       if ( je-js > 10 ) then
+          psizey = int( 2.0_RP*sqrt(real(je-js+1,RP)) )
+       else
+          psizey = 1
+       end if
+
+       allocate( i0(psizex), i1(psizex) )
+       allocate( j0(psizey), j1(psizey) )
+
+
+       dlon = ( lon_max - lon_min ) / psizex
+       dlat = ( lat_max - lat_min ) / psizey
+
+       do ii = 1, psizex
+          lon0 = lon_min + dlon * (ii-1)
+          do i = is, ie
+             if ( lon1d(i) >= lon0 ) then
+                i0(ii) = i
+                exit
+             end if
+          end do
+       end do
+       do ii = 1, psizex-1
+          i1(ii) = i0(ii+1) - 1
+       end do
+       i1(psizex) = ie
+
+       do jj = 1, psizey
+          lat0 = lat_min + dlat * (jj-1)
+          do j = js, je
+             if ( lat1d(j) >= lat0 ) then
+                j0(jj) = j
+                exit
+             end if
+          end do
+       end do
+       do jj = 1, psizey-1
+          j1(jj) = j0(jj+1) - 1
+       end do
+       j1(psizey) = je
+
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+          ! main search
+          call INTERP_search_horiz_struct( npoints,                     & ! [IN]
+                                           psizex, psizey,              & ! [IN]
+                                           IA_ref, JA_ref,              & ! [IN]
+                                           lon1d(:), lat1d(:),          & ! [IN]
+                                           lon_min, lat_min,            & ! [IN]
+                                           dlon, dlat,                  & ! [IN]
+                                           i0(:), i1(:), j0(:), j1(:),  & ! [IN]
+                                           lon(i,j), lat(i,j),          & ! [IN]
+                                           idx_i(i,j,:), idx_j(i,j,:),  & ! [OUT]
+                                           hfact(i,j,:),                & ! [OUT]
+                                           search_limit = search_limit, & ! [IN]
+                                           weight_order = weight_order  ) ! [IN]
+       enddo
+       enddo
+
+       deallocate( i0, i1, j0, j1 )
+
+    else
+
+       nsize = IA_ref * JA_ref
+       if ( nsize > 100 ) then
+          psize = int( sqrt(2.0_RP*sqrt(real(nsize,RP))) )
+          nidx_max = nsize / psize * INTERP_buffer_size_fact
+       else
+          psize = 1
+          nidx_max = nsize
+       end if
+
+       allocate(idx_blk(nidx_max,psize,psize))
+       allocate(nidx   (         psize,psize))
+
+       call INTERP_div_block(nsize, psize, nidx_max,     & ! [IN]
+                             lon_ref(:,:), lat_ref(:,:), & ! [IN]
+                             idx_blk(:,:,:), nidx(:,:),  & ! [OUT]
+                             lon_min, lon_max,           & ! [OUT]
+                             lat_min, lat_max,           & ! [OUT]
+                             dlon, dlat                  ) ! [OUT]
+
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+       !$omp private(idx_ref)
+       do j = 1, JA
+       do i = 1, IA
+          ! main search
+          call INTERP_search_horiz( npoints,                     & ! [IN]
+                                    nsize,                       & ! [IN]
+                                    lon_ref(:,:), lat_ref(:,:),  & ! [IN]
+                                    lon_min, lon_max,            & ! [IN]
+                                    lat_min, lat_max,            & ! [IN]
+                                    psize, nidx_max,             & ! [IN]
+                                    dlon, dlat,                  & ! [IN]
+                                    idx_blk(:,:,:), nidx(:,:),   & ! [IN]
+                                    lon(i,j), lat(i,j),          & ! [IN]
+                                    idx_ref(:),                  & ! [OUT]
+                                    hfact(i,j,:),                & ! [OUT]
+                                    search_limit = search_limit, & ! [IN]
+                                    weight_order = weight_order  ) ! [IN]
+          do n = 1, npoints
+             idx_i(i,j,n) = mod(idx_ref(n) - 1, IA_ref) + 1
+             idx_j(i,j,n) = ( idx_ref(n) - 1 ) / IA_ref + 1
+          end do
+       enddo
+       enddo
+
+       deallocate(idx_blk, nidx)
+
+    end if
 
     call PROF_rapend  ('INTERP_fact',3)
 
@@ -613,7 +755,8 @@ contains
        search_limit,     &
        weight_order      )
     use scale_const, only: &
-       CONST_EPS
+       EPS => CONST_EPS, &
+       RADIUS => CONST_RADIUS
     implicit none
 
     integer,  intent(in)  :: npoints        ! number of interpolation point for horizontal
@@ -638,7 +781,7 @@ contains
     real(RP), intent(in), optional :: search_limit
     integer,  intent(in), optional :: weight_order
 
-    real(RP) :: dist(npoints)
+    real(RP) :: drad(npoints)
     real(RP) :: sum
     real(RP) :: search_limit_
     integer  :: weight_order_
@@ -663,23 +806,35 @@ contains
 
 
 
-    dist   (:) = large_number
+    drad   (:) = large_number
     idx_ref(:) = -1
 
     ! find k-nearest points in the nearest block
-    ii0 = min( int(( lon - lon_min ) / dlon) + 1, psize )
-    jj0 = min( int(( lat - lat_min ) / dlat) + 1, psize )
+    ii0 = max( min( int(( lon - lon_min ) / dlon) + 1, psize ), 1 )
+    jj0 = max( min( int(( lat - lat_min ) / dlat) + 1, psize ), 1 )
     do i = 1, nidx(ii0,jj0)
        n = idx_blk(i,ii0,jj0)
        call INTERP_insert( npoints, &
                            lon, lat, &
                            lon_ref(n), lat_ref(n), & ! [IN]
                            n,                      & ! [IN]
-                           dist(:), idx_ref(:)     ) ! [INOUT]
+                           drad(:), idx_ref(:)     ) ! [INOUT]
     end do
 
-    dlon_sl = max(dlon * 0.5_RP, dist(npoints))
-    dlat_sl = max(dlat * 0.5_RP, dist(npoints))
+    if ( abs(drad(1)) < EPS ) then
+       hfact(:) = 0.0_RP
+       hfact(1) = 1.0_RP
+
+       return
+    else if ( drad(1) * RADIUS > search_limit_ ) then
+       hfact(:) = 0.0_RP
+       idx_ref(:) = 1 ! dummy
+
+       return
+    end if
+
+    dlon_sl = max(dlon * 0.5_RP, drad(npoints))
+    dlat_sl = max(dlat * 0.5_RP, drad(npoints))
     do jj = 1, psize
        lat0 = lat_min + dlat * (jj-1)
        lat1 = lat_min + dlat * jj
@@ -697,52 +852,207 @@ contains
                                  lon, lat, &
                                  lon_ref(n), lat_ref(n), & ! [IN]
                                  n,                      & ! [IN]
-                                 dist(:), idx_ref(:)     ) ! [INOUT]
+                                 drad(:), idx_ref(:)     ) ! [INOUT]
           end do
-          dlon_sl = max(dlon * 0.5_RP, dist(npoints))
-          dlat_sl = max(dlat * 0.5_RP, dist(npoints))
+          dlon_sl = max(dlon * 0.5_RP, drad(npoints))
+          dlat_sl = max(dlat * 0.5_RP, drad(npoints))
        end do
     end do
 
-    if ( abs(dist(1)) < CONST_EPS ) then
-       hfact(:) = 0.0_RP
-       hfact(1) = 1.0_RP
-    else if ( dist(1) > search_limit_ ) then
-       hfact(:) = 0.0_RP
+    ! factor = 1 / dradian
+    if ( weight_order_ < 0 ) then
+       do n = 1, npoints
+          hfact(n) = 1.0_RP / drad(n)**(-1.0_RP/weight_order_)
+       enddo
     else
-       ! factor = 1 / distance
-       if ( weight_order_ < 0 ) then
-          do n = 1, npoints
-             hfact(n) = 1.0_RP / dist(n)**(-1.0_RP/weight_order_)
-          enddo
-       else
-          do n = 1, npoints
-             hfact(n) = 1.0_RP / dist(n)**weight_order_
-          enddo
-       end if
-
-       ! ignore far point
        do n = 1, npoints
-          if ( dist(n) >= search_limit_ ) then
-             hfact(n) = 0.0_RP
-          endif
+          hfact(n) = 1.0_RP / drad(n)**weight_order_
        enddo
+    end if
 
-       ! normalize factor
-       sum = 0.0_RP
-       do n = 1, npoints
-          sum = sum + hfact(n)
-       enddo
-
-       if ( sum > 0.0_RP ) then
-          do n = 1, npoints
-             hfact(n) = hfact(n) / sum
-          enddo
+    ! ignore far point
+    do n = 1, npoints
+       if ( drad(n) >= search_limit_ ) then
+          hfact(n) = 0.0_RP
        endif
+    enddo
+
+    ! normalize factor
+    sum = 0.0_RP
+    do n = 1, npoints
+       sum = sum + hfact(n)
+    enddo
+
+    if ( sum > 0.0_RP ) then
+       do n = 1, npoints
+          hfact(n) = hfact(n) / sum
+       enddo
     endif
 
     return
   end subroutine INTERP_search_horiz
+
+  !-----------------------------------------------------------------------------
+  ! horizontal search of interpolation points for structure grid
+!OCL SERIAL
+  subroutine INTERP_search_horiz_struct( &
+       npoints,          &
+       psizex, psizey,   &
+       IA_ref, JA_ref,   &
+       lon_ref, lat_ref, &
+       lon_min, lat_min, &
+       dlon, dlat,       &
+       i0, i1, j0, j1,   &
+       lon, lat,         &
+       idx_i, idx_j,     &
+       hfact,            &
+       search_limit,     &
+       weight_order      )
+    use scale_const, only: &
+       UNDEF  => CONST_UNDEF, &
+       EPS    => CONST_EPS, &
+       RADIUS => CONST_RADIUS
+    implicit none
+
+    integer,  intent(in)  :: npoints         ! number of interpolation point for horizontal
+    integer,  intent(in)  :: psizex          ! number of block in x-direction (reference)
+    integer,  intent(in)  :: psizey          ! number of block in y-direction (reference)
+    integer,  intent(in)  :: IA_ref          ! number of grids in x-direction (reference)
+    integer,  intent(in)  :: JA_ref          ! number of grids in y-direction (reference)
+    real(RP), intent(in)  :: lon_ref(IA_ref) ! longitude [rad]                (reference)
+    real(RP), intent(in)  :: lat_ref(JA_ref) ! latitude  [rad]                (reference)
+    real(RP), intent(in)  :: lon_min         ! minimum longitude
+    real(RP), intent(in)  :: lat_min         ! minimum latitude
+    real(RP), intent(in)  :: dlon
+    real(RP), intent(in)  :: dlat
+    integer,  intent(in)  :: i0(psizex)      ! start index in the block
+    integer,  intent(in)  :: i1(psizex)      ! end   index in the block
+    integer,  intent(in)  :: j0(psizey)      ! start index in the block
+    integer,  intent(in)  :: j1(psizey)      ! start index in the block
+    real(RP), intent(in)  :: lon             ! longitude [rad]          (target)
+    real(RP), intent(in)  :: lat             ! latitude  [rad]          (target)
+    integer,  intent(out) :: idx_i(npoints)  ! x-index in reference     (target)
+    integer,  intent(out) :: idx_j(npoints)  ! y-index in reference     (target)
+    real(RP), intent(out) :: hfact(npoints)  ! horizontal interp factor (target)
+
+    real(RP), intent(in), optional :: search_limit
+    integer,  intent(in), optional :: weight_order
+
+    real(RP) :: drad(npoints)
+    real(RP) :: sum
+    real(RP) :: search_limit_
+    integer  :: weight_order_
+
+    real(RP) :: lon0, lon1, lat0, lat1
+    real(RP) :: dlon_sl, dlat_sl
+
+    integer  :: i, j, n
+    integer  :: ii, jj, ii0, jj0
+    !---------------------------------------------------------------------------
+
+    if ( present(search_limit) ) then
+       search_limit_ = search_limit
+    else
+       search_limit_ = INTERP_search_limit
+    end if
+
+    if ( present(weight_order) ) then
+       weight_order_ = weight_order
+    else
+       weight_order_ = INTERP_weight_order
+    end if
+
+
+    drad (:) = large_number
+    idx_i(:) = 1
+    idx_j(:) = 1
+
+    ! find k-nearest points in the nearest block
+    ii0 = max( min( int(( lon - lon_min ) / dlon) + 1, psizex ), 1)
+    jj0 = max( min( int(( lat - lat_min ) / dlat) + 1, psizey ), 1)
+    do j = j0(jj0), j1(jj0)
+    do i = i0(ii0), i1(ii0)
+       call INTERP_insert_2d( npoints, &
+                              lon, lat, &
+                              lon_ref(i), lat_ref(j),     & ! [IN]
+                              i, j,                       & ! [IN]
+                              drad(:), idx_i(:), idx_j(:) ) ! [INOUT]
+    end do
+    end do
+
+    if ( abs(drad(1)) < EPS ) then
+       hfact(:) = 0.0_RP
+       hfact(1) = 1.0_RP
+
+       return
+    else if ( drad(1) * RADIUS > search_limit_ ) then
+       hfact(:) = 0.0_RP
+       idx_i(:) = 1 ! dummy
+       idx_j(:) = 1 ! dummy
+
+       return
+    end if
+
+    dlon_sl = max(dlon * 0.5_RP, drad(npoints))
+    dlat_sl = max(dlat * 0.5_RP, drad(npoints))
+    do jj = 1, psizey
+       lat0 = lat_min + dlat * (jj-1)
+       lat1 = lat_min + dlat * jj
+       if (     lat <  lat0 - dlat_sl &
+           .or. lat >= lat1 + dlat_sl ) cycle
+       do ii = 1, psizex
+          if ( ii==ii0 .and. jj==jj0 ) cycle
+          lon0 = lon_min + dlon * (ii-1)
+          lon1 = lon_min + dlon * ii
+          if (     lon <  lon0 - dlon_sl &
+              .or. lon >= lon1 + dlon_sl ) cycle
+          do j = j0(jj0), j1(jj0)
+          do i = i0(ii0), i1(ii0)
+             call INTERP_insert_2d( npoints, &
+                                    lon, lat, &
+                                    lon_ref(i), lat_ref(j),     & ! [IN]
+                                    i, j,                       & ! [IN]
+                                    drad(:), idx_i(:), idx_j(:) ) ! [INOUT]
+          end do
+          end do
+          dlon_sl = max(dlon * 0.5_RP, drad(npoints))
+          dlat_sl = max(dlat * 0.5_RP, drad(npoints))
+       end do
+    end do
+
+
+    ! factor = 1 / drad
+    if ( weight_order_ < 0 ) then
+       do n = 1, npoints
+          hfact(n) = 1.0_RP / drad(n)**(-1.0_RP/weight_order_)
+       enddo
+    else
+       do n = 1, npoints
+          hfact(n) = 1.0_RP / drad(n)**weight_order_
+       enddo
+    end if
+
+    ! ignore far point
+    do n = 1, npoints
+       if ( drad(n) >= search_limit_ ) then
+          hfact(n) = 0.0_RP
+       endif
+    enddo
+
+    ! normalize factor
+    sum = 0.0_RP
+    do n = 1, npoints
+       sum = sum + hfact(n)
+    enddo
+
+    if ( sum > 0.0_RP ) then
+       do n = 1, npoints
+          hfact(n) = hfact(n) / sum
+       enddo
+    endif
+
+    return
+  end subroutine INTERP_search_horiz_struct
 
   !-----------------------------------------------------------------------------
   ! vertical search of interpolation points for two-points
@@ -818,7 +1128,7 @@ contains
                             lon, lat, &
                             lon_ref, lat_ref, &
                             i,                &
-                            dist, idx_i       )
+                            drad, idx_i       )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_sort, only: &
@@ -829,28 +1139,70 @@ contains
     real(RP), intent(in) :: lon_ref, lat_ref
     integer,  intent(in) :: i
 
-    real(RP), intent(inout) :: dist(npoints)
+    real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
     
-    real(RP) :: distance
+    real(RP) :: dradian
 
-    if ( lon_ref == UNDEF .or. lat_ref == UNDEF ) return
+    if ( lon_ref == UNDEF ) return
 
-    distance = haversine( lon, lat, lon_ref, lat_ref )
+    dradian = haversine( lon, lat, lon_ref, lat_ref )
 
-    if ( distance <= dist(npoints) ) then
+    if ( dradian <= drad(npoints) ) then
        ! replace last(=longest) value
-       dist (npoints) = distance
+       drad (npoints) = dradian
        idx_i(npoints) = i
 
        ! sort by ascending order
        call SORT_exec( npoints,   & ! [IN]
-                       dist (:),  & ! [INOUT]
+                       drad (:),  & ! [INOUT]
                        idx_i(:)   ) ! [INOUT]
     endif
 
     return
   end subroutine INTERP_insert
+
+!OCL SERIAL
+  subroutine INTERP_insert_2d( npoints, &
+                               lon, lat, &
+                               lon_ref, lat_ref,  &
+                               i, j,              &
+                               drad, idx_i, idx_j )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    use scale_sort, only: &
+       SORT_exec
+
+    integer,  intent(in) :: npoints
+    real(RP), intent(in) :: lon, lat
+    real(RP), intent(in) :: lon_ref, lat_ref
+    integer,  intent(in) :: i, j
+
+    real(RP), intent(inout) :: drad(npoints)
+    integer,  intent(inout) :: idx_i(npoints)
+    integer,  intent(inout) :: idx_j(npoints)
+    
+    real(RP) :: dradian
+
+    if ( lon_ref == UNDEF ) return
+
+    dradian = haversine( lon, lat, lon_ref, lat_ref )
+
+    if ( dradian <= drad(npoints) ) then
+       ! replace last(=longest) value
+       drad (npoints) = dradian
+       idx_i(npoints) = i
+       idx_j(npoints) = j
+
+       ! sort by ascending order
+       call SORT_exec( npoints,   & ! [IN]
+                       drad (:),  & ! [INOUT]
+                       idx_i(:),  & ! [INOUT]
+                       idx_j(:)   ) ! [INOUT]
+    endif
+
+    return
+  end subroutine INTERP_insert_2d
 
   subroutine INTERP_div_block(nsize, psize, nidx_max,  &
                               lon_ref, lat_ref, &
@@ -878,23 +1230,19 @@ contains
 
     lon_min = minval(lon_ref(:), mask=lon_ref.ne.UNDEF)
     lon_max = maxval(lon_ref(:), mask=lon_ref.ne.UNDEF)
-    lat_min = minval(lat_ref(:), mask=lon_ref.ne.UNDEF)
-    lat_max = maxval(lat_ref(:), mask=lon_ref.ne.UNDEF)
+    lat_min = minval(lat_ref(:), mask=lat_ref.ne.UNDEF)
+    lat_max = maxval(lat_ref(:), mask=lat_ref.ne.UNDEF)
 
     dlon = ( lon_max - lon_min ) / psize
     dlat = ( lat_max - lat_min ) / psize
 
     nidx(:,:) = 0
-    !$omp parallel do &
-    !$omp private(ii,jj,n)
     do i = 1, nsize
-       if ( lon_ref(i) == UNDEF .or. lat_ref(i) == UNDEF ) cycle
+       if ( lon_ref(i) == UNDEF ) cycle
        ii = min(int((lon_ref(i) - lon_min) / dlon) + 1, psize)
        jj = min(int((lat_ref(i) - lat_min) / dlat) + 1, psize)
-       !$omp critical
        n = nidx(ii,jj) + 1
        nidx(ii,jj) = n
-       !$omp end critical
        if ( n <= nidx_max ) idx(n,ii,jj) = i
     end do
 

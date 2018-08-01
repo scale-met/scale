@@ -596,6 +596,7 @@ contains
                           LON(:,:), LAT(:,:),         & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                           hfact(:,:,:),               & ! [OUT]
+                          latlon_structure = .true.,  & ! [OUT]
                           search_limit = search_limit ) ! [IN]
 
     call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
@@ -775,6 +776,8 @@ contains
                                     LATS = LATS, LATE = LATE, LONS = LONS, LONE = LONE  ) ! [IN]
     end if
 
+    if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
+
     allocate( HEIGHT(nLONH,nLATH) )
     allocate( LATH  (nLONH,nLATH) )
     allocate( LONH  (nLONH,nLATH) )
@@ -804,6 +807,7 @@ contains
                           LON(:,:), LAT(:,:),         & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                           hfact(:,:,:),               & ! [OUT]
+                          latlon_structure = .true.,  & ! [OUT]
                           search_limit = search_limit ) ! [IN]
 
     call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
