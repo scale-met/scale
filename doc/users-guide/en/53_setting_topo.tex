@@ -43,7 +43,7 @@ In default, the nearest five grid points of input data around the target grid po
 There are two types of filter for smoothing the elevation of the steep slope in re-gridded topography: Laplacian and Gaussian filter.
 The type can be chosen by \nmitem{CNVTOPO_smooth_type}. The Laplacian filter is used in default.
 In the smoothing operation, the selected filter is applied multiple times until the angle is below the maximum allowable angle $\theta_{\max}$.
-By specifying \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can set $\theta_{\max}$ directly. Or, you can use the parameter \nmitem{CNVTOPO_smooth_maxslope}, which determines the maximum angle in degree.
+By specifying \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can set $\mathrm{RATIO}$ described above directly. Or, you can use the parameter \nmitem{CNVTOPO_smooth_maxslope}, which determines the maximum angle in degree.
 The number limit of the smoothing iteration is 10000 times in default. You can set larger number by setting \nmitem{CNVTOPO_smooth_itelim}.
 When \nmitem{CNVTOPO_smooth_local} is set to \verb|.true.|, the iterative filter operation is continued only at the grid point where the smoothing is not completed.
 
@@ -80,4 +80,4 @@ The sample of the setting is as follows:
 }
 
 In this sample, the data file named \verb|GTOPO30_e100n40.grd| is located in the directory \verb|./input_topo|. The data covers from 40 degree north to 10 degree south in latitude, and from 100 degree east to 140 degree east in longitude. The grid interval is 30 arc second for both latitude and longitude. Thus, this data contains 100 and 80 points for latitude and longitude, respectively. The value is stored with a 2-byte integer.
-The user-defined data must be a simple binary as same as the format for \grads.
+The user-defined data must be a simple binary as same as the format of \grads (direct access) except for \verb|USERFILE_IN_DATATYPE|.
