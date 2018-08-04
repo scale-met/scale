@@ -18,7 +18,7 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of subsurface ocean schemes}
+  \caption{Choices of subsurface ocean schemes (\texttt{OCEAN\_DYN\_TYPE}).}
   \label{tab:nml_ocean_dyn}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
@@ -33,7 +33,7 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface schemes}
+  \caption{Choices of ocean surface schemes (\texttt{OCEAN\_SFC\_TYPE}). There is one option in current version.}
   \label{tab:nml_ocean_sfc}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
@@ -45,7 +45,7 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea ice schemes}
+  \caption{Choices of sea ice schemes (\texttt{OCEAN\_ICE\_TYPE}).}
   \label{tab:nml_ocean_ice}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
@@ -59,7 +59,7 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface albedo schemes}
+  \caption{Choices of ocean surface albedo schemes (\texttt{OCEAN\_ALB\_TYPE}).}
   \label{tab:nml_ocean_alb}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
@@ -73,7 +73,7 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface roughness schemes}
+  \caption{Choices of ocean surface roughness schemes (\texttt{OCEAN\_RGN\_TYPE}).}
   \label{tab:nml_ocean_rgn}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
@@ -254,7 +254,8 @@ The minimum limit of roughness lengths specified by \nmitem{PARAM_OCEAN_PHY_ROUG
 }
 
 
-By using the albedo and the roughness length, the surface fluxes between atmosphere and ocean, and fluxes between atmosphere and ice are calculated by the scheme selected by \nmitem{OCEAN_SFC_TYPE}.
+By using the albedo and the roughness length, 
+the surface fluxes between atmosphere and ocean, and fluxes between atmosphere and ice are calculated by the scheme selected by \nmitem{OCEAN_SFC_TYPE}.
 The bulk scheme specified by \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
 
 %-------------------------------------------------------------------------------
