@@ -42,19 +42,20 @@ VPATH = $(BUILD_DIR):           \
         admin:                  \
         atmos:                  \
         atmos/dcmip:            \
-        atmos/forcing:  	\
-        atmos/share:    	\
+        atmos/forcing:          \
+        atmos/share:            \
         atmos-gm/communication: \
         atmos-gm/dynamics:      \
         atmos-gm/grid:          \
         common:                 \
         coupler:                \
         io:                     \
-        land:                   \
         ocean:                  \
+        land:                   \
+        lake:                   \
+        urban:                  \
         preprocess:             \
-        tool:                   \
-        urban:
+        tool:
 
 
 VERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
@@ -87,6 +88,7 @@ OBJS =	\
 	mod_chemvar.o        \
 	mod_ocean_admin.o   \
 	mod_land_admin.o   \
+	mod_lake_admin.o   \
 	mod_urban_admin.o   \
 	mod_atmos_admin.o    \
 	mod_cpl_vars.o      \

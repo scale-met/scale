@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_cpl_admin
   !-----------------------------------------------------------------------------
   !
@@ -50,24 +51,24 @@ contains
        ATMOS_PHY_SF_TYPE, &
        ATMOS_sw_phy_sf
     use mod_ocean_admin, only: &
-       OCEAN_sw
+       OCEAN_do
     use mod_land_admin, only: &
-       LAND_sw
+       LAND_do
     use mod_urban_admin, only: &
-       URBAN_sw
+       URBAN_do
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[CPL] / Origin[SCALE-RM]'
+    LOG_NEWLINE
+    LOG_INFO("CPL_ADMIN_setup",*) 'Setup'
 
     !-----< module component check >-----
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Coupler components ***'
+    LOG_NEWLINE
+    LOG_INFO("CPL_ADMIN_setup",*) 'Coupler components '
 
     ! Atmos-Ocean/Land/Urban Switch
-    if ( OCEAN_sw .OR. LAND_sw .OR. URBAN_sw ) then
+    if ( OCEAN_do .OR. LAND_do .OR. URBAN_do ) then
        CPL_sw = .true.
     else
        CPL_sw = .false.
@@ -75,23 +76,22 @@ contains
 
     ! Check Atmos_Surface setting
     if ( CPL_sw ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : ON'
+       LOG_INFO_CONT(*) 'Coupler : ON'
 
        if ( ATMOS_PHY_SF_TYPE == 'COUPLE' ) then
           ! do nothing
        elseif( ATMOS_PHY_SF_TYPE == 'NONE' ) then
-          if( IO_L ) write(IO_FID_LOG,*) '*** -> Surface Flux Type is forced to change from NONE to COUPLE.'
+          LOG_INFO_CONT(*) '-> Surface Flux Type is forced to change from NONE to COUPLE.'
           ! overwrite
           ATMOS_PHY_SF_TYPE = 'COUPLE'
           ATMOS_sw_phy_sf   = .true.
        else
-          if( IO_L ) write(IO_FID_LOG,*) '*** Surface Flux : ', trim(ATMOS_PHY_SF_TYPE)
-          if( IO_L ) write(IO_FID_LOG,*) 'xxx Setting conflicts between coupler and surface flux! STOP.'
-          write(*,*)                     'xxx Setting conflicts between coupler and surface flux! STOP.'
+          LOG_ERROR("CPL_ADMIN_setup",*) 'Setting conflicts between coupler and surface flux! STOP.'
+          LOG_ERROR_CONT(*) 'Surface Flux : ', trim(ATMOS_PHY_SF_TYPE)
           call PRC_abort
        endif
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Coupler : OFF'
+       LOG_INFO_CONT(*) 'Coupler : OFF'
     endif
 
     return
