@@ -332,7 +332,8 @@ The tendency due to the nudging is written as
 \begin{eqnarray}
   \left.\frac{\partial \phi_{k,i,j}}{\partial t}\right|_\mathrm{nudging}
   & = & - \alpha \Delta\phi_{k,i,j} \\ \nonumber
-  && + \alpha_s \left( \frac{\Delta\phi_{k,i-1,j} + \Delta\phi_{k,i+1,j} + \Delta\phi_{k,i,j-1} + \Delta\phi_{k,i,j+1}}{4} - \Delta\phi_{k,i,j} \right),
+  && + \alpha_s \left( \frac{\Delta\phi_{k,i-1,j} + \Delta\phi_{k,i+1,j} + \Delta\phi_{k,i,j-1} + \Delta\phi_{k,i,j+1}}{8} - \frac{\Delta\phi_{k,i,j}}{2} \right),
+\label{eq:nudging}
 \end{eqnarray}
 where $\Delta\phi$ is difference from the boundary data and $\alpha_s = \alpha \times \nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$.
 The $\alpha$ is the maximum of those in the tree directions $\alpha_x, \alpha_y$ and $\alpha_z$.
@@ -360,8 +361,9 @@ otherwise
 \end{equation}
 $\alpha_y$ is derived by the same way as $\alpha_x$.
 
-The $\tau$ is the relaxation time in which the difference between the simulated value and the boundary value becomes $1/e$.
-The default value is ten times of \nmitem{TIME_DT}.
+The $\tau$ is the relaxation time at the boundary ($d=0$) with which the difference between the simulated value and the boundary value becomes $1/e$.
+On the other hand, two grid scale component of $\Delta \phi$ becomes $1/e$ with the time of $\tau/\nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$ by the second term of the right-hand side of Eq. \ref{eq:nudging}.
+The default value of the $\tau$ is ten times of \nmitem{TIME_DT}.
 Please refer to Section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
 
 
