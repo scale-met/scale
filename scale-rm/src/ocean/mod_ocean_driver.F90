@@ -778,7 +778,8 @@ contains
        OCEAN_vars_total,   &
        OCEAN_vars_history
     use scale_ocean_dyn_slab, only: &
-       OCEAN_DYN_SLAB
+       OCEAN_DYN_SLAB, &
+       OCEAN_DYN_SLAB_DEPTH
     use scale_ocean_dyn_offline, only: &
        OCEAN_DYN_OFFLINE
     use scale_ocean_phy_ice_simple, only: &
@@ -838,6 +839,7 @@ contains
        call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,           & ! [IN]
                                       OJA, OJS, OJE,           & ! [IN]
                                       exists_ocean  (:,:),     & ! [IN]
+                                      OCEAN_DYN_SLAB_DEPTH,    & ! [IN]
                                       OCEAN_TEMP    (OKS,:,:), & ! [INOUT]
                                       OCEAN_ICE_TEMP(:,:),     & ! [INOUT]
                                       OCEAN_ICE_MASS(:,:)      ) ! [INOUT]

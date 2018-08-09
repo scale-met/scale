@@ -188,6 +188,7 @@ contains
        OIA, OIS, OIE, &
        OJA, OJS, OJE, &
        calc_flag,     &
+       OCEAN_DEPTH,   &
        OCEAN_TEMP,    &
        ICE_TEMP,      &
        ICE_MASS       )
@@ -196,13 +197,12 @@ contains
        CI    => CONST_CI,    &
        EMELT => CONST_EMELT, &
        DWATR => CONST_DWATR
-    use scale_ocean_dyn_slab, only: &
-       OCEAN_DYN_SLAB_DEPTH
     implicit none
 
     integer,  intent(in)    :: OIA, OIS, OIE
     integer,  intent(in)    :: OJA, OJS, OJE
     logical,  intent(in)    :: calc_flag (OIA,OJA) ! to decide calculate or not
+    real(RP), intent(in)    :: OCEAN_DEPTH         ! depth of the first layer of the ocean
     real(RP), intent(inout) :: OCEAN_TEMP(OIA,OJA) ! ocean temperature   [K]
     real(RP), intent(inout) :: ICE_TEMP  (OIA,OJA) ! sea ice temperature [K]
     real(RP), intent(inout) :: ICE_MASS  (OIA,OJA) ! sea ice amount      [kg/m2]
@@ -220,7 +220,7 @@ contains
     do j = OJS, OJE
     do i = OIS, OIE
        sw = 0.5_RP + sign(0.5_RP, OCEAN_TEMP(i,j) - OCEAN_PHY_ICE_freezetemp) ! 1: melt, 0: freeze
-       factor = CL * DWATR * OCEAN_DYN_SLAB_DEPTH &
+       factor = CL * DWATR * OCEAN_DEPTH &
               / ( EMELT + sw * CI * ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) )
 
        if ( calc_flag(i,j) ) then
