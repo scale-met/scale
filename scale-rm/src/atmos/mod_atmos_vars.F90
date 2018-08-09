@@ -247,6 +247,12 @@ module mod_atmos_vars
   real(RP), allocatable, target :: W_PRIM3  (:,:,:) !> skewness of w                  [m3/s3]
   real(RP), allocatable, target :: TKE_RS   (:,:,:) !> resolved scale TKE             [m2/s2]
 
+  real(RP), allocatable, target :: VELZ     (:,:,:) !> velocity w at the half level           [m/s]
+  real(RP), allocatable, target :: VELX     (:,:,:) !> velocity u at the half level           [m/s]
+  real(RP), allocatable, target :: VELY     (:,:,:) !> velocity v at the half level           [m/s]
+  real(RP), allocatable, target :: Umet     (:,:,:) !> velocity in the londitudinal direction [m/s]
+  real(RP), allocatable, target :: Vmet     (:,:,:) !> velocity in the latitudinal direction  [m/s]
+
   ! id of diagnostic variables
   !! public
   integer,     private, parameter :: I_W         =  1
@@ -319,15 +325,20 @@ module mod_atmos_vars
   integer,     private, parameter :: I_PT_W_PRIM = 67
   integer,     private, parameter :: I_W_PRIM3   = 68
   integer,     private, parameter :: I_TKE_RS    = 69
+  integer,     private, parameter :: I_VELZ      = 70
+  integer,     private, parameter :: I_VELX      = 71
+  integer,     private, parameter :: I_VELY      = 72
+  integer,     private, parameter :: I_UMET      = 73
+  integer,     private, parameter :: I_VMET      = 74
 
-  integer,     private, parameter :: DV_nmax     = 69
+  integer,     private, parameter :: DV_nmax     = 74
   type(Vinfo), private            :: DV_info(DV_nmax)
-  logical,     private            :: DV_calclated(DV_nmax)
+  logical,     private            :: DV_calculated(DV_nmax)
 
   data DV_info / &
        Vinfo( 'W',         'velocity w',                      'm/s',     3, 'ZXY', 'upward_air_velocity' ), &
-       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY', 'eastward_air_velocity' ), &
-       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY', 'northward_air_velocity' ), &
+       Vinfo( 'U',         'velocity u',                      'm/s',     3, 'ZXY', 'x_wind' ), &
+       Vinfo( 'V',         'velocity v',                      'm/s',     3, 'ZXY', 'y_wind' ), &
        Vinfo( 'PT',        'potential temp.',                 'K',       3, 'ZXY', 'air_potential_temperature' ), &
        Vinfo( 'T',         'temperature',                     'K',       3, 'ZXY', 'air_temperature' ), &
        Vinfo( 'PRES',      'pressure',                        'Pa',      3, 'ZXY', 'air_pressure' ), &
@@ -361,7 +372,7 @@ module mod_atmos_vars
        Vinfo( 'VOR',       'vertical vorticity',              '1/s',     3, 'ZXY', 'atmosphere_relative_vorticity' ), &
        Vinfo( 'DIV',       'divergence',                      '1/s',     3, 'ZXY', 'divergence_of_wind' ), &
        Vinfo( 'HDIV',      'horizontal divergence',           '1/s',     3, 'ZXY', '' ), &
-       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY', '' ), &
+       Vinfo( 'Uabs',      'absolute velocity',               'm/s',     3, 'ZXY', 'wind_speed' ), &
        Vinfo( 'N2',        'squared Brunt-Vaisala frequency', '1/s2',    3, 'ZXY', 'square_of_brunt_vaisala_frequency_in_air' ), &
        Vinfo( 'PBLH',      'PBL height',                      'm',       2, 'XY', 'atmosphere_boundary_layer_thickness'  ), &
        Vinfo( 'MSE',       'moist static energy',             'm2/s2',   3, 'ZXY', '' ), &
@@ -393,7 +404,12 @@ module mod_atmos_vars
        Vinfo( 'W_PRIM2',   'variance of w',                   'm2/s2',   3, 'ZXY', '' ), &
        Vinfo( 'PT_W_PRIM', 'resolved scale heat flux',        'W/s',     3, 'ZXY', '' ), &
        Vinfo( 'W_PRIM3',   'skewness of w',                   'm3/s3',   3, 'ZXY', '' ), &
-       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY', '' ) /
+       Vinfo( 'TKE_RS',    'resolved scale TKE',              'm2/s2',   3, 'ZXY', '' ), &
+       Vinfo( 'VELZ',      'velocity w at the half level',    'm/s',     3, 'ZHXY','' ), &
+       Vinfo( 'VELX',      'velocity u at the half level',    'm/s',     3, 'ZXHY','' ), &
+       Vinfo( 'VELY',      'velocity v at the half level',    'm/s',     3, 'ZXYH','' ), &
+       Vinfo( 'Umet',      'eastward velocity',               'm/s',     3, 'ZXY', 'eastward_wind' ), &
+       Vinfo( 'Vmet',      'northward velocity',              'm/s',     3, 'ZXY', 'northward_wind' ) /
 
   ! for history output and monitor
   integer, private              :: PV_HIST_id (PV_nmax) !> prognostic variables
@@ -696,7 +712,7 @@ contains
     end if
 
 
-    DV_calclated(DV_nmax) = .false.
+    DV_calculated(DV_nmax) = .false.
 
     !-----< history output setup >-----
     allocate( QP_HIST_id( max(QA,1) ) )
@@ -1491,7 +1507,7 @@ contains
     end if
 
     ! reset diagnostic variables
-    DV_calclated(:) = .false.
+    DV_calculated(:) = .false.
 
     return
   end subroutine ATMOS_vars_calc_diagnostics
@@ -1514,6 +1530,11 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
+    use scale_atmos_grid_cartesC_metric, only: &
+       ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
+    use scale_comm_cartesC, only: &
+       COMM_vars8, &
+       COMM_wait
     use scale_atmos_hydrometeor, only: &
        LHVc => LHV, &
        LHFc => LHF, &
@@ -1577,51 +1598,51 @@ contains
        var(:,:,:) = CPTOT(:,:,:)
 
     case ( 'LHV' )
-       if ( .not. DV_calclated(I_LHV) ) then
+       if ( .not. DV_calculated(I_LHV) ) then
           call allocate_3D( LHV )
           call ATMOS_HYDROMETEOR_LHV( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), & ! (in)
                LHV(:,:,:)   ) ! (out)
-          DV_calclated(I_LHV) = .true.
+          DV_calculated(I_LHV) = .true.
        end if
        var(KS:KE,:,:) = LHV(KS:KE,:,:)
 
     case ( 'LHS' )
-       if ( .not. DV_calclated(I_LHS) ) then
+       if ( .not. DV_calculated(I_LHS) ) then
           call allocate_3D( LHS )
           call ATMOS_HYDROMETEOR_LHS( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), & ! (in)
                LHS(:,:,:)   ) ! (out)
-          DV_calclated(I_LHS) = .true.
+          DV_calculated(I_LHS) = .true.
        end if
        var(KS:KE,:,:) = LHS(KS:KE,:,:)
 
     case ( 'LHF' )
-       if ( .not. DV_calclated(I_LHF) ) then
+       if ( .not. DV_calculated(I_LHF) ) then
           call allocate_3D( LHF )
           call ATMOS_HYDROMETEOR_LHF( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), & ! (in)
                LHF(:,:,:)   ) ! (out)
-          DV_calclated(I_LHF) = .true.
+          DV_calculated(I_LHF) = .true.
        end if
        var(KS:KE,:,:) = LHF(KS:KE,:,:)
 
     case ( 'POTV' )
-       if ( .not. DV_calclated(I_POTV) ) then
+       if ( .not. DV_calculated(I_POTV) ) then
           call allocate_3D( POTV )
           call ATMOS_DIAGNOSTIC_get_potv( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & ! (in)
                POTV(:,:,:)               ) ! (out)
-          DV_calclated(I_POTV) = .true.
+          DV_calculated(I_POTV) = .true.
        end if
        var(KS:KE,:,:) = POTV(KS:KE,:,:)
 
     case ( 'TEML' )
-       if ( .not. DV_calclated(I_TEML) ) then
+       if ( .not. DV_calculated(I_TEML) ) then
           call allocate_3D( TEML )
           call ATMOS_vars_get_diagnostic( 'LHV', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'LHS', WORK3D(:,:,:) )
@@ -1632,12 +1653,12 @@ contains
                TEMP(:,:,:), LHV(:,:,:), LHS(:,:,:), & ! (in)
                QC(:,:,:), QI(:,:,:), CPtot(:,:,:),  & ! (in)
                TEML(:,:,:)                          ) ! (out)
-          DV_calclated(I_TEML) = .true.
+          DV_calculated(I_TEML) = .true.
        end if
        var(KS:KE,:,:) = TEML(KS:KE,:,:)
 
     case ( 'POTL' )
-       if ( .not. DV_calclated(I_POTL) ) then
+       if ( .not. DV_calculated(I_POTL) ) then
           call allocate_3D( POTL )
           call ATMOS_vars_get_diagnostic( 'TEML', WORK3D(:,:,:) )
 !OCL XFILL
@@ -1652,12 +1673,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_POTL) = .true.
+          DV_calculated(I_POTL) = .true.
        end if
        var(KS:KE,:,:) = POTL(KS:KE,:,:)
 
     case ( 'POTE' )
-       if ( .not. DV_calclated(I_POTE) ) then
+       if ( .not. DV_calculated(I_POTE) ) then
           call allocate_3D( POTE )
           call ATMOS_SATURATION_pote( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
@@ -1666,7 +1687,7 @@ contains
        end if
        var(KS:KE,:,:) = POTE(KS:KE,:,:)
     case ( 'QTOT' )
-       if ( .not. DV_calclated(I_QTOT) ) then
+       if ( .not. DV_calculated(I_QTOT) ) then
           call allocate_3D( QTOT )
           if ( moist ) then
              call ATMOS_vars_get_diagnostic( 'QHYD', WORK3D(:,:,:) )
@@ -1696,12 +1717,12 @@ contains
              enddo
              enddo
           end if
-          DV_calclated(I_QTOT) = .true.
+          DV_calculated(I_QTOT) = .true.
        end if
        var(KS:KE,:,:) = QTOT(KS:KE,:,:)
 
     case ( 'QHYD' )
-       if ( .not. DV_calclated(I_QHYD) ) then
+       if ( .not. DV_calculated(I_QHYD) ) then
           call allocate_3D( QHYD )
           if ( moist ) then
              call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
@@ -1732,12 +1753,12 @@ contains
              enddo
              enddo
           end if
-          DV_calclated(I_QHYD) = .true.
+          DV_calculated(I_QHYD) = .true.
        end if
        var(KS:KE,:,:) = QHYD(KS:KE,:,:)
 
     case ( 'QLIQ' )
-       if ( .not. DV_calclated(I_QLIQ) ) then
+       if ( .not. DV_calculated(I_QLIQ) ) then
           call allocate_3D( QLIQ )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,iq) &
@@ -1751,12 +1772,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_QLIQ) = .true.
+          DV_calculated(I_QLIQ) = .true.
        end if
        var(KS:KE,:,:) = QLIQ(KS:KE,:,:)
 
     case ( 'QICE' )
-       if ( .not. DV_calclated(I_QICE) ) then
+       if ( .not. DV_calculated(I_QICE) ) then
           call allocate_3D( QICE )
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -1770,23 +1791,23 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_QICE) = .true.
+          DV_calculated(I_QICE) = .true.
        end if
        var(KS:KE,:,:) = QICE(KS:KE,:,:)
 
     case ( 'QSAT' )
-       if ( .not. DV_calclated(I_QSAT) ) then
+       if ( .not. DV_calculated(I_QSAT) ) then
           call allocate_3D( QSAT )
           call ATMOS_SATURATION_dens2qsat_all( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                TEMP(:,:,:), DENS_av(:,:,:), & ! (in)
                QSAT(:,:,:)                  ) ! (out)
-          DV_calclated(I_QSAT) = .true.
+          DV_calculated(I_QSAT) = .true.
        end if
        var(KS:KE,:,:) = QSAT(KS:KE,:,:)
 
     case ( 'RHA' )
-       if ( .not. DV_calclated(I_RHA) ) then
+       if ( .not. DV_calculated(I_RHA) ) then
           call allocate_3D( RHA )
           if ( moist ) then
              call ATMOS_SATURATION_psat_all( &
@@ -1821,12 +1842,12 @@ contains
              enddo
              enddo
           end if
-          DV_calclated(I_RHA) = .true.
+          DV_calculated(I_RHA) = .true.
        end if
        var(KS:KE,:,:) = RHA(KS:KE,:,:)
 
     case ( 'RHL', 'RH' )
-       if ( .not. DV_calclated(I_RHL) ) then
+       if ( .not. DV_calculated(I_RHL) ) then
           call allocate_3D( RHL )
           if ( moist ) then
              call ATMOS_SATURATION_psat_liq( &
@@ -1861,12 +1882,12 @@ contains
              enddo
              enddo
           end if
-          DV_calclated(I_RHL) = .true.
+          DV_calculated(I_RHL) = .true.
        end if
        var(KS:KE,:,:) = RHL(KS:KE,:,:)
 
     case ( 'RHI' )
-       if ( .not. DV_calclated(I_RHI) ) then
+       if ( .not. DV_calculated(I_RHI) ) then
           call allocate_3D( RHI )
           if ( moist ) then
              call ATMOS_SATURATION_psat_ice( &
@@ -1901,12 +1922,12 @@ contains
              enddo
              enddo
           end if
-          DV_calclated(I_RHI) = .true.
+          DV_calculated(I_RHI) = .true.
        end if
        var(KS:KE,:,:) = RHI(KS:KE,:,:)
 
     case ( 'VOR' )
-       if ( .not. DV_calclated(I_VOR) ) then
+       if ( .not. DV_calculated(I_VOR) ) then
           call allocate_3D( VOR )
           !!!  to move to grid !!!
           ! at x, v, layer
@@ -1957,12 +1978,12 @@ contains
              VOR(k,i,JA) = VOR(k,i,JA-1)
           enddo
           enddo
-          DV_calclated(I_VOR) = .true.
+          DV_calculated(I_VOR) = .true.
        end if
        var(KS:KE,:,:) = VOR(KS:KE,:,:)
 
     case ( 'DIV' )
-       if ( .not. DV_calclated(I_DIV) ) then
+       if ( .not. DV_calculated(I_DIV) ) then
           call allocate_3D( DIV )
           call ATMOS_vars_get_diagnostic( 'HDIV', WORK3D(:,:,:) )
           !!!! to move to grid !!!!
@@ -1976,12 +1997,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_DIV) = .true.
+          DV_calculated(I_DIV) = .true.
        end if
        var(KS:KE,:,:) = DIV(KS:KE,:,:)
 
     case ( 'HDIV' )
-       if ( .not. DV_calclated(I_HDIV) ) then
+       if ( .not. DV_calculated(I_HDIV) ) then
           call allocate_3D( HDIV )
           !!!! to move to grid !!!!
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -2006,12 +2027,12 @@ contains
              HDIV(k,1,j) = HDIV(k,2,j)
           enddo
           enddo
-          DV_calclated(I_HDIV) = .true.
+          DV_calculated(I_HDIV) = .true.
        end if
        var(KS:KE,:,:) = HDIV(KS:KE,:,:)
 
     case ( 'Uabs' )
-       if ( .not. DV_calclated(I_Uabs) ) then
+       if ( .not. DV_calculated(I_Uabs) ) then
           call allocate_3D( Uabs )
 !OCL XFILL
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
@@ -2022,24 +2043,24 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_Uabs) = .true.
+          DV_calculated(I_Uabs) = .true.
        end if
        var(KS:KE,:,:) = Uabs(KS:KE,:,:)
 
     case ( 'N2' )
-       if ( .not. DV_calclated(I_N2) ) then
+       if ( .not. DV_calculated(I_N2) ) then
           call allocate_3D( N2 )
           call ATMOS_DIAGNOSTIC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                POTT(:,:,:), Rtot(:,:,:), & !(in)
                REAL_CZ(:,:,:),           & !(in)
                N2(:,:,:)                 ) ! (out)
-          DV_calclated(I_N2) = .true.
+          DV_calculated(I_N2) = .true.
        end if
        var(KS:KE,:,:) = N2(KS:KE,:,:)
 
     case ( 'MSE' )
-       if ( .not. DV_calclated(I_MSE) ) then
+       if ( .not. DV_calculated(I_MSE) ) then
           call allocate_3D( MSE )
           call ATMOS_vars_get_diagnostic( 'LHV', WORK3D(:,:,:) )
 !OCL XFILL
@@ -2053,22 +2074,22 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_MSE) = .true.
+          DV_calculated(I_MSE) = .true.
        end if
        var(KS:KE,:,:) = MSE(KS:KE,:,:)
 
     case ( 'TDEW' )
-       if ( .not. DV_calclated(I_TDEW) ) then
+       if ( .not. DV_calculated(I_TDEW) ) then
           call allocate_3D( TDEW )
           call ATMOS_SATURATION_tdew_liq( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                           DENS(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
                                           TDEW(:,:,:)                          ) ! [OUT]
-          DV_calclated(I_TDEW) = .true.
+          DV_calculated(I_TDEW) = .true.
        end if
        var(KS:KE,:,:) = TDEW(KS:KE,:,:)
 
     case ( 'ENGP' )
-       if ( .not. DV_calclated(I_ENGP) ) then
+       if ( .not. DV_calculated(I_ENGP) ) then
           call allocate_3D( ENGP )
           !$omp parallel do private(k,i,j) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
@@ -2078,12 +2099,12 @@ contains
           end do
           end do
           end do
-          DV_calclated(I_ENGP) = .true.
+          DV_calculated(I_ENGP) = .true.
        end if
        var(KS:KE,:,:) = ENGP(KS:KE,:,:)
 
     case ( 'ENGK' )
-       if ( .not. DV_calclated(I_ENGK) ) then
+       if ( .not. DV_calculated(I_ENGK) ) then
           call allocate_3D( ENGK )
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
@@ -2094,12 +2115,12 @@ contains
           end do
           end do
           end do
-             DV_calclated(I_ENGK) = .true.
+             DV_calculated(I_ENGK) = .true.
        end if
        var(KS:KE,:,:) = ENGK(KS:KE,:,:)
 
     case ( 'ENGI' )
-       if ( .not. DV_calclated(I_ENGI) ) then
+       if ( .not. DV_calculated(I_ENGI) ) then
           call allocate_3D( ENGI )
           if ( moist ) then
              call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
@@ -2121,12 +2142,12 @@ contains
           end do
           end do
           end do
-          DV_calclated(I_ENGI) = .true.
+          DV_calculated(I_ENGI) = .true.
        end if
        var(KS:KE,:,:) = ENGI(KS:KE,:,:)
 
     case ( 'ENGT' )
-       if ( .not. DV_calclated(I_ENGT) ) then
+       if ( .not. DV_calculated(I_ENGT) ) then
           call allocate_3D( ENGT )
           call ATMOS_vars_get_diagnostic( 'ENGP', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'ENGK', WORK3D(:,:,:) )
@@ -2139,12 +2160,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_ENGT) = .true.
+          DV_calculated(I_ENGT) = .true.
        end if
        var(KS:KE,:,:) = ENGT(KS:KE,:,:)
 
     case ( 'DENS_PRIM' )
-       if ( .not. DV_calclated(I_DENS_PRIM) ) then
+       if ( .not. DV_calculated(I_DENS_PRIM) ) then
           call allocate_3D( DENS_PRIM )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2156,12 +2177,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_DENS_PRIM) = .true.
+          DV_calculated(I_DENS_PRIM) = .true.
        end if
        var(KS:KE,:,:) = DENS_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM' )
-       if ( .not. DV_calclated(I_W_PRIM) ) then
+       if ( .not. DV_calculated(I_W_PRIM) ) then
           call allocate_3D( W_PRIM )
           call ATMOS_vars_get_diagnostic( 'W_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2173,12 +2194,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_W_PRIM) = .true.
+          DV_calculated(I_W_PRIM) = .true.
        end if
        var(KS:KE,:,:) = W_PRIM(KS:KE,:,:)
 
     case ( 'U_PRIM' )
-       if ( .not. DV_calclated(I_U_PRIM) ) then
+       if ( .not. DV_calculated(I_U_PRIM) ) then
           call allocate_3D( U_PRIM )
           call ATMOS_vars_get_diagnostic( 'U_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2190,12 +2211,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_U_PRIM) = .true.
+          DV_calculated(I_U_PRIM) = .true.
        end if
        var(KS:KE,:,:) = U_PRIM(KS:KE,:,:)
 
     case ( 'V_PRIM' )
-       if ( .not. DV_calclated(I_V_PRIM) ) then
+       if ( .not. DV_calculated(I_V_PRIM) ) then
           call allocate_3D( V_PRIM )
           call ATMOS_vars_get_diagnostic( 'V_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2207,12 +2228,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_V_PRIM) = .true.
+          DV_calculated(I_V_PRIM) = .true.
        end if
        var(KS:KE,:,:) = V_PRIM(KS:KE,:,:)
 
     case ( 'PT_PRIM' )
-       if ( .not. DV_calclated(I_PT_PRIM) ) then
+       if ( .not. DV_calculated(I_PT_PRIM) ) then
           call allocate_3D( PT_PRIM )
           call ATMOS_vars_get_diagnostic( 'PT_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2224,12 +2245,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_PT_PRIM) = .true.
+          DV_calculated(I_PT_PRIM) = .true.
        end if
        var(KS:KE,:,:) = PT_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM2' )
-       if ( .not. DV_calclated(I_W_PRIM2) ) then
+       if ( .not. DV_calculated(I_W_PRIM2) ) then
           call allocate_3D( W_PRIM2 )
           call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D(:,:,:) )
 !OCL XFILL
@@ -2241,12 +2262,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_W_PRIM2) = .true.
+          DV_calculated(I_W_PRIM2) = .true.
        end if
        var(KS:KE,:,:) = W_PRIM2(KS:KE,:,:)
 
     case ( 'PT_W_PRIM' )
-       if ( .not. DV_calclated(I_PT_W_PRIM) ) then
+       if ( .not. DV_calculated(I_PT_W_PRIM) ) then
           call allocate_3D( PT_W_PRIM )
           call ATMOS_vars_get_diagnostic( 'W_PRIM',  WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'PT_PRIM', WORK3D(:,:,:) )
@@ -2258,12 +2279,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_PT_W_PRIM) = .true.
+          DV_calculated(I_PT_W_PRIM) = .true.
        end if
        var(KS:KE,:,:) = PT_W_PRIM(KS:KE,:,:)
 
     case ( 'W_PRIM3' )
-       if ( .not. DV_calclated(I_W_PRIM3) ) then
+       if ( .not. DV_calculated(I_W_PRIM3) ) then
           call allocate_3D( W_PRIM3 )
           call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D(:,:,:) )
 !OCL XFILL
@@ -2275,12 +2296,12 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_W_PRIM3) = .true.
+          DV_calculated(I_W_PRIM3) = .true.
        end if
        var(KS:KE,:,:) = W_PRIM3(KS:KE,:,:)
 
     case ( 'TKE_RS' )
-       if ( .not. DV_calclated(I_TKE_RS) ) then
+       if ( .not. DV_calculated(I_TKE_RS) ) then
           call allocate_3D( TKE_RS )
           call ATMOS_vars_get_diagnostic( 'W_PRIM', WORK3D(:,:,:) )
           call ATMOS_vars_get_diagnostic( 'U_PRIM', WORK3D(:,:,:) )
@@ -2294,9 +2315,109 @@ contains
           enddo
           enddo
           enddo
-          DV_calclated(I_TKE_RS) = .true.
+          DV_calculated(I_TKE_RS) = .true.
        end if
        var(KS:KE,:,:) = TKE_RS(KS:KE,:,:)
+
+    case ( 'VELZ' )
+       if ( .not. DV_calculated(I_VELZ) ) then
+          call allocate_3D( VELZ )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+             VELZ(KS-1,i,j) = 0.0_RP
+             do k = KS, KE-1
+                VELZ(k,i,j) = MOMZ(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k+1,i,j) )
+             end do
+             VELZ(KE,i,j) = 0.0_RP
+          enddo
+          enddo
+          DV_calculated(I_VELZ) = .true.
+       end if
+       var(KS-1:KE,:,:) = VELZ(KS-1:KE,:,:)
+
+    case ( 'VELX' )
+       if ( .not. DV_calculated(I_VELX) ) then
+          call allocate_3D( VELX )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA-1
+          do k = KS, KE
+             VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
+          enddo
+          enddo
+          enddo
+!OCL XFILL
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = 1, JA
+          do k = KS, KE
+             VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
+          enddo
+          enddo
+          call COMM_vars8( VELX(:,:,:), 1 )
+          call COMM_wait ( VELX(:,:,:), 1, .false. )
+          DV_calculated(I_VELX) = .true.
+       end if
+       var(KS:KE,:,:) = VELX(KS:KE,:,:)
+
+    case ( 'VELY' )
+       if ( .not. DV_calculated(I_VELY) ) then
+          call allocate_3D( VELY )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA-1
+          do i = 1, IA
+          do k = KS, KE
+             VELY(k,i,j) = MOMY(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i,j+1) )
+          enddo
+          enddo
+          enddo
+!OCL XFILL
+          !$omp parallel do private(i,k) OMP_SCHEDULE_
+          do i = 1, IA
+          do k = KS, KE
+             VELY(k,i,JA) = MOMY(k,i,JA) / DENS(k,i,JA)
+          enddo
+          enddo
+          call COMM_vars8( VELY(:,:,:), 1 )
+          call COMM_wait ( VELY(:,:,:), 1, .false. )
+          DV_calculated(I_VELY) = .true.
+       end if
+       var(KS:KE,:,:) = VELY(KS:KE,:,:)
+
+    case ( 'Umet' )
+       if ( .not. DV_calculated(I_UMET) ) then
+          call allocate_3D( Umet )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             Umet(k,i,j) = U(k,i,j) * ROTC(i,j,1) - V(k,i,j) * ROTC(i,j,2)
+          end do
+          end do
+          end do
+          DV_calculated(I_UMET) = .true.
+       end if
+       var(KS:KE,:,:) = Umet(KS:KE,:,:)
+
+    case ( 'Vmet' )
+       if ( .not. DV_calculated(I_VMET) ) then
+          call allocate_3D( Vmet )
+!OCL XFILL
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             Vmet(k,i,j) = U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
+          end do
+          end do
+          end do
+          DV_calculated(I_VMET) = .true.
+       end if
+       var(KS:KE,:,:) = Vmet(KS:KE,:,:)
 
     case default
        LOG_ERROR("ATMOS_vars_calc_diagnostics",*) 'name is invalid for ATMOS_vars_get_diagnostic_3D: ', trim(vname)
@@ -2334,7 +2455,7 @@ contains
 
     select case ( vname )
     case ( 'LWP' )
-       if ( .not. DV_calclated(I_LWP) ) then
+       if ( .not. DV_calculated(I_LWP) ) then
           call allocate_2D( LWP )
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -2350,12 +2471,12 @@ contains
              enddo
           enddo
           enddo
-          DV_calclated(I_LWP) = .true.
+          DV_calculated(I_LWP) = .true.
        end if
        var(:,:) = LWP(:,:)
 
     case ( 'IWP' )
-       if ( .not. DV_calclated(I_IWP) ) then
+       if ( .not. DV_calculated(I_IWP) ) then
           call allocate_2D( IWP )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -2371,12 +2492,12 @@ contains
              enddo
           enddo
           enddo
-          DV_calclated(I_IWP) = .true.
+          DV_calculated(I_IWP) = .true.
        end if
        var(:,:) = IWP(:,:)
 
     case ( 'PW' )
-       if ( .not. DV_calclated(I_PW) ) then
+       if ( .not. DV_calculated(I_PW) ) then
           call allocate_2D( PW )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k) &
@@ -2391,12 +2512,12 @@ contains
              enddo
           enddo
           enddo
-          DV_calclated(I_PW) = .true.
+          DV_calculated(I_PW) = .true.
        end if
        var(:,:) = PW(:,:)
 
     case ( 'PBLH' )
-       if ( .not. DV_calclated(I_PBLH) ) then
+       if ( .not. DV_calculated(I_PBLH) ) then
           call allocate_2D( PBLH )
           call ATMOS_vars_get_diagnostic( 'POTV', WORK3D(:,:,:) )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -2419,12 +2540,12 @@ contains
              enddo
           enddo
           enddo
-          DV_calclated(I_PBLH) = .true.
+          DV_calculated(I_PBLH) = .true.
        end if
        var(:,:) = PBLH(:,:)
 
     case ( 'CAPE', 'CIN', 'LCL', 'LFC', 'LNB' )
-       if ( .not. DV_calclated(I_CAPE) ) then
+       if ( .not. DV_calculated(I_CAPE) ) then
           call allocate_2D( CAPE )
           call allocate_2D( CIN )
           call allocate_2D( LCL )
@@ -2438,7 +2559,7 @@ contains
                Rtot(:,:,:), CPtot(:,:,:),                        & ! (in)
                REAL_CZ(:,:,:), REAL_FZ(:,:,:),                   & ! (in)
                CAPE(:,:), CIN(:,:), LCL(:,:), LFC(:,:), LNB(:,:) ) ! (out)
-          DV_calclated(I_CAPE) = .true.
+          DV_calculated(I_CAPE) = .true.
        end if
        select case ( vname )
        case ( 'CAPE' )
@@ -2454,7 +2575,7 @@ contains
        end select
 
     case ( 'PREC', 'RAIN', 'SNOW' )
-       if ( .not. DV_calclated(I_PREC) ) then
+       if ( .not. DV_calculated(I_PREC) ) then
           call allocate_2D( PREC )
           call allocate_2D( RAIN )
           call allocate_2D( SNOW )
@@ -2466,7 +2587,7 @@ contains
              PREC(i,j) = RAIN(i,j) + SNOW(i,j)
           enddo
           enddo
-          DV_calclated(I_PREC) = .true.
+          DV_calculated(I_PREC) = .true.
        end if
        select case (vname)
        case ( 'RAIN' )
@@ -2509,16 +2630,16 @@ contains
 
     select case ( vname )
     case ( 'DENS_MEAN' )
-       if ( .not. DV_calclated(I_DENS_MEAN) ) then
+       if ( .not. DV_calculated(I_DENS_MEAN) ) then
           call allocate_1D( DENS_MEAN )
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                            DENS(:,:,:), AREA(:,:), DENS_MEAN(:) )
-          DV_calclated(I_DENS_MEAN) = .true.
+          DV_calculated(I_DENS_MEAN) = .true.
        end if
        var(:) = DENS_MEAN(:)
 
     case ( 'W_MEAN' )
-       if ( .not. DV_calclated(I_W_MEAN) ) then
+       if ( .not. DV_calculated(I_W_MEAN) ) then
           call allocate_1D( W_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2535,12 +2656,12 @@ contains
           do k = KS, KE
              W_MEAN(k) = W_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_W_MEAN) = .true.
+          DV_calculated(I_W_MEAN) = .true.
        end if
        var(:) = W_MEAN(:)
 
     case ( 'U_MEAN' )
-       if ( .not. DV_calclated(I_U_MEAN) ) then
+       if ( .not. DV_calculated(I_U_MEAN) ) then
           call allocate_1D( U_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2557,12 +2678,12 @@ contains
           do k = KS, KE
              U_MEAN(k) = U_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_U_MEAN) = .true.
+          DV_calculated(I_U_MEAN) = .true.
        end if
        var(:) = U_MEAN(:)
 
     case ( 'V_MEAN' )
-       if ( .not. DV_calclated(I_V_MEAN) ) then
+       if ( .not. DV_calculated(I_V_MEAN) ) then
           call allocate_1D( V_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2579,12 +2700,12 @@ contains
           do k = KS, KE
              V_MEAN(k) = V_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_V_MEAN) = .true.
+          DV_calculated(I_V_MEAN) = .true.
        end if
        var(:) = V_MEAN(:)
 
     case ( 'PT_MEAN' )
-       if ( .not. DV_calclated(I_PT_MEAN) ) then
+       if ( .not. DV_calculated(I_PT_MEAN) ) then
           call allocate_1D( PT_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
           call STATISTICS_horizontal_mean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -2592,12 +2713,12 @@ contains
           do k = KS, KE
              PT_MEAN(k) = PT_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_PT_MEAN) = .true.
+          DV_calculated(I_PT_MEAN) = .true.
        end if
        var(:) = PT_MEAN(:)
 
     case ( 'T_MEAN' )
-       if ( .not. DV_calclated(I_T_MEAN) ) then
+       if ( .not. DV_calculated(I_T_MEAN) ) then
           call allocate_1D( T_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
 !OCL XFILL
@@ -2614,12 +2735,12 @@ contains
           do k = KS, KE
              T_MEAN(k) = T_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_T_MEAN) = .true.
+          DV_calculated(I_T_MEAN) = .true.
        end if
        var(:) = T_MEAN(:)
 
     case ( 'QV_MEAN' )
-       if ( .not. DV_calclated(I_QV_MEAN) ) then
+       if ( .not. DV_calculated(I_QV_MEAN) ) then
           call allocate_1D( QV_MEAN )
           if ( moist ) then
              call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
@@ -2643,12 +2764,12 @@ contains
                 QV_MEAN(k) = 0.0_RP
              enddo
           end if
-          DV_calclated(I_QV_MEAN) = .true.
+          DV_calculated(I_QV_MEAN) = .true.
        end if
        var(:) = QV_MEAN(:)
 
     case ( 'QHYD_MEAN' )
-       if ( .not. DV_calclated(I_QHYD_MEAN) ) then
+       if ( .not. DV_calculated(I_QHYD_MEAN) ) then
           call allocate_1D( QHYD_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
           call ATMOS_vars_get_diagnostic( 'QHYD', WORK3D(:,:,:) )
@@ -2666,12 +2787,12 @@ contains
           do k = KS, KE
              QHYD_MEAN(k) = QHYD_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_QHYD_MEAN) = .true.
+          DV_calculated(I_QHYD_MEAN) = .true.
        end if
        var(:) = QHYD_MEAN(:)
 
     case ( 'QLIQ_MEAN' )
-       if ( .not. DV_calclated(I_QLIQ_MEAN) ) then
+       if ( .not. DV_calculated(I_QLIQ_MEAN) ) then
           call allocate_1D( QLIQ_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
           call ATMOS_vars_get_diagnostic( 'QLIQ', WORK3D(:,:,:) )
@@ -2689,12 +2810,12 @@ contains
           do k = KS, KE
              QLIQ_MEAN(k) = QLIQ_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_QLIQ_MEAN) = .true.
+          DV_calculated(I_QLIQ_MEAN) = .true.
        end if
        var(:) = QLIQ_MEAN(:)
 
     case ( 'QICE_MEAN' )
-       if ( .not. DV_calclated(I_QICE_MEAN) ) then
+       if ( .not. DV_calculated(I_QICE_MEAN) ) then
           call allocate_1D( QICE_MEAN )
           call ATMOS_vars_get_diagnostic( 'DENS_MEAN', WORK1D(:) )
           call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
@@ -2712,7 +2833,7 @@ contains
           do k = KS, KE
              QICE_MEAN(k) = QICE_MEAN(k) / DENS_MEAN(k)
           enddo
-          DV_calclated(I_QICE_MEAN) = .true.
+          DV_calculated(I_QICE_MEAN) = .true.
        end if
        var(:) = QICE_MEAN(:)
 

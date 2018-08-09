@@ -403,6 +403,8 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_atmos_grid_cartesC_metric, only: &
+       ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
        TOPO_Zsfc
     use scale_atmos_hydrometeor, only: &
@@ -431,6 +433,8 @@ contains
 
     real(RP) :: MSLP  (IA,JA) ! mean sea-level pressure [Pa]
     real(RP) :: Uabs10(IA,JA) ! 10m absolute wind [m/s]
+    real(RP) :: U10m  (IA,JA) ! eastward 10m wind
+    real(RP) :: V10m  (IA,JA) ! northward 10m wind
 
     integer :: i, j, iq
     !---------------------------------------------------------------------------
@@ -440,8 +444,11 @@ contains
     do j = JS, JE
     do i = IS, IE
        Uabs10(i,j) = sqrt( U10(i,j)**2 + V10(i,j)**2 )
+       U10m  (i,j) = U10(i,j) * ROTC(i,j,1) - V10(i,j) * ROTC(i,j,2)
+       V10m  (i,j) = U10(i,j) * ROTC(i,j,2) + V10(i,j) * ROTC(i,j,1)
     enddo
     enddo
+
 
     call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                 & ! [IN]
                               SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
@@ -472,12 +479,14 @@ contains
                                 'kg/m2/s' , fill_halo=.true.                         )
        enddo
     endif
-    call FILE_HISTORY_in( Uabs10    (:,:),                     'Uabs10',          '10m absolute wind',                   'm/s'     , fill_halo=.true. )
-    call FILE_HISTORY_in( U10       (:,:),                     'U10',             '10m x-wind',                          'm/s'     , fill_halo=.true. )
-    call FILE_HISTORY_in( V10       (:,:),                     'V10',             '10m y-wind',                          'm/s'     , fill_halo=.true. )
-    call FILE_HISTORY_in( T2        (:,:),                     'T2 ',             '2m air temperature',                  'K'       , fill_halo=.true. )
-    call FILE_HISTORY_in( Q2        (:,:),                     'Q2 ',             '2m specific humidity',                'kg/kg'   , fill_halo=.true. )
-    call FILE_HISTORY_in( MSLP      (:,:),                     'MSLP',            'mean sea-level pressure',             'Pa'      )
+    call FILE_HISTORY_in( Uabs10(:,:), 'Uabs10', '10m absolute wind',       'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( U10   (:,:), 'U10',    '10m x-wind',              'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( V10   (:,:), 'V10',    '10m y-wind',              'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( U10m  (:,:), 'U10m',   '10m eastward wind',       'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( V10m  (:,:), 'V10m',   '10m northward wind',      'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',      'K'    , fill_halo=.true. )
+    call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',    'kg/kg', fill_halo=.true. )
+    call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure', 'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
 
     return
   end subroutine history_output
