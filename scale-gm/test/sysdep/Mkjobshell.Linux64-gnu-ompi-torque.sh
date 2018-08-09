@@ -50,10 +50,10 @@ cat << EOF1 > run.sh
 ################################################################################
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
-#PBS -N ${res3d}
-#PBS -l walltime=00:30:00
-#PBS -o STDOUT
-#PBS -e STDERR
+#PBS -l walltime=8:00:00
+#PBS -N SCALE
+#PBS -o OUT.log
+#PBS -e ERR.log
 export FORT_FMT_RECL=400
 export GFORTRAN_UNBUFFERED_ALL=Y
 
@@ -108,10 +108,10 @@ cat << EOFICO2LL1 > ico2ll.sh
 ################################################################################
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
-#PBS -N ico2ll_${res3d}
-#PBS -l walltime=00:30:00
-#PBS -o STDOUT
-#PBS -e STDERR
+#PBS -l walltime=8:00:00
+#PBS -N ico2ll
+#PBS -o OUT.log
+#PBS -e ERR.log
 export FORT_FMT_RECL=400
 export GFORTRAN_UNBUFFERED_ALL=Y
 
