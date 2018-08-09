@@ -628,16 +628,24 @@ contains
                                        sflx_MV          (:,:),     & ! [OUT]
                                        sflx_SH          (:,:),     & ! [OUT]
                                        sflx_QV          (:,:),     & ! [OUT]
-                                       sflx_hbalance    (:,:),     & ! [OUT]
+                                       sflx_G           (:,:),     & ! [OUT]
                                        U10              (:,:),     & ! [OUT]
                                        V10              (:,:),     & ! [OUT]
                                        T2               (:,:),     & ! [OUT]
                                        Q2               (:,:)      ) ! [OUT]
        end select
 
-       ! roughness length
+       ! seaice
        select case ( OCEAN_ICE_TYPE )
        case ( 'SIMPLE' )
+
+          !$omp parallel do
+          do j = OJS, OJE
+          do i = OIS, OIE
+             sflx_hbalance(i,j) = - sflx_G(i,j) ! upward to downward
+          enddo
+          enddo
+
           call OCEAN_PHY_ICE_simple( OIA, OIS, OIE,         & ! [IN]
                                      OJA, OJS, OJE,         & ! [IN]
                                      sflx_QV         (:,:), & ! [IN]
@@ -659,7 +667,7 @@ contains
           !$omp parallel do
           do j = OJS, OJE
           do i = OIS, OIE
-             sflx_G    (i,j) = sflx_hbalance  (i,j)
+             sflx_G    (i,j) = - sflx_G(i,j) ! upward to downward
              sflx_water(i,j) = 0.0_RP ! no flux from seaice to ocean
              sflx_ice  (i,j) = 0.0_RP ! no flux from seaice to ocean
           enddo
@@ -685,7 +693,7 @@ contains
           OCEAN_T2        (i,j)      = OCEAN_T2        (i,j)      + T2        (i,j) * sfc_frac(i,j)
           OCEAN_Q2        (i,j)      = OCEAN_Q2        (i,j)      + Q2        (i,j) * sfc_frac(i,j)
 
-          OCEAN_SFLX_G    (i,j)      = OCEAN_SFLX_G    (i,j)      + sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
+          OCEAN_SFLX_G    (i,j)      = OCEAN_SFLX_G    (i,j)      + sflx_G    (i,j) * sfc_frac(i,j)
           OCEAN_SFLX_water(i,j)      = OCEAN_SFLX_water(i,j)      + sflx_water(i,j) * sfc_frac(i,j)
           OCEAN_SFLX_ice  (i,j)      = OCEAN_SFLX_ice  (i,j)      + sflx_ice  (i,j) * sfc_frac(i,j)
        enddo
@@ -830,7 +838,6 @@ contains
        call OCEAN_PHY_ICE_adjustment( OIA, OIS, OIE,           & ! [IN]
                                       OJA, OJS, OJE,           & ! [IN]
                                       exists_ocean  (:,:),     & ! [IN]
-                                      dt,                      & ! [IN]
                                       OCEAN_TEMP    (OKS,:,:), & ! [INOUT]
                                       OCEAN_ICE_TEMP(:,:),     & ! [INOUT]
                                       OCEAN_ICE_MASS(:,:)      ) ! [INOUT]

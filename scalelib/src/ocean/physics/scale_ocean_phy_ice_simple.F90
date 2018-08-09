@@ -188,14 +188,14 @@ contains
        OIA, OIS, OIE, &
        OJA, OJS, OJE, &
        calc_flag,     &
-       dt,            &
        OCEAN_TEMP,    &
        ICE_TEMP,      &
        ICE_MASS       )
     use scale_const, only: &
-       CONST_CL,    &
-       CONST_EMELT, &
-       CONST_DWATR
+       CL    => CONST_CL,    &
+       CI    => CONST_CI,    &
+       EMELT => CONST_EMELT, &
+       DWATR => CONST_DWATR
     use scale_ocean_dyn_slab, only: &
        OCEAN_DYN_SLAB_DEPTH
     implicit none
@@ -203,39 +203,43 @@ contains
     integer,  intent(in)    :: OIA, OIS, OIE
     integer,  intent(in)    :: OJA, OJS, OJE
     logical,  intent(in)    :: calc_flag (OIA,OJA) ! to decide calculate or not
-    real(DP), intent(in)    :: dt
     real(RP), intent(inout) :: OCEAN_TEMP(OIA,OJA) ! ocean temperature   [K]
     real(RP), intent(inout) :: ICE_TEMP  (OIA,OJA) ! sea ice temperature [K]
     real(RP), intent(inout) :: ICE_MASS  (OIA,OJA) ! sea ice amount      [kg/m2]
 
-    real(RP) :: ICE_MASS_t
+    real(RP) :: ICE_MASS_diff
     real(RP) :: ICE_MASS_prev
     real(RP) :: factor
-    real(RP) :: dt_RP
+    real(RP) :: sw
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    dt_RP  = real(dt,kind=RP)
-    factor = CONST_CL * CONST_DWATR * OCEAN_DYN_SLAB_DEPTH / dt_RP / CONST_EMELT
-
+    !$omp parallel do &
+    !$omp private(ICE_MASS_diff,ICE_MASS_prev,factor,sw)
     do j = OJS, OJE
     do i = OIS, OIE
+       sw = 0.5_RP + sign(0.5_RP, OCEAN_TEMP(i,j) - OCEAN_PHY_ICE_freezetemp) ! 1: melt, 0: freeze
+       factor = CL * DWATR * OCEAN_DYN_SLAB_DEPTH &
+              / ( EMELT + sw * CI * ( OCEAN_PHY_ICE_freezetemp - ICE_TEMP(i,j) ) )
+
        if ( calc_flag(i,j) ) then
           ! update ice mass
-          ICE_MASS_t    = ( OCEAN_PHY_ICE_freezetemp - OCEAN_TEMP(i,j) ) * factor ! [kg/m2/s], positive is freezing
+          ICE_MASS_diff = ( OCEAN_PHY_ICE_freezetemp - OCEAN_TEMP(i,j) ) * factor ! [kg/m2/s], positive is freezing
           ICE_MASS_prev = ICE_MASS(i,j)
-          ICE_MASS(i,j) = min( max( ICE_MASS(i,j) + ICE_MASS_t * dt_RP, 0.0_RP ), OCEAN_PHY_ICE_mass_limit ) ! update mass w/ limiter
-          ICE_MASS_t    = ( ICE_MASS(i,j) - ICE_MASS_prev ) / dt_RP
+          ICE_MASS(i,j) = min( max( ICE_MASS(i,j) + ICE_MASS_diff, 0.0_RP ), OCEAN_PHY_ICE_mass_limit ) ! update mass w/ limiter
+          ICE_MASS_diff = ICE_MASS(i,j) - ICE_MASS_prev
 
           ! update ocean temperature
-          OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) + ICE_MASS_t / factor
+          OCEAN_TEMP(i,j) = OCEAN_TEMP(i,j) + ICE_MASS_diff / factor
 
           ! update ice temperature
           if ( ICE_MASS(i,j) > 0.0_RP ) then
-             if ( ICE_MASS_t > 0.0_RP ) then ! when ice increases, new ice have the temperature at freezing point
-                ICE_TEMP(i,j) = ( ICE_TEMP(i,j) * ICE_MASS_prev + OCEAN_PHY_ICE_freezetemp * ICE_MASS_t * dt_RP ) &
-                              / ICE_MASS(i,j)
+             if ( ICE_MASS_diff > 0.0_RP ) then ! when ice increases, new ice have the temperature at freezing point (when the limiter does not work)
+                ICE_TEMP(i,j) = ( ICE_TEMP(i,j) * ICE_MASS_prev &
+                                + OCEAN_PHY_ICE_freezetemp * ICE_MASS_diff &
+                                + ( OCEAN_PHY_ICE_freezetemp - OCEAN_TEMP(i,j) ) * ICE_MASS_diff * CL / CI & ! due to the limiter
+                                ) / ICE_MASS(i,j)
              endif
           else ! fill value
              ICE_TEMP(i,j) = OCEAN_PHY_ICE_freezetemp
@@ -281,7 +285,7 @@ contains
     real(RP), intent(in)  :: sflx_QV      (OIA,OJA) ! water vapor flux [kg/m2/s]
     real(RP), intent(in)  :: sflx_rain    (OIA,OJA) ! rain        flux [kg/m2/s]
     real(RP), intent(in)  :: sflx_snow    (OIA,OJA) ! snow        flux [kg/m2/s]
-    real(RP), intent(in)  :: sflx_hbalance(OIA,OJA) ! surface heat flux balance [J/m2/s]
+    real(RP), intent(in)  :: sflx_hbalance(OIA,OJA) ! surface heat flux balance [J/m2/s] (negative)
     real(RP), intent(in)  :: subsfc_temp  (OIA,OJA) ! subsurface temperature [K]
     real(RP), intent(in)  :: TC_dz        (OIA,OJA) ! Thermal conductance [K/m]
     real(RP), intent(in)  :: ICE_TEMP     (OIA,OJA) ! sea ice temperature [K]
@@ -299,6 +303,7 @@ contains
     real(RP) :: ICE_MASS_new2   ! [kg/m2]
     real(RP) :: heat_budget     ! [J/m2/s]
     real(RP) :: heat_budget_new ! [J/m2/s]
+    real(RP) :: gflx            ! [J/m2/s]
     real(RP) :: ICE_TEMP_new    ! [K]
     real(RP) :: heatcapacity    ! [J/m2/K]
     real(RP) :: heating         ! [J/m2/s]
@@ -313,6 +318,10 @@ contains
 
     dt_RP = real(dt,kind=RP)
 
+    !$omp parallel do &
+    !$omp private(mass_budget,ICE_MASS_new,ICE_MASS_new2, &
+    !$omp         heat_budget,heat_budget_new,gflx,ICE_TEMP_new,heatcapacity,heating,cooling, &
+    !$omp         sflx_melt)
     do j = OJS, OJE
     do i = OIS, OIE
        if ( calc_flag(i,j) ) then
@@ -322,9 +331,10 @@ contains
           mass_budget     = mass_budget - ( ICE_MASS_new - ICE_MASS(i,j) ) / dt_RP ! residual
 
           ! heat balance
-          heat_budget     = - sflx_hbalance(i,j)                                & ! -SWD + SWU - LWD + LWU + SH + LH
-                            + ( subsfc_temp(i,j) - ICE_TEMP(i,j) ) * TC_dZ(i,j) & ! heat flux from ocean
-                            + sflx_rain(i,j) * CONST_EMELT                        ! rain freezing
+          gflx = ( subsfc_temp(i,j) - ICE_TEMP(i,j) ) * TC_dZ(i,j)
+          heat_budget     = sflx_hbalance(i,j)           & ! SWD - SWU + LWD - LWU - SH - LH
+                          + gflx                         & ! heat flux from ocean
+                          + sflx_rain(i,j) * CONST_EMELT   ! rain freezing
 
           ICE_TEMP_new    = ICE_TEMP(i,j)
           heatcapacity    = CONST_CI * ICE_MASS_new
@@ -353,12 +363,12 @@ contains
           ! melting ice
           sflx_melt       = max( heat_budget / CONST_EMELT, 0.0_RP ) ! only for positive heat flux
           ICE_MASS_new2   = max( ICE_MASS_new - sflx_melt * dt_RP, 0.0_RP )
-          sflx_melt       = ( ICE_MASS_new2 - ICE_MASS_new ) / dt_RP
+          sflx_melt       = ( ICE_MASS_new - ICE_MASS_new2 ) / dt_RP
           heat_budget     = heat_budget - sflx_melt * CONST_EMELT
           mass_budget     = mass_budget + sflx_melt
 
           ! ice to ocean flux
-          SFLX_G    (i,j) = heat_budget
+          SFLX_G    (i,j) = heat_budget - gflx
           SFLX_water(i,j) = mass_budget
           SFLX_ice  (i,j) = 0.0_RP
 
