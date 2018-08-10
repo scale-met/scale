@@ -15,13 +15,9 @@ module mod_gm_driver
   !
   !++ used modules
   !
-  use scale_file, only: &
-     FILE_Close_All
   use scale_precision
   use scale_io
   use scale_prof
-  use scale_atmos_grid_icoA_index
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -34,7 +30,7 @@ module mod_gm_driver
   !
   !++ Public procedure
   !
-  public :: scalegm
+  public :: gm_driver
 
   !-----------------------------------------------------------------------------
   !
@@ -54,30 +50,41 @@ module mod_gm_driver
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine scalegm( &
+  subroutine gm_driver( &
        comm_world,       &
        intercomm_parent, &
        intercomm_child,  &
        cnf_fname         )
+    use scale_file, only: &
+       FILE_Close_All
     use scale_prc, only: &
-       PRC_IsMaster,    &
-       PRC_MPIstart,    &
        PRC_abort,       &
-       PRC_LOCAL_setup, &
-       PRC_MPIfinish
+       PRC_LOCAL_setup
     use scale_fpm, only: &
        FPM_alive,       &
        FPM_Polling,     &
        FPM_POLLING_FREQ
     use scale_const, only: &
-       CONST_setup,  &
-       CONST_THERMODYN_TYPE, &
+       CONST_setup,            &
+       CONST_THERMODYN_TYPE,   &
        RADIUS => CONST_RADIUS, &
-       PI => CONST_PI
+       PI     => CONST_PI
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
+    use scale_atmos_grid_icoA_index
+    use scale_landuse, only: &
+       LANDUSE_setup
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_setup
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_setup
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
+
     use mod_adm, only: &
        ADM_setup
     use mod_fio, only: &
@@ -96,35 +103,17 @@ contains
        TIME_setup,     &
        TIME_report,    &
        TIME_advance,   &
-       TIME_LSTEP_MAX, &
-       TIME_CSTEP,     &
-       TIME_CTIME,     &
-       TIME_DTL
+       TIME_LSTEP_MAX
     use mod_extdata, only: &
        extdata_setup
     use mod_runconf, only: &
        runconf_setup
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_MP_TYPE,  &
-       ATMOS_PHY_BL_TYPE,  &
-       ATMOS_PHY_SF_TYPE,  &
-       atmos_sw_phy_sf
     use mod_prgvar, only: &
        prgvar_setup,            &
        restart_input_basename,  &
        restart_output_basename, &
        restart_input,           &
        restart_output
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_setup
-    use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_setup
-    use scale_atmos_hydrometeor, only: &
-       atmos_hydrometeor_setup
-    use mod_atmos_phy_bl_driver, only: &
-       atmos_phy_bl_driver_setup
-    use scale_bulkflux, only: &
-       BULKFLUX_setup
     use mod_dynamics, only: &
        dynamics_setup, &
        dynamics_step
@@ -141,100 +130,21 @@ contains
     use mod_embudget, only: &
        embudget_setup, &
        embudget_monitor
-    use mod_bndcnd, only: &
-       tem_sfc
 
-    !##### OpenACC (for data copy) #####
-    use mod_adm, only: &
-       ADM_prc_tab,  &
-       ADM_rgn_vnum
-    use mod_comm, only: &
-       sendlist,     sendlist_pl,  &
-       sendinfo,     sendinfo_pl,  &
-       recvlist,     recvlist_pl,  &
-       recvinfo,     recvinfo_pl,  &
-       recvlist_r2r, sendlist_r2r, &
-       recvlist_r2p, sendlist_r2p, &
-       recvlist_p2r, sendlist_p2r, &
-       recvlist_sgp, sendlist_sgp, &
-       copyinfo_r2r, copyinfo_sgp, &
-       copyinfo_r2p, copyinfo_p2r, &
-       nsmax,        nsmax_pl,     &
-       nrmax,        nrmax_pl,     &
-       ncmax_r2r,    ncmax_sgp,    &
-       ncmax_r2p,    ncmax_p2r
-    use mod_grd, only: &
-       GRD_x,     &
-       GRD_xt,    &
-       GRD_zs,    &
-       GRD_rdgz,  &
-       GRD_rdgzh, &
-       GRD_vz
-    use mod_gmtr, only: &
-       GMTR_p, &
-       GMTR_t, &
-       GMTR_a
-    use mod_vmtr, only: &
-       VMTR_GAM2H,     &
-       VMTR_GSGAM2,    &
-       VMTR_GSGAM2H,   &
-       VMTR_RGSQRTH,   &
-       VMTR_RGAM,      &
-       VMTR_RGAMH,     &
-       VMTR_RGSGAM2,   &
-       VMTR_RGSGAM2H,  &
-       VMTR_W2Cfact,   &
-       VMTR_C2Wfact,   &
-       VMTR_C2WfactGz, &
-       VMTR_PHI
-    use mod_prgvar, only: &
-       PRG_var,  &
-       DIAG_var
-    use mod_bsstate, only: &
-       rho_bs, &
-       pre_bs, &
-       tem_bs
-    use mod_numfilter, only: &
-       Kh_coef,      &
-       Kh_coef_lap1, &
-       divdamp_coef
-    use mod_vi, only : &
-       Mc, &
-       Ml, &
-       Mu
-    use mod_history, only: &
-       ksumstr,     &
-       cnvpre_klev, &
-       cnvpre_fac1, &
-       cnvpre_fac2
-    use scale_landuse, only: &
-       landuse_setup
-    use mod_atmos_surface, only: &
-       atmos_surface_get
-    use mod_atmos_vars, only: &
-       atmos_vars_setup
-    use scale_tracer, only: &
-       QA,  &
-       tracer_CV,  &
-       tracer_CP,  &
-       tracer_R
+    use mod_gm_topography, only: &
+       TOPO_setup
     use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_ADMIN_setup
+       ATMOS_admin_setup
+    use mod_atmos_vars, only: &
+       ATMOS_vars_setup
     use mod_atmos_phy_driver, only: &
        ATMOS_phy_driver_tracer_setup, &
-       atmos_phy_driver_setup, &
-       atmos_phy_driver
+       ATMOS_phy_driver_setup, &
+       ATMOS_phy_driver
     use mod_atmos_phy_sf_vars, only: &
        ATMOS_PHY_SF_vars_setup
     use mod_atmos_phy_sf_driver, only: &
        ATMOS_PHY_SF_driver_setup
-    use mod_gm_topography, only: &
-       TOPO_setup
-    use mod_atmos_phy_rd_vars, only: &
-       ATMOS_PHY_RD_vars_setup
-    use mod_atmos_phy_rd_driver, only: &
-       ATMOS_PHY_RD_driver_setup
     use mod_time, only: &
        TIME_RES_ATMOS_PHY_RD, &
        TIME_DOATMOS_PHY_RD
@@ -244,15 +154,14 @@ contains
     integer,          intent(in) :: intercomm_parent
     integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
-    real(RP) :: Tsfc   (ADM_gall_in,1,ADM_lall)
-    real(RP) :: dx, dy
 
     integer :: myrank
     integer :: fpm_counter
     logical :: ismaster
     logical :: sign_exit
 
-    integer :: n, l
+    real(RP) :: dx, dy
+    integer  :: n
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
@@ -289,6 +198,13 @@ contains
     ! setup random number
     call RANDOM_setup
 
+    ! setup submodel administrator
+    call ATMOS_admin_setup
+
+    !---< tracer setup >---
+    call ATMOS_HYDROMETEOR_setup
+    call ATMOS_phy_driver_tracer_setup
+
     !---< I/O module setup >---
     call FIO_setup
 
@@ -314,12 +230,6 @@ contains
     call extdata_setup
 
 
-    call atmos_admin_setup
-
-    !---< tracer setup >---
-    call atmos_hydrometeor_setup
-    call atmos_phy_driver_tracer_setup
-
     !---< forcing module setup >---
     call forcing_setup
 
@@ -330,30 +240,33 @@ contains
     call TOPO_setup
 
     !---< landuse module setup >---
-    call landuse_setup( .false., .false., .false. )
+    call LANDUSE_setup( .false., .false., .false. )
 
-    !---< module setup >---
-    call atmos_thermodyn_setup
-    call atmos_saturation_setup
+    ! setup common tools
+    call ATMOS_THERMODYN_setup
+    call ATMOS_SATURATION_setup
+
+    dx = sqrt( 4.0_RP * PI * RADIUS**2 / real(10*4**ADM_glevel+2,kind=RP) )
+    dy = dx
+    call BULKFLUX_setup( sqrt(dx**2+dy**2) )
 
     !---< prognostic variable module setup >---
     call prgvar_setup
     call restart_input( restart_input_basename )
 
     !---< scale variable module setup >---
-    call atmos_vars_setup
-
-    !---< surface module setup >---
-    call atmos_phy_sf_driver_setup
-    dx = sqrt( 4.0_RP * PI * RADIUS**2 / real(10*4**ADM_glevel+2,kind=RP) )
-    dy = dx
-    call bulkflux_setup( sqrt(dx**2+dy**2) )
+    call ATMOS_vars_setup
 
     !---< dynamics module setup >---
     call dynamics_setup
 
+    !---< surface module setup >---
+    call atmos_phy_sf_driver_setup
+
     !---< physics module setup >---
-    call atmos_phy_driver_setup
+    call ATMOS_phy_driver_setup
+    TIME_RES_ATMOS_PHY_RD = 0
+    TIME_DOATMOS_PHY_RD   = .true.
 
     !---< energy&mass budget module setup >---
     call embudget_setup
@@ -365,8 +278,8 @@ contains
     call history_vars_setup
 
     call PROF_rapend('Initialize', 0)
-    !########## main ##########
 
+    !########## main ##########
 
 #ifdef FIPP
     call fipp_start
@@ -375,34 +288,10 @@ contains
     call PROF_PAPI_rapstart
 #endif
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ START TIMESTEP ++++++'
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'START TIMESTEP'
     call PROF_setprefx('MAIN')
     call PROF_rapstart('Main_Loop', 0)
-
-    !$acc data &
-    !$acc& pcopyin(ADM_prc_tab,ADM_rgn_vnum) &
-    !$acc& pcopyin(sendlist,sendlist_pl) &
-    !$acc& pcopyin(sendinfo,sendinfo_pl) &
-    !$acc& pcopyin(recvlist,recvlist_pl) &
-    !$acc& pcopyin(recvinfo,recvinfo_pl) &
-    !$acc& pcopyin(recvlist_r2r,sendlist_r2r) &
-    !$acc& pcopyin(recvlist_sgp,sendlist_sgp) &
-    !$acc& pcopyin(recvlist_r2p,sendlist_r2p) &
-    !$acc& pcopyin(recvlist_p2r,sendlist_p2r) &
-    !$acc& pcopyin(copyinfo_r2r,copyinfo_sgp,copyinfo_r2p,copyinfo_p2r) &
-    !$acc& pcopyin(nsmax,nsmax_pl,nrmax,nrmax_pl) &
-    !$acc& pcopyin(ncmax_r2r,ncmax_sgp,ncmax_r2p,ncmax_p2r) &
-    !$acc& pcopyin(GRD_rdgz,GRD_rdgzh,GRD_x,GRD_xt,GRD_vz,GRD_zs) &
-    !$acc& pcopyin(GMTR_p,GMTR_t,GMTR_a) &
-    !$acc& pcopyin(VMTR_GAM2,VMTR_GAM2H,VMTR_GSGAM2,VMTR_GSGAM2H) &
-    !$acc& pcopyin(VMTR_RGSQRTH,VMTR_RGAM,VMTR_RGAMH,VMTR_RGSGAM2,VMTR_RGSGAM2H) &
-    !$acc& pcopyin(VMTR_W2Cfact,VMTR_C2Wfact,VMTR_C2WfactGz,VMTR_PHI) &
-    !$acc& pcopyin(rho_bs,pre_bs,tem_bs) &
-    !$acc& pcopyin(divdamp_coef,Kh_coef,Kh_coef_lap1) &
-    !$acc& pcopyin(Mc,Mu,Ml) &
-    !$acc& pcopyin(ksumstr,cnvpre_klev,cnvpre_fac1,cnvpre_fac2) &
-    !$acc& pcopy  (PRG_var,DIAG_var)
 
     !--- history output at initial time
     if ( HIST_output_step0 ) then
@@ -413,9 +302,6 @@ contains
        call history_out
     endif
 
-    TIME_RES_ATMOS_PHY_RD = 0
-    TIME_DOATMOS_PHY_RD = .true.
-
     fpm_counter = 0
 
     do n = 1, TIME_LSTEP_MAX
@@ -424,7 +310,7 @@ contains
 
        call PROF_rapstart('_Atmos',1)
        call dynamics_step
-       call atmos_phy_driver
+       call ATMOS_phy_driver
        call forcing_step
        call PROF_rapend  ('_Atmos',1)
 
@@ -450,7 +336,7 @@ contains
             sign_exit = .false.
             call FPM_Polling( .true., sign_exit )
             if ( sign_exit ) then
-               LOG_ERROR("scalegm",*) 'receive stop signal'
+               LOG_ERROR("gm_driver",*) 'receive stop signal'
                call PRC_abort
             endif
             fpm_counter = 0
@@ -466,11 +352,6 @@ contains
     if( IO_L ) write(IO_FID_LOG,*) '++++++ END TIMESTEP ++++++'
     if( IO_L ) write(IO_FID_LOG,*)
 
-
-    call PROF_setprefx('FIN')
-
-    call PROF_rapstart('All', 1)
-
 #ifdef FIPP
     call fipp_stop
 #endif
@@ -479,6 +360,10 @@ contains
 #endif
 
     !########## Finalize ##########
+
+    call PROF_setprefx('FIN')
+
+    call PROF_rapstart('All', 1)
 
     call PROF_rapstart('File', 2)
     call FILE_Close_All
@@ -492,6 +377,6 @@ contains
 #endif
 
     return
-  end subroutine scalegm
+  end subroutine gm_driver
 
 end module mod_gm_driver

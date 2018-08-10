@@ -19,9 +19,9 @@ program scalerm
   use scale_prof
 
   use scale_prc, only: &
+     PRC_abort,           &
      PRC_DOMAIN_nlim,     &
      PRC_MPIstart,        &
-     PRC_abort,         &
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
      PRC_UNIVERSAL_setup, &

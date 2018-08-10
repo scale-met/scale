@@ -10,7 +10,7 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-program scalegm_launcher
+program scalegm
   !-----------------------------------------------------------------------------
   !
   !++ used modules
@@ -20,11 +20,11 @@ program scalegm_launcher
   use scale_prof
 
   use scale_prc, only: &
+     PRC_abort,           &
      PRC_DOMAIN_nlim,     &
      PRC_MPIstart,        &
      PRC_MPIfinish,       &
      PRC_MPIsplit,        &
-     PRC_abort,           &
      PRC_UNIVERSAL_setup, &
      PRC_GLOBAL_setup,    &
      PRC_GLOBAL_ROOT,     &
@@ -32,7 +32,7 @@ program scalegm_launcher
   use scale_fpm, only: &
      FPM_Init
   use mod_gm_driver, only: &
-     scalegm
+     gm_driver
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -45,6 +45,8 @@ program scalegm_launcher
   !
   !=============================================================================
 
+  logical               :: EXECUTE_PREPROCESS           = .false. ! execute preprocess tools?
+  logical               :: EXECUTE_MODEL                = .true.  ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
@@ -57,6 +59,8 @@ program scalegm_launcher
   logical               :: FAILURE_PRC_MANAGE           = .false. ! use failure process management?
 
   namelist / PARAM_LAUNCHER / &
+!      EXECUTE_PREPROCESS, &
+!      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
      NUM_DOMAIN,         &
      NUM_FAIL_TOLERANCE, &
@@ -116,11 +120,20 @@ program scalegm_launcher
   if ( ierr < 0 ) then !--- missing
      ! keep default setting (no members, no nesting)
   elseif( ierr > 0 ) then !--- fatal error
-     if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_CONST. Check!'
+     if( universal_master ) write(*,*) 'xxx Not appropriate names in namelist PARAM_LAUNCHER. Check!'
      call PRC_abort
   endif
 
   close(fid)
+
+  if (      EXECUTE_PREPROCESS &
+       .OR. EXECUTE_MODEL      ) then
+     if( universal_master ) write(*,*) "*** Execute preprocess? : ", EXECUTE_PREPROCESS
+     if( universal_master ) write(*,*) "*** Execute model?      : ", EXECUTE_MODEL
+  else
+     if( universal_master ) write(*,*) 'xxx No execution. please check PARAM_LAUNCHER. STOP'
+     call PRC_abort
+  endif
 
   !--- split for bulk jobs
 
@@ -218,12 +231,17 @@ program scalegm_launcher
      local_cnf_fname = trim(bulk_prefix)//"/"//trim(local_cnf_fname)
   endif
 
-  call scalegm( local_comm,       & ! [IN]
-                intercomm_parent, & ! [IN]
-                intercomm_child,  & ! [IN]
-                local_cnf_fname   ) ! [IN]
+  if ( EXECUTE_MODEL ) then
+     call gm_driver( local_comm,       & ! [IN]
+                     intercomm_parent, & ! [IN]
+                     intercomm_child,  & ! [IN]
+                     local_cnf_fname   ) ! [IN]
+  endif
 
   ! stop MPI
   call PRC_MPIfinish
 
-end program scalegm_launcher
+  if( universal_master ) write(*,*) '*** End   Launch System for SCALE-GM'
+
+  stop
+end program scalegm
