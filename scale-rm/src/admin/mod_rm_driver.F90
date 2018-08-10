@@ -58,7 +58,7 @@ contains
     use scale_file, only: &
        FILE_Close_All
     use scale_prc, only: &
-       PRC_abort,  &
+       PRC_abort,      &
        PRC_LOCAL_setup
     use scale_fpm, only: &
        FPM_alive,       &
@@ -142,11 +142,9 @@ contains
        ATMOS_SATURATION_setup
     use scale_bulkflux, only: &
        BULKFLUX_setup
+
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
-    use mod_admin_restart, only: &
-       ADMIN_restart_setup, &
-       ADMIN_restart_write
     use mod_admin_versioncheck, only: &
        ADMIN_versioncheck
     use mod_admin_time, only: &
@@ -159,19 +157,22 @@ contains
        TIME_DOOCEAN_step,     &
        TIME_DOresume,         &
        TIME_DOend
+    use mod_admin_restart, only: &
+       ADMIN_restart_setup, &
+       ADMIN_restart_write
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
-       ATMOS_do, &
+       ATMOS_do,          &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
-       ATMOS_vars_setup,                         &
-       ATMOS_sw_check => ATMOS_RESTART_CHECK,    &
+       ATMOS_vars_setup,       &
+       ATMOS_RESTART_CHECK,    &
        ATMOS_vars_restart_check
     use mod_atmos_driver, only: &
-       ATMOS_driver_setup,         &
-       ATMOS_driver_calc_tendency, &
+       ATMOS_driver_setup,                    &
+       ATMOS_driver_calc_tendency,            &
        ATMOS_driver_calc_tendency_from_sflux, &
-       ATMOS_driver_update,        &
+       ATMOS_driver_update,                   &
        ATMOS_driver_finalize
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
@@ -195,7 +196,7 @@ contains
        LAND_driver_update
     use mod_urban_admin, only: &
        URBAN_admin_setup, &
-       URBAN_do, &
+       URBAN_do,          &
        URBAN_land
     use mod_urban_vars, only: &
        URBAN_vars_setup
@@ -251,11 +252,10 @@ contains
     ! setup PROF
     call PROF_setup
 
-
+    !###########################################################################
     ! profiler start
     call PROF_setprefx('INIT')
     call PROF_rapstart('Initialize', 0)
-
 
     ! setup constants
     call CONST_setup
@@ -278,22 +278,22 @@ contains
     if ( ATMOS_do ) then
        call ATMOS_GRID_CARTESC_INDEX_setup
        call ATMOS_GRID_CARTESC_setup
-    end if
+    endif
 
     if ( OCEAN_do ) then
        call OCEAN_GRID_CARTESC_INDEX_setup
        call OCEAN_GRID_CARTESC_setup
-    end if
+    endif
 
     if ( LAND_do ) then
        call LAND_GRID_CARTESC_INDEX_setup
        call LAND_GRID_CARTESC_setup
-    end if
+    endif
 
     if ( URBAN_do ) then
        call URBAN_GRID_CARTESC_INDEX_setup
        call URBAN_GRID_CARTESC_setup
-    end if
+    endif
 
     ! setup tracer index
     call ATMOS_HYDROMETEOR_setup
@@ -316,7 +316,7 @@ contains
        call ATMOS_GRID_CARTESC_REAL_setup
        ! setup grid transfer metrics (uses in ATMOS_dynamics)
        call ATMOS_GRID_CARTESC_METRIC_setup
-    end if
+    endif
     if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
     if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
     if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
@@ -376,9 +376,7 @@ contains
     call PROF_rapstart('Main_Loop', 0)
 
     fpm_counter = 0
-
     do
-
       ! report current time
       call ADMIN_TIME_checkstate
 
@@ -389,8 +387,7 @@ contains
          ! history&monitor file output
          call MONITOR_write('MAIN', TIME_NOWSTEP)
          call FILE_HISTORY_write ! if needed
-      end if
-
+      endif
 
       ! time advance
       call ADMIN_TIME_advance
@@ -402,10 +399,8 @@ contains
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
                                              call USER_update
-
       ! restart output
       call ADMIN_restart_write
-
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -424,8 +419,7 @@ contains
       if( IO_L ) call flush(IO_FID_LOG)
 
       ! FPM polling
-      if ( FPM_alive ) then
-      if ( FPM_POLLING_FREQ > 0 ) then
+      if ( FPM_alive .AND. FPM_POLLING_FREQ > 0 ) then
          if ( fpm_counter > FPM_POLLING_FREQ ) then
             sign_exit = .false.
             call FPM_Polling( .true., sign_exit )
@@ -435,8 +429,8 @@ contains
             endif
             fpm_counter = 0
          endif
+
          fpm_counter = fpm_counter + 1
-      endif
       endif
 
     enddo
@@ -445,13 +439,6 @@ contains
 
     LOG_PROGRESS(*) 'END TIMESTEP'
     LOG_NEWLINE
-
-
-    call PROF_setprefx('FIN')
-
-    call PROF_rapstart('All', 1)
-
-    if( ATMOS_do ) call ATMOS_driver_finalize
 
 #ifdef FIPP
     call fipp_stop
@@ -462,8 +449,14 @@ contains
 
     !########## Finalize ##########
 
+    call PROF_setprefx('FIN')
+
+    call PROF_rapstart('All', 1)
+
+    if( ATMOS_do ) call ATMOS_driver_finalize
+
     ! check data
-    if( ATMOS_sw_check ) call ATMOS_vars_restart_check
+    if( ATMOS_RESTART_CHECK ) call ATMOS_vars_restart_check
 
     call PROF_rapstart('Monit', 2)
     call MONITOR_finalize
@@ -492,49 +485,31 @@ contains
   !-----------------------------------------------------------------------------
   subroutine restart_read
     use scale_atmos_grid_cartesC_index
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ,  &
+       FZ   => ATMOS_GRID_CARTESC_FZ,  &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
+       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
+       AREA     => ATMOS_GRID_CARTESC_REAL_AREA
+    use scale_time, only: &
+       TIME_NOWDAYSEC
+    use mod_admin_restart, only: &
+       ADMIN_restart_read
+    use mod_atmos_admin, only: &
+       ATMOS_do
     use mod_atmos_driver, only: &
        ATMOS_driver_calc_tendency, &
        ATMOS_driver_calc_tendency_from_sflux, &
        ATMOS_SURFACE_SET
-    use mod_ocean_driver, only: &
-       OCEAN_driver_calc_tendency, &
-       OCEAN_SURFACE_SET
-    use mod_land_driver, only: &
-       LAND_driver_calc_tendency, &
-       LAND_SURFACE_SET
-    use mod_urban_driver, only: &
-       URBAN_driver_calc_tendency, &
-       URBAN_SURFACE_SET
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics, &
-       ATMOS_vars_history_setpres, &
-       ATMOS_vars_history, &
-       ATMOS_vars_monitor
-    use mod_ocean_vars, only: &
-       OCEAN_vars_history
-    use mod_land_vars, only: &
-       LAND_vars_history
-    use mod_urban_vars, only: &
-       URBAN_vars_history
-    use mod_atmos_bnd_driver, only: &
-       ATMOS_BOUNDARY_driver_set
-    use scale_atmos_refstate, only: &
-       ATMOS_REFSTATE_UPDATE
-    use mod_user, only: &
-       USER_calc_tendency
-    use mod_atmos_admin, only: &
-       ATMOS_do
-    use mod_ocean_admin, only: &
-       OCEAN_do
-    use mod_land_admin, only: &
-       LAND_do
-    use mod_urban_admin, only: &
-       URBAN_do
-    use mod_cpl_admin, only: &
-       CPL_sw
-    use mod_admin_restart, only: &
-       ADMIN_restart_read
-    use mod_atmos_vars, only: &
+       ATMOS_vars_history_setpres,  &
+       ATMOS_vars_history,          &
+       ATMOS_vars_monitor,          &
        DENS, &
        MOMZ, &
        MOMX, &
@@ -545,18 +520,35 @@ contains
        PRES, &
        POTT, &
        QV
-    use scale_atmos_grid_cartesC, only: &
-       CZ   => ATMOS_GRID_CARTESC_CZ,  &
-       FZ   => ATMOS_GRID_CARTESC_FZ,  &
-       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
-       RCDZ => ATMOS_GRID_CARTESC_RCDZ
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
-       REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
-       AREA     => ATMOS_GRID_CARTESC_REAL_AREA
-    use scale_time, only: &
-       TIME_NOWDAYSEC
+    use mod_atmos_bnd_driver, only: &
+       ATMOS_BOUNDARY_driver_set
+    use scale_atmos_refstate, only: &
+       ATMOS_REFSTATE_UPDATE
+    use mod_ocean_admin, only: &
+       OCEAN_do
+    use mod_ocean_driver, only: &
+       OCEAN_driver_calc_tendency, &
+       OCEAN_SURFACE_SET
+    use mod_ocean_vars, only: &
+       OCEAN_vars_history
+    use mod_land_admin, only: &
+       LAND_do
+    use mod_land_driver, only: &
+       LAND_driver_calc_tendency, &
+       LAND_SURFACE_SET
+    use mod_land_vars, only: &
+       LAND_vars_history
+    use mod_urban_admin, only: &
+       URBAN_do
+    use mod_urban_driver, only: &
+       URBAN_driver_calc_tendency, &
+       URBAN_SURFACE_SET
+    use mod_urban_vars, only: &
+       URBAN_vars_history
+    use mod_cpl_admin, only: &
+       CPL_sw
+    use mod_user, only: &
+       USER_calc_tendency
     implicit none
     !---------------------------------------------------------------------------
 
@@ -589,7 +581,6 @@ contains
     if( URBAN_do ) call URBAN_driver_calc_tendency( force = .true. )
     if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force = .true. )
                    call USER_calc_tendency
-
 
     !########## History & Monitor ##########
     if( ATMOS_do ) call ATMOS_vars_history

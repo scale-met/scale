@@ -179,16 +179,16 @@ $(BINDIR)/$(PPNAME8) : $(BUILD_DIR)/prg_fio_sel.o    $(patsubst %,$(BUILD_DIR)/%
 $(BINDIR)/$(PPNAME9) : $(BUILD_DIR)/prg_fio_ico2ll.o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 
-$(BUILD_DIR)/scale-gm.o       : scale-gm.f90       $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkmnginfo.o  : prg_mkmnginfo.f90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkrawgrid.o  : prg_mkrawgrid.f90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkhgrid.o    : prg_mkhgrid.f90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkvlayer.o   : prg_mkvlayer.f90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkllmap.o    : prg_mkllmap.f90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_dump.o   : prg_fio_dump.f90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_cat.o    : prg_fio_cat.f90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_sel.o    : prg_fio_sel.f90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.f90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/scale-gm.o       : scale-gm.F90       $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkmnginfo.o  : prg_mkmnginfo.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkrawgrid.o  : prg_mkrawgrid.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkhgrid.o    : prg_mkhgrid.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkvlayer.o   : prg_mkvlayer.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkllmap.o    : prg_mkllmap.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_dump.o   : prg_fio_dump.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_cat.o    : prg_fio_cat.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_sel.o    : prg_fio_sel.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 
 
@@ -226,35 +226,23 @@ dependency:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .c .mod
+.SUFFIXES: .o .F90 .c .mod
 
-%.mod: %.f90
-	make $(patsubst %.f90,%.o,$<)
+%.mod: %.F90
+	make $(patsubst %.F90,%.o,$<)
 
-$(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+$(BUILD_DIR)/%.o : %.F90
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 $(BUILD_DIR)/mod_oprt.o :
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) -o $@ -c $< $(MODDIROPT) $(BUILD_DIR)
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) $(FFLAGS_TENTATIVE) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALEGMDIR)/include $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALEGMDIR)/include -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils scalelib depend dependency
+.PHONY : clean distclean allclean scalelib depend dependency
 
 include $(TOPDIR)/utils/make/Make_environments
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend
 endif
-
-
-
-# parameters for fixed index
-glevel  =  5
-rlevel  =  0
-nmpi    = 10
-zlayer  = 38
-diamond = 10
-
-fixedindex:
-	@cd ./include; ruby ./setindex.rb $(glevel) $(rlevel) $(nmpi) $(zlayer) $(diamond)

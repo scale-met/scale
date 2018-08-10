@@ -935,7 +935,7 @@ contains
     call ATMOS_DIAGNOSTIC_ICOA_get_vel( &
          KA, 1, KA, IA, 1, IA, JA, 1, JA, ADM_gall_in, ADM_imax, ADM_lall, &
          rhogvx(:,:,:), rhogvy(:,:,:), rhogvz(:,:,:), rhogw(:,:,:), & ! (in)
-         GSGAM2(:,:,:), GSGAM2(:,:,:),                              & ! (in)
+         GSGAM2(:,:,:), GSGAM2h(:,:,:),                             & ! (in)
          RHOU(:,:,:,:), RHOV(:,:,:,:), MOMZ(:,:,:,:)                ) ! (out)
 
     return
@@ -968,7 +968,7 @@ contains
 
 
     call ATMOS_DIAGNOSTIC_ICOA_get_vvel( &
-         KA, KS, KE, IA, IS, IE, JA, JS, JE, ADM_gall_in, ADM_imax, ADM_lall, &
+         KA, 1, KA, IA, 1, IA, JA, 1, JA, ADM_gall_in, ADM_imax, ADM_lall, &
          RHOU(:,:,:,:), RHOV(:,:,:,:), MOMZ(:,:,:,:),              & ! [IN]
          GSGAM2(:,:,:), GSGAM2h(:,:,:),                            & ! [IN]
          rhogvx(:,:,:), rhogvy(:,:,:), rhogvz(:,:,:), rhogw(:,:,:) ) ! [OUT]
@@ -1113,27 +1113,28 @@ contains
     integer, parameter :: k0 = ADM_KNONE
 
     real(RP) :: rhovx, rhovy, rhovz
-    integer :: k, i, j, l, ij
+    integer :: k, i, j, l, ij, ij2
 
     !$omp parallel
     do l = 1, LALL
-    !$omp do private(ij,rhovx,rhovy,rhovz)
+    !$omp do private(ij,ij2,rhovx,rhovy,rhovz)
     do j = JS, JE
     do i = IS, IE
-       ij = i + (j - 1) * IALL
+       ij  = i + (j - 1) * IALL
+       ij2 = i + 1 + j * (IALL+1)
        do k = KS, KE
           rhovx = rhogvx(ij,k,l) / GSGAM2(ij,k,l)
           rhovy = rhogvy(ij,k,l) / GSGAM2(ij,k,l)
           rhovz = rhogvz(ij,k,l) / GSGAM2(ij,k,l)
-          RHOU(k,i,j,l) = rhovx * GMTR_p(ij,k0,l,GMTR_p_IX) &
-                        + rhovy * GMTR_p(ij,k0,l,GMTR_p_IY) &
-                        + rhovz * GMTR_p(ij,k0,l,GMTR_p_IZ)
-          RHOV(k,i,j,l) = rhovx * GMTR_p(ij,k0,l,GMTR_p_JX) &
-                        + rhovy * GMTR_p(ij,k0,l,GMTR_p_JY) &
-                        + rhovz * GMTR_p(ij,k0,l,GMTR_p_JZ)
+          RHOU(k,i,j,l) = rhovx * GMTR_p(ij2,k0,l,GMTR_p_IX) &
+                        + rhovy * GMTR_p(ij2,k0,l,GMTR_p_IY) &
+                        + rhovz * GMTR_p(ij2,k0,l,GMTR_p_IZ)
+          RHOV(k,i,j,l) = rhovx * GMTR_p(ij2,k0,l,GMTR_p_JX) &
+                        + rhovy * GMTR_p(ij2,k0,l,GMTR_p_JY) &
+                        + rhovz * GMTR_p(ij2,k0,l,GMTR_p_JZ)
        end do
        do k = KS, KE-1
-          MOMZ(k,i,j,l) = rhogw(ij,k+1,l) / GSGAM2h(ij,k,l)
+          MOMZ(k,i,j,l) = rhogw(ij,k+1,l) / GSGAM2h(ij,k+1,l)
        end do
        MOMZ(KE,i,j,l) = 0.0_RP
     end do
@@ -1175,21 +1176,22 @@ contains
     real(RP), intent(out) :: rhogw (GALL,KA,LALL)
 
     integer, parameter :: k0 = ADM_KNONE
-    integer :: k, i, j, l, ij
+    integer :: k, i, j, l, ij, ij2
 
     !$omp parallel
     do l = 1, LALL
-       !$omp do private(ij)
+       !$omp do private(ij,ij2)
        do k = KS, KE
        do j = JS, JE
        do i = IS, IE
-          ij = i + (j - 1) * IALL
-          rhogvx(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_IX) &
-                           + RHOV(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_JX) ) * GSGAM2(ij,k,l)
-          rhogvy(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_IY) &
-                           + RHOV(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_JY) ) * GSGAM2(ij,k,l)
-          rhogvz(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_IZ) &
-                           + RHOV(k,i,j,l) * GMTR_p(ij,k0,l,GMTR_p_JZ) ) * GSGAM2(ij,k,l)
+          ij  = i + (j - 1) * IALL
+          ij2 = i + 1 + j * (IALL+1)
+          rhogvx(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_IX) &
+                           + RHOV(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_JX) ) * GSGAM2(ij,k,l)
+          rhogvy(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_IY) &
+                           + RHOV(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_JY) ) * GSGAM2(ij,k,l)
+          rhogvz(ij,k,l) = ( RHOU(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_IZ) &
+                           + RHOV(k,i,j,l) * GMTR_p(ij2,k0,l,GMTR_p_JZ) ) * GSGAM2(ij,k,l)
        end do
        end do
        end do
@@ -1200,6 +1202,13 @@ contains
           ij = i + (j - 1) * IALL
           rhogw(ij,k,l) = MOMZ(k-1,i,j,l) * GSGAM2h(ij,k,l)
        end do
+       end do
+       end do
+       !$omp do private(ij)
+       do j = JS, JE
+       do i = IS, IE
+          ij = i + (j - 1) * IALL
+          rhogw(ij,KS,l) = 0.0_RP
        end do
        end do
     end do

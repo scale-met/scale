@@ -191,9 +191,8 @@ contains
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
 
-#ifdef DEBUG
-    !LOG_INFO("PROF_rapstart",*) '<DEBUG> [PROF] ', rapname, PROF_rapnstr(id)
-#endif
+    !LOG_INFO("PROF_rapstart",'(1x,A,I8)') rapname, PROF_rapnstr(id)
+    !call flush(IO_FID_LOG)
 
 #ifdef FAPP
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
