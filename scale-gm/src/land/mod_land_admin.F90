@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_land_admin
   !-----------------------------------------------------------------------------
   !
@@ -15,7 +16,6 @@ module mod_land_admin
   use scale_precision
   use scale_io
   use scale_prof
-  use scale_debug
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,17 +24,22 @@ module mod_land_admin
   !++ Public procedure
   !
   public :: LAND_ADMIN_setup
-  public :: LAND_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,                public :: LAND_do   = .true. ! main switch for the model
-
-  character(len=H_SHORT), public :: LAND_TYPE = 'NONE'
-
-  logical,                public :: LAND_sw
+  character(len=H_SHORT), public :: LAND_DYN_TYPE = 'NONE'
+                                                  ! 'OFF'
+                                                  ! 'BUCKET'
+                                                  ! 'INIT'
+  character(len=H_SHORT), public :: LAND_SFC_TYPE = 'SKIN'
+                                                  ! 'FIXED-TEMP'
+  character(len=H_SHORT), public :: SNOW_TYPE     = 'NONE'
+                                                  ! 'OFF'
+                                                  ! 'KY90'
+  logical,                public :: LAND_do
+  logical,                public :: SNOW_sw
 
   !-----------------------------------------------------------------------------
   !
@@ -53,65 +58,56 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_LAND / &
-       LAND_do,  &
-       LAND_TYPE
+    namelist / PARAM_LAND / &
+       LAND_DYN_TYPE, &
+       LAND_SFC_TYPE, &
+       SNOW_TYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[LAND] / Origin[SCALE-RM]'
+    LOG_NEWLINE
+    LOG_INFO("LAND_ADMIN_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_ADMIN_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND. Check!'
+       LOG_ERROR("LAND_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_LAND. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND)
+    LOG_NML(PARAM_LAND)
 
     !-----< module component check >-----
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land model components ***'
+    LOG_NEWLINE
+    LOG_INFO("LAND_ADMIN_setup",*) 'Land model components '
 
-    if ( LAND_TYPE == 'OFF' .OR. LAND_TYPE == 'NONE' ) then
-       LAND_do = .false. ! force off
+    if ( LAND_DYN_TYPE /= 'OFF' .AND. LAND_DYN_TYPE /= 'NONE' ) then
+       LOG_INFO_CONT(*) 'Land model           : ON, ', trim(LAND_DYN_TYPE)
+       LAND_do = .true.
+    else
+       LOG_INFO_CONT(*) 'Land model           : OFF'
+       LAND_do = .false.
     endif
 
     if ( LAND_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : ON'
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Land  model     : OFF'
-    endif
 
-    if ( LAND_TYPE /= 'OFF' .AND. LAND_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : ON, ', trim(LAND_TYPE)
-       LAND_sw = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Land  physics : OFF'
-       LAND_sw = .false.
-    endif
+       if ( SNOW_TYPE /= 'OFF' .AND. SNOW_TYPE /= 'NONE' ) then
+          LOG_INFO_CONT(*) '+ Snow  physics      : ON, ', trim(SNOW_TYPE)
+          SNOW_sw = .true.
+       else
+          LOG_INFO_CONT(*) '+ Snow  physics      : OFF'
+          SNOW_sw = .false.
+       endif
+
+       LOG_INFO_CONT(*) '+ Land surface model : ', trim(LAND_SFC_TYPE)
+
+    end if
 
     return
   end subroutine LAND_ADMIN_setup
-
-  !-----------------------------------------------------------------------------
-  !> Get name of scheme for each component
-  subroutine LAND_ADMIN_getscheme( &
-       scheme_name     )
-    implicit none
-
-    character(len=H_SHORT), intent(out) :: scheme_name
-    !---------------------------------------------------------------------------
-
-    scheme_name = LAND_TYPE
-
-    return
-  end subroutine LAND_ADMIN_getscheme
 
 end module mod_land_admin

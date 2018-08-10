@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_urban_admin
   !-----------------------------------------------------------------------------
   !
@@ -15,7 +16,6 @@ module mod_urban_admin
   use scale_precision
   use scale_io
   use scale_prof
-  use scale_debug
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,17 +24,20 @@ module mod_urban_admin
   !++ Public procedure
   !
   public :: URBAN_ADMIN_setup
-  public :: URBAN_ADMIN_getscheme
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical,                public :: URBAN_do   = .true. ! main switch for the model
+  logical,                public :: URBAN_do   = .true.  ! main switch for the model
+  logical,                public :: URBAN_land = .false. ! urban is handled as a land use type
 
-  character(len=H_SHORT), public :: URBAN_TYPE = 'NONE'
-
-  logical,                public :: URBAN_sw
+  character(len=H_SHORT), public :: URBAN_DYN_TYPE = 'NONE'
+                                                   ! 'OFF'
+                                                   ! 'LAND'
+                                                   ! 'KUSAKA01'
+  character(len=H_SHORT), public :: URBAN_SFC_TYPE = 'NONE'
+                                                   ! 'KUSAKA01'
 
   !-----------------------------------------------------------------------------
   !
@@ -53,64 +56,43 @@ contains
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_URBAN / &
-       URBAN_do,  &
-       URBAN_TYPE
+    namelist / PARAM_URBAN / &
+       URBAN_DYN_TYPE
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[ADMIN] / Categ[URBAN] / Origin[SCALE-RM]'
+    LOG_NEWLINE
+    LOG_INFO("URBAN_ADMIN_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("URBAN_ADMIN_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN. Check!'
+       LOG_ERROR("URBAN_ADMIN_setup",*) 'Not appropriate names in namelist PARAM_URBAN. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN)
+    LOG_NML(PARAM_URBAN)
 
     !-----< module component check >-----
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban model components ***'
+    LOG_NEWLINE
+    LOG_INFO("URBAN_ADMIN_setup",*) 'Urban model components '
 
-    if ( URBAN_TYPE == 'OFF' .OR. URBAN_TYPE == 'NONE' ) then
-       URBAN_do = .false. ! force off
-    endif
-
-    if ( URBAN_do ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : ON'
+    if ( URBAN_DYN_TYPE == 'LAND' ) then
+       LOG_INFO_CONT(*) 'Urban model : OFF (Land model is used for urban)'
+       URBAN_do   = .false.
+       URBAN_land = .true.
+    else if ( URBAN_DYN_TYPE /= 'OFF' .AND. URBAN_DYN_TYPE /= 'NONE' ) then
+       LOG_INFO_CONT(*) 'Urban model : ON, ', trim(URBAN_DYN_TYPE)
+       URBAN_do = .true.
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Urban model     : OFF'
-    endif
-
-    if ( URBAN_TYPE /= 'OFF' .AND. URBAN_TYPE /= 'NONE' ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : ON, ', trim(URBAN_TYPE)
-       URBAN_sw = .true.
-    else
-       if( IO_L ) write(IO_FID_LOG,*) '*** + Urban physics : OFF'
-       URBAN_sw = .false.
+       LOG_INFO_CONT(*) 'Urban model : OFF'
+       URBAN_do = .false.
     endif
 
     return
   end subroutine URBAN_ADMIN_setup
-
-  !-----------------------------------------------------------------------------
-  !> Get name of scheme for each component
-  subroutine URBAN_ADMIN_getscheme( &
-       scheme_name     )
-    implicit none
-
-    character(len=H_SHORT), intent(out) :: scheme_name
-    !---------------------------------------------------------------------------
-
-    scheme_name = URBAN_TYPE
-
-    return
-  end subroutine URBAN_ADMIN_getscheme
 
 end module mod_urban_admin
