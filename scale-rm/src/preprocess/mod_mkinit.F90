@@ -1157,6 +1157,9 @@ contains
        EPS => CONST_EPS
     use scale_atmos_phy_tb, only: &
        I_TKE
+    use mod_atmos_phy_bl_vars, only: &
+       QS_BL => QS, &
+       QE_BL => QE
     implicit none
 
     real(RP) :: TKE_CONST
@@ -1186,6 +1189,16 @@ contains
        do i = 1, IA
        do k = 1, KA
           QTRC(k,i,j,I_TKE) = TKE_CONST
+       enddo
+       enddo
+       enddo
+    end if
+    if ( QS_BL > 0 ) then
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, KA
+          QTRC(k,i,j,QS_BL) = TKE_CONST
+          QTRC(k,i,j,QS_BL+1:QE_BL) = 0.0_RP
        enddo
        enddo
        enddo

@@ -52,6 +52,7 @@ contains
     use scale_tracer, only: &
        TRACER_regist
     use scale_atmos_phy_bl_mynn, only: &
+       ATMOS_PHY_BL_MYNN_tracer_setup, &
        ATMOS_PHY_BL_MYNN_NTRACER, &
        ATMOS_PHY_BL_MYNN_NAME, &
        ATMOS_PHY_BL_MYNN_DESC, &
@@ -60,7 +61,7 @@ contains
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
     use mod_atmos_phy_bl_vars, only: &
-       I_TKE
+       QS, QE
     implicit none
     !---------------------------------------------------------------------------
 
@@ -70,12 +71,14 @@ contains
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
+          call ATMOS_PHY_BL_MYNN_tracer_setup
           call TRACER_regist( &
-               I_TKE, &
+               QS, &
                ATMOS_PHY_BL_MYNN_NTRACER, &
                ATMOS_PHY_BL_MYNN_NAME,    &
                ATMOS_PHY_BL_MYNN_DESC,    &
                ATMOS_PHY_BL_MYNN_UNITS    )
+          QE = QS + ATMOS_PHY_BL_MYNN_NTRACER - 1
        case default
           LOG_ERROR("ATMOS_PHY_BL_driver_tracer_setup",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
           call PRC_abort
@@ -160,7 +163,7 @@ contains
        RHOQ_t => RHOQ_tp, &
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
-       I_TKE, &
+       QS, QE, &
        RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
        RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
        RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
@@ -170,6 +173,7 @@ contains
        SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
        SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
        SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
+       SFLX_QV => ATMOS_PHY_SF_SFLX_QV, &
        l_mo    => ATMOS_PHY_SF_l_mo
     implicit none
 
@@ -188,7 +192,7 @@ contains
 
     if ( update_flag ) then
 
-       RHOQ_t_BL = 0.0_RP
+       RHOQ_t_BL(:,:,:,:) = 0.0_RP
 
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
@@ -204,18 +208,19 @@ contains
           end do
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               DENS(:,:,:), U(:,:,:), V(:,:,:),                      & ! (in)
-               POTT(:,:,:), QTRC(:,:,:,I_TKE),                       & ! (in)
-               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                 & ! (in)
-               QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                    & ! (in)
-               POTL(:,:,:), POTV(:,:,:),                             & ! (in)
-               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), l_mo(:,:),  & ! (in)
-               CZ(:,:,:), FZ(:,:,:), dt_BL,                          & ! (in)
-               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                   & ! (out)
-               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,I_TKE),             & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                  ) ! (out)
+               DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
+               POTT(:,:,:), QTRC(:,:,:,QS:QE),                         & ! (in)
+               PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
+               QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
+               POTL(:,:,:), POTV(:,:,:),                               & ! (in)
+               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
+               l_mo(:,:),                                              & ! (in)
+               CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
+               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                     & ! (out)
+               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),               & ! (out)
+               Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)
           do iq = 1, QA
-             if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_TKE ) cycle
+             if ( ( .not. TRACER_ADVC(iq) ) .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
@@ -227,7 +232,7 @@ contains
        end select
 
        call FILE_HISTORY_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
-       call FILE_HISTORY_in( Kh(:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+       call FILE_HISTORY_in( Kh(:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
 
        call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
        call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
