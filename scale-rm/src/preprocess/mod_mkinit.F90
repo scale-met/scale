@@ -1504,8 +1504,6 @@ contains
 
     call flux_setup
 
-    call ocean_setup
-
     return
   end subroutine MKINIT_planestate
 
