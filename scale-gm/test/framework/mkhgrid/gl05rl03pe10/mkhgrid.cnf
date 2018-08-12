@@ -8,9 +8,9 @@
  PRC_RGN_level = 3,
 /
 
-&ADMPARAM
-    glevel      = 5,
-    vlayer      = 1,
+&PARAM_ATMOS_GRID_ICOA_INDEX
+ GRID_LEVEL = 5,
+ KMAX = 1,
 /
 
 &PARAM_MKGRD
