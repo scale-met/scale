@@ -4,11 +4,13 @@
 #
 ################################################################################
 
+&PARAM_PRC_ICOA
+ PRC_RGN_level = 1,
+/
+
 &ADMPARAM
     glevel      = 6,
-    rlevel      = 1,
     vlayer      = 1,
-    rgnmngfname = "rl01-prc40.info",
 /
 
 &PARAM_MKGRD

@@ -8,11 +8,13 @@
  IO_LOG_ALLNODE = .false.,
 /
 
+&PARAM_PRC_ICOA
+ PRC_RGN_level = 0,
+/
+
 &ADMPARAM
     glevel      = 5,
-    rlevel      = 0,
     vlayer      = 30,
-    rgnmngfname = "rl00-prc10.info",
 /
 
 &GRDPARAM
