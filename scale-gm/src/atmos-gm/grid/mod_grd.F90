@@ -869,7 +869,7 @@ contains
     !--- send information of grid around south pole from regular region
 
     ! find region which has the south pole
-    do l = 1, PRC_RGN_total
+    do l = PRC_RGN_total, 1, -1
        if ( PRC_RGN_vert_num(I_S,l) == PRC_RGN_vlink ) then
           do n = 1, PRC_RGN_vlink
              rgntab(n) = PRC_RGN_vert_tab(I_RGNID,I_S,l,n)
