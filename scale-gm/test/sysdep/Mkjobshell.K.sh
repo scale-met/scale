@@ -112,7 +112,8 @@ layerfile_dir="./." \
 llmap_base="./llmap" \
 outfile_dir="../" \
 -lon_swap \
--comm_smallchunk
+-comm_smallchunk \
+-output_netcdf
 
 ################################################################################
 EOFICO2LL1

@@ -123,7 +123,8 @@ mnginfo="./${MNGINFO}" \
 layerfile_dir="./zaxis" \
 llmap_base="./llmap" \
 -lon_swap \
--comm_smallchunk
+-comm_smallchunk \
+-output_netcdf
 
 ################################################################################
 EOFICO2LL2
