@@ -75,22 +75,35 @@ contains
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
-    use scale_atmos_grid_icoA_index
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_setup
+    use scale_atmos_grid_icoA_index, only: &
+       ATMOS_GRID_icoA_INDEX_setup, &
+       ADM_glevel
+    use scale_atmos_grid_icoA, only: &
+       ATMOS_GRID_icoA_setup
+    use scale_ocean_grid_icoA_index, only: &
+       OCEAN_GRID_icoA_INDEX_setup
+    use scale_ocean_grid_icoA, only: &
+       OCEAN_GRID_icoA_setup
+    use scale_land_grid_icoA_index, only: &
+       LAND_GRID_icoA_INDEX_setup
+    use scale_land_grid_icoA, only: &
+       LAND_GRID_icoA_setup
+    use scale_urban_grid_icoA_index, only: &
+       URBAN_GRID_icoA_INDEX_setup
+    use scale_urban_grid_icoA, only: &
+       URBAN_GRID_icoA_setup
     use scale_comm_icoA, only: &
        COMM_setup
     use scale_landuse, only: &
        LANDUSE_setup
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_setup
-    use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_setup
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use scale_bulkflux, only: &
        BULKFLUX_setup
-
-    use mod_adm, only: &
-       ADM_setup
     use mod_fio, only: &
        FIO_setup
     use mod_grd, only: &
@@ -132,11 +145,8 @@ contains
     use mod_embudget, only: &
        embudget_setup, &
        embudget_monitor
-
     use mod_gm_topography, only: &
        TOPO_setup
-    use mod_atmos_admin, only: &
-       ATMOS_admin_setup
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
     use mod_atmos_phy_driver, only: &
@@ -150,6 +160,24 @@ contains
     use mod_time, only: &
        TIME_RES_ATMOS_PHY_RD, &
        TIME_DOATMOS_PHY_RD
+    use mod_atmos_admin, only: &
+       ATMOS_admin_setup, &
+       ATMOS_do
+    use mod_ocean_admin, only: &
+       OCEAN_admin_setup, &
+       OCEAN_do
+    use mod_land_admin, only: &
+       LAND_admin_setup, &
+       LAND_do
+    use mod_urban_admin, only: &
+       URBAN_admin_setup, &
+       URBAN_do
+    use mod_lake_admin, only: &
+       LAKE_admin_setup, &
+       LAKE_do
+    use mod_cpl_admin, only: &
+       CPL_admin_setup, &
+       CPL_sw
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -188,7 +216,7 @@ contains
     !###########################################################################
     ! profiler start
     call PROF_setprefx('INIT')
-    call PROF_rapstart('Initialize',0)
+    call PROF_rapstart('Initialize', 0)
 
     ! setup constants
     call CONST_setup
@@ -200,11 +228,34 @@ contains
     ! setup random number
     call RANDOM_setup
 
-    !---< admin module setup >---
-    call ADM_setup
-
     ! setup submodel administrator
     call ATMOS_admin_setup
+    call OCEAN_admin_setup
+    call LAND_admin_setup
+    call URBAN_admin_setup
+    call LAKE_admin_setup
+    call CPL_admin_setup
+
+    ! setup horizontal/vertical grid coordinates (icosahedral,idealized)
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_icoA_INDEX_setup
+       call ATMOS_GRID_icoA_setup
+    endif
+
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_icoA_INDEX_setup
+       !call OCEAN_GRID_icoA_setup
+    endif
+
+    if ( LAND_do ) then
+       call LAND_GRID_icoA_INDEX_setup
+       !call LAND_GRID_icoA_setup
+    endif
+
+    if ( URBAN_do ) then
+       call URBAN_GRID_icoA_INDEX_setup
+       !call URBAN_GRID_icoA_setup
+    endif
 
     !---< tracer setup >---
     call ATMOS_HYDROMETEOR_setup

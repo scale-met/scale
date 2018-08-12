@@ -36,7 +36,7 @@ $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o: ./atmosphere/grid/scale_atmos_grid_
 $(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o: ./atmosphere/grid/scale_atmos_grid_cartesC_metric.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_mapprojection.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_topography.o $(OBJ_DIR)/scale_vector.o
 $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o: ./atmosphere/grid/scale_atmos_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC.o $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_comm_cartesC.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_interp_vert.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_landuse.o $(OBJ_DIR)/scale_mapprojection.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_topography.o
 $(OBJ_DIR)/scale_atmos_grid_icoA.o: ./atmosphere/grid/scale_atmos_grid_icoA.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
-$(OBJ_DIR)/scale_atmos_grid_icoA_index.o: ./atmosphere/grid/scale_atmos_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o
+$(OBJ_DIR)/scale_atmos_grid_icoA_index.o: ./atmosphere/grid/scale_atmos_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_prc_icoA.o $(OBJ_DIR)/scale_precision.o
 $(OBJ_DIR)/scale_atmos_hydrometeor.o: ./atmosphere/common/scale_atmos_hydrometeor.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_tracer.o
 $(OBJ_DIR)/scale_atmos_hydrostatic.o: ./atmosphere/common/scale_atmos_hydrostatic.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_hydrometeor.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_statistics.o
 $(OBJ_DIR)/scale_atmos_phy_ae_kajino13.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_kajino13.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_aerosol.o $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
@@ -93,6 +93,8 @@ $(OBJ_DIR)/scale_land_dyn_bucket.o: ./land/dynamics/scale_land_dyn_bucket.F90 $(
 $(OBJ_DIR)/scale_land_grid_cartesC.o: ./land/grid/scale_land_grid_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_land_grid_cartesC_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_land_grid_cartesC_index.o: ./land/grid/scale_land_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_land_grid_cartesC_real.o: ./land/grid/scale_land_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_land_grid_cartesC.o $(OBJ_DIR)/scale_land_grid_cartesC_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_land_grid_icoA.o: ./land/grid/scale_land_grid_icoA.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_land_grid_icoA_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_land_grid_icoA_index.o: ./land/grid/scale_land_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_land_phy_matsiro.o: ./land/physics/scale_land_phy_matsiro.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_debug.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_land_grid_cartesC_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_land_phy_snow_diagnos.o: ./land/physics/scale_land_phy_snow_diagnos.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_bulkflux.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_land_phy_snow_ky90.o: ./land/physics/scale_land_phy_snow_ky90.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_saturation.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_cpl_sfc_index.o $(OBJ_DIR)/scale_file_history.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
@@ -106,6 +108,8 @@ $(OBJ_DIR)/scale_ocean_dyn_slab.o: ./ocean/dynamics/scale_ocean_dyn_slab.F90 $(D
 $(OBJ_DIR)/scale_ocean_grid_cartesC.o: ./ocean/grid/scale_ocean_grid_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o: ./ocean/grid/scale_ocean_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_grid_cartesC_real.o: ./ocean/grid/scale_ocean_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_grid_cartesC.o $(OBJ_DIR)/scale_ocean_grid_cartesC_index.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_ocean_grid_icoA.o: ./ocean/grid/scale_ocean_grid_icoA.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_ocean_grid_icoA_index.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
+$(OBJ_DIR)/scale_ocean_grid_icoA_index.o: ./ocean/grid/scale_ocean_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_albedo.o: ./ocean/physics/scale_ocean_phy_albedo.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_cpl_sfc_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.o: ./ocean/physics/scale_ocean_phy_albedo_nakajima00.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_cpl_sfc_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_ocean_phy_ice_simple.o: ./ocean/physics/scale_ocean_phy_ice_simple.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_calendar.o $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_file_external_input.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
@@ -130,6 +134,8 @@ $(OBJ_DIR)/scale_urban_dyn_kusaka01.o: ./urban/dynamics/scale_urban_dyn_kusaka01
 $(OBJ_DIR)/scale_urban_grid_cartesC.o: ./urban/grid/scale_urban_grid_cartesC.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
 $(OBJ_DIR)/scale_urban_grid_cartesC_index.o: ./urban/grid/scale_urban_grid_cartesC_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_urban_grid_cartesC_real.o: ./urban/grid/scale_urban_grid_cartesC_real.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_cartesC_index.o $(OBJ_DIR)/scale_atmos_grid_cartesC_real.o $(OBJ_DIR)/scale_file_cartesC.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_urban_grid_cartesC.o $(OBJ_DIR)/scale_urban_grid_cartesC_index.o
+$(OBJ_DIR)/scale_urban_grid_icoA.o: ./urban/grid/scale_urban_grid_icoA.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_file.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o $(OBJ_DIR)/scale_urban_grid_icoA_index.o
+$(OBJ_DIR)/scale_urban_grid_icoA_index.o: ./urban/grid/scale_urban_grid_icoA_index.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_atmos_grid_icoA_index.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_prc.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 $(OBJ_DIR)/scale_vector.o: ./common/scale_vector.F90 $(DEPENDLIB) $(OBJ_DIR)/scale_const.o $(OBJ_DIR)/scale_io.o $(OBJ_DIR)/scale_precision.o $(OBJ_DIR)/scale_prof.o
 
 MODS =	\
@@ -228,6 +234,8 @@ MODS =	\
 	$(OBJ_DIR)/scale_land_grid_cartesc.mod	\
 	$(OBJ_DIR)/scale_land_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_land_grid_cartesc_real.mod	\
+	$(OBJ_DIR)/scale_land_grid_icoa.mod	\
+	$(OBJ_DIR)/scale_land_grid_icoa_index.mod	\
 	$(OBJ_DIR)/scale_land_phy_matsiro.mod	\
 	$(OBJ_DIR)/scale_land_phy_snow_diagnos.mod	\
 	$(OBJ_DIR)/scale_land_phy_snow_ky90.mod	\
@@ -241,6 +249,8 @@ MODS =	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc.mod	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesc_real.mod	\
+	$(OBJ_DIR)/scale_ocean_grid_icoa.mod	\
+	$(OBJ_DIR)/scale_ocean_grid_icoa_index.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.mod	\
 	$(OBJ_DIR)/scale_ocean_phy_ice_simple.mod	\
@@ -265,4 +275,6 @@ MODS =	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc.mod	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc_index.mod	\
 	$(OBJ_DIR)/scale_urban_grid_cartesc_real.mod	\
+	$(OBJ_DIR)/scale_urban_grid_icoa.mod	\
+	$(OBJ_DIR)/scale_urban_grid_icoa_index.mod	\
 	$(OBJ_DIR)/scale_vector.mod

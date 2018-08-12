@@ -23,10 +23,10 @@ program mkllmap
      PRC_ICOA_setup
   use scale_const, only: &
      CONST_setup
+  use scale_atmos_grid_icoA_index, only: &
+     ATMOS_GRID_icoA_INDEX_setup
   use scale_comm_icoA, only: &
      COMM_setup
-  use mod_adm, only: &
-     ADM_setup
   use mod_fio, only: &
      FIO_setup
   use mod_grd, only: &
@@ -81,8 +81,8 @@ program mkllmap
   !--- < cnst module setup > ---
   call CONST_setup
 
-  !--- < admin module setup > ---
-  call ADM_setup
+  ! setup horizontal/vertical grid coordinates (icosahedral,idealized)
+  call ATMOS_GRID_icoA_INDEX_setup
 
   !---< I/O module setup >---
   call FIO_setup

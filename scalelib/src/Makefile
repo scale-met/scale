@@ -171,6 +171,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_ocean_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_slab.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_offline.o	\
 	$(OBJ_DIR)/scale_ocean_phy_ice_simple.o	\
@@ -183,6 +185,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_land_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_land_dyn_bucket.o	\
 	$(OBJ_DIR)/scale_land_phy_matsiro.o	\
 	$(OBJ_DIR)/scale_land_phy_snow_diagnos.o	\
@@ -190,6 +194,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_urban_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_urban_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_urban_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_urban_dyn_kusaka01.o	\
 	$(OBJ_DIR)/scale_bulkflux.o	\
 	$(OBJ_DIR)/scale_landuse.o	\
