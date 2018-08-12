@@ -324,8 +324,8 @@ contains
     use scale_const, only: &
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only : &
        VMTR_getIJ_PHI
     use mod_vintrpl, only: &
@@ -359,7 +359,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
           pre_bs_pl(:,k,l) = pre_ref(k)
@@ -377,7 +377,7 @@ contains
     rho_bs(:,:,l) = pre_bs(:,:,l) / tem_bs(:,:,l) / ( ( 1.0_RP-qv_bs(:,:,l) ) * Rdry &
                                                     + (        qv_bs(:,:,l) ) * Rvap )
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        rho_bs_pl(:,:,l) = pre_bs_pl(:,:,l) / tem_bs_pl(:,:,l) / ( ( 1.0_RP-qv_bs_pl(:,:,l) ) * Rdry &
                                                                 + (        qv_bs_pl(:,:,l) ) * Rvap )
     endif
@@ -391,7 +391,7 @@ contains
                            VMTR_PHI(:,:,l)  ) ! [IN]
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           call BNDCND_thermo( ADM_gall_pl,        & ! [IN]
                               rho_bs_pl  (:,:,l), & ! [INOUT]

@@ -64,6 +64,8 @@ contains
        FPM_alive,       &
        FPM_Polling,     &
        FPM_POLLING_FREQ
+    use scale_prc_icoA, only: &
+       PRC_ICOA_setup
     use scale_const, only: &
        CONST_setup,            &
        CONST_THERMODYN_TYPE,   &
@@ -74,6 +76,8 @@ contains
     use scale_random, only: &
        RANDOM_setup
     use scale_atmos_grid_icoA_index
+    use scale_comm_icoA, only: &
+       COMM_setup
     use scale_landuse, only: &
        LANDUSE_setup
     use scale_atmos_thermodyn, only: &
@@ -89,8 +93,6 @@ contains
        ADM_setup
     use mod_fio, only: &
        FIO_setup
-    use mod_comm, only: &
-       COMM_setup
     use mod_grd, only: &
        GRD_setup
     use mod_gmtr, only: &
@@ -177,8 +179,8 @@ contains
     ! setup Log
     call IO_LOG_setup( myrank, ismaster )
 
-    !---< admin module setup >---
-    call ADM_setup
+    ! setup process
+    call PRC_ICOA_setup
 
     ! setup PROF
     call PROF_setup
@@ -197,6 +199,9 @@ contains
 
     ! setup random number
     call RANDOM_setup
+
+    !---< admin module setup >---
+    call ADM_setup
 
     ! setup submodel administrator
     call ATMOS_admin_setup

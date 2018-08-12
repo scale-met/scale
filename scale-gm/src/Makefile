@@ -71,7 +71,6 @@ OBJS =	\
 	mod_io_param.o       \
 	mod_adm.o            \
 	mod_fio.o            \
-	mod_comm.o           \
 	mod_ideal_topo.o     \
 	mod_grd.o            \
 	mod_gmtr.o           \

@@ -333,8 +333,8 @@ contains
        QLE, &
        QIS, &
        QIE
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_dgz,  &
        GRD_ZSFC, &
@@ -730,7 +730,7 @@ contains
 
        end do
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
 
           do l = 1, ADM_lall_pl
 

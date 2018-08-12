@@ -86,8 +86,8 @@ contains
        thubern_lim                  ) !--- IN    : switch of thubern limiter
     use scale_const, only: &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_rdgz, &
        GRD_afac, &
@@ -217,7 +217,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
           do g = 1, ADM_gall_pl
@@ -271,7 +271,7 @@ contains
           q_h(:,ADM_kmin-1,l) = 0.0_RP
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              q_pl(:,:,l) = rhogq_pl(:,:,l,iq) / rhog_in_pl(:,:,l)
 
@@ -304,7 +304,7 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              q_h_pl(:,ADM_kmin  ,l) = 0.0_RP
              q_h_pl(:,ADM_kmax+1,l) = 0.0_RP
@@ -335,7 +335,7 @@ contains
        rhog(:,ADM_kmax+1,l) = rhog_in(:,ADM_kmax,l)
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax
           do g = 1, ADM_gall_pl
@@ -365,7 +365,7 @@ contains
        rhogvz(:,:,l) = rhogvz_mean(:,:,l) * VMTR_RGAM(:,:,l)
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           d_pl(:,:,l) = b2 * frhog_pl(:,:,l) / rhog_pl(:,:,l) * dt
 
@@ -405,7 +405,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        g = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -422,7 +422,7 @@ contains
     do iq = 1, vmax
 
        q(:,:,:) = rhogq(:,:,:,iq) / rhog(:,:,:)
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           q_pl(:,:,:) = rhogq_pl(:,:,:,iq) / rhog_pl(:,:,:)
        endif
 
@@ -458,7 +458,7 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           g = ADM_gslf_pl
 
           do l = 1, ADM_lall_pl
@@ -489,7 +489,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        g = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -521,7 +521,7 @@ contains
        ck(:,ADM_kmax+1,l,2) = 0.0_RP
     enddo ! l LOOP
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           d_pl(:,:,l) = b3 * frhog_pl(:,:,l) * dt / rhog_pl(:,:,l)
 
@@ -549,7 +549,7 @@ contains
           q_h(:,ADM_kmin-1,l) = 0.0_RP
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              q_pl(:,:,l) = rhogq_pl(:,:,l,iq) / rhog_pl(:,:,l)
 
@@ -587,7 +587,7 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              q_h_pl(:,ADM_kmin  ,l) = 0.0_RP
              q_h_pl(:,ADM_kmax+1,l) = 0.0_RP
@@ -625,9 +625,9 @@ contains
        dt                 )
     use scale_const, only: &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl, &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl, &
+       PRC_RGN_have_sgp
     use mod_grd, only: &
        GRD_xr,   &
        GRD_xr_pl
@@ -729,7 +729,7 @@ contains
                                       + rhovz(ijp1  ,k,l) * GMTR_t(n,K0,l,TJ,W3)
        enddo
 
-       if ( ADM_have_sgp(l) ) then
+       if ( PRC_RGN_have_sgp(l) ) then
           rhot_TI  (suf(ADM_gmin-1,ADM_gmin-1)) = rhot_TJ  (suf(ADM_gmin,ADM_gmin-1))
           rhovxt_TI(suf(ADM_gmin-1,ADM_gmin-1)) = rhovxt_TJ(suf(ADM_gmin,ADM_gmin-1))
           rhovyt_TI(suf(ADM_gmin-1,ADM_gmin-1)) = rhovyt_TJ(suf(ADM_gmin,ADM_gmin-1))
@@ -812,14 +812,14 @@ contains
           GRD_xc(n,k,l,AJ,ZDIR) = GRD_xr(n,K0,l,AJ,ZDIR) - rhovzt2 * rrhoa2 * dt * 0.5_RP
        enddo
 
-       if ( ADM_have_sgp(l) ) then
+       if ( PRC_RGN_have_sgp(l) ) then
           flx_h(suf(ADM_gmin,ADM_gmin),k,l,6) = 0.0_RP
        endif
 
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -881,10 +881,10 @@ contains
        q,      q_pl,     &
        cmask,  cmask_pl, &
        GRD_xc, GRD_xc_pl )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_x,   &
        GRD_x_pl
@@ -1163,7 +1163,7 @@ contains
        !$omp end parallel
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1198,8 +1198,8 @@ contains
     use scale_const, only: &
        BIG => CONST_HUGE, &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(inout) :: q_h   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -1276,7 +1276,7 @@ contains
 
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
 
           do k = ADM_kmin, ADM_kmax
@@ -1340,11 +1340,11 @@ contains
        cmask,  cmask_pl )
     use scale_const, only: &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl,    &
-       ADM_have_sgp
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl,    &
+       PRC_RGN_have_sgp
     implicit none
 
     real(RP), intent(inout) :: q_a     (ADM_gall   ,ADM_kall,ADM_lall   ,6)
@@ -1514,7 +1514,7 @@ contains
                                   + ( 1.0_RP-cmask(n,k,l,3) ) * q_max_AJ
        enddo
 
-       if ( ADM_have_sgp(l) ) then
+       if ( PRC_RGN_have_sgp(l) ) then
           n = suf(ADM_gmin-1,ADM_gmin-1)
           ij     = n
           ijp1   = n     + ADM_gall_1d
@@ -1608,7 +1608,7 @@ contains
     Qout(     1:nstart-1,:,:,I_max) = q(     1:nstart-1,:,:)
     Qout(nend+1:ADM_gall,:,:,I_max) = q(nend+1:ADM_gall,:,:)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1702,7 +1702,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl

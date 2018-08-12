@@ -73,6 +73,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_sort.o	\
 	$(OBJ_DIR)/scale_prc.o	\
 	$(OBJ_DIR)/scale_prc_cartesC.o	\
+	$(OBJ_DIR)/scale_prc_icoA.o	\
 	$(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_prof.o	\
 	$(OBJ_DIR)/scale_random.o	\
@@ -88,6 +89,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_monitor_cartesC.o	\
 	$(OBJ_DIR)/scale_comm_cartesC.o	\
 	$(OBJ_DIR)/scale_comm_cartesC_nest.o	\
+	$(OBJ_DIR)/scale_comm_icoA.o	\
 	$(OBJ_DIR)/scale_file.o	\
 	$(OBJ_DIR)/scale_file_cartesC.o	\
 	$(OBJ_DIR)/scale_file_external_input.o	\

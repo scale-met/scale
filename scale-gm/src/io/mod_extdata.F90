@@ -525,7 +525,7 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine data_read( np )
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_var
     use mod_fio, only: &
        FIO_input

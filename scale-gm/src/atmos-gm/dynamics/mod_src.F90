@@ -69,8 +69,8 @@ contains
        grhogw,  grhogw_pl   )
     use scale_const, only: &
        OHM => CONST_OHM
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_rscale, &
        GRD_XDIR,   &
@@ -166,7 +166,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax
           do g = 1, ADM_gall_pl
@@ -261,7 +261,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           !---< coriolis force >
           do k = ADM_kmin, ADM_kmax
@@ -327,8 +327,8 @@ contains
        scl,      scl_pl,      &
        grhogscl, grhogscl_pl, &
        fluxtype               )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_afac, &
        GRD_bfac
@@ -377,7 +377,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -404,7 +404,7 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              do k = ADM_kmin, ADM_kmax+1
              do g = 1, ADM_gall_pl
@@ -430,7 +430,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -468,8 +468,8 @@ contains
        rhogw,  rhogw_pl,  &
        grhog,  grhog_pl,  &
        fluxtype           )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_rdgz
     use mod_oprt, only: &
@@ -581,7 +581,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           !--- Horizontal flux
           do k = 1, ADM_kall
@@ -643,7 +643,7 @@ contains
     enddo
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax
           do g = 1, ADM_gall_pl
@@ -671,8 +671,8 @@ contains
        Pgrad,  Pgrad_pl,  &
        Pgradw, Pgradw_pl, &
        gradtype           )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -748,7 +748,7 @@ contains
     enddo
     !$omp end parallel
 
-    if ( ADM_have_pl) then
+    if ( PRC_have_pl) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -816,7 +816,7 @@ contains
     enddo
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = ADM_kmin, ADM_kmax+1
        do g = 1, ADM_gall_pl
@@ -888,7 +888,7 @@ contains
        enddo
        !$omp end parallel
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              do k = ADM_kmin+1, ADM_kmax
              do g = 1, ADM_gall_pl
@@ -911,7 +911,7 @@ contains
        !$omp parallel workshare
        Pgradw(:,:,:) = 0.0_RP
        !$omp end parallel workshare
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           Pgradw_pl(:,:,:) = 0.0_RP
        endif
 
@@ -930,8 +930,8 @@ contains
        buoiw, buoiw_pl )
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_C2Wfact,    &
        VMTR_C2Wfact_pl
@@ -979,7 +979,7 @@ contains
     enddo
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
           do g = 1, ADM_gall_pl

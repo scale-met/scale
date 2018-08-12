@@ -94,12 +94,12 @@ contains
   !-----------------------------------------------------------------------------
   !> setup lat/lon value of the ico-grid (without mod_gmtr)
   subroutine LATLON_ico_setup
-    use mod_adm, only: &
-       ADM_have_pl
     use scale_vector, only: &
        VECTR_xyz2latlon
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -133,7 +133,7 @@ contains
        enddo
     enddo ! l loop
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
        do l = 1,ADM_lall_pl
           call VECTR_xyz2latlon( GRD_x_pl    (n,k0,l,GRD_XDIR),   & ! [IN]
@@ -160,9 +160,8 @@ contains
        PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
-    use mod_adm, only: &
-       ADM_prc_me,  &
-       ADM_prc_tab
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r
     implicit none
 
     character(len=*), intent(in) :: output_dirname
@@ -278,7 +277,7 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '# of managing llgrid'
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
        if( IO_L ) write(IO_FID_LOG,*) 'region=', rgnid, ', llgrid=', nmax_llgrid_rgn(l)
 
@@ -366,7 +365,7 @@ contains
 
     ! output relation map
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
        call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid,isrgn=.true.)
 
@@ -399,7 +398,7 @@ contains
 
     ! ASCII output for debug
 !    do l = 1, ADM_lall
-!       rgnid = ADM_prc_tab(l,ADM_prc_me)
+!       rgnid = PRC_RGN_l2r(l)
 !
 !       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid,isrgn=.true.)
 !
@@ -435,11 +434,11 @@ contains
        PRC_abort
     use scale_const, only: &
        PI => CONST_PI
-    use mod_adm, only: &
-       ADM_prc_tab,       &
-       ADM_prc_me,        &
-       ADM_rgnid_npl_mng, &
-       ADM_rgnid_spl_mng
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r,    &
+       PRC_RGN_rgn4pl, &
+       I_NPL,          &
+       I_SPL
     use scale_vector, only: &
        VECTR_triangle, &
        VECTR_cross,    &
@@ -701,11 +700,11 @@ contains
     enddo ! l LOOP
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
-       if    ( rgnid == ADM_rgnid_npl_mng ) then
+       if    ( rgnid == PRC_RGN_rgn4pl(I_NPL) ) then
           ij = suf(ADM_gmin  ,ADM_gmax+1)
-       elseif( rgnid == ADM_rgnid_spl_mng ) then
+       elseif( rgnid == PRC_RGN_rgn4pl(I_SPL) ) then
           ij = suf(ADM_gmax+1,ADM_gmin  )
        else
           cycle
@@ -765,14 +764,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine LL_outputsample
     use scale_prc, only: &
+       PRC_myrank, &
        PRC_abort
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r
+    use scale_comm_icoA, only: &
+       COMM_data_transfer
     use mod_io_param, only: &
        IO_REAL8
-    use mod_adm, only: &
-       ADM_prc_tab,   &
-       ADM_prc_me
-    use mod_comm, only: &
-       COMM_data_transfer
     use mod_fio, only: &
        FIO_output
     implicit none
@@ -790,8 +789,8 @@ contains
     SAMPLE_pl(:,:,:,:) = -999.0_RP
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
-       prc   = ADM_prc_me
+       rgnid = PRC_RGN_l2r(l)
+       prc   = PRC_myrank
 
        do j = ADM_gmin, ADM_gmax
        do i = ADM_gmin, ADM_gmax
@@ -807,7 +806,7 @@ contains
 
     do l = 1, ADM_lall_pl
        rgnid = l
-       prc   = ADM_prc_me
+       prc   = PRC_myrank
 
        do ij = 1, ADM_gall_pl
           SAMPLE_pl(ij,k,l,1) = real(prc,   kind=RP)
@@ -994,7 +993,7 @@ contains
   !-----------------------------------------------------------------------------
 !  subroutine intrpl_2( var_ll, var, var_pl, kmin, kmax )
 !    !
-!    use mod_adm, only :              &
+!    use scale_prc_icoA, only :              &
 !         ADM_prc_me,               &
 !         ADM_prc_pl,               &
 !         ADM_gslf_pl,             &
@@ -1022,7 +1021,7 @@ contains
 !         CONST_UNDEF
 !    use mod_oprt, only :           &
 !         OPRT_gradient
-!    use mod_comm, only :               &
+!    use scale_comm_icoA, only :               &
 !         COMM_data_transfer
 !    !
 !    implicit none

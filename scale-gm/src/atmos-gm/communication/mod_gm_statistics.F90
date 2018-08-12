@@ -47,10 +47,10 @@ module mod_gm_statistics
 contains
   !-----------------------------------------------------------------------------
   function GTL_global_sum( var, var_pl ) result( sum_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_sum
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_VOLUME,   &
        VMTR_VOLUME_pl
@@ -75,7 +75,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,        ADM_lall_pl
        do k = ADM_kmin, ADM_kmax
           sum = sum + var_pl(ADM_gslf_pl,k,l) * VMTR_VOLUME_pl(ADM_gslf_pl,k,l)
@@ -90,10 +90,10 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_global_sum_srf( var, var_pl ) result( sum_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_sum
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_gmtr, only: &
        GMTR_area,   &
        GMTR_area_pl
@@ -116,7 +116,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           sum = sum + var_pl(ADM_gslf_pl,ADM_KNONE,l) * GMTR_area_pl(ADM_gslf_pl,l)
        enddo
@@ -129,10 +129,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine GTL_global_sum_eachlayer( var, var_pl, sum_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_sum_eachlayer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_gmtr, only: &
        GMTR_area,   &
        GMTR_area_pl
@@ -162,7 +162,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
           sum(k) = sum(k) + var_pl      (ADM_gslf_pl,k,l)    &
@@ -234,10 +234,10 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_max( var, var_pl, kdim, kstart, kend ) result( vmax_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_max
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     integer,  intent(in) :: kdim
@@ -262,7 +262,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,      ADM_lall_pl
        do k = kstart, kend
           vmax = max( vmax, var_pl(ADM_gslf_pl,k,l) )
@@ -277,10 +277,10 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_max_k( var, var_pl, k ) result( vmax_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_max
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(in) :: var   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -301,7 +301,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,        ADM_lall_pl
           vmax = max( vmax, var_pl(ADM_gslf_pl,k,l) )
        enddo
@@ -314,10 +314,10 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_min( var, var_pl, kdim, kstart, kend, nonzero ) result( vmin_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_min
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     integer,  intent(in) :: kdim
@@ -352,7 +352,7 @@ contains
           enddo
           enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1,      ADM_lall_pl
           do k = kstart, kend
              if (       var_pl(ADM_gslf_pl,k,l) > 0.0_RP &
@@ -382,7 +382,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,      ADM_lall_pl
        do k = kstart, kend
           vmin = min( vmin, var_pl(ADM_gslf_pl,k,l) )
@@ -397,10 +397,10 @@ contains
 
   !-----------------------------------------------------------------------------
   function GTL_min_k( var, var_pl, k ) result( vmin_g )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_Stat_min
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(in) :: var   (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -421,7 +421,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,        ADM_lall_pl
           vmin = min( vmin, var_pl(ADM_gslf_pl,k,l) )
        enddo

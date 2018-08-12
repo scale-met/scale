@@ -18,15 +18,17 @@ program mkhgrid
   use scale_prc, only: &
      PRC_LOCAL_MPIstart, &
      PRC_MPIfinish
+  use scale_prc_icoA, only: &
+     PRC_ICOA_setup
   use scale_const, only: &
      RADIUS => CONST_RADIUS, &
      CONST_setup
+  use scale_comm_icoA, only: &
+     COMM_setup
   use mod_adm, only: &
      ADM_setup
   use mod_fio, only: &
      FIO_setup
-  use mod_comm, only: &
-     COMM_setup
   use mod_grd, only: &
      GRD_input_hgrid,  &
      GRD_output_hgrid, &
@@ -73,6 +75,9 @@ program mkhgrid
   ! setup standard I/O
   call IO_setup( MODELNAME )
   call IO_LOG_setup( myrank, ismaster )
+
+  ! setup process
+  call PRC_ICOA_setup
 
   !---< admin module setup >---
   call ADM_setup

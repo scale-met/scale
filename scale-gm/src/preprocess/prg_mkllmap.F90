@@ -19,14 +19,16 @@ program mkllmap
      PRC_LOCAL_MPIstart, &
      PRC_abort, &
      PRC_MPIfinish
+  use scale_prc_icoA, only: &
+     PRC_ICOA_setup
   use scale_const, only: &
      CONST_setup
+  use scale_comm_icoA, only: &
+     COMM_setup
   use mod_adm, only: &
      ADM_setup
   use mod_fio, only: &
      FIO_setup
-  use mod_comm, only: &
-     COMM_setup
   use mod_grd, only: &
      GRD_setup
   use mod_latlon, only: &
@@ -65,6 +67,9 @@ program mkllmap
   ! setup standard I/O
   call IO_setup( MODELNAME )
   call IO_LOG_setup( myrank, ismaster )
+
+  ! setup process
+  call PRC_ICOA_setup
 
   ! setup PROF
   call PROF_setup

@@ -146,12 +146,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Make standard grid system
   subroutine MKGRD_standard
-    use mod_adm, only: &
-       ADM_prc_tab, &
-       ADM_prc_me
+    use scale_prc_icoA, only: &
+       PRC_RGN_level, &
+       PRC_RGN_l2r,   &
+       I_NPL,         &
+       I_SPL
     use scale_const, only: &
        PI => CONST_PI
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
     implicit none
 
@@ -179,11 +181,11 @@ contains
     alpha2 = 2.0_RP * PI / 5.0_RP
     phi    = asin( cos(alpha2) / (1.0_RP-cos(alpha2) ) )
 
-    rgn_all_1d = 2**ADM_rlevel
+    rgn_all_1d = 2**PRC_RGN_level
     rgn_all    = rgn_all_1d * rgn_all_1d
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
        nmax = 2
        allocate( r0(nmax,nmax,3) )
@@ -229,7 +231,7 @@ contains
           r0(2,2,GRD_ZDIR) = sin(-phi)
        endif
 
-       do rl = 1, ADM_rlevel
+       do rl = 1, PRC_RGN_level
           nmax_prev = nmax
           nmax = 2 * (nmax-1) + 1
 
@@ -260,7 +262,7 @@ contains
        g0(1,2,:) = r0(ir  ,jr+1,:)
        g0(2,2,:) = r0(ir+1,jr+1,:)
 
-       do gl = ADM_rlevel+1, ADM_glevel
+       do gl = PRC_RGN_level+1, ADM_glevel
           nmax_prev = nmax
           nmax = 2 * (nmax-1) + 1
 
@@ -294,13 +296,13 @@ contains
 
     ij = ADM_gslf_pl
 
-    GRD_x_pl(ij,k,ADM_NPL,GRD_XDIR) =  0.0_RP
-    GRD_x_pl(ij,k,ADM_NPL,GRD_YDIR) =  0.0_RP
-    GRD_x_pl(ij,k,ADM_NPL,GRD_ZDIR) =  1.0_RP
+    GRD_x_pl(ij,k,I_NPL,GRD_XDIR) =  0.0_RP
+    GRD_x_pl(ij,k,I_NPL,GRD_YDIR) =  0.0_RP
+    GRD_x_pl(ij,k,I_NPL,GRD_ZDIR) =  1.0_RP
 
-    GRD_x_pl(ij,k,ADM_SPL,GRD_XDIR) =  0.0_RP
-    GRD_x_pl(ij,k,ADM_SPL,GRD_YDIR) =  0.0_RP
-    GRD_x_pl(ij,k,ADM_SPL,GRD_ZDIR) = -1.0_RP
+    GRD_x_pl(ij,k,I_SPL,GRD_XDIR) =  0.0_RP
+    GRD_x_pl(ij,k,I_SPL,GRD_YDIR) =  0.0_RP
+    GRD_x_pl(ij,k,I_SPL,GRD_ZDIR) = -1.0_RP
 
     call COMM_data_transfer( GRD_x(:,:,:,:), GRD_x_pl(:,:,:,:) )
 
@@ -317,10 +319,10 @@ contains
        VECTR_dot,   &
        VECTR_abs,   &
        VECTR_angle
-    use mod_adm, only: &
-       ADM_have_sgp
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_RGN_have_sgp
     use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
@@ -424,7 +426,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_sgp(l) ) then ! pentagon
+          if ( PRC_RGN_have_sgp(l) ) then ! pentagon
              P(:,6,suf(ADM_gmin,ADM_gmin)) = P(:,1,suf(ADM_gmin,ADM_gmin))
           endif
 
@@ -444,7 +446,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_sgp(l) ) then ! pentagon
+          if ( PRC_RGN_have_sgp(l) ) then ! pentagon
              F(:,6,suf(ADM_gmin,ADM_gmin)) = 0.0_RP
 
              ! save value of fixed point
@@ -488,7 +490,7 @@ contains
           enddo
 
           ! restore value of fixed point
-          if ( ADM_have_sgp(l) ) then ! pentagon
+          if ( PRC_RGN_have_sgp(l) ) then ! pentagon
              var(suf(ADM_gmin,ADM_gmin),k0,l,:)         = 0.0_RP
              var(suf(ADM_gmin,ADM_gmin),k0,l,I_Rx:I_Rz) = fixed_point(:)
           endif
@@ -523,10 +525,10 @@ contains
        VECTR_rotation, &
        I_Yaxis,        &
        I_Zaxis
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP) :: g(3)
@@ -574,7 +576,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
           g(:) = GRD_x_pl(ij,k,l,:)
@@ -610,10 +612,10 @@ contains
     use scale_vector, only: &
        VECTR_xyz2latlon, &
        VECTR_latlon2xyz
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP) :: lat, lon, lat_trans
@@ -655,7 +657,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
 
@@ -690,10 +692,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply shrinkng to grid system
   subroutine MKGRD_shrink
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP) :: o(3), g(3), len
@@ -731,7 +733,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
     do ite = 1, MKGRD_shrink_level-1
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
@@ -767,10 +769,10 @@ contains
        VECTR_rotation, &
        I_Yaxis,        &
        I_Zaxis
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP) :: g(3)
@@ -809,7 +811,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l  = 1, ADM_lall_pl
        do ij = 1, ADM_gall_pl
           g(:) = GRD_x_pl(ij,k,l,:)
@@ -836,7 +838,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Arrange gravitational center
   subroutine MKGRD_gravcenter
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
     implicit none
     !---------------------------------------------------------------------------
@@ -864,8 +866,8 @@ contains
        VECTR_cross, &
        VECTR_dot,   &
        VECTR_abs
-    use mod_adm, only: &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        GMTR_p_AREA, &
        GMTR_p,      &
@@ -917,7 +919,7 @@ contains
     do i = ADM_gmin, ADM_gmax
        ij = suf(i,j)
 
-       if (       ADM_have_sgp(l) &
+       if (       PRC_RGN_have_sgp(l) &
             .AND. i == ADM_gmin   &
             .AND. j == ADM_gmin   ) then ! Pentagon
 
@@ -1163,9 +1165,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Make center grid -> vertex grid
   subroutine MKGRD_center2vertex
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
@@ -1213,7 +1215,7 @@ contains
        wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TJ)
        wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TJ) = wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TI)
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,:,suf(ADM_gmin-1,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmin,ADM_gmin-1),ADM_TJ)
        endif
 
@@ -1242,7 +1244,7 @@ contains
 
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1,ADM_lall_pl
@@ -1284,9 +1286,9 @@ contains
   subroutine MKGRD_vertex2center
     use scale_const, only: &
        EPS => CONST_EPS
-    use mod_adm, only : &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only : &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use scale_vector, only: &
        VECTR_cross, &
        VECTR_dot,   &
@@ -1329,7 +1331,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,6,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
           wk(:,7,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
        endif
@@ -1357,7 +1359,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1,ADM_lall_pl

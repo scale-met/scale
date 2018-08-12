@@ -58,9 +58,9 @@ contains
        RGAM,      RGAM_pl,      &
        RGAMH,     RGAMH_pl,     &
        C2WfactGz, C2WfactGz_pl  )
-    use mod_adm, only: &
-       ADM_have_pl,    &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,    &
+       PRC_RGN_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -131,7 +131,7 @@ contains
     lall = ADM_lall
 
     !$omp parallel default(none),private(i,j,k,l,sclt_rhogw), &
-    !$omp shared(imin,imax,jmin,jmax,kall,kmin,kmax,lall,ADM_have_sgp,GRD_rdgz, &
+    !$omp shared(imin,imax,jmin,jmax,kall,kmin,kmax,lall,PRC_RGN_have_sgp,GRD_rdgz, &
     !$omp ddivdx,ddivdy,ddivdz,rhogvx,rhogvy,rhogvz,rhogw,sclt,coef_intp,coef_diff, &
     !$omp rhogvx_vm,rhogvy_vm,rhogvz_vm,rhogw_vm,C2WfactGz,RGAMH,RGSQRTH,RGAM)
     do l = 1, lall
@@ -216,7 +216,7 @@ contains
           enddo
           !$omp end do
 
-          if ( ADM_have_sgp(l) ) then ! pentagon
+          if ( PRC_RGN_have_sgp(l) ) then ! pentagon
              sclt(imin-1,jmin-1,TI) = sclt(imin,jmin-1,TJ)
           endif
 
@@ -286,7 +286,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
           do ij = 1, ADM_gall_pl

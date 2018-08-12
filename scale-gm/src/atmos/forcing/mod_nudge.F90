@@ -77,8 +77,8 @@ contains
        UNDEF => CONST_UNDEF, &
        Rdry  => CONST_Rdry,  &
        CVdry => CONST_CVdry
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_gz
     use mod_vmtr, only : &
@@ -281,7 +281,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall
        do k = 1, ADM_kall
        do g = 1, ADM_gall
@@ -330,7 +330,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine NDG_update_reference( &
        ctime )
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_var
     use mod_extdata, only: &
        extdata_update
@@ -492,8 +492,8 @@ contains
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        CVdry => CONST_CVdry
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_oprt, only: &
        OPRT_horizontalize_vec
     use mod_vmtr, only: &
@@ -568,7 +568,7 @@ contains
     dein(:,:,:) = NDG_fact(:,:,:,I_tem) * ( NDG_ref(:,:,:,I_tem) - tem(:,:,:) ) &
                 + NDG_fact(:,:,:,I_pre) * ( NDG_ref(:,:,:,I_pre) - pre(:,:,:) )
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        dvx_pl (:,:,:) = NDG_fact_pl(:,:,:,I_vx ) * ( NDG_ref_pl(:,:,:,I_vx ) - vx_pl (:,:,:) )
        dvy_pl (:,:,:) = NDG_fact_pl(:,:,:,I_vy ) * ( NDG_ref_pl(:,:,:,I_vy ) - vy_pl (:,:,:) )
        dvz_pl (:,:,:) = NDG_fact_pl(:,:,:,I_vz ) * ( NDG_ref_pl(:,:,:,I_vz ) - vz_pl (:,:,:) )
@@ -585,7 +585,7 @@ contains
     frhogvz  (:,:,:) = frhogvz  (:,:,:) + dvz (:,:,:) * rhog(:,:,:)
     frhoge   (:,:,:) = frhoge   (:,:,:) + dein(:,:,:) * rhog(:,:,:)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        frhogvx_pl  (:,:,:) = frhogvx_pl  (:,:,:) + dvx_pl (:,:,:) * rhog_pl(:,:,:)
        frhogvy_pl  (:,:,:) = frhogvy_pl  (:,:,:) + dvy_pl (:,:,:) * rhog_pl(:,:,:)
        frhogvz_pl  (:,:,:) = frhogvz_pl  (:,:,:) + dvz_pl (:,:,:) * rhog_pl(:,:,:)
@@ -608,7 +608,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = ADM_kmin,ADM_kmax+1
           do g = 1, ADM_gall_pl
@@ -713,15 +713,15 @@ contains
        D2R    => CONST_D2R,   &
        UNDEF  => CONST_UNDEF, &
        RADIUS => CONST_RADIUS
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_vector, only: &
        VECTR_distance
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
     use mod_grd, only: &
-       GRD_LAT,  &
-       GRD_LON,  &
+       I_LAT,    &
+       I_LON,    &
        GRD_s,    &
        GRD_s_pl
     use mod_history, only: &
@@ -753,8 +753,8 @@ contains
        call VECTR_distance( RADIUS,                & ! [IN]
                             center_lon_rad,        & ! [IN]
                             center_lat_rad,        & ! [IN]
-                            GRD_s(g,k0,l,GRD_LON), & ! [IN]
-                            GRD_s(g,k0,l,GRD_LAT), & ! [IN]
+                            GRD_s(g,k0,l,I_LON), & ! [IN]
+                            GRD_s(g,k0,l,I_LAT), & ! [IN]
                             dist                   ) ! [OUT]
 
        if ( dist < halo1_dist ) then
@@ -771,15 +771,15 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
 
           call VECTR_distance( RADIUS,                   & ! [IN]
                                center_lon,               & ! [IN]
                                center_lat,               & ! [IN]
-                               GRD_s_pl(g,k0,l,GRD_LON), & ! [IN]
-                               GRD_s_pl(g,k0,l,GRD_LAT), & ! [IN]
+                               GRD_s_pl(g,k0,l,I_LON), & ! [IN]
+                               GRD_s_pl(g,k0,l,I_LAT), & ! [IN]
                                dist                      ) ! [OUT]
 
           if ( dist < halo1_dist ) then

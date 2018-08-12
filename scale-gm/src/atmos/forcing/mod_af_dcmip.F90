@@ -71,7 +71,7 @@ contains
     use mod_bndcnd, only: &
        Tsfc => tem_sfc
     use mod_grd, only: &
-       GRD_LAT,  &
+       I_LAT,  &
        GRD_s
     use mod_gtl, only: &
        GTL_clip_region_1layer
@@ -283,7 +283,7 @@ contains
 ! Tsurf needs to be dependent on latitude for moist baroclinic wave test
 ! Tsurf needs to be constant for tropical cyclone test
 !
-    lat(:,:) = GRD_s(:,ADM_KNONE,:,GRD_LAT)
+    lat(:,:) = GRD_s(:,ADM_KNONE,:,I_LAT)
     latw = 2.0_RP * pi / 9.0_RP
     etav = (1._RP-eta0) * 0.5_RP * pi
     zvir   = (rh2o/rair) - 1._RP

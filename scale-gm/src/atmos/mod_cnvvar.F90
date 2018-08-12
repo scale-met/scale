@@ -67,8 +67,8 @@ contains
   subroutine cnvvar_prg2diag(&
        prg,  prg_pl, &
        diag, diag_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat, &
        ATMOS_THERMODYN_ein2temp_pres
@@ -165,7 +165,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
@@ -232,8 +232,8 @@ contains
   subroutine cnvvar_diag2prg( &
        prg,  prg_pl, &
        diag, diag_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_atmos_thermodyn, only: &
        ATMOS_THERMODYN_specific_heat,  &
        ATMOS_THERMODYN_temp_pres2ein
@@ -333,7 +333,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        do l = 1, ADM_lall_pl
 
@@ -404,8 +404,8 @@ contains
        rhogvz,  rhogvz_pl, &
        rhogw,   rhogw_pl,  &
        rhogkin, rhogkin_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_C2Wfact, &
        VMTR_getIJ_W2Cfact
@@ -475,7 +475,7 @@ contains
        rhogkin(:,ADM_kmax+1,l) = 0.0_RP
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           !--- horizontal kinetic energy
           do k = ADM_kmin, ADM_kmax
@@ -522,10 +522,10 @@ contains
        vx,   vx_pl,   &
        vy,   vy_pl,   &
        vz,   vz_pl    )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
-       GRD_LAT, &
+       I_LAT, &
        GRD_s,   &
        GRD_s_pl
     use mod_gmtr, only: &
@@ -560,7 +560,7 @@ contains
     do l = 1, ADM_lall
     do k = 1, ADM_kall
     do g = 1, ADM_gall
-       coslat = cos(GRD_s(g,k0,l,GRD_LAT))
+       coslat = cos(GRD_s(g,k0,l,I_LAT))
 
        sw = 0.5_RP + sign(0.5_RP,-abs(coslat)) ! if (coslat == 0), u=v=0
 
@@ -577,11 +577,11 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
-          coslat = cos(GRD_s_pl(g,k0,l,GRD_LAT))
+          coslat = cos(GRD_s_pl(g,k0,l,I_LAT))
 
           sw = 0.5_RP + sign(0.5_RP,-abs(coslat)) ! if (coslat == 0), u=v=0
 
@@ -610,10 +610,10 @@ contains
        vy, vy_pl, &
        vz, vz_pl, &
        withcos    )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
-       GRD_LAT, &
+       I_LAT, &
        GRD_s,   &
        GRD_s_pl
     use mod_gmtr, only: &
@@ -653,9 +653,9 @@ contains
 
     if ( present(withcos) ) then
        if ( withcos ) then
-          coslat(:,:) = cos(GRD_s(:,k0,:,GRD_LAT))
-          if ( ADM_have_pl ) then
-             coslat_pl(:,:) = cos(GRD_s_pl(:,k0,:,GRD_LAT))
+          coslat(:,:) = cos(GRD_s(:,k0,:,I_LAT))
+          if ( PRC_have_pl ) then
+             coslat_pl(:,:) = cos(GRD_s_pl(:,k0,:,I_LAT))
           endif
        endif
     endif
@@ -673,7 +673,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do n = 1, ADM_gall_pl

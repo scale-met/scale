@@ -171,8 +171,8 @@ contains
        rhogw,  rhogw_pl,  &
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(out) :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -216,7 +216,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
@@ -263,8 +263,8 @@ contains
        vz,     vz_pl,     &
        w,      w_pl,      &
        q,      q_pl       )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2
     use mod_cnvvar, only: &
@@ -347,7 +347,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
@@ -397,10 +397,10 @@ contains
        rhogw,  rhogw_pl,  &
        rhoge,  rhoge_pl,  &
        rhogq,  rhogq_pl   )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(in)  :: rhog     (ADM_gall   ,ADM_kall,ADM_lall   )
@@ -444,7 +444,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
@@ -648,7 +648,7 @@ contains
        rhogw,  &
        rhoge,  &
        rhogq   )
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_var
     use mod_runconf, only: &
        PRG_vmax
@@ -710,10 +710,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine restart_input( basename )
+    use scale_comm_icoA, only: &
+       COMM_var
     use mod_fio, only: &
        FIO_input
-    use mod_comm, only: &
-       COMM_var
     use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min

@@ -337,8 +337,8 @@ contains
     use scale_const, only: &
        PI  => CONST_PI, &
        EPS => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -402,7 +402,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 Kh_coef_pl(:,k,l) = gamma / large_step_dt * GMTR_area_pl(:,l)**lap_order
@@ -425,7 +425,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 Kh_coef_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order) / ( tau+EPS )
@@ -467,7 +467,7 @@ contains
              enddo
              enddo
 
-             if ( ADM_have_pl ) then
+             if ( PRC_have_pl ) then
                 do l = 1, ADM_lall_pl
                 do k = 1, ADM_kall
                    e_fold_time_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order) &
@@ -522,7 +522,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 Kh_coef_lap1_pl(:,k,l) = gamma_lap1 / large_step_dt * GMTR_area_pl(:,l)
@@ -547,7 +547,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 Kh_coef_lap1_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**2 / ( tau_lap1+EPS )
@@ -570,7 +570,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
           Kh_coef_lap1_pl(:,k,l) = Kh_coef_lap1_pl(:,k,l) * fact(k)
@@ -588,7 +588,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 e_fold_time_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**2 / ( Kh_coef_lap1_pl(:,k,l)+EPS )
@@ -685,8 +685,8 @@ contains
        PI    => CONST_PI,   &
        EPS   => CONST_EPS,  &
        SOUND => CONST_SOUND
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_gz
     use mod_gmtr, only: &
@@ -758,7 +758,7 @@ contains
              divdamp_coef(:,k,l) = ( sqrt(GMTR_area(:,l))/PI )**(2*lap_order) / ( tau+EPS )
           enddo
           enddo
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 divdamp_coef_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order) / ( tau+EPS )
@@ -796,7 +796,7 @@ contains
 
           e_fold_time_pl(:,:,:) = 0.0_RP
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 e_fold_time_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order) &
@@ -842,8 +842,8 @@ contains
        PI    => CONST_PI,   &
        EPS   => CONST_EPS,  &
        SOUND => CONST_SOUND
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -917,7 +917,7 @@ contains
              divdamp_2d_coef(:,k,l) = ( sqrt(GMTR_area(:,l))/PI )**(2*lap_order) / ( tau+EPS )
           enddo
           enddo
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 divdamp_2d_coef_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order) / ( tau+EPS )
@@ -943,7 +943,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
           divdamp_2d_coef_pl(:,k,l) = divdamp_2d_coef_pl(:,k,l) * fact(k)
@@ -962,7 +962,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
                 e_fold_time_pl(:,k,l) = ( sqrt(GMTR_area_pl(:,l))/PI )**(2*lap_order_divdamp) &
@@ -1003,8 +1003,8 @@ contains
        frhogvy, frhogvy_pl, &
        frhogvz, frhogvz_pl, &
        frhogw,  frhogw_pl   )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_C2Wfact
     implicit none
@@ -1054,7 +1054,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -1079,7 +1079,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = ADM_kmin, ADM_kmax+1
        do g = 1, ADM_gall_pl
@@ -1111,10 +1111,10 @@ contains
        tendency_q, tendency_q_pl )
     use scale_const, only: &
        CVdry => CONST_CVdry
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_htop, &
        GRD_gz
@@ -1452,7 +1452,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -1569,7 +1569,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do nq = 1, QA
           do l  = 1, ADM_lall_pl
           do k  = ADM_kmin, ADM_kmax
@@ -1605,8 +1605,8 @@ contains
        tendency_q, tendency_q_pl )
     use scale_const, only: &
        CVdry => CONST_CVdry
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_rdgz,  &
        GRD_rdgzh
@@ -1688,7 +1688,7 @@ contains
        rhog_h(:,ADM_kmin-1,l) = rhog_h(:,ADM_kmin,l)
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax+1
           do g = 1, ADM_gall_pl
@@ -1875,7 +1875,7 @@ contains
        endif
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        vtmp0_pl(:,:,:,I_VX ) = vx_pl (:,:,:)
        vtmp0_pl(:,:,:,I_VY ) = vy_pl (:,:,:)
@@ -2091,10 +2091,10 @@ contains
        gdy,    gdy_pl,    &
        gdz,    gdz_pl,    &
        gdvz,   gdvz_pl    )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only:  &
        GRD_rdgzh
     use mod_vmtr, only: &
@@ -2231,7 +2231,7 @@ contains
     gdy(:,:,:) = divdamp_coef(:,:,:) * vtmp2(:,:,:,2)
     gdz(:,:,:) = divdamp_coef(:,:,:) * vtmp2(:,:,:,3)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        gdx_pl(:,:,:) = divdamp_coef_pl(:,:,:) * vtmp2_pl(:,:,:,1)
        gdy_pl(:,:,:) = divdamp_coef_pl(:,:,:) * vtmp2_pl(:,:,:,2)
        gdz_pl(:,:,:) = divdamp_coef_pl(:,:,:) * vtmp2_pl(:,:,:,3)
@@ -2259,7 +2259,7 @@ contains
           gdvz(:,ADM_kmax+1,l) = 0.0_RP
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              do k = ADM_kmin+1, ADM_kmax
                 gdvz_pl(:,k,l) = divdamp_coef_v * ( cnv_pl(:,k,l) - cnv_pl(:,k-1,l) ) * GRD_rdgzh(k)
@@ -2289,10 +2289,10 @@ contains
        gdx,    gdx_pl,    &
        gdy,    gdy_pl,    &
        gdz,    gdz_pl     )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_oprt, only: &
        OPRT_divdamp,           &
        OPRT_horizontalize_vec, &
@@ -2390,7 +2390,7 @@ contains
     gdy(:,:,:) = divdamp_2d_coef(:,:,:) * vtmp2(:,:,:,2)
     gdz(:,:,:) = divdamp_2d_coef(:,:,:) * vtmp2(:,:,:,3)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        gdx_pl(:,:,:) = divdamp_2d_coef_pl(:,:,:) * vtmp2_pl(:,:,:,1)
        gdy_pl(:,:,:) = divdamp_2d_coef_pl(:,:,:) * vtmp2_pl(:,:,:,2)
        gdz_pl(:,:,:) = divdamp_2d_coef_pl(:,:,:) * vtmp2_pl(:,:,:,3)
@@ -2409,10 +2409,10 @@ contains
   !> smoothing
   subroutine numfilter_smooth_1var( &
        s, s_pl )
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_gmtr, only: &
        GMTR_area,    &
        GMTR_area_pl
@@ -2446,7 +2446,7 @@ contains
 
        vtmp_pl(:,:,:,:) = 0.0_RP
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           vtmp_pl(:,:,:,1) = s_pl(:,:,:)
        endif
 
@@ -2473,7 +2473,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
              s_pl(:,k,l) = s_pl(:,k,l) - ggamma_h * GMTR_area_pl(:,l)**2 * vtmp_pl(:,k,l,1)
