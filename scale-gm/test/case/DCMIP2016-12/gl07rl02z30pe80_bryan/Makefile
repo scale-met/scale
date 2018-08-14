@@ -14,11 +14,12 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 7
-rlevel      = 2
-nmpi        = 80
-zlayer      = 30
-vgrid       = vgrid30_stretch_30km_dcmip2016v2.dat
+RUNCONF     = run.conf
+TPROC       = 80
+
+# required data (parameters,distributed files)
+DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid30_stretch_30km_dcmip2016v2.dat vgrid30_stretch_30km_dcmip2016v2.dat] "
+DATDISTS    = " [${TPROC} ${TESTDIR}/data/grid/boundary/gl07rl02pe80/boundary_GL07RL02 boundary_GL07RL02] "
 
 
 

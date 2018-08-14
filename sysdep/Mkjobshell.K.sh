@@ -89,7 +89,11 @@ else
    rscgrp="small"
 fi
 
-
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
 
 
 
@@ -153,7 +157,7 @@ if [ ${ndata} -gt 0 ]; then
       triple=(${DATDISTS[$i]})
 
       if [ -f ${triple[1]}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r.nc %r:./${triple[2]}.pe%06r.nc'" >> ./run.sh
+         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r${nc} %r:./${triple[2]}.pe%06r${nc}'" >> ./run.sh
       else
          echo "datafile does not found! : ${triple[1]}.pe000000.nc"
          exit 1

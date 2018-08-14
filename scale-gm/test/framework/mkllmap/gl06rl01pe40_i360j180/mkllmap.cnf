@@ -18,6 +18,7 @@
     hgrid_fname   = "boundary_GL06RL01",
     VGRID_fname   = "NONE",
     topo_fname    = "NONE",
+    toposd_fname  = "NONE",
 /
 
 &LATLONPARAM

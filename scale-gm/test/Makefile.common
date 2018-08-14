@@ -8,15 +8,74 @@ ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif
 
+msg1 = "\n"
+
+ifeq ($(SCALE_DEBUG),T)
+   msg1       += "SCALE_DEBUG is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   msg1       += "SCALE_USE_SINGLEFP is set.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SCALE_USE_FIXEDINDEX),T)
+   msg1       += "SCALE_USE_FIXEDINDEX is set.\n"
+   USELOCALBIN = T
+endif
+
+ifneq ($(ORG_SRCS),)
+   msg1       += "User-defined file is used.\n"
+   USELOCALBIN = T
+endif
+
+ifeq ($(SCALE_DISABLE_LOCALBIN),T)
+   USELOCALBIN = F
+endif
+
+ifeq ($(USELOCALBIN),T)
+   BUILD_DIR := $(PWD)/.libs
+   BINDIR     = $(PWD)
+   msg1      += "The location of executable files is changed to $(BINDIR)\n"
+else
+   BUILD_DIR := $(TOPDIR)/.libs
+   BINDIR     = $(TOPDIR)/bin
+endif
+
+ifeq ($(origin PPNAME), undefined)
+   PPNAME = scale-gm_pp
+endif
+
+ifeq ($(origin INITNAME), undefined)
+   INITNAME = scale-gm_init
+endif
+
 ifeq ($(origin BINNAME), undefined)
    BINNAME = scale-gm
 endif
 
-# For Mkjobshell of scale-gm
-SYSDEP_DIR2 = $(TOPDIR)/scale-gm/test/sysdep
+ifeq ($(origin ICO2LLNAME), undefined)
+   ICO2LLNAME = gm_fio_ico2ll
+endif
+
+ifeq ($(origin PPCONF), undefined)
+   PPCONF = NONE
+endif
+
+ifeq ($(origin INITCONF), undefined)
+   INITCONF = NONE
+endif
+
+ifeq ($(origin RUNCONF), undefined)
+   RUNCONF = NONE
+endif
+
+ifeq ($(origin ICO2LLCONF), undefined)
+   ICO2LLCONF = NONE
+endif
 
 
-BUILD_DIR := $(TOPDIR)/.libs
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -25,16 +84,16 @@ include $(TOPDIR)/Mkinclude
 all: build
 
 
-$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+$(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
+	@echo -e "$(msg1)"
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALEGMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
                                 BINDIR=$(BINDIR)
-
 
 
 
@@ -44,12 +103,24 @@ run: jobshell
 
 jobshell:
 	@if [ -f ../Mkjobshell.$(SCALE_SYS).sh ]; then \
-		sh ../Mkjobshell.$(SCALE_SYS).sh $(glevel) $(rlevel) $(nmpi) $(zlayer) $(vgrid) \
-		                                 $(TOPDIR) $(BINNAME); \
+		bash ../Mkjobshell.$(SCALE_SYS).sh            $(BINDIR)                                   \
+		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(ICO2LLNAME) \
+		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(ICO2LLCONF) \
+		                                              $(TPROC)                                    \
+		                                              $(DATPARAM) $(DATDISTS);                    \
 	else \
-		sh $(SYSDEP_DIR2)/Mkjobshell.$(SCALE_SYS).sh $(glevel) $(rlevel) $(nmpi) $(zlayer) $(vgrid) \
-		                                             $(TOPDIR) $(BINNAME); \
+		bash $(SYSDEP_DIR)/Mkjobshell.$(SCALE_SYS).sh $(BINDIR)                                   \
+		                                              $(PPNAME) $(INITNAME) $(BINNAME) $(ICO2LLNAME) \
+		                                              $(PPCONF) $(INITCONF) $(RUNCONF) $(ICO2LLCONF) \
+		                                              $(TPROC)                                    \
+		                                              $(DATPARAM) $(DATDISTS);                    \
 	fi
+
+vis:
+	bash ./visualize/visualize.sh
+
+eval:
+	bash ./evaluate/evaluate.sh
 
 
 
