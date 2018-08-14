@@ -339,9 +339,9 @@ params.each do |param|
     next
   end
   if /^&PARAM_LAND_SFC_THIN_SLAB$/i =~ param_name
-    print "&PARAM_LAND_SFC_SKIN\n"
+    print "&PARAM_CPL_PHY_SFC_SKIN\n"
     param_items.each do |item|
-      print item.sub(/THIN_SLAB/i, "SKIN"), "\n"
+      print item.sub(/LAND_SFC_THIN_SLAB/i, "CPL_PHY_SFC_SKIN"), "\n"
     end
     print "/\n"
     next
