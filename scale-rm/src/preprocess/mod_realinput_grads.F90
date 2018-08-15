@@ -1016,7 +1016,7 @@ contains
              Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
              dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
                              / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
-             pres_org(2,i,j) = dens_org(2,i,j) * Rdry * temp_org(2,i,j)
+             pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
           end do
           end do
        else
@@ -1028,7 +1028,7 @@ contains
              Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
              dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
                              / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
-             pres_org(2,i,j) = dens_org(2,i,j) * Rdry * temp_org(2,i,j)
+             pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
           end do
           end do
        end if
@@ -1037,16 +1037,16 @@ contains
        do i = 1, dims(2)
           k = lm_layer(i,j)
           ! ignore surface variables
-          cz_org  (2,i,j) = cz_org  (k,i,j)
-          velz_org(2,i,j) = velz_org(k,i,j)
-          velx_org(2,i,j) = velx_org(k,i,j)
-          vely_org(2,i,j) = vely_org(k,i,j)
-          pres_org(2,i,j) = pres_org(k,i,j)
-          temp_org(2,i,j) = temp_org(k,i,j)
-          dens_org(2,i,j) = dens_org(k,i,j)
-          qv_org  (2,i,j) = qv_org  (k,i,j)
+          cz_org  (2,i,j)   = cz_org  (k,i,j)
+          velz_org(2,i,j)   = velz_org(k,i,j)
+          velx_org(2,i,j)   = velx_org(k,i,j)
+          vely_org(2,i,j)   = vely_org(k,i,j)
+          pres_org(2,i,j)   = pres_org(k,i,j)
+          temp_org(2,i,j)   = temp_org(k,i,j)
+          dens_org(2,i,j)   = dens_org(k,i,j)
+          qv_org  (2,i,j)   = qv_org  (k,i,j)
           qhyd_org(2,i,j,:) = qhyd_org(k,i,j,:)
-          RN222_org(2,i,j) = RN222_org(k,i,j)
+          RN222_org(2,i,j)  = RN222_org(k,i,j)
 !!$          ! guess surface height (elevation)
 !!$          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
 !!$             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
