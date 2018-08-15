@@ -25,54 +25,46 @@ do
 done
 
 if [ ! ${PPCONF} = "NONE" ]; then
-   SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
-
    CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      SIN2_PP=`echo -e "${SIN2_PP}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
-   SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
-
    CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      SIN2_INIT=`echo -e "${SIN2_INIT}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
-   SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
-
    CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      SIN2_MAIN=`echo -e "${SIN2_MAIN}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+#       RUN_MAIN=`echo -e "${RUN_MAIN}\n"fapp -C -Ihwm -Hevent=Cache        -d prof_cache -L 10 ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+#       RUN_MAIN=`echo -e "${RUN_MAIN}\n"fapp -C -Ihwm -Hevent=Instructions -d prof_inst  -L 10 ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+#       RUN_MAIN=`echo -e "${RUN_MAIN}\n"fapp -C -Ihwm -Hevent=MEM_access   -d prof_mem   -L 10 ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+#       RUN_MAIN=`echo -e "${RUN_MAIN}\n"fapp -C -Ihwm -Hevent=Performance  -d prof_perf  -L 10 ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fapp -C -Ihwm -Hevent=Statistics   -d prof       -L 10 ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
 if [ ! ${N2GCONF} = "NONE" ]; then
-   SIN1_N2G="#PJM --stgin  \"rank=* ${BINDIR}/${N2GNAME}  %r:./\""
-
    CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      SIN2_N2G=`echo -e "${SIN2_N2G}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
-      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -81,12 +73,9 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-if [ ${xy} -gt 36864 ]; then
-   rscgrp="huge"
-elif [ ${xy} -gt 384 ]; then
-   rscgrp="large"
-else
-   rscgrp="small"
+if [ ${xy} -gt 1024 ]; then
+   echo "Node usage is less than 1024. STOP"
+   exit
 fi
 
 if [ "${BINNAME}" = "scale-gm" ]; then
@@ -104,19 +93,17 @@ cat << EOF1 > ./run.sh
 # ------ For K computer
 #
 ################################################################################
-#PJM --rsc-list "rscgrp=${rscgrp}"
+#PJM --rsc-list "rscgrp=micro"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=04:00:00"
-#PJM --stg-transfiles all
-#PJM --mpi "use-rankdir"
-${SIN1_PP}
-${SIN1_INIT}
-${SIN1_MAIN}
-${SIN1_N2G}
-${SIN2_PP}
-${SIN2_INIT}
-${SIN2_MAIN}
-${SIN2_N2G}
+#PJM --rsc-list "elapse=00:25:00"
+#PJM -j
+#PJM -s
+#
+. /work/system/Env_base
+#
+export PARALLEL=8
+export OMP_NUM_THREADS=8
+
 EOF1
 
 # link to file or directory
@@ -136,9 +123,10 @@ if [ ${ndata} -gt 0 ]; then
       fi
 
       if [ -f ${src} ]; then
-         echo "#PJM --stgin  'rank=* ${src}   %r:./${dst} '" >> ./run.sh
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
       elif [ -d ${src} ]; then
-         echo "#PJM --stgin  'rank=* ${src}/* %r:./${dst}/'" >> ./run.sh
+         echo "rm -f          ./${dst}" >> ./run.sh
+         echo "ln -svf ${src} ./${dst}" >> ./run.sh
       else
          echo "datafile does not found! : ${src}"
          exit 1
@@ -156,27 +144,31 @@ if [ ${ndata} -gt 0 ]; then
 
       triple=(${DATDISTS[$i]})
 
-      if [ -f ${triple[1]}.pe000000.nc ]; then
-         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r${nc} %r:./${triple[2]}.pe%06r${nc}'" >> ./run.sh
-      else
-         echo "datafile does not found! : ${triple[1]}.pe000000.nc"
-         exit 1
-      fi
+      for np in `seq 1 ${triple[0]}`
+      do
+         let "ip = ${np} - 1"
+         PE=`printf %06d ${ip}`
+
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
+
+         if [ -f ${src} ]; then
+            echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         else
+            echo "datafile does not found! : ${src}"
+            exit 1
+         fi
+      done
    done
 fi
 
 cat << EOF2 >> ./run.sh
-#PJM --stgout "rank=* %r:./* ./"
-#PJM --stgout "rank=* %r:./prof/* ./prof/"
-#PJM -j
-#PJM -s
-#
-. /work/system/Env_base
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=8
 
-rm -rf ./prof
+# rm -rf prof_cache
+# rm -rf prof_inst
+# rm -rf prof_mem
+# rm -rf prof_perf
+rm -rf prof
 
 # run
 ${RUN_PP}
