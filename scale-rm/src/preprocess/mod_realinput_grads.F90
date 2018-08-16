@@ -407,8 +407,7 @@ contains
     real(RP) :: rhprs_org(dims(1)+2,dims(2),dims(3))
     real(RP) :: pott
 
-    real(RP) :: RovCP
-    real(RP) :: CPovR
+    real(RP) :: Rtot
 
     integer  :: lm_layer(dims(2),dims(3))
 
@@ -977,105 +976,96 @@ contains
     end do
     end do
 
-    RovCP = Rdry / CPdry
-    CPovR = CPdry / Rdry
-
-    if ( data_available(Ia_t2,1) .and. data_available(Ia_ps,1) ) then
+    ! density
+    if ( .not. data_available(Ia_dens,1) ) then
        do j = 1, dims(3)
        do i = 1, dims(2)
-          dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+       do k = lm_layer(i,j), dims(1)+2
+          Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) )
+          dens_org(k,i,j) = pres_org(k,i,j) / ( Rtot * temp_org(k,i,j) )
        end do
        end do
-    else if ( data_available(Ia_ps,1) ) then
-       if ( data_available(Ia_topo,1) ) then
-          if ( .not. data_available(Ia_dens,1) ) then
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                k = lm_layer(i,j)
-                dens_org(k,i,j) = pres_org(k,i,j) / ( Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) ) * temp_org(k,i,j) )
-             end do
-             end do
-          end if
+       end do
+    end if
+
+    ! surface
+    if ( data_available(Ia_topo,1) ) then
+       if ( data_available(Ia_t2,1) .and. data_available(Ia_ps,1) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
+             dens_org(2,i,j) = pres_org(2,i,j) / ( Rtot * temp_org(2,i,j) )
+          end do
+          end do
+       else if ( data_available(Ia_ps,1) ) then
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
              dz = cz_org(k,i,j) - cz_org(2,i,j)
              dens_org(2,i,j) = - ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
                              - dens_org(k,i,j)
-             temp_org(2,i,j) = pres_org(2,i,j) / ( Rdry * dens_org(2,i,j) )
+             Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
+             temp_org(2,i,j) = pres_org(2,i,j) / ( Rtot * dens_org(2,i,j) )
+          end do
+          end do
+       else if ( data_available(Ia_t2,1) ) then
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             k = lm_layer(i,j)
+             dz = cz_org(k,i,j) - cz_org(2,i,j)
+             Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
+             dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
+                             / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
+             pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
           end do
           end do
        else
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
-             temp_org(2,i,j) = temp_org(k,i,j)
-             dens_org(2,i,j) = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
-          end do
-          end do
-       end if
-    else if ( data_available(Ia_topo,1) ) then
-       if ( .not. data_available(Ia_t2,1) ) then
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             k = lm_layer(i,j)
              dz = cz_org(k,i,j) - cz_org(2,i,j)
              temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
+             Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
+             dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
+                             / ( Rtot * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
+             pres_org(2,i,j) = dens_org(2,i,j) * Rtot * temp_org(2,i,j)
           end do
           end do
        end if
-       if ( .not. data_available(Ia_dens,1) ) then
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             k = lm_layer(i,j)
-             dens_org(k,i,j) = pres_org(k,i,j) / ( Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) ) * temp_org(k,i,j) )
-          end do
-          end do
-       end if
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          k = lm_layer(i,j)
-          dz = cz_org(k,i,j) - cz_org(2,i,j)
-
-          dens_org(2,i,j) = ( pres_org(k,i,j) + GRAV * dens_org(k,i,j) * dz * 0.5_RP ) &
-                          / ( Rdry * temp_org(2,i,j) - GRAV * dz * 0.5_RP )
-          pres_org(2,i,j) = dens_org(2,i,j) * Rdry * temp_org(2,i,j)
-       end do
-       end do
     else
        do j = 1, dims(3)
        do i = 1, dims(2)
           k = lm_layer(i,j)
-          temp_org(2,i,j) = temp_org(k,i,j)
-          dens_org(2,i,j) = dens_org(k,i,j)
-          pres_org(2,i,j) = pres_org(k,i,j)
+          ! ignore surface variables
+          cz_org  (2,i,j)   = cz_org  (k,i,j)
+          velz_org(2,i,j)   = velz_org(k,i,j)
+          velx_org(2,i,j)   = velx_org(k,i,j)
+          vely_org(2,i,j)   = vely_org(k,i,j)
+          pres_org(2,i,j)   = pres_org(k,i,j)
+          temp_org(2,i,j)   = temp_org(k,i,j)
+          dens_org(2,i,j)   = dens_org(k,i,j)
+          qv_org  (2,i,j)   = qv_org  (k,i,j)
+          qhyd_org(2,i,j,:) = qhyd_org(k,i,j,:)
+          RN222_org(2,i,j)  = RN222_org(k,i,j)
+!!$          ! guess surface height (elevation)
+!!$          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
+!!$             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
+!!$          else
+!!$             lp2 = -1.0_RP
+!!$          end if
+!!$          if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
+!!$             lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
+!!$          else
+!!$             lp3 = -1.0_RP
+!!$          end if
+!!$          cz_org(2,i,j) = cz_org(k,i,j) * lp2 / lp3
+!!$          if ( cz_org(2,i,j) < 0.0_RP ) cz_org(2,i,j) = cz_org(k,i,j)
        end do
        end do
     end if
 
 
-    if ( .not. data_available(Ia_topo,1) ) then
-       ! guess surface height (elevation)
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-          k = lm_layer(i,j)
-          if ( pres_org(2,i,j) < pres_org(1,i,j) ) then
-             lp2 = log( pres_org(2,i,j) / pres_org(1,i,j) )
-          else
-             lp2 = -1.0_RP
-          end if
-          if ( pres_org(k,i,j) < pres_org(1,i,j) ) then
-             lp3 = log( pres_org(k,i,j) / pres_org(1,i,j) )
-          else
-             lp3 = -1.0_RP
-          end if
-          cz_org(2,i,j) = cz_org(k,i,j) * lp2 / lp3
-          if ( cz_org(2,i,j) < 0.0_RP ) cz_org(2,i,j) = cz_org(k,i,j)
-       end do
-       end do
-    end if
-
-
+    ! sea level
     do j = 1, dims(3)
     do i = 1, dims(2)
        temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
