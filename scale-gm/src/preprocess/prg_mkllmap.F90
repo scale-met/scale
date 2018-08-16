@@ -47,6 +47,8 @@ program mkllmap
   !
   character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
 
+  character(len=H_LONG) :: cnf_fname ! config file
+
   integer :: myrank
   logical :: ismaster
 
@@ -65,7 +67,9 @@ program mkllmap
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  cnf_fname = IO_ARG_getfname( ismaster )
+
+  call IO_setup( MODELNAME, cnf_fname )
   call IO_LOG_setup( myrank, ismaster )
 
   ! setup process

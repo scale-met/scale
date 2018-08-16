@@ -18,17 +18,21 @@ module mod_mkgrd
   use scale_atmos_grid_icoA_index
 
   use mod_grd, only: &
-     GRD_XDIR,  &
-     GRD_YDIR,  &
-     GRD_ZDIR,  &
-     GRD_x,     &
-     GRD_x_pl,  &
-     GRD_xt,    &
-     GRD_xt_pl, &
-     GRD_s,     &
-     GRD_s_pl,  &
-     GRD_st,    &
-     GRD_st_pl
+     GRD_XDIR,   &
+     GRD_YDIR,   &
+     GRD_ZDIR,   &
+     GRD_x,      &
+     GRD_x_pl,   &
+     GRD_xt,     &
+     GRD_xt_pl,  &
+     GRD_s,      &
+     GRD_s_pl,   &
+     GRD_st,     &
+     GRD_st_pl,  &
+     GRD_LAT,    &
+     GRD_LAT_pl, &
+     GRD_LON,    &
+     GRD_LON_pl
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -104,8 +108,11 @@ contains
       MKGRD_rotation_lon,     &
       MKGRD_rotation_lat
 
+    integer :: k0
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    k0 = ADM_KNONE
 
     !--- read parameters
     if( IO_L ) write(IO_FID_LOG,*)
@@ -120,25 +127,35 @@ contains
     endif
     if( IO_NML ) write(IO_FID_NML,nml=PARAM_MKGRD)
 
-    allocate( GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz) )
-    allocate( GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
-    allocate( GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
-    allocate( GRD_xt_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_x     (ADM_gall   ,k0,ADM_lall   ,              ADM_nxyz) )
+    allocate( GRD_x_pl  (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_xt    (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
+    allocate( GRD_xt_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
 
-    allocate( GRD_s    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              2) )
-    allocate( GRD_s_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
-    allocate( GRD_st   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,2) )
-    allocate( GRD_st_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2) )
+    allocate( GRD_s     (ADM_gall   ,k0,ADM_lall   ,              2) )
+    allocate( GRD_s_pl  (ADM_gall_pl,k0,ADM_lall_pl,              2) )
+    allocate( GRD_st    (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,2) )
+    allocate( GRD_st_pl (ADM_gall_pl,k0,ADM_lall_pl,              2) )
 
-    GRD_x    (:,:,:,:)   = UNDEF
-    GRD_x_pl (:,:,:,:)   = UNDEF
-    GRD_xt   (:,:,:,:,:) = UNDEF
-    GRD_xt_pl(:,:,:,:)   = UNDEF
+    allocate( GRD_LAT   (ADM_gall   ,ADM_lall   ) )
+    allocate( GRD_LAT_pl(ADM_gall_pl,ADM_lall_pl) )
+    allocate( GRD_LON   (ADM_gall   ,ADM_lall   ) )
+    allocate( GRD_LON_pl(ADM_gall_pl,ADM_lall_pl) )
 
-    GRD_s    (:,:,:,:)   = UNDEF
-    GRD_s_pl (:,:,:,:)   = UNDEF
-    GRD_st   (:,:,:,:,:) = UNDEF
-    GRD_st_pl(:,:,:,:)   = UNDEF
+    GRD_x     (:,:,:,:)   = UNDEF
+    GRD_x_pl  (:,:,:,:)   = UNDEF
+    GRD_xt    (:,:,:,:,:) = UNDEF
+    GRD_xt_pl (:,:,:,:)   = UNDEF
+
+    GRD_s     (:,:,:,:)   = UNDEF
+    GRD_s_pl  (:,:,:,:)   = UNDEF
+    GRD_st    (:,:,:,:,:) = UNDEF
+    GRD_st_pl (:,:,:,:)   = UNDEF
+
+    GRD_LAT   (:,:)       = UNDEF
+    GRD_LAT_pl(:,:)       = UNDEF
+    GRD_LON   (:,:)       = UNDEF
+    GRD_LON_pl(:,:)       = UNDEF
 
     return
   end subroutine MKGRD_setup

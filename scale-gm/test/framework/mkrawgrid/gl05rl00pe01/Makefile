@@ -14,13 +14,13 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = gm_mkhgrid
+PPNAME      = gm_mkrawgrid
 PPCONF      = pp.conf
-TPROC       = 10
+TPROC       = 1
 
 # required data (parameters,distributed files)
 DATPARAM    = ""
-DATDISTS    = " [${TPROC} ../../mkrawgrid/gl05rl03pe10/rawgrid_GL05RL03 rawgrid_GL05RL03] "
+DATDISTS    = ""
 
 
 

@@ -823,20 +823,20 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("PRC_ICOA_RGN_setup",'(1x,A)') 'Region management information'
-    LOG_INFO_CONT('(1x,A,A)' )              '--- Grid sysytem                     : Icosahedral'
-    LOG_INFO_CONT('(1x,A,I7)')              '--- number of diamond                : ', PRC_RGN_DMD
-    LOG_INFO_CONT('(1x,A,I7)')              '--- maximum number of vertex linkage : ', PRC_RGN_vlink
+    LOG_INFO_CONT('(1x,A,A)' )              'Grid sysytem                      : Icosahedral'
+    LOG_INFO_CONT('(1x,A,I7)')              'number of diamond                 : ', PRC_RGN_DMD
+    LOG_INFO_CONT('(1x,A,I7)')              'maximum number of vertex linkage  : ', PRC_RGN_vlink
     LOG_NEWLINE
-    LOG_INFO_CONT('(1x,A,I7)')              '--- Region division level (RL)       : ', PRC_RGN_level
-    LOG_INFO_CONT('(1x,A,I7,3(A,I4),A)')    '--- Total number of regular region   : ', PRC_RGN_total, &
+    LOG_INFO_CONT('(1x,A,I7)')              'Region division level (RL)        : ', PRC_RGN_level
+    LOG_INFO_CONT('(1x,A,I7,3(A,I4),A)')    'Total number of regular region    : ', PRC_RGN_total, &
                                             ' (', 2**PRC_RGN_level, ' x', 2**PRC_RGN_level, ' x', PRC_RGN_DMD, ' )'
-    LOG_INFO_CONT('(1x,A,I7)')              '--- #  of region per process          : ', PRC_RGN_local
-    LOG_INFO_CONT('(1x,A)'   )              '--- ID of region in my process        : '
+    LOG_INFO_CONT('(1x,A,I7)')              '#  of region per process          : ', PRC_RGN_local
+    LOG_INFO_CONT('(1x,A)'   )              'ID of region in my process        : '
     LOG_INFO_CONT(*)                        PRC_RGN_lp2r(:,PRC_myrank)
-    LOG_INFO_CONT('(1x,A,I7)')              '--- Region ID, containing north pole    : ', PRC_RGN_rgn4pl(I_NPL)
-    LOG_INFO_CONT('(1x,A,I7)')              '--- Region ID, containing south pole    : ', PRC_RGN_rgn4pl(I_SPL)
-    LOG_INFO_CONT('(1x,A,I7)')              '--- Process rank, managing north pole : ', PRC_RGN_r2p_pl(I_NPL)
-    LOG_INFO_CONT('(1x,A,I7)')              '--- Process rank, managing south pole : ', PRC_RGN_r2p_pl(I_SPL)
+    LOG_INFO_CONT('(1x,A,I7)')              'Region ID, containing north pole  : ', PRC_RGN_rgn4pl(I_NPL)
+    LOG_INFO_CONT('(1x,A,I7)')              'Region ID, containing south pole  : ', PRC_RGN_rgn4pl(I_SPL)
+    LOG_INFO_CONT('(1x,A,I7)')              'Process rank, managing north pole : ', PRC_RGN_r2p_pl(I_NPL)
+    LOG_INFO_CONT('(1x,A,I7)')              'Process rank, managing south pole : ', PRC_RGN_r2p_pl(I_SPL)
 
     if ( debug ) then
        LOG_NEWLINE

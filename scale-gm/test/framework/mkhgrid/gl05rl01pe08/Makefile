@@ -16,11 +16,11 @@ ORG_SRCS    =
 # parameters for run
 PPNAME      = gm_mkhgrid
 PPCONF      = pp.conf
-TPROC       = 10
+TPROC       = 8
 
 # required data (parameters,distributed files)
 DATPARAM    = ""
-DATDISTS    = " [${TPROC} ../../mkrawgrid/gl05rl03pe10/rawgrid_GL05RL03 rawgrid_GL05RL03] "
+DATDISTS    = " [${TPROC} ../../mkrawgrid/gl05rl01pe08/rawgrid_GL05RL01 rawgrid_GL05RL01] "
 
 
 

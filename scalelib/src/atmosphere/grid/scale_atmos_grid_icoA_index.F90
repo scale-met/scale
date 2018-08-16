@@ -113,6 +113,7 @@ contains
        PRC_abort
     use scale_prc_icoA, only: &
        PRC_RGN_level, &
+       PRC_RGN_total, &
        PRC_RGN_local, &
        PRC_RGN_vlink
     implicit none
@@ -149,8 +150,8 @@ contains
        call PRC_abort
     endif
 
-    if ( KMAX < 2 ) then
-       LOG_ERROR("ATMOS_GRID_ICOA_INDEX_setup",*) 'KMAX must be >= 2! ', KMAX
+    if ( KMAX < 1 ) then
+       LOG_ERROR("ATMOS_GRID_ICOA_INDEX_setup",*) 'KMAX must be >= 1! ', KMAX
        call PRC_abort
     end if
 
@@ -159,7 +160,7 @@ contains
 
     ADM_lall    = PRC_RGN_local
 
-    nmax        = 2**(ADM_glevel-PRC_RGN_level)
+    nmax        = 2**(GRID_LEVEL-PRC_RGN_level)
     ADM_gall_1d = 1 + nmax + 1
     ADM_gmin    = 1 + 1
     ADM_gmax    = 1 + nmax
@@ -183,9 +184,9 @@ contains
        ADM_kmin = 1
        ADM_kmax = 1
     else
-       ADM_kall = 1 + ADM_vlayer + 1
+       ADM_kall = 1 + KMAX + 1
        ADM_kmin = 1 + 1
-       ADM_kmax = 1 + ADM_vlayer
+       ADM_kmax = 1 + KMAX
     endif
 
     ! for physics grid
@@ -202,6 +203,16 @@ contains
     ! JS = 1
     JE = nmax + 1
     JA = JE
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_ICOA_INDEX_setup",'(1x,A)') 'Grid management information'
+    LOG_INFO_CONT('(1x,A,I4)' )                      'Grid divisiona level (GL)         : ', GRID_LEVEL
+    LOG_INFO_CONT('(1x,A,I7,2(A,I4),A,I7,A)')        'Total number of grid (horizontal) : ',      &
+                                                     4**(GRID_LEVEL-PRC_RGN_level)*PRC_RGN_total, &
+                                                     ' (', 2**(GRID_LEVEL-PRC_RGN_level),         &
+                                                     ' x', 2**(GRID_LEVEL-PRC_RGN_level),         &
+                                                     ' x', PRC_RGN_total, ' ) + 2 (pole)'
+    LOG_INFO_CONT('(1x,A,I7)')                       'Number of vertical layer          : ', ADM_kmax-ADM_kmin+1
 
     return
   end subroutine ATMOS_GRID_ICOA_INDEX_setup

@@ -61,6 +61,8 @@ program mkhgrid
   !
   character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
 
+  character(len=H_LONG) :: cnf_fname ! config file
+
   integer :: myrank
   logical :: ismaster
   !=============================================================================
@@ -73,7 +75,9 @@ program mkhgrid
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  cnf_fname = IO_ARG_getfname( ismaster )
+
+  call IO_setup( MODELNAME, cnf_fname )
   call IO_LOG_setup( myrank, ismaster )
 
   ! setup process
@@ -141,10 +145,6 @@ program mkhgrid
   call GRD_scaling( RADIUS )
   call GMTR_setup
   call PROF_rapend  ('GMTR_setup',0)
-
-  call PROF_rapstart('MKGRD_diagnosis',0)
-  call MKGRD_diagnosis
-  call PROF_rapend  ('MKGRD_diagnosis',0)
 
   call PROF_rapend('Main_MKGRD',0)
   !#############################################################################
