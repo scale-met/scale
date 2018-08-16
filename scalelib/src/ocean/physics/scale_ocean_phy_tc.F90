@@ -101,7 +101,7 @@ contains
     do i = OIS, OIE
        ice_depth  = ICE_MASS(i,j) / OCEAN_PHY_ICE_density / max(ICE_FRAC(i,j),EPS)
 
-       TC_dz(i,j) = OCEAN_PHY_thermalcond_seaice / max(ice_depth,EPS)
+       TC_dz(i,j) = OCEAN_PHY_thermalcond_seaice / max(ice_depth*0.5_RP,EPS) ! at the middle point of the layer
 
        TC_dz(i,j) = min( TC_dz(i,j), OCEAN_PHY_thermalcond_max )
     enddo

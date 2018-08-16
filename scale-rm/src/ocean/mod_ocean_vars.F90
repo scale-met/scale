@@ -552,6 +552,7 @@ contains
           OCEAN_ICE_TEMP(:,:) = OCEAN_PHY_ICE_freezetemp
           OCEAN_ICE_FRAC(:,:) = 0.0_RP
        else
+          OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
           call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
                                        OJA, OJS, OJE,       & ! [IN]
                                        OCEAN_ICE_MASS(:,:), & ! [IN]
@@ -593,7 +594,7 @@ contains
                       VAR_NAME(I_OCN_Z0M),                                   __FILE__, __LINE__ )
        call VALCHECK( OCEAN_ICE_TEMP  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_ICE_TEMP),                                  __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_ICE_MASS  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
+       call VALCHECK( OCEAN_ICE_MASS  (OIS:OIE,OJS:OJE),                     0.0_RP,   5E+5_RP, &
                       VAR_NAME(I_ICE_MASS),                                  __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_TEMP  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_TEMP),                                  __FILE__, __LINE__ )

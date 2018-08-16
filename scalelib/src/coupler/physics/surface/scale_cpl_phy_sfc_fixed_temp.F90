@@ -215,7 +215,7 @@ contains
           ! calculation for residual
           res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j)
 
-          ! put residual in ground heat flux
+          ! put residual in ground heat flux (positive for upward)
           GFLX(i,j) = -res
 
           ! diagnostic variables considering unstable/stable state
