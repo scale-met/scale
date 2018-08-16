@@ -72,14 +72,18 @@ contains
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_setup
     use scale_atmos_grid_cartesC_index, only: &
        ATMOS_GRID_CARTESC_INDEX_setup
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_setup, &
        DX, &
        DY
-    use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_setup
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_setup
+    use scale_atmos_grid_cartesC_metric, only: &
+       ATMOS_GRID_CARTESC_METRIC_setup
     use scale_ocean_grid_cartesC_index, only: &
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
@@ -104,14 +108,12 @@ contains
     use scale_comm_cartesC, only: &
        COMM_setup , &
        COMM_cleanup
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_setup
     use scale_topography, only: &
        TOPO_setup
     use scale_landuse, only: &
        LANDUSE_setup
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_setup
-    use scale_atmos_grid_cartesC_metric, only: &
-       ATMOS_GRID_CARTESC_METRIC_setup
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_time, only: &
@@ -119,6 +121,16 @@ contains
        TIME_NOWMS,   &
        TIME_NOWSTEP, &
        TIME_DTSEC
+    use scale_atmos_hydrostatic, only: &
+       ATMOS_HYDROSTATIC_setup
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_setup
+    use scale_atmos_saturation, only: &
+       ATMOS_SATURATION_setup
+    use scale_bulkflux, only: &
+       BULKFLUX_setup
+    use scale_file_external_input_cartesC, only: &
+       FILE_EXTERNAL_INPUT_CARTESC_setup
     use scale_file_history, only: &
        FILE_HISTORY_write, &
        FILE_HISTORY_set_nowdate, &
@@ -130,18 +142,6 @@ contains
     use scale_monitor, only: &
        MONITOR_write, &
        MONITOR_finalize
-    use scale_file_external_input_cartesC, only: &
-       FILE_EXTERNAL_INPUT_CARTESC_setup
-    use scale_atmos_hydrostatic, only: &
-       ATMOS_HYDROSTATIC_setup
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_setup
-    use scale_atmos_hydrometeor, only: &
-       ATMOS_HYDROMETEOR_setup
-    use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_setup
-    use scale_bulkflux, only: &
-       BULKFLUX_setup
 
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup

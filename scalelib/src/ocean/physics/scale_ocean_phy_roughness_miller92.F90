@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / physics / surface roughness length
+!> module ocean / physics / surface roughness length / miller92
 !!
 !! @par Description
 !!          surface roughness length Miller92 scheme

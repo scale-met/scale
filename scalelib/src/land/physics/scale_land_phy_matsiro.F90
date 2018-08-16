@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Physics Matsiro model
+!> module land / physics / MATSIRO
 !!
 !! @par Description
 !!          matsiro-type land physics module

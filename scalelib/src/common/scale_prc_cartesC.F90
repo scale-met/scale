@@ -29,7 +29,6 @@ module scale_prc_cartesC
   !
   !++ Public parameters & variables
   !
-  !-----------------------------------------------------------------------------
   integer, public, parameter   :: PRC_W  = 1       !< [node direction] west
   integer, public, parameter   :: PRC_N  = 2       !< [node direction] north
   integer, public, parameter   :: PRC_E  = 3       !< [node direction] east
@@ -67,7 +66,7 @@ contains
   !> Setup Processor topology
   subroutine PRC_CARTESC_setup
     use scale_prc, only: &
-       PRC_abort,              &
+       PRC_abort,                &
        PRC_masterrank,           &
        PRC_mpi_alive,            &
        PRC_ABORT_COMM_WORLD,     &
@@ -94,12 +93,12 @@ contains
        PRC_PERIODIC_Y, &
        PRC_CART_REORDER
 
-    logical :: period(2)
-    integer :: divide(2)
-    integer :: coords_W(2)
-    integer :: coords_N(2)
-    integer :: coords_E(2)
-    integer :: coords_S(2)
+    logical :: period     (2)
+    integer :: divide     (2)
+    integer :: coords_W   (2)
+    integer :: coords_N   (2)
+    integer :: coords_E   (2)
+    integer :: coords_S   (2)
     integer :: next_coords(2)
     integer :: iptbl
     integer :: next(8)
@@ -115,21 +114,21 @@ contains
        LOG_NEWLINE
        LOG_PROGRESS(*) 'start MPI'
        LOG_NEWLINE
-       LOG_INFO("PRC_CARTESC_setup",*)            'Process information '
-       LOG_INFO_CONT('(1x,A,I12)') 'UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
-       LOG_INFO_CONT('(1x,A,I12)') 'total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
-       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
-       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
-       LOG_INFO_CONT('(1x,A,I12)') 'GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
-       LOG_INFO_CONT('(1x,A,I12)') 'total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
-       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
-       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
-       LOG_INFO_CONT('(1x,A,I12)') 'LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
-       LOG_INFO_CONT('(1x,A,I12)') 'total process [LOCAL]       : ', PRC_nprocs
-       LOG_INFO_CONT('(1x,A,I12)') 'my process ID [LOCAL]       : ', PRC_myrank
-       LOG_INFO_CONT('(1x,A,L12)') 'master rank?  [LOCAL]       : ', PRC_IsMaster
-       LOG_INFO_CONT('(1x,A,I12)') 'ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
-       LOG_INFO_CONT('(1x,A,I12)') 'master rank ID [each world] : ', PRC_masterrank
+       LOG_INFO("PRC_CARTESC_setup",*) 'Process information '
+       LOG_INFO_CONT('(1x,A,I12)')     'UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)')     'total process [UNIVERSAL]   : ', PRC_UNIVERSAL_nprocs
+       LOG_INFO_CONT('(1x,A,I12)')     'my process ID [UNIVERSAL]   : ', PRC_UNIVERSAL_myrank
+       LOG_INFO_CONT('(1x,A,L12)')     'master rank?  [UNIVERSAL]   : ', PRC_UNIVERSAL_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)')     'GLOBAL_COMM_WORLD           : ', PRC_GLOBAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)')     'total process [GLOBAL]      : ', PRC_GLOBAL_nprocs
+       LOG_INFO_CONT('(1x,A,I12)')     'my process ID [GLOBAL]      : ', PRC_GLOBAL_myrank
+       LOG_INFO_CONT('(1x,A,L12)')     'master rank?  [GLOBAL]      : ', PRC_GLOBAL_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)')     'LOCAL_COMM_WORLD            : ', PRC_LOCAL_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)')     'total process [LOCAL]       : ', PRC_nprocs
+       LOG_INFO_CONT('(1x,A,I12)')     'my process ID [LOCAL]       : ', PRC_myrank
+       LOG_INFO_CONT('(1x,A,L12)')     'master rank?  [LOCAL]       : ', PRC_IsMaster
+       LOG_INFO_CONT('(1x,A,I12)')     'ABORT_COMM_WORLD            : ', PRC_ABORT_COMM_WORLD
+       LOG_INFO_CONT('(1x,A,I12)')     'master rank ID [each world] : ', PRC_masterrank
     endif
 
     !--- read namelist
@@ -145,7 +144,7 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("PRC_CARTESC_setup",*) 'Process allocation '
-    LOG_INFO_CONT(*) 'No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
+    LOG_INFO_CONT(*)                'No. of Node   :', PRC_NUM_X," x ",PRC_NUM_Y
 
     if ( PRC_NUM_X*PRC_NUM_Y /= PRC_nprocs ) then
        LOG_ERROR("PRC_CARTESC_setup",*) 'total number of node does not match that requested. Check!'

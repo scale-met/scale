@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module urban grid index
+!> module urban / grid / icosahedralA / index
 !!
 !! @par Description
 !!          Grid Index module for urban
@@ -59,10 +59,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_index, only: &
-         IMAX, &
-         IA, IS, IE, &
-         JMAX, &
-         JA, JS, JE
+       IMAX,       &
+       IA, IS, IE, &
+       JMAX,       &
+       JA, JS, JE
     implicit none
 
     namelist / PARAM_URBAN_GRID_CARTESC_INDEX / &

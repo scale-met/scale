@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module land grid index for the CartesianC grid
+!> module land / grid / cartesianC / index
 !!
 !! @par Description
 !!          Grid Index module for land
@@ -60,10 +60,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_index, only: &
-         IMAX, &
-         IA, IS, IE, &
-         JMAX, &
-         JA, JS, JE
+       IMAX,       &
+       IA, IS, IE, &
+       JMAX,       &
+       JA, JS, JE
     implicit none
 
     namelist / PARAM_LAND_GRID_CARTESC_INDEX / &

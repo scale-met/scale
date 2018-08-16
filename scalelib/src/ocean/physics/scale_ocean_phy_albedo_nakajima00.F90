@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / physics / surface albedo nakajima00 model
+!> module ocean / physics / surface albedo / nakajima00
 !!
 !! @par Description
 !!          Ocean surface albedo nakajima00 model

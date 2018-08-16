@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Momentum fluxes and Diagnostic variables
+!> module land / physics / snow / diagnostics
 !!
 !! @par Description
 !!       Momentum fluxes and Diagnostic variables

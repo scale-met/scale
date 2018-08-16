@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module GRID (cartesian) for ocean
+!> module ocean / grid / cartesianC
 !!
 !! @par Description
 !!          Grid module for cartesian coordinate for ocean

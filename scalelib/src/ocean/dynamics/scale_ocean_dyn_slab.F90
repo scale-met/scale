@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / dynamics / slab model
+!> module ocean / dynamics / slab
 !!
 !! @par Description
 !!          ocean slab model
