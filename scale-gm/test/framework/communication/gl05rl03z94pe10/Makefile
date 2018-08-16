@@ -19,7 +19,7 @@ TPROC       = 10
 
 # required data (parameters,distributed files)
 DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid94.dat vgrid94.dat] "
-DATDISTS    = " [${TPROC} ${TESTDIR}/data/grid/boundary/gl05rl03pe10/boundary_GL05RL03 boundary_GL05RL03] "
+DATDISTS    = " [${TPROC} $(SCALE_DB)/grid/boundary/gl05rl03pe10/boundary_GL05RL03 boundary_GL05RL03] "
 
 
 
