@@ -14,13 +14,15 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 4
-rlevel      = 0
-nmpi        = 2
-zlayer      = none
-vgrid       = none
+PPNAME      = gm_mkllmap
+PPCONF      = pp.conf
+TPROC       = 8
 
-BINNAME     = gm_mkllmap
+# required data (parameters,distributed files)
+DATPARAM    = ""
+DATDISTS    = " [${TPROC} ../../mkhgrid/gl05rl01pe08/boundary_GL05RL01 boundary_GL05RL01] "
+
+
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

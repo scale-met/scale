@@ -174,8 +174,8 @@ contains
 
     namelist / LATLONPARAM / &
          latlon_type,         &
-         lon_imax,                &
-         lat_jmax,                &
+         lon_imax,            &
+         lat_jmax,            &
          lonmin_deg,          &
          lonmax_deg,          &
          latmin_deg,          &
@@ -321,7 +321,7 @@ contains
     globalsum = sum( recvbuf(:) )
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'lon_imax x lat_jmax                    = ', lon_imax*lat_jmax
+    if( IO_L ) write(IO_FID_LOG,*) 'lon_imax x lat_jmax            = ', lon_imax*lat_jmax
     if( IO_L ) write(IO_FID_LOG,*) 'global total of counted llgrid = ', globalsum
     if ( globalsum /= lon_imax*lat_jmax ) then
        write(*,         *) 'counted llgrid does not match!'
