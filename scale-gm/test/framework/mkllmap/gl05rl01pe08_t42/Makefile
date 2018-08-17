@@ -16,6 +16,8 @@ ORG_SRCS    =
 # parameters for run
 PPNAME      = gm_mkllmap
 PPCONF      = pp.conf
+ICO2LLNAME  = gm_fio_ico2ll
+ICO2LLCONF  = ico2ll.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
