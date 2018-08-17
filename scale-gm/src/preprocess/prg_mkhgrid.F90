@@ -68,7 +68,6 @@ program mkhgrid
   !=============================================================================
 
   !---< MPI start >---
-  !---< MPI start >---
   call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
                            ismaster ) ! [OUT]
 

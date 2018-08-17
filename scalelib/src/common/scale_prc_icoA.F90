@@ -26,6 +26,7 @@ module scale_prc_icoA
   !++ Public procedure
   !
   public :: PRC_ICOA_setup
+  public :: PRC_ICOA_RGN_generate
 
   !-----------------------------------------------------------------------------
   !
@@ -97,7 +98,6 @@ module scale_prc_icoA
   private :: PRC_ICOA_RGN_setup
   private :: PRC_ICOA_RGN_input
   private :: PRC_ICOA_RGN_output
-  private :: PRC_ICOA_RGN_generate
   private :: PRC_ICOA_RGN_vertex_walkaround
   private :: output_info
 

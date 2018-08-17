@@ -68,7 +68,7 @@ $(BUILD_DIR)/mod_vintrpl.o: atmos-gm/grid/mod_vintrpl.F90 $(DEPENDLIB) $(BUILD_D
 $(BUILD_DIR)/mod_vmtr.o: atmos-gm/grid/mod_vmtr.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_oprt.o
 $(BUILD_DIR)/prg_fio_cat.o: tool/prg_fio_cat.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_fio_dump.o: tool/prg_fio_dump.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_io_param.o
-$(BUILD_DIR)/prg_fio_ico2ll.o: tool/prg_fio_ico2ll.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
+$(BUILD_DIR)/prg_fio_ico2ll.o: tool/prg_fio_ico2ll.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o
 $(BUILD_DIR)/prg_fio_sel.o: tool/prg_fio_sel.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_fio_sub.o: tool/prg_fio_sub.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_mkhgrid.o: preprocess/prg_mkhgrid.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_mkgrd.o
