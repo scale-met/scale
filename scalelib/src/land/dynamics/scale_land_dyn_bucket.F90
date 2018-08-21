@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module LAND / Dynamics / Bucket model
+!> module land / dynamics / bucket
 !!
 !! @par Description
 !!          slab-type land model

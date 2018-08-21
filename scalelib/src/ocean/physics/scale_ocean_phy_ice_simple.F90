@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / physics / common
+!> module ocean / physics / ice / simple
 !!
 !! @par Description
 !!          ocean common module

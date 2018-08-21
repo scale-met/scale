@@ -14,8 +14,8 @@ module mod_dynamics
   !
   use scale_precision
   use scale_io
-  use scale_atmos_grid_icoA_index
   use scale_prof
+  use scale_atmos_grid_icoA_index
   use scale_tracer
 
   !-----------------------------------------------------------------------------
@@ -159,10 +159,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine dynamics_step
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat,  &
+       ATMOS_THERMODYN_temp_pres2pott, &
+       ATMOS_THERMODYN_ein_pres2enth
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_GSGAM2,    &
        VMTR_getIJ_C2Wfact,   &
@@ -204,10 +208,6 @@ contains
        rho_bs_pl, &
        pre_bs,    &
        pre_bs_pl
-    use scale_atmos_thermodyn, only: &
-       ATMOS_THERMODYN_specific_heat, &
-       ATMOS_THERMODYN_temp_pres2pott, &
-       ATMOS_THERMODYN_ein_pres2enth
     use mod_numfilter, only: &
        NUMFILTER_DOrayleigh,       &
        NUMFILTER_DOverticaldiff,   &
@@ -357,7 +357,7 @@ contains
     PROG0(:,:,:,:) = PROG(:,:,:,:)
     !$acc end kernels
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        PROG0_pl(:,:,:,:) = PROG_pl(:,:,:,:)
     endif
 
@@ -366,7 +366,7 @@ contains
        PROGq0(:,:,:,:) = PROGq(:,:,:,:)
        !$acc end kernels
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           PROGq0_pl(:,:,:,:) = PROGq_pl(:,:,:,:)
        endif
     endif
@@ -517,7 +517,7 @@ contains
        rhogd(:,:,:) = ( rho (:,:,:)       - rho_bs(:,:,:) ) * VMTR_GSGAM2(:,:,:)
        !$acc end kernels
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
 
           do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax
@@ -856,7 +856,7 @@ contains
              PROGq(:,:,:,:) = PROGq(:,:,:,:) + large_step_dt * f_TENDq(:,:,:,:) ! update rhogq by viscosity
              !$acc end kernels
 
-             if ( ADM_have_pl ) then
+             if ( PRC_have_pl ) then
                 PROGq_pl(:,:,:,:) = PROGq_pl(:,:,:,:) + large_step_dt * f_TENDq_pl(:,:,:,:)
              endif
 
@@ -887,7 +887,7 @@ contains
           PROGq(:,ADM_kmax+1,:,:) = 0.0_RP
           !$acc end kernels
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              PROGq_pl(:,:,:,:) = PROGq0_pl(:,:,:,:)                                                                      &
                                + ( num_of_iteration_sstep(nl) * TIME_DTS ) * ( g_TENDq_pl(:,:,:,:) + f_TENDq_pl(:,:,:,:) )
 
@@ -918,7 +918,7 @@ contains
           enddo
           !$acc end kernels
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
              do g = 1, ADM_gall_pl

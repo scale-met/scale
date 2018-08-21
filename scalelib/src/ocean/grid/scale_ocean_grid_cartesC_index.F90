@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean grid cartesc index
+!> module ocean / grid / cartesianC / index
 !!
 !! @par Description
 !!          Grid Index module for ocean
@@ -61,10 +61,10 @@ contains
     use scale_prc, only: &
          PRC_abort
     use scale_atmos_grid_cartesC_index, only: &
-         IMAX, &
-         IA, IS, IE, &
-         JMAX, &
-         JA, JS, JE
+       IMAX,       &
+       IA, IS, IE, &
+       JMAX,       &
+       JA, JS, JE
     implicit none
 
     namelist / PARAM_OCEAN_GRID_CARTESC_INDEX / &

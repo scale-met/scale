@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module ocean / dynamics / offline model
+!> module ocean / dynamics / offline
 !!
 !! @par Description
 !!          ocean offline model

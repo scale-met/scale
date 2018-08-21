@@ -22,7 +22,7 @@ module mod_grd
   private
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
+  !++ Public procedures
   !
   public :: GRD_setup
   public :: GRD_input_hgrid
@@ -43,8 +43,8 @@ module mod_grd
   integer,  public, parameter :: GRD_ZDIR = 3
 
   ! Indentifiers for the directions in the spherical coordinate
-  integer,  public, parameter :: GRD_LAT = 1
-  integer,  public, parameter :: GRD_LON = 2
+  integer,  public, parameter :: I_LAT = 1
+  integer,  public, parameter :: I_LON = 2
 
   !====== Horizontal Grid ======
   !
@@ -71,44 +71,31 @@ module mod_grd
   !
   real(RP), public              :: GRD_rscale ! scaling factor for the radius of the sphere
 
-#ifdef FIXEDINDEX
-  real(RP), public              :: GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
-  real(RP), public              :: GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
-  real(RP), public              :: GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz)
-  real(RP), public              :: GRD_xt_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
-  real(RP), public              :: GRD_xr   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_AI:ADM_AJ,ADM_nxyz)
-  real(RP), public              :: GRD_xr_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
+  real(RP), public, allocatable :: GRD_x     (:,:,:,:)
+  real(RP), public, allocatable :: GRD_x_pl  (:,:,:,:)
+  real(RP), public, allocatable :: GRD_xt    (:,:,:,:,:)
+  real(RP), public, allocatable :: GRD_xt_pl (:,:,:,:)
+  real(RP), public, allocatable :: GRD_xr    (:,:,:,:,:)
+  real(RP), public, allocatable :: GRD_xr_pl (:,:,:,:)
 
-  real(RP), public              :: GRD_s    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              2)
-  real(RP), public              :: GRD_s_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2)
-  real(RP), public              :: GRD_st   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,2)
-  real(RP), public              :: GRD_st_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2)
-#else
-  real(RP), public, allocatable :: GRD_x    (:,:,:,:)
-  real(RP), public, allocatable :: GRD_x_pl (:,:,:,:)
-  real(RP), public, allocatable :: GRD_xt   (:,:,:,:,:)
-  real(RP), public, allocatable :: GRD_xt_pl(:,:,:,:)
-  real(RP), public, allocatable :: GRD_xr   (:,:,:,:,:)
-  real(RP), public, allocatable :: GRD_xr_pl(:,:,:,:)
+  real(RP), public, allocatable :: GRD_s     (:,:,:,:)
+  real(RP), public, allocatable :: GRD_s_pl  (:,:,:,:)
+  real(RP), public, allocatable :: GRD_st    (:,:,:,:,:)
+  real(RP), public, allocatable :: GRD_st_pl (:,:,:,:)
 
-  real(RP), public, allocatable :: GRD_s    (:,:,:,:)
-  real(RP), public, allocatable :: GRD_s_pl (:,:,:,:)
-  real(RP), public, allocatable :: GRD_st   (:,:,:,:,:)
-  real(RP), public, allocatable :: GRD_st_pl(:,:,:,:)
-#endif
+  real(RP), public, allocatable :: GRD_LAT   (:,:)
+  real(RP), public, allocatable :: GRD_LAT_pl(:,:)
+  real(RP), public, allocatable :: GRD_LON   (:,:)
+  real(RP), public, allocatable :: GRD_LON_pl(:,:)
 
 
 
   !====== Topography ======
   integer,  public, parameter   :: GRD_ZSFC = 1
+  integer,  public, parameter   :: GRD_ZSD  = 2
 
-#ifdef FIXEDINDEX
-  real(RP), public              :: GRD_zs   (ADM_gall   ,ADM_KNONE,ADM_lall   ,GRD_ZSFC)
-  real(RP), public              :: GRD_zs_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,GRD_ZSFC)
-#else
   real(RP), public, allocatable :: GRD_zs   (:,:,:,:)
   real(RP), public, allocatable :: GRD_zs_pl(:,:,:,:)
-#endif
 
 
 
@@ -132,22 +119,6 @@ module mod_grd
 
   real(RP), public              :: GRD_htop ! model top height [m]
 
-#ifdef FIXEDINDEX
-  real(RP), public              :: GRD_gz   (ADM_kall)
-  real(RP), public              :: GRD_gzh  (ADM_kall)
-  real(RP), public              :: GRD_dgz  (ADM_kall)
-  real(RP), public              :: GRD_dgzh (ADM_kall)
-  real(RP), public              :: GRD_rdgz (ADM_kall)
-  real(RP), public              :: GRD_rdgzh(ADM_kall)
-
-  real(RP), public              :: GRD_afac(ADM_kall)
-  real(RP), public              :: GRD_bfac(ADM_kall)
-  real(RP), public              :: GRD_cfac(ADM_kall)
-  real(RP), public              :: GRD_dfac(ADM_kall)
-
-  real(RP), public              :: GRD_vz   (ADM_gall   ,ADM_kall,ADM_lall   ,GRD_Z:GRD_ZH)
-  real(RP), public              :: GRD_vz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,GRD_Z:GRD_ZH)
-#else
   real(RP), public, allocatable :: GRD_gz   (:) ! gsi (z-star) coordinate
   real(RP), public, allocatable :: GRD_gzh  (:) ! gsi (z-star) coordinate at the half point
   real(RP), public, allocatable :: GRD_dgz  (:) ! d(gsi)
@@ -156,20 +127,20 @@ module mod_grd
   real(RP), public, allocatable :: GRD_rdgzh(:)
 
   real(RP), public, allocatable :: GRD_afac (:) ! From the cell center value to the cell wall value
-  real(RP), public, allocatable :: GRD_bfac (:) !    A(k-1/2) = ( afac(k) A(k) + bfac(k) * A(k-1) ) / 2
+  real(RP), public, allocatable :: GRD_bfac (:) !  A(k-1/2) = ( afact(k) A(k) + bfact(k) * A(k-1) )
   real(RP), public, allocatable :: GRD_cfac (:) ! From the cell wall value to the cell center value
-  real(RP), public, allocatable :: GRD_dfac (:) !    A(k) = ( cfac(k) A(k+1/2) + dfac(k) * A(k-1/2) ) / 2
+  real(RP), public, allocatable :: GRD_dfac (:) !  A(k) = ( cfact(k) A(k+1/2) + dfact(k) * A(k-1/2) )
 
   real(RP), public, allocatable :: GRD_vz   (:,:,:,:)
   real(RP), public, allocatable :: GRD_vz_pl(:,:,:,:)
-#endif
 
-  character(len=H_SHORT), public :: GRD_grid_type = 'ON_SPHERE' ! grid type [add] T.Ohno 110722
-                                                  ! 'ON_PLANE'
+  integer,  public, parameter   :: GRD_grid_type_on_sphere = 1
+  integer,  public, parameter   :: GRD_grid_type_on_plane  = 2
+  integer,  public              :: GRD_grid_type           = GRD_grid_type_on_sphere
 
   !-----------------------------------------------------------------------------
   !
-  !++ Private procedure
+  !++ Private procedures
   !
   private :: GRD_gen_plgrid
   private :: GRD_makearc
@@ -182,6 +153,7 @@ module mod_grd
   character(len=H_SHORT), private :: topo_io_mode   = 'ADVANCED'
   character(len=H_LONG),  private :: hgrid_fname    = ''         ! horizontal grid file
   character(len=H_LONG),  private :: topo_fname     = ''         ! topography file
+  character(len=H_LONG),  private :: toposd_fname   = ''         ! topography file
 
   character(len=H_LONG),  private :: vgrid_fname    = ''         ! vertical grid file
   character(len=H_SHORT), private :: vgrid_scheme   = 'LINEAR'   ! vertical coordinate scheme
@@ -200,12 +172,12 @@ contains
     use scale_prc, only: &
        PRC_IsMaster, &
        PRC_abort
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        UNDEF  => CONST_UNDEF,  &
        RADIUS => CONST_RADIUS
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only:  &
+    use scale_comm_icoA, only:  &
        COMM_data_transfer
     implicit none
 
@@ -215,6 +187,7 @@ contains
        topo_io_mode,   &
        hgrid_fname,    &
        topo_fname,     &
+       toposd_fname,   &
        vgrid_fname,    &
        vgrid_scheme,   &
        h_efold,        &
@@ -224,12 +197,14 @@ contains
        triangle_size
 
     real(RP) :: htop
-    real(RP) :: dz
     integer  :: nstart, nend
     integer  :: kflat
 
     integer  :: ierr
-    integer  :: n, k, l, k0, i, j
+    integer  :: n, k, l, k0
+
+    integer  :: suf, i, j
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     k0 = ADM_KNONE
@@ -250,30 +225,39 @@ contains
 
 
     !---< horizontal grid >---
-#ifndef FIXEDINDEX
-    allocate( GRD_x    (ADM_gall   ,k0,ADM_lall   ,              ADM_nxyz) )
-    allocate( GRD_x_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
-    allocate( GRD_xt   (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
-    allocate( GRD_xt_pl(ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
-    allocate( GRD_xr   (ADM_gall   ,k0,ADM_lall   ,ADM_AI:ADM_AJ,ADM_nxyz) )
-    allocate( GRD_xr_pl(ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_x     (ADM_gall   ,k0,ADM_lall   ,              ADM_nxyz) )
+    allocate( GRD_x_pl  (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_xt    (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz) )
+    allocate( GRD_xt_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
+    allocate( GRD_xr    (ADM_gall   ,k0,ADM_lall   ,ADM_AI:ADM_AJ,ADM_nxyz) )
+    allocate( GRD_xr_pl (ADM_gall_pl,k0,ADM_lall_pl,              ADM_nxyz) )
 
-    allocate( GRD_s    (ADM_gall   ,k0,ADM_lall   ,              2) )
-    allocate( GRD_s_pl (ADM_gall_pl,k0,ADM_lall_pl,              2) )
-    allocate( GRD_st   (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,2) )
-    allocate( GRD_st_pl(ADM_gall_pl,k0,ADM_lall_pl,              2) )
-#endif
-    GRD_x    (:,:,:,:)   = UNDEF
-    GRD_x_pl (:,:,:,:)   = UNDEF
-    GRD_xt   (:,:,:,:,:) = UNDEF
-    GRD_xt_pl(:,:,:,:)   = UNDEF
-    GRD_xr   (:,:,:,:,:) = UNDEF
-    GRD_xr_pl(:,:,:,:)   = UNDEF
+    allocate( GRD_s     (ADM_gall   ,k0,ADM_lall   ,              2) )
+    allocate( GRD_s_pl  (ADM_gall_pl,k0,ADM_lall_pl,              2) )
+    allocate( GRD_st    (ADM_gall   ,k0,ADM_lall   ,ADM_TI:ADM_TJ,2) )
+    allocate( GRD_st_pl (ADM_gall_pl,k0,ADM_lall_pl,              2) )
 
-    GRD_s    (:,:,:,:)   = UNDEF
-    GRD_s_pl (:,:,:,:)   = UNDEF
-    GRD_st   (:,:,:,:,:) = UNDEF
-    GRD_st_pl(:,:,:,:)   = UNDEF
+    allocate( GRD_LAT   (ADM_gall   ,ADM_lall   ) )
+    allocate( GRD_LAT_pl(ADM_gall_pl,ADM_lall_pl) )
+    allocate( GRD_LON   (ADM_gall   ,ADM_lall   ) )
+    allocate( GRD_LON_pl(ADM_gall_pl,ADM_lall_pl) )
+
+    GRD_x     (:,:,:,:)   = UNDEF
+    GRD_x_pl  (:,:,:,:)   = UNDEF
+    GRD_xt    (:,:,:,:,:) = UNDEF
+    GRD_xt_pl (:,:,:,:)   = UNDEF
+    GRD_xr    (:,:,:,:,:) = UNDEF
+    GRD_xr_pl (:,:,:,:)   = UNDEF
+
+    GRD_s     (:,:,:,:)   = UNDEF
+    GRD_s_pl  (:,:,:,:)   = UNDEF
+    GRD_st    (:,:,:,:,:) = UNDEF
+    GRD_st_pl (:,:,:,:)   = UNDEF
+
+    GRD_LAT   (:,:)       = UNDEF
+    GRD_LAT_pl(:,:)       = UNDEF
+    GRD_LON   (:,:)       = UNDEF
+    GRD_LON_pl(:,:)       = UNDEF
 
     call GRD_input_hgrid( hgrid_fname,  & ![IN]
                           .true.,       & ![IN]
@@ -283,7 +267,7 @@ contains
     if( hgrid_comm_flg ) call COMM_data_transfer( GRD_x, GRD_x_pl )
 
     ! scaling
-    if ( trim(GRD_grid_type) == 'ON_PLANE' ) then
+    if ( GRD_grid_type == GRD_grid_type_on_plane ) then
        call GRD_scaling(triangle_size)
     else
        call GRD_scaling(RADIUS)
@@ -295,21 +279,22 @@ contains
     ! calc position of cell arc
     call GRD_makearc
 
+
+
     !---< surface height >---
-#ifndef FIXEDINDEX
-    allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC) )
-    allocate( GRD_zs_pl(ADM_gall_pl,k0,ADM_lall_pl,GRD_ZSFC) )
-#endif
+    allocate( GRD_zs   (ADM_gall,   k0,ADM_lall,   GRD_ZSFC:GRD_ZSD) )
+    allocate( GRD_zs_pl(ADM_gall_pl,k0,ADM_lall_pl,GRD_ZSFC:GRD_ZSD) )
     GRD_zs   (:,:,:,:) = 0.0_RP
     GRD_zs_pl(:,:,:,:) = 0.0_RP
 
-    call GRD_input_topograph(topo_fname)
+    call GRD_input_topograph( topo_fname,   & ![IN]
+                              toposd_fname, & ![IN]
+                              topo_io_mode  ) ![IN]
 
 
 
     !---< vertical coordinate >---
     if ( ADM_kall /= ADM_KNONE ) then
-#ifndef FIXEDINDEX
        allocate( GRD_gz   (ADM_kall) )
        allocate( GRD_gzh  (ADM_kall) )
        allocate( GRD_dgz  (ADM_kall) )
@@ -324,7 +309,6 @@ contains
 
        allocate( GRD_vz   (ADM_gall   ,ADM_kall,ADM_lall   ,GRD_Z:GRD_ZH) )
        allocate( GRD_vz_pl(ADM_gall_pl,ADM_kall,ADM_lall_pl,GRD_Z:GRD_ZH) )
-#endif
 
        call GRD_input_vgrid(vgrid_fname)
 
@@ -344,7 +328,7 @@ contains
           GRD_rdgz (k) = 1.0_RP / grd_dgz (k)
           GRD_rdgzh(k) = 1.0_RP / grd_dgzh(k)
        enddo
-       
+
        ! hight top
        GRD_htop = GRD_gzh(ADM_kmax+1) - GRD_gzh(ADM_kmin)
 
@@ -413,7 +397,7 @@ contains
              endif
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              n = ADM_gslf_pl
              do l = 1, ADM_lall_pl
                 do k = ADM_kmin-1, kflat
@@ -440,27 +424,27 @@ contains
           do k = ADM_kmin-1, ADM_kmax+1
           do n = nstart, nend
              GRD_vz(n,k,l,GRD_Z)  = GRD_gz(k)                               &
-                                  + GRD_zs(n,k0,l,1)                        &
+                                  + GRD_zs(n,k0,l,GRD_ZSFC)                 &
                                   * sinh( (GRD_htop-GRD_gz (k)) / h_efold ) &
                                   / sinh(  GRD_htop             / h_efold )
              GRD_vz(n,k,l,GRD_ZH) = GRD_gzh(k)                              &
-                                  + GRD_zs(n,k0,l,1)                        &
+                                  + GRD_zs(n,k0,l,GRD_ZSFC)                 &
                                   * sinh( (GRD_htop-GRD_gzh(k)) / h_efold ) &
                                   / sinh(  GRD_htop             / h_efold )
           enddo
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              n = ADM_gslf_pl
              do l = 1, ADM_lall_pl
              do k = ADM_kmin-1, ADM_kmax+1
                 GRD_vz_pl(n,k,l,GRD_Z)  = GRD_gz(k)                               &
-                                        + GRD_zs_pl(n,k0,l,1)                     &
+                                        + GRD_zs_pl(n,k0,l,GRD_ZSFC)              &
                                         * sinh( (GRD_htop-GRD_gz (k)) / h_efold ) &
                                         / sinh(  GRD_htop             / h_efold )
                 GRD_vz_pl(n,k,l,GRD_ZH) = GRD_gzh(k)                              &
-                                        + GRD_zs_pl(n,k0,l,1)                     &
+                                        + GRD_zs_pl(n,k0,l,GRD_ZSFC)              &
                                         * sinh( (GRD_htop-GRD_gzh(k)) / h_efold ) &
                                         / sinh(  GRD_htop             / h_efold )
              enddo
@@ -471,7 +455,11 @@ contains
 
        ! fill HALO
        call COMM_data_transfer( GRD_vz, GRD_vz_pl )
-
+    else
+       allocate( GRD_gz (ADM_KNONE) )
+       allocate( GRD_gzh(ADM_KNONE) )
+       GRD_gz (:) = 1.0_RP
+       GRD_gzh(:) = 1.0_RP
     endif
 
     !--- output information about grid.
@@ -583,9 +571,9 @@ contains
     if ( io_mode == 'ADVANCED' ) then
 
        call FIO_output( GRD_x(:,:,:,GRD_XDIR),                            & ! [IN]
-                        basename, desc, "",                               & ! [IN]
-                       "grd_x_x", "GRD_x (X_DIR)", "",                    & ! [IN]
-                       "NIL", IO_REAL8, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
+                        basename, desc, '',                               & ! [IN]
+                       'grd_x_x', 'GRD_x (X_DIR)', '',                    & ! [IN]
+                       'NIL', IO_REAL8, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
        call FIO_output( GRD_x(:,:,:,GRD_YDIR),                            & ! [IN]
                         basename, desc, '',                               & ! [IN]
                        'grd_x_y', 'GRD_x (Y_DIR)', '',                    & ! [IN]
@@ -712,8 +700,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Input topography data
   subroutine GRD_input_topograph( &
-       basename )
-    use mod_comm, only: &
+       topo_basename,   &
+       toposd_basename, &
+       io_mode          )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_comm_icoA, only: &
        COMM_var
     use mod_fio, only: &
        FIO_input
@@ -721,28 +713,36 @@ contains
        IDEAL_topo
     implicit none
 
-    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: topo_basename   ! input basename (topography)
+    character(len=*), intent(in) :: toposd_basename ! input basename (std.dev. of topography)
+    character(len=*), intent(in) :: io_mode         ! io_mode
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** topography data input'
 
-    if ( topo_io_mode == 'ADVANCED' ) then
+    if ( io_mode == 'ADVANCED' ) then
 
-       if ( basename /= 'NONE' ) then
-          call FIO_input(GRD_zs(:,:,:,GRD_ZSFC),basename,'topo','ZSSFC1',1,1,1)
+       if ( topo_basename /= 'NONE' ) then
+          call FIO_input(GRD_zs(:,:,:,GRD_ZSFC),topo_basename,  'topo'       ,'ZSSFC1',1,1,1)
+       endif
+       if ( toposd_basename /= 'NONE' ) then
+          call FIO_input(GRD_zs(:,:,:,GRD_ZSD ),toposd_basename,'topo_stddev','ZSSFC1',1,1,1)
        endif
 
-    elseif( topo_io_mode == 'IDEAL' ) then
+    elseif( io_mode == 'IDEAL' ) then
 
        if( IO_L ) write(IO_FID_LOG,*) '*** make ideal topography'
 
-       call IDEAL_topo( GRD_s (:,:,:,GRD_LAT), & ! [IN]
-                        GRD_s (:,:,:,GRD_LON), & ! [IN]
+       call IDEAL_topo( GRD_s (:,:,:,I_LAT),   & ! [IN]
+                        GRD_s (:,:,:,I_LON),   & ! [IN]
                         GRD_zs(:,:,:,GRD_ZSFC) ) ! [OUT]
 
+    else
+       write(*,*) 'xxx [grd/GRD_input_topograph] Invalid io_mode!', trim(io_mode)
+       call PRC_abort
     endif ! io_mode
 
-    call COMM_var( GRD_zs, GRD_zs_pl, ADM_KNONE, 1 )
+    call COMM_var( GRD_zs, GRD_zs_pl, ADM_KNONE, 2 )
 
     return
   end subroutine GRD_input_topograph
@@ -752,32 +752,45 @@ contains
   subroutine GRD_gen_plgrid
     use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD, &
+       PRC_myrank,     &
        PRC_abort
-    use mod_adm, only: &
-       ADM_rgn_vnum,   &
-       ADM_rgn_vtab,   &
-       ADM_rgn2prc,    &
-       ADM_prc_tab,    &
-       ADM_prc_me,     &
-       ADM_prc_npl,    &
-       ADM_prc_spl
-    use mod_comm, only: &
+    use scale_prc_icoA, only: &
+       PRC_have_pl,      &
+       PRC_RGN_vlink,    &
+       PRC_RGN_total,    &
+       PRC_RGN_local,    &
+       PRC_RGN_vert_num, &
+       PRC_RGN_vert_tab, &
+       PRC_RGN_l2r,      &
+       PRC_RGN_r2lp,     &
+       PRC_RGN_r2p_pl,   &
+       I_prc,            &
+       I_RGNID,          &
+       I_N,              &
+       I_S,              &
+       I_NPL,            &
+       I_SPL
+    use scale_comm_icoA, only: &
        COMM_var
     implicit none
 
-    integer :: prctab   (ADM_vlink)
-    integer :: rgntab   (ADM_vlink)
-    integer :: sreq     (ADM_vlink)
-    integer :: rreq     (ADM_vlink)
-    logical :: send_flag(ADM_vlink)
+    integer :: prctab   (PRC_RGN_vlink)
+    integer :: rgntab   (PRC_RGN_vlink)
+    integer :: sreq     (PRC_RGN_vlink)
+    integer :: rreq     (PRC_RGN_vlink)
+    logical :: send_flag(PRC_RGN_vlink)
 
-    real(RP) :: vsend_pl (ADM_nxyz,ADM_vlink)
-    real(RP) :: vrecv_pl (ADM_nxyz,ADM_vlink)
+    real(RP) :: vsend_pl (ADM_nxyz,PRC_RGN_vlink)
+    real(RP) :: vrecv_pl (ADM_nxyz,PRC_RGN_vlink)
 
-    integer :: datatype
+    integer  :: datatype
 
-    integer :: istat(MPI_STATUS_SIZE)
-    integer :: n, l, ierr
+    integer  :: istat(MPI_STATUS_SIZE)
+    integer  :: l, n, nn
+    integer  :: ierr
+
+    integer  :: suf, i, j
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     if ( RP == DP ) then
@@ -792,11 +805,13 @@ contains
     !--- send information of grid around north pole from regular region
 
     ! find region which has the north pole
-    do l = ADM_rgn_nmax, 1, -1
-       if ( ADM_rgn_vnum(ADM_N,l) == ADM_vlink ) then
-          do n = 1, ADM_vlink
-             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_N,l,n)
-             prctab(n) = ADM_rgn2prc(rgntab(n))
+    do l = PRC_RGN_total, 1, -1
+       if ( PRC_RGN_vert_num(I_N,l) == PRC_RGN_vlink ) then
+          do n = 1, PRC_RGN_vlink
+             nn = n + 1
+             if( nn > ADM_vlink ) nn = 1
+             rgntab(n) = PRC_RGN_vert_tab(I_RGNID,I_N,l,nn)
+             prctab(n) = PRC_RGN_r2lp(I_prc,rgntab(n))
           enddo
           exit
        endif
@@ -805,31 +820,31 @@ contains
     send_flag(:) = .false.
 
     ! send grid position from regular region
-    do n = 1, ADM_vlink
-       do l = 1, ADM_lall
-          if ( ADM_prc_tab(l,ADM_prc_me) == rgntab(n) ) then
+    do n = 1, PRC_RGN_vlink
+       do l = 1, PRC_RGN_local
+          if ( PRC_RGN_l2r(l) == rgntab(n) ) then
              vsend_pl(:,n) = GRD_xt(suf(ADM_gmin,ADM_gmax),ADM_KNONE,l,ADM_TJ,:) ! [mod] H.Yashiro 20120525
 
-             call MPI_ISEND( vsend_pl(:,n),        &
-                             3,                    &
-                             datatype,             &
-                             ADM_prc_npl-1,        &
-                             rgntab(n),            &
-                             PRC_LOCAL_COMM_WORLD, &
-                             sreq(n),              &
-                             ierr                  )
+             call MPI_ISEND( vsend_pl(:,n),         &
+                             3,                     &
+                             datatype,              &
+                             PRC_RGN_r2p_pl(I_NPL), &
+                             rgntab(n),             &
+                             PRC_LOCAL_COMM_WORLD,  &
+                             sreq(n),               &
+                             ierr                   )
 
              send_flag(n) = .true.
           endif
        enddo
     enddo
 
-    if ( ADM_prc_me == ADM_prc_npl ) then
-       do n = 1, ADM_vlink
+    if ( PRC_myrank == PRC_RGN_r2p_pl(I_NPL) ) then
+       do n = 1, PRC_RGN_vlink
           call MPI_IRECV( vrecv_pl(:,n),        &
                           3,                    &
                           datatype,             &
-                          prctab(n)-1,          &
+                          prctab(n),            &
                           rgntab(n),            &
                           PRC_LOCAL_COMM_WORLD, &
                           rreq(n),              &
@@ -838,27 +853,27 @@ contains
     endif
 
     ! wait and store
-    do n = 1, ADM_vlink
+    do n = 1, PRC_RGN_vlink
        if ( send_flag(n) ) then
           call MPI_WAIT(sreq(n),istat,ierr)
        endif
     enddo
 
-    if ( ADM_prc_me == ADM_prc_npl ) then
-       do n = 1, ADM_vlink
+    if ( PRC_myrank == PRC_RGN_r2p_pl(I_NPL) ) then
+       do n = 1, PRC_RGN_vlink
           call MPI_WAIT(rreq(n),istat,ierr)
-          GRD_xt_pl(n+1,ADM_KNONE,ADM_NPL,:) = vrecv_pl(:,n) ! [mod] H.Yashiro 20120525
+          GRD_xt_pl(n+1,ADM_KNONE,I_NPL,:) = vrecv_pl(:,n) ! [mod] H.Yashiro 20120525
        enddo
     endif
 
     !--- send information of grid around south pole from regular region
 
     ! find region which has the south pole
-    do l = 1, ADM_rgn_nmax
-       if ( ADM_rgn_vnum(ADM_S,l) == ADM_vlink ) then
-          do n = 1, ADM_vlink
-             rgntab(n) = ADM_rgn_vtab(ADM_RID,ADM_S,l,n)
-             prctab(n) = ADM_rgn2prc(rgntab(n))
+    do l = PRC_RGN_total, 1, -1
+       if ( PRC_RGN_vert_num(I_S,l) == PRC_RGN_vlink ) then
+          do n = 1, PRC_RGN_vlink
+             rgntab(n) = PRC_RGN_vert_tab(I_RGNID,I_S,l,n)
+             prctab(n) = PRC_RGN_r2lp(I_prc,rgntab(n))
           enddo
           exit
        endif
@@ -868,31 +883,31 @@ contains
 
     send_flag(:) = .false.
 
-    do n = 1, ADM_vlink
-       do l =1, ADM_lall
-          if (ADM_prc_tab(l,ADM_prc_me) == rgntab(n) ) then
+    do n = 1, PRC_RGN_vlink
+       do l =1, PRC_RGN_local
+          if (PRC_RGN_l2r(l) == rgntab(n) ) then
              vsend_pl(:,n) = GRD_xt(suf(ADM_gmax,ADM_gmin),ADM_KNONE,l,ADM_TI,:) ! [mod] H.Yashiro 20120525
 
-             call MPI_ISEND( vsend_pl(:,n),        &
-                             3,                    &
-                             datatype,             &
-                             ADM_prc_spl-1,        &
-                             rgntab(n),            &
-                             PRC_LOCAL_COMM_WORLD, &
-                             sreq(n),              &
-                             ierr                  )
+             call MPI_ISEND( vsend_pl(:,n),         &
+                             3,                     &
+                             datatype,              &
+                             PRC_RGN_r2p_pl(I_SPL), &
+                             rgntab(n),             &
+                             PRC_LOCAL_COMM_WORLD,  &
+                             sreq(n),               &
+                             ierr                   )
 
              send_flag(n) = .true.
           endif
        enddo
     enddo
 
-    if ( ADM_prc_me == ADM_prc_spl ) then
-       do n = 1, ADM_vlink
+    if ( PRC_myrank == PRC_RGN_r2p_pl(I_SPL) ) then
+       do n = 1, PRC_RGN_vlink
           call MPI_IRECV( vrecv_pl(:,n),        &
                           3,                    &
                           datatype,             &
-                          prctab(n)-1,          &
+                          prctab(n),            &
                           rgntab(n),            &
                           PRC_LOCAL_COMM_WORLD, &
                           rreq(n),              &
@@ -901,24 +916,24 @@ contains
     endif
 
     ! wait and store
-    do n = 1, ADM_vlink
+    do n = 1, PRC_RGN_vlink
        if ( send_flag(n) ) then
           call MPI_WAIT(sreq(n),istat,ierr)
        endif
     enddo
 
-    if ( ADM_prc_me == ADM_prc_spl ) then
-       do n = 1, ADM_vlink
+    if ( PRC_myrank == PRC_RGN_r2p_pl(I_SPL) ) then
+       do n = 1, PRC_RGN_vlink
           call MPI_WAIT(rreq(n),istat,ierr)
-          GRD_xt_pl(n+1,ADM_KNONE,ADM_SPL,:) = vrecv_pl(:,n) ! [mod] H.Yashiro 20120525
+          GRD_xt_pl(n+1,ADM_KNONE,I_SPL,:) = vrecv_pl(:,n) ! [mod] H.Yashiro 20120525
        enddo
     endif
 
     ! grid point communication
     call COMM_var( GRD_x, GRD_x_pl, ADM_KNONE, 3 )
 
-    if (      ADM_prc_me == ADM_prc_npl &
-         .OR. ADM_prc_me == ADM_prc_spl ) then
+    if (      PRC_myrank == PRC_RGN_r2p_pl(I_NPL) &
+         .OR. PRC_myrank == PRC_RGN_r2p_pl(I_SPL) ) then
        GRD_xt_pl(ADM_gslf_pl,:,:,:) = GRD_x_pl(ADM_gslf_pl,:,:,:)
     endif
 
@@ -928,8 +943,8 @@ contains
   !-----------------------------------------------------------------------------
   !> scaling grid position on the plane/sphere
   subroutine GRD_scaling( fact )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
     real(RP), intent(in) :: fact ! scaling factor
@@ -938,12 +953,12 @@ contains
     GRD_x (:,:,:,:)   = GRD_x (:,:,:,:)   * fact
     GRD_xt(:,:,:,:,:) = GRD_xt(:,:,:,:,:) * fact
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        GRD_x_pl (:,:,:,:)   = GRD_x_pl (:,:,:,:) * fact
        GRD_xt_pl(:,:,:,:)   = GRD_xt_pl(:,:,:,:) * fact
     endif
 
-    if ( GRD_grid_type == 'ON_PLANE' ) then
+    if ( GRD_grid_type == GRD_grid_type_on_plane ) then
        ! do nothing
     else
        ! setting the sphere radius
@@ -956,8 +971,8 @@ contains
   !-----------------------------------------------------------------------------
   !> calculate longitude and latitude
   subroutine GRD_makelatlon
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_vector, only: &
        VECTR_xyz2latlon
     implicit none
@@ -972,37 +987,43 @@ contains
        call VECTR_xyz2latlon( GRD_x(g,k0,l,GRD_XDIR), & ! [IN]
                               GRD_x(g,k0,l,GRD_YDIR), & ! [IN]
                               GRD_x(g,k0,l,GRD_ZDIR), & ! [IN]
-                              GRD_s(g,k0,l,GRD_LAT),  & ! [OUT]
-                              GRD_s(g,k0,l,GRD_LON)   ) ! [OUT]
+                              GRD_s(g,k0,l,I_LAT),    & ! [OUT]
+                              GRD_s(g,k0,l,I_LON)     ) ! [OUT]
 
        call VECTR_xyz2latlon( GRD_xt(g,k0,l,ADM_TI,GRD_XDIR), & ! [IN]
                               GRD_xt(g,k0,l,ADM_TI,GRD_YDIR), & ! [IN]
                               GRD_xt(g,k0,l,ADM_TI,GRD_ZDIR), & ! [IN]
-                              GRD_st(g,k0,l,ADM_TI,GRD_LAT),  & ! [OUT]
-                              GRD_st(g,k0,l,ADM_TI,GRD_LON)   ) ! [OUT]
+                              GRD_st(g,k0,l,ADM_TI,I_LAT),    & ! [OUT]
+                              GRD_st(g,k0,l,ADM_TI,I_LON)     ) ! [OUT]
 
        call VECTR_xyz2latlon( GRD_xt(g,k0,l,ADM_TJ,GRD_XDIR), & ! [IN]
                               GRD_xt(g,k0,l,ADM_TJ,GRD_YDIR), & ! [IN]
                               GRD_xt(g,k0,l,ADM_TJ,GRD_ZDIR), & ! [IN]
-                              GRD_st(g,k0,l,ADM_TJ,GRD_LAT),  & ! [OUT]
-                              GRD_st(g,k0,l,ADM_TJ,GRD_LON)   ) ! [OUT]
+                              GRD_st(g,k0,l,ADM_TJ,I_LAT),    & ! [OUT]
+                              GRD_st(g,k0,l,ADM_TJ,I_LON)     ) ! [OUT]
+
+       GRD_LAT(g,l) = GRD_s(g,k0,l,I_LAT)
+       GRD_LON(g,l) = GRD_s(g,k0,l,I_LON)
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1,ADM_lall_pl
        do g = 1,ADM_gall_pl
           call VECTR_xyz2latlon( GRD_x_pl(g,k0,l,GRD_XDIR), & ! [IN]
                                  GRD_x_pl(g,k0,l,GRD_YDIR), & ! [IN]
                                  GRD_x_pl(g,k0,l,GRD_ZDIR), & ! [IN]
-                                 GRD_s_pl(g,k0,l,GRD_LAT),  & ! [OUT]
-                                 GRD_s_pl(g,k0,l,GRD_LON)   ) ! [OUT]
+                                 GRD_s_pl(g,k0,l,I_LAT),    & ! [OUT]
+                                 GRD_s_pl(g,k0,l,I_LON)     ) ! [OUT]
 
           call VECTR_xyz2latlon( GRD_xt_pl(g,k0,l,GRD_XDIR), & ! [IN]
                                  GRD_xt_pl(g,k0,l,GRD_YDIR), & ! [IN]
                                  GRD_xt_pl(g,k0,l,GRD_ZDIR), & ! [IN]
-                                 GRD_st_pl(g,k0,l,GRD_LAT),  & ! [OUT]
-                                 GRD_st_pl(g,k0,l,GRD_LON)   ) ! [OUT]
+                                 GRD_st_pl(g,k0,l,I_LAT),    & ! [OUT]
+                                 GRD_st_pl(g,k0,l,I_LON)     ) ! [OUT]
+
+          GRD_LAT_pl(g,l) = GRD_s_pl(g,k0,l,I_LAT)
+          GRD_LON_pl(g,l) = GRD_s_pl(g,k0,l,I_LON)
        enddo
        enddo
     endif
@@ -1013,15 +1034,18 @@ contains
   !-----------------------------------------------------------------------------
   !> calculate location of the mid-point of cell arc
   subroutine GRD_makearc
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     implicit none
 
-    integer :: ij
-    integer :: im1j, ijm1
+    integer  :: ij
+    integer  :: im1j, ijm1
 
-    integer :: nstart,nend
-    integer :: n, l, v, k0
+    integer  :: nstart,nend
+    integer  :: n, l, v, k0
+
+    integer  :: suf, i, j
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     k0 = ADM_KNONE
@@ -1063,7 +1087,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1081,16 +1105,5 @@ contains
 
     return
   end subroutine GRD_makearc
-
-  !-----------------------------------------------------------------------------
-  integer function suf(i,j)
-    implicit none
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    suf = ADM_gall_1d * (j-1) + i
-
-  end function suf
 
 end module mod_grd

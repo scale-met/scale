@@ -154,8 +154,8 @@ contains
        QIE, &
        LHV, &
        LHF
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_vmtr, only: &
        VMTR_getIJ_RGSGAM2, &
        VMTR_getIJ_PHI
@@ -268,7 +268,7 @@ contains
             qd(:,:,l)                   ) ! [OUT]
     end do
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           call ATMOS_THERMODYN_qdry( &
                ADM_gall_pl, 1, ADM_gall_pl, ADM_kall, 1, ADM_kall, QA, &
@@ -281,7 +281,7 @@ contains
 
     !--- total mass (dry air)
     tmp(:,:,:) = rho(:,:,:) * qd(:,:,:)
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        tmp_pl(:,:,:) = rho_pl(:,:,:) * qd_pl(:,:,:)
     endif
     rhoqd_sum = GTL_global_sum( tmp, tmp_pl )
@@ -289,7 +289,7 @@ contains
     !--- total mass (each water category)
     do nq = I_QV, QHE
        tmp(:,:,:) = rho(:,:,:) * q(:,:,:,nq)
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq)
        endif
        rhoq_sum(nq) = GTL_global_sum( tmp, tmp_pl )
@@ -317,14 +317,14 @@ contains
 
     !--- potential energy
     tmp(:,:,:) = rho(:,:,:) * VMTR_PHI(:,:,:)
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        tmp_pl(:,:,:) = rho_pl(:,:,:) * VMTR_PHI_pl(:,:,:)
     endif
     rhophi_sum = GTL_global_sum( tmp, tmp_pl )
 
     !--- internal energy (dry air)
     tmp = rho * qd * CVdry * tem
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        tmp_pl = rho_pl * qd_pl * CVdry * tem_pl
     endif
     rhoein_qd_sum = GTL_global_sum( tmp, tmp_pl )
@@ -339,7 +339,7 @@ contains
           tmp(:,:,:) = tmp(:,:,:) - rho(:,:,:) * q(:,:,:,nq) * LHF ! correct latent heat
        endif
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           tmp_pl(:,:,:) = rho_pl(:,:,:) * q_pl(:,:,:,nq) * TRACER_CV(nq) * tem_pl(:,:,:)
           if    ( nq == I_QV ) then
              tmp_pl(:,:,:) = tmp_pl(:,:,:) + rho_pl(:,:,:) * q_pl(:,:,:,nq) * LHV ! correct latent heat
@@ -366,7 +366,7 @@ contains
                          tmp,    tmp_pl     ) ! [OUT]
 
     tmp(:,:,:) = tmp(:,:,:) * VMTR_RGSGAM2(:,:,:)
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        tmp_pl(:,:,:) = tmp_pl(:,:,:) * VMTR_RGSGAM2_pl(:,:,:)
     endif
     rhokin_sum = GTL_global_sum( tmp, tmp_pl )

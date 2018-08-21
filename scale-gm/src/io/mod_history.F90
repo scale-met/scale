@@ -517,8 +517,6 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use mod_adm, only: &
-       ADM_l_me
     use mod_time, only: &
        TIME_CSTEP, &
        TIME_DTL
@@ -601,8 +599,6 @@ contains
 
           if ( present(l_region) ) then
              l_region_save(n) = l_region
-          elseif( ADM_l_me >= 1 .and. ADM_l_me <= ADM_lall ) then
-             l_region_save(n) = ADM_l_me
           else
              l_region_save(n) = l_region_save(n) + 1
              if( l_region_save(n) > ADM_lall ) l_region_save(n) = 1 ! cyclic
@@ -725,7 +721,7 @@ contains
        CALENDAR_daysec2date,   &
        CALENDAR_adjust_daysec, &
        CALENDAR_date2char
-    use mod_comm, only : &
+    use scale_comm_icoA, only : &
        COMM_var
     use mod_fio, only: &
        FIO_output

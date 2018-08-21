@@ -85,10 +85,10 @@ contains
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
        CVdry => CONST_CVdry
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -251,7 +251,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin, ADM_kmax+1
           do g = 1, ADM_gall_pl
@@ -341,7 +341,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -382,7 +382,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -448,7 +448,7 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
              do g = 1, ADM_gall_pl
@@ -515,7 +515,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
              do g = 1, ADM_gall_pl
@@ -550,7 +550,7 @@ contains
           enddo
           enddo
 
-          if ( ADM_have_pl ) then
+          if ( PRC_have_pl ) then
              do l = 1, ADM_lall_pl
              do k = 1, ADM_kall
              do g = 1, ADM_gall_pl
@@ -578,7 +578,7 @@ contains
                               diff_vh(:,:,:,2),      & ! [INOUT]
                               diff_vh(:,:,:,3)       ) ! [INOUT]
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           call BNDCND_rhovxvyvz( ADM_gall_pl,              & ! [IN]
                                  ADM_kall,                 & ! [IN]
                                  ADM_lall_pl,              & ! [IN]
@@ -649,7 +649,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -702,7 +702,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -753,8 +753,8 @@ contains
        grhoge,           grhoge_pl,           &
        grhogetot,        grhogetot_pl,        &
        dt                                     )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        Rdry  => CONST_Rdry, &
        CVdry => CONST_CVdry
@@ -910,7 +910,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -942,7 +942,7 @@ contains
                          VMTR_C2WfactGz(:,:,:,l) ) ! [IN]
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do g = 1, ADM_gall_pl
@@ -979,7 +979,7 @@ contains
 
     rhog_split1(:,:,:) = rhog_split0(:,:,:) + ( grhog(:,:,:) + drhog(:,:,:) ) * dt
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        rhog_split1_pl(:,:,:) = rhog_split0_pl(:,:,:) + ( grhog_pl(:,:,:) + drhog_pl(:,:,:) ) * dt
     endif
 
@@ -1010,7 +1010,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -1047,7 +1047,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -1074,7 +1074,7 @@ contains
                    + rhogkin0(:,:,:) / rhog0(:,:,:) &
                    + VMTR_PHI(:,:,:)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        ethtot0_pl(:,:,:) = eth0_pl(:,:,:)                       &
                          + rhogkin0_pl(:,:,:) / rhog0_pl(:,:,:) &
                          + VMTR_PHI_pl(:,:,:)
@@ -1097,7 +1097,7 @@ contains
                         + ( rhog_split0(:,:,:)                     & ! potential energy (diff,t=n)
                           - rhog_split1(:,:,:) ) * VMTR_PHI(:,:,:)   ! potential energy (diff,t=n+1)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        rhoge_split1_pl(:,:,:) = rhoge_split0_pl (:,:,:)                        &
                               + ( grhogetot_pl  (:,:,:)                        &
                                 + drhogetot_pl  (:,:,:) ) * dt                 &
@@ -1115,8 +1115,8 @@ contains
        eth,     eth_pl,     &
        g_tilde, g_tilde_pl, &
        dt                   )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
@@ -1223,7 +1223,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k = ADM_kmin+1, ADM_kmax
           do g = 1, ADM_gall_pl
@@ -1273,8 +1273,8 @@ contains
        Sw,     Sw_pl,     &
        Spre,   Spre_pl,   &
        dt                 )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
        Rdry  => CONST_Rdry, &
@@ -1402,7 +1402,7 @@ contains
        enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
           do k  = ADM_kmin+1, ADM_kmax
           do g = 1, ADM_gall_pl

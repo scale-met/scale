@@ -16,17 +16,21 @@ program mkllmap
   use scale_io
   use scale_prof
   use scale_prc, only: &
-     PRC_LOCAL_MPIstart, &
-     PRC_abort, &
+     PRC_MPIstart,         &
+     PRC_SINGLECOM_setup,  &
+     PRC_ERRHANDLER_setup, &
+     PRC_abort,            &
      PRC_MPIfinish
+  use scale_prc_icoA, only: &
+     PRC_ICOA_setup
   use scale_const, only: &
      CONST_setup
-  use mod_adm, only: &
-     ADM_setup
+  use scale_atmos_grid_icoA_index, only: &
+     ATMOS_GRID_icoA_INDEX_setup
+  use scale_comm_icoA, only: &
+     COMM_setup
   use mod_fio, only: &
      FIO_setup
-  use mod_comm, only: &
-     COMM_setup
   use mod_grd, only: &
      GRD_setup
   use mod_latlon, only: &
@@ -45,10 +49,14 @@ program mkllmap
   !
   character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
 
+  character(len=H_LONG) :: cnf_fname ! config file
+
+  integer :: comm
+  integer :: nprocs
   integer :: myrank
   logical :: ismaster
 
-  character(len=H_LONG) :: output_dir   = './'
+  character(len=H_LONG) :: output_dir = './'
 
   namelist /mkllmap_param/ &
      output_dir
@@ -56,15 +64,29 @@ program mkllmap
   integer :: ierr
   !=============================================================================
 
-  !---< MPI start >---
-  call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
-                           ismaster ) ! [OUT]
+  ! start MPI
+  call PRC_MPIstart( comm ) ! [OUT]
+
+  ! setup MPI communicator
+  call PRC_SINGLECOM_setup( comm,    & ! [IN]
+                            nprocs,  & ! [OUT]
+                            myrank,  & ! [OUT]
+                            ismaster ) ! [OUT]
+
+  ! setup errhandler
+  call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                             ismaster ) ! [IN]
 
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  cnf_fname = IO_ARG_getfname( ismaster )
+
+  call IO_setup( MODELNAME, cnf_fname )
   call IO_LOG_setup( myrank, ismaster )
+
+  ! setup process
+  call PRC_ICOA_setup
 
   ! setup PROF
   call PROF_setup
@@ -76,8 +98,8 @@ program mkllmap
   !--- < cnst module setup > ---
   call CONST_setup
 
-  !--- < admin module setup > ---
-  call ADM_setup
+  ! setup horizontal/vertical grid coordinates (icosahedral,idealized)
+  call ATMOS_GRID_icoA_INDEX_setup
 
   !---< I/O module setup >---
   call FIO_setup

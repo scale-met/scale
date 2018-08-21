@@ -28,7 +28,6 @@ module scale_prc
   !++ Public procedure
   !
   public :: PRC_MPIstart
-  public :: PRC_LOCAL_MPIstart
   public :: PRC_UNIVERSAL_setup
   public :: PRC_GLOBAL_setup
   public :: PRC_LOCAL_setup
@@ -137,39 +136,6 @@ contains
 
     return
   end subroutine PRC_MPIstart
-
-  !-----------------------------------------------------------------------------
-  !> Start MPI, without nesting, bulk job
-  subroutine PRC_LOCAL_MPIstart( &
-       myrank,  &
-       ismaster )
-    implicit none
-
-    integer, intent(out) :: myrank   ! myrank         in this communicator
-    logical, intent(out) :: ismaster ! master process in this communicator?
-
-    integer :: comm               ! communicator
-    integer :: nprocs             ! number of procs in this communicator
-    logical :: abortall = .false. ! abort all jobs?
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    call MPI_Init(ierr)
-
-    PRC_mpi_alive = .true.
-!    PRC_UNIVERSAL_handler = MPI_ERRHANDLER_NULL
-!    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
-
-    comm = MPI_COMM_WORLD
-    PRC_ABORT_COMM_WORLD = comm
-
-    call PRC_UNIVERSAL_setup( comm, nprocs, ismaster )
-    call PRC_GLOBAL_setup   ( abortall, comm )
-    call PRC_LOCAL_setup    ( comm, myrank, ismaster )
-
-    return
-  end subroutine PRC_LOCAL_MPIstart
 
   !-----------------------------------------------------------------------------
   !> setup MPI in universal communicator
@@ -330,26 +296,26 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup MPI error handler
   subroutine PRC_ERRHANDLER_setup( &
-       use_fpm,  &
-       master    )
+       use_fpm, &
+       master   )
     implicit none
-    logical, intent(in) :: use_fpm  ! fpm switch
-    logical, intent(in) :: master   ! master flag
+
+    logical, intent(in) :: use_fpm ! fpm switch
+    logical, intent(in) :: master  ! master flag
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    call MPI_COMM_CREATE_ERRHANDLER(PRC_MPI_errorhandler,PRC_UNIVERSAL_handler,ierr)
 
-
-    call MPI_COMM_CREATE_ERRHANDLER( PRC_MPI_errorhandler, PRC_UNIVERSAL_handler, ierr )
     call MPI_COMM_SET_errhandler(PRC_ABORT_COMM_WORLD,PRC_UNIVERSAL_handler,ierr)
     call MPI_COMM_GET_errhandler(PRC_ABORT_COMM_WORLD,PRC_ABORT_handler    ,ierr)
 
-    if( PRC_UNIVERSAL_handler /= PRC_ABORT_handler )then
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) ""
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "ERROR: MPI HANDLER is INCONSISTENT"
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
-       if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "     PRC_ABORT_handler     = ", PRC_ABORT_handler
+    if ( PRC_UNIVERSAL_handler /= PRC_ABORT_handler ) then
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) ""
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) "ERROR: MPI HANDLER is INCONSISTENT"
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) "     PRC_UNIVERSAL_handler = ", PRC_UNIVERSAL_handler
+       if( PRC_UNIVERSAL_IsMaster ) write(*,*) "     PRC_ABORT_handler     = ", PRC_ABORT_handler
        call PRC_abort
     endif
 

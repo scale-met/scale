@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module LAND / SNOW model for Land Slab model
+!> module land / physics / snow / ky90
 !!
 !! @par Description
 !!       Profile model for snowpack by Kondo and Yamazaki (1990)

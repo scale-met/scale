@@ -73,6 +73,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_sort.o	\
 	$(OBJ_DIR)/scale_prc.o	\
 	$(OBJ_DIR)/scale_prc_cartesC.o	\
+	$(OBJ_DIR)/scale_prc_icoA.o	\
 	$(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_prof.o	\
 	$(OBJ_DIR)/scale_random.o	\
@@ -88,6 +89,7 @@ OBJS = \
 	$(OBJ_DIR)/scale_monitor_cartesC.o	\
 	$(OBJ_DIR)/scale_comm_cartesC.o	\
 	$(OBJ_DIR)/scale_comm_cartesC_nest.o	\
+	$(OBJ_DIR)/scale_comm_icoA.o	\
 	$(OBJ_DIR)/scale_file.o	\
 	$(OBJ_DIR)/scale_file_cartesC.o	\
 	$(OBJ_DIR)/scale_file_external_input.o	\
@@ -169,6 +171,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_ocean_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_ocean_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_slab.o	\
 	$(OBJ_DIR)/scale_ocean_dyn_offline.o	\
 	$(OBJ_DIR)/scale_ocean_phy_ice_simple.o	\
@@ -181,6 +185,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_land_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_land_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_land_dyn_bucket.o	\
 	$(OBJ_DIR)/scale_land_phy_matsiro.o	\
 	$(OBJ_DIR)/scale_land_phy_snow_diagnos.o	\
@@ -188,6 +194,8 @@ OBJS = \
 	$(OBJ_DIR)/scale_urban_grid_cartesC.o	\
 	$(OBJ_DIR)/scale_urban_grid_cartesC_index.o	\
 	$(OBJ_DIR)/scale_urban_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA_index.o	\
 	$(OBJ_DIR)/scale_urban_dyn_kusaka01.o	\
 	$(OBJ_DIR)/scale_bulkflux.o	\
 	$(OBJ_DIR)/scale_landuse.o	\

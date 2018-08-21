@@ -2,7 +2,7 @@
 !> module COMMUNICATION
 !!
 !! @par Description
-!!          MPI Communication module
+!!          MPI Communication module for Cartesian C-grid
 !!
 !! @author Team SCALE
 !!

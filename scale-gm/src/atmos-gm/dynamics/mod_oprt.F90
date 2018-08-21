@@ -186,9 +186,9 @@ contains
        GMTR_t,   GMTR_t_pl,  &
        GMTR_a,   GMTR_a_pl,  &
        coef_div, coef_div_pl )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -295,7 +295,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           j = ADM_jmin
           i = ADM_imin
 
@@ -355,7 +355,7 @@ contains
     enddo ! loop d
     enddo ! loop l
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
        do l = 1, ADM_lall_pl
        do d = 1, ADM_nxyz
@@ -400,9 +400,9 @@ contains
        GMTR_t,   GMTR_t_pl,  &
        GMTR_a,   GMTR_a_pl,  &
        coef_rot, coef_rot_pl )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -509,7 +509,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           j = ADM_jmin
           i = ADM_imin
 
@@ -569,7 +569,7 @@ contains
     enddo ! loop d
     enddo ! loop l
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
        do l = 1, ADM_lall_pl
        do d = 1, ADM_nxyz
@@ -614,9 +614,9 @@ contains
        GMTR_t,    GMTR_t_pl,   &
        GMTR_a,    GMTR_a_pl,   &
        coef_grad, coef_grad_pl )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        W1      => GMTR_t_W1,    &
@@ -729,7 +729,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           j = ADM_jmin
           i = ADM_imin
 
@@ -793,7 +793,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -838,9 +838,9 @@ contains
        GMTR_t,   GMTR_t_pl,  &
        GMTR_a,   GMTR_a_pl,  &
        coef_lap, coef_lap_pl )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        T_RAREA => GMTR_t_RAREA, &
@@ -1060,7 +1060,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           j = ADM_jmin
           i = ADM_imin
 
@@ -1223,7 +1223,7 @@ contains
        coef_lap(:,:,6,l) = coef_lap(:,:,6,l) * GMTR_p(:,:,k0,l,P_RAREA) / 12.0_RP
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n  = ADM_gslf_pl
 
        do l = 1,ADM_lall_pl
@@ -1299,9 +1299,9 @@ contains
        GMTR_a,    GMTR_a_pl,    &
        coef_intp, coef_intp_pl, &
        coef_diff, coef_diff_pl  )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_gmtr, only: &
        P_RAREA => GMTR_p_RAREA, &
        T_RAREA => GMTR_t_RAREA, &
@@ -1392,13 +1392,13 @@ contains
           enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           coef_diff(ADM_imin,ADM_jmin,5,:,l) = 0.0_RP
        endif
 
     enddo ! l loop
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n  = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1442,8 +1442,8 @@ contains
        vy,       vy_pl,      &
        vz,       vz_pl,      &
        coef_div, coef_div_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1541,7 +1541,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1570,8 +1570,8 @@ contains
        vy,       vy_pl,      &
        vz,       vz_pl,      &
        coef_rot, coef_rot_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1653,7 +1653,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1681,8 +1681,8 @@ contains
        grad,      grad_pl,     &
        scl,       scl_pl,      &
        coef_grad, coef_grad_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1782,7 +1782,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1811,8 +1811,8 @@ contains
        dscl,     dscl_pl,    &
        scl,      scl_pl,     &
        coef_lap, coef_lap_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_atmos_grid_icoA_index, only: &
        TI  => ADM_TI,  &
        TJ  => ADM_TJ,  &
@@ -1872,7 +1872,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -1899,9 +1899,9 @@ contains
        kh,        kh_pl,        &
        coef_intp, coef_intp_pl, &
        coef_diff, coef_diff_pl  )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -1946,7 +1946,7 @@ contains
     lall = ADM_lall
 
     !$omp parallel default(none),private(i,j,k,l,d), &
-    !$omp shared(imin,imax,jmin,jmax,kall,lall,ADM_have_sgp,dscl,scl,kh,vt,coef_intp,coef_diff)
+    !$omp shared(imin,imax,jmin,jmax,kall,lall,PRC_RGN_have_sgp,dscl,scl,kh,vt,coef_intp,coef_diff)
     do l = 1, lall
     do k = 1, kall
        !$omp do schedule(static) collapse(2)
@@ -1987,7 +1987,7 @@ contains
        enddo
        !$omp end do
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           !$omp master
           vt(imin-1,jmin-1,:,TI) = vt(imin,jmin-1,:,TJ)
           !$omp end master
@@ -2074,7 +2074,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -2134,9 +2134,9 @@ contains
        vz,        vz_pl,        &
        coef_intp, coef_intp_pl, &
        coef_diff, coef_diff_pl  )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,  &
+       PRC_RGN_have_sgp
     use mod_grd, only: &
        XDIR => GRD_XDIR, &
        YDIR => GRD_YDIR, &
@@ -2187,7 +2187,7 @@ contains
     lall = ADM_lall
 
     !$omp parallel default(none),private(i,j,k,l), &
-    !$omp shared(imin,imax,jmin,jmax,kall,lall,ADM_have_sgp, &
+    !$omp shared(imin,imax,jmin,jmax,kall,lall,PRC_RGN_have_sgp, &
     !$omp ddivdx,ddivdy,ddivdz,vx,vy,vz,sclt,coef_intp,coef_diff)
     do l = 1, lall
     do k = 1, kall
@@ -2224,7 +2224,7 @@ contains
        enddo
        !$omp end do
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           !$omp master
           sclt(imin-1,jmin-1,TI) = sclt(imin,jmin-1,TJ)
           !$omp end master
@@ -2287,7 +2287,7 @@ contains
     enddo ! l loop
     !$omp end parallel
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -2340,8 +2340,8 @@ contains
        vx, vx_pl, &
        vy, vy_pl, &
        vz, vz_pl  )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR,   &
        GRD_YDIR,   &
@@ -2386,7 +2386,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -2416,8 +2416,8 @@ contains
        vx, vx_pl, &
        vy, vy_pl, &
        vz, vz_pl  )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR,   &
        GRD_YDIR,   &
@@ -2468,7 +2468,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        do l = 1, ADM_lall_pl
        do k = 1, ADM_kall
        do g = 1, ADM_gall_pl
@@ -2498,13 +2498,13 @@ contains
        basename )
     use scale_prc, only: &
        PRC_abort
+    use scale_comm_icoA, only: &
+       COMM_data_transfer
     use mod_io_param, only: &
        IO_REAL8, &
        IO_REAL4
-    use mod_adm, only: &
-       ADM_have_pl
-    use mod_comm, only: &
-       COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_fio, only: &
        FIO_output
     use scale_atmos_grid_icoA_index, only: &
@@ -2649,7 +2649,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) Then
+    if ( PRC_have_pl ) Then
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
           tmp_pl(g,  1,l,1) = abs(OPRT_coef_div_pl (0,1,l))

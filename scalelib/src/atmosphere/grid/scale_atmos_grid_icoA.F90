@@ -1,8 +1,8 @@
 !-------------------------------------------------------------------------------
-!> module atmosphere / grid / icoA
+!> module atmosphere / grid / icosahedralA
 !!
 !! @par Description
-!!          Atmospheric grid module for the icosapedralA coordinate
+!!          Grid module for icosahedral coordinate for atmosphere
 !!
 !! @author Team SCALE
 !!

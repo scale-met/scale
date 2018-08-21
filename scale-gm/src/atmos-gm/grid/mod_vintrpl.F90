@@ -44,10 +44,10 @@ contains
   subroutine VINTRPL_Z2Xi( &
        var,   &
        var_pl )
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use mod_adm, only: &
-       ADM_have_pl
     use mod_grd, only: &
        Xi => GRD_gz, &
        GRD_Z,        &
@@ -87,7 +87,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) Then
+    if ( PRC_have_pl ) Then
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
           Z  (:)          = GRD_vz_pl(g,:,l,GRD_Z)
@@ -123,11 +123,11 @@ contains
        var,     &
        var_pl,  &
        use_quad )
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
-    use mod_adm, only: &
-       ADM_have_pl
     use mod_grd, only: &
        Xi => GRD_gz, &
        GRD_Z,        &
@@ -188,7 +188,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) Then
+       if ( PRC_have_pl ) Then
           do l = 1, ADM_lall_pl
           do g = 1, ADM_gall_pl
              Z  (:)          = GRD_vz_pl(g,:,l,GRD_Z)
@@ -269,7 +269,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) Then
+       if ( PRC_have_pl ) Then
           do l = 1, ADM_lall_pl
           do g = 1, ADM_gall_pl
              Z  (:)          = GRD_vz_pl(g,:,l,GRD_Z)

@@ -99,9 +99,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FIO_setup
-    use mod_adm, only: &
-       ADM_prc_tab, &
-       ADM_prc_me
+    use scale_prc_icoA, only: &
+       PRC_RGN_level, &
+       PRC_RGN_local, &
+       PRC_RGN_l2r
     implicit none
 
     integer, allocatable :: prc_tab(:)
@@ -110,21 +111,21 @@ contains
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '+++ Module[fio]/Category[common share]'
 
-    allocate( prc_tab(ADM_lall) )
-    prc_tab(1:ADM_lall) = ADM_prc_tab(1:ADM_lall,ADM_prc_me)-1
+    allocate( prc_tab(PRC_RGN_local) )
+    prc_tab(1:PRC_RGN_local) = PRC_RGN_l2r(1:PRC_RGN_local)-1
 
     call fio_syscheck()
     call fio_put_commoninfo( IO_SPLIT_FILE,  & ! [IN]
                              IO_BIG_ENDIAN,  & ! [IN]
                              IO_ICOSAHEDRON, & ! [IN]
                              ADM_glevel,     & ! [IN]
-                             ADM_rlevel,     & ! [IN]
-                             ADM_lall,       & ! [IN]
+                             PRC_RGN_level,  & ! [IN]
+                             PRC_RGN_local,  & ! [IN]
                              prc_tab         ) ! [IN]
 
     deallocate(prc_tab)
 
-    allocate( hinfo%rgnid(ADM_lall) )
+    allocate( hinfo%rgnid(PRC_RGN_local) )
 
     return
   end subroutine FIO_setup
@@ -137,8 +138,8 @@ contains
        rwtype,   &
        pkg_desc, &
        pkg_note  )
-    use mod_adm, only: &
-       ADM_prc_me
+    use scale_prc, only: &
+       PRC_myrank
     implicit none
 
     integer,          intent(out) :: fid      !< file ID
@@ -162,7 +163,7 @@ contains
 
     if ( fid < 0 ) then ! file registration
        !--- register new file and open
-       call fio_mk_fname(fname,trim(basename),'pe',ADM_prc_me-1,6)
+       call fio_mk_fname(fname,trim(basename),'pe',PRC_myrank,6)
        call fio_register_file(fid,fname)
 
        if ( rwtype == IO_FREAD ) then
@@ -667,8 +668,8 @@ contains
   !-----------------------------------------------------------------------------
   subroutine FIO_close( &
        basename )
-    use mod_adm, only: &
-       ADM_prc_me
+    use scale_prc, only: &
+       PRC_myrank
     implicit none
 
     character(len=*), intent(in) :: basename
@@ -685,7 +686,7 @@ contains
           fid = FIO_fid_list(n)
 
           call fio_fclose(fid)
-          call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',ADM_prc_me-1,6)
+          call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',PRC_myrank,6)
 
           if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') &
           '*** [FIO] File close (ADVANCED) fid= ', fid, ', name: ', trim(fname)
@@ -701,8 +702,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine FIO_finalize
-    use mod_adm, only: &
-       ADM_prc_me
+    use scale_prc, only: &
+       PRC_myrank
     implicit none
 
     character(len=H_LONG) :: fname
@@ -713,7 +714,7 @@ contains
        fid = FIO_fid_list(n)
 
        call fio_fclose(fid)
-       call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',ADM_prc_me-1,6)
+       call fio_mk_fname(fname,trim(FIO_fname_list(n)),'pe',PRC_myrank,6)
 
        if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A)') &
        '*** [FIO] File close (ADVANCED) fid= ', fid, ', name: ', trim(fname)

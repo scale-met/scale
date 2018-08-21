@@ -142,11 +142,11 @@ contains
   subroutine VMTR_setup
     use scale_prc, only: &
        PRC_abort
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use scale_const, only: &
        GRAV => CONST_GRAV
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
     use mod_grd, only: &
        GRD_Z,        &
@@ -488,7 +488,7 @@ contains
 
 
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
 
        !---   G^1/2 = dz/dgz
        do l = 1, ADM_lall_pl

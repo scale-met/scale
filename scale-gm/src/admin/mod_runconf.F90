@@ -112,12 +112,6 @@ contains
   subroutine RUNCONF_setup
     use scale_prc, only: &
        PRC_abort
-    use mod_ocean_admin, only: &
-       OCEAN_TYPE
-    use mod_land_admin, only: &
-       LAND_TYPE
-    use mod_cpl_admin, only: &
-       CPL_sw
     implicit none
 
     namelist /RUNCONFPARAM/ &
@@ -128,10 +122,8 @@ contains
        NDIFF_LOCATION,     &
        FLAG_NUDGING,       &
        THUBURN_LIM,        & ! R.Yoshida 13/06/13 [add]
-       ATMOS_PHY_TYPE,     & 
+       ATMOS_PHY_TYPE,     &
        ROUGHNESS_SEA_TYPE, &
-       LAND_TYPE,          &
-       OCEAN_TYPE,         &
        AF_TYPE,            &
        OUT_FILE_TYPE
 
@@ -155,8 +147,6 @@ contains
     call RUNCONF_component_setup
 
     call RUNCONF_tracer_setup
-
-    CPL_sw = .false.
 
     return
   end subroutine RUNCONF_setup

@@ -55,8 +55,8 @@ module mod_latlon
   !++ Private parameters & variables
   !
   character(len=H_SHORT), private :: latlon_type = 'EQUIDIST' ! grid type ( equidist or gaussian )
-  integer,                private :: imax        = 360        ! number of longitude
-  integer,                private :: jmax        = 180        ! number of latitude
+  integer,                private :: lon_imax        = 360        ! number of longitude
+  integer,                private :: lat_jmax        = 180        ! number of latitude
   real(RP),               private :: lonmin      = -999.0_RP  ! minimun longitude of region window in deg
   real(RP),               private :: lonmax      = -999.0_RP  ! maximun longitude of region window in deg
   real(RP),               private :: latmin      = -999.0_RP  ! minimun latitude of region window in deg
@@ -94,12 +94,12 @@ contains
   !-----------------------------------------------------------------------------
   !> setup lat/lon value of the ico-grid (without mod_gmtr)
   subroutine LATLON_ico_setup
-    use mod_adm, only: &
-       ADM_have_pl
     use scale_vector, only: &
        VECTR_xyz2latlon
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -133,7 +133,7 @@ contains
        enddo
     enddo ! l loop
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
        do l = 1,ADM_lall_pl
           call VECTR_xyz2latlon( GRD_x_pl    (n,k0,l,GRD_XDIR),   & ! [IN]
@@ -160,9 +160,8 @@ contains
        PRC_abort
     use scale_const, only: &
        D2R => CONST_D2R
-    use mod_adm, only: &
-       ADM_prc_me,  &
-       ADM_prc_tab
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r
     implicit none
 
     character(len=*), intent(in) :: output_dirname
@@ -175,8 +174,8 @@ contains
 
     namelist / LATLONPARAM / &
          latlon_type,         &
-         imax,                &
-         jmax,                &
+         lon_imax,            &
+         lat_jmax,            &
          lonmin_deg,          &
          lonmax_deg,          &
          latmin_deg,          &
@@ -219,8 +218,8 @@ contains
     polar_limit = abs(polar_limit_deg) * D2R
 
     !--- setup latitude-longitude grid
-    allocate( lat(jmax) )
-    allocate( lon(imax) )
+    allocate( lat(lat_jmax) )
+    allocate( lon(lon_imax) )
 
     call setup_latlon
 
@@ -230,15 +229,15 @@ contains
              file   = trim(output_dirname)//'/llmap.info', &
              form   = 'unformatted',                       &
              status = 'unknown'                            )
-          write(fid) imax
+          write(fid) lon_imax
           write(fid) lon(:)
-          write(fid) jmax
+          write(fid) lat_jmax
           write(fid) lat(:)
        close(fid)
     endif
 
-    allocate( checkmap   (imax,jmax) )
-    allocate( checkmapsum(imax,jmax) )
+    allocate( checkmap   (lon_imax,lat_jmax) )
+    allocate( checkmapsum(lon_imax,lat_jmax) )
     checkmap   (:,:) = 0.0
     checkmapsum(:,:) = 0.0
 
@@ -253,10 +252,10 @@ contains
     else
        if( IO_L ) write(IO_FID_LOG,*) '--- Longitude offset : no'
     endif
-    if( IO_L ) write(IO_FID_LOG,*)    '--- # of Latitude    :', jmax
-    if( IO_L ) write(IO_FID_LOG,*)    '--- # of Longitude   :', imax
-    if( IO_L ) write(IO_FID_LOG,*)    '--- Latitude  range  :', lat(1)/D2R,' - ', lat(jmax)/D2R
-    if( IO_L ) write(IO_FID_LOG,*)    '--- Longitude range  :', lon(1)/D2R,' - ', lon(imax)/D2R
+    if( IO_L ) write(IO_FID_LOG,*)    '--- # of Latitude    :', lat_jmax
+    if( IO_L ) write(IO_FID_LOG,*)    '--- # of Longitude   :', lon_imax
+    if( IO_L ) write(IO_FID_LOG,*)    '--- Latitude  range  :', lat(1)/D2R,' - ', lat(lat_jmax)/D2R
+    if( IO_L ) write(IO_FID_LOG,*)    '--- Longitude range  :', lon(1)/D2R,' - ', lon(lon_imax)/D2R
 
     allocate( nmax_llgrid_rgn(ADM_lall) )
 
@@ -269,7 +268,7 @@ contains
     if ( debug ) then
        call MPI_Allreduce( checkmap(1,1),        &
                            checkmapsum(1,1),     &
-                           imax*jmax,            &
+                           lon_imax*lat_jmax,            &
                            MPI_REAL,             &
                            MPI_SUM,              &
                            PRC_LOCAL_COMM_WORLD, &
@@ -278,13 +277,13 @@ contains
 
     if( IO_L ) write(IO_FID_LOG,*) '# of managing llgrid'
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
        if( IO_L ) write(IO_FID_LOG,*) 'region=', rgnid, ', llgrid=', nmax_llgrid_rgn(l)
 
        if ( debug ) then
-          do j = 1, jmax
-          do i = 1, imax
+          do j = 1, lat_jmax
+          do i = 1, lon_imax
              if    ( checkmapsum(i,j) >  1.0 ) then
                 if( IO_L ) write(IO_FID_LOG,*) 'dupicate! (i,j)=', i, j, checkmapsum(i,j)
              elseif( checkmapsum(i,j) == 0.0 ) then
@@ -300,7 +299,7 @@ contains
                 file   = trim(fname),   &
                 form   = 'unformatted', &
                 access = 'direct',      &
-                recl   = imax*jmax*4,   &
+                recl   = lon_imax*lat_jmax*4,   &
                 status = 'unknown'      )
              write(fid,rec=1) checkmap(:,:)
           close(fid)
@@ -322,9 +321,9 @@ contains
     globalsum = sum( recvbuf(:) )
 
     if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) 'imax x jmax                    = ', imax*jmax
+    if( IO_L ) write(IO_FID_LOG,*) 'lon_imax x lat_jmax            = ', lon_imax*lat_jmax
     if( IO_L ) write(IO_FID_LOG,*) 'global total of counted llgrid = ', globalsum
-    if ( globalsum /= imax*jmax ) then
+    if ( globalsum /= lon_imax*lat_jmax ) then
        write(*,         *) 'counted llgrid does not match!'
        if( IO_L ) write(IO_FID_LOG,*) 'counted llgrid does not match!'
 !       call PRC_abort
@@ -366,7 +365,7 @@ contains
 
     ! output relation map
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
        call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgn',rgnid,isrgn=.true.)
 
@@ -399,7 +398,7 @@ contains
 
     ! ASCII output for debug
 !    do l = 1, ADM_lall
-!       rgnid = ADM_prc_tab(l,ADM_prc_me)
+!       rgnid = PRC_RGN_l2r(l)
 !
 !       call IO_make_idstr(fname,trim(output_dirname)//'/llmap','rgntxt',rgnid,isrgn=.true.)
 !
@@ -435,11 +434,11 @@ contains
        PRC_abort
     use scale_const, only: &
        PI => CONST_PI
-    use mod_adm, only: &
-       ADM_prc_tab,       &
-       ADM_prc_me,        &
-       ADM_rgnid_npl_mng, &
-       ADM_rgnid_spl_mng
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r,    &
+       PRC_RGN_rgn4pl, &
+       I_NPL,          &
+       I_SPL
     use scale_vector, only: &
        VECTR_triangle, &
        VECTR_cross,    &
@@ -459,8 +458,8 @@ contains
     real(RP) :: rf, rn, ip, len
     real(RP) :: v01(3)
 
-    real(RP) :: coslat(jmax), sinlat(jmax)
-    real(RP) :: coslon(imax), sinlon(imax)
+    real(RP) :: coslat(lat_jmax), sinlat(lat_jmax)
+    real(RP) :: coslon(lon_imax), sinlon(lon_imax)
     real(RP) :: lat1, lat2, lat3
     real(RP) :: lon1, lon2, lon3
     real(RP) :: latmin_l,latmax_l
@@ -482,11 +481,11 @@ contains
 
     k = ADM_KNONE
 
-    do i=1,imax
+    do i=1,lon_imax
        coslon(i) = cos(lon(i))
        sinlon(i) = sin(lon(i))
     enddo
-    do j=1,jmax
+    do j=1,lat_jmax
        coslat(j) = cos(lat(j))
        sinlat(j) = sin(lat(j))
     enddo
@@ -547,7 +546,7 @@ contains
              lonmax_l = lonmax_l + eps_latlon
              lonmin_l = lonmin_l - eps_latlon
 
-             do j = 1, jmax
+             do j = 1, lat_jmax
 
                 if( lat(j) > latmax_l ) cycle
                 if( lat(j) < latmin_l ) cycle
@@ -556,7 +555,7 @@ contains
                 if( lat(j) >  polar_limit ) near_pole = .true.
                 if( lat(j) < -polar_limit ) near_pole = .true.
 
-                do i = 1, imax
+                do i = 1, lon_imax
 
                    if ( .NOT. near_pole ) then
                       if ( .NOT. (      (       ( lon(i)             <= lonmax_l ) &
@@ -701,11 +700,11 @@ contains
     enddo ! l LOOP
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
 
-       if    ( rgnid == ADM_rgnid_npl_mng ) then
+       if    ( rgnid == PRC_RGN_rgn4pl(I_NPL) ) then
           ij = suf(ADM_gmin  ,ADM_gmax+1)
-       elseif( rgnid == ADM_rgnid_spl_mng ) then
+       elseif( rgnid == PRC_RGN_rgn4pl(I_SPL) ) then
           ij = suf(ADM_gmax+1,ADM_gmin  )
        else
           cycle
@@ -713,8 +712,8 @@ contains
 
        r1(:) = GRD_x(ij,k,l,:) / GRD_rscale
 
-       do j = 1, jmax
-       do i = 1, imax
+       do j = 1, lat_jmax
+       do i = 1, lon_imax
           !--- target latlon point on the sphere
           r0(1) = coslat(j) * coslon(i)
           r0(2) = coslat(j) * sinlon(i)
@@ -765,14 +764,14 @@ contains
   !-----------------------------------------------------------------------------
   subroutine LL_outputsample
     use scale_prc, only: &
+       PRC_myrank, &
        PRC_abort
+    use scale_prc_icoA, only: &
+       PRC_RGN_l2r
+    use scale_comm_icoA, only: &
+       COMM_data_transfer
     use mod_io_param, only: &
        IO_REAL8
-    use mod_adm, only: &
-       ADM_prc_tab,   &
-       ADM_prc_me
-    use mod_comm, only: &
-       COMM_data_transfer
     use mod_fio, only: &
        FIO_output
     implicit none
@@ -790,8 +789,8 @@ contains
     SAMPLE_pl(:,:,:,:) = -999.0_RP
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
-       prc   = ADM_prc_me
+       rgnid = PRC_RGN_l2r(l)
+       prc   = PRC_myrank
 
        do j = ADM_gmin, ADM_gmax
        do i = ADM_gmin, ADM_gmax
@@ -807,7 +806,7 @@ contains
 
     do l = 1, ADM_lall_pl
        rgnid = l
-       prc   = ADM_prc_me
+       prc   = PRC_myrank
 
        do ij = 1, ADM_gall_pl
           SAMPLE_pl(ij,k,l,1) = real(prc,   kind=RP)
@@ -873,20 +872,20 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    dlat = ( latmax - latmin ) / real(jmax,kind=RP)
+    dlat = ( latmax - latmin ) / real(lat_jmax,kind=RP)
 
-    do j = 1, jmax
+    do j = 1, lat_jmax
        lat(j) = latmin + dlat * ( real(j,kind=RP) - 0.5_RP )
     enddo
 
-    dlon = ( lonmax - lonmin ) / real(imax,kind=RP)
+    dlon = ( lonmax - lonmin ) / real(lon_imax,kind=RP)
 
     if ( lon_offset ) then
-       do i = 1, imax
+       do i = 1, lon_imax
           lon(i) = lonmin + dlon * ( real(i,kind=RP) - 0.5_RP )
        enddo
     else
-       do i = 1, imax
+       do i = 1, lon_imax
           lon(i) = lonmin + dlon * ( real(i,kind=RP) - 1.0_RP )
        enddo
     endif
@@ -906,8 +905,8 @@ contains
     real(RP) :: eps
 
     real(RP) :: mu0, dmu, dP0
-    real(RP) :: mu(jmax)
-    real(RP) :: P0(0:jmax)
+    real(RP) :: mu(lat_jmax)
+    real(RP) :: P0(0:lat_jmax)
 
     real(RP) :: dlon
 
@@ -933,25 +932,25 @@ contains
     eps = eps * 4.0_RP
 
     !---  calculate gausian_grid by Newton-Rapson method
-    do j = 1, jmax
+    do j = 1, lat_jmax
 
-       mu0=sin(PI*real(jmax+1-2*j,kind=RP)/real(2*jmax+1,kind=RP))
+       mu0=sin(PI*real(lat_jmax+1-2*j,kind=RP)/real(2*lat_jmax+1,kind=RP))
 
        loopeps:do
 
           P0(0)=1.0_RP
           P0(1)=mu0
-          do n=1,jmax-1
+          do n=1,lat_jmax-1
              P0(n+1)=(real(2*n+1,kind=RP)*mu0*P0(n)-n*P0(n-1)) / real(n+1,kind=RP)
           enddo
-          dP0=jmax*(P0(jmax-1)-mu0*P0(jmax))/(1-mu0*mu0)
-          dmu=P0(jmax)/dP0
+          dP0=lat_jmax*(P0(lat_jmax-1)-mu0*P0(lat_jmax))/(1-mu0*mu0)
+          dmu=P0(lat_jmax)/dP0
           mu0=mu0-dmu
           if (abs(dmu)<eps) then
              mu(j)=mu0
              P0(0)=1.0_RP
              P0(1)=mu(j)
-             do n=1,jmax-1
+             do n=1,lat_jmax-1
                 P0(n+1)=(real(2*n+1,kind=RP)*mu(j)*P0(n)-n*P0(n-1)) / real(n+1,kind=RP)
              enddo
              exit loopeps
@@ -961,18 +960,18 @@ contains
 
     enddo
 
-    do j = 1, jmax
+    do j = 1, lat_jmax
        lat(j) = -asin(mu(j))
     enddo
 
-    dlon = ( lonmax - lonmin) / real(imax,kind=RP)
+    dlon = ( lonmax - lonmin) / real(lon_imax,kind=RP)
 
     if ( lon_offset ) then
-       do i = 1, imax
+       do i = 1, lon_imax
           lon(i) = lonmin + dlon * ( real(i,kind=RP) - 0.5_RP )
        enddo
     else
-       do i = 1, imax
+       do i = 1, lon_imax
           lon(i) = lonmin + dlon * ( real(i,kind=RP) - 1.0_RP )
        enddo
     endif
@@ -994,7 +993,7 @@ contains
   !-----------------------------------------------------------------------------
 !  subroutine intrpl_2( var_ll, var, var_pl, kmin, kmax )
 !    !
-!    use mod_adm, only :              &
+!    use scale_prc_icoA, only :              &
 !         ADM_prc_me,               &
 !         ADM_prc_pl,               &
 !         ADM_gslf_pl,             &
@@ -1022,7 +1021,7 @@ contains
 !         CONST_UNDEF
 !    use mod_oprt, only :           &
 !         OPRT_gradient
-!    use mod_comm, only :               &
+!    use scale_comm_icoA, only :               &
 !         COMM_data_transfer
 !    !
 !    implicit none

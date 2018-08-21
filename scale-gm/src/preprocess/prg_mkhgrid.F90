@@ -16,17 +16,21 @@ program mkhgrid
   use scale_io
   use scale_prof
   use scale_prc, only: &
-     PRC_LOCAL_MPIstart, &
+     PRC_MPIstart,         &
+     PRC_SINGLECOM_setup,  &
+     PRC_ERRHANDLER_setup, &
      PRC_MPIfinish
+  use scale_prc_icoA, only: &
+     PRC_ICOA_setup
   use scale_const, only: &
      RADIUS => CONST_RADIUS, &
      CONST_setup
-  use mod_adm, only: &
-     ADM_setup
+  use scale_atmos_grid_icoA_index, only: &
+     ATMOS_GRID_icoA_INDEX_setup
+  use scale_comm_icoA, only: &
+     COMM_setup
   use mod_fio, only: &
      FIO_setup
-  use mod_comm, only: &
-     COMM_setup
   use mod_grd, only: &
      GRD_input_hgrid,  &
      GRD_output_hgrid, &
@@ -59,23 +63,37 @@ program mkhgrid
   !
   character(len=H_MID), parameter :: MODELNAME = "SCALE-GM ver. "//VERSION
 
+  character(len=H_LONG) :: cnf_fname ! config file
+
+  integer :: comm
+  integer :: nprocs
   integer :: myrank
   logical :: ismaster
   !=============================================================================
 
-  !---< MPI start >---
-  !---< MPI start >---
-  call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
-                           ismaster ) ! [OUT]
+  ! start MPI
+  call PRC_MPIstart( comm ) ! [OUT]
+
+  ! setup MPI communicator
+  call PRC_SINGLECOM_setup( comm,    & ! [IN]
+                            nprocs,  & ! [OUT]
+                            myrank,  & ! [OUT]
+                            ismaster ) ! [OUT]
+
+  ! setup errhandler
+  call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                             ismaster ) ! [IN]
 
   !########## Initial setup ##########
 
   ! setup standard I/O
-  call IO_setup( MODELNAME )
+  cnf_fname = IO_ARG_getfname( ismaster )
+
+  call IO_setup( MODELNAME, cnf_fname )
   call IO_LOG_setup( myrank, ismaster )
 
-  !---< admin module setup >---
-  call ADM_setup
+  ! setup process
+  call PRC_ICOA_setup
 
   ! setup PROF
   call PROF_setup
@@ -86,6 +104,9 @@ program mkhgrid
 
   !---< cnst module setup >---
   call CONST_setup
+
+  ! setup horizontal/vertical grid coordinates (icosahedral,idealized)
+  call ATMOS_GRID_icoA_INDEX_setup
 
   !---< I/O module setup >---
   call FIO_setup
@@ -136,10 +157,6 @@ program mkhgrid
   call GRD_scaling( RADIUS )
   call GMTR_setup
   call PROF_rapend  ('GMTR_setup',0)
-
-  call PROF_rapstart('MKGRD_diagnosis',0)
-  call MKGRD_diagnosis
-  call PROF_rapend  ('MKGRD_diagnosis',0)
 
   call PROF_rapend('Main_MKGRD',0)
   !#############################################################################

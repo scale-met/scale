@@ -111,8 +111,8 @@ contains
     use scale_const, only: &
        GRAV => CONST_GRAV
     use mod_grd, only: &
-       GRD_LAT,  &
-       GRD_LON,  &
+       I_LAT,    &
+       I_LON,    &
        GRD_s,    &
        GRD_zs,   &
        GRD_ZSFC, &
@@ -334,7 +334,7 @@ contains
     do nq = 1, QA
        frhogq(:,:,:) = fq(:,:,:,nq) * rho(:,:,:) * GSGAM2(:,:,:) &
             + q(:,:,:,nq) * frho(:,:,:) * GSGAM2(:,:,:)
-          
+
        if ( NEGATIVE_FIXER ) then
           tmp   (:,:,:)    = max( rhogq(:,:,:,nq) + TIME_DTL * frhogq(:,:,:), 0.0_DP )
           frhogq(:,:,:)    = ( tmp(:,:,:) - rhogq(:,:,:,nq) ) / TIME_DTL
@@ -363,16 +363,16 @@ contains
 
     return
   end subroutine forcing_step
-  
+
   !-----------------------------------------------------------------------------
   ! [add; original by H.Miura] 20130613 R.Yoshida
   subroutine forcing_update( &
        PROG, PROG_pl )
-    use mod_adm, only: &
-       ADM_have_pl
+    use scale_prc_icoA, only: &
+       PRC_have_pl
     use mod_grd, only: &
-       GRD_LAT,  &
-       GRD_LON,  &
+       I_LAT,    &
+       I_LON,    &
        GRD_s,    &
        GRD_s_pl, &
        GRD_Z,    &
@@ -421,8 +421,8 @@ contains
           ! full (1): u,v
           ! half (2): w
           call test11_velocity( time,                   & ! [IN]
-                                GRD_s (n,k0,l,GRD_LON), & ! [IN]
-                                GRD_s (n,k0,l,GRD_LAT), & ! [IN]
+                                GRD_s (n,k0,l,I_LON), & ! [IN]
+                                GRD_s (n,k0,l,I_LAT), & ! [IN]
                                 GRD_vz(n,k,l,GRD_Z ),   & ! [IN]
                                 GRD_vz(n,k,l,GRD_ZH),   & ! [IN]
                                 vx    (n,k,l),          & ! [OUT]
@@ -433,13 +433,13 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do n = 1, ADM_gall_pl
              call test11_velocity( time,                      & ! [IN]
-                                   GRD_s_pl (n,k0,l,GRD_LON), & ! [IN]
-                                   GRD_s_pl (n,k0,l,GRD_LAT), & ! [IN]
+                                   GRD_s_pl (n,k0,l,I_LON), & ! [IN]
+                                   GRD_s_pl (n,k0,l,I_LAT), & ! [IN]
                                    GRD_vz_pl(n,k,l,GRD_Z ),   & ! [IN]
                                    GRD_vz_pl(n,k,l,GRD_ZH),   & ! [IN]
                                    vx_pl    (n,k,l),          & ! [OUT]
@@ -459,8 +459,8 @@ contains
           ! full (1): u,v
           ! half (2): w
           call test12_velocity( time,                   & ! [IN]
-                                GRD_s (n,k0,l,GRD_LON), & ! [IN]
-                                GRD_s (n,k0,l,GRD_LAT), & ! [IN]
+                                GRD_s (n,k0,l,I_LON), & ! [IN]
+                                GRD_s (n,k0,l,I_LAT), & ! [IN]
                                 GRD_vz(n,k,l,GRD_Z ),   & ! [IN]
                                 GRD_vz(n,k,l,GRD_ZH),   & ! [IN]
                                 vx    (n,k,l),          & ! [OUT]
@@ -471,13 +471,13 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_pl ) then
+       if ( PRC_have_pl ) then
           do l = 1, ADM_lall_pl
           do k = 1, ADM_kall
           do n = 1, ADM_gall_pl
              call test12_velocity( time,                      & ! [IN]
-                                   GRD_s_pl (n,k0,l,GRD_LON), & ! [IN]
-                                   GRD_s_pl (n,k0,l,GRD_LAT), & ! [IN]
+                                   GRD_s_pl (n,k0,l,I_LON), & ! [IN]
+                                   GRD_s_pl (n,k0,l,I_LAT), & ! [IN]
                                    GRD_vz_pl(n,k,l,GRD_Z ),   & ! [IN]
                                    GRD_vz_pl(n,k,l,GRD_ZH),   & ! [IN]
                                    vx_pl    (n,k,l),          & ! [OUT]
@@ -496,7 +496,7 @@ contains
     PROG(:,:,:,I_RHOGVZ) = vz(:,:,:) * PROG(:,:,:,I_RHOG)
     PROG(:,:,:,I_RHOGW ) = w (:,:,:) * PROG(:,:,:,I_RHOG)
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        PROG_pl(:,:,:,I_RHOGVX) = vx_pl(:,:,:) * PROG_pl(:,:,:,I_RHOG)
        PROG_pl(:,:,:,I_RHOGVY) = vy_pl(:,:,:) * PROG_pl(:,:,:,I_RHOG)
        PROG_pl(:,:,:,I_RHOGVZ) = vz_pl(:,:,:) * PROG_pl(:,:,:,I_RHOG)

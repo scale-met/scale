@@ -14,11 +14,15 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 6
-rlevel      = 1
-nmpi        = 40
-zlayer      = 30
-vgrid       = vgrid30_stretch_30km_dcmip2016v2.dat
+RUNCONF     = run.conf
+ICO2LLNAME  = gm_fio_ico2ll
+ICO2LLCONF  = ico2ll.conf
+TPROC       = 40
+
+# required data (parameters,distributed files)
+DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid30_stretch_30km_dcmip2016v2.dat vgrid30_stretch_30km_dcmip2016v2.dat] \
+                [$(SCALE_DB)/grid/llmap/gl06rl01pe40_i360j180 llmap] "
+DATDISTS    = " [${TPROC} $(SCALE_DB)/grid/boundary/gl06rl01pe40/boundary_GL06RL01 boundary_GL06RL01] "
 
 
 

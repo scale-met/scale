@@ -21,7 +21,7 @@ module mod_gmtr
   private
   !-----------------------------------------------------------------------------
   !
-  !++ Public procedure
+  !++ Public procedures
   !
   public :: GMTR_setup
 
@@ -71,17 +71,6 @@ module mod_gmtr
   integer,  public, parameter :: GMTR_a_TT2Y = 17
   integer,  public, parameter :: GMTR_a_TT2Z = 18
 
-#ifdef FIXEDINDEX
-  real(RP), public              :: GMTR_p   (ADM_gall   ,ADM_KNONE,ADM_lall   ,              GMTR_p_nmax   )
-  real(RP), public              :: GMTR_p_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_p_nmax   )
-  real(RP), public              :: GMTR_t   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,GMTR_t_nmax   )
-  real(RP), public              :: GMTR_t_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_t_nmax   )
-  real(RP), public              :: GMTR_a   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_AI:ADM_AJ,GMTR_a_nmax   )
-  real(RP), public              :: GMTR_a_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_a_nmax_pl)
-
-  real(RP), public              :: GMTR_area   (ADM_gall   ,ADM_lall   )
-  real(RP), public              :: GMTR_area_pl(ADM_gall_pl,ADM_lall_pl)
-#else
   real(RP), public, allocatable :: GMTR_p   (:,:,:,:)   ! geometrics for the cell point
   real(RP), public, allocatable :: GMTR_p_pl(:,:,:,:)
   real(RP), public, allocatable :: GMTR_t   (:,:,:,:,:) ! geometrics for the cell vertex
@@ -91,7 +80,6 @@ module mod_gmtr
 
   real(RP), public, allocatable :: GMTR_area   (:,:)    ! control area of the cell
   real(RP), public, allocatable :: GMTR_area_pl(:,:)
-#endif
 
   character(len=H_SHORT), public :: GMTR_polygon_type = 'ON_SPHERE'
                                                       ! 'ON_SPHERE' triangle is fit to the sphere
@@ -99,11 +87,12 @@ module mod_gmtr
 
   !-----------------------------------------------------------------------------
   !
-  !++ Private procedure
+  !++ Private procedures
   !
   private :: GMTR_p_setup
   private :: GMTR_t_setup
   private :: GMTR_a_setup
+  private :: GMTR_diagnosis
   private :: GMTR_output_metrics
 
   private :: GMTR_TNvec
@@ -122,7 +111,7 @@ contains
   subroutine GMTR_setup
     use scale_prc, only: &
        PRC_abort
-    use mod_comm, only: &
+    use scale_comm_icoA, only: &
        COMM_data_transfer
     use mod_grd, only: &
        GRD_rscale, &
@@ -130,8 +119,10 @@ contains
        GRD_x_pl,   &
        GRD_xt,     &
        GRD_xt_pl,  &
-       GRD_s,      &
-       GRD_s_pl
+       GRD_LON,    &
+       GRD_LON_pl, &
+       GRD_gz,     &
+       GRD_gzh
     implicit none
 
     namelist / GMTRPARAM / &
@@ -157,7 +148,6 @@ contains
 
 
 
-#ifndef FIXEDINDEX
     allocate( GMTR_p   (ADM_gall   ,ADM_KNONE,ADM_lall   ,              GMTR_p_nmax   ) )
     allocate( GMTR_p_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              GMTR_p_nmax   ) )
     allocate( GMTR_t   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,GMTR_t_nmax   ) )
@@ -167,16 +157,15 @@ contains
 
     allocate( GMTR_area    (ADM_gall,   ADM_lall   ) )
     allocate( GMTR_area_pl (ADM_gall_pl,ADM_lall_pl) )
-#endif
 
 
 
     !--- calc geometrical information for cell point
-    call GMTR_p_setup( GRD_x (:,:,:,:),   GRD_x_pl (:,:,:,:), & ! [IN]
-                       GRD_xt(:,:,:,:,:), GRD_xt_pl(:,:,:,:), & ! [IN]
-                       GRD_s (:,:,:,:),   GRD_s_pl (:,:,:,:), & ! [IN]
-                       GMTR_p(:,:,:,:),   GMTR_p_pl(:,:,:,:), & ! [OUT]
-                       GRD_rscale                             ) ! [IN]
+    call GMTR_p_setup( GRD_x  (:,:,:,:),   GRD_x_pl  (:,:,:,:), & ! [IN]
+                       GRD_xt (:,:,:,:,:), GRD_xt_pl (:,:,:,:), & ! [IN]
+                       GRD_LON(:,:),       GRD_LON_pl(:,:),     & ! [IN]
+                       GMTR_p (:,:,:,:),   GMTR_p_pl (:,:,:,:), & ! [OUT]
+                       GRD_rscale                               ) ! [IN]
 
     ! fill HALO
     call COMM_data_transfer( GMTR_p, GMTR_p_pl )
@@ -197,7 +186,9 @@ contains
                        GMTR_a(:,:,:,:,:), GMTR_a_pl(:,:,:,:), & ! [OUT]
                        GRD_rscale                             ) ! [IN]
 
-    if ( GMTR_fname /= "" ) then
+    call GMTR_diagnosis
+
+    if ( GMTR_fname /= '' ) then
        call GMTR_output_metrics( GMTR_fname )
     endif
 
@@ -207,33 +198,33 @@ contains
   !-----------------------------------------------------------------------------
   !> calc geometrical information for cell point
   subroutine GMTR_p_setup( &
-       GRD_x,  GRD_x_pl,  &
-       GRD_xt, GRD_xt_pl, &
-       GRD_s,  GRD_s_pl,  &
-       GMTR_p, GMTR_p_pl, &
-       GRD_rscale         )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
-    use mod_grd, only: &
-       GRD_XDIR,     &
-       GRD_YDIR,     &
-       GRD_ZDIR,     &
-       GRD_LON,      &
-       GRD_grid_type
+       GRD_x,   GRD_x_pl,   &
+       GRD_xt,  GRD_xt_pl,  &
+       GRD_LON, GRD_LON_pl, &
+       GMTR_p,  GMTR_p_pl,  &
+       GRD_rscale           )
+    use scale_prc_icoA, only: &
+       PRC_have_pl,     &
+       PRC_RGN_have_sgp
     use scale_vector, only: &
        VECTR_triangle,      &
        VECTR_triangle_plane
+    use mod_grd, only: &
+       GRD_XDIR,               &
+       GRD_YDIR,               &
+       GRD_ZDIR,               &
+       GRD_grid_type_on_plane, &
+       GRD_grid_type
     implicit none
 
-    real(RP), intent(in)  :: GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
-    real(RP), intent(in)  :: GRD_x_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
-    real(RP), intent(in)  :: GRD_xt   (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz)
-    real(RP), intent(in)  :: GRD_xt_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
-    real(RP), intent(in)  :: GRD_s    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              2)
-    real(RP), intent(in)  :: GRD_s_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              2)
-    real(RP), intent(out) :: GMTR_p   (ADM_gall   ,ADM_KNONE,ADM_lall   ,GMTR_p_nmax)
-    real(RP), intent(out) :: GMTR_p_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,GMTR_p_nmax)
+    real(RP), intent(in)  :: GRD_x     (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
+    real(RP), intent(in)  :: GRD_x_pl  (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
+    real(RP), intent(in)  :: GRD_xt    (ADM_gall   ,ADM_KNONE,ADM_lall   ,ADM_TI:ADM_TJ,ADM_nxyz)
+    real(RP), intent(in)  :: GRD_xt_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,              ADM_nxyz)
+    real(RP), intent(in)  :: GRD_LON   (ADM_gall   ,ADM_lall   )
+    real(RP), intent(in)  :: GRD_LON_pl(ADM_gall_pl,ADM_lall_pl)
+    real(RP), intent(out) :: GMTR_p    (ADM_gall   ,ADM_KNONE,ADM_lall   ,GMTR_p_nmax)
+    real(RP), intent(out) :: GMTR_p_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl,GMTR_p_nmax)
     real(RP), intent(in)  :: GRD_rscale
 
     real(RP) :: wk   (ADM_nxyz,0:7,ADM_gall)
@@ -247,6 +238,9 @@ contains
     integer  :: im1j, ijm1, im1jm1
 
     integer  :: i, j, k0, l, d, v, n
+
+    integer  :: suf
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** setup metrics for hexagonal/pentagonal mesh'
@@ -282,13 +276,13 @@ contains
        enddo ! i loop
        enddo ! j loop
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,6,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
           wk(:,7,suf(ADM_gmin,ADM_gmin)) = wk(:,1,suf(ADM_gmin,ADM_gmin))
        endif
 
        !--- calc control area
-       if ( GRD_grid_type == 'ON_PLANE' ) then
+       if ( GRD_grid_type == GRD_grid_type_on_plane ) then
           do j = ADM_gmin, ADM_gmax
           do i = ADM_gmin, ADM_gmax
              ij = suf(i,j)
@@ -323,7 +317,7 @@ contains
        endif
 
        !--- calc coefficient between xyz <-> latlon
-       if ( GRD_grid_type == 'ON_PLANE' ) then
+       if ( GRD_grid_type == GRD_grid_type_on_plane ) then
           GMTR_p(:,k0,l,GMTR_p_IX) = 1.0_RP
           GMTR_p(:,k0,l,GMTR_p_IY) = 0.0_RP
           GMTR_p(:,k0,l,GMTR_p_IZ) = 0.0_RP
@@ -335,8 +329,8 @@ contains
           do i = ADM_gmin, ADM_gmax
              ij = suf(i,j)
 
-             sin_lambda = sin( GRD_s(ij,k0,l,GRD_LON) )
-             cos_lambda = cos( GRD_s(ij,k0,l,GRD_LON) )
+             sin_lambda = sin( GRD_LON(ij,l) )
+             cos_lambda = cos( GRD_LON(ij,l) )
 
              GMTR_p(ij,k0,l,GMTR_p_IX) = -sin_lambda
              GMTR_p(ij,k0,l,GMTR_p_IY) =  cos_lambda
@@ -350,7 +344,7 @@ contains
        endif
     enddo ! l loop
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -375,8 +369,8 @@ contains
           GMTR_p_pl(n,k0,l,GMTR_p_RAREA) = 1.0_RP / GMTR_p_pl(n,k0,l,GMTR_p_AREA)
 
           !--- calc coefficient between xyz <-> latlon
-          sin_lambda = sin( GRD_s_pl(n,k0,l,GRD_LON) )
-          cos_lambda = cos( GRD_s_pl(n,k0,l,GRD_LON) )
+          sin_lambda = sin( GRD_LON_pl(n,l) )
+          cos_lambda = cos( GRD_LON_pl(n,l) )
 
           GMTR_p_pl(n,k0,l,GMTR_p_IX) = -sin_lambda
           GMTR_p_pl(n,k0,l,GMTR_p_IY) =  cos_lambda
@@ -398,14 +392,15 @@ contains
        GRD_xt, GRD_xt_pl, &
        GMTR_t, GMTR_t_pl, &
        GRD_rscale         )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
-    use mod_grd, only: &
-       GRD_grid_type
+    use scale_prc_icoA, only: &
+       PRC_have_pl,     &
+       PRC_RGN_have_sgp
     use scale_vector, only: &
        VECTR_triangle,      &
        VECTR_triangle_plane
+    use mod_grd, only: &
+       GRD_grid_type_on_plane, &
+       GRD_grid_type
     implicit none
 
     real(RP), intent(in)  :: GRD_x    (ADM_gall   ,ADM_KNONE,ADM_lall   ,              ADM_nxyz)
@@ -425,6 +420,9 @@ contains
     integer  :: ip1j, ijp1, ip1jp1
 
     integer  :: i, j, k0, l, d, v, n, t
+
+    integer  :: suf
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** setup metrics for triangle mesh'
@@ -463,11 +461,11 @@ contains
        wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmax,ADM_gmin-1),ADM_TJ)
        wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TJ) = wk(:,:,suf(ADM_gmin-1,ADM_gmax),ADM_TI)
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,:,suf(ADM_gmin-1,ADM_gmin-1),ADM_TI) = wk(:,:,suf(ADM_gmin,ADM_gmin-1),ADM_TJ)
        endif
 
-       if ( GRD_grid_type == 'ON_PLANE' ) then
+       if ( GRD_grid_type == GRD_grid_type_on_plane ) then
           do t = ADM_TI,ADM_TJ
           do j = ADM_gmin-1, ADM_gmax
           do i = ADM_gmin-1, ADM_gmax
@@ -515,7 +513,7 @@ contains
 
     enddo
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1,ADM_lall_pl
@@ -560,9 +558,9 @@ contains
        GRD_xt, GRD_xt_pl, &
        GMTR_a, GMTR_a_pl, &
        GRD_rscale         )
-    use mod_adm, only: &
-       ADM_have_pl,  &
-       ADM_have_sgp
+    use scale_prc_icoA, only: &
+       PRC_have_pl,     &
+       PRC_RGN_have_sgp
     use mod_grd, only: &
        GRD_grid_type
     implicit none
@@ -585,6 +583,9 @@ contains
     integer  :: im1j, ijm1
 
     integer  :: i, j, k0, l, d, v, n
+
+    integer  :: suf
+    suf(i,j) = ADM_gall_1d * (j-1) + i
     !---------------------------------------------------------------------------
 
     if( IO_L ) write(IO_FID_LOG,*) '*** setup metrics for cell arcs'
@@ -616,7 +617,7 @@ contains
        wk(:,1,suf(ADM_gmin-1,ADM_gmax+1)) = GRD_x(suf(ADM_gmin  ,ADM_gmax+1),k0,l,:)
        wk(:,2,suf(ADM_gmin-1,ADM_gmax+1)) = GRD_x(suf(ADM_gmin  ,ADM_gmax  ),k0,l,:)
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,1,suf(ADM_gmin-1,ADM_gmin-1)) = GRD_x(suf(ADM_gmin  ,ADM_gmin-1),k0,l,:)
           wk(:,2,suf(ADM_gmin-1,ADM_gmin-1)) = GRD_x(suf(ADM_gmin+1,ADM_gmin  ),k0,l,:)
        endif
@@ -787,7 +788,7 @@ contains
        enddo
        enddo
 
-       if ( ADM_have_sgp(l) ) then ! pentagon
+       if ( PRC_RGN_have_sgp(l) ) then ! pentagon
           wk(:,1,suf(ADM_gmin  ,ADM_gmin-1)) = GRD_xt(suf(ADM_gmin  ,ADM_gmin  ),k0,l,ADM_TI,:)
           wk(:,2,suf(ADM_gmin  ,ADM_gmin-1)) = GRD_xt(suf(ADM_gmin  ,ADM_gmin-1),k0,l,ADM_TJ,:)
        endif
@@ -811,7 +812,7 @@ contains
 
     enddo ! l loop
 
-    if ( ADM_have_pl ) then
+    if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
        do l = 1, ADM_lall_pl
@@ -903,13 +904,16 @@ contains
        VECTR_cross, &
        VECTR_abs,   &
        VECTR_angle
+    use mod_grd, only : &
+      GRD_grid_type_on_plane, &
+      GRD_grid_type_on_sphere
     implicit none
 
     real(RP),         intent(out) :: vT   (3)     ! tangential vector
     real(RP),         intent(out) :: vN   (3)     ! normal     vector
     real(RP),         intent(in)  :: vFrom(3)
     real(RP),         intent(in)  :: vTo  (3)
-    character(len=*), intent(in)  :: grid_type    ! ON_SPHERE or ON_PLANE
+    integer,          intent(in)  :: grid_type    ! ON_SPHERE or ON_PLANE
     character(len=*), intent(in)  :: polygon_type ! ON_SPHERE or ON_PLANE
     real(RP),         intent(in)  :: radius
 
@@ -922,14 +926,14 @@ contains
     ! calculate tangential vector
     vT(:) = vTo(:) - vFrom(:)
 
-    if ( grid_type == 'ON_PLANE' ) then ! treat as point on the plane
+    if ( grid_type == GRD_grid_type_on_plane ) then ! treat as point on the plane
 
        ! calculate normal vector
        vN(1) = -vT(2)
        vN(2) =  vT(1)
        vN(3) = 0.0_RP
 
-    elseif( grid_type == 'ON_SPHERE' ) then ! treat as point on the sphere
+    elseif( grid_type == GRD_grid_type_on_sphere ) then ! treat as point on the sphere
 
        if ( polygon_type == 'ON_PLANE' ) then ! length of a line
 
@@ -958,17 +962,248 @@ contains
   end subroutine GMTR_TNvec
 
   !-----------------------------------------------------------------------------
+  !> Diagnose grid property
+  subroutine GMTR_diagnosis
+    use scale_prc_icoA, only: &
+       PRC_have_pl,     &
+       PRC_RGN_have_sgp
+    use scale_const, only: &
+       PI     => CONST_PI,     &
+       RADIUS => CONST_RADIUS
+    use scale_vector, only: &
+       VECTR_cross, &
+       VECTR_dot,   &
+       VECTR_abs
+    use scale_comm_icoA, only: &
+       COMM_Stat_sum, &
+       COMM_Stat_max, &
+       COMM_Stat_min
+    use mod_grd, only: &
+       GRD_xt
+    implicit none
+
+    real(RP) :: angle    (ADM_gall,   ADM_KNONE,ADM_lall   )
+    real(RP) :: angle_pl (ADM_gall_pl,ADM_KNONE,ADM_lall_pl)
+    real(RP) :: length   (ADM_gall,   ADM_KNONE,ADM_lall   )
+    real(RP) :: length_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl)
+    real(RP) :: sqarea   (ADM_gall,   ADM_KNONE,ADM_lall   )
+    real(RP) :: sqarea_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl)
+
+    real(RP) :: len(6), ang(6)
+    real(RP) :: p(ADM_nxyz,0:7)
+    real(RP) :: nvlenC, nvlenS, nv(3)
+
+    real(RP) :: nlen, len_tot
+    real(RP) :: l_mean, area, temp
+    real(RP) :: sqarea_avg, sqarea_max, sqarea_min
+    real(RP) :: angle_max,  length_max, length_avg
+
+    real(RP) :: global_area
+    integer  :: global_grid
+
+    real(RP) :: local_area
+    real(RP) :: sqarea_local_max, sqarea_local_min
+    real(RP) :: angle_local_max,  length_local_max
+
+    integer  :: i, j, ij, k, l, m
+
+    integer  :: suf
+    suf(i,j) = ADM_gall_1d * (j-1) + i
+    !---------------------------------------------------------------------------
+
+    if( IO_L ) write(IO_FID_LOG,*) '*** Diagnose grid property'
+
+    k = ADM_KNONE
+
+    angle    (:,:,:) = 0.0_RP
+    angle_pl (:,:,:) = 0.0_RP
+    length   (:,:,:) = 0.0_RP
+    length_pl(:,:,:) = 0.0_RP
+
+    nlen    = 0.0_RP
+    len_tot = 0.0_RP
+
+    do l = 1, ADM_lall
+    do j = ADM_gmin, ADM_gmax
+    do i = ADM_gmin, ADM_gmax
+       ij = suf(i,j)
+
+       if (       PRC_RGN_have_sgp(l) &
+            .AND. i == ADM_gmin       &
+            .AND. j == ADM_gmin       ) then ! Pentagon
+
+          p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
+          p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
+          p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
+          p(:,5) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,6) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+
+          len(:) = 0.0_RP
+          ang(:) = 0.0_RP
+          do m = 1, 5
+             ! vector length of Pm->Pm-1, Pm->Pm+1
+             call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+             len(m) = sqrt( len(m) )
+
+             ! angle of Pm-1->Pm->Pm+1
+             call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_abs( nvlenS, nv(:) )
+
+             ang(m) = atan2( nvlenS, nvlenC )
+          enddo
+
+          ! maximum/minimum ratio of angle between the cell vertexes
+          angle(ij,k,l) = maxval( ang(1:5) ) / minval( ang(1:5) ) - 1.0_RP
+
+          ! l_mean: side length of regular pentagon =sqrt(area/1.7204774005)
+          area   = GMTR_p(ij,k,l,GMTR_P_AREA)
+          l_mean = sqrt( 4.0_RP / sqrt( 25.0_RP + 10.0_RP*sqrt(5.0_RP)) * area )
+
+          temp = 0.0_RP
+          do m = 1, 5
+             nlen    = nlen + 1.0_RP
+             len_tot = len_tot + len(m)
+
+             temp = temp + (len(m)-l_mean) * (len(m)-l_mean)
+          enddo
+          ! distortion of side length from l_mean
+          length(ij,k,l) = sqrt( temp/5.0_RP ) / l_mean
+
+       else ! Hexagon
+
+          p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+          p(:,2) = GRD_xt(suf(i,  j  ),k,l,ADM_TJ,:)
+          p(:,3) = GRD_xt(suf(i-1,j  ),k,l,ADM_TI,:)
+          p(:,4) = GRD_xt(suf(i-1,j-1),k,l,ADM_TJ,:)
+          p(:,5) = GRD_xt(suf(i-1,j-1),k,l,ADM_TI,:)
+          p(:,6) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
+          p(:,7) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
+
+          len(:) = 0.0_RP
+          ang(:) = 0.0_RP
+          do m = 1, 6
+             ! vector length of Pm->Pm-1, Pm->Pm+1
+             call VECTR_dot( len(m), p(:,m), p(:,m-1), p(:,m), p(:,m-1) )
+             len(m) = sqrt( len(m) )
+
+             ! angle of Pm-1->Pm->Pm+1
+             call VECTR_dot( nvlenC, p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_cross( nv(:), p(:,m), p(:,m-1), p(:,m), p(:,m+1) )
+             call VECTR_abs( nvlenS, nv(:) )
+
+             ang(m) = atan2( nvlenS, nvlenC )
+          enddo
+
+          ! maximum/minimum ratio of angle between the cell vertexes
+          angle(ij,k,l) = maxval( ang(:) ) / minval( ang(:) ) - 1.0_RP
+
+          ! l_mean: side length of equilateral triangle
+          area   = GMTR_p(ij,k,l,GMTR_P_AREA)
+          l_mean = sqrt( 4.0_RP / sqrt(3.0_RP) / 6.0_RP * area )
+
+          temp = 0.0_RP
+          do m = 1, 6
+             nlen = nlen + 1.0_RP
+             len_tot = len_tot + len(m)
+
+             temp = temp + (len(m)-l_mean)*(len(m)-l_mean)
+          enddo
+          ! distortion of side length from l_mean
+          length(ij,k,l) = sqrt( temp/6.0_RP ) / l_mean
+
+       endif
+    enddo
+    enddo
+    enddo
+
+
+
+    local_area = 0.0_RP
+    do l = 1,        ADM_lall
+    do j = ADM_gmin, ADM_gmax
+    do i = ADM_gmin, ADM_gmax
+       local_area = local_area + GMTR_p(suf(i,j),k,l,GMTR_P_AREA)
+    enddo
+    enddo
+    enddo
+
+    if ( PRC_have_pl ) then
+       do l = 1, ADM_lall_pl
+          local_area = local_area + GMTR_p_pl(ADM_gslf_pl,k,l,GMTR_P_AREA)
+       enddo
+    endif
+
+    call COMM_Stat_sum( local_area, global_area )
+
+    global_grid = 10*4**ADM_glevel + 2
+    sqarea_avg = sqrt( global_area / real(global_grid,kind=RP) )
+
+    sqarea   (:,:,:) = sqrt( GMTR_p   (:,:,:,GMTR_P_AREA) )
+    sqarea_pl(:,:,:) = sqrt( GMTR_p_pl(:,:,:,GMTR_P_AREA) )
+
+    sqarea_local_max = -1.E+30_RP
+    sqarea_local_min =  1.E+30_RP
+    length_local_max = -1.E+30_RP
+    angle_local_max  = -1.E+30_RP
+    do l = 1,        ADM_lall
+    do j = ADM_gmin, ADM_gmax
+    do i = ADM_gmin, ADM_gmax
+       sqarea_local_max = max( sqarea_local_max, sqarea(suf(i,j),k,l) )
+       sqarea_local_min = min( sqarea_local_min, sqarea(suf(i,j),k,l) )
+       length_local_max = max( length_local_max, length(suf(i,j),k,l) )
+       angle_local_max  = max( angle_local_max , angle (suf(i,j),k,l) )
+    enddo
+    enddo
+    enddo
+
+    if ( PRC_have_pl ) then
+       do l = 1, ADM_lall_pl
+          sqarea_local_max = max( sqarea_local_max, sqarea_pl(ADM_gslf_pl,k,l) )
+          sqarea_local_min = min( sqarea_local_min, sqarea_pl(ADM_gslf_pl,k,l) )
+          length_local_max = max( length_local_max, length_pl(ADM_gslf_pl,k,l) )
+          angle_local_max  = max( angle_local_max , angle_pl (ADM_gslf_pl,k,l) )
+       enddo
+    endif
+
+    call COMM_Stat_max( sqarea_local_max, sqarea_max )
+    call COMM_Stat_min( sqarea_local_min, sqarea_min )
+    call COMM_Stat_max( length_local_max, length_max )
+    call COMM_Stat_max( angle_local_max , angle_max  )
+    length_avg = len_tot / nlen
+
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '------ Diagnosis result ---'
+    if( IO_L ) write(IO_FID_LOG,*) '--- ideal  global surface area  = ', 4.0_RP*PI*RADIUS*RADIUS*1.E-6_RP,' [km2]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- actual global surface area  = ', global_area*1.E-6_RP,' [km2]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- global total number of grid = ', global_grid
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '--- average grid interval       = ', sqarea_avg * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- max grid interval           = ', sqarea_max * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- min grid interval           = ', sqarea_min * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- ratio max/min grid interval = ', sqarea_max / sqarea_min
+    if( IO_L ) write(IO_FID_LOG,*) '--- average length of arc(side) = ', length_avg * 1.E-3_RP,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*)
+    if( IO_L ) write(IO_FID_LOG,*) '--- max length distortion       = ', length_max * 1.D-3,' [km]'
+    if( IO_L ) write(IO_FID_LOG,*) '--- max angle distortion        = ', angle_max*180.0_RP/PI,' [deg]'
+
+    return
+  end subroutine GMTR_diagnosis
+
+  !-----------------------------------------------------------------------------
   subroutine GMTR_output_metrics( &
        basename )
+    use scale_prc_icoA, only: &
+       PRC_have_pl, &
+       PRC_RGN_l2r
+    use scale_comm_icoA, only: &
+       COMM_data_transfer
     use mod_io_param, only: &
        IO_REAL8, &
        IO_REAL4
-    use mod_adm, only: &
-       ADM_prc_tab, &
-       ADM_prc_me,  &
-       ADM_have_pl
-    use mod_comm, only: &
-       COMM_data_transfer
     use mod_fio, only: &
        FIO_output
     implicit none
@@ -1000,14 +1235,14 @@ contains
     endif
 
     do l = 1, ADM_lall
-       rgnid = ADM_prc_tab(l,ADM_prc_me)
+       rgnid = PRC_RGN_l2r(l)
        do g = 1, ADM_gall
           tmp(g,k0,l,I_rgn ) = real(rgnid,kind=RP)
           tmp(g,k0,l,I_grid) = real(g    ,kind=RP)
        enddo
     enddo
 
-    if ( ADM_have_pl ) Then
+    if ( PRC_have_pl ) Then
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
           tmp_pl(g,k0,l,I_rgn ) = real(-l,kind=RP)
@@ -1029,7 +1264,7 @@ contains
     enddo
     enddo
 
-    if ( ADM_have_pl ) Then
+    if ( PRC_have_pl ) Then
        do l = 1, ADM_lall_pl
        do g = 1, ADM_gall_pl
           tmp2_pl(g, 1: 8,l,1) = abs( GMTR_p_pl(g,k0,l,:) )
@@ -1045,29 +1280,18 @@ contains
     call COMM_data_transfer( tmp2, tmp2_pl )
 
     if ( GMTR_io_mode == 'ADVANCED' ) then
-       call FIO_output( tmp(:,:,:,I_rgn),  basename, desc, "",          & ! [IN]
-                        "rgn", "region number", "",                     & ! [IN]
-                        "NIL", dtype, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call FIO_output( tmp(:,:,:,I_grid), basename, desc, "",          & ! [IN]
-                        "grid", "grid number", "",                      & ! [IN]
-                        "NIL", dtype, "ZSSFC1", 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
-       call FIO_output( tmp2(:,:,:,1),     basename, desc, "",          & ! [IN]
-                        "gmtrmetrics", "gmtr metrics", "",              & ! [IN]
-                        "", dtype, "LAYERNM", 1, 54, 1, 0.0_DP, 0.0_DP  ) ! [IN]
+       call FIO_output( tmp(:,:,:,I_rgn),  basename, desc, '',          & ! [IN]
+                        'rgn', 'region number', '',                     & ! [IN]
+                        'NIL', dtype, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
+       call FIO_output( tmp(:,:,:,I_grid), basename, desc, '',          & ! [IN]
+                        'grid', 'grid number', '',                      & ! [IN]
+                        'NIL', dtype, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP ) ! [IN]
+       call FIO_output( tmp2(:,:,:,1),     basename, desc, '',          & ! [IN]
+                        'gmtrmetrics', 'gmtr metrics', '',              & ! [IN]
+                        '', dtype, 'LAYERNM', 1, 54, 1, 0.0_DP, 0.0_DP  ) ! [IN]
     endif
 
     return
   end subroutine GMTR_output_metrics
-
-  !-----------------------------------------------------------------------------
-  integer function suf(i,j)
-    implicit none
-
-    integer :: i, j
-    !---------------------------------------------------------------------------
-
-    suf = ADM_gall_1d * (j-1) + i
-
-  end function suf
 
 end module mod_gmtr

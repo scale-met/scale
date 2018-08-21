@@ -23,6 +23,8 @@
 #define LOG_INFO_CONT(format) \
   if (IO_L) write(IO_FID_LOG,'(5x)',advance='no'); \
   if (IO_L) write(IO_FID_LOG,format)
+#define LOG_INFO_CONTNA(format) \
+  if (IO_L) write(IO_FID_LOG,format,advance='no')
 
 
 #define LOG_NEWLINE \
