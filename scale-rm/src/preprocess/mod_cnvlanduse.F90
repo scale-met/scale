@@ -453,7 +453,7 @@ contains
                                  TILE_fname(:), TILE_hit(:),                     & ! [IN]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "INT8",                                         & ! [IN]
+                                 "INT1",                                         & ! [IN]
                                  LANDUSE(:,:), LATH(:,:), LONH(:,:)              ) ! [OUT]
 
     call MAPPROJECTION_lonlat2xy( nLONH, 1, nLONH, nLATH, 1, nLATH, &
@@ -650,7 +650,7 @@ contains
                                  TILE_fname(:), TILE_hit(:),                     & ! [IN]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "REAL32",                                       & ! [IN]
+                                 "REAL4",                                        & ! [IN]
                                  LANDUSE(:,:), LATH(:,:), LONH(:,:),             & ! [OUT]
                                  min_value = -999                                ) ! [IN]
 
