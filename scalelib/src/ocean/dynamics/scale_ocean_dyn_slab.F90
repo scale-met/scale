@@ -239,7 +239,7 @@ contains
              ! heat flux from atm/ice at uppermost ocean layer
              OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP(OKS,i,j) + OCEAN_TEMP_t_ndg(OKS,i,j) * dt &
                                  + ( OCEAN_SFLX_G(i,j) - OCEAN_SFLX_ice(i,j) * EMELT ) / OCEAN_DYN_SLAB_HeatCapacity * dt
-             do k = OKS, OKE
+             do k = OKS+1, OKE
                 OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t_ndg(k,i,j) * dt
              enddo
           endif
