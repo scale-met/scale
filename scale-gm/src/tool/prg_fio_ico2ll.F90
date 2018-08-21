@@ -23,6 +23,7 @@ program fio_ico2ll
      PRC_masterrank,       &
      PRC_MPIstart,         &
      PRC_SINGLECOM_setup,  &
+     PRC_ERRHANDLER_setup, &
      PRC_MPIfinish,        &
      PRC_abort
   use scale_prc_icoA, only: &
@@ -208,6 +209,10 @@ program fio_ico2ll
                             nprocs,  & ! [OUT]
                             myrank,  & ! [OUT]
                             ismaster ) ! [OUT]
+
+  ! setup errhandler
+  call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                             ismaster ) ! [IN]
 
   !########## Initial setup ##########
 
