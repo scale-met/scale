@@ -16,7 +16,9 @@ program mkhgrid
   use scale_io
   use scale_prof
   use scale_prc, only: &
-     PRC_LOCAL_MPIstart, &
+     PRC_MPIstart,         &
+     PRC_SINGLECOM_setup,  &
+     PRC_ERRHANDLER_setup, &
      PRC_MPIfinish
   use scale_prc_icoA, only: &
      PRC_ICOA_setup
@@ -63,13 +65,24 @@ program mkhgrid
 
   character(len=H_LONG) :: cnf_fname ! config file
 
+  integer :: comm
+  integer :: nprocs
   integer :: myrank
   logical :: ismaster
   !=============================================================================
 
-  !---< MPI start >---
-  call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
-                           ismaster ) ! [OUT]
+  ! start MPI
+  call PRC_MPIstart( comm ) ! [OUT]
+
+  ! setup MPI communicator
+  call PRC_SINGLECOM_setup( comm,    & ! [IN]
+                            nprocs,  & ! [OUT]
+                            myrank,  & ! [OUT]
+                            ismaster ) ! [OUT]
+
+  ! setup errhandler
+  call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                             ismaster ) ! [IN]
 
   !########## Initial setup ##########
 

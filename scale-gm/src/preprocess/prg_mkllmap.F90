@@ -16,8 +16,10 @@ program mkllmap
   use scale_io
   use scale_prof
   use scale_prc, only: &
-     PRC_LOCAL_MPIstart, &
-     PRC_abort, &
+     PRC_MPIstart,         &
+     PRC_SINGLECOM_setup,  &
+     PRC_ERRHANDLER_setup, &
+     PRC_abort,            &
      PRC_MPIfinish
   use scale_prc_icoA, only: &
      PRC_ICOA_setup
@@ -49,10 +51,12 @@ program mkllmap
 
   character(len=H_LONG) :: cnf_fname ! config file
 
+  integer :: comm
+  integer :: nprocs
   integer :: myrank
   logical :: ismaster
 
-  character(len=H_LONG) :: output_dir   = './'
+  character(len=H_LONG) :: output_dir = './'
 
   namelist /mkllmap_param/ &
      output_dir
@@ -60,9 +64,18 @@ program mkllmap
   integer :: ierr
   !=============================================================================
 
-  !---< MPI start >---
-  call PRC_LOCAL_MPIstart( myrank,  & ! [OUT]
-                           ismaster ) ! [OUT]
+  ! start MPI
+  call PRC_MPIstart( comm ) ! [OUT]
+
+  ! setup MPI communicator
+  call PRC_SINGLECOM_setup( comm,    & ! [IN]
+                            nprocs,  & ! [OUT]
+                            myrank,  & ! [OUT]
+                            ismaster ) ! [OUT]
+
+  ! setup errhandler
+  call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                             ismaster ) ! [IN]
 
   !########## Initial setup ##########
 
