@@ -424,7 +424,7 @@ contains
                                  TILE_fname(:), TILE_hit(:),                     & ! [IN]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "INT16",                                        & ! [IN]
+                                 "INT2",                                         & ! [IN]
                                  HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
                                  min_value = 0.0_RP, yrevers = .true.            ) ! [IN]
 
@@ -579,7 +579,7 @@ contains
                                  TILE_fname(:), TILE_hit(:),                     & ! [IN]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "REAL32",                                       & ! [IN]
+                                 "REAL4",                                        & ! [IN]
                                  HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
                                  min_value = 0.0_RP                              ) ! [IN]
 

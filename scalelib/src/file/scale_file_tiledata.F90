@@ -28,7 +28,7 @@ module scale_file_tiledata
 
   interface FILE_TILEDATA_get_data
      module procedure FILE_TILEDATA_get_data_real
-     module procedure FILE_TILEDATA_get_data_int8
+     module procedure FILE_TILEDATA_get_data_int1
   end interface FILE_TILEDATA_get_data
 
   !-----------------------------------------------------------------------------
@@ -224,14 +224,14 @@ contains
     end if
 
     select case( data_type )
-    case ( "int16", "INT16" )
-       read_data => FILE_TILEDATA_read_data_int16_real
-    case ( "int32", "INT32" )
-       read_data => FILE_TILEDATA_read_data_int32_real
-    case ( "real32", "REAL32" )
-       read_data => FILE_TILEDATA_read_data_real32_real
-    case ( "real64", "REAL64" )
-       read_data => FILE_TILEDATA_read_data_real64_real
+    case ( "int2", "INT2" )
+       read_data => FILE_TILEDATA_read_data_int2_real
+    case ( "int4", "INT4" )
+       read_data => FILE_TILEDATA_read_data_int4_real
+    case ( "real4", "REAL4" )
+       read_data => FILE_TILEDATA_read_data_real4_real
+    case ( "real8", "REAL8" )
+       read_data => FILE_TILEDATA_read_data_real8_real
     case default
        LOG_ERROR("FILE_TILEDATA_get_data_real",*) 'data_type is invalid: ', trim(data_type)
        call PRC_abort
@@ -304,7 +304,7 @@ contains
     return
   end subroutine FILE_TILEDATA_get_data_real
 
-  subroutine FILE_TILEDATA_get_data_int8( &
+  subroutine FILE_TILEDATA_get_data_int1( &
        nLATH, nLONH,         &
        dirname,              &
        GLOBAL_IA,            &
@@ -380,16 +380,16 @@ contains
     end if
 
     select case( data_type )
-    case ( "int8", "INT8" )
-       read_data => FILE_TILEDATA_read_data_int8_int
-    case ( "int16", "INT16" )
-       read_data => FILE_TILEDATA_read_data_int16_int
-    case ( "int32", "INT32" )
-       read_data => FILE_TILEDATA_read_data_int32_int
-    case ( "real32", "REAL32" )
-       read_data => FILE_TILEDATA_read_data_real32_int
+    case ( "int1", "INT1" )
+       read_data => FILE_TILEDATA_read_data_int1_int
+    case ( "int2", "INT2" )
+       read_data => FILE_TILEDATA_read_data_int2_int
+    case ( "int4", "INT4" )
+       read_data => FILE_TILEDATA_read_data_int4_int
+    case ( "real4", "REAL4" )
+       read_data => FILE_TILEDATA_read_data_real4_int
     case default
-       LOG_ERROR("FILE_TILEDATA_get_data_int8",*) 'data_type is invalid: ', trim(data_type)
+       LOG_ERROR("FILE_TILEDATA_get_data_int1",*) 'data_type is invalid: ', trim(data_type)
        call PRC_abort
     end select
 
@@ -407,7 +407,7 @@ contains
        fname = trim(dirname) // '/' // trim(TILE_fname(t))
 
        LOG_NEWLINE
-       LOG_INFO("FILE_TILEDATA_get_data_int8",*) 'Input data file :', trim(fname)
+       LOG_INFO("FILE_TILEDATA_get_data_int1",*) 'Input data file :', trim(fname)
        LOG_INFO_CONT(*) 'Tile   (LAT)    :', TILE_JS(t)*TILE_DLAT/D2R, (TILE_JE(t)+1)*TILE_DLAT/D2R
        LOG_INFO_CONT(*) '       (LON)    :', TILE_IS(t)*TILE_DLON/D2R, (TILE_IE(t)+1)*TILE_DLON/D2R
 
@@ -456,7 +456,7 @@ contains
     enddo ! tile loop
 
     return
-  end subroutine FILE_TILEDATA_get_data_int8
+  end subroutine FILE_TILEDATA_get_data_int1
 
 
   ! private
@@ -638,7 +638,7 @@ contains
     return
   end subroutine FILE_TILEDATA_get_tile_info
 
-  subroutine FILE_TILEDATA_read_data_int16_real( &
+  subroutine FILE_TILEDATA_read_data_int2_real( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -674,7 +674,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int16_real",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int2_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -700,9 +700,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int16_real
+  end subroutine FILE_TILEDATA_read_data_int2_real
 
-  subroutine FILE_TILEDATA_read_data_int32_real( &
+  subroutine FILE_TILEDATA_read_data_int4_real( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -738,7 +738,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int32_real",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int4_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -764,9 +764,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int32_real
+  end subroutine FILE_TILEDATA_read_data_int4_real
 
-  subroutine FILE_TILEDATA_read_data_real32_real( &
+  subroutine FILE_TILEDATA_read_data_real4_real( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -802,7 +802,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real32_real",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_real4_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -828,9 +828,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_real32_real
+  end subroutine FILE_TILEDATA_read_data_real4_real
 
-  subroutine FILE_TILEDATA_read_data_real64_real( &
+  subroutine FILE_TILEDATA_read_data_real8_real( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -866,7 +866,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real64_real",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_real8_real",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -892,9 +892,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_real64_real
+  end subroutine FILE_TILEDATA_read_data_real8_real
 
-  subroutine FILE_TILEDATA_read_data_int8_int( &
+  subroutine FILE_TILEDATA_read_data_int1_int( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -930,7 +930,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int8_int",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int1_int",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -956,9 +956,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int8_int
+  end subroutine FILE_TILEDATA_read_data_int1_int
 
-  subroutine FILE_TILEDATA_read_data_int16_int( &
+  subroutine FILE_TILEDATA_read_data_int2_int( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -994,7 +994,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int16_int",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int2_int",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -1020,9 +1020,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int16_int
+  end subroutine FILE_TILEDATA_read_data_int2_int
 
-  subroutine FILE_TILEDATA_read_data_int32_int( &
+  subroutine FILE_TILEDATA_read_data_int4_int( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -1058,7 +1058,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int32_int",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_int4_int",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -1084,9 +1084,9 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_int32_int
+  end subroutine FILE_TILEDATA_read_data_int4_int
 
-  subroutine FILE_TILEDATA_read_data_real32_int( &
+  subroutine FILE_TILEDATA_read_data_real4_int( &
        jsize, isize, &
        fname, &
        TILE_DATA, &
@@ -1122,7 +1122,7 @@ contains
           iostat = ierr            )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real32_int",*) 'data file not found!: ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_data_real4_int",*) 'data file not found!: ', trim(fname)
        call PRC_abort
     endif
 
@@ -1148,6 +1148,6 @@ contains
     end if
 
     return
-  end subroutine FILE_TILEDATA_read_data_real32_int
+  end subroutine FILE_TILEDATA_read_data_real4_int
 
 end module scale_file_tiledata
