@@ -522,7 +522,12 @@ contains
        DATATYPE          = FILE_HISTORY_DEFAULT_DATATYPE
 
        read(IO_FID_CONF,nml=HISTORY_ITEM,iostat=ierr)
-       if( ierr /= 0 ) exit
+       if    ( ierr < 0 ) then
+          exit ! no more items
+       elseif( ierr > 0 ) then
+          LOG_ERROR("FILE_HISTORY_Setup",*) 'Not appropriate names in namelist HISTORY_ITEM. Check!'
+          call PRC_abort
+       endif
        if( BASENAME == '' .OR. NAME == '' .OR. OUTNAME == '' ) cycle ! invalid HISTORY_ITEM
 
        LOG_NML(HISTORY_ITEM)
