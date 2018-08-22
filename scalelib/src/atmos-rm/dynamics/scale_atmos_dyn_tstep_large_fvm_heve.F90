@@ -1171,13 +1171,13 @@ contains
     integer :: ierr
 
 
-    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', dim_type='ZXYH' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXYH' )
 
-    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', dim_type='ZXYH' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXYH' )
 
     mflx_lb_total            = 0.0_RP
     mflx_lb_horizontal(:)    = 0.0_RP
@@ -1281,7 +1281,7 @@ contains
                         ierr                          )
 
     call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
-                    'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
+                    'horizontally total momentum flux from lateral boundary (w/ CHECK_MASS)', 'kg/m2/s' )
 
     return
   end subroutine check_mass
