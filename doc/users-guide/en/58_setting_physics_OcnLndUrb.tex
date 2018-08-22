@@ -1,16 +1,16 @@
 %-------------------------------------------------------------------------------
 \section{Ocean Model} \label{sec:basic_usel_ocean}
 %-------------------------------------------------------------------------------
-The ocean process consists of two main parts, i.e., update of sea surface state and flux calculation at the interface of atmosphere and ocean. The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
+The ocean process consists of two main parts, i.e., the update of the state of the near-surface ocean and the calculation of the flux at the interface of atmosphere and ocean.
+The timing of calling these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing.
 
-\subsection{Sea Surface Scheme}
-%-------------------------------------------------------------------------------
-The manner of updating sea surface state, such as sea surface temperature, is configured in \nmitem{OCEAN_DYN_TYPE}, \nmitem{OCEAN_SFC_TYPE}, \nmitem{OCEAN_ALB_TYPE}, and \nmitem{OCEAN_RGN_TYPE} in \namelist{PARAM_OCEAN} in the files \verb|init.conf| and \verb|run.conf|:
+The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_DYN_TYPE}, \nmitem{OCEAN_SFC_TYPE}, \nmitem{OCEAN_ICE_TYPE}, \nmitem{OCEAN_ALB_TYPE}, and \nmitem{OCEAN_RGN_TYPE} in \namelist{PARAM_OCEAN} in the configuration files:
 
 \editboxtwo{
 \verb|&PARAM_OCEAN                    | & \\
 \verb| OCEAN_DYN_TYPE = "SLAB",       | & ; Select the ocean dynamics type shown in Table \ref{tab:nml_ocean_dyn}\\
 \verb| OCEAN_SFC_TYPE = "FIXED-TEMP", | & ; Select the ocean surface type shown in Table \ref{tab:nml_ocean_sfc}\\
+\verb| OCEAN_ICE_TYPE = "SIMPLE",     | & ; Select the ocean ice physics type shown in Table \ref{tab:nml_ocean_ice}\\
 \verb| OCEAN_ALB_TYPE = "NAKAJIMA00", | & ; Select the ocean albedo type shown in Table \ref{tab:nml_ocean_alb}\\
 \verb| OCEAN_RGN_TYPE = "MOON07",     | & ; Select the ocean roughness type shown in Table \ref{tab:nml_ocean_rgn}\\
 \verb|/                               | & \\
@@ -18,13 +18,14 @@ The manner of updating sea surface state, such as sea surface temperature, is co
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea dynamics schemes}
+  \caption{Choices of subsurface ocean schemes (\texttt{OCEAN\_DYN\_TYPE}).}
   \label{tab:nml_ocean_dyn}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
-      \verb|NONE or OFF| & Not using the sea model \\
-      \verb|SLAB|        & Slab ocean model \\
+      \verb|NONE or OFF| & Disable the ocean submodel \\
       \verb|INIT|        & Fixed to the initial condition \\
+      \verb|OFFILNE|     & Update by external data \\
+      \verb|SLAB|        & Slab ocean model \\
     \hline
   \end{tabularx}
 \end{center}
@@ -32,11 +33,11 @@ The manner of updating sea surface state, such as sea surface temperature, is co
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea surface schemes}
+  \caption{Choices of ocean surface schemes (\texttt{OCEAN\_SFC\_TYPE}). There is one option in current version.}
   \label{tab:nml_ocean_sfc}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
-      \verb|FIXED-TEMP| & Do not update sea surface temperature \\
+      \verb|FIXED-TEMP| & Calculate flux without diagnosing surface skin temperature \\
     \hline
   \end{tabularx}
 \end{center}
@@ -44,12 +45,27 @@ The manner of updating sea surface state, such as sea surface temperature, is co
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea albedo schemes}
+  \caption{Choices of sea ice schemes (\texttt{OCEAN\_ICE\_TYPE}).}
+  \label{tab:nml_ocean_ice}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE|   & Disable the sea ice model \\
+      \verb|INIT|   & Fixed to the initial condition \\
+      \verb|SIMPLE| & Simple sea ice model \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{Choices of ocean surface albedo schemes (\texttt{OCEAN\_ALB\_TYPE}).}
   \label{tab:nml_ocean_alb}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
-      \verb|NAKAJIMA00| & Sea albedo scheme & \citet{nakajima_2000} \\
       \verb|INIT|       & Fixed to the initial condition \\
+      \verb|CONST|      & Use constant value \\
+      \verb|NAKAJIMA00| & Calculate albedo for short-wave by solar zenith angle & \citet{nakajima_2000} \\
     \hline
   \end{tabularx}
 \end{center}
@@ -57,62 +73,244 @@ The manner of updating sea surface state, such as sea surface temperature, is co
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea roughness schemes}
+  \caption{Choices of ocean surface roughness schemes (\texttt{OCEAN\_RGN\_TYPE}).}
   \label{tab:nml_ocean_rgn}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
-      \verb|MOON07|   & Based on empirical formula with time development as default & \citet{moon_2007} \\
-      \verb|MILLER92| & Based on empirical formula without time development          & \citet{miller_1992} \\
+      \verb|MOON07|   & Based on empirical formula with time development    & \citet{moon_2007} \\
       \verb|INIT|     & Fixed to the initial condition \\
+      \verb|CONST|    & Use constant value \\
+      \verb|MILLER92| & Based on empirical formula without time development & \citet{miller_1992} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-If the ocean category is included in land-use setup by \namelist{PARAM_LANDUSE}, neither \verb|"NONE"| nor \verb|"OFF"| can be given to \nmitem{OCEAN_DYN_TYPE}. If this condition is not satisfied, the program immediately stops without the computation, and outputs the following message to LOG file:
+
+\clearpage
+%-------------------------------------------------------------------------------
+\subsection{Subsurface ocean scheme}
+%-------------------------------------------------------------------------------
+
+The grid points, which have a ocean fraction (= land fraction is less than 1.0), must be calculated by the ocean submodel. The setting of land-ocean fraction is controlled by \namelist{PARAM_LANDUSE}.
+When \nmitem{OCEAN_DYN_TYPE} is set to \verb|"NONE"| or \verb|"OFF"| although the grid points with the ocean fraction exist, the following error message is displayed to the log file:
+
 \msgbox{
 \verb|ERROR [CPL_vars_setup] Ocean fraction exists, but ocean component has not been called.|\\
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-If \nmitem{OCEAN_DYN_TYPE} $=$ \verb|"SLAB"|, the depth of the slab layer can be specified in \verb|run.conf|. In this case, the temperature in the slab layer develops over time through heat flux exchange between the atmosphere and the ocean:
+If \nmitem{OCEAN_DYN_TYPE} is set to \verb|"SLAB"|, the subsurface ocean is treated as a slab layer. The temperature of the slab layer changes over time by the heat flux from the surface. The depth of the slab layer, which controls the heat capacity of the slab ocean, can be specified \nmitem{OCEAN_DYN_SLAB_DEPTH} in \namelist{PARAM_OCEAN_DYN_SLAB}.
+
 \editboxtwo{
  \verb|&PARAM_OCEAN_DYN_SLAB            | & \\
- \verb| OCEAN_DYN_SLAB_DEPTH = 10.0_RP, | & ; water depth of slab ocean [m] \\
+ \verb| OCEAN_DYN_SLAB_DEPTH = 10.0_RP, | & ; Water depth of slab ocean [m] \\
  \verb|/                                | & \\
 }
 
-If \nmitem{OCEAN_DYN_TYPE} $=$ \verb|"SLAB"|, you can apply SST relaxation (nudging) by using external data.
-The parameter of the nudging can be specified in \verb|run.conf|.
+In the slab ocean model, you can apply SST relaxation (nudging) by using external data.
+The parameter of the nudging can be specified in \namelist{PARAM_OCEAN_DYN_SLAB}.
 
 \editboxtwo{
  \verb|&PARAM_OCEAN_DYN_SLAB                                    | & \\
- \verb| OCEAN_DYN_SLAB_nudging                       = .false., | & ; use nudging for ocean variables? \\
- \verb| OCEAN_DYN_SLAB_nudging_tau                   = 0.0_DP,  | & ; relaxation time for nudging \\
- \verb| OCEAN_DYN_SLAB_nudging_tau_unit              = "SEC",   | & ; relaxation time unit \\
- \verb| OCEAN_DYN_SLAB_nudging_basename              = "",      | & ; base name of input data \\
- \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_year  = .false., | & ; annually cyclic data? \\
- \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false., | & ; monthly cyclic data? \\
- \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false., | & ; dayly cyclic data? \\
+ \verb| OCEAN_DYN_SLAB_nudging                       = .false., | & ; Use nudging for ocean variables? \\
+ \verb| OCEAN_DYN_SLAB_nudging_tau                   = 0.0_DP,  | & ; Relaxation time for nudging \\
+ \verb| OCEAN_DYN_SLAB_nudging_tau_unit              = "SEC",   | & ; Relaxation time unit \\
+ \verb| OCEAN_DYN_SLAB_nudging_basename              = "",      | & ; Base name of input data \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_year  = .false., | & ; Annually cyclic data? \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false., | & ; Monthly cyclic data? \\
+ \verb| OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false., | & ; Daily cyclic data? \\
  \verb| OCEAN_DYN_SLAB_nudging_step_fixed            = 0,       | & ; Option for using specific step number of the data \\
- \verb| OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP,  | & ; offset value of the variables \\
- \verb| OCEAN_DYN_SLAB_nudging_defval                = UNDEF,   | & ; default value of the variables \\
- \verb| OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.,  | & ; check coordinate of variables \\
- \verb| OCEAN_DYN_SLAB_nudging_step_limit            = 0,       | & ; maximum limit of the time steps of the data \\
+ \verb| OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP,  | & ; Offset value of the variables \\
+ \verb| OCEAN_DYN_SLAB_nudging_defval                = UNDEF,   | & ; Default value of the variables \\
+ \verb| OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.,  | & ; Check coordinate of variables \\
+ \verb| OCEAN_DYN_SLAB_nudging_step_limit            = 0,       | & ; Maximum limit of the time steps of the data \\
  \verb|/                                                        | & \\
 }
 
-When \nmitem{OCEAN_DYN_SLAB_nudging_tau} is 0, the value of sea surface temperature is totally replaced by the external file. This configuration is the same as \nmitem{OCEAN_TYPE} = \verb|"FILE"| in the old version.
-%
-When \nmitem{OCEAN_DYN_SLAB_nudging_step_fixed} is less than 1, the certain time of the input data is used and temporal interpolation is applied to calculate the value of current time. When the specific step number is set for \nmitem{OCEAN_DYN_SLAB_nudging_step_fixed}, the data of that step is always used without interpolation.
-%
-When the number larger than 0 is set to \nmitem{OCEAN_DYN_SLAB_nudging_step_limit}, The data at the time step exceed this limit would not be read. When \nmitem{OCEAN_DYN_SLAB_nudging_step_limit} is 0, no limit is set.
+When \nmitem{OCEAN_DYN_SLAB_nudging_tau} is 0, the value of sea surface temperature is totally replaced by the external file.
+When \nmitem{OCEAN_DYN_SLAB_nudging_step_fixed} is less than 1,
+the value of current time is calculated by temporal interpolation from the input data.
+When the specific step number is set for \nmitem{OCEAN_DYN_SLAB_nudging_step_fixed}, the data of that step is always used without temporal interpolation.
+When the number larger than 0 is set to \nmitem{OCEAN_DYN_SLAB_nudging_step_limit}, the data at the time step exceed this limit would not be read.
+The last read data is used for nudging.
+When \nmitem{OCEAN_DYN_SLAB_nudging_step_limit} is 0, no limit is set.
 
-\subsection{Flux in Atmosphere and Ocean}
+
+
+If \nmitem{OCEAN_DYN_TYPE} is set to \verb|"OFFLINE"|, no dynamical nor physical process of subsurface ocean are calculated.
+The temporal changes of sea surface temperature are provided by the external file.
+This is the same as \nmitem{OCEAN_TYPE} = \verb|"FILE"| in the old version of \scale, and also same as the case of \nmitem{OCEAN_DYN_SLAB_nudging_tau} $=$ 0 in the slab ocean scheme.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_DYN_OFFLINE                            | & \\
+ \verb| OCEAN_DYN_OFFLINE_basename              = "",      | & ; Base name of input data \\
+ \verb| OCEAN_DYN_OFFLINE_enable_periodic_year  = .false., | & ; Annually cyclic data? \\
+ \verb| OCEAN_DYN_OFFLINE_enable_periodic_month = .false., | & ; Monthly cyclic data? \\
+ \verb| OCEAN_DYN_OFFLINE_enable_periodic_day   = .false., | & ; Daily cyclic data? \\
+ \verb| OCEAN_DYN_OFFLINE_step_fixed            = 0,       | & ; Option for using specific step number of the data \\
+ \verb| OCEAN_DYN_OFFLINE_offset                = 0.0_RP,  | & ; Offset value of the variables \\
+ \verb| OCEAN_DYN_OFFLINE_defval                = UNDEF,   | & ; Default value of the variables \\
+ \verb| OCEAN_DYN_OFFLINE_check_coordinates     = .true.,  | & ; Check coordinate of variables \\
+ \verb| OCEAN_DYN_OFFLINE_step_limit            = 0,       | & ; Maximum limit of the time steps of the data \\
+ \verb|/                                                   | & \\
+}
+
+Each parameter for the external file in offline mode follows the parameter for the nudging file in the slab ocean scheme.
+
+
+
 %-------------------------------------------------------------------------------
-The albedo of ocean surface is calculated by the scheme selected by \nmitem{OCEAN_ALB_TYPE}. The roughness length of ocean surface is calculated by the scheme selected by \nmitem{OCEAN_RGN_TYPE}. By using these variables, surface flux between atmosphere and ocean is calculated by the scheme selected by \nmitem{OCEAN_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
+\subsection{Ocean surface process}
+%-------------------------------------------------------------------------------
+
+The ocean surface process contains the following subprocess:
+
+\begin{itemize}
+   \item Calculation of open ocean (ice-free) surface
+   \begin{itemize}
+      \item Calculation of the ocean surface albedo
+      \item Calculation of the ocean surface roughness length
+      \item Calculation of the heat/evaporation/emission flux between the atmosphere and the ocean
+   \end{itemize}
+
+   \item Calculation of sea ice surface
+   \begin{itemize}
+      \item Calculation of the ice surface albedo
+      \item Calculation of the ice surface roughness length
+      \item Calculation of the thermal conductance between the sea ice and the subsurface ocean
+      \item Calculation of the heat/evaporation/emission flux between the atmosphere and the ice
+      \item Calculation of the heat and water flux between the ice and the subsurface ocean
+   \end{itemize}
+\end{itemize}
 
 
+
+The albedo of the open ocean surface is configured by the scheme selected by \nmitem{OCEAN_ALB_TYPE}.
+If \nmitem{OCEAN_ALB_TYPE} is set to \verb|"CONST"|, the albedo values over the open ocean are constant and set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_const}.
+If \nmitem{OCEAN_ALB_TYPE} is set to \verb|"NAKAJIMA00"|, the albedo for the short-wave is calculated from the solar zenith angle,
+while the albedo parameters set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_const} are used for the long-wave (IR).
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ALBEDO_const       | & \\
+ \verb| OCEAN_PHY_ALBEDO_IR_dir  = 0.05D0, | & ; Ocean surface albedo for the long-wave (IR), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_IR_dif  = 0.05D0, | & ; Ocean surface albedo for the long-wave (IR), diffuse light \\
+ \verb| OCEAN_PHY_ALBEDO_NIR_dir = 0.07D0, | & ; Ocean surface albedo for the short-wave (near-IR), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_NIR_dif = 0.06D0, | & ; Ocean surface albedo for the short-wave (near-IR), diffuse light \\
+ \verb| OCEAN_PHY_ALBEDO_VIS_dir = 0.07D0, | & ; Ocean surface albedo for the short-wave (visible), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_VIS_dif = 0.06D0, | & ; Ocean surface albedo for the short-wave (visible), diffuse light \\
+ \verb|/                                   | & \\
+}
+
+
+The albedos over the sea ice surface are constant regardress of \nmitem{OCEAN_ALB_TYPE}. The values are set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_seaice}.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ALBEDO_seaice             | & \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_IR_dir  = 0.05D0, | & ; Sea ice surface albedo for the long-wave (IR), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_IR_dif  = 0.05D0, | & ; Sea ice surface albedo for the long-wave (IR), diffuse light \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_NIR_dir = 0.60D0, | & ; Sea ice surface albedo for the short-wave (near-IR), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_NIR_dif = 0.60D0, | & ; Sea ice surface albedo for the short-wave (near-IR), diffuse light \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_VIS_dir = 0.80D0, | & ; Sea ice surface albedo for the short-wave (visible), direct light \\
+ \verb| OCEAN_PHY_ALBEDO_seaice_VIS_dif = 0.80D0, | & ; Sea ice surface albedo for the short-wave (visible), diffuse light \\
+ \verb|/                                          | & \\
+}
+
+
+
+The roughness length of ocean surface is calculated by the scheme selected by \nmitem{OCEAN_RGN_TYPE}.
+If \nmitem{OCEAN_RGN_TYPE} is set to \verb|"CONST"|, the parameters in \nmitem{PARAM_OCEAN_PHY_ROUGHNESS_const} are used.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ROUGHNESS_const  | & \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0M = 1.0D-5, | & ; Ocean surface roughness length for momentum [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0H = 1.0D-5, | & ; Ocean surface roughness length for heat [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0E = 1.0D-5, | & ; Ocean surface roughness length for moisture [m] \\
+ \verb|/                                 | & \\
+}
+
+When \nmitem{OCEAN_RGN_TYPE} is set to \verb|"MOON07"| or \verb|"MILLER92"|, the roughness length for momentum, heat, and water vapor are calculated in the selected scheme. You can specify some limiters by setting \nmitem{PARAM_OCEAN_PHY_ROUGHNESS}.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ROUGHNESS       | & \\
+ \verb| OCEAN_PHY_ROUGHNESS_visck     = 1.5D-5, | & ; Kinematic viscosity [m2/s] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Ustar_min = 1.0D-3, | & ; Minimum limit of friction velocity [m/s] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0M_min   = 1.0D-5, | & ; Minimum limit of surface roughness length for momentum [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0H_min   = 1.0D-5, | & ; Minimum limit of roughness length for heat [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_Z0E_min   = 1.0D-5, | & ; Minimum limit of roughness length for moisture [m] \\
+ \verb|/                                   | & \\
+}
+
+The roughness lengths of the sea ice surface are constant regardress of \nmitem{OCEAN_RGN_TYPE}. \\
+The values are set by \nmitem{PARAM_OCEAN_PHY_ROUGHNESS_seaice}.
+The minimum limit of roughness lengths specified by \nmitem{PARAM_OCEAN_PHY_ROUGHNESS} are also applied to the value over the sea ice surface.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ROUGHNESS_seaice         | & \\
+ \verb| OCEAN_PHY_ROUGHNESS_seaice_Z0M = 2.0D-2, | & ; Sea ice surface roughness length for momentum [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_seaice_Z0H = 2.0D-3, | & ; Sea ice surface roughness length for heat [m] \\
+ \verb| OCEAN_PHY_ROUGHNESS_seaice_Z0E = 2.0D-3, | & ; Sea ice surface roughness length for moisture [m] \\
+ \verb|/                                         | & \\
+}
+
+
+By using the albedo and the roughness length, 
+the surface fluxes between atmosphere and ocean, and fluxes between atmosphere and ice are calculated by the scheme selected by \nmitem{OCEAN_SFC_TYPE}.
+The bulk scheme specified by \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
+
+%-------------------------------------------------------------------------------
+\subsubsection{Ocean ice process}
+%-------------------------------------------------------------------------------
+
+When \nmitem{OCEAN_ICE_TYPE} is set to \verb|"SIMPLE"|, the ocean ice process comes to be considered.
+The thermal conductance between the sea ice and the subsurface ocean is calculated by using the parameter specified in \namelist{PARAM_OCEAN_PHY_TC_seaice}.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_TC_seaice             | & \\
+ \verb| OCEAN_PHY_thermalcond_max    = 10.D0, | & ; Maximum thermal conductivity per depth [J/m2/s/K] \\
+ \verb| OCEAN_PHY_thermalcond_seaice =  2.D0, | & ; Thermal conductivity of sea ice [J/m/s/K] \\
+ \verb|/                                      | & \\
+}
+
+The parameters of sea ice process is configured by \namelist{PARAM_OCEAN_PHY_ICE}.
+
+\editboxtwo{
+ \verb|&PARAM_OCEAN_PHY_ICE                      | & \\
+ \verb| OCEAN_PHY_ICE_density        =  1000.D0, | & ; Density of sea ice [kg/m3] \\
+ \verb| OCEAN_PHY_ICE_mass_critical  =  1600.D0, | & ; Ice amount for fraction = 1 [kg/m2] \\
+ \verb| OCEAN_PHY_ICE_mass_limit     = 50000.D0, | & ; Maximum limit of ice amount [kg/m2] \\
+ \verb| OCEAN_PHY_ICE_fraction_limit =     1.D0, | & ; Maximum limit of ice fraction [1] \\
+ \verb|/                                         | & \\
+}
+
+In \scale, the mass amount of the sea ice is the prognostic variable and the ice fraction diagnosed by following equation:
+
+\begin{eqnarray}
+  && \nmitemeq{ICE_fraction} = \sqrt{ \frac{\nmitemeq{ICE_mass}}{\nmitemeq{OCEAN_PHY_ICE_mass_critical}} }\nonumber.
+\end{eqnarray}
+
+
+%The sea ice model also has the nudging option. You can apply relaxation to the ice fraction by using external data.
+%The parameter of the nudging can be specified in \namelist{PARAM_OCEAN_PHY_ICE}.
+%
+%\editboxtwo{
+% \verb|&PARAM_OCEAN_PHY_ICE                                    | & \\
+% \verb| OCEAN_PHY_ICE_nudging                       = .false., | & ; use nudging for ocean variables? \\
+% \verb| OCEAN_PHY_ICE_nudging_tau                   = 0.0_DP,  | & ; relaxation time for nudging \\
+% \verb| OCEAN_PHY_ICE_nudging_tau_unit              = "SEC",   | & ; relaxation time unit \\
+% \verb| OCEAN_PHY_ICE_nudging_basename              = "",      | & ; base name of input data \\
+% \verb| OCEAN_PHY_ICE_nudging_enable_periodic_year  = .false., | & ; annually cyclic data? \\
+% \verb| OCEAN_PHY_ICE_nudging_enable_periodic_month = .false., | & ; monthly cyclic data? \\
+% \verb| OCEAN_PHY_ICE_nudging_enable_periodic_day   = .false., | & ; dayly cyclic data? \\
+% \verb| OCEAN_PHY_ICE_nudging_step_fixed            = 0,       | & ; Option for using specific step number of the data \\
+% \verb| OCEAN_PHY_ICE_nudging_offset                = 0.0_RP,  | & ; offset value of the variables \\
+% \verb| OCEAN_PHY_ICE_nudging_defval                = UNDEF,   | & ; default value of the variables \\
+% \verb| OCEAN_PHY_ICE_nudging_check_coordinates     = .true.,  | & ; check coordinate of variables \\
+% \verb| OCEAN_PHY_ICE_nudging_step_limit            = 0,       | & ; maximum limit of the time steps of the data \\
+% \verb|/                                                        | & \\
+%}
+%
+%Each parameter of the nudging follows the setting in the slab ocean scheme described above.
 
 \section{Land Model} \label{sec:basic_usel_land}
 %-------------------------------------------------------------------------------
