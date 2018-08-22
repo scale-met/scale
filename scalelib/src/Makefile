@@ -42,8 +42,7 @@ VPATH = common:                          \
         coupler/physics/surface:         \
         \
         atmos-rm/dynamics:               \
-        atmos-rm/forcing:                \
-        atmos-physics/turbulence:
+        atmos-rm/turbulence:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
