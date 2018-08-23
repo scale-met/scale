@@ -252,7 +252,7 @@ contains
     end select
 
     call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
-    call FILE_HISTORY_in( Kh(:,:,:,:),        'Ku_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+    call FILE_HISTORY_in( Kh(:,:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
 
     call ATMOS_vars_calc_diagnostics
 
