@@ -141,6 +141,7 @@ contains
 #endif
 
    ! momentum -> velocity
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE-1
@@ -156,6 +157,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-1, IE+1
        VELZ_XY(KE,i,j) = 0.0_RP
@@ -164,6 +166,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-2, JE+2
     do i = IS-2, IE+2
     do k = KS+1, KE
@@ -179,6 +182,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-2, JE+2
     do i = IS-2, IE+2
 #ifdef DEBUG
@@ -193,6 +197,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-2, IE+1
     do k = KS, KE
@@ -208,6 +213,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-2, IE+1
        VELX_YZ(KE+1,i,j) = 0.0_RP
@@ -216,6 +222,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-2, JE+2
     do i = IS-1, IE+2
     do k = KS, KE
@@ -249,6 +256,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-2, JE+1
     do i = IS-1, IE+1
        VELY_ZX(KE+1,i,j) = 0.0_RP
@@ -257,6 +265,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JS-1, JE+2
     do i = IS-2, IE+2
     do k = KS, KE
@@ -285,6 +294,7 @@ contains
        ! (x-y plane; x,y,w)
        ! WORK_Z = VELZ_XY
        ! (y-z plane; u,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -299,6 +309,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           WORK_X(KE+1,i,j) = 0.0_RP
@@ -308,6 +319,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z-x plane; x,v,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -322,6 +334,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
           WORK_Y(KE+1,i,j) = 0.0_RP
@@ -333,6 +346,7 @@ contains
 
        ! dw/dz
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE
@@ -349,6 +363,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -366,6 +381,7 @@ contains
 
        ! 1/2 * dw/dx
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -392,6 +408,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -425,6 +442,7 @@ contains
 #endif
 
        ! (y edge, u,y,w)
+       !$omp parallel do
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -446,6 +464,7 @@ contains
 
        ! 1/2 * dw/dy
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -471,6 +490,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -504,6 +524,7 @@ contains
 #endif
 
        ! (x edge; x,v,w)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE-1
@@ -528,6 +549,7 @@ contains
 #endif
        ! u
        ! (x-y plane; x,y,w)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE-1
@@ -545,6 +567,7 @@ contains
        ! (y-z plane; u,y,z)
        ! WORK_X = VELX_YZ
        ! (z-x plane; x,v,z)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -560,6 +583,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (vertex; u,v,w)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -587,6 +611,7 @@ contains
 
        ! du/dx
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -612,6 +637,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -651,6 +677,7 @@ contains
 
        ! 1/2 * du/dz
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -670,6 +697,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -694,6 +722,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (y edge; u,y,w)
+       !$omp parallel do
        do j = JJS  , JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -715,6 +744,7 @@ contains
 
        ! 1/2 * du/dy
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -738,6 +768,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -777,6 +808,7 @@ contains
 #endif
 
        ! (z edge; u,v,z)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS+1, KE-1
@@ -797,6 +829,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
 #ifdef DEBUG
@@ -834,6 +867,7 @@ contains
 #endif
        ! v
        ! (x-y plane; x,y,w)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE-1
@@ -849,6 +883,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (y-z plane; u,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE
        do k = KS, KE
@@ -866,6 +901,7 @@ contains
        ! (z-x plane; x,v,z)
        ! WORK_Y = VELY_ZX
        ! (vertex; u,v,w)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -889,6 +925,7 @@ contains
 
        ! dv/dy
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -913,6 +950,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -950,6 +988,7 @@ contains
 
        ! 1/2 * dv/dx
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -978,6 +1017,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -1022,6 +1062,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z edge; u,v,z)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
        do k = KS+1, KE-1
@@ -1044,6 +1085,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS-1, IIE
 #ifdef DEBUG
@@ -1079,6 +1121,7 @@ contains
 
        ! 1/2 * dv/dz
        ! (cell center; x,y,z)
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS+1, KE-1
@@ -1098,6 +1141,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
 #ifdef DEBUG
@@ -1123,6 +1167,7 @@ contains
 #endif
 
        ! (x edge; x,v,w)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE-1
@@ -1251,6 +1296,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_phi(KS-1,i,j,ZDIR) = 0.0_RP
@@ -1294,6 +1340,7 @@ contains
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JJS,   JJE
     do i = IIS-1, IIE
 #ifdef DEBUG
@@ -1363,6 +1410,7 @@ contains
 #ifdef DEBUG
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+    !$omp parallel do
     do j = JJS-1, JJE
     do i = IIS,   IIE
 #ifdef DEBUG
@@ -1402,10 +1450,12 @@ contains
 
     if ( (.not. horizontal) .and. implicit ) then
        call ATMOS_PHY_TB_calc_tend_phi( TEND, & ! (out)
-                           qflx_phi, & ! (in)
-                           GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-                           IIS, IIE, JJS, JJE ) ! (in)
+                                        qflx_phi, & ! (in)
+                                        GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
+                                        IIS, IIE, JJS, JJE ) ! (in)
 
+       !$omp parallel do &
+       !$omp private(d)
        do j = JJS, JJE
        do i = IIS, IIE
 
@@ -1490,7 +1540,8 @@ contains
        CDZ  => ATMOS_GRID_CARTESC_CDZ
     implicit none
 
-    real(RP), intent(out) :: MOMZ_t_TB(KA,IA,JA)
+    real(RP), intent(inout) :: MOMZ_t_TB(KA,IA,JA)
+
     real(RP), intent(in)  :: QFLX_MOMZ(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
     real(RP), intent(in)  :: J13G(KA,IA,JA,7)
@@ -1511,7 +1562,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
-       MOMZ_t_TB(k,i,j) = &
+       MOMZ_t_TB(k,i,j) = MOMZ_t_TB(k,i,j) &
             - ( ( GSQRT(k,i  ,j,I_UYW) * QFLX_MOMZ(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j,I_UYW) * QFLX_MOMZ(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(k,i,j  ,I_XVW) * QFLX_MOMZ(k,i,j  ,YDIR) &
@@ -1529,9 +1580,10 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMZ_t_TB(KS,i,j) = &
+       MOMZ_t_TB(KS,i,j) = MOMZ_t_TB(KS,i,j) &
             - ( ( GSQRT(KS,i  ,j,I_UYW) * QFLX_MOMZ(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j,I_UYW) * QFLX_MOMZ(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KS,i,j  ,I_XVW) * QFLX_MOMZ(KS,i,j  ,YDIR) &
@@ -1546,7 +1598,7 @@ contains
                   + J33G * ( QFLX_MOMZ(KS+1,i,j,ZDIR) ) ) * RFDZ(KS) &
               ) / GSQRT(KS,i,j,I_XYW)
 
-       MOMZ_t_TB(KE-1,i,j) = &
+       MOMZ_t_TB(KE-1,i,j) = MOMZ_t_TB(KE-1,i,j) &
             - ( ( GSQRT(KE-1,i  ,j,I_UYW) * QFLX_MOMZ(KE-1,i  ,j,XDIR) &
                 - GSQRT(KE-1,i-1,j,I_UYW) * QFLX_MOMZ(KE-1,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KE-1,i,j  ,I_XVW) * QFLX_MOMZ(KE-1,i,j  ,YDIR) &
@@ -1578,7 +1630,8 @@ contains
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
-    real(RP), intent(out) :: MOMX_t_TB(KA,IA,JA)
+    real(RP), intent(inout) :: MOMX_t_TB(KA,IA,JA)
+
     real(RP), intent(in)  :: QFLX_MOMX(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
     real(RP), intent(in)  :: MAPF(IA,JA,2,4)
@@ -1599,7 +1652,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       MOMX_t_TB(k,i,j) = &
+       MOMX_t_TB(k,i,j) = MOMX_t_TB(k,i,j) &
             - ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) &
                 - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) &
@@ -1616,9 +1669,10 @@ contains
     enddo
     enddo
     enddo
+    !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMX_t_TB(KS,i,j) = &
+       MOMX_t_TB(KS,i,j) = MOMX_t_TB(KS,i,j) &
             - ( ( GSQRT(KS,i+1,j,I_XYZ) * QFLX_MOMX(KS,i+1,j,XDIR) &
                 - GSQRT(KS,i  ,j,I_XYZ) * QFLX_MOMX(KS,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(KS,i,j  ,I_UVZ) * QFLX_MOMX(KS,i,j  ,YDIR) &
@@ -1633,7 +1687,7 @@ contains
                 + J33G * ( QFLX_MOMX(KS,i,j,ZDIR) ) ) * RFDZ(KS) &
             ) / GSQRT(KS,i,j,I_UYZ)
 
-       MOMX_t_TB(KE,i,j) = &
+       MOMX_t_TB(KE,i,j) = MOMX_t_TB(KE,i,j) &
             - ( ( GSQRT(KE,i+1,j,I_XYZ) * QFLX_MOMX(KE,i+1,j,XDIR) &
                 - GSQRT(KE,i  ,j,I_XYZ) * QFLX_MOMX(KE,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(KE,i,j  ,I_UVZ) * QFLX_MOMX(KE,i,j  ,YDIR) &
@@ -1665,7 +1719,8 @@ contains
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
 
-    real(RP), intent(out) :: MOMY_t_TB(KA,IA,JA)
+    real(RP), intent(inout) :: MOMY_t_TB(KA,IA,JA)
+
     real(RP), intent(in)  :: QFLX_MOMY(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
     real(RP), intent(in)  :: MAPF(IA,JA,2,4)
@@ -1686,7 +1741,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       MOMY_t_TB(k,i,j) = &
+       MOMY_t_TB(k,i,j) = MOMY_t_TB(k,i,j) &
             - ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) &
@@ -1703,9 +1758,10 @@ contains
     enddo
     enddo
     enddo
+    !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMY_t_TB(KS,i,j) = &
+       MOMY_t_TB(KS,i,j) = MOMY_t_TB(KS,i,j) &
             - ( ( GSQRT(KS,i  ,j  ,I_UVZ) * QFLX_MOMY(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j  ,I_UVZ) * QFLX_MOMY(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(KS,i  ,j+1,I_XYZ) * QFLX_MOMY(KS,i,j+1,YDIR) &
@@ -1720,7 +1776,7 @@ contains
                 + J33G * ( QFLX_MOMY(KS,i,j,ZDIR) ) ) * RCDZ(KS) &
               ) / GSQRT(KS,i,j,I_XVW)
 
-       MOMY_t_TB(KE,i,j) = &
+       MOMY_t_TB(KE,i,j) = MOMY_t_TB(KE,i,j) &
             - ( ( GSQRT(KE,i  ,j  ,I_UVZ) * QFLX_MOMY(KE,i  ,j,XDIR) &
                 - GSQRT(KE,i-1,j  ,I_UVZ) * QFLX_MOMY(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(KE,i  ,j+1,I_XYZ) * QFLX_MOMY(KE,i,j+1,YDIR) &
@@ -1752,7 +1808,8 @@ contains
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
 
-    real(RP), intent(out) :: phi_t_TB(KA,IA,JA)
+    real(RP), intent(inout) :: phi_t_TB(KA,IA,JA)
+
     real(RP), intent(in)  :: QFLX_phi(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
     real(RP), intent(in)  :: MAPF(IA,JA,2,4)
@@ -1772,7 +1829,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       phi_t_TB(k,i,j) = &
+       phi_t_TB(k,i,j) = phi_t_TB(k,i,j) &
             - ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_phi(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j,I_UVZ) * QFLX_phi(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_phi(k,i,j  ,YDIR) &
@@ -1789,9 +1846,10 @@ contains
     enddo
     enddo
     enddo
+    !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       phi_t_TB(KS,i,j) = &
+       phi_t_TB(KS,i,j) = phi_t_TB(KS,i,j) &
             - ( ( GSQRT(KS,i  ,j,I_UYZ) * QFLX_phi(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j,I_UVZ) * QFLX_phi(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KS,i,j  ,I_XVZ) * QFLX_phi(KS,i,j  ,YDIR) &
@@ -1806,7 +1864,7 @@ contains
                   + J33G * ( QFLX_phi(KS,i,j,ZDIR) ) ) * RCDZ(KS) &
              ) / GSQRT(KS,i,j,I_XYZ)
 
-       phi_t_TB(KE,i,j) = &
+       phi_t_TB(KE,i,j) = phi_t_TB(KE,i,j) &
             - ( ( GSQRT(KE,i  ,j,I_UYZ) * QFLX_phi(KE,i  ,j,XDIR) &
                 - GSQRT(KE,i-1,j,I_UVZ) * QFLX_phi(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KE,i,j  ,I_XVZ) * QFLX_phi(KE,i,j  ,YDIR) &
