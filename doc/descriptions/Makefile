@@ -25,6 +25,7 @@ SRCS = ${TARGET}.tex \
        turbulence_mynn.tex \
        microphysics.tex \
        microphysics_kessler.tex \
+       microphysics_tomita08.tex \
        microphysics_seiki.tex \
        microphysics_suzuki.tex \
        surface_flux.tex \
