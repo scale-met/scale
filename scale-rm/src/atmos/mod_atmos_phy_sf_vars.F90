@@ -77,7 +77,8 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SH   (:,:)     ! sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)     ! latent heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   ! tracer mass flux [kg/m2/s]
+  real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
+  real(RP), public, pointer     :: ATMOS_PHY_SF_SFLX_QV   (:,:)
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_U10       (:,:)     ! 10m x-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_V10       (:,:)     ! 10m y-wind [m/s]
@@ -166,6 +167,8 @@ module mod_atmos_phy_sf_vars
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0        = 1E-4_RP
 
+  real(RP), allocatable, target :: ZERO(:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -175,6 +178,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     implicit none
 
     namelist / PARAM_ATMOS_PHY_SF_VARS / &
@@ -297,6 +302,13 @@ contains
        LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Restart output? : NO'
        ATMOS_PHY_SF_RESTART_OUTPUT = .false.
     endif
+
+    if ( I_QV > 0 ) then
+       ATMOS_PHY_SF_SFLX_QV => ATMOS_PHY_SF_SFLX_QTRC(:,:,I_QV)
+    else
+       allocate( ZERO(IA,JA) )
+       ATMOS_PHY_SF_SFLX_QV => ZERO
+    end if
 
     return
   end subroutine ATMOS_PHY_SF_vars_setup

@@ -32,12 +32,14 @@ module mod_atmos_phy_bl_vars
   !
   !++ Public parameters & variables
   !
-  integer,  public              :: I_TKE
+  integer,  public              :: QS, QE
 
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOU_t(:,:,:)   ! tendency RHOU [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOV_t(:,:,:)   ! tendency RHOV [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
+
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
+
   real(RP), public, allocatable :: ATMOS_PHY_BL_Zi    (:,:)     ! depth of the PBL
 
   !-----------------------------------------------------------------------------

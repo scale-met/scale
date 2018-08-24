@@ -223,8 +223,7 @@ contains
 
        vel = mflx(KS,i,j)
        flux(KS,i,j) = vel &
-                   * ( val(KS,i,j) * min( 1.0_RP, &
-                   ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) / ( val(KS,i,j) + EPS ) ) &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) &
                      * ( 0.5_RP + sign(0.5_RP,vel) ) &
                 + ( 2.0_RP * val(KS,i,j) + 5.0_RP * val(KS+1,i,j) - val(KS+2,i,j) ) / 6.0_RP &
                      * ( 0.5_RP - sign(0.5_RP,vel) ) ) &
@@ -233,8 +232,7 @@ contains
        flux(KE-1,i,j) = vel &
                    * ( ( 2.0_RP * val(KE,i,j) + 5.0_RP * val(KE-1,i,j) - val(KE-2,i,j) ) / 6.0_RP &
                      * ( 0.5_RP + sign(0.5_RP,vel) ) &
-                + val(KE,i,j) * min( 1.0_RP, &
-                   ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) ) / ( val(KE,i,j) + EPS ) ) &
+                + F2 * ( val(KE,i,j)+val(KE-1,i,j) ) &
                      * ( 0.5_RP - sign(0.5_RP,vel) ) ) &
                    + GSQRT(KE-1,i,j) * num_diff(KE-1,i,j)
 
