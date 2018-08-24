@@ -19,7 +19,7 @@ RUNCONF     = run.conf
 TPROC       = 1
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
+DATPARAM    =
 DATDISTS    =
 
 
