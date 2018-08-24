@@ -162,7 +162,7 @@ contains
     allocate( divf(KA), divh(KA) )
 
     fluxh(KS-1) = 0.0_RP
-    do k = KS, KE-1
+    do k = KS, KE
        if ( CZ(k) > 1000.0_RP ) then
           fluxf(k) = LSD
        else
@@ -326,7 +326,7 @@ contains
        do k = KS+1, KE
           val(k) = ( MOMZ(k,i,j) + MOMZ(k-1,i,j) ) / DENS(k,i,j) * 0.5_RP
        end do
-       do k = KS, KE
+       do k = KS, KE-1
           MOMZ_tp(k,i,j) = MOMZ_tp(k,i,j) &
                - ( fluxf(k+1)*val(k+1) - fluxf(k)*val(k) ) * RFDZ(k) &
                + MOMZ(k,i,j) * divh(k) / ( DENS(k,i,j)*FDZ(k+1) + DENS(k+1,i,j)*FDZ(k) ) * ( FDZ(k+1) + FDZ(k) )
