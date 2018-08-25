@@ -47,20 +47,40 @@ contains
   !-----------------------------------------------------------------------------
   !> Tracer setup
   subroutine ATMOS_PHY_TB_driver_tracer_setup
-    use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_config
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_phy_tb_d1980, only: &
+       ATMOS_PHY_TB_d1980_config
+    use scale_atmos_phy_tb_dns, only: &
+       ATMOS_PHY_TB_dns_config
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
        ATMOS_sw_phy_tb
+    use mod_atmos_phy_tb_vars, only: &
+       I_TKE
     implicit none
     !---------------------------------------------------------------------------
+
+    if ( .not. ATMOS_sw_phy_tb ) return
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_TB_driver_tracer_setup",*) 'Setup'
 
-    if ( ATMOS_sw_phy_tb ) then
-       call ATMOS_PHY_TB_config( ATMOS_PHY_TB_TYPE )
-    end if
+    select case( ATMOS_PHY_TB_TYPE )
+    case( 'SMAGORINSKY' )
+       I_TKE = -1
+    case( 'D1980' )
+       call ATMOS_PHY_TB_d1980_config( ATMOS_PHY_TB_TYPE, & ! [IN]
+                                       I_TKE              ) ! [OUT]
+    case( 'DNS' )
+       call ATMOS_PHY_TB_dns_config( ATMOS_PHY_TB_TYPE, & ! [IN]
+                                     I_TKE              ) ! [OUT]
+    case('OFF')
+       ! do nothing
+    case default
+       LOG_ERROR("ATMOS_PHY_TB_driver_tracer_setup",*) 'ATMOS_PHY_TB_TYPE is invalid: ', ATMOS_PHY_TB_TYPE
+       call PRC_abort
+    end select
 
     return
   end subroutine ATMOS_PHY_TB_driver_tracer_setup
@@ -73,10 +93,18 @@ contains
        CDX => ATMOS_GRID_CARTESC_CDX, &
        CDY => ATMOS_GRID_CARTESC_CDY
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB_setup
+       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
+    use scale_atmos_phy_tb_smg, only: &
+       ATMOS_PHY_TB_smg_setup
+    use scale_atmos_phy_tb_d1980, only: &
+       ATMOS_PHY_TB_d1980_setup
+    use scale_atmos_phy_tb_dns, only: &
+       ATMOS_PHY_TB_dns_setup
     use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
        ATMOS_sw_phy_tb
     use mod_atmos_phy_tb_vars, only: &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
@@ -84,6 +112,8 @@ contains
 
     integer :: i, j
     !---------------------------------------------------------------------------
+
+    if ( .not. ATMOS_sw_phy_tb ) return
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_TB_driver_setup",*) 'Setup'
@@ -96,12 +126,15 @@ contains
     enddo
     enddo
 
-    if ( ATMOS_sw_phy_tb ) then
-       ! setup library component
-       call ATMOS_PHY_TB_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
-    else
-       LOG_INFO("ATMOS_PHY_TB_driver_setup",*) 'this component is never called.'
-    endif
+    ! setup library component
+    select case( ATMOS_PHY_TB_TYPE )
+    case( 'SMAGORINSKY' )
+       call ATMOS_PHY_TB_smg_setup( REAL_FZ, REAL_CZ, CDX, CDY, MAPF(:,:,:,I_XY) ) ! [IN]
+    case( 'D1980' )
+       call ATMOS_PHY_TB_d1980_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
+    case( 'DNS' )
+       call ATMOS_PHY_TB_dns_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
+    end select
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
@@ -131,14 +164,19 @@ contains
        FILE_HISTORY_in
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
-    use scale_atmos_phy_tb, only: &
-       ATMOS_PHY_TB, &
-       I_TKE
+    use scale_atmos_phy_tb_smg, only: &
+       ATMOS_PHY_TB_smg
+    use scale_atmos_phy_tb_d1980, only: &
+       ATMOS_PHY_TB_d1980
+    use scale_atmos_phy_tb_dns, only: &
+       ATMOS_PHY_TB_dns
     use scale_atmos_phy_tb_common, only: &
        calc_tend_momz => ATMOS_PHY_TB_calc_tend_momz, &
        calc_tend_momx => ATMOS_PHY_TB_calc_tend_momx, &
        calc_tend_momy => ATMOS_PHY_TB_calc_tend_momy, &
        calc_tend_phi  => ATMOS_PHY_TB_calc_tend_phi
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE
     use mod_atmos_vars, only: &
        ATMOS_vars_get_diagnostic, &
        DENS => DENS_av,   &
@@ -146,6 +184,7 @@ contains
        MOMX => MOMX_av,   &
        MOMY => MOMY_av,   &
        RHOT => RHOT_av,   &
+       POTT,              &
        QTRC => QTRC_av,   &
        MOMZ_t => MOMZ_tp, &
        MOMX_t => MOMX_tp, &
@@ -153,6 +192,7 @@ contains
        RHOT_t => RHOT_tp, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_tb_vars, only: &
+       I_TKE, &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t, &
        MOMX_t_TB => ATMOS_PHY_TB_MOMX_t, &
        MOMY_t_TB => ATMOS_PHY_TB_MOMY_t, &
@@ -181,8 +221,6 @@ contains
 
     real(RP) :: N2(KA,IA,JA)
 
-    real(RP) :: tend(KA,IA,JA)
-
     integer  :: JJS, JJE
     integer  :: IIS, IIE
 
@@ -191,24 +229,56 @@ contains
 
     if ( update_flag ) then
 
-       RHOQ_t_TB = 0.0_RP
-
        call ATMOS_vars_get_diagnostic( "N2", N2 )
-       call ATMOS_PHY_TB( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
-                          QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
-                          RHOQ_t_TB,                              & ! [INOUT]
-                          Nu, Ri, Pr,                             & ! [OUT]
-                          MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
-                          SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
-                          SFLX_SH, SFLX_Q,                        & ! [IN]
-                          GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
-                          dt_TB                                   ) ! [IN]
+
+       select case( ATMOS_PHY_TB_TYPE )
+       case( 'SMAGORINSKY' )
+          call ATMOS_PHY_TB_smg( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
+                                 QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
+                                 MOMZ_t_TB, MOMX_t_TB, MOMY_t_TB,        & ! [OUT]
+                                 RHOT_t_TB, RHOQ_t_TB,                   & ! [OUT]
+                                 Nu, Ri, Pr,                             & ! [OUT]
+                                 MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2, & ! [IN]
+                                 SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
+                                 SFLX_SH, SFLX_Q,                        & ! [IN]
+                                 GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
+                                 dt_TB                                   ) ! [IN]
+       case( 'D1980' )
+          MOMZ_t_TB(:,:,:)   = 0.0_RP
+          MOMX_t_TB(:,:,:)   = 0.0_RP
+          MOMY_t_TB(:,:,:)   = 0.0_RP
+          RHOT_t_TB(:,:,:)   = 0.0_RP
+          call ATMOS_PHY_TB_d1980( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
+                                   QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
+                                   RHOQ_t_TB,                              & ! [OUT]
+                                   Nu, Ri, Pr,                             & ! [OUT]
+                                   MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
+                                   SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
+                                   SFLX_SH, SFLX_Q,                        & ! [IN]
+                                   GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
+                                   dt_TB                                   ) ! [IN]
+       case( 'DNS' )
+          MOMZ_t_TB(:,:,:)   = 0.0_RP
+          MOMX_t_TB(:,:,:)   = 0.0_RP
+          MOMY_t_TB(:,:,:)   = 0.0_RP
+          RHOT_t_TB(:,:,:)   = 0.0_RP
+          call ATMOS_PHY_TB_dns( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
+                                 QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
+                                 RHOQ_t_TB,                              & ! [OUT]
+                                 Nu, Ri, Pr,                             & ! [OUT]
+                                 MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2, & ! [IN]
+                                 SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
+                                 SFLX_SH, SFLX_Q,                        & ! [IN]
+                                 GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
+                                 dt_TB                                   ) ! [IN]
+       end select
+
 
        do JJS = JS, JE, JBLOCK
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          call calc_tend_momz( MOMZ_t_TB,   & ! (out)
+          call calc_tend_momz( MOMZ_t_TB,   & ! (inout)
                                QFLX_MOMZ,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
@@ -219,7 +289,7 @@ contains
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          call calc_tend_momx( MOMX_t_TB,   & ! (out)
+          call calc_tend_momx( MOMX_t_TB,   & ! (inout)
                                QFLX_MOMX,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
@@ -230,7 +300,7 @@ contains
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          call calc_tend_momy( MOMY_t_TB,   & ! (out)
+          call calc_tend_momy( MOMY_t_TB,   & ! (inout)
                                QFLX_MOMY,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
@@ -241,7 +311,7 @@ contains
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          call calc_tend_phi ( RHOT_t_TB,  & ! (out)
+          call calc_tend_phi ( RHOT_t_TB,  & ! (inout)
                                QFLX_RHOT,  & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
@@ -255,22 +325,15 @@ contains
           JJE = JJS+JBLOCK-1
           do IIS = IS, IE, IBLOCK
           IIE = IIS+IBLOCK-1
-             call calc_tend_phi( tend(:,:,:), & ! (out)
-                                 QFLX_RHOQ(:,:,:,:,iq),  & ! (in)
+             call calc_tend_phi( RHOQ_t_TB(:,:,:,iq),           & ! (inout)
+                                 QFLX_RHOQ(:,:,:,:,iq),         & ! (in)
                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                  IIS, IIE, JJS, JJE ) ! (in)
-
-             do j = JJS, JJE
-             do i = IIS, IIE
-             do k = KS, KE
-                RHOQ_t_TB(k,i,j,iq) = RHOQ_t_TB(k,i,j,iq) + tend(k,i,j)
-             end do
-             end do
-             end do
 
           end do
           end do
        end do
+
 
        call FILE_HISTORY_in( NU (:,:,:), 'NU',  'eddy viscosity',           'm2/s' , fill_halo=.true. )
        call FILE_HISTORY_in( Ri (:,:,:), 'Ri',  'Richardson number',        'NIL'  , fill_halo=.true. )
@@ -382,15 +445,19 @@ contains
     enddo
     enddo
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = 1,  QA
-    do j  = JS, JE
-    do i  = IS, IE
-    do k  = KS, KE
-       RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_TB(k,i,j,iq)
-    enddo
-    enddo
-    enddo
+
+       if ( .not. ( iq == I_TKE .or. TRACER_ADVC(iq) ) ) cycle
+
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j  = JS, JE
+       do i  = IS, IE
+       do k  = KS, KE
+          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_TB(k,i,j,iq)
+       enddo
+       enddo
+      enddo
+
     enddo
 
     return

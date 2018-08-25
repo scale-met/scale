@@ -58,6 +58,8 @@ module mod_atmos_phy_tb_vars
   real(RP), public, allocatable :: ATMOS_PHY_TB_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_TB_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
 
+  integer, public :: I_TKE = -1
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure

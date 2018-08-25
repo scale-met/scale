@@ -42,8 +42,7 @@ VPATH = common:                          \
         coupler/physics/surface:         \
         \
         atmos-rm/dynamics:               \
-        atmos-rm/forcing:                \
-        atmos-physics/turbulence:
+        atmos-rm/turbulence:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
@@ -162,7 +161,6 @@ OBJS = \
 	$(OBJ_DIR)/scale_atmos_phy_sf_bulk.o	\
 	$(OBJ_DIR)/scale_atmos_phy_sf_const.o	\
 	\
-	$(OBJ_DIR)/scale_atmos_phy_tb.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_common.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_d1980.o	\
 	$(OBJ_DIR)/scale_atmos_phy_tb_dns.o	\

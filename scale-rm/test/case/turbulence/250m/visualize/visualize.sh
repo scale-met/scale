@@ -26,7 +26,7 @@ rm -f dcl.pdf
 
 var__set=(PT U W TKE_SMG)
 rangeset=(eddy 4.7:5.3 -0.5:0.5 auto)
-time_set=(00000 07200 14400)
+time_set=(00000 14400)
 
 i=0
 for var in ${var__set[@]}
@@ -56,8 +56,8 @@ do
    let i="${i} + 1"
 done
 
-var__set=(W_PRIM2 W_PRIM3 PT_W_PRIM TKE_SMG TKE_RS)
-rangeset=(0:1 -1:1 -30:70 0:5 0:1)
+var__set=(U V W W_PRIM2 W_PRIM3 PT PT_W_PRIM TKE_SMG TKE_RS Ri)
+rangeset=(4.5:5.5 -0.05:0.05 -0.003:0.003 -0.1:1.2 -1:1 298:307 -30:100 -0.1:2.0 -0.1:1.5 -10:100)
 time_set=(00000 07200 14400)
 
 i=0

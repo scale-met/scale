@@ -4294,7 +4294,7 @@ contains
   ! + Reference Sato et al. (2009) JGR, doi:10.1029/2008JD011247
   subroutine random_setup( mset ) !--- in
     use scale_random, only: &
-       RANDOM_get
+       RANDOM_uniform
     use scale_prc, only: &
        PRC_abort
 
@@ -4343,7 +4343,7 @@ contains
     enddo
 
     do n = 1, mset
-       call RANDOM_get( randnum )
+       call RANDOM_uniform( randnum )
        do p = 1, pq
           abq1 = randnum( 1,1,p )
           k = int( abq1*( pq-p-1 ) ) + p
@@ -4389,7 +4389,7 @@ contains
        gc,     &
        dtime   )
     use scale_random, only: &
-         RANDOM_get
+         RANDOM_uniform
     implicit none
 
     integer,  intent(in)    :: KA
@@ -4474,7 +4474,7 @@ contains
       !--- rule of interaction
       irsl = ifrsl( ibnd(ijk),isml,ilrg )
 
-      call RANDOM_get( rndm )
+      call RANDOM_uniform( rndm )
       det = int( rndm(1,1,1)*IA*JA*KA )
       nbinr = real( nbin )
       mbinr = real( mbin )

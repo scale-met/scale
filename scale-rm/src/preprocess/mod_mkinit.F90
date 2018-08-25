@@ -32,7 +32,7 @@ module mod_mkinit
      P00    => CONST_PRE00,  &
      EPSvap => CONST_EPSvap
   use scale_random, only: &
-     RANDOM_get
+     RANDOM_uniform
   use scale_comm_cartesC, only: &
      COMM_vars8, &
      COMM_wait
@@ -1155,7 +1155,7 @@ contains
   subroutine tke_setup
     use scale_const, only: &
        EPS => CONST_EPS
-    use scale_atmos_phy_tb, only: &
+    use mod_atmos_phy_tb_vars, only: &
        I_TKE
     use mod_atmos_phy_bl_vars, only: &
        QS_BL => QS, &
@@ -1452,7 +1452,7 @@ contains
                                       temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
                                       qsat(:,:,:)                            ) ! [OUT]
 
-       call RANDOM_get(rndm) ! make random
+       call RANDOM_uniform(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
@@ -1465,7 +1465,7 @@ contains
        enddo
     end if
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
        pott_sfc(i,j) = pott_sfc(i,j) + rndm(KS-1,i,j) * RANDOM_THETA
@@ -1486,7 +1486,7 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, min(IEB,IA-1)
     do k = KS, KE
@@ -1496,7 +1496,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, min(JEB,JA-1)
     do i = ISB, IEB
     do k = KS, KE
@@ -1938,7 +1938,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2040,7 +2040,7 @@ contains
                                       temp(:,1,1), pres(:,1,1), qdry(:,1,1), & ! [IN]
                                       qsat(:,1,1)                            ) ! [OUT]
 
-       call RANDOM_get(rndm) ! make random
+       call RANDOM_uniform(rndm) ! make random
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
@@ -2053,7 +2053,7 @@ contains
        enddo
     end if
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
@@ -2075,7 +2075,7 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2085,7 +2085,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -2709,7 +2709,7 @@ contains
 
     call read_sounding( RHO, VELX, VELY, POTT, QV1D ) ! (out)
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3043,7 +3043,7 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3057,7 +3057,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3071,7 +3071,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3085,7 +3085,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3164,7 +3164,7 @@ contains
     LOG_NML(PARAM_MKINIT_RF02)
 
     ! calc in dry condition
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3258,7 +3258,7 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3272,7 +3272,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3286,7 +3286,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3300,7 +3300,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3386,7 +3386,7 @@ contains
     LOG_NML(PARAM_MKINIT_RF02_DNS)
 
     ! calc in dry condition
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
 
@@ -3472,7 +3472,7 @@ contains
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_wait ( DENS(:,:,:), 1 )
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3487,7 +3487,7 @@ contains
     enddo
 
     !LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*)'chk8'
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3502,7 +3502,7 @@ contains
     enddo
     !LOG_INFO("MKINIT_DYCOMS2_RF02_DNS",*)'chk9'
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3516,7 +3516,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3702,7 +3702,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3711,7 +3711,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3910,7 +3910,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -3923,7 +3923,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4173,7 +4173,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4187,7 +4187,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4201,7 +4201,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
@@ -4215,7 +4215,7 @@ contains
     enddo
     enddo
 
-    call RANDOM_get(rndm) ! make random
+    call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
