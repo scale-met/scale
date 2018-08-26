@@ -35,7 +35,7 @@ $(BUILD_DIR)/mod_lake_admin.o: lake/mod_lake_admin.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_land_admin.o: land/mod_land_admin.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_land_driver.o: land/mod_land_driver.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ch_driver.o $(BUILD_DIR)/mod_cpl_vars.o $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_land_vars.o
 $(BUILD_DIR)/mod_land_vars.o: land/mod_land_vars.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_land_admin.o
-$(BUILD_DIR)/mod_mkinit.o: preprocess/mod_mkinit.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_bl_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_driver.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput.o $(BUILD_DIR)/mod_urban_vars.o
+$(BUILD_DIR)/mod_mkinit.o: preprocess/mod_mkinit.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_bl_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_driver.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_phy_tb_vars.o $(BUILD_DIR)/mod_atmos_vars.o $(BUILD_DIR)/mod_land_vars.o $(BUILD_DIR)/mod_ocean_vars.o $(BUILD_DIR)/mod_realinput.o $(BUILD_DIR)/mod_urban_vars.o
 $(BUILD_DIR)/mod_mktopo.o: preprocess/mod_mktopo.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_ocean_admin.o: ocean/mod_ocean_admin.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_ocean_driver.o: ocean/mod_ocean_driver.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_phy_ch_driver.o $(BUILD_DIR)/mod_cpl_vars.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_ocean_vars.o

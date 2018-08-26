@@ -196,8 +196,6 @@ contains
        TRC_ADV_TYPE,   &
        FLAG_NUDGING,   &
        THUBURN_LIM
-    use mod_atmos_phy_bl_vars, only: &
-       I_TKE
     use mod_prgvar, only: &
        prgvar_get, &
        prgvar_set
@@ -861,7 +859,7 @@ contains
              endif
 
              ! [comment] H.Tomita: I don't recommend adding the hyperviscosity term because of numerical instability in this case.
-             if( I_TKE >= 0 ) do_tke_correction = .true.
+!             if( I_TKE >= 0 ) do_tke_correction = .true.
 
           endif ! Last large step only
 
@@ -895,7 +893,7 @@ contains
              PROGq_pl(:,ADM_kmax+1,:,:) = 0.0_RP
           endif
 
-          if( I_TKE >= 0 ) do_tke_correction = .true.
+!          if( I_TKE >= 0 ) do_tke_correction = .true.
 
        endif
 
@@ -904,34 +902,34 @@ contains
        call PROF_rapstart('___Pre_Post',1)
 
        ! TKE fixer
-       if ( do_tke_correction ) then
-          !$acc kernels pcopy(PROG,PROGq) pcopyin(VMTR_GSGAM2) async(0)
-          do l = 1, ADM_lall
-          do k = 1, ADM_kall
-          do g = 1, ADM_gall
-             TKEG_corr = max( -PROGq(g,k,l,I_TKE), 0.0_RP )
-
-             PROG (g,k,l,I_RHOGE) = PROG (g,k,l,I_RHOGE) - TKEG_corr
-             PROGq(g,k,l,I_TKE)   = PROGq(g,k,l,I_TKE)   + TKEG_corr
-          enddo
-          enddo
-          enddo
-          !$acc end kernels
-
-          if ( PRC_have_pl ) then
-             do l = 1, ADM_lall_pl
-             do k = 1, ADM_kall
-             do g = 1, ADM_gall_pl
-                TKEg_corr = max( -PROGq_pl(g,k,l,I_TKE), 0.0_RP )
-
-                PROG_pl (g,k,l,I_RHOGE) = PROG_pl (g,k,l,I_RHOGE) - TKEG_corr
-                PROGq_pl(g,k,l,I_TKE)   = PROGq_pl(g,k,l,I_TKE)   + TKEG_corr
-             enddo
-             enddo
-             enddo
-          endif
-       endif
-
+!        if ( do_tke_correction ) then
+!           !$acc kernels pcopy(PROG,PROGq) pcopyin(VMTR_GSGAM2) async(0)
+!           do l = 1, ADM_lall
+!           do k = 1, ADM_kall
+!           do g = 1, ADM_gall
+!              TKEG_corr = max( -PROGq(g,k,l,I_TKE), 0.0_RP )
+!
+!              PROG (g,k,l,I_RHOGE) = PROG (g,k,l,I_RHOGE) - TKEG_corr
+!              PROGq(g,k,l,I_TKE)   = PROGq(g,k,l,I_TKE)   + TKEG_corr
+!           enddo
+!           enddo
+!           enddo
+!           !$acc end kernels
+!
+!           if ( PRC_have_pl ) then
+!              do l = 1, ADM_lall_pl
+!              do k = 1, ADM_kall
+!              do g = 1, ADM_gall_pl
+!                 TKEg_corr = max( -PROGq_pl(g,k,l,I_TKE), 0.0_RP )
+!
+!                 PROG_pl (g,k,l,I_RHOGE) = PROG_pl (g,k,l,I_RHOGE) - TKEG_corr
+!                 PROGq_pl(g,k,l,I_TKE)   = PROGq_pl(g,k,l,I_TKE)   + TKEG_corr
+!              enddo
+!              enddo
+!              enddo
+!           endif
+!        endif
+!
        !------ Update
        if ( nl /= num_of_iteration_lstep ) then
           call COMM_data_transfer( PROG, PROG_pl )

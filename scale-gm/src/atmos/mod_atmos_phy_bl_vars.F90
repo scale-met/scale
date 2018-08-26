@@ -32,7 +32,7 @@ module mod_atmos_phy_bl_vars
   !
   !++ Public parameters & variables
   !
-  integer,  public              :: I_TKE = -1
+  integer,  public              :: QS, QE
 
   real(RP), public, allocatable :: ATMOS_PHY_BL_Zi(:,:,:)     ! depth of the PBL
 

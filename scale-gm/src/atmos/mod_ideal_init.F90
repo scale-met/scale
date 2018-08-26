@@ -249,7 +249,7 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_random, only: &
-       RANDOM_get
+       RANDOM_uniform
     use mod_grd, only: &
        I_LAT, &
        I_LON, &
@@ -267,7 +267,7 @@ contains
     k0 = ADM_KNONE
 
     do nq = 1, QA
-       call RANDOM_get( random(:,:,:) )
+       call RANDOM_uniform( random(:,:,:) )
 
        if ( nq == 1 ) then ! vapor (dummy for thermodynamics)
           do l = 1, ADM_lall
