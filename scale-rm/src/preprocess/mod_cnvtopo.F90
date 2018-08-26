@@ -59,6 +59,7 @@ module mod_cnvtopo
   integer,  private :: CNVTOPO_smooth_hypdiff_niter  = 20
   logical,  private :: CNVTOPO_smooth_local          = .true.
   integer,  private :: CNVTOPO_smooth_itelim         = 10000
+  logical,  private :: CNVTOPO_smooth_trim_ocean     = .false.
   real(RP), private :: CNVTOPO_smooth_maxslope_ratio = 10.0_RP ! ratio of DZDX, DZDY
   real(RP), private :: CNVTOPO_smooth_maxslope       = -1.0_RP ! [deg]
   real(RP), private :: CNVTOPO_smooth_maxslope_limit
@@ -96,6 +97,7 @@ contains
 !       CNVTOPO_UseGMTED2010,          &
        CNVTOPO_UseDEM50M,             &
        CNVTOPO_UseUSERFILE,           &
+       CNVTOPO_smooth_trim_ocean,     &
        CNVTOPO_smooth_hypdiff_niter,  &
        CNVTOPO_smooth_maxslope_ratio, &
        CNVTOPO_smooth_maxslope,       &
@@ -835,6 +837,7 @@ contains
   subroutine CNVTOPO_smooth( &
        Zsfc )
     use scale_const, only: &
+       EPS => CONST_EPS, &
        D2R => CONST_D2R
     use scale_prc, only: &
        PRC_abort
@@ -860,6 +863,7 @@ contains
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
+    real(RP) :: mask(IA,JA)
     real(RP) :: flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
@@ -886,7 +890,15 @@ contains
     DXL(:) = FDX(:)
     DYL(:) = FDY(:)
 
-
+    if ( CNVTOPO_smooth_trim_ocean ) then
+       do j = 1, JA
+       do i = 1, IA
+          mask(i,j) = 0.5_RP + sign(0.5_RP, Zsfc(i,j) - EPS)
+       end do
+       end do
+    else
+       mask(:,:) = 1.0_RP
+    end if
 
     ! digital filter
     do ite = 1, CNVTOPO_smooth_itelim+1
@@ -998,10 +1010,9 @@ contains
 
           do j = JS, JE
           do i = IS, IE
-             Zsfc(i,j) = max( 0.0_RP, &
-                              Zsfc(i,j) &
-                              + 0.1_RP * ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
-                                         + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) ) )
+             Zsfc(i,j) = Zsfc(i,j) &
+                       + 0.1_RP * ( ( FLX_X(i,j) - FLX_X(i-1,j) ) &
+                                  + ( FLX_Y(i,j) - FLX_Y(i,j-1) ) )
           enddo
           enddo
 
@@ -1009,6 +1020,12 @@ contains
           LOG_ERROR("CNVTOPO_smooth",*) 'Invalid smoothing type'
           call PRC_abort
        end select
+
+       do j = JS, JE
+       do i = IS, IE
+          Zsfc(i,j) = max( Zsfc(i,j) * mask(i,j), 0.0_RP )
+       end do
+       end do
 
     enddo
 
@@ -1034,7 +1051,7 @@ contains
        LOG_NEWLINE
        LOG_INFO("CNVTOPO_smooth",*) 'Apply hyperdiffusion.'
 
-       call CNVTOPO_hypdiff( Zsfc(:,:), CNVTOPO_smooth_hypdiff_niter )
+       call CNVTOPO_hypdiff( Zsfc(:,:), mask(:,:), CNVTOPO_smooth_hypdiff_niter )
 
        do j = 1, JA
        do i = 1, IA-1
@@ -1067,10 +1084,11 @@ contains
     return
   end subroutine CNVTOPO_smooth
 
-  subroutine CNVTOPO_hypdiff( Zsfc, nite )
+  subroutine CNVTOPO_hypdiff( Zsfc, mask, nite )
     use scale_topography, only: &
        TOPO_fillhalo
     real(RP), intent(inout) :: Zsfc(IA,JA)
+    real(RP), intent(in)    :: mask(IA,JA)
     integer,  intent(in)    :: nite
 
     real(RP), pointer :: p1(:,:)
@@ -1106,7 +1124,7 @@ contains
        end do
        do j = JS, JE
        do i = IS, IE
-          Zsfc(i,j) = max( Zsfc(i,j) - p1(i,j), 0.0_RP )
+          Zsfc(i,j) = max( ( Zsfc(i,j) - p1(i,j) ) * mask(i,j), 0.0_RP )
        end do
        end do
     end do
