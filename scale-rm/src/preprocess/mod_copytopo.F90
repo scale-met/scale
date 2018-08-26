@@ -170,18 +170,16 @@ contains
     end if
 
     if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
-       itrans = 0
+       COPYTOPO_TRANSITION_DX = bufftotx
+    end if
+    do i = ibuff+IHALO+1, IAG
+       if( CXG(i) - bufftotx - FXG(IHALO) >= COPYTOPO_TRANSITION_DX ) exit
+    enddo
+    itrans = i - 1 - IHALO - ibuff
+    if ( itrans == 0 ) then
        transtotx = 0.0_RP
     else
-       do i = ibuff+IHALO+1, IAG
-          if( CXG(i) - bufftotx - FXG(IHALO) >= COPYTOPO_TRANSITION_DX ) exit
-       enddo
-       itrans = i - 1 - IHALO - ibuff
-       if ( itrans == 0 ) then
-          transtotx = 0.0_RP
-       else
-          transtotx = CXG(itrans+ibuff+IHALO) - FXG(IHALO) - bufftotx
-       end if
+       transtotx = CXG(itrans+ibuff+IHALO) - FXG(IHALO) - bufftotx
     end if
 
     imain  = IAG - 2*ibuff - 2*itrans - 2*IHALO
@@ -208,15 +206,15 @@ contains
        do i = copy_is, copy_ie
           CTRXG(i) = (transtotx+bufftotx+FXG(IHALO    )-CXG(i)) / transtotx
        enddo
-       copy_is = IHALO+ibuff+itrans+imain+1
-       copy_ie = IHALO+ibuff+itrans+imain+itrans+ibuff
+       copy_is = IAG - IHALO - ibuff - itrans + 1
+       copy_ie = IAG - IHALO - ibuff
        do i = copy_is, copy_ie
           CTRXG(i) = (transtotx+bufftotx-FXG(IAG-IHALO)+CXG(i)) / transtotx
        enddo
     endif
 
-    copy_is = IHALO+ibuff+itrans+imain+itrans+ibuff+1
-    copy_ie = IHALO+ibuff+itrans+imain+itrans+ibuff+IHALO
+    copy_is = IAG - IHALO - ibuff + 1
+    copy_ie = IAG
     do i = copy_is, copy_ie
        CTRXG(i) = 1.0_RP
     enddo
@@ -236,18 +234,16 @@ contains
     end if
 
     if ( COPYTOPO_TRANSITION_DY < 0.0_RP ) then
-       jtrans = 0
+       COPYTOPO_TRANSITION_DY = bufftoty
+    end if
+    do j = jbuff+JHALO+1, JAG
+       if( CYG(j) - bufftoty - FYG(JHALO) >= COPYTOPO_TRANSITION_DY ) exit
+    enddo
+    jtrans = j - 1 - JHALO - jbuff
+    if ( jtrans == 0 ) then
        transtoty = 0.0_RP
     else
-       do j = jbuff+JHALO+1, JAG
-          if( CYG(j) - bufftoty - FYG(JHALO) >= COPYTOPO_TRANSITION_DY ) exit
-       enddo
-       jtrans = j - 1 - JHALO - jbuff
-       if ( jtrans == 0 ) then
-          transtoty = 0.0_RP
-       else
-          transtoty = CYG(jtrans+jbuff+JHALO) - FYG(JHALO) - bufftoty
-       end if
+       transtoty = CYG(jtrans+jbuff+JHALO) - FYG(JHALO) - bufftoty
     end if
 
     jmain  = JAG - 2*jbuff - 2*jtrans - 2*JHALO
@@ -274,15 +270,15 @@ contains
        do j = copy_js, copy_je
           CTRYG(j) = (transtoty+bufftoty+FYG(JHALO    )-CYG(j)) / transtoty
        enddo
-       copy_js = JHALO+jbuff+jtrans+jmain+1
-       copy_je = JHALO+jbuff+jtrans+jmain+jtrans+jbuff
+       copy_js = JAG - JHALO - jbuff - jtrans + 1
+       copy_je = JAG - JHALO - jbuff
        do j = copy_js, copy_je
           CTRYG(j) = (transtoty+bufftoty-FYG(JAG-JHALO)+CYG(j)) / transtoty
        enddo
     endif
 
-    copy_js = JHALO+jbuff+jtrans+jmain+jtrans+jbuff+1
-    copy_je = JHALO+jbuff+jtrans+jmain+jtrans+jbuff+JHALO
+    copy_js = JAG - JHALO - jbuff + 1
+    copy_je = JAG
     do j = copy_js, copy_je
        CTRYG(j) = 1.0_RP
     enddo
@@ -301,6 +297,13 @@ contains
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
        CTRY(j) = CTRYG(jj)
     enddo
+
+    LOG_INFO("COPYTOPO_transgrid",*) 'COPYTOPO grid Information'
+    LOG_INFO_CONT(*) 'size of buffer   region (x and y; one side) = ', bufftotx, bufftoty
+    LOG_INFO_CONT(*) '#    of buffer   region (x and y; one side) = ', ibuff, jbuff
+    LOG_INFO_CONT(*) 'size of transion region (x and y; one side) = ', transtotx, transtoty
+    LOG_INFO_CONT(*) '#    of transion region (x and y; one side) = ', itrans, jtrans
+
 
     return
   end subroutine COPYTOPO_transgrid
