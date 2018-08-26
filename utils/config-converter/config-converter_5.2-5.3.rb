@@ -189,7 +189,7 @@ params.each do |param|
   if /^&PARAM_MAPPROJ$/i =~ param_name
     print "&PARAM_MAPPROJECTION\n"
     param_items.each do |item|
-      print item.sub(/^(\s*)MPRJ_/i, "\1MAPPROJECTION_"), "\n"
+      print item.sub(/^(\s*)MPRJ_/i, '\1MAPPROJECTION_'), "\n"
     end
     print "/\n"
     next
