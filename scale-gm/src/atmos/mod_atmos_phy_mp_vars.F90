@@ -492,12 +492,12 @@ contains
                      ATMOS_PHY_MP_Qe(:,:,:,:,l)       ) ! [OUT]
              end do
           case default
-!OCL XIFLL
+!OCL XFILL
              ATMOS_PHY_MP_Qe(:,:,:,:,:) = 0.0_RP
           end select
           DIAG_Qe = .true.
        end if
-!OCL XIFLL
+!OCL XFILL
        do ih = 1, N_HYD
        do l = 1, ADM_lall
        do j = JS, JE

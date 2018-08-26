@@ -743,12 +743,12 @@ contains
                   QTRC(:,:,:,QS_MP+1:QE_MP), & ! [IN]
                   ATMOS_PHY_MP_Qe(:,:,:,:)   ) ! [OUT]
           case default
-!OCL XIFLL
+!OCL XFILL
              ATMOS_PHY_MP_Qe(:,:,:,:) = 0.0_RP
           end select
           DIAG_Qe = .true.
        end if
-!OCL XIFLL
+!OCL XFILL
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
@@ -778,7 +778,7 @@ contains
           end select
           DIAG_Ne = .true.
        end if
-!OCL XIFLL
+!OCL XFILL
        do ih = 1, N_HYD
        do j = JSB, JEB
        do i = ISB, IEB
