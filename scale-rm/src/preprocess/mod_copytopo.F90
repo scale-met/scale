@@ -166,7 +166,7 @@ contains
     if ( ibuff == 0 ) then
        bufftotx = 0.0_RP
     else
-       bufftotx = CXG(ibuff+IHALO) - FXG(IHALO)
+       bufftotx = FXG(ibuff+IHALO) - FXG(IHALO)
     end if
 
     if ( COPYTOPO_TRANSITION_DX < 0.0_RP ) then
@@ -179,7 +179,7 @@ contains
     if ( itrans == 0 ) then
        transtotx = 0.0_RP
     else
-       transtotx = CXG(itrans+ibuff+IHALO) - FXG(IHALO) - bufftotx
+       transtotx = FXG(itrans+ibuff+IHALO) - FXG(IHALO) - bufftotx
     end if
 
     imain  = IAG - 2*ibuff - 2*itrans - 2*IHALO
@@ -230,7 +230,7 @@ contains
     if ( jbuff == 0 ) then
        bufftoty = 0.0_RP
     else
-       bufftoty = CYG(jbuff+JHALO) - FYG(JHALO)
+       bufftoty = FYG(jbuff+JHALO) - FYG(JHALO)
     end if
 
     if ( COPYTOPO_TRANSITION_DY < 0.0_RP ) then
@@ -243,7 +243,7 @@ contains
     if ( jtrans == 0 ) then
        transtoty = 0.0_RP
     else
-       transtoty = CYG(jtrans+jbuff+JHALO) - FYG(JHALO) - bufftoty
+       transtoty = FYG(jtrans+jbuff+JHALO) - FYG(JHALO) - bufftoty
     end if
 
     jmain  = JAG - 2*jbuff - 2*jtrans - 2*JHALO
