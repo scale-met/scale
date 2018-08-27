@@ -141,30 +141,32 @@ The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INT
 \begin{center}
   \caption{Variables available for monitor output}
   \label{tab:varlist_monitor}
-  \begin{tabularx}{150mm}{|l|X|X|} \hline
+  \begin{tabularx}{150mm}{|l|X|l|} \hline
     \rowcolor[gray]{0.9}  Values & Description & Unit \\ \hline
       \verb|TRACER*|      & Tracers in prognostic variable            & [each unit*m3] \\
-      \verb|QDRY|         & dry air mass                              & [kg] \\
-      \verb|QTOT|         & water mass                                & [kg] \\
-      \verb|EVAP|         & evaporation                               & [kg] \\
-      \verb|PRCP|         & precipitation                             & [kg] \\
-      \verb|ENGT|         & total     energy                          & [J] \\
-      \verb|ENGP|         & potential energy                          & [J] \\
-      \verb|ENGK|         & kinetic   energy                          & [J] \\
-      \verb|ENGI|         & internal  energy                          & [J] \\
-      \verb|ENGFLXT|      & total energy flux                         & [J] \\
-      \verb|ENGSFC_SH|    & surface specific heat flux                & [J] \\
-      \verb|ENGSFC_LH|    & surface latent   heat flux                & [J] \\
-      \verb|ENGSFC_RD|    & surface net radiation flux                & [J] \\
-      \verb|ENGTOA_RD|    & top-of-atmosphere net radiation flux      & [J] \\
-      \verb|ENGSFC_LW_up| & surface longwave  upward   flux           & [J] \\
-      \verb|ENGSFC_LW_dn| & surface longwave  downward flux           & [J] \\
-      \verb|ENGSFC_SW_up| & surface shortwave upward   flux           & [J] \\
-      \verb|ENGSFC_SW_dn| & surface shortwave downward flux           & [J] \\
-      \verb|ENGTOA_LW_up| & top-of-atmosphere longwave  upward   flux & [J] \\
-      \verb|ENGTOA_LW_dn| & top-of-atmosphere longwave  downward flux & [J] \\
-      \verb|ENGTOA_SW_up| & top-of-atmosphere shortwave upward   flux & [J] \\
-      \verb|ENGTOA_SW_dn| & top-of-atmosphere shortwave downward flux & [J] \\
+      \verb|QDRY|         & Dry air mass                              & [kg] \\
+      \verb|QTOT|         & Water mass                                & [kg] \\
+      \verb|EVAP|         & Evaporation                               & [kg] \\
+      \verb|PRCP|         & Precipitation                             & [kg] \\
+      \verb|ENGT|         & Total     energy (\verb|ENGP + ENGK + ENGI|)  & [J] \\
+      \verb|ENGP|         & Potential energy ($\rho * g * dz$)            & [J] \\
+      \verb|ENGK|         & Kinetic   energy ($\rho * (W^2+U^2+V^2) / 2$) & [J] \\
+      \verb|ENGI|         & Internal  energy ($\rho * Q * T * C_v$)       & [J] \\
+      \verb|ENGFLXT|      & Total energy flux (\verb|SH + LH + SFC_RD - TOA_RD|)  & [J] \\
+      \verb|ENGSFC_SH|    & Surface sensible heat flux                & [J] \\
+      \verb|ENGSFC_LH|    & Surface latent   heat flux                & [J] \\
+      \verb|ENGSFC_RD|    & Surface net radiation flux                & [J] \\
+                          & (\verb|LW_up + SW_up - LW_dn - SW_dn|)    &     \\
+      \verb|ENGTOA_RD|    & Top-of-atmosphere net radiation flux      & [J] \\
+                          & (\verb|LW_up + SW_up - LW_dn - SW_dn|)    &     \\
+      \verb|ENGSFC_LW_up| & Surface longwave  upward   flux           & [J] \\
+      \verb|ENGSFC_LW_dn| & Surface longwave  downward flux           & [J] \\
+      \verb|ENGSFC_SW_up| & Surface shortwave upward   flux           & [J] \\
+      \verb|ENGSFC_SW_dn| & Surface shortwave downward flux           & [J] \\
+      \verb|ENGTOA_LW_up| & Top-of-atmosphere longwave  upward   flux & [J] \\
+      \verb|ENGTOA_LW_dn| & Top-of-atmosphere longwave  downward flux & [J] \\
+      \verb|ENGTOA_SW_up| & Top-of-atmosphere shortwave upward   flux & [J] \\
+      \verb|ENGTOA_SW_dn| & Top-of-atmosphere shortwave downward flux & [J] \\
     \hline
   \end{tabularx}
 \end{center}
