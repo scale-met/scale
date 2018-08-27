@@ -1207,9 +1207,8 @@ contains
        call CHECK( __LINE__, S12_C(k,i,j) )
        call CHECK( __LINE__, S23_C(k,i,j) )
 #endif
-          S2(k,i,j) = max( 1e-10_RP, &
-                 2.0_RP * ( S11_C(k,i,j)**2 + S22_C(k,i,j)**2 + S33_C(k,i,j)**2 ) &
-               + 4.0_RP * ( S31_C(k,i,j)**2 + S12_C(k,i,j)**2 + S23_C(k,i,j)**2 ) )
+          S2(k,i,j) = 2.0_RP * ( S11_C(k,i,j)**2 + S22_C(k,i,j)**2 + S33_C(k,i,j)**2 ) &
+                    + 4.0_RP * ( S31_C(k,i,j)**2 + S12_C(k,i,j)**2 + S23_C(k,i,j)**2 )
        enddo
        enddo
        enddo

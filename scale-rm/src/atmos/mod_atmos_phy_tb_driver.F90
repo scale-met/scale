@@ -142,16 +142,19 @@ contains
   !-----------------------------------------------------------------------------
   !> calclate tendency
   subroutine ATMOS_PHY_TB_driver_calc_tendency( update_flag )
-    use scale_atmos_grid_cartesC_metric, only: &
-       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
-       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
-       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
-       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
-       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
+    use scale_atmos_grid_cartesC, only: &
+       FDZ  => ATMOS_GRID_CARTESC_FDZ, &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       CDX  => ATMOS_GRID_CARTESC_CDX, &
+       FDX  => ATMOS_GRID_CARTESC_FDX, &
+       CDY  => ATMOS_GRID_CARTESC_CDY, &
+       FDY  => ATMOS_GRID_CARTESC_FDY
     use scale_atmos_grid_cartesC_real, only: &
+       FZ  => ATMOS_GRID_CARTESC_REAL_FZ, &
        ATMOS_GRID_CARTESC_REAL_VOL,       &
        ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
        ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
@@ -160,6 +163,12 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+    use scale_atmos_grid_cartesC_metric, only: &
+       GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G,  &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G,  &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G,  &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_time, only: &
@@ -233,16 +242,15 @@ contains
 
        select case( ATMOS_PHY_TB_TYPE )
        case( 'SMAGORINSKY' )
-          call ATMOS_PHY_TB_smg( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,        & ! [OUT]
-                                 QFLX_RHOT, QFLX_RHOQ,                   & ! [OUT]
-                                 MOMZ_t_TB, MOMX_t_TB, MOMY_t_TB,        & ! [OUT]
-                                 RHOT_t_TB, RHOQ_t_TB,                   & ! [OUT]
-                                 Nu, Ri, Pr,                             & ! [OUT]
-                                 MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2, & ! [IN]
-                                 SFLX_MW, SFLX_MU, SFLX_MV,              & ! [IN]
-                                 SFLX_SH, SFLX_Q,                        & ! [IN]
-                                 GSQRT, J13G, J23G, J33G, MAPF,          & ! [IN]
-                                 dt_TB                                   ) ! [IN]
+          call ATMOS_PHY_TB_smg( QFLX_MOMZ, QFLX_MOMX, QFLX_MOMY,         & ! [OUT]
+                                 QFLX_RHOT, QFLX_RHOQ,                    & ! [OUT]
+                                 MOMZ_t_TB, MOMX_t_TB, MOMY_t_TB,         & ! [OUT]
+                                 RHOT_t_TB, RHOQ_t_TB,                    & ! [OUT]
+                                 Nu, Ri, Pr,                              & ! [OUT]
+                                 MOMZ, MOMX, MOMY, POTT, DENS, QTRC, N2,  & ! [IN]
+                                 FZ, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY, & ! [IN]
+                                 GSQRT, J13G, J23G, J33G, MAPF,           & ! [IN]
+                                 dt_TB                                    ) ! [IN]
        case( 'D1980' )
           MOMZ_t_TB(:,:,:)   = 0.0_RP
           MOMX_t_TB(:,:,:)   = 0.0_RP
