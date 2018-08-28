@@ -428,7 +428,7 @@ contains
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "INT2",                                         & ! [IN]
                                  HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
-                                 min_value = 0.0_RP, yrevers = .true.            ) ! [IN]
+                                 min_value = -9000.0_RP, yrevers = .true.        ) ! [IN]
 
     ! interporation
     allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
@@ -583,7 +583,7 @@ contains
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "REAL4",                                        & ! [IN]
                                  HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
-                                 min_value = 0.0_RP                              ) ! [IN]
+                                 min_value = -900.0_RP                           ) ! [IN]
 
     ! interporation
     allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
@@ -863,7 +863,7 @@ contains
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
-    real(RP) :: mask(IA,JA)
+    real(RP) :: TOPO_sign(IA,JA)
     real(RP) :: flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
@@ -893,11 +893,12 @@ contains
     if ( CNVTOPO_smooth_trim_ocean ) then
        do j = 1, JA
        do i = 1, IA
-          mask(i,j) = 0.5_RP + sign(0.5_RP, Zsfc(i,j) - EPS)
+          TOPO_sign(i,j) = sign( 1.0_RP, Zsfc(i,j) ) &
+                         * ( 0.5_RP + sign(0.5_RP, abs(Zsfc(i,j)) - EPS) ) ! 0 for ocean
        end do
        end do
     else
-       mask(:,:) = 1.0_RP
+       TOPO_sign(i,j) = 1.0_RP
     end if
 
     ! digital filter
@@ -1021,11 +1022,13 @@ contains
           call PRC_abort
        end select
 
-       do j = JS, JE
-       do i = IS, IE
-          Zsfc(i,j) = max( Zsfc(i,j) * mask(i,j), 0.0_RP )
-       end do
-       end do
+       if ( CNVTOPO_smooth_trim_ocean ) then
+          do j = JS, JE
+          do i = IS, IE
+             Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
+          end do
+          end do
+       end if
 
     enddo
 
@@ -1051,7 +1054,7 @@ contains
        LOG_NEWLINE
        LOG_INFO("CNVTOPO_smooth",*) 'Apply hyperdiffusion.'
 
-       call CNVTOPO_hypdiff( Zsfc(:,:), mask(:,:), CNVTOPO_smooth_hypdiff_niter )
+       call CNVTOPO_hypdiff( Zsfc(:,:), TOPO_sign(:,:), CNVTOPO_smooth_hypdiff_niter )
 
        do j = 1, JA
        do i = 1, IA-1
@@ -1084,11 +1087,11 @@ contains
     return
   end subroutine CNVTOPO_smooth
 
-  subroutine CNVTOPO_hypdiff( Zsfc, mask, nite )
+  subroutine CNVTOPO_hypdiff( Zsfc, TOPO_sign, nite )
     use scale_topography, only: &
        TOPO_fillhalo
     real(RP), intent(inout) :: Zsfc(IA,JA)
-    real(RP), intent(in)    :: mask(IA,JA)
+    real(RP), intent(in)    :: TOPO_sign(IA,JA)
     integer,  intent(in)    :: nite
 
     real(RP), pointer :: p1(:,:)
@@ -1122,11 +1125,20 @@ contains
              p2 => work2
           end if
        end do
+
        do j = JS, JE
        do i = IS, IE
-          Zsfc(i,j) = max( ( Zsfc(i,j) - p1(i,j) ) * mask(i,j), 0.0_RP )
+          Zsfc(i,j) = Zsfc(i,j) - p1(i,j)
        end do
        end do
+
+       if ( CNVTOPO_smooth_trim_ocean ) then
+          do j = JS, JE
+          do i = IS, IE
+             Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
+          end do
+          end do
+       end if
     end do
 
     return
