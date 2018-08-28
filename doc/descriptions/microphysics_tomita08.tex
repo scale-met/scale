@@ -1,5 +1,146 @@
 \subsection{Six-class Single-moment Bulk Scheme (Tomita 2008)}
-ix-class single-moment bulk scheme in the SCALE was developed by \citet{tomita_2008}. This scheme predicts mass exchange among six categories of water substances (water vapor, cloud water, rain, cloud ice, snow, and graupel), which is largely based on the method of \citet{lin_etal_1983}. However, there are some modifications from the original method of \citet{lin_etal_1983}: Both cloud water and cloud ice are generated only by a saturation adjustment process, and wet growth process of graupel is omitted. According to \citet{tomita_2008}, these modifications result in 20\% reduction in computational cost compared to \citet{lin_etal_1983} without significant changes on physical performance.
+Six-class single-moment bulk scheme in the SCALE was developed by \citet{tomita_2008}. This scheme predicts mass exchange among six categories of water substances (water vapor, cloud water, rain, cloud ice, snow, and graupel), which is largely based on the method of \citet{lin_etal_1983}. However, there are some modifications from the original method of \citet{lin_etal_1983}: Both cloud water and cloud ice are generated only by a saturation adjustment process, and wet growth process of graupel is omitted. According to \citet{tomita_2008}, these modifications result in 20\% reduction in computational cost compared to \citet{lin_etal_1983} without significant changes on physical performance. In this subsection, we describe the formulation of microphysical scheme of \citet{tomita_2008}. Mass concentrations of water vapor, cloud water, rain, cloud ice, snow, and graupel are indicated by $q_{v}$, $Q_{W}$, $Q_{R}$, $Q_{I}$, $Q_{S}$, and $Q_{G}$ respectively.
+
+In \citet{tomita_2008}, cloud microphysics processes except for the saturation adjustment consist of auto-conversion, accretion, evaporation, sublimation, deposition, melting, freezing, and Bergeron process. When $T < T_{0}$ (= 273.15 K), the tendency of each water substance by these processes can be written as follows:
+\begin{align}
+  \frac{\partial Q_{W}}{\partial t} &= -P_{RAUT}-P_{RACW}-P_{SACW}-P_{GACW}-P_{SFW}, \\
+  \frac{\partial Q_{I}}{\partial t} &= -P_{SAUT}-P_{RACI}-P_{SACI}-P_{GACI}-P_{SFI}, \\
+  \frac{\partial Q_{R}}{\partial t} &= P_{RAUT}+P_{RACW}-P_{IACR}-P_{SACR}-P_{GACR}-P_{GFRZ}-P_{REVP}, \\
+  \frac{\partial Q_{S}}{\partial t} &= P_{SAUT}-P_{GAUT} \nonumber \\
+  &+P_{SACW}+P_{SACI}+(1-\delta_{1})P_{RACI}+(1-\delta_{1})P_{IACR}+\delta_{2}P_{SACR}-(1-\delta_{2})P_{RACS}-P_{GACS} \nonumber \\
+  &-(1-\delta_{3})P_{SSUB}+\delta_{3}P_{SDEP}+P_{SFW}+P_{SFI}, \\
+  \frac{\partial Q_{G}}{\partial t} &= P_{GAUT} \nonumber \\
+  &+P_{GACW}+P_{GACI}+P_{GACR}+P_{GACS}+\delta_{1}P_{RACI}+\delta_{1}P_{IACR}+(1-\delta_{2})P_{SACR}+(1-\delta_{2})P_{RACS} \nonumber \\
+  &-(1-\delta_{3})P_{GSUB}+\delta_{3}P_{GDEP}+P_{GFRZ}, \\
+  \frac{\partial q_{v}}{\partial t} &= P_{REVP}+(1-\delta_{3})P_{SSUB}+(1-\delta_{3})P_{GSUB}-\delta_{3}P_{SDEP}-\delta_{3}P_{GDEP},
+\end{align}
+where $P_{*}$ in the right hand sides are conversion terms listed in Table \ref{table-tomita08-1}, and $\delta_{1}$, $\delta_{2}$, and $\delta_{3}$ are defined as
+\begin{align}
+\delta_{1} &=
+\begin{cases}
+  1, &{\rm for\ } Q_{R} \geq 10^{-4} {\rm \ kg/kg}\\
+  0, &{\rm otherwise}\\
+\end{cases},
+\\
+\delta_{2} &=
+\begin{cases}
+  1, &{\rm for\ } Q_{R} \leq 10^{-4} {\rm \ kg/kg\ and\ } Q_{S} \leq 10^{-4} {\rm \ kg/kg}\\
+  0, &{\rm otherwise}\\
+\end{cases},
+\\
+\delta_{3} &=
+\begin{cases}
+  1, &{\rm for\ } S_{ice} \geq 1\\
+  0, &{\rm otherwise}\\
+\end{cases},
+\end{align}
+where $S_{ice}$ is saturation ratio over ice. When $T \geq T_{0}$, the tendencies of each water substance can be written as follows:
+\begin{align}
+  \frac{\partial Q_{W}}{\partial t} &= -P_{RAUT}-P_{RACW}-P_{SACW}-P_{GACW}, \\
+  \frac{\partial Q_{I}}{\partial t} &= 0, \\
+  \frac{\partial Q_{R}}{\partial t} &= P_{RAUT}+P_{RACW}+P_{SACW}+P_{GACW}+P_{SMLT}+P_{GMLT}-P_{REVP}, \\
+  \frac{\partial Q_{S}}{\partial t} &= -P_{GACS}-P_{SMLT}, \\
+  \frac{\partial Q_{G}}{\partial t} &= P_{GACS}-P_{GMLT}, \\
+  \frac{\partial q_{v}}{\partial t} &= P_{REVP}.
+\end{align}
+Formulation of each term is described later.
+\begin{table}[tbh]
+\begin{center}
+\caption{List of conversion terms used in six-class single-moment bulk scheme of \citet{tomita_2008}}
+\label{table-tomita08-1}
+\scalebox{0.7}{
+\begin{tabular}{llll}
+\hline
+Notation&Description&Direction&Conditions \\ \hline \hline
+$P_{RAUT}$&Auto-conversion rate of cloud water to form rain&$Q_{W} \longrightarrow Q_{R}$& \\ \hline
+$P_{SAUT}$&Auto-conversion rate of cloud ice to form snow&$Q_{I} \longrightarrow Q_{S}$&$T < T_{0}$ \\ \hline
+$P_{GAUT}$&Auto-conversion rate of snow to form graupel&$Q_{S} \longrightarrow Q_{G}$&$T < T_{0}$ \\ \hline
+$P_{RACW}$&Accretion rate of cloud water by rain&$Q_{W} \longrightarrow Q_{R}$& \\ \hline
+$P_{SACW}$&Accretion rate of cloud water by snow&$Q_{W} \longrightarrow Q_{S}$&$T < T_{0}$ \\
+&&$Q_{W} \longrightarrow Q_{R}$&$T \geq T_{0}$ \\ \hline
+$P_{GACW}$&Accretion rate of cloud water by graupel&$Q_{W} \longrightarrow Q_{G}$&$T < T_{0}$ \\
+&&$Q_{W} \longrightarrow Q_{R}$&$T \geq T_{0}$ \\ \hline
+$P_{RACI}$&Accretion rate of cloud ice by rain&$Q_{I} \longrightarrow Q_{S}$&$T < T_{0}$ and $Q_{R} < 10^{-4}$ kg/kg \\
+&&$Q_{I} \longrightarrow Q_{G}$&$T < T_{0}$ and $Q_{R} \geq 10^{-4}$ kg/kg \\ \hline
+$P_{SACI}$&Accretion rate of cloud ice by snow&$Q_{I} \longrightarrow Q_{S}$&$T < T_{0}$ \\ \hline
+$P_{GACI}$&Accretion rate of cloud ice by graupel&$Q_{I} \longrightarrow Q_{G}$&$T < T_{0}$ \\ \hline
+$P_{IACR}$&Accretion rate of rain by cloud ice&$Q_{R} \longrightarrow Q_{S}$&$T < T_{0}$ and $Q_{R} < 10^{-4}$ kg/kg \\
+&&$Q_{R} \longrightarrow Q_{G}$&$T < T_{0}$ and $Q_{R} \geq 10^{-4}$ kg/kg \\ \hline
+$P_{SACR}$&Accretion rate of rain by snow&$Q_{R} \longrightarrow Q_{S}$&$T < T_{0}$, $Q_{R} \leq 10^{-4}$ kg/kg, and $Q_{S} \leq 10^{-4}$ kg/kg \\
+&&$Q_{R} \longrightarrow Q_{G}$&$T < T_{0}$ and ($Q_{R}$ or $Q_{S}$) $> 10^{-4}$ kg/kg \\ \hline
+$P_{GACR}$&Accretion rate of rain by graupel&$Q_{R} \longrightarrow Q_{G}$&$T < T_{0}$ \\ \hline
+$P_{RACS}$&Accretion rate of snow by rain&$Q_{S} \longrightarrow Q_{G}$&$T < T_{0}$ and ($Q_{R}$ or $Q_{S}$) $> 10^{-4}$ kg/kg \\ \hline
+$P_{GACS}$&Accretion rate of snow by graupel&$Q_{S} \longrightarrow Q_{G}$& \\ \hline
+$P_{REVP}$&Evaporation rate of rain&$Q_{R} \longrightarrow q_{v}$& \\ \hline
+$P_{SSUB}$&Sublimation rate of snow&$Q_{S} \longrightarrow q_{v}$&$S_{ice} < 1$ \\ \hline
+$P_{GSUB}$&Sublimation rate of graupel&$Q_{G} \longrightarrow q_{v}$&$S_{ice} < 1$ \\ \hline
+$P_{SDEP}$&Deposition rate of water vapor for snow&$q_{v} \longrightarrow Q_{S}$&$S_{ice} \geq 1$ \\ \hline
+$P_{GDEP}$&Deposition rate of water vapor for graupel&$q_{v} \longrightarrow Q_{G}$&$S_{ice} \geq 1$ \\ \hline
+$P_{SMLT}$&Melting rate of snow&$Q_{S} \longrightarrow Q_{R}$&$T \geq T_{0}$ \\ \hline
+$P_{GMLT}$&Melting rate of graupel&$Q_{G} \longrightarrow Q_{R}$&$T \geq T_{0}$ \\ \hline
+$P_{GFRZ}$&Freezing rate of rain to form graupel&$Q_{R} \longrightarrow Q_{G}$&$T < T_{0}$ \\ \hline
+$P_{SFW}$&Growth rate of snow by Bergeron process from cloud water&$Q_{W} \longrightarrow Q_{S}$& 243.15 K $\leq T < T_{0}$ \\ \hline
+$P_{SFI}$&Growth rate of snow by Bergeron process from cloud ice&$Q_{I} \longrightarrow Q_{S}$& 243.15 K $\leq T < T_{0}$ \\ \hline
+\end{tabular}
+}
+\end{center}
+\end{table}
+
+\subsubsection{The saturation adjustment}
+Mass exchange among water vapor, cloud water, and cloud ice are controlled by the saturation adjustment. In the SCALE, the saturation adjustment is executed after the aforementioned conversion processes of the microphysics. To calculate the adjustment process, we define saturated mass concentration of water vapor as follows:
+\begin{equation}
+  q^{*}_{v}(T) = q^{*}_{vl}(T)+[1-\alpha (T)]q^{*}_{vi}(T)\label{eq:satuqv}
+\end{equation}
+where $q^{*}_{vl}(T)$ is saturated mass concentration of water vapor against liquid phase, $q^{*}_{vi}(T)$ is that for ice phase, and $\alpha (T)$ is a continuous function which satisfies
+\begin{align}
+\begin{cases}
+  \alpha (T) = 1, & {\rm \ for\ } T \geq {\rm \ 273.15 \ K} ,\\
+  \alpha (T) = \frac{T-233.15}{40.0}, & {\rm \ for\ 233.15\ K \ } < T < {\rm \ 273.15 \ K},\\
+  \alpha (T) = 0, & {\rm \ for\ } T \leq {\rm \ 233.15 \ K}.
+\end{cases}
+\end{align}
+If it is supersaturated, water vapor is converted into cloud water and cloud ice. If it is unsaturated, cloud water and cloud ice are converted into water vapor. As a conserved quantity for the adjustment process, we also define moist internal energy as follows:
+\begin{align}
+  U_{0}&=[q_{d}c_{vd}+q_{v}c_{vv}+(Q_{W}+Q_{R})c_{l}+(Q_{I}+Q_{S}+Q_{G})c_{s}]T \nonumber \\ 
+  &+q_{v}L_{v}-(Q_{I}+Q_{S}+Q_{G})L_{f}
+\end{align}
+where $L_{v}$ is the latent heat between water vapor and liquid water, $L_{f}$ is that between liquid water and solid water. In addition, the sum of the mass concentration of water vapor, cloud water, and cloud ice
+\begin{equation}
+  q_{sum}=q_{v}+Q_{W}+Q_{I}
+\end{equation}
+does not change through the saturation adjustment.
+
+First, we assume that all of cloud water $Q_{W}$ and cloud ice $Q_{I}$ evaporate. In this case, the mass concentration of water vapor becomes equal to $q_{sum}$ and the temperature decreases due to the evaporation. The moist internal energy can be written as
+\begin{align}
+  U_{1}&=[q_{d}c_{vd}+q_{sum}c_{vv}+Q_{R}c_{l}+(Q_{S}+Q_{G})c_{s}]T_{1} \nonumber \\ 
+  &+q_{sum}L_{v}-(Q_{S}+Q_{G})L_{f}
+\end{align}
+Since the moist internal energy does not change through the saturation adjustment, we can get the new temperature value $T_{1}$ easily by solving $U_{0}=U_{1}$. Then, if $q_{sum}$ is less than saturated mass concentration of water vapor at this temperature (i.e. $q^{*}_{v} (T_{1})$), no saturation occurs and the new values of water vapor $q^{\prime}_{v}$, cloud water $Q^{\prime}_{W}$, cloud ice $Q^{\prime}_{I}$, and temperature $T^{\prime}$ are determined as
+\begin{align}
+\begin{cases}
+  q^{\prime}_{v} &= q_{sum}, \\
+  Q^{\prime}_{W} &= 0, \\
+  Q^{\prime}_{I} &= 0, \\
+  T^{\prime} &= T_{1}.
+\end{cases}
+\end{align}
+
+If $q_{sum}$ exceeds $q^{*}_{v} (T_{1})$, saturation occurs. In this case, new temperature value $T_{2}$ should be determined by satisfying the equations of
+\begin{align}
+  U_{0}&=[q_{d}c_{vd}+q^{*}_{v}(T_{2})c_{vv}+(Q_{W2}+Q_{R})c_{l}+(Q_{I2}+Q_{S}+Q_{G})c_{s}]T_{2} \nonumber \\ 
+  &+q^{*}_{v}(T_{2})L_{v}-(Q_{I2}+Q_{S}+Q_{G})L_{f}\label{eq:newu} \\
+  Q_{W2}&=[q_{sum}-q^{*}_{v}(T_{2})]\alpha (T_{2})\label{eq:newqw} \\
+  Q_{I2}&=[q_{sum}-q^{*}_{v}(T_{2})](1-\alpha (T_{2}))\label{eq:newqi}
+\end{align}
+Eqs. (\ref{eq:satuqv}) and (\ref{eq:newu}-\ref{eq:newqi}) are solved numerically and the new values are determined as
+\begin{align}
+\begin{cases}
+  q^{\prime}_{v} &= q^{*}_{v}(T_{2}), \\
+  Q^{\prime}_{W} &= Q_{W2}, \\
+  Q^{\prime}_{I} &= Q_{I2}, \\
+  T^{\prime} &= T_{2}.
+\end{cases}
+\end{align}
 
 \subsubsection{Optional schemes}
-There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983} instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by the formulation of \citet{wainwright_etal_2014} instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007} instead of Marshall-Palmer exponential size distribution.
+There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of Marshall-Palmer exponential size distribution.
