@@ -1333,8 +1333,8 @@ contains
           if ( ATMOS_PHY_TB_SMG_backscatter .and. iq == I_QV ) then
 
              !$omp parallel do
-             do j = JJS, JJE
-             do i = IIS, IIE
+             do j = JJS-1, JJE+1
+             do i = IIS-1, IIE+1
 
                 do k = KS+1, KE-1
                    dd(k,i,j) = sqrt( ( ( QTRC(k+1,i,j,iq) - QTRC(k-1,i,j,iq) ) * J33G / ( FDZ(k) + FDZ(k-1) ) )**2 &
