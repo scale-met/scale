@@ -257,7 +257,7 @@ contains
        QDRY, QV, Qw, POTL, POTV,           &
        SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        l_mo,                               &
-       CZ, FZ, dt,                         &
+       CZ, FZ, dt_DP,                      &
        RHOU_t, RHOV_t, RHOT_t, RPROG_t,    &
        Nu, Kh                              )
     use scale_const, only: &
@@ -306,7 +306,7 @@ contains
 
     real(RP), intent(in)  :: CZ(  KA,IA,JA)
     real(RP), intent(in)  :: FZ(0:KA,IA,JA)
-    real(DP), intent(in)  :: dt
+    real(DP), intent(in)  :: dt_DP
 
     real(RP), intent(out) :: RHOU_t(KA,IA,JA) !> tendency of dens * u
     real(RP), intent(out) :: RHOV_t(KA,IA,JA) !> tendency of dens * v
@@ -384,9 +384,12 @@ contains
 
     logical :: mynn_level3
 
+    real(RP) :: dt
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
+    dt = real(dt_DP, RP)
 
     LOG_PROGRESS(*) "atmosphere / physics / pbl / MYNN"
 
