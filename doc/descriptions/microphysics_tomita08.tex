@@ -1,7 +1,7 @@
 \subsection{Six-class Single-moment Bulk Scheme (Tomita 2008)}
 Six-class single-moment bulk scheme in the SCALE was developed by \citet{tomita_2008}. This scheme predicts mass exchange among six categories of water substances (water vapor, cloud water, rain, cloud ice, snow, and graupel), which is largely based on the method of \citet{lin_etal_1983}. However, there are some modifications from the original method of \citet{lin_etal_1983}: Both cloud water and cloud ice are generated only by a saturation adjustment process, and wet growth process of graupel is omitted. According to \citet{tomita_2008}, these modifications result in 20\% reduction in computational cost compared to \citet{lin_etal_1983} without significant changes on physical performance. In this subsection, we describe the formulation of microphysical scheme of \citet{tomita_2008}. Mass concentrations of water vapor, cloud water, rain, cloud ice, snow, and graupel are indicated by $q_{v}$, $Q_{W}$, $Q_{R}$, $Q_{I}$, $Q_{S}$, and $Q_{G}$ respectively.
 
-In \citet{tomita_2008}, cloud microphysics processes except for the saturation adjustment consist of auto-conversion, accretion, evaporation, sublimation, deposition, melting, freezing, and Bergeron process. When $T < T_{0}$ (= 273.15 K), the tendency of each water substance by these processes can be written as follows:
+In \citet{tomita_2008}, cloud microphysics processes except for the saturation adjustment process consist of auto-conversion, accretion, evaporation, sublimation, deposition, melting, freezing, and Bergeron process. When $T < T_{0}$ (= 273.15 K), the tendency of each water substance by these processes can be written as follows:
 \begin{align}
   \frac{\partial Q_{W}}{\partial t} &= -P_{RAUT}-P_{RACW}-P_{SACW}-P_{GACW}-P_{SFW}, \\
   \frac{\partial Q_{I}}{\partial t} &= -P_{SAUT}-P_{RACI}-P_{SACI}-P_{GACI}-P_{SFI}, \\
@@ -142,5 +142,43 @@ Eqs. (\ref{eq:satuqv}) and (\ref{eq:newu}-\ref{eq:newqi}) are solved numerically
 \end{cases}
 \end{align}
 
-\subsubsection{Optional schemes}
-There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of Marshall-Palmer exponential size distribution.
+\subsubsection{Fundamental characteristics of precipitation particles}
+In \citet{tomita_2008}, it is assumed that seizes of precipitation particles (rain, snow, and graupel) obey the Marshall-Palmer exponential size distribution:
+\begin{equation}
+  n_{[R,S,G]}(D) = N_{0[R,S,G]}\exp(-\lambda_{[R,S,G]}D)\label{eq:size_dist},
+\end{equation}
+where $D$ is the diameter of particle, $N_{0}$ is an intercept parameter, and $\lambda$ is a slope parameter. The subscriptions of $R$, $S$, and $G$ denote rain, snow, and graupel, respectively. In the SCALE, each intercept parameter has values of
+\begin{align}
+\begin{cases}
+  N_{0R}&=8.0\times 10^{6}\quad\text{m}^{\text{-4}}, \\ 
+  N_{0S}&=3.0\times 10^{6}\quad\text{m}^{\text{-4}}, \\ 
+  N_{0G}&=4.0\times 10^{6}\quad\text{m}^{\text{-4}}.
+\end{cases}
+\end{align}
+The mass and terminal velocity of each particle are described as
+\begin{align}
+  m_{[R,S,G]}(D) &= a_{[R,S,G]}D^{b_{[R,S,G]}}\label{eq:particle_mass} \\
+  v_{t[R,S,G]}(D) &= c_{[R,S,G]}D^{d_{[R,S,G]}}\left(\frac{\rho_{0}}{\rho}\right)^{1/2}
+\end{align}
+where $\rho_{0}$ is a reference density having a value of 1.28 kg $\text{m}^{\text{-3}}$, and $a$, $b$, $c$, and $d$ are coefficients depending on the particle shape. All precipitation particles are treated as spherical, thus
+\begin{align}
+  &a_{R}=\pi \rho_{w}/6,\quad a_{S}=\pi \rho_{S}/6,\quad a_{G}=\pi \rho_{G}/6, \\
+  &b_{R}=b_{S}=b_{G}=3,
+\end{align}
+where $\rho_{w}$ = 1000 kg $\text{m}^{\text{-3}}$, $\rho_{S}$ = 100 kg $\text{m}^{\text{-3}}$, $\rho_{G}$ = 400 kg $\text{m}^{\text{-3}}$. The coefficients c and d are determined empirically. In the SCALE, their values are
+\begin{align}
+  c_{R}=130.0,\quad c_{S}=4.84,\quad c_{G}=82.5, \\
+  d_{R}=0.5,\quad d_{S}=0.25,\quad d_{G}=0.5,
+\end{align}
+The slope parameters are determined from Eqs. (\ref{eq:size_dist}) and (\ref{eq:particle_mass}) as
+\begin{equation}
+  \lambda=\left[\frac{aN_{0}\Gamma (b+1)}{\rho Q}\right]^{1/(b+1)}\label{eq:lambda},
+\end{equation}
+where $\Gamma$ is the gamma function. The bulk terminal velocities are derived as
+\begin{equation}
+  V_{T}=c\left(\frac{\rho_{0}}{\rho}\right)^{1/2}\frac{\Gamma(b+d+1)}{\Gamma(b+1)\lambda^{-d}}\label{eq:tvelocity}.
+\end{equation}
+Note that subscription $R$, $S$, and $G$ in Eqs. (\ref{eq:lambda}) and (\ref{eq:tvelocity}) are omitted for simplicity.
+
+\subsubsection{Optional schemes in the SCALE}
+There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of the Marshall-Palmer exponential size distribution.
