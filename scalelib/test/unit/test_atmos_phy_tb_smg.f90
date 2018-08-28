@@ -202,28 +202,28 @@ subroutine test_zero
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
   call AssertEqual("qflx_sgs_momz", ZERO(KS:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS:KE-1,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_momx", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_momy", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("MOMZ_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMZ_t       (KS:KE,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("MOMX_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMX_t       (KS:KE,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("MOMY_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMY_t       (KS:KE,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("RHOT_t",        ZERO(KS:KE,IS:IE,JS:JE,1), RHOT_t       (KS:KE,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   do iq = 1, QA
      write(message, '("qflx_sgs_rhoq(",i2,")")') iq
      call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
      write(message, '("RHOQ_t(",i2,")")') iq
      call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,1), RHOQ_t       (KS:KE,IS:IE,JS:JE,  iq), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   end do
 
 end subroutine test_zero
@@ -264,28 +264,28 @@ subroutine test_constant
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
   call AssertEqual("qflx_sgs_momz", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_momx", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momx(KS+1:KE-1,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_momy", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momy(KS+1:KE-1,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:),     qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -30)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   call AssertEqual("MOMZ_t",        ZERO(KS+1:KE-2,IS:IE,JS:JE,1), MOMZ_t       (KS+1:KE-2,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("MOMX_t",        ZERO(KS+2:KE-2,IS:IE,JS:JE,1), MOMX_t       (KS+2:KE-2,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("MOMY_t",        ZERO(KS+2:KE-2,IS:IE,JS:JE,1), MOMY_t       (KS+2:KE-2,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   call AssertEqual("RHOT_t",        ZERO(KS:KE,IS:IE,JS:JE,1),     RHOT_t       (KS:KE,IS:IE,JS:JE), &
-       significant_digits = 16, ignore_digits = -20)
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   do iq = 1, QA
      write(message, '("qflx_sgs_rhoq(",i2,")")') iq
      call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq), &
-          significant_digits = 16, ignore_digits = -30)
+          significant_digits = RP*2-3, ignore_digits = -RP*4)
      write(message, '("RHOQ_t(",i2,")")') iq
      call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,1), RHOQ_t       (KS:KE,IS:IE,JS:JE,  iq), &
-          significant_digits = 16, ignore_digits = -30)
+          significant_digits = RP*2-3, ignore_digits = -RP*3)
   end do
 
 end subroutine test_constant
@@ -440,15 +440,15 @@ subroutine test_double
 
   call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), &
        qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -6)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   where(qflx_sgs_momx /= 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
   where(qflx_sgs_momx == 0.0_RP) work = 4.0_RP
   call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -6)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   where(qflx_sgs_momy /= 0.0_RP) work = qflx_sgs_momy2 / qflx_sgs_momy
   where(qflx_sgs_momy == 0.0_RP) work = 4.0_RP
   call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -6)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   message = "iq = ??"
   do iq = 1, QA
      if ( .not. TRACER_ADVC(iq) ) cycle
@@ -456,7 +456,7 @@ subroutine test_double
      where(qflx_sgs_rhoq2(:,:,:,:,iq) == 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
      call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
-       significant_digits = 16, ignore_digits = -6)
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   end do
 
 end subroutine test_double

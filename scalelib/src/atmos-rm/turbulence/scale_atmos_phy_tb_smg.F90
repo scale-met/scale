@@ -1271,7 +1271,7 @@ contains
           !$omp parallel do
           do j = JJS, JJE
           do i = IIS, IIE
-             do k = KS, KE
+             do k = KS+1, KE-1
                 RHOT_t(k,i,j) = J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
                               + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
                               + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
@@ -1361,7 +1361,7 @@ contains
              !$omp parallel do
              do j = JJS, JJE
              do i = IIS, IIE
-                do k = KS, KE
+                do k = KS+1, KE-1
                    RHOQ_t(k,i,j,iq) = J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
                                     + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
                                     + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
