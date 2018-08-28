@@ -150,9 +150,9 @@ In \citet{tomita_2008}, it is assumed that seizes of precipitation particles (ra
 where $D$ is the diameter of particle, $N_{0}$ is an intercept parameter, and $\lambda$ is a slope parameter. The subscriptions of $R$, $S$, and $G$ denote rain, snow, and graupel, respectively. In the SCALE, each intercept parameter has values of
 \begin{align}
 \begin{cases}
-  N_{0R}&=8.0\times 10^{6}\quad\text{m}^{\text{-4}}, \\ 
-  N_{0S}&=3.0\times 10^{6}\quad\text{m}^{\text{-4}}, \\ 
-  N_{0G}&=4.0\times 10^{6}\quad\text{m}^{\text{-4}}.
+  N_{0R}&=8.0\times 10^{6}\quad\text{m}^{-4}, \\ 
+  N_{0S}&=3.0\times 10^{6}\quad\text{m}^{-4}, \\ 
+  N_{0G}&=4.0\times 10^{6}\quad\text{m}^{-4}.
 \end{cases}
 \end{align}
 The mass and terminal velocity of each particle are described as
@@ -160,12 +160,12 @@ The mass and terminal velocity of each particle are described as
   m_{[R,S,G]}(D) &= a_{[R,S,G]}D^{b_{[R,S,G]}}\label{eq:particle_mass} \\
   v_{t[R,S,G]}(D) &= c_{[R,S,G]}D^{d_{[R,S,G]}}\left(\frac{\rho_{0}}{\rho}\right)^{1/2}
 \end{align}
-where $\rho_{0}$ is a reference density having a value of 1.28 kg $\text{m}^{\text{-3}}$, and $a$, $b$, $c$, and $d$ are coefficients depending on the particle shape. All precipitation particles are treated as spherical, thus
+where $\rho_{0}$ is a reference density having a value of 1.28 kg $\text{m}^{-3}$, and $a$, $b$, $c$, and $d$ are coefficients depending on the particle shape. All precipitation particles are treated as spherical, thus
 \begin{align}
   &a_{R}=\pi \rho_{w}/6,\quad a_{S}=\pi \rho_{S}/6,\quad a_{G}=\pi \rho_{G}/6, \\
   &b_{R}=b_{S}=b_{G}=3,
 \end{align}
-where $\rho_{w}$ = 1000 kg $\text{m}^{\text{-3}}$, $\rho_{S}$ = 100 kg $\text{m}^{\text{-3}}$, $\rho_{G}$ = 400 kg $\text{m}^{\text{-3}}$. The coefficients c and d are determined empirically. In the SCALE, their values are
+where $\rho_{w}$ = 1000 kg $\text{m}^{-3}$, $\rho_{S}$ = 100 kg $\text{m}^{-3}$, $\rho_{G}$ = 400 kg $\text{m}^{-3}$. The coefficients c and d are determined empirically. In the SCALE, their values are
 \begin{align}
   c_{R}=130.0,\quad c_{S}=4.84,\quad c_{G}=82.5, \\
   d_{R}=0.5,\quad d_{S}=0.25,\quad d_{G}=0.5,
@@ -179,6 +179,36 @@ where $\Gamma$ is the gamma function. The bulk terminal velocities are derived a
   V_{T}=c\left(\frac{\rho_{0}}{\rho}\right)^{1/2}\frac{\Gamma(b+d+1)}{\Gamma(b+1)\lambda^{-d}}\label{eq:tvelocity}.
 \end{equation}
 Note that subscription $R$, $S$, and $G$ in Eqs. (\ref{eq:lambda}) and (\ref{eq:tvelocity}) are omitted for simplicity.
+
+\subsubsection{Auto-conversion terms}
+The auto-conversion rate of cloud water to form rain ($P_{RAUT}$) is given as
+\begin{equation}
+  P_{RAUT}=\frac{1}{\rho}\left[16.7\times(\rho Q_{W})^{2}\left(5+\frac{3.6\times10^{-5}N_{d}}{D_{d}\rho Q_{W}}\right)^{-1}\right]\label{eq:praut},
+\end{equation}
+where $N_{d}$ is the number concentration of cloud water ($N_{d}$ = 50 $\text{cm}^{-3}$ in the SCALE). $D_{d}$ in Eq (\ref{eq:praut}) is given as
+\begin{equation}
+  D_{d}=0.146-5.964\times10^{-2}\ln{\frac{N_{d}}{2000}}.
+\end{equation}
+
+The auto-conversion rate of cloud ice to form snow ($P_{SAUT}$) is given as
+\begin{equation}
+  P_{SAUT}=\beta_{1}(Q_{I}-Q_{I0}),
+\end{equation}
+where $Q_{I0}$ is set as 0 kg $\text{kg}^{-1}$ and $\beta_{1}$ is formulated as
+\begin{equation}
+  \beta_{1}=\beta_{10}\exp[\gamma_{SAUT}(T-T_{0})].
+\end{equation}
+$\beta_{10}$ and $\gamma_{SAUT}$ are set as 0.001 and 0.025, respectively, in \citet{tomita_2008}. In the SCALE, however, they are set as 0.006 and 0.06 as default settings.
+
+The auto-conversion rate of snow to form graupel ($P_{GAUT}$) is given as
+\begin{equation}
+  P_{GAUT}=\beta_{2}(Q_{S}-Q_{S0}),
+\end{equation}
+where $Q_{S0}$ is set as $6\times10^{-4}$ kg $\text{kg}^{-1}$ and $\beta_{2}$ is formulated as
+\begin{equation}
+  \beta_{2}=\beta_{20}\exp[\gamma_{GAUT}(T-T_{0})].
+\end{equation}
+$\beta_{20}$ and $\gamma_{GAUT}$ are set as 0.001 and 0.09, respectively, in \citet{tomita_2008}. In the SCALE, however, $\beta_{20} = 0$ as default settings, which means that auto-conversion of snow to graupel does not occur.
 
 \subsubsection{Optional schemes in the SCALE}
 There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of the Marshall-Palmer exponential size distribution.
