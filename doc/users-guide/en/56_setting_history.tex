@@ -126,7 +126,7 @@ The default format of the monitor file is configured at \namelist{PARAM_MONITOR}
 \verb|/                                   | & \\
 }
 
-Monitor component outputs global domain total of physical quantity such as dry airmass, water vapor, total energy, surface precipitation flux, and so on.
+Monitor component outputs global domain total of physical quantity such as dry air mass, water vapor, total energy, surface precipitation flux, and so on.
 These output is useful to check mass and energy budget.
 The monitor file is ASCII format and the name of the file is set by \nmitem{MONITOR_OUT_BASENAME} \verb|.pe000000|.
 The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INTERVAL} as the multiple of time step ($\Delta t$).
@@ -141,30 +141,37 @@ The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INT
 \begin{center}
   \caption{Variables available for monitor output}
   \label{tab:varlist_monitor}
-  \begin{tabularx}{150mm}{|l|X|X|} \hline
+  \begin{tabularx}{150mm}{|l|X|l|} \hline
     \rowcolor[gray]{0.9}  Values & Description & Unit \\ \hline
-      \verb|TRACER*|      & Tracers in prognostic variable            & [each unit*m3] \\
-      \verb|QDRY|         & dry air mass                              & [kg] \\
-      \verb|QTOT|         & water mass                                & [kg] \\
-      \verb|EVAP|         & evaporation                               & [kg] \\
-      \verb|PRCP|         & precipitation                             & [kg] \\
-      \verb|ENGT|         & total     energy                          & [J] \\
-      \verb|ENGP|         & potential energy                          & [J] \\
-      \verb|ENGK|         & kinetic   energy                          & [J] \\
-      \verb|ENGI|         & internal  energy                          & [J] \\
-      \verb|ENGFLXT|      & total energy flux                         & [J] \\
-      \verb|ENGSFC_SH|    & surface specific heat flux                & [J] \\
-      \verb|ENGSFC_LH|    & surface latent   heat flux                & [J] \\
-      \verb|ENGSFC_RD|    & surface net radiation flux                & [J] \\
-      \verb|ENGTOA_RD|    & top-of-atmosphere net radiation flux      & [J] \\
-      \verb|ENGSFC_LW_up| & surface longwave  upward   flux           & [J] \\
-      \verb|ENGSFC_LW_dn| & surface longwave  downward flux           & [J] \\
-      \verb|ENGSFC_SW_up| & surface shortwave upward   flux           & [J] \\
-      \verb|ENGSFC_SW_dn| & surface shortwave downward flux           & [J] \\
-      \verb|ENGTOA_LW_up| & top-of-atmosphere longwave  upward   flux & [J] \\
-      \verb|ENGTOA_LW_dn| & top-of-atmosphere longwave  downward flux & [J] \\
-      \verb|ENGTOA_SW_up| & top-of-atmosphere shortwave upward   flux & [J] \\
-      \verb|ENGTOA_SW_dn| & top-of-atmosphere shortwave downward flux & [J] \\
+      \verb|DENS|         & Air mass                                  & [kg]     \\
+      \verb|MOMZ|         & Momentum in z-direction                   & [kg m/s] \\
+      \verb|MOMX|         & Momentum in x-direction                   & [kg m/s] \\
+      \verb|MOMY|         & Momentum in y-direction                   & [kg m/s] \\
+      \verb|RHOT|         & Potential temperature                     & [kg K]   \\
+      \verb|TRACER*|      & Tracers in prognostic variable            & [each unit $\times$ kg] \\
+      \verb|QDRY|         & Dry air mass                              & [kg] \\
+      \verb|QTOT|         & Water mass                                & [kg] \\
+      \verb|EVAP|         & Evaporation at the surface                & [kg] \\
+      \verb|PRCP|         & Precipitation                             & [kg] \\
+      \verb|ENGT|         & Total     energy (\verb|ENGP + ENGK + ENGI|)  & [J] \\
+      \verb|ENGP|         & Potential energy ($\rho * g * z$)             & [J] \\
+      \verb|ENGK|         & Kinetic   energy ($\rho * (W^2+U^2+V^2) / 2$) & [J] \\
+      \verb|ENGI|         & Internal  energy ($\rho * C_v * T$)           & [J] \\
+      \verb|ENGFLXT|      & Total energy flux convergenc (\verb|SH + LH + SFC_RD - TOA_RD|) & [J] \\
+      \verb|ENGSFC_SH|    & Surface sensible heat flux                & [J] \\
+      \verb|ENGSFC_LH|    & Surface latent   heat flux                & [J] \\
+      \verb|ENGSFC_RD|    & Surface net radiation flux                & [J] \\
+                          & (\verb|SFC_LW_up + SFC_SW_up - SFC_LW_dn - SFC_SW_dn|) & \\
+      \verb|ENGTOA_RD|    & Top-of-atmosphere net radiation flux      & [J] \\
+                          & (\verb|TOA_LW_up + TOA_SW_up - TOA_LW_dn - TOA_SW_dn|) & \\
+      \verb|ENGSFC_LW_up| & Surface longwave  upward   flux           & [J] \\
+      \verb|ENGSFC_LW_dn| & Surface longwave  downward flux           & [J] \\
+      \verb|ENGSFC_SW_up| & Surface shortwave upward   flux           & [J] \\
+      \verb|ENGSFC_SW_dn| & Surface shortwave downward flux           & [J] \\
+      \verb|ENGTOA_LW_up| & Top-of-atmosphere longwave  upward   flux & [J] \\
+      \verb|ENGTOA_LW_dn| & Top-of-atmosphere longwave  downward flux & [J] \\
+      \verb|ENGTOA_SW_up| & Top-of-atmosphere shortwave upward   flux & [J] \\
+      \verb|ENGTOA_SW_dn| & Top-of-atmosphere shortwave downward flux & [J] \\
     \hline
   \end{tabularx}
 \end{center}

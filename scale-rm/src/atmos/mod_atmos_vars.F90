@@ -740,14 +740,14 @@ contains
 
     !-----< monitor output setup >-----
     do iv = 1, PV_nmax
-       call MONITOR_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, PV_info(iv)%UNIT, & ! (in)
-                         PV_MONIT_id(iv),                                      & ! (out)
-                         dim_type=PV_info(iv)%dim_type, isflux=.false.         ) ! (in)
+       call MONITOR_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, trim(PV_info(iv)%UNIT)//"*m3", & ! (in)
+                         PV_MONIT_id(iv),                                                   & ! (out)
+                         dim_type=PV_info(iv)%dim_type, isflux=.false.                      ) ! (in)
     end do
     do iq = 1, QA
-       call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), & ! (in)
-                         QP_MONIT_id(iq),                                   & ! (out)
-                         dim_type='ZXY', isflux=.false.                     ) ! (in)
+       call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq)//"*kg", & ! (in)
+                         QP_MONIT_id(iq),                                          & ! (out)
+                         dim_type='ZXY', isflux=.false.                            ) ! (in)
     enddo
 
     call MONITOR_reg( 'QDRY',         'dry air mass',           'kg', & ! (in)
@@ -756,7 +756,7 @@ contains
     call MONITOR_reg( 'QTOT',         'water mass',             'kg', & ! (in)
                       DV_MONIT_id(IM_QTOT),                           & ! (out)
                       dim_type='ZXY', isflux=.false.                  ) ! (in)
-    call MONITOR_reg( 'EVAP',         'evaporation',            'kg', & ! (in)
+    call MONITOR_reg( 'EVAP',         'evaporation at the surface', 'kg', & ! (in)
                       DV_MONIT_id(IM_EVAP),                           & ! (out)
                       dim_type='XY', isflux=.true.                    ) ! (in)
     call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
@@ -776,7 +776,7 @@ contains
                       DV_MONIT_id(IM_ENGI),                          & ! (out)
                       dim_type='ZXY', isflux=.false.                 ) ! (in)
 
-    call MONITOR_reg( 'ENGFLXT',      'total energy flux',      'J', & ! (in)
+    call MONITOR_reg( 'ENGFLXT',      'total energy flux convergence', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
                       dim_type='XY', isflux=.true.                   ) ! (in)
     call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
