@@ -249,5 +249,48 @@ where $\gamma_{GACS}$ is set to 0.09. When the accretion of rain by snow occurs 
   &\times\left[\frac{\Gamma(b_{S}+1)\Gamma(3)}{\lambda^{b_{S}+1}_{S}\lambda^{3}_{R}}+2\frac{\Gamma(b_{S}+2)\Gamma(2)}{\lambda^{b_{S}+2}_{S}\lambda^{2}_{R}}+\frac{\Gamma(b_{S}+3)\Gamma(1)}{\lambda^{b_{S}+3}_{S}\lambda_{R}}\right].
 \end{align}
 
+\subsubsection{Evaporation, sublimation, and deposition}
+Evaporation rate of rain ($P_{REVP}$) is described as
+\begin{align}
+  P_{REVP}&=\frac{2\pi N_{0R}(1-\min(S_{liq},1))G_{w}(T)}{\rho} \nonumber \\
+  &\times\left[f_{1R}\frac{\Gamma(2)}{\lambda^{2}_{R}}+f_{2R}c^{1/2}_{R}\left(\frac{\rho_{0}}{\rho}\right)^{1/4}\nu^{-1/2}\frac{\Gamma(\frac{5+d_{R}}{2})}{\lambda^{\frac{5+d_{R}}{2}}_{R}}\right],
+\end{align}
+where $S_{liq}$ is saturation ratio over liquid, coefficients $f_{1R}$ and $f_{2R}$ are 0.78 and 0.27 respectively, $\nu$ is the kinematic viscosity of air, and $G_{w}(T)$ is the thermodynamic function for liquid water given as
+\begin{equation}
+  G_{w}(T)=\left[\frac{L_{v}}{K_{a}T}\left(\frac{L_{v}}{R_{v}T}-1\right)+\frac{1}{\rho q^{*}_{vl}(T)K_{d}}\right]^{-1},
+\end{equation}
+where $K_{a}$ is the thermal diffusion coefficient of air and $K_{d}$ is the diffusion coefficient of water vapor in air. $P_{REVP}$ works only when $S_{liq}$ is less than 1 (i.e. unsaturated condition).
+
+Sublimation and deposition rates for snow ($P_{SSUB}$ and $P_{SDEP}$) are described by the same equation:
+\begin{align}
+  P^{*}_{SSUB,SDEP}&=\frac{2\pi N_{0S}(1-S_{ice})G_{i}(T)}{\rho} \nonumber \\
+  &\times\left[f_{1S}\frac{\Gamma(2)}{\lambda^{2}_{S}}+f_{2S}c^{1/2}_{S}\left(\frac{\rho_{0}}{\rho}\right)^{1/4}\nu^{-1/2}\frac{\Gamma(\frac{5+d_{S}}{2})}{\lambda^{\frac{5+d_{S}}{2}}_{S}}\right],
+\end{align}
+where coefficients $f_{1S}$ and $f_{2S}$ are 0.65 and 0.39 respectively, and $G_{i}(T)$ is the thermodynamic function for ice water given as
+\begin{equation}
+  G_{i}(T)=\left[\frac{L_{s}}{K_{a}T}\left(\frac{L_{s}}{R_{v}T}-1\right)+\frac{1}{\rho q^{*}_{vi}(T)K_{d}}\right]^{-1},
+\end{equation}
+where $L_{s}$ is the latent heat between water vapor and solid water. If it is unsaturated ($S_{ice} < 1$), the sublimation rate of snow is given as
+\begin{equation}
+  P_{SSUB}=P^{*}_{SSUB,SDEP}.
+\end{equation}
+If it is saturated ($S_{ice} \geq 1$), the deposition rate of water vapor for snow is given as
+\begin{equation}
+  P_{SSUB}=-P^{*}_{SSUB,SDEP}.
+\end{equation}
+Also sublimation and deposition rates for graupel ($P_{GSUB}$ and $P_{GDEP}$) are described by
+\begin{align}
+  P^{*}_{GSUB,GDEP}&=\frac{2\pi N_{0G}(1-S_{ice})G_{i}(T)}{\rho} \nonumber \\
+  &\times\left[f_{1G}\frac{\Gamma(2)}{\lambda^{2}_{G}}+f_{2G}c^{1/2}_{G}\left(\frac{\rho_{0}}{\rho}\right)^{1/4}\nu^{-1/2}\frac{\Gamma(\frac{5+d_{G}}{2})}{\lambda^{\frac{5+d_{G}}{2}}_{G}}\right],
+\end{align}
+where coefficients $f_{1G}$ and $f_{2G}$ are 0.78 and 0.27 respectively. If it is unsaturated ($S_{ice} < 1$), the sublimation rate of graupel is given as
+\begin{equation}
+  P_{GSUB}=P^{*}_{GSUB,GDEP}.
+\end{equation}
+If it is saturated ($S_{ice} \geq 1$), the deposition rate of water vapor for graupel is given as
+\begin{equation}
+  P_{GSUB}=-P^{*}_{GSUB,GDEP}.
+\end{equation}
+
 \subsubsection{Optional schemes in the SCALE}
 There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of the Marshall-Palmer exponential size distribution.
