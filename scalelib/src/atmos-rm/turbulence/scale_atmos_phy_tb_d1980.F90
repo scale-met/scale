@@ -148,6 +148,7 @@ contains
 #ifdef DEBUG
     delta(:,:,:) = UNDEF
 #endif
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -276,6 +277,7 @@ contains
 #endif
 
     ! potential temperature
+    !$omp parallel do
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -307,6 +309,7 @@ contains
     IIE = IIS+IBLOCK-1
 
        ! Ri = N^2 / |S|^2, N^2 = g / theta * dtheta/dz
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -327,6 +330,7 @@ contains
 #endif
 
        ! mixing length
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -342,6 +346,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
+       !$omp parallel do
        do j = JJS-1, JJE+1
        do i = IIS-1, IIE+1
        do k = KS, KE
@@ -357,6 +362,7 @@ contains
 
        !##### momentum equation (z) #####
        ! (cell center)
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS+1, KE-1
@@ -372,6 +378,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
@@ -382,6 +389,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (y edge)
+       !$omp parallel do
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -407,6 +415,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (x edge)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -438,6 +447,8 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
+          !$omp parallel do &
+          !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
 
@@ -481,6 +492,7 @@ contains
 
        !##### momentum equation (x) #####
        ! (y edge)
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -505,6 +517,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
@@ -515,6 +528,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (cell center)
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -531,6 +545,7 @@ contains
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (z edge)
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -562,6 +577,8 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
+          !$omp parallel do &
+          !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
 
@@ -612,6 +629,7 @@ contains
 
        !##### momentum equation (y) #####
        ! (x edge)
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -636,6 +654,7 @@ contains
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
           qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
@@ -647,6 +666,7 @@ contains
 #endif
 
        ! (z edge)
+       !$omp parallel do
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -673,6 +693,7 @@ contains
 #endif
 
        ! (z-x plane)
+       !$omp parallel do
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
@@ -695,6 +716,8 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
+          !$omp parallel do &
+          !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
 
@@ -747,6 +770,8 @@ contains
 
        if ( ATMOS_PHY_TB_D1980_implicit ) then
 
+          !$omp parallel do &
+          !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
 
@@ -828,6 +853,8 @@ contains
 
        if ( ATMOS_PHY_TB_D1980_implicit ) then
 
+          !$omp parallel do &
+          !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
 
@@ -867,6 +894,7 @@ contains
                            qflx_tke,                      & ! (in)
                            GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                            IIS, IIE, JJS, JJE             ) ! (in)
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE

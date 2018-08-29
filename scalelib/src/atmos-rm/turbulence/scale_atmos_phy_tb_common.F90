@@ -1270,7 +1270,7 @@ contains
        qflx_phi(:,:,:,ZDIR) = 0.0_RP
     else
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
        !$omp shared(FDZ)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1286,7 +1286,7 @@ contains
 #endif
           qflx_phi(k,i,j,ZDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-               * ( Kh(k,i,j) + Kh(k+1,i,j) ) &
+               * ( Kh(k,i,j) + Kh(k+1,i,j) ) * FACT &
                * ( PHI(k+1,i,j)-PHI(k,i,j) ) * RFDZ(k) * J33G &
                / GSQRT(k,i,j,I_XYW)
        enddo
@@ -1309,7 +1309,7 @@ contains
 
     ! (y-z plane; u,y,z)
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,PHI,qflx_phi,GSQRT,I_XYZ,RFDX,J13G,I_UYZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYZ,RFDX,J13G,I_UYZ) &
     !$omp shared(FDZ)
     do j = JJS,   JJE
     do i = IIS-1, IIE
@@ -1325,7 +1325,7 @@ contains
 #endif
        qflx_phi(k,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-               * ( Kh(k,i,j) + Kh(k,i+1,j) ) &
+               * ( Kh(k,i,j) + Kh(k,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(k,i+1,j,I_XYZ) * PHI(k,i+1,j) &
                    - GSQRT(k,i  ,j,I_XYZ) * PHI(k,i  ,j) ) * RFDX(i) &
@@ -1353,7 +1353,7 @@ contains
 #endif
        qflx_phi(KS,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
-               * ( Kh(KS,i,j) + Kh(KS,i+1,j) ) &
+               * ( Kh(KS,i,j) + Kh(KS,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(KS,i+1,j,I_XYZ) * PHI(KS,i+1,j) &
                    - GSQRT(KS,i  ,j,I_XYZ) * PHI(KS,i  ,j) ) * RFDX(i) &
@@ -1363,7 +1363,7 @@ contains
                ) * MAPF(i,j,1,I_UY) / GSQRT(KS,i,j,I_UYZ)
        qflx_phi(KE,i,j,XDIR) = - 0.25_RP & ! 1/2/2
                * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-               * ( Kh(KE,i,j) + Kh(KE,i+1,j) ) &
+               * ( Kh(KE,i,j) + Kh(KE,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(KE,i+1,j,I_XYZ) * PHI(KE,i+1,j) &
                    - GSQRT(KE,i  ,j,I_XYZ) * PHI(KE,i  ,j) ) * RFDX(i) &
@@ -1378,7 +1378,7 @@ contains
 #endif
     ! (z-x plane; x,v,z)
     !$omp parallel do default(none)                                                          &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,FDZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,FACT,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,FDZ) &
     !$omp shared(MAPF,I_XV)                                                                  &
     !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
@@ -1395,7 +1395,7 @@ contains
 #endif
        qflx_phi(k,i,j,YDIR) = - 0.25_RP &
                * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-               * ( Kh(k,i,j) + Kh(k,i,j+1) ) &
+               * ( Kh(k,i,j) + Kh(k,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(k,i,j+1,I_XYZ) * PHI(k,i,j+1) &
                      - GSQRT(k,i,j  ,I_XYZ) * PHI(k,i,j  ) ) * RFDY(j) &
@@ -1423,7 +1423,7 @@ contains
 #endif
        qflx_phi(KS,i,j,YDIR) = - 0.25_RP &
                * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
-               * ( Kh(KS,i,j) + Kh(KS,i,j+1) ) &
+               * ( Kh(KS,i,j) + Kh(KS,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(KS,i,j+1,I_XYZ) * PHI(KS,i,j+1) &
                      - GSQRT(KS,i,j  ,I_XYZ) * PHI(KS,i,j  ) ) * RFDY(j) &
@@ -1433,7 +1433,7 @@ contains
                ) * MAPF(i,j,2,I_XV) / GSQRT(KS,i,j,I_XVZ)
        qflx_phi(KE,i,j,YDIR) = - 0.25_RP &
                * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-               * ( Kh(KE,i,j) + Kh(KE,i,j+1) ) &
+               * ( Kh(KE,i,j) + Kh(KE,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(KE,i,j+1,I_XYZ) * PHI(KE,i,j+1) &
                      - GSQRT(KE,i,j  ,I_XYZ) * PHI(KE,i,j  ) ) * RFDY(j) &
@@ -1471,7 +1471,7 @@ contains
              qflx_phi(k,i,j,ZDIR) = qflx_phi(k,i,j,ZDIR) &
                      - 0.25_RP & ! 1/2/2
                      * ( DENS(k,i,j)+DENS(k+1,i,j) ) &
-                     * ( Kh(k,i,j) + Kh(k+1,i,j) ) &
+                     * ( Kh(k,i,j) + Kh(k+1,i,j) ) * FACT &
                      * dt * ( TEND(k+1,i,j)-TEND(k,i,j) ) * RFDZ(k) * J33G &
                      / GSQRT(k,i,j,I_XYW)
           end do
@@ -1539,7 +1539,7 @@ contains
        CDZ  => ATMOS_GRID_CARTESC_CDZ
     implicit none
 
-    real(RP), intent(inout) :: MOMZ_t_TB(KA,IA,JA)
+    real(RP), intent(out) :: MOMZ_t_TB(KA,IA,JA)
 
     real(RP), intent(in)  :: QFLX_MOMZ(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -1561,7 +1561,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-2
-       MOMZ_t_TB(k,i,j) = MOMZ_t_TB(k,i,j) &
+       MOMZ_t_TB(k,i,j) = &
             - ( ( GSQRT(k,i  ,j,I_UYW) * QFLX_MOMZ(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j,I_UYW) * QFLX_MOMZ(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(k,i,j  ,I_XVW) * QFLX_MOMZ(k,i,j  ,YDIR) &
@@ -1582,7 +1582,7 @@ contains
     !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMZ_t_TB(KS,i,j) = MOMZ_t_TB(KS,i,j) &
+       MOMZ_t_TB(KS,i,j) = &
             - ( ( GSQRT(KS,i  ,j,I_UYW) * QFLX_MOMZ(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j,I_UYW) * QFLX_MOMZ(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KS,i,j  ,I_XVW) * QFLX_MOMZ(KS,i,j  ,YDIR) &
@@ -1597,7 +1597,7 @@ contains
                   + J33G * ( QFLX_MOMZ(KS+1,i,j,ZDIR) ) ) * RFDZ(KS) &
               ) / GSQRT(KS,i,j,I_XYW)
 
-       MOMZ_t_TB(KE-1,i,j) = MOMZ_t_TB(KE-1,i,j) &
+       MOMZ_t_TB(KE-1,i,j) = &
             - ( ( GSQRT(KE-1,i  ,j,I_UYW) * QFLX_MOMZ(KE-1,i  ,j,XDIR) &
                 - GSQRT(KE-1,i-1,j,I_UYW) * QFLX_MOMZ(KE-1,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KE-1,i,j  ,I_XVW) * QFLX_MOMZ(KE-1,i,j  ,YDIR) &
@@ -1629,7 +1629,7 @@ contains
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
-    real(RP), intent(inout) :: MOMX_t_TB(KA,IA,JA)
+    real(RP), intent(out) :: MOMX_t_TB(KA,IA,JA)
 
     real(RP), intent(in)  :: QFLX_MOMX(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -1651,7 +1651,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       MOMX_t_TB(k,i,j) = MOMX_t_TB(k,i,j) &
+       MOMX_t_TB(k,i,j) = &
             - ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) &
                 - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) &
@@ -1671,7 +1671,7 @@ contains
     !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMX_t_TB(KS,i,j) = MOMX_t_TB(KS,i,j) &
+       MOMX_t_TB(KS,i,j) = &
             - ( ( GSQRT(KS,i+1,j,I_XYZ) * QFLX_MOMX(KS,i+1,j,XDIR) &
                 - GSQRT(KS,i  ,j,I_XYZ) * QFLX_MOMX(KS,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(KS,i,j  ,I_UVZ) * QFLX_MOMX(KS,i,j  ,YDIR) &
@@ -1686,7 +1686,7 @@ contains
                 + J33G * ( QFLX_MOMX(KS,i,j,ZDIR) ) ) * RFDZ(KS) &
             ) / GSQRT(KS,i,j,I_UYZ)
 
-       MOMX_t_TB(KE,i,j) = MOMX_t_TB(KE,i,j) &
+       MOMX_t_TB(KE,i,j) = &
             - ( ( GSQRT(KE,i+1,j,I_XYZ) * QFLX_MOMX(KE,i+1,j,XDIR) &
                 - GSQRT(KE,i  ,j,I_XYZ) * QFLX_MOMX(KE,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
               + ( GSQRT(KE,i,j  ,I_UVZ) * QFLX_MOMX(KE,i,j  ,YDIR) &
@@ -1718,7 +1718,7 @@ contains
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
 
-    real(RP), intent(inout) :: MOMY_t_TB(KA,IA,JA)
+    real(RP), intent(out) :: MOMY_t_TB(KA,IA,JA)
 
     real(RP), intent(in)  :: QFLX_MOMY(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -1740,7 +1740,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       MOMY_t_TB(k,i,j) = MOMY_t_TB(k,i,j) &
+       MOMY_t_TB(k,i,j) = &
             - ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) &
@@ -1760,7 +1760,7 @@ contains
     !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       MOMY_t_TB(KS,i,j) = MOMY_t_TB(KS,i,j) &
+       MOMY_t_TB(KS,i,j) = &
             - ( ( GSQRT(KS,i  ,j  ,I_UVZ) * QFLX_MOMY(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j  ,I_UVZ) * QFLX_MOMY(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(KS,i  ,j+1,I_XYZ) * QFLX_MOMY(KS,i,j+1,YDIR) &
@@ -1775,7 +1775,7 @@ contains
                 + J33G * ( QFLX_MOMY(KS,i,j,ZDIR) ) ) * RCDZ(KS) &
               ) / GSQRT(KS,i,j,I_XVW)
 
-       MOMY_t_TB(KE,i,j) = MOMY_t_TB(KE,i,j) &
+       MOMY_t_TB(KE,i,j) = &
             - ( ( GSQRT(KE,i  ,j  ,I_UVZ) * QFLX_MOMY(KE,i  ,j,XDIR) &
                 - GSQRT(KE,i-1,j  ,I_UVZ) * QFLX_MOMY(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
               + ( GSQRT(KE,i  ,j+1,I_XYZ) * QFLX_MOMY(KE,i,j+1,YDIR) &
@@ -1807,7 +1807,7 @@ contains
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none
 
-    real(RP), intent(inout) :: phi_t_TB(KA,IA,JA)
+    real(RP), intent(out) :: phi_t_TB(KA,IA,JA)
 
     real(RP), intent(in)  :: QFLX_phi(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
@@ -1828,7 +1828,7 @@ contains
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
-       phi_t_TB(k,i,j) = phi_t_TB(k,i,j) &
+       phi_t_TB(k,i,j) = &
             - ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_phi(k,i  ,j,XDIR) &
                 - GSQRT(k,i-1,j,I_UVZ) * QFLX_phi(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_phi(k,i,j  ,YDIR) &
@@ -1848,7 +1848,7 @@ contains
     !$omp parallel do
     do j = JJS, JJE
     do i = IIS, IIE
-       phi_t_TB(KS,i,j) = phi_t_TB(KS,i,j) &
+       phi_t_TB(KS,i,j) = &
             - ( ( GSQRT(KS,i  ,j,I_UYZ) * QFLX_phi(KS,i  ,j,XDIR) &
                 - GSQRT(KS,i-1,j,I_UVZ) * QFLX_phi(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KS,i,j  ,I_XVZ) * QFLX_phi(KS,i,j  ,YDIR) &
@@ -1863,7 +1863,7 @@ contains
                   + J33G * ( QFLX_phi(KS,i,j,ZDIR) ) ) * RCDZ(KS) &
              ) / GSQRT(KS,i,j,I_XYZ)
 
-       phi_t_TB(KE,i,j) = phi_t_TB(KE,i,j) &
+       phi_t_TB(KE,i,j) = &
             - ( ( GSQRT(KE,i  ,j,I_UYZ) * QFLX_phi(KE,i  ,j,XDIR) &
                 - GSQRT(KE,i-1,j,I_UVZ) * QFLX_phi(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
               + ( GSQRT(KE,i,j  ,I_XVZ) * QFLX_phi(KE,i,j  ,YDIR) &
