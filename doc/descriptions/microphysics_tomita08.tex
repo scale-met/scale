@@ -292,5 +292,40 @@ If it is saturated ($S_{ice} \geq 1$), the deposition rate of water vapor for gr
   P_{GSUB}=-P^{*}_{GSUB,GDEP}.
 \end{equation}
 
+\subsubsection{Melting and freezing}
+When $T \geq T_{0}$, snow particle melts to become rain. The melting rate of snow is described as
+\begin{align}
+  P_{SMLT}&=\frac{2\pi K_{a}(T-T_{0})N_{0S}}{\rho L_{f}} \nonumber \\
+  &\times\left[f_{1S}\frac{\Gamma(2)}{\lambda^{2}_{S}}+f_{2S}c^{1/2}_{S}\left(\frac{\rho_{0}}{\rho}\right)^{1/4}\nu^{-1/2}\frac{\Gamma(\frac{5+d_{S}}{2})}{\lambda^{\frac{5+d_{S}}{2}}_{S}}\right] \nonumber \\
+  &+\frac{c_{l}(T-T_{0})}{L_{f}}(P_{SACW}+P_{SACR}).
+\end{align}
+The last term indicates that the accretions of cloud water and rain promote snow melting. Similarly, the melting rate of graupel is described as
+\begin{align}
+  P_{GMLT}&=\frac{2\pi K_{a}(T-T_{0})N_{0G}}{\rho L_{f}} \nonumber \\
+  &\times\left[f_{1G}\frac{\Gamma(2)}{\lambda^{2}_{G}}+f_{2G}c^{1/2}_{G}\left(\frac{\rho_{0}}{\rho}\right)^{1/4}\nu^{-1/2}\frac{\Gamma(\frac{5+d_{G}}{2})}{\lambda^{\frac{5+d_{G}}{2}}_{G}}\right] \nonumber \\
+  &+\frac{c_{l}(T-T_{0})}{L_{f}}(P_{GACW}+P_{GACR}).
+\end{align}
+
+When $T < T_{0}$, rain particle freezes to become graupel. The freezing rate of rain is described as
+\begin{equation}
+  P_{GFRZ}=20\pi^{2}B^{\prime}N_{0R}\frac{\rho_{w}}{\rho}\frac{\exp[A^{\prime}(T_{0}-T)]-1}{\lambda^{7}_{R}},
+\end{equation}
+where $A^{\prime}=0.66 {\rm \ K^{-1}}$ and $B^{\prime}=100 {\rm \ m^{-3} \ s^{-1}}$.
+
+\subsubsection{Bergeron process}
+When cloud water and cloud ice coexist under the condition of $T < T_{0}$, supercooled cloud water evaporates and diffuses to cloud ice because the saturated vapor pressure over liquid water is higher than that for solid water. This process is called Bergeron process. Through this process, cloud ice particle grows to become precipitating snow particle. Thus, mass conversion from cloud water and cloud ice to snow occurs. Conversion rates of cloud water ($P_{SFW}$) and cloud ice ($P_{SFI}$) are formulated as
+\begin{align}
+  P_{SFW}&=N_{I50}(a_{1}m^{a_{2}}_{I50}+\pi E_{IW}\rho Q_{W}R^2_{I50}U_{I50}), \\
+  P_{SFI}&=Q_{I}/\Delta t_{1},
+\end{align}
+where $m_{I50}$ ($=4.8\times10^{-10} {\rm \ kg}$) and $U_{I50}$ ($=1{\rm \ m/s}$) denotes mass and terminal velocity of ice particle having a radius of 50 ${\rm \mu m}$ ($\equiv R_{I50}$), and $E_{IW}=1$ is collection efficiency of cloud ice for cloud water. The values of $a_{1}$ and $a_{2}$ is determined from a laboratory experiment by \citet{koenig_1971}. $\Delta t_{1}$ is the time during which an ice particle of 40 ${\rm \mu m}$ grows to 50 ${\rm \mu m}$, which is fomulated as
+\begin{equation}
+  \Delta t_{1}=\frac{1}{a_{1}(1-a_{2})}\left[m^{1-a_{2}}_{I50}-m^{1-a_{2}}_{I40}\right],
+\end{equation}
+where $m_{I40}=2.46\times10^{-10} {\rm \ kg}$. $N_{I50}$ is the number concentration of 50 ${\rm \mu m}$ ice particle which is formulated as
+\begin{equation}
+  N_{I50}=q_{I50}/m_{I50}=\frac{Q_{I}\Delta t}{m_{I50}\Delta t_{1}}.
+\end{equation}
+
 \subsubsection{Optional schemes in the SCALE}
 There are some optional schemes which can be applied to the six-class single-moment bulk microphysics. Cloud ice generation can be explicitly solved as the original method of \citet{lin_etal_1983}, instead of the saturation adjustment process. Conversion terms of cloud water to rain ($P_{RAUT}$ and $P_{RACW}$) can be replaced with those used in \citet{khairoutdinov_and_kogan_2000}. Intercept parameters of particle size distribution ($N_{0R}$, $N_{0S}$, $N_{0G}$) can be diagnostically derived by using the equation of \citet{wainwright_etal_2014}, instead of the constant values. Bimodal particle size distribution can be applied to snow following \citet{roh_and_satoh_2007}, instead of the Marshall-Palmer exponential size distribution.
