@@ -296,8 +296,6 @@ contains
              if ( lon1d(i) .ne. UNDEF ) then
                 lon_max = lon1d(i)
                 ie = i
-             else
-                exit
              end if
           end if
        end do
@@ -319,11 +317,21 @@ contains
              if ( lat1d(j) .ne. UNDEF ) then
                 lat_max = lat1d(j)
                 je = j
-             else
-                exit
              end if
           end if
        end do
+
+       ! fill undef
+       dlon = ( lon_max - lon_min ) / ( ie - is )
+       do i = is, ie
+          if ( lon1d(i) == UNDEF ) lon1d(i) = lon_min + dlon * ( i - is )
+       end do
+       dlat = ( lat_max - lat_min ) / ( je - js )
+       do j = js, je
+          if ( lat1d(j) == UNDEF ) lat1d(j) = lat_min + dlat * ( j - js )
+       end do
+
+
 
        if ( ie-is > 10 ) then
           psizex = int( 2.0_RP*sqrt(real(ie-is+1,RP)) )
@@ -338,7 +346,6 @@ contains
 
        allocate( i0(psizex), i1(psizex) )
        allocate( j0(psizey), j1(psizey) )
-
 
        dlon = ( lon_max - lon_min ) / psizex
        dlat = ( lat_max - lat_min ) / psizey

@@ -56,7 +56,7 @@ module mod_cnvlanduse
   real(RP), private :: DOMAIN_DLAT
   real(RP), private, allocatable :: DOMAIN_DXY(:,:)
 
-  real(RP), private, parameter :: d_large = 1e20
+  real(RP), private, parameter :: d_large = 1e20_RP
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -460,7 +460,7 @@ contains
                                   LONH(:,:), LATH(:,:), & ! [IN]
                                   XH(:,:), YH(:,:)      ) ! [OUT]
 
-    limit = TILE_DLAT * RADIUS * 1.5_RP
+    limit = ( TILE_DLAT * RADIUS * 1.5_RP )**2
     !$omp parallel do collapse(2) &
     !$omp private(hit,no_hit_x,lu,p,dmin,min_i,min_j,d)
     do j = 1, JA
@@ -494,7 +494,7 @@ contains
           if ( hit .and. no_hit_x ) exit
        end do
        if ( ( .not. hit ) .and. dmin < limit ) then
-          lu = min( LANDUSE(ii,jj), categ_nmax )
+          lu = min( LANDUSE(min_i,min_j), categ_nmax )
           p = lookuptable(lu)
           PFT_weight(p,i,j) = 1.0_RP
        end if
@@ -658,7 +658,7 @@ contains
                                   LONH(:,:), LATH(:,:), & ! [IN]
                                   XH(:,:), YH(:,:)      ) ! [OUT]
 
-    limit = TILE_DLAT * RADIUS * 1.5_RP
+    limit = ( TILE_DLAT * RADIUS * 1.5_RP )**2
     !$omp parallel do collapse(2) &
     !$omp private(hit,no_hit_x,lu,p,dmin,min_i,min_j,d)
     do j = 1, JA
@@ -692,7 +692,7 @@ contains
           if ( hit .and. no_hit_x ) exit
        end do
        if ( ( .not. hit ) .and. dmin < limit ) then
-          lu = LANDUSE(ii,jj)
+          lu = LANDUSE(min_i,min_j)
           if ( lu /= UNDEF2 ) then
              p = lookuptable( max(0,lu) ) ! -999 to 0
              PFT_weight(p,i,j) = 1.0_RP

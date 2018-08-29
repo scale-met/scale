@@ -90,7 +90,7 @@ contains
 
 
     if ( catalog_fname /= "" ) then
-       LOG_INFO("FILE_TILEDATA_get_tile_info",*) 'Input catalogue file:', trim(catalog_fname)
+       LOG_INFO("FILE_TILEDATA_get_info",*) 'Input catalogue file:', trim(catalog_fname)
 
        call FILE_TILEDATA_read_catalog_file( TILE_nlim,                  & ! [IN]
                                              catalog_fname,              & ! [IN]
@@ -103,23 +103,23 @@ contains
 
     else
        if ( .not. present(single_fname) ) then
-          LOG_ERROR("FILE_TILEDATA_get_tile_info",*) "single_fname is required if catalog_fname is empty"
+          LOG_ERROR("FILE_TILEDATA_get_info",*) "single_fname is required if catalog_fname is empty"
           call PRC_abort
        end if
        if ( .not. present(LATS) ) then
-          LOG_ERROR("FILE_TILEDATA_get_tile_info",*) "LATS is required if catalog_fname is empty"
+          LOG_ERROR("FILE_TILEDATA_get_info",*) "LATS is required if catalog_fname is empty"
           call PRC_abort
        end if
        if ( .not. present(LATE) ) then
-          LOG_ERROR("FILE_TILEDATA_get_tile_info",*) "LATE is required if catalog_fname is empty"
+          LOG_ERROR("FILE_TILEDATA_get_info",*) "LATE is required if catalog_fname is empty"
           call PRC_abort
        end if
        if ( .not. present(LONS) ) then
-          LOG_ERROR("FILE_TILEDATA_get_tile_info",*) "LONS is required if catalog_fname is empty"
+          LOG_ERROR("FILE_TILEDATA_get_info",*) "LONS is required if catalog_fname is empty"
           call PRC_abort
        end if
        if ( .not. present(LONE) ) then
-          LOG_ERROR("FILE_TILEDATA_get_tile_info",*) "LONE is required if catalog_fname is empty"
+          LOG_ERROR("FILE_TILEDATA_get_info",*) "LONE is required if catalog_fname is empty"
           call PRC_abort
        end if
 
@@ -270,31 +270,31 @@ contains
        !$omp parallel do &
        !$omp private(i,j)
        do jj = 1, jsize
-       do ii = 1, isize
-          i = TILE_IS(t) + ii - 1
           j = TILE_JS(t) + jj - 1
           if ( jsh <= j .and. j <= jeh ) then
-             if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_DATA(ii,jj) < min_value_ ) then
-                   DATA(i-ish+1,j-jsh+1) = UNDEF
-                else
-                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+             do ii = 1, isize
+                i = TILE_IS(t) + ii - 1
+                if ( ish <= i .and. i <= ieh ) then
+                   if ( TILE_DATA(ii,jj) < min_value_ ) then
+                      DATA(i-ish+1,j-jsh+1) = UNDEF
+                   else
+                      DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                   end if
+                   LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                   LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
                 end if
-                LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
-             end if
-             i = i - GLOBAL_IA
-             if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_DATA(ii,jj) < min_value_ ) then
-                   DATA(i-ish+1,j-jsh+1) = UNDEF
-                else
-                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                i = i - GLOBAL_IA
+                if ( ish <= i .and. i <= ieh ) then
+                   if ( TILE_DATA(ii,jj) < min_value_ ) then
+                      DATA(i-ish+1,j-jsh+1) = UNDEF
+                   else
+                      DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                   end if
+                   LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                   LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
                 end if
-                LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
-             end if
+             end do
           end if
-       end do
        end do
 
        deallocate( TILE_DATA )
@@ -607,7 +607,7 @@ contains
        TILE_IS(t) = nint( TILE_LONS(t) / TILE_DLON )
        TILE_IE(t) = nint( TILE_LONE(t) / TILE_DLON ) - 1
 
-       do while ( TILE_IS(t) < DOMAIN_IS )
+       do while ( TILE_IE(t) < DOMAIN_IS )
           TILE_IS(t) = TILE_IS(t) + GLOBAL_IA
           TILE_IE(t) = TILE_IE(t) + GLOBAL_IA
        end do

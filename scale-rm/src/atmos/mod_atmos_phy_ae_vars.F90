@@ -503,7 +503,7 @@ contains
           end select
           DIAG_Qe = .true.
        end if
-!OCL XIFLL
+!OCL XFILL
        Qe(:,:,:,:) = ATMOS_PHY_AE_Qe(:,:,:,:)
     end if
 
