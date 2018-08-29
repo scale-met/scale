@@ -119,6 +119,7 @@ contains
     LOG_INFO("ATMOS_PHY_TB_driver_setup",*) 'Setup'
 
     ! initialize
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        MOMZ_t_TB(KS-1,i,j) = 0.0_RP
@@ -230,6 +231,8 @@ contains
 
     real(RP) :: N2(KA,IA,JA)
 
+    real(RP) :: tend(KA,IA,JA)
+
     integer  :: JJS, JJE
     integer  :: IIS, IIE
 
@@ -286,60 +289,79 @@ contains
        JJE = JJS+JBLOCK-1
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
-          call calc_tend_momz( MOMZ_t_TB,   & ! (inout)
+
+          call calc_tend_momz( tend(:,:,:), & ! (out)
                                QFLX_MOMZ,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
-       end do
-       end do
+          !$omp parallel do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+             MOMZ_t_TB(k,i,j) = MOMZ_t_TB(k,i,j) + tend(k,i,j)
+          end do
+          end do
+          end do
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-          call calc_tend_momx( MOMX_t_TB,   & ! (inout)
+          call calc_tend_momx( tend(:,:,:), & ! (out)
                                QFLX_MOMX,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
-       end do
-       end do
+          !$omp parallel do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMX_t_TB(k,i,j) = MOMX_t_TB(k,i,j) + tend(k,i,j)
+          end do
+          end do
+          end do
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-          call calc_tend_momy( MOMY_t_TB,   & ! (inout)
+          call calc_tend_momy( tend(:,:,:), & ! (out)
                                QFLX_MOMY,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
-       end do
-       end do
+          !$omp parallel do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             MOMY_t_TB(k,i,j) = MOMY_t_TB(k,i,j) + tend(k,i,j)
+          end do
+          end do
+          end do
 
-       do JJS = JS, JE, JBLOCK
-       JJE = JJS+JBLOCK-1
-       do IIS = IS, IE, IBLOCK
-       IIE = IIS+IBLOCK-1
-          call calc_tend_phi ( RHOT_t_TB,  & ! (inout)
-                               QFLX_RHOT,  & ! (in)
+          call calc_tend_phi ( tend(:,:,:), & ! (out)
+                               QFLX_RHOT,   & ! (in)
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
-       end do
-       end do
+          !$omp parallel do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             RHOT_t_TB(k,i,j) = RHOT_t_TB(k,i,j) + tend(k,i,j)
+          end do
+          end do
+          end do
 
-       do iq = 1, QA
-          if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
+          do iq = 1, QA
+             if ( iq == I_TKE .or. .not. TRACER_ADVC(iq) ) cycle
 
-          do JJS = JS, JE, JBLOCK
-          JJE = JJS+JBLOCK-1
-          do IIS = IS, IE, IBLOCK
-          IIE = IIS+IBLOCK-1
-             call calc_tend_phi( RHOQ_t_TB(:,:,:,iq),           & ! (inout)
+             call calc_tend_phi( tend(:,:,:),                   & ! (out)
                                  QFLX_RHOQ(:,:,:,:,iq),         & ! (in)
                                  GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                  IIS, IIE, JJS, JJE ) ! (in)
 
+             !$omp parallel do
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+                RHOQ_t_TB(k,i,j,iq) = RHOQ_t_TB(k,i,j,iq) + tend(k,i,j)
+             end do
+             end do
+             end do
+
           end do
-          end do
+
+       end do
        end do
 
 

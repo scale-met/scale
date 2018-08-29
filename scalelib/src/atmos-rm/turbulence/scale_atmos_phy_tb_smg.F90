@@ -247,7 +247,6 @@ contains
        calc_tend_momz     => ATMOS_PHY_TB_calc_tend_momz,     &
        calc_tend_momx     => ATMOS_PHY_TB_calc_tend_momx,     &
        calc_tend_momy     => ATMOS_PHY_TB_calc_tend_momy,     &
-       calc_tend_phi      => ATMOS_PHY_TB_calc_tend_phi,      &
        calc_flux_phi      => ATMOS_PHY_TB_calc_flux_phi
     use scale_atmos_hydrometeor, only: &
        I_QV
