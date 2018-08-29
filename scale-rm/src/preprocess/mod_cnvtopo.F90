@@ -849,6 +849,8 @@ contains
        STATISTICS_horizontal_max
     use scale_topography, only: &
        TOPO_fillhalo
+    use scale_filter, only: &
+       FILTER_hyperdiff
     implicit none
 
     real(RP), intent(inout) :: Zsfc(IA,JA)
@@ -863,7 +865,7 @@ contains
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
-    real(RP) :: TOPO_sign(IA,JA)
+    real(RP), pointer :: TOPO_sign(:,:)
     real(RP) :: flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
@@ -891,6 +893,7 @@ contains
     DYL(:) = FDY(:)
 
     if ( CNVTOPO_smooth_trim_ocean ) then
+       allocate( TOPO_sign(IA,JA) )
        do j = 1, JA
        do i = 1, IA
           TOPO_sign(i,j) = sign( 1.0_RP, Zsfc(i,j) ) &
@@ -898,7 +901,7 @@ contains
        end do
        end do
     else
-       TOPO_sign(i,j) = 1.0_RP
+       TOPO_sign => NULL()
     end if
 
     ! digital filter
@@ -1054,7 +1057,9 @@ contains
        LOG_NEWLINE
        LOG_INFO("CNVTOPO_smooth",*) 'Apply hyperdiffusion.'
 
-       call CNVTOPO_hypdiff( Zsfc(:,:), TOPO_sign(:,:), CNVTOPO_smooth_hypdiff_niter )
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
+                              Zsfc(:,:), 8, CNVTOPO_smooth_hypdiff_niter, &
+                              limiter_sign = TOPO_sign(:,:)            )
 
        do j = 1, JA
        do i = 1, IA-1
@@ -1086,62 +1091,5 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
-
-  subroutine CNVTOPO_hypdiff( Zsfc, TOPO_sign, nite )
-    use scale_topography, only: &
-       TOPO_fillhalo
-    real(RP), intent(inout) :: Zsfc(IA,JA)
-    real(RP), intent(in)    :: TOPO_sign(IA,JA)
-    integer,  intent(in)    :: nite
-
-    real(RP), pointer :: p1(:,:)
-    real(RP), pointer :: p2(:,:)
-    real(RP), target :: work1(IA,JA)
-    real(RP), target :: work2(IA,JA)
-
-    integer :: i, j
-    integer :: ite, n
-
-    ! reduce grid-scale variation
-    do ite = 1, nite
-       call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
-       work2(:,:) = Zsfc(:,:)
-       p1 => work2
-       p2 => work1
-       do n = 1, 4 ! 8th derivative
-!       do n = 1, 2 ! 4th derivative
-          do j = JS, JE
-          do i = IS, IE
-             p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
-                         - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
-          end do
-          end do
-          call TOPO_fillhalo( Zsfc=p2(:,:), FILL_BND=.true. )
-          if ( mod(n,2) == 0 ) then
-             p1 => work2
-             p2 => work1
-          else
-             p1 => work1
-             p2 => work2
-          end if
-       end do
-
-       do j = JS, JE
-       do i = IS, IE
-          Zsfc(i,j) = Zsfc(i,j) - p1(i,j)
-       end do
-       end do
-
-       if ( CNVTOPO_smooth_trim_ocean ) then
-          do j = JS, JE
-          do i = IS, IE
-             Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
-          end do
-          end do
-       end if
-    end do
-
-    return
-  end subroutine CNVTOPO_hypdiff
 
 end module mod_cnvtopo

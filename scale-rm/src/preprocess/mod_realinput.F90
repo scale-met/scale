@@ -153,6 +153,9 @@ module mod_realinput
   character(len=H_SHORT), private :: BOUNDARY_DTYPE             = 'DEFAULT'
   real(DP),               private :: BOUNDARY_UPDATE_DT         = 0.0_DP  ! inteval time of boudary data update [s]
 
+  integer,                private :: FILTER_ORDER               = 4       ! order of the hyper-diffusion (must be even)
+  integer,                private :: FILTER_NITER               = 20      ! times for hyper-diffusion iteration, default off (=-1)
+
   logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
   logical,                private :: SAME_MP_TYPE               = .false. ! microphysics type of the parent model is same as it in this model
 
@@ -187,6 +190,8 @@ contains
        BOUNDARY_TITLE,             &
        BOUNDARY_DTYPE,             &
        BOUNDARY_UPDATE_DT,         &
+       FILTER_ORDER,               &
+       FILTER_NITER,               &
        USE_FILE_DENSITY,           &
        SAME_MP_TYPE
 
@@ -476,6 +481,8 @@ contains
        INTRP_LAND_WATER,           &
        INTRP_LAND_SFC_TEMP,        &
        INTRP_ITER_MAX,             &
+       FILTER_ORDER,               &
+       FILTER_NITER,               &
        SOILWATER_DS2VC,            &
        ELEVATION_COLLECTION,       &
        SERIAL_PROC_READ
@@ -497,6 +504,8 @@ contains
        INTRP_OCEAN_TEMP,           &
        INTRP_OCEAN_SFC_TEMP,       &
        INTRP_ITER_MAX,             &
+       FILTER_ORDER,               &
+       FILTER_NITER,               &
        SERIAL_PROC_READ
 
     character(len=H_LONG) :: FILETYPE_LAND
@@ -1116,6 +1125,8 @@ contains
        INTERP_domain_compatibility, &
        INTERP_factor3d,             &
        INTERP_interp3d
+    use scale_filter, only: &
+       FILTER_hyperdiff
     use mod_atmos_admin, only: &
        ATMOS_PHY_CH_TYPE
     use mod_realinput_scale, only: &
@@ -1168,6 +1179,8 @@ contains
     logical, save :: first = .true.
 
     logical :: same_mptype_ = .false.
+
+    real(RP) :: one(KA,IA,JA)
 
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -1342,6 +1355,11 @@ contains
                           vfact   (:,:,:,:,:),         & ! [IN]
                           W_org   (:,:,:),             & ! [IN]
                           W       (:,:,:)              ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                              W(:,:,:), FILTER_ORDER, FILTER_NITER )
+    end if
+
 
     call INTERP_interp3d( itp_nh,                      & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
@@ -1354,6 +1372,10 @@ contains
                           vfact   (:,:,:,:,:),         & ! [IN]
                           U_org   (:,:,:),             & ! [IN]
                           U       (:,:,:)              ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                              U(:,:,:), FILTER_ORDER, FILTER_NITER )
+    end if
 
     call INTERP_interp3d( itp_nh,                      & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
@@ -1366,6 +1388,10 @@ contains
                           vfact   (:,:,:,:,:),         & ! [IN]
                           V_org   (:,:,:),             & ! [IN]
                           V       (:,:,:)              ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                              V(:,:,:), FILTER_ORDER, FILTER_NITER )
+    end if
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
        do j = 1, JA
@@ -1449,6 +1475,10 @@ contains
                           vfact   (:,:,:,:,:),         & ! [IN]
                           POTT_org(:,:,:),             & ! [IN]
                           POTT    (:,:,:)              ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                              POTT(:,:,:), FILTER_ORDER, FILTER_NITER )
+    end if
 
     do j = 1, JA
     do i = 1, IA
@@ -1469,6 +1499,12 @@ contains
                              vfact   (:,:,:,:,:),         & ! [IN]
                              QTRC_org(:,:,:,iq),          & ! [IN]
                              QTRC    (:,:,:,iq)           ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          one(:,:,:) = 1.0_RP
+          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                 QTRC(:,:,:,iq), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:,:) )
+       end if
 
        do j = 1, JA
        do i = 1, IA
@@ -1491,6 +1527,11 @@ contains
                              DENS_org(:,:,:),             & ! [IN]
                              DENS    (:,:,:),             & ! [OUT]
                              logwgt = .true.              ) ! [IN]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                 DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:,:) )
+       end if
     else
        call INTERP_interp3d( itp_nh,                      & ! [IN]
                              dims(1)+2, dims(2), dims(3), & ! [IN]
@@ -1504,6 +1545,11 @@ contains
                              PRES_org(:,:,:),             & ! [IN]
                              PRES    (:,:,:),             & ! [OUT]
                              logwgt = .true.              ) ! [IN]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                 PRES(:,:,:), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:,:) )
+       end if
 
        QC(:,:,:) = 0.0_RP
        if ( ATMOS_HYDROMETEOR_dry ) then
@@ -2039,6 +2085,8 @@ contains
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_interp2d
+    use scale_filter, only: &
+         FILTER_hyperdiff
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
     use scale_atmos_thermodyn, only: &
@@ -2133,6 +2181,8 @@ contains
 
     real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp, pres
+
+    real(RP) :: one(IA,JA)
 
     integer :: i, j
     integer :: n, nn
@@ -2515,6 +2565,10 @@ contains
                              hfact   (:,:,:),      & ! [IN]
                              tw_org  (:,:),        & ! [IN]
                              tw      (:,:,nn)      ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 tw(:,:,nn), FILTER_ORDER, FILTER_NITER )
+       end if
 
        call INTERP_interp2d( itp_nh,               & ! [IN]
                              odims(1), odims(2),   & ! [IN]
@@ -2524,6 +2578,10 @@ contains
                              hfact   (:,:,:),      & ! [IN]
                              sst_org (:,:),        & ! [IN]
                              sst     (:,:,nn)      ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 sst(:,:,nn), FILTER_ORDER, FILTER_NITER )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2533,6 +2591,12 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_IR ),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_IR ,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          one(:,:) = 1.0_RP
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_direct,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2542,6 +2606,11 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_IR ),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_IR ,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_diffuse,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2551,6 +2620,11 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_NIR,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_direct,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2560,6 +2634,11 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_NIR,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_diffuse,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2569,6 +2648,11 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_VIS,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_direct,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
@@ -2578,6 +2662,11 @@ contains
                              hfact   (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_VIS,nn) ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 albw(:,:,I_R_diffuse,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        call INTERP_interp2d( itp_nh,               & ! [IN]
                              odims(1), odims(2),   & ! [IN]
@@ -2587,6 +2676,11 @@ contains
                              hfact   (:,:,:),      & ! [IN]
                              z0w_org (:,:),        & ! [IN]
                              z0w     (:,:,nn)      ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 z0w(:,:,nn), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+       end if
 
        if ( first ) then
 
@@ -2759,6 +2853,7 @@ contains
          PRC_abort
     use scale_const, only: &
          UNDEF => CONST_UNDEF, &
+         EPS   => CONST_EPS, &
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW, &
          LAPS => CONST_LAPS
@@ -2767,6 +2862,8 @@ contains
          INTERP_factor3d, &
          INTERP_interp2d, &
          INTERP_interp3d
+    use scale_filter, only: &
+         FILTER_hyperdiff
     use scale_topography, only: &
          TOPO_Zsfc
     use mod_land_vars, only: &
@@ -2826,6 +2923,8 @@ contains
     ! elevation collection
     real(RP) :: topo(IA,JA)
     real(RP) :: tdiff
+
+    real(RP) :: one(IA,JA)
 
     integer :: k, i, j
 
@@ -2964,6 +3063,10 @@ contains
                           hfact   (:,:,:),    & ! [IN]
                           lst_org (:,:),      & ! [IN]
                           lst     (:,:)       ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              lst(:,:), FILTER_ORDER, FILTER_NITER )
+    end if
 
     if ( URBAN_do ) then
        call INTERP_interp2d( itp_nh,             & ! [IN]
@@ -2974,6 +3077,10 @@ contains
                              hfact   (:,:,:),    & ! [IN]
                              ust_org (:,:),      & ! [IN]
                              ust     (:,:)       ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 ust(:,:), FILTER_ORDER, FILTER_NITER )
+       end if
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -2984,6 +3091,12 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_direct ,I_R_IR ), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_IR )  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       one(:,:) = 1.0_RP
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_direct,I_R_IR), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -2993,6 +3106,11 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_IR )  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_diffuse,I_R_IR), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -3002,6 +3120,11 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_direct ,I_R_NIR), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_NIR)  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_direct,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -3011,6 +3134,11 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_NIR)  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_diffuse,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -3020,6 +3148,11 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_direct ,I_R_VIS), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_VIS)  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_direct,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
@@ -3029,6 +3162,11 @@ contains
                           hfact   (:,:,:),                   & ! [IN]
                           albg_org(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_VIS)  ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              albg(:,:,I_R_diffuse,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+    end if
 
     call INTERP_interp3d( itp_nh,                       & ! [IN]
                           ldims(1), ldims(2), ldims(3), & ! [IN]
@@ -3052,6 +3190,10 @@ contains
     do k = 1, LKMAX
        call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
     enddo
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( LKMAX, 1, LKMAX, IA, 1, IA, JA, 1, JA, &
+                              tg(:,:,:), FILTER_ORDER, FILTER_NITER )
+    end if
 
 
     ! elevation collection
@@ -3064,10 +3206,14 @@ contains
                              hfact   (:,:,:),    & ! [IN]
                              topo_org(:,:),      & ! [IN]
                              topo    (:,:)       ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                                 topo(:,:), FILTER_ORDER, FILTER_NITER )
+       end if
 
        do j = 1, JA
        do i = 1, IA
-          if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
+          if ( topo(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
              tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
              lst(i,j) = lst(i,j) - tdiff
              do k = 1, LKMAX
@@ -3166,6 +3312,11 @@ contains
        do k = 1, LKMAX-1
           call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
        enddo
+
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( LKMAX, 1, LKMAX-1, IA, 1, IA, JA, 1, JA, &
+                                 strg(:,:,:), FILTER_ORDER, FILTER_NITER )
+       end if
 
        do j = 1, JA
        do i = 1, IA
