@@ -20,6 +20,8 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
+  use scale_spnudge
+  use scale_dft
 
 #ifdef DEBUG
   use scale_debug, only: &
@@ -344,6 +346,10 @@ contains
     call MONITOR_put( MONIT_qflx_south, zero_y(:,:) )
     call MONITOR_put( MONIT_qflx_north, zero_y(:,:) )
 
+    ! setup for spectral nudging
+    call SPNUDGE_setup
+    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm)
+
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
 
@@ -540,7 +546,7 @@ contains
 #endif
 
     real(RP) :: DENS_tq(KA,IA,JA)
-    real(RP) :: diff(KA,IA,JA)
+    real(RP) :: diff(KA,IA,JA), diff2(KA,IA,JA), diff3(KA,IA,JA)
     real(RP) :: damp
     real(RP) :: damp_t_DENS(KA,IA,JA)
     real(RP) :: damp_t_MOMZ(KA,IA,JA)
@@ -1042,6 +1048,7 @@ contains
           enddo
        end if
 
+
        call FILE_HISTORY_query( HIST_damp(3), do_put )
        if ( TwoD ) then
 !OCL XFILL
@@ -1064,6 +1071,90 @@ contains
           enddo
           enddo
        else
+          if( SPNUDGE_uv ) then
+             if( SPNUDGE_uv_divfree ) then
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS-1, JE+1
+                do i = IS-1, IE+1
+                do k = KS, KE
+                   diff3(k,i,j) = MOMY(k,i,j) - DAMP_VELY(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
+                enddo
+                enddo
+                enddo
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff(k,i,j) / ( ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP )
+                enddo
+                enddo
+                enddo
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff3(k,i,j) = diff3(k,i,j) / ( ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP )
+                enddo
+                enddo
+                enddo
+
+                call DFT_g2g_divfree(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2,diff3)
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff2(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
+                enddo
+                enddo
+                enddo
+
+             else
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff(k,i,j) / ( ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP )
+                enddo
+                enddo
+                enddo
+
+                call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2)
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff2(k,i,j) * ( DENS(k,i,j)+DENS(k,i+1,j) ) * 0.5_RP
+                enddo
+                enddo
+                enddo
+
+             endif
+          else
+
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                diff2(k,i,j) = 0
+             enddo
+             enddo
+             enddo
+
+          endif
+
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,damp) &
@@ -1077,7 +1168,8 @@ contains
              damp = - DAMP_alpha_VELX(k,i,j) &
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                    * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+                  - SPNUDGE_uv_alpha * diff2(k,i,j)
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + ( DENS_damp(k,i,j) + DENS_damp(k,i+1,j) ) * MOMX(k,i,j) / ( DENS(k,i,j) + DENS(k,i+1,j) )
@@ -1127,7 +1219,44 @@ contains
           enddo
           enddo
        else
-          !OCL XFILL
+          if( SPNUDGE_uv ) then
+             if( SPNUDGE_uv_divfree ) then
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff3(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
+                enddo
+                enddo
+                enddo
+             else
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff(k,i,j) / ( ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP )
+                enddo
+                enddo
+                enddo
+
+                call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2)
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff2(k,i,j) * ( DENS(k,i,j)+DENS(k,i,j+1) ) * 0.5_RP
+                enddo
+                enddo
+                enddo
+             endif
+          endif
+
+!OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,damp) &
           !$omp shared(JS,JE,IS,IE,KS,KE) &
@@ -1140,7 +1269,8 @@ contains
              damp = - DAMP_alpha_VELY(k,i,j) &
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                    * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+                  - SPNUDGE_uv_alpha * diff2(k,i,j)
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + ( DENS_damp(k,i,j) + DENS_damp(k,i,j+1) ) * MOMY(k,i,j) / ( DENS(k,i,j) + DENS(k,i,j+1) )

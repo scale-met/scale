@@ -15,9 +15,12 @@ module scale_spnudge
   !++ Public procedure
   !
   logical, public :: SPNUDGE_uv = .false.
-  logical, public :: SPNUDGE_uv_divfree = .true.
+  logical, public :: SPNUDGE_uv_divfree = .false.
   integer, public :: SPNUDGE_uv_lm = 3
   integer, public :: SPNUDGE_uv_mm = 3 
+  real(RP), public :: SPNUDGE_uv_tau
+
+  real(RP), public :: SPNUDGE_uv_alpha
 
   public :: SPNUDGE_setup
   
@@ -30,7 +33,8 @@ module scale_spnudge
       SPNUDGE_uv, &
       SPNUDGE_uv_divfree, &
       SPNUDGE_uv_lm, &
-      SPNUDGE_uv_mm
+      SPNUDGE_uv_mm, &
+      SPNUDGE_uv_tau
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -48,6 +52,12 @@ module scale_spnudge
        call PRC_abort
     endif
     LOG_NML(PARAM_SPNUDGE)
+
+    if( SPNUDGE_uv_tau <= 0.0_RP ) then
+        SPNUDGE_uv_alpha = 0
+    else
+        SPNUDGE_uv_alpha = 1.0_RP / SPNUDGE_uv_tau
+    endif
 
   end subroutine SPNUDGE_setup
   
