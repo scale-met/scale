@@ -6,7 +6,7 @@ rm -f dcl.pdf
 
 var__set=(ps u850)
 rangeset=(auto auto)
-time_set=(00000 01440 7200 11520 15840)
+time_set=(00000 01440 07200 11520 15840)
 
 i=0
 for var in ${var__set[@]}
