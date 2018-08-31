@@ -200,12 +200,12 @@ module mod_ocean_vars
                   'seaice temperature',                         &
                   'seaice mass',                                &
                   'ocean surface skin temperature',             &
-                  'ocean surface albedo for IR,  direct ',      &
-                  'ocean surface albedo for IR,  diffuse',      &
-                  'ocean surface albedo for NIR, direct ',      &
-                  'ocean surface albedo for NIR, diffuse',      &
-                  'ocean surface albedo for VIS, direct ',      &
-                  'ocean surface albedo for VIS, diffuse',      &
+                  'ocean surface albedo for IR (direct)',       &
+                  'ocean surface albedo for IR (diffuse)',      &
+                  'ocean surface albedo for NIR (direct)',      &
+                  'ocean surface albedo for NIR (diffuse)',     &
+                  'ocean surface albedo for VIS (direct)',      &
+                  'ocean surface albedo for VIS (diffuse)',     &
                   'ocean surface roughness length (momentum)',  &
                   'ocean surface roughness length (heat)',      &
                   'ocean surface roughness length (vapor)',     &

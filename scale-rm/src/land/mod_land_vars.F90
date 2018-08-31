@@ -186,12 +186,12 @@ module mod_land_vars
                   'moisture at each soil layer',               &
                   'degree of saturation at each soil layer',   &
                   'land surface skin temperature',             &
-                  'land surface albedo for IR,  direct ',      &
-                  'land surface albedo for IR,  diffuse',      &
-                  'land surface albedo for NIR, direct ',      &
-                  'land surface albedo for NIR, diffuse',      &
-                  'land surface albedo for VIS, direct ',      &
-                  'land surface albedo for VIS, diffuse',      &
+                  'land surface albedo for IR (direct)',       &
+                  'land surface albedo for IR (diffuse)',      &
+                  'land surface albedo for NIR (direct)',      &
+                  'land surface albedo for NIR (diffuse)',     &
+                  'land surface albedo for VIS (direct)',      &
+                  'land surface albedo for VIS (diffuse)',     &
                   'land surface w-momentum flux (upward)',     &
                   'land surface u-momentum flux (upward)',     &
                   'land surface v-momentum flux (upward)',     &

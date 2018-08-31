@@ -2575,7 +2575,7 @@ contains
     do iq = 1, BND_QA
        iqa = QS_MP + iq - 1
        call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iqa))//'_BND', &
-                     'Boundary '//trim(TRACER_NAME(iqa)), 'kg/kg' )
+                     trim(TRACER_NAME(iqa))//' in boundary', 'kg/kg' )
     enddo
 
     return
