@@ -63,7 +63,7 @@ module scale_atmos_refstate
   real(RP),               private :: ATMOS_REFSTATE_TEMP_SFC     = 300.0_RP             !< surface temperature           [K]
   real(RP),               private :: ATMOS_REFSTATE_RH           =   0.0_RP             !< surface & environment RH      [%]
   real(RP),               private :: ATMOS_REFSTATE_POTT_UNIFORM = 300.0_RP             !< uniform potential temperature [K]
-  real(DP),               private :: ATMOS_REFSTATE_UPDATE_DT    = 0.0_DP
+  real(DP),               private :: ATMOS_REFSTATE_UPDATE_DT    =  -1.0_DP
 
   real(DP),               private :: last_updated
 
@@ -104,7 +104,6 @@ contains
        ATMOS_REFSTATE_TEMP_SFC,     &
        ATMOS_REFSTATE_RH,           &
        ATMOS_REFSTATE_POTT_UNIFORM, &
-       ATMOS_REFSTATE_UPDATE_FLAG,  &
        ATMOS_REFSTATE_UPDATE_DT
 
     integer :: ierr
@@ -112,6 +111,17 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_REFSTATE_setup",*) 'Setup'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_REFSTATE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("ATMOS_REFSTATE_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_ATMOS_REFSTATE)
 
     allocate( ATMOS_REFSTATE_pres(KA,IA,JA) )
     allocate( ATMOS_REFSTATE_temp(KA,IA,JA) )
@@ -135,68 +145,68 @@ contains
     ATMOS_REFSTATE1D_pott(:) = UNDEF
     ATMOS_REFSTATE1D_qv  (:) = UNDEF
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_REFSTATE,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_REFSTATE_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_REFSTATE. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(PARAM_ATMOS_REFSTATE)
-
     LOG_NEWLINE
+    LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state settings'
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
-       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Input file of reference state : ', trim(ATMOS_REFSTATE_IN_BASENAME)
+       LOG_INFO_CONT(*) 'Input file of reference state  : ', trim(ATMOS_REFSTATE_IN_BASENAME)
     else
-       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Input file of reference state : Nothing, generate internally'
+       LOG_INFO_CONT(*) 'Input file of reference state  : Nothing, generate internally'
     endif
 
     if ( ATMOS_REFSTATE_OUT_BASENAME /= '' ) then
-       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state output? : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
+       LOG_INFO_CONT(*) 'Output file of reference state : ', trim(ATMOS_REFSTATE_OUT_BASENAME)
     else
-       LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference state output? : NO'
+       LOG_INFO_CONT(*) 'Output file of reference state : No output'
     endif
-
 
     ! input or generate reference profile
     if ( ATMOS_REFSTATE_IN_BASENAME /= '' ) then
-       call ATMOS_REFSTATE_read( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
+
+       call ATMOS_REFSTATE_read( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
+                                 CZ(:), FZ(:),                       & ! [IN]
+                                 REAL_CZ(:,:,:), REAL_FZ(:,:,:),     & ! [IN]
+                                 REAL_PHI(:,:,:)                     ) ! [IN]
 
     else
        if ( ATMOS_REFSTATE_TYPE == 'ISA' ) then
 
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : ISA'
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Surface temperature      [K]  : ', ATMOS_REFSTATE_TEMP_SFC
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Surface & environment RH [%]  : ', ATMOS_REFSTATE_RH
-          call ATMOS_REFSTATE_generate_isa( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                            CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
-          ATMOS_REFSTATE_UPDATE_FLAG = .false.
+          LOG_INFO_CONT(*) 'Reference type                 : ISA'
+          LOG_INFO_CONT(*) 'Surface temperature      [K]   : ', ATMOS_REFSTATE_TEMP_SFC
+          LOG_INFO_CONT(*) 'Surface & environment RH [%]   : ', ATMOS_REFSTATE_RH
+
+          call ATMOS_REFSTATE_generate_isa( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
+                                            CZ(:), FZ(:),                       & ! [IN]
+                                            REAL_CZ(:,:,:), REAL_FZ(:,:,:),     & ! [IN]
+                                            REAL_PHI(:,:,:)                     ) ! [IN]
 
        elseif ( ATMOS_REFSTATE_TYPE == 'UNIFORM' ) then
 
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : UNIFORM POTT'
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Potential temperature         : ', ATMOS_REFSTATE_POTT_UNIFORM
-          call ATMOS_REFSTATE_generate_uniform( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                                CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
-          ATMOS_REFSTATE_UPDATE_FLAG = .false.
+          LOG_INFO_CONT(*) 'Reference type                 : UNIFORM POTT'
+          LOG_INFO_CONT(*) 'Potential temperature          : ', ATMOS_REFSTATE_POTT_UNIFORM
+
+          call ATMOS_REFSTATE_generate_uniform( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
+                                                CZ(:), FZ(:),                       & ! [IN]
+                                                REAL_CZ(:,:,:), REAL_FZ(:,:,:),     & ! [IN]
+                                                REAL_PHI(:,:,:)                     ) ! [IN]
 
        elseif ( ATMOS_REFSTATE_TYPE == 'ZERO' ) then
 
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : ZERO'
+          LOG_INFO_CONT(*) 'Reference type                 : ZERO'
+
           call ATMOS_REFSTATE_generate_zero( KA, IA, JA )
-          ATMOS_REFSTATE_UPDATE_FLAG = .false.
 
        elseif ( ATMOS_REFSTATE_TYPE == 'INIT' ) then
 
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Reference type                : Generate from initial data'
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Update state?                 : ', ATMOS_REFSTATE_UPDATE_FLAG
-          LOG_INFO("ATMOS_REFSTATE_setup",*) 'Update interval [sec]         : ', ATMOS_REFSTATE_UPDATE_DT
+          if ( ATMOS_REFSTATE_UPDATE_DT >= 0.0_RP ) then
+             ATMOS_REFSTATE_UPDATE_FLAG = .true.
+          endif
+
+          LOG_INFO_CONT(*) 'Reference type                 : Generate from initial data'
+          LOG_INFO_CONT(*) 'Update state?                  : ', ATMOS_REFSTATE_UPDATE_FLAG
+          LOG_INFO_CONT(*) 'Update interval [sec]          : ', ATMOS_REFSTATE_UPDATE_DT
 
        else
-          LOG_ERROR("ATMOS_REFSTATE_setup",*) 'ATMOS_REFSTATE_TYPE must be "ISA" or "UNIFORM". Check! : ', trim(ATMOS_REFSTATE_TYPE)
+          LOG_ERROR("ATMOS_REFSTATE_setup",*) 'ATMOS_REFSTATE_TYPE must be "ISA", "UNIFORM", "ZERO", or "INIT". Check! : ', trim(ATMOS_REFSTATE_TYPE)
           call PRC_abort
        endif
 
@@ -218,10 +228,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: IA, IS, IE
+    integer,  intent(in) :: JA, JS, JE
     real(RP), intent(in) :: CZ      (  KA)
     real(RP), intent(in) :: FZ      (0:KA)
     real(RP), intent(in) :: REAL_CZ (  KA,IA,JA)
