@@ -804,6 +804,7 @@ contains
     else
        search_limit_ = INTERP_search_limit
     end if
+    search_limit_ = search_limit_ / RADIUS ! m to radian
 
     if ( present(weight_order) ) then
        weight_order_ = weight_order
@@ -833,7 +834,7 @@ contains
        hfact(1) = 1.0_RP
 
        return
-    else if ( drad(1) * RADIUS > search_limit_ ) then
+    else if ( drad(1) > search_limit_ ) then
        hfact(:) = 0.0_RP
        idx_ref(:) = 1 ! dummy
 
@@ -962,6 +963,7 @@ contains
     else
        search_limit_ = INTERP_search_limit
     end if
+    search_limit_ = search_limit_ / RADIUS ! m to radian
 
     if ( present(weight_order) ) then
        weight_order_ = weight_order
@@ -992,7 +994,7 @@ contains
        hfact(1) = 1.0_RP
 
        return
-    else if ( drad(1) * RADIUS > search_limit_ ) then
+    else if ( drad(1) > search_limit_ ) then
        hfact(:) = 0.0_RP
        idx_i(:) = 1 ! dummy
        idx_j(:) = 1 ! dummy

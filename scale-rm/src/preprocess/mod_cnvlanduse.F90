@@ -202,7 +202,7 @@ contains
        end do
        end do
 
-       LOG_INFO("CNVTOPO",*) 'Domain Information'
+       LOG_INFO("CNVLANDUSE",*) 'Domain Information'
        LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
        LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
 
