@@ -56,6 +56,8 @@ module mod_copytopo
   logical,               private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
   logical,               private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
   real(RP),              private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
+  integer,               private :: COPYTOPO_FILTER_ORDER  = 2
+  integer,               private :: COPYTOPO_FILTER_NITER  = 20
 
   !-----------------------------------------------------------------------------
 contains
@@ -84,7 +86,9 @@ contains
        COPYTOPO_tauy,           &
        COPYTOPO_ENTIRE_REGION,  &
        COPYTOPO_LINEAR_H,       &
-       COPYTOPO_EXP_H
+       COPYTOPO_EXP_H,          &
+       COPYTOPO_FILTER_ORDER,   &
+       COPYTOPO_FILTER_NITER
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -196,6 +200,7 @@ contains
 
     copy_is = 1
     copy_ie = IHALO+ibuff
+    !$omp parallel do
     do i = copy_is, copy_ie
        CTRXG(i) = 1.0_RP
     enddo
@@ -203,11 +208,13 @@ contains
     if ( itrans > 0 ) then
        copy_is = IHALO+ibuff+1
        copy_ie = IHALO+ibuff+itrans
+       !$omp parallel do
        do i = copy_is, copy_ie
           CTRXG(i) = (transtotx+bufftotx+FXG(IHALO    )-CXG(i)) / transtotx
        enddo
        copy_is = IAG - IHALO - ibuff - itrans + 1
        copy_ie = IAG - IHALO - ibuff
+       !$omp parallel do
        do i = copy_is, copy_ie
           CTRXG(i) = (transtotx+bufftotx-FXG(IAG-IHALO)+CXG(i)) / transtotx
        enddo
@@ -215,6 +222,7 @@ contains
 
     copy_is = IAG - IHALO - ibuff + 1
     copy_ie = IAG
+    !$omp parallel do
     do i = copy_is, copy_ie
        CTRXG(i) = 1.0_RP
     enddo
@@ -260,6 +268,7 @@ contains
 
     copy_js = 1
     copy_je = JHALO+jbuff
+    !$omp parallel do
     do j = copy_js, copy_je
        CTRYG(j) = 1.0_RP
     enddo
@@ -267,11 +276,13 @@ contains
     if ( jtrans > 0 ) then
        copy_js = JHALO+jbuff+1
        copy_je = JHALO+jbuff+jtrans
+       !$omp parallel do
        do j = copy_js, copy_je
           CTRYG(j) = (transtoty+bufftoty+FYG(JHALO    )-CYG(j)) / transtoty
        enddo
        copy_js = JAG - JHALO - jbuff - jtrans + 1
        copy_je = JAG - JHALO - jbuff
+       !$omp parallel do
        do j = copy_js, copy_je
           CTRYG(j) = (transtoty+bufftoty-FYG(JAG-JHALO)+CYG(j)) / transtoty
        enddo
@@ -279,6 +290,7 @@ contains
 
     copy_js = JAG - JHALO - jbuff + 1
     copy_je = JAG
+    !$omp parallel do
     do j = copy_js, copy_je
        CTRYG(j) = 1.0_RP
     enddo
@@ -288,11 +300,13 @@ contains
 
 
     ! horizontal coordinate (local domaim)
+    !$omp parallel do
     do i = 1, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
        CTRX(i) = CTRXG(ii)
     enddo
 
+    !$omp parallel do
     do j = 1, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
        CTRY(j) = CTRYG(jj)
@@ -349,6 +363,8 @@ contains
        coef_y = 1.0_RP / COPYTOPO_tauy
     endif
 
+    !$omp parallel do &
+    !$omp private(ee1,alpha_x1,alpha_y1)
     do j = 1, JA
     do i = 1, IA
        ee1 = CTRX(i)
@@ -395,6 +411,7 @@ contains
   subroutine COPYTOPO_input_data( &
        TOPO_parent )
     use scale_const, only: &
+       EPS => CONST_EPS, &
        D2R => CONST_D2R
     use scale_file, only: &
        FILE_open, &
@@ -418,6 +435,10 @@ contains
        NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID,      &
        PARENT_IMAX,       &
        PARENT_JMAX
+    use scale_filter, only: &
+       FILTER_hyperdiff
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
     implicit none
 
     real(RP), intent(out) :: TOPO_parent(:,:)
@@ -432,14 +453,18 @@ contains
     integer  :: idx_j(IA,JA,NEST_INTERP_LEVEL)
     real(RP) :: hfact(IA,JA,NEST_INTERP_LEVEL)
 
+    real(RP) :: TOPO_sign(IA,JA)
+
     integer :: IA_org, JA_org     ! number of grids for whole domain
     integer :: tilei, tilej
     integer :: cxs, cxe, cys, cye ! for child domain
     integer :: pxs, pxe, pys, pye ! for parent domain
     integer :: rank
 
+    real(RP) :: ocean_flag
+
     integer :: fid
-    integer :: n
+    integer :: n, i, j
     !---------------------------------------------------------------------------
 
     IA_org = PARENT_IMAX(handle) * NEST_TILE_NUM_X
@@ -502,8 +527,26 @@ contains
                           TOPO_org   (:,:),   & ! [IN]
                           TOPO_parent(:,:)    ) ! [OUT]
 
+    if ( COPYTOPO_FILTER_NITER > 1 ) then
+       !$omp parallel do &
+       !$omp private(ocean_flag)
+       do j = 1, JA
+       do i = 1, IA
+          ocean_flag = ( 0.5_RP + sign( 0.5_RP, LANDUSE_fact_ocean(i,j) - 1.0_RP + EPS ) ) & ! fact_ocean==1
+                     * ( 0.5_RP + sign( 0.5_RP, EPS - abs(TOPO_parent(i,j)) ) )              ! |TOPO| > EPS
+          TOPO_sign(i,j) = sign( 1.0_RP, TOPO_parent(i,j) ) * ( 1.0_RP - ocean_flag )
+       end do
+       end do
+
+       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+                              TOPO_parent(:,:), COPYTOPO_FILTER_ORDER, COPYTOPO_FILTER_NITER, &
+                              limiter_sign = TOPO_sign(:,:) )
+    end if
+
+
     call COMM_vars8( TOPO_parent(:,:), 1 )
     call COMM_wait ( TOPO_parent(:,:), 1 )
+
 
     return
   end subroutine COPYTOPO_input_data
@@ -524,12 +567,14 @@ contains
     !---------------------------------------------------------------------------
 
     if ( COPYTOPO_ENTIRE_REGION ) then
+       !$omp parallel do
        do j = 1, JA
        do i = 1, IA
           TOPO_child(i,j) = TOPO_parent(i,j)
        enddo
        enddo
     else
+       !$omp parallel do
        do j = 1, JA
        do i = 1, IA
           TOPO_child(i,j) = ( 1.0_RP-alpha(i,j) ) * TOPO_child (i,j) &
