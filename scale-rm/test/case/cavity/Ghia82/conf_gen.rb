@@ -211,7 +211,7 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE       = "INIT",
+ ATMOS_REFSTATE_TYPE = "INIT",
 /
 
 &PARAM_ATMOS_BOUNDARY
