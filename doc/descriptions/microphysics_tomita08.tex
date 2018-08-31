@@ -1,5 +1,10 @@
 \subsection{Six-class Single-moment Bulk Scheme (Tomita 2008)}
-Six-class single-moment bulk scheme in the SCALE was developed by \citet{tomita_2008}. This scheme predicts mass exchange among six categories of water substances (water vapor, cloud water, rain, cloud ice, snow, and graupel), which is largely based on the method of \citet{lin_etal_1983}. However, there are some modifications from the original method of \citet{lin_etal_1983}: Both cloud water and cloud ice are generated only by a saturation adjustment process, and wet growth process of graupel is omitted. According to \citet{tomita_2008}, these modifications result in 20\% reduction in computational cost compared to \citet{lin_etal_1983} without significant changes on physical performance. In this subsection, we describe the formulation of microphysical scheme of \citet{tomita_2008}. Mass concentrations of water vapor, cloud water, rain, cloud ice, snow, and graupel are indicated by $q_{v}$, $Q_{W}$, $Q_{R}$, $Q_{I}$, $Q_{S}$, and $Q_{G}$ respectively.
+Six-class single-moment bulk scheme in the SCALE was developed by \citet{tomita_2008}.
+This scheme predicts mass exchange among six categories of water substances (water vapor, cloud water, rain, cloud ice, snow, and graupel), which is largely based on the method of \citet{lin_etal_1983}.
+However, there are some modifications from the original method of \citet{lin_etal_1983}: Both cloud water and cloud ice are generated only by a saturation adjustment process, and wet growth process of graupel is omitted.
+According to \citet{tomita_2008}, these modifications result in 20\% reduction in computational cost compared to \citet{lin_etal_1983} without significant changes on physical performance.
+In this subsection, the formulations of the microphysical scheme of \citet{tomita_2008} are described.
+Mass concentrations of water vapor, cloud water, rain, cloud ice, snow, and graupel are indicated by $q_{v}$, $Q_{W}$, $Q_{R}$, $Q_{I}$, $Q_{S}$, and $Q_{G}$ respectively.
 
 In \citet{tomita_2008}, cloud microphysics processes except for the saturation adjustment process consist of auto-conversion, accretion, evaporation, sublimation, deposition, melting, freezing, and Bergeron process. When $T < T_{0}$ (= 273.15 K), the tendency of each water substance by these processes can be written as follows:
 \begin{align}
@@ -87,7 +92,9 @@ $P_{SFI}$&Growth rate of snow by Bergeron process from cloud ice&$Q_{I} \longrig
 \end{table}
 
 \subsubsection{The saturation adjustment}
-Mass exchange among water vapor, cloud water, and cloud ice is controlled by the saturation adjustment. In the SCALE, the saturation adjustment is executed after the aforementioned conversion processes of the microphysics. To calculate the adjustment process, we define saturated mass concentration of water vapor as follows:
+Mass exchange among water vapor, cloud water, and cloud ice is controlled by the saturation adjustment.
+In the SCALE, the saturation adjustment is calculated after the aforementioned conversion processes of the microphysics.
+To calculate the adjustment process, saturated mass concentration of water vapor is defined as follows:
 \begin{equation}
   q^{*}_{v}(T) = q^{*}_{vl}(T)+[1-\alpha (T)]q^{*}_{vi}(T)\label{eq:satuqv},
 \end{equation}
@@ -99,7 +106,9 @@ where $q^{*}_{vl}(T)$ is saturated mass concentration of water vapor against liq
   \alpha (T) = 0, & {\rm \ for\ } T \leq {\rm \ 233.15 \ K}.
 \end{cases}
 \end{align}
-If it is supersaturated, water vapor is converted into cloud water and cloud ice. If it is unsaturated, cloud water and cloud ice are converted into water vapor. As a conserved quantity for the adjustment process, we also define moist internal energy as follows:
+If it is supersaturated, water vapor is converted into cloud water and cloud ice.
+If it is unsaturated, cloud water and cloud ice are converted into water vapor.
+As a conserved quantity for the adjustment process, the moist internal energy is also defined as follows:
 \begin{align}
   U_{0}&=[q_{d}c_{vd}+q_{v}c_{vv}+(Q_{W}+Q_{R})c_{l}+(Q_{I}+Q_{S}+Q_{G})c_{s}]T \nonumber \\ 
   &+q_{v}L_{v}-(Q_{I}+Q_{S}+Q_{G})L_{f},
@@ -110,12 +119,14 @@ where $L_{v}$ is the latent heat between water vapor and liquid water, $L_{f}$ i
 \end{equation}
 does not change through the saturation adjustment.
 
-First, we assume that all of cloud water $Q_{W}$ and cloud ice $Q_{I}$ evaporate. In this case, the mass concentration of water vapor becomes equal to $q_{sum}$ and the temperature decreases due to the evaporation. The moist internal energy can be written as
+First, it is assumed that all of the cloud water $Q_{W}$ and cloud ice $Q_{I}$ evaporate.
+In this case, the mass concentration of water vapor becomes equal to $q_{sum}$ and the temperature decreases due to the evaporation.
+The moist internal energy can be written as
 \begin{align}
   U_{1}&=[q_{d}c_{vd}+q_{sum}c_{vv}+Q_{R}c_{l}+(Q_{S}+Q_{G})c_{s}]T_{1} \nonumber \\ 
   &+q_{sum}L_{v}-(Q_{S}+Q_{G})L_{f}.
 \end{align}
-Since the moist internal energy does not change through the saturation adjustment, we can get the new temperature value $T_{1}$ easily by solving $U_{0}=U_{1}$. Then, if $q_{sum}$ is less than saturated mass concentration of water vapor at this temperature (i.e. $q_{sum}<q^{*}_{v} (T_{1})$), no saturation occurs and the new values of water vapor $q^{\prime}_{v}$, cloud water $Q^{\prime}_{W}$, cloud ice $Q^{\prime}_{I}$, and temperature $T^{\prime}$ are determined as
+Since the moist internal energy does not change through the saturation adjustment, we can obtain the new temperature value $T_{1}$ easily by solving $U_{0}=U_{1}$. Then, if $q_{sum}$ is less than saturated mass concentration of water vapor at this temperature (i.e. $q_{sum}<q^{*}_{v} (T_{1})$), no saturation occurs and the new values of water vapor $q^{\prime}_{v}$, cloud water $Q^{\prime}_{W}$, cloud ice $Q^{\prime}_{I}$, and temperature $T^{\prime}$ are determined as
 \begin{align}
 \begin{cases}
   q^{\prime}_{v} &= q_{sum}, \\
@@ -143,7 +154,9 @@ Eqs. (\ref{eq:satuqv}) and (\ref{eq:newu}-\ref{eq:newqi}) are solved numerically
 \end{align}
 
 \subsubsection{Fundamental characteristics of precipitation particles}
-In the reminder of this subsection, we show the formulation of all conversion terms listed in Table \ref{table-tomita08-1}. Before that, however, it is necessary to clarify assumptions about the characteristics of precipitation particles (rain, snow, and graupel). In \citet{tomita_2008}, it is assumed that seizes of precipitation particles obey the Marshall-Palmer exponential size distribution:
+In the reminder of this subsection, the formulations of all conversion terms listed in Table \ref{table-tomita08-1} are shown.
+Before that, however, it is necessary to clarify assumptions about the characteristics of precipitation particles (rain, snow, and graupel).
+In \citet{tomita_2008}, it is assumed that seizes of precipitation particles obey the Marshall-Palmer exponential size distribution:
 \begin{equation}
   n_{[R,S,G]}(D) = N_{0[R,S,G]}\exp(-\lambda_{[R,S,G]}D)\label{eq:size_dist},
 \end{equation}
@@ -222,7 +235,10 @@ where $E_{RW}$, $E_{SW}$, $E_{GW}$, $E_{RI}$, $E_{SI}$, and $E_{GI}$ are collect
 \begin{equation}
   E_{SI}=\exp[\gamma_{SACI}(T-T_{0})],
 \end{equation}
-where $\gamma_{SACI}$ is set to 0.025. When the accretion of cloud ice by rain occurs, rain freezes to become snow or graupel. Thus, we should also consider the conversion term from rain to these particles ($P_{IACR}$) which is derived as
+where $\gamma_{SACI}$ is set to 0.025.
+When the accretion of cloud ice by rain occurs, rain freezes to become snow or graupel.
+Thus, the conversion term from rain to these particles ($P_{IACR}$) should be considered.
+It is derived as
 \begin{align}
   P_{IACR}&=\frac{1}{\rho}\int_{0}^{\infty}N_{I}E_{RI}\frac{\pi}{4}D^{2}v_{tR}(D)m_{R}(D)n_{R}(D)dD \nonumber \\
   &=\frac{\pi a_{R}E_{RI}Q_{I}N_{0R}c_{R}\Gamma(6+d_{R})}{4M_{I}\lambda^{6+d_{R}}_{R}}\left(\frac{\rho_{0}}{\rho}\right)^{1/2},
@@ -243,7 +259,10 @@ where $E_{SR}$, $E_{GR}$, and $E_{GS}$ are collection efficiency of each accreti
 \begin{equation}
   E_{GS}=\min(1,\exp[\gamma_{GACS}(T-T_{0})]),
 \end{equation}
-where $\gamma_{GACS}$ is set to 0.09. When the accretion of rain by snow occurs under the condition of $Q_{R} > 10^{-4}$ kg/kg or $Q_{S} > 10^{-4}$ kg/kg, graupel particle is generated. Thus, we should also consider the conversion term from snow to graupel ($P_{RACS}$) which can be written as
+where $\gamma_{GACS}$ is set to 0.09.
+When the accretion of rain by snow occurs under the condition of $Q_{R} > 10^{-4}$ kg/kg or $Q_{S} > 10^{-4}$ kg/kg, graupel particle is generated.
+Thus, the conversion term from snow to graupel ($P_{RACS}$) should be also considered.
+It can be written as
 \begin{align}
   P_{RACS}&=\frac{\pi a_{S}|V_{TR}-V_{TS}|E_{SR}N_{0R}N_{0S}}{4\rho} \nonumber \\
   &\times\left[\frac{\Gamma(b_{S}+1)\Gamma(3)}{\lambda^{b_{S}+1}_{S}\lambda^{3}_{R}}+2\frac{\Gamma(b_{S}+2)\Gamma(2)}{\lambda^{b_{S}+2}_{S}\lambda^{2}_{R}}+\frac{\Gamma(b_{S}+3)\Gamma(1)}{\lambda^{b_{S}+3}_{S}\lambda_{R}}\right].
@@ -318,7 +337,7 @@ When cloud water and cloud ice coexist under the condition of $T < T_{0}$, super
   P_{SFW}&=N_{I50}(a_{1}m^{a_{2}}_{I50}+\pi E_{IW}\rho Q_{W}R^2_{I50}U_{I50}), \\
   P_{SFI}&=Q_{I}/\Delta t_{1},
 \end{align}
-where $m_{I50}$ ($=4.8\times10^{-10} {\rm \ kg}$) and $U_{I50}$ ($=1{\rm \ m/s}$) denotes mass and terminal velocity of ice particle having a radius of 50 ${\rm \mu m}$ ($\equiv R_{I50}$), and $E_{IW}=1$ is collection efficiency of cloud ice for cloud water. The values of $a_{1}$ and $a_{2}$ is determined from a laboratory experiment by \citet{koenig_1971}. $\Delta t_{1}$ is the time during which an ice particle of 40 ${\rm \mu m}$ grows to 50 ${\rm \mu m}$, which is fomulated as
+where $m_{I50}$ ($=4.8\times10^{-10} {\rm \ kg}$) and $U_{I50}$ ($=1{\rm \ m/s}$) denotes mass and terminal velocity of ice particle having a radius of 50 ${\rm \mu m}$ ($\equiv R_{I50}$), and $E_{IW}=1$ is collection efficiency of cloud ice for cloud water. The values of $a_{1}$ and $a_{2}$ is determined from a laboratory experiment by \citet{koenig_1971}. $\Delta t_{1}$ is the time during which an ice particle of 40 ${\rm \mu m}$ grows to 50 ${\rm \mu m}$, which is formulated as
 \begin{equation}
   \Delta t_{1}=\frac{1}{a_{1}(1-a_{2})}\left[m^{1-a_{2}}_{I50}-m^{1-a_{2}}_{I40}\right],
 \end{equation}
