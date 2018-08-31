@@ -470,6 +470,7 @@ contains
     real(RP) :: RHOD(KA)                                   !< dry density
     real(RP) :: QV_resd(KA)                                !< residual vapor
 
+    real(RP) :: R_convflag(IA,JA)
     ! ------
 
     LOG_PROGRESS(*) 'atmosphere / physics / cumulus / KF'
@@ -735,7 +736,8 @@ contains
     call PROF_rapend('CP_kf', 3)
 
     call FILE_HISTORY_in( lifetime(:,:),            'KF_LIFETIME', 'lifetime of KF scheme', 's' )
-    call FILE_HISTORY_in( real(I_convflag(:,:),RP), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
+    R_convflag(:,:) = real(I_convflag(:,:),RP)
+    call FILE_HISTORY_in( R_convflag(:,:), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
 
     return
   end subroutine ATMOS_PHY_CP_kf_tendency

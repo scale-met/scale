@@ -887,9 +887,9 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_tendency_tracer( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, QTRC, SFLX_Q, Kh, &
-       CZ, FZ, DT, name,       &
-       RHOQ_t                  )
+       DENS, QTRC, SFLX_Q, Kh,  &
+       CZ, FZ, DT, TRACER_NAME, &
+       RHOQ_t                   )
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     use scale_file_history, only: &
@@ -902,10 +902,10 @@ contains
     real(RP),         intent(in) :: QTRC  (KA,IA,JA) !> tracers
     real(RP),         intent(in) :: SFLX_Q(   IA,JA) !> surface flux
     real(RP),         intent(in) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
-    real(RP),         intent(in) :: CZ (  KA,IA,JA) !> z at the full level
-    real(RP),         intent(in) :: FZ (0:KA,IA,JA) !> z at the half level
-    real(DP),         intent(in) :: DT              !> time step
-    character(len=*), intent(in) :: name            !> name of tracer (for history output)
+    real(RP),         intent(in) :: CZ (  KA,IA,JA)  !> z at the full level
+    real(RP),         intent(in) :: FZ (0:KA,IA,JA)  !> z at the half level
+    real(DP),         intent(in) :: DT               !> time step
+    character(len=*), intent(in) :: TRACER_NAME      !> name of tracer (for history output)
 
     real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
 
@@ -983,7 +983,7 @@ contains
     end do
     end do
 
-    call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(name)//'_MYNN', 'Z FLUX of DENS * '//trim(name)//' (MYNN)', 'kg/m2/s', fill_halo=.true.)
+    call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(TRACER_NAME)//'_MYNN', 'Z FLUX of DENS * '//trim(TRACER_NAME)//' (MYNN)', 'kg/m2/s', fill_halo=.true.)
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency_tracer

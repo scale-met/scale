@@ -374,12 +374,12 @@ contains
        call FILE_HISTORY_in( flux_dn     (:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net    (:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', fill_halo=.true. )
 
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ), 'SFLX_IR_dn_dir',  'SFC downward radiation flux (direct ,IR )', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ), 'SFLX_IR_dn_dif',  'SFC downward radiation flux (diffuse,IR )', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR), 'SFLX_NIR_dn_dir', 'SFC downward radiation flux (direct ,NIR)', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR), 'SFLX_NIR_dn_dif', 'SFC downward radiation flux (diffuse,NIR)', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS), 'SFLX_VIS_dn_dir', 'SFC downward radiation flux (direct ,VIS)', 'W/m2', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS), 'SFLX_VIS_dn_dif', 'SFC downward radiation flux (diffuse,VIS)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ), 'SFLX_IR_dn_dir',  'SFC downward radiation flux (direct; IR)',   'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ), 'SFLX_IR_dn_dif',  'SFC downward radiation flux (diffuse; IR)',  'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR), 'SFLX_NIR_dn_dir', 'SFC downward radiation flux (direct; NIR)',  'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR), 'SFLX_NIR_dn_dif', 'SFC downward radiation flux (diffuse; NIR)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS), 'SFLX_VIS_dn_dir', 'SFC downward radiation flux (direct; VIS)',  'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS), 'SFLX_VIS_dn_dif', 'SFC downward radiation flux (diffuse; VIS)', 'W/m2', fill_halo=.true. )
 
        call FILE_HISTORY_in( TEMP_t   (:,:,:,I_LW), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)',  'K/day',     fill_halo=.true. )
        call FILE_HISTORY_in( TEMP_t   (:,:,:,I_SW), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)',  'K/day',     fill_halo=.true. )

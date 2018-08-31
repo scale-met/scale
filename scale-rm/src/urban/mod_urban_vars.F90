@@ -210,12 +210,12 @@ module mod_urban_vars
                   'urban rain strage on road',                             &
                   'urban runoff ',                                         &
                   'urban grid average of temperature',                     &
-                  'urban grid average of albedo for IR,  direct ',         &
-                  'urban grid average of albedo for IR,  diffuse',         &
-                  'urban grid average of albedo for NIR, direct ',         &
-                  'urban grid average of albedo for NIR, diffuse',         &
-                  'urban grid average of albedo for VIS, direct ',         &
-                  'urban grid average of albedo for VIS, diffuse',         &
+                  'urban grid average of albedo for IR (direct)',          &
+                  'urban grid average of albedo for IR (diffuse)',         &
+                  'urban grid average of albedo for NIR (direct)',         &
+                  'urban grid average of albedo for NIR (diffuse)',        &
+                  'urban grid average of albedo for VIS (direct)',         &
+                  'urban grid average of albedo for VIS (diffuse)',        &
                   'urban grid average of w-momentum flux',                 &
                   'urban grid average of u-momentum flux',                 &
                   'urban grid average of v-momentum flux',                 &
