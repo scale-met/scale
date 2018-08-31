@@ -153,7 +153,7 @@ module mod_realinput
   character(len=H_SHORT), private :: BOUNDARY_DTYPE             = 'DEFAULT'
   real(DP),               private :: BOUNDARY_UPDATE_DT         = 0.0_DP  ! inteval time of boudary data update [s]
 
-  integer,                private :: FILTER_ORDER               = 4       ! order of the hyper-diffusion (must be even)
+  integer,                private :: FILTER_ORDER               = 2       ! order of the hyper-diffusion (must be even)
   integer,                private :: FILTER_NITER               = 20      ! times for hyper-diffusion iteration, default off (=-1)
 
   logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
@@ -2924,7 +2924,8 @@ contains
     real(RP) :: topo(IA,JA)
     real(RP) :: tdiff
 
-    real(RP) :: one(IA,JA)
+    real(RP) :: one2d(IA,JA)
+    real(RP) :: one3d(KA,IA,JA)
 
     integer :: k, i, j
 
@@ -3092,10 +3093,10 @@ contains
                           albg_org(:,:,I_R_direct ,I_R_IR ), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_IR )  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       one(:,:) = 1.0_RP
+       one2d(:,:) = 1.0_RP
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_direct,I_R_IR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3109,7 +3110,7 @@ contains
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_diffuse,I_R_IR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3123,7 +3124,7 @@ contains
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_direct,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3137,7 +3138,7 @@ contains
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_diffuse,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3151,7 +3152,7 @@ contains
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_direct,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3165,7 +3166,7 @@ contains
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
                               albg(:,:,I_R_diffuse,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one(:,:) )
+                              limiter_sign = one2d(:,:) )
     end if
 
     call INTERP_interp3d( itp_nh,                       & ! [IN]
@@ -3314,8 +3315,10 @@ contains
        enddo
 
        if ( FILTER_NITER > 0 ) then
+          one3d(:,:,:) = 1.0_RP
           call FILTER_hyperdiff( LKMAX, 1, LKMAX-1, IA, 1, IA, JA, 1, JA, &
-                                 strg(:,:,:), FILTER_ORDER, FILTER_NITER )
+                                 strg(:,:,:), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one3d(:,:,:) )
        end if
 
        do j = 1, JA
