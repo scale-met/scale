@@ -110,7 +110,7 @@ contains
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
-    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
+    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .false.
 
     namelist / PARAM_ATMOS_PHY_TB_SMG / &
        ATMOS_PHY_TB_SMG_Cs,             &
@@ -641,7 +641,7 @@ contains
 #endif
              qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
                   - 2.0_RP * nu(k,i,j) &
-                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
                   + twoOverThree * tke(k,i,j) * tke_fact )
           enddo
           enddo
@@ -823,7 +823,7 @@ contains
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * TKE(k,i,j) * tke_fact )
        enddo
        enddo
@@ -1004,7 +1004,7 @@ contains
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * TKE(k,i,j) * tke_fact)
        enddo
        enddo
