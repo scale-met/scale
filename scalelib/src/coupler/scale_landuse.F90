@@ -250,8 +250,6 @@ contains
     enddo
     enddo
 
-    call LANDUSE_write
-
     return
   end subroutine LANDUSE_calc_fact
 
