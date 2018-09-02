@@ -300,13 +300,15 @@ contains
 
 
     ! horizontal coordinate (local domaim)
-    !$omp parallel do
+    !$omp parallel do &
+    !$omp private(ii)
     do i = 1, IA
        ii = i + PRC_2Drank(PRC_myrank,1) * IMAX
        CTRX(i) = CTRXG(ii)
     enddo
 
-    !$omp parallel do
+    !$omp parallel do &
+    !$omp private(jj)
     do j = 1, JA
        jj = j + PRC_2Drank(PRC_myrank,2) * JMAX
        CTRY(j) = CTRYG(jj)
