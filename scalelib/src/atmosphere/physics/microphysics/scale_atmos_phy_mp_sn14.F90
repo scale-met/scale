@@ -1898,10 +1898,16 @@ contains
     CVtot_t(:,:,:)  = 0.0_RP
 
     ! intermidiate variable
-    cpa(:,:,:)  = CPtot0(:,:,:)
-    cva(:,:,:)  = CVtot0(:,:,:)
-    pres(:,:,:) = PRES0(:,:,:)
-    temp(:,:,:) = TEMP0(:,:,:)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       cpa (k,i,j) = CPtot0(k,i,j)
+       cva (k,i,j) = CVtot0(k,i,j)
+       pres(k,i,j) = PRES0 (k,i,j)
+       temp(k,i,j) = TEMP0 (k,i,j)
+    enddo
+    enddo
+    enddo
 
     !============================================================================
     !

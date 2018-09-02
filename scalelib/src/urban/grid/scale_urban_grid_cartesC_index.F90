@@ -33,15 +33,17 @@ module scale_urban_grid_cartesC_index
   integer, public :: UIMAX = -1 ! # of computational cells: x for urban
   integer, public :: UJMAX = -1 ! # of computational cells: y for urban
 
-  integer, public :: UKA       ! # of total grids: z for urban, local
-  integer, public :: UKS       ! start point of inner domain: z for urban, local
-  integer, public :: UKE       ! end   point of inner domain: z for urban, local
-  integer, public :: UIA       ! # of total grids: x for urban, local
-  integer, public :: UIS       ! start point of inner domain: x for urban, local
-  integer, public :: UIE       ! end   point of inner domain: x for urban, local
-  integer, public :: UJA       ! # of total grids: Y for urban, local
-  integer, public :: UJS       ! start point of inner domain: y for urban, local
-  integer, public :: UJE       ! end   point of inner domain: y for urban, local
+  integer, public :: UKA   = -1 ! # of total grids: z for urban, local
+  integer, public :: UKS        ! start point of inner domain: z for urban, local
+  integer, public :: UKE        ! end   point of inner domain: z for urban, local
+
+  integer, public :: UIA        ! # of total grids: x for urban, local
+  integer, public :: UIS        ! start point of inner domain: x for urban, local
+  integer, public :: UIE        ! end   point of inner domain: x for urban, local
+
+  integer, public :: UJA        ! # of total grids: Y for urban, local
+  integer, public :: UJS        ! start point of inner domain: y for urban, local
+  integer, public :: UJE        ! end   point of inner domain: y for urban, local
 
   !-----------------------------------------------------------------------------
   !
