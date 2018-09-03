@@ -146,7 +146,7 @@ contains
 
     LOG_PROGRESS(*) 'atmosphere / physics / surface flux / const'
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        ATM_Uabs(i,j) = min( ATMOS_PHY_SF_U_maxM, max( ATMOS_PHY_SF_U_minM, &
@@ -155,14 +155,14 @@ contains
     enddo
 
     if   ( ATMOS_PHY_SF_FLG_MOM_FLUX == 0 ) then ! Bulk coefficient is constant
-       !omp parallel do
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           Cm(i,j) = ATMOS_PHY_SF_Const_Cm
        enddo
        enddo
     elseif( ATMOS_PHY_SF_FLG_MOM_FLUX == 1 ) then ! Friction velocity is constant
-       !omp parallel do
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           Cm(i,j) = ( ATMOS_PHY_SF_Const_Ustar / ATM_Uabs(i,j) )**2
@@ -173,7 +173,7 @@ contains
 
     !-----< momentum >-----
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_MW(i,j) = -Cm(i,j) * ATM_Uabs(i,j) * SFC_DENS(i,j) * ATM_W(i,j)
@@ -190,7 +190,7 @@ contains
        modulation = 1.0_RP
     endif
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_SH(i,j) = ATMOS_PHY_SF_Const_SH * modulation
@@ -204,7 +204,7 @@ contains
          ATM_TEMP(:,:), & ! [IN]
          LHV(:,:)       ) ! [OUT]
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_QV(i,j) = SFLX_LH(i,j) / LHV(i,j)
@@ -213,7 +213,7 @@ contains
 
     !-----< U10, V10 >-----
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        R10 = 10.0_RP / ATM_Z1(i,j)
