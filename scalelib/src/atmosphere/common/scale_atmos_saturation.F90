@@ -351,7 +351,7 @@ contains
     do k = KS, KE
        call ATMOS_SATURATION_alpha_0D( temp(k,i,j), & ! [IN]
                                        alpha(k,i,j) ) ! [OUT]
-                                       
+
     enddo
     enddo
     enddo
@@ -421,8 +421,6 @@ contains
 
     real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
 
-    real(RP) :: alpha, psatl, psati
-
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -453,8 +451,6 @@ contains
 
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
-
-    real(RP) :: alpha, psatl, psati
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -528,7 +524,7 @@ contains
     real(RP), intent(in)  :: temp(IA,JA) !< temperature               [K]
     real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
 
-    integer  :: k, i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
@@ -632,7 +628,7 @@ contains
     real(RP), intent(in)  :: temp(IA,JA) !< temperature               [K]
     real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
 
-    integer  :: k, i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
@@ -1062,9 +1058,6 @@ contains
     real(RP), intent(in)  :: dens(KA,IA,JA)
 
     real(RP), intent(out) :: qsat(KA,IA,JA)
-
-    real(RP) :: alpha, psatl, psati
-    real(RP) :: psat
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -2059,12 +2052,12 @@ contains
     real(RP) :: QV0, QC0, QI0
     real(RP) :: CVtot0
     real(RP) :: alpha
-    real(RP) :: qsat, qsatl, qsati
+    real(RP) :: qsat
     real(RP) :: Emoist ! moist internal energy
 
     ! d(X)/dT
     real(RP) :: dalpha_dT
-    real(RP) :: dqsat_dT, dqsatl_dT, dqsati_dT
+    real(RP) :: dqsat_dT
     real(RP) :: dqc_dT, dqi_dT
     real(RP) :: dCVtot_dT
     real(RP) :: dEmoist_dT
@@ -2238,7 +2231,7 @@ contains
                      - Rvap * log( psat/ PSAT0 ) &
                      + LHV0 / TEM00 &
                      ) * dqsat_dT
-          
+
           call ATMOS_HYDROMETEOR_entr( TEMP_ite, PRES,       & ! [IN]
                                        QV_ite, 0.0_RP, Qdry, & ! [IN] ! QI = 0
                                        Rtot_ite, CPtot_ite,  & ! [IN]

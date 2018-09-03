@@ -89,9 +89,6 @@ contains
     logical,  intent(in) :: OCEAN_do
     logical,  intent(in) :: LAND_do
     logical,  intent(in) :: URBAN_do
-
-    integer :: ierr
-    integer :: n
     !---------------------------------------------------------------------------
 
 

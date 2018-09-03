@@ -184,7 +184,6 @@ contains
 
     logical :: local_stat
     logical :: sendbuff
-    logical :: force_stop
     !---------------------------------------------------------------------------
 
     sendcounts  = 1

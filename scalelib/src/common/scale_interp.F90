@@ -509,7 +509,7 @@ contains
     real(RP) :: dlon, dlat
     integer  :: idx_ref(npoints)
 
-    integer  :: k, i, j, ii, jj, n
+    integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_fact',3)
@@ -795,7 +795,7 @@ contains
 
     real(RP) :: lon0, lon1, lat0, lat1
     real(RP) :: dlon_sl, dlat_sl
-    integer  :: i, j, n
+    integer  :: i, n
     integer  :: ii, jj, ii0, jj0
     !---------------------------------------------------------------------------
 
@@ -1150,7 +1150,7 @@ contains
 
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
-    
+
     real(RP) :: dradian
 
     if ( lon_ref == UNDEF ) return
@@ -1190,7 +1190,7 @@ contains
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
     integer,  intent(inout) :: idx_j(npoints)
-    
+
     real(RP) :: dradian
 
     if ( lon_ref == UNDEF ) return

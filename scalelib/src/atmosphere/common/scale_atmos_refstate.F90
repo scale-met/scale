@@ -561,15 +561,15 @@ contains
     use scale_interp_vert, only: &
        INTERP_VERT_xi2z
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: DENS (KA,IA,JA)
-    real(RP), intent(in) :: POTT (KA,IA,JA)
-    real(RP), intent(in) :: TEMP (KA,IA,JA)
-    real(RP), intent(in) :: PRES (KA,IA,JA)
-    real(RP), intent(in) :: QV   (KA,IA,JA)
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: IA, IS, IE
+    integer,  intent(in) :: JA, JS, JE
+    real(RP), intent(in) :: DENS    (KA,IA,JA)
+    real(RP), intent(in) :: POTT    (KA,IA,JA)
+    real(RP), intent(in) :: TEMP    (KA,IA,JA)
+    real(RP), intent(in) :: PRES    (KA,IA,JA)
+    real(RP), intent(in) :: QV      (KA,IA,JA)
     real(RP), intent(in) :: CZ      (  KA)
     real(RP), intent(in) :: FZ      (0:KA)
     real(RP), intent(in) :: FDZ     (  KA-1)
@@ -579,13 +579,12 @@ contains
     real(RP), intent(in) :: REAL_PHI(  KA,IA,JA)
     real(RP), intent(in) :: AREA    (     IA,JA)
     real(DP), intent(in) :: nowsec
-
     logical, intent(in), optional :: force
 
     real(RP) :: work(KA,IA,JA)
+    logical  :: force_
 
-    logical :: force_
-    integer  :: k, i, j
+    integer  :: k
     !---------------------------------------------------------------------------
 
     if ( present(force) ) then

@@ -65,7 +65,7 @@ contains
 
     return
   end subroutine ATMOS_ADIABAT_setup
-  
+
   !-----------------------------------------------------------------------------
   !> Calc CAPE and CIN
   !> Type of parcel method: Pseudo-adiabatic ascend from lowermost layer of the model
@@ -108,18 +108,10 @@ contains
     real(RP), intent(out) :: QV_p  (KA)
     logical,  intent(out) :: converged
 
-
-    real(RP) :: QL_p   (KA)
-    real(RP) :: QI_p   (KA)
-    real(RP) :: QC_p   (KA)
     real(RP) :: BUOY_pf(KA)
-    real(RP) :: QSAT_p (KA)
+    integer  :: kLCL, kLFC, kLNB
 
-    integer :: kLCL
-    integer :: kLFC
-    integer :: kLNB
-
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     ! lift parcel
@@ -237,7 +229,7 @@ contains
 
     real(RP), pointer :: P_DENS(:,:,:), P_TEMP(:,:,:), P_BUOY(:,:,:), P_QV(:,:,:)
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     error = .false.
@@ -262,7 +254,7 @@ contains
     else
        allocate( P_QV(KA,IA,JA) )
     end if
-    
+
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(converged)
@@ -439,7 +431,7 @@ contains
 
     logical :: error
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     error = .false.

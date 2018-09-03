@@ -139,7 +139,6 @@ contains
        PRC_RGN_level, &
        debug
 
-    integer :: nmax, dmd
     integer :: l, rgnid
 
     integer :: ierr
@@ -505,7 +504,7 @@ contains
        num_of_mng, &
        mng_rgnid
 
-    integer  :: fid, ierr
+    integer  :: fid
     integer  :: r, p, l
     !---------------------------------------------------------------------------
 

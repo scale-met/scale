@@ -394,11 +394,8 @@ contains
     real(DP) :: dtsec
     integer  :: dstep
 
-    integer                :: id1, id2, count
-    character(len=H_SHORT) :: item1, item2
-
     integer  :: ierr
-    integer  :: k, n, id
+    integer  :: n, id
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -905,7 +902,6 @@ contains
 
     logical, parameter     :: fill_halo = .false.
 %  end
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = <%=n%>
     integer :: itemid
@@ -1403,7 +1399,6 @@ contains
 
     integer                :: fid
     character(len=H_MID)   :: tunits
-    character(len=H_SHORT) :: calendar
     character(len=H_LONG)  :: basename_mod
     logical                :: fileexisted
     integer(8)             :: array_size
@@ -1788,7 +1783,6 @@ contains
     logical,          intent(in), optional :: add_variable
 
     character(len=5) :: buf
-    integer :: id
     !---------------------------------------------------------------------------
 
     if ( val ) then

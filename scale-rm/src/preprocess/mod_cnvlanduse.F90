@@ -587,13 +587,7 @@ contains
 
     integer  :: GLOBAL_IA
 
-    ! interpolation
-    integer,  allocatable :: idx_i(:,:,:)
-    integer,  allocatable :: idx_j(:,:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-
     character(len=H_LONG) :: fname
-    integer               :: interp_level
 
     logical  :: hit, no_hit_x
     real(RP) :: dmin, d

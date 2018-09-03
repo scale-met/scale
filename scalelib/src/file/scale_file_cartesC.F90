@@ -234,7 +234,6 @@ contains
        FILE_CARTESC_datacheck_criteria
 
     integer :: IM, JM
-    integer :: dimid
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -756,13 +755,10 @@ contains
     use scale_prc, only: &
        PRC_myrank
     implicit none
+
     character(len=*), intent(in)  :: basename !< basename of the file
-
     integer,          intent(out) :: fid      !< file ID
-
     logical,          intent(in), optional :: aggregate
-
-    integer :: comm
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -808,12 +804,11 @@ contains
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y
     implicit none
+
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: title    !< title    of the file
     character(len=*), intent(in)  :: datatype !< data type (REAL8/REAL4/default)
-
     integer,          intent(out) :: fid      !< file ID
-
     integer,          intent(in), optional :: date(6)   !< ymdhms of the time
     real(DP),         intent(in), optional :: subsec    !< subsec of the time
     logical,          intent(in), optional :: append    !< switch whether append existing file or not (default=false)
@@ -828,7 +823,6 @@ contains
     real(DP)               :: subsec_
     integer                :: rank_x, rank_y
     integer                :: num_x, num_y
-    integer                :: comm
     logical                :: fileexisted
     logical                :: aggregate_
     logical                :: single_
@@ -2145,8 +2139,6 @@ contains
     real(DP),         intent(in) :: time
     character(len=*), intent(in) :: tunits
     character(len=*), intent(in) :: calendar
-
-    logical :: opened
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
@@ -4268,9 +4260,8 @@ contains
        PRC_HAS_N
     use scale_mapprojection, only: &
        MAPPROJECTION_get_attributes
-
-    integer :: dimid
-
+    implicit none
+    !---------------------------------------------------------------------------
 
     ! Dimension Information
 

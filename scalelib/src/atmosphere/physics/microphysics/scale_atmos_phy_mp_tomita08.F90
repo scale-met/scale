@@ -1680,7 +1680,7 @@ contains
           ! intercept parameter N0
           N0r(k) = 1.16E+5_RP * exp( log( max( dens(k)*qr(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
           N0s(k) = 4.58E+9_RP * exp( log( max( dens(k)*qs(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
-          N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) 
+          N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
        end do
     else
        do k = KS, KE
@@ -1864,7 +1864,7 @@ contains
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP) :: dens(KA)
     real(RP) :: temc(KA)
-    real(RP) :: qc(KA), qr(KA), qs(KA), qg(KA)
+    real(RP) :: qr(KA), qs(KA), qg(KA)
     real(RP) :: Nc(KA)              !< Number concentration of cloud water [1/m3]
     real(RP) :: N0r(KA), N0s(KA), N0g(KA)
     real(RP) :: RLMDr, RLMDs, RLMDg
@@ -2216,22 +2216,21 @@ contains
        QTRC )
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
-       I_HC, &
-       I_HR, &
-       I_HI, &
-       I_HS, &
-       I_HG, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
        I_HH
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: Qe  (KA,IA,JA,N_HYD)   ! mass ratio of each cateory [kg/kg]
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP-1)
 
-    real(RP), intent(out)  :: QTRC(KA,IA,JA,QA_MP-1)
-
-    integer :: k, i, j, ih
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_

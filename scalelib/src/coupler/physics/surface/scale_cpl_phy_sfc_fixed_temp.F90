@@ -48,8 +48,6 @@ contains
   !> Setup
   subroutine CPL_PHY_SFC_FIXED_TEMP_setup
     implicit none
-
-    integer :: ierr
     !---------------------------------------------------------------------------
 
     if ( initialized ) return

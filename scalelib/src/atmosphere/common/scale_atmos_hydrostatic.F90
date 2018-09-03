@@ -165,25 +165,23 @@ contains
        CP_VAPOR, &
        CP_WATER
     implicit none
-    integer, intent(in) :: KA, KS, KE
 
-    real(RP), intent(in)  :: pott(KA) !< potential temperature [K]
-    real(RP), intent(in)  :: qv  (KA) !< water vapor           [kg/kg]
-    real(RP), intent(in)  :: qc  (KA) !< liquid water          [kg/kg]
-    real(RP), intent(in)  :: pres_sfc !< surface pressure              [Pa]
-    real(RP), intent(in)  :: pott_sfc !< surface potential temperature [K]
-    real(RP), intent(in)  :: qv_sfc   !< surface water vapor           [kg/kg]
-    real(RP), intent(in)  :: qc_sfc   !< surface liquid water          [kg/kg]
+    integer,  intent(in)  :: KA, KS, KE
+    real(RP), intent(in)  :: pott(KA)        !< potential temperature [K]
+    real(RP), intent(in)  :: qv  (KA)        !< water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc  (KA)        !< liquid water          [kg/kg]
+    real(RP), intent(in)  :: pres_sfc        !< surface pressure              [Pa]
+    real(RP), intent(in)  :: pott_sfc        !< surface potential temperature [K]
+    real(RP), intent(in)  :: qv_sfc          !< surface water vapor           [kg/kg]
+    real(RP), intent(in)  :: qc_sfc          !< surface liquid water          [kg/kg]
     real(RP), intent(in)  :: cz  (KA)
     real(RP), intent(in)  :: fz  (0:KA)
-
-    real(RP), intent(out) :: dens(KA) !< density               [kg/m3]
-    real(RP), intent(out) :: temp(KA) !< temperature           [K]
-    real(RP), intent(out) :: pres(KA) !< pressure              [Pa]
-    real(RP), intent(out) :: temp_sfc !< surface temperature           [K]
+    real(RP), intent(out) :: dens(KA)        !< density               [kg/m3]
+    real(RP), intent(out) :: temp(KA)        !< temperature           [K]
+    real(RP), intent(out) :: pres(KA)        !< pressure              [Pa]
+    real(RP), intent(out) :: temp_sfc        !< surface temperature           [K]
 
     real(RP) :: dens_sfc
-
     real(RP) :: Rtot_sfc
     real(RP) :: CVtot_sfc
     real(RP) :: CPtot_sfc
@@ -192,14 +190,9 @@ contains
     real(RP) :: CVtot
     real(RP) :: CPtot
     real(RP) :: CPovCV
-
-    real(RP) :: dens_s, dhyd, dgrd
-    integer  :: ite
-    logical  :: converged
-
     real(RP) :: dz(KA)
 
-    integer :: k
+    integer  :: k
     !---------------------------------------------------------------------------
 
     !--- from surface to lowermost atmosphere
@@ -956,10 +949,10 @@ contains
        temp, pres,   &
        kref          )
     implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
 
+    integer,  intent(in)    :: KA, KS, KE
+    integer,  intent(in)    :: IA, IS, IE
+    integer,  intent(in)    :: JA, JS, JE
     real(RP), intent(inout) :: dens(KA,IA,JA) !< density               [kg/m3]
     real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
@@ -967,9 +960,9 @@ contains
     real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
     real(RP), intent(in)    :: dz  (KA,IA,JA) !< distance between the layer (center) [m]
-    integer, intent(in), optional :: kref
+    integer,  intent(in), optional :: kref
 
-    integer  :: k, i, j
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)

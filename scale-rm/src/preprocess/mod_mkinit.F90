@@ -804,7 +804,7 @@ contains
     end do
 
     !-- Aerosol distribution
-    if( nccn /= 0 ) then
+    if ( nccn /= 0 ) then
        do iq = 1, nccn
        do j = JSB, JEB
        do i = ISB, IEB

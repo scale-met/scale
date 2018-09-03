@@ -632,16 +632,15 @@ contains
        RCDZ, RFDZ,             &
        MOMZ_t, RHOU_t, RHOV_t  )
     implicit none
-    integer,  intent(in) :: KA, KS, KE
 
-    real(RP), intent(in) :: DENS(KA)
-    real(RP), intent(in) :: MOMZ(KA)
-    real(RP), intent(in) :: U   (KA)
-    real(RP), intent(in) :: V   (KA)
-    real(RP), intent(in) :: mflx(KA)
-    real(RP), intent(in) :: RCDZ(KA)
-    real(RP), intent(in) :: RFDZ(KA)
-
+    integer,  intent(in)  :: KA, KS, KE
+    real(RP), intent(in)  :: DENS  (KA)
+    real(RP), intent(in)  :: MOMZ  (KA)
+    real(RP), intent(in)  :: U     (KA)
+    real(RP), intent(in)  :: V     (KA)
+    real(RP), intent(in)  :: mflx  (KA)
+    real(RP), intent(in)  :: RCDZ  (KA)
+    real(RP), intent(in)  :: RFDZ  (KA)
     real(RP), intent(out) :: MOMZ_t(KA)
     real(RP), intent(out) :: RHOU_t(KA)
     real(RP), intent(out) :: RHOV_t(KA)
@@ -649,7 +648,6 @@ contains
     real(RP) :: flx(KA)
 
     integer  :: k
-    integer  :: iq, iqa
     !---------------------------------------------------------------------------
 
     flx(KE) = 0.0_RP
