@@ -154,11 +154,16 @@ contains
     LOG_PROGRESS(*) 'coupler / physics / surface / FIXED-TEMP'
 
     ! calculate surface flux
+#ifndef __GFORTRAN__
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU) &
     !$omp shared(IS,IE,JS,JE,Rdry,CPdry,bulkflux, &
     !$omp        calc_flag,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
     !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
+#else
+    !$omp parallel do default(shared) &
+    !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU)
+#endif
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
