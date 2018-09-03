@@ -191,7 +191,6 @@ contains
        PARAM_ATMOS_PHY_CP_kf_LOG
 
     integer :: k, i, j
-    integer :: QS
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -219,7 +218,7 @@ contains
                       PARAM_ATMOS_PHY_CP_kf_dlcape,    & ! [IN]
                       PARAM_ATMOS_PHY_CP_kf_dlifetime, & ! [IN]
                       PARAM_ATMOS_PHY_CP_kf_slifetime, & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, & ! [IN]                     
+                      PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, & ! [IN]
                       PARAM_ATMOS_PHY_CP_kf_thres,     & ! [IN]
                       PARAM_ATMOS_PHY_CP_kf_LOG,       & ! [IN]
                       PARAM_ATMOS_PHY_CP_kf_trigger    ) ! [INOUT]
@@ -398,7 +397,7 @@ contains
     real(RP), intent(out) :: cldfrac_sh   (KA,IA,JA)       !< cloud fraction (shallow convection)
     real(RP), intent(out) :: nca          (IA,JA)          !< convection active time [sec]
 
-    integer  :: k, i, j, iq, iqa, ii                       !< loop index
+    integer  :: k, i, j, iq                                !< loop index
     integer  :: nic                                        !< rate of timestep (time_advec/KF_DTSEC)
     integer  :: k_lcl                                      !< index of LCL layer
     integer  :: k_top                                      !< index of cloud top hight
@@ -468,7 +467,6 @@ contains
     ! update variables
     real(RP) :: pott_nw(KA)                                !< new PT
     real(RP) :: RHOD(KA)                                   !< dry density
-    real(RP) :: QV_resd(KA)                                !< residual vapor
 
     real(RP) :: R_convflag(IA,JA)
     ! ------
@@ -1291,7 +1289,7 @@ contains
   subroutine CP_kf_updraft ( &
        KA, KS, KE,                           &
        k_lcl, k_pbl, dz_kf, z_kf,            &
-       w_lcl, temp_lcl, tempv_lcl, pres_lcl, & 
+       w_lcl, temp_lcl, tempv_lcl, pres_lcl, &
        qv_mix, qv, temp, tempv_env,          &
        zlcl, pres, deltap,                   &
        deltax, radius, dpthmx,               &
@@ -1299,7 +1297,7 @@ contains
        k_top,                                &
        umf, umflcl,                          &
        upent, updet,                         &
-       umfnewdold, umfnew,umfold,            & 
+       umfnewdold, umfnew,umfold,            &
        temp_u, theta_ee,                     &
        cloudhight, totalprcp, cloudtop,      &
        qv_u, qc, qi, qrout, qsout,           &
@@ -1896,7 +1894,7 @@ contains
              ! specify RH decrease of 20%/km indowndraft
              rhh = 1._RP - 2.E-4_RP*(z_kf(k_dstart) -z_kf(kk) ) ! 0.2/1000.
              !
-             !< adjust downdraft temp,qv to secified RH 
+             !< adjust downdraft temp,qv to secified RH
              !< Kain(2004)
              if(rhh < 1._RP) then
                 !
@@ -3035,7 +3033,7 @@ contains
 
   !------------------------------------------------------------------------------
   !> CP_kf_tpmix2dd
-  !! calculate temperature of a lifting parcel    
+  !! calculate temperature of a lifting parcel
   !! LOOKUP TABLE VARIABLES (F77 format)
   !!     parameter(kfnt=250,kfnp=220
   !!     COMMON/KFLUT/ ttab(kfnt,kfnp),qstab(kfnt,kfnp),the0k(kfnp),        &
@@ -3083,7 +3081,7 @@ contains
   !! NOTE: Calculations for mixed/ice phase no longer used...jsk 8/00
   !!        For example, KF90 Eq. 10 no longer used
   !! DATA:  T00, P00, C1, C2, C3, C4, C5 (in original?)
-  !!       / 273.16_RP, 1.E5_RP,3374.6525_RP, 2.5403_RP, 
+  !!       / 273.16_RP, 1.E5_RP,3374.6525_RP, 2.5403_RP,
   !!         3114.834_RP, 0.278296_RP,1.0723E-3_RP /
   !<
   subroutine CP_kf_envirtht( P1, T1, Q1, THT1 )
@@ -3094,7 +3092,7 @@ contains
     real(RP), intent(in)  :: P1, T1, Q1
     real(RP), intent(out) :: THT1
 
-    real(RP) :: EE,TLOG,ASTRT,AINC,A1,TP,VALUE,AINTRP,TDPT,TSAT,THT
+    real(RP) :: EE,TLOG,TDPT,TSAT,THT
     real(RP),parameter :: C1=3374.6525_RP
     real(RP),parameter :: C2=2.5403_RP
     EE=Q1*P1/(0.622_RP+Q1)
@@ -3140,7 +3138,7 @@ contains
     real(RP) :: TMIN  =  150._RP
     real(RP) :: TOLER = 0.001_RP
     real(RP) :: PBOT, DPR, TEMP, P, ES, QS, PI
-    real(RP) :: THES, TGUES, THGUES, THGS, THTGS
+    real(RP) :: THES, TGUES, THGUES, THTGS
     real(RP) :: DT, T1, T0, F0, F1, ASTRT, AINC, A1
 
     ! equivalent potential temperature increment: data dth/1._RP/

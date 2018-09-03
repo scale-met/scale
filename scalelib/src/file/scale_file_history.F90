@@ -428,11 +428,8 @@ contains
     real(DP) :: dtsec
     integer  :: dstep
 
-    integer                :: id1, id2, count
-    character(len=H_SHORT) :: item1, item2
-
     integer  :: ierr
-    integer  :: k, n, id
+    integer  :: n, id
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -903,7 +900,6 @@ contains
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 0
     integer :: itemid
@@ -1036,7 +1032,6 @@ contains
     character(len=*), intent(in), optional :: dim_type
 
     logical, parameter     :: fill_halo = .false.
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 1
     integer :: itemid
@@ -1169,7 +1164,6 @@ contains
     character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 2
     integer :: itemid
@@ -1302,7 +1296,6 @@ contains
     character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 3
     integer :: itemid
@@ -1435,7 +1428,6 @@ contains
     character(len=*), intent(in), optional :: standard_name
     character(len=*), intent(in), optional :: dim_type
     logical,          intent(in), optional :: fill_halo
-    character(len=H_SHORT) :: dim_type_
 
     integer, parameter :: ndim = 4
     integer :: itemid
@@ -1932,7 +1924,6 @@ contains
 
     integer                :: fid
     character(len=H_MID)   :: tunits
-    character(len=H_SHORT) :: calendar
     character(len=H_LONG)  :: basename_mod
     logical                :: fileexisted
     integer(8)             :: array_size
@@ -2469,7 +2460,6 @@ contains
     logical,          intent(in), optional :: add_variable
 
     character(len=5) :: buf
-    integer :: id
     !---------------------------------------------------------------------------
 
     if ( val ) then
@@ -3012,9 +3002,11 @@ contains
     idx = 1
     do j = 1, size(src,4)
     do i = 1, size(src,3)
+    do k = 1, size(src,2)
     do l = 1, size(src,1)
        dsc(idx) = src(l, k, i, j)
        idx = idx + 1
+    end do
     end do
     end do
     end do

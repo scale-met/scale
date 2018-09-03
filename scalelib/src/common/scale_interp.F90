@@ -509,7 +509,7 @@ contains
     real(RP) :: dlon, dlat
     integer  :: idx_ref(npoints)
 
-    integer  :: k, i, j, ii, jj, n
+    integer  :: i, j, ii, jj, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_fact',3)
@@ -795,7 +795,7 @@ contains
 
     real(RP) :: lon0, lon1, lat0, lat1
     real(RP) :: dlon_sl, dlat_sl
-    integer  :: i, j, n
+    integer  :: i, n
     integer  :: ii, jj, ii0, jj0
     !---------------------------------------------------------------------------
 
@@ -804,6 +804,7 @@ contains
     else
        search_limit_ = INTERP_search_limit
     end if
+    search_limit_ = search_limit_ / RADIUS ! m to radian
 
     if ( present(weight_order) ) then
        weight_order_ = weight_order
@@ -833,7 +834,7 @@ contains
        hfact(1) = 1.0_RP
 
        return
-    else if ( drad(1) * RADIUS > search_limit_ ) then
+    else if ( drad(1) > search_limit_ ) then
        hfact(:) = 0.0_RP
        idx_ref(:) = 1 ! dummy
 
@@ -962,6 +963,7 @@ contains
     else
        search_limit_ = INTERP_search_limit
     end if
+    search_limit_ = search_limit_ / RADIUS ! m to radian
 
     if ( present(weight_order) ) then
        weight_order_ = weight_order
@@ -992,7 +994,7 @@ contains
        hfact(1) = 1.0_RP
 
        return
-    else if ( drad(1) * RADIUS > search_limit_ ) then
+    else if ( drad(1) > search_limit_ ) then
        hfact(:) = 0.0_RP
        idx_i(:) = 1 ! dummy
        idx_j(:) = 1 ! dummy
@@ -1148,7 +1150,7 @@ contains
 
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
-    
+
     real(RP) :: dradian
 
     if ( lon_ref == UNDEF ) return
@@ -1188,7 +1190,7 @@ contains
     real(RP), intent(inout) :: drad(npoints)
     integer,  intent(inout) :: idx_i(npoints)
     integer,  intent(inout) :: idx_j(npoints)
-    
+
     real(RP) :: dradian
 
     if ( lon_ref == UNDEF ) return

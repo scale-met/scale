@@ -210,6 +210,7 @@ contains
     enddo
 
     ! update surface temperature
+#ifndef __GFORTRAN__
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2) &
@@ -218,6 +219,11 @@ contains
     !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
     !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,U10,V10,T2,Q2)
+#else
+    !$omp parallel do default(shared) &
+    !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
+    !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2)
+#endif
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then

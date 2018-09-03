@@ -325,7 +325,6 @@ contains
     real(RP) :: flxU(KA,IA,JA) !> dens * w * u
     real(RP) :: flxV(KA,IA,JA) !> dens * w * v
     real(RP) :: flxT(KA,IA,JA) !> dens * w * pt
-    real(RP) :: flxQ(KA,IA,JA) !> dens * w * qv
 
     real(RP) :: TEML  (KA) !> liquid water temperature
     real(RP) :: RHONu (KA) !> dens * Nu at the half level
@@ -407,7 +406,7 @@ contains
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,l_mo, &
     !$omp        mynn_level3, &
     !$omp        CZ,FZ,dt, &
-    !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
+    !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
     !$omp         Q1,Qsl,dQsl,dtldz,dqwdz,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
     !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h, &
@@ -893,7 +892,7 @@ contains
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     use scale_file_history, only: &
-       FILE_HISTORY_in  
+       FILE_HISTORY_in
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE

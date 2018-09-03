@@ -202,7 +202,7 @@ contains
        end do
        end do
 
-       LOG_INFO("CNVTOPO",*) 'Domain Information'
+       LOG_INFO("CNVLANDUSE",*) 'Domain Information'
        LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
        LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
 
@@ -587,13 +587,7 @@ contains
 
     integer  :: GLOBAL_IA
 
-    ! interpolation
-    integer,  allocatable :: idx_i(:,:,:)
-    integer,  allocatable :: idx_j(:,:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-
     character(len=H_LONG) :: fname
-    integer               :: interp_level
 
     logical  :: hit, no_hit_x
     real(RP) :: dmin, d

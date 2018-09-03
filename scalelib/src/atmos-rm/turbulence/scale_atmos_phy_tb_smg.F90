@@ -83,7 +83,7 @@ module scale_atmos_phy_tb_smg
   real(RP), private, allocatable :: lambda (:,:,:)
 
   real(RP), private              :: ATMOS_PHY_TB_SMG_NU_MAX      = 10000.0_RP
-  logical,  private              :: ATMOS_PHY_TB_SMG_backscatter = .true.
+  logical,  private              :: ATMOS_PHY_TB_SMG_backscatter = .false.
   logical,  private              :: ATMOS_PHY_TB_SMG_bottom      = .true.
   logical,  private              :: ATMOS_PHY_TB_SMG_implicit    = .false.
   logical,  private              :: ATMOS_PHY_TB_SMG_horizontal  = .false.
@@ -215,10 +215,11 @@ contains
        end if
     end if
 
+    ! flag for isotropic stress tensor
     if ( ATMOS_PHY_TB_SMG_consistent_tke ) then
        tke_fact = 1.0_RP
     else
-       tke_fact = 0.0_RP
+       tke_fact = 0.0_RP ! neglect
     end if
 
     return
@@ -641,7 +642,7 @@ contains
 #endif
              qflx_sgs_momz(k,i,j,ZDIR) = DENS(k,i,j) * ( &
                   - 2.0_RP * nu(k,i,j) &
-                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+                  * ( S33_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
                   + twoOverThree * tke(k,i,j) * tke_fact )
           enddo
           enddo
@@ -652,8 +653,10 @@ contains
           !$omp parallel do
           do j = JJS, JJE
           do i = IIS, IIE
-             qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
-             qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
+             ! momentum will not be conserved
+             qflx_sgs_momz(KS,i,j,ZDIR) = DENS(KS,i,j) * twoOverThree * tke(KS,i,j) * tke_fact
+             qflx_sgs_momz(KE,i,j,ZDIR) = DENS(KE,i,j) * twoOverThree * tke(KE,i,j) * tke_fact
+             ! anti-isotropic stress is calculated by the surface scheme
           enddo
           enddo
 #ifdef DEBUG
@@ -823,7 +826,7 @@ contains
 #endif
           qflx_sgs_momx(k,i,j,XDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+               * ( S11_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * TKE(k,i,j) * tke_fact )
        enddo
        enddo
@@ -1004,7 +1007,7 @@ contains
 #endif
           qflx_sgs_momy(k,i,j,YDIR) = DENS(k,i,j) * ( &
                - 2.0_RP * nu(k,i,j) &
-               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree * tke_fact ) &
+               * ( S22_C(k,i,j) - ( S11_C(k,i,j) + S22_C(k,i,j) + S33_C(k,i,j) ) * OneOverThree ) &
              + twoOverThree * TKE(k,i,j) * tke_fact)
        enddo
        enddo
@@ -1140,7 +1143,7 @@ contains
           !$omp parallel do
           do j = JJS, JJE+1
           do i = IIS, IIE
-             do k = KS, KE
+             do k = KS+1, KE-1
                 acc(k,i,j) = ( J33G * ( random_mx(k+1,i,j) - random_mx(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
                              - ( GSQRT(k,i+1,j,I_XYZ) * random_mz(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_mz(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
                                + ( J13G(k+1,i,j,I_XYZ) * random_mz(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_mz(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
@@ -1273,22 +1276,25 @@ contains
           do j = JJS, JJE
           do i = IIS, IIE
              do k = KS+1, KE-1
-                RHOT_t(k,i,j) = J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
-                              + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                              + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
-                              + ( GSQRT(k,i,j+1,I_XYZ) * random_qy(k,i,j+1) * dd(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ) * random_qy(k,i,j-1) * dd(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                              + ( J23G(k+1,i,j,I_XYZ) * random_qy(k+1,i,j) * dd(k+1,i,j) - J23G(k-1,i,j,I_XYZ) * random_qy(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) )
+                RHOT_t(k,i,j) = ( J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                                + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                + ( GSQRT(k,i,j+1,I_XYZ) * random_qy(k,i,j+1) * dd(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ) * random_qy(k,i,j-1) * dd(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                                + ( J23G(k+1,i,j,I_XYZ) * random_qy(k+1,i,j) * dd(k+1,i,j) - J23G(k-1,i,j,I_XYZ) * random_qy(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                ) / GSQRT(k,i,j,I_XYZ)
              end do
-             RHOT_t(KS,i,j) = J33G * ( random_qz(KS+1,i,j) * dd(KS+1,i,j) - random_qz(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) &
-                            + ( GSQRT(KS,i+1,j,I_XYZ) * random_qx(KS,i+1,j) * dd(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ) * random_qx(KS,i-1,j) * dd(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                            + ( J13G(KS+1,i,j,I_XYZ) * random_qx(KS+1,i,j) * dd(KS+1,i,j) - J13G(KS,i,j,I_XYZ) * random_qx(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
-                            + ( GSQRT(KS,i,j+1,I_XYZ) * random_qy(KS,i,j+1) * dd(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ) * random_qy(KS,i,j-1) * dd(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                            + ( J23G(KS+1,i,j,I_XYZ) * random_qy(KS+1,i,j) * dd(KS+1,i,j) - J23G(KS,i,j,I_XYZ) * random_qy(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP
-             RHOT_t(KE,i,j) = J33G * ( random_qz(KE,i,j) * dd(KE,i,j) - random_qz(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
-                            + ( GSQRT(KE,i+1,j,I_XYZ) * random_qx(KE,i+1,j) * dd(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ) * random_qx(KE,i-1,j) * dd(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                            + ( J13G(KE,i,j,I_XYZ) * random_qx(KE,i,j) * dd(KE,i,j) - J13G(KE-1,i,j,I_XYZ) * random_qx(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
-                            + ( GSQRT(KE,i,j+1,I_XYZ) * random_qy(KE,i,j+1) * dd(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ) * random_qy(KE,i,j-1) * dd(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                            + ( J23G(KE,i,j,I_XYZ) * random_qy(KE,i,j) * dd(KE,i,j) - J23G(KE-1,i,j,I_XYZ) * random_qy(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP
+             RHOT_t(KS,i,j) = ( J33G * ( random_qz(KS+1,i,j) * dd(KS+1,i,j) - random_qz(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) &
+                              + ( GSQRT(KS,i+1,j,I_XYZ) * random_qx(KS,i+1,j) * dd(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ) * random_qx(KS,i-1,j) * dd(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                              + ( J13G(KS+1,i,j,I_XYZ) * random_qx(KS+1,i,j) * dd(KS+1,i,j) - J13G(KS,i,j,I_XYZ) * random_qx(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
+                              + ( GSQRT(KS,i,j+1,I_XYZ) * random_qy(KS,i,j+1) * dd(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ) * random_qy(KS,i,j-1) * dd(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                              + ( J23G(KS+1,i,j,I_XYZ) * random_qy(KS+1,i,j) * dd(KS+1,i,j) - J23G(KS,i,j,I_XYZ) * random_qy(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
+                              ) / GSQRT(KS,i,j,I_XYZ)
+             RHOT_t(KE,i,j) = ( J33G * ( random_qz(KE,i,j) * dd(KE,i,j) - random_qz(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                              + ( GSQRT(KE,i+1,j,I_XYZ) * random_qx(KE,i+1,j) * dd(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ) * random_qx(KE,i-1,j) * dd(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                              + ( J13G(KE,i,j,I_XYZ) * random_qx(KE,i,j) * dd(KE,i,j) - J13G(KE-1,i,j,I_XYZ) * random_qx(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                              + ( GSQRT(KE,i,j+1,I_XYZ) * random_qy(KE,i,j+1) * dd(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ) * random_qy(KE,i,j-1) * dd(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                              + ( J23G(KE,i,j,I_XYZ) * random_qy(KE,i,j) * dd(KE,i,j) - J23G(KE-1,i,j,I_XYZ) * random_qy(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                              ) / GSQRT(KE,i,j,I_XYZ)
           end do
           end do
 
@@ -1363,22 +1369,25 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
                 do k = KS+1, KE-1
-                   RHOQ_t(k,i,j,iq) = J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
-                                    + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                                    + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
-                                    + ( GSQRT(k,i,j+1,I_XYZ) * random_qy(k,i,j+1) * dd(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ) * random_qy(k,i,j-1) * dd(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                                    + ( J23G(k+1,i,j,I_XYZ) * random_qy(k+1,i,j) * dd(k+1,i,j) - J23G(k-1,i,j,I_XYZ) * random_qy(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) )
+                   RHOQ_t(k,i,j,iq) = ( J33G * ( random_qz(k+1,i,j) * dd(k+1,i,j) - random_qz(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                      + ( GSQRT(k,i+1,j,I_XYZ) * random_qx(k,i+1,j) * dd(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ) * random_qx(k,i-1,j) * dd(k,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                                      + ( J13G(k+1,i,j,I_XYZ) * random_qx(k+1,i,j) * dd(k+1,i,j) - J13G(k-1,i,j,I_XYZ) * random_qx(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                      + ( GSQRT(k,i,j+1,I_XYZ) * random_qy(k,i,j+1) * dd(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ) * random_qy(k,i,j-1) * dd(k,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                                      + ( J23G(k+1,i,j,I_XYZ) * random_qy(k+1,i,j) * dd(k+1,i,j) - J23G(k-1,i,j,I_XYZ) * random_qy(k-1,i,j) * dd(k-1,i,j) ) / ( FDZ(k) + FDZ(k-1) ) &
+                                      ) / GSQRT(k,i,j,I_XYZ)
                 end do
-                RHOQ_t(KS,i,j,iq) = J33G * ( random_qz(KS+1,i,j) * dd(KS+1,i,j) - random_qz(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
-                                  + ( GSQRT(KS,i+1,j,I_XYZ) * random_qx(KS,i+1,j) * dd(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ) * random_qx(KS,i-1,j) * dd(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                                  + ( J13G(KS+1,i,j,I_XYZ) * random_qx(KS+1,i,j) * dd(KS+1,i,j) - J13G(KS,i,j,I_XYZ) * random_qx(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
-                                  + ( GSQRT(KS,i,j+1,I_XYZ) * random_qy(KS,i,j+1) * dd(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ) * random_qy(KS,i,j-1) * dd(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                                  + ( J23G(KS+1,i,j,I_XYZ) * random_qy(KS+1,i,j) * dd(KS+1,i,j) - J23G(KS,i,j,I_XYZ) * random_qy(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP
-                RHOQ_t(KE,i,j,iq) = J33G * ( random_qz(KE,i,j) * dd(KE,i,j) - random_qz(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
-                                  + ( GSQRT(KE,i+1,j,I_XYZ) * random_qx(KE,i+1,j) * dd(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ) * random_qx(KE,i-1,j) * dd(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                                  + ( J13G(KE,i,j,I_XYZ) * random_qx(KE,i,j) * dd(KE,i,j) - J13G(KE-1,i,j,I_XYZ) * random_qx(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
-                                  + ( GSQRT(KE,i,j+1,I_XYZ) * random_qy(KE,i,j+1) * dd(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ) * random_qy(KE,i,j-1) * dd(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
-                                  + ( J23G(KE,i,j,I_XYZ) * random_qy(KE,i,j) * dd(KE,i,j) - J23G(KE-1,i,j,I_XYZ) * random_qy(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP
+                RHOQ_t(KS,i,j,iq) = ( J33G * ( random_qz(KS+1,i,j) * dd(KS+1,i,j) - random_qz(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
+                                    + ( GSQRT(KS,i+1,j,I_XYZ) * random_qx(KS,i+1,j) * dd(KS,i+1,j) - GSQRT(KS,i-1,j,I_XYZ) * random_qx(KS,i-1,j) * dd(KS,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                                    + ( J13G(KS+1,i,j,I_XYZ) * random_qx(KS+1,i,j) * dd(KS+1,i,j) - J13G(KS,i,j,I_XYZ) * random_qx(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
+                                    + ( GSQRT(KS,i,j+1,I_XYZ) * random_qy(KS,i,j+1) * dd(KS,i,j+1) - GSQRT(KS,i,j-1,I_XYZ) * random_qy(KS,i,j-1) * dd(KS,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                                    + ( J23G(KS+1,i,j,I_XYZ) * random_qy(KS+1,i,j) * dd(KS+1,i,j) - J23G(KS,i,j,I_XYZ) * random_qy(KS,i,j) * dd(KS,i,j) ) * RFDZ(KS) * 0.5_RP &
+                                    ) / GSQRT(KS,i,j,I_XYZ)
+                RHOQ_t(KE,i,j,iq) = ( J33G * ( random_qz(KE,i,j) * dd(KE,i,j) - random_qz(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                                    + ( GSQRT(KE,i+1,j,I_XYZ) * random_qx(KE,i+1,j) * dd(KE,i+1,j) - GSQRT(KE,i-1,j,I_XYZ) * random_qx(KE,i-1,j) * dd(KE,i-1,j) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                                    + ( J13G(KE,i,j,I_XYZ) * random_qx(KE,i,j) * dd(KE,i,j) - J13G(KE-1,i,j,I_XYZ) * random_qx(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                                    + ( GSQRT(KE,i,j+1,I_XYZ) * random_qy(KE,i,j+1) * dd(KE,i,j+1) - GSQRT(KE,i,j-1,I_XYZ) * random_qy(KE,i,j-1) * dd(KE,i,j-1) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                                    + ( J23G(KE,i,j,I_XYZ) * random_qy(KE,i,j) * dd(KE,i,j) - J23G(KE-1,i,j,I_XYZ) * random_qy(KE-1,i,j) * dd(KE-1,i,j) ) * RFDZ(KE-1) * 0.5_RP &
+                                    ) / GSQRT(KE,i,j,I_XYZ)
              end do
              end do
 

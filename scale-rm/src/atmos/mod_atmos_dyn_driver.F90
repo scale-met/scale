@@ -314,6 +314,15 @@ contains
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
+#if defined DEBUG || defined QUICKDEBUG
+    RHOT_tp(   1:KS-1,:,:) = 0.0_RP
+    RHOT_tp(KE+1:KA,  :,:) = 0.0_RP
+    MOMX_tp(   1:KS-1,:,:) = 0.0_RP
+    MOMX_tp(KE+1:KA,  :,:) = 0.0_RP
+    MOMY_tp(   1:KS-1,:,:) = 0.0_RP
+    MOMY_tp(KE+1:KA,  :,:) = 0.0_RP
+#endif
+
     if ( do_flag ) then
 
        call COMM_vars8( RHOU_tp, 1 )

@@ -163,12 +163,6 @@ contains
        TGLEND,     &
        BOUND
 
-    real(RP) :: SHR(UIA,UJA), SHB(UIA,UJA), SHG(UIA,UJA)
-    real(RP) :: LHR(UIA,UJA), LHB(UIA,UJA), LHG(UIA,UJA)
-    real(RP) :: GHR(UIA,UJA), GHB(UIA,UJA), GHG(UIA,UJA)
-    real(RP) :: RNR(UIA,UJA), RNB(UIA,UJA), RNG(UIA,UJA)
-    real(RP) :: RNgrd(UIA,UJA)
-
     integer :: i, j
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -771,7 +765,7 @@ contains
 
     real(RP) :: RIBR, BHR, CDR
     real(RP) :: RIBC, BHC, CDC
-    real(RP) :: ALPHAR, ALPHAB, ALPHAG, ALPHAC
+    real(RP) :: ALPHAB, ALPHAG, ALPHAC
     real(RP) :: CHR, CHB, CHG, CHC
     real(RP) :: TC1, TC2, QC1, QC2
 !    real(RP) :: CAPL1, AKSL1
@@ -781,7 +775,7 @@ contains
     real(RP) :: resi1p,resi2p     ! residual
     real(RP) :: G0RP,G0BP,G0GP
 
-    real(RP) :: XXX, X, CD, CH, CHU, XXX2, XXX10
+    real(RP) :: XXX, XXX2, XXX10
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface

@@ -123,28 +123,23 @@ contains
     use scale_atmos_phy_mp_common, only: &
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
-    integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: IA, IS, IE
-    integer,  intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: DENS (KA,IA,JA)         ! density [kg/m3]
-    real(RP), intent(in) :: PRES (KA,IA,JA)         ! pressure [Pa]
-    real(DP), intent(in) :: dt                      ! time interval of microphysics [s]
-
-    real(RP), intent(inout) :: TEMP(KA,IA,JA)       ! temperature [K]
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_MP) ! tracer mass concentration [kg/kg]
-    real(RP), intent(inout) :: CPtot(KA,IA,JA)      ! total specific heat capacity at constant pressure [J/kg/K]
-    real(RP), intent(inout) :: CVtot(KA,IA,JA)      ! total specific heat capacity at constant volume [J/kg/K]
-
-    real(RP), intent(out) :: RHOE_t   (KA,IA,JA)    ! tendency of rhoe [J/m3/s]
-    real(RP), intent(out) :: EVAPORATE(KA,IA,JA)    ! number of evaporated cloud [#/m3/s]
+    integer,  intent(in)    :: KA, KS, KE
+    integer,  intent(in)    :: IA, IS, IE
+    integer,  intent(in)    :: JA, JS, JE
+    real(RP), intent(in)    :: DENS     (KA,IA,JA)       ! density [kg/m3]
+    real(RP), intent(in)    :: PRES     (KA,IA,JA)       ! pressure [Pa]
+    real(DP), intent(in)    :: dt                        ! time interval of microphysics [s]
+    real(RP), intent(inout) :: TEMP     (KA,IA,JA)       ! temperature [K]
+    real(RP), intent(inout) :: QTRC     (KA,IA,JA,QA_MP) ! tracer mass concentration [kg/kg]
+    real(RP), intent(inout) :: CPtot    (KA,IA,JA)       ! total specific heat capacity at constant pressure [J/kg/K]
+    real(RP), intent(inout) :: CVtot    (KA,IA,JA)       ! total specific heat capacity at constant volume [J/kg/K]
+    real(RP), intent(out)   :: RHOE_t   (KA,IA,JA)       ! tendency of rhoe [J/m3/s]
+    real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)       ! number of evaporated cloud [#/m3/s]
 
     real(RP) :: QTRC_dummy(KA,IA,JA)
-
     real(RP) :: RHOE_d_sat(KA,IA,JA)
-
-    real(RP) :: QC_t_sat (KA,IA,JA)
-    real(RP) :: dens_prof(KA)       ! averaged profile of rho
+    real(RP) :: QC_t_sat  (KA,IA,JA)
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -359,18 +354,17 @@ contains
        REFSTATE_dens_profile, &
        vterm                  )
     implicit none
+
     integer,  intent(in)  :: KA, KS, KE
-
-    real(RP), intent(in)  :: DENS0(KA)                  ! density [kg/m3]
-    real(RP), intent(in)  :: RHOQ0(KA,QA_MP-1)          ! density of each hydrometeor [kg/m3]
-    real(RP), intent(in)  :: REFSTATE_dens_profile(KA)  ! reference state density profile [kg/m3]
-
-    real(RP), intent(out) :: vterm(KA,QA_MP-1) ! terminal velocity of each hydrometeor [m/s]
+    real(RP), intent(in)  :: DENS0                (KA)         ! density [kg/m3]
+    real(RP), intent(in)  :: RHOQ0                (KA,QA_MP-1) ! density of each hydrometeor [kg/m3]
+    real(RP), intent(in)  :: REFSTATE_dens_profile(KA)         ! reference state density profile [kg/m3]
+    real(RP), intent(out) :: vterm                (KA,QA_MP-1) ! terminal velocity of each hydrometeor [m/s]
 
     real(RP) :: qr
     real(RP) :: zerosw
 
-    integer :: k, i, j
+    integer  :: k
     !---------------------------------------------------------------------------
 
     do k = KS, KE

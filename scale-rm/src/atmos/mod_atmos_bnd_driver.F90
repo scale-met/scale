@@ -1524,8 +1524,12 @@ contains
     end if
 
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
+    if ( UPDATE_NSTEP * TIME_DTSEC /= ATMOS_BOUNDARY_UPDATE_DT ) then
+       LOG_ERROR("ATMOS_BOUNDARY_set_online",*) 'DT of the parent is not multiple of the DT'
+       call PRC_abort
+    end if
     if ( UPDATE_NSTEP * PARENT_NSTEP(handle) /= TIME_NSTEP ) then
-       LOG_ERROR("ATMOS_BOUNDARY_set_online",*) 'NSTEP is not multiple of PARENT_NSTEP'
+       LOG_ERROR("ATMOS_BOUNDARY_set_online",*) 'DURATION must be the same as that of the parent'
        call PRC_abort
     end if
 

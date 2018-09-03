@@ -117,12 +117,12 @@ contains
        LOG_NEWLINE
        LOG_PROGRESS(*) 'start convert boundary data'
 
-       if( CONVERT_TOPO ) then
-          call CNVTOPO
-       end if
-
        if( CONVERT_LANDUSE ) then
           call CNVLANDUSE
+       end if
+
+       if( CONVERT_TOPO ) then
+          call CNVTOPO
        end if
 
        if( CONVERT_2D ) then

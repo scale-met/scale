@@ -56,6 +56,7 @@ module mod_cnvtopo
                                                                    ! 'OFF'         Do not apply smoothing
                                                                    ! 'LAPLACIAN'   Laplacian filter
                                                                    ! 'GAUSSIAN'    Gaussian filter
+  integer,  private :: CNVTOPO_smooth_hypdiff_order  = 4
   integer,  private :: CNVTOPO_smooth_hypdiff_niter  = 20
   logical,  private :: CNVTOPO_smooth_local          = .true.
   integer,  private :: CNVTOPO_smooth_itelim         = 10000
@@ -98,6 +99,7 @@ contains
        CNVTOPO_UseDEM50M,             &
        CNVTOPO_UseUSERFILE,           &
        CNVTOPO_smooth_trim_ocean,     &
+       CNVTOPO_smooth_hypdiff_order,  &
        CNVTOPO_smooth_hypdiff_niter,  &
        CNVTOPO_smooth_maxslope_ratio, &
        CNVTOPO_smooth_maxslope,       &
@@ -221,6 +223,8 @@ contains
       enddo
 
       i = IS-1
+      !$omp parallel do &
+      !$omp private(DZDX,DZDY)
       do j = JS, JE
       do k = KS, KE
          DZDX = atan2( CNVTOPO_smooth_maxslope_ratio * CDZ(k), DXL(i) ) / D2R
@@ -229,6 +233,8 @@ contains
       enddo
       enddo
 
+      !$omp parallel do &
+      !$omp private(DZDX,DZDY)
       do j = JS, JE
       do i = IS, IE
       do k = KS, KE
@@ -455,6 +461,7 @@ contains
     deallocate( HEIGHT, LATH, LONH )
     deallocate( idx_j, idx_i, hfact )
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -483,6 +490,9 @@ contains
        UNDEF  => CONST_UNDEF, &
        RADIUS => CONST_RADIUS, &
        D2R    => CONST_D2R
+    use scale_atmos_grid_cartesC, only: &
+       DX, &
+       DY
     use scale_atmos_grid_cartesC_real, only: &
        LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON   => ATMOS_GRID_CARTESC_REAL_LON
@@ -590,7 +600,7 @@ contains
     allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
     allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
-    search_limit = TILE_DLAT * RADIUS * 1.5_RP
+    search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
     call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH, nLATH,               & ! [IN]
                           LONH(:,:), LATH(:,:),       & ! [IN]
@@ -613,6 +623,7 @@ contains
     deallocate( HEIGHT, LATH, LONH )
     deallocate( idx_j, idx_i, hfact )
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -631,6 +642,9 @@ contains
        UNDEF  => CONST_UNDEF, &
        RADIUS => CONST_RADIUS, &
        D2R    => CONST_D2R
+    use scale_atmos_grid_cartesC, only: &
+       DX, &
+       DY
     use scale_atmos_grid_cartesC_real, only: &
        LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON   => ATMOS_GRID_CARTESC_REAL_LON
@@ -801,7 +815,7 @@ contains
     allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
     allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
-    search_limit = TILE_DLAT * RADIUS * 1.5_RP
+    search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
     call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH, nLATH,               & ! [IN]
                           LONH(:,:), LATH(:,:),       & ! [IN]
@@ -823,6 +837,7 @@ contains
     deallocate( HEIGHT, LATH, LONH )
     deallocate( idx_j, idx_i, hfact )
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -849,6 +864,10 @@ contains
        STATISTICS_horizontal_max
     use scale_topography, only: &
        TOPO_fillhalo
+    use scale_filter, only: &
+       FILTER_hyperdiff
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
     implicit none
 
     real(RP), intent(inout) :: Zsfc(IA,JA)
@@ -863,8 +882,8 @@ contains
 
     real(RP) :: slope(IA,JA)
     real(RP) :: maxslope
-    real(RP) :: TOPO_sign(IA,JA)
-    real(RP) :: flag
+    real(RP), pointer :: TOPO_sign(:,:)
+    real(RP) :: flag, ocean_flag
 
     character(len=8), parameter :: varname(2) = (/ "DZsfc_DX", "DZsfc_DY" /)
 
@@ -891,14 +910,18 @@ contains
     DYL(:) = FDY(:)
 
     if ( CNVTOPO_smooth_trim_ocean ) then
+       allocate( TOPO_sign(IA,JA) )
+       !$omp parallel do &
+       !$omp private(ocean_flag)
        do j = 1, JA
        do i = 1, IA
-          TOPO_sign(i,j) = sign( 1.0_RP, Zsfc(i,j) ) &
-                         * ( 0.5_RP + sign(0.5_RP, abs(Zsfc(i,j)) - EPS) ) ! 0 for ocean
+          ocean_flag = ( 0.5_RP + sign( 0.5_RP, LANDUSE_fact_ocean(i,j) - 1.0_RP + EPS ) ) & ! fact_ocean==1
+                     * ( 0.5_RP + sign( 0.5_RP, EPS - abs(Zsfc(i,j)) ) )                   ! |Zsfc| < EPS
+          TOPO_sign(i,j) = sign( 1.0_RP, Zsfc(i,j) ) * ( 1.0_RP - ocean_flag )
        end do
        end do
     else
-       TOPO_sign(i,j) = 1.0_RP
+       TOPO_sign => NULL()
     end if
 
     ! digital filter
@@ -907,12 +930,14 @@ contains
 
        call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
+       !$omp parallel do
        do j = 1, JA
        do i = 1, IA-1
           DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
        DZsfc_DXY(IA,:,1) = 0.0_RP
+       !$omp parallel do
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
@@ -935,6 +960,7 @@ contains
        case( 'GAUSSIAN' )
 
           ! 3 by 3 gaussian filter
+          !$omp parallel do
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = ( 0.2500_RP * Zsfc(i  ,j  ) &
@@ -951,6 +977,7 @@ contains
 
        case( 'LAPLACIAN' )
 
+          !$omp parallel do
           do j = JS  , JE
           do i = IS-1, IE
              FLX_X(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
@@ -964,6 +991,7 @@ contains
 !!$          enddo
 !!$          enddo
 
+          !$omp parallel do
           do j = JS-1, JE
           do i = IS  , IE
              FLX_Y(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
@@ -979,6 +1007,8 @@ contains
 
 
           if ( CNVTOPO_smooth_local ) then
+             !$omp parallel do &
+             !$omp private(flag)
              do j = JS  , JE
              do i = IS-1, IE
                 flag = 0.5_RP &
@@ -993,6 +1023,8 @@ contains
                 FLX_X(i,j) = FLX_X(i,j) * flag
              enddo
              enddo
+             !$omp parallel do &
+             !$omp private(flag)
              do j = JS-1, JE
              do i = IS  , IE
                 flag = 0.5_RP &
@@ -1009,6 +1041,7 @@ contains
              enddo
           endif
 
+          !$omp parallel do
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = Zsfc(i,j) &
@@ -1023,6 +1056,7 @@ contains
        end select
 
        if ( CNVTOPO_smooth_trim_ocean ) then
+          !$omp parallel do
           do j = JS, JE
           do i = IS, IE
              Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
@@ -1054,14 +1088,19 @@ contains
        LOG_NEWLINE
        LOG_INFO("CNVTOPO_smooth",*) 'Apply hyperdiffusion.'
 
-       call CNVTOPO_hypdiff( Zsfc(:,:), TOPO_sign(:,:), CNVTOPO_smooth_hypdiff_niter )
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
+                              Zsfc(:,:), &
+                              CNVTOPO_smooth_hypdiff_order, CNVTOPO_smooth_hypdiff_niter, &
+                              limiter_sign = TOPO_sign(:,:)                               )
 
+       !$omp parallel do
        do j = 1, JA
        do i = 1, IA-1
           DZsfc_DXY(i,j,1) = atan2( ( Zsfc(i+1,j)-Zsfc(i,j) ), DXL(i) ) / D2R
        enddo
        enddo
        DZsfc_DXY(IA,:,1) = 0.0_RP
+       !$omp parallel do
        do j = 1, JA-1
        do i = 1, IA
           DZsfc_DXY(i,j,2) = atan2( ( Zsfc(i,j+1)-Zsfc(i,j) ), DYL(j) ) / D2R
@@ -1086,62 +1125,5 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
-
-  subroutine CNVTOPO_hypdiff( Zsfc, TOPO_sign, nite )
-    use scale_topography, only: &
-       TOPO_fillhalo
-    real(RP), intent(inout) :: Zsfc(IA,JA)
-    real(RP), intent(in)    :: TOPO_sign(IA,JA)
-    integer,  intent(in)    :: nite
-
-    real(RP), pointer :: p1(:,:)
-    real(RP), pointer :: p2(:,:)
-    real(RP), target :: work1(IA,JA)
-    real(RP), target :: work2(IA,JA)
-
-    integer :: i, j
-    integer :: ite, n
-
-    ! reduce grid-scale variation
-    do ite = 1, nite
-       call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
-       work2(:,:) = Zsfc(:,:)
-       p1 => work2
-       p2 => work1
-       do n = 1, 4 ! 8th derivative
-!       do n = 1, 2 ! 4th derivative
-          do j = JS, JE
-          do i = IS, IE
-             p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
-                         - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
-          end do
-          end do
-          call TOPO_fillhalo( Zsfc=p2(:,:), FILL_BND=.true. )
-          if ( mod(n,2) == 0 ) then
-             p1 => work2
-             p2 => work1
-          else
-             p1 => work1
-             p2 => work2
-          end if
-       end do
-
-       do j = JS, JE
-       do i = IS, IE
-          Zsfc(i,j) = Zsfc(i,j) - p1(i,j)
-       end do
-       end do
-
-       if ( CNVTOPO_smooth_trim_ocean ) then
-          do j = JS, JE
-          do i = IS, IE
-             Zsfc(i,j) = sign( max( Zsfc(i,j) * TOPO_sign(i,j), 0.0_RP ), TOPO_sign(i,j) )
-          end do
-          end do
-       end if
-    end do
-
-    return
-  end subroutine CNVTOPO_hypdiff
 
 end module mod_cnvtopo

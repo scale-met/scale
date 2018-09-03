@@ -1090,7 +1090,6 @@ contains
   subroutine solve_direct( &
        C,         & ! (inout)
        F1, F2, F3 ) ! (in)
-
     use scale_prc, only: &
        PRC_abort
     implicit none

@@ -491,7 +491,7 @@ contains
   !<
 !OCL SERIAL
   subroutine ATMOS_THERMODYN_specific_heat_1D( &
-       KA, KS, KE, &       
+       KA, KS, KE, &
        QA,         &
        q, Mq, Rq, CVq, CPq,     &
        Qdry, Rtot, CVtot, CPtot )
@@ -545,7 +545,7 @@ contains
     real(RP), intent(out) :: CVtot(IA,JA) !> total specific heat    [J/kg/K]
     real(RP), intent(out) :: CPtot(IA,JA) !> total specific heat    [J/kg/K]
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &

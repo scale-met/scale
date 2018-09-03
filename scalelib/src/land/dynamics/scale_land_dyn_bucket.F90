@@ -115,7 +115,7 @@ contains
     if ( LAND_DYN_BUCKET_nudging ) then
        call CALENDAR_unit2sec( LAND_DYN_BUCKET_nudging_tausec, LAND_DYN_BUCKET_nudging_tau, LAND_DYN_BUCKET_nudging_tau_unit )
 
-       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for OCEAN physics : ON'
+       LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for LAND physics  : ON'
        LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Relaxation time Tau [sec]     : ', LAND_DYN_BUCKET_nudging_tausec
 
        if ( LAND_DYN_BUCKET_nudging_tausec == 0.0_RP ) then
@@ -212,8 +212,6 @@ contains
 
     real(RP), intent(out) :: RUNOFF(LIA,LJA)
 
-
-    ! work
     logical :: solve_matrix
     logical :: error
 

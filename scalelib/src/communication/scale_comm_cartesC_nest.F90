@@ -1271,7 +1271,7 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
 
     integer :: ping, pong
-    integer :: ireq1, ireq2, ireq3, ierr1, ierr2, ierr3
+    integer :: ireq1, ireq2, ierr1, ierr2
     integer :: istatus(MPI_STATUS_SIZE)
     integer :: tag
     logical :: ping_error

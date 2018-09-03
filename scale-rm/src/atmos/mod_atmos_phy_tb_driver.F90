@@ -418,7 +418,7 @@ contains
                'SGS_XFLX_'//trim(TRACER_NAME(iq)), 'SGS X FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
                dim_type='ZXHY', fill_halo=.true.)
           call FILE_HISTORY_in( QFLX_RHOQ(:,:,:,YDIR,iq), &
-               'SGS_YFLX_'//trim(TRACER_NAME(iq)), 'SGS Y FLUX of '//trim(TRACER_NAME(ia)), 'kg/m2/s', &
+               'SGS_YFLX_'//trim(TRACER_NAME(iq)), 'SGS Y FLUX of '//trim(TRACER_NAME(iq)), 'kg/m2/s', &
                dim_type='ZXYH', fill_halo=.true.)
        end do
 

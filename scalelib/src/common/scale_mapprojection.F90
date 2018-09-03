@@ -295,7 +295,6 @@ contains
     real(RP), intent(out) :: lat ! [rad]
 
     real(DP) :: xx, yy
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     xx = MAPPROJECTION_basepoint_x &
