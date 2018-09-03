@@ -110,7 +110,7 @@ contains
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
-    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .false.
+    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     namelist / PARAM_ATMOS_PHY_TB_SMG / &
        ATMOS_PHY_TB_SMG_Cs,             &
@@ -215,10 +215,11 @@ contains
        end if
     end if
 
+    ! flag for isotropic stress tensor
     if ( ATMOS_PHY_TB_SMG_consistent_tke ) then
        tke_fact = 1.0_RP
     else
-       tke_fact = 0.0_RP
+       tke_fact = 0.0_RP ! neglect
     end if
 
     return
@@ -652,8 +653,10 @@ contains
           !$omp parallel do
           do j = JJS, JJE
           do i = IIS, IIE
-             qflx_sgs_momz(KS,i,j,ZDIR) = 0.0_RP ! just above bottom boundary
-             qflx_sgs_momz(KE,i,j,ZDIR) = 0.0_RP ! just below top boundary
+             ! momentum will not be conserved
+             qflx_sgs_momz(KS,i,j,ZDIR) = DENS(KS,i,j) * twoOverThree * tke(KS,i,j) * tke_fact
+             qflx_sgs_momz(KE,i,j,ZDIR) = DENS(KE,i,j) * twoOverThree * tke(KE,i,j) * tke_fact
+             ! anti-isotropic stress is calculated by the surface scheme
           enddo
           enddo
 #ifdef DEBUG

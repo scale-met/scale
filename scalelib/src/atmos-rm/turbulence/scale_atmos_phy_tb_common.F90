@@ -1592,7 +1592,7 @@ contains
                 + ( J23G (KS+1,i,j,I_XYZ) * ( QFLX_MOMZ(KS+1,i,j,YDIR) + QFLX_MOMZ(KS+1,i,j-1,YDIR) ) &
                   ) * MAPF(i,j,2,I_XY) &
                 ) * 0.5_RP / ( CDZ(KS+1)+CDZ(KS) ) &
-              + J33G * ( QFLX_MOMZ(KS+1,i,j,ZDIR) ) * RFDZ(KS) ) &
+              + J33G * ( QFLX_MOMZ(KS+1,i,j,ZDIR) - QFLX_MOMZ(KS,i,j,ZDIR) ) * RFDZ(KS) ) &
               / GSQRT(KS,i,j,I_XYW)
 
        MOMZ_t_TB(KE-1,i,j) = &
@@ -1607,7 +1607,7 @@ contains
                   - J23G (KE-2,i,j,I_XYZ) * ( QFLX_MOMZ(KE-2,i,j,YDIR) + QFLX_MOMZ(KE-2,i,j-1,YDIR) ) &
                   ) * MAPF(i,j,2,I_XY) &
                 ) * 0.5_RP / ( CDZ(KE)+CDZ(KE-1) ) &
-              + J33G * ( - QFLX_MOMZ(KE-1,i,j,ZDIR) ) * RFDZ(KE-1) ) &
+              + J33G * ( QFLX_MOMZ(KE,i,j,ZDIR) - QFLX_MOMZ(KE-1,i,j,ZDIR) ) * RFDZ(KE-1) ) &
               / GSQRT(KE-1,i,j,I_XYW)
     enddo
     enddo
