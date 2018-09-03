@@ -2221,18 +2221,18 @@ contains
     idx = 1
     do j = 1, size(src,<%=n%>)
     do i = 1, size(src,<%=n-1%>)
-%   if n==3
+%   if n>=3
     do k = 1, size(src,<%=n-2%>)
 %   end
-%   if n==4
+%   if n>=4
     do l = 1, size(src,<%=n-3%>)
 %   end
        dsc(idx) = src(<%=idx%>)
        idx = idx + 1
-%   if n==4
+%   if n>=4
     end do
 %   end
-%   if n==3
+%   if n>=3
     end do
 %   end
     end do

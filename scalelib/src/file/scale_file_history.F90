@@ -3002,9 +3002,11 @@ contains
     idx = 1
     do j = 1, size(src,4)
     do i = 1, size(src,3)
+    do k = 1, size(src,2)
     do l = 1, size(src,1)
        dsc(idx) = src(l, k, i, j)
        idx = idx + 1
+    end do
     end do
     end do
     end do
