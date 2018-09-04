@@ -674,8 +674,6 @@ contains
     use mod_cpl_vars, only: &
        CPL_getATM_LND
     implicit none
-
-    integer  :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('LND_SfcExch', 2)

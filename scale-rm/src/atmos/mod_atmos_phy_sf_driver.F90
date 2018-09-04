@@ -203,18 +203,7 @@ contains
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
-
-    real(RP) :: Z0M_t(IA,JA)
-    real(RP) :: Z0H_t(IA,JA)
-    real(RP) :: Z0E_t(IA,JA)
-
-    real(RP) :: q(QA)
-    real(RP) :: qdry
-    real(RP) :: Rtot
-    real(RP) :: CPtot
-
     real(RP) :: us, SFLX_PT
-
     real(RP) :: work
 
     integer  :: i, j, iq

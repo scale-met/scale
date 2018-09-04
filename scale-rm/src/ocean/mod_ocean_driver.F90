@@ -270,11 +270,9 @@ contains
 
     logical, intent(in) :: force
 
-    real(RP) :: LHV        (OIA,OJA) ! latent heat of vaporization [J/kg]
-    real(RP) :: LHS        (OIA,OJA) ! latent heat of sublimation  [J/kg]
-    real(RP) :: LHF        (OIA,OJA) ! latent heat of fusion       [J/kg]
-    real(RP) :: ATMOS_Uabs (OIA,OJA)
-
+    real(RP) :: LHV          (OIA,OJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: LHS          (OIA,OJA) ! latent heat of sublimation  [J/kg]
+    real(RP) :: ATMOS_Uabs   (OIA,OJA)
     real(RP) :: sfc_frac     (OIA,OJA)
     real(RP) :: sfc_temp     (OIA,OJA)
     real(RP) :: sfc_albedo   (OIA,OJA,N_RAD_DIR,N_RAD_RGN)
@@ -298,7 +296,7 @@ contains
     real(RP) :: sflx_ice     (OIA,OJA)
     logical  :: exists_ice   (OIA,OJA)
 
-    integer  :: k, i, j, iq, idir, irgn, n
+    integer  :: k, i, j, iq, idir, irgn
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_CalcTend', 1)
@@ -787,7 +785,7 @@ contains
        OCEAN_PHY_ICE_fraction
     implicit none
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_Update', 2)
@@ -887,8 +885,6 @@ contains
     use mod_cpl_vars, only: &
        CPL_getATM_OCN
     implicit none
-
-    integer  :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_SfcExch', 2)

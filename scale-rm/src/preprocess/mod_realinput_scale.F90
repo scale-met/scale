@@ -119,7 +119,7 @@ contains
     logical :: existed
 
     integer :: fid
-    integer :: i, k
+    integer :: i
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -236,8 +236,6 @@ contains
     real(RP) :: CPtot   (dims(1)+2)
     real(RP) :: temp_org(dims(1)+2)
     real(RP) :: dz
-
-    integer  :: dims2(3)
 
     integer  :: xs, xe
     integer  :: ys, ye
@@ -565,16 +563,13 @@ contains
     integer,          intent(in)  :: it
 
     integer :: rank
-    integer :: dims(3)
-
     integer :: fid
     integer :: xloc, yloc
     integer :: xs, xe
     integer :: ys, ye
-
     logical :: existed
 
-    integer :: k, i, j, n
+    integer :: i
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -661,8 +656,6 @@ contains
     implicit none
 
     integer, intent(out) :: odims(2)
-
-    integer :: i
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentOceanSetupSCALE",*) 'Real Case/Ocean Input File Type: SCALE-RM'
@@ -710,7 +703,7 @@ contains
     integer :: xs, xe, ys, ye
 
     integer :: fid
-    integer :: i, k
+    integer :: i
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
