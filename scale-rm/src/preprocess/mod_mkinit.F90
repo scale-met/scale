@@ -809,7 +809,7 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
        do k  = KS, KE
-          QTRC(k,i,j,QHE+iq) = gan(iq) / DENS(k,i,j)
+          QTRC(k,i,j,QHE+iq) = gan(iq) / DENS(k,i,j) ! [note] gan is never set.
        enddo
        enddo
        enddo
