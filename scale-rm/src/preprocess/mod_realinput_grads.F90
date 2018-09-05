@@ -379,10 +379,6 @@ contains
        I_HG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
-    use mod_atmos_phy_ch_vars, only: &
-       QA_CH, &
-       QS_CH, &
-       QE_CH
     implicit none
 
 

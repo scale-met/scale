@@ -83,8 +83,7 @@ contains
        FILE_HISTORY_truncate_3D
     use scale_prc, only: &
        PRC_masterrank, &
-       PRC_myrank,     &
-       PRC_LOCAL_COMM_WORLD
+       PRC_myrank
     use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &

@@ -267,12 +267,8 @@ contains
        temp_sfc            )
     use scale_statistics, only: &
        STATISTICS_horizontal_mean
-    use scale_atmos_hydrometeor, only: &
-       CV_VAPOR, &
-       CV_WATER, &
-       CP_VAPOR, &
-       CP_WATER
     implicit none
+
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE

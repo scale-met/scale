@@ -497,7 +497,6 @@ contains
     use scale_const, only: &
        RADIUS => CONST_RADIUS, &
        PI     => CONST_PI,     &
-       EPS    => CONST_EPS,    &
        D2R    => CONST_D2R
     use scale_atmos_grid_cartesC_real, only: &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT, &

@@ -773,11 +773,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup aerosol condition for Spectral Bin Microphysics (SBM) model
   subroutine SBMAERO_setup( convert_qtrc )
-    use scale_const, only: &
-       PI => CONST_PI
     use scale_atmos_hydrometeor, only: &
        I_QV, &
-       QHS, &
+       QHS,  &
        QHE
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
@@ -787,7 +785,7 @@ contains
 
     logical, intent(inout) :: convert_qtrc
 
-    real(RP), allocatable :: xabnd( : ), xactr( : )
+    real(RP), allocatable :: xabnd(:), xactr(:)
 
     integer :: iq, i, j, k
     !---------------------------------------------------------------------------

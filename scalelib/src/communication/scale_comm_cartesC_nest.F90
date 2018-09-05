@@ -275,11 +275,6 @@ contains
        PRC_abort,         &
        PRC_GLOBAL_domainID, &
        PRC_IsMaster
-    use scale_prc_cartesC, only: &
-       PRC_HAS_W, &
-       PRC_HAS_E, &
-       PRC_HAS_S, &
-       PRC_HAS_N
     use scale_interp, only: &
        INTERP_setup,   &
        INTERP_factor3d
@@ -299,11 +294,11 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
+
     integer,          intent(in) :: QA_MP
     character(len=*), intent(in) :: MP_TYPE_in
-
-    integer, intent(in), optional :: inter_parent
-    integer, intent(in), optional :: inter_child
+    integer,          intent(in), optional :: inter_parent
+    integer,          intent(in), optional :: inter_child
 
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'

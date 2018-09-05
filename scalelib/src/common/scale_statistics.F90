@@ -131,9 +131,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm_cartesC, only: &
-       COMM_datatype
     implicit none
+
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
@@ -226,9 +225,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm_cartesC, only: &
-       COMM_datatype
     implicit none
+
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -660,14 +658,11 @@ contains
        varname, var, &
        local         )
     use scale_prc, only: &
-       PRC_nprocs,   &
-       PRC_myrank
-    use scale_const, only: &
-       CONST_UNDEF, &
-       CONST_UNDEF2
+       PRC_nprocs
     use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
+
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -799,14 +794,12 @@ contains
        varname, var, &
        local         )
     use scale_prc, only: &
-       PRC_nprocs,   &
+       PRC_nprocs, &
        PRC_myrank
-    use scale_const, only: &
-       CONST_UNDEF, &
-       CONST_UNDEF2
     use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
+
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
     integer, intent(in) :: VA
