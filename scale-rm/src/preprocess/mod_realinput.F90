@@ -1356,8 +1356,10 @@ contains
                           W_org   (:,:,:),             & ! [IN]
                           W       (:,:,:)              ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               W(:,:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( W(:,:,:), 1 )
+       call COMM_wait ( W(:,:,:), 1 )
     end if
 
 
@@ -1373,8 +1375,10 @@ contains
                           U_org   (:,:,:),             & ! [IN]
                           U       (:,:,:)              ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               U(:,:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( U(:,:,:), 1 )
+       call COMM_wait ( U(:,:,:), 1 )
     end if
 
     call INTERP_interp3d( itp_nh,                      & ! [IN]
@@ -1389,8 +1393,10 @@ contains
                           V_org   (:,:,:),             & ! [IN]
                           V       (:,:,:)              ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               V(:,:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( V(:,:,:), 1 )
+       call COMM_wait ( V(:,:,:), 1 )
     end if
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
@@ -1476,8 +1482,10 @@ contains
                           POTT_org(:,:,:),             & ! [IN]
                           POTT    (:,:,:)              ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               POTT(:,:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( POTT(:,:,:), 1 )
+       call COMM_wait ( POTT(:,:,:), 1 )
     end if
 
     do j = 1, JA
@@ -1501,9 +1509,11 @@ contains
                              QTRC    (:,:,:,iq)           ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           one(:,:,:) = 1.0_RP
-          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  QTRC(:,:,:,iq), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:,:) )
+          call COMM_vars8( QTRC(:,:,:,iq), 1 )
+          call COMM_wait ( QTRC(:,:,:,iq), 1 )
        end if
 
        do j = 1, JA
@@ -1528,9 +1538,11 @@ contains
                              DENS    (:,:,:),             & ! [OUT]
                              logwgt = .true.              ) ! [IN]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:,:) )
+          call COMM_vars8( DENS(:,:,:), 1 )
+          call COMM_wait ( DENS(:,:,:), 1 )
        end if
     else
        call INTERP_interp3d( itp_nh,                      & ! [IN]
@@ -1546,9 +1558,11 @@ contains
                              PRES    (:,:,:),             & ! [OUT]
                              logwgt = .true.              ) ! [IN]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  PRES(:,:,:), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:,:) )
+          call COMM_vars8( PRES(:,:,:), 1 )
+          call COMM_wait ( PRES(:,:,:), 1 )
        end if
 
        QC(:,:,:) = 0.0_RP
@@ -2566,8 +2580,10 @@ contains
                              tw_org  (:,:),        & ! [IN]
                              tw      (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  tw(:,:,nn), FILTER_ORDER, FILTER_NITER )
+          call COMM_vars8( tw(:,:,nn), 1 )
+          call COMM_wait ( tw(:,:,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,               & ! [IN]
@@ -2579,8 +2595,10 @@ contains
                              sst_org (:,:),        & ! [IN]
                              sst     (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  sst(:,:,nn), FILTER_ORDER, FILTER_NITER )
+          call COMM_vars8( sst(:,:,nn), 1 )
+          call COMM_wait ( sst(:,:,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2593,9 +2611,11 @@ contains
                              albw    (:,:,I_R_direct ,I_R_IR ,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           one(:,:) = 1.0_RP
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_direct,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_direct,I_R_IR,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_direct,I_R_IR,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2607,9 +2627,11 @@ contains
                              albw_org(:,:,I_R_diffuse,I_R_IR ),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_IR ,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_diffuse,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_IR,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_IR,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2621,9 +2643,11 @@ contains
                              albw_org(:,:,I_R_direct ,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_NIR,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_direct,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_direct,I_R_NIR,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_direct,I_R_NIR,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2635,9 +2659,11 @@ contains
                              albw_org(:,:,I_R_diffuse,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_NIR,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, JS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_diffuse,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_NIR,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_NIR,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2649,9 +2675,11 @@ contains
                              albw_org(:,:,I_R_direct ,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_VIS,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_direct,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_direct,I_R_VIS,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_direct,I_R_VIS,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2663,9 +2691,11 @@ contains
                              albw_org(:,:,I_R_diffuse,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_VIS,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  albw(:,:,I_R_diffuse,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_VIS,nn), 1 )
+          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_VIS,nn), 1 )
        end if
 
        call INTERP_interp2d( itp_nh,               & ! [IN]
@@ -2677,9 +2707,11 @@ contains
                              z0w_org (:,:),        & ! [IN]
                              z0w     (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  z0w(:,:,nn), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one(:,:) )
+          call COMM_vars8( z0w(:,:,nn), 1 )
+          call COMM_wait ( z0w(:,:,nn), 1 )
        end if
 
        if ( first ) then
@@ -2862,6 +2894,9 @@ contains
          INTERP_factor3d, &
          INTERP_interp2d, &
          INTERP_interp3d
+    use scale_comm_cartesC, only: &
+         COMM_vars8, &
+         COMM_wait
     use scale_filter, only: &
          FILTER_hyperdiff
     use scale_topography, only: &
@@ -3065,8 +3100,10 @@ contains
                           lst_org (:,:),      & ! [IN]
                           lst     (:,:)       ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               lst(:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( lst(:,:), 1 )
+       call COMM_wait ( lst(:,:), 1 )
     end if
 
     if ( URBAN_do ) then
@@ -3079,8 +3116,10 @@ contains
                              ust_org (:,:),      & ! [IN]
                              ust     (:,:)       ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  ust(:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( ust(:,:), 1 )
+       call COMM_wait ( ust(:,:), 1 )
        end if
     end if
 
@@ -3094,9 +3133,11 @@ contains
                           albg    (:,:,I_R_direct ,I_R_IR )  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        one2d(:,:) = 1.0_RP
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_direct,I_R_IR), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_direct,I_R_IR), 1 )
+       call COMM_wait ( albg(:,:,I_R_direct,I_R_IR), 1 )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3108,9 +3149,11 @@ contains
                           albg_org(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_IR )  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_diffuse,I_R_IR), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_IR), 1 )
+       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_IR), 1 )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3122,9 +3165,11 @@ contains
                           albg_org(:,:,I_R_direct ,I_R_NIR), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_NIR)  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_direct,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_direct,I_R_NIR), 1 )
+       call COMM_wait ( albg(:,:,I_R_direct,I_R_NIR), 1 )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3136,9 +3181,11 @@ contains
                           albg_org(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_NIR)  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_diffuse,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_NIR), 1 )
+       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_NIR), 1 )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3150,9 +3197,11 @@ contains
                           albg_org(:,:,I_R_direct ,I_R_VIS), & ! [IN]
                           albg    (:,:,I_R_direct ,I_R_VIS)  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_direct,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_direct,I_R_VIS), 1 )
+       call COMM_wait ( albg(:,:,I_R_direct,I_R_VIS), 1 )
     end if
 
     call INTERP_interp2d( itp_nh,                            & ! [IN]
@@ -3164,9 +3213,11 @@ contains
                           albg_org(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
                           albg    (:,:,I_R_diffuse,I_R_VIS)  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                               albg(:,:,I_R_diffuse,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
                               limiter_sign = one2d(:,:) )
+       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_VIS), 1 )
+       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_VIS), 1 )
     end if
 
     call INTERP_interp3d( itp_nh,                       & ! [IN]
@@ -3192,8 +3243,10 @@ contains
        call replace_misval_const( tg(k,:,:), maskval_tg, lsmask_nest )
     enddo
     if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( LKMAX, 1, LKMAX, IA, 1, IA, JA, 1, JA, &
+       call FILTER_hyperdiff( LKMAX, 1, LKMAX, IA, IS, IE, JA, JS, JE, &
                               tg(:,:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( tg(:,:,:), 1 )
+       call COMM_wait ( tg(:,:,:), 1 )
     end if
 
 
@@ -3208,8 +3261,10 @@ contains
                              topo_org(:,:),      & ! [IN]
                              topo    (:,:)       ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
                                  topo(:,:), FILTER_ORDER, FILTER_NITER )
+          call COMM_vars8( topo(:,:), 1 )
+          call COMM_wait ( topo(:,:), 1 )
        end if
 
        do j = 1, JA
@@ -3316,9 +3371,11 @@ contains
 
        if ( FILTER_NITER > 0 ) then
           one3d(:,:,:) = 1.0_RP
-          call FILTER_hyperdiff( LKMAX, 1, LKMAX-1, IA, 1, IA, JA, 1, JA, &
+          call FILTER_hyperdiff( LKMAX, 1, LKMAX-1, IA, IS, IE, JA, JS, JE, &
                                  strg(:,:,:), FILTER_ORDER, FILTER_NITER, &
                                  limiter_sign = one3d(:,:,:) )
+          call COMM_vars8( strg(:,:,:), 1 )
+          call COMM_wait ( strg(:,:,:), 1 )
        end if
 
        do j = 1, JA

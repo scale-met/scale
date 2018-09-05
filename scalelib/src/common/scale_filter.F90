@@ -82,6 +82,24 @@ contains
        call PRC_abort
     end if
 
+    if ( IS < 2 ) then
+       LOG_ERROR("FILTER_hyperdiff_2D", *) "IS must be >= 2"
+       call PRC_abort
+    end if
+    if ( IE > IA-1  ) then
+       LOG_ERROR("FILTER_hyperdiff_2D", *) "IS must be <= IA-1"
+       call PRC_abort
+    end if
+    if ( JS < 2 ) then
+       LOG_ERROR("FILTER_hyperdiff_2D", *) "JS must be >= 2"
+       call PRC_abort
+    end if
+    if ( JE > JA-1  ) then
+       LOG_ERROR("FILTER_hyperdiff_2D", *) "JS must be <= JA-1"
+       call PRC_abort
+    end if
+
+
     limiter = present( limiter_sign )
 
     ! reduce grid-scale variation
@@ -169,11 +187,6 @@ contains
     real(RP), pointer :: limiter(:,:)
 
     integer :: k, i, j
-
-    if ( mod(order,2) .ne. 0 ) then
-       LOG_ERROR("FILTER_hyperdiff_3D", *) "order must be even"
-       call PRC_abort
-    end if
 
     if ( present(limiter_sign) ) then
        limiter => work_sign
