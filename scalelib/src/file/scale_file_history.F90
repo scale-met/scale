@@ -340,8 +340,7 @@ contains
        myrank                            )
     use scale_file_h, only: &
        FILE_REAL4, &
-       FILE_REAL8, &
-       FILE_preclist
+       FILE_REAL8
     use scale_file, only: &
        FILE_AGGREGATE
     use scale_calendar, only: &

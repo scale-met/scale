@@ -64,11 +64,6 @@ contains
   subroutine CNVLANDUSE_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_const, only: &
-       D2R => CONST_D2R
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_DLAT => ATMOS_GRID_CARTESC_REAL_DLAT, &
-       REAL_DLON => ATMOS_GRID_CARTESC_REAL_DLON
     implicit none
 
     character(len=H_SHORT) :: CNVLANDUSE_name = 'NONE' ! keep backward compatibility
@@ -316,8 +311,6 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF,  &
-       EPS    => CONST_EPS,    &
        RADIUS => CONST_RADIUS, &
        D2R    => CONST_D2R
     use scale_atmos_grid_cartesC, only: &
@@ -325,9 +318,6 @@ contains
        FY => ATMOS_GRID_CARTESC_FY, &
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
-    use scale_atmos_grid_cartesC_real, only: &
-       LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON   => ATMOS_GRID_CARTESC_REAL_LON
     use scale_file_tiledata, only: &
        FILE_TILEDATA_get_info, &
        FILE_TILEDATA_get_data
@@ -513,7 +503,6 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF2 => CONST_UNDEF2, &
-       EPS    => CONST_EPS,    &
        RADIUS => CONST_RADIUS, &
        D2R    => CONST_D2R
     use scale_atmos_grid_cartesC, only: &
@@ -521,9 +510,6 @@ contains
        FY => ATMOS_GRID_CARTESC_FY, &
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
-    use scale_atmos_grid_cartesC_real, only: &
-       LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON   => ATMOS_GRID_CARTESC_REAL_LON
     use scale_file_tiledata, only: &
        FILE_TILEDATA_get_info, &
        FILE_TILEDATA_get_data
@@ -696,7 +682,6 @@ contains
     end do
 
     deallocate( LANDUSE, LATH, LONH, YH, XH )
-
 
     return
   end subroutine CNVLANDUSE_LU100M

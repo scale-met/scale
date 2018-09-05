@@ -54,7 +54,8 @@ contains
 
 !    namelist / PARAM_LAKE / &
 !       LAKE_DYN_TYPE
-    integer :: ierr
+
+!    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE

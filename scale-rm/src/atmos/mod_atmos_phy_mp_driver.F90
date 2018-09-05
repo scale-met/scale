@@ -478,11 +478,9 @@ contains
 
     real(RP) :: RHOE_t(KA,IA,JA)
     real(RP) :: TEMP1 (KA,IA,JA)
-    real(RP) :: PRES1 (KA,IA,JA)
     real(RP) :: CPtot1(KA,IA,JA)
     real(RP) :: CVtot1(KA,IA,JA)
     real(RP) :: CCN   (KA,IA,JA)
-    real(RP) :: QHYD  (KA,IA,JA,6)
     real(RP) :: vterm (KA,QS_MP+1:QE_MP)
     real(RP), target :: QTRC1(KA,IA,JA,QS_MP:QE_MP)
 

@@ -348,7 +348,6 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
        PI     => CONST_PI,    &
        GRAV   => CONST_GRAV,  &
        dens_w => CONST_DWATR, &

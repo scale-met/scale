@@ -510,15 +510,10 @@ contains
        ATMOS_vars_history_setpres,  &
        ATMOS_vars_history,          &
        ATMOS_vars_monitor,          &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
-       TEMP, &
-       PRES, &
-       POTT, &
+       DENS,                        &
+       POTT,                        &
+       TEMP,                        &
+       PRES,                        &
        QV
     use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_driver_set
@@ -575,11 +570,11 @@ contains
     if( URBAN_do ) call URBAN_SURFACE_SET( countup=.false. )
 
     ! calc tendencies
-    if( ATMOS_do ) call ATMOS_driver_calc_tendency( force = .true. )
-    if( OCEAN_do ) call OCEAN_driver_calc_tendency( force = .true. )
-    if( LAND_do  ) call LAND_driver_calc_tendency( force = .true. )
-    if( URBAN_do ) call URBAN_driver_calc_tendency( force = .true. )
-    if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force = .true. )
+    if( ATMOS_do ) call ATMOS_driver_calc_tendency           ( force=.true. )
+    if( OCEAN_do ) call OCEAN_driver_calc_tendency           ( force=.true. )
+    if( LAND_do  ) call LAND_driver_calc_tendency            ( force=.true. )
+    if( URBAN_do ) call URBAN_driver_calc_tendency           ( force=.true. )
+    if( CPL_sw   ) call ATMOS_driver_calc_tendency_from_sflux( force=.true. )
                    call USER_calc_tendency
 
     !########## History & Monitor ##########

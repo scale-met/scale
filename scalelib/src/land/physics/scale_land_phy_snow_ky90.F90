@@ -916,7 +916,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
   real(RP)             :: ts0,zn0
   integer              :: i,j
   real(RP)             :: ts_r1,ts_r2,zn_r1,zn_r2
-  character(len=3)     :: ttt
+  character(len=3)     :: ttt = ""
 
   real(RP)               :: a,b,c,d,e,f,g
 

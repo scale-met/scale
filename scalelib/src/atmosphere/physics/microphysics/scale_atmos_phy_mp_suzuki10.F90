@@ -4280,7 +4280,7 @@ contains
 
     do ijk = 1, ijkmax
     do n   = 1, nccn
-       ga(n,ijk) = ga(n,ijk) + f0(ijk) * marate(n) * expxactr(n) / dxaer
+       ga(n,ijk) = ga(n,ijk) + f0(ijk) * marate(n) * expxactr(n) / dxaer ! [note] marate is never set.
     enddo
     enddo
 

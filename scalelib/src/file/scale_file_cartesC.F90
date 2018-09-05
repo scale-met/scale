@@ -791,8 +791,7 @@ contains
     use scale_calendar, only: &
        CALENDAR_get_name
     use scale_prc, only: &
-       PRC_Ismaster, &
-       PRC_myrank,   &
+       PRC_myrank, &
        PRC_abort
     use scale_time, only: &
        NOWDATE => TIME_NOWDATE, &
@@ -950,8 +949,6 @@ contains
        FILE_EndDef,    &
        FILE_Flush,     &
        FILE_Attach_Buffer
-    use scale_prc, only: &
-       PRC_myrank
     implicit none
 
     integer, intent(in) :: fid  !< file ID
@@ -1829,8 +1826,6 @@ contains
        append, aggregate,   &
        standard_name,       &
        cell_measures        )
-    use scale_prc, only: &
-       PRC_myrank
     implicit none
 
     real(RP),         intent(in) :: var(:)   !< value of the variable

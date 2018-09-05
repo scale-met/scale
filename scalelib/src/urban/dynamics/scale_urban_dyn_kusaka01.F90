@@ -117,14 +117,12 @@ contains
        Z0M, Z0H, Z0E  )
     use scale_prc, only: &
        PRC_abort
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
-    integer, intent(in) :: UIA, UIS, UIE
-    integer, intent(in) :: UJA, UJS, UJE
 
+    integer,  intent(in)  :: UIA, UIS, UIE
+    integer,  intent(in)  :: UJA, UJS, UJE
     real(RP), intent(out) :: Z0M(UIA,UJA)
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
@@ -620,7 +618,6 @@ contains
        PRC_abort
     use scale_const, only: &
        EPS    => CONST_EPS,     &    ! small number (machine epsilon)
-       PI     => CONST_PI,      &    ! pi               [-]
        KARMAN => CONST_KARMAN,  &    ! Kalman constant  [-]
        CPdry  => CONST_CPdry,   &    ! Heat capacity of dry air [J/K/kg]
        GRAV   => CONST_GRAV,    &    ! gravitational constant [m/s2]
@@ -634,6 +631,7 @@ contains
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
+
     integer, intent(in) :: UKA, UKS, UKE
     integer, intent(in) :: UIA, UIS, UIE
     integer, intent(in) :: UJA, UJS, UJE

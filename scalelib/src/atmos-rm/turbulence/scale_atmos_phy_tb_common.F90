@@ -1623,7 +1623,6 @@ contains
     use scale_atmos_grid_cartesC, only: &
        RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        FDZ  => ATMOS_GRID_CARTESC_FDZ
     implicit none

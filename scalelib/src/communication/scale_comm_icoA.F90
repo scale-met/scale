@@ -977,7 +977,6 @@ contains
        PRC_myrank
     use scale_prc_icoA, only: &
        PRC_have_pl,         &
-       PRC_RGN_vlink,       &
        PRC_RGN_local,       &
        PRC_RGN_vert_num,    &
        PRC_RGN_vert_tab_pl, &

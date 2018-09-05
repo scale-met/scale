@@ -194,13 +194,11 @@ contains
     integer,          intent(out) :: dims(6)
     character(len=*), intent(in)  :: basename
 
-
     namelist / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
     integer :: ielem
 
-    integer :: k, n
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -381,10 +379,6 @@ contains
        I_HG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
-    use mod_atmos_phy_ch_vars, only: &
-       QA_CH, &
-       QS_CH, &
-       QE_CH
     implicit none
 
 
@@ -405,21 +399,15 @@ contains
     integer,          intent(in)  :: nt
 
     real(RP) :: rhprs_org(dims(1)+2,dims(2),dims(3))
-    real(RP) :: pott
-
     real(RP) :: Rtot
-
     integer  :: lm_layer(dims(2),dims(3))
 
-    ! data
     character(len=H_LONG) :: gfile
 
     real(RP) :: p_sat, qm, rhsfc, dz
-    real(RP) :: lp2, lp3
+    logical  :: pressure_coordinates
 
     integer  :: i, j, k, iq, ielem
-
-    logical  :: pressure_coordinates
     !---------------------------------------------------------------------------
 
     dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
@@ -1144,10 +1132,8 @@ contains
     logical,          intent(in)  :: use_file_landwater ! use landwater data from files
     character(len=*), intent(in)  :: basename
 
-    integer             :: ielem
-    integer             :: k, n
-
-    integer             :: ierr
+    integer :: ielem
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentLandSetupGrADS",*) 'Real Case/Land Input File Type: GrADS format'
@@ -1274,30 +1260,23 @@ contains
        EPS   => CONST_EPS
     implicit none
 
-    real(RP), intent(out) :: tg_org    (:,:,:)
-    real(RP), intent(out) :: strg_org  (:,:,:)
-    real(RP), intent(out) :: smds_org  (:,:,:)
-    real(RP), intent(out) :: lst_org   (:,:)
-    real(RP), intent(out) :: llon_org  (:,:)
-    real(RP), intent(out) :: llat_org  (:,:)
-    real(RP), intent(out) :: lz_org    (:)
-    real(RP), intent(out) :: topo_org(:,:)
-    real(RP), intent(out) :: lmask_org(:,:)
+    real(RP),         intent(out) :: tg_org   (:,:,:)
+    real(RP),         intent(out) :: strg_org (:,:,:)
+    real(RP),         intent(out) :: smds_org (:,:,:)
+    real(RP),         intent(out) :: lst_org  (:,:)
+    real(RP),         intent(out) :: llon_org (:,:)
+    real(RP),         intent(out) :: llat_org (:,:)
+    real(RP),         intent(out) :: lz_org   (:)
+    real(RP),         intent(out) :: topo_org (:,:)
+    real(RP),         intent(out) :: lmask_org(:,:)
+    character(len=*), intent(in)  :: basename_num
+    integer,          intent(in)  :: ldims(3)
+    logical,          intent(in)  :: use_file_landwater ! use land water data from files
+    integer,          intent(in)  :: nt
 
-    character(len=*), intent(in) :: basename_num
-    integer,          intent(in) :: ldims(3)
-    logical,          intent(in) :: use_file_landwater   ! use land water data from files
-    integer,          intent(in) :: nt
-    ! ----------------------------------------------------------------
-
-    !> grads data
     character(len=H_LONG) :: gfile
 
-    real(RP) :: qvsat, qm
-
-    integer :: i, j, k, ielem, n
-    integer :: ierr
-
+    integer :: i, j, k, ielem
     !---------------------------------------------------------------------------
 
     loop_InputLandGrADS : do ielem = 1, num_item_list_land
@@ -1594,10 +1573,9 @@ contains
     character(len=*), intent(in)  :: basename
 
     character(len=H_LONG) :: grads_ctl
-    integer             :: ielem
-    integer             :: n
 
-    integer             :: ierr
+    integer :: ielem
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentOceanSetupGrADS",*) 'Real Case/Ocean Input File Type: GrADS format'
@@ -1736,25 +1714,18 @@ contains
        EPS   => CONST_EPS
     implicit none
 
-    real(RP), intent(out) :: tw_org   (:,:)
-    real(RP), intent(out) :: sst_org  (:,:)
-    real(RP), intent(out) :: omask_org(:,:)
-    real(RP), intent(out) :: olon_org (:,:)
-    real(RP), intent(out) :: olat_org (:,:)
+    real(RP),         intent(out) :: tw_org   (:,:)
+    real(RP),         intent(out) :: sst_org  (:,:)
+    real(RP),         intent(out) :: omask_org(:,:)
+    real(RP),         intent(out) :: olon_org (:,:)
+    real(RP),         intent(out) :: olat_org (:,:)
+    character(len=*), intent(in)  :: basename_num
+    integer,          intent(in)  :: odims(2)
+    integer,          intent(in)  :: nt
 
-    character(len=*), intent(in) :: basename_num
-    integer,          intent(in) :: odims(2)
-    integer,          intent(in) :: nt
-    ! ----------------------------------------------------------------
-
-    !> grads data
     character(len=H_LONG) :: gfile
 
-    real(RP) :: qvsat, qm
-
-    integer :: i, j, ielem, n
-    integer :: ierr
-
+    integer :: i, j, ielem
     !---------------------------------------------------------------------------
 
     loop_InputOceanGrADS : do ielem = 1, num_item_list_ocean
@@ -2139,14 +2110,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine read_grads_file_2d(  &
-       io_fid,                    &
-       gfile,                     &
-       nx,ny,nz,it,               &
-       item,                      &
-       startrec,                  &
-       totalrec,                  &
-       yrev,                      &
-       gdata                      )
+       io_fid,      &
+       gfile,       &
+       nx,ny,nz,it, &
+       item,        &
+       startrec,    &
+       totalrec,    &
+       yrev,        &
+       gdata        )
     implicit none
 
     integer,          intent(in)  :: io_fid
@@ -2162,7 +2133,8 @@ contains
 
     integer  :: ierr
     integer  :: irec, irecl
-    integer  :: i,j,k
+    integer  :: i,j
+    !---------------------------------------------------------------------------
 
     irecl=nx*ny*4
     call open_grads_file(io_fid, gfile, irecl)
@@ -2190,14 +2162,14 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine read_grads_file_3d(  &
-       io_fid,                    &
-       gfile,                     &
-       nx,ny,nz,it,               &
-       item,                      &
-       startrec,                  &
-       totalrec,                  &
-       yrev,                      &
-       gdata                      )
+       io_fid,      &
+       gfile,       &
+       nx,ny,nz,it, &
+       item,        &
+       startrec,    &
+       totalrec,    &
+       yrev,        &
+       gdata        )
     implicit none
 
     integer,          intent(in)  :: io_fid

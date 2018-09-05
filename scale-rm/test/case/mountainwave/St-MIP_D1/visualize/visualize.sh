@@ -22,7 +22,7 @@ rm -f energy.dat mass.dat
 echo "+visualize by gpview"
 rm -f dcl.pdf
 
-gpview history.pe\*.nc@W,x=42500:60000,y=50,z=0:10000,time=6000 --nozero --noshade --cint=0.2 --range=-5:5 --aspect=1 --wsn 2 || exit
+gpview history.pe\*.nc@W,x=42500:60000,y=50,z=0:10000,time=6000 --nozero --noshade --cint=0.2 --range=-4:4 --aspect=1 --wsn 2 || exit
 convert -density 150 -rotate 90 +antialias dcl.pdf W.png || exit
 
 rm -f dcl.pdf

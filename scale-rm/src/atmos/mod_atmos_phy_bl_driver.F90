@@ -103,8 +103,6 @@ contains
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
     implicit none
-
-    integer :: i, j
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE

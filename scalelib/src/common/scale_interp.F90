@@ -917,8 +917,7 @@ contains
        search_limit,     &
        weight_order      )
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
-       EPS    => CONST_EPS, &
+       EPS    => CONST_EPS,   &
        RADIUS => CONST_RADIUS
     implicit none
 

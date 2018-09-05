@@ -1363,8 +1363,7 @@ contains
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
-
-    integer  :: i, j, k, iq
+    integer  :: iq
     !---------------------------------------------------------------------------
 
     if ( STATISTICS_checktotal ) then
@@ -2446,12 +2445,13 @@ contains
     use mod_atmos_phy_cp_vars, only: &
        SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
     implicit none
+
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:,:)
 
     real(RP) :: fact
-
-    integer :: k, i, j, iq
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
 
     select case ( vname )
     case ( 'LWP' )
@@ -2621,12 +2621,13 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        AREA => ATMOS_GRID_CARTESC_REAL_AREA
     implicit none
+
     character(len=*), intent(in)  :: vname
     real(RP),         intent(out) :: var(:)
 
     real(RP) :: WORK(KA,IA,JA)
-
-    integer :: k, i, j, iq
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
 
     select case ( vname )
     case ( 'DENS_MEAN' )

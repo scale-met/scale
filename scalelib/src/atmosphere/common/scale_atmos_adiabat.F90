@@ -403,12 +403,11 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr, &
-       CP_WATER
+       HYDROMETEOR_entr => ATMOS_HYDROMETEOR_entr
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_moist_conversion_pres_liq
-
     implicit none
+
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
