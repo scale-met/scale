@@ -1899,8 +1899,6 @@ contains
   subroutine FILE_HISTORY_Create( &
        id,     &
        options )
-    use scale_prc, only: &
-       PRC_LOCAL_COMM_WORLD
     use scale_file_h, only: &
        FILE_REAL8, &
        FILE_REAL4
