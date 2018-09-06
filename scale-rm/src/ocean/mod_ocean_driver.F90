@@ -185,6 +185,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
+       ATMOS_HYDROMETEOR_dry,                    &
        I_QV
     use scale_ocean_grid_cartesC_real, only: &
        OCEAN_GRID_CARTESC_REAL_VOL,    &
@@ -492,25 +493,33 @@ contains
     !$omp parallel do
     do j = OJS, OJE
     do i = OIS, OIE
-       OCEAN_SFC_TEMP  (i,j)      = sfc_temp  (i,j) * sfc_frac(i,j)
-       OCEAN_SFC_Z0M   (i,j)      = sfc_Z0M   (i,j) * sfc_frac(i,j)
-       OCEAN_SFC_Z0H   (i,j)      = sfc_Z0H   (i,j) * sfc_frac(i,j)
-       OCEAN_SFC_Z0E   (i,j)      = sfc_Z0E   (i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_MW   (i,j)      = sflx_MW   (i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_MU   (i,j)      = sflx_MU   (i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_MV   (i,j)      = sflx_MV   (i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_SH   (i,j)      = sflx_SH   (i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_QTRC (i,j,I_QV) = sflx_QV   (i,j) * sfc_frac(i,j)
-       OCEAN_U10       (i,j)      = U10       (i,j) * sfc_frac(i,j)
-       OCEAN_V10       (i,j)      = V10       (i,j) * sfc_frac(i,j)
-       OCEAN_T2        (i,j)      = T2        (i,j) * sfc_frac(i,j)
-       OCEAN_Q2        (i,j)      = Q2        (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_TEMP  (i,j) = sfc_temp  (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0M   (i,j) = sfc_Z0M   (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0H   (i,j) = sfc_Z0H   (i,j) * sfc_frac(i,j)
+       OCEAN_SFC_Z0E   (i,j) = sfc_Z0E   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MW   (i,j) = sflx_MW   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MU   (i,j) = sflx_MU   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_MV   (i,j) = sflx_MV   (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_SH   (i,j) = sflx_SH   (i,j) * sfc_frac(i,j)
+       OCEAN_U10       (i,j) = U10       (i,j) * sfc_frac(i,j)
+       OCEAN_V10       (i,j) = V10       (i,j) * sfc_frac(i,j)
+       OCEAN_T2        (i,j) = T2        (i,j) * sfc_frac(i,j)
+       OCEAN_Q2        (i,j) = Q2        (i,j) * sfc_frac(i,j)
 
-       OCEAN_SFLX_G    (i,j)      = sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
-       OCEAN_SFLX_water(i,j)      = sflx_water(i,j) * sfc_frac(i,j)
-       OCEAN_SFLX_ice  (i,j)      = sflx_ice  (i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_G    (i,j) = sflx_G    (i,j) * sfc_frac(i,j) * (-1.0_RP) ! upward to downward
+       OCEAN_SFLX_water(i,j) = sflx_water(i,j) * sfc_frac(i,j)
+       OCEAN_SFLX_ice  (i,j) = sflx_ice  (i,j) * sfc_frac(i,j)
     enddo
     enddo
+
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_SFLX_QTRC (i,j,I_QV) = sflx_QV(i,j) * sfc_frac(i,j)
+       enddo
+       enddo
+    endif
 
     !$omp parallel do
     do irgn = I_R_IR, I_R_VIS
@@ -677,25 +686,33 @@ contains
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          OCEAN_SFC_TEMP  (i,j)      = OCEAN_SFC_TEMP  (i,j)      + sfc_temp  (i,j) * sfc_frac(i,j)
-          OCEAN_SFC_Z0M   (i,j)      = OCEAN_SFC_Z0M   (i,j)      + sfc_Z0M   (i,j) * sfc_frac(i,j)
-          OCEAN_SFC_Z0H   (i,j)      = OCEAN_SFC_Z0H   (i,j)      + sfc_Z0H   (i,j) * sfc_frac(i,j)
-          OCEAN_SFC_Z0E   (i,j)      = OCEAN_SFC_Z0E   (i,j)      + sfc_Z0E   (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_MW   (i,j)      = OCEAN_SFLX_MW   (i,j)      + sflx_MW   (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_MU   (i,j)      = OCEAN_SFLX_MU   (i,j)      + sflx_MU   (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_MV   (i,j)      = OCEAN_SFLX_MV   (i,j)      + sflx_MV   (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_SH   (i,j)      = OCEAN_SFLX_SH   (i,j)      + sflx_SH   (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_QTRC (i,j,I_QV) = OCEAN_SFLX_QTRC (i,j,I_QV) + sflx_QV   (i,j) * sfc_frac(i,j)
-          OCEAN_U10       (i,j)      = OCEAN_U10       (i,j)      + U10       (i,j) * sfc_frac(i,j)
-          OCEAN_V10       (i,j)      = OCEAN_V10       (i,j)      + V10       (i,j) * sfc_frac(i,j)
-          OCEAN_T2        (i,j)      = OCEAN_T2        (i,j)      + T2        (i,j) * sfc_frac(i,j)
-          OCEAN_Q2        (i,j)      = OCEAN_Q2        (i,j)      + Q2        (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_TEMP  (i,j) = OCEAN_SFC_TEMP  (i,j) + sfc_temp  (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0M   (i,j) = OCEAN_SFC_Z0M   (i,j) + sfc_Z0M   (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0H   (i,j) = OCEAN_SFC_Z0H   (i,j) + sfc_Z0H   (i,j) * sfc_frac(i,j)
+          OCEAN_SFC_Z0E   (i,j) = OCEAN_SFC_Z0E   (i,j) + sfc_Z0E   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MW   (i,j) = OCEAN_SFLX_MW   (i,j) + sflx_MW   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MU   (i,j) = OCEAN_SFLX_MU   (i,j) + sflx_MU   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_MV   (i,j) = OCEAN_SFLX_MV   (i,j) + sflx_MV   (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_SH   (i,j) = OCEAN_SFLX_SH   (i,j) + sflx_SH   (i,j) * sfc_frac(i,j)
+          OCEAN_U10       (i,j) = OCEAN_U10       (i,j) + U10       (i,j) * sfc_frac(i,j)
+          OCEAN_V10       (i,j) = OCEAN_V10       (i,j) + V10       (i,j) * sfc_frac(i,j)
+          OCEAN_T2        (i,j) = OCEAN_T2        (i,j) + T2        (i,j) * sfc_frac(i,j)
+          OCEAN_Q2        (i,j) = OCEAN_Q2        (i,j) + Q2        (i,j) * sfc_frac(i,j)
 
-          OCEAN_SFLX_G    (i,j)      = OCEAN_SFLX_G    (i,j)      + sflx_G    (i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_water(i,j)      = OCEAN_SFLX_water(i,j)      + sflx_water(i,j) * sfc_frac(i,j)
-          OCEAN_SFLX_ice  (i,j)      = OCEAN_SFLX_ice  (i,j)      + sflx_ice  (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_G    (i,j) = OCEAN_SFLX_G    (i,j) + sflx_G    (i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_water(i,j) = OCEAN_SFLX_water(i,j) + sflx_water(i,j) * sfc_frac(i,j)
+          OCEAN_SFLX_ice  (i,j) = OCEAN_SFLX_ice  (i,j) + sflx_ice  (i,j) * sfc_frac(i,j)
        enddo
        enddo
+
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+          !$omp parallel do
+          do j = OJS, OJE
+          do i = OIS, OIE
+             OCEAN_SFLX_QTRC(i,j,I_QV) = OCEAN_SFLX_QTRC(i,j,I_QV) + sflx_QV(i,j) * sfc_frac(i,j)
+          enddo
+          enddo
+       endif
 
        !$omp parallel do
        do irgn = I_R_IR, I_R_VIS
@@ -710,12 +727,21 @@ contains
 
     endif ! ICE process?
 
-    !$omp parallel do
-    do j = OJS, OJE
-    do i = OIS, OIE
-       OCEAN_SFLX_LH(i,j) = OCEAN_SFLX_QTRC(i,j,I_QV) * LHV(i,j) ! always LHV
-    enddo
-    enddo
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_SFLX_LH(i,j) = OCEAN_SFLX_QTRC(i,j,I_QV) * LHV(i,j) ! always LHV
+       enddo
+       enddo
+    else
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          OCEAN_SFLX_LH(i,j) = 0.0_RP
+       enddo
+       enddo
+    endif
 
     ! Surface flux for chemical tracers
     if ( ATMOS_sw_phy_ch ) then

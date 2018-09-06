@@ -620,8 +620,10 @@ contains
                           VAR_DESC(I_SFLX_SH),         VAR_UNIT(I_SFLX_SH),         standard_name=VAR_STDN(I_SFLX_SH)         )
     call FILE_HISTORY_in( LAND_SFLX_LH   (:,:),                     VAR_NAME(I_SFLX_LH),                                      &
                           VAR_DESC(I_SFLX_LH),         VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
+    if ( I_QV > 0 ) then
     call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV),                VAR_NAME(I_SFLX_evap),                                    &
                           VAR_DESC(I_SFLX_evap),       VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
+    endif
     call FILE_HISTORY_in( LAND_SFLX_GH   (:,:),                     VAR_NAME(I_SFLX_GH),                                      &
                           VAR_DESC(I_SFLX_GH),         VAR_UNIT(I_SFLX_GH),         standard_name=VAR_STDN(I_SFLX_GH)         )
     call FILE_HISTORY_in( LAND_SFLX_water(:,:),                     VAR_NAME(I_SFLX_water),                                   &

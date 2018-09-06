@@ -172,6 +172,7 @@ contains
        URBAN_ROFF
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       ATMOS_HYDROMETEOR_dry,                    &
        I_QV
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN, &
@@ -338,10 +339,17 @@ contains
           URBAN_RAINB_t(i,j) = ( RAINB(i,j) - URBAN_RAINB(i,j) ) / dt
           URBAN_RAING_t(i,j) = ( RAING(i,j) - URBAN_RAING(i,j) ) / dt
           URBAN_ROFF_t (i,j) = ( ROFF (i,j) - URBAN_ROFF (i,j) ) / dt
+       end do
+       end do
 
-          URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
-       end do
-       end do
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+          !$omp parallel do
+          do j = UJS, UJE
+          do i = UIS, UIE
+             URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
+          enddo
+          enddo
+       endif
 
     end select
 

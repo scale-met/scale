@@ -692,9 +692,11 @@ contains
     call FILE_HISTORY_in( OCEAN_SFLX_LH   (:,:),                                                 &
                           VAR_NAME(I_SFLX_LH),         VAR_DESC(I_SFLX_LH),                      &
                           VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
+    if ( I_QV > 0 ) then
     call FILE_HISTORY_in( OCEAN_SFLX_QTRC (:,:,I_QV),                                            &
                           VAR_NAME(I_SFLX_evap),       VAR_DESC(I_SFLX_evap),                    &
                           VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
+    endif
     call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),                                                 &
                           VAR_NAME(I_SFLX_G),          VAR_DESC(I_SFLX_G),                       &
                           VAR_UNIT(I_SFLX_G),          standard_name=VAR_STDN(I_SFLX_G)          )
@@ -822,10 +824,12 @@ contains
                               OCEAN_SFLX_LH   (:,:), VAR_NAME(I_SFLX_LH),    & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                       & ! [IN]
-                              OCEAN_SFLX_QTRC (:,:,I_QV), VAR_NAME(I_SFLX_evap),  & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                  & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                     ) ! [IN]
+       if ( I_QV > 0 ) then
+       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                      & ! [IN]
+                              OCEAN_SFLX_QTRC (:,:,I_QV), VAR_NAME(I_SFLX_evap), & ! [IN]
+                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                 & ! [IN]
+                              OCEAN_GRID_CARTESC_REAL_TOTAREA                    ) ! [IN]
+       endif
        call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
                               OCEAN_SFLX_G    (:,:), VAR_NAME(I_SFLX_G),     & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
