@@ -444,7 +444,6 @@ contains
          call MKINIT_landcouple
       case(I_URBANCOUPLE)
          call MKINIT_planestate
-         call MKINIT_landcouple ! tentative
          call MKINIT_urbancouple
       case(I_TRIPLECOUPLE)
          call MKINIT_planestate
@@ -2722,8 +2721,6 @@ contains
     enddo
 
     call flux_setup
-
-    call ocean_setup
 
     return
   end subroutine MKINIT_squallline

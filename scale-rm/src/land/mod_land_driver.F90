@@ -120,8 +120,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate tendency
   subroutine LAND_driver_calc_tendency( force )
-    use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_time, only: &
        dt => TIME_DTSEC_LAND
     use scale_file_history, only: &
@@ -129,6 +127,8 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_atmos_hydrometeor, only: &
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       ATMOS_HYDROMETEOR_dry,                    &
        I_QV
     use scale_land_grid_cartesC, only: &
        LCZ => LAND_GRID_CARTESC_CZ
@@ -211,6 +211,7 @@ contains
     real(RP) :: SNOW_QVEF (LIA,LJA)
     real(RP) :: LAND_QVEF (LIA,LJA)
     real(RP) :: LAND_TC_dZ(LIA,LJA)
+    real(RP) :: SFLX_QV   (LIA,LJA)
     real(RP) :: SFLX_GH   (LIA,LJA)
     real(RP) :: LHV       (LIA,LJA) ! latent heat of vaporization [J/kg]
 
@@ -446,7 +447,7 @@ contains
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                              LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(:,:,I_QV), SFLX_GH(:,:), & ! [OUT]
+                              LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
     case ( 'FIXED-TEMP' )
@@ -485,7 +486,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
-                                    LAND_SFLX_SH(:,:), LAND_SFLX_QTRC(:,:,I_QV), SFLX_GH(:,:), & ! [OUT]
+                                    LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
 
@@ -497,12 +498,26 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
        LAND_SFLX_GH   (i,j) = - SFLX_GH(i,j) ! inverse sign ( positive for upward to downward )
-       LAND_SFLX_LH   (i,j) = LAND_SFLX_QTRC (i,j,I_QV) * LHV(i,j) ! always LHV
-       LAND_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - LAND_SFLX_QTRC(i,j,I_QV)
+       LAND_SFLX_water(i,j) = ATMOS_SFLX_rain(i,j) - SFLX_QV(i,j)
        LAND_SFLX_ice  (i,j) = ATMOS_SFLX_snow(i,j)
     end do
     end do
 
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          LAND_SFLX_LH(i,j) = SFLX_QV(i,j) * LHV(i,j) ! always LHV
+       enddo
+       enddo
+    else
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          LAND_SFLX_LH(i,j) = 0.0_RP
+       enddo
+       enddo
+    endif
 
     if ( snow_flag ) then
 
@@ -536,8 +551,6 @@ contains
           LAND_SFLX_LH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_LH  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_LH  (i,j)
 
-          LAND_SFLX_QTRC (i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
-
           ! diagnostics
           LAND_U10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_U10       (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_U10       (i,j)
@@ -549,6 +562,15 @@ contains
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_Q2        (i,j)
        enddo
        enddo
+
+       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+          !$omp parallel do
+          do j = LJS, LJE
+          do i = LIS, LIE
+             LAND_SFLX_QTRC(i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
+          enddo
+          enddo
+       endif
 
     end if
 

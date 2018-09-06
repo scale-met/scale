@@ -680,7 +680,9 @@ contains
     call FILE_HISTORY_in( URBAN_SFLX_SH  (:,:), VAR_NAME(I_SFLX_SH),   VAR_DESC(I_SFLX_SH),   VAR_UNIT(I_SFLX_SH)   )
     call FILE_HISTORY_in( URBAN_SFLX_LH  (:,:), VAR_NAME(I_SFLX_LH),   VAR_DESC(I_SFLX_LH),   VAR_UNIT(I_SFLX_LH)   )
     call FILE_HISTORY_in( URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   VAR_DESC(I_SFLX_GH),   VAR_UNIT(I_SFLX_GH)   )
+    if ( I_QV > 0 ) then
     call FILE_HISTORY_in( URBAN_SFLX_QTRC(:,:,I_QV), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
+    endif
 
     call PROF_rapend  ('URB_History', 1)
 
@@ -816,10 +818,12 @@ contains
                               URBAN_SFLX_GH  (:,:), VAR_NAME(I_SFLX_GH),   & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       if ( I_QV > 0 ) then
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
                               URBAN_SFLX_QTRC(:,:,I_QV), VAR_NAME(I_SFLX_evap), & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
+       endif
     endif
 
     return
