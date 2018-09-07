@@ -1,5 +1,9 @@
 = Release History
 
+== 2018-09-07 (5.2.6)
+* Bug fixes:
+  * Fix wrong flux of tracers at the lateral boundaries
+
 == 2017-12-21 (5.2.5)
 * Bug fixes:
   * Fix the surface precipitation flux to include that calculated by the cumulus parameterization
