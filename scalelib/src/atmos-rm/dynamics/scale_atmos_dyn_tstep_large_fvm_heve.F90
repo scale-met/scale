@@ -487,14 +487,14 @@ contains
 !OCL XFILL
     DENS_tq(:,:,:) = 0.0_RP
 
-    do iq = 1, BND_QA
+    do iq = I_QV, I_QV+BND_QA-1
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-       do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do j = JS-1, JE+1
+       do i = IS-1, IE+1
        do k = KS, KE
-          diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_QTRC(k,i,j,iq)
+          diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_QTRC(k,i,j,iq-I_QV+1)
        enddo
        enddo
        enddo
@@ -504,12 +504,12 @@ contains
        !$omp shared(damp_t) &
 #endif
        !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS)
+       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha_QTRC(k,i,j,iq) &
+          damp = - DAMP_alpha_QTRC(k,i,j,iq-I_QV+1) &
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
@@ -541,9 +541,10 @@ contains
 
     end do
 
-    !$omp parallel do private(i,j,k,iq) OMP_SCHEDULE_ collapse(3)
-!OCL XFILL
     do iq = BND_QA+1, QA
+       if ( iq >= I_QV .and. iq < I_QV+BND_QA ) cycle
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+!OCL XFILL
        do j = 1, JA
        do i = 1, IA
        do k = 1, KA

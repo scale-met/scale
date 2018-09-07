@@ -130,7 +130,7 @@ module mod_atmos_bnd_driver
   logical,               private :: ATMOS_BOUNDARY_USE_POTT     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_QHYD     = .false. ! read from file?
-  logical,               private :: ATMOS_BOUNDARY_USE_CHEM     = .false. ! read from file?
+!  logical,               private :: ATMOS_BOUNDARY_USE_CHEM     = .false. ! read from file?
 
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELZ   =   0.0_RP ! velocity w      at boundary, 0   [m/s]
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELX   =   0.0_RP ! velocity u      at boundary, 0   [m/s]
@@ -230,7 +230,7 @@ contains
        ATMOS_BOUNDARY_USE_DENS,       &
        ATMOS_BOUNDARY_USE_QV,         &
        ATMOS_BOUNDARY_USE_QHYD,       &
-       ATMOS_BOUNDARY_USE_CHEM,       &
+!       ATMOS_BOUNDARY_USE_CHEM,       &
        ATMOS_BOUNDARY_VALUE_VELZ,     &
        ATMOS_BOUNDARY_VALUE_VELX,     &
        ATMOS_BOUNDARY_VALUE_VELY,     &
@@ -306,9 +306,9 @@ contains
 
     if( ATMOS_BOUNDARY_USE_QHYD ) then
        BND_QA = QA_MP
-       if( ATMOS_BOUNDARY_USE_CHEM ) then
-         BND_QA = BND_QA + QA_CH
-       endif
+!!$       if( ATMOS_BOUNDARY_USE_CHEM ) then
+!!$         BND_QA = BND_QA + QA_CH
+!!$       endif
     else if ( QA_MP > 0 ) then
        BND_QA = 1
     else
@@ -438,7 +438,7 @@ contains
     LOG_INFO_CONT(*) 'Is DENS used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_DENS
     LOG_INFO_CONT(*) 'Is QV   used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_QV
     LOG_INFO_CONT(*) 'Is QHYD used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_QHYD
-    LOG_INFO_CONT(*) 'Is CHEM used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_CHEM
+!    LOG_INFO_CONT(*) 'Is CHEM used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_CHEM
     LOG_NEWLINE
     LOG_INFO_CONT(*) 'Atmospheric boundary VELZ values               : ', ATMOS_BOUNDARY_VALUE_VELZ
     LOG_INFO_CONT(*) 'Atmospheric boundary VELX values               : ', ATMOS_BOUNDARY_VALUE_VELX

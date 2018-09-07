@@ -93,7 +93,6 @@ module mod_atmos_vars
   real(RP), public, pointer             :: RHOT_av(:,:,:)
   real(RP), public, pointer             :: QTRC_av(:,:,:,:)
 
-  integer,  public                      :: I_QV
   real(RP), public, pointer             :: QV(:,:,:)
   real(RP), public, pointer             :: QC(:,:,:)
   real(RP), public, pointer             :: QR(:,:,:)
