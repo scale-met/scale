@@ -487,71 +487,74 @@ contains
 !OCL XFILL
     DENS_tq(:,:,:) = 0.0_RP
 
-    do iq = I_QV, I_QV+BND_QA-1
+    do iq = 1, QA
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       if ( iq >= I_QV .and. iq < I_QV+BND_QA ) then
+
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS, KE
-          diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_QTRC(k,i,j,iq-I_QV+1)
-       enddo
-       enddo
-       enddo
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k,damp) &
+          do j = JS-1, JE+1
+          do i = IS-1, IE+1
+          do k = KS, KE
+             diff(k,i,j) = QTRC(k,i,j,iq) - DAMP_QTRC(k,i,j,iq-I_QV+1)
+          enddo
+          enddo
+          enddo
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,k,damp) &
 #ifdef HIST_TEND
-       !$omp shared(damp_t) &
+          !$omp shared(damp_t) &
 #endif
-       !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-       !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV)
+          !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
+          !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV)
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          damp = - DAMP_alpha_QTRC(k,i,j,iq-I_QV+1) &
-               * ( diff(k,i,j) & ! rayleigh damping
-                 - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                   * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             damp = - DAMP_alpha_QTRC(k,i,j,iq-I_QV+1) &
+                  * ( diff(k,i,j) & ! rayleigh damping
+                    - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
+                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
 #ifdef HIST_TEND
-          damp_t(k,i,j) = damp
+             damp_t(k,i,j) = damp
 #endif
-          damp = damp * DENS00(k,i,j)
-          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
-          DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
-       enddo
-       enddo
-       enddo
+             damp = damp * DENS00(k,i,j)
+             RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
+             DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
+          enddo
+          enddo
+          enddo
 #ifdef HIST_TEND
-       call FILE_HISTORY_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
-                    'tendency of '//trim(TRACER_NAME(iq))//' due to physics (w/ HIST_TEND)', 'kg/kg/s' )
-       call FILE_HISTORY_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
-                    'tendency of '//trim(TRACER_NAME(iq))//' due to damping (w/ HIST_TEND)', 'kg/kg/s' )
+          call FILE_HISTORY_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
+               'tendency of '//trim(TRACER_NAME(iq))//' due to physics (w/ HIST_TEND)', 'kg/kg/s' )
+          call FILE_HISTORY_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
+               'tendency of '//trim(TRACER_NAME(iq))//' due to damping (w/ HIST_TEND)', 'kg/kg/s' )
 #endif
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          RHOQ_t(   1:KS-1,i,j,iq) = 0.0_RP
-          RHOQ_t(KE+1:KA  ,i,j,iq) = 0.0_RP
-       enddo
-       enddo
+          do j = JS, JE
+          do i = IS, IE
+             RHOQ_t(   1:KS-1,i,j,iq) = 0.0_RP
+             RHOQ_t(KE+1:KA  ,i,j,iq) = 0.0_RP
+          enddo
+          enddo
 
-       call COMM_vars8( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
-       call COMM_wait ( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq), .false. )
+          call COMM_vars8( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
+          call COMM_wait ( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq), .false. )
 
-    end do
+       else
 
-    do iq = BND_QA+1, QA
-       if ( iq >= I_QV .and. iq < I_QV+BND_QA ) cycle
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
 !OCL XFILL
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq)
-       enddo
-       enddo
-       enddo
+          do j = 1, JA
+          do i = 1, IA
+          do k = 1, KA
+             RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq)
+          enddo
+          enddo
+          enddo
+
+       end if
+
     end do
 
     call PROF_rapend  ("DYN_Large_Tendency", 2)
