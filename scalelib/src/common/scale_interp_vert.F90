@@ -172,13 +172,13 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       if ( Z(k,i,j) <= Xih(KS-1) ) then
+       if ( Z(k,i,j) < Xih(KS-1) ) then
 
           INTERP_z2xi_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_z2xi_idx (k,i,j,2) = KS     ! dummmy
+          INTERP_z2xi_idx (k,i,j,2) = KS
           INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
+          INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
+!          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        elseif( Z(k,i,j) <= Xi(KS) ) then
 
