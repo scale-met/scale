@@ -254,9 +254,10 @@ contains
        TIME_DTSEC_ATMOS_DYN
     use mod_atmos_admin, only: &
        ATMOS_USE_AVERAGE
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     use mod_atmos_vars, only: &
        ATMOS_vars_total,  &
-       I_QV,    &
        DENS,    &
        MOMZ,    &
        MOMX,    &
