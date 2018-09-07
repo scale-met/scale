@@ -38,6 +38,7 @@ module scale_atmos_dyn_tinteg_tracer
           mflx_hi, num_diff, & ! (in)
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
+          BND_W, BND_E, BND_S, BND_N, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -57,6 +58,10 @@ module scale_atmos_dyn_tinteg_tracer
        real(RP), intent(in)    :: RCDZ(KA)
        real(RP), intent(in)    :: RCDX(IA)
        real(RP), intent(in)    :: RCDY(JA)
+       logical,  intent(in)    :: BND_W
+       logical,  intent(in)    :: BND_E
+       logical,  intent(in)    :: BND_S
+       logical,  intent(in)    :: BND_N
        real(RP), intent(in)    :: dtl
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
