@@ -1025,6 +1025,7 @@ contains
                mflx_hi, num_diff_q, & ! (in)
                GSQRT, MAPF(:,:,:,I_XY), & ! (in)
                CDZ, RCDZ, RCDX, RCDY,             & ! (in)
+               BND_W, BND_E, BND_S, BND_N, & ! (in)
                dtl, & ! (in)
                Llast .AND. FLAG_FCT_TRACER, & ! (in)
                FLAG_FCT_ALONG_STREAM         ) ! (in)

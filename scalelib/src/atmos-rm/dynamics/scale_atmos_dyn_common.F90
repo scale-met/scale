@@ -45,6 +45,7 @@ module scale_atmos_dyn_common
   public :: ATMOS_DYN_filter_tend
   public :: ATMOS_DYN_fct
   public :: ATMOS_DYN_Copy_boundary
+  public :: ATMOS_DYN_Copy_boundary_tracer
   public :: ATMOS_DYN_divergence
 
   !-----------------------------------------------------------------------------
@@ -1369,6 +1370,72 @@ contains
 
     return
   end subroutine ATMOS_DYN_Copy_boundary
+
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN_Copy_boundary_tracer( &
+       QTRC, QTRC0, &
+       BND_W, BND_E, BND_S, BND_N )
+    implicit none
+    real(RP), intent(inout) :: QTRC (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC0(KA,IA,JA)
+    logical,  intent(in)    :: BND_W
+    logical,  intent(in)    :: BND_E
+    logical,  intent(in)    :: BND_S
+    logical,  intent(in)    :: BND_N
+
+    integer :: k, i, j
+
+    if ( BND_W ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,IS,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,IE,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JA
+       do i = IE+1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,JE,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine ATMOS_DYN_Copy_boundary_tracer
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_divergence( &
