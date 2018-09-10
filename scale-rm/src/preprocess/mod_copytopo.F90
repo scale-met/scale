@@ -450,7 +450,7 @@ contains
     real(RP), allocatable :: TOPO_org(:,:)
     real(RP), allocatable :: read2D  (:,:)
 
-    real(RP) :: dummy(1,1,1)
+    real(RP) :: dummy(1,1)
     integer  :: idx_i(IA,JA,NEST_INTERP_LEVEL)
     integer  :: idx_j(IA,JA,NEST_INTERP_LEVEL)
     real(RP) :: hfact(IA,JA,NEST_INTERP_LEVEL)
@@ -505,9 +505,9 @@ contains
 
     enddo
 
-    call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:,:), &
-                                      LON(:,:),     LAT(:,:),     dummy(:,:,:), &
-                                     skip_z=.true.                             )
+    call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:),             &
+                                      LON(:,:),     LAT(:,:),     dummy(:,:), dummy(:,:), &
+                                      skip_z=.true.                                       )
 
     call INTERP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
                           IA_org, JA_org,    & ! [IN]

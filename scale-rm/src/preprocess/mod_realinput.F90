@@ -1318,12 +1318,14 @@ contains
     if ( first .OR. update_coord ) then
        first = .false.
 
-       call INTERP_domain_compatibility( LON_org(:,:),      & ! [IN]
-                                         LAT_org(:,:),      & ! [IN]
-                                         CZ_org (:,:,:),    & ! [IN]
-                                         LON    (:,:),      & ! [IN]
-                                         LAT    (:,:),      & ! [IN]
-                                         CZ     (KS:KE,:,:) ) ! [IN]
+       k = dims(1) + 2
+       call INTERP_domain_compatibility( LON_org(:,:),    & ! [IN]
+                                         LAT_org(:,:),    & ! [IN]
+                                         CZ_org (k,:,:),  & ! [IN]
+                                         LON    (:,:),    & ! [IN]
+                                         LAT    (:,:),    & ! [IN]
+                                         CZ     (KE,:,:), & ! [IN]
+                                         FZ     (KE,:,:)  ) ! [IN]
 
        ! full level
        call INTERP_factor3d( itp_nh,                  & ! [IN]
