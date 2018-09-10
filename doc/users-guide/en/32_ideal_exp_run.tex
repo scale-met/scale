@@ -16,7 +16,7 @@ Table \ref{tab:setting_ideal} shows the experimental settings.
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} ~~ & Configuration & Note \\ \hline
  Number of MPI processes& 2: eastward direction, 1: northward direction & 2 MPI parallel \\ \hline
- Horizontal grid spacing & 500m: eastward direction, 500m :northward direction & The quasi 2 dimensional experiment in the eastward and vertical directions. \\ \hline
+ Horizontal grid spacing & 500 m: eastward direction, 500 m :northward direction & The quasi 2 dimensional experiment in the eastward and vertical directions. \\ \hline
  Number of horizontal grids & 40: eastward direction, 2: northward direction\footnote{In the current version, the pure 2D experimental framework is not prepared. In this case, the initial conditions with the same values are set northward. Thus, the setting corresponds to a 2D experiment. Further, the number of grids northward should be same as the number of halos. Refer to Section \ref{subsec:atmos_dyn_scheme} for the required numbers of halos.} &  \\ \hline
  Number of vertical layers & 97 layers with model top of 20 km & Stretched grid with finer resolution in the lower layers. \\ \hline
  Lateral boundary condition & Periodic condition & both eastward and northward \\ \hline
@@ -100,7 +100,7 @@ If the execution is normally concluded, the statements below are output at the e
 }
 
 The two files
-\verb|init_00000101-000000.000.pe000000.nc|\\ and \verb|init_00000101-000000.000.pe000001.nc| are the initial-condition files, and each is approximately 100 KB.
+\verb|init_00000101-000000.000.pe000000.nc|\\ and \verb|init_00000101-000000.000.pe000001.nc| are the initial-condition files, and each is approximately 600 KB.
 The file whose name ends with ``.nc''  is formatted by \netcdf.
 It can be directly read by GPhys/Ruby-DCL and ncview.
 
@@ -129,4 +129,4 @@ the following message is output at the end of this LOG file:
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
 }
-The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and each file is approximately 1.4 MB.
+The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and each file is approximately 5.8 MB.
