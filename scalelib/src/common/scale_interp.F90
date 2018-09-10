@@ -106,27 +106,29 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine INTERP_domain_compatibility( &
-       lon_org, &
-       lat_org, &
-       lev_org, &
-       lon_loc, &
-       lat_loc, &
-       lev_loc, &
-       skip_x,  &
-       skip_y,  &
-       skip_z   )
+       lon_org,  &
+       lat_org,  &
+       topc_org, &
+       lon_loc,  &
+       lat_loc,  &
+       topc_loc, &
+       topf_loc, &
+       skip_x,   &
+       skip_y,   &
+       skip_z    )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_prc, only: &
        PRC_abort
     implicit none
 
-    real(RP), intent(in) :: lon_org(:,:)
-    real(RP), intent(in) :: lat_org(:,:)
-    real(RP), intent(in) :: lev_org(:,:,:)
-    real(RP), intent(in) :: lon_loc(:,:)
-    real(RP), intent(in) :: lat_loc(:,:)
-    real(RP), intent(in) :: lev_loc(:,:,:)
+    real(RP), intent(in) :: lon_org (:,:)
+    real(RP), intent(in) :: lat_org (:,:)
+    real(RP), intent(in) :: topc_org(:,:) ! full level
+    real(RP), intent(in) :: lon_loc (:,:)
+    real(RP), intent(in) :: lat_loc (:,:)
+    real(RP), intent(in) :: topc_loc(:,:) ! full level
+    real(RP), intent(in) :: topf_loc(:,:) ! half level (ceil)
 
     logical,  intent(in), optional :: skip_z
     logical,  intent(in), optional :: skip_x
@@ -158,8 +160,8 @@ contains
     endif
 
     if ( .NOT. skip_z_ ) then
-       max_ref = maxval( lev_org(:,:,:) )
-       max_loc = maxval( lev_loc(:,:,:) ) ! HALO + 1
+       max_ref = maxval( topc_org(:,:) ) + minval( topf_loc(:,:) - topc_loc(:,:) ) ! not real top boundary (only for check)
+       max_loc = maxval( topc_loc(:,:) )
 
        if ( max_ref < max_loc ) then
           LOG_ERROR("INTERP_domain_compatibility",*) 'REQUESTED DOMAIN IS TOO MUCH BROAD'
