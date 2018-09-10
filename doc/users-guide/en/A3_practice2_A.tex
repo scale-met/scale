@@ -7,9 +7,9 @@
 \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} and \nmitem{PRC_NUM_X, PRC_NUM_Y} in  \namelist{PARAM_PRC}
 are changed. If the below conditions are satisfied, your answer is correct:
 \begin{eqnarray}
-&& Number of MPIs parallel = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& Number of grid cells along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
-&& Number of grid cells along the X direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
+&& \verb|Number of MPIs parallel| = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
+&& \verb|Number of grid cells along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
+&& \verb|Number of grid cells along the X direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
 \end{eqnarray}
 
 
@@ -51,8 +51,8 @@ When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PA
 
 In case the number of MPIs parallel are also changed, if the below conditions are satisfied in addition to \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
 \begin{eqnarray}
-&& Number of grids along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-&& Number of grids along the Y direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& \verb|Number of grids along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \nonumber \\
+&& \verb|Number of grids along the Y direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
 Moreover, it is necessary to suitably change the time interval for the dynamics,\\
@@ -153,7 +153,6 @@ Once the three hours for integration have elapsed, the restart file is created.\
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\verb| RESTART_RUN          = .false.,               | ~~~~~~~~~~~~~~~(added, but it is not necessary.) & \\
 \textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(\verb|.false.,| in the original setting) & \\
 \verb| RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| &  \\
 \textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~(added)& \\
@@ -190,7 +189,6 @@ The configuration for the restart calculation from three to six hours in integra
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\textcolor{red}{\verb| RESTART_RUN          = .true.,               |} & (\textcolor{red}{necessary})\\
 \verb| RESTART_OUTPUT      = .true.,                |                  & (not always necessary)\\
 \textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & (\textcolor{red}{necessary})\\
 \verb| RESTART_OUT_BASENAME = "restart2_d01",| & (not alway necessary)\\
