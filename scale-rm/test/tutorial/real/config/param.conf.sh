@@ -180,7 +180,7 @@ cat <<EOF >> param.physics.conf
 /
 
 &PARAM_OCEAN_DYN_SLAB
- OCEAN_PHY_SLAB_DEPTH = 10.0,
+ OCEAN_DYN_SLAB_DEPTH = 10.0,
 /
 
 #################################################

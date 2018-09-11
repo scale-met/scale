@@ -69,7 +69,7 @@ File.foreach(fname) do |line|
     okmax = true
   end
 
-  if /limit_urban_fraction\s*=\s*(.+),?\s*$/i =~ line
+  if /limit_urban_fraction\s*=\s*([^,]+),?\s*$/i =~ line
     urban_limit = $1
   end
 
@@ -220,9 +220,21 @@ params.each do |param|
   if /^&PARAM_ATMOS_DYN$/i =~ param_name
     print param_name, "\n"
     param_items.each do |item|
-      if /^(\s*)ATMOS_DYN_ENABLE_CORIOLIS\s*=\s*([^,\s]+)/i =~ item && /\.true\./i =~ $2
-        print "#{$1}ATMOS_DYN_CORIOLIS_TYPE = \"SPHERE\",\n"
+      if /^(\s*)ATMOS_DYN_ENABLE_CORIOLIS\s*=\s*([^,\s]+)/i =~ item && (indent = $1) && /\.true\./i =~ $2
+        print "#{indent}ATMOS_DYN_CORIOLIS_TYPE = \"SPHERE\",\n"
       else
+        print item, "\n"
+      end
+    end
+    print "/\n"
+    next
+  end
+
+  # Reference state
+  if /^&PARAM_ATMOS_REFSTATE$/i =~ param_name
+    print param_name, "\n"
+    param_items.each do |item|
+      if /ATMOS_REFSTATE_UPDATE_FLAG/ !~ item
         print item, "\n"
       end
     end
@@ -374,7 +386,7 @@ params.each do |param|
     unless okmax
       print <<EOL
 
-&PARAM_OCEAN_CARTESC_INDEX
+&PARAM_OCEAN_GRID_CARTESC_INDEX
  OKMAX = 1,
 /
 
