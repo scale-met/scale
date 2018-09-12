@@ -1,7 +1,40 @@
 = Release History
 
-== 2018-09-07 (5.2.6)
+== 2018-10-03 (5.3.0)
+* Changes:
+  * Change the ocean grid to have the vertical dimension
+  * Change several namelist parameter names; provide a configure converter
+  * Change the smoothing filter for the topography
+  * Change internal structure
+  * Change the radiation flux category from short and long waves to IR, near-IR and visible.
+  * Change the category of the planetary boundary layer scheme from TB to BL
+  * Increase grid size of the variables at the staggered point in the netcdf file.
+  * Add several attributes into the netcdf file.
+  * Add some examples for analysis using SCALE library
+* New features:
+  * Add a new post-process tool: SNO
+  * Add several prognostic variables to history output
+  * Add the RN222 scheme
+  * Add ideal 360- and 365-day calendars
+  * Add a semi-Lagrangian precipitation scheme
+  * Add a sea ice scheme
+  * Enable to nudge the ocean and land variables
+  * Enable to use rotated domain
+  * Enable to control solarins for ideal experiments
+  * Enable to set the Coriolis parameter for ideal experiments
+  * Enable to split the history output into multiple files for the time dimension
+  * Enable to split external input files for the time dimension
+* Improvements:
+  * Change for the better initial states especially near the surface
+  * Reduce memory usage in the initial process
+  * Change error message to more user friendly
 * Bug fixes:
+  * Fix wrong check of domain size for the nest setting
+  * Fix a bugs in the SMG scheme related to the terrain-following coordinate
+  * Many minor bug fixes
+
+== 2018-09-07 (5.2.6)
+* Bug fix:
   * Fix wrong flux of tracers at the lateral boundaries
 
 == 2017-12-21 (5.2.5)
