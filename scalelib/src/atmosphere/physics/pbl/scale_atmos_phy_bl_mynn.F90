@@ -380,6 +380,7 @@ contains
     real(RP) :: us, phi_h
 
     real(RP) :: f2h(KA,2)
+    real(RP) :: z1
 
     logical :: mynn_level3
 
@@ -409,11 +410,14 @@ contains
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
     !$omp         Q1,Qsl,dQsl,dtldz,dqwdz,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
-    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h, &
+    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
     !$omp         k,i,j)
     do j = JS, JE
     do i = IS, IE
+
+       z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
+
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) * EXNER(KS,i,j) )
 
        dudz2(KS,i,j) = ( ( U(KS+1,i,j) )**2 + ( V(KS+1,i,j) )**2 ) &
@@ -538,16 +542,16 @@ contains
                 ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
                 us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
                 if ( l_mo(i,j) > 0 ) then
-                   phi_h = 4.7_RP * CZ(KS,i,j) / l_mo(i,j) / 0.74_RP + 1.0_RP
+                   phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
                 else
-                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * CZ(KS,i,j) / l_mo(i,j) )
+                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
                 end if
                 ! TSQ
-                prod_t1 = 2.0_RP / us * phi_h / ( KARMAN * CZ(KS,i,j) ) * SFLX_PT**2
+                prod_t1 = 2.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
                 ! QSQ
-                prod_q1 = 2.0_RP / us * phi_h / ( KARMAN * CZ(KS,i,j) ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
+                prod_q1 = 2.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
                 ! COV
-                prod_c1 = 2.0_RP / us * phi_h * ( KARMAN * CZ(KS,i,j) ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
+                prod_c1 = 2.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
                 tsq25 = prod_t1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                 qsq25 = prod_q1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                 cov25 = prod_c1 * B2 * l(k,i,j) / q(k) * 0.5_RP
@@ -736,14 +740,14 @@ contains
 
 
        ! dens * TKE
-       ! production at KS: 2.0 * us3 * phi_m(zeta) / ( KARMAN * CZ(KS,i,j) )
+       ! production at KS: 2.0 * us3 * phi_m(zeta) / ( KARMAN * z1 )
        ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
        if ( l_mo(i,j) > 0 ) then
           prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       * ( 1.0_RP + 4.7_RP * CZ(KS,i,j) / l_mo(i,j) ) / CZ(KS,i,j)
+                       * ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) / z1
        else
           prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       / sqrt(sqrt( 1.0_RP - 15.0_RP * CZ(KS,i,j) / l_mo(i,j) )) / CZ(KS,i,j)
+                       / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) / z1
        end if
        do k = KS+1, KE_PBL
 !       do k = KS, KE_PBL

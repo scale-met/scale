@@ -193,7 +193,7 @@ contains
           do j = JS-1, JE+1
           do i = IS-1, IE+1
           do k = KS, KE
-             lambda(k,i,j) = sqrt( 1.0_RP / ( 1.0_RP / lambda0(k,i,j)**2 + 1.0_RP / ( KARMAN*CZ(k,i,j) )**2 ) )
+             lambda(k,i,j) = sqrt( 1.0_RP / ( 1.0_RP / lambda0(k,i,j)**2 + 1.0_RP / ( KARMAN*(CZ(k,i,j)-FZ(KS-1,i,j)) )**2 ) )
           enddo
           enddo
           enddo

@@ -183,15 +183,16 @@ contains
     real(RP), intent(in), optional :: limiter_sign(KA,IA,JA)
 
     real(RP) :: work_data(IA,JA)
-    real(RP), target :: work_sign(IA,JA)
-    real(RP), pointer :: limiter(:,:)
+    real(RP) :: work_sign(IA,JA)
+
+    logical :: flag
 
     integer :: k, i, j
 
     if ( present(limiter_sign) ) then
-       limiter => work_sign
+       flag = .true.
     else
-       limiter => NULL()
+       flag = .false.
     end if
 
     do k = KS, KE
@@ -202,18 +203,24 @@ contains
           work_data(i,j) = data(k,i,j)
        end do
        end do
-       if ( present(limiter_sign) ) then
+       if ( flag ) then
           !$omp parallel do
           do j = JS, JE
           do i = IS, IE
-             limiter(i,j) = limiter_sign(k,i,j)
+             work_sign(i,j) = limiter_sign(k,i,j)
           end do
           end do
+
+          call FILTER_hyperdiff_2D( IA, IS, IE, JA, JS, JE, &
+                                    work_data(:,:), order, nite, &
+                                    limiter_sign = work_sign )
+
+       else
+
+          call FILTER_hyperdiff_2D( IA, IS, IE, JA, JS, JE, &
+                                    work_data(:,:), order, nite )
        end if
 
-       call FILTER_hyperdiff_2D( IA, IS, IE, JA, JS, JE, &
-                                 work_data(:,:), order, nite, &
-                                 limiter_sign = limiter )
 
        !$omp parallel do
        do j = 1, JA

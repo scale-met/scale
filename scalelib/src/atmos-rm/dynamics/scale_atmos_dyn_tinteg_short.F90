@@ -34,7 +34,7 @@ module scale_atmos_dyn_tinteg_short
           DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
           mflx_hi, tflx_hi,                         & ! (inout)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-          Rtot, CVtot, CORIOLI,                     & ! (in)
+          DPRES0, CVtot, CORIOLI,                   & ! (in)
           num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
           FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
           FLAG_FCT_ALONG_STREAM,                    & ! (in)
@@ -63,7 +63,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(in)    :: MOMY_t(KA,IA,JA)
        real(RP), intent(in)    :: RHOT_t(KA,IA,JA)
 
-       real(RP), intent(in)    :: Rtot(KA,IA,JA)
+       real(RP), intent(in)    :: DPRES0(KA,IA,JA)
        real(RP), intent(in)    :: CVtot(KA,IA,JA)
        real(RP), intent(in)    :: CORIOLI(IA,JA)
 

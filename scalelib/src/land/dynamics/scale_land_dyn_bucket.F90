@@ -260,8 +260,15 @@ contains
         ! nudging is used
         solve_matrix = .true.
 
-        NDG_TEMP (:,:,:) = ( TEMP1 (:,:,:) - TEMP (:,:,:) ) / LAND_DYN_BUCKET_nudging_tausec * dt
-        NDG_WATER(:,:,:) = ( WATER1(:,:,:) - WATER(:,:,:) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+        !$omp parallel do
+        do j = LJS,LJE
+        do i = LIS,LIE
+        do k = LKS,LKE
+           NDG_TEMP (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+           NDG_WATER(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+        end do
+        end do
+        end do
 
       else
         ! replace data to reference
