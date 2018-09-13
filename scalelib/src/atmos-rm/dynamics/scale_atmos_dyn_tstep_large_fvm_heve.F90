@@ -348,8 +348,8 @@ contains
 
     ! setup for spectral nudging
     call SPNUDGE_setup
-    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm)
-
+    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,max(SPNUDGE_uv_lm, SPNUDGE_pt_lm),max(SPNUDGE_uv_mm,SPNUDGE_pt_lm))
+    
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
 
@@ -1320,7 +1320,45 @@ contains
           enddo
           enddo
        else
-          !OCL XFILL
+          if( SPNUDGE_pt ) then
+
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                diff2(k,i,j) = diff(k,i,j) / DENS(k,i,j)
+             enddo
+             enddo
+             enddo
+
+             call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_pt_lm,SPNUDGE_pt_mm,diff2)
+
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                diff2(k,i,j) = diff2(k,i,j) * DENS(k,i,j)
+             enddo
+             enddo
+             enddo
+           
+          else
+
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                diff2(k,i,j) = 0
+             enddo
+             enddo
+             enddo
+
+          endif
+
+!OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,damp) &
           !$omp shared(JS,JE,IS,IE,KS,KE) &
@@ -1333,7 +1371,8 @@ contains
              damp = - DAMP_alpha_POTT(k,i,j) &
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                    * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                    * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+                  - SPNUDGE_pt_alpha * diff2(k,i,j)
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + DENS_damp(k,i,j) * RHOT(k,i,j) / DENS(k,i,j)
