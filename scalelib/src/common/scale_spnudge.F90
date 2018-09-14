@@ -7,6 +7,10 @@ module scale_spnudge
   use scale_precision
   use scale_io
   use scale_prc
+  use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_CZUY => ATMOS_GRID_CARTESC_REAL_CZUY, &
+       REAL_CZXV => ATMOS_GRID_CARTESC_REAL_CZXV
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -20,21 +24,24 @@ module scale_spnudge
   integer, public :: SPNUDGE_uv_mm = 3 
   real(RP), public :: SPNUDGE_uv_tau
 
-  real(RP), public :: SPNUDGE_uv_alpha
-
   logical, public :: SPNUDGE_pt = .false.
   integer, public :: SPNUDGE_pt_lm = 3
   integer, public :: SPNUDGE_pt_mm = 3 
   real(RP), public :: SPNUDGE_pt_tau
 
-  real(RP), public :: SPNUDGE_pt_alpha
+  real(RP), allocatable, public :: SPNUDGE_u_alpha(:,:,:)
+  real(RP), allocatable, public :: SPNUDGE_v_alpha(:,:,:)
+  real(RP), allocatable, public :: SPNUDGE_pt_alpha(:,:,:)
+
+  real(RP), public :: SPNUDGE_P1
+  real(RP), public :: SPNUDGE_P2
 
   
   public :: SPNUDGE_setup
   
   contains
   
-  subroutine SPNUDGE_setup
+  subroutine SPNUDGE_setup(KA, KS, KE, IA, IS, IE, JA, JS, JE)
     implicit none
     
     namelist /PARAM_SPNUDGE/ &
@@ -46,9 +53,18 @@ module scale_spnudge
       SPNUDGE_pt, &
       SPNUDGE_pt_lm, &
       SPNUDGE_pt_mm, &
-      SPNUDGE_pt_tau
+      SPNUDGE_pt_tau, &
+      SPNUDGE_P1, &
+      SPNUDGE_P2
 
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    
+    real(RP) :: uv_alpha, pt_alpha
+    integer :: k, i, j
     integer :: ierr
+    
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -65,18 +81,66 @@ module scale_spnudge
     endif
     LOG_NML(PARAM_SPNUDGE)
 
+    allocate( SPNUDGE_u_alpha(KA,IA,JA) )
+    allocate( SPNUDGE_v_alpha(KA,IA,JA) )
+    allocate( SPNUDGE_pt_alpha(KA,IA,JA) )
+    
     if( SPNUDGE_uv_tau <= 0.0_RP ) then
-        SPNUDGE_uv_alpha = 0
+        uv_alpha = 0
     else
-        SPNUDGE_uv_alpha = 1.0_RP / SPNUDGE_uv_tau
+        uv_alpha = 1.0_RP / SPNUDGE_uv_tau
     endif
 
     if( SPNUDGE_pt_tau <= 0.0_RP ) then
-        SPNUDGE_pt_alpha = 0
+        pt_alpha = 0
     else
-        SPNUDGE_pt_alpha = 1.0_RP / SPNUDGE_pt_tau
+        pt_alpha = 1.0_RP / SPNUDGE_pt_tau
     endif
 
+    do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
+             if( REAL_CZUY(k,i,j) <= SPNUDGE_P1 ) then
+                SPNUDGE_u_alpha(k,i,j) = 0
+             elseif( REAL_CZUY(k,i,j) <= SPNUDGE_P2 ) then
+                SPNUDGE_u_alpha(k,i,j) = ( REAL_CZUY(k,i,j) - SPNUDGE_P1 ) / (SPNUDGE_P2 - SPNUDGE_P1 )*uv_alpha
+             else
+                SPNUDGE_u_alpha(k,i,j) = uv_alpha
+             endif
+             
+          enddo
+       enddo
+     enddo
+
+    do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
+             if( REAL_CZXV(k,i,j) <= SPNUDGE_P1 ) then
+                SPNUDGE_v_alpha(k,i,j) = 0
+             elseif( REAL_CZXV(k,i,j) <= SPNUDGE_P2 ) then
+                SPNUDGE_v_alpha(k,i,j) = ( REAL_CZXV(k,i,j) - SPNUDGE_P1 ) / (SPNUDGE_P2 - SPNUDGE_P1 )*uv_alpha
+             else
+                SPNUDGE_v_alpha(k,i,j) = uv_alpha
+             endif
+             
+          enddo
+       enddo
+    enddo     
+
+    do j = JS, JE
+       do i = IS, IE
+          do k = KS, KE
+             if( REAL_CZ(k,i,j) <= SPNUDGE_P1 ) then
+                SPNUDGE_pt_alpha(k,i,j) = 0
+             elseif( REAL_CZ(k,i,j) <= SPNUDGE_P2 ) then
+                SPNUDGE_pt_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_P1 ) / (SPNUDGE_P2 - SPNUDGE_P1 )*pt_alpha
+             else
+                SPNUDGE_pt_alpha(k,i,j) = pt_alpha
+             endif
+             
+          enddo
+       enddo
+    enddo
     
   end subroutine SPNUDGE_setup
   

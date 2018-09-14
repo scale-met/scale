@@ -347,8 +347,8 @@ contains
     call MONITOR_put( MONIT_qflx_north, zero_y(:,:) )
 
     ! setup for spectral nudging
-    call SPNUDGE_setup
-    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,max(SPNUDGE_uv_lm, SPNUDGE_pt_lm),max(SPNUDGE_uv_mm,SPNUDGE_pt_lm))
+    call SPNUDGE_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE)
+    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,max(SPNUDGE_uv_lm, SPNUDGE_pt_lm),max(SPNUDGE_uv_mm,SPNUDGE_pt_mm))
     
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
@@ -1160,7 +1160,7 @@ contains
           !$omp private(i,j,k,damp) &
           !$omp shared(JS,JE,IS,IE,KS,KE) &
           !$omp shared(DENS_damp,DENS,MOMX) &
-          !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t) &
+          !$omp shared(DAMP_alpha_VELX,diff,diff2,BND_SMOOTHER_FACT,SPNUDGE_u_alpha,MOMX_tp,MOMX_t) &
           !$omp shared(damp_t_MOMX,do_put,nstep)
           do j = JS, JE
           do i = IS, IE
@@ -1169,7 +1169,7 @@ contains
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                     * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-                  - SPNUDGE_uv_alpha * diff2(k,i,j)
+                  - SPNUDGE_u_alpha(k,i,j) * diff2(k,i,j)
              MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + ( DENS_damp(k,i,j) + DENS_damp(k,i+1,j) ) * MOMX(k,i,j) / ( DENS(k,i,j) + DENS(k,i+1,j) )
@@ -1261,7 +1261,7 @@ contains
           !$omp private(i,j,k,damp) &
           !$omp shared(JS,JE,IS,IE,KS,KE) &
           !$omp shared(DENS_damp,DENS,MOMY) &
-          !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t) &
+          !$omp shared(DAMP_alpha_VELY,diff,diff2,BND_SMOOTHER_FACT,SPNUDGE_v_alpha,MOMY_tp,MOMY_t) &
           !$omp shared(damp_t_MOMY,do_put,nstep)
           do j = JS, JE
           do i = IS, IE
@@ -1270,7 +1270,7 @@ contains
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                     * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-                  - SPNUDGE_uv_alpha * diff2(k,i,j)
+                  - SPNUDGE_v_alpha(k,i,j) * diff2(k,i,j)
              MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + ( DENS_damp(k,i,j) + DENS_damp(k,i,j+1) ) * MOMY(k,i,j) / ( DENS(k,i,j) + DENS(k,i,j+1) )
@@ -1363,7 +1363,7 @@ contains
           !$omp private(i,j,k,damp) &
           !$omp shared(JS,JE,IS,IE,KS,KE) &
           !$omp shared(DENS_damp,DENS,RHOT) &
-          !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp) &
+          !$omp shared(DAMP_alpha_POTT,diff,diff2,BND_SMOOTHER_FACT,SPNUDGE_pt_alpha,RHOT_t,RHOT_tp) &
           !$omp shared(damp_t_RHOT,do_put,nstep)
           do j = JS, JE
           do i = IS, IE
@@ -1372,7 +1372,7 @@ contains
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                     * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-                  - SPNUDGE_pt_alpha * diff2(k,i,j)
+                  - SPNUDGE_pt_alpha(k,i,j) * diff2(k,i,j)
              RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
                            + damp &
                            + DENS_damp(k,i,j) * RHOT(k,i,j) / DENS(k,i,j)
