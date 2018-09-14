@@ -153,8 +153,8 @@ module mod_realinput
   character(len=H_SHORT), private :: BOUNDARY_DTYPE             = 'DEFAULT'
   real(DP),               private :: BOUNDARY_UPDATE_DT         = 0.0_DP  ! inteval time of boudary data update [s]
 
-  integer,                private :: FILTER_ORDER               = 2       ! order of the hyper-diffusion (must be even)
-  integer,                private :: FILTER_NITER               = 20      ! times for hyper-diffusion iteration, default off (=-1)
+  integer,                private :: FILTER_ORDER               = 8       ! order of the hyper-diffusion (must be even)
+  integer,                private :: FILTER_NITER               = 5       ! times for hyper-diffusion iteration
 
   logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
   logical,                private :: SAME_MP_TYPE               = .false. ! microphysics type of the parent model is same as it in this model
