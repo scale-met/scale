@@ -182,7 +182,7 @@ COPYTOPO=(     ".false." ".true."  ) # required parameters for each domain
 SMOOTH_LOCAL=( ".true."  ".true."  ) # required parameters for each domain
 
 SMOOTH_ITELIM="10000"
-MAXSLOPE_RATIO="10.0"
+MAXSLOPE_RATIO="5.0"
 LIMIT_URBAN_FRACTION="0.3"
 
 #################################################
