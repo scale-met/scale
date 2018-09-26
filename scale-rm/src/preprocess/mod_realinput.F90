@@ -463,6 +463,8 @@ contains
     character(len=H_SHORT)   :: SOILWATER_DS2VC      = 'limit'
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
     logical                  :: elevation_collection = .true.
+    logical                  :: elevation_collection_land
+    logical                  :: elevation_collection_ocean
 
     namelist / PARAM_MKINIT_REAL_LAND / &
        NUMBER_OF_FILES,            &
@@ -601,6 +603,7 @@ contains
     BOUNDARY_POSTFIX_TIMELABEL_LAND = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_LAND             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_LAND         = BOUNDARY_UPDATE_DT
+    elevation_collection_land       = elevation_collection
 
     if ( FILETYPE_LAND .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
        BASENAME_LAND = trim(BASENAME_ORG)//"_00000"
@@ -642,6 +645,7 @@ contains
     BOUNDARY_POSTFIX_TIMELABEL_OCEAN = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_OCEAN             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_OCEAN         = BOUNDARY_UPDATE_DT
+    elevation_collection_ocean       = elevation_collection
 
     if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
        BASENAME_OCEAN = trim(BASENAME_ORG)//"_00000"
@@ -746,22 +750,22 @@ contains
                                 OCEAN_SFC_TEMP_org  (    :,:,    ns:ne), &
                                 OCEAN_SFC_albedo_org(    :,:,:,:,ns:ne), &
                                 OCEAN_SFC_Z0_org    (    :,:,    ns:ne), &
-                                BASENAME_LAND,           &
-                                BASENAME_OCEAN,          &
-                                mdlid_land, mdlid_ocean, &
-                                ldims, odims,            &
-                                USE_FILE_LANDWATER,      &
-                                INIT_LANDWATER_RATIO,    &
-                                INIT_OCEAN_ALB_LW,       &
-                                INIT_OCEAN_ALB_SW,       &
-                                INIT_OCEAN_Z0W,          &
-                                INTRP_ITER_MAX,          &
-                                SOILWATER_DS2VC_flag,    &
-                                elevation_collection,    &
-                                boundary_flag,           &
-                                NUMBER_OF_TSTEPS,        &
-                                skip_steps,              &
-                                URBAN_do                 )
+                                BASENAME_LAND,                &
+                                BASENAME_OCEAN,               &
+                                mdlid_land, mdlid_ocean,      &
+                                ldims, odims,                 &
+                                USE_FILE_LANDWATER,           &
+                                INIT_LANDWATER_RATIO,         &
+                                INIT_OCEAN_ALB_LW,            &
+                                INIT_OCEAN_ALB_SW,            &
+                                INIT_OCEAN_Z0W,               &
+                                INTRP_ITER_MAX,               &
+                                SOILWATER_DS2VC_flag,         &
+                                elevation_collection_land,    &
+                                elevation_collection_ocean,   &
+                                boundary_flag,                &
+                                NUMBER_OF_TSTEPS, skip_steps, &
+                                URBAN_do                      )
 
        ! required one-step data only
        if( BASENAME_BOUNDARY == '' ) exit
@@ -2079,25 +2083,28 @@ contains
        basename_land, basename_ocean,     &
        mdlid_land, mdlid_ocean,           &
        ldims, odims,                      &
-       use_file_landwater,   &
-       init_landwater_ratio, &
-       init_ocean_alb_lw,    &
-       init_ocean_alb_sw,    &
-       init_ocean_z0w,       &
-       intrp_iter_max,       &
-       soilwater_ds2vc_flag, &
-       elevation_collection, &
-       boundary_flag,        &
-       timelen,              &
-       skiplen,              &
-       URBAN_do              )
+       use_file_landwater,                &
+       init_landwater_ratio,              &
+       init_ocean_alb_lw,                 &
+       init_ocean_alb_sw,                 &
+       init_ocean_z0w,                    &
+       intrp_iter_max,                    &
+       soilwater_ds2vc_flag,              &
+       elevation_collection_land,         &
+       elevation_collection_ocean,        &
+       boundary_flag,                     &
+       timelen, skiplen,                  &
+       URBAN_do                           )
     use scale_comm_cartesC, only: &
          COMM_bcast, &
          COMM_vars8, &
          COMM_wait
     use scale_const, only: &
          EPS => CONST_EPS, &
-         UNDEF => CONST_UNDEF
+         UNDEF => CONST_UNDEF, &
+         LAPS => CONST_LAPS
+    use scale_topography, only: &
+         TOPO_Zsfc
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_interp2d
@@ -2164,7 +2171,8 @@ contains
     real(RP),         intent(in)  :: init_ocean_z0w
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
-    logical,          intent(in)  :: elevation_collection
+    logical,          intent(in)  :: elevation_collection_land
+    logical,          intent(in)  :: elevation_collection_ocean
     logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
     integer,          intent(in)  :: timelen          ! time steps in one file
     integer,          intent(in)  :: skiplen          ! skip steps
@@ -2197,6 +2205,11 @@ contains
 
     real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp, pres
+
+    ! elevation collection
+    real(RP) :: work(ldims(1),ldims(2))
+    real(RP) :: topo(IA,JA)
+    real(RP) :: tdiff
 
     real(RP) :: one(IA,JA)
 
@@ -2499,52 +2512,54 @@ contains
           call interp_OceanLand_data(sst_org, omask, odims(1), odims(2), .false., intrp_iter_max)
        end if
 
-       if ( first ) then ! interporate land data only once
+       call land_interporation( &
+            tg(:,:,:,nn), strg(:,:,:,nn),  & ! (out)
+            lst(:,:,nn), albg(:,:,:,:,nn), & ! (out)
+            ust, albu,                     & ! (out)
+            tg_org, strg_org, smds_org,    & ! (inout)
+            lst_org, albg_org,             & ! (inout)
+            ust_org,                       & ! (inout)
+            sst_org,                       & ! (in)
+            lmask_org,                     & ! (in)
+            lsmask_nest,                   & ! (in)
+            topo_org,                      & ! (in)
+            lz_org, llon_org, llat_org,    & ! (in)
+            LCZ, LON, LAT,                 & ! (in)
+            ldims, odims,                  & ! (in)
+            maskval_tg, maskval_strg,      & ! (in)
+            init_landwater_ratio,          & ! (in)
+            use_file_landwater,            & ! (in)
+            use_waterratio,                & ! (in)
+            soilwater_ds2vc_flag,          & ! (in)
+            elevation_collection_land,     & ! (in)
+            intrp_iter_max,                & ! (in)
+            ol_interp,                     & ! (in)
+            URBAN_do                       ) ! (in)
 
-          call land_interporation( &
-               tg(:,:,:,nn), strg(:,:,:,nn),  & ! (out)
-               lst(:,:,nn), albg(:,:,:,:,nn), & ! (out)
-               ust, albu,                     & ! (out)
-               tg_org, strg_org, smds_org,    & ! (inout)
-               lst_org, albg_org,             & ! (inout)
-               ust_org,                       & ! (inout)
-               sst_org,                       & ! (in)
-               lmask_org,                     & ! (in)
-               lsmask_nest,                   & ! (in)
-               topo_org,                      & ! (in)
-               lz_org, llon_org, llat_org,    & ! (in)
-               LCZ, LON, LAT,                 & ! (in)
-               ldims, odims,                  & ! (in)
-               maskval_tg, maskval_strg,      & ! (in)
-               init_landwater_ratio,          & ! (in)
-               use_file_landwater,            & ! (in)
-               use_waterratio,                & ! (in)
-               soilwater_ds2vc_flag,          & ! (in)
-               elevation_collection,          & ! (in)
-               intrp_iter_max,                & ! (in)
-               ol_interp,                     & ! (in)
-               URBAN_do                       ) ! (in)
-
-       end if ! first
-
-       if ( first .or. update_coord ) then
-          if ( ol_interp ) then
-             ! land surface temperature at ocean grid
-             call INTERP_interp2d( itp_nh,             & ! [IN]
-                                   ldims(2), ldims(3), & ! [IN]
-                                   odims(1), odims(2), & ! [IN]
-                                   igrd_o   (:,:,:),   & ! [IN]
-                                   jgrd_o   (:,:,:),   & ! [IN]
-                                   hfact_o  (:,:,:),   & ! [IN]
-                                   lst_org  (:,:),     & ! [IN]
-                                   lst_ocean(:,:)      ) ! [OUT]
-          else
-             lst_ocean(:,:) = lst_org(:,:)
+       do j = 1, ldims(3)
+       do i = 1, ldims(2)
+          if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
+             work(i,j) = lst_org(i,j) + topo_org(i,j) * LAPS
           end if
+       end do
+       end do
+
+       if ( ol_interp ) then
+          ! land surface temperature at ocean grid
+          call INTERP_interp2d( itp_nh,             & ! [IN]
+                                ldims(2), ldims(3), & ! [IN]
+                                odims(1), odims(2), & ! [IN]
+                                igrd_o   (:,:,:),   & ! [IN]
+                                jgrd_o   (:,:,:),   & ! [IN]
+                                hfact_o  (:,:,:),   & ! [IN]
+                                work     (:,:),     & ! [IN]
+                                lst_ocean(:,:)      ) ! [OUT]
+       else
+          lst_ocean(:,:) = work(:,:)
        end if
 
-       call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST")
-       call replace_misval_map( tw_org,  lst_ocean, odims(1), odims(2), "OCEAN_TEMP")
+       call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST" )
+       call replace_misval_map( tw_org,  lst_ocean, odims(1), odims(2), "OCEAN_TEMP" )
 
        do j = 1, odims(2)
        do i = 1, odims(1)
@@ -2601,6 +2616,21 @@ contains
                                  sst(:,:,nn), FILTER_ORDER, FILTER_NITER )
           call COMM_vars8( sst(:,:,nn), 1 )
           call COMM_wait ( sst(:,:,nn), 1 )
+       end if
+
+       ! elevation collection
+       if ( elevation_collection_ocean ) then
+
+          do j = 1, JA
+          do i = 1, IA
+             if ( topo(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
+                tdiff = TOPO_Zsfc(i,j) * LAPS
+                sst(i,j,nn) = sst(i,j,nn) - tdiff
+                tw (i,j,nn) = tw (i,j,nn) - tdiff
+             end if
+          end do
+          end do
+
        end if
 
        call INTERP_interp2d( itp_nh,                              & ! [IN]
@@ -2716,26 +2746,22 @@ contains
           call COMM_wait ( z0w(:,:,nn), 1 )
        end if
 
-       if ( first ) then
-
-          ! replace values over the ocean ####
+       ! replace values over the ocean ####
+       do j = 1, JA
+       do i = 1, IA
+          if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
+             lst(i,j,nn) = sst(i,j,nn)
+          endif
+       enddo
+       enddo
+       if ( URBAN_do .and. first ) then
           do j = 1, JA
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                lst(i,j,nn) = sst(i,j,nn)
+                ust(i,j) = sst(i,j,nn)
              endif
           enddo
           enddo
-          if ( URBAN_do ) then
-             do j = 1, JA
-             do i = 1, IA
-                if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                   ust(i,j)    = sst(i,j,nn)
-                endif
-             enddo
-          enddo
-       end if
-
        end if
 
        first = .false.
@@ -3021,7 +3047,15 @@ contains
        sst_land(:,:) = sst_org(:,:)
     end if
 
-    call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT")
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
+          sst_land(i,j) = sst_land(i,j) - topo_org(i,j) * LAPS
+       end if
+    end do
+    end do
+
+    call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT" )
 
     ! replace missing value
     do j = 1, ldims(3)
