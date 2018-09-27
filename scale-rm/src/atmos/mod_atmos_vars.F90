@@ -416,6 +416,7 @@ module mod_atmos_vars
   integer, private, allocatable :: QP_HIST_id (:)       !> tracer variables
   integer, private, allocatable :: QP_MONIT_id(:)
   integer, private              :: DV_HIST_id (DV_nmax) !> diagnostic variables
+  integer, private              :: HIST_id_gph
 
   integer, private, parameter   :: IM_QDRY         =  1
   integer, private, parameter   :: IM_QTOT         =  2
@@ -735,6 +736,8 @@ contains
     do iv = 1, DV_nmax
        call FILE_HISTORY_reg( DV_info(iv)%NAME, DV_info(iv)%DESC, DV_info(iv)%UNIT, DV_HIST_id(iv), dim_type=DV_info(iv)%dim_type, standard_name=DV_info(iv)%STDNAME )
     end do
+
+    call FILE_HISTORY_reg( "GPH", "geopotential height", "m", HIST_id_gph, dim_type='ZXY', standard_name="geopotential_height" )
 
 
     !-----< monitor output setup >-----
@@ -1261,6 +1264,8 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_vars_history
     use mod_atmos_phy_ae_vars, only: &
@@ -1328,6 +1333,9 @@ contains
           endif
        endif
     enddo
+
+    call FILE_HISTORY_put( HIST_id_gph, REAL_CZ(:,:,:) )
+
 
     if ( moist ) &
          call ATMOS_PHY_MP_vars_history( DENS_av(:,:,:), TEMP(:,:,:), QTRC_av(:,:,:,:) )
