@@ -19,7 +19,7 @@ The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configu
 \verb|CNVTOPO_UseDEM50M             = .false.,     | & ; Use DEM50M dataset? \\
 \verb|CNVTOPO_UseUSERFILE           = .false.,     | & ; Use user-defined dataset? \\
 \verb|CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; Type of smoothing filter (OFF,LAPLACIAN,GAUSSIAN) \\
-\verb|CNVTOPO_smooth_maxslope_ratio = 10.D0,       | & ; Maximum allowable ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
+\verb|CNVTOPO_smooth_maxslope_ratio = 5.D0,        | & ; Maximum allowable ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
 \verb|CNVTOPO_smooth_maxslope       = -1.D0,       | & ; Maximum allowable angle of inclination [deg] \\
 \verb|CNVTOPO_smooth_local          = .true.,      | & ; Try to continue smoothing, for only grids whose angles of inclination exceed the maximum value? \\
 \verb|CNVTOPO_smooth_itelim         = 10000,       | & ; Number limit of the smoothing iteration \\
