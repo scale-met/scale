@@ -69,6 +69,25 @@ the ratio of \nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN} can be specified by \nm
 Integer is acceptable for \nmitem{TIME_NSTEP_ATMOS_DYN}.
 
 
+\subsection{Check of CFL Condition} \label{subsec:cfl_check}
+
+The time step for the advection \nmitem{TIME_DT} must be smaller than the grid spacing divided by velocity, i.e., the Courant-Friedrichs-Lewy (CFL) condition.
+A non-dimensional number $U \Delta t/\Delta x$ is called the Courant number, where $U, \Delta x$ and $\Delta t$ are velocity, spatial grid spacing, and time step, respectively.
+The CFL condition is that the Courant number must be smaller than 1.
+
+\scalerm has a functionality to check whether the Courant number exceeds a limit.
+To enable this function, set \nmitem{ATMOS_VARS_CHECKCFL_SOFT} and/or \nmitem{ATMOS_VARS_CHECKCFL_HARD} in \namelist{PARAM_ATMOS_VARS}.
+Their default values are 1.0 and 2.0, respectively.
+If the Courant number in simulations exceeds \nmitem{ATMOS_VARS_CHECKCFL_SOFT}, the following message is output to the LOG file.
+\msgbox{
+\verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
+}
+If it exceeds \nmitem{ATMOS_VARS_CHECKCFL_HARD}, the following message is output to the standard output, and the simulation aborts.
+\msgbox{
+\verb|ERROR [ATMOS_vars_monitor] Courant number = xxx exceeded the hard limit = yyy|
+}
+
+
 \subsection{Time Step for Physical Processes}
 A time step for the physical process represents the timing of the tendency to update given by the process. Once the model starts, each physical process is called during the setup of the model to obtain the initial tendency. Each tendency is updated at every time step specified process by process.
 All time steps for the physical process must be a multiple of \nmitem{TIME_DT}.
@@ -104,20 +123,3 @@ The wall clock is checked every 6 hours of the simulation time. When the elapse 
 
 
 
-\subsection{Check of CFL Condition} \label{subsec:cfl_check}
-
-The time step for the advection \nmitem{TIME_DT} must be smaller than the grid spacing divided by velocity, i.e., the Courant-Friedrichs-Lewy (CFL) condition.
-A non-dimensional number $U \Delta t/\Delta x$ is called the Courant number, where $U, \Delta x$ and $\Delta t$ are velocity, spatial grid spacing, and time step, respectively.
-The CFL condition is that the Courant number must be smaller than 1.
-
-\scalerm has a functionality to check whether the Courant number exceeds a limit.
-To enable this function, set \nmitem{ATMOS_VARS_CHECKCFL_SOFT} and/or \nmitem{ATMOS_VARS_CHECKCFL_HARD} in \namelist{PARAM_ATMOS_VARS}.
-Their default values are 1.0 and 2.0, respectively.
-If the Courant number in simulations exceeds \nmitem{ATMOS_VARS_CHECKCFL_SOFT}, the following message is output to the LOG file.
-\msgbox{
-\verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
-}
-If it exceeds \nmitem{ATMOS_VARS_CHECKCFL_HARD}, the following message is output to the standard output, and the simulation aborts.
-\msgbox{
-\verb|ERROR [ATMOS_vars_monitor] Courant number = xxx exceeded the hard limit = yyy|
-}

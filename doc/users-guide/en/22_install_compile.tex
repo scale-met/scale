@@ -125,16 +125,15 @@ the following executable files are created in the \texttt{scale-{\version}/bin} 
 
 \subsubsection{Points to note}
 
-\noindent If you want to compile them again, remove these binary files by the following command:
+\noindent If you want to compile them again, remove the created binary files by the following command:
 \begin{verbatim}
  $ make clean
 \end{verbatim}
-Note that the library already compiled is not deleted in this command. If you want to remove all files, use the following command:
+Note that, the library already compiled is not deleted by this command.
+When you recompile the files by changing the compilation environment and options, use the following command to remove all files created by compilation:
 \begin{verbatim}
  $ make allclean
 \end{verbatim}
-Moreover, if the files are recompiled by changing the compilation environment and options,
-execute \verb|"make allclean"|.\\
 
 
 In \scalelib, a compilation and an archive are conducted in directory \texttt{scale-{\version}/scalelib/}.
