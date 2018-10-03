@@ -80,6 +80,7 @@ module scale_landuse
   logical,                private :: LANDUSE_AllLand      = .false.
   logical,                private :: LANDUSE_AllUrban     = .false.
   logical,                private :: LANDUSE_AllLake      = .false.
+  logical,                private :: LANDUSE_Ignore_Lake  = .false.
   logical,                private :: LANDUSE_MosaicWorld  = .false.
 
   !-----------------------------------------------------------------------------
@@ -113,6 +114,7 @@ contains
        LANDUSE_AllLand,              &
        LANDUSE_AllUrban,             &
        LANDUSE_AllLake,              &
+       LANDUSE_Ignore_Lake,          &
        LANDUSE_MosaicWorld
 
     integer :: ierr
@@ -411,7 +413,9 @@ contains
 
        if ( .not. LAKE_do ) then
           ! lake is assumed to be ocean
-          if ( OCEAN_do ) then
+          if ( LANDUSE_Ignore_Lake ) then
+             ! do nothing
+          else if ( OCEAN_do ) then
              LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
           else
              !$omp parallel do

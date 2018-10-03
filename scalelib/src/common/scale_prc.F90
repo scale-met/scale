@@ -631,7 +631,7 @@ contains
        call PRC_sort_ascd( PRC_ORDER(1:NUM_DOMAIN), 1, NUM_DOMAIN )
 
        do i = 1, NUM_DOMAIN
-       do j = 1, NUM_DOMAIN
+       do j = NUM_DOMAIN, 1, -1
           if ( PRC_DOMAINS(i) == PRC_ORDER(j) .AND. touch(j) < 0 ) then
              DOM2COL(i  ) = j-1 ! domain_num --> color_num
              COL2DOM(j-1) = i   ! color_num  --> domain_num

@@ -1,7 +1,7 @@
-\section{How to Conduct Bulk Job} \label{sec:bulkjob}
+%\section{How to Conduct Bulk Job}
 %====================================================================================
 
-\subsection{What's Bulk Job}
+\section{What's Bulk Job} \label{sec:bulkjob}
  \scalerm has a functionality for bulk jobs that allows simultaneous multiple execution of independent runs.
 This function is useful for the parameter-sweep experiment, the ensemble experiment in different initial conditions, the time-slice climate simulation, and so on.
 
@@ -21,7 +21,7 @@ Numbers such as ``0000'' are the directory names corresponding to job number, an
 
 
 
-\subsection{Settings for Bulk Job}
+\section{Settings for Bulk Job}
 Since the bulk job function is an extension of the division and redistribution of MPI processes used in online nesting, file \verb|launch.conf| is required to launch the job. Even in case online nesting and bulk job functions are used together, only one file \verb|launch.conf| is prepared.
 Below is an example of such a case.
 \editboxtwo{
@@ -46,7 +46,7 @@ Option of \nmitem{COLOR_REORDER} is the switch fo job rearrangement in MPI commu
 this would be reasonable to gain the efficient inter-node communication.
 
 
-\subsection{Failure Process Management}
+\section{Failure Process Management}
 In the \scalerm bulk job system, a failure process management (FPM) tool is available. FPM watches the job groups with a polling interval.
 If some jobs are unfortunately aborted, all other jobs are not aborted until the number of failure jobs reacheas to the limit number.
 \nmitem{FAILURE_PRC_MANAGE} is a switch for use FPM tool.
@@ -55,7 +55,7 @@ Note, this version of FPM tool is available only for single domain calculation, 
 \nmitem{NUM_FAIL_TOLERANCE} must be equal to the number of all jobs.
 
 
-\subsection{Preparation for Bulk Job}
+\section{Preparation for Bulk Job}
 Prior to the execution of bulk jobs, prepare as many directories as the number of jobs, which are called ``sub-directories.'' As in Fig. \ref{fig_bulkjob}, these correspond to \verb|0000/  0001/  0002/|. The directory name is assigned as a four-digit number starting from zero. In each directory, all the necessary files (configuration files, input files, and output directories) must be prepared.
 Note than the path to directoies or files specified in the configuration files must be correctly set up as explained below.
 An excerpt of \verb|run.d01.conf| for job \verb|0000| are as follows:
@@ -106,7 +106,7 @@ As shown in Fig. \ref{fig_bulkjob}, job directories exist in the same hierarchy 
 %% 下記, ドメイン1のプロセス0からの出力例である。\\
 
 
-\subsection{Execution of Bulk Job}
+\section{Execution of Bulk Job}
 
 At the execution of bulk jobs, the total number of MPI processes is specified as
 

@@ -50,6 +50,7 @@ end
 prefix = ARGV.shift || "."
 fname_air = File.join( prefix, "fcst_mdlA.nus")
 fname_land = File.join( prefix, "anal_land0.nus")
+fname_land2 = File.join( prefix, "anl_land0.nus")
 basename_out = "MANAL"
 grads_namelist = "namelist.grads_boundary"
 
@@ -126,16 +127,20 @@ grhog2  = file_air.var("DNSG2")
 gptdev  = file_air.var("PT")
 gpdevg2 = file_air.var("PRS")
 gqv     = file_air.var("QV")
-#gqc     = file_air.var("QC")
-#gqr     = file_air.var("QR")
-#gqi     = file_air.var("QCI")
-#gqs     = file_air.var("QS")
-#gqg     = file_air.var("QG")
+gqc     = file_air.var("QC")
+gqr     = file_air.var("QR")
+gqi     = file_air.var("QCI")
+gqs     = file_air.var("QS")
+gqg     = file_air.var("QG")
 gslp    = file_air.var("PSEAsrf")
 gptsfc  = file_air.var("PTGRDsrf")
 
 #  land data
-file_land = NuSDaS.open(fname_land)
+begin
+  file_land = NuSDaS.open(fname_land)
+rescue
+  file_land = NuSDaS.open(fname_land2)
+end
 gtg      = file_land.var("TUGD")
 gsst     = file_land.var("SSTsrf")
 gkind    = file_land.var("KINDsrf")
@@ -145,7 +150,7 @@ nlon_land, nlat_land = lon_land.shape
 nl = gtg.dim("plane").val.length
 
 
-time = grhog2.dim("basetime").val[trange] / (24*60)
+time = grhog2.dim("basetime").val.to_type(NArray::SFLOAT)[trange] / (24*60)
 ntime = time.length
 
 lsmask = gkind[true,true,0]
@@ -243,11 +248,11 @@ unless skip_data
       ptdev = gptdev[xrange,yrange,zrange,validtime,n]
       pdevg2 = gpdevg2[xrange,yrange,zrange,validtime,n]
       qv = gqv[xrange,yrange,zrange,validtime,n]
-#      qc = gqc[xrange,yrange,zrange,validtime,n]
-#      qr = gqr[xrange,yrange,zrange,validtime,n]
-#      qi = gqi[xrange,yrange,zrange,validtime,n]
-#      qs = gqs[xrange,yrange,zrange,validtime,n]
-#      qg = gqg[xrange,yrange,zrange,validtime,n]
+      qc = gqc[xrange,yrange,zrange,validtime,n]
+      qr = gqr[xrange,yrange,zrange,validtime,n]
+      qi = gqi[xrange,yrange,zrange,validtime,n]
+      qs = gqs[xrange,yrange,zrange,validtime,n]
+      qg = gqg[xrange,yrange,zrange,validtime,n]
       slp = gslp[xrange,yrange,validtime,n] * 100.0 # hPa to Pa
       ptsfc = gptsfc[xrange,yrange,validtime,n] + PTref
 
@@ -307,12 +312,11 @@ unless skip_data
       ofile.write vlat.to_s
       ofile.write tem.to_s
       ofile.write qv.to_s
-#      ofile.write qc.to_s
-#      ofile.write qr.to_s
-#      ofile.write qc.to_s
-#      ofile.write qi.to_s
-#      ofile.write qs.to_s
-#      ofile.write qg.to_s
+      ofile.write qc.to_s
+      ofile.write qr.to_s
+      ofile.write qi.to_s
+      ofile.write qs.to_s
+      ofile.write qg.to_s
 
 
       # write land variables
@@ -349,7 +353,12 @@ vars_air = [
     ["U", nlev, "U-Component of Wind [m/s]"],
     ["V", nlev, "V-Component of Wind [m/s]"],
     ["T", nlev, "Tmeperature [K]"],
-    ["QV",nlev, "Specific humidity [kg/kg]"]
+    ["QV",nlev, "Specific humidity [kg/kg]"],
+    ["QC",nlev, "Clowd water [kg/kg]"],
+    ["QR",nlev, "Rain water [kg/kg]"],
+    ["QI",nlev, "Ice clowd water [kg/kg]"],
+    ["QS",nlev, "Snow [kg/kg]"],
+    ["QG",nlev, "Groupel [kg/kg]"],
 ]
 
 vars_land = [

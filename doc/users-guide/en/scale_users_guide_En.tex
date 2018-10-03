@@ -68,11 +68,11 @@
 
 \part{Install} \label{part:install}
  \chapter{Preparation}
- \input{install_prep}       % \section{Necessary system environment} \label{sec:req_env}
+ \input{21_install_prep}       % \section{Necessary system environment} \label{sec:req_env}
  \chapter{Compile of \scalelib}
- \input{21_install}       % \section{Necessary system environment} \label{sec:req_env}
+ \input{22_install_compile}       % \section{Necessary system environment} \label{sec:req_env}
  \chapter{Compile of post-processing tool (net2g)}
- \input{install_net2g}
+ \input{23_install_net2g}
 
 
 \part{Tutorial for \scalerm}
@@ -82,7 +82,7 @@
  \input{33_ideal_exp_net2g}
  \input{34_ideal_exp_last}
 
- \chapter{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
+ %\chapter{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
 
  \chapter{Real atomsphere experiment} \label{chap:tutorial_real}
  \input{41_real_exp_introduction}
@@ -105,28 +105,27 @@
 
 \part{Various settings} \label{part:basic_usel}
 
- \chapter{Common settings}
- \input{516_setting_common}
- \input{55_setting_time}
- \input{56_setting_history}
- \input{515_setting_log}
+ \chapter{Pre-processing}
+ \input{54_setting_howtoinput}
 
  \chapter{Framework for \scalerm}
- \input{50_setting_introduction}
+ \input{513_setting_makeconf}
+ \input{514_setting_convert4conf}
+ \clearpage
  \input{51_setting_domain}
+ \clearpage
  \input{52_setting_mapproj}
  \input{53_setting_topo}
- \input{54_setting_howtoinput}
  \clearpage
- %\input{59_setting_net2g}
+ \input{55_setting_time}
+ \input{56_setting_history}
  \input{510_setting_restart}
+ \clearpage
  \input{511_0setting_nesting}
  \input{511_1setting_nesting_topo}
  \input{511_2setting_offline_nesting}
  \input{511_3setting_online_nesting}
- \input{512_setting_bulkjob}
- \input{513_setting_makeconf}
- \input{514_setting_convert4conf}
+
 
 % \chapter{Framework for \scalegm}
 % \input{setting_gm_level}
@@ -144,6 +143,11 @@
  \input{58_setting_physics_sf}
  \input{58_setting_physics_OcnLndUrb}
 
+ \chapter{Common settings}
+ \input{515_setting_log}
+ \input{56_setting_monitor}
+ \input{516_setting_common}
+
  \chapter{Post-processing} \label{sec:basic_usel_post}
  \input{59_setting_net2g.tex}
  \input{59_setting_sno.tex}
@@ -160,6 +164,9 @@
  \chapter{How to use scale library}
  \input{62_uselibrary}
  \input{62_doxygen}
+
+ \chapter{How to Conduct Bulk Job}
+ \input{63_setting_bulkjob}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}

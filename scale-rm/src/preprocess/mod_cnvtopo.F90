@@ -61,7 +61,7 @@ module mod_cnvtopo
   logical,  private :: CNVTOPO_smooth_local          = .true.
   integer,  private :: CNVTOPO_smooth_itelim         = 10000
   logical,  private :: CNVTOPO_smooth_trim_ocean     = .true.
-  real(RP), private :: CNVTOPO_smooth_maxslope_ratio = 10.0_RP ! ratio of DZDX, DZDY
+  real(RP), private :: CNVTOPO_smooth_maxslope_ratio =  5.0_RP ! ratio of DZDX, DZDY
   real(RP), private :: CNVTOPO_smooth_maxslope       = -1.0_RP ! [deg]
   real(RP), private :: CNVTOPO_smooth_maxslope_limit
 

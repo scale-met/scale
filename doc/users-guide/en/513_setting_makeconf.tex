@@ -1,7 +1,7 @@
 \section{Supporting tool for preparation of configuration files} \label{sec:basic_makeconf}
 %------------------------------------------------------
 
-In the current version, the configuration files \verb|***.conf| for experiment are required to be individually prepared for \verb|pp, init, run|. Some items in namelist are required to be the same among these configure files. If there is an inconsistency among them, the model does not run properly. To avoid such mistakes, a convenient supporting tool for the preparation of configuration files is provided as follows:
+The configuration files \verb|***.conf| for experiment are required to be individually prepared for \verb|pp, init, run|. Some items in namelist are required to be the same among these configure files. If there is an inconsistency among them, the model does not run properly. To avoid such mistakes, a convenient supporting tool for the preparation of configuration files is provided as follows:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
@@ -62,5 +62,6 @@ it is recommended to leave the tutrial setting as a different file as follows:
 
 %Copy the script in the sample programs closest to the intended experiment to \verb|USER.sh|.
 \verb|NUM_DOMAIN| specifies the number of domains appearing in the script.
-Change the items below appropriately;
-when items following \verb|"# require parameters for each domain"|, settings are described to the number of domains. Note that if the number of nesting domains according to \verb|NUM_DOMAIN| and the number of variables are different, the set of files for the experiment cannot be generated. When items do not appear in \verb|USER.sh|, edit directly the configuration file generated under the directory \verb|experiment|.
+Change the items appropriately;
+the settings for each item are specified in configure files generated.
+When items following \verb|"# require parameters for each domain"|, settings are described to the number of domains. Note that if the number of nesting domains according to \verb|NUM_DOMAIN| and the number of variables are different, the set of files for the experiment cannot be generated. When items do not appear in \verb|USER.sh|, edit directly the configuration file generated under the directory \verb|experiment|.
