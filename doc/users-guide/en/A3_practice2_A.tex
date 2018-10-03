@@ -4,21 +4,21 @@
 \section*{Answer}
 \begin{enumerate}
 \item {\bf How is the number of MPIs parallel changed while maintaining the computational domain?}\\
-\nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} and \nmitem{PRC_NUM_X, PRC_NUM_Y} in  \namelist{PARAM_PRC}
+\nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} and \nmitem{PRC_NUM_X, PRC_NUM_Y} in  \namelist{PARAM_PRC}
 are changed. If the below conditions are satisfied, your answer is correct:
 \begin{eqnarray}
-&& Number of MPIs parallel = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& Number of grid cells along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
-&& Number of grid cells along the X direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
+&& \verb|Number of MPIs parallel| = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
+&& \verb|Number of grid cells along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
+&& \verb|Number of grid cells along the X direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
 \end{eqnarray}
 
 
 \item {\bf How is the computational domain altered while maintaining the number of MPIs parallel?}\\
-If the number of grid cells per MPI process increases n times, the total number of grid cells also increases n times. Thus, only \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} are changed. The red parts indicate the answer below:\\
+If the number of grid cells per MPI process increases n times, the total number of grid cells also increases n times. Thus, only \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} are changed. The red parts indicate the answer below:\\
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_INDEX| & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
 \textcolor{red}{\verb| IMAX = 60,|}  & (\verb|IMAX = 45| in the original settings)\\
 \textcolor{red}{\verb| JMAX = 30,|}  & (\verb|JMAX = 45| in the original settings)\\
@@ -27,32 +27,32 @@ If the number of grid cells per MPI process increases n times, the total number 
 }}}\\
 
 \item {\bf How is horizontal grid interval changed while maintaining the computational domain?}\\
-When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PARAM_GRID} and  \nmitem{IMAX, JMAX} in \namelist{PARAM_INDEX} should be changed.
+When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} and  \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} should be changed.
 
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_PRC|  & \\
+\verb|&PARAM_PRC_CARTESC|  & \\
 \verb| PRC_NUM_X      = 2,|  & \\
 \verb| PRC_NUM_Y      = 2,|  & \\
 \\
-\verb|&PARAM_INDEX| & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
 \textcolor{red}{\verb| IMAX = 180,|} &  (\verb|IMAX = 45| in the original settings)\\
 \textcolor{red}{\verb| JMAX = 180,|} &  (\verb|JMAX = 45| in the original settings)\\
 \verb|/| &\\
  \\
-\verb|&PARAM_GRID| & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC| & \\
 \textcolor{red}{\verb| DX = 5000.D0,|} & (\verb|DX = 20000.D0| in the original settings)\\
 \textcolor{red}{\verb| DY = 5000.D0,|} & (\verb|DY = 20000.D0| in the original settings)\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
-In case the number of MPIs parallel are also changed, if the below conditions are satisfied in addition to \verb|&PARAM_GRID|, your answer is correct:
+In case the number of MPIs parallel are also changed, if the below conditions are satisfied in addition to \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
 \begin{eqnarray}
-&& Number of grids along the X direction = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-&& Number of grids along the Y direction = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& \verb|Number of grids along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \nonumber \\
+&& \verb|Number of grids along the Y direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
 Moreover, it is necessary to suitably change the time interval for the dynamics,\\
@@ -61,7 +61,7 @@ Moreover, it is necessary to suitably change the time interval for the dynamics,
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_PRC|  & \\
+\verb|&PARAM_PRC_CARTESC|  & \\
 \verb| BUFFER_DX = 100000.D0, | & (\verb|BUFFER_DX = 400000.D0,| in the original settings) \\
 \verb| BUFFER_DY = 100000.D0, | & (\verb|BUFFER_DY = 400000.D0,| in the original settings) \\
 \verb|/| &\\
@@ -76,12 +76,12 @@ The coordinates of the center of the computational domain are changed as follows
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_MAPPROJ                      | & \\
-\textcolor{red}{\verb| MPRJ_basepoint_lon = 139.7567D0,|} & (\verb|135.220404D0,| in the original setting)\\
-\textcolor{red}{\verb| MPRJ_basepoint_lat =  35.6883D0,|} & (\verb|34.653396D0,| in the original setting)\\
-\verb| MPRJ_type          = 'LC',         | & \\
-\verb| MPRJ_LC_lat1       =  30.00D0,     | & \\
-\verb| MPRJ_LC_lat2       =  40.00D0,     | & \\
+\verb|&PARAM_MAPPROJECTION                   | & \\
+\textcolor{red}{\verb| MAPPROJECTION_basepoint_lon = 139.7567D0,|} & (\verb|135.220404D0,| in the original setting)\\
+\textcolor{red}{\verb| MPRPROJECTION_basepoint_lat =  35.6883D0,|} & (\verb|34.653396D0,| in the original setting)\\
+\verb| MAPPROJECTION_type    = 'LC',         | & \\
+\verb| MAPPROJECTION_LC_lat1 =  30.00D0,     | & \\
+\verb| MAPPROJECTION_LC_lat2 =  40.00D0,     | & \\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
@@ -108,19 +108,20 @@ Furthermore, it is necessary to prepare a boundary condition of more than 12 hou
 
 \item {\bf How are output variables added and their output interval changed?}\\
 
-The output interval is set to \nmitem{HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTITEM}. Refer to Appendix \ref{achap:namelist} for variable names.\\
+The output interval is set to \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_FILE_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTORY_ITEM}. The list of the history variables is in the reference manual.
+See Section \ref{sec:reference_manual} for the reference manual.\\
 
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
-\verb|&PARAM_HISTORY | & \\
-\verb| HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
-\textcolor{red}{\verb| HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (\verb|3600.D0,| in the original settings) \\
-\verb| HISTORY_DEFAULT_TUNIT     = "SEC",| & \\
+\verb|&PARAM_FILE_HISTORY | & \\
+\verb| FILE_HISTORY_DEFAULT_BASENAME  = "history_d01", | & \\
+\textcolor{red}{\verb| FILE_HISTORY_DEFAULT_TINTERVAL = 1800.D0,|} & (\verb|3600.D0,| in the original settings) \\
+\verb| FILE_HISTORY_DEFAULT_TUNIT     = "SEC",| & \\
 \verb|/| & \\
 \\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_up" /|} & \textcolor{red}{added}\\
-\textcolor{red}{\verb|&HISTITEM item="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_up" /|} & \textcolor{red}{added}\\
+\textcolor{red}{\verb|&HISTORY_ITEM NAME="SFLX_SW_dn" /|} & \textcolor{red}{added}\\
 \\
 \end{tabularx}
 }}}\\
@@ -152,7 +153,6 @@ Once the three hours for integration have elapsed, the restart file is created.\
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\verb| RESTART_RUN          = .false.,               | ~~~~~~~~~~~~~~~(added, but it is not necessary.) & \\
 \textcolor{red}{\verb| RESTART_OUTPUT      = .true.,|} ~~~~~~~~~~~~(\verb|.false.,| in the original setting) & \\
 \verb| RESTART_IN_BASENAME = "../init/init_d01_20070714-180000.000",| &  \\
 \textcolor{red}{\verb| RESTART_OUT_BASENAME = "restart_d01",|} ~~~~~~~~~~~~~~~(added)& \\
@@ -189,7 +189,6 @@ The configuration for the restart calculation from three to six hours in integra
 \verb|/| & \\
 \\
 \verb|&PARAM_RESTART | & \\
-\textcolor{red}{\verb| RESTART_RUN          = .true.,               |} & (\textcolor{red}{necessary})\\
 \verb| RESTART_OUTPUT      = .true.,                |                  & (not always necessary)\\
 \textcolor{red}{\verb| RESTART_IN_BASENAME = "restart_d01_20070714-210000.000",|} & (\textcolor{red}{necessary})\\
 \verb| RESTART_OUT_BASENAME = "restart2_d01",| & (not alway necessary)\\

@@ -1,8 +1,8 @@
-\chapter{Variables in the source code}
-
+The variables used in the model is listed in the Tables \ref{table:vars_dyn} and \ref{table:vars_smg}.
 
 \begin{table}[htbp]
-  \caption{Variables in atmos/mod\_atmos\_dyn\_fent\_fct.f90.}
+  \caption{Variables of the dynamics}
+  \label{table:vars_dyn}
   \begin{tabular}{ll}\hline
     DENS(k,i,j) & $\rho_{i,j,k}$ \\
     MOMZ(k,i,j) & $(\rho w)_{i,j,k+\frac{1}{2}}$ \\
@@ -31,7 +31,8 @@
 
 
 \begin{table}[htbp]
-  \caption{Variables in atmos/mod\_atmos\_phy\_tb\_smg.f90.}
+  \caption{Variables of the Smagorinsky scheme.}
+  \label{table:vars_smg}
   \begin{tabular}{ll}\hline
     tke(k,i,j) & $TKE$ \\
     nu(k,i,j), nu\_*(k,i,j) & $\nu_{SGS}$ \\

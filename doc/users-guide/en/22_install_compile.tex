@@ -1,0 +1,179 @@
+\section{Download and environmental settings} \label{sec:scale_compile}
+%====================================================================================
+
+The environment used in the explanation below is as follows:
+\begin{itemize}
+\item CPU: Intel Core i5 2410M 2 core /4 thread
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 6.6 x86-64, CentOS 7.1 x86-64, openSUSE 13.2 x86-64
+\item GNU C/C++, FORTRAN compiler %(refer to Appendix \ref{achap:env_setting})
+\end{itemize}
+
+\subsubsection{Obtaining the source code} %\label{subsec:get_source_code}
+%-----------------------------------------------------------------------------------
+The source code for the latest release can be downloaded
+from \url{http://scale.aics.riken.jp/ja/download/index.html}.\\
+The directory \texttt{scale-{\version}/} can be seen when the tarball file of the source code is extracted.
+\begin{alltt}
+ $ tar -zxvf scale-{\version}.tar.gz
+ $ ls ./
+    scale-{\version}/
+\end{alltt}
+
+\subsubsection{Setting Makedef file and environment variables} \label{subsec:environment}
+%-----------------------------------------------------------------------------------
+
+\scalelib is compiled using a Makedef file
+specified in the environment variable ``\verb|SCALE_SYS|.''
+Several variations of the Makedef file corresponding to computer environment are prepared in the directory \texttt{scale-{\version}/sysdep/}.
+Choose a Makedef file according to your environment.
+Table \ref{tab:makedef} shows environments that Makedef files have supported. If there is no file for your environment, create a Makedif file by modifying any existing one.
+For example,
+if you use Linux x86-64 OS, a GNU compiler, and openMPI,
+"Makedef.Linux64-gnu-ompi" is apropriate.
+An environment variable must also be specified as follows:
+\begin{verbatim}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{verbatim}
+If the environment is always the same, it is convenient to explicitly describe the environmental variable in the environmental configuration file, such as \verb|.bashrc|.
+
+\begin{table}[htb]
+\begin{center}
+\caption{Examples of environments and their corresponding Makedef files.}
+\begin{tabularx}{150mm}{|l|l|X|l|} \hline
+ \rowcolor[gray]{0.9} OS/Computer & Compiler & MPI & Makedef file \\ \hline
+                 & gcc/gfortran & openMPI  & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
+ Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
+                 & icc/ifort    & SGI-MPT  & Makedef.Linux64-intel-mpt \\ \hline
+ Mac OS          & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
+ K Computer      & fccpx/frtpx  & mpiccpx/mpifrtpx & Makedef.K \\ \hline
+ Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
+\end{tabularx}
+\label{tab:makedef}
+\end{center}
+\end{table}
+
+
+\scalelib requires \netcdf.
+In the most cases, the pathes of \netcdf may be automatically found by using ``nc-config'' command.
+If the pathes cannot be found automatically, you should set the following pathes.
+You must set the environmental variables for \netcdf as follows:
+\begin{verbatim}
+ $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
+ $ export SCALE_NETCDF_LIBS= \
+        "-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
+\end{verbatim}
+
+
+\section{Compile} %\label{subsec:compile}
+%-----------------------------------------------------------------------------------
+
+\subsubsection{Compile of \scalerm} %\label{subsec:compile}
+
+Move to the \scalerm source directory
+and compile it by executing the following command:
+\begin{alltt}
+ $ cd scale-{\version}/scale-rm/src
+ $ make -j 4
+\end{alltt}
+The number of \verb|-j| option shows a number of parallel compile processes;
+it is four-parallel in this example.
+To reduce elapsed time of compile,
+it is better to use this option to execute parallel compilation.
+Specify this number according to your environment.
+When a compilation is successful,
+the following three executable files are generated under the \texttt{scale-{\version}/bin} directory.
+\begin{verbatim}
+ scale-rm  scale-rm_init  scale-rm_pp
+\end{verbatim}
+
+
+\subsubsection{Compile of \scalegm} %\label{subsec:compile}
+
+Move to the \scalegm source directory
+and compile it by executing the following command:
+\begin{alltt}
+  $  cd scale-{\version}/scale-gm/src
+  $  make -j 4
+\end{alltt}
+
+The number of \verb|-j| option shows a number of parallel compile processes;
+it is four-parallel in this example.
+To reduce elapsed time of compile,
+it is better to use this option to execute parallel compilation.
+Specify this number according to your environment;
+we recommend the use of two $\sim$ eight processes.
+When a compilation is successful,
+the following three executable files are generated under the scale-{\version}/bin directory.
+
+When a compilation is successful,
+the following executable files are created in the \texttt{scale-{\version}/bin} directory.
+``fio'' is original format based on binary with header information.
+\begin{verbatim}
+   scale-gm      (executable binary of \scalegm)
+   gm_fio_cat    (cat commant tool for fio format)
+   gm_fio_dump   (dump tool for fio format file)
+   gm_fio_ico2ll (convert tool from icosahedral grid data with fio format to LatLon grid data)
+   gm_fio_sel    (sel command tool for fio format)
+   gm_mkhgrid    (generation tool of icosahedral horizontal grid using spring grid)
+   gm_mkllmap    (generation tool of LatLon horizontal grid)
+   gm_mkmnginfo  (tool for creating management file of MPI process)
+   gm_mkrawgrid  (generation tool of icosahedral horizontal grid)
+   gm_mkvlayer   (generation tool of vertical grid)
+\end{verbatim}
+
+
+\subsubsection{Points to note}
+
+\noindent If you want to compile them again, remove the created binary files by the following command:
+\begin{verbatim}
+ $ make clean
+\end{verbatim}
+Note that, the library already compiled is not deleted by this command.
+When you recompile the files by changing the compilation environment and options, use the following command to remove all files created by compilation:
+\begin{verbatim}
+ $ make allclean
+\end{verbatim}
+
+
+In \scalelib, a compilation and an archive are conducted in directory \texttt{scale-{\version}/scalelib/}.
+Object files are placed in a hidden directory called \verb|".lib"| under this directory when you carry out a compilation.
+
+When you want to compile it in debug mode, compile it using \verb|"make -j 4 SCALE_DEBUG=T"|.
+(All the environment variables applied at compile time are listed in Table \ref{tab:env_var_list}.)
+If you want to change the compilation options in detail, edit \verb|Makedef.***|.
+
+\begin{table}[htb]
+\begin{center}
+\caption{List of environment variables applied at compile time}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} Environment variable & Description \\ \hline
+ SCALE\_SYS               & Selection of system (required) \\ \hline
+ SCALE\_DISABLE\_MPI      & Do not use MPI (only for utils) \\ \hline
+ SCALE\_DEBUG             & Use compile option for debug \\ \hline
+ SCALE\_QUICKDEBUG        & Use compile option for quick debug (detect floating point error while maintaining speed-up option) \\ \hline
+ SCALE\_USE\_SINGLEFP     & Use single precision floating-point number (for all sources) \\ \hline
+ SCALE\_USE\_FIXEDINDEX   & Fix grid index size at the compile time \\ \hline
+ SCALE\_ENABLE\_OPENMP    & Enable to use OpenMP \\ \hline
+ SCALE\_ENABLE\_OPENACC   & Enable to use OpenACC \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for K computer and FX, this can be a side effect) \\ \hline
+ SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization (only with Intel compiler) \\ \hline
+ SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library \\ \hline
+ SCALE\_NETCDF\_LIBS      & Directory path of NetCDF library and specifying libraries \\ \hline
+ SCALE\_ENABLE\_PNETCDF   & Use Parallel NetCDF \\ \hline
+ SCALE\_COMPAT\_NETCDF3   & Limit to NetCDF3-compatible features \\ \hline
+ SCALE\_ENABLE\_MATHLIB   & Use numerical calculation library \\ \hline
+ SCALE\_MATHLIB\_LIBS     & Directory path of numerical library and specifying libraries \\ \hline
+ SCALE\_ENABLE\_PAPI      & Use Performance Application Programming Interface (PAPI) \\ \hline
+ SCALE\_PAPI\_INCLUDE     & Include path of PAPI library \\ \hline
+ SCALE\_PAPI\_LIBS        & Directory path of PAPI library and specifying libraries \\ \hline
+ SCALE\_DISABLE\_LOCALBIN & Disable making local binary files in directory for test cases \\ \hline
+ SCALE\_IGNORE\_SRCDEP    & Ignore dependency check at the compile time \\ \hline
+ SCALE\_ENABLE\_SDM       & Use Super Droplet Method (SDM) model \\ \hline
+\end{tabularx}
+\label{tab:env_var_list}
+\end{center}
+\end{table}
+
+
+

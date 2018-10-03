@@ -13,19 +13,16 @@ MODDIROPT = -M
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Qi -Qt -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
-               -x-                                                       \
+               -x-     	    	       		  			 \
                -Ksimd                                                    \
                -Kauto,threadsafe
 
 # NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
 #       If you find the segmentation fault error, please check.
-FFLAGS_AGGRESSIVE = $(FFLAGS_FAST)  \
-                   -Kautoobjstack   \
-                   -Ktemparraystack \
-                   -Kinstance=8     \
-                   -Kswp_strong
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Nquickdbg -NRtrap
+FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=8,swp_strong
+
+FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 
 FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
 
@@ -46,6 +43,7 @@ CFLAGS_DEBUG = -O0
 
 
 ##### Special setting
+SCALE_ENABLE_OPENMP ?= T
 
 FFLAGS_OPENMP = -Kopenmp
 # enable + disable parallel

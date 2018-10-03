@@ -1,0 +1,63 @@
+\documentclass[a4paper]{jreport}
+%##########################################################################################
+\input{00_version}
+\title{{\Huge USERS GUIDE for SCALE-GM\\
+        \vspace{2cm}{\Large Version \version} }}
+\vspace{3cm}
+\author{\Large Team SCALE\\ UGC working group}
+\vspace{3cm}
+\date{\today}
+\vspace{3cm}
+
+\usepackage[dvipdfmx]{graphicx, color}
+\usepackage[dvipdfmx]{hyperref}
+\usepackage{float}
+%\usepackage{amsmath}
+%\usepackage{ascmac}
+%\usepackage[round]{natbib}
+\usepackage{tabularx}
+\usepackage{color}
+\usepackage{colortbl}
+%\usepackage{fancybox}
+\usepackage{url}
+\usepackage{pxjahyper}
+\hypersetup{% options for hyperref
+ bookmarksopen=true,
+ bookmarksnumbered=true,
+ colorlinks=true,
+% linkcolor=red,
+ linkcolor=cyan,
+ citecolor=cyan,
+ urlcolor=cyan,
+}
+\usepackage[top=30mm,bottom=35mm,left=30mm,right=30mm]{geometry}
+\renewcommand{\thefootnote}{*\arabic{footnote})}
+
+\begin{document}
+\maketitle
+
+\clearpage
+\tableofcontents
+
+\chapter{概要}\label{chap:overview}
+\input{01intro}
+
+\chapter{クイックスタート}\label{chap:quickstart}
+\input{02start}
+
+\chapter{実験設定とモデル設定の変更方法}\label{chap:settings}
+\input{03conf}
+
+%\clearpage
+%\input{04test}
+
+\clearpage
+\input{Refs}
+
+\begin{appendix}
+\chapter{付録: 設定パラメータの説明}
+\input{Aparam}
+\end{appendix}
+
+%##########################################################################################
+\end{document}

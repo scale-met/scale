@@ -2,7 +2,7 @@ module test_atmos_dyn
 
   !-----------------------------------------------------------------------------
   use scale_precision
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   use scale_atmos_dyn, only: &
@@ -11,26 +11,30 @@ module test_atmos_dyn
      AssertEqual, &
      AssertGreaterThan, &
      AssertLessThan
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_SHORT
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_vars8, &
      COMM_wait
-  use scale_grid, only: &
-       CZ   => GRID_CZ,   &
-       FZ   => GRID_FZ,   &
-       CDZ  => GRID_CDZ,  &
-       CDX  => GRID_CDX,  &
-       CDY  => GRID_CDY,  &
-       FDZ  => GRID_FDZ,  &
-       FDX  => GRID_FDX,  &
-       FDY  => GRID_FDY,  &
-       RCDZ => GRID_RCDZ, &
-       RCDX => GRID_RCDX, &
-       RCDY => GRID_RCDY, &
-       RFDZ => GRID_RFDZ, &
-       RFDX => GRID_RFDX, &
-       RFDY => GRID_RFDY
+  use scale_atmos_grid_cartesC, only: &
+     DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+     CY              => ATMOS_GRID_CARTESC_CY,              &
+     CZ              => ATMOS_GRID_CARTESC_CZ,              &
+     FZ              => ATMOS_GRID_CARTESC_FZ,              &
+     CDZ             => ATMOS_GRID_CARTESC_CDZ,             &
+     CDX             => ATMOS_GRID_CARTESC_CDX,             &
+     CDY             => ATMOS_GRID_CARTESC_CDY,             &
+     FDZ             => ATMOS_GRID_CARTESC_FDZ,             &
+     FDX             => ATMOS_GRID_CARTESC_FDX,             &
+     FDY             => ATMOS_GRID_CARTESC_FDY,             &
+     RCDZ            => ATMOS_GRID_CARTESC_RCDZ,            &
+     RCDX            => ATMOS_GRID_CARTESC_RCDX,            &
+     RCDY            => ATMOS_GRID_CARTESC_RCDY,            &
+     RFDZ            => ATMOS_GRID_CARTESC_RFDZ,            &
+     RFDX            => ATMOS_GRID_CARTESC_RFDX,            &
+     RFDY            => ATMOS_GRID_CARTESC_RFDY
+  use scale_atmos_hydrometeor, only: &
+     I_QV
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -87,12 +91,17 @@ module test_atmos_dyn
   real(RP), allocatable :: AQ_CP(:)
   real(RP), allocatable :: AQ_MASS(:)
 
+  integer  :: BND_QA
+  real(RP) :: BND_SMOOTHER_FACT
+
   integer  :: nd_order
   real(RP) :: nd_coef
   real(RP) :: nd_sfc_fact
   logical  :: nd_use_rs
 
   real(RP) :: divdmp_coef
+
+  logical  :: flag_tracer_split_tend = .false.
 
   logical  :: flag_fct_momentum = .true.
   logical  :: flag_fct_t        = .true.
@@ -125,18 +134,15 @@ contains
   !
   !++ used modules
   !
-  use scale_stdio
+  use scale_io
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
   use scale_atmos_dyn_Tstep_short, only: &
      ATMOS_DYN_Tstep_short_regist
-  use scale_grid, only: &
-     GRID_CBFZ
+  use scale_atmos_grid_cartesC, only: &
+     CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
-  use scale_atmos_boundary, only: &
-     BND_QA
-
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -144,7 +150,7 @@ contains
   !++ parameters & variables
   !
   !-----------------------------------------------------------------------------
-  real(RP) :: lat(1,IA,JA)
+  real(RP) :: lat(IA,JA)
   character(len=H_SHORT) :: CSDUMMY(1)
   character(len=H_MID)   :: CMDUMMY(1)
   integer :: j
@@ -205,7 +211,8 @@ contains
 
   allocate( PROG(KA,IA,JA,1) )
 
-  BND_QA = 0
+  BND_QA            = 0
+  BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
 
@@ -214,12 +221,12 @@ contains
   nd_sfc_fact = 1.0_RP
   nd_use_rs = .true.
   do j = 1, JA
-     lat(1,:,j) = real(j, RP)
+     lat(:,j) = real(j, RP)
   end do
 
   DYN_TYPE = "FVM-HEVE"
   call ATMOS_DYN_Tstep_short_regist( DYN_TYPE, & !(in)
-                            VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
+                                     VA, CSDUMMY, CMDUMMY, CSDUMMY ) ! (out)
 
   DYN_Tinteg_Short_TYPE = "RK4"
   DYN_Tinteg_Tracer_TYPE = "RK3WS2002"
@@ -243,10 +250,11 @@ contains
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
        wdamp_tau, wdamp_height, FZ,        & ! (in)
-       .false., lat                        ) ! (in)
+       'PLANE', 0.0_RP, 0.0_RP,            & ! (in)
+       DOMAIN_CENTER_Y, CY, lat            ) ! (in)
 
   do k = KS+1, KE
-     if ( GRID_CBFZ(k) > 0.0_RP ) then
+     if ( CBFZ(k) > 0.0_RP ) then
         KME = k - 1
         exit
      end if
@@ -345,13 +353,16 @@ subroutine test_undef
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+          BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
           divdmp_coef,                                 & ! (in)
+          flag_tracer_split_tend,                      & ! (in)
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
+          I_QV,                                        & ! (in)
           1.0_DP, 1.0_DP                               ) ! (in)
 
   end do
@@ -399,13 +410,16 @@ subroutine test_const
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   do k = KS, KE
@@ -499,13 +513,16 @@ subroutine test_conserve
          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+         BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
          divdmp_coef,                                 & ! (in)
+         flag_tracer_split_tend,                      & ! (in)
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
+         I_QV,                                        & ! (in)
          1.0_DP, 1.0_DP                               ) ! (in)
 
   total_o = 0.0_RP
@@ -627,13 +644,16 @@ subroutine test_cwc
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   answer(:,:,:) = POTT
@@ -716,13 +736,16 @@ subroutine test_fctminmax
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
        divdmp_coef,                                 & ! (in)
+       flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   message = "iq = ??"

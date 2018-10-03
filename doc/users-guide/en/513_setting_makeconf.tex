@@ -1,7 +1,7 @@
 \section{Supporting tool for preparation of configuration files} \label{sec:basic_makeconf}
 %------------------------------------------------------
 
-In the current version, the configuration files \verb|***.conf| for the experiment are individually prepared for \verb|pp, init, run|. Some items are required to be the same among these configure files. If there is an inconsistency among them, the model does not run properly. To avoid such mistakes, a convenient supporting tool for the preparation of configuration files is provided as follows:
+The configuration files \verb|***.conf| for experiment are required to be individually prepared for \verb|pp, init, run|. Some items in namelist are required to be the same among these configure files. If there is an inconsistency among them, the model does not run properly. To avoid such mistakes, a convenient supporting tool for the preparation of configuration files is provided as follows:
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
@@ -14,11 +14,15 @@ In the current version, the configuration files \verb|***.conf| for the experime
     config/  
       : Configuration files for each setting (not necessary for user to rewrite it)
     sample
-      : Sample script of USER.sh
+      : Sample scripts of USER.sh
+    data
+      : Files for tutrial real
+    tools
+      : Files for tutrial real, converting FNL data from grib format to binary format
 \end{verbatim}
 Although this tool is intended for the tutorial experiment of real atmosphere as initial setting, users can change the settings in \verb|USER.sh|.
 
-Under the directory \verb|sample/|,   several sample scripts are provided for the typical configuration. Use them as necessary by copying them to \verb|USER.sh|.
+Under the directory \verb|sample/|, several sample scripts are provided for the typical configuration. Use them as necessary by copying them to \verb|USER.sh|.
 \begin{verbatim}
  $ ls sample/
    USER.default.sh                 
@@ -57,4 +61,7 @@ it is recommended to leave the tutrial setting as a different file as follows:
 \subsubsection{Editing \texttt{USER.sh}}
 
 %Copy the script in the sample programs closest to the intended experiment to \verb|USER.sh|.
-\verb|NUMB_DOMAIN| specifies the number of domains appearing in the script. Change the items below appropriately; as many items following \verb|"# require  parameters for each domain"|  are described as the number of domains. Note that if the number of nesting domains according to \verb|NUM_DOMAIN| and the number of variables are different, the set of files for the experiment cannot be generated. When items do not appear in \verb|USER.sh|, edit directly the configuration file generated under the directory \verb|experiment|.
+\verb|NUM_DOMAIN| specifies the number of domains appearing in the script.
+Change the items appropriately;
+the settings for each item are specified in configure files generated.
+When items following \verb|"# require parameters for each domain"|, settings are described to the number of domains. Note that if the number of nesting domains according to \verb|NUM_DOMAIN| and the number of variables are different, the set of files for the experiment cannot be generated. When items do not appear in \verb|USER.sh|, edit directly the configuration file generated under the directory \verb|experiment|.

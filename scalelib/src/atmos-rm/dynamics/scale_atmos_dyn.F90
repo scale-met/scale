@@ -7,41 +7,18 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)   [new] Imported from SCALE-LES ver.2
-!! @li      2011-11-11 (H.Yashiro)   [mod] Merged with Y.Miyamoto's
-!! @li      2011-12-11 (H.Yashiro)   [mod] Use reference state
-!! @li      2011-12-26 (Y.Miyamoto)  [mod] Add numerical diffusion into mass flux calc
-!! @li      2012-01-04 (H.Yashiro)   [mod] Nonblocking communication (Y.Ohno)
-!! @li      2012-01-25 (H.Yashiro)   [fix] Bugfix (Y.Miyamoto)
-!! @li      2011-01-25 (H.Yashiro)   [mod] sprit as "full" FCT (Y.Miyamoto)
-!! @li      2012-02-14 (H.Yashiro)   [mod] Cache tiling
-!! @li      2012-03-14 (H.Yashiro)   [mod] Bugfix (Y.Miyamoto)
-!! @li      2012-03-23 (H.Yashiro)   [mod] Explicit index parameter inclusion
-!! @li      2012-04-09 (H.Yashiro)   [mod] Integrate RDMA communication
-!! @li      2012-06-10 (Y.Miyamoto)  [mod] large-scale divergence (from H.Yashiro's)
-!! @li      2012-07-13 (H.Yashiro)   [mod] prevent conditional branching in FCT
-!! @li      2012-07-27 (Y.Miyamoto)  [mod] divegence damping option
-!! @li      2012-08-16 (S.Nishizawa) [mod] use FCT for momentum and temperature
-!! @li      2012-09-21 (Y.Sato)      [mod] merge DYCOMS-II experimental set
-!! @li      2013-03-26 (Y.Sato)      [mod] modify Large scale forcing and corioli forcing
-!! @li      2013-04-04 (Y.Sato)      [mod] modify Large scale forcing
-!! @li      2013-06-14 (S.Nishizawa) [mod] enable to change order of numerical diffusion
-!! @li      2013-06-18 (S.Nishizawa) [mod] split part of RK to other files
-!! @li      2013-06-20 (S.Nishizawa) [mod] split large scale sining to other file
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 #ifdef DEBUG
@@ -65,7 +42,7 @@ module scale_atmos_dyn
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: CORIOLI   (:,:)       ! coriolis term
+  real(RP), public, allocatable :: CORIOLIS(:,:) ! coriolis term
 
   !-----------------------------------------------------------------------------
   !
@@ -116,12 +93,16 @@ contains
        wdamp_tau,                    &
        wdamp_height,                 &
        FZ,                           &
-       enable_coriolis,              &
+       coriolis_type,                &
+       coriolis_f0,                  &
+       coriolis_beta,                &
+       coriolis_y0,                  &
+       CY,                           &
        lat,                          &
        none                          )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_rm_process, only: &
+    use scale_prc, only: &
+       PRC_abort
+    use scale_prc_cartesC, only: &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
@@ -129,7 +110,7 @@ contains
     use scale_const, only: &
        OHM   => CONST_OHM,  &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_filter_setup, &
@@ -173,10 +154,15 @@ contains
     real(RP),          intent(in)    :: wdamp_tau
     real(RP),          intent(in)    :: wdamp_height
     real(RP),          intent(in)    :: FZ(0:KA)
-    logical,           intent(in)    :: enable_coriolis
+    character(len=*),  intent(in)    :: coriolis_type
+    real(RP),          intent(in)    :: coriolis_f0
+    real(RP),          intent(in)    :: coriolis_beta
+    real(RP),          intent(in)    :: coriolis_y0
+    real(RP),          intent(in)    :: CY(JA)
     real(RP),          intent(in)    :: lat(IA,JA)
     logical, optional, intent(in)    :: none
 
+    integer :: j
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
@@ -195,12 +181,14 @@ contains
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
-       allocate( CORIOLI   (IA,JA)        )
+       allocate( CORIOLIS  (IA,JA)        )
        allocate( mflx_hi   (KA,IA,JA,3)   )
        allocate( num_diff  (KA,IA,JA,5,3) )
        allocate( num_diff_q(KA,IA,JA,3)   )
        allocate( wdamp_coef(KA)           )
-       mflx_hi(:,:,:,:) = UNDEF
+       mflx_hi   (:,:,:,:)   = UNDEF
+       num_diff  (:,:,:,:,:) = UNDEF
+       num_diff_q(:,:,:,:)   = UNDEF
 
        call ATMOS_DYN_FVM_flux_setup     ( DYN_FVM_FLUX_TYPE,            & ! [IN]
                                            DYN_FVM_FLUX_TYPE_TRACER      ) ! [IN]
@@ -230,11 +218,18 @@ contains
                                    FZ(:)                    ) ! [IN]
 
        ! coriolis parameter
-       if ( enable_coriolis ) then
-          CORIOLI(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
-       else
-          CORIOLI(:,:) = 0.0_RP
-       endif
+       select case ( coriolis_type )
+       case ( 'PLANE' )
+          do j = 1, JA
+             CORIOLIS(:,j) = coriolis_f0 + coriolis_beta * ( CY(j) - coriolis_y0 )
+          end do
+       case ( 'SPHERE' )
+          CORIOLIS(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
+       case default
+          LOG_ERROR("ATMOS_DYN_setup",*) 'Coriolis type is invalid: ', trim(coriolis_type)
+          LOG_ERROR_CONT(*) 'The type must be PLANE or SPHERE'
+          call PRC_abort
+       end select
 
     else
 
@@ -273,20 +268,21 @@ contains
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+       BND_QA, BND_SMOOTHER_FACT,                            &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
        divdmp_coef,                                          &
+       FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
+       I_QV,                                                 &
        DTSEC, DTSEC_DYN                                      )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_boundary, only: &
-       BND_QA
     use scale_atmos_dyn_tinteg_large, only: &
        ATMOS_DYN_tinteg_large
     implicit none
@@ -348,6 +344,9 @@ contains
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
 
+    integer,  intent(in)    :: BND_QA
+    real(RP), intent(in)    :: BND_SMOOTHER_FACT
+
     real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
@@ -364,12 +363,15 @@ contains
 
     real(RP), intent(in)    :: divdmp_coef
 
+    logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
     logical,  intent(in)    :: FLAG_FCT_MOMENTUM
     logical,  intent(in)    :: FLAG_FCT_T
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
     logical,  intent(in)    :: USE_AVERAGE
+
+    integer,  intent(in)    :: I_QV
 
     real(DP), intent(in)    :: DTSEC
     real(DP), intent(in)    :: DTSEC_DYN
@@ -384,7 +386,7 @@ contains
     integer  :: i, j, k, iq
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos dynamics step'
+    LOG_PROGRESS(*) 'atmosphere / dynamics'
 
     dt = real(DTSEC, kind=RP)
 
@@ -486,7 +488,7 @@ contains
                                  mflx_hi, tflx_hi,                                     & ! [OUT]
                                  num_diff, num_diff_q,                                 & ! [OUT;WORK]
                                  DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
-                                 CORIOLI,                                              & ! [IN]
+                                 CORIOLIS,                                             & ! [IN]
                                  CDZ, CDX, CDY, FDZ, FDX, FDY,                         & ! [IN]
                                  RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                                  PHI, GSQRT,                                           & ! [IN]
@@ -495,15 +497,18 @@ contains
                                  REF_dens, REF_pott, REF_qv, REF_pres,                 & ! [IN]
                                  BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
                                  ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! [IN]
+                                 BND_QA, BND_SMOOTHER_FACT,                            & ! [IN]
                                  DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          & ! [IN]
                                  DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! [IN]
                                  DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! [IN]
                                  DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
                                  wdamp_coef,                                           & ! [IN]
                                  divdmp_coef,                                          & ! [IN]
+                                 FLAG_TRACER_SPLIT_TEND,                               & ! [IN]
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]
                                  USE_AVERAGE,                                          & ! [IN]
+                                 I_QV,                                                 & ! [IN]
                                  DTSEC, DTSEC_DYN                                      ) ! [IN]
 
     call PROF_rapend  ("DYN_Tinteg", 2)
@@ -530,16 +535,13 @@ contains
        dt,                        &
        BND_W, BND_E, BND_S, BND_N )
     use mpi
-    use scale_grid_real, only: &
-       vol => REAL_VOL
-    use scale_comm, only: &
+    use scale_atmos_grid_cartesC_real, only: &
+       vol => ATMOS_GRID_CARTESC_REAL_VOL
+    use scale_comm_cartesC, only: &
        COMM_datatype, &
        COMM_world
-    use scale_history, only: &
-       HIST_in
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XY
+    use scale_file_history, only: &
+       FILE_HISTORY_in
     implicit none
 
     real(RP), intent(in) :: DENS     (KA,IA,JA)
@@ -570,13 +572,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    call HIST_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction', 'kg/m2/s', zdim='half' )
-    call HIST_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction', 'kg/m2/s', xdim='half' )
-    call HIST_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction', 'kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXYH' )
 
-    call HIST_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction', 'K*kg/m2/s', zdim='half' )
-    call HIST_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction', 'K*kg/m2/s', xdim='half' )
-    call HIST_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction', 'K*kg/m2/s', ydim='half' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZHXY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXHY' )
+    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXYH' )
 
     mflx_lb_total            = 0.0_RP
     mflx_lb_horizontal(:)    = 0.0_RP
@@ -649,7 +651,7 @@ contains
                         COMM_world,       &
                         ierr              )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
 
     call MPI_Allreduce( mass_total,    &
                         allmass_total, &
@@ -659,7 +661,7 @@ contains
                         COMM_world,    &
                         ierr           )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass   :', allmass_total
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass   :', allmass_total
 
     call MPI_Allreduce( mass_total2,    &
                         allmass_total2, &
@@ -669,7 +671,7 @@ contains
                         COMM_world,     &
                         ierr            )
 
-    if( IO_L ) write(IO_FID_LOG,'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
+    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
 
     call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
                         allmflx_lb_horizontal(KS:KE), &
@@ -679,7 +681,7 @@ contains
                         COMM_world,                   &
                         ierr                          )
 
-    call HIST_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
+    call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
                     'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
 
     return

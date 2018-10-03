@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpirun -np"
+MPIEXEC="mpiexec.hydra -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -67,6 +67,14 @@ fi
 NNODE=`expr \( $TPROC - 1 \) / 64 + 1`
 NPROC=`expr $TPROC / $NNODE`
 NPIN=`expr 255 / \( $NPROC \) + 1`
+
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
@@ -151,8 +159,8 @@ if [ ${ndata} -gt 0 ]; then
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${triple[1]}.pe${PE}.nc
-         dst=${triple[2]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh

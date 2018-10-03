@@ -30,7 +30,7 @@ In particular,  the contents of \namelist{PARAM_MKINIT_REAL_ATMOS}, \namelist{PA
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
 \verb| NUMBER_OF_FILES      = 2,|                                   & {\small : number of files read } \\
 \verb| FILETYPE_ORG         = "GrADS",|                             & {\small : choose from Table \ref{tab:inputdata_format}} \\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
+\multicolumn{2}{l}{\verb| BASENAME_ORG        = "namelist.grads_boundary.FNL.2005053112-2016051106",|}     \\
 \verb| BASENAME_BOUNDARY    = "boundary_d01",|                      & {\small : output name of boundary data} \\
 \verb| BOUNDARY_UPDATE_DT   = 21600.0,|                             & {\small : time interval of input data} \\
 \verb| PARENT_MP_TYPE       = 3,|                                   & \\
@@ -94,27 +94,28 @@ If the job finishes normally, the following files are generated:
 \end{verbatim}
 The file \verb|init_LOG_d01.pe000000| is a log file.  The following message is output at the end of the file \verb|init_LOG_d01.pe000000|:
 \msgbox{
- ++++++ Finalize MPI...\\
- ++++++ MPI is peacefully finalized\\
+ +++++ finalize MPI...\\
+ +++++ MPI is peacefully finalized\\
 }
 The file sizes of the boundary and initial data, \verb|boundary_d01.pe######.nc| and \\
-\verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 5.8 MB and 3.5 MB, respectively,  where \verb|######| represents the MPI process number.
+\verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 18.9 MB and 12.6 MB, respectively,  where \verb|######| represents the MPI process number.
 
 \vspace{1cm}
 \noindent {\Large\em OPTION} \hrulefill \\
 When ``gpview'' is installed,  one can confirm whether the initial and boundary data have been created correctly  by the following command:
 \begin{verbatim}
- $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
-          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV      \
-          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY
+ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016 --int 0.001     \
+          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV         \
+          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY \
+          --title "QV, MOMX, MOMY"
 \end{verbatim}
 If the same figure as Fig. \ref{fig:init} is found, it is successfully concluded.
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.eps}\\
-  \caption{Initial field at z=1500m for the tutorial experiment. 
-    The color indicates relative humidity and the vector horizontal momentum flux.}
+  \includegraphics[width=0.6\hsize]{./figure/real_init_qv-momxy.pdf}\\
+  \caption{Initial field at z=1500m for the tutorial experiment.
+    The color indicates specific humidity and the vector horizontal momentum flux.}
   \label{fig:init}
 \end{center}
 \end{figure}

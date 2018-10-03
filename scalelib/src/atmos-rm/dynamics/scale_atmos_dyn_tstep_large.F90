@@ -6,21 +6,18 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_large
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -48,24 +45,25 @@ module scale_atmos_dyn_tstep_large
           J13G, J23G, J33G, MAPF,                               &
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
-          BND_W, BND_E, BND_S, BND_N,                           & ! (in)
+          BND_W, BND_E, BND_S, BND_N,                           &
           ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+          BND_QA, BND_SMOOTHER_FACT,                            &
           DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
           DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
           DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
           wdamp_coef,                                           &
           divdmp_coef,                                          &
+          FLAG_TRACER_SPLIT_TEND,                               &
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
           USE_AVERAGE,                                          &
+          I_QV,                                                 &
           DTL, DTS, Llast                                       )
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        use scale_tracer
-       use scale_atmos_boundary, only: &
-            BND_QA
        real(RP), intent(inout) :: DENS(KA,IA,JA)
        real(RP), intent(inout) :: MOMZ(KA,IA,JA)
        real(RP), intent(inout) :: MOMX(KA,IA,JA)
@@ -139,6 +137,9 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(in)    :: ND_SFC_FACT
        logical,  intent(in)    :: ND_USE_RS
 
+       integer,  intent(in)    :: BND_QA
+       real(RP), intent(in)    :: BND_SMOOTHER_FACT
+
        real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_VELZ(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_VELX(KA,IA,JA)
@@ -156,12 +157,15 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
 
+       logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
        logical,  intent(in)    :: FLAG_FCT_MOMENTUM
        logical,  intent(in)    :: FLAG_FCT_T
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
 
        logical,  intent(in)    :: USE_AVERAGE
+
+       integer,  intent(in)    :: I_QV
 
        real(DP), intent(in)    :: DTL
        real(DP), intent(in)    :: DTS
@@ -195,10 +199,10 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
        mflx_hi )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tstep_large_fvm_heve, only: &
        ATMOS_DYN_Tstep_large_fvm_heve_setup, &
        ATMOS_DYN_Tstep_large_fvm_heve
@@ -222,8 +226,8 @@ contains
             mflx_hi )
        ATMOS_DYN_Tstep_large => ATMOS_DYN_Tstep_large_fvm_heve
     case default
-       write(*,*) 'xxx ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_large_setup",*) 'ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type
+       call PRC_abort
     end select
 
     return

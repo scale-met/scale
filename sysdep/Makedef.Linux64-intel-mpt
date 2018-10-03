@@ -11,12 +11,14 @@ FC  = ifort -lmpi
 SFC = ifort
 MODDIROPT = -module
 
-FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+FFLAGS_FAST  = -fpp -m64 -O3 -xHost -ip             \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -traceback -fpe0 -CB -CU
+FFLAGS_AGGRESSIVE = -ipo -no-prec-div
+
+FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 
 FFLAGS_DYN   = $(FFLAGS)
 
@@ -34,14 +36,20 @@ FFLAGS_DEBUG = -fpp -m64 -O0                        \
 
 CC = icc -lmpi
 
-CFLAGS_FAST  = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
-CFLAGS_DEBUG = -O0
+CFLAGS_FAST       = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+CFLAGS_AGGRESSIVE = -ipo -no-prec-div
+CFLAGS_DEBUG      = -O0
 
 
 
 ##### Special setting
 
-FFLAGS_OPENMP = -openmp -no-heap-arrays
+IFORT_VERSION=$(shell $(SFC) -v 2>&1 | cut -f3 -d' ' | cut -f1 -d.)
+ifeq ($(shell if [ $(IFORT_VERSION) -ge 15 ]; then echo yes; fi),yes)
+  FFLAGS_OPENMP = -qopenmp -no-heap-arrays
+else
+  FFLAGS_OPENMP = -openmp -no-heap-arrays
+endif
 
 ifeq ($(SCALE_DISABLE_INTELVEC),T)
    NOVEC = -no-vec
@@ -75,7 +83,7 @@ LDFLAGS = $(FFLAGS)
 
 ##### for frontend
 INSTALL = install
-AR      = ar
+AR      = xiar
 ARFLAGS = r
 RANLIB  = ranlib
 JOBSUB  = sh

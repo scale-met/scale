@@ -10,14 +10,12 @@
 !! @li      2013-12-03 (S.Nishizawa) [new]
 !!
 !<
+#include "scalelib.h"
 module scale_precision
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
-  use dc_types, only: &
-     dc_SP => SP, &
-     dc_DP => DP
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -30,8 +28,8 @@ module scale_precision
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
-  integer, public, parameter :: SP = dc_SP ! Single Precision: kind(0.E0)
-  integer, public, parameter :: DP = dc_DP ! Double Precision: kind(0.D0)
+  integer, public, parameter :: SP = kind(0.0E0) ! Single Precision
+  integer, public, parameter :: DP = kind(0.0D0) ! Double Precision
 
   integer, public, parameter :: SP_PREC = precision(0.E0)
   integer, public, parameter :: DP_PREC = precision(0.D0)

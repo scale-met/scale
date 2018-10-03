@@ -15,10 +15,8 @@ program netcdf2grads_h_launcher
   !
   !++ used modules
   !
-  use gtool_file, only: &
-     FileCloseAll
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
   use scale_process, only: &

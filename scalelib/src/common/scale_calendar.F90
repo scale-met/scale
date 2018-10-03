@@ -7,18 +7,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-01-29 (H.Yashiro)  [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_calendar
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -35,8 +33,10 @@ module scale_calendar
   public :: CALENDAR_adjust_daysec
   public :: CALENDAR_combine_daysec
   public :: CALENDAR_unit2sec
+  public :: CALENDAR_sec2unit
   public :: CALENDAR_CFunits2sec
   public :: CALENDAR_date2char
+  public :: CALENDAR_get_name
 
   !-----------------------------------------------------------------------------
   !
@@ -63,6 +63,9 @@ module scale_calendar
   !
   !++ Private parameters & variables
   !
+  logical,  private :: CALENDAR_360DAYS = .false.
+  logical,  private :: CALENDAR_365DAYS = .false.
+
   real(DP), private :: CALENDAR_DOI  = 365.0_DP !< days of year
   real(DP), private :: CALENDAR_HOUR = 24.0_DP  !< hours   of day
   real(DP), private :: CALENDAR_MIN  = 60.0_DP  !< minutes of hour
@@ -70,21 +73,60 @@ module scale_calendar
 
   integer,  private, parameter :: I_nonleapyear = 1   !< [index] non leap year
   integer,  private, parameter :: I_leapyear    = 2   !< [index] leap year
-  integer,  private            :: dayofmonth(12,2)    !< days of each month
+  integer,  private, parameter :: I_360days     = 3   !< [index] 360 days
+  integer,  private            :: dayofmonth(12,3)    !< days of each month
   data dayofmonth / 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! non-leap year
-                    31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31  / ! leap year
+                    31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! leap year
+                    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30  / ! 360 days
+
+  logical,  private :: debug = .false.
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine CALENDAR_setup
+    use scale_prc, only: &
+       PRC_abort
     implicit none
+
+    namelist / PARAM_CALENDAR / &
+       CALENDAR_360DAYS, &
+       CALENDAR_365DAYS, &
+       debug
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CALENDAR] / Categ[COMMON] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    LOG_NEWLINE
+    LOG_INFO("CALENDAR_setup",*) 'Setup'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_CALENDAR,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("CALENDAR_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("CALENDAR_setup",*) 'Not appropriate names in namelist PARAM_CALENDAR. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_CALENDAR)
+
+    if    ( CALENDAR_360DAYS ) then
+       CALENDAR_DOI = 360.0_DP
+    elseif( CALENDAR_365DAYS ) then
+       CALENDAR_DOI = 365.0_DP
+    endif
+
+    LOG_NEWLINE
+    LOG_INFO("CALENDAR_setup",*) 'Calendar settings'
+    if    ( CALENDAR_360DAYS ) then
+       LOG_INFO_CONT(*) 'DayOfYear = 360 : ideal setting'
+    elseif( CALENDAR_365DAYS ) then
+       LOG_INFO_CONT(*) 'DayOfYear = 365 : ideal setting'
+    else
+       LOG_INFO_CONT(*) 'DayOfYear = 365 or 366 : Gregorian calendar'
+    endif
 
     return
   end subroutine CALENDAR_setup
@@ -194,16 +236,21 @@ contains
     gmonth_mod = mod( gmonth-1, 12 ) + 1
     gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
 
-    yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
-            + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
-            - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
-            + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
-            - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
-            + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
-            - int( real(oyear    -1,kind=DP) / 400.0_DP )
+    if ( CALENDAR_360DAYS .OR. CALENDAR_365DAYS ) then
+       yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) )
+    else
+       yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
+               + int( real(gyear_mod-1,kind=DP) /   4.0_DP ) &
+               - int( real(gyear_mod-1,kind=DP) / 100.0_DP ) &
+               + int( real(gyear_mod-1,kind=DP) / 400.0_DP ) &
+               - int( real(oyear    -1,kind=DP) /   4.0_DP ) &
+               + int( real(oyear    -1,kind=DP) / 100.0_DP ) &
+               - int( real(oyear    -1,kind=DP) / 400.0_DP )
+    endif
 
     ileap = I_nonleapyear
     if( checkleap(gyear_mod) ) ileap = I_leapyear
+    if( CALENDAR_360DAYS     ) ileap = I_360days
 
     monthday = 0
     do m = 1, gmonth_mod-1
@@ -235,7 +282,12 @@ contains
     integer :: i, ileap
     !---------------------------------------------------------------------------
 
-    gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
+    if ( CALENDAR_360DAYS ) then
+       gyear = int( real(absday,kind=DP) / 361.0_DP ) + oyear ! first guess
+    else
+       gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
+    endif
+
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
        if( absday < checkday ) exit
@@ -244,6 +296,7 @@ contains
 
     ileap = I_nonleapyear
     if( checkleap(gyear) ) ileap = I_leapyear
+    if( CALENDAR_360DAYS ) ileap = I_360days
 
     gmonth = 1
     do i = 1, 1000
@@ -338,6 +391,11 @@ contains
 
     abssec = abssec - real(addday,kind=DP) * CALENDAR_HOUR * CALENDAR_MIN * CALENDAR_SEC
 
+    if ( abssec < 0.0_DP ) then
+       absday = absday - 1
+       abssec = abssec + CALENDAR_HOUR * CALENDAR_MIN * CALENDAR_SEC
+    endif
+
     return
   end subroutine CALENDAR_adjust_daysec
 
@@ -363,8 +421,8 @@ contains
        second, &
        value,  &
        unit    )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(out) :: second !< second
@@ -384,18 +442,51 @@ contains
     case('DAY')
        second = value * CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR
     case default
-       write(*,*) 'xxx Unsupported UNIT: ', trim(unit), ', ', value
-       call PRC_MPIstop
+       LOG_ERROR("CALENDAR_unit2sec",*) 'Unsupported UNIT: ', trim(unit), ', ', value
+       call PRC_abort
     endselect
 
     return
   end subroutine CALENDAR_unit2sec
 
   !-----------------------------------------------------------------------------
+  !> Convert several second to specified unit
+  subroutine CALENDAR_sec2unit( &
+     value,  &
+     second, &
+     unit    )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+
+    real(DP),         intent(out) :: value
+    real(DP),         intent( in) :: second
+    character(len=*), intent( in) :: unit
+    !---------------------------------------------------------------------------
+
+    select case(trim(unit))
+    case('MSEC', 'msec')
+       value = second / 1.0E-3_DP
+    case('SEC', 'seconds', 'sec', 's')
+       value = second
+    case('MIN', 'mins', 'min')
+       value = second / CALENDAR_SEC
+    case('HOUR', 'hours', 'hour', 'h')
+       value = second / (CALENDAR_SEC * CALENDAR_MIN)
+    case('DAY', 'days', 'day')
+       value = second / (CALENDAR_SEC * CALENDAR_MIN * CALENDAR_HOUR)
+    case default
+       LOG_ERROR("CALENDAR_sec2unit",*) 'Unsupported UNIT: ', trim(unit), ', ', value
+       call PRC_abort
+    endselect
+
+  end subroutine CALENDAR_sec2unit
+
+  !-----------------------------------------------------------------------------
   !> Convert time in units of the CF convention to second
   function CALENDAR_CFunits2sec( cftime, cfunits, offset_year, startdaysec ) result( sec )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     real(DP),         intent(in) :: cftime
@@ -423,60 +514,60 @@ contains
 
        l = index(buf,"-")
        if ( l /= 5 ) then
-          write(*,*) 'xxx units for time is invalid (year)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (year)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          call PRC_abort
        end if
        read(buf(1:4),*) date(1) ! year
        buf = buf(6:)
 
        l = index(buf,"-")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (month)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (month)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          call PRC_abort
        end if
        read(buf(1:2),*) date(2) ! month
        buf = buf(4:)
 
        l = index(buf," ")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (day)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (day)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          call PRC_abort
        end if
        read(buf(1:2),*) date(3) ! day
        buf = buf(4:)
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (hour)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (hour)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          call PRC_abort
        end if
        read(buf(1:2),*) date(4) ! hour
        buf = buf(4:)
 
        l = index(buf,":")
        if ( l /= 3 ) then
-          write(*,*) 'xxx units for time is invalid (min)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (min)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          call PRC_abort
        end if
        read(buf(1:2),*) date(5) ! min
        buf = buf(4:)
 
        if ( len_trim(buf) /= 2 ) then
-          write(*,*) 'xxx units for time is invalid (sec)'
-          write(*,*) 'xxx ', trim(cfunits)
-          write(*,*) 'xxx ', trim(buf)
-          write(*,*) 'xxx ', len_trim(buf)
-          call PRC_MPIstop
+          LOG_ERROR("CALENDAR_CFunits2sec",*) 'units for time is invalid (sec)'
+          LOG_ERROR_CONT(*) trim(cfunits)
+          LOG_ERROR_CONT(*) trim(buf)
+          LOG_ERROR_CONT(*) len_trim(buf)
+          call PRC_abort
        end if
        read(buf(1:2),*) date(6) ! sec
 
@@ -544,6 +635,9 @@ contains
     if( check4   == 0 ) checkleap = .true.
     if( check100 == 0 ) checkleap = .false.
     if( check400 == 0 ) checkleap = .true.
+
+    if( CALENDAR_360DAYS ) checkleap = .false.
+    if( CALENDAR_365DAYS ) checkleap = .false.
 
   end function checkleap
 
@@ -616,5 +710,19 @@ contains
 
     return
   end subroutine CALENDAR_ymdhms2mjd
+
+  subroutine CALENDAR_get_name(name)
+    character(len=*), intent(out) :: name
+
+    if    ( CALENDAR_360DAYS ) then
+       name = "360_day"
+    elseif( CALENDAR_365DAYS ) then
+       name = "365_day"
+    else
+       name = "gregorian"
+    endif
+
+    return
+  end subroutine CALENDAR_get_name
 
 end module scale_calendar

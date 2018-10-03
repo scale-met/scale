@@ -7,21 +7,18 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_tracer_euler
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -61,8 +58,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_tracer_euler_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*) :: tinteg_type
@@ -71,8 +68,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'EULER' ) then
-       write(*,*) 'xxx TINTEG_LARGE_TYPE is not EULER. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_LARGE_TYPE is not EULER. Check!'
+       call PRC_abort
     end if
 
     return
@@ -91,7 +88,7 @@ contains
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_tstep_tracer, only: &

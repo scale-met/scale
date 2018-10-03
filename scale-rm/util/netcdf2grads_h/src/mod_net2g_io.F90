@@ -123,29 +123,37 @@ contains
   !> create control file
   !-----------------------------------------------------------------------------------------
   subroutine io_create_ctl( &
-      varname,    & ! [in]
-      atype,      & ! [in]
-      ctype,      & ! [in]
-      vtype,      & ! [in]
-      idom,       & ! [in]
-      nx, ny,     & ! [in]
-      zz,         & ! [in]
-      nt,         & ! [in]
-      cx, cy,     & ! [in]
-      vgrid,      & ! [in]
-      zlev,       & ! [in]
-      long_name,  & ! [in]
-      unit        ) ! [in]
+      varname_org, & ! [in]
+      atype,       & ! [in]
+      ctype,       & ! [in]
+      vtype,       & ! [in]
+      idom,        & ! [in]
+      nx, ny,      & ! [in]
+      zz,          & ! [in]
+      nt,          & ! [in]
+      cx, cy,      & ! [in]
+      vgrid,       & ! [in]
+      zlev,        & ! [in]
+      lz, uz, oz,  & ! [in]
+      lcz,         & ! [in]
+      ucz,         & ! [in]
+      ocz,         & ! [in]
+      long_name,   & ! [in]
+      unit         ) ! [in]
     implicit none
 
-    character(CMID), intent(in) :: varname
-    integer,         intent(in) :: atype, ctype, vtype
-    integer,         intent(in) :: idom
-    integer,         intent(in) :: nx, ny, zz, nt
-    real(SP), intent(in) :: cx(:), cy(:)
-    real(SP), intent(in) :: vgrid(:), zlev(:)
+    character(CMID),  intent(in) :: varname_org
+    integer,          intent(in) :: atype, ctype, vtype
+    integer,          intent(in) :: idom
+    integer,          intent(in) :: nx, ny, zz, nt
+    real(SP),         intent(in) :: cx(:), cy(:)
+    real(SP),         intent(in) :: vgrid(:), zlev(:)
+    integer,          intent(in) :: lz, uz, oz
+    real(SP),         intent(in) :: lcz(:), ucz(:), ocz(:)
     character(len=*), intent(in) :: long_name
     character(len=*), intent(in) :: unit
+
+    character(CMID)              :: varname
 
     character(2)    :: cdom
     character(3)    :: clev
@@ -171,6 +179,17 @@ contains
         clev = "ave"
      end select
      if ( vtype == vt_2d ) clev = "-2d"
+
+     ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+     select case (trim(varname_org))
+     case ('lon')
+        varname='long'
+     case ('lat')
+        varname='lati'
+     case default
+        varname=trim(varname_org)
+     end select
+
      if ( T_MERGE_OUT ) then
         fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev
         fname2 = trim(varname)//'_d'//cdom//'z'//clev
@@ -195,11 +214,23 @@ contains
         write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_urban, vt_land )
+     case ( vt_urban )
         if ( Z_MERGE_OUT ) then
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", uz, "LEVELS", ucz(1:uz)
         else
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,i4)') "ZDEF", 1, "LEVELS", zz
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
+        endif
+     case ( vt_land )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", lz, "LEVELS", lcz(1:lz)
+        else
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
+        endif
+     case ( vt_ocean )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", oz, "LEVELS", ocz(1:oz)
+        else
+           write( FID_CTL, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
         endif
      case ( vt_3d, vt_height )
         if ( Z_MERGE_OUT ) then
@@ -217,7 +248,16 @@ contains
      write( FID_CTL, '(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nt, "LINEAR", trim(STIME), trim(DELT)
      write( FID_CTL, '(a,3x,i2)') "VARS", 1
      if ( Z_MERGE_OUT ) then
-        write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), ZCOUNT, 99, trim(long_name),trim(unit)
+        select case( vtype )
+        case ( vt_urban )
+           write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), uz, 99, trim(long_name),trim(unit)
+        case ( vt_land )
+           write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), lz, 99, trim(long_name),trim(unit)
+        case ( vt_ocean )
+           write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), oz, 99, trim(long_name),trim(unit)
+        case default
+           write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), ZCOUNT, 99, trim(long_name),trim(unit)
+        end select
      else
         write( FID_CTL, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), 0, 99, trim(long_name),trim(unit)
      endif
@@ -231,32 +271,40 @@ contains
   !> create control file
   !-----------------------------------------------------------------------------------------
   subroutine io_create_ctl_mproj( &
-      varname,    & ! [in]
-      atype,      & ! [in]
-      ctype,      & ! [in]
-      vtype,      & ! [in]
-      idom,       & ! [in]
-      nx, ny,     & ! [in]
-      zz,         & ! [in]
-      nt,         & ! [in]
-      cx, cy,     & ! [in]
-      vgrid,      & ! [in]
-      zlev,       & ! [in]
-      slon,       & ! [in]
-      slat,       & ! [in]
-      long_name,  & ! [in]
-      unit        ) ! [in]
+      varname_org, & ! [in]
+      atype,       & ! [in]
+      ctype,       & ! [in]
+      vtype,       & ! [in]
+      idom,        & ! [in]
+      nx, ny,      & ! [in]
+      zz,          & ! [in]
+      nt,          & ! [in]
+      cx, cy,      & ! [in]
+      vgrid,       & ! [in]
+      zlev,        & ! [in]
+      lz, uz, oz,  & ! [in]
+      lcz,         & ! [in]
+      ucz,         & ! [in]
+      ocz,         & ! [in]
+      slon,        & ! [in]
+      slat,        & ! [in]
+      long_name,   & ! [in]
+      unit         ) ! [in]
     implicit none
 
-    character(CMID), intent(in) :: varname
-    integer,         intent(in) :: atype, ctype, vtype
-    integer,         intent(in) :: idom
-    integer,         intent(in) :: nx, ny, zz, nt
-    real(SP), intent(in) :: cx(:), cy(:)
-    real(SP), intent(in) :: vgrid(:), zlev(:)
-    real(SP), intent(in) :: slon, slat
+    character(CMID),  intent(in) :: varname_org
+    integer,          intent(in) :: atype, ctype, vtype
+    integer,          intent(in) :: idom
+    integer,          intent(in) :: nx, ny, zz, nt
+    real(SP),         intent(in) :: cx(:), cy(:)
+    real(SP),         intent(in) :: vgrid(:), zlev(:)
+    integer,          intent(in) :: lz, uz, oz
+    real(SP),         intent(in) :: lcz(:), ucz(:), ocz(:)
+    real(SP),         intent(in) :: slon, slat
     character(len=*), intent(in) :: long_name
     character(len=*), intent(in) :: unit
+
+    character(CMID)              :: varname
 
     real(SP)           :: DX, DY, DLON, DLAT
     character(len=5)   :: cmproj
@@ -285,7 +333,7 @@ contains
         clev = "ave"
      end select
 
-     select case ( MPRJ_type )
+     select case ( MAPPROJECTION_type )
      case ("LC")
         cmproj = "lccr"
         DX=cx(2)-cx(1)
@@ -297,6 +345,18 @@ contains
      call cal_dlondlat(DX, DY, DLON, DLAT)
 
      if ( vtype == vt_2d ) clev = "-2d"
+
+     ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+     select case (trim(varname_org))
+     case ('lon')
+        varname='long'
+     case ('lat')
+        varname='lati'
+     case default
+        varname=trim(varname_org)
+     end select
+
+
     if ( T_MERGE_OUT ) then
         fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev
         fname2 = trim(varname)//'_d'//cdom//'z'//clev
@@ -312,21 +372,32 @@ contains
      write( FID_CTLM, '(a)') "OPTIONS BIG_ENDIAN"
      write( FID_CTLM, '(a,1x,ES15.7)') "UNDEF", -9.9999001E+30
      write( FID_CTLM, '(a,1x,2i5,1x,a,1x,f9.5,1x,f10.5,1x,2f7.1,2f10.5,1x,f10.5,1x,f8.1,1x,f8.1)')  &
-          "PDEF",nx,ny,trim(cmproj),MPRJ_basepoint_lat,MPRJ_basepoint_lon,real(nx)/2.,real(ny)/2.,MPRJ_LC_lat1,MPRJ_LC_lat2,MPRJ_basepoint_lon,DX,DY
+          "PDEF",nx,ny,trim(cmproj),MAPPROJECTION_basepoint_lat,MAPPROJECTION_basepoint_lon,real(nx)/2.,real(ny)/2.,MAPPROJECTION_LC_lat1,MAPPROJECTION_LC_lat2,MAPPROJECTION_basepoint_lon,DX,DY
      write( FID_CTLM, '(a,3x,i7,1x,a,f8.2,f10.5)') "XDEF", int(real(nx)*1.2), "linear", slon, DLON
      write( FID_CTLM, '(a,3x,i7,1x,a,f8.2,f10.5)') "YDEF", int(real(ny)*1.2), "linear", slat, DLAT
 
-
      select case( vtype )
      case ( vt_tpmsk )
-        write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", 1, "linear", "1 1"
+        write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)')      "ZDEF", 1, "linear", "1 1"
      case ( vt_2d )
         write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)') "ZDEF", 1, "LEVELS", zlev(zz)*1.d-3
-     case ( vt_urban, vt_land )
+     case ( vt_urban )
         if ( Z_MERGE_OUT ) then
-           write( FID_CTLM, '(a,3x,i7,1x,a,1x,a)') "ZDEF", ZCOUNT, "linear", "1 1"
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", uz, "LEVELS", ucz(1:uz)
         else
-           write( FID_CTL, '(a,3x,i7,1x,a,1x,i4)') "ZDEF", 1, "LEVELS", zz
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
+        endif
+     case ( vt_land )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", lz, "LEVELS", lcz(1:lz)
+        else
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
+        endif
+     case ( vt_ocean )
+        if ( Z_MERGE_OUT ) then
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,5(1x,ES15.7))') "ZDEF", oz, "LEVELS", ocz(1:oz)
+        else
+           write( FID_CTLM, '(a,3x,i7,1x,a,1x,ES15.7)')       "ZDEF",  1, "LEVELS", real(zz, kind=SP)
         endif
      case ( vt_3d, vt_height )
         if ( Z_MERGE_OUT ) then
@@ -344,7 +415,16 @@ contains
      write( FID_CTLM, '(a,3x,i5,1x,a,1x,a,3x,a)') "TDEF", nt, "LINEAR", trim(STIME), trim(DELT)
      write( FID_CTLM, '(a,3x,i2)') "VARS", 1
      if ( Z_MERGE_OUT ) then
-        write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), ZCOUNT, 99, trim(long_name), trim(unit)
+        select case( vtype )
+        case ( vt_urban )
+           write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), uz, 99, trim(long_name),trim(unit)
+        case ( vt_land )
+           write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), lz, 99, trim(long_name),trim(unit)
+        case ( vt_ocean )
+           write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), oz, 99, trim(long_name),trim(unit)
+        case default
+           write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), ZCOUNT, 99, trim(long_name), trim(unit)
+        end select
      else
         write( FID_CTLM, '(a,1x,i7,1x,i2,1x,a,1x,a)') trim(varname), 0, 99, trim(long_name), trim(unit)
      endif
@@ -379,7 +459,7 @@ contains
     f             = 1.0/CONST_f
     e             = sqrt(f*2.0-f*f)
     CONST_D2R     = CONST_PI / 180.0
-    alat          = MPRJ_basepoint_lat*CONST_D2R
+    alat          = MAPPROJECTION_basepoint_lat*CONST_D2R
     Nphi          = CONST_RADIUS / sqrt(1.0-e**2*(sin(alat))**2)
     Mphi          = CONST_RADIUS*(1.0-e**2) / (1.0-e**2*(sin(alat))**2)**1.5
 
@@ -428,19 +508,20 @@ contains
   !> set file name for binary data output
   !-----------------------------------------------------------------------------------------
   subroutine io_set_fname( &
-      varname,  & ! [in]
-      idom,     & ! [in]
-      zz,       & ! [in]
-      atype,    & ! [in]
-      vtype,    & ! [in]
-      fname     ) ! [out]
+      varname_org,  & ! [in]
+      idom,         & ! [in]
+      zz,           & ! [in]
+      atype,        & ! [in]
+      vtype,        & ! [in]
+      fname         ) ! [out]
     implicit none
 
-    character(CMID), intent(in)  :: varname
+    character(CMID), intent(in)  :: varname_org
     integer,         intent(in)  :: idom, zz
     integer,         intent(in)  :: atype, vtype
     character(CLNG), intent(out) :: fname
 
+    character(CMID)              :: varname
     character(2) :: cdom
     character(3) :: clev
     !---------------------------------------------------------------------------
@@ -463,6 +544,16 @@ contains
        clev = "ave"
     end select
     if ( vtype == vt_2d ) clev = "-2d"
+
+    ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+    select case (trim(varname_org))
+    case ('lon')
+       varname='long'
+    case ('lat')
+       varname='lati'
+    case default
+       varname=trim(varname_org)
+    end select
 
     if ( T_MERGE_OUT ) then
        fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//".grd"

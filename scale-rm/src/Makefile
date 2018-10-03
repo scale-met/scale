@@ -18,7 +18,7 @@ PPNAME   = scale-rm_pp
 BINS = $(BINDIR)/$(BINNAME)  \
        $(BINDIR)/$(INITNAME) \
        $(BINDIR)/$(PPNAME)
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -30,6 +30,7 @@ VPATH = $(BUILD_DIR): \
         ocean:        \
         land:         \
         urban:        \
+        lake:         \
         coupler:      \
         user:         \
         preprocess:
@@ -42,11 +43,13 @@ else
 endif
 
 SUB_OBJS =	\
+	mod_admin_versioncheck.o  \
 	mod_admin_time.o          \
 	mod_atmos_admin.o         \
 	mod_ocean_admin.o         \
 	mod_land_admin.o          \
 	mod_urban_admin.o         \
+	mod_lake_admin.o          \
 	mod_cpl_admin.o           \
 	\
 	mod_atmos_dyn_vars.o      \
@@ -55,6 +58,7 @@ SUB_OBJS =	\
 	mod_atmos_phy_rd_vars.o   \
 	mod_atmos_phy_sf_vars.o   \
 	mod_atmos_phy_tb_vars.o   \
+	mod_atmos_phy_bl_vars.o   \
 	mod_atmos_phy_ch_vars.o   \
 	mod_atmos_phy_ae_vars.o   \
 	mod_atmos_vars.o          \
@@ -71,28 +75,28 @@ SUB_OBJS =	\
 	mod_atmos_phy_rd_driver.o \
 	mod_atmos_phy_sf_driver.o \
 	mod_atmos_phy_tb_driver.o \
+	mod_atmos_phy_bl_driver.o \
 	mod_atmos_phy_cp_driver.o \
+	mod_atmos_bnd_driver.o	  \
 	mod_atmos_driver.o        \
-	mod_ocean_phy_driver.o    \
 	mod_ocean_driver.o        \
-	mod_land_phy_driver.o     \
 	mod_land_driver.o         \
-	mod_urban_phy_driver.o    \
 	mod_urban_driver.o        \
 	mod_cpl_driver.o          \
 	\
 	mod_copytopo.o            \
 	mod_cnvtopo.o             \
 	mod_cnvlanduse.o          \
+	mod_cnv2d.o               \
 	mod_convert.o             \
 	mod_mktopo.o              \
 	mod_realinput_scale.o     \
 	mod_realinput_wrfarw.o    \
-	mod_realinput_nicam.o     \
 	mod_realinput_grads.o     \
 	mod_realinput_scale.o     \
 	mod_realinput.o           \
 	mod_mkinit.o
+#	mod_realinput_nicam.o     \
 
 MAIN_OBJS =	\
 	mod_rm_driver.o           \
@@ -105,8 +109,6 @@ OBJS = 	\
 all:
 	$(MAKE) envlog
 	$(MAKE) makedir
-	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(GTOOLDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
@@ -117,13 +119,7 @@ makedir:
 	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libdcutils.a :
-	$(MAKE) -C $(DCUTILSDIR)
-
-$(LIBDIR)/libgtool.a : $(LIBDIR)/libdcutils.a
-	$(MAKE) -C $(GTOOLDIR)
-
-$(LIBDIR)/libscale.a : $(LIBDIR)/libdcutils.a $(LIBDIR)/libgtool.a
+$(LIBDIR)/libscale.a:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
@@ -135,17 +131,15 @@ $(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$
 $(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
-$(BUILD_DIR)/$(BINNAME).o  : $(BINNAME).f90  $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(INITNAME).o : $(INITNAME).f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-$(BUILD_DIR)/$(PPNAME).o   : $(PPNAME).f90   $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-
-$(BUILD_DIR)/mod_user.o : mod_user.f90 $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
-
+ifneq ($(SCALE_IGNORE_SRCDEP),T)
+  $(BUILD_DIR)/$(BINNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/$(INITNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/$(PPNAME).o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/mod_user.o    : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
+endif
 
 
 allclean: distclean
-	$(MAKE) -C $(DCUTILSDIR)      allclean
-	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(INITNAME)
@@ -165,20 +159,20 @@ dependency:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .f90 .c .mod
+.SUFFIXES: .o .F90 .c .mod
 
-%.mod: %.f90
-	make $(patsubst %.f90,%.o,$<)
+%.mod: %.F90
+	make $(patsubst %.F90,%.o,$<)
 
-$(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
+$(BUILD_DIR)/%.o : %.F90
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(MODDIR) $(CONTRIB_INCLUDE) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
 $(BUILD_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils gtool scalelib depend dependency
+.PHONY : clean distclean allclean scalelib depend dependency
 
-include $(TOPDIR)/utils/Make_environments
+include $(TOPDIR)/utils/make/Make_environments
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
 -include depend

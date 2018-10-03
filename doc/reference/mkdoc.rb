@@ -126,7 +126,7 @@ files.each do |fname|
         case line_new
         when /^\s*(public|private)\s* ::/i
           next
-        when /^\s*module\s*([^\s]+)\s*$/i
+        when /^\s*(?:program|module)\s*([^\s]+)\s*$/i
           modname = $1.strip
         when /^([^,]+).*(intent\([^\)]+\))?.*::([^=]+)(=.*)?$/i
           next if $2
@@ -151,14 +151,38 @@ files.each do |fname|
           group.strip!
           lists = lists.split(",").map{|c| c.strip.upcase}
           namelists[group] = lists
-        when /call HIST_in\s*\((.+)$/i
-          next if modname == "scale_history"
+        when /call FILE_HISTORY_in\s*\((.+)$/i
           str = $1.strip.sub(/\)\Z/,"").strip
+          next if /scale_file_history/ =~ modname
           str.gsub!(/\(:[^)]*\)/,'')
-          info = str.split(",").map{|c| c.strip.sub(/\A'(.*)'\Z/,'\1')}
+          info = str.split(",").map{|c| c.strip.sub(/\A'?(.*)'\Z/,'\1')}
           hist[info[1]] = {:unit => info[3], :desc => info[2], :var => info[0]}
+        when /call FILE_HISTORY_reg\s*\((.+)$/i
+          str = $1.strip.sub(/\)\Z/,"").strip
+          next if /scale_file_history/ =~ modname
+          str.gsub!(/\(:[^)]*\)/,'')
+          info = str.split(",").map{|c| c.strip.sub(/\A'?(.*)'\Z/,'\1')}
+          hist[info[0]] = {:unit => info[2], :desc => info[1], :var => info[0]}
         when /data\s+([^\s]+)\s+\/(.+)\/$/i
-          data[$1] = $2.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
+          name = $1
+          body = $2
+          if /Vinfo/ =~ body
+            ary = Array.new
+            while body
+              if /\A(Vinfo\(.+?\)),\s*?(Vinfo.*)\Z/ =~ body
+                ary.push $1
+                body = $2.strip
+              elsif /\A(Vinfo\(.+\))\Z/ =~ body
+                ary.push $1
+                body = nil
+              else
+                raise
+              end
+            end
+            data[name] = ary
+          else
+            data[name] = body.split(',').map{|s| s.strip.sub(/^'/,"").sub(/'$/,"")}
+          end
         end
 
       end # while line
@@ -238,16 +262,75 @@ EOL
 
     hist.sort.each do |name, info|
       name = get_data(name,data,vars)
-      history[name] ||= Array.new
-      history[name].push modname
-      file.print <<EOL
+      desc = get_data(info[:desc],data,vars)
+      if /\A(.*)trim\(([^()]+)(?:\([^()]+\))?\)(.*)\Z/ =~ name || /\A()(TRACER_NAME)\([^()]+\)()\Z/ =~ name
+        pre = $1
+        vn = $2
+        post = $3
+        pre.sub!(/'?([^']+)'\/\//, '\1')
+        post.sub!(/\/\/'([^']+)'?/, '\1')
+        vn = "@ref #{vn.downcase} \"#{vn}\"" if vn == "TRACER_NAME"
+        name = "#{pre}<em>{#{vn}}</em>#{post}"
+      end
+      if /\A(.*)trim\(([^()]+)(?:\([^()]+\))?\)(.*)\Z/ =~ desc || /\A()(TRACER_DESC)\([^()]+\)()\Z/ =~ desc
+        pre = $1
+        vn = $2
+        post = $3
+        pre.sub!(/'?([^']+)'\/\//, '\1')
+        post.sub!(/\/\/'([^']+)'?/,'\1')
+        vn = "TRACER_NAME" if vn == "TRACER_DESC"
+        vn = "HYD_NAME" if vn == "HYD_DESC"
+        vn = "AE_NAME" if vn == "AE_DESC"
+        case vn
+        when "HYD_NAME"
+          if /NUM_NAME/ =~ name
+            desc = "#{pre}<em>{#{vn}}</em>#{post};<br/><em>{NUM_NAME}</em> is NC, NR, NI, NS, NG, NH."
+          else
+            desc = "#{pre}<em>{#{vn}}</em>#{post};<br/><em>{#{vn}}</em> is QC, QR, QI, QS, QG, QH."
+          end
+        when "AE_NAME"
+          desc = "#{pre}<em>{#{vn}}</em>#{post};<br/><em>{#{vn}}</em> is AD, ASO, AVA, AS, AR, ASS, AU, AT, AOC."
+        else
+          vn = "@ref #{vn.downcase} \"#{vn}\"" if vn == "TRACER_NAME"
+          desc = "#{pre}<em>{#{vn}}</em>#{post};<br/><em>{#{vn}}</em> depends on the physics schemes, e.g., QV, QC, QR."
+        end
+      end
+      if /\A([^()]+)\([^()]+\)%(.+)\Z/ =~ name 
+        vn  = $1
+        elm = $2
+        ary = data[vn].map do |d|
+          if /\AVinfo\((.+)\)\Z/ =~ d
+            body = $1.split(",").map{|s| s.strip.sub!(/\A'(.+)'\Z/,'\1')}
+            [ body[0], modname, body[1], body[2], body[0]]
+          else
+            raise d
+          end
+        end
+      else
+        unit = get_data(info[:unit],data,vars)
+        var = get_data(info[:var],data,vars)
+        if /\A([^()]+)\(.+\)\Z/ =~ unit
+          unit = "<em>{#{$1}}</em>"
+        end
+        if /\A([^()]+)\(.+\)\Z/ =~ var
+          var = "<em>{#{$1}}</em>"
+        end
+        ary = [
+          [name, modname, desc, unit, var]
+        ]
+      end
+      ary.each do |ar|
+        history[ar[0]] ||= [ar[2], Array.new]
+        history[ar[0]][1].push ar[1]
+        file.print <<EOL
 !>      <tr>
-!>        <td id="#{name}">#{name}</td>
-!>        <td>#{get_data(info[:desc],data,vars)}</td>
-!>        <td>#{get_data(info[:unit],data,vars)}</td>
-!>        <td>#{get_data(info[:var],data,vars)}</td>
+!>        <td>#{ar[0]}</td>
+!>        <td>#{ar[2]}</td>
+!>        <td>#{ar[3]}</td>
+!>        <td>#{ar[4]}</td>
 !>      </tr>
 EOL
+      end
     end
     file.print <<EOL
 !>    </table>
@@ -268,12 +351,15 @@ if nm_params.any?
     file.print <<EOL
 !> @page namelist NAMELIST Parameters
 !> @section #{title} #{title.upcase}
+!> <p>
+!> Click the corresponding "NAMELIST Group" or "module name" to see detail information of each variable
+!> </p>
 !> <table>
 !> <tr><th>Variable name</th><th>NAMELIST Group</th><th>module name</th></tr>
 EOL
     nm_params.sort.each do |name,ary|
       list = ary.map do |mod, group|
-        file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>#{mod}</td></tr>\n"
+        file.print "!>    <tr><td>#{name}</td><td>@ref namelist_#{mod}_#{group} \"#{group}\"</td><td>@ref #{mod.downcase} \"#{mod}\"</td></tr>\n"
       end
     end
     file.print <<EOL
@@ -288,17 +374,39 @@ if history.any?
     file.print <<EOL
 !> @page history History Variables
 !> @section #{title} #{title.upcase}
+!> <p>
+!> Click the corresponding "module name" to see detail information of each variable.
+!> </p>
+!> <p>
+!> Note: "(w/ XXXXX)" means that it is enabled only when the SCALE is compiled with "-DXXXXX" compile option.
+!> </p>
 !> <table>
-!> <tr><th>Variable name</th><th>module name</th></tr>
+!> <tr><th>Variable name</th><th>Description</th><th>module name</th></tr>
 EOL
-    history.sort.each do |name,list|
+    history.sort.each do |name,dat|
+      desc,list = dat
       list = list.map{|mod|
         "@ref history_#{mod} \"#{mod}\""
       }
-      file.print "!>    <tr><td>#{name}</td><td>#{list.join(", ")}</td></tr>\n"
+      file.print "!>    <tr><td>#{name}</td><td>#{desc}</td><td>#{list.join(", ")}</td></tr>\n"
     end
     file.print <<EOL
 !>    </table>
 EOL
+    if title == "scale-rm"
+    file.print <<EOL
+!> <p>
+!> @section tracer_name TRACER_NAME
+!> <table>
+!>  <tr><th>Category</th><th>Scheme name</th><th>Tracers</th><th>File</th></tr>
+!>  <tr><td rowspan="3">Cloud microphysics</td><td>Kessler</td><td>QV,QC,QR</td><td>scale_atmos_phy_mp_kessler</td></tr>
+!>  <tr><td>Tomita08</td><td>QV,QC,QR,QI,QS,QG</td><td>scale_atmos_phy_mp_tomita08</td></tr>
+!>  <tr><td>SN14</td><td>QV,QC,QR,QI,QS,QG,NC,NR,NI,NS,NG</td><td>scale_atmos_phy_mp_sn14</td></tr>
+!>  <tr><td rowspan="1">PBL</td><td>MYNN</td><td>TKE_MYNN</td><td>scale_atmos_phy_bl_mynn</td></tr>
+!>  <tr><td rowspan="1">SGS trublence</td><td>D1980</td><td>TKE_D1980</td><td>scale_atmos_phy_tb_d1980</td></tr>
+!> </table>
+!> </p>
+EOL
+    end
   end
 end

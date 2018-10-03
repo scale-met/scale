@@ -22,7 +22,7 @@ VPATH = $(BUILD_DIR)
 
 BINNAME = unit
 
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libgtool.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
 
 OBJS = \
 	test_comm.o             \
@@ -40,6 +40,7 @@ makedir:
 	mkdir -p $(BUILD_DIR)
 
 makelib:
+	$(MAKE) -C $(DCUTILSDIR)
 	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
 
 makebin: $(BINDIR)/$(BINNAME)
@@ -61,7 +62,6 @@ $(BUILD_DIR)/unit.o:                  unit.f90 $(patsubst %,$(BUILD_DIR)/%,$(MOD
 
 allclean: distclean
 	$(MAKE) -C $(DCUTILSDIR)      allclean
-	$(MAKE) -C $(GTOOLDIR)        allclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
 	rm -f $(BINDIR)/$(BINNAME)
 
@@ -82,8 +82,8 @@ clean:
 	make $(patsubst %.f90,%.o,$<)
 
 $(BUILD_DIR)/%.o : %.f90
-	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(GTOOLDIR) -I$(MODDIR) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
+	$(FC) $(FFLAGS) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(VERSION)\" -I$(BUILD_DIR) -I$(DCUTILSDIR) -I$(MODDIR) -I$(SCALELIBDIR)/include -I$(SCALERMDIR)/include $(MODDIROPT) $(BUILD_DIR) -o $@ -c $<
 
-.PHONY : clean distclean allclean dcutils gtool scalelib
+.PHONY : clean distclean allclean dcutils scalelib
 
-include $(TOPDIR)/utils/Make_environments
+include $(TOPDIR)/utils/make/Make_environments

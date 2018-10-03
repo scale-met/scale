@@ -16,7 +16,7 @@ FFLAGS_FAST  = -cpp -O3 -m64 \
                -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none    \
                -ffpe-summary=none
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -ffpe-trap=invalid,zero,overflow -fbacktrace -fcheck=bounds,do,mem,pointer -finit-real=snan
+FFLAGS_QUICKDEBUG = -ffpe-trap=invalid,zero,overflow -fbacktrace -fcheck=bounds,do,mem,pointer -finit-real=snan
 
 FFLAGS_DYN   = $(FFLAGS)
 

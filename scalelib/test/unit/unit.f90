@@ -1,26 +1,14 @@
 program unit
-  use mpi
-  use scale_precision
-  use scale_stdio
-  use scale_grid_index
+  use scale
+  use scale_atmos_grid_cartesC_index
   use scale_tracer
-
-  use scale_process, only: &
-     PRC_UNIVERSAL_setup,  &
-     PRC_global_setup,  &
-     PRC_LOCAL_setup,  &
-     PRC_MPIfinish, &
-     PRC_MPIstart
-  use scale_rm_process, only: &
-     PRC_setup
-  use scale_const, only: &
-     CONST_setup
-  use scale_comm, only: &
+  use scale_prc_cartesC, only: &
+     PRC_CARTESC_setup
+  use scale_comm_cartesC, only: &
      COMM_setup
-  use scale_grid, only: &
-     DZ, DX, DY, &
-     GRID_allocate, &
-     GRID_generate
+  use scale_atmos_grid_cartesC, only: &
+     ATMOS_GRID_CARTESC_allocate, &
+     ATMOS_GRID_CARTESC_generate
   use scale_atmos_hydrometeor, only: &
      ATMOS_HYDROMETEOR_regist
 
@@ -29,41 +17,25 @@ program unit
   use test_comm
   implicit none
 
-  character(len=H_MID), parameter :: MODELNAME = "Unit test"
+  character(len=H_MID), parameter :: APPNAME = "Unit test"
+
   integer :: q0
-  integer :: comm, myrank, nprocs
-  logical :: ismaster
 
-  ! start MPI
-  call PRC_MPIstart( comm )
-
-  ! setup standard I/O
-  call IO_setup( MODELNAME, .false. )
-
-  ! setup MPI
-  call PRC_UNIVERSAL_setup( MPI_COMM_WORLD, nprocs, ismaster )
-  call PRC_GLOBAL_setup( .true., MPI_COMM_WORLD )
-  call PRC_LOCAL_setup( comm, myrank, ismaster )
-
-  ! setup Log
-  call IO_LOG_setup( myrank, ismaster )
+  ! scale setup
+  call SCALE_init( APPNAME )
 
   ! setup process
-  call PRC_setup
+  call PRC_CARTESC_setup
 
-  ! setup constants
-  call CONST_setup
+  call ATMOS_GRID_CARTESC_INDEX_setup( KMAX=10, IMAX=10, JMAX=2, IBLOCK=5, JBLOCK=1 )
 
-  call GRID_INDEX_setup
-
-  call ATMOS_HYDROMETEOR_regist(q0, 1, 1, 0, (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/) )
+  call ATMOS_HYDROMETEOR_regist( 1, 0, &
+                                 (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/), &
+                                 q0 )
 
   ! setup horizontal/veritical grid system
-  DZ = 500.0_RP
-  DX = 500.0_RP
-  DY = 500.0_RP
-  call GRID_allocate
-  call GRID_generate
+  call ATMOS_GRID_CARTESC_allocate
+  call ATMOS_GRID_CARTESC_generate( DZ=500.0_RP, DX=500.0_RP, DY=500.0_RP )
 
   ! setup mpi communication
   call COMM_setup
@@ -77,6 +49,6 @@ program unit
   write(*,*) "test_atmos_dyn_run"
   call test_atmos_dyn_run
 
-  call PRC_MPIfinish
+  call SCALE_finalize
 
 end program unit

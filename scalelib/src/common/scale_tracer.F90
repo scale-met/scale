@@ -12,13 +12,15 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_tracer
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -61,8 +63,8 @@ contains
        QS,                   &
        NQ, NAME, DESC, UNIT, &
        CV, CP, R, ADVC, MASS )
-    use scale_process, only: &
-      PRC_MPIstop
+    use scale_prc, only: &
+      PRC_abort
     implicit none
 
     integer,          intent(out)          :: QS
@@ -88,8 +90,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( QA + NQ > QA_MAX ) then
-       write(*,*) 'xxx total number of tracer must be less or equal to ', QA_MAX
-       call PRC_MPIstop
+       LOG_ERROR("TRACER_regist",*) 'total number of tracer must be less or equal to ', QA_MAX
+       call PRC_abort
     end if
 
     if ( present(CV) ) then
@@ -122,12 +124,12 @@ contains
        MASS_(:) = .false.
     end if
 
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
     do n = 1, NQ
 
        NAME_trim = trim(NAME(n))
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,L1,A,L1)') &
+       LOG_INFO("TRACER_regist",'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,L1,A,L1)') &
                                       '] Register tracer : No.', QA+n,      &
                                                     ', NAME = ', NAME_trim, &
                                                       ', CV = ', CV_  (n),  &

@@ -11,7 +11,7 @@ deps = Hash.new
 pros = Hash.new
 
 
-SUFFIX = ".f90"
+SUFFIX = ".F90"
 
 def parse(deps, pros, srcdir, dir="")
   dirs = Dir[ File.join(srcdir, dir, "*") ]
@@ -39,8 +39,7 @@ def parse(deps, pros, srcdir, dir="")
           pros[mod] = pro
         when /^\s*use (\w+)/
           mod = $1
-#          next if /(dc_types|gtool|mpi|netcdf|NAME)/ =~ mod
-          next if /(dc_types|dc_log|gtool|mpi|netcdf|scale_|gadg|rng|NAME)/ =~ mod
+          next if /(dc_types|dc_log|mpi|netcdf|scale_|gadg|rng|NAME)/ =~ mod
           dep[:depends].push(mod) unless dep[:depends].include?(mod)
         end
       end
@@ -52,8 +51,8 @@ parse(deps, pros, srcdir)
 
 File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
-    file.print "$(BUILD_DIR)/#{name}.o: #{dep[:dir]}/#{name}.f90 $(DEPENDLIB)"
-#    file.print "#{name}.o: #{name}.f90"
+    file.print "$(BUILD_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(DEPENDLIB)"
+#    file.print "#{name}.o: #{name}.F90"
     dep[:depends].sort.each do |mod|
       if pro = pros[mod]
         file.print " $(BUILD_DIR)/#{pro[:file]}.o"

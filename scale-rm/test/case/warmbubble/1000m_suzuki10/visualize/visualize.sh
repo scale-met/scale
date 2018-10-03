@@ -8,9 +8,9 @@ rm -f energy.dat mass.dat mass_q.dat
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
-      echo ${line[1]} ${line[7]} ${line[8]}  ${line[9]}  ${line[10]} >> energy.dat
-      echo ${line[1]} ${line[3]} ${line[4]}  ${line[5]}  ${line[6]}  >> mass.dat
-      echo ${line[1]} ${line[4]} ${line[11]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} ${line[16]} >> mass_q.dat
+      echo ${line[1]} ${line[8]} ${line[9]} ${line[10]} ${line[11]} >> energy.dat
+      echo ${line[1]} ${line[4]} ${line[5]} ${line[6]}  ${line[7]}  >> mass.dat
+      echo ${line[1]} ${line[3]} ${line[5]} >> mass_q.dat
    fi
 done < monitor.pe000000
 
@@ -62,7 +62,7 @@ do
    let i="${i} + 1"
 done
 
-var__set=(RH QC QR QI QS QG)
+var__set=(RH)
 rangeset=(auto auto auto auto auto auto)
 time_set=
 

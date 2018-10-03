@@ -8,7 +8,7 @@ cat << EOF > base.pp.conf
 #
 #################################################
 
-&PARAM_NEST
+&PARAM_COMM_CARTESC_NEST
  OFFLINE_PARENT_BASENAME   = "${PARENT_BASENAME}",
  OFFLINE_PARENT_PRC_NUM_X  = ${PARENT_PRC_NUM_X},
  OFFLINE_PARENT_PRC_NUM_Y  = ${PARENT_PRC_NUM_Y},
@@ -31,6 +31,7 @@ cat << EOF > base.pp.conf
 &PARAM_CNVTOPO
  CNVTOPO_name                  = "${TOPOTYPE[$D]}",
  CNVTOPO_smooth_local          = ${SMOOTH_LOCAL[$D]},
+ CNVTOPO_smooth_itelim         = ${SMOOTH_ITELIM},
  CNVTOPO_smooth_maxslope_ratio = ${MAXSLOPE_RATIO},
  CNVTOPO_copy_parent           = ${COPYTOPO[$D]},
 /
@@ -42,18 +43,18 @@ cat << EOF > base.pp.conf
 /
 
 &PARAM_CNVTOPO_${TOPOTYPE[$D]}
- ${TOPOTYPE[$D]}_IN_CATALOGUE = "${TOPO_IN_CATALOGUE}",
  ${TOPOTYPE[$D]}_IN_DIR       = "${TOPO_IN_DIR}",
+ ${TOPOTYPE[$D]}_IN_CATALOGUE = "${TOPO_IN_CATALOGUE}",
 /
 
 &PARAM_CNVLANDUSE
  CNVLANDUSE_name = "${LANDUSETYPE[$D]}",
+ CNVLANDUSE_limit_urban_fraction = ${LIMIT_URBAN_FRACTION},
 /
 
 &PARAM_CNVLANDUSE_${LANDUSETYPE[$D]}
- ${LANDUSETYPE[$D]}_IN_CATALOGUE  = "${LANDUSE_IN_CATALOGUE}",
  ${LANDUSETYPE[$D]}_IN_DIR        = "${LANDUSE_IN_DIR}",
- limit_urban_fraction = ${LIMIT_URBAN_FRACTION},
+ ${LANDUSETYPE[$D]}_IN_CATALOGUE  = "${LANDUSE_IN_CATALOGUE}",
 /
 
 &PARAM_IO

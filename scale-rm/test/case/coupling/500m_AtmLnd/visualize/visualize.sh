@@ -45,7 +45,7 @@ do
 done
 
 var__set=(SFC_TEMP LHFLX SHFLX GHFLX Uabs10 T2 Q2 SFLX_LW_up SFLX_LW_dn SFLX_SW_up SFLX_SW_dn)
-rangeset=(auto auto auto auto auto auto auto auto auto auto)
+rangeset=(auto auto auto auto 0.1:0.35 auto auto auto auto auto auto)
 
 i=0
 for var in ${var__set[@]}
@@ -53,11 +53,11 @@ do
    if [ ${rangeset[$i]} == "auto" ]; then
       range=""
    else
-      range="--range="${rangeset[$i]}
+      range="--range=${rangeset[$i]}"
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},x=0,y=0 --aspect=2 --wsn 2 || exit
+   gpview history.pe\*.nc@${var},x=0,y=0 --aspect=2 --wsn 2 ${range} || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
    rm -f dcl.pdf
 

@@ -38,14 +38,14 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},x=0,y=0 --nocont --exch --wsn 2 || exit
+   gpview history_\*.pe\*.nc@${var},x=0,y=0 --nocont --exch --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
    rm -f dcl.pdf
 
    # snapshot
    for sec in ${time_set[@]}
    do
-       gpview history.pe\*.nc@${var},time=${sec} --nocont --mean y ${range} --wsn 2 || exit
+       gpview history_\*.pe\*.nc@${var},time=${sec} --nocont --mean y ${range} --wsn 2 || exit
        convert -density 150 -rotate 90 +antialias dcl.pdf ${var}${sec}sec.png
        rm -f dcl.pdf
    done
@@ -69,14 +69,14 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},x=0,y=0 --wsn 2 || exit
+   gpview history_\*.pe\*.nc@${var},x=0,y=0 --wsn 2 || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
    rm -f dcl.pdf
 
    # snapshot
    for sec in ${time_set[@]}
    do
-       gpview history.pe\*.nc@${var},time=${sec} --nocont --mean y ${range} --wsn 2 || exit
+       gpview history_\*.pe\*.nc@${var},time=${sec} --nocont --mean y ${range} --wsn 2 || exit
        convert -density 150 -rotate 90 +antialias dcl.pdf ${var}${sec}sec.png
        rm -f dcl.pdf
    done

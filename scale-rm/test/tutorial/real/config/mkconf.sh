@@ -53,6 +53,7 @@ if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_MP[*]} ]; then echo "Error: Wrong ar
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_RD[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_RD)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_SF[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_SF)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_TB[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_TB)."; exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#TIME_DT_ATMOS_PHY_BL[*]} ]; then echo "Error: Wrong array size (TIME_DT_ATMOS_PHY_BL)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_OCEAN[*]} ];        then echo "Error: Wrong array size (TIME_DT_OCEAN).";        exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_LAND[*]} ];         then echo "Error: Wrong array size (TIME_DT_LAND).";         exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#TIME_DT_URBAN[*]} ];        then echo "Error: Wrong array size (TIME_DT_URBAN).";        exit 1; fi
@@ -80,9 +81,11 @@ if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_MP_TYPE[*]} ]; then echo "Error: Wrong array
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_RD_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_RD_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_SF_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_SF_TYPE)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_TB_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_TB_TYPE)."; exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#OCEAN_TYPE[*]} ];        then echo "Error: Wrong array size (OCEAN_TYPE).";        exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#LAND_TYPE[*]} ];         then echo "Error: Wrong array size (LAND_TYPE).";         exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#URBAN_TYPE[*]} ];        then echo "Error: Wrong array size (URBAN_TYPE).";        exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#ATMOS_PHY_BL_TYPE[*]} ]; then echo "Error: Wrong array size (ATMOS_PHY_BL_TYPE)."; exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#OCEAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (OCEAN_DYN_TYPE).";    exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#LAND_DYN_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_DYN_TYPE).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#LAND_SFC_TYPE[*]} ];     then echo "Error: Wrong array size (LAND_SFC_TYPE).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#URBAN_DYN_TYPE[*]} ];    then echo "Error: Wrong array size (URBAN_DYN_TYPE).";    exit 1; fi
 
 if [ ${NUM_DOMAIN} -ne ${#TOPOTYPE[*]} ];    then echo "Error: Wrong array size (TOPOTYPE).";     exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#LANDUSETYPE[*]} ]; then echo "Error: Wrong array size (LANDUSETYPE).";  exit 1; fi
@@ -145,13 +148,6 @@ HISTORY_2D_INTERVAL=`echo ${TIME_DT_HISTORY_2D%%.*}`
 HISTORY_3D_INTERVAL=`echo ${TIME_DT_HISTORY_3D%%.*}`
 MAXSTEP_2D=`expr ${INT_DURATION} / ${HISTORY_2D_INTERVAL} + 1`
 MAXSTEP_3D=`expr ${INT_DURATION} / ${HISTORY_3D_INTERVAL} + 1`
-
-# set restart switch
-if [ ${INIT_BASENAME} = "init" ]; then
-  RESTART_RUN=".false."
-else
-  RESTART_RUN=".true."
-fi
 
 INPUT_CONFIGDIR="config"
 
@@ -220,11 +216,11 @@ do
   LANDUSE_OUT_BASENAME="landuse_d${FNUM}"
   LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
 
-  TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
   TOPO_IN_DIR="${TOPODIR}/${TOPOTYPE[$D]}/Products"
+  TOPO_IN_CATALOGUE="${TOPOTYPE[$D]}_catalogue.txt"
 
-  LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
   LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
+  LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
 
   INIT_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
   INIT_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
@@ -238,7 +234,7 @@ do
   RUN_RESTART_IN_BASENAME="${INITDIR}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"
   ATMOS_BOUNDARY_IN_BASENAME="${INITDIR}/${BASENAME_BOUNDARY}"
   RESTART_OUT_BASENAME="restart_d${FNUM}"
-  HISTORY_DEFAULT_BASENAME="history_d${FNUM}"
+  FILE_HISTORY_DEFAULT_BASENAME="history_d${FNUM}"
 
   NET2G_2D_IO_LOG_BASENAME="net2g_2D_LOG_d${FNUM}"
   NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"

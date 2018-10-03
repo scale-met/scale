@@ -12,18 +12,20 @@ SFC = pgfortran
 MODDIROPT = -module
 
 FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
-               -Mbyteswapio -Minfo                    \
+               -Mbyteswapio                           \
                -Mflushz -Mfprelaxed -Mfpapprox -Kieee \
                -Mvect=assoc
 
-FFLAGS_QUICKDEBUG = $(FFLAGS_FAST) -Ktrap=fp -Mbounds -gopt
+FFLAGS_AGGRESSIVE = -Mipa
+
+FFLAGS_QUICKDEBUG = -Ktrap=fp -Mbounds -gopt
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -Mpreprocess -m64 -O0 \
-               -Mbyteswapio -Minfo   \
-               -Mflushz -Ktrap=fp    \
-               -Mbounds -Mstandard   \
+FFLAGS_DEBUG = -Mpreprocess -m64 -O0  \
+               -Mbyteswapio -Mneginfo \
+               -Mflushz -Ktrap=fp     \
+               -Mbounds -Mstandard    \
                -g -traceback
 
 

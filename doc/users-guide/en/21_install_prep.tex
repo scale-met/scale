@@ -1,0 +1,133 @@
+This chapter explains how to compile \scalelib / \scalerm
+and the minimum computational requirements for their execution.
+
+\section{System environment} \label{sec:req_env}
+%====================================================================================
+\subsubsection{Recommended Hardwares}
+
+  Although the necessary hardware depends on an experiment to be performed,
+the following are the specifications for conducting the tutorial as in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}.
+
+  \begin{itemize}
+    \item {\bf CPU} :
+    The system need to have more than or equal to two physical cores for the ideal experiment in the tutorial, and more than or equal to four for the real atmospheric experiment.
+    \item {\bf Memory} :
+    The system needs 512 MB and 2 GB memory
+    for the ideal experiment and the real atmospheric experiment, respectively.
+    Note that this applies to the case involving the use of double-precision floating points.
+    \item {\bf HDD} : The system needs to have 3 GB of free disk space in the real atmospheric experiment.
+  \end{itemize}
+
+
+\subsubsection{Required Softwares}
+
+  \begin{itemize}
+  \item {\bf OS} : Linux OS, Mac OS
+  %Refer to Table \ref{tab:compatible_os} for other OSs currently supported.
+  \item {\bf Compiler} : C, Fortran
+  \end{itemize}
+
+Since the source code of \scalelib is  written in FORTRAN 2003 standard syntax, the compiler must support it. For example, GNU gfortran version 4.3 or previous versions cannot be used for \scalelib compilation because they do not follow the FORTRAN 2003 standard. Refer to Table \ref{tab:compatible_compiler} for compilers already confirmed as supported.
+
+
+\begin{table}[tb]
+\begin{center}
+\caption{Compiler already checked}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} Name of compiler &  \\ \hline
+  GNU (gcc/gfortran)    & Version 4.3 or earlier are not supported. The series with version 4.4.x sometimes issues a warning. \\ \hline
+  Intel (icc/ifort)     & Version of 2013 or later are recommended. \\ \hline
+  PGI (gcc/pgfortran)   & Version 17.1 is comfirmed.       \\ \hline
+\end{tabularx}
+\label{tab:compatible_compiler}
+\end{center}
+\end{table}
+
+
+
+\subsubsection{Required libraries}\label{sec:inst_env}
+
+The required external libraries are described below:
+\begin{itemize}
+%\item HDF5 Library (\url{https://www.hdfgroup.org/HDF5/})
+\item {\netcdf} Library (\url{http://www.unidata.ucar.edu/software/netcdf/})
+\item MPI Library (e.g., openMPI \url{http://www.open-mpi.org/})
+\item LAPACK ( \url{http://www.netlib.org/lapack/} ) (only required for \scalegm)
+\end{itemize}
+
+
+The MPI library should support the MPI 1.0/2.0 protocol.  Refer to Table \ref{tab:compatible_mpi} for MPI libraries already confirmed as supported.
+
+\begin{table}[tb]
+\begin{center}
+\caption{Compiler list}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} Name of MPI library &  \\ \hline
+  openMPI               & Version 1.7.2 or later is supported. \\ \hline
+  Intel MPI             & Version released in 2013 or later is supported.\\ \hline
+  SGI MPT               & Version 2.09 or later is supported. \\ \hline
+\end{tabularx}
+\label{tab:compatible_mpi}
+\end{center}
+\end{table}
+
+
+
+{\netcdf}4 is recommended, but {\netcdf}3 is also available.
+Note that with \netcdf 3 there are some restrictions (See Section \ref{sec:netcdf}).
+You can also use distributed binary packages for Linux and Mac.
+These \netcdf library have been already installed on the K Computer. Refer to the description ``R-CCS software'' in the K portal site or the URL\\ \url{https://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf/}\\ for details. The library paths are described there in ``Makedef.K.''
+
+The tutorials in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real} assume that the above library environment has been prepared.
+
+
+
+
+
+
+
+\subsubsection{Drawing tools}
+
+In this subsection, drawing tools that can draw the initial conditions, boundary data, and the simulation results with \scalerm are introduced.
+
+The GPhys and \grads are used for a quick view
+and the drawing model output in the tutorial in Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}, respectively.
+Other tools are also available,
+if they can be read in \netcdf file format, which is the output of \scalerm.
+
+\begin{itemize}
+\item GPhys / Ruby-DCL by GFD DENNOU Club
+ \begin{itemize}
+  \item URL: \url{http://ruby.gfd-dennou.org/products/gphys/}
+  \item Note: \scalelib outputs the split files
+  in {\netcdf} format according to domain decomposition by the MPI process.
+  "gpview" and/or "gpvect" in {\gphys} can directly draw the split file without post-processing.
+  \item How to install:
+  On the GFD DENNOU Club webpage, the installation is explained for major OSs\\
+  \url{http://ruby.gfd-dennou.org/tutorial/install/}\\
+   \end{itemize}
+\item Grid Analysis and Display System (\grads) by COLA
+ \begin{itemize}
+  \item URL: \url{http://cola.gmu.edu/grads/}
+  \item Note:This is among the most popular drawing tools,
+  but the split files with {\netcdf} generated by \scalelib are not directly readable.
+  The post-processing tool \verb|netcdf2grads_h| is needed to combine the output of \scalelib in one file that is readable from \grads. Refer to \verb|netcdf2grads_h| for installation instructions in Section \ref{sec:source_net2g}, and to Chapters 3 and 4 and Section \ref{sec:net2g} for details pertaining to its use.
+  \item How to install: Refer to \url{http://cola.gmu.edu/grads/downloads}.
+ \end{itemize}
+\item Ncview: {\netcdf} visual browser developed by David W. Pierce
+ \begin{itemize}
+  \item URL: \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
+  \item Note: Ncview is a quick viewer for the {\netcdf} file format.
+  Although it cannot combine split files in \scalelib, it is useful in drawing the result file by file.
+  \item How to install: Refer to \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
+ \end{itemize}
+\end{itemize}
+
+
+\subsubsection{Useful tools (not always necessary)}
+\begin{itemize}
+  \item {\bf Data conversion tool}: wgrib, wgrib2, NCL\\
+  In the tutorial for the real atmospheric experiment, wgrib is used.
+  \item {\bf Evaluation tool of computational performance}:The PAPI library\footnote{\url{http://icl.utk.edu/papi/}} is available.
+\end{itemize}
+

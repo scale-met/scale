@@ -75,7 +75,6 @@ ifeq ($(origin N2GCONF), undefined)
    N2GCONF = NONE
 endif
 
-INDEX_DIR := $(PWD)
 UTILDIR    = ${TOPDIR}/scale-rm/util/netcdf2grads_h
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
@@ -85,7 +84,7 @@ include $(TOPDIR)/Mkinclude
 all: build
 
 
-$(BUILD_DIR)/%.f90: $(CODE_DIR)/%.f90
+$(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 	mkdir -p $(BUILD_DIR)
 	cp -f $< $@
 
@@ -94,7 +93,6 @@ build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	mkdir -p $(BUILD_DIR)
 	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BUILD_DIR=$(BUILD_DIR)   \
-                                INDEX_DIR=$(INDEX_DIR)   \
                                 BINDIR=$(BINDIR)
 
 util:

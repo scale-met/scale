@@ -8,15 +8,13 @@ TOPDIR = ../..
 
 include $(TOPDIR)/Mkinclude
 
-all: doxygen tex
+all: html tex
 
 dox:
-	$(MAKE) -C $(TOPDIR)/dc_utils/doc dox
-	$(MAKE) -C $(TOPDIR)/gtool/doc dox
 	$(MAKE) -C $(TOPDIR)/scalelib/doc dox
 	$(MAKE) -C $(TOPDIR)/scale-rm/doc dox
 
-doxygen: dox
+html: dox
 	doxygen scale-rm.cfg
 
 tex: latex/refman.pdf
@@ -29,7 +27,6 @@ clean:
 
 allclean: clean
 	$(MAKE) -C $(TOPDIR)/dc_utils/doc clean
-	$(MAKE) -C $(TOPDIR)/gtool/doc clean
 	$(MAKE) -C $(TOPDIR)/scalelib/doc clean
 	$(MAKE) -C $(TOPDIR)/scale-rm/doc clean
 

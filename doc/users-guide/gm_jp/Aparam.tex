@@ -1,0 +1,199 @@
+%##########################################################################################
+「設定例」のカラムは、g-level 5の湿潤傾圧波理想実験の場合を示す。
+
+\begin{table}[htb]
+\begin{center}
+\caption{ADMPARAM (モデル管理パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ glevel      & 5                 & int  & g-levelの値              \\ \hline
+ rlevel      & 0                 & int  & r-levelの値              \\ \hline
+ vlayer      & 30                & int  & 鉛直層数      \\ \hline
+ rgnmngfname & "rl00-prc10.info" & char & リージョン管理ファイルの名前 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{GRDPARAM (格子設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|hgrid_io_mode| & "ADVANCED" & char & 水平格子ファイルのIOモード \\ \hline
+ \verb|hgrid_fname|   & "\verb|boundary_GL05RL00|" & char & 水平格子ファイルの名前 \\ \hline
+ \verb|VGRID_fname|   & "\verb|vgrid30_stretch_30km_dcmip2016.dat|" & char & 鉛直格子ファイルの名前 \\ \hline
+ \verb|vgrid_scheme|  & "LINEAR"   & char & 鉛直格子ファイルのIOモード   \\ \hline
+ \verb|topo_fname|    & "NONE"     & char & 地形データファイルの名前         \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{TIMEPARAM (時間積分設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ DTL        & 600.D0 & real & 数値積分時間間隔 (s) \\ \hline
+ \verb|INTEG_TYPE| & "RK3"  & char & 数値積分スキームの種類 \\ \hline
+ \verb|LSTEP_MAX|  & 2160   & int  &  時間積分ステップ数 \\ \hline
+ \verb|start_date| & 0000,1,1,0,0,0 & int (array) & 初期値の年、月、日、時、分、秒 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{RUNCONFPARAM (モデル内共通設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ RUNNAME               & 'DCMIP2016-11'   & char & テストケースの名前 \\ \hline
+ \verb|NDIFF_LOCATION|        & '\verb|IN_LARGE_STEP2|' & char  & 数値フィルターの設定 \\ \hline
+ \verb|THUBURN_LIM|           & .true.      & logical & リミッターの使用フラグ \\ \hline
+ \verb|EIN_TYPE|              & 'SIMPLE'    & char  & 内部エネルギーの評価手法 \\ \hline
+ \verb|RAIN_TYPE|             & 'WARM'      & char & 降雨評価の手法 \\ \hline
+ \verb|CHEM_TYPE|             & 'PASSIVE'   & char & 化学トレーサーのタイプ \\ \hline
+ \verb|AF_TYPE|               & 'DCMIP2016' & char & 外部強制(物理)の種類 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{CHEMVARPARAM (化学トレーサー設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|CHEM_TRC_vmax| & 2 & int &  化学トレーサーの最大種類数 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{BSSTATEPARAM (ベーシックステート (reference) 設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|ref_type| & 'NOBASE' & char & ベーシックステートのタイプ \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{RESTARTPARAM (初期値/再計算 設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|input_io_mode|     & 'IDEAL'                   & char & 入力ファイルのIOモード (初期値ファイル用) \\ \hline
+ \verb|output_io_mode|    & 'ADVANCED'                & char & 出力ファイルのIOモード (リスタートファイル用) \\ \hline
+ \verb|output_basename|   & '\verb|restart_all_GL05RL00z30|' & char & 出力ファイルの名前 \\ \hline
+ \verb|restart_layername| & '\verb|ZSALL32_DCMIP16|'         & char & リスタートファイル向け鉛直層情報ファイルの名前 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{DYCORETESTPARAM (力学コアテストケース設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|init_type|    & 'Jablonowski-Moist' & char & テストケース名 \\ \hline
+ \verb|test_case|    & '1'     & char & テストケース番号 (DCMIPのテストケース番号ではない) \\ \hline
+ chemtracer   & .true.  & logical & 化学トレーサーのスイッチ \\ \hline
+ \verb|prs_rebuild|  & .false. & logical & 初期値の気圧を再計算するスイッチ \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{FORCING\_PARAM (外部強制 (物理過程) 設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|NEGATIVE_FIXER|  & .true.  & logical & トレーサーに対する負値修正のスイッチ \\ \hline
+ \verb|UPDATE_TOT_DENS| & .false. & logical & 全密度の修正に対するスイッチ \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{FORCING\_DCMIP\_PARAM (DCMIP2016 物理過程設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|SET_DCMIP2016_11| & .true.  & logical & DCMIP2016 湿潤傾圧波理想実験向け物理セットのスイッチ (排他的利用) \\ \hline
+ \verb|SET_DCMIP2016_12| & .false. & logical & DCMIP2016 全球台風理想実験向け物理セットのスイッチ (排他的利用) \\ \hline
+ \verb|SET_DCMIP2016_13| & .false. & logical & DCMIP2016 全球スーパーセル理想実験向け物理セットのスイッチ (排他的利用) \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{PARAM\_CONST (物理定数パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|earth_radius| & 6.37122D+6  & real & 地球の半径 (m) \\ \hline
+ \verb|earth_angvel| & 7.292D-5    & real & 地球自転の角速度 (s-1) \\ \hline
+ \verb|small_planet_factor| & 1.D0 & real & 小惑星係数 (X) \\ \hline
+ \verb|earth_gravity|       & 9.80616D0 & real & 重力加速度 (m s-2) \\ \hline
+ \verb|gas_cnst|            & 287.0D0   & real & 乾燥空気の理想気体定数 (J kg-1 K-1) \\ \hline
+ \verb|specific_heat_pre|   & 1004.5D0  & real & 定圧比熱 (J kg-1 K-1) \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{NUMFILTERPARAM (数値フィルター設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|lap_order_hdiff| & 2            & int  & 水平拡散スキームのオーダー \\ \hline
+ \verb|hdiff_type|      & 'NONLINEAR1' & char & 水平拡散のタイプ \\ \hline
+ \verb|Kh_coef_maxlim|  & 1.200D+17    & real & 最大値 of Kh 係数 (for Non-Linear) \\ \hline
+ \verb|Kh_coef_minlim|  & 1.200D+16    & real & 最小値 of Kh 係数 (for Non-Linear) \\ \hline
+ \verb|ZD_hdiff_nl|     & 20000.D0     & real & 水平2次元ダンピング層の下端高度 (for Non-Linear) \\ \hline
+ \verb|divdamp_type|    &  'DIRECT'    & char & 拡散型ダンピングのタイプ \\ \hline
+ \verb|lap_order_divdamp| & 2          & int  & 拡散型ダンピングのオーダー \\ \hline
+ \verb|alpha_d|         & 1.20D16      & real & 拡散型ダンピング係数の指定値 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{EMBUDGETPARAM (予報変数収支モニター設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|MNT_ON|   & .true. & logical & モニタリングのスイッチ \\ \hline
+ \verb|MNT_INTV| & 72     & int     & モニタリング間隔 (steps) \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[htb]
+\begin{center}
+\caption{NMHISD (ヒストリー出力共通設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ \verb|output_io_mode|   & 'ADVANCED' & char    & ヒストリー出力ファイルのIOモード \\ \hline
+ \verb|histall_fname|    & 'history'  & char    & ヒストリー出力ファイルの名前 \\ \hline
+ \verb|hist3D_layername| & '\verb|ZSDEF30_DCMIP16|' & char & ヒストリー出力ファイル向け鉛直層情報ファイルの名前 \\ \hline
+ \verb|NO_VINTRPL|       & .false.    & logical & ヒストリー出力時の鉛直内挿のスイッチ \\ \hline
+ \verb|output_type|      & 'SNAPSHOT' & char    & ヒストリー出力値の設定 (snapshot or average) \\ \hline
+ step             & 72         & int     & ヒストリー出力間隔 (steps) \\ \hline
+ \verb|doout_step0|      & .true.     & logical & 初期値を出力するスイッチ \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[t]
+\begin{center}
+\caption{NMHIST (ヒストリー出力アイテム設定パラメータ群)}
+\begin{tabularx}{150mm}{|l|l|l|X|} \hline
+ \rowcolor[gray]{0.9} パラメータ & 設定例 & kind & 説明          \\ \hline
+ item  & '\verb|ml_u|' & char & ヒストリー出力変数のモデル内の名前 \\ \hline
+ file  & 'u'    & char & ヒストリー出力変数の出力ファイル内の名前 \\ \hline
+ ktype & '3D'   & char & 出力変数の次元 \\ \hline
+\end{tabularx}
+\end{center}
+\end{table}
+

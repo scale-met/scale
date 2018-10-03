@@ -102,11 +102,12 @@ contains
     call date_and_time(LOG_FILE(4:11), LOG_FILE(12:21))
 
     !--- read PARAM
-    rewind(fid_conf)
-    read(fid_conf,nml=PARAM_DC_LOG,iostat=ierr)
-
-    if ( ierr > 0 ) then
-       call Log('E', 'xxx Not appropriate names in namelist PARAM_DC_LOG. Check!')
+    if ( fid_conf > 0 ) then
+       rewind(fid_conf)
+       read(fid_conf,nml=PARAM_DC_LOG,iostat=ierr)
+       if ( ierr > 0 ) then
+          call Log('E', 'xxx Not appropriate names in namelist PARAM_DC_LOG. Check!')
+       end if
     end if
 
     if ( present(fid_log) ) then

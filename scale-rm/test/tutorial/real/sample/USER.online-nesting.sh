@@ -2,11 +2,11 @@
 
 #################################################
 #
-# &PARAM_NEST            (ALL configs)
-# &PARAM_TIME            (ALL configs)
-# &PARAM_HISTORY         (run config)
-# &PARAM_ATMOS_BOUNDARY  (run config)
-# &PARAM_ATMOS_REFSTATE  (run config)
+# &PARAM_COMM_CARTESC_NEST(ALL configs)
+# &PARAM_TIME             (ALL configs)
+# &PARAM_FILE_HISTORY     (run config)
+# &PARAM_ATMOS_BOUNDARY   (run config)
+# &PARAM_ATMOS_REFSTATE   (run config)
 #
 #################################################
 
@@ -31,24 +31,28 @@ TIME_DT_HISTORY_3D="3600.0" # unit: SEC only
 
 TIME_DT=(               "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_DYN=(     "45.0"  "15.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_CP=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_MP=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_RD=( "900.0" "300.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_SF=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_TB=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_BL=(  "90.0"  "30.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_OCEAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_LAND=(         "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_URBAN=(        "450.0" "150.0" ) # required parameters for each domain - unit: SEC only
 
 #################################################
 #
-# &PARAM_PRC          (ALL configs)
-# &PARAM_INDEX        (ALL configs)
-# &PARAM_LAND_INDEX   (ALL configs)
-# &PARAM_LAND_GRID    (ALL configs)
-# &PARAM_URBAN_INDEX  (ALL configs)
-# &PARAM_URBAN_GRID   (ALL configs)
-# &PARAM_GRID         (ALL configs)
-# &PARAM_MAPPROJ      (ALL configs)
+# &PARAM_PRC                      (ALL configs)
+# &PARAM_ATMOS_GRID_CARTESC_INDEX (ALL configs)
+# &PARAM_ATMOS_GRID_CARTESC       (ALL configs)
+# &PARAM_OCEAN_GRID_CARTESC_INDEX (ALL configs)
+# &PARAM_OCEAN_GRID_CARTESC       (ALL configs)
+# &PARAM_LAND_GRID_CARTESC_INDEX  (ALL configs)
+# &PARAM_LAND_GRID_CARTESC        (ALL configs)
+# &PARAM_URBAN_CARTESC_INDEX      (ALL configs)
+# &PARAM_URBAN_GRID_CARTESC       (ALL configs)
+# &PARAM_MAPPROJECTION            (ALL configs)
 #
 #################################################
 
@@ -58,6 +62,8 @@ PRC_NUM_Y=( 2 4 ) # required parameters for each domain
 KMAX=( 36 60 ) # required parameters for each domain
 IMAX=( 45 32 ) # required parameters for each domain
 JMAX=( 45 32 ) # required parameters for each domain
+
+OKMAX=1
 
 LKMAX=7
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
@@ -96,11 +102,11 @@ BUFFER_DZ=( "5000.0"   "5000.0"   ) # required parameters for each domain
 BUFFER_DX=( "400000.0" "140000.0" ) # required parameters for each domain
 BUFFER_DY=( "400000.0" "140000.0" ) # required parameters for each domain
 
-MPRJ_BASEPOINT_LON="135.220404"
-MPRJ_BASEPOINT_LAT="34.653396"
-MPRJ_TYPE="LC"
-MPRJ_LC_LAT1="30.0"
-MPRJ_LC_LAT2="40.0"
+MAPPROJECTION_BASEPOINT_LON="135.220404"
+MAPPROJECTION_BASEPOINT_LAT="34.653396"
+MAPPROJECTION_TYPE="LC"
+MAPPROJECTION_LC_LAT1="30.0"
+MAPPROJECTION_LC_LAT2="40.0"
 
 #################################################
 #
@@ -111,20 +117,22 @@ MPRJ_LC_LAT2="40.0"
 #
 #################################################
 
-ATMOS_DYN_TYPE=(    "HEVI"     "HEVI"     ) # required parameters for each domain
-ATMOS_PHY_CP_TYPE=( "NONE"     "NONE"     ) # required parameters for each domain
-ATMOS_PHY_MP_TYPE=( "TOMITA08" "TOMITA08" ) # required parameters for each domain
-ATMOS_PHY_RD_TYPE=( "MSTRNX"   "MSTRNX"   ) # required parameters for each domain
-ATMOS_PHY_SF_TYPE=( "COUPLE"   "COUPLE"   ) # required parameters for each domain
-ATMOS_PHY_TB_TYPE=( "HYBRID"   "HYBRID"   ) # required parameters for each domain
+ATMOS_DYN_TYPE=(    "HEVI"        "HEVI"        ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "KF"          "KF"          ) # required parameters for each domain
+ATMOS_PHY_MP_TYPE=( "TOMITA08"    "TOMITA08"    ) # required parameters for each domain
+ATMOS_PHY_RD_TYPE=( "MSTRNX"      "MSTRNX"      ) # required parameters for each domain
+ATMOS_PHY_SF_TYPE=( "COUPLE"      "COUPLE"      ) # required parameters for each domain
+ATMOS_PHY_TB_TYPE=( "SMAGORINSKY" "SMAGORINSKY" ) # required parameters for each domain
+ATMOS_PHY_BL_TYPE=( "MYNN"        "MYNN"        ) # required parameters for each domain
 
-OCEAN_TYPE=( "CONST" "CONST" ) # required parameters for each domain
-LAND_TYPE=(  "SLAB"  "SLAB"  ) # required parameters for each domain
-URBAN_TYPE=( "SLC"   "SLC"   ) # required parameters for each domain
+OCEAN_DYN_TYPE=( "INIT"     "INIT"     ) # required parameters for each domain
+LAND_DYN_TYPE=(  "BUCKET"   "BUCKET"   ) # required parameters for each domain
+LAND_SFC_TYPE=(  "SKIN"     "SKIN"     ) # required parameters for each domain
+URBAN_DYN_TYPE=( "KUSAKA01" "KUSAKA01" ) # required parameters for each domain
 
 #################################################
 #
-# &HISTITEM (run config)
+# &HISTORY_ITEM (run config)
 #
 #################################################
 
@@ -152,7 +160,6 @@ INIT_BASENAME="init"
 
 BASENAME_ORG="namelist.grads_boundary.FNL.2005053112-2016051106"
 FILETYPE_ORG="GrADS"
-PARENT_MP_TYPE=3
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."
 
@@ -174,7 +181,8 @@ LANDUSETYPE=(  "GLCCv2"  "GLCCv2"  ) # required parameters for each domain
 COPYTOPO=(     ".false." ".true."  ) # required parameters for each domain
 SMOOTH_LOCAL=( ".true."  ".true."  ) # required parameters for each domain
 
-MAXSLOPE_RATIO="1.0"
+SMOOTH_ITELIM="10000"
+MAXSLOPE_RATIO="5.0"
 LIMIT_URBAN_FRACTION="0.3"
 
 #################################################

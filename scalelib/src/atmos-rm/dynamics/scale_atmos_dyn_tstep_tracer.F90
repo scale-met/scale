@@ -6,21 +6,18 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_tracer
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -45,7 +42,7 @@ module scale_atmos_dyn_tstep_tracer
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
        use scale_precision
-       use scale_grid_index
+       use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: QTRCo   (KA,IA,JA)
        real(RP), intent(in)  :: QTRC    (KA,IA,JA)
@@ -90,10 +87,10 @@ contains
   subroutine ATMOS_DYN_Tstep_tracer_setup( &
        ATMOS_DYN_TSTEP_TRACER_TYPE )
     use scale_precision
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tstep_tracer_fvm_heve, only: &
        ATMOS_DYN_Tstep_tracer_fvm_heve_setup, &
        ATMOS_DYN_Tstep_tracer_fvm_heve
@@ -107,8 +104,8 @@ contains
             ATMOS_DYN_TSTEP_TRACER_TYPE )
        ATMOS_DYN_Tstep_tracer => ATMOS_DYN_Tstep_tracer_fvm_heve       
     case default
-       write(*,*) 'xxx ATMOS_DYN_TSTEP_TRACER_TYPE is invalid: ', ATMOS_DYN_TSTEP_TRACER_TYPE
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_tracer_setup",*) 'ATMOS_DYN_TSTEP_TRACER_TYPE is invalid: ', ATMOS_DYN_TSTEP_TRACER_TYPE
+       call PRC_abort
     end select
 
     return

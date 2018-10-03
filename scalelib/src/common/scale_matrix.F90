@@ -7,14 +7,15 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_matrix
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -45,20 +46,20 @@ module scale_matrix
 contains
   !-----------------------------------------------------------------------------
   !> solve tridiagonal matrix with Thomas's algorithm
+!OCL SERIAL
   subroutine MATRIX_SOLVER_tridiagonal_1D( &
-       KA, &
-       ud, &
-       md, &
-       ld, &
-       iv, &
-       ov  )
+       KA, KS, KE, &
+       ud, md, ld, &
+       iv,         &
+       ov          )
     implicit none
+    integer,  intent(in)  :: KA, KS, KE
 
-    integer,  intent(in)  :: KA     ! array size
     real(RP), intent(in)  :: ud(KA) ! upper  diagonal
     real(RP), intent(in)  :: md(KA) ! middle diagonal
     real(RP), intent(in)  :: ld(KA) ! lower  diagonal
     real(RP), intent(in)  :: iv(KA) ! input  vector
+
     real(RP), intent(out) :: ov(KA) ! output vector
 
     real(RP) :: c(KA)
@@ -68,16 +69,16 @@ contains
     !---------------------------------------------------------------------------
 
     ! foward reduction
-    c(1) = ud(1) / md(1)
-    d(1) = iv(1) / md(1)
-    do k = 2, KA
+    c(KS) = ud(KS) / md(KS)
+    d(KS) = iv(KS) / md(KS)
+    do k = KS+1, KE
        c(k) =           ud(k)            / ( md(k) - ld(k) * c(k-1) )
        d(k) = ( iv(k) - ld(k) * d(k-1) ) / ( md(k) - ld(k) * c(k-1) )
     enddo
 
     ! backward substitution
-    ov(KA) = d(KA)
-    do k = KA-1, 1, -1
+    ov(KE) = d(KE)
+    do k = KE-1, KS, -1
        ov(k) = d(k) - c(k) * ov(k+1)
     enddo
 

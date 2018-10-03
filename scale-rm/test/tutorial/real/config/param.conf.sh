@@ -19,18 +19,20 @@ cat << EOF > param.admin.conf
  ATMOS_PHY_RD_TYPE = "${ATMOS_PHY_RD_TYPE[$D]}",
  ATMOS_PHY_SF_TYPE = "${ATMOS_PHY_SF_TYPE[$D]}",
  ATMOS_PHY_TB_TYPE = "${ATMOS_PHY_TB_TYPE[$D]}",
+ ATMOS_PHY_BL_TYPE = "${ATMOS_PHY_BL_TYPE[$D]}",
 /
 
 &PARAM_OCEAN
- OCEAN_TYPE = "${OCEAN_TYPE[$D]}",
+ OCEAN_DYN_TYPE = "${OCEAN_DYN_TYPE[$D]}",
 /
 
 &PARAM_LAND
- LAND_TYPE = "${LAND_TYPE[$D]}",
+ LAND_DYN_TYPE = "${LAND_DYN_TYPE[$D]}",
+ LAND_SFC_TYPE = "${LAND_SFC_TYPE[$D]}",
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "${URBAN_TYPE[$D]}",
+ URBAN_DYN_TYPE = "${URBAN_DYN_TYPE[$D]}",
 /
 EOF
 
@@ -42,7 +44,7 @@ cat << EOF > param.region.conf
 #
 #################################################
 
-&PARAM_PRC
+&PARAM_PRC_CARTESC
  PRC_NUM_X      = ${PRC_NUM_X[$D]},
  PRC_NUM_Y      = ${PRC_NUM_Y[$D]},
  PRC_PERIODIC_X = .false.,
@@ -55,29 +57,33 @@ cat << EOF > param.region.conf
 #
 #################################################
 
-&PARAM_INDEX
+&PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = ${KMAX[$D]},
  IMAX = ${IMAX[$D]},
  JMAX = ${JMAX[$D]},
 /
 
-&PARAM_LAND_INDEX
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = ${OKMAX},
+/
+
+&PARAM_LAND_GRID_CARTESC_INDEX
  LKMAX = ${LKMAX},
 /
 
-&PARAM_URBAN_INDEX
+&PARAM_URBAN_GRID_CARTESC_INDEX
  UKMAX = ${UKMAX},
 /
 
-&PARAM_LAND_GRID
+&PARAM_LAND_GRID_CARTESC
  LDZ = ${LIST_LDZ},
 /
 
-&PARAM_URBAN_GRID
+&PARAM_URBAN_GRID_CARTESC
  UDZ = ${LIST_UDZ},
 /
 
-&PARAM_GRID
+&PARAM_ATMOS_GRID_CARTESC
  DX = ${DX[$D]},
  DY = ${DY[$D]},
  ${LINE_Z}
@@ -86,12 +92,12 @@ cat << EOF > param.region.conf
  BUFFER_DY = ${BUFFER_DY[$D]},
 /
 
-&PARAM_MAPPROJ
- MPRJ_basepoint_lon = ${MPRJ_BASEPOINT_LON},
- MPRJ_basepoint_lat = ${MPRJ_BASEPOINT_LAT},
- MPRJ_type          = "${MPRJ_TYPE}",
- MPRJ_LC_lat1       = ${MPRJ_LC_LAT1},
- MPRJ_LC_lat2       = ${MPRJ_LC_LAT2},
+&PARAM_MAPPROJECTION
+ MAPPROJECTION_basepoint_lon = ${MAPPROJECTION_BASEPOINT_LON},
+ MAPPROJECTION_basepoint_lat = ${MAPPROJECTION_BASEPOINT_LAT},
+ MAPPROJECTION_type          = "${MAPPROJECTION_TYPE}",
+ MAPPROJECTION_LC_lat1       = ${MAPPROJECTION_LC_LAT1},
+ MAPPROJECTION_LC_lat2       = ${MAPPROJECTION_LC_LAT2},
 /
 EOF
 
@@ -108,9 +114,8 @@ cat << EOF > param.physics.conf
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE        = "INIT",
- ATMOS_REFSTATE_UPDATE_FLAG = .true.,
- ATMOS_REFSTATE_UPDATE_DT   = ${TIME_DT_REFSTATE},
+ ATMOS_REFSTATE_TYPE      = "INIT",
+ ATMOS_REFSTATE_UPDATE_DT = ${TIME_DT_REFSTATE},
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -133,7 +138,7 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
- ATMOS_DYN_enable_coriolis            = .true.,
+ ATMOS_DYN_coriolis_type              = "SPHERE",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
 /
@@ -152,18 +157,15 @@ cat << EOF > param.physics.conf
 
 EOF
 
-if [ ${ATMOS_PHY_TB_TYPE[$D]} = "HYBRID" ]; then
+if [ ${ATMOS_PHY_BL_TYPE[$D]} = "MYNN" ]; then
+if [ ${ATMOS_PHY_TB_TYPE[$D]} = "SMAGORINSKY" ]; then
   cat <<EOF >> param.physics.conf
-&PARAM_ATMOS_PHY_TB_HYBRID
- ATMOS_PHY_TB_HYBRID_SGS_TYPE = "SMAGORINSKY",
- ATMOS_PHY_TB_HYBRID_PBL_TYPE = "MYNN",
-/
-
 &PARAM_ATMOS_PHY_TB_SMG
  ATMOS_PHY_TB_SMG_horizontal = .true.,
 /
 
 EOF
+fi
 fi
 
 cat <<EOF >> param.physics.conf
@@ -177,8 +179,8 @@ cat <<EOF >> param.physics.conf
  OCEAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_OCEAN_PHY_SLAB
- OCEAN_PHY_SLAB_DEPTH = 10.0,
+&PARAM_OCEAN_DYN_SLAB
+ OCEAN_DYN_SLAB_DEPTH = 10.0,
 /
 
 #################################################
@@ -191,9 +193,9 @@ cat <<EOF >> param.physics.conf
  LAND_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_LAND_PHY_SLAB
- LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
- LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
 /
 
 #################################################
@@ -206,7 +208,7 @@ cat <<EOF >> param.physics.conf
 ! URBAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_URBAN_PHY_SLC
+&PARAM_URBAN_DYN_KUSAKA01
  STRGR = 0.0,
  STRGB = 0.0,
  STRGG = 0.0,
@@ -221,18 +223,18 @@ cat << EOF > param.history.conf
 #
 #################################################
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "${HISTORY_DEFAULT_BASENAME}",
- HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
- HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_DEFAULT_ZCOORD    = "model",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "${FILE_HISTORY_DEFAULT_BASENAME}",
+ FILE_HISTORY_DEFAULT_TINTERVAL = ${TIME_DT_HISTORY_2D},
+ FILE_HISTORY_DEFAULT_TUNIT     = "${TIME_DT_UNIT}",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_DEFAULT_ZCOORD    = "model",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&PARAM_HIST
- HIST_BND = .false.,
+&PARAM_FILE_HISTORY_CARTESC
+ FILE_HISTORY_CARTESC_BOUNDARY = .false.,
 /
 
 EOF
@@ -240,24 +242,24 @@ EOF
 if [ ${#HIST_ITEMS_SNAPSHOT_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\" /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\" /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_SNAPSHOT_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_SNAPSHOT_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_2D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_2D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true. /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true. /" >> param.history.conf
   done
 fi
 if [ ${#HIST_ITEMS_AVERAGE_3D[*]} -ge 1 ]; then
   for VAR in ${HIST_ITEMS_AVERAGE_3D[*]}
   do
-    echo "&HISTITEM item=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
+    echo "&HISTORY_ITEM name=\"${VAR}\", taverage=.true., tinterval=${TIME_DT_HISTORY_3D} /" >> param.history.conf
   done
 fi

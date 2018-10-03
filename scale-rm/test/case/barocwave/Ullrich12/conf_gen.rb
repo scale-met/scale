@@ -7,7 +7,7 @@
 # flow and unstable baroclinic wave in 3D channel domain, following experimental setup
 # in Ullrich and Jablonowsski (2012).
 #
-# * The Computatinal domain is a f or beta plane 3D channel 
+# * The Computatinal domain is a f or beta plane 3D channel
 #   - Lx=40000 km, Ly=6000 km, Lz=30 km (Rigid walls exist at y=0 and y=6000 km)
 # * In the unstable baroclinic wave test, we employ a sponge layer near the top layer.
 #
@@ -105,22 +105,22 @@ def gen_init_conf( conf_name,
  IO_LOG_BASENAME = 'init_LOG',
 /
 
-&PARAM_PRC
- PRC_NUM_X       = #{nprocx},  
+&PARAM_PRC_CARTESC
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
  PRC_PERIODIC_Y  = .false.,
 /
 
-&PARAM_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
+&PARAM_ATMOS_GRID_CARTESC_INDEX
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
  JMAX = #{jmax}, JHALO = 3,
 /
 
-&PARAM_GRID
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
+&PARAM_ATMOS_GRID_CARTESC
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
 /
 
 &PARAM_TIME
@@ -153,7 +153,7 @@ def gen_init_conf( conf_name,
 /
 EOS
   f.close
-  
+
 end
 
 def gen_run_conf( conf_name,
@@ -174,22 +174,22 @@ def gen_run_conf( conf_name,
 #####
 
 &PARAM_PRC
- PRC_NUM_X       = #{nprocx},  
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
  PRC_PERIODIC_Y  = .false.,
 /
 
 &PARAM_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
  JMAX = #{jmax}, JHALO = 3,
 /
 
 &PARAM_GRID
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
- BUFFER_DZ = #{sponge_buf_dz},  
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
+ BUFFER_DZ = #{sponge_buf_dz},
  BUFFFACT  =   1.D0,
 /
 &PARAM_TIME
@@ -199,7 +199,7 @@ def gen_run_conf( conf_name,
  TIME_DURATION_UNIT         = "SEC",
  TIME_DT                    = #{dtsec_dyn},
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
+ TIME_DT_ATMOS_DYN          = #{dtsec_dyn},
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
 /
 
@@ -219,8 +219,7 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_ATMOS_REFSTATE
-! ATMOS_REFSTATE_IN_BASENAME = "REFSTATE", 
- ATMOS_REFSTATE_TYPE        = "INIT",
+ ATMOS_REFSTATE_TYPE = "INIT",
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -235,48 +234,49 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_TINTEG_LARGE_TYPE    = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE    = "RK3WS2002",
  ATMOS_DYN_TINTEG_TRACER_TYPE   = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
+ ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}",
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
- ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag}, 
- ATMOS_DYN_ENABLE_CORIOLIS      = T
+ ATMOS_DYN_FLAG_FCT_TRACER      = #{fctFlag},
+ ATMOS_DYN_WDAMP_HEIGHT         = 15.D3,
+ ATMOS_DYN_coriolis_type        = "PLANE",
+ ATMOS_DYN_coriolis_f0          = 1.031244D-4  ! 45 degrees north
+ ATMOS_DYN_coriolis_beta        = 1.618598D-11 ! 45 degrees north
 /
 
 &PARAM_USER
- USER_do = .true., 
- Phi0Deg = 45.D0, 
+ USER_do = .true.,
 /
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history",
- HISTORY_DEFAULT_TINTERVAL = #{hst_interval},
- HISTORY_DEFAULT_TUNIT     = "HOUR",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL4",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "history",
+ FILE_HISTORY_DEFAULT_TINTERVAL = #{hst_interval},
+ FILE_HISTORY_DEFAULT_TUNIT     = "HOUR",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTITEM item='U'    /
-&HISTITEM item='V'    /
-&HISTITEM item='W'    /
-&HISTITEM item='VOR' /
-&HISTITEM item='PT'   /
-&HISTITEM item='PRES'   /
-&HISTITEM item='T' /
-&HISTITEM item='DENS'    /
-!&HISTITEM item='MOMY'    /
-!&HISTITEM item='RHOT'    /
+&HISTORY_ITEM item='U'    /
+&HISTORY_ITEM item='V'    /
+&HISTORY_ITEM item='W'    /
+&HISTORY_ITEM item='VOR' /
+&HISTORY_ITEM item='PT'   /
+&HISTORY_ITEM item='PRES'   /
+&HISTORY_ITEM item='T' /
+&HISTORY_ITEM item='DENS'    /
+!&HISTORY_ITEM item='MOMY'    /
+!&HISTORY_ITEM item='RHOT'    /
 
-!&HISTITEM item='DENS_t_advch'    /
-!&HISTITEM item='DENS_t_advcv'    /
-!&HISTITEM item='MOMZ_t_pg'    /
-!&HISTITEM item='MOMZ_t_advch'    /
-!&HISTITEM item='MOMZ_t_advcv'    /
-!&HISTITEM item='MOMY_t_pg'    /
-!&HISTITEM item='MOMY_t_cf'    /
-!&HISTITEM item='MOMY_t_advch'    /
-!&HISTITEM item='MOMY_t_advcv'    /
+!&HISTORY_ITEM item='DENS_t_advch'    /
+!&HISTORY_ITEM item='DENS_t_advcv'    /
+!&HISTORY_ITEM item='MOMZ_t_pg'    /
+!&HISTORY_ITEM item='MOMZ_t_advch'    /
+!&HISTORY_ITEM item='MOMZ_t_advcv'    /
+!&HISTORY_ITEM item='MOMY_t_pg'    /
+!&HISTORY_ITEM item='MOMY_t_cf'    /
+!&HISTORY_ITEM item='MOMY_t_advch'    /
+!&HISTORY_ITEM item='MOMY_t_advcv'    /
 
 &PARAM_MONITOR
  MONITOR_STEP_INTERVAL = 30,
@@ -299,7 +299,7 @@ runParam_hash = {}
 
 initParam_hash["STEADY"] = { "u0_p"=>0.0 }
 runParam_hash ["STEADY"] = { "DURATION_SEC" => TIME_DURATION_SEC_STEADY,
-                             "SPONGE_BUFFER_DZ" => 0.0, 
+                             "SPONGE_BUFFER_DZ" => 0.0,
                              "HIST_TINTERVAL_HOUR" => HISTORY_TINTERVAL_HOUR_STEADY }
 
 initParam_hash["CTRL"]   = { "u0_p"=>Up }
@@ -317,7 +317,7 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
     CONF_GEN_NUMERIC_HASHLIST.each{|numeric_hash|
 
       initParam = initParam_hash[case_hash["TAG"]]
-      
+
       ["F", "T"].each{|fct_flag|
 
         dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/"
@@ -328,18 +328,18 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
           puts "Create directory .."
           FileUtils.mkdir_p(dataDir)
         end
-      
-        init_conf_name = "#{dataDir}init.conf" 
-        gen_init_conf(init_conf_name, 
-                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+
+        init_conf_name = "#{dataDir}init.conf"
+        gen_init_conf(init_conf_name,
+                      resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
                       resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"],  initParam["u0_p"]
                      )
 
         runParam = runParam_hash[case_hash["TAG"]]
         run_conf_name = "#{dataDir}run.conf"
-        gen_run_conf(run_conf_name, 
-                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], 
+        gen_run_conf(run_conf_name,
+                     resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
+                     resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"],
                      numeric_hash["TAG"].sub("FVM_",""), fct_flag, dataDir,
                      runParam["DURATION_SEC"], runParam["HIST_TINTERVAL_HOUR"], runParam["SPONGE_BUFFER_DZ"] )
       }

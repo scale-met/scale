@@ -1,4 +1,4 @@
-\section{How to create initial and boundary data} \label{sec:adv_datainput}
+\section{How to prepare initial and boundary data} \label{sec:adv_datainput}
 %====================================================================================
 
 \begin{table}[tbh]
@@ -6,7 +6,7 @@
 \caption{External input data supported in \scalelib}
 \begin{tabularx}{150mm}{l|l|X} \hline
  \rowcolor[gray]{0.9} Data type   & \verb|FILETYPE_ORG|  & Note \\ \hline
- SCALE format   & \verb|SCALE-RM|     & Only history files are supported. The latitude-longitude catalog is needed. \\ \hline
+ SCALE format   & \verb|SCALE-RM|     & History and restart files are supported. The latitude-longitude catalog is needed. \\ \hline
  Binary format  & \verb|GrADS|        & Another namelist for data input is required.    \\ \hline
  WRF format     & \verb|WRF-ARW|      & Both ``wrfout''  and``wrfrst'' are supported.\\ \hline
 \end{tabularx}
@@ -14,7 +14,16 @@
 \end{center}
 \end{table}
 
-\scalerm can generate initial and boundary data by entering various types of external data, as shown in Table \ref{tab:inputdata_format}. The program \verb|scale-rm_init| converts external data into boundary and initial data by configuring the file \verb|init.conf|. The input data format is specified at \nmitem{FILETYPE_ORG} in \namelist{PARAM_MKINIT_REAL_***}. The SCALE format is mainly used for offline nesting. Refer to Section \ref{subsec:nest_offline} for details. The WRF data format is available; WRF model output data can be used directly. Note that the file should contain all data required for the generation of the boundary data of \scalerm. The ``binary format'' in this documentation is defined as binary data with single-precision floating points that FORTRAN can directly access. GRIB/GRIB2 data are available by converting them to binary format; this procedure is explained in Section \ref{sec:tutrial_real_data}. Other arbitrary data can also be used if it is converted into binary format.
+\scalerm can generate initial and boundary data by entering various types of external data, as shown in Table \ref{tab:inputdata_format}. The program \verb|scale-rm_init| converts external data into boundary and initial data by configuring the file \verb|init.conf|. The input data format is specified at \nmitem{FILETYPE_ORG} in \namelist{PARAM_MKINIT_REAL_***}.
+
+The SCALE format is mainly used for offline nesting. Refer to Section \ref{subsec:nest_offline} for details.
+
+The WRF data format is available; WRF model output data can be used directly. Note that the file should contain all data required for the generation of the boundary data of \scalerm.
+
+The ``binary format'' in this documentation is defined as binary data with single-precision floating points that FORTRAN can directly access. GRIB/GRIB2 data are available by converting them to binary format; this procedure is explained in Section \ref{sec:tutrial_real_data}. Other arbitrary data can also be used if it is converted into binary format.
+
+Note that the format of output files in the latest version is different from that in the version 5.2 or older.
+Therefore, the init/boundary files which are made in the version 5.2 or older can't be used in the \scalelib \version.
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{Input from binary format data} \label{sec:datainput_grads}
@@ -59,17 +68,17 @@ In \scalerm, the namelist file \verb|namelist.grads_boundary**|, which contains 
 
 \nmitem{NUMBER_OF_FILES} is the number of input files.
 In case of a single input file, prepare only file \verb|"filename.grd"|.
-In the case of multiple input files, prepare the files numbered as \verb|"filename.XXXXX.grd"| in the forward direction.
+In the case of multiple input files, prepare the files numbered as \verb|"filename_XXXXX.grd"| in the forward direction.
 The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| to the given number \nmitem{NUMBER_OF_FILES}-1.
 The header name of input files, i.e., \verb|"filename"|, is specified in the namelist file and explained later.
 
 \nmitem{BOUNDARY_UPDATE_DT} is the time step of input data.
 \nmitem{RESTART_OUT_BASENAME} in \namelist{PARAM_RESTART} is the header name of the initial file converted.
 \nmitem{BASENAME_BOUNDARY} is the header name of the boundary files converted.
+If \nmitem{BASENAME_BOUNDARY} is empty, no boundary files are output.
 
 The above configurations are the common among \namelist{PARAM_MKINIT_REAL_ATMOS},\\ \namelist{PARAM_MKINIT_REAL_OCEAN}, and \namelist{PARAM_MKINIT_REAL_LAND}. Unless otherwise specified in\\
-\namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, these information are inherited. 
-
+\namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, these information are inherited.
 
 \nmitem{USE_FILE_DENSITY} is an option in case of \verb|FILETYPE_ORG="SCALE-RM"|.
 If binary data is selected, provide \verb|.false.| to \nmitem{USE_FILE_DENSITY}.
@@ -129,7 +138,7 @@ The following example is the namelist file \verb|namelist.grads_boundary**| to p
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
-The number of grids in the atmosphere is specified as \verb|outer_nx, outer_ny, outer_nz|, and the number of layers of soil data (\verb|STEMP、SMOISVC|) is specified as \verb|outer_nl|.\\ 
+The number of grids in the atmosphere is specified as \verb|outer_nx, outer_ny, outer_nz|, and the number of layers of soil data (\verb|STEMP, SMOISVC|) is specified as \verb|outer_nl|.\\
 
 The input data to \verb|QV| and \verb|RH| is not often provided in the upper layers.
 In such cases, the number of layers where the data exist is specified as \verb|knum|. Two methods of giving values to the upper layers are prepared. As default, \verb| upper_qv_type = "ZERO"| as
@@ -141,7 +150,7 @@ In such cases, the number of layers where the data exist is specified as \verb|k
 }
 
 The configuration of \namelist{grdvar} is different by data, as shown in Table \ref{tab:namelist_grdvar}.
-The list of \namelist{grdvar} is shown in Table \ref{tab:grdvar_item}. In Table \ref{tab:grdvar_item}, soil moisture (fraction of volume) is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$. The saturation ratio is the ratio of water volume $V_w$ to void volume in $V$, i.e., $V_w / V_v$. If \nmitem{USE_FILE_LANDWATER}\verb|=.true.| in \namelist{PARAM_MKINIT_REAL_LAND}, prepare data either for \verb|SMOISVC| or of \verb|SMOISDS|. 
+The list of \namelist{grdvar} is shown in Table \ref{tab:grdvar_item}. In Table \ref{tab:grdvar_item}, soil moisture (fraction of volume) is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$. The saturation ratio is the ratio of water volume $V_w$ to void volume in $V$, i.e., $V_w / V_v$. If \nmitem{USE_FILE_LANDWATER}\verb|=.true.| in \namelist{PARAM_MKINIT_REAL_LAND}, prepare data either for \verb|SMOISVC| or of \verb|SMOISDS|.
 
 
 {\small
@@ -150,7 +159,7 @@ The list of \namelist{grdvar} is shown in Table \ref{tab:grdvar_item}. In Table 
 \caption{Variables of \namelist{grdvar}}
 \label{tab:namelist_grdvar}
 \begin{tabularx}{150mm}{llX} \hline
-\rowcolor[gray]{0.9} 
+\rowcolor[gray]{0.9}
 item of \verb|grdvar|      & Explanation    & Note \\ \hline
 item                        & Variable name  & Select from Table \ref{tab:grdvar_item}   \\
 dtype                       & Data type      & \verb|"linear" or "levels" or "map"| \\\hline
@@ -167,7 +176,7 @@ totalrec  & Recorded length of all variables per time  &  \\
 knum      & Number of layers of 3D data & (option) in the case of specifying \\
                              &                      &  value that differs from \verb|outer_nz|\\
                              &                      &  available for RH and QV\\
-missval  & missing value   　    & (option) \\ \hline
+missval  & missing value     & (option) \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
@@ -176,35 +185,49 @@ missval  & missing value   　    & (option) \\ \hline
 {
 \begin{table}[bth]
 \begin{center}
-\caption{Variable list of \nmitem{item} in \namelist{grdvar}. $\ast$ means ``required.''}
+\caption{Variable list of \nmitem{item} in \namelist{grdvar}. The asterisk means ``it is optional but recommended as possible''. The double-asterisk means ``it is available but not recommended''. When you target on the place at high altitude, use of \texttt{HGT} is stongly recommended.}
 \label{tab:grdvar_item}
 \small
-\begin{tabularx}{150mm}{rl|l|l|X} \hline
- \rowcolor[gray]{0.9}  & Variable name            & Explanation &  Unit & \nmitem{dtype} \\ \hline
-$\ast$ &\verb|lon|     & longitude data           & [deg.]      & \verb|linear, map| \\
-$\ast$ &\verb|lat|     & latitude data            & [deg.]      & \verb|linear, map| \\
-$\ast$ &\verb|plev|    & pressure data            & [Pa]        & \verb|levels, map| \\
-$\ast$ &\verb|HGT|     & geopotential height data & [m]         & \verb|map| \\
-$\ast$ &\verb|U|       & eastward wind speed      & [m/s]       & \verb|map| \\
-$\ast$ &\verb|V|       & northward wind speed     & [m/s]       & \verb|map| \\
-$\ast$ &\verb|T|       & temperature              & [K]         & \verb|map| \\
-$\ast$ &\verb|QV|      & specific humidity (optional if RH is given) & [kg/kg] & \verb|map| \\
-$\ast$ &\verb|RH|      & relative humidity (optional if QV is given) & [\%] & \verb|map| \\
-       &\verb|MSLP|    & sea level pressure       & [Pa]        & \verb|map| \\
-       &\verb|PSFC|    & surface pressure         & [Pa]        & \verb|map| \\
-       &\verb|U10|     & eastward 10m wind speed  & [m/s]       & \verb|map| \\
-       &\verb|V10|     & northward 10m wind speed & [m/s]       & \verb|map| \\
-       &\verb|T2|      & 2m temperature           & [K]         & \verb|map| \\
-       &\verb|Q2|      & 2m specific humidity  (optional if RH2 is given)   &[kg/kg] & \verb|map| \\
-       &\verb|RH2|     & 2m relative humidity (optional if Q2 is given) & [\%]  & \verb|map| \\
-       &\verb|TOPO|    & topography of GCM        & [m]         & \verb|map| \\
-       &\verb|lsmask|  & ocean--land distribution of GCM & 0:ocean1:land & \verb|map| \\
-$\ast$ &\verb|SKINT|   & surface temperature      & [K]         & \verb|map| \\
-$\ast$ &\verb|llev|    & soil depth  & [m]        & \verb|levels| \\
-$\ast$ &\verb|STEMP|   & soil temperature         & [K]         & \verb|map| \\
-($\ast$) &\verb|SMOISVC| & soil moisture (volume fraction)  & [-] & \verb|map| \\
-($\ast$) &\verb|SMOISDS| & soil moisture (saturation ratio) & [-] & \verb|map| \\
-$\ast$ &\verb|SST|     & sea surface temperature (optional if SKINT is given) & [K] & \verb|map|\\\hline
+\begin{tabularx}{150mm}{rl|l|l|l} \hline
+ \rowcolor[gray]{0.9} & Variable name & Explanation & Unit & \nmitem{dtype} \\ \hline
+             &\verb|lon|     & longitude data                   & [deg.]         & \verb|linear, map| \\
+             &\verb|lat|     & latitude data                    & [deg.]         & \verb|linear, map| \\
+             &\verb|plev|    & pressure data                    & [Pa]           & \verb|levels, map| \\
+      $\ast$ &\verb|HGT|     & geopotential height data         & [m]            & \verb|map|         \\
+$\ast$$\ast$ &\verb|DENS|    & air density                      & [kg/m3]        & \verb|map|         \\
+             &\verb|U|       & eastward wind speed              & [m/s]          & \verb|map|         \\
+             &\verb|V|       & northward wind speed             & [m/s]          & \verb|map|         \\
+$\ast$$\ast$ &\verb|W|       & vertical wind speed              & [m/s]          & \verb|map|         \\
+             &\verb|T|       & temperature                      & [K]            & \verb|map|         \\
+             &\verb|RH|      & relative humidity                & [\%]           & \verb|map|         \\
+             &               & (optional if QV is given)        &                &                    \\
+             &\verb|QV|      & specific humidity                & [kg/kg]        & \verb|map|         \\
+             &               & (optional if RH is given)        &                &                    \\
+$\ast$$\ast$ &\verb|QC|      & ratio of cloud water mass        & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QR|      & ratio of rain water mass         & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QI|      & ratio of cloud ice mass ratio    & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QS|      & ratio of snow miass ratio        & [kg/kg]        & \verb|map|         \\
+$\ast$$\ast$ &\verb|QG|      & ratio of graupel mass ratio      & [kg/kg]        & \verb|map|         \\
+      $\ast$ &\verb|MSLP|    & sea level pressure               & [Pa]           & \verb|map|         \\
+      $\ast$ &\verb|PSFC|    & surface pressure                 & [Pa]           & \verb|map|         \\
+      $\ast$ &\verb|U10|     & eastward 10m wind speed          & [m/s]          & \verb|map|         \\
+      $\ast$ &\verb|V10|     & northward 10m wind speed         & [m/s]          & \verb|map|         \\
+      $\ast$ &\verb|T2|      & 2m temperature                   & [K]            & \verb|map|         \\
+      $\ast$ &\verb|RH2|     & 2m relative humidity             & [\%]           & \verb|map|         \\
+             &               & (optional if Q2 is given)        &                &                    \\
+      $\ast$ &\verb|Q2|      & 2m specific humidity             & [kg/kg]        & \verb|map|         \\
+             &               & (optional if RH2 is given)       &                &                    \\
+      $\ast$ &\verb|TOPO|    & topography of GCM                & [m]            & \verb|map|         \\
+      $\ast$ &\verb|lsmask|  & ocean--land distribution of GCM  & 0:ocean,1:land & \verb|map|         \\
+             &\verb|SKINT|   & surface temperature              & [K]            & \verb|map|         \\
+             &\verb|llev|    & soil depth                       & [m]            & \verb|levels|      \\
+             &\verb|STEMP|   & soil temperature                 & [K]            & \verb|map|         \\
+             &\verb|SMOISVC| & soil moisture (volume fraction)  & [-]            & \verb|map|         \\
+             &               & (optional if SMOISDS is given)   &                &                    \\
+             &\verb|SMOISDS| & soil moisture (saturation ratio) & [-]            & \verb|map|         \\
+             &               & (optional if SMOISVC is given)   &                &                    \\
+             &\verb|SST|     & sea surface temperature          & [K]            & \verb|map|         \\
+             &               & (optional if SKINT is given)     &                &                    \\\hline
 \end{tabularx}
 \end{center}
 \end{table}

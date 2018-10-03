@@ -39,10 +39,10 @@ module mod_net2g_vars
   integer,         public :: TARGET_ZLEV(max_zcount) = -1
   real(DP),        public :: EXTRA_TINTERVAL = -9.999
   character(5),    public :: EXTRA_TUNIT    = ""
-  character(CLNG), public :: IDIR           = "./data"
+  character(CLNG), public :: IDIR           = "./"
   character(CLNG), public :: ODIR           = "."
   character(CLNG), public :: CONFFILE       = "./run.conf"
-  character(CSHT), public :: VNAME(max_vcount) = ""
+  character(CMID), public :: VNAME(max_vcount) = ""
   character(CSHT), public :: Z_LEV_TYPE     = "original"
   character(5),    public :: DELT           = "1mn"
   character(15),   public :: STIME          = "00:00Z01JAN2000"
@@ -62,17 +62,20 @@ module mod_net2g_vars
   integer,         public :: PRC_NUM_X
   integer,         public :: PRC_NUM_Y
   integer,         public :: TIME_STARTDATE(6)
-  real(DP),        public :: HISTORY_DEFAULT_TINTERVAL
-  character(CMID), public :: HISTORY_DEFAULT_BASENAME
-  character(5),    public :: HISTORY_DEFAULT_TUNIT
-  character(CSHT), public :: HISTORY_DEFAULT_ZDIM = 'native'
-  logical,         public :: HIST_BND = .true.
 
-  real(DP),        public :: MPRJ_basepoint_lon
-  real(DP),        public :: MPRJ_basepoint_lat
-  character(CSHT), public :: MPRJ_type
-  real(DP),        public :: MPRJ_LC_lat1
-  real(DP),        public :: MPRJ_LC_lat2
+  real(DP),            public :: MAPPROJECTION_basepoint_lon               !> position of base point (domain center) in real world [deg]
+  real(DP),            public :: MAPPROJECTION_basepoint_lat               !> position of base point (domain center) in real world [deg]
+  character(len=CSHT), public :: MAPPROJECTION_type             = 'NONE'   !> map projection type
+  real(DP),            public :: MAPPROJECTION_LC_lat1                     !> standard latitude1 for L.C. projection [deg]
+  real(DP),            public :: MAPPROJECTION_LC_lat2                     !> standard latitude2 for L.C. projection [deg]
+
+  character(len=CLNG), public :: FILE_HISTORY_DEFAULT_BASENAME  = ''       !> Base name of the file
+  real(DP),            public :: FILE_HISTORY_DEFAULT_TINTERVAL = -1.0_DP  !> Time interval
+  character(len=CSHT), public :: FILE_HISTORY_DEFAULT_TUNIT     = ''       !> Time unit
+
+  character(len=CSHT), public :: FILE_HISTORY_DEFAULT_ZDIM      = 'native'
+
+  logical,             public :: FILE_HISTORY_CARTESC_BOUNDARY  = .false.
 
   integer,         public :: FID_LOG        = 22
   logical,         public :: LOUT           = .false.

@@ -1,73 +1,113 @@
+%-------------------------------------------------------------------------------
 \section{Setting the history file and output variable} \label{sec:output}
-%====================================================================================
+%-------------------------------------------------------------------------------
 
-A history file and output variables are configured at \namelist{PARAM_HISTORY} and \namelist{HISTITEM} in \verb|run.conf|.
-The default format of the history file is configured at \namelist{PARAM_HISTORY}.
+A history file and output variables are configured at \namelist{PARAM_FILE_HISTORY_CARTESC},\\
+\namelist{PARAM_FILE_HISTORY} and \namelist{HISTORY_ITEM} in \verb|run.conf|.
+The default format of the history file is configured at \namelist{PARAM_FILE_HISTORY}.
+
 \editboxtwo{
-\verb|&PARAM_HISTORY| & \\
-\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; Header name  of files\\
-\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; Output interval of history data \\
-\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; Unit of \verb|HISTORY_DEFAULT_TINTERVAL| \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: Snapshot value, \verb|.true.|: Average value \\
-\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; Types of vertical interpolation.\\
-                                                    & ~ \verb|"model"|: model level (not interpolated)\\
-                                                    & ~ \verb|"z"    |: Interpolated value at absolute height\\
-                                                    & ~ \verb|"pressure"|: Interpolated value at pressure level\\
-\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; Output data type: \verb|REAL4|, \verb|REAL8|\\
-\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; Whether or not data are output at initial time (t=0).\\
-                                                    & ~ \verb|.true.|: Output, \verb|.false.|: Not output.\\
-\verb|/| & \\
+\verb|&PARAM_FILE_HISTORY_CARTESC                   | & \\
+\verb|  FILE_HISTORY_CARTESC_PRES_nlayer = -1,      | & ; Number of pressure levels \\
+                                                      & ~ (OPTION for interpolation at pressure level) \\
+\verb|  FILE_HISTORY_CARTESC_PRES        = 0.D0     | & ; Pressure levels in order from lower to upper [hPa] \\
+                                                      & ~ (OPTION for interpolation at pressure level) \\
+\verb|  FILE_HISTORY_CARTESC_BOUNDARY    = .false., | & ; Whether output data in halo or not.\\
+                                                      & ~ \verb|.true.|: Output, \verb|.false.|: Not output.\\
+\verb|/                                             | & \\
 }
 
-The unit for \nmitem{HISTORY_DEFAULT_TUNIT} can be selected from \\
-\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
-When the average value output is selected as \verb|HISTORY_DEFAULT_TAVERAGE = .true.|,
-the history data averaged over the last period, given as \verb|HISTORY_DEFAULT_TINTERVAL|, is output.
+\editboxtwo{
+\verb|&PARAM_FILE_HISTORY                                      | & \\
+\verb| FILE_HISTORY_TITLE                     = "",            | & ; Brief description of data (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_SOURCE                    = "",            | & ; Name of the source software  (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_INSTITUTION               = "",            | & ; Data author  (See Sec.\ref{sec:netcdf})\\
+\verb| FILE_HISTORY_TIME_UNITS                = "seconds",     | & ; Unit of time axis in \netcdf \\
+\verb| FILE_HISTORY_DEFAULT_BASENAME          = "history_d01", | & ; Base name of the output file \\
+\verb| FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = .false.,       | & ; Add the time label to the file name? \\
+\verb| FILE_HISTORY_DEFAULT_ZCOORD            = "model",       | & ; Type of vertical coordinate \\
+\verb| FILE_HISTORY_DEFAULT_TINTERVAL         = 3600.D0,       | & ; Time interval of history output \\
+\verb| FILE_HISTORY_DEFAULT_TUNIT             = "SEC",         | & ; Unit of \verb|DEFAULT_TINTERVAL| \\
+\verb| FILE_HISTORY_DEFAULT_TAVERAGE          = .false.,       | & ; Average the value during the interval? \\
+\verb| FILE_HISTORY_DEFAULT_DATATYPE          = "REAL4",       | & ; Output data type: \verb|REAL4| or \verb|REAL8| \\
+\verb| FILE_HISTORY_OUTPUT_STEP0              = .true.,        | & ; Output data at initial time (t=0)? \\
+\verb| FILE_HISTORY_OUTPUT_WAIT               = 0.D0,          | & ; Time to suppress output \\
+\verb| FILE_HISTORY_OUTPUT_WAIT_TUNIT         = "SEC",         | & ; Unit of \verb|OUTPUT_WAIT| \\
+\verb| FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   = -1.D0,         | & ; Time interval to switch the file \\
+\verb| FILE_HISTORY_OUTPUT_SWITCH_TUNIT       = "SEC",         | & ; Unit of \verb|OUTPUT_SWITCH_TINTERVAL| \\
+\verb| FILE_HISTORY_ERROR_PUTMISS             = .true.,        | & ; Check missing preparation of the data? \\
+\verb| FILE_HISTORY_AGGREGATE                 = .false.,       | & ; Aggregate to one file with PnetCDF? \\
+\verb|/                                                        | & \\
+}
 
-When the absolute height level is selected as \nmitem{HISTORY_DEFAULT_ZCOORD} \verb|= "z"|,
+In default, each process output the history file.
+When \nmitem{FILE_HISTORY_AGGREGATE} is set to \verb|.true.|, the distributed output file is aggregated into one file by using parallel \Netcdf.
+The default setting of \nmitem{FILE_HISTORY_AGGREGATE} is determined by the \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}.
+Please refer to Section \ref{sec:netcdf}
+
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} is time interval of history output and its unit is defined by \nmitem{FILE_HISTORY_DEFAULT_TUNIT}.
+The unit can be selected from\\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|.\\
+%
+When the average value output is selected as \nmitem{FILE_HISTORY_DEFAULT_TAVERAGE} to \verb|= .true.|,
+the history data averaged over the last period, given as \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}, is output.
+
+The time interval of history output must be the equal to or a multiple of the time interval of its related scheme.
+When you want to disable checking this consistency,\\
+please set \nmitem{FILE_HISTORY_ERROR_PUTMISS} to \verb|.false.|.
+
+When \nmitem{FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL} is set to \verb|.true.|, the time label is added to the name of output file.
+The time label is generated from the current time in the simulation, and its format is defined by \verb|YYYYMMDD-HHMMSS.msec|.
+
+When \nmitem{FILE_HISTORY_OUTPUT_STEP0} is set to \verb|.true.|, the variables at the time before time integration (initial state) are output to history file.
+You can suppress history output during the time in the simulation defined by \nmitem{FILE_HISTORY_OUTPUT_WAIT} and \nmitem{FILE_HISTORY_OUTPUT_WAIT_TUNIT}.
+If the value is negative, no suppression occurs.
+\nmitem{FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL} is time interval of switching output file and its unit is defined by \nmitem{FILE_HISTORY_OUTPUT_SWITCH_TUNIT}.
+If the value is negative only one file per process is used for history output. If this option is enabled, the time label is added to the file name.
+
+Three vertical coordinates are available to output atmospheric 3-D variables.\\
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD} \verb|= "model"| is selected in default.
+In this case, the variable is output with original coordinate of the model (terrain-following, z* coordinate for \scalerm).
+When \nmitem{FILE_HISTORY_DEFAULT_ZCOORD} is set to \verb|"z"|, the variables are interpolated to absolute height
 the number of levels in output data is the same as that of the model level.
 The height at each level is the same as that of the model level in a grid cell with no topography.
-When the pressure level is selected as \nmitem{HISTORY_DEFAULT_ZCOORD} \verb|= "pressure"|,
-the configurations of \nmitem{HIST_PRES_nlayer} and \nmitem{HIST_PRES} in \namelist{PARAM_HIST} are required.
+The variables are interpolated to the pressure level when \nmitem{FILE_HISTORY_DEFAULT_ZCOORD} is set to \verb|"pressure"|.
+In this case, the configurations of \nmitem{FILE_HISTORY_CARTESC_PRES_nlayer} and \nmitem{FILE_HISTORY_CARTESC_PRES} in \namelist{PARAM_FILE_HISTORY_CARTESC} are required.
 
-When \nmitem{HIST_BND} in \namelist{PARAM_HIST} is \verb|.true.|,
+When \nmitem{FILE_HISTORY_CARTESC_BOUNDARY} in \namelist{PARAM_FILE_HISTORY_CARTESC} is \verb|.true.|,
 the data in halo, which is located outside of a target domain, is also output except in the case of periodic boundary condition.
-The setting of \nmitem{HIST_BND} is applied to all output variables.\\
+The setting of \nmitem{FILE_HISTORY_CARTESC_BOUNDARY} is applied to all output variables.\\
+
+The output variables are set by adding \namelist{HISTORY_ITEM}.
+The output format follows the default setting specified at \namelist{PARAM_FILE_HISTORY}.
+By adding namelists with ``(OPTION)'', the format for a specific variable can be changed from the default setting.
 
 \editboxtwo{
-\verb|&PARAM_HIST| & \\
-\verb|  HIST_PRES_nlayer   = -1,         | & ; Number of levels\\
-                                           & ~ (OPTION for interpolation at pressure level)\\
-\verb|  HIST_PRES          = 0.0,        | & ; Pressure levels in order from lower to upper level. The unit is [hPa].\\
-                                           & ~ (OPTION for interpolation at pressure level)\\
-\verb|  HIST_BND           = .false.     | & ; Whether output data in halo or not.\\
-                                           & ~ \verb|.true.|: Output, \verb|.false.|: Not output.\\
-\verb|/| & \\
+\verb|&HISTORY_ITEM                    | & \\
+\verb| NAME              = "RAIN",     | &  Variable name. List of variables is in the reference manual (See Section \ref{sec:reference_manual}) \\
+\verb| OUTNAME           = "",         | &  (OPTION) same as \verb|NAME| \\
+\verb| BASENAME          = "rain_d01", | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_BASENAME| \\
+\verb| POSTFIX_TIMELABEL = .false.,    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TAVERAGE| \\
+\verb| ZCOORD            = "model",    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_ZCOORD| \\
+\verb| TINTERVAL         = 600.D0,     | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TINTERVAL| \\
+\verb| TUNIT             = "SEC",      | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TINTERVAL| \\
+\verb| TAVERAGE          = .true.,     | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_TAVERAGE| \\
+\verb| DATATYPE          = "REAL4",    | &  (OPTION) same as \verb|FILE_HISTORY_DEFAULT_DATATYPE| \\
+\verb|/                                | & \\
 }
 
-The output variables are set by adding \namelist{HISTITEM}.
-The output format follows the default setting specified at \namelist{PARAM_HISTORY}.
-By adding namelists with ``(OPTION),''
-the format for a specific variable can be changed from the default setting.
+If the variable requested by \namelist{HISTORY_ITEM} is not prepared during the time stepping of the simulation, the execution will stop and error log is written to the log file.
+This case may occur if there is the spelling miss of the \nmitem{NAME}, or when requested variables are not used in the selected scheme.
 
-
-\editboxtwo{
-\verb|&HISTITEM| &\\
-\verb| ITEM     = "RAIN",    | &  Variable name. List of variables is shown in Appendix \ref{achap:namelist}.\\
-\verb| BASENAME = "rain_d01",| &  (OPTION) same as \verb|HISTORY_DEFAULT_BASENAME|\\
-\verb| TINTERVAL= 600.0,     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
-\verb| TUNIT    = "SEC",     | &  (OPTION) same as \verb|HISTORY_DEFAULT_TINTERVAL|\\
-\verb| TAVERAGE = .true.,    | &  (OPTION) same as \verb|HISTORY_DEFAULT_TAVERAGE|\\
-\verb| ZCOORD   = "model",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_ZCOORD|\\
-\verb| DATATYPE = "REAL4",   | &  (OPTION) same as \verb|HISTORY_DEFAULT_DATATYPE|\\
-\verb|/| & \\
-}
-
-Namelists with ``(OPTION)'' are applied only to the variable \nmitem{ITEM}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTITEM} be added, maintaining the above setting of \namelist{PARAM_HISTORY}. The snapshot values of \verb|T, U, V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file. 
+Namelists with ``(OPTION)'' are applied only to the variable \nmitem{NAME}. If the default setting is used for the variable, the namelist with ``(OPTION)'' can be omitted. For example, let the below setting for \namelist{HISTORY_ITEM} be added, maintaining the above setting of \namelist{PARAM_FILE_HISTORY}. The snapshot values of \verb|U and V| are stored as four-byte real values at an interval of 3600 s in the file \verb|history_d01.xxxxxx.nc|, whereas the value of \verb|RAIN| averaged over the last 600 seconds is stored each time in the file. The value of \verb|T| is output as \verb|T| in a rule same as \verb|U and V|, and is also output as \verb|T_pres| with interpolation to pressure coordinate.
 
 \editbox{
-\verb|&HISTITEM  ITEM = "T" /|\\
-\verb|&HISTITEM  ITEM = "U" /|\\
-\verb|&HISTITEM  ITEM = "V" /|\\
-\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = 600.0, TAVERAGE = .true. /|\\
+\verb|&HISTORY_ITEM  NAME="T" /|\\
+\verb|&HISTORY_ITEM  NAME="U" /|\\
+\verb|&HISTORY_ITEM  NAME="V" /|\\
+\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TAVERAGE=.true. /|\\
+\verb|&HISTORY_ITEM  NAME="T", OUTNAME="T_pres", ZCOORD="pressure" /|\\
 }
+
+
+

@@ -1,0 +1,135 @@
+%\section{Setting the common components} \label{sec:common}
+%------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\section{Setting Physical Constants} \label{subsec:const}
+%-------------------------------------------------------------------------------
+
+The some physical constants are able to modify in \namelist{PARAM_CONST} in the configure file.
+
+\editboxtwo{
+\verb|&PARAM_CONST                           | & \\
+\verb| CONST_RADIUS            = 6.37122D+6, | & ; Radius of the planet [m] \\
+\verb| CONST_OHM               = 7.2920D-5,  | & ; Angular velocity of the planet [1/s] \\
+\verb| CONST_GRAV              = 9.80665D0,  | & ; Standard acceleration of gravity [m/s2] \\
+\verb| CONST_Rdry              = 287.04D0,   | & ; Specific gas constant (dry air) [J/kg/K] \\
+\verb| CONST_CPdry             = 1004.64D0,  | & ; Specific heat (dry air,constant pressure) [J/kg/K] \\
+\verb| CONST_LAPS              = 6.5D-3,     | & ; Lapse rate of ISA [K/m] \\
+\verb| CONST_Pstd              = 101325.D0,  | & ; Standard pressure [Pa] \\
+\verb| CONST_PRE00             = 100000.D0,  | & ; Pressure reference [Pa] \\
+\verb| CONST_Tstd              = 288.15D0,   | & ; Standard temperature (15C) [K] \\
+\verb| CONST_THERMODYN_TYPE    = 'EXACT',    | & ; Internal energy type \\
+\verb| CONST_SmallPlanetFactor = 1.D0,       | & ; Factor for small planet [1] \\
+\verb|/                                      | & \\
+}
+
+\noindent
+When \nmitem{CONST_THERMODYN_TYPE} is 'EXACT', temperature dependencies of the latent heat are considered.
+%
+When \nmitem{CONST_THERMODYN_TYPE} is 'SIMPLE', specific heat of water categories are set to that of dry air,
+and temperature dependencies of the latent heat are ignored.
+%
+The \nmitem{CONST_RADIUS} is multiplied by the \nmitem{CONST_SmallPlanetFactor}.
+At the same time, \nmitem{CONST_OHM} is multiplied by the inverse of the \nmitem{CONST_SmallPlanetFactor}.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Calendar} \label{subsec:calendar}
+%-------------------------------------------------------------------------------
+
+The calendar type can be specified in \namelist{PARAM_CALENDAR} in the configure file.
+Gregorian calendar is used in default.
+
+\editboxtwo{
+\verb|&PARAM_CALENDAR             | & \\
+\verb| CALENDAR_360DAYS = .false. | & ; Whether 12x30 days calendar is used? \\
+\verb| CALENDAR_365DAYS = .false. | & ; Whether leap year is considered? \\
+\verb|/                           | & \\
+}
+
+\noindent
+The setting of the calendar affects calculation of solar zenith angle.
+It is calculated so that length of one year and the full circle of the ecliptic match.
+Note that the external data in the different calendar should not be read.
+
+When \nmitem{CALENDAR_360DAYS} is \verb|.true.|,
+the calendar that one year is 12 months and one month is 30 days, is set.
+%
+When \nmitem{CALENDAR_365DAYS} is \verb|.true.|,
+the Gregorian calendar is used without leap year.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Random Number Generator} \label{subsec:random}
+%-------------------------------------------------------------------------------
+
+A parameter of the random number generator is set in \namelist{PARAM_RANDOM} in the configure file.
+
+\editboxtwo{
+\verb|&PARAM_RANDOM         | & \\
+\verb| RANDOM_FIX = .false. | & ; Random seed is fixed? \\
+\verb|/                     | & \\
+}
+
+\noindent
+The intrinsic function of random number generator is used in the scale library. Note that the generated number is pseudorandom.
+The seed of the random number is determined by current datetime, cpu time, and the process id.
+%
+When \nmitem{RANDOM_FIX} is \verb|.true.|, the seed is fixed by specific number.
+This option is useful to reproduce the simulation results, which use the random perturbation for the initial field.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Performance Profiler} \label{subsec:prof}
+%-------------------------------------------------------------------------------
+
+Parameters of the performance profiler are set in \namelist{PARAM_PROF} in the configure file.
+
+\editboxtwo{
+\verb|&PARAM_PROF                 | & \\
+\verb| PROF_rap_level   = 2       | & ; Rap output level \\
+\verb| PROF_mpi_barrier = .false. | & ; Add barrier command of MPI in every rap? \\
+\verb|/                           | & \\
+}
+
+\noindent
+To measure the elapse time, utility functions (PROF\_rapstart,PROF\_rapend) are inserted in the source code.
+These measurement sections are also used for detailed performance profiling.
+%
+The results of the rap time are displayed at the end of the log file.
+If \nmitem{IO_LOG_ALLNODE} in  \namelist{PARAM_IO} is \verb|.true.|, the result of each process is reported to each log file individually.
+If \nmitem{IO_LOG_SUPPRESS} in \namelist{PARAM_IO} is \verb|.true.|, the result is sent to the standard output.
+%
+Each measurement section has the output level. The section, which has the output level larger than the \nmitem{PROF_rap_level} are not measured.
+
+When \nmitem{PROF_mpi_barrier} is \verb|.true.|, barrier command of MPI is called before and after getting current time.
+This option is useful to separate the computation time and communication time.
+The computation time often shows large imbalance among the processes.
+
+
+
+%-------------------------------------------------------------------------------
+\section{Setting Statistics Monitor} \label{subsec:statistics}
+%-------------------------------------------------------------------------------
+
+Parameters of the statistics monitor are set in \namelist{PARAM_STATISTICS} in the configure file.
+
+\editboxtwo{
+\verb|&PARAM_STATISTICS                    | & \\
+\verb| STATISTICS_checktotal     = .false. | & ; Calculate and report variable totals to logfile? \\
+\verb| STATISTICS_use_globalcomm = .false. | & ; Calculate total with global communication? \\
+\verb|/                                    | & \\
+}
+
+\noindent
+When \nmitem{STATISTICS_checktotal} is \verb|.true.|, domain total of some variables are calculated and reported to the log file, for debugging.
+%
+When \nmitem{STATISTICS_use_globalcomm} is \verb|.true.|, global domain total is calculated by using global communication.
+This option can slow the simulation time.
+When the option is \verb|.false.|, the total is calculated in the spatial region allocated for each process.
+
+
+

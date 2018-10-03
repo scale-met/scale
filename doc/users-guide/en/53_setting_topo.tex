@@ -2,37 +2,82 @@
 %-----------------------------------------------------------------------
 
 \scalerm employs the terrain-following coordinates to represent topography.
-In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude. The allowable maximum angle of inclination, $\theta_{\max}$[radian] is calculated as follows: 
+In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude. The maximum allowable angle of inclination, $\theta_{\max}$[radian] is calculated as follows:
 \begin{eqnarray}
   && \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )\nonumber,
 \end{eqnarray}
-where $\mathrm{DZ}$ and $\mathrm{DX}$ are the horizontal and vertical grid intervals, respectively.  As shown in the above equation, $\theta_{\max}$ depends on spatial resolution. 
-In \scalerm, the default value of $\mathrm{RATIO}$ is 1.0.
-If $\mathrm{RATIO}$ is greater than unity, the fine topography is expressed, and vice versa. Note that at $\mathrm{RATIO} >1$, the risk of numerical instability increases.
+where $\mathrm{DZ}$ and $\mathrm{DX}$ are the horizontal and vertical grid intervals, respectively.  As shown in the above equation, $\theta_{\max}$ depends on spatial resolution.
+If $\mathrm{RATIO}$ is greater than unity, the fine topography is expressed, and vice versa. Note that if $\mathrm{RATIO}$ is set to a greatly large value, the risk of numerical instability increases.
+In \scalerm, the default value of $\mathrm{RATIO}$ is 10.0.
 
-The program \verb|scale-rm_pp| converts external topography data into \scalelib format.  The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configuration file \verb|pp.conf|. An example is as follows:
+The program \verb|scale-rm_pp| converts external topography data into \scalelib format.
+The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configuration file \verb|pp.conf|. An example is as follows:
+
 \editboxtwo{
-\verb|&PARAM_CNVTOPO  |                  & \\
- \verb|CNVTOPO_name                  = "GTOPO30", | & ; Data name used\\
- \verb|CNVTOPO_smooth_maxslope_ratio = 1.0,       | & ; Allowable maximum ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
- \verb|CNVTOPO_smooth_local          = .true.,    | & ; 
-Whether smoothened or not, only grids whose angles of inclination exceed the maximum value \\
- \verb|CNVTOPO_copyparent            = .false.,   | & ; Whether the topography in the buffer region is copied \\
-\verb|/|\\
+\verb|&PARAM_CNVTOPO                               | & \\
+\verb|CNVTOPO_UseGTOPO30            = .true.,      | & ; Use GTOPO30 dataset? \\
+\verb|CNVTOPO_UseDEM50M             = .false.,     | & ; Use DEM50M dataset? \\
+\verb|CNVTOPO_UseUSERFILE           = .false.,     | & ; Use user-defined dataset? \\
+\verb|CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; Type of smoothing filter (OFF,LAPLACIAN,GAUSSIAN) \\
+\verb|CNVTOPO_smooth_maxslope_ratio = 5.D0,        | & ; Maximum allowable ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
+\verb|CNVTOPO_smooth_maxslope       = -1.D0,       | & ; Maximum allowable angle of inclination [deg] \\
+\verb|CNVTOPO_smooth_local          = .true.,      | & ; Try to continue smoothing, for only grids whose angles of inclination exceed the maximum value? \\
+\verb|CNVTOPO_smooth_itelim         = 10000,       | & ; Number limit of the smoothing iteration \\
+\verb|CNVTOPO_smooth_hypdiff_niter  = 20,          | & ; Number of the smoothing iteration by hyperdiffusion \\
+\verb|CNVTOPO_interp_level          = 5,           | & ; Number of the neighbor grid points for interpolation \\
+\verb|CNVTOPO_copy_parent           = .false.,     | & ; The topography in the buffer region of child domain is copied from parent domain? \\
+\verb|/                                            | \\
 }
-\scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as external input topography data.
 
-The topographical data is formulated as the area-weighting mean of grid spacing.
-This conversion calculates the difference in altitude between them using their neighboring grids and inclinations.
-In case $\theta_{\max}$ exceeds the allowable maximum angle of inclination, \\
-i.e., \nmitem{CNVTOPO_smooth_maxslope_ratio}, the topography is smoothened by a Laplacian filter with several iterations until the angle is below the allowable maximum angle.
-Smoothing is selectively applied either only to grids whose angles of inclination exceed the maximum value, or to the entire domain.
-Since the former saves the sharp structure of the topography within the allowable maximum angle, it is selected if the representation of fine structures is desired.
-The Gaussian filter is also selected as a smoothing filter. In this case, the topography is smoother than when the Laplacian filter is used.
+\scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as the input of the topography data.
+The program \verb|scale-rm_pp| can convert the topographic data prepared by user. Please refer to the next section \ref{subsec:topo_userfile}, too.
+The combination of these datasets is also available. If both \nmitem{CNVTOPO_UseGTOPO30} and \nmitem{CNVTOPO_UseDEM50M} are set to \verb|true|, the program makes the data as follows:
 
-\nmitem{CNVTOPO_copyparent} is the item used for the nesting computation.
+\begin{itemize}
+ \item Interpolate GTOPO30 dataset to the grid point of simulation domain,
+ \item Interpolate DEM50M dataset and overwrite the region covered by DEM50M,
+ \item Apply smoothing.
+\end{itemize}
+
+In default, the nearest five grid points of input data around the target grid point are used for the interpolation. The number of using grid point is determined by \nmitem{CNVTOPO_interp_level}.
+There are two types of filter for smoothing the elevation of the steep slope in re-gridded topography: Laplacian and Gaussian filter.
+The type can be chosen by \nmitem{CNVTOPO_smooth_type}. The Laplacian filter is used in default.
+In the smoothing operation, the selected filter is applied multiple times until the angle is below the maximum allowable angle $\theta_{\max}$.
+By specifying \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can set $\mathrm{RATIO}$ described above directly. Or, you can use the parameter \nmitem{CNVTOPO_smooth_maxslope}, which determines the maximum angle in degree.
+The number limit of the smoothing iteration is 10000 times in default. You can set larger number by setting \nmitem{CNVTOPO_smooth_itelim}.
+When \nmitem{CNVTOPO_smooth_local} is set to \verb|.true.|, the iterative filter operation is continued only at the grid point where the smoothing is not completed.
+
+Additional hyperdiffusion is applied to the topography for removing the noise in a small spatial scale. We recommend to do this filtering to reduce the numerical noise in the simulation.
+If \nmitem{CNVTOPO_smooth_hypdiff_niter} is set to negative, the filter is not applied.
+
+\nmitem{CNVTOPO_copy_parent} is the item used for the nesting computation.
 In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
-At this time, problems often occers due to 
-an inconsistency between 
+At this time, problems often occers due to
+an inconsistency between
 the atmospheric data in the buffer region of the child domain and that in the parent domain.
-To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copyparent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copyparent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copyparent}.
+To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copy_parent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copy_parent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copy_parent}.
+
+
+
+\section{Preparation of user-defined topography} \label{subsec:topo_userfile}
+
+When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|, the program \verb|scale-rm_pp| try to convert the file specified by \namelist{PARAM_CNVTOPO_USERFILE}.
+The sample of the setting is as follows:
+
+\editboxtwo{
+\verb|&PARAM_CNVTOPO_USERFILE                        | & \\
+\verb|USERFILE_IN_DIR       = "./input_topo",        | & ; Directory path of input file \\
+\verb|USERFILE_IN_FILENAME  = "GTOPO30_e100n40.grd", | & ; Name of the input file \\
+\verb|USERFILE_DLAT         = 0.0083333333333333D0,  | & ; Interval of the grid (latitude,degree) \\
+\verb|USERFILE_DLON         = 0.0083333333333333D0,  | & ; Interval of the grid (longitude,degree) \\
+\verb|USERFILE_IN_DATATYPE  = "INT2",                | & ; Type of the data (INT2,INT4,REAL4,REAL8) \\
+\verb|USERFILE_LATORDER_N2S = .true.,                | & ; Data is stored from north to south in latitudinal direction? \\
+\verb|USERFILE_LAT_START    = -10.D0,                | & ; Start of the grid point (latitude,degree) \\
+\verb|USERFILE_LAT_END      =  40.D0,                | & ; End   of the grid point (latitude,degree) \\
+\verb|USERFILE_LON_START    = 100.D0,                | & ; Start of the grid point (longitude,degree) \\
+\verb|USERFILE_LON_END      = 140.D0,                | & ; End   of the grid point (longitude,degree) \\
+\verb|/                                              | \\
+}
+
+In this sample, the data file named \verb|GTOPO30_e100n40.grd| is located in the directory \verb|./input_topo|. The data covers from 40 degree north to 10 degree south in latitude, and from 100 degree east to 140 degree east in longitude. The grid interval is 30 arc second for both latitude and longitude. Thus, this data contains 100 and 80 points for latitude and longitude, respectively. The value is stored with a 2-byte integer.
+The user-defined data must be a simple binary as same as the format of \grads (direct access) except for \verb|USERFILE_IN_DATATYPE|.

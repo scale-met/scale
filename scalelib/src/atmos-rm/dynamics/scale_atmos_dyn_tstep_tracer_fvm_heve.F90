@@ -6,21 +6,18 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_tracer_fvm_heve
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 
@@ -59,14 +56,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_tracer_fvm_heve_setup( type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     character(len=*), intent(in) :: type
 
     if ( type /= 'FVM-HEVE' ) then
-       write(*,*) 'xxx Tstep_tracer_type is not "FVM-HEVE"!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_tracer_fvm_heve_setup",*) 'Tstep_tracer_type is not "FVM-HEVE"!'
+       call PRC_abort
     end if
 
     return
@@ -82,14 +79,6 @@ contains
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_fct
     use scale_atmos_dyn_fvm_flux, only: &

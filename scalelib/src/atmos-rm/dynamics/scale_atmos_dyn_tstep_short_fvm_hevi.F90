@@ -6,13 +6,8 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] newly impremented
-!! @li      2014-04-04 (S.Nishizawa) [mod] support terrain-following coordinate
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
 
 #ifdef PROFILE_FAPP
 #define PROFILE_START(name) call fapp_start(name, 1, 1)
@@ -25,15 +20,16 @@
 #define PROFILE_STOP(name)
 #endif
 
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_hevi
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
-  use scale_grid_index
+  use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
 #if defined DEBUG || defined QUICKDEBUG
@@ -87,8 +83,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -99,8 +95,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVI' .AND. ATMOS_DYN_TYPE /= 'HEVI' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hevi_regist",*) 'ATMOS_DYN_TYPE is not FVM-HEVI. Check!'
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HEVI
@@ -108,10 +104,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HEVI)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hevi_regist",*) 'Register additional prognostic variables (HEVI)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return
@@ -123,7 +119,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HEVI Setup'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hevi_setup",*) 'HEVI Setup'
 
     return
   end subroutine ATMOS_DYN_Tstep_short_fvm_hevi_setup
@@ -147,7 +143,7 @@ contains
        REF_dens, REF_rhot,                          &
        BND_W, BND_E, BND_S, BND_N,                  &
        dtrk, last                                   )
-    use scale_grid_index
+    use scale_atmos_grid_cartesC_index
     use scale_const, only: &
 #ifdef DRY
        Rdry   => CONST_Rdry,  &
@@ -179,21 +175,9 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ,   &
        ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY , &
-       I_UY , &
-       I_XV , &
-       I_UV
 #ifdef HIST_TEND
-    use scale_history, only: &
-       HIST_in
+    use scale_file_history, only: &
+       FILE_HISTORY_in
 #endif
     implicit none
 
@@ -295,17 +279,17 @@ contains
 #endif
 
     ! for implicit solver
-    real(RP) :: A(KA,IA,JA)
+    real(RP) :: A(KA)
     real(RP) :: B
     real(RP) :: Sr(KA,IA,JA)
     real(RP) :: Sw(KA,IA,JA)
     real(RP) :: St(KA,IA,JA)
-    real(RP) :: PT(KA,IA,JA)
-    real(RP) :: C(KMAX-1,IA,JA)
+    real(RP) :: PT(KA)
+    real(RP) :: C(KMAX-1)
 
-    real(RP) :: F1(KA,IA,JA)
-    real(RP) :: F2(KA,IA,JA)
-    real(RP) :: F3(KA,IA,JA)
+    real(RP) :: F1(KA)
+    real(RP) :: F2(KA)
+    real(RP) :: F3(KA)
 
     integer :: IIS, IIE, JJS, JJE
     integer :: k, i, j
@@ -315,7 +299,7 @@ contains
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
 
-    PT(:,:,:) = UNDEF
+    PT(:) = UNDEF
 
     qflx_hi (:,:,:,:) = UNDEF
     qflx_J13(:,:,:)   = UNDEF
@@ -688,7 +672,7 @@ contains
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,B,pg,advcv) &
+       !$omp private(i,j,A,B,C,F1,F2,F3,PT,pg,advcv) &
 #ifdef HIST_TEND
        !$omp shared(lhist,pg_t,advcv_t) &
 #endif
@@ -697,36 +681,36 @@ contains
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
-       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,PT,POTT,DPRES) &
-       !$omp shared(GRAV,dtrk,A,C,F1,F2,F3,REF_dens,Sr,Sw,St,RT2P) &
+       !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,POTT,DPRES) &
+       !$omp shared(GRAV,dtrk,REF_dens,Sr,Sw,St,RT2P) &
        !$omp shared(ATMOS_DYN_FVM_flux_valueW_Z) &
        !$omp shared(MAPF,GSQRT,J33G,I_XY,I_XYZ,I_XYW,CDZ,RCDZ,RFDZ)
 #else
        !$omp parallel do default(shared) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(B,pg,advcv)
+       !$omp private(A,B,C,F1,F2,F3,PT,pg,advcv)
 #endif
        do j = JJS, JJE
        do i = IIS, IIE
 
-          call ATMOS_DYN_FVM_flux_valueW_Z( PT(:,i,j), & ! (out)
+          call ATMOS_DYN_FVM_flux_valueW_Z( PT(:), & ! (out)
                MOMZ(:,i,j), POTT(:,i,j), GSQRT(:,i,j,I_XYZ), & ! (in)
                CDZ )
 
           do k = KS, KE
-             A(k,i,j) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
+             A(k) = dtrk**2 * J33G * RCDZ(k) * RT2P(k,i,j) * J33G / GSQRT(k,i,j,I_XYZ)
           enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KS+1) + CDZ(KS) )
-          F1(KS,i,j) =        - ( PT(KS+1,i,j) * RFDZ(KS) *   A(KS+1,i,j)             + B ) / GSQRT(KS,i,j,I_XYW)
-          F2(KS,i,j) = 1.0_RP + ( PT(KS  ,i,j) * RFDZ(KS) * ( A(KS+1,i,j)+A(KS,i,j) )     ) / GSQRT(KS,i,j,I_XYW)
+          F1(KS) =        - ( PT(KS+1) * RFDZ(KS) *   A(KS+1)         + B ) / GSQRT(KS,i,j,I_XYW)
+          F2(KS) = 1.0_RP + ( PT(KS  ) * RFDZ(KS) * ( A(KS+1)+A(KS) )     ) / GSQRT(KS,i,j,I_XYW)
           do k = KS+1, KE-2
              B = GRAV * dtrk**2 * J33G / ( CDZ(k+1) + CDZ(k) )
-             F1(k,i,j) =        - ( PT(k+1,i,j) * RFDZ(k) *   A(k+1,i,j)            + B ) / GSQRT(k,i,j,I_XYW)
-             F2(k,i,j) = 1.0_RP + ( PT(k  ,i,j) * RFDZ(k) * ( A(k+1,i,j)+A(k,i,j) )     ) / GSQRT(k,i,j,I_XYW)
-             F3(k,i,j) =        - ( PT(k-1,i,j) * RFDZ(k) *              A(k,i,j)   - B ) / GSQRT(k,i,j,I_XYW)
+             F1(k) =        - ( PT(k+1) * RFDZ(k) *   A(k+1)        + B ) / GSQRT(k,i,j,I_XYW)
+             F2(k) = 1.0_RP + ( PT(k  ) * RFDZ(k) * ( A(k+1)+A(k) )     ) / GSQRT(k,i,j,I_XYW)
+             F3(k) =        - ( PT(k-1) * RFDZ(k) *          A(k)   - B ) / GSQRT(k,i,j,I_XYW)
           enddo
           B = GRAV * dtrk**2 * J33G / ( CDZ(KE) + CDZ(KE-1) )
-          F2(KE-1,i,j) = 1.0_RP + ( PT(KE-1,i,j) * RFDZ(KE-1) * ( A(KE,i,j)+A(KE-1,i,j) )    ) / GSQRT(KE-1,i,j,I_XYW)
-          F3(KE-1,i,j) =        - ( PT(KE-2,i,j) * RFDZ(KE-1) *             A(KE-1,i,j)  - B ) / GSQRT(KE-1,i,j,I_XYW)
+          F2(KE-1) = 1.0_RP + ( PT(KE-1) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
+          F3(KE-1) =        - ( PT(KE-2) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
           do k = KS, KE-1
              pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
                     - DPRES(k  ,i,j) - RT2P(k  ,i,j)*dtrk*St(k  ,i,j) ) &
@@ -734,20 +718,20 @@ contains
                   - GRAV &
                     * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
                       + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
-             C(k-KS+1,i,j) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
+             C(k-KS+1) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
 #endif
           enddo
 
           call solve_direct( &
-               C(:,i,j),        & ! (inout)
-               F1(:,i,j), F2(:,i,j), F3(:,i,j) ) ! (in)
+               C(:),               & ! (inout)
+               F1(:), F2(:), F3(:) ) ! (in)
 
           do k = KS, KE-1
 #ifdef DEBUG_HEVI2HEVE
           ! for debug (change to explicit integration)
-             C(k-KS+1,i,j) = MOMZ(k,i,j)
+             C(k-KS+1) = MOMZ(k,i,j)
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                                  + J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
@@ -758,46 +742,46 @@ contains
 #else
              ! z-momentum flux
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-                                 + J33G * C(k-KS+1,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+                                 + J33G * C(k-KS+1) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              ! z-momentum
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
-                            + ( C(k-KS+1,i,j) - MOMZ(k,i,j) )
+                            + ( C(k-KS+1) - MOMZ(k,i,j) )
 #endif
           enddo
           MOMZ_RK(KS-1,i,j) = 0.0_RP
           MOMZ_RK(KE  ,i,j) = 0.0_RP
 
           ! density and rho*theta
-          advcv = - C(1,i,j)            * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1)            * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advcv + Sr(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_DENS) = advcv
 #endif
-          advcv = - C(1,i,j)*PT(KS,i,j) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1)*PT(KS) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advcv + St(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
           do k = KS+1, KE-1
-             advcv = - ( C(k-KS+1,i,j)           - C(k-KS,i,j) ) &
+             advcv = - ( C(k-KS+1)           - C(k-KS) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
 #endif
-             advcv = - ( C(k-KS+1,i,j)*PT(k,i,j) - C(k-KS,i,j)*PT(k-1,i,j) ) &
+             advcv = - ( C(k-KS+1)*PT(k) - C(k-KS)*PT(k-1) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
           enddo
-          advcv = C(KE-KS,i,j)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = C(KE-KS)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_DENS) = advcv
 #endif
-          advcv = C(KE-KS,i,j) * PT(KE-1,i,j) * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = C(KE-KS) * PT(KE-1) * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           RHOT_RK(KE,i,j) = RHOT0(KE,i,j) + dtrk * ( advcv + St(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_RHOT) = advcv
@@ -805,7 +789,7 @@ contains
 
 #ifdef DEBUG
           call check_equation( &
-               C(:,i,j), &
+               C(:), &
                DENS(:,i,j), MOMZ(:,i,j), RHOT(:,i,j), DPRES(:,i,j), &
                REF_dens(:,i,j), &
                Sr(:,i,j), Sw(:,i,j), St(:,i,j), &
@@ -1073,30 +1057,30 @@ contains
 
 #ifdef HIST_TEND
     if ( lhist ) then
-       call HIST_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection)',    'kg/m3/s'   )
-       call HIST_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z (vert. advection)',    'kg/m2/s2', zdim='half')
-       call HIST_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x (vert. advection)',    'kg/m2/s2', xdim='half')
-       call HIST_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y (vert. advection)',    'kg/m2/s2', ydim='half')
-       call HIST_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta  (vert. advection)',    'K kg/m3/s' )
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection) (w/ HIST_TEND)',    'kg/m3/s'   )
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta  (vert. advection) (w/ HIST_TEND)',    'K kg/m3/s' )
 
-       call HIST_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of density    (horiz. advection)',   'kg/m3/s'   )
-       call HIST_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z (horiz. advection)',   'kg/m2/s2', zdim='half')
-       call HIST_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x (horiz. advection)',   'kg/m2/s2', xdim='half')
-       call HIST_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y (horiz. advection)',   'kg/m2/s2', ydim='half')
-       call HIST_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta  (horiz. advection)',   'K kg/m3/s' )
+       call FILE_HISTORY_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of density    (horiz. advection) (w/ HIST_TEND)',   'kg/m3/s'   )
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta  (horiz. advection) (w/ HIST_TEND)',   'K kg/m3/s' )
 
-       call HIST_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient)',  'kg/m2/s2', zdim='half')
-       call HIST_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', xdim='half')
-       call HIST_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', ydim='half')
+       call FILE_HISTORY_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXYH')
 
-       call HIST_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Rayleigh damping)',   'kg/m2/s2', zdim='half')
+       call FILE_HISTORY_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Rayleigh damping) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZHXY')
 
-       call HIST_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', zdim='half')
-       call HIST_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', xdim='half')
-       call HIST_in(ddiv_t (:,:,:,3),      'MOMY_t_ddiv',  'tendency of momentum y (divergence damping)', 'kg/m2/s2', ydim='half')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,3),      'MOMY_t_ddiv',  'tendency of momentum y (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXYH')
 
-       call HIST_in(cf_t   (:,:,:,1),      'MOMX_t_cf',    'tendency of momentum x (coliolis force)',     'kg/m2/s2', xdim='half')
-       call HIST_in(cf_t   (:,:,:,2),      'MOMY_t_cf',    'tendency of momentum y (coliolis force)',     'kg/m2/s2', ydim='half')
+       call FILE_HISTORY_in(cf_t   (:,:,:,1),      'MOMX_t_cf',    'tendency of momentum x (coliolis force) (w/ HIST_TEND)',     'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(cf_t   (:,:,:,2),      'MOMY_t_cf',    'tendency of momentum y (coliolis force) (w/ HIST_TEND)',     'kg/m2/s2', dim_type='ZXYH')
     endif
 #endif
 
@@ -1106,9 +1090,8 @@ contains
   subroutine solve_direct( &
        C,         & ! (inout)
        F1, F2, F3 ) ! (in)
-
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     real(RP), intent(inout) :: C(KMAX-1)
     real(RP), intent(in)    :: F1(KA)
@@ -1142,6 +1125,7 @@ contains
   end subroutine solve_direct
 
 #ifdef DEBUG
+!OCL SERIAL
   subroutine check_equation( &
        VECT, &
        DENS, MOMZ, RHOT, DPRES, &
@@ -1153,14 +1137,11 @@ contains
     use scale_const, only: &
          EPS => CONST_EPS, &
          GRAV => CONST_GRAV
-    use scale_process, only: &
-         PRC_MPIstop
-    use scale_grid, only: &
-         RCDZ => GRID_RCDZ, &
-         RFDZ => GRID_RFDZ
-    use scale_gridtrans, only: &
-       I_XYZ, &
-       I_XYW
+    use scale_prc, only: &
+         PRC_abort
+    use scale_atmos_grid_cartesC, only: &
+         RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+         RFDZ => ATMOS_GRID_CARTESC_RFDZ
     implicit none
     real(RP), intent(in) :: VECT(KMAX-1)
     real(RP), intent(in) :: DENS(KA)
@@ -1244,9 +1225,9 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: DENS error", k, i, j, error, lhs, rhs
-          write(*,*)eps
-          call PRC_MPIstop
+          LOG_ERROR("check_equation",*)"DENS error", k, i, j, error, lhs, rhs
+          LOG_ERROR_CONT(*)eps
+          call PRC_abort
        endif
     enddo
 
@@ -1261,12 +1242,12 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: MOMZ error", k, i, j, error, lhs, rhs
-          write(*,*) MOMZ_N(k), MOMZ(k), dt
-          write(*,*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
+          LOG_ERROR("check_equation",*)"MOMZ error", k, i, j, error, lhs, rhs
+          LOG_ERROR_CONT(*) MOMZ_N(k), MOMZ(k), dt
+          LOG_ERROR_CONT(*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
              - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
              + Sw(k)
-          call PRC_MPIstop
+          call PRC_abort
        endif
     enddo
 
@@ -1279,8 +1260,8 @@ contains
           error = ( lhs - rhs ) / lhs
        endif
        if ( abs(error) > small ) then
-          write(*,*)"HEVI: RHOT error", k, i, j, error, lhs, rhs
-          call PRC_MPIstop
+          LOG_ERROR("check_equation",*)"RHOT error", k, i, j, error, lhs, rhs
+          call PRC_abort
        endif
     enddo
 

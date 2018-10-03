@@ -30,7 +30,7 @@ if [ ! ${PPCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_PP=`echo -e "cp -uv ${BINDIR}/${PPNAME} .; ${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -40,7 +40,7 @@ if [ ! ${INITCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_INIT=`echo -e "cp -uv ${BINDIR}/${INITNAME} .; ${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -50,7 +50,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_MAIN=`echo -e "cp -uv ${BINDIR}/${BINNAME} .; ${RUN_MAIN}\n"${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -60,7 +60,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_N2G=`echo -e "cp -uv ${BINDIR}/${N2GNAME} .; ${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -74,7 +74,11 @@ if [ ${xy} -gt 1024 ]; then
    exit
 fi
 
-
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
 
 
 
@@ -115,10 +119,10 @@ if [ ${ndata} -gt 0 ]; then
       fi
 
       if [ -f ${src} ]; then
-         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         echo "cp -uv ${src}   ./${dst}" >> ./run.sh
       elif [ -d ${src} ]; then
-         echo "rm -f          ./${dst}" >> ./run.sh
-         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         echo "mkdir -p        ./${dst} " >> ./run.sh
+         echo "cp -uv ${src}/* ./${dst}/" >> ./run.sh
       else
          echo "datafile does not found! : ${src}"
          exit 1
@@ -141,11 +145,11 @@ if [ ${ndata} -gt 0 ]; then
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${triple[1]}.pe${PE}.nc
-         dst=${triple[2]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
-            echo "ln -svf ${src} ./${dst}" >> ./run.sh
+            echo "cp -uv ${src} ./${dst}" >> ./run.sh
          else
             echo "datafile does not found! : ${src}"
             exit 1
