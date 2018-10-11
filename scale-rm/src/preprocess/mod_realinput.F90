@@ -2207,8 +2207,7 @@ contains
     real(RP) :: temp, pres
 
     ! elevation collection
-    real(RP) :: work(ldims(1),ldims(2))
-    real(RP) :: topo(IA,JA)
+    real(RP) :: work(ldims(2),ldims(3))
     real(RP) :: tdiff
 
     real(RP) :: one(IA,JA)
@@ -2623,11 +2622,9 @@ contains
 
           do j = 1, JA
           do i = 1, IA
-             if ( topo(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
-                tdiff = TOPO_Zsfc(i,j) * LAPS
-                sst(i,j,nn) = sst(i,j,nn) - tdiff
-                tw (i,j,nn) = tw (i,j,nn) - tdiff
-             end if
+             tdiff = TOPO_Zsfc(i,j) * LAPS
+             sst(i,j,nn) = sst(i,j,nn) - tdiff
+             tw (i,j,nn) = tw (i,j,nn) - tdiff
           end do
           end do
 
