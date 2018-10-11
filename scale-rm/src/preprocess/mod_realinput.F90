@@ -3422,7 +3422,7 @@ contains
        smds(:,:,:) = init_landwater_ratio
        ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
        do k = 1, LKMAX
-          strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=.true. )
+          strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
        end do
 
     endif ! use_file_waterratio
