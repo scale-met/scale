@@ -636,8 +636,8 @@ contains
        ! compute tendencys
        !------------------------------------------------------------------------
        do k = KS, KE
-          Rtot_nw (k) = Rtot (k,i,j)
-          CPtot_nw(k) = CPtot(k,i,j)
+          Rtot_nw (k) = Rtot (k,i,j) * dens(k,i,j)
+          CPtot_nw(k) = CPtot(k,i,j) * dens(k,i,j)
        end do
 
        if(I_convflag(i,j) == 2) then ! no convection
@@ -697,6 +697,8 @@ contains
                               + RHOQ_t_CP(k,i,j,I_HC) + RHOQ_t_CP(k,i,j,I_HR) &
                               + RHOQ_t_CP(k,i,j,I_HI) + RHOQ_t_CP(k,i,j,I_HS)
              dens_nw(k) = dens(k,i,j) + dQV + dQC + dQR + dQI + dQS
+             Rtot_nw(k) = Rtot_nw(k) / dens_nw(k)
+             CPtot_nw(k) = CPtot_nw(k) / dens_nw(k)
           end do
           do iq = I_HS+1, N_HYD
           do k = KS, k_top
