@@ -653,7 +653,7 @@ contains
                 - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0H,IL+dIL) * DP_Z0H / DP_Z1 &
                 + RzH * ( fh_unstable(DP_Z0H,IL+dIL) - 1.0_DP )
           denoE = log_Z1ovZ0E &
-                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0E,IL+dIL) * DP_Z0M / DP_Z1 &
+                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0E,IL+dIL) * DP_Z0E / DP_Z1 &
                 + RzE * ( fh_unstable(DP_Z0E,IL+dIL) - 1.0_DP )
        else
           denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL)

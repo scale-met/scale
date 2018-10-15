@@ -563,16 +563,16 @@ contains
        enddo
        enddo
 
-       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-          !$omp parallel do
-          do j = LJS, LJE
-          do i = LIS, LIE
-             LAND_SFLX_QTRC(i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
-          enddo
-          enddo
-       endif
-
     end if
+
+    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          LAND_SFLX_QTRC(i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
+       enddo
+       enddo
+    endif
 
     ! Surface flux for chemical tracers
     if ( ATMOS_sw_phy_ch ) then

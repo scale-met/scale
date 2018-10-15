@@ -1,5 +1,12 @@
 = Release History
 
+== 2018-10-15 (5.3.1)
+* Bug fixes:
+  * Fix the vapor flux at the surface
+  * Fix wrong heat capacity in the KF scheme
+  * Fix wrong roughness length in the B91W01
+  * Fix potential segmentation error in the real init
+
 == 2018-10-03 (5.3.0)
 * Changes:
   * Change the ocean grid to have the vertical dimension

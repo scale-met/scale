@@ -383,6 +383,8 @@ contains
 !!$                   end if
 !!$                   LANDUSE_index_PFT(i,j,p) = LANDUSE_index_OCEAN
 !!$                   LANDUSE_frac_PFT (i,j,p) = frac_ocean
+!!$                else
+!!$                   exit
 !!$                end if
 !!$             end do
 !!$             LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
@@ -412,12 +414,7 @@ contains
        end if
 
        if ( .not. LAKE_do ) then
-          ! lake is assumed to be ocean
-          if ( LANDUSE_Ignore_Lake ) then
-             ! do nothing
-          else if ( OCEAN_do ) then
-             LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
-          else
+          if ( LANDUSE_Ignore_Lake .or. (.not. OCEAN_do) ) then
              !$omp parallel do
              do j = 1, JA
              do i = 1, IA
@@ -429,11 +426,16 @@ contains
                       end if
                       LANDUSE_index_PFT(i,j,p) = LANDUSE_index_LAKE
                       LANDUSE_frac_PFT (i,j,p) = LANDUSE_frac_lake(i,j)
+                   else
+                      exit
                    end if
                 end do
                 LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
              end do
              end do
+          else
+             ! lake is assumed to be ocean
+             LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
           end if
           LANDUSE_frac_lake(:,:) = 0.0_RP
        end if
