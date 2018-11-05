@@ -42,7 +42,7 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape
  IO_LOG_BASENAME = 'init_LOG',
 /
 
-&PARAM_PRC
+&PARAM_PRC_CARTESC
  PRC_NUM_X       = #{nprocx},  
  PRC_NUM_Y       = #{nprocy},
 /
@@ -139,13 +139,13 @@ def gen_run_conf( conf_name,
  PRC_NUM_Y       = #{nprocy},
 /
 
-&PARAM_INDEX
+&PARAM_ATMOS_GRID_CARTESC_INDEX
  KMAX = #{kmax}, 
  IMAX = #{imax}, IHALO = 3, 
  JMAX = #{jmax}, JHALO = 3, 
 /
 
-&PARAM_GRID
+&PARAM_ATSMO_GRID_CARTESC
  DZ =  #{dz}, 
  DX =  #{dx},  
  DY =  #{dy}, 
@@ -186,7 +186,7 @@ def gen_run_conf( conf_name,
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE       = "INIT",
+ ATMOS_REFSTATE_TYPE = "INIT",
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -214,23 +214,23 @@ def gen_run_conf( conf_name,
 /
 
 
-&PARAM_HISTORY
- HISTORY_DEFAULT_BASENAME  = "history",
- HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
- HISTORY_DEFAULT_TUNIT     = "SEC",
- HISTORY_DEFAULT_TAVERAGE  = .false.,
- HISTORY_DEFAULT_DATATYPE  = "REAL8",
- HISTORY_OUTPUT_STEP0      = .true.,
+&PARAM_FILE_HISTORY
+ FILE_HISTORY_DEFAULT_BASENAME  = "history",
+ FILE_HISTORY_DEFAULT_TINTERVAL = #{HISTORY_TINTERVAL_SEC},
+ FILE_HISTORY_DEFAULT_TUNIT     = "SEC",
+ FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,
+ FILE_HISTORY_DEFAULT_DATATYPE  = "REAL8",
+ FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTITEM item='U'           /
-&HISTITEM item='V'           /
-&HISTITEM item='NC'          /
-&HISTITEM item='NC_diff'     /
-&HISTITEM item='l2error'     /
-&HISTITEM item='linferror'   /
-!&HISTITEM item='DENS'       /
-!&HISTITEM item='W'          /
+&HISTORY_ITEM item='U'           /
+&HISTORY_ITEM item='V'           /
+&HISTORY_ITEM item='NC'          /
+&HISTORY_ITEM item='NC_diff'     /
+&HISTORY_ITEM item='l2error'     /
+&HISTORY_ITEM item='linferror'   /
+!&HISTORY_ITEM item='DENS'       /
+!&HISTORY_ITEM item='W'          /
 
 
 &PARAM_MONITOR

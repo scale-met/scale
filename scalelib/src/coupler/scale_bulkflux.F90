@@ -6,16 +6,17 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_bulkflux
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -98,7 +99,9 @@ module scale_bulkflux
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01'
+  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
+
+  logical,  private :: BULKFLUX_use_mean = .true.
 
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
@@ -111,19 +114,22 @@ module scale_bulkflux
   real(RP), private :: BULKFLUX_Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
   real(RP), private :: BULKFLUX_Wstar_min = 1.0E-4_RP ! minimum of W* [m/s]
 
+  logical,  private :: flag_W01
+
 contains
 
   !-----------------------------------------------------------------------------
   !
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_setup( dx )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
     real(RP), intent(in) :: dx
 
-    NAMELIST / PARAM_BULKFLUX / &
+    namelist / PARAM_BULKFLUX / &
        BULKFLUX_type,       &
+       BULKFLUX_use_mean,   &
        BULKFLUX_itr_sa_max, &
        BULKFLUX_itr_nr_max, &
        BULKFLUX_err_min,    &
@@ -134,8 +140,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[BULKFLUX] / Categ[COUPLER] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("BULKFLUX_setup",*) 'Setup'
 
     ! WSCF = 1.2 for dx > 1 km (Beljaars 1994)
     ! lim_{dx->0} WSCF = 0  for LES (Fig. 6 Kitamura and Ito 2016 BLM)
@@ -147,25 +153,30 @@ contains
     read(IO_FID_CONF,nml=PARAM_BULKFLUX,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("BULKFLUX_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_BULKFLUX. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("BULKFLUX_setup",*) 'Not appropriate names in namelist PARAM_BULKFLUX. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_BULKFLUX)
+    LOG_NML(PARAM_BULKFLUX)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Scheme for surface bulk flux : ', trim(BULKFLUX_type)
+    LOG_NEWLINE
+    LOG_INFO("BULKFLUX_setup",*) 'Scheme for surface bulk flux : ', trim(BULKFLUX_type)
     select case(BULKFLUX_type)
     case('U95')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Uno et al.(1995)'
+       LOG_INFO_CONT(*) '=> Uno et al.(1995)'
        BULKFLUX => BULKFLUX_U95
     case('B91W01')
-       if( IO_L ) write(IO_FID_LOG,*) '*** => Beljaars (1991) and Wilson (2001)'
+       LOG_INFO_CONT(*) '=> Beljaars (1991) and Wilson (2001)'
+       FLAG_W01 = .true.
+       BULKFLUX => BULKFLUX_B91W01
+    case('B94')
+       LOG_INFO_CONT(*) '=> Beljaars (1994)'
+       FLAG_W01 = .false.
        BULKFLUX => BULKFLUX_B91W01
     case default
-       write(*,*) 'xxx Unsupported BULKFLUX_type. STOP'
-       call PRC_MPIstop
+       LOG_ERROR("BULKFLUX_setup",*) 'Unsupported BULKFLUX_type. STOP'
+       call PRC_abort
     end select
 
     return
@@ -342,6 +353,7 @@ contains
   ! Iteration method: refs. JMA-NHM Description Note II, Mar 2008
   !
   !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine BULKFLUX_B91W01( &
       Ustar,   & ! (out)
       Tstar,   & ! (out)
@@ -436,10 +448,17 @@ contains
     real(DP) :: DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E
     real(DP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
     real(DP) :: log_10ovZ0M, log_02ovZ0H, log_02ovZ0E
+
+    real(DP) :: denoM, denoH, denoE
+    real(DP) :: RzM, RzH, RzE
     !---------------------------------------------------------------------------
 
     ! convert to DP
-    DP_Z1  = real( Z1,  kind=DP )
+    if ( BULKFLUX_use_mean ) then
+       DP_Z1  = real( Z1*2.0_RP,  kind=DP )
+    else
+       DP_Z1  = real( Z1,  kind=DP )
+    end if
     DP_Z0M = real( Z0M, kind=DP )
     DP_Z0H = real( Z0H, kind=DP )
     DP_Z0E = real( Z0E, kind=DP )
@@ -453,6 +472,10 @@ contains
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
     TV0 = TH0 * ( 1.0_DP + EPSTvap * Q0 )
     TVM = ( TV1 + TV0 ) * 0.5_RP
+
+    RzM = 1.0_DP - DP_Z0M / DP_Z1
+    RzH = 1.0_DP - DP_Z0H / DP_Z1
+    RzE = 1.0_DP - DP_Z0E / DP_Z1
 
     ! make log constant
     log_Z1ovZ0M = log( DP_Z1 / DP_Z0M )
@@ -475,17 +498,53 @@ contains
 
     ! Successive approximation
     do n = 1, BULKFLUX_itr_sa_max
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
+       end if
       ! unstable condition
       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
-      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+      UstarUS = KARMAN / denoM * UabsUS
+      TstarUS = KARMAN / denoH * ( TH1 - TH0 )
+      QstarUS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
+!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
-      UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
+       end if
+       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UstarS = KARMAN / denoM * UabsS
+       TstarS = KARMAN / denoH * ( TH1 - TH0 )
+       QstarS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
+!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -511,19 +570,56 @@ contains
       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
     end do
 
+
     ! Newton-Raphson method
     do n = 1, BULKFLUX_itr_nr_max
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
-      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
+       end if
+       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UstarUS = KARMAN / denoM * UabsUS
+       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
+       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
+!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
-      UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
+       end if
+       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UstarS = KARMAN / denoM * UabsS
+       TstarS = KARMAN / denoH * ( TH1 - TH0 )
+       QstarS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
+!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -549,16 +645,52 @@ contains
       res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
 
       ! unstable condition
-      dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*dWstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
-      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL) ) * dUabsUS
-      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
-      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_unstable(DP_Z1,IL+dIL) + fmm_unstable(DP_Z0M,IL+dIL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_unstable(DP_Z0M,IL+dIL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0H,IL+dIL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_unstable(DP_Z0H,IL+dIL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0E,IL+dIL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_unstable(DP_Z0E,IL+dIL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL)
+          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL)
+          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL)
+       end if
+       dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       dUstarUS = KARMAN / denoM * UabsUS
+       dTstarUS = KARMAN / denoH * ( TH1 - TH0 )
+       dQstarUS = KARMAN / denoE * ( Q1  - Q0  )
+!      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL) ) * dUabsUS
+!      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
+!      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
 
       ! stable condition
-      dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL) ) * dUabsS
-      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
-      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_stable(DP_Z1,IL+dIL) + fmm_stable(DP_Z0M,IL+dIL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_stable(DP_Z0M,IL+dIL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_stable(DP_Z1,IL+dIL) + fhm_stable(DP_Z0H,IL+dIL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_stable(DP_Z0H,IL+dIL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_stable(DP_Z1,IL+dIL) + fhm_stable(DP_Z0E,IL+dIL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_stable(DP_Z0E,IL+dIL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL)
+          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL)
+          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL)
+       end if
+       dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       dUstarS = KARMAN / denoM * UabsS
+       dTstarS = KARMAN / denoH * ( TH1 - TH0 )
+       dQstarS = KARMAN / denoE * ( Q1  - Q0  )
+!      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL) ) * dUabsS
+!      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
+!      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL+dIL ) ! if unstable, sw = 1
 
@@ -599,16 +731,52 @@ contains
     ! Successive approximation after Newton-Raphson method
     if( .NOT. abs( res/dres ) < BULKFLUX_err_min ) then
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
-      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
+       end if
+       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UstarUS = KARMAN / denoM * UabsUS
+       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
+       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
+!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       ! stable condition
-      UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       if ( BULKFLUX_use_mean ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+          denoH = log_Z1ovZ0H &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
+       end if
+       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UstarS = KARMAN / denoM * UabsS
+       TstarS = KARMAN / denoH * ( TH1 - TH0 )
+       QstarS = KARMAN / denoE * ( Q1  - Q0  )
+!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
+!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
       sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
@@ -634,13 +802,32 @@ contains
       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
     end if
 
+
     ! calculate Ustar, Tstar, and Qstar based on IL
 
     ! unstable condition
+    if ( BULKFLUX_use_mean ) then
+       denoM = log_Z1ovZ0M &
+             - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+             + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+       denoH = log_Z1ovZ0H &
+             - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+             + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+       denoE = log_Z1ovZ0E &
+             - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+             + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+    else
+       denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+       denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
+       denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
+    end if
     UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
-    UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-    TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-    QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+    UstarUS = KARMAN / denoM * UabsUS
+    TstarUS = KARMAN / denoH * ( TH1 - TH0 )
+    QstarUS = KARMAN / denoE * ( Q1  - Q0  )
+!    UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
+!    TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!    QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
     FracU10US = ( log_10ovZ0M - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) &
               / ( log_Z1ovZ0M - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0M,IL) )
@@ -650,10 +837,28 @@ contains
               / ( log_Z1ovZ0E - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0E,IL) )
 
     ! stable condition
+    if ( BULKFLUX_use_mean ) then
+       denoM = log_Z1ovZ0M &
+             - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+             + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+       denoH = log_Z1ovZ0H &
+             - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+             + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+       denoE = log_Z1ovZ0E &
+             - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+             + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+    else
+       denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+       denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
+       denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
+    end if
     UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
-    UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-    TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-    QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+    UstarS = KARMAN / denoM * UabsS
+    TstarS = KARMAN / denoH * ( TH1 - TH0 )
+    QstarS = KARMAN / denoE * ( Q1  - Q0  )
+!    UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
+!    TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
+!    QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
     FracU10S = ( log_10ovZ0M - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) &
              / ( log_Z1ovZ0M - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0M,IL) )
@@ -681,7 +886,8 @@ contains
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )
 
-    Ra = ( Q1 - Q0 ) / ( UstarC * QstarC + EPS )
+    Ra = max( ( Q1 - Q0 ) / real(UstarC * QstarC + EPS,kind=RP), EPS )
+
 
     return
   end subroutine BULKFLUX_B91W01
@@ -689,8 +895,8 @@ contains
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
   function fm_unstable( Z, IL )
-    !use scale_const, only: &
-    !  PI => CONST_PI
+    use scale_const, only: &
+         PI => CONST_PI
     implicit none
 
     ! argument
@@ -702,23 +908,76 @@ contains
 
     ! works
     real(DP) :: R
-    !real(DP) :: r4R
+    real(DP) :: r4R
     !---------------------------------------------------------------------------
 
     R = min( Z * IL, 0.0_DP )
 
-    ! Wilson (2001)
-    fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
-
-    ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
-    ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
-    !
-    !! Paulson (1974); Dyer (1974)
-    !r4R = ( 1.0_DP - 16.0_DP * R )**0.25_DP
-    !fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
+    if ( flag_W01 ) then
+       ! Wilson (2001)
+       fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
+    else
+       ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
+       r4R = ( 1.0_DP - 16.0_DP * R )**0.25_DP
+       fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
+    end if
 
     return
   end function fm_unstable
+  function fmm_unstable( Z, IL )
+    use scale_const, only: &
+      PI  => CONST_PI, &
+      EPS => CONST_EPS
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! function
+    real(DP) :: fmm_unstable
+
+    ! Wilson (2001)
+    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: gamma = 2.6_DP
+
+    ! works
+    real(DP) :: R
+    real(DP) :: f, r3
+    real(DP) :: r4R, r2R
+    !---------------------------------------------------------------------------
+
+    R = min( Z * IL, 0.0_DP )
+
+    if ( flag_W01 ) then
+       ! Wilson (2001)
+       r3 = (-R)**(1.0_DP/3.0_DP)
+       if ( R > -EPS ) then
+          fmm_unstable = 9.0_DP / 20.0_DP * gamma * r3**2
+       else
+          f = sqrt( 1.0_DP + gamma * r3**2 )
+          fmm_unstable = 3.0_DP * log( ( 1.0_DP + f ) * 0.5_DP ) &
+                       + 1.5_DP / ( sqrt(gamma)**3 * R) * asinh( sqrt(gamma) * r3 ) &
+                       + 1.5_DP * f / ( gamma * r3**2 ) &
+                       - 1.0_DP
+          fmm_unstable = fmm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
+       end if
+    else
+       ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
+       if ( R > -EPS ) then ! |R|<EPS, now R < 0
+          fmm_unstable = - 2.0_DP * R
+       else
+          r2R = sqrt( 1.0_DP - 16.0_DP * R )
+          r4R = sqrt( r2R )
+          fmm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r2R ) * 0.125_DP ) &
+                        - 2.0_DP * atan( r4R ) &
+                        + ( 1.0_DP - r4R*r2R ) / ( 12.0_DP * R ) &
+                        + PI * 0.5_DP - 1.0_DP
+       end if
+    end if
+
+    return
+  end function fmm_unstable
 
   !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in unstable condition
@@ -741,18 +1000,68 @@ contains
 
     R = min( Z * IL, 0.0_DP )
 
-    ! Wilson (2001)
-    fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
-    fh_unstable = Pt * fh_unstable  + ( 1.0_DP - Pt ) * log( Z )
-
-    ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
-    ! you should comment out the above line (Wilson 2001) and uncomment the below lines (Paulson 1974; Dyer 1974).
-    !
-    !! Paulson (1974); Dyer (1974)
-    !fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 16.0_DP * R ) ) * 0.5_DP )
+    if ( flag_W01 ) then
+       ! Wilson (2001)
+       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
+                   + log( Z ) * ( 1.0_DP - Pt )
+    else
+       ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
+       fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 16.0_DP * R ) ) * 0.5_DP )
+    end if
 
     return
   end function fh_unstable
+  function fhm_unstable( Z, IL )
+    use scale_const, only: &
+      EPS => CONST_EPS
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! function
+    real(DP) :: fhm_unstable
+
+    ! Wilson (2001)
+    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: gamma = 7.9_DP
+
+    ! works
+    real(DP) :: R
+    real(DP) :: f, r3
+    real(DP) :: r2R
+    !---------------------------------------------------------------------------
+
+    R = min( Z * IL, 0.0_DP )
+
+    if ( flag_W01 ) then
+       ! Wilson (2001)
+       r3 = (-R)**(1.0_DP/3.0_DP)
+       if ( R > -EPS ) then
+          fhm_unstable = 9.0_DP / 20.0_DP * gamma * r3**2
+       else
+          f = sqrt( 1.0_DP + gamma * r3**2 )
+          fhm_unstable = 3.0_DP * log( ( 1.0_DP + f ) * 0.5_DP ) &
+                       + 1.5_DP / ( sqrt(gamma)**3 * R) * asinh( sqrt(gamma) * r3 ) &
+                       + 1.5_DP * f / ( gamma * r3**2 ) &
+                       - 1.0_DP
+          fhm_unstable = fhm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
+       end if
+    else
+       ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
+       if ( R > -EPS ) then ! |R| < EPS, now R < 0
+          fhm_unstable = - 4.0_DP * R
+       else
+          r2R = sqrt( 1.0_DP - 16.0_DP * R )
+          fhm_unstable = 2.0_DP * log( ( 1.0_DP + r2R ) * 0.5_DP ) &
+                       + ( 1.0_DP - r2R ) / ( 8.0_DP * R ) &
+                       - 1.0_DP
+       end if
+    end if
+
+    return
+  end function fhm_unstable
 
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in stable condition
@@ -787,6 +1096,47 @@ contains
 
     return
   end function fm_stable
+  function fmm_stable( Z, IL )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! function
+    real(DP) :: fmm_stable
+
+    ! parameters of stability functions (Beljaars and Holtslag 1991)
+    real(DP), parameter :: a = 1.0_DP
+    real(DP), parameter :: b = 0.667_DP
+    real(DP), parameter :: c = 5.0_DP
+    real(DP), parameter :: d = 0.35_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = max( Z * IL, 0.0_DP )
+
+    ! Holtslag and DeBruin (1988)
+    if ( R < EPS ) then
+       fmm_stable = - 0.5_DP * ( a + b * c + d ) * R
+    else
+       fmm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
+#if defined(__PGI) || defined(__ES2)
+    ! apply exp limiter
+                    * exp( -min( d*R, 1.E+3_DP ) ) &
+#else
+                    * exp( -d*R ) &
+#endif
+                  - a * R * 0.5_DP &
+                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )
+    end if
+
+    return
+  end function fmm_stable
 
   !-----------------------------------------------------------------------------
   ! stability function for heat/vapor in stable condition
@@ -821,5 +1171,46 @@ contains
 
     return
   end function fh_stable
+  function fhm_stable( Z, IL )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    implicit none
+
+    ! argument
+    real(DP), intent(in) :: Z
+    real(DP), intent(in) :: IL
+
+    ! function
+    real(DP) :: fhm_stable
+
+    ! parameters of stability functions (Beljaars and Holtslag 1991)
+    real(DP), parameter :: a = 1.0_DP
+    real(DP), parameter :: b = 0.667_DP
+    real(DP), parameter :: c = 5.0_DP
+    real(DP), parameter :: d = 0.35_DP
+
+    ! works
+    real(DP) :: R
+    !---------------------------------------------------------------------------
+
+    R = max( Z * IL, 0.0_DP )
+
+    ! Beljaars and Holtslag (1991)
+    if ( R < EPS ) then
+       fhm_stable = - 0.5_DP * ( a + b*c + b ) * R
+    else
+       fhm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
+#if defined(__PGI) || defined(__ES2)
+                    * exp( -min( d*R, 1.E+3_DP) ) &
+#else
+                    * exp( -d*R ) &
+#endif
+                  - 3.0_DP * sqrt( 1.0_DP + 2.0_DP*a*R/3.0_DP )**5 / ( 5.0_DP * a * R ) &
+                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )&
+                  + 0.6_RP / ( a * R ) + 1.0_DP
+    end if
+
+    return
+  end function fhm_stable
 
 end module scale_bulkflux

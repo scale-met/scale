@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpirun --oversubscribe -np"
+MPIEXEC="mpirun -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -64,7 +64,11 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
 
 
 
@@ -123,8 +127,8 @@ if [ ${ndata} -gt 0 ]; then
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${triple[1]}.pe${PE}.nc
-         dst=${triple[2]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh

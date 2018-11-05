@@ -7,7 +7,7 @@ module test_atmos_phy_tb_smg
   use dc_test, only: &
      AssertEqual, &
      AssertLessThan
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_MPIbarrier
   !-----------------------------------------------------------------------------
   implicit none
@@ -33,6 +33,10 @@ module test_atmos_phy_tb_smg
   real(RP), allocatable :: RHOT(:,:,:)
   real(RP), allocatable :: DENS(:,:,:)
   real(RP), allocatable :: QTRC(:,:,:,:)
+  real(RP), allocatable :: MOMZ_t(:,:,:)
+  real(RP), allocatable :: MOMX_t(:,:,:)
+  real(RP), allocatable :: MOMY_t(:,:,:)
+  real(RP), allocatable :: RHOT_t(:,:,:)
   real(RP), allocatable :: RHOQ_t(:,:,:,:)
 
   real(RP), allocatable :: GSQRT(:,:,:,:)
@@ -41,12 +45,7 @@ module test_atmos_phy_tb_smg
   real(RP) :: J33G
 
   real(RP), allocatable :: MAPF(:,:,:,:)
-
-  real(RP), allocatable  :: SFLX_MW(:,:)
-  real(RP), allocatable  :: SFLX_MU(:,:)
-  real(RP), allocatable  :: SFLX_MV(:,:)
-  real(RP), allocatable  :: SFLX_SH(:,:)
-  real(RP), allocatable  :: SFLX_QV(:,:)
+  real(RP), allocatable :: FZ3D(:,:,:)
 
   real(DP) :: dt
 
@@ -56,7 +55,7 @@ module test_atmos_phy_tb_smg
   integer :: KME ! end of main region
 
   integer :: k, i, j, iq
-  character(len=7) :: message
+  character(len=17) :: message
   character(len=4) :: rankname
   !-----------------------------------------------------------------------------
 contains
@@ -66,18 +65,18 @@ contains
   !
   !++ used modules
   !
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_SHORT
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB_config, &
-     ATMOS_PHY_TB_setup
+  use scale_atmos_phy_tb_smg, only: &
+     ATMOS_PHY_TB_SMG_setup
   use scale_atmos_grid_cartesC, only: &
      CDZ  => ATMOS_GRID_CARTESC_CDZ, &
      CDX  => ATMOS_GRID_CARTESC_CDX, &
      CDY  => ATMOS_GRID_CARTESC_CDX, &
+     FZ   => ATMOS_GRID_CARTESC_FZ,  &
      CZ   => ATMOS_GRID_CARTESC_CZ,  &
      CBFZ => ATMOS_GRID_CARTESC_CBFZ
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_myrank
   !-----------------------------------------------------------------------------
   implicit none
@@ -86,14 +85,10 @@ contains
   !++ parameters & variables
   !
   !=============================================================================
-  character(len=H_SHORT) :: TB_TYPE
-  real(RP) :: CZ3D(KA,IA,JA)
+  real(RP) :: CZ3D(  KA,IA,JA)
   integer :: i, j
 
   write(rankname,'(A,I2.2,A)') "(", PRC_myrank, ")"
-
-  TB_TYPE = "SMAGORINSKY"
-  call ATMOS_PHY_TB_config( TB_TYPE )
 
   ! allocate
   allocate( qflx_sgs_momz(KA,IA,JA,3) )
@@ -113,6 +108,10 @@ contains
   allocate( RHOT(KA,IA,JA) )
   allocate( DENS(KA,IA,JA) )
   allocate( QTRC(KA,IA,JA,QA) )
+  allocate( MOMZ_t(KA,IA,JA) )
+  allocate( MOMX_t(KA,IA,JA) )
+  allocate( MOMY_t(KA,IA,JA) )
+  allocate( RHOT_t(KA,IA,JA) )
   allocate( RHOQ_t(KA,IA,JA,QA) )
 
   allocate( GSQRT(KA,IA,JA,7) )
@@ -120,26 +119,23 @@ contains
   allocate( J23G(KA,IA,JA,7) )
 
   allocate( MAPF(IA,JA,2,4) )
-
-  allocate( SFLX_MW(IA,JA) )
-  allocate( SFLX_MU(IA,JA) )
-  allocate( SFLX_MV(IA,JA) )
-  allocate( SFLX_SH(IA,JA) )
-  allocate( SFLX_QV(IA,JA) )
+  allocate( FZ3D(0:KA,IA,JA) )
 
   allocate( ZERO(KA,IA,JA,3) )
 
 
-  do j = JS, JE
-  do i = IS, IE
+  do j = JS-1, JE+1
+  do i = IS-1, IE+1
+     FZ3D(:,i,j) = FZ(:)
      CZ3D(:,i,j) = CZ(:)
   end do
   end do
 
+  MAPF(:,:,:,:) = 1.0_RP
+
   !########## Initial setup ##########
-  call ATMOS_PHY_TB_setup( &
-       CDZ, CDX, CDY, & ! (in)
-       CZ3D           ) ! (in)
+  call ATMOS_PHY_TB_smg_setup( &
+       FZ3D, CZ3D, CDX, CDY, MAPF )
 
   ZERO(:,:,:,:) = 0.0_RP
 
@@ -156,16 +152,14 @@ contains
   J23G(:,:,:,:) = 0.0_RP
   J33G          = 1.0_RP
 
-  MAPF(:,:,:,:) = 1.0_RP
-
   dt = 1.0_RP
 
   !########## test ##########
 
   ! introduced lower limiter for S2 in SMG, so test_zero and test_constant fail
-  ! call test_zero
+  call test_zero
 
-  ! call test_constant
+  call test_constant
 
   call test_big
 
@@ -176,9 +170,16 @@ end subroutine test_atmos_phy_tb_smg_run
 
 
 subroutine test_zero
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB
-
+  use scale_atmos_phy_tb_smg, only: &
+     ATMOS_PHY_TB_smg
+  use scale_atmos_grid_cartesC, only: &
+     FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+     RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX,  &
+     FDX  => ATMOS_GRID_CARTESC_FDX,  &
+     CDY  => ATMOS_GRID_CARTESC_CDY,  &
+     FDY  => ATMOS_GRID_CARTESC_FDY
   call PRC_MPIbarrier
   write(*,*) rankname, "Test zero"
 
@@ -191,30 +192,53 @@ subroutine test_zero
 
   N2(:,:,:) = 0.0_RP
 
-  call ATMOS_PHY_TB( &
+  call ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       RHOQ_t,                                      & ! (inout)
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, RHOQ_t,      & ! (out)
        nu_C, Ri, Pr,                                & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
+       FZ3D, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,   & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
-  call AssertEqual("qflx_sgs_momz", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momz(KS:KE,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_momx", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_momy", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
-  message = "iq = ??"
+  call AssertEqual("qflx_sgs_momz", ZERO(KS:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS:KE-1,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_momx", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_momy", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("MOMZ_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMZ_t       (KS:KE,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("MOMX_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMX_t       (KS:KE,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("MOMY_t",        ZERO(KS:KE,IS:IE,JS:JE,1), MOMY_t       (KS:KE,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("RHOT_t",        ZERO(KS:KE,IS:IE,JS:JE,1), RHOT_t       (KS:KE,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
+     write(message, '("qflx_sgs_rhoq(",i2,")")') iq
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+     write(message, '("RHOQ_t(",i2,")")') iq
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,1), RHOQ_t       (KS:KE,IS:IE,JS:JE,  iq), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   end do
 
 end subroutine test_zero
 !=============================================================================
 subroutine test_constant
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB
+  use scale_atmos_phy_tb_smg, only: &
+     ATMOS_PHY_TB_smg
+  use scale_atmos_grid_cartesC, only: &
+     FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+     RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX,  &
+     FDX  => ATMOS_GRID_CARTESC_FDX,  &
+     CDY  => ATMOS_GRID_CARTESC_CDY,  &
+     FDY  => ATMOS_GRID_CARTESC_FDY
 
   call PRC_MPIbarrier
   write(*,*) rankname, "Test constant"
@@ -230,23 +254,38 @@ subroutine test_constant
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB( &
+  call ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       RHOQ_t,                                      & ! (inout)
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, RHOQ_t,      & ! (out)
        nu_C, Ri, Pr,                                & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
+       FZ3D, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,   & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
-  call AssertEqual("qflx_sgs_momz", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_momx", ZERO(KS+1:KE,IS:IE,JS:JE,:), qflx_sgs_momx(KS+1:KE,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_momy", ZERO(KS+1:KE,IS:IE,JS:JE,:), qflx_sgs_momy(KS+1:KE,IS:IE,JS:JE,:))
-  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
-  message = "iq = ??"
+  call AssertEqual("qflx_sgs_momz", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_momx", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momx(KS+1:KE-1,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_momy", ZERO(KS+1:KE-1,IS:IE,JS:JE,:), qflx_sgs_momy(KS+1:KE-1,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("qflx_sgs_rhot", ZERO(KS:KE,IS:IE,JS:JE,:),     qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
+  call AssertEqual("MOMZ_t",        ZERO(KS+1:KE-2,IS:IE,JS:JE,1), MOMZ_t       (KS+1:KE-2,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("MOMX_t",        ZERO(KS+2:KE-2,IS:IE,JS:JE,1), MOMX_t       (KS+2:KE-2,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("MOMY_t",        ZERO(KS+2:KE-2,IS:IE,JS:JE,1), MOMY_t       (KS+2:KE-2,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
+  call AssertEqual("RHOT_t",        ZERO(KS:KE,IS:IE,JS:JE,1),     RHOT_t       (KS:KE,IS:IE,JS:JE), &
+       significant_digits = RP*2-3, ignore_digits = -RP*3)
   do iq = 1, QA
-     write(message(6:7), "(i2)") iq
-     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:))
+     write(message, '("qflx_sgs_rhoq(",i2,")")') iq
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,:), qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq), &
+          significant_digits = RP*2-3, ignore_digits = -RP*4)
+     write(message, '("RHOQ_t(",i2,")")') iq
+     call AssertEqual(message, ZERO(KS:KE,IS:IE,JS:JE,1), RHOQ_t       (KS:KE,IS:IE,JS:JE,  iq), &
+          significant_digits = RP*2-3, ignore_digits = -RP*3)
   end do
 
 end subroutine test_constant
@@ -255,9 +294,15 @@ subroutine test_big
   use scale_const, only: &
      GRAV => CONST_GRAV
   use scale_atmos_grid_cartesC, only: &
-     RCDZ => ATMOS_GRID_CARTESC_RCDZ
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB
+     FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+     RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX,  &
+     FDX  => ATMOS_GRID_CARTESC_FDX,  &
+     CDY  => ATMOS_GRID_CARTESC_CDY,  &
+     FDY  => ATMOS_GRID_CARTESC_FDY
+  use scale_atmos_phy_tb_smg, only: &
+     ATMOS_PHY_TB_smg
 
   real(RP) :: BIG(KA,IA,JA,3)
 
@@ -296,31 +341,44 @@ subroutine test_big
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB( &
+  call ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       RHOQ_t,                                      & ! (inout)
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, RHOQ_t,      & ! (out)
        nu_C, Ri, Pr,                                & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
+       FZ3D, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,   & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
   call AssertLessThan("qflx_sgs_momz", BIG(KS+1:KE-1,IS:IE,JS:JE,:), abs(qflx_sgs_momz(KS+1:KE-1,IS:IE,JS:JE,:)))
   call AssertLessThan("qflx_sgs_momx", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_momx(KS:KE,IS:IE,JS:JE,:)))
   call AssertLessThan("qflx_sgs_momy", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_momy(KS:KE,IS:IE,JS:JE,:)))
   call AssertLessThan("qflx_sgs_rhot", BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhot(KS:KE,IS:IE,JS:JE,:)))
-  message = "iq = ??"
+  call AssertLessThan("MOMZ_t",        BIG(KS:KE,IS:IE,JS:JE,1), abs(MOMZ_t       (KS:KE,IS:IE,JS:JE  )))
+  call AssertLessThan("MOMX_t",        BIG(KS:KE,IS:IE,JS:JE,1), abs(MOMX_t       (KS:KE,IS:IE,JS:JE  )))
+  call AssertLessThan("MOMY_t",        BIG(KS:KE,IS:IE,JS:JE,1), abs(MOMY_t       (KS:KE,IS:IE,JS:JE  )))
+  call AssertLessThan("RHOT_t",        BIG(KS:KE,IS:IE,JS:JE,1), abs(RHOT_t       (KS:KE,IS:IE,JS:JE  )))
   do iq = 1, QA
      if ( .not. TRACER_ADVC(iq) ) cycle
-     write(message(6:7), "(i2)") iq
+     write(message, '("qflx_sgs_rhoq(",i2,")")') iq
      call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE,:), abs(qflx_sgs_rhoq(KS:KE,IS:IE,JS:JE,:,iq)))
+     write(message, '("RHOQ_t(",i2,")")') iq
+     call AssertLessThan(message, BIG(KS:KE,IS:IE,JS:JE,1), abs(RHOQ_t       (KS:KE,IS:IE,JS:JE,  iq)))
   end do
 
 end subroutine test_big
 !=============================================================================
 subroutine test_double
-  use scale_atmos_phy_tb, only: &
-     ATMOS_PHY_TB
+  use scale_atmos_phy_tb_smg, only: &
+     ATMOS_PHY_TB_smg
+  use scale_atmos_grid_cartesC, only: &
+     FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+     RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+     RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+     CDX  => ATMOS_GRID_CARTESC_CDX,  &
+     FDX  => ATMOS_GRID_CARTESC_FDX,  &
+     CDY  => ATMOS_GRID_CARTESC_CDY,  &
+     FDY  => ATMOS_GRID_CARTESC_FDY
 
   real(RP) :: qflx_sgs_momz2(KA,IA,JA,3)
   real(RP) :: qflx_sgs_momx2(KA,IA,JA,3)
@@ -356,13 +414,13 @@ subroutine test_double
 
   call fill_halo(MOMZ, MOMX, MOMY, RHOT, DENS, QTRC)
 
-  call ATMOS_PHY_TB( &
+  call ATMOS_PHY_TB_smg( &
        qflx_sgs_momz, qflx_sgs_momx, qflx_sgs_momy, & ! (out)
        qflx_sgs_rhot, qflx_sgs_rhoq,                & ! (out)
-       RHOQ_t,                                      & ! (inout)
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, RHOQ_t,      & ! (out)
        nu_C, Ri, Pr,                                & ! (out)
        MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
+       FZ3D, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,   & ! (in)
        GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
 
   MOMZ(:,:,:) = MOMZ(:,:,:) * 2.0_RP
@@ -370,31 +428,35 @@ subroutine test_double
   MOMY(:,:,:) = MOMY(:,:,:) * 2.0_RP
   QTRC(:,:,:,:) = QTRC(:,:,:,:) * 2.0_RP
 
-  call ATMOS_PHY_TB( &
+  call ATMOS_PHY_TB_smg( &
        qflx_sgs_momz2, qflx_sgs_momx2, qflx_sgs_momy2, & ! (out)
-       qflx_sgs_rhot2, qflx_sgs_rhoq2,              & ! (out)
-       RHOQ_t,                                      & ! (inout)
-       nu_C, Ri, Pr,                                & ! (out)
-       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,      & ! (in)
-       SFLX_MW, SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, & ! (in)
-       GSQRT, J13G, J23G, J33G, MAPF, dt            ) ! (in)
+       qflx_sgs_rhot2, qflx_sgs_rhoq2,                 & ! (out)
+       MOMZ_t, MOMX_t, MOMY_t, RHOT_t, RHOQ_t,         & ! (out)
+       nu_C, Ri, Pr,                                   & ! (out)
+       MOMZ, MOMX, MOMY, RHOT, DENS, QTRC, N2,         & ! (in)
+       FZ3D, FDZ, RCDZ, RFDZ, CDX, FDX, CDY, FDY,      & ! (in)
+       GSQRT, J13G, J23G, J33G, MAPF, dt               ) ! (in)
 
 
   call AssertEqual("qflx_sgs_momz", FOUR(KS+1:KME-1,IS:IE,JS:JE,:), &
-       qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:))
+       qflx_sgs_momz2(KS+1:KME-1,IS:IE,JS:JE,:)/qflx_sgs_momz(KS+1:KME-1,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   where(qflx_sgs_momx /= 0.0_RP) work = qflx_sgs_momx2 / qflx_sgs_momx
   where(qflx_sgs_momx == 0.0_RP) work = 4.0_RP
-  call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momx", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   where(qflx_sgs_momy /= 0.0_RP) work = qflx_sgs_momy2 / qflx_sgs_momy
   where(qflx_sgs_momy == 0.0_RP) work = 4.0_RP
-  call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
+  call AssertEqual("qflx_sgs_momy", FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   message = "iq = ??"
   do iq = 1, QA
      if ( .not. TRACER_ADVC(iq) ) cycle
      where(qflx_sgs_rhoq(:,:,:,:,iq) /= 0.0_RP) work = qflx_sgs_rhoq2(:,:,:,:,iq) / qflx_sgs_rhoq(:,:,:,:,iq)
      where(qflx_sgs_rhoq2(:,:,:,:,iq) == 0.0_RP) work = 4.0_RP
      write(message(6:7), "(i2)") iq
-     call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:))
+     call AssertEqual(message, FOUR(KS:KE,IS:IE,JS:JE,:), work(KS:KE,IS:IE,JS:JE,:), &
+       significant_digits = RP*2-3, ignore_digits = -RP*4)
   end do
 
 end subroutine test_double

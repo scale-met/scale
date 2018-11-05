@@ -1,4 +1,4 @@
-\section{Introduction} \label{sec:introduction}
+
 %==============================================================%
 This user's manual is intended for first-time users
 of the regional climate/weather forecasting model \scalerm.
@@ -6,22 +6,27 @@ The manual is based on
 the meteorology/climate library {\scalelib} version \version.
 The current version of \scalelib contains a regional model \scalerm
 and a global model \scalegm.
-Only a dynamical core is provided for the latter.
+%Only a dynamical core is provided for the latter.
 This version of the user's manual explains how to use \scalerm in detail.
 A description of \scalegm is planned for the next release.
 
 The structure of this document is as follows:
-Chapter \ref{chap:overview} provides an overview of \scalelib,
-Chapter \ref{chap:install} describes how to install \scalerm
+Part \ref{part:overview} provides an overview of \scalelib,
+Part \ref{part:install} describes how to install \scalerm
 along with the system requirements. Using simple examples,
-Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real} use examples and explain the basic use of \scalerm in an ideal experiment and the method
-to conduct an atmospheric experiment, respectively. Since these chapters are constructed as a series of tutorials, it is recommended that beginning users of \scalerm read these chapters meticulously.
-Chapter \ref{chap:basic_usel} describes how to change the model configuration, and explains various functions and tools.
+Chapters \ref{chap:tutorial_ideal} and \ref{chap:tutorial_real}
+explain the basic use of \scalerm
+using examples of an ideal experiment and an real atmospheric experiment, respectively.
+Since these chapters are constructed as a series of tutorials, it is recommended that beginning users of \scalerm read these chapters meticulously.
+Parts \ref{part:basic_usel} and \ref{part:advance_use}
+describe how to change the model configuration and explain data format and available functions and tools.
+Since each section is closed itself basically, these chapter can be utilized as a dictionary.
+
 
 If you have any questions or comments, please contact us through the users’ mailing list\\ $\langle \verb|scale-users@ml.riken.jp|\rangle$.
 
 
-\subsection{What is \scalelib?} \label{subsec:scale_feature}
+\section{What is \scalelib?} \label{subsec:scale_feature}
 %--------------------------------------------------------------%
 
 Scalable Computing for Advanced Library and Environment, called {\scalelib}, is a software library that helps conduct research on climate and weather forecasting on any computer with ease. 
@@ -42,17 +47,18 @@ For the details of the license, the interested reader can refer to the file \tex
 
 In this section, the concept of \scalelib and its relations to actual models are explained. It can be skipped, as it is not related directly to its practical use.
 
+\clearpage
 \Item{Relations between \scalelib library and models}
 
 \begin{figure}[htb]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/library.eps}\\
+  \includegraphics[width=0.9\hsize]{./figure/library.pdf}\\
   \caption{Aims of \scalelib}
   \label{fig:scale}
 \end{center}
 \end{figure}
 
-\scalelib was developed in RIKEN/AICS with several outside contributors,
+\scalelib was developed in RIKEN with several outside contributors,
 and its improvement and extension continue.
 Figure \ref{fig:scale} shows the schematic concept of \scalelib.
 As shown in this figure, SCALE aims to resolve various problems.
@@ -60,10 +66,10 @@ The development of \scalelib is considered in the context of its wide use
 by devices ranging from small PC clusters to next-generation supercomputers.
 For this purpose, scientists in meteorology/climate science
 and computer science are cooperating.
-This has led to high computational performance of SCALE not only in supercomputers,
-such as the K Computer and the Fujitsu FX10,
-but also for general-purpose commercial computers,
-such as Intel processor-based machines.
+%This has led to high computational performance of SCALE not only in supercomputers,
+%such as the K Computer and the Fujitsu FX10,
+%but also for general-purpose commercial computers,
+%such as Intel processor-based machines.
 
 \scalerm is a numerical model that fully uses \scalelib.
 This model is contained in the \scalelib package,
@@ -80,14 +86,14 @@ Users can select a scheme in every component according to simulations they want.
 
 \begin{figure}[hbt]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/scale.eps}\\
+  \includegraphics[width=0.9\hsize]{./figure/scale.pdf}\\
   \caption{Relationship between the library \scalelib and the model \scalerm}
   \label{fig:scale-rm}
 \end{center}
 \end{figure}
 
 
-\subsection{Structure of \scalerm}  \label{subsec:sturcture_scale_rm}
+\section{Structure of \scalerm}  \label{subsec:sturcture_scale_rm}
 %--------------------------------------------------------------%
 All schemes in all components of \scalelib are available in \scalerm.
 The components are categorized into three parts:

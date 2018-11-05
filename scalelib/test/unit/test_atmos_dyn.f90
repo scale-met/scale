@@ -11,9 +11,9 @@ module test_atmos_dyn
      AssertEqual, &
      AssertGreaterThan, &
      AssertLessThan
-  use scale_stdio, only: &
+  use scale_io, only: &
      H_SHORT
-  use scale_comm, only: &
+  use scale_comm_cartesC, only: &
      COMM_vars8, &
      COMM_wait
   use scale_atmos_grid_cartesC, only: &
@@ -33,6 +33,8 @@ module test_atmos_dyn
      RFDZ            => ATMOS_GRID_CARTESC_RFDZ,            &
      RFDX            => ATMOS_GRID_CARTESC_RFDX,            &
      RFDY            => ATMOS_GRID_CARTESC_RFDY
+  use scale_atmos_hydrometeor, only: &
+     I_QV
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -89,6 +91,9 @@ module test_atmos_dyn
   real(RP), allocatable :: AQ_CP(:)
   real(RP), allocatable :: AQ_MASS(:)
 
+  integer  :: BND_QA
+  real(RP) :: BND_SMOOTHER_FACT
+
   integer  :: nd_order
   real(RP) :: nd_coef
   real(RP) :: nd_sfc_fact
@@ -129,7 +134,7 @@ contains
   !
   !++ used modules
   !
-  use scale_stdio
+  use scale_io
   use scale_atmos_dyn, only: &
      ATMOS_DYN_setup
   use scale_atmos_dyn_Tstep_short, only: &
@@ -138,9 +143,6 @@ contains
      CBFZ => ATMOS_GRID_CARTESC_CBFZ
   use scale_const, only: &
      GRAV => CONST_GRAV
-  use scale_atmos_boundary, only: &
-     BND_QA
-
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -209,7 +211,8 @@ contains
 
   allocate( PROG(KA,IA,JA,1) )
 
-  BND_QA = 0
+  BND_QA            = 0
+  BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
 
@@ -350,6 +353,7 @@ subroutine test_undef
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+          BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -358,6 +362,7 @@ subroutine test_undef
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
           flag_fct_along_stream,                       & ! (in)
           .false.,                                     & ! (in)
+          I_QV,                                        & ! (in)
           1.0_DP, 1.0_DP                               ) ! (in)
 
   end do
@@ -405,6 +410,7 @@ subroutine test_const
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -413,6 +419,7 @@ subroutine test_const
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   do k = KS, KE
@@ -506,6 +513,7 @@ subroutine test_conserve
          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+         BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -514,6 +522,7 @@ subroutine test_conserve
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
          flag_fct_along_stream,                       & ! (in)
          .true.,                                      & ! (in)
+         I_QV,                                        & ! (in)
          1.0_DP, 1.0_DP                               ) ! (in)
 
   total_o = 0.0_RP
@@ -635,6 +644,7 @@ subroutine test_cwc
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -643,6 +653,7 @@ subroutine test_cwc
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   answer(:,:,:) = POTT
@@ -725,6 +736,7 @@ subroutine test_fctminmax
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
+       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
@@ -733,6 +745,7 @@ subroutine test_fctminmax
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
        flag_fct_along_stream,                       & ! (in)
        .false.,                                     & ! (in)
+       I_QV,                                        & ! (in)
        1.0_DP, 1.0_DP                               ) ! (in)
 
   message = "iq = ??"

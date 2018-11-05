@@ -1,0 +1,16 @@
+This file is readme file of a directory named "data/chem/rn222/flux_Schery1998".
+Using the information in this file, you can get a global map of Rn-222 flux by Schery and Wasiolec (1998) and arrange it for SCALE simulation.
+
+1. How to get flux data
+The Rn-222 flux data is published from a web site (http://infohost.nmt.edu/~schery/mapdata.html).
+To use the data by SCALE, you should firstly get data named fdh3a.xx (xx is from 00 to 12).
+
+2. In your simulation by SCALE, you should specify the directory, which contains data files, in the configure file.
+
+&PARAM_ATMOS_SFC_CH_RN222
+ ATMOS_SFC_CH_Rn222_emission_type      = 'SCHERY1998',
+ ATMOS_SFC_CH_Rn222_SCHERY1998_dirpath = '#path_to_the_data_directory#',
+/
+
+Reference
+Schery and Wasiolek, Modeling Radon Flux from the Earth's Surface, in RADON AND THORON IN THE HUMAN ENVIRONMENT, World Scientific Publishing, Singapore, 1998, pp. 207-217

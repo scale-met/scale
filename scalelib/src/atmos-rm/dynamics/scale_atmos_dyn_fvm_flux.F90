@@ -7,23 +7,21 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_dyn_fvm_flux
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -277,8 +275,8 @@ contains
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
        scheme, scheme_tracer )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
 
    use scale_atmos_dyn_fvm_flux_ud1, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
@@ -434,7 +432,7 @@ contains
     select case( scheme )
 
     case( "UD1" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud1 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud1
 
@@ -477,17 +475,17 @@ contains
 
 
       if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 1
+         call PRC_abort
       end if
 
 
     case( "CD2" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd2 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd2
 
@@ -530,17 +528,17 @@ contains
 
 
       if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 1
+         call PRC_abort
       end if
 
 
     case( "UD3" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud3 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3
 
@@ -583,17 +581,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "UD3KOREN1993" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud3Koren1993 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3Koren1993 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud3Koren1993
 
@@ -636,17 +634,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "CD4" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd4 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd4 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd4
 
@@ -689,17 +687,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "UD5" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud5 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud5 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud5
 
@@ -742,17 +740,17 @@ contains
 
 
       if ( IHALO < 3 ) then
-         write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
-         write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 3
+         call PRC_abort
       end if
 
 
     case( "CD6" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd6 scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd6 scheme is used for flux calculation'
 
       ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd6
 
@@ -795,24 +793,24 @@ contains
 
 
       if ( IHALO < 3 ) then
-         write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
-         write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 3
+         call PRC_abort
       end if
 
 
     case default
-       write(*,*) 'xxx scheme is invalid: ', scheme
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme
+       call PRC_abort
     end select
 
     select case( scheme_tracer )
 
     case( "UD1" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud1 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud1 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud1
 
@@ -853,17 +851,17 @@ contains
 
 
       if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 1
+         call PRC_abort
       end if
 
 
     case( "CD2" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd2 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd2 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd2
 
@@ -904,17 +902,17 @@ contains
 
 
       if ( IHALO < 1 ) then
-         write(*,*) 'xxx IHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
+         call PRC_abort
       end if
       if ( JHALO < 1 ) then
-         write(*,*) 'xxx JHALO must be >= ', 1
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 1
+         call PRC_abort
       end if
 
 
     case( "UD3" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud3 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud3
 
@@ -955,17 +953,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "UD3KOREN1993" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud3Koren1993 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud3Koren1993 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud3Koren1993
 
@@ -1006,17 +1004,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "CD4" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd4 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd4 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd4
 
@@ -1057,17 +1055,17 @@ contains
 
 
       if ( IHALO < 2 ) then
-         write(*,*) 'xxx IHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
+         call PRC_abort
       end if
       if ( JHALO < 2 ) then
-         write(*,*) 'xxx JHALO must be >= ', 2
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 2
+         call PRC_abort
       end if
 
 
     case( "UD5" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the ud5 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud5 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud5
 
@@ -1108,17 +1106,17 @@ contains
 
 
       if ( IHALO < 3 ) then
-         write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
-         write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 3
+         call PRC_abort
       end if
 
 
     case( "CD6" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the cd6 scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd6 scheme is used for flux calculation of tracer'
 
       ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd6
 
@@ -1159,18 +1157,18 @@ contains
 
 
       if ( IHALO < 3 ) then
-         write(*,*) 'xxx IHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
+         call PRC_abort
       end if
       if ( JHALO < 3 ) then
-         write(*,*) 'xxx JHALO must be >= ', 3
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 3
+         call PRC_abort
       end if
 
 
     case default
-       write(*,*) 'xxx scheme is invalid: ', scheme_tracer
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme_tracer
+       call PRC_abort
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup

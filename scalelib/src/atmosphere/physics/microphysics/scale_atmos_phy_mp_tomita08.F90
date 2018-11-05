@@ -9,14 +9,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_mp_tomita08
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
 
   !-----------------------------------------------------------------------------
@@ -29,9 +29,10 @@ module scale_atmos_phy_mp_tomita08
   public :: ATMOS_PHY_MP_tomita08_setup
   public :: ATMOS_PHY_MP_tomita08_adjustment
   public :: ATMOS_PHY_MP_tomita08_terminal_velocity
-  public :: ATMOS_PHY_MP_tomita08_mass_ratio
   public :: ATMOS_PHY_MP_tomita08_effective_radius
   public :: ATMOS_PHY_MP_tomita08_cloud_fraction
+  public :: ATMOS_PHY_MP_tomita08_qtrc2qhyd
+  public :: ATMOS_PHY_MP_tomita08_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
   !
@@ -88,7 +89,7 @@ module scale_atmos_phy_mp_tomita08
   integer,  private, parameter   :: I_hyd_QS =  4
   integer,  private, parameter   :: I_hyd_QG =  5
 
-  logical,  private              :: couple_aerosol      ! apply CCN effect?
+  logical,  private              :: do_couple_aerosol   ! apply CCN effect?
   logical,  private              :: do_explicit_icegen  ! apply explicit ice generation?
 
   logical,  private              :: fixed_re  = .false. ! use ice's effective radius for snow and graupel, and set rain transparent?
@@ -344,10 +345,9 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
        PI     => CONST_PI,    &
        GRAV   => CONST_GRAV,  &
        dens_w => CONST_DWATR, &
@@ -364,7 +364,8 @@ contains
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
 
-    NAMELIST / PARAM_ATMOS_PHY_MP_TOMITA08 / &
+    namelist / PARAM_ATMOS_PHY_MP_TOMITA08 / &
+       do_couple_aerosol, &
        do_explicit_icegen, &
        autoconv_nc,     &
        enable_KK2000,   &
@@ -413,9 +414,9 @@ contains
     !---------------------------------------------------------------------------
 
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[Cloud Microphysics Tomita08] / Categ[atmosphere physics] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Tomita (2008) 1-moment bulk 6 category'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Tomita (2008) 1-moment bulk 6 category'
 
     allocate( w3d(KA,IA,JA,w_nmax) )
     w3d(:,:,:,:) = 0.0_RP
@@ -427,31 +428,31 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP_TOMITA08,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
+       LOG_ERROR("ATMOS_PHY_MP_tomita08_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_MP_TOMITA08. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_MP_TOMITA08)
+    LOG_NML(PARAM_ATMOS_PHY_MP_TOMITA08)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** density of the snow    [kg/m3] : ', dens_s
-    if( IO_L ) write(IO_FID_LOG,*) '*** density of the graupel [kg/m3] : ', dens_g
-    if( IO_L ) write(IO_FID_LOG,*) '*** Nc for auto-conversion [num/m3]: ', autoconv_nc
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use k-k  scheme?               : ', enable_KK2000
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use Roh  scheme?               : ', enable_RS2014
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use WDXZ scheme?               : ', enable_WDXZ2014
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Use effective radius of ice for snow and graupel,'
-    if( IO_L ) write(IO_FID_LOG,*) '    and set rain transparent?          : ', fixed_re
-    if( IO_L ) write(IO_FID_LOG,*) '*** Density of the ice is used for the calculation of '
-    if( IO_L ) write(IO_FID_LOG,*) '    optically effective volume of snow and graupel.'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of rain?    : ', nofall_qr
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of ice?     : ', nofall_qi
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of snow?    : ', nofall_qs
-    if( IO_L ) write(IO_FID_LOG,*) '*** Surpress sedimentation of graupel? : ', nofall_qg
-    if( IO_L ) write(IO_FID_LOG,*) '*** Enable explicit ice generation?    : ', do_explicit_icegen
-    if( IO_L ) write(IO_FID_LOG,*)
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'density of the snow    [kg/m3] : ', dens_s
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'density of the graupel [kg/m3] : ', dens_g
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Nc for auto-conversion [num/m3]: ', autoconv_nc
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use k-k  scheme?               : ', enable_KK2000
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use Roh  scheme?               : ', enable_RS2014
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use WDXZ scheme?               : ', enable_WDXZ2014
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Use effective radius of ice for snow and graupel,'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) '    and set rain transparent?          : ', fixed_re
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Density of the ice is used for the calculation of '
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) '    optically effective volume of snow and graupel.'
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of rain?    : ', nofall_qr
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of ice?     : ', nofall_qi
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of snow?    : ', nofall_qs
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Surpress sedimentation of graupel? : ', nofall_qg
+    LOG_INFO("ATMOS_PHY_MP_tomita08_setup",*) 'Enable explicit ice generation?    : ', do_explicit_icegen
+    LOG_NEWLINE
 
     do j = JS, JE
     do i = IS, IE
@@ -572,7 +573,7 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** atmosphere / physics / microphysics / Tomita08'
+    LOG_PROGRESS(*) 'atmosphere / physics / microphysics / Tomita08'
 
     !##### MP Main #####
     call MP_tomita08( &
@@ -778,7 +779,7 @@ contains
     !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
     !$omp        UNDEF,EPS,PI,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
-    !$omp        couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
+    !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
     !$omp        Nc_def,N0r_def,N0s_def,N0g_def, &
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
     !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
@@ -801,7 +802,7 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       if ( couple_aerosol ) then
+       if ( do_couple_aerosol ) then
           do k = KS, KE
              Nc(k) = max( CCN(k,i,j)*1.E-6_RP, Nc_def(i,j) ) ! [#/m3]->[#/cc]
           end do
@@ -1136,10 +1137,9 @@ contains
           Kd    = ( Dw0 + dDw_dT * temc(k) ) * PRE00 / PRES0(k,i,j)
           NU(k) = ( mu0 + dmu_dT * temc(k) ) * Rdens(k)
 
-          ! temp is correct? (TO BE CHECK)
           Glv(k) = 1.0_RP / ( LHV0/(Da*temp(k)) * ( LHV0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATL(k)) )
           Giv(k) = 1.0_RP / ( LHS0/(Da*temp(k)) * ( LHS0/(Rvap*temp(k)) - 1.0_RP ) + 1.0_RP/(Kd*dens(k)*QSATI(k)) )
-          Gil(k) = 1.0_RP / ( LHF0/(Da*temc(k)) )
+          Gil(k) = ( Da * temc(k) ) / LHF0
        end do
 
        ! [Prevp] evaporation rate of rain
@@ -1679,7 +1679,7 @@ contains
           ! intercept parameter N0
           N0r(k) = 1.16E+5_RP * exp( log( max( dens(k)*qr(k)*1000.0_RP, 1.E-2_RP ) )*0.477_RP )
           N0s(k) = 4.58E+9_RP * exp( log( max( dens(k)*qs(k)*1000.0_RP, 1.E-2_RP ) )*0.788_RP )
-          N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP ) 
+          N0g(k) = 9.74E+8_RP * exp( log( max( dens(k)*qg(k)*1000.0_RP, 1.E-2_RP ) )*0.816_RP )
        end do
     else
        do k = KS, KE
@@ -1818,7 +1818,8 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private(qhydro)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE
@@ -1862,7 +1863,7 @@ contains
     real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
     real(RP) :: dens(KA)
     real(RP) :: temc(KA)
-    real(RP) :: qc(KA), qr(KA), qs(KA), qg(KA)
+    real(RP) :: qr(KA), qs(KA), qg(KA)
     real(RP) :: Nc(KA)              !< Number concentration of cloud water [1/m3]
     real(RP) :: N0r(KA), N0s(KA), N0g(KA)
     real(RP) :: RLMDr, RLMDs, RLMDg
@@ -1914,7 +1915,7 @@ contains
        !$omp private(Nc)
        do j = JS, JE
        do i = IS, IE
-          if ( couple_aerosol ) then
+          if ( do_couple_aerosol ) then
              do k = KS, KE
                 ! Nc(k) = max( CCN(k,i,j), Nc_def(i,j)*1.E+6_RP ) ! [#/m3] tentatively off the CCN effect
                 Nc(k) = Nc_def(i,j) * 1.E+6_RP ! [#/m3]
@@ -2062,91 +2063,7 @@ contains
   end subroutine ATMOS_PHY_MP_tomita08_effective_radius
 
   !-----------------------------------------------------------------------------
-  !> Calculate mass ratio of each category
-  subroutine ATMOS_PHY_MP_tomita08_mass_ratio( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QTRC0, &
-       Qe     )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC, &
-       I_HR, &
-       I_HI, &
-       I_HS, &
-       I_HG
-    implicit none
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1)
-
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
-
-    integer :: k, i, j, ih
-    !---------------------------------------------------------------------------
-
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HC) = QTRC0(k,i,j,I_hyd_QC)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HR) = QTRC0(k,i,j,I_hyd_QR)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HI) = QTRC0(k,i,j,I_hyd_QI)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HS) = QTRC0(k,i,j,I_hyd_QS)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,I_HG) = QTRC0(k,i,j,I_hyd_QG)
-    end do
-    end do
-    end do
-    !$omp parallel do OMP_SCHEDULE_
-!OCL XFILL
-    do ih = I_HG+1, N_HYD
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       Qe(k,i,j,ih) = 0.0_RP
-    end do
-    end do
-    end do
-    end do
-
-    return
-  end subroutine ATMOS_PHY_MP_tomita08_mass_ratio
-
-  !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine MP_tomita08_BergeronParam( &
        KA, KS, KE, &
        temp,       &
@@ -2204,5 +2121,164 @@ contains
 
     return
   end subroutine MP_tomita08_BergeronParam
+
+  !-----------------------------------------------------------------------------
+  !> Calculate mass ratio of each category
+  subroutine ATMOS_PHY_MP_tomita08_qtrc2qhyd( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QTRC, &
+       Qe    )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_MP-1)
+
+    real(RP), intent(out) :: Qe(KA,IA,JA,N_HYD) ! mass ratio of each cateory [kg/kg]
+
+    integer :: k, i, j, ih
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HC) = QTRC(k,i,j,I_hyd_QC)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HR) = QTRC(k,i,j,I_hyd_QR)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HI) = QTRC(k,i,j,I_hyd_QI)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HS) = QTRC(k,i,j,I_hyd_QS)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HG) = QTRC(k,i,j,I_hyd_QG)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do ih = I_HG+1, N_HYD
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,ih) = 0.0_RP
+    end do
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_qtrc2qhyd
+
+  !-----------------------------------------------------------------------------
+  !> get mass ratio of each category
+  subroutine ATMOS_PHY_MP_tomita08_qhyd2qtrc( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       Qe,  &
+       QTRC )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: Qe  (KA,IA,JA,N_HYD)   ! mass ratio of each cateory [kg/kg]
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP-1)
+
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QC) = Qe(k,i,j,I_HC)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QR) = Qe(k,i,j,I_HR)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QI) = Qe(k,i,j,I_HI)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QS) = Qe(k,i,j,I_HS)
+    end do
+    end do
+    end do
+    !$omp parallel do OMP_SCHEDULE_
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       QTRC(k,i,j,I_hyd_QG) = Qe(k,i,j,I_HG) + Qe(k,i,j,I_HH)
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_qhyd2qtrc
 
 end module scale_atmos_phy_mp_tomita08

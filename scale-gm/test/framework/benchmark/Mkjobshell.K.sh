@@ -1,48 +1,103 @@
 #! /bin/bash -x
 
-GLEV=${1}
-RLEV=${2}
-TPROC=${3}
-ZL=${4}
-VGRID=${5}
-TOPDIR=${6}
-BINNAME=${7}
+# Arguments
+BINDIR=${1}
+PPNAME=${2}
+INITNAME=${3}
+BINNAME=${4}
+N2GNAME=${5}
+PPCONF=${6}
+INITCONF=${7}
+RUNCONF=${8}
+N2GCONF=${9}
+PROCS=${10}
+eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
+eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpiexec"
+MPIEXEC="mpiexec -np"
 
-GL=`printf %02d ${GLEV}`
-RL=`printf %02d ${RLEV}`
-if   [ ${TPROC} -ge 10000 ]; then
-	NP=`printf %05d ${TPROC}`
-elif [ ${TPROC} -ge 1000 ]; then
-	NP=`printf %04d ${TPROC}`
-elif [ ${TPROC} -ge 100 ]; then
-	NP=`printf %03d ${TPROC}`
-else
-	NP=`printf %02d ${TPROC}`
+PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
+TPROC=${PROCLIST[0]}
+for n in ${PROCLIST[@]}
+do
+   (( n > TPROC )) && TPROC=${n}
+done
+
+if [ ! ${PPCONF} = "NONE" ]; then
+   SIN1_PP="#PJM --stgin  \"rank=* ${BINDIR}/${PPNAME}   %r:./\""
+
+   CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_PP=`echo -e "${SIN2_PP}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ./${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
 fi
 
-dir2d=gl${GL}rl${RL}pe${NP}
-dir3d=gl${GL}rl${RL}z${ZL}pe${NP}
-res2d=GL${GL}RL${RL}
-res3d=GL${GL}RL${RL}z${ZL}
+if [ ! ${INITCONF} = "NONE" ]; then
+   SIN1_INIT="#PJM --stgin  \"rank=* ${BINDIR}/${INITNAME} %r:./\""
 
-MNGINFO=rl${RL}-prc${NP}.info
+   CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_INIT=`echo -e "${SIN2_INIT}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ./${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
+fi
 
-# for K computer
-if [ ${TPROC} -gt 36864 ]; then
+if [ ! ${RUNCONF} = "NONE" ]; then
+   SIN1_MAIN="#PJM --stgin  \"rank=* ${BINDIR}/${BINNAME}  %r:./\""
+
+   CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_MAIN=`echo -e "${SIN2_MAIN}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${PROCLIST[i]} ./${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
+fi
+
+if [ ! ${N2GCONF} = "NONE" ]; then
+   SIN1_N2G="#PJM --stgin  \"rank=* ${BINDIR}/${N2GNAME}  %r:./\""
+
+   CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
+   ndata=${#CONFLIST[@]}
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+      SIN2_N2G=`echo -e "${SIN2_N2G}\n#PJM --stgin  \"rank=*         ./${CONFLIST[i]}   %r:./\""`
+      RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ./${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+   done
+fi
+
+array=( `echo ${TPROC} | tr -s 'x' ' '`)
+x=${array[0]}
+y=${array[1]:-1}
+let xy="${x} * ${y}"
+
+if [ ${xy} -gt 36864 ]; then
    rscgrp="huge"
-elif [ ${TPROC} -gt 384 ]; then
+elif [ ${xy} -gt 384 ]; then
    rscgrp="large"
 else
    rscgrp="small"
 fi
 
-PROF1="fipp -C -Srange -Ihwm,nocall -d prof"
-PROF2="fipp -C -Srange -Inohwm,call -d prof_call"
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
 
-cat << EOF1 > run.sh
+
+
+cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
@@ -51,59 +106,68 @@ cat << EOF1 > run.sh
 ################################################################################
 #PJM --rsc-list "rscgrp=${rscgrp}"
 #PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:30:00"
+#PJM --rsc-list "elapse=04:00:00"
 #PJM --stg-transfiles all
 #PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${TOPDIR}/bin/${BINNAME}           %r:./"
-#PJM --stgin  "rank=* ./nhm_driver.cnf                   %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO}  %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/vgrid/${VGRID} %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/boundary/${dir2d}/boundary_${res2d}.pe%06r %r:./"
-#PJM --stgout "rank=* %r:./*           ./"
-#PJM --stgout "rank=* %r:./prof/*      ./prof/"
-#PJM --stgout "rank=* %r:./prof_call/* ./prof_call/"
-#PJM -j
-#PJM -s
-#
-. /work/system/Env_base
-#
-export PARALLEL=8
-export OMP_NUM_THREADS=8
-#export fu08bf=1
-export XOS_MMM_L_ARENA_FREE=2
-
-rm -rf ./prof
-rm -rf ./prof_call
-mkdir -p ./prof
-mkdir -p ./prof_call
-
-# run
-${PROF1} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
-${PROF2} ${MPIEXEC} ./${BINNAME} nhm_driver.cnf || exit
-
-################################################################################
+${SIN1_PP}
+${SIN1_INIT}
+${SIN1_MAIN}
+${SIN1_N2G}
+${SIN2_PP}
+${SIN2_INIT}
+${SIN2_MAIN}
+${SIN2_N2G}
 EOF1
 
+# link to file or directory
+ndata=${#DATPARAM[@]}
 
-cat << EOFICO2LL1 > ico2ll.sh
-#! /bin/bash -x
-################################################################################
-#
-# ------ For K computer
-#
-################################################################################
-#PJM --rsc-list "rscgrp=${rscgrp}"
-#PJM --rsc-list "node=${TPROC}"
-#PJM --rsc-list "elapse=00:30:00"
-#PJM --stg-transfiles all
-#PJM --mpi "use-rankdir"
-#PJM --stgin  "rank=* ${TOPDIR}/bin/gm_fio_ico2ll      %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/mnginfo/${MNGINFO} %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/zaxis/*            %r:./"
-#PJM --stgin  "rank=* ./history.pe%06r                  %r:./"
-#PJM --stgin  "rank=* ${TOPDIR}/scale-gm/test/data/grid/llmap/gl${GL}/rl${RL}/llmap.* %r:./"
-#PJM --stgout "rank=* %r:./*           ./"
-#PJM --stgout "rank=0 ../*             ./"
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      pair=(${DATPARAM[$i]})
+
+      src=${pair[0]}
+      dst=${pair[1]}
+      if [ "${dst}" = "" ]; then
+         dst=${pair[0]}
+      fi
+
+      if [ -f ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}   %r:./${dst} '" >> ./run.sh
+      elif [ -d ${src} ]; then
+         echo "#PJM --stgin  'rank=* ${src}/* %r:./${dst}/'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${src}"
+         exit 1
+      fi
+   done
+fi
+
+# link to distributed file
+ndata=${#DATDISTS[@]}
+
+if [ ${ndata} -gt 0 ]; then
+   for n in `seq 1 ${ndata}`
+   do
+      let i="n - 1"
+
+      triple=(${DATDISTS[$i]})
+
+      if [ -f ${triple[1]}.pe000000.nc ]; then
+         echo "#PJM --stgin  'rank=* ${triple[1]}.pe%06r${nc} %r:./${triple[2]}.pe%06r${nc}'" >> ./run.sh
+      else
+         echo "datafile does not found! : ${triple[1]}.pe000000.nc"
+         exit 1
+      fi
+   done
+fi
+
+cat << EOF2 >> ./run.sh
+#PJM --stgout "rank=* %r:./* ./"
+#PJM --stgout "rank=* %r:./prof/* ./prof/"
 #PJM -j
 #PJM -s
 #
@@ -111,19 +175,14 @@ cat << EOFICO2LL1 > ico2ll.sh
 #
 export PARALLEL=8
 export OMP_NUM_THREADS=8
-export fu08bf=1
+
+rm -rf ./prof
 
 # run
-${MPIEXEC} ./gm_fio_ico2ll \
-history \
-glevel=${GLEV} \
-rlevel=${RLEV} \
-mnginfo="./${MNGINFO}" \
-layerfile_dir="./." \
-llmap_base="./llmap" \
-outfile_dir="../" \
--lon_swap \
--comm_smallchunk
+${RUN_PP}
+${RUN_INIT}
+${RUN_MAIN}
+${RUN_N2G}
 
 ################################################################################
-EOFICO2LL1
+EOF2

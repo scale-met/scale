@@ -11,23 +11,21 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_dyn_fvm_flux
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #ifdef DEBUG
   use scale_debug, only: &
      CHECK
@@ -207,8 +205,8 @@ contains
   !> setup
   subroutine ATMOS_DYN_FVM_flux_setup( &
        scheme, scheme_tracer )
-    use scale_process, only: &
-         PRC_MPIstop
+    use scale_prc, only: &
+         PRC_abort
 <%
   funcs = Hash.new
   order.each do |o, nh|
@@ -234,31 +232,31 @@ contains
     select case( scheme )
 <%   order.each do |o, nh| %>
     case( "<%= o.upcase %>" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the <%=o%> scheme is used for flux calculation'
 <% funcs[o].each do |func| %>
       <%= func.sub(/_[^_]+\Z/,"") %> => <%= func %>
 <% end %>
 <%# func %>
 
       if ( IHALO < <%=nh%> ) then
-         write(*,*) 'xxx IHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', <%=nh%>
+         call PRC_abort
       end if
       if ( JHALO < <%=nh%> ) then
-         write(*,*) 'xxx JHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', <%=nh%>
+         call PRC_abort
       end if
 
 <% end %>
     case default
-       write(*,*) 'xxx scheme is invalid: ', scheme
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme
+       call PRC_abort
     end select
 
     select case( scheme_tracer )
 <%   order.each do |o, nh| %>
     case( "<%= o.upcase %>" )
-      if( IO_L ) write(IO_FID_LOG,*) '*** the <%=o%> scheme is used for flux calculation of tracer'
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the <%=o%> scheme is used for flux calculation of tracer'
 <% funcs[o].each do |func|
      unless /value/ =~ func %>
       <%= func.sub(/_[^_]+\Z/,"") %>_tracer => <%= func %>
@@ -267,18 +265,18 @@ contains
 <%# func %>
 
       if ( IHALO < <%=nh%> ) then
-         write(*,*) 'xxx IHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', <%=nh%>
+         call PRC_abort
       end if
       if ( JHALO < <%=nh%> ) then
-         write(*,*) 'xxx JHALO must be >= ', <%=nh%>
-         call PRC_MPIstop
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', <%=nh%>
+         call PRC_abort
       end if
 
 <% end %>
     case default
-       write(*,*) 'xxx scheme is invalid: ', scheme_tracer
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme_tracer
+       call PRC_abort
     end select
 
   end subroutine ATMOS_DYN_FVM_flux_setup

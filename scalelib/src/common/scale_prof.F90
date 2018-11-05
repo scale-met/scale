@@ -7,13 +7,14 @@
 !! @author Team SCALE
 !!
 !<
+#include "scalelib.h"
 module scale_prof
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -99,8 +100,8 @@ module scale_prof
 contains
   !-----------------------------------------------------------------------------
   subroutine PROF_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_PROF / &
@@ -109,23 +110,23 @@ contains
 
     integer :: ierr
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[PROF] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("PRF_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_PROF,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("PROF_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_PROF. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("PROF_setup",*) 'Not appropriate names in namelist PARAM_PROF. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_PROF)
+    LOG_NML(PARAM_PROF)
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Rap output level              = ', PROF_rap_level
-    if( IO_L ) write(IO_FID_LOG,*) '*** Add MPI_barrier in every rap? = ', PROF_mpi_barrier
+    LOG_NEWLINE
+    LOG_INFO("PROF_setup",*) 'Rap output level              = ', PROF_rap_level
+    LOG_INFO("PROF_setup",*) 'Add MPI_barrier in every rap? = ', PROF_mpi_barrier
 
     PROF_prefix = ''
 
@@ -153,7 +154,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Start raptime
   subroutine PROF_rapstart( rapname_base, level )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
@@ -190,9 +191,8 @@ contains
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
 
-#ifdef DEBUG
-    !if( IO_L ) write(IO_FID_LOG,*) '<DEBUG> [PROF] ', rapname, PROF_rapnstr(id)
-#endif
+    !LOG_INFO("PROF_rapstart",'(1x,A,I8)') rapname, PROF_rapnstr(id)
+    !call flush(IO_FID_LOG)
 
 #ifdef FAPP
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
@@ -207,7 +207,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Save raptime
   subroutine PROF_rapend( rapname_base, level )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
@@ -255,7 +255,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Report raptime
   subroutine PROF_rapreport
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPItimestat, &
        PRC_IsMaster
     implicit none
@@ -272,13 +272,12 @@ contains
 
     do id = 1, PROF_rapnmax
        if ( PROF_rapnstr(id) /= PROF_rapnend(id) ) then
-           write(*,*) '*** Mismatch Report',id,PROF_rapname(id),PROF_rapnstr(id),PROF_rapnend(id)
+           LOG_WARN("PROF_rapreport",*) 'Mismatch Report',id,PROF_rapname(id),PROF_rapnstr(id),PROF_rapnend(id)
        endif
     enddo
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Computational Time Report'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Rap level is ', PROF_rap_level
+    LOG_NEWLINE
+    LOG_INFO("PROF_rapreport",'(1x,A,I2,A)') 'Computational Time Report (Rap level = ', PROF_rap_level, ')'
 
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
@@ -286,8 +285,8 @@ contains
           do id = 1, PROF_rapnmax
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            ) then
-                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
-                           '*** ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
+                LOG_INFO_CONT('(1x,A,I3.3,A,A,A,F10.3,A,I9)') &
+                              'ID=',id,' : ',PROF_rapname(id),' T=',PROF_rapttot(id),' N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -304,8 +303,8 @@ contains
        fid = -1
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
           if ( PRC_IsMaster ) then
-             write(*,*) '*** Computational Time Report'
-             fid = 6 ! master node
+             write(*,*) 'INFO  [PROF_rapreport] Computational Time Report'
+             fid = IO_FID_STDOUT ! master node
           endif
        else
           if ( IO_L ) fid = IO_FID_LOG
@@ -316,12 +315,12 @@ contains
              if (       PROF_raplevel(id) <= PROF_rap_level &
                   .AND. PROF_grpid   (id) == gid            &
                   .AND. fid > 0                             ) then
-                if( IO_L ) write(IO_FID_LOG,'(1x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
-                           '*** ID=',id,' : ',PROF_rapname(id), &
-                           ' T(avg)=',avgvar(id), &
-                           ', T(max)=',maxvar(id),'[',maxidx(id),']', &
-                           ', T(min)=',minvar(id),'[',minidx(id),']', &
-                           ' N=',PROF_rapnstr(id)
+                write(fid,'(6x,A,I3.3,3A,F10.3,A,F10.3,A,I5,2A,F10.3,A,I5,2A,I9)') &
+                          'ID=',id,' : ',PROF_rapname(id), &
+                          ' T(avg)=',avgvar(id), &
+                          ', T(max)=',maxvar(id),'[',maxidx(id),']', &
+                          ', T(min)=',minvar(id),'[',minidx(id),']', &
+                          ', N=',PROF_rapnstr(id)
              endif
           enddo
        enddo
@@ -357,7 +356,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Report flop
   subroutine PROF_PAPI_rapreport
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPItimestat, &
        PRC_nprocs,      &
        PRC_IsMaster
@@ -378,13 +377,13 @@ contains
 
     if ( IO_LOG_ALLNODE ) then ! report for each node
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** PAPI Report [Local PE information]'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** Real time          [sec] : ', PROF_PAPI_real_time
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** CPU  time          [sec] : ', PROF_PAPI_proc_time
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** FLOP             [GFLOP] : ', PROF_PAPI_gflop
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** FLOPS by PAPI   [GFLOPS] : ', PROF_PAPI_mflops/1024.0_DP
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') '*** FLOP / CPU Time [GFLOPS] : ', PROF_PAPI_gflop/PROF_PAPI_proc_time
+       LOG_NEWLINE
+       LOG_INFO("PROF_PAPI_rapreport",*) 'PAPI Report [Local PE information]'
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') 'Real time          [sec] : ', PROF_PAPI_real_time
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') 'CPU  time          [sec] : ', PROF_PAPI_proc_time
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') 'FLOP             [GFLOP] : ', PROF_PAPI_gflop
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') 'FLOPS by PAPI   [GFLOPS] : ', PROF_PAPI_mflops/1024.0_DP
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') 'FLOP / CPU Time [GFLOPS] : ', PROF_PAPI_gflop/PROF_PAPI_proc_time
 
     else
        statistics(1) = real(PROF_PAPI_real_time,kind=8)
@@ -400,25 +399,25 @@ contains
 
        zerosw = 0.5_DP - sign(0.5_DP,maxvar(2)-1.D-12) ! if maxvar(2) = 0 then zerosw = 1
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** PAPI Report'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** Real time [sec]',' T(avg)=',avgvar(1), &
+       LOG_NEWLINE
+       LOG_INFO("PROF_PAPI_rapreport",*) 'PAPI Report'
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+                  'Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** CPU  time [sec]',' T(avg)=',avgvar(2), &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+                  'CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
-                  '*** FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+                  'FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3,A,I6,A)') &
-                  '*** TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
-                  '*** FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F15.3)') &
-                  '*** FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
-       if( IO_L ) write(IO_FID_LOG,*)
+       LOG_NEWLINE
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3,A,I6,A)') &
+                  'TOTAL FLOP    [GFLOP] : ', avgvar(3)*PRC_nprocs, '(',PRC_nprocs,' PEs)'
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') &
+                  'FLOPS        [GFLOPS] : ', avgvar(3)*PRC_nprocs * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,F15.3)') &
+                  'FLOPS per PE [GFLOPS] : ', avgvar(3)            * ( 1.0_DP-zerosw ) / ( maxvar(2)+zerosw )
+       LOG_NEWLINE
 
        if ( IO_LOG_SUPPRESS ) then ! report to STDOUT
           if ( PRC_IsMaster ) then ! master node
@@ -532,7 +531,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_1D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -555,7 +554,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_2D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -578,7 +577,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_3D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -601,7 +600,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_4D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -624,7 +623,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_5D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -647,7 +646,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_SP_6D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -670,7 +669,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_1D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -693,7 +692,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_2D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -716,7 +715,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_3D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -739,7 +738,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_4D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -762,7 +761,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_5D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return
@@ -785,7 +784,7 @@ contains
     PROF_max    = real(maxval(var),kind=DP)
     PROF_min    = real(minval(var),kind=DP)
     PROF_sum    = real(sum   (var),kind=DP)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A7,A,A16,3(A,ES24.16))') &
+    LOG_INFO("PROF_valcheck_DP_6D",'(1x,A,A7,A,A16,3(A,ES24.16))') &
     '+',PROF_header,'[',PROF_item,'] max=',PROF_max,',min=',PROF_min,',sum=',PROF_sum
 
     return

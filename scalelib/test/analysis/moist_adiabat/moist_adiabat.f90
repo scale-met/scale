@@ -9,7 +9,7 @@ program moist_adiabat
      CPvap => CP_VAPOR, &
      CL    => CP_WATER, &
      CI    => CP_ICE
-  use scale_stdio, only: &
+  use scale_io, only: &
      IO_get_available_fid
   use scale_atmos_saturation, only: &
      ATMOS_SATURATION_setup, &
@@ -18,7 +18,6 @@ program moist_adiabat
   use scale_atmos_adiabat, only: &
      ATMOS_ADIABAT_setup, &
      ATMOS_ADIABAT_cape
-  use netcdf
   implicit none
 
   integer :: nx, ny, nz
@@ -42,7 +41,7 @@ program moist_adiabat
   real(RP) :: x, y
   integer  :: nstep
 
-  NAMELIST / PARAM_MOIST_ADIABAT / &
+  namelist / PARAM_MOIST_ADIABAT / &
        basename_in, &
        rankid, &
        filename_out, &

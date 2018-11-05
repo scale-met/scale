@@ -3,20 +3,20 @@
 !!
 !! @par Description
 !!          Flux from/to bottom wall of atmosphere (surface)
-!!          Constant flux
+!!          Constant flux, domain-uniform
 !!
 !! @author Team SCALE
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_sf_const
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -62,11 +62,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_const_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_CONST / &
+    namelist / PARAM_ATMOS_PHY_SF_CONST / &
        ATMOS_PHY_SF_FLG_MOM_FLUX,   &
        ATMOS_PHY_SF_U_minM,         &
        ATMOS_PHY_SF_CM_min,         &
@@ -80,20 +80,20 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[surface const] / Categ[atmosphere physics] / Origin[SCALE lib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Constant flux'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Constant flux'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_CONST,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_SF_const_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
+       LOG_ERROR("ATMOS_PHY_SF_const_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_CONST. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_CONST)
+    LOG_NML(PARAM_ATMOS_PHY_SF_CONST)
 
     return
   end subroutine ATMOS_PHY_SF_const_setup
@@ -144,9 +144,9 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(const)'
+    LOG_PROGRESS(*) 'atmosphere / physics / surface flux / const'
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        ATM_Uabs(i,j) = min( ATMOS_PHY_SF_U_maxM, max( ATMOS_PHY_SF_U_minM, &
@@ -155,14 +155,14 @@ contains
     enddo
 
     if   ( ATMOS_PHY_SF_FLG_MOM_FLUX == 0 ) then ! Bulk coefficient is constant
-       !omp parallel do
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           Cm(i,j) = ATMOS_PHY_SF_Const_Cm
        enddo
        enddo
     elseif( ATMOS_PHY_SF_FLG_MOM_FLUX == 1 ) then ! Friction velocity is constant
-       !omp parallel do
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           Cm(i,j) = ( ATMOS_PHY_SF_Const_Ustar / ATM_Uabs(i,j) )**2
@@ -173,7 +173,7 @@ contains
 
     !-----< momentum >-----
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_MW(i,j) = -Cm(i,j) * ATM_Uabs(i,j) * SFC_DENS(i,j) * ATM_W(i,j)
@@ -190,7 +190,7 @@ contains
        modulation = 1.0_RP
     endif
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_SH(i,j) = ATMOS_PHY_SF_Const_SH * modulation
@@ -204,7 +204,7 @@ contains
          ATM_TEMP(:,:), & ! [IN]
          LHV(:,:)       ) ! [OUT]
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        SFLX_QV(i,j) = SFLX_LH(i,j) / LHV(i,j)
@@ -213,7 +213,7 @@ contains
 
     !-----< U10, V10 >-----
 
-    !omp parallel do
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        R10 = 10.0_RP / ATM_Z1(i,j)

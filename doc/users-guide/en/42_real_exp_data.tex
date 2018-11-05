@@ -2,17 +2,17 @@
 \section{Preparations for input data (boundary data)} \label{sec:tutrial_real_data}
 %-------------------------------------------------------%
 
-When a realistic atmospheric experiment is conducted, boundary data need to be provided to \scalerm. Table \ref{tab:real_bnd} shows the items for external input data to create boundary data. The variables denoted by {\color{blue}blue character} in this table  are always needed, whereas the others (black character) are optional. 
+When a realistic atmospheric experiment is conducted, boundary data need to be provided to \scalerm. Table \ref{tab:real_bnd} shows the items for external input data to create boundary data. The variables denoted by {\color{blue}blue character} in this table  are always needed, whereas the others (black character) are optional.
 \begin{table}[tb]
 \begin{center}
   \caption{Items of external input data for real atmospheric experiments}
   \label{tab:real_bnd}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9} 
+    \rowcolor[gray]{0.9}
     \multicolumn{3}{l}{Data to create the topography and land-use data (in general, in-situ data)}\\ \hline
     & \multicolumn{2}{l}{\color{blue}{Altitude data}}\\
     & \multicolumn{2}{l}{\color{blue}{Land-use classification data}}\\ \hline
-    \rowcolor[gray]{0.9} 
+    \rowcolor[gray]{0.9}
     \multicolumn{3}{l}{data to craete the initial and boundary data for \scalerm (in general, GCM data)}\\ \hline
     &  \multicolumn{2}{l}{\color{blue}{Information for latitude and longitude of the parent model}}\\
     &  \multicolumn{2}{l}{--- 3D atmospheric data ---}\\
@@ -27,7 +27,7 @@ When a realistic atmospheric experiment is conducted, boundary data need to be p
     & &  \multicolumn{1}{l}{{\color{blue}{information of depth of soil data in the parent model, soil temperature,}}}\\
     & &  \multicolumn{1}{l}{{{soil moisture(volume content or degree of saturation)}}}\\
     &  \multicolumn{2}{l}{--- 2D ocean data at the surface ---}\\
-　　& &  \multicolumn{1}{l}{\color{blue}{sea surface temperature (omitted if skin temperature is also used for SST)}}\\ \hline
+    & &  \multicolumn{1}{l}{\color{blue}{sea surface temperature (omitted if skin temperature is also used for SST)}}\\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
@@ -35,7 +35,7 @@ When a realistic atmospheric experiment is conducted, boundary data need to be p
 
 \subsubsection{Topography and land-use classification data}
 
-The external topography and land-use classification data are used to obtain 
+The external topography and land-use classification data are used to obtain
 the altitude, the ocean to land ratio, the lake ratio, urban covering and vegetation rates, and the classification of land use at every grid point.
 In order to allow users to calculate at any areas over the globe,
 the altitude data GTOPO30 from the USGS (U.S. Geological Survey)
@@ -53,15 +53,15 @@ Obtain the data for altitude and land-use classification formatted for \scalerm 
 \item Setting of the path\\
 To prepare the files used in the realistic atmospheric experiment,
 the ``making tool for the complete settings of the experiment" is available.
-To use the tool, set the directory name including above database 
+To use the tool, set the directory name including above database
 to an environment variable \verb|SCALE_DB| (hereinafter, it denoted as \verb|SCALE_DB|):
 \begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
-where \verb|${path_to_directory_of_scale_database}| is the directory name 
-which the \verb|tar| file including topography and land-use database is extracted in. 
+where \verb|${path_to_directory_of_scale_database}| is the directory name
+which the \verb|tar| file including topography and land-use database is extracted in.
 %Thus, you should execute above command after substituting the portion of \verb|${path_to_directory_of_scale_database}|.
-For example, if the absolute path where you expanded \verb|scale_database.tar.gz| 
+For example, if the absolute path where you expanded \verb|scale_database.tar.gz|
 was \verb|/home/user/scale|, you need to set as follows.
 \begin{verbatim}
   $ export SCALE_DB="/home/user/scale/scale_database"
@@ -75,7 +75,7 @@ was \verb|/home/user/scale|, you need to set as follows.
 The initial and boundary data are readable
 when they are converted into four-byte binary (\grads form. Hereinafter, it is denoted by ``binary data.'').
 The users prepare the ``binary'' data by themselves as mentioned above.
-However, 
+However,
 the programs to prepare the ``binary'' data are provided in the directory \\
 \verb|${Tutorial_DIR}/real/tools/| for the execution of this tutorial.
 A procedure is explained below.
@@ -87,7 +87,7 @@ to use NCEP FNL (Final) Operational Global Analysis data with grib1 format.
 \begin{enumerate}
 \item Downloading data
 Download 12-hour data from July 14, 2007 1800UTC from the NCAR website \url{http://rda.ucar.edu/datasets/ds083.2/}
-and place them in the directory \\ 
+and place them in the directory \\
 \verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|.
 The following is the data list, formatted by grib1:
 \begin{verbatim}

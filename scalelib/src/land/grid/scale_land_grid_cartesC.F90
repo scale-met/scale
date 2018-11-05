@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module GRID (cartesian) for land
+!> module land / grid / cartesianC
 !!
 !! @par Description
 !!          Grid module for cartesian coordinate for land
@@ -7,13 +7,14 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_land_grid_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_land_grid_cartesC_index
@@ -48,14 +49,14 @@ module scale_land_grid_cartesC
   real(RP), private :: LDZ(100)
 
   character(len=H_LONG) :: LAND_GRID_CARTESC_IN_BASENAME  = ''
-  logical               :: LAND_GRID_CARTESC_IN_AGGREGATE 
+  logical               :: LAND_GRID_CARTESC_IN_AGGREGATE
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine LAND_GRID_CARTESC_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
@@ -70,8 +71,13 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC] / Categ[LAND GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Setup'
+
+    if ( LKMAX < 1 ) then
+       LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Skip because LKMAX < 1'
+       return
+    end if
 
     LDZ(:) = 0.0_RP
 
@@ -81,55 +87,46 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_LAND_GRID_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_LAND_GRID_CARTESC. Check!'
+       LOG_ERROR("LAND_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_LAND_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_LAND_GRID_CARTESC)
+    LOG_NML(PARAM_LAND_GRID_CARTESC)
 
     allocate( LAND_GRID_CARTESC_CZ (LKS  :LKE) )
     allocate( LAND_GRID_CARTESC_FZ (LKS-1:LKE) )
     allocate( LAND_GRID_CARTESC_CDZ(LKS  :LKE) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Land grid information ***'
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Land grid information '
 
     if ( LAND_GRID_CARTESC_IN_BASENAME /= '' ) then
        call LAND_GRID_CARTESC_read
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Grid position is calculated.'
+       LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Not found input grid file. Grid position is calculated.'
 
        call LAND_GRID_CARTESC_generate
     endif
 
     if ( LKE == LKS ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Single layer. LDZ = ', LDZ(1)
+       LOG_NEWLINE
+       LOG_INFO("LAND_GRID_CARTESC_setup",*) 'Single layer. LDZ = ', LDZ(1)
     else
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|====== Vertical Coordinate ======|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|   k       z      zh      dz   k |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|         [m]     [m]     [m]     |'
+       LOG_NEWLINE
+       LOG_INFO_CONT('(1x,A)') 'Vertical Coordinate'
+       LOG_INFO_CONT('(1x,A)')                  '|   k       z      zh      dz   k |'
+       LOG_INFO_CONT('(1x,A)')                  '|         [m]     [m]     [m]     |'
        k = LKS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | Atmosphere interface'
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | Atmosphere interface'
        do k = LKS, LKE-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',LAND_GRID_CARTESC_FZ(k),'       |',k,' | '
+       LOG_INFO_CONT('(1x,A,I4,F8.3,A,F8.3,A)') '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',LAND_GRID_CARTESC_FZ(k),'       |',k,' | '
        enddo
        k = LKE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | bedrock'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|=================================|'
+       LOG_INFO_CONT('(1x,A,I4,F8.3,A,F8.3,A)') '|',k,LAND_GRID_CARTESC_CZ(k),'        ',LAND_GRID_CARTESC_CDZ(k),'     | '
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',LAND_GRID_CARTESC_FZ(k),'        ',k,' | bedrock'
+       LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
     return
@@ -141,22 +138,22 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input land grid file ***'
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_read",*) 'Input land grid file '
 
     call FILE_open( LAND_GRID_CARTESC_IN_BASENAME, fid, rankid=PRC_myrank, aggregate=LAND_GRID_CARTESC_IN_AGGREGATE )
 
     call FILE_read( fid, 'LCZ',  LAND_GRID_CARTESC_CZ (:) )
     call FILE_read( fid, 'LCDZ', LAND_GRID_CARTESC_CDZ(:) )
     call FILE_read( fid, 'LFZ',  LAND_GRID_CARTESC_FZ (:) )
-                                                 
+
     return
   end subroutine LAND_GRID_CARTESC_read
 

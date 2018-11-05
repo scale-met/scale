@@ -4,9 +4,8 @@
 \author{\Large Team SCALE\\ UGC working group}
 \date{\today}
 
-
-\usepackage[dvipdfmx]{graphicx, color}
-\usepackage[dvipdfmx]{hyperref}
+\usepackage{graphicx, color}
+\usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{ascmac}
 \usepackage{alltt}
@@ -16,9 +15,11 @@
 \usepackage{colortbl}
 \usepackage{fancybox}
 \usepackage{url}
-\usepackage{pxjahyper}
+\usepackage{longtable}
+%\usepackage{pxjahyper}
+\usepackage{here}
 \hypersetup{% options for hyperref
- bookmarksopen=true,
+ bookmarksopen=false,
  bookmarksnumbered=true,
  colorlinks=true,
 % linkcolor=red,
@@ -28,6 +29,11 @@
 }
 
 
+%\setcounter{secnumdepth}{3}
+\makeatletter
+\@addtoreset{chapter}{part}
+\makeatother
+
 
 %\setlength{\textwidth}{42zw}
 %\setlength{\textheight}{40\baselineskip}
@@ -35,73 +41,143 @@
 \usepackage{wallpaper}
 %\renewcommand{\thefootnote}{\fnsymbol{footnote}}
 \renewcommand{\thefootnote}{*\arabic{footnote})}
-
+\renewcommand{\thepart}{\arabic{part}}
+\renewcommand{\thechapter}{\arabic{part}.\arabic{chapter}}
+%\renewcommand{\thechapter}{\Roman{part}.\arabic{chapter}}
 
 \input{local_macro}
 
 
 \begin{document}
-\CenterWallPaper{1.0}{figure/title_wallpaper.eps}
+\CenterWallPaper{1.0}{figure/title_wallpaper.pdf}
 \maketitle
 \ClearWallPaper
-\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.eps}
+\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.pdf}
 \tableofcontents
 
-\chapter{Overview} \label{chap:overview}
-\input{11_introduction}
-\input{12_notation}
+%-----------------------------------------------------------------------
+% Part and chapter are defined in this main tex file.
+% Sections are defined in each input tex file.
+%-----------------------------------------------------------------------
 
-\chapter{Install} \label{chap:install}
-\input{21_install}
+\part{Overview} \label{part:overview}
+ \chapter{Introduction} \label{sec:introduction}
+ \input{11_introduction}  %\section{Introduction} \label{sec:introduction}
+ \chapter{Notations used in this document} \label{sec:notation}
+ \input{12_notation}      %\section{Notations used in this document} \label{sec:notation}
 
-\chapter{Operation check and basic usage} \label{chap:tutorial_ideal}
-\input{31_ideal_exp_introduction}
-\input{32_ideal_exp_run}
-\input{33_ideal_exp_net2g}
-\input{34_ideal_exp_last}
+\part{Install} \label{part:install}
+ \chapter{Preparation}
+ \input{21_install_prep}       % \section{Necessary system environment} \label{sec:req_env}
+ \chapter{Compile of \scalelib}
+ \input{22_install_compile}       % \section{Necessary system environment} \label{sec:req_env}
+ \chapter{Compile of post-processing tool (net2g)}
+ \input{23_install_net2g}
 
-\chapter{Conduction of real atomsphere experiment} \label{chap:tutorial_real}
-\input{41_real_exp_introduction}
-\input{42_real_exp_data}
-\input{43_real_exp_prep}
-\input{44_real_exp_pp}
-\input{45_real_exp_init}
-\input{46_real_exp_run}
-\input{47_real_exp_net2g}
 
-\chapter{Various settings} \label{chap:basic_usel}
-\input{50_setting_introduction}
-\input{51_setting_domain}
-\input{52_setting_mapproj}
-\input{53_setting_topo}
-\input{54_setting_howtoinput}
-\clearpage
-\input{55_setting_time}
-\input{56_setting_history}
-\input{57_setting_dynamics}
-\input{58_setting_physics}
-\input{59_setting_net2g}
-\input{510_setting_restart}
-\input{511_0setting_nesting}
-\input{511_1setting_nesting_topo}
-\input{511_2setting_offline_nesting}
-\input{511_3setting_online_nesting}
-\input{512_setting_bulkjob}
-\input{513_setting_makeconf}
-\input{514_setting_common}
+\part{Tutorial for \scalerm}
+ \chapter{Operation check and basic usage} \label{chap:tutorial_ideal}
+ \input{31_ideal_exp_introduction}
+ \input{32_ideal_exp_run}
+ \input{33_ideal_exp_net2g}
+ \input{34_ideal_exp_last}
+
+ %\chapter{Ideal atomsphere experiment} %\label{chap:tutorial_ideal}
+
+ \chapter{Real atomsphere experiment} \label{chap:tutorial_real}
+ \input{41_real_exp_introduction}
+ \input{42_real_exp_data}
+ \input{43_real_exp_prep}
+ \input{44_real_exp_pp}
+ \input{45_real_exp_init}
+ \input{46_real_exp_run}
+ \input{47_real_exp_net2g}
+
+
+%\part{Tutorial for \scalegm}
+% \chapter{Operation check and basic usage}
+% \input{gm_01intro}
+% \input{gm_02basic}
+% \chapter{Ideal atomsphere experiment}
+% \input{gm_03conf}
+% \chapter{Real atomsphere experiment}
+
+
+\part{Various settings} \label{part:basic_usel}
+
+ \chapter{Pre-processing}
+ \input{54_setting_howtoinput}
+
+ \chapter{Framework for \scalerm}
+ \input{513_setting_makeconf}
+ \input{514_setting_convert4conf}
+ \clearpage
+ \input{51_setting_domain}
+ \clearpage
+ \input{52_setting_mapproj}
+ \input{53_setting_topo}
+ \clearpage
+ \input{55_setting_time}
+ \input{56_setting_history}
+ \input{510_setting_restart}
+ \clearpage
+ \input{511_0setting_nesting}
+ \input{511_1setting_nesting_topo}
+ \input{511_2setting_offline_nesting}
+ \input{511_3setting_online_nesting}
+
+
+% \chapter{Framework for \scalegm}
+% \input{setting_gm_level}
+
+ \chapter{Setting the dynamical core}
+ \input{57_setting_dynamics}
+ %input \section{Dynamical core for \scalegm} here
+
+ \chapter{Setting the physical process} \label{sec:basic_usel_physics}
+ \input{58_setting_physics_mp}
+ \input{58_setting_physics_cp}
+ \input{58_setting_physics_tb}
+ \input{58_setting_physics_bl}
+ \input{58_setting_physics_rd}
+ \input{58_setting_physics_sf}
+ \input{58_setting_physics_OcnLndUrb}
+
+ \chapter{Common settings}
+ \input{515_setting_log}
+ \input{56_setting_monitor}
+ \input{516_setting_common}
+
+ \chapter{Post-processing} \label{sec:basic_usel_post}
+ \input{59_setting_net2g.tex}
+ \input{59_setting_sno.tex}
+
+\part{Detailed explanation for advanced use} \label{part:advance_use}
+ \chapter{File IO of \scalelib}
+ \input{61_detail_netcdf}
+ %\input{file_convention_scale}
+ %\input section{Binary data format for input data}
+ %\input section{Data format for topography/landuse data}
+
+ \chapter{How to use user defined program}
+ \input{62_moduser}
+ \chapter{How to use scale library}
+ \input{62_uselibrary}
+ \input{62_doxygen}
+
+ \chapter{How to Conduct Bulk Job}
+ \input{63_setting_bulkjob}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}
 
 \begin{appendix}
-%\chapter{Install of common library environment} \label{achap:env_setting}
-%\input{A1_setting_for_install}
-\chapter{Namelist of configuration file and variable name list for history output} \label{achap:namelist}
-\input{A2_namelist}
+\part{Appendix}
 \chapter{Frequently asked questions} \label{achap:practice}
 \input{A3_practice1_Q}
 \input{A3_practice2_A}
 \end{appendix}
+
 
 %backmatter
 \ClearWallPaper

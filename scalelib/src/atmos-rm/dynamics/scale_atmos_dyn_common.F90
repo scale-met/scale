@@ -6,19 +6,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] splited from dynamical core
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_common
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -45,6 +42,7 @@ module scale_atmos_dyn_common
   public :: ATMOS_DYN_filter_tend
   public :: ATMOS_DYN_fct
   public :: ATMOS_DYN_Copy_boundary
+  public :: ATMOS_DYN_Copy_boundary_tracer
   public :: ATMOS_DYN_divergence
 
   !-----------------------------------------------------------------------------
@@ -94,9 +92,9 @@ contains
   subroutine ATMOS_DYN_filter_setup( &
        num_diff, num_diff_q,        &
        CDZ, CDX, CDY, FDZ, FDX, FDY )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_comm, only: &
+    use scale_prc, only: &
+       PRC_abort
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
     real(RP), intent(inout) :: num_diff(KA,IA,JA,5,3)
@@ -112,8 +110,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
-       write(*,*) 'xxx number of HALO must be at least 2 for numrical filter'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_filter_setup",*) 'number of HALO must be at least 2 for numrical filter'
+       call PRC_abort
     end if
 
     ! allocation
@@ -357,26 +355,26 @@ contains
        wdamp_coef(   1:KS-1) = wdamp_coef(KS)
        wdamp_coef(KE+1:KA  ) = wdamp_coef(KE)
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*)                          ' *** Setup Rayleigh damping coefficient ***'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|     k     zh[m]    coef[/s] |'
+       LOG_NEWLINE
+       LOG_INFO("ATMOS_DYN_wdamp_setup",*)                          'Setup Rayleigh damping coefficient'
+       LOG_INFO_CONT('(1x,A)')                   '|=== Rayleigh Damping Coef ===|'
+       LOG_INFO_CONT('(1x,A)')                   '|     k     zh[m]    coef[/s] |'
        do k = KA, KE+1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = KE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KE = TOA'
        do k = KE-1, KS, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = KS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' | KS-1 = surface'
        do k = KS-2, 1, -1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,ES12.4,A)') '| ',k, FZ(k), wdamp_coef(k),' |'
        enddo
        k = 0
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)')                   '|=============================|'
+       LOG_INFO_CONT('(1x,A,I5,F10.2,12x,A)')    '| ',k, FZ(k),               ' |'
+       LOG_INFO_CONT('(1x,A)')                   '|=============================|'
     endif
 
     return
@@ -390,7 +388,7 @@ contains
        CDZ, CDX, CDY, FDZ, FDX, FDY, DT,       &
        REF_dens, REF_pott,                     &
        ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -990,21 +988,20 @@ contains
   !> Calc coefficient of numerical filter
   subroutine ATMOS_DYN_numfilter_coef_q( &
        num_diff_q,                             &
-       DENS, QTRC,                             &
+       DENS, QTRC, is_qv,                      &
        CDZ, CDX, CDY, dt,                      &
        REF_qv, iq,                             &
        ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_hydrometeor, only: &
-       I_QV
     implicit none
 
     real(RP), intent(out) :: num_diff_q(KA,IA,JA,3)
 
     real(RP), intent(in)  :: DENS(KA,IA,JA)
     real(RP), intent(in)  :: QTRC(KA,IA,JA)
+    logical,  intent(in)  :: is_qv
 
     real(RP), intent(in)  :: CDZ(KA)
     real(RP), intent(in)  :: CDX(IA)
@@ -1050,7 +1047,7 @@ contains
        nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
     end do
 
-    if ( iq == I_QV .AND. (.NOT. ND_USE_RS) ) then
+    if ( is_qv .AND. (.NOT. ND_USE_RS) ) then
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -1094,7 +1091,7 @@ contains
 
     end if
 
-    if ( iq == I_QV ) then
+    if ( is_qv ) then
 
        if ( ND_USE_RS ) then
 
@@ -1118,7 +1115,7 @@ contains
                           nd_order, & ! (in)
                           0, 0, 0, KE )
 
-    else ! iq /= I_QV
+    else ! not qv
 
        call calc_numdiff( work, iwork, & ! (out)
                           QTRC, & ! (in)
@@ -1208,7 +1205,7 @@ contains
        phi, &
        rdz, rdx, rdy, &
        KO, IO, JO )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1371,19 +1368,77 @@ contains
   end subroutine ATMOS_DYN_Copy_boundary
 
   !-----------------------------------------------------------------------------
+  subroutine ATMOS_DYN_Copy_boundary_tracer( &
+       QTRC, QTRC0, &
+       BND_W, BND_E, BND_S, BND_N )
+    implicit none
+    real(RP), intent(inout) :: QTRC (KA,IA,JA)
+    real(RP), intent(in)    :: QTRC0(KA,IA,JA)
+    logical,  intent(in)    :: BND_W
+    logical,  intent(in)    :: BND_E
+    logical,  intent(in)    :: BND_S
+    logical,  intent(in)    :: BND_N
+
+    integer :: k, i, j
+
+    if ( BND_W ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,IS,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_E ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,IE,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JA
+       do i = IE+1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_S ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+    if ( BND_N ) then
+       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,JE,IA,KS,KE,QTRC,QTRC0)
+!OCL XFILL
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = KS, KE
+          QTRC(k,i,j) = QTRC0(k,i,j)
+       enddo
+       enddo
+       enddo
+    end if
+
+    return
+  end subroutine ATMOS_DYN_Copy_boundary_tracer
+
+  !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_divergence( &
        DDIV, &
        MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF, &
        RCDZ, RCDX, RCDY, RFDZ, FDZ )
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV
     implicit none
     real(RP), intent(out) :: DDIV(KA,IA,JA)
     real(RP), intent(in)  :: MOMZ(KA,IA,JA)
@@ -1465,7 +1520,7 @@ contains
        data, &
        nd_order, &
        KO, IO, JO, KEE )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -1876,7 +1931,7 @@ contains
        UNDEF => CONST_UNDEF, &
        IUNDEF => CONST_UNDEF2, &
        EPSILON => CONST_EPS
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none

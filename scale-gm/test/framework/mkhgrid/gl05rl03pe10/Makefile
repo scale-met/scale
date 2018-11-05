@@ -14,13 +14,15 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-glevel      = 5
-rlevel      = 3
-nmpi        = 10
-zlayer      = none
-vgrid       = none
+PPNAME      = gm_mkhgrid
+PPCONF      = pp.conf
+TPROC       = 10
 
-BINNAME     = gm_mkhgrid
+# required data (parameters,distributed files)
+DATPARAM    = ""
+DATDISTS    = " [${TPROC} ../../mkrawgrid/gl05rl03pe10/rawgrid_GL05RL03 rawgrid_GL05RL03] "
+
+
 
 # build, makedir, run, jobshell, allclean, clean is inside of common Makefile
 include $(TESTDIR)/Makefile.common

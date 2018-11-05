@@ -1,0 +1,128 @@
+\section{SCALE-IO netCDF}
+ここでは、SCALE が読み書きする データファイル (SCALE-IO netCDF) について説明する。
+SCALE では、データファイルフォーマットとして、Unidata (\url{http://www.unidata.ucar.edu}) が開発を行っている
+ファイルフォーマットおよびそのファイルを扱うためのソフトウェアライブラリである netCDF (network Common Data Form) を採用している。
+NetCDF ファイルフォーマットは、自己記述的で軸情報やデータに関する必要な情報をファイルに格納することができるとともに、エンディアなどのマシン依存性がなくどのマシンでも同様に扱うことができる。
+
+
+\subsection{Global Attributes}
+SCALE-IO netCDF ファイルには、データに関する説明や空間分割に関する情報が Global Attribute として格納されている (表\ref{table:netcdf_global_attrs})。
+ただし、myrank, rankidx, procsize については、単一ファイル IO を用いた場合 (\nmitem{IO_AGGREGATE}=.true.) には出力されない。
+
+\begin{table}[h]
+  \caption{SCALE-IO netCDF に含まれる global attributes。}
+  \label{table:netcdf_global_attrs}
+  \begin{tabular}{|lll|} \hline
+    attribute name & description & 備考 \\ \hline \hline
+    title & データの簡単な説明 & \nmitem{History_TITLE} で設定された値 \\
+    source & 出力ソフトウェア名 & \nmitem{History_SOURCE} で設定された値 \\
+    institution & データ作成者情報 & \nmitem{History_INSTITUTION} で設定された値 \\
+    myrank & MPI プロセスのランク番号 & モデル内の \verb|PRC_myrank| に相当 \\
+    rankidx & 2次元分割のマッピング番号 & モデル内の \verb|PRC_2Drank(PRC_myrank,1:2)| に相当 \\
+    procsize & 2次元の分割数 & モデル内の \verb|(/| \nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} \verb|/)| に相当。 \\ \hline
+  \end{tabular}
+\end{table}
+
+\noindent \nmitem{PRC_NUM_X, PRC_NUM_Y}については、第\ref{sec:domain}節を参照のこと。
+
+
+\subsection{Halo 領域データ}
+データの種類や設定によって halo 領域のデータが含まれるかどうかが異なる。
+
+初期値(リスタート)データおよび境界値データについては、周期境界条件でない場合 (\namelist{PARAM_PRC}の\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false.) もしくは単一ファイル入出力の場合(\namelist{PARAM_IO}の\nmitem{IO_AGGREGATE}=.true.) は halo 領域データが含まれる。それ以外の場合は halo 領域データは含まれない。
+
+ヒストリデータについては、周期境界条件でなく (\namelist{PARAM_PRC}の\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false.) かつ \namelist{PARAM_HIST}の\nmitem{HIST_BND}=.true. とした場合には halo 領域データが含まれ、それ以外の場合には含まれない（第\ref{sec:output}節参照)。
+
+
+
+\subsection{軸変数}
+SCALE-IO netCDF ファイルには、軸に関するデータが格納されている。
+ただし、水平 2 次元データのみをもつ場合など不要な場合は、z 方向の軸情報が含まれていないこともある。
+表\ref{table:netcdf_axes} に 軸データの一覧を示す。
+\begin{longtable}{|l|ll|}
+  \caption{SCALE-IO netCDF に含まれる軸変数。}
+  \label{table:netcdf_axes} \\ \hline
+  & name & 説明 \\ \hline \hline
+  \endfirsthead
+  \multicolumn{3}{l}{\small\it 前ページからの続き} \\ \hline
+  & name & 説明 \\ \hline \hline
+  \endhead
+  \hline
+  \endfoot
+    1次元
+    & x & ファイルに含まれるデータの x 方向の full level 位置情報 \\
+    & y & ファイルに含まれるデータの y 方向の full level 位置情報 \\
+    & z & ファイルに含まれる大気データの z 方向の full level 位置情報 \\
+    & xh & ファイルに含まれるデータの x 方向の half level 位置情報 \\
+    & yh & ファイルに含まれるデータの y 方向の half level 位置情報 \\
+    & zh & ファイルに含まれる大気データの z 方向の half level 位置情報 \\
+    & lz & ファイルに含まれる陸面データの z 方向の full level 位置情報 \\
+    & lzh & ファイルに含まれる陸面データの z 方向の half level 位置情報 \\
+    & uz & ファイルに含まれる都市キャノピーデータの z 方向の full level 位置情報 \\
+    & uzh & ファイルに含まれる都市キャノピーデータの z 方向の half level 位置情報 \\
+    & CZ & 大気モデルの z 方向の full level 格子位置情報 (halo格子も含む) \\
+    & FZ & 大気モデルの z 方向の half level 格子位置情報 (halo格子も含む) \\
+    & CDZ & 大気モデルの z 方向の full level 格子幅情報 (halo格子も含む) \\
+    & FDZ & 大気モデルの z 方向の half level 格子幅情報 (halo格子も含む) \\
+    & CX & 対応する計算プロセスが担当する x 方向の full level 格子位置情報 (halo格子も含む) \\
+    & FX & 対応する計算プロセスが担当する x 方向の half level 格子位置情報 (halo格子も含む) \\
+    & CDX & 対応する計算プロセスが担当する x 方向の full level 格子幅情報 (halo格子も含む) \\
+    & FDX & 対応する計算プロセスが担当する x 方向の half level 格子幅情報 (halo格子も含む) \\
+    & CY & 対応する計算プロセスが担当する y 方向の full level 格子位置情報 (halo格子も含む) \\
+    & FY & 対応する計算プロセスが担当する y 方向の half level 格子位置情報 (halo格子も含む) \\
+    & CDY & 対応する計算プロセスが担当する y 方向の full level 格子幅情報 (halo格子も含む) \\
+    & FDY & 対応する計算プロセスが担当する y 方向の half level 格子幅情報 (halo格子も含む) \\
+    & LCZ & 陸面モデルの z 方向の full level 格子位置情報 \\
+    & LFZ & 陸面モデルの z 方向の half level 格子位置情報 \\
+    & LCDZ & 陸面モデルの z 方向の half level 格子幅情報 \\
+    & UCZ & 都市キャノピーモデルの z 方向の full level 格子位置情報 \\
+    & UFZ & 都市キャノピーモデルの z 方向の half level 格子位置情報 \\
+    & UCDZ & 都市キャノピーモデルの z 方向の half level 格子幅情報 \\
+    & CBFZ & z 方向の full level 格子位置におけるバッファー領域係数 \\
+    & FBFZ & z 方向の half level 格子位置におけるバッファー領域係数 \\
+    & CBFX & 対応する計算プロセスが担当する x 方向の full level 格子位置におけるバッファー領域係数 \\
+    & FBFX & 対応する計算プロセスが担当する x 方向の half level 格子位置におけるバッファー領域係数 \\
+    & CBFY & 対応する計算プロセスが担当する y 方向の full level 格子位置におけるバッファー領域係数 \\
+    & FBFY & 対応する計算プロセスが担当する y 方向の half level 格子位置におけるバッファー領域係数 \\
+    & CXG & 全計算領域の x 方向の full level 格子位置情報 (halo格子も含む) \\
+    & FXG & 全計算領域の x 方向の half level 格子位置情報 (halo格子も含む) \\
+    & CYG & 全計算領域の y 方向の full level 格子位置情報 (halo格子も含む) \\
+    & FYG & 全計算領域の y 方向の half level 格子位置情報 (halo格子も含む) \\
+    & CBFXG & 全計算領域の x 方向の full level 格子位置におけるバッファー領域係数 \\
+    & FBFXG & 全計算領域の x 方向の half level 格子位置におけるバッファー領域係数 \\
+    & CBFYG & 全計算領域の y 方向の full level 格子位置におけるバッファー領域係数 \\
+    & FBFYG & 全計算領域の y 方向の half level 格子位置におけるバッファー領域係数 \\
+    & time & 時刻情報 \\
+    \hline
+    2次元
+    & lon & full level 格子位置における経度 \\
+    & lon\_uy & x 方向の half level, y 方向の full level 格子位置における経度 \\
+    & lon\_xv & x 方向の full level, y 方向の half level 格子位置における経度 \\
+    & lon\_uv & x 方向の half level, y 方向の half level 格子位置における経度 \\
+    & lat & full level 格子位置における緯度 \\
+    & lat\_uy & x 方向の half level, y 方向の full level 格子位置における緯度 \\
+    & lat\_xv & x 方向の full level, y 方向の half level 格子位置における緯度 \\
+    & lat\_uv & x 方向の half level, y 方向の half level 格子位置における緯度 \\
+    \hline
+    3次元
+    & height & full level 格子位置における高度 \\
+    & height\_xyw & x 方向の full level, y 方向の full level, z 方向の half level 格子位置における高度 \\
+    & height\_xvz & x 方向の full level, y 方向の half level, z 方向の full level 格子位置における高度 \\
+    & height\_uyz & x 方向の half level, y 方向の full level, z 方向の full level 格子位置における高度 \\
+    & height\_xvw & x 方向の full level, y 方向の half level, z 方向の half level 格子位置における高度 \\
+    & height\_uyw & x 方向の half level, y 方向の full level, z 方向の half level 格子位置における高度 \\
+    & height\_uvz & x 方向の half level, y 方向の half level, z 方向の full level 格子位置における高度 \\
+    & height\_uvw & half level 格子位置における高度 \\
+\end{longtable}
+
+すべての軸情報変数は、long\_name および units 属性をもつ。それぞれ、変数の説明および単位である。
+また、x, y, xh, yh については、全領域データ格子数(size\_global)、全格子におけるファイルに含まれるデータの開始格子点位置(start\_global)、全領域データにおける先頭および末尾における halo 領域格子数 (halo\_global)、ファイルに含まれる先頭および末尾における halo 領域格子数 (halo\_local) の情報が attribute として付加されている。
+
+
+
+\subsection{データ変数}
+データ変数は、long\_name, units に加えて、未定義値を表す \_FillValue および欠損値を表す missing\_value を attribute としてもつ。
+
+初期値(リスタート)データファイル、境界値データのデータ構造はモデル内の配列構造と同じで、z, x, y の順番である。
+一方、ヒストリデータファイルは、x, y, z の順番である。
+

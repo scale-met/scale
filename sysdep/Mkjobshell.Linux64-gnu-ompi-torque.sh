@@ -75,7 +75,11 @@ else
    rscgrp="s"
 fi
 
-
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
 
 
 
@@ -88,7 +92,7 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PBS -q ${rscgrp}
 #PBS -l nodes=${NNODE}:ppn=${NPROC}
-#PBS -l walltime=4:00:00
+#PBS -l walltime=8:00:00
 #PBS -N SCALE
 #PBS -o OUT.log
 #PBS -e ERR.log
@@ -155,8 +159,8 @@ if [ ${ndata} -gt 0 ]; then
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${triple[1]}.pe${PE}.nc
-         dst=${triple[2]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh

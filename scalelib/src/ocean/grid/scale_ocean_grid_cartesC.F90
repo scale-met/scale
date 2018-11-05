@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module GRID (cartesian) for ocean
+!> module ocean / grid / cartesianC
 !!
 !! @par Description
 !!          Grid module for cartesian coordinate for ocean
@@ -8,13 +8,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_ocean_grid_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_ocean_grid_cartesC_index
@@ -46,7 +47,8 @@ module scale_ocean_grid_cartesC
   !
   !++ Private parameters & variables
   !
-  real(RP), private :: FZ(100) ! face coordinate without surface (=0 m)
+  integer,  private, parameter :: FZ_MAX = 100
+  real(RP), private :: FZ(FZ_MAX) ! face coordinate without surface (=0 m)
 
   character(len=H_LONG) :: OCEAN_GRID_CARTESC_IN_BASENAME  = ''
   logical               :: OCEAN_GRID_CARTESC_IN_AGGREGATE
@@ -56,7 +58,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine OCEAN_GRID_CARTESC_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
@@ -71,8 +73,13 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC] / Categ[OCEAN GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Setup'
+
+    if ( OKMAX < 1 ) then
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Skip because OKMAX < 1'
+       return
+    end if
 
     FZ(:) = 0.0_RP
 
@@ -82,55 +89,46 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_OCEAN_GRID_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_OCEAN_GRID_CARTESC. Check!'
+       LOG_ERROR("OCEAN_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_OCEAN_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_OCEAN_GRID_CARTESC)
+    LOG_NML(PARAM_OCEAN_GRID_CARTESC)
 
     allocate( OCEAN_GRID_CARTESC_CZ (OKS  :OKE) )
     allocate( OCEAN_GRID_CARTESC_FZ (OKS-1:OKE) )
     allocate( OCEAN_GRID_CARTESC_CDZ(OKS  :OKE) )
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Ocean grid information ***'
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Ocean grid information '
 
     if ( OCEAN_GRID_CARTESC_IN_BASENAME /= '' ) then
        call OCEAN_GRID_CARTESC_read
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found input grid file. Grid position is calculated.'
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Not found input grid file. Grid position is calculated.'
 
        call OCEAN_GRID_CARTESC_generate
     endif
 
     if ( OKE == OKS ) then
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Single layer. ODZ = ', OCEAN_GRID_CARTESC_CDZ(1)
+       LOG_NEWLINE
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",*) 'Single layer. ODZ = ', OCEAN_GRID_CARTESC_CDZ(1)
     else
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|====== Vertical Coordinate ======|'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|   k       z      zh      dz   k |'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|         [m]     [m]     [m]     |'
+       LOG_NEWLINE
+       LOG_INFO("OCEAN_GRID_CARTESC_setup",'(1x,A)') 'Vertical Coordinate'
+       LOG_INFO_CONT('(1x,A)')                  '|   k       z      zh      dz   k |'
+       LOG_INFO_CONT('(1x,A)')                  '|         [m]     [m]     [m]     |'
        k = OKS-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',OCEAN_GRID_CARTESC_FZ(k),'        ',k,' | Atmosphere interface'
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',OCEAN_GRID_CARTESC_FZ(k),'        ',k,' | Atmosphere interface'
        do k = OKS, OKE-1
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,OCEAN_GRID_CARTESC_CZ(k),'        ',OCEAN_GRID_CARTESC_CDZ(k),'     | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',OCEAN_GRID_CARTESC_FZ(k),'       |',k,' | '
+       LOG_INFO_CONT('(1x,A,I4,F8.3,A,F8.3,A)') '|',k,OCEAN_GRID_CARTESC_CZ(k),'        ',OCEAN_GRID_CARTESC_CDZ(k),'     | '
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',OCEAN_GRID_CARTESC_FZ(k),'       |',k,' | '
        enddo
        k = OKE
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,I4,F8.3,A,F8.3,A)') &
-       '|',k,OCEAN_GRID_CARTESC_CZ(k),'        ',OCEAN_GRID_CARTESC_CDZ(k),'     | '
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,F8.3,A,I4,A)') &
-       '|            ',OCEAN_GRID_CARTESC_FZ(k),'        ',k,' | layer of no motion'
-       if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-       '|=================================|'
+       LOG_INFO_CONT('(1x,A,I4,F8.3,A,F8.3,A)') '|',k,OCEAN_GRID_CARTESC_CZ(k),'        ',OCEAN_GRID_CARTESC_CDZ(k),'     | '
+       LOG_INFO_CONT('(1x,A,F8.3,A,I4,A)')      '|            ',OCEAN_GRID_CARTESC_FZ(k),'        ',k,' | layer of no motion'
+       LOG_INFO_CONT('(1x,A)')                  '|=================================|'
     endif
 
     return
@@ -142,15 +140,15 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
     integer  :: fid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input ocean grid file ***'
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_GRID_CARTESC_read",*) 'Input ocean grid file '
 
     call FILE_open( OCEAN_GRID_CARTESC_IN_BASENAME, fid, rankid=PRC_myrank, aggregate=OCEAN_GRID_CARTESC_IN_AGGREGATE )
 
@@ -170,6 +168,9 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
+    if ( OKA == 1 .and. FZ(1) == 0.0_RP ) then
+       FZ(1) = 1.0_RP ! to avoid zero thickness (tentative)
+    end if
     OCEAN_GRID_CARTESC_FZ(OKS-1) = 0.0_RP
     do k = OKS, OKE
        OCEAN_GRID_CARTESC_FZ(k) = FZ(k)
@@ -184,4 +185,3 @@ contains
   end subroutine OCEAN_GRID_CARTESC_generate
 
 end module scale_ocean_grid_cartesC
-

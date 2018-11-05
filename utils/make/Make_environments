@@ -13,7 +13,7 @@ envlog:
 	@echo "[Debug]"
 	@echo " + Activate debug option?                            [SCALE_DEBUG]            :" $(SCALE_DEBUG)
 	@echo " + Activate quick debug option?                      [SCALE_QUICKDEBUG]       :" $(SCALE_QUICKDEBUG)
-	@echo " + Use check routine for mass in dynamics?           [SCALE_USE_MASSCHECK]    :" $(SCALE_USE_MASSCHECK)
+#	@echo " + Use check routine for mass in dynamics?           [SCALE_USE_MASSCHECK]    :" $(SCALE_USE_MASSCHECK)
 	@echo "[Perforamnce optimization]"
 	@echo " + Use single floating-point precision?              [SCALE_USE_SINGLEFP]     :" $(SCALE_USE_SINGLEFP)
 	@echo " + Use fixed size for spatial grid dimension?        [SCALE_USE_FIXEDINDEX]   :" $(SCALE_USE_FIXEDINDEX)

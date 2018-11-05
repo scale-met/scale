@@ -15,38 +15,34 @@ LIBNAME = libscale.a
 DEPENDLIB =
 
 VPATH = common:                          \
-        coupler:                         \
         io:                              \
-	file:                            \
-	grid:                            \
-	communication:                   \
+        file:                            \
+        communication:                   \
+        atmosphere/common:               \
         atmosphere/grid:                 \
-        atmosphere/physics/pbl:          \
+        atmosphere/physics/aerosol:      \
+        atmosphere/physics/chemistry:    \
+        atmosphere/physics/cumulus:      \
         atmosphere/physics/microphysics: \
+        atmosphere/physics/pbl:          \
         atmosphere/physics/radiation:    \
         atmosphere/physics/surface:      \
-        atmos-physics:                   \
-        atmos-physics/share:             \
-        atmos-physics/microphysics:      \
-        atmos-physics/aerosol:           \
-        atmos-physics/chemistry:         \
-        atmos-physics/radiation:         \
-        atmos-physics/surfaceflux:       \
-        atmos-physics/turbulence:        \
-        atmos-physics/cumulus:           \
-        atmos-rm:                        \
-        atmos-rm/communication:          \
-        atmos-rm/grid:                   \
-        atmos-rm/io:                     \
-        atmos-rm/numeric:                \
-        atmos-rm/dynamics:               \
-        atmos-rm/forcing:                \
         land:                            \
         land/grid:                       \
+        land/dynamics:                   \
+        land/physics:                    \
         ocean:                           \
         ocean/grid:                      \
+        ocean/dynamics:                  \
+        ocean/physics:                   \
         urban:                           \
-        urban/grid:
+        urban/grid:                      \
+        urban/dynamics:                  \
+        coupler:                         \
+        coupler/physics/surface:         \
+        \
+        atmos-rm/dynamics:               \
+        atmos-rm/turbulence:
 
 LIBVERSION = $(shell git rev-parse --short HEAD 2> /dev/null)
 ifeq ($(LIBVERSION),)
@@ -57,190 +53,194 @@ endif
 
 SDM_EXIST := $(shell find $(TOPDIR)/contrib -name SDM 2> /dev/null )
 
-OBJS_DYN = scale_atmos_dyn_fvm_flux_cd2.o	\
-           scale_atmos_dyn_fvm_flux_cd4.o	\
-           scale_atmos_dyn_fvm_flux_cd6.o	\
-           scale_atmos_dyn_fvm_flux_ud1.o	\
-           scale_atmos_dyn_fvm_flux_ud3.o	\
-           scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
-           scale_atmos_dyn_fvm_flux_ud5.o	\
-           scale_atmos_dyn_fvm_flux.o	\
-           scale_atmos_dyn_tinteg_large_euler.o	\
-           scale_atmos_dyn_tinteg_large_rk3.o	\
-           scale_atmos_dyn_tinteg_large.o	\
-           scale_atmos_dyn_tinteg_short_rk3.o	\
-           scale_atmos_dyn_tinteg_short_rk4.o	\
-           scale_atmos_dyn_tinteg_short.o	\
-           scale_atmos_dyn_tinteg_tracer_euler.o	\
-           scale_atmos_dyn_tinteg_tracer_rk3.o	\
-           scale_atmos_dyn_tinteg_tracer.o	\
-           scale_atmos_dyn_tstep_large_fvm_heve.o	\
-           scale_atmos_dyn_tstep_large.o	\
-           scale_atmos_dyn_tstep_short_fvm_heve.o	\
-           scale_atmos_dyn_tstep_short_fvm_hevi.o	\
-           scale_atmos_dyn_tstep_short_fvm_hivi.o	\
-           scale_atmos_dyn_tstep_short.o	\
-           scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
-           scale_atmos_dyn_tstep_tracer.o
-
-OBJS_MP = scale_atmos_phy_mp_dry.o	\
-          scale_atmos_phy_mp_kessler.o	\
-          scale_atmos_phy_mp_sn14.o	\
-          scale_atmos_phy_mp_sdm.o	\
-          scale_atmos_phy_mp_suzuki10.o	\
-          scale_atmos_phy_mp_tomita08.o
-
-OBJS_AE = scale_atmos_phy_ae_dummy.o	\
-          scale_atmos_phy_ae_kajino13.o
-
-OBJS_CH = scale_atmos_phy_ch_rn222.o
-
-OBJS_RD = scale_atmos_phy_rd_mstrnx.o	\
-          scale_atmos_phy_rd_mm5sw.o	\
-          scale_atmos_phy_rd_offline.o	\
-          scale_atmos_phy_rd_profile.o
-
-OBJS_SF = scale_atmos_phy_sf_bulk.o	\
-          scale_atmos_phy_sf_const.o
-
-OBJS_TB = scale_atmos_phy_tb_smg.o	\
-          scale_atmos_phy_tb_d1980.o	\
-          scale_atmos_phy_tb_dns.o
-
-OBJS_BL = scale_atmos_phy_bl_mynn.o
-
-OBJS_CP = scale_atmos_phy_cp_kf.o
-
-
-
-OBJS_NAME = \
-	scale.o \
-	scale_file_netcdf.o	\
-	scale_file_f.o	\
-	scale_file_h.o	\
-	scale_file.o	\
-	scale_file_cartesC.o	\
-	scale_file_history.o	\
-	scale_file_history_cartesC.o	\
-	scale_file_external_input.o	\
-	scale_file_external_input_cartesC.o	\
-	scale_atmos_grid_cartesC_index.o	\
-	scale_atmos_grid_cartesC.o	\
-	scale_atmos_grid_cartesC_real.o	\
-	scale_atmos_grid_cartesC_metric.o	\
-	scale_atmos_dyn.o	\
-	scale_atmos_dyn_common.o	\
-	$(OBJS_DYN)	\
-	$(OBJS_NUMERIC_FDM)	\
+OBJS = \
+	$(OBJ_DIR)/scale.o	\
 	\
-	scale_atmos_phy_mp.o	\
-	scale_atmos_phy_mp_common.o	\
-	scale_atmos_phy_mp_convert.o	\
-	$(OBJS_MP)	\
+	$(OBJ_DIR)/scale_sys_sigvars.o	\
+	$(OBJ_DIR)/scale_file_netcdf.o	\
+	$(OBJ_DIR)/scale_file_f.o	\
 	\
-	scale_atmos_phy_ae.o	\
-	$(OBJS_AE)	\
-	\
-	scale_atmos_phy_ch.o	\
-	$(OBJS_CH)	\
-	\
-	scale_atmos_phy_rd.o	\
-	scale_atmos_phy_rd_common.o	\
-	$(OBJS_RD)	\
-	\
-	$(OBJS_SF)	\
-	\
-	scale_atmos_phy_tb.o	\
-	scale_atmos_phy_tb_common.o	\
-	$(OBJS_TB)	\
-        \
-	$(OBJS_BL)	\
-	\
-	scale_atmos_phy_cp.o	\
-	scale_atmos_phy_cp_common.o	\
-	$(OBJS_CP)	\
-	\
-	scale_atmos_sub_bottom.o	\
-	scale_atmos_sub_boundary.o	\
-	scale_atmos_sub_hydrostatic.o	\
-	scale_atmos_sub_profile.o	\
-	scale_atmos_sub_refstate.o	\
-	scale_atmos_sub_saturation.o	\
-	scale_atmos_sub_solarins.o	\
-	scale_atmos_sub_thermodyn.o	\
-	scale_atmos_sub_aerosol.o	\
-	scale_atmos_sub_hydrometeor.o	\
-	scale_atmos_sub_adiabat.o	\
-	scale_atmos_sub_diagnostic.o	\
-	scale_bulkflux.o	\
-	scale_calendar.o	\
-	scale_comm_cartesC.o	\
-	scale_comm_cartesC_nest.o	\
-	scale_const.o	\
-	scale_debug.o	\
-	scale_index.o		\
-	scale_interp.o	\
-	scale_interp_vert.o	\
-	scale_ocean_grid_cartesC_index.o	\
-	scale_ocean_grid_cartesC.o	\
-	scale_ocean_phy.o	\
-	scale_ocean_phy_const.o	\
-	scale_ocean_phy_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
-	scale_ocean_sfc.o	\
-	scale_ocean_sfc_const.o	\
-	scale_ocean_sfc_slab.o	\
-	scale_land_grid_cartesC_index.o	\
-	scale_land_grid_cartesC.o	\
-	scale_land_phy.o	\
-	scale_land_phy_const.o	\
-	scale_land_phy_slab.o	\
-	scale_land_phy_matsiro.o	\
-	scale_land_phy_snow_ky90.o	\
-	scale_land_phy_snow_diagnos.o	\
-	scale_land_sfc.o	\
-	scale_land_sfc_const.o	\
-	scale_land_sfc_thin-slab.o	\
-	scale_land_sfc_thick-slab.o	\
-	scale_urban_grid_cartesC_index.o	\
-	scale_urban_grid_cartesC.o	\
-	scale_urban_phy.o	\
-	scale_urban_phy_slc.o	\
-	scale_landuse.o	\
-	scale_rm_process.o	\
-	scale_rm_statistics.o	\
-	scale_mapprojection.o	\
-	scale_matrix.o	\
-	scale_monitor.o	\
-	scale_precision.o	\
-	scale_process.o	\
-	scale_prof.o	\
-	scale_random.o	\
-	scale_roughness.o	\
-	scale_specfunc.o	\
-	scale_stdio.o	\
-	scale_time.o	\
-	scale_topography.o	\
-	scale_tracer.o	\
-	scale_vector.o
-
-OBJS = $(patsubst %,$(OBJ_DIR)/%,$(OBJS_NAME))
-
-OBJS_FOR_DYN = $(OBJ_DIR)/scale_atmos_dyn.o	\
-	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
-	$(patsubst %,$(OBJ_DIR)/%,$(OBJS_DYN))
-
-OBJS_FOR_SDM = $(OBJ_DIR)/scale_precision.o	\
+	$(OBJ_DIR)/scale_calendar.o	\
+	$(OBJ_DIR)/scale_const.o	\
+	$(OBJ_DIR)/scale_debug.o	\
+	$(OBJ_DIR)/scale_fpm.o	\
+	$(OBJ_DIR)/scale_index.o	\
+	$(OBJ_DIR)/scale_interp.o	\
+	$(OBJ_DIR)/scale_interp_vert.o	\
+	$(OBJ_DIR)/scale_mapprojection.o	\
+	$(OBJ_DIR)/scale_matrix.o	\
+	$(OBJ_DIR)/scale_sort.o	\
+	$(OBJ_DIR)/scale_filter.o	\
+	$(OBJ_DIR)/scale_prc.o	\
+	$(OBJ_DIR)/scale_prc_cartesC.o	\
+	$(OBJ_DIR)/scale_prc_icoA.o	\
+	$(OBJ_DIR)/scale_precision.o	\
 	$(OBJ_DIR)/scale_prof.o	\
-	$(OBJ_DIR)/scale_comm.o	\
-	$(OBJ_DIR)/scale_atmos_sub_thermodyn.o	\
-	$(OBJ_DIR)/scale_atmos_sub_saturation.o	\
+	$(OBJ_DIR)/scale_random.o	\
+	$(OBJ_DIR)/scale_sigvars.o	\
+	$(OBJ_DIR)/scale_specfunc.o	\
+	$(OBJ_DIR)/scale_statistics.o	\
+	$(OBJ_DIR)/scale_time.o	\
+	$(OBJ_DIR)/scale_topography.o	\
+	$(OBJ_DIR)/scale_tracer.o	\
+	$(OBJ_DIR)/scale_vector.o	\
+	$(OBJ_DIR)/scale_io.o	\
+	$(OBJ_DIR)/scale_monitor.o	\
+	$(OBJ_DIR)/scale_monitor_cartesC.o	\
+	$(OBJ_DIR)/scale_comm_cartesC.o	\
+	$(OBJ_DIR)/scale_comm_cartesC_nest.o	\
+	$(OBJ_DIR)/scale_comm_icoA.o	\
+	$(OBJ_DIR)/scale_file.o	\
+	$(OBJ_DIR)/scale_file_cartesC.o	\
+	$(OBJ_DIR)/scale_file_external_input.o	\
+	$(OBJ_DIR)/scale_file_external_input_cartesC.o	\
+	$(OBJ_DIR)/scale_file_h.o	\
+	$(OBJ_DIR)/scale_file_history.o	\
+	$(OBJ_DIR)/scale_file_history_cartesC.o	\
+	$(OBJ_DIR)/scale_file_tiledata.o	\
+	\
+	$(OBJ_DIR)/scale_atmos_adiabat.o	\
+	$(OBJ_DIR)/scale_atmos_aerosol.o	\
+	$(OBJ_DIR)/scale_atmos_bottom.o	\
+	$(OBJ_DIR)/scale_atmos_diagnostic.o	\
+	$(OBJ_DIR)/scale_atmos_diagnostic_cartesC.o	\
+	$(OBJ_DIR)/scale_atmos_hydrometeor.o	\
+	$(OBJ_DIR)/scale_atmos_hydrostatic.o	\
+	$(OBJ_DIR)/scale_atmos_profile.o	\
+	$(OBJ_DIR)/scale_atmos_refstate.o	\
+	$(OBJ_DIR)/scale_atmos_saturation.o	\
+	$(OBJ_DIR)/scale_atmos_solarins.o	\
+	$(OBJ_DIR)/scale_atmos_thermodyn.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC_index.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC_metric.o	\
+	$(OBJ_DIR)/scale_atmos_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_atmos_grid_icoA.o	\
+	$(OBJ_DIR)/scale_atmos_grid_icoA_index.o	\
+	$(OBJ_DIR)/scale_atmos_dyn.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd2.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd4.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd6.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud1.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_large.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_heve.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_hevi.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_hivi.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
+	$(OBJ_DIR)/scale_atmos_phy_ae_kajino13.o	\
+	$(OBJ_DIR)/scale_atmos_phy_bl_mynn.o	\
+	$(OBJ_DIR)/scale_atmos_phy_ch_rn222.o	\
+	$(OBJ_DIR)/scale_atmos_sfc_ch_rn222.o	\
+	$(OBJ_DIR)/scale_atmos_phy_cp_common.o	\
+	$(OBJ_DIR)/scale_atmos_phy_cp_kf.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_kessler.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_sn14.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_suzuki10.o	\
+	$(OBJ_DIR)/scale_atmos_phy_mp_tomita08.o	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_common.o	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_mstrnx.o	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_offline.o	\
+	$(OBJ_DIR)/scale_atmos_phy_rd_profile.o	\
+	$(OBJ_DIR)/scale_atmos_phy_sf_bulk.o	\
+	$(OBJ_DIR)/scale_atmos_phy_sf_const.o	\
+	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_common.o	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_d1980.o	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_dns.o	\
+	$(OBJ_DIR)/scale_atmos_phy_tb_smg.o	\
+	\
+	$(OBJ_DIR)/scale_ocean_grid_cartesC.o	\
+	$(OBJ_DIR)/scale_ocean_grid_cartesC_index.o	\
+	$(OBJ_DIR)/scale_ocean_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA.o	\
+	$(OBJ_DIR)/scale_ocean_grid_icoA_index.o	\
+	$(OBJ_DIR)/scale_ocean_dyn_slab.o	\
+	$(OBJ_DIR)/scale_ocean_dyn_offline.o	\
+	$(OBJ_DIR)/scale_ocean_phy_ice_simple.o	\
+	$(OBJ_DIR)/scale_ocean_phy_albedo.o	\
+	$(OBJ_DIR)/scale_ocean_phy_albedo_nakajima00.o	\
+	$(OBJ_DIR)/scale_ocean_phy_roughness.o	\
+	$(OBJ_DIR)/scale_ocean_phy_roughness_miller92.o	\
+	$(OBJ_DIR)/scale_ocean_phy_roughness_moon07.o	\
+	$(OBJ_DIR)/scale_ocean_phy_tc.o	\
+	$(OBJ_DIR)/scale_land_grid_cartesC.o	\
+	$(OBJ_DIR)/scale_land_grid_cartesC_index.o	\
+	$(OBJ_DIR)/scale_land_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA.o	\
+	$(OBJ_DIR)/scale_land_grid_icoA_index.o	\
+	$(OBJ_DIR)/scale_land_dyn_bucket.o	\
+	$(OBJ_DIR)/scale_land_phy_matsiro.o	\
+	$(OBJ_DIR)/scale_land_phy_snow_diagnos.o	\
+	$(OBJ_DIR)/scale_land_phy_snow_ky90.o	\
+	$(OBJ_DIR)/scale_urban_grid_cartesC.o	\
+	$(OBJ_DIR)/scale_urban_grid_cartesC_index.o	\
+	$(OBJ_DIR)/scale_urban_grid_cartesC_real.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA.o	\
+	$(OBJ_DIR)/scale_urban_grid_icoA_index.o	\
+	$(OBJ_DIR)/scale_urban_dyn_kusaka01.o	\
+	$(OBJ_DIR)/scale_bulkflux.o	\
+	$(OBJ_DIR)/scale_landuse.o	\
+	$(OBJ_DIR)/scale_cpl_sfc_index.o	\
+	$(OBJ_DIR)/scale_cpl_phy_sfc_fixed_temp.o	\
+	$(OBJ_DIR)/scale_cpl_phy_sfc_skin.o
+
+OBJS_FOR_DYN = \
+	$(OBJ_DIR)/scale_atmos_dyn.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_common.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd2.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd4.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_cd6.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud1.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_large_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_large.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_heve.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_hevi.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_short_fvm_hivi.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer.o	\
+	$(OBJ_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.o
+
+OBJS_FOR_SDM = \
+	$(OBJ_DIR)/scale_precision.o	\
+	$(OBJ_DIR)/scale_prof.o	\
+	$(OBJ_DIR)/scale_comm_cartesC.o	\
+	$(OBJ_DIR)/scale_atmos_thermodyn.o	\
+	$(OBJ_DIR)/scale_atmos_saturation.o	\
 	$(OBJ_DIR)/scale_atmos_phy_mp_common.o	\
 	$(OBJ_DIR)/scale_tracer.o	\
 	$(OBJ_DIR)/scale_tracer_sdm.o	\
-	$(OBJ_DIR)/scale_stdio.o	\
+	$(OBJ_DIR)/scale_io.o	\
 	$(OBJ_DIR)/scale_history.o	\
 	$(OBJ_DIR)/scale_const.o	\
 	$(OBJ_DIR)/scale_time.o	\
@@ -268,10 +268,10 @@ makedir:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
-$(LIBNAME): $(LIBDIR)/$(LIBNAME)
+$(LIBDIR)/$(LIBNAME): $(LIBNAME)
 	install $< $@
 
-$(LIBDIR)/$(LIBNAME): $(OBJS)
+$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
@@ -299,14 +299,12 @@ endif
 
 overridesdm:
 	@echo;echo "Copy SDM-related file from $(SDMDIR)"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/
-	rsync -th $(SDMDIR)/scale_tracer_sdm.F90       $(SCALELIBDIR)/src/common/tracer/
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm.F90 $(SCALELIBDIR)/src/atmosphere/physics/microphysics/
 	@echo
 
 restoresdm:
 	@echo;echo "Restore SDM-related file"
-	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmos-physics/microphysics/scale_atmos_phy_mp_sdm.F90
-	rsync -th $(SDMDIR)/scale_tracer_sdm_dummy.F90       $(SCALELIBDIR)/src/common/tracer/scale_tracer_sdm.F90
+	rsync -th $(SDMDIR)/scale_atmos_phy_mp_sdm_dummy.F90 $(SCALELIBDIR)/src/atmosphere/physics/microphysics/scale_atmos_phy_mp_sdm.F90
 	@echo
 
 allcleansdm:
@@ -326,6 +324,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) allcleansdm
 endif
 	rm -f $(LIBDIR)/$(LIBNAME)
+	rm -f $(MODDIR)/*.mod
 
 distclean: clean
 	rm -f $(LIBNAME)
@@ -356,19 +355,17 @@ dependency:
 $(MODDIR)/%.mod : %.mod
 	install $< $@
 
-$(OBJ_DIR)/%.o : %.F90
-	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-$(OBJS_FOR_DYN) :
-	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
-
 file/scale_file.F90 : scale_file.F90.erb
 
 file/scale_file_history.F90 : scale_file_history.F90.erb
 
 scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb $< > $@
-#	erb fname=$@ $< > $@
 
+$(OBJ_DIR)/%.o : %.F90
+	$(FC) $(FFLAGS)     $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
+$(OBJS_FOR_DYN) :
+	$(FC) $(FFLAGS_DYN) $(ADDITIONAL_FFLAGS) -DVERSION_MACRO=\"$(LIBVERSION)\" -I$(SCALELIBDIR)/include -I$(OBJ_DIR) $(SCALE_PAPI_INCLUDE) $(SCALE_NETCDF_INCLUDE) $(CONTRIB_INCLUDE) $(MODDIROPT) $(OBJ_DIR) -o $@ -c $<
 $(OBJ_DIR)/%.o : %.c
 	$(CC) $(CFLAGS) -I$(SCALELIBDIR)/include $(SCALE_NETCDF_INCLUDE) -o $@ -c $<
 

@@ -7,13 +7,14 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_topography
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -60,8 +61,8 @@ contains
   subroutine TOPO_setup
     use scale_file, only: &
        FILE_AGGREGATE
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_TOPO / &
@@ -75,8 +76,8 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("TOPO_setup",*) 'Setup'
 
     TOPO_IN_AGGREGATE  = FILE_AGGREGATE
     TOPO_OUT_AGGREGATE = FILE_AGGREGATE
@@ -85,12 +86,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("TOPO_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_TOPO. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("TOPO_setup",*) 'Not appropriate names in namelist PARAM_TOPO. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TOPO)
+    LOG_NML(PARAM_TOPO)
 
     allocate( TOPO_Zsfc(IA,JA) )
     TOPO_Zsfc(:,:) = 0.0_RP
@@ -104,7 +105,7 @@ contains
   !-----------------------------------------------------------------------------
   !> HALO Communication
   subroutine TOPO_fillhalo( Zsfc, FILL_BND )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
@@ -138,21 +139,21 @@ contains
        FILE_CARTESC_flush, &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input topography file ***'
+    LOG_NEWLINE
+    LOG_INFO("TOPO_read",*) 'Input topography file '
 
     if ( TOPO_IN_BASENAME /= '' ) then
 
        call FILE_CARTESC_open( TOPO_IN_BASENAME, fid, aggregate=TOPO_IN_AGGREGATE )
        call FILE_CARTESC_read( fid, 'TOPO', 'XY', TOPO_Zsfc(:,:) )
-                               
+
        call FILE_CARTESC_flush( fid )
 
        if ( TOPO_IN_CHECK_COORDINATES ) then
@@ -166,7 +167,7 @@ contains
        TOPO_exist = .true.
 
     else
-       if( IO_L ) write(IO_FID_LOG,*) '*** topography file is not specified.'
+       LOG_INFO_CONT(*) 'topography file is not specified.'
 
        TOPO_exist = .false.
     endif
@@ -184,13 +185,14 @@ contains
 
     if ( TOPO_OUT_BASENAME /= '' ) then
 
-       if( IO_L ) write(IO_FID_LOG,*)
-       if( IO_L ) write(IO_FID_LOG,*) '*** Output topography file ***'
+       LOG_NEWLINE
+       LOG_INFO("TOPO_write",*) 'Output topography file '
 
        call TOPO_fillhalo( FILL_BND=.false. )
 
        call FILE_CARTESC_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
                                 'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
+                                standard_name="surface_altitude",                  & ! [IN]
                                 haszcoord=.false., aggregate=TOPO_OUT_AGGREGATE    ) ! [IN]
 
     endif

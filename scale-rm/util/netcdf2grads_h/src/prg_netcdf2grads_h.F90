@@ -178,14 +178,14 @@ program netcdf2grads_h
   !namelist  /PARAM_TIME/       &
   !  TIME_STARTDATE
 
-  namelist  /PARAM_PRC/        &
+  namelist  /PARAM_PRC_CARTESC/        &
     PRC_NUM_X,                 &
     PRC_NUM_Y,                 &
     PRC_PERIODIC_X,            & ! not required
     PRC_PERIODIC_Y,            & ! not required
     PRC_CART_REORDER             ! not required
 
-  NAMELIST / PARAM_MAPPROJECTION / &
+  namelist / PARAM_MAPPROJECTION / &
      MAPPROJECTION_basepoint_lon, &
      MAPPROJECTION_basepoint_lat, &
      MAPPROJECTION_basepoint_x,   & ! not required
@@ -198,7 +198,7 @@ program netcdf2grads_h
      MAPPROJECTION_M_lat,         & ! not required
      MAPPROJECTION_EC_lat           ! not required
 
-  NAMELIST / PARAM_FILE_HISTORY / &
+  namelist / PARAM_FILE_HISTORY / &
      FILE_HISTORY_TITLE,                     & ! not required
      FILE_HISTORY_SOURCE,                    & ! not required
      FILE_HISTORY_INSTITUTION,               & ! not required
@@ -221,7 +221,7 @@ program netcdf2grads_h
      debug,                                  & ! not required
      FILE_HISTORY_DEFAULT_ZDIM                 ! added?
 
-  NAMELIST / PARAM_FILE_HISTORY_CARTESC / &
+  namelist / PARAM_FILE_HISTORY_CARTESC / &
      FILE_HISTORY_CARTESC_PRES_nlayer, & ! not required
      FILE_HISTORY_CARTESC_PRES,        & ! not required
      FILE_HISTORY_CARTESC_BOUNDARY
@@ -286,6 +286,7 @@ program netcdf2grads_h
 #ifdef MPIUSE
   call comm_setup( mnxp, mnyp, nxgp, nygp, nmnge )
 #endif
+  ! allocation
   call netcdf_setup( mnxp, mnyp, nz_all )
 
   call set_atype( atype )
@@ -749,6 +750,14 @@ contains
           do n=1, ZCOUNT
              if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
           enddo
+       case ( "original" ) ! If Z_LEV_TYPE = original, then TARGET_ZLEV is ignored.
+          Z_LEV_LIST = .false.
+          m = ZSTART
+          do n=1, ZCOUNT
+             TARGET_ZLEV(n) = m
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+             m = m + 1
+          enddo
        case default
           do n=1, ZCOUNT
              if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
@@ -813,8 +822,8 @@ contains
     !if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_TIME )
 
     rewind( FID_RCNF )
-    read  ( FID_RCNF, nml=PARAM_PRC, iostat=ierr )
-    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC )
+    read  ( FID_RCNF, nml=PARAM_PRC_CARTESC, iostat=ierr )
+    if ( LOUT .and. LOG_DBUG ) write ( FID_LOG, nml=PARAM_PRC_CARTESC )
 
     rewind( FID_RCNF )
     read  ( FID_RCNF, nml=PARAM_FILE_HISTORY_CARTESC, iostat=ierr )

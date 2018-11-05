@@ -1,0 +1,95 @@
+\section{User Program Using {\scalelib}}
+
+\scalelib is a collection of subroutines.
+The subroutines can be used in an arbitrary program.
+The library file is created as ``\verb|scalelib.a|'' under \texttt{scale-{\version}/lib/} after compiling.
+
+The following is a template when you use \scalelib in your program.
+\editbox{
+  \verb|program template|\\
+  \verb|  use scalelib|\\
+  \verb|  implicit none|\\
+  \verb||\\
+  \verb|  call SCALE_init|\\
+  \verb||\\
+  \verb|  ! user instractions|\\
+  \verb||\\
+  \verb|  call SCALE_finalize|\\
+  \verb||\\
+  \verb|  stop|\\
+  \verb|end program template|\\
+}
+
+The following is a pseudo program calculating convective available potential energy (CAPE)
+from atmospheric quantities read from a file.
+You needs to use necessary modules and prepare required input variables before main part.
+Note that this is only a part of the program.
+\editbox{
+  \verb|                         |\\
+  \verb|use scale_const, only: & | \\
+  \verb|      Rdry => CONST_Rdry, Rvap => CONST_Rvap, CPdry => CONST_CPdry|\\
+  \verb|use scale_atmos_hydrometeor, only:  &  |\\
+  \verb|      CPvap => CP_VAPOR, CL => CP_WATER|\\
+  \verb|use scale_file, only:  &  | \\
+  \verb|     FILE_open, FILE_read, FILE_close|\\
+  \verb|use scale_atmos_adiabat, only:  & | \\
+  \verb|     ATMOS_ADIABAT_setup, ATMOS_ADIABAT_cape|\\
+  \verb|                  :      |\\
+  \verb| real(8) :: z(kmax,imax,jmax), zh(0:kmax,imax,jmax)|\\
+  \verb| real(8) :: temp(kmax,imax,jmax), pres(kmax,imax,jmax), dens(kmax,imax,jmax)|\\
+  \verb| real(8) :: qv(kmax,imax,jmax), qc(kmax,imax,jmax), qdry(kmax,imax,jmax)|\\
+  \verb| real(8) :: rtot(kmax,imax,jmax), cptot(kmax,imax,jmax)|\\
+  \verb| real(8) :: cape(imax,jmax), cin(imax,jmax)|\\
+  \verb| real(8) :: lcl(imax,jmax), lfc(imax,jmax), lnb(imax,jmax)|\\
+  \verb|                  :      |\\
+  \verb| call FILE_open( basename, fid )                ! open file|\\
+  \verb| call FILE_read( fid, 'height', z(:,:,:) )      ! read full-level height data|\\
+  \verb| call FILE_read( fid, 'height_xyw', zh(:,:,:) ) ! read half-level height data|\\
+  \verb| call FILE_read( fid, 'T', temp(:,:,:) )        ! read temperature data|\\
+  \verb|                  : ! read PRES, DENS, QV, QC|\\
+  \verb| call FILE_close( fid )  |\\
+  \verb|                         |\\
+  \verb|! calculate some variables required to calculate CAPE|\\
+  \verb| qdry(:,:,:)  = 1.0D0 - qv(:,:,:) - qc(:,:,:)                            ! mass ratio of dry air|\\
+  \verb| rtot(:,:,:)  = qdry(:,:,:) * Rdry + qv(:,:,:) * Rvap                    ! gas constant|\\
+  \verb| cptot(:,:,:) = qdry(:,:,:) * CPdry + qv(:,:,:) * CPvap + ql(:,:,:) * CL ! heat capacity|\\
+  \verb|                         |\\
+  \verb| call ATMOS_ADIABAT_setup|\\
+  \verb| call ATMOS_ADIABAT_cape( kmax, 1, kmax, imax, 1, imax, jmax, 1, jmax,      & ! array size|\\
+  \hspace{12em}\verb|             k0,                                               & ! percel initial layer|\\
+  \hspace{12em}\verb|             dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! input|\\
+  \hspace{12em}\verb|             qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! input|\\
+  \hspace{12em}\verb|             rtot(:,:,:), cptot(:,:,:),                        & ! input|\\
+  \hspace{12em}\verb|             z(:,:,:), zh(:,:,:),                              & ! input|\\
+  \hspace{12em}\verb|             cape(:,:), cin(:,:), lcl(:,:), lfc(:,:), lnb(:,:) ) ! output|\\
+  \verb| |\\
+}
+
+
+In the reference manual (see Section \ref{sec:reference_manual}), you can find list of the subroutine which is available and details of the subroutines.
+There are sample programs for analysis of \scalerm history file at the \texttt{scale-\version/scalelib/test/analysis} directory.
+
+
+\subsection{Compile}
+
+Before compiling your program using \scalelib, you need to compile \scalelib.\\
+\texttt{ \$ cd scale-\version/scalelib/src}\\
+\texttt{ \$ make}
+
+To compile your program, you need to link \verb|libscale.a| located at \texttt{scale-\version/lib}.
+You also have to tell the path of the module files to the compiler.
+The module path is \texttt{scale-\version/include}.
+The option to specify the module path depends on compiler.
+You can find the option in the sysdep file as \verb|MODDIROPT| variable (refer Section \ref{subsec:environment}).\\
+\verb| $ ${FC} your-program ${MODDIROPT} scale-top-dir/include \\|\\
+\verb|            `nc-config --cflags` -Lscale-top-dir/lib -lscale `nc-config --libs`|
+
+You can also use the Makefile in the samples to compile your program as follows.\\
+\texttt{ \$ cd scale-\version/scalelib/test/analysis}\\
+\texttt{ \$ mkdir your\_dir}\\
+\texttt{ \$ cd your\_dir}\\
+\texttt{ \$ cp ../horizontal\_mean/Makefile .}\\
+Copy your program file to this directory.\\
+Edit Makefile (BINNAME = your\_program\_name).\\
+\texttt{ \$ make}
+

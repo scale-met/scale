@@ -10,14 +10,20 @@ VERFNAME = 00_version.tex
 VERTEMPL = 00_version_template.tex
 
 # commands to compile documents
-LATEX    = platex
+LATEX    = pdflatex
 BIBTEX   = bibtex
-DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
+CURL     = curl -f -s -S --create-dirs
+IMAGE_URL = http://scale.aics.riken.jp/doc/ug_figures
+IMAGE_PATH = $(IMAGE_URL)/$(VERSION)$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release),-devel)
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
-SRCS = $(wildcard *.tex)
+IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includegraphics.*\{(.+)\}/ =~ $$_.split(":")[1] && print(/\A([^.]+)(\..+)?\Z/=~File.basename($$1) && $$1+($$2 || ".eps"),"\n") ') title_wallpaper.pdf scale_logo_final_ULWB.pdf
+IMAGES = $(patsubst %,figure/%,$(IMAGE_BASENAME))
+
+SRCS = $(wildcard *.tex) $(IMAGES)
+
 
 all: pdf
 
@@ -25,13 +31,19 @@ pdf: $(TEXNAME).pdf
 
 html: $(TEXNAME).html
 
+update_images:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	for image in $(IMAGES) ; do \
+	  $(CURL) $(IMAGE_PATH)/`basename $$image` -z $$image -o $$image; \
+	done
+
 clean:
-	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+	rm -f *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
 
-$(TEXNAME).pdf: $(TEXNAME).dvi
-	$(DVIPDF) $(TEXNAME)
+allclean: clean
+	rm -rf *.pdf figure
 
-$(TEXNAME).dvi: $(VERFNAME) $(SRCS) reference.bib
+$(TEXNAME).pdf: $(VERFNAME) $(SRCS) reference.bib
 	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
@@ -45,6 +57,16 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 
 .SUFFIXES:
-.SUFFIXES: .tex .bbl .dvi .pdf .bib .html
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .pdf .png .eps
+
+figure/%.png:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+figure/%.pdf:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+figure/%.eps:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
 
 .PHONY : pdf clean html

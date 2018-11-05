@@ -8,13 +8,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_atmos_grid_cartesC
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -104,7 +105,7 @@ contains
   subroutine ATMOS_GRID_CARTESC_setup( &
        basename, &
        aggregate )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_file, only: &
        FILE_AGGREGATE
@@ -156,8 +157,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[CartesC] / Categ[ATMOSPHER GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Setup'
+
+    if ( KMAX < 1 ) then
+       LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Skip because KMAX < 1'
+       return
+    end if
 
     FZ(:) = -1.0_RP
 
@@ -172,12 +178,12 @@ contains
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_GRID_CARTESC,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_GRID_CARTESC_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC. Check!'
+       LOG_ERROR("ATMOS_GRID_CARTESC_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_GRID_CARTESC. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_GRID_CARTESC)
+    LOG_NML(PARAM_ATMOS_GRID_CARTESC)
 
 
     call ATMOS_GRID_CARTESC_allocate
@@ -202,7 +208,6 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_setup
-  
 
   !-----------------------------------------------------------------------------
   ! private
@@ -267,7 +272,7 @@ contains
     use scale_file, only: &
        FILE_open, &
        FILE_read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -275,6 +280,9 @@ contains
     logical, intent(in), optional :: aggregate
 
     integer :: fid
+
+    real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
+    real(RP) :: FDX(0:IA), FDY(0:JA)
     !---------------------------------------------------------------------------
 
 
@@ -293,8 +301,10 @@ contains
     call FILE_read( fid, 'CDY', ATMOS_GRID_CARTESC_CDY(:) )
 
     call FILE_read( fid, 'FDZ', ATMOS_GRID_CARTESC_FDZ(:) )
-    call FILE_read( fid, 'FDX', ATMOS_GRID_CARTESC_FDX(:) )
-    call FILE_read( fid, 'FDY', ATMOS_GRID_CARTESC_FDY(:) )
+    call FILE_read( fid, 'FDX',                    FDX(:) )
+    call FILE_read( fid, 'FDY',                    FDY(:) )
+    ATMOS_GRID_CARTESC_FDX(:) = FDX(1:IA-1)
+    ATMOS_GRID_CARTESC_FDY(:) = FDY(1:JA-1)
 
     ATMOS_GRID_CARTESC_RCDZ(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDZ(:)
     ATMOS_GRID_CARTESC_RCDX(:) = 1.0_RP / ATMOS_GRID_CARTESC_CDX(:)
@@ -317,8 +327,10 @@ contains
 
     call FILE_read( fid, 'CDXG', ATMOS_GRID_CARTESC_CDXG(:) )
     call FILE_read( fid, 'CDYG', ATMOS_GRID_CARTESC_CDYG(:) )
-    call FILE_read( fid, 'FDXG', ATMOS_GRID_CARTESC_FDXG(:) )
-    call FILE_read( fid, 'FDYG', ATMOS_GRID_CARTESC_FDYG(:) )
+    call FILE_read( fid, 'FDXG',                    FDXG(:) )
+    call FILE_read( fid, 'FDYG',                    FDYG(:) )
+    ATMOS_GRID_CARTESC_FDXG(:) = FDXG(1:IA-1)
+    ATMOS_GRID_CARTESC_FDYG(:) = FDYG(1:JA-1)
 
 
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_X = 0.5_RP * ( ATMOS_GRID_CARTESC_FXG(IHALO) + ATMOS_GRID_CARTESC_FXG(IAG-IHALO) )
@@ -336,10 +348,10 @@ contains
        BUFFER_NZ, BUFFER_NX, BUFFER_NY,   &
        BUFFFACT,                          &
        BUFFFACT_Z, BUFFFACT_X, BUFFFACT_Y )
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
-    use scale_rm_process, only: &
+    use scale_prc_cartesC, only: &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y
@@ -387,7 +399,7 @@ contains
     if ( present(BUFFER_NX) ) ibuff = BUFFER_NX
     if ( ibuff > 0 ) then
        if ( 2*ibuff > IMAXG ) then
-          write(*,*) 'xxx Buffer grid size (', ibuff, &
+          LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer grid size (', ibuff, &
                      'x2) must be smaller than global domain size (X). Use smaller BUFFER_NX!'
           call PRC_abort
        endif
@@ -407,7 +419,7 @@ contains
        imain = IMAXG - 2*ibuff
 
        if ( imain < 0 ) then
-          write(*,*) 'xxx Buffer length (', bufftotx, &
+          LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer length (', bufftotx, &
                      'x2[m]) must be smaller than global domain size (X). Use smaller BUFFER_DX!'
           call PRC_abort
        endif
@@ -505,7 +517,7 @@ contains
     if ( present(BUFFER_NY) ) jbuff = BUFFER_NY
     if ( jbuff > 0 ) then
        if ( 2*jbuff > JMAXG ) then
-          write(*,*) 'xxx Buffer grid size (', jbuff, &
+          LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer grid size (', jbuff, &
                      'x2) must be smaller than global domain size (Y). Use smaller BUFFER_NY!'
           call PRC_abort
        endif
@@ -525,7 +537,7 @@ contains
        jmain = JMAXG - 2*jbuff
 
        if ( jmain < 0 ) then
-          write(*,*) 'xxx Buffer length (', bufftoty, &
+          LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer length (', bufftoty, &
                      'x2[m]) must be smaller than global domain size (Y). Use smaller BUFFER_DY!'
           call PRC_abort
        endif
@@ -618,20 +630,20 @@ contains
     use_user_input = .false.
     if ( present(FZ) ) then
        if ( maxval(FZ(:)) > 0.0_RP ) then ! try to use input from namelist
-          if( IO_L ) write(IO_FID_LOG,*) '*** Z coordinate is given from NAMELIST.'
+          LOG_INFO("ATMOS_GRID_CARTESC_generate",*) 'Z coordinate is given from NAMELIST.'
 
           if ( KMAX < 2 ) then
-             write(*,*) 'xxx KMAX must be larger than 1. Check!', KMAX
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'KMAX must be larger than 1. Check!', KMAX
              call PRC_abort
           endif
 
           if ( KMAX > FZ_MAX ) then
-             write(*,*) 'xxx KMAX must be smaller than ', FZ_MAX, '. Check!', KMAX
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'KMAX must be smaller than ', FZ_MAX, '. Check!', KMAX
              call PRC_abort
           endif
 
           if ( minval(FZ(1:KMAX)) <= 0.0_RP ) then
-             write(*,*) 'xxx FZ must be positive. Check! minval(FZ(1:KMAX))=', minval(FZ(1:KMAX))
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'FZ must be positive. Check! minval(FZ(1:KMAX))=', minval(FZ(1:KMAX))
              call PRC_abort
           endif
 
@@ -648,7 +660,7 @@ contains
        if ( present(BUFFER_NZ) ) kbuff = BUFFER_NZ
        if ( kbuff > 0 ) then
           if ( kbuff > KMAX ) then
-             write(*,*) 'xxx Buffer grid size (', kbuff, &
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer grid size (', kbuff, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
              call PRC_abort
           endif
@@ -660,7 +672,7 @@ contains
           kmain = KMAX - kbuff
        else if ( present(BUFFER_DZ) ) then
           if ( BUFFER_DZ > FZ(KMAX) ) then
-             write(*,*) 'xxx Buffer length (', BUFFER_DZ, &
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer length (', BUFFER_DZ, &
                         '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
              call PRC_abort
           endif
@@ -715,7 +727,7 @@ contains
        if ( present(BUFFER_NZ) ) kbuff = BUFFER_NZ
        if ( kbuff > 0 ) then
           if ( kbuff > KMAX ) then
-             write(*,*) 'xxx Buffer grid size (', kbuff, &
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer grid size (', kbuff, &
                         ') must be smaller than global domain size (Z). Use smaller BUFFER_NZ!'
              call PRC_abort
           endif
@@ -735,7 +747,7 @@ contains
           kmain = KMAX - kbuff
 
           if ( kmain < 0 ) then
-             write(*,*) 'xxx Buffer length (', bufftotz, &
+             LOG_ERROR("ATMOS_GRID_CARTESC_generate",*) 'Buffer length (', bufftotz, &
                         '[m]) must be smaller than global domain size (Z). Use smaller BUFFER_DZ!'
              call PRC_abort
           endif
@@ -859,19 +871,19 @@ contains
     ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y = 0.5_RP * ( ATMOS_GRID_CARTESC_FYG(JHALO) + ATMOS_GRID_CARTESC_FYG(JAG-JHALO) )
 
     ! report
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                   '*** Grid information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,3(1x,F9.3))') '*** delta Z, X, Y [m]        :', DZ, DX, DY
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_generate",*)                   'Grid information '
+    LOG_INFO_CONT('(1x,A,3(1x,F9.3))') 'delta Z, X, Y [m]        :', DZ, DX, DY
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Main/buffer Grid (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))')   '*** Z: buffer = ', kbuff,' x 1, main = ',kmain
-    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))')   '*** X: buffer = ', ibuff,' x 2, main = ',imain
-    if( IO_L ) write(IO_FID_LOG,'(1x,2(A,I6))')   '*** Y: buffer = ', jbuff,' x 2, main = ',jmain
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_generate",*)                'Main/buffer Grid (global) :'
+    LOG_INFO_CONT('(1x,2(A,I6))')   'Z: buffer = ', kbuff,' x 1, main = ',kmain
+    LOG_INFO_CONT('(1x,2(A,I6))')   'X: buffer = ', ibuff,' x 2, main = ',imain
+    LOG_INFO_CONT('(1x,2(A,I6))')   'Y: buffer = ', jbuff,' x 2, main = ',jmain
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,7(A,F9.3))') '*** Z:', &
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_generate",*)                'Domain size [km] (global) :'
+    LOG_INFO_CONT('(1x,7(A,F9.3))') 'Z:', &
                                                   ATMOS_GRID_CARTESC_FZ(0)       *1.E-3_RP, ' -HALO-                    ',   &
                                                   ATMOS_GRID_CARTESC_FZ(KS-1)    *1.E-3_RP, ' | ',        &
                                                   ATMOS_GRID_CARTESC_CZ(KS)      *1.E-3_RP, ' - ',        &
@@ -879,7 +891,7 @@ contains
                                                   ATMOS_GRID_CARTESC_FZ(KE-kbuff)*1.E-3_RP, ' -buffer- ', &
                                                   ATMOS_GRID_CARTESC_FZ(KE)      *1.E-3_RP, ' -HALO- ',   &
                                                   ATMOS_GRID_CARTESC_FZ(KA)      *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F9.3))') '*** X:', &
+    LOG_INFO_CONT('(1x,8(A,F9.3))') 'X:', &
                                                   ATMOS_GRID_CARTESC_FXG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   ATMOS_GRID_CARTESC_FXG(IHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   ATMOS_GRID_CARTESC_FXG(IHALO+ibuff)    *1.E-3_RP, ' | ',        &
@@ -888,7 +900,7 @@ contains
                                                   ATMOS_GRID_CARTESC_FXG(IAG-IHALO-ibuff)*1.E-3_RP, ' -buffer- ', &
                                                   ATMOS_GRID_CARTESC_FXG(IAG-IHALO)      *1.E-3_RP, ' -HALO- ',   &
                                                   ATMOS_GRID_CARTESC_FXG(IAG)            *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,8(A,F9.3))') '*** Y:', &
+    LOG_INFO_CONT('(1x,8(A,F9.3))') 'Y:', &
                                                   ATMOS_GRID_CARTESC_FYG(0)              *1.E-3_RP, ' -HALO- ',   &
                                                   ATMOS_GRID_CARTESC_FYG(JHALO)          *1.E-3_RP, ' -buffer- ', &
                                                   ATMOS_GRID_CARTESC_FYG(JHALO+jbuff)    *1.E-3_RP, ' | ',        &
@@ -906,71 +918,57 @@ contains
   subroutine ATMOS_GRID_CARTESC_output_info
     integer :: k
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Center Position of Grid (global) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '*** X: ', ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F12.3)')   '*** Y: ', ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_output_info",*)                'Center Position of Grid (global) :'
+    LOG_INFO_CONT('(1x,A,F12.3)')   'X: ', ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
+    LOG_INFO_CONT('(1x,A,F12.3)')   'Y: ', ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y
 
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*)                '*** Domain size [km] (local) :'
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F9.3))') '*** X:',                                                          &
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_output_info",*)                'Domain size [km] (local) :'
+    LOG_INFO_CONT('(1x,6(A,F9.3))') 'X:',                                                          &
                                                   ATMOS_GRID_CARTESC_FX(0) *1.E-3_RP, ' -HALO- ', ATMOS_GRID_CARTESC_FX(IS-1)*1.E-3_RP, ' | ', &
                                                   ATMOS_GRID_CARTESC_CX(IS)*1.E-3_RP, ' - ',      ATMOS_GRID_CARTESC_CX(IE)  *1.E-3_RP, ' | ', &
                                                   ATMOS_GRID_CARTESC_FX(IE)*1.E-3_RP, ' -HALO- ', ATMOS_GRID_CARTESC_FX(IA)  *1.E-3_RP
-    if( IO_L ) write(IO_FID_LOG,'(1x,6(A,F9.3))') '*** Y:',                    &
+    LOG_INFO_CONT('(1x,6(A,F9.3))') 'Y:',                    &
                                                   ATMOS_GRID_CARTESC_FY(0) *1.E-3_RP, ' -HALO- ', ATMOS_GRID_CARTESC_FY(JS-1)*1.E-3_RP, ' | ', &
                                                   ATMOS_GRID_CARTESC_CY(JS)*1.E-3_RP, ' - ',      ATMOS_GRID_CARTESC_CY(JE)  *1.E-3_RP, ' | ', &
                                                   ATMOS_GRID_CARTESC_FY(JE)*1.E-3_RP, ' -HALO- ', ATMOS_GRID_CARTESC_FY(JA)  *1.E-3_RP
 
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-    '|============= Vertical Coordinate =============|'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-    '|    k        z       zh       dz   buffer    k |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-    '|           [m]      [m]      [m]   factor      |'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_output_info",'(1x,A)') 'Vertical Coordinate'
+    LOG_INFO_CONT('(1x,A)') '|===============================================|'
+    LOG_INFO_CONT('(1x,A)') '|    k        z       zh       dz   buffer    k |'
+    LOG_INFO_CONT('(1x,A)') '|           [m]      [m]      [m]   factor      |'
 
     do k = KA, KE+1, -1
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-    '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)')  '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
+    LOG_INFO_CONT('(1x,A,I5,F9.2,A,2F9.2,A)') '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
     enddo
 
     k = KE
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' | KE = TOA'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-    '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)')  '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' | KE = TOA'
+    LOG_INFO_CONT('(1x,A,I5,F9.2,A,2F9.2,A)') '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
 
     do k = KE-1, KS, -1
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-    '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)')  '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
+    LOG_INFO_CONT('(1x,A,I5,F9.2,A,2F9.2,A)') '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
     enddo
 
     k = KS-1
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' | KS-1 = surface'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-    '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)')  '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' | KS-1 = surface'
+    LOG_INFO_CONT('(1x,A,I5,F9.2,A,2F9.2,A)') '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
 
     do k = KS-2, 1, -1
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I5,F9.2,A,2F9.2,A)') &
-    '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)')  '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
+    LOG_INFO_CONT('(1x,A,I5,F9.2,A,2F9.2,A)') '|',k,ATMOS_GRID_CARTESC_CZ(k),'         ',ATMOS_GRID_CARTESC_CDZ(k), ATMOS_GRID_CARTESC_CBFZ(k),'      |'
     enddo
 
     k = 0
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,F9.2,A,F9.2,I5,A)') &
-    '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
+    LOG_INFO_CONT('(1x,A,F9.2,A,F9.2,I5,A)') '|              ',ATMOS_GRID_CARTESC_FZ(k),'         ', ATMOS_GRID_CARTESC_FBFZ(k),k,' |'
 
-    if( IO_L ) write(IO_FID_LOG,'(1x,A)') &
-    '|===============================================|'
+    LOG_INFO_CONT('(1x,A)') '|===============================================|'
 
 
     return

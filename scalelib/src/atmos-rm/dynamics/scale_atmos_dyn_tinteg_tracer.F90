@@ -6,19 +6,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_tracer
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -41,6 +38,7 @@ module scale_atmos_dyn_tinteg_tracer
           mflx_hi, num_diff, & ! (in)
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
+          BND_W, BND_E, BND_S, BND_N, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -60,6 +58,10 @@ module scale_atmos_dyn_tinteg_tracer
        real(RP), intent(in)    :: RCDZ(KA)
        real(RP), intent(in)    :: RCDX(IA)
        real(RP), intent(in)    :: RCDY(JA)
+       logical,  intent(in)    :: BND_W
+       logical,  intent(in)    :: BND_E
+       logical,  intent(in)    :: BND_S
+       logical,  intent(in)    :: BND_N
        real(RP), intent(in)    :: dtl
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -90,8 +92,8 @@ contains
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tinteg_tracer_euler, only: &
        ATMOS_DYN_Tinteg_tracer_euler_setup, &
        ATMOS_DYN_Tinteg_tracer_euler
@@ -114,8 +116,8 @@ contains
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_setup",*) 'ATMOS_DYN_TINTEG_TRACER_TYPE is invalid: ', ATMOS_DYN_Tinteg_tracer_TYPE
+       call PRC_abort
     end select
 
     return

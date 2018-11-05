@@ -1,4 +1,4 @@
-\documentclass[a4paper]{article}
+\documentclass[a4paper]{report}
 %##########################################################################################
 \input{00_version}
 \title{{\Huge USERS GUIDE for SCALE-GM\\
@@ -28,16 +28,25 @@
 \clearpage
 \tableofcontents
 
-\clearpage
+\chapter{Introduction}
 \input{01intro}
-\clearpage
+
+\chapter{Quick Start}
 \input{02start}
-\clearpage
+
+\chapter{Change Model Configurations}
 \input{03conf}
+
 %\clearpage
 %\input{04test}
+
 \clearpage
+\input{../gm_jp/Refs}
+
+\begin{appendix}
+\chapter{Appendix: Configuration Parameters}
 \input{Aparam}
+\end{appendix}
 
 %##########################################################################################
 \end{document}

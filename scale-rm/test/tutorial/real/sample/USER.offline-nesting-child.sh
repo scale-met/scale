@@ -2,11 +2,11 @@
 
 #################################################
 #
-# &PARAM_NEST            (ALL configs)
-# &PARAM_TIME            (ALL configs)
-# &PARAM_FILE_HISTORY    (run config)
-# &PARAM_ATMOS_BOUNDARY  (run config)
-# &PARAM_ATMOS_REFSTATE  (run config)
+# &PARAM_COMM_CARTESC_NEST(ALL configs)
+# &PARAM_TIME             (ALL configs)
+# &PARAM_FILE_HISTORY     (run config)
+# &PARAM_ATMOS_BOUNDARY   (run config)
+# &PARAM_ATMOS_REFSTATE   (run config)
 #
 #################################################
 
@@ -31,6 +31,7 @@ TIME_DT_HISTORY_3D="150.0"  # unit: SEC only
 
 TIME_DT=(               "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_DYN=(      "7.5" ) # required parameters for each domain - unit: SEC only
+TIME_DT_ATMOS_PHY_CP=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_MP=(  "15.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_RD=( "150.0" ) # required parameters for each domain - unit: SEC only
 TIME_DT_ATMOS_PHY_SF=(  "15.0" ) # required parameters for each domain - unit: SEC only
@@ -61,6 +62,8 @@ PRC_NUM_Y=( 4 ) # required parameters for each domain
 KMAX=( 60 ) # required parameters for each domain
 IMAX=( 32 ) # required parameters for each domain
 JMAX=( 32 ) # required parameters for each domain
+
+OKMAX=1
 
 LKMAX=7
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
@@ -106,20 +109,21 @@ MAPPROJECTION_LC_LAT2="40.0"
 #################################################
 
 ATMOS_DYN_TYPE=(    "HEVI"        ) # required parameters for each domain
-ATMOS_PHY_CP_TYPE=( "NONE"        ) # required parameters for each domain
+ATMOS_PHY_CP_TYPE=( "KF"          ) # required parameters for each domain
 ATMOS_PHY_MP_TYPE=( "TOMITA08"    ) # required parameters for each domain
 ATMOS_PHY_RD_TYPE=( "MSTRNX"      ) # required parameters for each domain
 ATMOS_PHY_SF_TYPE=( "COUPLE"      ) # required parameters for each domain
 ATMOS_PHY_TB_TYPE=( "SMAGORINSKY" ) # required parameters for each domain
 ATMOS_PHY_BL_TYPE=( "MYNN"        ) # required parameters for each domain
 
-OCEAN_TYPE=( "CONST" ) # required parameters for each domain
-LAND_TYPE=(  "SLAB"  ) # required parameters for each domain
-URBAN_TYPE=( "SLC"   ) # required parameters for each domain
+OCEAN_DYN_TYPE=( "INIT"     ) # required parameters for each domain
+LAND_DYN_TYPE=(  "BUCKET"   ) # required parameters for each domain
+LAND_SFC_TYPE=(  "SKIN"     ) # required parameters for each domain
+URBAN_DYN_TYPE=( "KUSAKA01" ) # required parameters for each domain
 
 #################################################
 #
-# &HISTITEM (run config)
+# &HISTORY_ITEM (run config)
 #
 #################################################
 
@@ -127,7 +131,12 @@ HIST_ITEMS_SNAPSHOT_2D=(
   "MSLP" "U10" "V10" "T2" "Q2"
   "PREC" "OLR" "SFC_PRES" "SFC_TEMP"
   "OCEAN_SFC_TEMP" "LAND_SFC_TEMP" "URBAN_SFC_TEMP"
-  "OCEAN_ALB_LW" "OCEAN_ALB_SW" "LAND_ALB_LW" "LAND_ALB_SW"
+  "OCEAN_SFC_ALB_IR_dir"  "OCEAN_SFC_ALB_IR_dif"
+  "OCEAN_SFC_ALB_NIR_dir" "OCEAN_SFC_ALB_NIR_dif"
+  "OCEAN_SFC_ALB_VIS_dir" "OCEAN_SFC_ALB_VIS_dif"
+  "LAND_SFC_ALB_IR_dir"   "LAND_SFC_ALB_IR_dif"
+  "LAND_SFC_ALB_NIR_dir"  "LAND_SFC_ALB_NIR_dif"
+  "LAND_SFC_ALB_VIS_dir"  "LAND_SFC_ALB_VIS_dif"
   "OCEAN_TEMP" "OCEAN_SFC_Z0M" "LAND_TEMP" "LAND_WATER"
 )
 HIST_ITEMS_SNAPSHOT_3D=(
@@ -155,7 +164,6 @@ BASENAME_ORG="history_d01"
 FILETYPE_ORG="SCALE-RM"
 PARENT_PRC_NUM_X=2
 PARENT_PRC_NUM_Y=2
-PARENT_MP_TYPE=3
 LATLON_CATALOGUE="latlon_domain_catalogue_d01.txt"
 USE_FILE_DENSITY=".false."
 USE_FILE_LANDWATER=".true."
@@ -178,7 +186,8 @@ LANDUSETYPE=(  "GLCCv2"  ) # required parameters for each domain
 COPYTOPO=(     ".false." ) # required parameters for each domain
 SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 
-MAXSLOPE_RATIO="1.0"
+SMOOTH_ITELIM="10000"
+MAXSLOPE_RATIO="5.0"
 LIMIT_URBAN_FRACTION="0.3"
 
 #################################################

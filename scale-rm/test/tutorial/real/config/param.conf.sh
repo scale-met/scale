@@ -23,15 +23,16 @@ cat << EOF > param.admin.conf
 /
 
 &PARAM_OCEAN
- OCEAN_TYPE = "${OCEAN_TYPE[$D]}",
+ OCEAN_DYN_TYPE = "${OCEAN_DYN_TYPE[$D]}",
 /
 
 &PARAM_LAND
- LAND_TYPE = "${LAND_TYPE[$D]}",
+ LAND_DYN_TYPE = "${LAND_DYN_TYPE[$D]}",
+ LAND_SFC_TYPE = "${LAND_SFC_TYPE[$D]}",
 /
 
 &PARAM_URBAN
- URBAN_TYPE = "${URBAN_TYPE[$D]}",
+ URBAN_DYN_TYPE = "${URBAN_DYN_TYPE[$D]}",
 /
 EOF
 
@@ -43,7 +44,7 @@ cat << EOF > param.region.conf
 #
 #################################################
 
-&PARAM_PRC
+&PARAM_PRC_CARTESC
  PRC_NUM_X      = ${PRC_NUM_X[$D]},
  PRC_NUM_Y      = ${PRC_NUM_Y[$D]},
  PRC_PERIODIC_X = .false.,
@@ -60,6 +61,10 @@ cat << EOF > param.region.conf
  KMAX = ${KMAX[$D]},
  IMAX = ${IMAX[$D]},
  JMAX = ${JMAX[$D]},
+/
+
+&PARAM_OCEAN_GRID_CARTESC_INDEX
+ OKMAX = ${OKMAX},
 /
 
 &PARAM_LAND_GRID_CARTESC_INDEX
@@ -109,9 +114,8 @@ cat << EOF > param.physics.conf
 /
 
 &PARAM_ATMOS_REFSTATE
- ATMOS_REFSTATE_TYPE        = "INIT",
- ATMOS_REFSTATE_UPDATE_FLAG = .true.,
- ATMOS_REFSTATE_UPDATE_DT   = ${TIME_DT_REFSTATE},
+ ATMOS_REFSTATE_TYPE      = "INIT",
+ ATMOS_REFSTATE_UPDATE_DT = ${TIME_DT_REFSTATE},
 /
 
 &PARAM_ATMOS_BOUNDARY
@@ -175,8 +179,8 @@ cat <<EOF >> param.physics.conf
  OCEAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_OCEAN_PHY_SLAB
- OCEAN_PHY_SLAB_DEPTH = 10.0,
+&PARAM_OCEAN_DYN_SLAB
+ OCEAN_DYN_SLAB_DEPTH = 10.0,
 /
 
 #################################################
@@ -189,9 +193,9 @@ cat <<EOF >> param.physics.conf
  LAND_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_LAND_PHY_SLAB
- LAND_PHY_UPDATE_BOTTOM_TEMP  = .false.,
- LAND_PHY_UPDATE_BOTTOM_WATER = .true.,
+&PARAM_LAND_DYN_BUCKET
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_TEMP  = .false.,
+ LAND_DYN_BUCKET_UPDATE_BOTTOM_WATER = .true.,
 /
 
 #################################################
@@ -204,7 +208,7 @@ cat <<EOF >> param.physics.conf
 ! URBAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_URBAN_PHY_SLC
+&PARAM_URBAN_DYN_KUSAKA01
  STRGR = 0.0,
  STRGB = 0.0,
  STRGG = 0.0,

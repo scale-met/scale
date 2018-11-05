@@ -10,13 +10,14 @@
 !! @li      2012-03-28 (H.Yashiro)  [new]
 !!
 !<
+#include "scalelib.h"
 module scale_random
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -25,7 +26,8 @@ module scale_random
   !++ Public procedure
   !
   public :: RANDOM_setup
-  public :: RANDOM_get
+  public :: RANDOM_uniform
+  public :: RANDOM_normal
 
   !-----------------------------------------------------------------------------
   !
@@ -50,8 +52,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine RANDOM_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_RANDOM / &
@@ -60,30 +62,32 @@ contains
     integer :: nseeds, ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[RANDOM] / Categ[COMMON] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("RANDOM_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_RANDOM,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("RANDOM_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_RANDOM. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("RANDOM_setup",*) 'Not appropriate names in namelist PARAM_RANDOM. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_RANDOM)
+    LOG_NML(PARAM_RANDOM)
 
     call random_seed
     call random_seed(size=nseeds)
 
     allocate( RANDOM_seedvar(nseeds))
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Array size for random seed:', nseeds
+    LOG_NEWLINE
+    LOG_INFO("RANDOM_setup",*) 'Array size for random seed:', nseeds
     if ( RANDOM_FIX ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** random seed is fixed.'
+       LOG_INFO("RANDOM_setup",*) 'random seed is fixed.'
     endif
+
+    call RANDOM_reset
 
     return
   end subroutine RANDOM_setup
@@ -91,7 +95,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Reset random seed
   subroutine RANDOM_reset
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank
     implicit none
 
@@ -131,17 +135,63 @@ contains
   end subroutine RANDOM_reset
 
   !-----------------------------------------------------------------------------
-  !> Get random number
-  subroutine RANDOM_get( var )
+  !> Get uniform random number
+  subroutine RANDOM_uniform( var )
     implicit none
 
     real(RP), intent(out) :: var(:,:,:)
     !---------------------------------------------------------------------------
 
-    call RANDOM_reset
     call random_number(var)
 
     return
-  end subroutine RANDOM_get
+  end subroutine RANDOM_uniform
+
+  !-----------------------------------------------------------------------------
+  !> Get normal random number
+  subroutine RANDOM_normal( var )
+    implicit none
+    real(RP), intent(out) :: var(:,:,:)
+    integer :: n
+
+    n = size(var)
+    call get_normal( n, var(:,:,:) )
+
+    return
+  end subroutine RANDOM_normal
+
+  ! private
+
+  subroutine get_normal( n, var )
+    use scale_const, only: &
+       PI => CONST_PI
+    implicit none
+    integer,  intent(in)  :: n
+    real(RP), intent(out) :: var(n)
+
+    real(RP) :: rnd(n+1)
+    real(RP) :: fact
+    real(RP) :: theta
+    integer :: i
+    !---------------------------------------------------------------------------
+
+    call random_number(rnd)
+
+    !$omp parallel do &
+    !$omp private(fact,theta)
+    do i = 1, n/2
+       fact = sqrt(-2.0_RP * log( rnd(i*2-1) ) )
+       theta = 2.0_RP * PI * rnd(i*2)
+       var(i*2-1) = fact * cos(theta)
+       var(i*2  ) = fact * sin(theta)
+    end do
+    if ( mod(n,2) == 1 ) then
+       fact = sqrt(-2.0_RP * log( rnd(n) ) )
+       theta = 2.0_RP * PI * rnd(n+1)
+       var(n) = fact * cos(theta)
+    end if
+
+    return
+  end subroutine get_normal
 
 end module scale_random

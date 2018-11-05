@@ -10,13 +10,15 @@
 !! @li      2013-02-06 (S.Nishizawa) [new] SF_gamma
 !!
 !<
+#include "scalelib.h"
 module scale_specfunc
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
+  use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
   private

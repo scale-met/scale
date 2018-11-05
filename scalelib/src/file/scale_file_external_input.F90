@@ -8,13 +8,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_file_external_input
   !-----------------------------------------------------------------------------
   !
   !++ Used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -107,7 +108,7 @@ module scale_file_external_input
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: FILE_EXTERNAL_INPUT_file_limit = 1000 !< limit of file (for one item)
+  integer, public, parameter :: FILE_EXTERNAL_INPUT_file_limit = 100 !< limit of file (for one item)
 
   !-----------------------------------------------------------------------------
   !
@@ -129,6 +130,7 @@ module scale_file_external_input
   integer, private, parameter :: FILE_EXTERNAL_INPUT_item_limit = 1000  !< limit of item
   integer, private, parameter :: FILE_EXTERNAL_INPUT_step_limit = 10000 !< limit of steps          for each item
   integer, private, parameter :: FILE_EXTERNAL_INPUT_dim_limit  = 3     !< limit of dimension rank for each item
+  integer, private, parameter :: FILE_EXTERNAL_INPUT_att_limit  = 10    !< limit of dimension rank for each item
 
   type, private :: itemcontainer
      character(len=H_SHORT)             :: varname                   !< variable name
@@ -161,7 +163,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine FILE_EXTERNAL_INPUT_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -179,7 +181,7 @@ contains
     real(RP)               :: defval
     logical                :: check_coordinates
 
-    namelist /EXTERNAL_ITEM/ &
+    namelist / EXTERNAL_ITEM / &
        basename,              &
        varname,               &
        axistype,              &
@@ -196,8 +198,8 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[EXTERNAL_INPUT] / Categ[FILE] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("FILE_EXTERNAL_INPUT_setup",*) 'Setup'
 
     ! count external data from namelist
     rewind(IO_FID_CONF)
@@ -220,10 +222,10 @@ contains
        if ( ierr < 0 ) then !--- no more items
           exit
        elseif( ierr > 0 ) then !--- fatal error
-          write(*,*) 'xxx Not appropriate names in namelist EXTERNAL_ITEM. Check!', count
+          LOG_ERROR("FILE_EXTERNAL_INPUT_setup",*) 'Not appropriate names in namelist EXTERNAL_ITEM. Check!', count
           call PRC_abort
        endif
-       if( IO_NML .AND. IO_FID_NML /= IO_FID_LOG ) write(IO_FID_NML,nml=EXTERNAL_ITEM)
+       LOG_NML(EXTERNAL_ITEM)
 
        call FILE_EXTERNAL_INPUT_regist( basename(:),           & ! [IN]
                           varname,               & ! [IN]
@@ -262,7 +264,7 @@ contains
        FILE_Open,             &
        FILE_Get_All_DataInfo, &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_calendar, only: &
@@ -297,15 +299,21 @@ contains
     logical,          intent(out), optional :: exist
 
     integer                :: step_nmax
-    character(len=H_LONG)  :: description
+    character(len=H_MID)   :: description
     character(len=H_SHORT) :: unit
+    character(len=H_MID)   :: standard_name
     integer                :: datatype
     integer                :: dim_rank
-    character(len=H_SHORT) :: dim_name  (3)
-    integer                :: dim_size  (3)
+    character(len=H_SHORT) :: dim_name  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: dim_size  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: natts
+    character(len=H_SHORT) :: att_name  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_type  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_len   (FILE_EXTERNAL_INPUT_att_limit)
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
@@ -335,7 +343,7 @@ contains
 
     do nid = 1, FILE_EXTERNAL_INPUT_item_count
        if ( FILE_EXTERNAL_INPUT_item(nid)%varname  == varname ) then
-          write(*,*) 'xxx Data is already registered! basename,varname = ', trim(basename(1)), ', ', trim(varname)
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data is already registered! basename,varname = ', trim(basename(1)), ', ', trim(varname)
           call PRC_abort
        endif
     enddo
@@ -343,7 +351,7 @@ contains
     FILE_EXTERNAL_INPUT_item_count = FILE_EXTERNAL_INPUT_item_count + 1
 
     if ( FILE_EXTERNAL_INPUT_item_count > FILE_EXTERNAL_INPUT_item_limit ) then
-       write(*,*) 'xxx Number of EXT data exceedes the limit', FILE_EXTERNAL_INPUT_item_count, FILE_EXTERNAL_INPUT_item_limit
+       LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Number of EXT data exceedes the limit', FILE_EXTERNAL_INPUT_item_count, FILE_EXTERNAL_INPUT_item_limit
        call PRC_abort
     endif
 
@@ -352,20 +360,14 @@ contains
                     rankid=PRC_myrank ) ! [IN]
 
     ! read from file
-    call FILE_Get_All_Datainfo( step_limit_,                   & ! [IN]
-                                FILE_EXTERNAL_INPUT_dim_limit, & ! [IN]
-                                fid,                           & ! [IN]
-                                varname,                       & ! [IN]
-                                step_nmax,                     & ! [OUT]
-                                description,                   & ! [OUT]
-                                unit,                          & ! [OUT]
-                                datatype,                      & ! [OUT]
-                                dim_rank,                      & ! [OUT]
-                                dim_name  (:),                 & ! [OUT]
-                                dim_size  (:),                 & ! [OUT]
-                                time_start(1:step_limit_),     & ! [OUT]
-                                time_end  (1:step_limit_),     & ! [OUT]
-                                time_units                     ) ! [OUT]
+    call FILE_Get_All_Datainfo( fid, varname,                                       & ! [IN]
+                                step_nmax,                                          & ! [OUT]
+                                description, unit,  standard_name,                  & ! [OUT]
+                                datatype,                                           & ! [OUT]
+                                dim_rank, dim_name(:), dim_size(:),                 & ! [OUT]
+                                natts, att_name(:), att_type(:), att_len(:),        & ! [OUT]
+                                time_start(1:step_limit_), time_end(1:step_limit_), & ! [OUT]
+                                time_units, calendar                                ) ! [OUT]
 
     if ( step_nmax > 0 ) then
        if ( present(exist) ) then
@@ -376,7 +378,7 @@ contains
           exist = .false.
           return
        else
-          write(*,*) 'xxx Data not found! basename,varname = ', trim(basename(1)), ', ', trim(varname)
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data not found! basename,varname = ', trim(basename(1)), ', ', trim(varname)
           call PRC_abort
        endif
     endif
@@ -492,14 +494,14 @@ contains
                 FILE_EXTERNAL_INPUT_item(nid)%time(n) = CALENDAR_combine_daysec( dataday, datasec )
              enddo
 
-             if( IO_L ) write(IO_FID_LOG,*) '*** data time is updated.'
+             LOG_INFO("FILE_EXTERNAL_INPUT_regist",*) 'data time is updated.'
           endif
 
        else ! normal mode
 
           if (      FILE_EXTERNAL_INPUT_item(nid)%data_step_next == 1                          &
                .OR. FILE_EXTERNAL_INPUT_item(nid)%data_step_next == FILE_EXTERNAL_INPUT_item(nid)%step_num+1 ) then
-             write(*,*) 'xxx Current time is out of period of external data! ', trim(varname)
+             LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Current time is out of period of external data! ', trim(varname)
              call PRC_abort
           endif
 
@@ -508,7 +510,7 @@ contains
     endif
 
     !--- read first data
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Initial read of external data : ', trim(varname)
+    LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A15)') 'Initial read of external data : ', trim(varname)
 
     if (       dim_size(1) >= 1 &
          .AND. dim_size(2) == 1 &
@@ -523,14 +525,14 @@ contains
        FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
 
        if ( dim1_max /= dim_size(1) ) then
-          write(*,*) 'xxx data length does not match! ', trim(axistype), ' item:', trim(varname)
-          write(*,*) 'xxx dim 1 (data,requested)    : ', dim_size(1), dim1_max
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+          LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
           call PRC_abort
        endif
 
        ! read prev
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -538,8 +540,8 @@ contains
                        FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_prev), & ! [OUT]
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
        ! read next
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -563,15 +565,15 @@ contains
 
        if (      dim1_max /= dim_size(1) &
             .OR. dim2_max /= dim_size(2) ) then
-          write(*,*) 'xxx data length does not match! ', trim(axistype), ' item:', trim(varname)
-          write(*,*) 'xxx dim 1 (data,requested)    : ', dim_size(1), dim1_max
-          write(*,*) 'xxx dim 2 (data,requested)    : ', dim_size(2), dim2_max
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+          LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
+          LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
           call PRC_abort
        endif
 
        ! read prev
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -579,8 +581,8 @@ contains
                        FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_prev), & ! [OUT]
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
        ! read next
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -607,16 +609,16 @@ contains
        if (      dim1_max /= dim_size(1) &
             .OR. dim2_max /= dim_size(2) &
             .OR. dim3_max /= dim_size(3) ) then
-          write(*,*) 'xxx data length does not match! ', trim(axistype), ' item:', trim(varname)
-          write(*,*) 'xxx dim 1 (data,requested)    : ', dim_size(1), dim1_max
-          write(*,*) 'xxx dim 2 (data,requested)    : ', dim_size(2), dim2_max
-          write(*,*) 'xxx dim 3 (data,requested)    : ', dim_size(3), dim3_max
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+          LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
+          LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
+          LOG_ERROR_CONT(*) 'dim 3 (data,requested)    : ', dim_size(3), dim3_max
           call PRC_abort
        endif
 
        ! read prev
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -625,8 +627,8 @@ contains
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
 
        ! read next
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
@@ -635,7 +637,7 @@ contains
                        step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
 
     else
-       write(*,*) 'xxx Unexpected dimsize: ', dim_size(:)
+       LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Unexpected dimsize: ', dim_size(:)
        call PRC_abort
     endif
 
@@ -659,7 +661,7 @@ contains
        error         )
     use scale_file, only: &
        FILE_Read
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
     character(len=*), intent(in)  :: varname      ! item name
@@ -686,12 +688,12 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx Variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%ndim /= 1 ) then
-       write(*,*) 'xxx Data is not 1D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+       LOG_ERROR("FILE_EXTERNAL_INPUT_update_1D",*) 'Data is not 1D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
        call PRC_abort
     endif
 
@@ -703,8 +705,8 @@ contains
     if ( do_readfile ) then
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",'(1x,A,A,A,I4,A,I4,A)') &
+                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
@@ -764,7 +766,7 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
@@ -777,8 +779,8 @@ contains
 
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",'(1x,A,A,A,I4,A,I4,A)') &
+                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
@@ -856,7 +858,7 @@ contains
     enddo
 
     if ( nid == 0 ) then
-       if( IO_L ) write(IO_FID_LOG,*) 'xxx variable was not registered: ', trim(varname)
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
        return
     endif
 
@@ -869,8 +871,8 @@ contains
 
        step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A,A,I4,A,I4,A)') &
-                  '*** Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",'(1x,A,A,A,I4,A,I4,A)') &
+                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
 
        ! next -> prev
@@ -934,7 +936,7 @@ contains
     use scale_file, only: &
        FILE_Open,           &
        FILE_Get_All_DataInfo
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_calendar, only: &
@@ -957,15 +959,21 @@ contains
     logical,  intent(out) :: do_readfile  ! read new data at this time?
 
     integer                :: step_nmax
-    character(len=H_LONG)  :: description
+    character(len=H_MID)   :: description
     character(len=H_SHORT) :: unit
+    character(len=H_MID)   :: standard_name
     integer                :: datatype
     integer                :: dim_rank
-    character(len=H_SHORT) :: dim_name  (3)
-    integer                :: dim_size  (3)
+    character(len=H_SHORT) :: dim_name  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: dim_size  (FILE_EXTERNAL_INPUT_dim_limit)
+    integer                :: natts
+    character(len=H_SHORT) :: att_name  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_type  (FILE_EXTERNAL_INPUT_att_limit)
+    integer                :: att_len   (FILE_EXTERNAL_INPUT_att_limit)
     real(DP)               :: time_start(FILE_EXTERNAL_INPUT_step_limit)
     real(DP)               :: time_end  (FILE_EXTERNAL_INPUT_step_limit)
     character(len=H_MID)   :: time_units
+    character(len=H_SHORT) :: calendar
 
     integer  :: datadate(6)   !< date
     real(DP) :: datasubsec    !< subsecond
@@ -990,7 +998,7 @@ contains
 
           do_readfile = .true.
 
-          if( IO_L ) write(IO_FID_LOG,'(1x,A,A15)') '*** Update external input : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+          LOG_INFO("FILE_EXTERNAL_INPUT_time_advance",'(1x,A,A15)') 'Update external input : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
 
           ! update step position
           FILE_EXTERNAL_INPUT_item(nid)%data_step_prev = FILE_EXTERNAL_INPUT_item(nid)%data_step_prev + 1
@@ -1047,32 +1055,27 @@ contains
                                    rankid=PRC_myrank ) ! [IN]
 
                    ! read from file
-                   call FILE_Get_All_Datainfo( FILE_EXTERNAL_INPUT_item(nid)%step_limit,               & ! [IN]
-                                               FILE_EXTERNAL_INPUT_dim_limit,                          & ! [IN]
-                                               fid,                                                    & ! [IN]
-                                               FILE_EXTERNAL_INPUT_item(nid)%varname,                  & ! [IN]
+                   call FILE_Get_All_Datainfo( fid, FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
                                                step_nmax,                                              & ! [OUT]
-                                               description,                                            & ! [OUT]
-                                               unit,                                                   & ! [OUT]
+                                               description, unit, standard_name,                       & ! [OUT]
                                                datatype,                                               & ! [OUT]
-                                               dim_rank,                                               & ! [OUT]
-                                               dim_name  (:),                                          & ! [OUT]
-                                               dim_size  (:),                                          & ! [OUT]
+                                               dim_rank, dim_name(:), dim_size(:),                     & ! [OUT]
+                                               natts, att_name(:), att_type(:), att_len(:),            & ! [OUT]
                                                time_start(1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
                                                time_end  (1:FILE_EXTERNAL_INPUT_item(nid)%step_limit), & ! [OUT]
-                                               time_units                                              ) ! [OUT]
+                                               time_units, calendar                                    ) ! [OUT]
 
                    if ( step_nmax == 0 ) then
-                      write(*,*) 'xxx Data not found! basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
+                      LOG_ERROR("FILE_EXTERNAL_INPUT_time_advance",*) 'Data not found! basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
                                                     ', varname = ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
                       call PRC_abort
                    endif
 
                    do n = 1, dim_rank
                       if ( FILE_EXTERNAL_INPUT_item(nid)%dim_size(n) /= dim_size(n) ) then
-                         write(*,*) 'xxx The size of dimension', n, ' is inconsistent! '
-                         write(*,*) 'xxx size (previous,current) = ', FILE_EXTERNAL_INPUT_item(nid)%dim_size(n), dim_size(n)
-                         write(*,*) 'xxx basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
+                         LOG_ERROR("FILE_EXTERNAL_INPUT_time_advance",*) 'The size of dimension', n, ' is inconsistent! '
+                         LOG_ERROR_CONT(*) 'size (previous,current) = ', FILE_EXTERNAL_INPUT_item(nid)%dim_size(n), dim_size(n)
+                         LOG_ERROR_CONT(*) 'basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
                                        ', varname = ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
                          call PRC_abort
                       endif
@@ -1084,10 +1087,10 @@ contains
                    enddo
 
                    if ( FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_prev) > FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_next) ) then
-                      write(*,*) 'xxx Time in new file is earlier than last time of previous file! stop'
-                      write(*,*) 'xxx Time (previous,current)  = ', FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_prev), &
+                      LOG_ERROR("FILE_EXTERNAL_INPUT_time_advance",*) 'Time in new file is earlier than last time of previous file! stop'
+                      LOG_ERROR_CONT(*) 'Time (previous,current)  = ', FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_prev), &
                                                                     FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_next)
-                      write(*,*) 'xxx Data not found! basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
+                      LOG_ERROR_CONT(*) 'Data not found! basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
                                                     ', varname = ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
                       call PRC_abort
                    endif
@@ -1097,7 +1100,7 @@ contains
                    FILE_EXTERNAL_INPUT_item(nid)%step_num         = FILE_EXTERNAL_INPUT_item(nid)%step_num + step_nmax
 
                 else
-                   write(*,*) 'xxx Current time is out of period of external data! '
+                   LOG_ERROR("FILE_EXTERNAL_INPUT_time_advance",*) 'Current time is out of period of external data! '
                    call PRC_abort
                 endif
 

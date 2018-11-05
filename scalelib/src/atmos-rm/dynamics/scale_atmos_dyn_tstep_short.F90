@@ -6,19 +6,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -160,8 +157,8 @@ contains
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tstep_short_fvm_heve, only: &
        ATMOS_DYN_Tstep_short_fvm_heve_regist, &
        ATMOS_DYN_Tstep_short_fvm_heve_setup, &
@@ -204,8 +201,8 @@ contains
 
     case( 'FVM-HIVI', 'HIVI' )
 
-       write(*,*) 'xxx HIVI is tentatively disabled'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_regist",*) 'HIVI is tentatively disabled'
+       call PRC_abort
 
        call ATMOS_DYN_Tstep_short_fvm_hivi_regist( ATMOS_DYN_TYPE,              & ! [IN]
                                                    VA_out,                      & ! [OUT]
@@ -222,8 +219,8 @@ contains
        VAR_UNIT(:) = ""
 
     case default
-       write(*,*) 'xxx ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_regist",*) 'ATMOS_DYN_TYPE is invalid: ', ATMOS_DYN_TYPE
+       call PRC_abort
     end select
 
     return

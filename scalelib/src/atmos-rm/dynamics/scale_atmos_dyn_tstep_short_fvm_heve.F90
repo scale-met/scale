@@ -6,24 +6,21 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2013-06-18 (S.Nishizawa) [new] splited from dynamical core
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_heve
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_process
+  use scale_prc
 #if defined DEBUG || defined QUICKDEBUG
   use scale_debug, only: &
      CHECK
@@ -72,8 +69,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -84,8 +81,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HEVE' .AND. ATMOS_DYN_TYPE /= 'HEVE' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_heve_regist",*) 'ATMOS_DYN_TYPE is not FVM-HEVE. Check!'
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HEVE
@@ -93,10 +90,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HEVE)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_heve_regist",*) 'Register additional prognostic variables (HEVE)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return
@@ -132,7 +129,7 @@ contains
        EPS    => CONST_EPS,   &
        GRAV   => CONST_GRAV,  &
        P00    => CONST_PRE00
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -169,18 +166,6 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ, &
        ATMOS_DYN_FVM_fluxX_XVZ,   &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY,  &
-       I_UY,  &
-       I_XV,  &
-       I_UV
 #ifdef HIST_TEND
     use scale_file_history, only: &
        FILE_HISTORY_in
@@ -1500,30 +1485,30 @@ contains
 
 #ifdef HIST_TEND
     if ( lhist ) then
-       call FILE_HISTORY_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection)',    'kg/m3/s'   )
-       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z (vert. advection)',    'kg/m2/s2', dim_type='ZHXY')
-       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x (vert. advection)',    'kg/m2/s2', dim_type='ZXHY')
-       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y (vert. advection)',    'kg/m2/s2', dim_type='ZXYH')
-       call FILE_HISTORY_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta  (vert. advection)',    'K kg/m3/s' )
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_DENS), 'DENS_t_advcv', 'tendency of density    (vert. advection) (w/ HIST_TEND)',    'kg/m3/s'   )
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMZ), 'MOMZ_t_advcv', 'tendency of momentum z (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMX), 'MOMX_t_advcv', 'tendency of momentum x (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_MOMY), 'MOMY_t_advcv', 'tendency of momentum y (vert. advection) (w/ HIST_TEND)',    'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(advcv_t(:,:,:,I_RHOT), 'RHOT_t_advcv', 'tendency of rho*theta  (vert. advection) (w/ HIST_TEND)',    'K kg/m3/s' )
 
-       call FILE_HISTORY_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of density    (horiz. advection)',   'kg/m3/s'   )
-       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z (horiz. advection)',   'kg/m2/s2', dim_type='ZHXY')
-       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x (horiz. advection)',   'kg/m2/s2', dim_type='ZXHY')
-       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y (horiz. advection)',   'kg/m2/s2', dim_type='ZXYH')
-       call FILE_HISTORY_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta  (horiz. advection)',   'K kg/m3/s' )
+       call FILE_HISTORY_in(advch_t(:,:,:,I_DENS), 'DENS_t_advch', 'tendency of density    (horiz. advection) (w/ HIST_TEND)',   'kg/m3/s'   )
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMZ), 'MOMZ_t_advch', 'tendency of momentum z (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMX), 'MOMX_t_advch', 'tendency of momentum x (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_MOMY), 'MOMY_t_advch', 'tendency of momentum y (horiz. advection) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta  (horiz. advection) (w/ HIST_TEND)',   'K kg/m3/s' )
 
-       call FILE_HISTORY_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient)',  'kg/m2/s2', dim_type='ZHXY')
-       call FILE_HISTORY_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient)',  'kg/m2/s2', dim_type='ZXHY')
-       call FILE_HISTORY_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient)',  'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXYH')
 
-       call FILE_HISTORY_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Raileight damping)', 'kg/m2/s2',  dim_type='ZHXY')
+       call FILE_HISTORY_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Raileight damping) (w/ HIST_TEND)', 'kg/m2/s2',  dim_type='ZHXY')
 
-       call FILE_HISTORY_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping)', 'kg/m2/s2', dim_type='ZHXY')
-       call FILE_HISTORY_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping)', 'kg/m2/s2', dim_type='ZXHY')
-       call FILE_HISTORY_in(ddiv_t (:,:,:,3),      'MOMY_t_ddiv',  'tendency of momentum y (divergence damping)', 'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZHXY')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(ddiv_t (:,:,:,3),      'MOMY_t_ddiv',  'tendency of momentum y (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXYH')
 
-       call FILE_HISTORY_in(cf_t   (:,:,:,1),      'MOMX_t_cf',    'tendency of momentum x (coliolis force)',     'kg/m2/s2', dim_type='ZXHY')
-       call FILE_HISTORY_in(cf_t   (:,:,:,2),      'MOMY_t_cf',    'tendency of momentum y (coliolis force)',     'kg/m2/s2', dim_type='ZXYH')
+       call FILE_HISTORY_in(cf_t   (:,:,:,1),      'MOMX_t_cf',    'tendency of momentum x (coliolis force) (w/ HIST_TEND)',     'kg/m2/s2', dim_type='ZXHY')
+       call FILE_HISTORY_in(cf_t   (:,:,:,2),      'MOMY_t_cf',    'tendency of momentum y (coliolis force) (w/ HIST_TEND)',     'kg/m2/s2', dim_type='ZXYH')
     endif
 #endif
 

@@ -5,20 +5,16 @@
 !!          Temporal integration scheme selecter for dynamical short time step
 !!
 !! @author Team SCALE
-!!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_short
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -38,7 +34,7 @@ module scale_atmos_dyn_tinteg_short
           DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
           mflx_hi, tflx_hi,                         & ! (inout)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-          Rtot, CVtot, CORIOLI,                     & ! (in)
+          DPRES0, CVtot, CORIOLI,                   & ! (in)
           num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
           FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
           FLAG_FCT_ALONG_STREAM,                    & ! (in)
@@ -67,7 +63,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(in)    :: MOMY_t(KA,IA,JA)
        real(RP), intent(in)    :: RHOT_t(KA,IA,JA)
 
-       real(RP), intent(in)    :: Rtot(KA,IA,JA)
+       real(RP), intent(in)    :: DPRES0(KA,IA,JA)
        real(RP), intent(in)    :: CVtot(KA,IA,JA)
        real(RP), intent(in)    :: CORIOLI(IA,JA)
 
@@ -134,8 +130,8 @@ contains
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_atmos_dyn_tinteg_short_rk3, only: &
        ATMOS_DYN_Tinteg_short_rk3_setup, &
        ATMOS_DYN_Tinteg_short_rk3
@@ -159,8 +155,8 @@ contains
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
-       write(*,*) 'xxx ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) 'ATMOS_DYN_TINTEG_SHORT_TYPE is invalid: ', ATMOS_DYN_Tinteg_short_TYPE
+       call PRC_abort
     end select
 
     return

@@ -7,14 +7,14 @@
 !! @author Team SCALE
 !!
 !<
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_interp_vert
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
@@ -92,15 +92,14 @@ contains
     integer :: k, i, j, kk, kp
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[INTERPOLATION] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** No namelists.'
+    LOG_NEWLINE
+    LOG_INFO("INTERP_VERT_setcoef",*) 'Setup'
+    LOG_INFO("INTERP_VERT_setcoef",*) 'No namelists.'
 
     INTERP_available = TOPO_exist
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Topography exists & interpolation has meaning? : ', INTERP_available
-
+    LOG_NEWLINE
+    LOG_INFO("INTERP_VERT_setcoef",*) 'Topography exists & interpolation has meaning? : ', INTERP_available
 
     ! full level
 
@@ -173,13 +172,13 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       if ( Z(k,i,j) <= Xih(KS-1) ) then
+       if ( Z(k,i,j) < Xih(KS-1) ) then
 
           INTERP_z2xi_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_z2xi_idx (k,i,j,2) = KS     ! dummmy
+          INTERP_z2xi_idx (k,i,j,2) = KS
           INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
+          INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
+!          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
 
        elseif( Z(k,i,j) <= Xi(KS) ) then
 
@@ -460,12 +459,12 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-2,         & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          MD (KS+1:KE-1), & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          V  (KS+1:KE-1), & ! [IN]
-                                          U  (KS+1:KE-1)  ) ! [OUT]
+          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          MD (:), & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          V  (:), & ! [IN]
+                                          U  (:)  ) ! [OUT]
 
           U(KS) = U(KS+1)
           U(KE) = U(KE-1)
@@ -525,7 +524,7 @@ contains
 
     kmax = KE - KS + 1
 
-    if ( kmax == 2 ) then
+    if ( kmax <= 2 ) then
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(k,i,j) &
@@ -568,12 +567,12 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-2,         & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          MD (KS+1:KE-1), & ! [IN]
-                                          FDZ(KS+1:KE-1), & ! [IN]
-                                          V  (KS+1:KE-1), & ! [IN]
-                                          U  (KS+1:KE-1)  ) ! [OUT]
+          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          MD (:), & ! [IN]
+                                          FDZ(:), & ! [IN]
+                                          V  (:), & ! [IN]
+                                          U  (:)  ) ! [OUT]
 
           U(KS) = U(KS+1)
           U(KE) = U(KE-1)
@@ -676,7 +675,7 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-1,         & ! [IN]
+          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
                                           MD (KS  :KE-1), & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
@@ -784,7 +783,7 @@ contains
                   - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
           end do
 
-          call MATRIX_SOLVER_tridiagonal( kmax-1,         & ! [IN]
+          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]
                                           MD (KS  :KE-1), & ! [IN]
                                           CDZ(KS+1:KE  ), & ! [IN]

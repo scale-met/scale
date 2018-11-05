@@ -7,19 +7,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-04-18 (S.Nishizawa) [mod] split from scale_atmos_dyn.F90
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_short_rk3
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -91,11 +88,11 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_short_rk3_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
 
@@ -106,7 +103,7 @@ contains
 
     select case( tinteg_type )
     case( 'RK3' )
-       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Heun's method is used"
+       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Heun's method is used"
        ! Heun's method
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
        ! k2 = f(r1);     r2 = \phi_n + k2 * dt * 2 / 3
@@ -118,7 +115,7 @@ contains
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 2.0_RP / 3.0_RP
     case( 'RK3WS2002' )
-       if( IO_L ) write(IO_FID_LOG,*) "*** RK3: Wichere and Skamarock (2002) is used"
+       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Wichere and Skamarock (2002) is used"
        ! Wicher and Skamarock (2002) RK3 scheme
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
        ! k2 = f(r1);     r2 = \phi_n + k2 * dt / 2
@@ -128,8 +125,8 @@ contains
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 1.0_RP / 2.0_RP
     case default
-       write(*,*) 'xxx TINTEG_TYPE is not RK3. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk3_setup",*) 'TINTEG_TYPE is not RK3. Check!'
+       call PRC_abort
     end select
 
     allocate( DENS_RK1(KA,IA,JA) )
@@ -192,7 +189,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, PROG,      &
        mflx_hi,  tflx_hi,                       &
        DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,  &
-       Rtot, CVtot, CORIOLI,                    &
+       DPRES0, CVtot, CORIOLI,                  &
        num_diff, wdamp_coef, divdmp_coef, DDIV, &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T,           &
        FLAG_FCT_ALONG_STREAM,                   &
@@ -202,7 +199,7 @@ contains
        REF_pres, REF_dens,                      &
        BND_W, BND_E, BND_S, BND_N,              &
        dt                                       )
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_tstep_short, only: &
@@ -227,7 +224,7 @@ contains
     real(RP), intent(in)    :: MOMY_t(KA,IA,JA)
     real(RP), intent(in)    :: RHOT_t(KA,IA,JA)
 
-    real(RP), intent(in)    :: Rtot(KA,IA,JA)
+    real(RP), intent(in)    :: DPRES0(KA,IA,JA)
     real(RP), intent(in)    :: CVtot(KA,IA,JA)
     real(RP), intent(in)    :: CORIOLI(IA,JA)
     real(RP), intent(in)    :: num_diff(KA,IA,JA,5,3)
@@ -369,7 +366,7 @@ contains
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG,                                      & ! [IN]
-                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          DPRES0, CVtot, CORIOLI,                           & ! [IN]
                           num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
@@ -422,7 +419,7 @@ contains
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK1,                                  & ! [IN]
-                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          DPRES0, CVtot, CORIOLI,                           & ! [IN]
                           num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]
@@ -475,7 +472,7 @@ contains
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
                           PROG0, PROG_RK2,                                  & ! [IN]
-                          Rtot, CVtot, CORIOLI,                             & ! [IN]
+                          DPRES0, CVtot, CORIOLI,                           & ! [IN]
                           num_diff, wdamp_coef, divdmp_coef, DDIV,          & ! [IN]
                           FLAG_FCT_MOMENTUM, FLAG_FCT_T,                    & ! [IN]
                           FLAG_FCT_ALONG_STREAM,                            & ! [IN]

@@ -11,8 +11,8 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
 #define HIVI_BICGSTAB 1
+#include "scalelib.h"
 module scale_atmos_dyn_tstep_short_fvm_hivi
   !-----------------------------------------------------------------------------
   !
@@ -20,7 +20,7 @@ module scale_atmos_dyn_tstep_short_fvm_hivi
   !
   use mpi
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -76,8 +76,8 @@ contains
        VAR_NAME,       &
        VAR_DESC,       &
        VAR_UNIT        )
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*),       intent(in)  :: ATMOS_DYN_TYPE
@@ -88,8 +88,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( ATMOS_DYN_TYPE /= 'FVM-HIVI' .AND. ATMOS_DYN_TYPE /= 'HIVI' ) then
-       write(*,*) 'xxx ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_regist",*) 'ATMOS_DYN_TYPE is not FVM-HIVI. Check!'
+       call PRC_abort
     endif
 
     VA_out      = VA_FVM_HIVI
@@ -97,10 +97,10 @@ contains
     VAR_DESC(:) = ""
     VAR_UNIT(:) = ""
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Register additional prognostic variables (HIVI)'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_regist",*) 'Register additional prognostic variables (HIVI)'
     if ( VA_out < 1 ) then
-       if( IO_L ) write(IO_FID_LOG,*) '*** => nothing.'
+       LOG_INFO_CONT(*) '=> nothing.'
     endif
 
     return
@@ -109,8 +109,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_short_fvm_hivi_setup
-    use scale_process, only: &
-       PRC_MPIstop
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     namelist / PARAM_ATMOS_DYN_TSTEP_FVM_HIVI / &
@@ -120,13 +120,13 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** HIVI Setup'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'HIVI Setup'
 #ifdef HIVI_BICGSTAB
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Bi-CGSTAB'
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'USING Bi-CGSTAB'
 #else
-    if( IO_L ) write(IO_FID_LOG,*) '*** USING Multi-Grid'
-    write(*,*) 'xxx Not Implemented yet'
-    call PRC_MPIstop
+    LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'USING Multi-Grid'
+    LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not Implemented yet'
+    call PRC_abort
 #endif
 
     ! currently, vertical difference scheme for potential temperature is the CD4
@@ -138,20 +138,20 @@ contains
     read(IO_FID_CONF,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI,iostat=ierr)
 
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_DYN_TSTEP_FVM_HIVI. Check!'
+       call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
+    LOG_NML(PARAM_ATMOS_DYN_TSTEP_FVM_HIVI)
 
     if ( RP == DP ) then
        mtype = MPI_DOUBLE_PRECISION
     elseif( RP == SP ) then
        mtype = MPI_REAL
     else
-       write(*,*) 'xxx Unsupported precision'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tstep_short_fvm_hivi_setup",*) 'Unsupported precision'
+       call PRC_abort
     endif
 
     return
@@ -180,7 +180,7 @@ contains
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
        P00    => CONST_PRE00
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
@@ -205,18 +205,6 @@ contains
        ATMOS_DYN_FVM_fluxJ23_XVZ,   &
        ATMOS_DYN_FVM_fluxX_XVZ,     &
        ATMOS_DYN_FVM_fluxY_XVZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       I_XYZ, &
-       I_XYW, &
-       I_UYW, &
-       I_XVW, &
-       I_UYZ, &
-       I_XVZ, &
-       I_UVZ, &
-       I_XY , &
-       I_UY , &
-       I_XV , &
-       I_UV
     implicit none
 
     real(RP), intent(out) :: DENS_RK(KA,IA,JA)   ! prognostic variables
@@ -1474,9 +1462,9 @@ contains
        DPRES_N, &
        DPRES, &
        M, B )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_comm, only: &
+    use scale_prc, only: &
+       PRC_abort
+    use scale_comm_cartesC, only: &
        COMM_world, &
        COMM_vars8, &
        COMM_wait
@@ -1628,11 +1616,11 @@ contains
        error = buf(1)
 
 #ifdef DEBUG
-       if( IO_L ) write(*,*) iter, error/norm
+       LOG_INFO("solve_bicgstab",*) iter, error/norm
 #endif
        if ( sqrt(error/norm) < epsilon .OR. error > error2 ) then
 #ifdef DEBUG
-         if( IO_L ) write(*,*) "Bi-CGSTAB converged:", iter
+         LOG_INFO("solve_bicgstab",*) "Bi-CGSTAB converged:", iter
 #endif
           exit
        endif
@@ -1784,9 +1772,8 @@ contains
     enddo
 
     if ( iter >= ITMAX ) then
-       write(*,*) 'xxx [atmos_dyn_hivi] Bi-CGSTAB'
-       write(*,*) 'xxx not converged', error, norm
-       call PRC_MPIstop
+       LOG_ERROR("solve_bicgstab",*) 'not converged', error, norm
+       call PRC_abort
     endif
 
     return
@@ -2228,6 +2215,8 @@ contains
 #ifdef DEBUG
   subroutine check_solver( &
        DPRES, M, B )
+    use scale_prc, only: &
+       PRC_abort
     real(RP), intent(in) :: DPRES(KA,IA,JA)
     real(RP), intent(in) :: M(7,KA,IA,JA)
     real(RP), intent(in) :: B(KA,IA,JA)
@@ -2243,8 +2232,8 @@ contains
     do k = KS, KE
        err = abs( B2(k,i,j) - B(k,i,j) )
        if ( err > 1.e-5_RP .and. abs( err / B(k,i,j) ) > 1.e-5_RP ) then
-          write(*,*) "solver error is too large: ", k,i,j, B(k,i,j), B2(k,i,j)
-          call abort
+          LOG_ERROR("check_solver",*) "solver error is too large: ", k,i,j, B(k,i,j), B2(k,i,j)
+          call PRC_abort
        endif
     enddo
     enddo
@@ -2258,6 +2247,8 @@ contains
        DENS_RK, DENS, &
        B, &
        RT2P )
+    use scale_prc, only: &
+       PRC_abort
     real(RP), intent(in) :: DPRES_N(KA,IA,JA)
     real(RP), intent(in) :: DPRES(KA,IA,JA)
     real(RP), intent(in) :: RHOT_RK(KA,IA,JA)
@@ -2276,10 +2267,9 @@ contains
        lhs = DPRES_N(k,i,j) - DPRES(k,i,j)
        rhs = RT2P(k,i,j) * ( RHOT_RK(k,i,j) - RHOT(k,i,j) )
        if ( abs( (lhs - rhs) / lhs ) > 1e-15 ) then
-!          write(*,*) "error is too large: ", k,i,j, lhs, rhs
-          write(*,*) "error is too large: ", k,i,j, lhs, rhs, &
+          LOG_ERROR("check_pres",*) "error is too large: ", k,i,j, lhs, rhs, &
                dpres_n(k,i,j),dpres(k,i,j),rhot_rk(k,i,j),rhot(k,i,j),dens_rk(k,i,j),dens(k,i,j),B(k,i,j)
-          call abort
+          call PRC_abort
        endif
     enddo
     enddo

@@ -5,14 +5,18 @@
 !!          initialization
 !!
 !<
+#include "scalelib.h"
 module scale
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
-  use scale_process
+  use scale_io
+  use scale_prof
+
+  use scale_prc, only: &
+     PRC_abort
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -25,6 +29,7 @@ module scale
 
   ! from scale_process
   public :: PRC_abort
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -57,15 +62,14 @@ contains
   !> Initialization
   subroutine SCALE_init( &
        app_name )
-    use scale_process, only: &
-       PRC_MPIstart, &
-       PRC_SINGLECOM_setup
+    use scale_prc, only: &
+       PRC_MPIstart,        &
+       PRC_SINGLECOM_setup, &
+       PRC_ERRHANDLER_setup
     use scale_const, only: &
        CONST_setup
-    use scale_prof, only: &
-       PROF_setup, &
-       PROF_rapstart
     implicit none
+
     character(len=*), optional :: app_name !> application name
 
     character(len=H_SHORT) :: name
@@ -75,13 +79,13 @@ contains
     integer :: nprocs
     integer :: myrank
     logical :: ismaster
+    !---------------------------------------------------------------------------
 
     if ( present(app_name) ) then
        name = app_name
     else
        name = "SCALE APPLICATION"
     end if
-
 
     ! start MPI
     call PRC_MPIstart( comm ) ! [OUT]
@@ -91,6 +95,10 @@ contains
                               nprocs,  & ! [OUT]
                               myrank,  & ! [OUT]
                               ismaster ) ! [OUT]
+
+    ! setup errhandler
+    call PRC_ERRHANDLER_setup( .false., & ! [IN]
+                               ismaster ) ! [IN]
 
     ! setup scale_io
     call IO_setup( name, allow_noconf = .true. )
@@ -109,18 +117,20 @@ contains
     return
   end subroutine SCALE_init
 
+  !-----------------------------------------------------------------------------
+  !> Finalize
   subroutine SCALE_finalize
     use scale_file, only: &
        FILE_Close_All
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_MPIfinish
-    use scale_prof, only: &
-       PROF_rapend, &
-       PROF_rapreport
+    implicit none
+    !---------------------------------------------------------------------------
 
     call PROF_rapend( 'Main', 0 )
 
     call FILE_Close_All
+
     call PROF_rapreport
 
     ! stop mpi
@@ -128,4 +138,5 @@ contains
 
     return
   end subroutine SCALE_finalize
+
 end module scale

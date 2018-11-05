@@ -123,26 +123,26 @@ contains
   !> create control file
   !-----------------------------------------------------------------------------------------
   subroutine io_create_ctl( &
-      varname,    & ! [in]
-      atype,      & ! [in]
-      ctype,      & ! [in]
-      vtype,      & ! [in]
-      idom,       & ! [in]
-      nx, ny,     & ! [in]
-      zz,         & ! [in]
-      nt,         & ! [in]
-      cx, cy,     & ! [in]
-      vgrid,      & ! [in]
-      zlev,       & ! [in]
-      lz, uz, oz, & ! [in]
-      lcz,        & ! [in]
-      ucz,        & ! [in]
-      ocz,        & ! [in]
-      long_name,  & ! [in]
-      unit        ) ! [in]
+      varname_org, & ! [in]
+      atype,       & ! [in]
+      ctype,       & ! [in]
+      vtype,       & ! [in]
+      idom,        & ! [in]
+      nx, ny,      & ! [in]
+      zz,          & ! [in]
+      nt,          & ! [in]
+      cx, cy,      & ! [in]
+      vgrid,       & ! [in]
+      zlev,        & ! [in]
+      lz, uz, oz,  & ! [in]
+      lcz,         & ! [in]
+      ucz,         & ! [in]
+      ocz,         & ! [in]
+      long_name,   & ! [in]
+      unit         ) ! [in]
     implicit none
 
-    character(CMID),  intent(in) :: varname
+    character(CMID),  intent(in) :: varname_org
     integer,          intent(in) :: atype, ctype, vtype
     integer,          intent(in) :: idom
     integer,          intent(in) :: nx, ny, zz, nt
@@ -152,6 +152,8 @@ contains
     real(SP),         intent(in) :: lcz(:), ucz(:), ocz(:)
     character(len=*), intent(in) :: long_name
     character(len=*), intent(in) :: unit
+
+    character(CMID)              :: varname
 
     character(2)    :: cdom
     character(3)    :: clev
@@ -177,6 +179,17 @@ contains
         clev = "ave"
      end select
      if ( vtype == vt_2d ) clev = "-2d"
+
+     ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+     select case (trim(varname_org))
+     case ('lon')
+        varname='long'
+     case ('lat')
+        varname='lati'
+     case default
+        varname=trim(varname_org)
+     end select
+
      if ( T_MERGE_OUT ) then
         fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev
         fname2 = trim(varname)//'_d'//cdom//'z'//clev
@@ -258,28 +271,28 @@ contains
   !> create control file
   !-----------------------------------------------------------------------------------------
   subroutine io_create_ctl_mproj( &
-      varname,    & ! [in]
-      atype,      & ! [in]
-      ctype,      & ! [in]
-      vtype,      & ! [in]
-      idom,       & ! [in]
-      nx, ny,     & ! [in]
-      zz,         & ! [in]
-      nt,         & ! [in]
-      cx, cy,     & ! [in]
-      vgrid,      & ! [in]
-      zlev,       & ! [in]
-      lz, uz, oz, & ! [in]
-      lcz,        & ! [in]
-      ucz,        & ! [in]
-      ocz,        & ! [in]
-      slon,       & ! [in]
-      slat,       & ! [in]
-      long_name,  & ! [in]
-      unit        ) ! [in]
+      varname_org, & ! [in]
+      atype,       & ! [in]
+      ctype,       & ! [in]
+      vtype,       & ! [in]
+      idom,        & ! [in]
+      nx, ny,      & ! [in]
+      zz,          & ! [in]
+      nt,          & ! [in]
+      cx, cy,      & ! [in]
+      vgrid,       & ! [in]
+      zlev,        & ! [in]
+      lz, uz, oz,  & ! [in]
+      lcz,         & ! [in]
+      ucz,         & ! [in]
+      ocz,         & ! [in]
+      slon,        & ! [in]
+      slat,        & ! [in]
+      long_name,   & ! [in]
+      unit         ) ! [in]
     implicit none
 
-    character(CMID),  intent(in) :: varname
+    character(CMID),  intent(in) :: varname_org
     integer,          intent(in) :: atype, ctype, vtype
     integer,          intent(in) :: idom
     integer,          intent(in) :: nx, ny, zz, nt
@@ -290,6 +303,8 @@ contains
     real(SP),         intent(in) :: slon, slat
     character(len=*), intent(in) :: long_name
     character(len=*), intent(in) :: unit
+
+    character(CMID)              :: varname
 
     real(SP)           :: DX, DY, DLON, DLAT
     character(len=5)   :: cmproj
@@ -330,6 +345,18 @@ contains
      call cal_dlondlat(DX, DY, DLON, DLAT)
 
      if ( vtype == vt_2d ) clev = "-2d"
+
+     ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+     select case (trim(varname_org))
+     case ('lon')
+        varname='long'
+     case ('lat')
+        varname='lati'
+     case default
+        varname=trim(varname_org)
+     end select
+
+
     if ( T_MERGE_OUT ) then
         fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev
         fname2 = trim(varname)//'_d'//cdom//'z'//clev
@@ -481,19 +508,20 @@ contains
   !> set file name for binary data output
   !-----------------------------------------------------------------------------------------
   subroutine io_set_fname( &
-      varname,  & ! [in]
-      idom,     & ! [in]
-      zz,       & ! [in]
-      atype,    & ! [in]
-      vtype,    & ! [in]
-      fname     ) ! [out]
+      varname_org,  & ! [in]
+      idom,         & ! [in]
+      zz,           & ! [in]
+      atype,        & ! [in]
+      vtype,        & ! [in]
+      fname         ) ! [out]
     implicit none
 
-    character(CMID), intent(in)  :: varname
+    character(CMID), intent(in)  :: varname_org
     integer,         intent(in)  :: idom, zz
     integer,         intent(in)  :: atype, vtype
     character(CLNG), intent(out) :: fname
 
+    character(CMID)              :: varname
     character(2) :: cdom
     character(3) :: clev
     !---------------------------------------------------------------------------
@@ -516,6 +544,16 @@ contains
        clev = "ave"
     end select
     if ( vtype == vt_2d ) clev = "-2d"
+
+    ! 'lon' & 'lat' are renamed, because they are reserved words in grads.
+    select case (trim(varname_org))
+    case ('lon')
+       varname='long'
+    case ('lat')
+       varname='lati'
+    case default
+       varname=trim(varname_org)
+    end select
 
     if ( T_MERGE_OUT ) then
        fname = trim(ODIR)//'/'//trim(varname)//'_d'//cdom//'z'//clev//".grd"

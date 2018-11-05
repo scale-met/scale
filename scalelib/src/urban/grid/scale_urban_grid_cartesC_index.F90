@@ -1,5 +1,5 @@
 !-------------------------------------------------------------------------------
-!> module urban grid index
+!> module urban / grid / icosahedralA / index
 !!
 !! @par Description
 !!          Grid Index module for urban
@@ -7,13 +7,14 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module scale_urban_grid_cartesC_index
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -28,19 +29,21 @@ module scale_urban_grid_cartesC_index
   !
   !++ Public parameters & variables
   !
-  integer, public :: UKMAX = 1 ! # of computational cells: z for urban
-  integer, public :: UIMAX = 1 ! # of computational cells: x for urban
-  integer, public :: UJMAX = 1 ! # of computational cells: y for urban
+  integer, public :: UKMAX = -1 ! # of computational cells: z for urban
+  integer, public :: UIMAX = -1 ! # of computational cells: x for urban
+  integer, public :: UJMAX = -1 ! # of computational cells: y for urban
 
-  integer, public :: UKA       ! # of total grids: z for urban, local
-  integer, public :: UKS       ! start point of inner domain: z for urban, local
-  integer, public :: UKE       ! end   point of inner domain: z for urban, local
-  integer, public :: UIA       ! # of total grids: x for urban, local
-  integer, public :: UIS       ! start point of inner domain: x for urban, local
-  integer, public :: UIE       ! end   point of inner domain: x for urban, local
-  integer, public :: UJA       ! # of total grids: Y for urban, local
-  integer, public :: UJS       ! start point of inner domain: y for urban, local
-  integer, public :: UJE       ! end   point of inner domain: y for urban, local
+  integer, public :: UKA   = -1 ! # of total grids: z for urban, local
+  integer, public :: UKS        ! start point of inner domain: z for urban, local
+  integer, public :: UKE        ! end   point of inner domain: z for urban, local
+
+  integer, public :: UIA        ! # of total grids: x for urban, local
+  integer, public :: UIS        ! start point of inner domain: x for urban, local
+  integer, public :: UIE        ! end   point of inner domain: x for urban, local
+
+  integer, public :: UJA        ! # of total grids: Y for urban, local
+  integer, public :: UJS        ! start point of inner domain: y for urban, local
+  integer, public :: UJE        ! end   point of inner domain: y for urban, local
 
   !-----------------------------------------------------------------------------
   !
@@ -55,13 +58,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine URBAN_GRID_CARTESC_INDEX_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     use scale_atmos_grid_cartesC_index, only: &
-         IMAX, &
-         IA, IS, IE, &
-         JMAX, &
-         JA, JS, JE
+       IMAX,       &
+       IA, IS, IE, &
+       JMAX,       &
+       JA, JS, JE
     implicit none
 
     namelist / PARAM_URBAN_GRID_CARTESC_INDEX / &
@@ -70,27 +73,32 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[GRID_CARTESC_INDEX] / Categ[URBAN GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("URBAN_GRID_CARTESC_INDEX_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_GRID_CARTESC_INDEX,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("URBAN_GRID_CARTESC_INDEX_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_URBAN_GRID_CARTESC_INDEX. Check!'
+       LOG_ERROR("URBAN_GRID_CARTESC_INDEX_setup",*) 'Not appropriate names in namelist PARAM_URBAN_GRID_CARTESC_INDEX. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_URBAN_GRID_CARTESC_INDEX)
+    LOG_NML(PARAM_URBAN_GRID_CARTESC_INDEX)
+
+    if ( UKMAX < 1 ) then
+       LOG_ERROR("URBAN_GRID_CARTESC_INDEX_setup",*) 'UKMAX must be >= 1 ', UKMAX
+       call PRC_abort
+    end if
 
     UKA  = UKMAX
     UKS  = 1
     UKE  = UKMAX
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Urban grid index information ***'
-    if( IO_L ) write(IO_FID_LOG,'(1x,A,I6,A,I6,A,I6)') '*** z-axis levels :', UKMAX
+    LOG_NEWLINE
+    LOG_INFO("URBAN_GRID_CARTESC_INDEX_setup",*) 'Urban grid index information '
+    LOG_INFO_CONT('(1x,A,I6,A,I6,A,I6)') 'z-axis levels :', UKMAX
 
     ! at this moment horizontal grid is same as that in atmosphere
     UIMAX = IMAX

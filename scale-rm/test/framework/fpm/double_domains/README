@@ -1,0 +1,5 @@
+FPM framework test for online nesting case
+------------------------------------------------------------------
+The boundary data (i.e. topo, landuse, init, boundary) should be
+created as same as the real case in tutorial.
+

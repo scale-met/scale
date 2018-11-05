@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpirun -np"
+MPIEXEC="mpiexec.hydra -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -64,9 +64,17 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-NNODE=`expr \( $TPROC - 1 \) / 6 + 1`
+NNODE=`expr \( $TPROC - 1 \) / 70 + 1`
 NPROC=`expr $TPROC / $NNODE`
-NPIN=`expr 263 / \( $NPROC \) + 1`
+NPIN=`expr 287 / \( $NPROC \) + 1`
+
+if [ "${BINNAME}" = "scale-gm" ]; then
+   nc=""
+else
+   nc=".nc"
+fi
+
+
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
@@ -79,13 +87,13 @@ export FORT_FMT_RECL=400
 
 export HFI_NO_CPUAFFINITY=1
 export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,72,73,144,145,216,217
-export I_MPI_HBW_POLICY=hbw_preferred,,
-export I_MPI_FABRICS_LIST=tmi
+#export I_MPI_HBW_POLICY=hbw_preferred,,
+#export I_MPI_FABRICS_LIST=tmi
 unset KMP_AFFINITY
 #export KMP_AFFINITY=verbose
 #export I_MPI_DEBUG=5
 
-export OMP_NUM_THREADS=11
+export OMP_NUM_THREADS=1
 export I_MPI_PIN_DOMAIN=${NPIN}
 export I_MPI_PERHOST=${NPROC}
 export KMP_HW_SUBSET=1t
@@ -135,8 +143,8 @@ if [ ${ndata} -gt 0 ]; then
          let "ip = ${np} - 1"
          PE=`printf %06d ${ip}`
 
-         src=${triple[1]}.pe${PE}.nc
-         dst=${triple[2]}.pe${PE}.nc
+         src=${triple[1]}.pe${PE}${nc}
+         dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
             echo "ln -svf ${src} ./${dst}" >> ./run.sh

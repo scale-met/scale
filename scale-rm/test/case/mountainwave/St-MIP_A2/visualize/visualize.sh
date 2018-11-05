@@ -23,6 +23,6 @@ echo "+visualize by gpview"
 rm -f dcl.pdf
 
 gpview history.pe\*.nc@W,x=95000:120000,y=100,z=0:15000,time=6000 --nozero --noshade --cint=0.1 --aspect=1 --wsn 2 || exit
-convert -density 150 -rotate 90 +antialias dcl.pdf U.png || exit
+convert -density 150 -rotate 90 +antialias dcl.pdf W.png || exit
 
 rm -f dcl.pdf

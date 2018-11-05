@@ -4,7 +4,8 @@
 
 ##### for computation
 
-FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+#FFLAGS_FAST  = -fpp -m64 -O3 -xHost                 \
+FFLAGS_FAST  = -fpp -m64 -O2 -xHost                 \
                -assume byterecl -convert big_endian \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays         \
@@ -40,7 +41,8 @@ endif
 MODDIROPT ?= -module
 
 CC     = mpicc
-CFLAGS = -O3 -xHost -mcmodel=medium -shared-intel
+#CFLAGS = -O3 -xHost -mcmodel=medium -shared-intel
+CFLAGS = -O2 -xHost -mcmodel=medium -shared-intel
 
 LD      = $(FC)
 LDFLAGS = $(FFLAGS)

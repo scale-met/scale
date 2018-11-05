@@ -7,19 +7,16 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2016-05-17 (S.Nishizawa) [new]
-!!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_dyn_tinteg_tracer_rk3
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_index
@@ -65,9 +62,9 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup( &
        tinteg_type )
-    use scale_process, only: &
-       PRC_MPIstop
-    use scale_comm, only: &
+    use scale_prc, only: &
+       PRC_abort
+    use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
 
@@ -77,8 +74,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'RK3WS2002' ) then
-       write(*,*) 'xxx TINTEG_LARGE_TYPE is not RK3WS2002. Check!'
-       call PRC_MPIstop
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_rk3_setup",*) 'TINTEG_LARGE_TYPE is not RK3WS2002. Check!'
+       call PRC_abort
     end if
 
     allocate( QTRC_RK1(KA,IA,JA) )
@@ -99,14 +96,17 @@ contains
        mflx_hi, num_diff, & ! (in)
        GSQRT, MAPF, & ! (in)
        CDZ, RCDZ, RCDX, RCDY, & ! (in)
+       BND_W, BND_E, BND_S, BND_N, & ! (in)
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_tstep_tracer, only: &
        ATMOS_DYN_tstep_tracer
+    use scale_atmos_dyn_common, only: &
+       ATMOS_DYN_Copy_Boundary_tracer
     implicit none
     real(RP), intent(inout) :: QTRC    (KA,IA,JA)
     real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
@@ -121,6 +121,10 @@ contains
     real(RP), intent(in)    :: RCDZ(KA)
     real(RP), intent(in)    :: RCDX(IA)
     real(RP), intent(in)    :: RCDY(JA)
+    logical,  intent(in)    :: BND_W
+    logical,  intent(in)    :: BND_E
+    logical,  intent(in)    :: BND_S
+    logical,  intent(in)    :: BND_N
     real(RP), intent(in)    :: dtl
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -153,6 +157,10 @@ contains
          dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
 
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK1,                  & ! [INOUT]
+                                         QTRC0,                     & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
+
     call COMM_vars8( QTRC_RK1(:,:,:), I_COMM_RK1 )
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
 
@@ -176,6 +184,10 @@ contains
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
          dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
+
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK2,                  & ! [INOUT]
+                                         QTRC0,                     & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
 
     call COMM_vars8( QTRC_RK2(:,:,:), I_COMM_RK2 )
     call COMM_wait ( QTRC_RK2(:,:,:), I_COMM_RK2, .false. )

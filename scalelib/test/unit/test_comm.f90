@@ -23,9 +23,9 @@ module test_comm
 contains
 
   subroutine test_comm_run
-  use scale_process, only: &
+  use scale_prc, only: &
      PRC_myrank
-  use scale_rm_process, only: &
+  use scale_prc_cartesC, only: &
      PRC_next, &
      PRC_W, &
      PRC_N, &
@@ -120,7 +120,7 @@ contains
 
 
   subroutine test_vars
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
          COMM_vars_init, &
          COMM_vars, &
          COMM_wait
@@ -148,9 +148,9 @@ contains
   end subroutine test_vars
 
   subroutine test_vars8
-    use scale_process, only: &
+    use scale_prc, only: &
          PRC_myrank
-    use scale_comm, only: &
+    use scale_comm_cartesC, only: &
          COMM_vars8_init, &
          COMM_vars8, &
          COMM_wait

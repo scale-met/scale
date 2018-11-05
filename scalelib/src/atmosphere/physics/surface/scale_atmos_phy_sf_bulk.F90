@@ -9,14 +9,14 @@
 !!
 !<
 !-------------------------------------------------------------------------------
-#include "inc_openmp.h"
+#include "scalelib.h"
 module scale_atmos_phy_sf_bulk
   !-----------------------------------------------------------------------------
   !
   !++ used modules
   !
   use scale_precision
-  use scale_stdio
+  use scale_io
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -40,37 +40,37 @@ module scale_atmos_phy_sf_bulk
   !
   !++ Private parameters & variables
   !
-  real(RP), private            :: ATMOS_PHY_SF_beta   =   1.0_RP ! evaporation efficiency (0-1)
+  real(RP), private :: ATMOS_PHY_SF_BULK_beta = 1.0_RP ! evaporation efficiency (0-1)
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_SF_bulk_setup
-    use scale_process, only: &
+    use scale_prc, only: &
        PRC_abort
     implicit none
 
-    NAMELIST / PARAM_ATMOS_PHY_SF_BULK / &
-       ATMOS_PHY_SF_beta
+    namelist / PARAM_ATMOS_PHY_SF_BULK / &
+       ATMOS_PHY_SF_BULK_beta
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[surface bulk] / Categ[atmosphere physics] / Origin[SCALE lib]'
-    if( IO_L ) write(IO_FID_LOG,*) '*** Bulk scheme'
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Setup'
+    LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Bulk scheme'
 
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_BULK,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("ATMOS_PHY_SF_bulk_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
+       LOG_ERROR("ATMOS_PHY_SF_bulk_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_BULK. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_ATMOS_PHY_SF_BULK)
+    LOG_NML(PARAM_ATMOS_PHY_SF_BULK)
 
     return
   end subroutine ATMOS_PHY_SF_bulk_setup
@@ -88,13 +88,10 @@ contains
        SFLX_SH, SFLX_LH, SFLX_QV,    &
        U10, V10, T2, Q2              )
     use scale_const, only: &
-       PRE00  => CONST_PRE00, &
        CPdry  => CONST_CPdry, &
-       Rdry   => CONST_Rdry,  &
        EPSvap => CONST_EPSvap
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
-       I_QV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
        SATURATION_psat_all => ATMOS_SATURATION_psat_all
     use scale_bulkflux, only: &
@@ -147,7 +144,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*) '*** Atmos physics  step: Surface flux(bulk)'
+    LOG_PROGRESS(*) 'atmosphere / physics / surface flux / bulk'
 
     ! ToDo consider ATM_TEMP is appropriate
     call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
@@ -158,18 +155,23 @@ contains
                               SFC_TEMP(:,:), & ! [IN]
                               SFC_PSAT(:,:)  ) ! [OUT]
 
-    !omp parallel do default(none) &
-    !omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
-    !omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_beta, &
-    !omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_U,ATM_V,ATM_Z1, &
-    !omp         SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
-    !omp         SFLX_MW,SFLX_MU,SFLX_MW,SFLX_QV,U10,V10,T2,Q2)
+#ifndef __GFORTRAN__
+    !$omp parallel do default(none) &
+    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
+    !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,CPdry,LHV,bulkflux,    &
+    !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_W,ATM_U,ATM_V,ATM_Z1,               &
+    !$omp         SFC_DENS,SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
+    !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)
+#else
+    !$omp parallel do default(shared) &
+    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2)
+#endif
     do j = JS, JE
     do i = IS, IE
        ! qdry = 1 - psat
        SFC_QSAT = EPSvap * SFC_PSAT(i,j) / ( SFC_PRES(i,j) - ( 1.0_RP-EPSvap ) * SFC_PSAT(i,j) )
 
-       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_beta * SFC_QSAT
+       SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_BULK_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_BULK_beta * SFC_QSAT
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
