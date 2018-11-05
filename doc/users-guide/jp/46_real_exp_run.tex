@@ -2,16 +2,15 @@
 \section{シミュレーションの実行：run} \label{sec:tutrial_real_run}
 %-------------------------------------------------------%
 \subsubsection{run.confの準備}
-runディレクトリへ移動する。
+\verb|run|ディレクトリへ移動する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/run
 \end{verbatim}
 %
-runディレクトリの中には、\verb|run.d01.conf|という名前の
+このディレクトリの中には、\verb|run.d01.conf|という名前の
 設定ファイルが準備されており、
-ドメインの位置や格子点数など、
-チュートリアル用の設定（表\ref{tab:grids}）に合わせて設定されている。
-他に\verb|run.launch.conf|というファイルも作成されているが、ここでは使用しない。
+チュートリアル用の設定（表\ref{tab:grids}に合わせて設定されている。
+他に\verb|run.launch.conf|というファイルも存在するが、ここでは使用しない。
 
 モデル本体の実行には
 事前に作成した地形データや初期値・境界値データを利用する。
@@ -30,7 +29,6 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \verb|/| \\
  \\
 \verb|&PARAM_RESTART| \\
-\verb| RESTART_RUN          = .false.,|\\
 \verb| RESTART_OUTPUT       = .true., |\\
 \verb| RESTART_OUT_BASENAME = "restart_d01",|\\
 \verb| RESTART_IN_BASENAME  = "../init/init_d01_20070714-180000.000",|\\
@@ -51,13 +49,13 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 }}\\
 
 
-\verb|run.d01.conf|の設定の中で時間積分に関する設定は、
-\namelist{PARAM_TIME}の項目にある。
+\verb|run.d01.conf|の中で、
+時間積分に関する設定は\namelist{PARAM_TIME}において設定する。
 初期時刻は、\nmitem{TIME_STARTDATE}にUTCで指定する。
-チュートリアルでは2007年7月14日18時UTCに設定している。
-積分時間は\nmitem{TIME_DURATION}で与える。
-積分のための時間ステップは、上記の他、
-それぞれの物理スキーム毎に設定できるようになっている。\\
+チュートリアルでは、2007年7月14日18時UTCに設定している。
+積分時間は、\nmitem{TIME_DURATION}で与える。
+物理過程に対する時間ステップは、
+それぞれの物理スキーム毎に設定できる。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -79,7 +77,7 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 }}\\
 
 
-計算結果の出力に関する設定は\nmitem{PARAM_HISTORY}で行う。\\
+計算結果の出力に関する設定は、\nmitem{PARAM_HISTORY}で行う。\\
 
 \noindent {\gt
 \ovalbox{
@@ -96,10 +94,10 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \end{tabularx}
 }}\\
 
-上記の設定に従って、下記の\nmitem{HISTITEM}に列挙された変数が出力される。
-\nmitem{HISTITEM}ではオプション変数を加えることで、変数毎に、出力間隔を変更したり、
-平均値を出力したりすることも可能である。
-これらの説明は\ref{sec:output}を参照されたい。\\
+上記の設定に従って、下記の\nmitem{HISTITEM}に列挙した変数を出力する。
+必要があれば、\nmitem{HISTITEM}においてオプション変数を加えることで、変数毎に出力間隔を変更できる。
+また、瞬間値の代わりに平均値を出力することも可能である。
+これらの詳細は、\ref{sec:output}を参照されたい。\\
 
 \noindent {{\gt
 \ovalbox{
@@ -127,28 +125,24 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \end{tabularx}
 }}}\\
 
-\noindent その他、実験で使用されるスキームの設定として、
-力学過程の設定は、
-\namelist{&PARAM_ATMOS_DYN}
-物理過程の設定は、
-\namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}に
-記述されている。
+力学過程や物理過程に対するスキームとして他のスキームを用いたいときには、
+力学過程に関しては\namelist{&PARAM_ATMOS_DYN}
+物理過程に関しては\namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}で設定すれば良い。
 詳細な内容については、第\ref{sec:atmos_dyn}節、\ref{sec:basic_usel_physics}節を参照されたい。
 
 %
 \subsubsection{シミュレーションの実行}
 
-実行に必要なファイルとして、下記が用意されている。
+実行に必要なファイルは下記であり、これらはあらかじめ用意されている。
 \begin{alltt}
  $ ls
     MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
                                   : 放射スキーム用のパラメータファイル
     run.d01.conf      : 設定ファイル
     param.bucket.conf : 陸面スキーム用のパラメータファイル
-    scale-rm          : \scalerm 実行バイナリ
+    scale-rm          : \scalerm の実行バイナリ
     run.launch.conf   : ネスティング計算用のlaunchファイル
                        （チュートリアルでは使用しない）
-    Makefile          : make 用設定ファイル （チュートリアルでは使用しない）
 \end{alltt}
 %
 準備が整ったら、4-MPI並列により\scalerm を実行する。
@@ -157,11 +151,11 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
 \end{verbatim}
 
 
-実行にはある程度時間を要するため（上記のマシンで計算完了までに10〜20分を要した）、
-上記のように標準出力をファイルへ書き出すようにして
+実行が完了するまでには、ある程度時間を要する（推奨環境では10〜20分程度かかる)。
+そのため、上記のように標準出力をファイルへ書き出すようにして
 バックグラウンドで実行すると便利である。
-計算が開始されれば，処理内容のログとして、\verb|"LOG_d01.pe000000"|が生成される。
-さらに、ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|に\\
+計算が進みながら、途中経過のログは\verb|"LOG_d01.pe000000"|に出力される。
+ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|の最後に\\
 
 \noindent {\small {\gt
 \fbox{
@@ -179,13 +173,12 @@ runディレクトリの中には、\verb|run.d01.conf|という名前の
   history_d01.pe000002.nc
   history_d01.pe000003.nc
 \end{verbatim}
-それぞれ、おおよそ23MBのファイルサイズとなる。
-モデルの出力ファイル(\verb|history_d01.pe######.nc|)は、
-MPIプロセス毎に計算領域が分割されて、
-\nmitem{HISTITEM}で指定した出力変数が出力される。
-\verb|######|はMPIプロセス番号を表している。
-ファイルフォーマットは、
-気候・予報(CF)メタデータ規約に対応したNetCDF4形式である。
+各ファイルのサイズは、約 34 MB である。
+出力ファイル(\verb|history_d01.pe######.nc|)は、
+MPI のプロセス数に応じて分割されている。
+ここで、\verb|######|はMPIプロセス番号を表す。
+これらのファイルには、\nmitem{HISTITEM}で指定した変数が出力されている。
+ファイル形式は、気候・予報(CF)メタデータ規約に対応したNetCDFである。
 
 
 

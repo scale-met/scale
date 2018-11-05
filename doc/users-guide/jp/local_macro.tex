@@ -16,8 +16,8 @@
 \newcommand{\SubsecBasicBufferSetting}{{緩和領域と境界ナッジングの設定}}
 \newcommand{\SecMapprojectionSetting}{{地図投影法と計算領域の位置の設定}}
 \newcommand{\SecBasicTopoSetting}{{地形の設定}}
-\newcommand{\SecInputDataSetting}{{様々な初期値・境界値データの作成方法}}
-\newcommand{\SecBasicIntegrationSetting}{{積分時間と積分時間間隔の設定}}
+\newcommand{\SecInputDataSetting}{{初期値・境界値データの作成方法}}
+\newcommand{\SecBasicIntegrationSetting}{{積分時間と時間刻み幅の設定}}
 \newcommand{\SecBasicOutputSetting}{{出力変数の追加・変更方法}}
 \newcommand{\SecBasicDynamicsSetting}{{力学スキームの設定}}
 \newcommand{\SubsecDynsolverSetting}{{数値解法の設定}}
@@ -46,12 +46,58 @@
 \newcommand{\replycomment}[1]{{\color{blue} \Large 回答: #1}}
 
 \newcommand{\netcdf}{{netCDF}}
+\newcommand{\Netcdf}{{NetCDF }}
 \newcommand{\grads}{{GrADS}}
 \newcommand{\gphys}{{GPhys}}
 
+\newcommand{\scale}{{SCALE }}
 \newcommand{\scalerm}{{SCALE-RM}}
 \newcommand{\scalegm}{{SCALE-GM}}
-\newcommand{\scalelib}{{SCALE}}
+\newcommand{\scalelib}{{SCALE }}
+\newcommand{\scalenetcdf}{{SCALE-netCDF }}
+\newcommand{\sno}{{SNO }}
+
+\newcommand{\scaleweb}{{\url{https://scale.aics.riken.jp/}}}
+\newcommand{\ppconf}{{the configuration file for the preprocess run }}
+\newcommand{\initconf}{{the configuration file for the initialization run }}
+\newcommand{\runconf}{{the configuration file for simulation run }}
+
 
 \newcommand{\Item}[1]{~\\\noindent{\bf \large \underline{#1}}\\}
 
+\newcommand{\msgbox}[1]{
+~\\~\\\noindent{\small {\rm
+\fbox{
+\begin{tabularx}{147mm}{l}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+\newcommand{\editbox}[1]{
+~\\~\\\noindent{\small {\rm
+\ovalbox{
+\begin{tabularx}{147mm}{l}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+\newcommand{\editboxtwo}[1]{
+~\\~\\\noindent{\small {\rm
+\ovalbox{
+\begin{tabularx}{147mm}{lX}
+#1
+\end{tabularx}
+}}}\\~\\
+}
+
+
+\newcommand{\msgboxtwo}[1]{
+~\\~\\\noindent{\small {\rm
+\fbox{
+\begin{tabularx}{147mm}{lX}
+#1
+\end{tabularx}
+}}}\\~\\
+}

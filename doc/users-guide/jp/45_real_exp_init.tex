@@ -2,7 +2,7 @@
 \section{初期値・境界値データの作成：init} \label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
-initディレクトリでは、\scalerm 計算に必要な初期値・境界値データを作成する。
+\verb|init|ディレクトリに移動し、\scalerm によるシミュレーションに必要な初期値・境界値データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
  $ ls
@@ -13,12 +13,11 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
     scale-rm_init
 \end{verbatim}
 ディレクトリの中には、\verb|init.d01.conf|という名前の設定ファイルが準備されている。\\
-他に\verb|init.launch.conf|というファイルも作成されているが、ここでは使用しない。
-\verb|pp.d01.conf|と同様に、実験設定に合わせて、この\verb|init.d01.conf|を書き換える必要があるが、
-チュートリアル用の\verb|init.d01.conf|ファイルは表\ref{tab:grids}の設定に
-すでに合わせてある。
-初期値・境界値データの作成には前節で作成した地形データを利用する。
-これは、\verb|init.d01.conf|の中で、下記のように相対パスを用いて参照するように設定されている。\\
+他に\verb|init.launch.conf|というファイルも存在するが、ここでは使用しない。
+\verb|init.d01.conf|ファイルには、表\ref{tab:grids}に示すチュートリアル用の設定が
+すでになされているが、\verb|pp.d01.conf|と同様に実験設定に応じて変更されたい。
+初期値・境界値データの作成には、前節で作成した地形データを利用する。
+これは、\verb|init.d01.conf|の中で、下記のように相対パスを用いて参照するように設定される。\\
 
 \noindent {\gt
 \ovalbox{
@@ -43,7 +42,7 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
 \begin{tabularx}{150mm}{lX}
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
 \verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
-\verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}に示す設定値を指定} \\
+\verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}から選択する} \\
 \verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
 \verb| BASENAME_BOUNDARY    = "boundary_d01",|                      & {\small ← 境界値データの出力名} \\
 \verb| BOUNDARY_UPDATE_DT   = 21600.0,|                             & {\small ← 入力データの時間間隔} \\
@@ -67,20 +66,18 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
 \end{tabularx}
 }}\\
 
-\noindent \nmitem{FILETYPE_ORG}は入力する気象場データのファイルフォーマットに
-関するパラメータを設定しており、ここでは
-{\grads}形式のデータを読み込むため``\verb|grads|''と指定している。
-詳細な設定ファイルの内容については、第\ref{sec:adv_datainput}節を参照されたい。
+\noindent 気象場データのファイル形式は、\nmitem{FILETYPE_ORG}で指定する。
+ここでは、{\grads}形式のデータを読み込むために``\verb|grads|''と与えている。
+入力ファイルの詳細は、第\ref{sec:adv_datainput}節を参照されたい。
 
-
-第\ref{sec:tutrial_real_data}節用意した、バイナリ形式に変換した入力データ(FNL)を
-作業ディレクトリにリンクを張る。リンクをはるためのスクリプトが、
-\verb|${Tutorial_DIR}/real/data|の\verb|"gradsinput-link_FNL.sh"|に用意されている。
+第\ref{sec:tutrial_real_data}節では、バイナリ形式に変換した入力データ(FNL)を準備したが、
+今の作業ディレクトリにこのファイルへのリンクを張る。リンクを適切に張るためのスクリプトとして、
+\verb|${Tutorial_DIR}/real/data|の中に\verb|"gradsinput-link_FNL.sh"|を用意している。
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-下記のリンクが作成されていれば成功である。\\
+上記のコマンドを実行し、下記のリンクが作成されていれば成功である。\\
 
 \noindent {\gt
 \fbox{
@@ -96,17 +93,17 @@ initディレクトリでは、\scalerm 計算に必要な初期値・境界値�
 
 
 次に、{\grads}形式のバイナリデータをSCALEで読み込むためのnamelistファイルを
-initディレクトリへリンクする。
+\verb|init|ディレクトリへリンクする。
 \begin{verbatim}
   $ ln -s ../../data/namelist.grads_boundary.FNL.2005053112-2016051106 ./
 \end{verbatim}
 %
-準備が整ったら、4つのMPIプロセスを使用してinitを実行する。
+上記の準備が終わったら、4つのMPIプロセスを使用して\verb|scale-rm_init|を実行する。
 \begin{verbatim}
  $ mpirun -n 4 ./scale-rm_init init.d01.conf
 \end{verbatim}
 
-正常にジョブが終了すると、
+正常にジョブが終了すれば、以下のファイルが生成される。
 \begin{verbatim}
  $ ls
     boundary_d01.pe000000.nc
@@ -119,7 +116,8 @@ initディレクトリへリンクする。
     init_d01_20070714-180000.000.pe000003.nc
     init_LOG_d01.pe000000
 \end{verbatim}
-が作成され、\verb|init_LOG_d01.pe000000|の最後に\\
+\verb|init_LOG_d01.pe000000|はログファイルであり、
+処理が正常に完了していれば、ファイルの最後に\\
 
 \noindent {\small {\gt
 \fbox{
@@ -130,32 +128,31 @@ initディレクトリへリンクする。
 }}}\\
 
 \noindent
-と出力される。
-\verb|boundary_d01.pe######.nc|は境界値データで約5.8MBのファイルサイズとなり、
-\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データで約3.5MBのファイルサイズとなる。
-\verb|init_LOG_d01.pe000000|はログファイルである。
-\verb|######|はMPIプロセス番号を表している。
-
+という内容が出力される。
+\verb|boundary_d01.pe######.nc|は境界値データ、
+\verb|init_d01_20070714-180000.000.pe######.nc|は初期値データであり、
+それぞれのファイルサイズは約18.9 MB、約12.6 MB である。、
+ここで、\verb|######|はMPIプロセス番号を表す。
 
 %% サポート外
 \vspace{1cm}
 \noindent {\Large\em OPTION} \hrulefill \\
-gpviewがインストールされている場合，作成された初期値と境界値が
-正しく作成されているかどうかを確認することが出来る。
-正しく作成されていれば、図 \ref{fig:init}と同じように描かれる。
+「gpview」がインストールされている場合には，以下のコマンドによって、
+初期値と境界値が正しく作成されているかを確認できる。
 
 \begin{verbatim}
- $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016          \
-          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV      \
-          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY
+ $ gpvect --scalar --slice z=1500 --nocont --aspect=1 --range=0.002:0.016 --int 0.001     \
+          --xintv=10 --yintv=10 --unit_vect init_d01_20070714-180000.000.pe00*@QV         \
+          init_d01_20070714-180000.000.pe00*@MOMX init_d01_20070714-180000.000.pe00*@MOMY \
+          --title "QV, MOMX, MOMY"
 \end{verbatim}
-
+処理が正常に終了していれば、図\ref{fig:init}と同様の図が得られる。
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.eps}\\
-  \caption{チュートリアル実験の高さ1500mにおける初期場の様子。カラーシェードは比湿、
-           ベクトルは水平運動量フラックスを表している。}
+  \caption{チュートリアル実験における初期場の様子($z=$1500 m)。
+           色は比湿、ベクトルは水平運動量フラックスを表す。}
   \label{fig:init}
 \end{center}
 \end{figure}

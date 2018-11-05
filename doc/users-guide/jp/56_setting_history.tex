@@ -1,99 +1,223 @@
-\section{\SecBasicOutputSetting} \label{sec:output}
-%====================================================================================
+%-------------------------------------------------------------------------------
+\section{ヒストリファイルと出力変数の設定} \label{sec:output}
+%-------------------------------------------------------------------------------
 
-計算結果の出力ファイルと出力形式の設定、及び、出力する変数の追加は、
-\namelist{PARAM_HISTORY}と\namelist{HISTITEM}で行う。
-まず、出力ファイルとデフォルトの出力形式の設定を、\verb|run.conf|の\namelist{PARAM_HISTORY} で行う。\\
+ヒストリファイルと出力変数は、\verb|run.conf|内の\namelist{PARAM_FILE_HISTORY_CARTESC}、
+\namelist{PARAM_FILE_HISTORY}、\namelist{HISTORY_ITEM}によって設定する。
+ヒストリファイルのデフォルトの形式は、\namelist{PARAM_FILE_HISTORY}によって設定する。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&PARAM_HISTORY| & \\
-\verb|  HISTORY_DEFAULT_BASENAME  = "history_d01",| & ; 出力ファイル名の頭。 \\
-\verb|  HISTORY_DEFAULT_TINTERVAL = 3600.0,|        & ; 出力の時間間隔。 \\
-\verb|  HISTORY_DEFAULT_TUNIT     = "SEC",|         & ; \verb|HISTORY_DEFAULT_TINTERVAL|の単位。 \\
-\verb|  HISTORY_DEFAULT_TAVERAGE  = .false.,|       & ; \verb|.false.|: 瞬間値、\verb|.true.|: 時間平均値。\\
-\verb|  HISTORY_DEFAULT_ZCOORD    = "model",|       & ; 出力データの鉛直座標の種別。\\
-                                                    & ~ \verb|"model"|: モデル面の値を出力。\\
-                                                    & ~ \verb|"z"    |: 絶対高度面に内挿した値を出力。\\
-                                                    & ~ \verb|"pressure"|: 気圧面に内挿した値を出力。\\
-\verb|  HISTORY_DEFAULT_DATATYPE  = "REAL4",|       & ; 出力データの型。\verb|REAL4|, \verb|REAL8|など。\\
-\verb|  HISTORY_OUTPUT_STEP0      = .true.,|        & ; 初期時刻(t=0)の値を出力するかどうか。\\
-                                                    & ~ \verb|.true.|: 出力、\verb|.false.|: 出力しない。\\
-\verb|/| & \\
-\end{tabularx}
-}}}\\
+\editboxtwo{
+\verb|&PARAM_FILE_HISTORY_CARTESC                   | & \\
+\verb|  FILE_HISTORY_CARTESC_PRES_nlayer = -1,      | & ; 圧力レベル数 \\
+                                                      & ~ (圧力レベルへの補間に関するオプション) \\
+\verb|  FILE_HISTORY_CARTESC_PRES        = 0.D0     | & ; 補間を行う圧力レベル(下層から上層の順) [hPa] \\
+                                                      & ~ (圧力レベルへの補間に関するオプション) \\
+\verb|  FILE_HISTORY_CARTESC_BOUNDARY    = .false., | & ; ハロのデータを出力するか? \\
+                                                      & ~ \verb|.true.|: 出力する, \verb|.false.|: 出力しない.\\
+\verb|/                                             | & \\
+}
 
+\editboxtwo{
+\verb|&PARAM_FILE_HISTORY                                      | & \\
+\verb| FILE_HISTORY_TITLE                     = "",            | & ; データに関する簡単な説明 (\ref{sec:netcdf}節参照)\\
+\verb| FILE_HISTORY_SOURCE                    = "",            | & ; データを作成したソフトウェアの名前  (\ref{sec:netcdf}節参照)\\
+\verb| FILE_HISTORY_INSTITUTION               = "",            | & ; データの作成者 (\ref{sec:netcdf}節参照)\\
+\verb| FILE_HISTORY_TIME_UNITS                = "seconds",     | & ; \netcdf 中の時間軸の単位\\
+\verb| FILE_HISTORY_DEFAULT_BASENAME          = "history_d01", | & ; 出力ファイルのベース名 \\
+\verb| FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL = .false.,       | & ; ファイル名に時間のラベルを加えるか? \\
+\verb| FILE_HISTORY_DEFAULT_ZCOORD            = "model",       | & ; 鉛直座標の種類 \\
+\verb| FILE_HISTORY_DEFAULT_TINTERVAL         = 3600.D0,       | & ; ヒストリ出力の時間間隔 \\
+\verb| FILE_HISTORY_DEFAULT_TUNIT             = "SEC",         | & ; \verb|DEFAULT_TINTERVAL|の単位 \\
+\verb| FILE_HISTORY_DEFAULT_TAVERAGE          = .false.,       | & ; 出力の時間間隔中の値を平均するか? \\
+\verb| FILE_HISTORY_DEFAULT_DATATYPE          = "REAL4",       | & ; 出力データの種類: \verb|REAL4| or \verb|REAL8| \\
+\verb| FILE_HISTORY_OUTPUT_STEP0              = .true.,        | & ; 初期時刻(t=0)のデータを出力するか? \\
+\verb| FILE_HISTORY_OUTPUT_WAIT               = 0.D0,          | & ; 出力を抑制する時間 \\
+\verb| FILE_HISTORY_OUTPUT_WAIT_TUNIT         = "SEC",         | & ; \verb|OUTPUT_WAIT| の単位 \\
+\verb| FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   = -1.D0,         | & ; ファイルを切り替える時間間隔 \\
+\verb| FILE_HISTORY_OUTPUT_SWITCH_TUNIT       = "SEC",         | & ; \verb|OUTPUT_SWITCH_TINTERVAL| の単位 \\
+\verb| FILE_HISTORY_ERROR_PUTMISS             = .true.,        | & ; データの準備状況の整合性を確認するか? \\
+\verb| FILE_HISTORY_AGGREGATE                 = .false.,       | & ; PnetCDF を用いて単一のファイルに集めるか? \\
+\verb|/                                                        | & \\
+}
 
-\nmitem{HISTORY_DEFAULT_TUNIT}の単位は、\\
-\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|
-より選択可能である。
+デフォルトでは、各プロセスがヒストリファイルを出力する。
+\nmitem{FILE_HISTORY_AGGREGATE}が\verb|.true.|に設定されている場合は, 
+分散された出力ファイルは parallel \Netcdf を用いることによって単一のファイルへと集められる。
+\nmitem{FILE_HISTORY_AGGREGATE}のデフォルト設定は、\namelist{PARAM_FILE}内の\nmitem{FILE_AGGREGATE}によって決定される。
+\ref{sec:netcdf}節を参考にされたい。
+
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}はヒストリ出力の時間間隔であり、その単位は\\
+\nmitem{FILE_HISTORY_DEFAULT_TUNIT}によって定義される。単位は、\\
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|から選択することができる。
 %
-\verb|HISTORY_DEFAULT_TAVERAGE = .true.|として、平均値での出力を設定した場合、
-出力するタイミング直前の\verb|HISTORY_DEFAULT_TINTERVAL|間の平均値が出力される。
+\nmitem{FILE_HISTORY_DEFAULT_TAVERAGE}を\verb|.true.|として平均値の出力が設定されている場合には、
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}に指定された直近の期間に渡って平均されたヒストリデータを出力する。
 
-\nmitem{HISTORY_DEFAULT_ZCOORD}で絶対高度面座標(\verb|"z"|)を選択した場合は、
-出力データの鉛直層数はモデル面の鉛直層数と同じであり、
-各層の高度は標高ゼロ地点でのモデル面高度である。\\
-\nmitem{HISTORY_DEFAULT_ZCOORD}で気圧面座標(\verb|"pressure"|)を選択した場合、
-\namelist{PARAM_HIST}の\\ \nmitem{HIST_PRES_nlayer}と\nmitem{HIST_PRES}の設定が必要である。
+ヒストリ出力の時間間隔は、それと関係したスキームの時間間隔と等しいか倍数でなければならない。
+この整合性の確認を無効にしたい場合には、\nmitem{FILE_HISTORY_ERROR_PUTMISS}を\verb|.false.|に設定すれば良い.
 
-\namelist{PARAM_HIST}の\nmitem{HIST_BND}を\verb|.true.|とした場合、
-計算領域の外側のハロ領域のデータも出力される。ただし、周期境界条件の場合にはこの設定は無視される。
-\nmitem{HIST_BND}の設定はすべての出力変数に対して適用される。\\
+\nmitem{FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL}が\verb|.true.|に設定されている場合には, 
+時間に関するラベルが出力ファイル名に付加される。
+時間のラベルは、シミュレーションの現時刻から生成され、その形式は\verb|YYYYMMDD-HHMMSS.msec|によって定義される。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&PARAM_HIST| & \\
-\verb|  HIST_PRES_nlayer   = -1,    |    & ; 層数 (オプション 気圧面出力の場合のみ) \\
-\verb|  HIST_PRES          = 0.0,   |    & ; 各層の気圧の値。下層から順に[hPa]で指定する。\\
-                                         & ~ (オプション 気圧面出力の場合のみ) \\
-\verb|  HIST_BND           = .false.|    & ; 計算領域の外側のハロ領域の値を出力するかどうか。\\
-                                         & ~ \verb|.true.|: 出力する, \verb|.false.|: 出力しない.\\
-\verb|/| & \\
-\end{tabularx}
-}}}\\
+\nmitem{FILE_HISTORY_OUTPUT_STEP0}が\verb|.true.|に設定されている場合は, 
+時間積分の前の時刻における変数(初期値)をヒストリファイルに出力する。
+\nmitem{FILE_HISTORY_OUTPUT_WAIT}と\nmitem{FILE_HISTORY_OUTPUT_WAIT_TUNIT}によって定義されるシミュレーション時間の間、
+その値が負であれば、出力の抑制は起こらない。
+\nmitem{FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL}は出力ファイルの切り替えの時間間隔であり、
+その単位は\nmitem{FILE_HISTORY_OUTPUT_SWITCH_TUNIT}によって定義される。
+その値が負であれば、ヒストリ出力のために各プロセス毎に単一ファイルだけが使われる。
+このオプションが有効であれば、時間に関するラベルがファイル名に付加される。
+
+大気の3次元変数を出力するために、3種類の鉛直座標が利用可能である。
+デフォルトでは\\
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD} \verb|= "model"|と選択される。
+この場合には、変数はモデルのもとの座標系({\scalerm}において地形に沿った、z*座標系)を用いて出力される。
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}が\verb|"z"|に設定されている場合は、 変数は絶対高度へと補間される。
+出力データのレベル数は、モデルのレベル数と同じである。
+各レベルにおける高度は、地形を伴わない格子セルにおけるモデル高度と同じである。
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}が\verb|"pressure"|に設定されている場合には、
+変数は圧力レベルへと補間される。
+この場合には、\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_PRES_nlayer}と\nmitem{FILE_HISTORY_CARTESC_PRES}を設定する必要がある。
+
+\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_BOUNDARY}が\verb|.true.|である場合には、
+周期境界条件の場合を除いて、ハロ(対象領域の外側に位置する)におけるデータも出力される。
+\nmitem{FILE_HISTORY_CARTESC_BOUNDARY}の設定は、全ての出力変数に適用される。\\
+
+出力変数は、\namelist{HISTORY_ITEM}を加えることによって設定される。
+出力の形式は、\namelist{PARAM_FILE_HISTORY}で指定されたデフォルト設定に従う。
+「(オプション)」を伴うネームリストを追加することによって、特定の変数に対する形式をデフォルト設定から変更することができる。
+
+\editboxtwo{
+\verb|&HISTORY_ITEM                    | & \\
+\verb| NAME              = "RAIN",     | &  変数名. 変数のリストはリファレンスマニュアル内にある(\ref{sec:reference_manual}節を参照) \\
+\verb| OUTNAME           = "",         | &  (オプション) \verb|NAME|と同じ \\
+\verb| BASENAME          = "rain_d01", | &  (オプション) \verb|FILE_HISTORY_DEFAULT_BASENAME|と同じ \\
+\verb| POSTFIX_TIMELABEL = .false.,    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL|と同じ \\
+\verb| ZCOORD            = "model",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_ZCOORD|と同じ \\
+\verb| TINTERVAL         = 600.D0,     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TINTERVAL|と同じ \\
+\verb| TUNIT             = "SEC",      | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TINTERVAL|と同じ \\
+\verb| TAVERAGE          = .true.,     | &  (オプション) \verb|FILE_HISTORY_DEFAULT_TAVERAGE|と同じ \\
+\verb| DATATYPE          = "REAL4",    | &  (オプション) \verb|FILE_HISTORY_DEFAULT_DATATYPE|と同じ \\
+\verb|/                                | & \\
+}
+
+\namelist{HISTORY_ITEM}によって要求された変数がシミュレーションの時間スッテップ中に準備されていない場合には、
+実行が停止し、エラーログがログファイルに書かれる。
+この状況は、\nmitem{NAME}にスペルミスがある場合や、要求した変数が選択したスキーム内で用いられていない場合に起こりうる。
+
+「(オプション)」と書かれたネームリストは、変数\nmitem{NAME}に対してのみ適用される。
+変数に対してデフォルト設定を用いる場合には、「(オプション)」と書かれたネームリストは省略することができる。
+例えば、\namelist{PARAM_FILE_HISTORY}の上記の設定を維持して、\namelist{HISTORY_ITEM}に対する以下の設定を付け加えるとしよう。
+ファイル\verb|history_d01.xxxxxx.nc|には、\verb|U and V|の瞬間値が 3600 s 間隔で 4バイトの実数値として格納される一方で、
+\verb|RAIN|については 600 秒間隔でその期間に渡った平均値がファイルに格納される。
+\verb|T|の値は \verb|U|や\verb|V|と同じ規則において\verb|T|として出力され、
+圧力座標系に補間した値は\verb|T_pres|として出力される。
+
+\editbox{
+\verb|&HISTORY_ITEM  NAME="T" /|\\
+\verb|&HISTORY_ITEM  NAME="U" /|\\
+\verb|&HISTORY_ITEM  NAME="V" /|\\
+\verb|&HISTORY_ITEM  NAME="RAIN", TINTERVAL=600.D0, TAVERAGE=.true. /|\\
+\verb|&HISTORY_ITEM  NAME="T", OUTNAME="T_pres", ZCOORD="pressure" /|\\
+}
 
 
 
+%-------------------------------------------------------------------------------
+\section{モニターファイルの設定} \label{sec:monitor}
+%-------------------------------------------------------------------------------
 
-次に、出力する変数の設定を\namelist{HISTITEM}で行う。
-\namelist{HISTITEM}は変数毎に設定するため、出力したい変数の数だけ追加することになる。
-それぞれの変数の出力形式は、基本的に \namelist{PARAM_HISTORY} の設定に従うが、
-(オプション)のネイムリスとを追加することによって変数毎に変更することも可能である。\\
+モニターファイルと出力変数は、\verb|run.conf|内の\namelist{PARAM_MONITOR}と\namelist{MONITOR_ITEM}において設定する。
+モニターのデフォルトの形式は、\namelist{PARAM_MONITOR}において設定する。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
-\verb|&HISTITEM| &\\
-\verb| ITEM     = "RAIN",    | &  ; 変数名。 出力可能な変数は付録\ref{achap:namelist}を参照 \\
-\verb| BASENAME = "rain_d01",| &  ; (オプション) \verb|HISTORY_DEFAULT_BASENAME|に同じ。\\
-\verb| TINTERVAL= 600.0,     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TUNIT    = "SEC",     | &  ; (オプション) \verb|HISTORY_DEFAULT_TINTERVAL|に同じ。\\
-\verb| TAVERAGE = .true.,    | &  ; (オプション) \verb|HISTORY_DEFAULT_TAVERAGE|に同じ。\\
-\verb| ZCOORD   = "model",   | &  ; (オプション) \verb|HISTORY_DEFAULT_ZCOORD|に同じ。\\
-\verb| DATATYPE = "REAL4",   | &  ; (オプション) \verb|HISTORY_DEFAULT_DATATYPE|に同じ。\\
-\verb|/| & \\
-\end{tabularx}
-}}}\\
+\editboxtwo{
+\verb|&PARAM_MONITOR                      | & \\
+\verb| MONITOR_OUT_BASENAME  = "monitor", | & ; 出力ファイルのベース名 \\
+\verb| MONITOR_USEDEVATION   = .true.,    | & ; 最初のステップからの偏差を使うか? \\
+\verb| MONITOR_STEP_INTERVAL = 1,         | & ; モニター出力ステップ間隔 \\
+\verb|/                                   | & \\
+}
 
-(オプション)の項目は、変数\nmitem{ITEM}にのみ適用される。
-上記では、明示的にすべての設定を書いているが、
-\nmitem{HISTORY_DEFAULT_***} と同じ設定であれば
-それらが適用されるので明記する必要はない。
-例えば、上記の\namelist{PARAM_HISTORY}の設定に、下記の\namelist{HISTITEM}の設定を組み合わせた場合には、
-\verb|history_d01.xxxxxx.nc|に4バイト実数で、3600秒毎に \verb|T, U, V| の瞬間値が出力される。
-また、\verb|RAIN|が、600秒の出力間隔で、前600秒間の平均値が出力される。\\
+モニターのコンポーネントは、乾燥空気の質量・水蒸気・全エネルギー・表面での降水フラックス等の物理量の領域全体での合計を出力する。
+これらの出力は、質量収支やエネルギー収支の確認に役立つ。
+モニターファイルは ASCII 形式であり、ファイル名は \nmitem{MONITOR_OUT_BASENAME} \verb|.pe000000| と設定される。 
+モニター出力の時間間隔は、時間刻み幅($\Delta t$)の倍数として\nmitem{MONITOR_STEP_INTERVAL}に指定する。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
-\verb|&HISTITEM  ITEM = "T" /|\\
-\verb|&HISTITEM  ITEM = "U" /|\\
-\verb|&HISTITEM  ITEM = "V" /|\\
-\verb|&HISTITEM  ITEM = "RAIN",  TINTERVAL = 600.0, TAVERAGE = .true. /|\\
-\end{tabularx}
-}}}\\
+\editboxtwo{
+\verb|&MONITOR_ITEM   | & \\
+\verb| NAME = "ENGT", | &  変数名。 変数のリストは表\ref{tab:varlist_monitor}に示される。 \\
+\verb|/               | & \\
+}
+
+\begin{table}[h]
+\begin{center}
+  \caption{モニターに出力可能な変数}
+  \label{tab:varlist_monitor}
+  \begin{tabularx}{150mm}{|l|X|l|} \hline
+    \rowcolor[gray]{0.9}  Values & Description & Unit \\ \hline
+      \verb|DENS|         & 大気の質量                                  & [kg]     \\
+      \verb|MOMZ|         & z方向の運動量                   & [kg m/s] \\
+      \verb|MOMX|         & x方向の運動量                   & [kg m/s] \\
+      \verb|MOMY|         & y方向の運動量                   & [kg m/s] \\
+      \verb|RHOT|         & 温位                     & [kg K]   \\
+      \verb|TRACER*|      & 予報変数のトレーサー            & [each unit $\times$ kg] \\
+      \verb|QDRY|         & 乾燥空気の質量                              & [kg] \\
+      \verb|QTOT|         & 水物質の質量                                 & [kg] \\
+      \verb|EVAP|         & 表面での蒸発                & [kg] \\
+      \verb|PRCP|         & 降水量                             & [kg] \\
+      \verb|ENGT|         & 全エネルギー (\verb|ENGP + ENGK + ENGI|)  & [J] \\
+      \verb|ENGP|         & ポテンシャルエネルギー ($\rho * g * z$)             & [J] \\
+      \verb|ENGK|         & 運動エネルギー ($\rho * (W^2+U^2+V^2) / 2$) & [J] \\
+      \verb|ENGI|         & 内部エネルギー ($\rho * C_v * T$)           & [J] \\
+      \verb|ENGFLXT|      & 全エネルギーのフラックスの収束  & [J] \\
+                          & (\verb|SH + LH + SFC_RD - TOA_RD|) & \\
+      \verb|ENGSFC_SH|    & 表面での顕熱フラックス                & [J] \\
+      \verb|ENGSFC_LH|    & 表面での潜熱フラックス                & [J] \\
+      \verb|ENGSFC_RD|    & 表面での正味の放射フラックス                & [J] \\
+                          & (\verb|SFC_LW_up + SFC_SW_up - SFC_LW_dn - SFC_SW_dn|) & \\
+      \verb|ENGTOA_RD|    & 大気上端での正味の放射フラックス      & [J] \\
+                          & (\verb|TOA_LW_up + TOA_SW_up - TOA_LW_dn - TOA_SW_dn|) & \\
+      \verb|ENGSFC_LW_up| & 表面での上向き長波放射フラックス           & [J] \\
+      \verb|ENGSFC_LW_dn| & 表面での下向き長波放射フラックス           & [J] \\
+      \verb|ENGSFC_SW_up| & 表面での上向き短波放射フラックス           & [J] \\
+      \verb|ENGSFC_SW_dn| & 表面での下向き短波放射フラックス           & [J] \\
+      \verb|ENGTOA_LW_up| & 大気上端での上向き長波放射フラックス & [J] \\
+      \verb|ENGTOA_LW_dn| & 大気上端での下向き長波放射フラックス & [J] \\
+      \verb|ENGTOA_SW_up| & 大気上端での上向き短波放射フラックス & [J] \\
+      \verb|ENGTOA_SW_dn| & 大気上端での下向き短波放射フラックス & [J] \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+例えば、 \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| および \nmitem{MONITOR_USEDEVATION}として、
+\namelist{MONITOR_ITEM}に対する以下の設定を付け加えたとする。
+
+\editbox{
+\verb|&MONITOR_ITEM  NAME="ENGK" /|\\
+\verb|&MONITOR_ITEM  NAME="ENGP" /|\\
+\verb|&MONITOR_ITEM  NAME="ENGI" /|\\
+\verb|&MONITOR_ITEM  NAME="ENGT" /|\\
+}
+
+\noindent
+このとき、モニターファイルは以下のように出力される。
+
+\msgbox{
+                   ENGT            ENGP            ENGK            ENGI            \\
+STEP=      1 (MAIN)  1.18127707E+17  2.92701438E+16  2.40231436E+13  8.88335403E+16\\
+STEP=     11 (MAIN)  1.18127712E+17  2.92701415E+16  2.40249223E+13  8.88335453E+16\\
+STEP=     21 (MAIN)  1.18127711E+17  2.92701439E+16  2.40223566E+13  8.88335443E+16\\
+STEP=     31 (MAIN)  1.18127710E+17  2.92701454E+16  2.40213480E+13  8.88335435E+16\\
+STEP=     41 (MAIN)  1.18127710E+17  2.92701495E+16  2.40210662E+13  8.88335392E+16\\
+STEP=     51 (MAIN)  1.18127710E+17  2.92701439E+16  2.40205575E+13  8.88335456E+16\\
+STEP=     61 (MAIN)  1.18127711E+17  2.92701565E+16  2.40200252E+13  8.88335340E+16\\
+STEP=     71 (MAIN)  1.18127711E+17  2.92701457E+16  2.40195927E+13  8.88335455E+16\\
+STEP=     81 (MAIN)  1.18127710E+17  2.92701486E+16  2.40193679E+13  8.88335425E+16\\
+STEP=     91 (MAIN)  1.18127710E+17  2.92701573E+16  2.40188095E+13  8.88335342E+16\\
+STEP=    101 (MAIN)  1.18127710E+17  2.92701404E+16  2.40180752E+13  8.88335517E+16\\
+}
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

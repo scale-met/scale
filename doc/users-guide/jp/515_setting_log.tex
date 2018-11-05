@@ -1,0 +1,89 @@
+\section{ログファイル} \label{sec:log}
+%====================================================================================
+
+
+\subsection{ログファイルの出力}
+
+\verb|scale-rm|、 \verb|scale-rm_init|、 \verb|scale-rm_pp|を実行するときに、
+\scalerm はログファイルを出力可能である。
+デフォルト設定では、番号ゼロのプロセスからのログメッセージが
+\verb|scale-rm|では"\verb|LOG.pe000000|"、 
+ \verb|scale-rm_init|では"\verb|init_LOG.pe000000|"、
+\verb|scale-rm_pp|では"\verb|pp_LOG.pe000000|"に書き込まれる。
+ユーザーは、以下のように設定ファイルを編集することによってログファイルの出力設定を変更できる。
+
+\editboxtwo{
+\verb|&PARAM_IO                       | & \\
+\verb| IO_LOG_BASENAME     = 'LOG',   | & ; ログファイルのベース名 \\
+\verb| IO_LOG_ALLNODE      = .false., | & ; 全てのプロセスに対するログファイルを出力するか? \\
+\verb| IO_LOG_SUPPRESS     = .false., | & ; .true.であれば、 ログの出力を抑制する \\
+\verb| IO_LOG_NML_SUPPRESS = .false., | & ; .true.であれば、 ネームリストのパラメータの出力を抑制する \\
+\verb| IO_NML_FILENAME     = '',      | & ; 指定された場合には、ネームリストのパラメータを指定したファイルに出力する。指定がなければ、ログファイルに出力する。\\
+\verb| IO_STEP_TO_STDOUT   = -1,      | & ; 正であれば、時間ステップの情報を標準出力に出力する \\
+\verb|/                               | & \\
+}
+
+ログファイルの名前は、\namelist{PARAM_IO}内の\nmitem{IO_LOG_BASENAME}によって制御する。
+上記のデフォルト設定の場合には、マスタープロセスに対するログファイル名は"\verb|LOG.pe000000|"である。
+全てのプロセスに対するログファイルを出力するかは、\nmitem{IO_LOG_ALLNODE}によって制御する。
+\nmitem{IO_LOG_ALLNODE}が\verb|.true.|である場合は、全プロセスに対するログファイルが生成され、
+そうでない場合にはログファイルはマスタープロセス(すなわちランク0)からのみ出力される。
+
+\nmitem{IO_LOG_SUPPRESS}が\verb|.true.|に設定されている場合には、ログファイルは生成されず、
+ほぼ全てのログメッセージが出力されない。
+\nmitem{IO_LOG_SUPPRESS}が\verb|.true.|に設定されている場合でも、経過時間に関する情報だけは標準出力(STDOUT)に送られる。
+
+ネームリストのパラメータは、\nmitem{IO_LOG_NML_SUPPRESS}が\verb|.true.|に設定されている場合を除いて出力される。
+デフォルトでは、パラメータはログファイルに出力される。
+\nmitem{IO_NML_FILENAME}を設定することによって、異なるファイルに出力することができる。
+\nmitem{IO_NML_FILENAME}によって指定されたファイルは、その後の実行のための入力設定ファイルとして用いることができることを注意しておく。
+
+時間ステップの情報はログファイルに出力される。
+情報の詳細は、次節で説明する。
+Details of the information is explained in the next section.
+\nmitem{IO_STEP_TO_STDOUT}が$>0$と設定されているならば, 時間ステップの情報は標準出力にも出力される。
+全ての時間ステップの情報はログファイルに出力される。
+標準出力に対しては、出力するステップ間隔を\nmitem{IO_STEP_TO_STDOUT}に与える数値で指定する。
+
+
+\subsection{ログファイル内の時間に関する情報}
+
+\verb|scale-rm|を実行すると、ログファイル内に以下の形式の行を見つけられる。
+\msgbox{
+  +++++ TIME: 0000/01/01 00:06:36 + 0.600 STEP:   1984/ 432000 WCLOCK:    2000.2 \\
+}
+この行は、以下のような計算状況に関するメッセージを示す。
+\begin{itemize}
+ \item 現在、初期時刻"0000/01/01 00:00:00 + 0.000"から 6m36.6s の時間積分が行われたこと。
+ \item 今回のステップは、全タイムステップ数である 432000 回中の 1984 回目であること。
+ \item 経過時間(cpu 時間)は 2000.2s であること。
+\end{itemize}
+さらに、この計算に対する必要な時間をこれらの情報から推測できる。
+この場合には、推定される所要時間は、121 時間( $= 2000.2 \times 432000 \div 1984$ ) である。
+
+\vspace{2ex}
+ログファイル内のメッセージは以下の形式で出力される。
+\msgbox{
+\texttt{{\it type} [{\it subroutine name}] {\it message}} \\
+\texttt{\hspace{2em}{\it messages}} \\
+\texttt{\hspace{2em} ... }
+}
+\begin{description}
+ \item[{\it type}]: メッセージの種類(以下の中の１つをとる)
+   \begin{itemize}
+    \item INFO: ジョブ実行に関する一般的な情報
+    \item WARN: ジョブ実行に関する重要な出来事
+    \item ERROR: 実行停止を伴う致命的なエラー
+   \end{itemize}
+ \item[{\it subroutine name}]: メッセージを書き込んだサブルーチンの名前
+ \item[{\it message}]: メッセージの本文
+\end{description}
+
+
+\noindent 以下は、エラーメッセージの例である。
+\msgbox{
+\verb|ERROR [ATMOS_PHY_MP_negative_fixer] large negative is found. rank =            1| \\
+\verb|      k,i,j,value(QHYD,QV) =           17           8           1   1.7347234759768071E-018   0.0000000000000000| \\
+\verb|      k,i,j,value(QHYD,QV) =           19           8           1  -5.4717591620764856E-003   0.0000000000000000| \\
+\verb|  ... |
+}

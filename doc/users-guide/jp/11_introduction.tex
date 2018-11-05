@@ -1,25 +1,24 @@
-\section{はじめに} \label{sec:introduction}
+
 %==============================================================%
 
 本書は初めて領域気象気候モデル({\scalerm})
 を利用する人に向けた解説書です。
 気象気候ライブラリー{\scalelib}  version \version に対応した説明を記載します。
-現在、\scalelib を利用するため、領域モデル\scalerm と全球モデル\scalegm が
-用意されていますが、後者は、力学コアの整備のみされています。
-そのため、本版では、\scalerm の使い方についてのみ詳しく述べています。
+\scalelib の現バージョンには、領域モデル\scalerm と全球モデル\scalegm が含まれます。
+本版では、\scalerm の使い方についてのみ詳しく述べています。
 \scalegm については、次版で詳しく記載される予定です。
 %\scalerm の使い方を通して、\scalelib を他のモデルからの呼び出す方法を
 %習得することも可能です。
 
-第\ref{chap:overview}章で\scalelib の概要について、
-第\ref{chap:install}章で必要な環境、およびインストール方法について説明します。
-続いて、第\ref{chap:tutorial_ideal}章で基本的な操作方法、
-第\ref{chap:tutorial_real}章で現実大気実験の実行方法について
+本書の構成は次の通りです。
+第\ref{part:overview}部では SCALE の概要、
+第\ref{part:install}部では必要な環境とインストール方法について説明します。
+続いて、第\ref{chap:tutorial_ideal}章では\scalerm の基本的な操作方法、
+第\ref{chap:tutorial_real}章では現実大気実験の実行方法について、
 簡単な例を示しながら説明します。
-第\ref{chap:install}章から第\ref{chap:tutorial_real}章までは
-ひと繋がりのチュートリアルとなっており、
+これらの章はひと繋がりのチュートリアルとなっており、
 \scalerm を初めて使うユーザは一通り通読することをお勧めます。
-第\ref{chap:basic_usel}章以降は、設定の変更、機能やツールの説明が記載されています。
+第\ref{part:basic_usel}部以降は、設定の変更、機能やツールの説明が記載されています。
 
 %%%
 本書中の不明点やお気づきの点がございましたら、SCALE user's メーリングリスト\\
@@ -27,7 +26,7 @@
 
 
 
-\subsection{\scalelib の特徴} \label{subsec:scale_feature}
+\section{\scalelib の特徴} \label{subsec:scale_feature}
 %--------------------------------------------------------------%
 
 {\scalelib} (Scalable Computing for Advanced Library and Environment)は
@@ -64,11 +63,11 @@
 \end{center}
 \end{figure}
 
-\scalelib は、理化学研究所 計算科学研究機構（RIKEN AICS）を中心に
+\scalelib は、理化学研究所(RIKEN)を中心に
 開発が進められている気象・気候科学計算向けのライブラリである。
 図 \ref{fig:scale}に\scalelib の思想の概念図を示す。
 この図に示されるような諸問題に対応することを目指している。
-\scalelib は次世代のスーパーコンピュータから小型PCクラスターに至るまで
+\scalelib は小型PCクラスターから次世代のスーパーコンピュータに至るまで
 広く用いられる事を念頭において開発されており、
 気候・気象科学を専門とする科学者と計算機科学を専門とする科学者が
 共同で開発を行っている。
@@ -76,12 +75,14 @@
 スーパーコンピュータに加え、インテル機のような汎用計算機でも
 計算効率がでることを目指して設計されている。
 
-\scalelib を利用した数値モデルとして、\scalerm が含まれている(図 \ref{fig:scale-rm})。
-並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定は\scalelib が提供する。
+\scalerm は \scalelib を利用した数値モデルの一つであり、
+\scalelib のパッケージに含まれている(図 \ref{fig:scale-rm})。
+\scalelib は、並列プロセスの管理、ファイル入出力、プロセス間通信や格子情報の設定を行う。
 大気流体の支配方程式を解く部分（流体力学コア、力学過程）と
-雲微物理や大気放射のような諸物理過程を解く部分も\scalelib が提供する。
-\scalerm は入力された大気状態のデータ（予報変数）を保持し、\scalelib が提供する機能を組み合わせ、
-各コンポーネントを適切に呼び出すことで時間発展計算を行っている。
+雲微物理や大気放射のような諸物理過程を解く部分も、\scalelib が提供する。
+一方、\scalerm は\scalelib が提供する機能を組み合わせることによって構築されている。
+\scalerm 自身は大気の状態の入力データを予報変数として読み込んで保持し、
+\scalelib の各コンポーネントを適切に呼び出すことで時間発展を計算する。
 ユーザは必要に応じて利用するコンポーネントを選択し、組み合わせてシミュレーションを行うことが出来る。
 
 \begin{figure}[hbt]
@@ -94,13 +95,17 @@
 
 
 
-\subsection{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
+\section{\scalerm の構成}  \label{subsec:sturcture_scale_rm}
 %--------------------------------------------------------------%
-現在、\scalerm には下記のコンポーネントが実装されている。
-\scalerm ではすべてのコンポーネントが利用可能である。
+\scalelib に含まれるコンポーネントとスキームは全て、\scalerm において利用できる。
+コンポーネントは三つの部分(フレームワーク、力学コア、物理過程)に分類される。
+\scalerm の現バージョンに実装済みのコンポーネントや様々なスキームを以下に列挙する%
+\footnote{
 詳細なモデル構成や差分化手法については、
 \citet{scale_2015}、\citet{satoy_2015b}、
-および\citet{nishizawa_2015}を参照されたい。\\
+および\citet{nishizawa_2015}を参照されたい。
+}。
+\\
 
 {\bf フレームワーク}
 \begin{itemize}
@@ -119,7 +124,7 @@
    \end{itemize}
  \item 理想実験のための初期値データ生成
  \item 外部データ読み込みによる標高・土地利用区分データの変換作成
- \item 外部データ読み込みによる初期値・境界値データ変換作成
+ \item 外部データ読み込みによる初期値・境界値データの変換作成
    \begin{itemize}
     \item 
       WRF-ARW\footnote{\url{http://www.wrf-model.org/}}、
@@ -130,22 +135,13 @@
 
 {\bf 力学コア関係}
 \begin{itemize}
- \item 方程式系: 3次元完全圧縮非静力学方程式系
- \item 数値解法: 陽解法と陰解法の両方を実装
-   \begin{itemize}
-    \item 水平陽解法-鉛直陽解法
-    \item 水平陽解法-鉛直陰解法
-%    \item HI-VI(陰解法)
-   \end{itemize}
- \item 空間差分: フラックス形式
+ \item 支配方程式系: 3次元完全圧縮非静力学方程式系
+ \item 空間離散化: 有限体積法 
     \begin{itemize}
-      \item 2次中央差分
-      \item 4次中央差分
-      \item 6次中央差分
-      \item 3次風上差分
-      \item 5次風上差分
+      \item 2次, 4次, 6次中央差分
+      \item 3次, 5次風上差分
     \end{itemize}
- \item 時間差分:(詳細は、\citet{scale_2015}を参照のこと)
+ \item 時間差分: 「完全陽解法」または「水平陽解法-鉛直陰解法」から選択
     \begin{itemize}
       \item Heun型3次ルンゲクッタスキーム
       \item \citet{Wicker_2002}の3段ルンゲクッタスキーム
@@ -157,18 +153,18 @@
       \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
     \end{itemize}
  \item 数値フィルター: 4次超粘性・拡散
- \item 地形: 地形に沿った座標系
+ \item 地形: 地形に沿った座標系を用いて表現
 \end{itemize}
 
 {\bf 物理過程}
 \begin{itemize}
- \item 乱流過程: 複数から選択可能
+ \item 乱流過程: 以下から選択可能
    \begin{itemize}
     \item \citet{smagorinsky_1963} \& \citet{lilly_1962}型のサブグリッドスケール乱流モデル (\citet{Brown_etal_1994}と\citet{Scotti_1993}による補正)
     \item \citet{Deardorff_1980} サブグリッドスケール乱流モデル
     \item \citet{my_1982,nakanishi_2004}によるlevel 2.5境界層乱流パラメタリゼーション
    \end{itemize}
- \item 雲微物理: 複数から選択可能
+ \item 雲微物理: 以下から選択可能
    \begin{itemize}
     \item \citet{kessler_1969}による3-class 1モーメントバルクモデル
     \item \citet{tomita_2008}による6-class 1モーメントバルクモデル
@@ -179,10 +175,18 @@
  \item 地表面モデル
   \begin{itemize}
    \item 陸面モデル: 熱拡散・バケツモデル
-   \item 海洋モデル: 初期値固定・外部データ入力・スラブモデル
+   \item 海洋モデル: 以下から選択可能
+   \begin{itemize}
+     \item 初期値固定
+     \item 外部データ入力
+     \item スラブモデル
+   \end{itemize}
    \item 都市モデル: \citet{kusaka_2001}による単層キャノピーモデル
-   \item バルク交換係数(陸面および海面): \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
-     もしくは \citet{uno_1995}によるLouis 型バルク法
+   \item バルク交換係数(陸面および海面): 以下から選択可能
+   \begin{itemize}
+     \item \citet{beljaars_1991,wilson_2001}による普遍関数によるバルク法
+     \item \citet{uno_1995}によるLouis 型バルク法
+   \end{itemize}
   \end{itemize}
 \end{itemize}
 
