@@ -79,7 +79,7 @@
 \input{33_ideal_exp_net2g}
 \input{34_ideal_exp_last}
 
-\chapter{理想大気実験}
+%\chapter{理想大気実験}
 
 \chapter{現実大気実験} \label{chap:tutorial_real}
 \input{41_real_exp_introduction}
@@ -90,33 +90,41 @@
 \input{46_real_exp_run}
 \input{47_real_exp_net2g}
 
+%\part{Tutorial for \scalegm}
+% \chapter{Operation check and basic usage}
+% \input{gm_01intro}
+% \input{gm_02basic}
+% \chapter{Ideal atomsphere experiment}
+% \input{gm_03conf}
+% \chapter{Real atomsphere experiment}
+
 \part{各種設定} \label{part:basic_usel}
 
- \chapter{共通の設定}
- \input{516_setting_common}
- \input{55_setting_time}
- \input{56_setting_history}
- \input{515_setting_log}
+ \chapter{前処理}
+  \input{54_setting_howtoinput}% 完了
 
  \chapter{\scalerm のフレームワーク} 
-  \input{50_setting_introduction}
-  \input{51_setting_domain}
-  \input{52_setting_mapproj}
-  \input{53_setting_topo}
-  \input{54_setting_howtoinput}
+   \input{513_setting_makeconf}  % これから
+   \input{514_setting_convert4conf} % これから
   \clearpage
-  %\input{59_setting_net2g}
+  \input{51_setting_domain}% 完了
+  \clearpage
+  \input{52_setting_mapproj}% 完了
+  \input{53_setting_topo}% 完了
+  \clearpage
+  \input{55_setting_time}    %完了
+  \input{56_setting_history} %完了
   \input{510_setting_restart}
+  \clearpage
   \input{511_0setting_nesting}
   \input{511_1setting_nesting_topo}
   \input{511_2setting_offline_nesting}
   \input{511_3setting_online_nesting}
-  \input{512_setting_bulkjob}
-  \input{513_setting_makeconf}
-  \input{514_setting_common}
 
  \chapter{力学過程の設定}
  \input{57_setting_dynamics}
+ %input \section{Dynamical core for \scalegm} here
+
 
  \chapter{物理過程の設定} \label{sec:basic_usel_physics}
  %\input{58_setting_physics}
@@ -128,6 +136,12 @@
  %\input{58_setting_physics_sf}
  %\input{58_setting_physics_OcnLndUrb}
 
+ \chapter{共通の設定}
+ \input{515_setting_log}    %完了
+ \input{56_setting_monitor} %完了
+ \input{516_setting_common} %完了
+
+
  \chapter{後処理} \label{sec:basic_usel_post}
  \input{59_setting_net2g.tex}
  %\input{59_setting_sno.tex}
@@ -135,12 +149,18 @@
  \part{詳細説明 (応用編)} \label{part:advance}
  \chapter{\scalelib のファイルI/O}
  \input{61_detail_netcdf}
+ %\input{file_convention_scale}
+ %\input section{Binary data format for input data}
+ %\input section{Data format for topography/landuse data}
 
  \chapter{ユーザーが作成したプログラムの組み込み方}
  %\input{62_moduser}
  \chapter{scale library  の使い方}
  %\input{62_uselibrary}
  %\input{62_doxygen}
+
+ \chapter{How to Conduct Bulk Job}
+  \input{63_setting_bulkjob}
 
 \bibliographystyle{plainnat}
 \bibliography{reference}

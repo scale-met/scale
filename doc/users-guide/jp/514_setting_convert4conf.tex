@@ -1,0 +1,12 @@
+\section{旧バージョンにおける設定ファイルの変換プログラム}
+%------------------------------------------
+
+\scalelib のバージョンが 5.2 から 5.3 へ進むときに、ネームリストのパラメータに対して数多くの変更がなされた。
+そのため、バージョン 5.2 用から 5.3 用に設定ファイルを変換するためのプログラムを用意している。
+プログラムの実行には、「ruby」 (\url{https://www.ruby-lang.org/en/})が必要である。
+
+変換プログラムの使用方法は以下である。\\
+\begin{alltt}
+ \$ ruby scale-{\version}/utils/config-converter/config-converter_5.2-5.3.rb \verb|\\|
+        old.conf > new.conf
+\end{alltt}
