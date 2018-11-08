@@ -1,11 +1,15 @@
-\section{\SecBasicDynamicsSetting} \label{sec:atmos_dyn}
+\section{デカルト座標系 C-grid による力学コア} \label{sec:atmos_dyn_cartesC}
 %------------------------------------------------------
+本節では、デカルト座標系 C-grid による力学コアについて記述する。
+\scalerm では、デカルト座標系 C-grid が採用されている。
+C-grid において、密度・熱力学変数・水蒸気といったスカラー量はセル中心で定義され、運動量やフラックスといったベクトル量の成分はセル中心から半格子ずれた位置(staggered point)で定義される。
+詳細については、 \scalerm の記述文書を参照されたい。
 
 
-\subsection{\SubsecDynsolverSetting}  \label{subsec:atmos_dyn_sover}
+\subsection{時間積分の数値解法の設定}  %\label{subsec:atmos_dyn_sover}
 %------------------------------------------------------
-時間方向の数値解法選択は、
-設定ファイルの\namelist{PARAM_ATMOS}の\nmitem{ATMOS_DYN_TYPE}で行う。\\
+力学コアにおける時間積分の数値解法は、
+設定ファイルにおける\namelist{PARAM_ATMOS}の\nmitem{ATMOS_DYN_TYPE}で行う。\\
 
 \noindent {\gt\small
 \ovalbox{
@@ -16,13 +20,20 @@
 \end{tabularx}
 }}\\
 
+陽解法を用いる場合には時間刻み幅は音速に依存するが、
+陰解法を用いる場合には依存しない。
+多くの実大気実験では、鉛直格子間隔は水平格子間隔よりも非常に小さい。
+そのため、完全陽解法(「HEVE」)を用いると、鉛直格子間隔や音速に応じて、
+かなり小さな時間刻み幅を設定する必要がある。
+そのため、「HEVI」が現実大気実験においてしばしば用いられる。
+
 \begin{table}[h]
 \begin{center}
-  \caption{数値解法の選択肢}
+  \caption{力学過程における時間積分法の選択肢}
   \label{tab:nml_dyn}
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 備考\\ \hline
-      \verb|HEVE|  & 水平陽解法-鉛直陽解法 & \\
+      \verb|HEVE|  & 完全陽解法(水平陽解法-鉛直陽解法) & \\
       \verb|HEVI|  & 水平陽解法-鉛直陰解法 & 実大気実験ではこちらを推奨\\
     \hline
   \end{tabularx}
@@ -32,45 +43,46 @@
 
 \subsection{\SubsecDynSchemeSetting} \label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
-時間・空間差分スキームの設定は、設定ファイルの\namelist{PARAM_ATMOS_DYN}で設定する。
-また、空間スキームによってはハロの数の設定も必要である。
-下記の設定は推奨設定である。
-その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。
-また、時間スキームや空間差分スキーム変更時には、数値安定性が変わるため、
-タイムステップも考慮する必要がある。
-タイムステップついては、第\ref{sec:timeintiv}節を参照のこと。\\
+時間・空間差分スキームの設定は、\namelist{PARAM_ATMOS_DYN}で設定する。
+%また、空間スキームによってはハロの数の設定も必要である。
+%下記の設定は推奨設定である。
+%その他、スキームと各種設定については表\ref{tab:nml_atm_dyn}を参照のこと。
+%また、時間スキームや空間差分スキーム変更時には、数値安定性が変わるため、
+%タイムステップも考慮する必要がある。
+%タイムステップについては、第\ref{sec:timeintiv}節を参照のこと。\\
+実大気実験で推奨される設定の例を、以下に示す。
 
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; 時間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 空間スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
+ \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; 表\ref{tab:nml_atm_dyn}の時間スキームより選択\\
+ \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; 時間積分スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 表\ref{tab:nml_atm_dyn}の空間差分スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間差分スキームより選択\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; FCTスキームを利用するかどうか\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
  \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
- \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ;レイリーダンピングを適用するスポンジ層の\\
-                                                             &  ~~下端高度\\
+ \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ;スポンジ層の下端高度\\
+                                                             &  (レイリー摩擦用)\\
 \verb|/             | & \\
-\end{tabularx}
-}}\\
+}
 
+時間積分・空間差分スキームに対する他のオプションを表\ref{tab:nml_atm_dyn}に示す。
+時間刻み幅は、選択するスキームに応じて数値安定性を考慮して設定すべきである。
+時間ステップを決定する基準は、第\ref{sec:timeintiv}節に記述する。
 
 \begin{table}[h]
 \begin{center}
-  \caption{力学スキームの設定}
+  \caption{時間積分・空間差分スキームの設定}
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
-    \multicolumn{3}{l}{時間スキーム} &  \\ \hline
+    \multicolumn{3}{l}{時間積分スキーム} &  \\ \hline
     & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次3段ルンゲクッタスキーム(Heun)} \\
     & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲクッタスキーム} \\
     & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次4段ルンゲクッタスキーム} \\
     \hline
-    \multicolumn{3}{l}{空間スキーム} & 最小のハロ格子数\\ \hline
+    \multicolumn{3}{l}{空間差分スキーム} & 最小のハロ格子数\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
     & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
@@ -82,33 +94,115 @@
 \end{center}
 \end{table}
 
-力学変数の移流計算スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE})のデフォルト設定は、
-4次中央差分（\verb|CD4|）となっている。
-\verb|CD4|では、地形起伏がある場合に、その直上でグリッドスケールに近い鉛直流が発生することが
-しばしば確認されており、これは\verb|UD3|を使用することで緩和される。
-{\scalerm}では、地形起伏があるような現実大気実験では、\verb|UD3|の使用を推奨する。
-\verb|UD3|を使う時は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}はゼロでもよい。
+\scalerm において、力学の予報変数に対する移流スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}で指定)のデフォルト設定は4次中央差分（\verb|CD4|)である。
+地形の起伏が大きい計算で\verb|CD4|を用いると、グリッドスケールの偽の鉛直流が山頂周辺でしばしば確認される。
+このグリッドスケールの流れは、\verb|UD3|を使用することで緩和される。
+そのため、地形の起伏が大きい実験では\verb|UD3|の使用を推奨する。
 
-トレーサー移流については、何らかの非負保証スキームを使う事が望ましい。
-\verb|UD3KOREN1993|は非負保証スキームであるが、
-それ以外は非負が保証されない。
-つまり \nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}として \verb|UD3KOREN1993|以外を選択した場合は、
-\nmitem{ATMOS_DYN_FLAG_FCT_TRACER} を \verb|.true.| としてFCTを利用するのがよい。
+\subsection{数値拡散}
 
-ハロの格子数はデフォルトで2となっている。
-従って、空間スキームがCD4、UD3以外の場合、上記の表に記したハロの数の設定が必要である。
-設定は、\namelist{PARAM_INDEX}の中の\nmitem{IHALO, JHALO}で行う。
+数値安定性は計算で用いるスキームに依存する。
+数値拡散は安定性を良くするだろう。
+\scalerm では、数値拡散として超粘性と発散減衰(divergence damping)を用いることができる。
+これらの設定例を以下に示す。
+\editboxtwo{
+ \verb|&PARAM_ATMOS_DYN  | & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER       = 1,    |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,|        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
+ \verb|ATMOS_DYN_DIVDMP_COEF                = 0.D0, |        & \\
+\verb|/                  | & \\
+}
 
-例えば、空間スキームとして5次風上差分を設定した場合、\\
+超粘性の微分の階数は\nmitem{ATMOS_DYN_NUMERICAL_DIFF_ORDER}の4倍である。
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
+超粘性に対する無次元の係数である。
+この係数の値が大きいほど減衰は強く、
+もしこの係数が 1 であれば、2-grid scale のノイズは1タイムステップで$1/e$倍まで減衰する。
+係数が1よりも大きい場合には、超粘性自体が数値不安定を引き起こす可能性がある。
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}は密度・運動量・温位といった力学の予報変数に対する係数であり、
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は比湿・水物質・乱流運動エネルギーといった
+トレーサー変数に対する係数である。
+\verb|UD3, UD5|等の風上スキームを用いる場合には既に数値拡散が含まれているので、
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}をゼロに設定することができる。
 
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
- \verb|&PARAM_INDEX | &  \\
+発散減衰もまた、数値安定性を向上させるために利用できる。
+その係数は\nmitem{ATMOS_DYN_DIVDMP_COEF}で設定する。
+
+\subsection{正定値性}
+
+トレーサー移流については、多くの場合に非負の値が保証されることが要求される。
+\verb|UD3KOREN1993|スキームでは非負の値が保証されるが、その他のスキームではそうでない。
+\verb|UD3KOREN1993|以外のスキームを選択した場合は、非負保証のためにFCTフィルタを用いることができる。
+移流スキームは\nmitem{ATMOS_DYN_FVM_FLUX_TRACER_TYPE}で指定し、
+FCT フィルタは\nmitem{ATMOS_DYN_FLAG_FCT_TRACER}を\verb|.true.|とすれば利用できる。
+
+\subsection{ハロ}
+
+必要なハロの格子点数は、表\ref{tab:nml_atm_dyn}に示すように空間差分スキームに依存する。
+x方向やy方向に対するハロの格子点数はそれぞれ、
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}における\nmitem{IHALO}と\nmitem{JHALO}で設定する。
+デフォルトではハロの格子点数は2であり、「UD3」、「UD3UD3KOREN1993」、「CD4」に対して適切な設定である。
+例えば5次風上差分スキームに対するハロは、以下のように設定する。
+
+\editboxtwo{
+ \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX | &  \\
  \verb| IHALO = 3,|   &\\
  \verb| JHALO = 3,|   &\\
  \verb|/ | & \\
-\end{tabularx}
-}}\\
+}
 
-のように設定する。
+\subsection{コリオリ力の設定} \label{subsec:coriolis}
+%----------------------------------------------------------
+
+この小節では、 \scalerm　におけるコリオリ力の取り扱いについて説明する。
+デフォルトではコリオリパラメータはゼロであるので、実験においてコリオリ力を導入するには
+(いくつかの)パラメータを設定する必要がある。
+コリオリパラメータの設定には2種類あり、$f$-面/$\beta$-面および球面である。
+この種類は\namelist{PARAM_ATMOS_DYN}の\nmitem{ATMOS_DYN_coriolis_type}で指定できる。
+
+\subsubsection{$f$-面/$\beta$-面}
+\nmitem{ATMOS_DYN_coriolis_type}を``PLANE''に設定する場合は,
+コリオリパラメータ $f$ は $f=f_0 + \beta (y-y_0)$である。
+デフォルトでは$f_0=0$および$\beta=0$あり、コリオリ力は考慮されない。
+
+$\beta=0$とした平面は$f$-面と呼ばれ, そうでない場合は$\beta$-planeと呼ばれる.
+$f_0, \beta$および$y_0$は、\namelist{PARAM_ATMOS_DYN}のパラメータによって
+次のように設定する。
+\editbox{
+  \verb|&PARAM_ATMOS_DYN| \\
+  \verb| ATMOS_DYN_coriolis_type = 'PLANE',| \\
+  \verb| ATMOS_DYN_coriolis_f0   = 1.0D-5, | ! $f_0$ \\
+  \verb| ATMOS_DYN_coriolis_beta = 0.0D0,  | ! $\beta$ \\
+  \verb| ATMOS_DYN_coriolis_y0   = 0.0D0,  | ! $y_0$ \\
+  \verb| : | \\
+  \verb|/| \\
+}
+
+\nmitem{ATMOS_DYN_coriolis_f0}, \nmitem{ATMOS_DYN_coriolis_beta}のデフォルト値はともにゼロであり、
+and \nmitem{ATMOS_DYN_coriolis_y0}のデフォルト値は領域中心の$y$である。
+
+地衡風に伴うコリオリ力と地衡風バランスにある圧力勾配力を加えたい場合は、
+ユーザー定義ファイル\verb|mod_user.f90|を修正する必要がある(第\ref{sec:mod_user}節を参照)。
+\verb|scale-rm/test/case/inertial_oscillation/20km|のテストケースは、
+地衡風の圧力勾配力を入れた$f$-面での実験例である。
+
+\subsubsection{球面}
+球面において、コリオリパラメータは$f = 2\Omega \sin(\phi)$のように緯度に依存する。
+ここで、$\Omega$は球の角速度、$\phi$は緯度である。
+この場合、\nmitem{ATMOS_DYN_coriolis_type}は``SPHERE''に設定する必要がある。
+球の角速度は\namelist{PARAM_CONST}のパラメータ\nmitem{CONST_OHM}で設定する(第\ref{subsec:const}節を参照)。
+各々の格子点の緯度は、第\ref{subsec:adv_mapproj}節で説明した地図投影法に応じて決定される。
+
+
+\subsection{コリオリ力に伴う側面境界条件の注意点}
+
+全ての設定($f$-面、$\beta$-面、球面)においてx方向の側面境界は周期境界にすることができる。
+また、$f$-面ではy方向の側面境界も周期境界にすることができる。
+一方で、$\beta$-面や球面においてコリオリパラメータは南北の境界で異なる値を持つために、
+y方向の側面境界に対して周期境界条件を用いることはできない。
+
+南北境界におけるナッジング型の側面境界条件は、$f$-面や$\beta$-面の実験において用いられるだろう。
+\verb|scale-rm/test/case/rossby_wave/beta-plane|のテストケースは、
+ナッジングを行う南北境界をもつ$\beta$-面上での実験例である。
+ナッジングを行う境界の詳細は、第\ref{subsec:buffer}節を参照にされたい。
