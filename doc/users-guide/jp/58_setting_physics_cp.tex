@@ -1,0 +1,82 @@
+\section{積雲パラメタリゼーションの設定} \label{sec:basic_usel_cumulus}
+
+積雲パラメタリゼーションは、設定ファイル\verb|init.conf|と\verb|run.conf|における
+\namelist{PARAM_ATMOS}内の\nmitem{ATMOS_PHY_CP_TYPE}で指定する。
+積雲パラメタリゼーションを呼び出す時間間隔は、\namelist{PARAM_TIME}で設定する
+(詳細は第\ref{sec:timeintiv}節を参照)。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_CP_TYPE = "KF", | & ; 表\ref{tab:nml_atm_cp}に示すスキームから選択 \\
+\verb|/             | & \\
+}
+\begin{table}[h]
+\begin{center}
+  \caption{積雲パラメタリゼーションの選択}
+  \label{tab:nml_atm_cp}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  値 & スキームの参照 & 参考文献 \\ \hline
+      \verb|OFF|  & 積雲パラメタリゼーションを使用しない &  \\
+      \verb|KF|   & Kain-Fritsch 対流パラメタリゼーション & \citet{kain_1990,kain_2004} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\scalerm の現在版では、積雲パラメタリゼーションとして\verb|KF|のみ対応している。
+\verb|KF| は質量フラックス保存型の積雲パラメタリゼーションスキームであり、
+サブグリッドスケールの一つの積雲を表現する。
+格子間隔が 5 km 以下の場合には、非自然な強力な深い対流が計算されることを避けるために
+積雲パラメタリゼーションを使用することを推奨する。
+積雲パラメタリゼーションと雲微物理のスキームは、
+\verb|RAIN_CP|\verb|RAIN_MP|という名前で別々に降水量を出力する。
+\verb|RAIN|と\verb|PREC|は、両者のスキームによる合計の降水量である。
+つまり、\verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|、
+\verb|PREC| = \verb|RAIN_CP| + \verb|RAIN_MP|である。
+%%%
+\verb|KF|は待機中の水蒸気と水物質(雲水・雲氷等)の変化を計算することに注意が必要である。
+水物質の変化は、さらに雲微物理の過程で計算される。
+\verb|KF|では、雲水や雲氷等の数密度は考慮されない。
+したがって、\verb|KF|における水物質の変化と関係した数密度の変化は指定した関数によって見積もられ、
+2モーメントの雲微物理スキームへと渡される。
+
+\subsubsection{\texttt{Kain-Fritsch}スキームに対する設定}
+
+\verb|KF|では、以下のチューニングパラメータを設定できる。
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
+\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function の種類: 1=Kain, 3=Narita-Ohmori\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decleace rate\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; 深い対流の生存時間のスケール[sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; 浅い対流の生存時間のスケール[sec]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; updraft source layer の深さ[hPa]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; 降水の種類: 1=Ogura-Cho, 2=Kessler\\
+\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ogura-Cho precipitation function における雲水と降水の比 \\
+\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Kessler の precipitation function における Autoconversion の比 \\
+\verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; 警告メッセージを出力するか? \\
+\verb|/             | & \\
+}\\
+ユーザーはtrigger fuctionとして以下の2つから選択できる。
+\begin{enumerate}
+\item Kain Type \citet{kain_2004} \\
+  \scalerm におけるデフォルト。
+\item Narita and Ohmori Type \citet{narita_2007} \\
+  日本域における KF 積雲パラメタリゼーションスキームに対する trigger function
+\end{enumerate}
+また、 precipitation fuctionとして以下の2つから選択できる。
+\begin{enumerate}
+\item Ogura-Cho Type \citet{ogura_1973} \\
+  \scalerm におけるデフォルト。この場合には、
+  \nmitem{PARAM_ATMOS_PHY_CP_kf_rate}というチューニングパラメータをさらに設定できる。
+\item Kessler Type \citet{kessler_1969} \\
+  Kessler type の簡単な precipitation fuction.
+  この場合には、 \nmitem{PARAM_ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
+\end{enumerate}
+
+\namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する
+KF を呼び出す時間間隔もまたチューニングパラメータであり、降水量に影響を及す。
+\nmitem{TIME_DT_ATMOS_PHY_CP}の初めの設定として 300 秒を推奨する。
+上昇流を駆動する層はしきい値(デフォルトでは 50 hPa)よりも厚い必要があるが、
+この条件を満たさない場合でも計算は止まらない。
+ただし、\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}をtrueにすれば、
+「go off top/bottom of updraft source layer」という警告メッセージを出力する。
