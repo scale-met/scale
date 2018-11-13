@@ -796,7 +796,7 @@ contains
                 qv_org(1:2,i,j) = qv_org(3,i,j)
              enddo
              enddo
-             if( dims(3)>knum ) then
+             if( dims(1)>knum ) then
                 select case( upper_qv_type )
                 case("COPY")
                    do j = 1, dims(3)
