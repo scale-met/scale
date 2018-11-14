@@ -270,7 +270,7 @@ contains
        !$omp parallel do private(us,sflx_pt)
        do j = JS, JE
        do i = IS, IE
-          us = max( 1.E-6_RP, sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ) ! frictional velocity
+          us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ! friction velocity
 
           SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) * POTT(KS,i,j) / TEMP(KS,i,j)
           SFLX_PT = sign( max(abs(SFLX_PT), EPS), SFLX_PT )
