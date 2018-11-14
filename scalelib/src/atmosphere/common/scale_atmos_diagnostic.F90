@@ -197,10 +197,9 @@ contains
        KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
-       POTT, &
-       Rtot, &
-       CZ,   &
-       N2    )
+       POTT, Rtot,  &
+       CZ, FZ, F2H, &
+       N2           )
     use scale_const, only: &
        GRAV => CONST_GRAV
     integer, intent(in) :: KA, KS, KE
@@ -210,19 +209,22 @@ contains
     real(RP), intent(in)  :: POTT(KA,IA,JA)
     real(RP), intent(in)  :: Rtot(KA,IA,JA)
 
-    real(RP), intent(in)  :: CZ(KA,IA,JA)
+    real(RP), intent(in)  :: CZ (  KA,IA,JA)
+    real(RP), intent(in)  :: FZ (0:KA,IA,JA)
+    real(RP), intent(in)  :: F2H(KA,2,IA,JA)
 
     real(RP), intent(out) :: N2  (KA,IA,JA)
 
     real(RP) :: RPT(KA) !> Rtot * PT (= Rdry * virtual potential temperature)
+    real(RP) :: RPT_h(KA)
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(i,j,k) &
-    !$omp private(RPT) &
-    !$omp shared(N2,POTT,Rtot,CZ,GRAV) &
+    !$omp private(RPT,RPT_h) &
+    !$omp shared(N2,POTT,Rtot,CZ,FZ,F2H,GRAV) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
     do j = JS, JE
     do i = IS, IE
@@ -230,11 +232,15 @@ contains
           RPT(k) = Rtot(k,i,j) * POTT(k,i,j)
        end do
 
-       N2(KS,i,j) = GRAV * ( RPT(KS+1) - RPT(KS) ) / ( ( CZ(KS+1,i,j) - CZ(KS,i,j) ) * RPT(KS) )
-       do k = KS+1,KE-1
-          N2(k,i,j) = GRAV * ( RPT(k+1) - RPT(k-1) ) / ( ( CZ(k+1,i,j) - CZ(k-1,i,j) ) * RPT(k ) )
+       do k = KS, KE-1
+          RPT_h(k) = f2h(k,1,i,j) * RPT(k+1) + f2h(k,2,i,j) * RPT(k)
        end do
-       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT(KE-1) ) / ( ( CZ(KE,i,j) - CZ(KE-1,i,j) ) * RPT(KE) )
+
+       N2(KS,i,j) = GRAV * ( RPT_h(KS) - RPT(KS) ) / ( ( FZ(KS,i,j) - CZ(KS,i,j) ) * RPT(KS) )
+       do k = KS+1,KE-1
+          N2(k,i,j) = GRAV * ( RPT_h(k) - RPT_h(k-1) ) / ( ( FZ(k,i,j) - FZ(k-1,i,j) ) * RPT(k) )
+       end do
+       N2(KE,i,j) = GRAV * ( RPT(KE) - RPT_h(KE-1) ) / ( ( CZ(KE,i,j) - FZ(KE-1,i,j) ) * RPT(KE) )
     end do
     end do
 
