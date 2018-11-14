@@ -712,12 +712,13 @@ contains
           F2(KE-1) = 1.0_RP + ( PT(KE-1) * RFDZ(KE-1) * ( A(KE)+A(KE-1) )    ) / GSQRT(KE-1,i,j,I_XYW)
           F3(KE-1) =        - ( PT(KE-2) * RFDZ(KE-1) *         A(KE-1)  - B ) / GSQRT(KE-1,i,j,I_XYW)
           do k = KS, KE-1
+             ! use not density at the half level but mean density between CZ(k) and C(k+1)
              pg = - ( DPRES(k+1,i,j) + RT2P(k+1,i,j)*dtrk*St(k+1,i,j) &
                     - DPRES(k  ,i,j) - RT2P(k  ,i,j)*dtrk*St(k  ,i,j) ) &
                     * RFDZ(k) * J33G / GSQRT(k,i,j,I_XYW) &
-                  - GRAV &
-                    * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
-                      + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
+                  - GRAV * 0.5_RP &
+                    * ( ( DENS(k+1,i,j) - REF_dens(k+1,i,j) + Sr(k+1,i,j) * dtrk ) &
+                      + ( DENS(k  ,i,j) - REF_dens(k  ,i,j) + Sr(k  ,i,j) * dtrk ) )
              C(k-KS+1) = MOMZ(k,i,j) + dtrk * ( pg + Sw(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) pg_t(k,i,j,1) = pg
@@ -734,10 +735,11 @@ contains
              C(k-KS+1) = MOMZ(k,i,j)
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
                                  + J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+             ! use not density at the half level but mean density between CZ(k) and C(k+1)
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
                   - J33G * ( DPRES(k+1,i,j)-DPRES(k,i,j) ) * RFDZ(k) / GSQRT(k,i,j,i_XYW) &
-                  - GRAV * ( F2H(k,2,I_XYZ)*(DENS(k,i,j)-REF_dens(k,i,j))+F2H(k,1,I_XYZ)*(DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
+                  - GRAV * 0.5_RP * ( (DENS(k,i,j)-REF_dens(k,i,j)) + (DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
                   + Sw(k,i,j) )
 #else
              ! z-momentum flux
@@ -1234,7 +1236,7 @@ contains
     do k = KS, KE-1
        lhs = ( MOMZ_N(k) - MOMZ(k) ) / dt
        rhs = - J33G * ( DPRES_N(k+1) - DPRES_N(k) ) * RFDZ(k) / G(k,I_XYW) &
-             - GRAV * ( DENS_N(k+1) - REF_dens(k+1) + DENS_N(k) - REF_dens(k) ) * 0.5_RP &
+             - GRAV * ( ( DENS_N(k+1) - REF_dens(k+1) ) + ( DENS_N(k) - REF_dens(k) ) ) * 0.5_RP &
              + Sw(k)
        if ( abs(lhs) < small ) then
           error = rhs
@@ -1245,7 +1247,7 @@ contains
           LOG_ERROR("check_equation",*)"MOMZ error", k, i, j, error, lhs, rhs
           LOG_ERROR_CONT(*) MOMZ_N(k), MOMZ(k), dt
           LOG_ERROR_CONT(*) - J33G * ( DPRES(k+1) - DPRES(k) ) * RFDZ(k) / G(k,I_XYW) &
-             - GRAV * ( DENS(k+1) -REF_dens(k+1) + DENS(k) -REF_dens(k) ) * 0.5_RP &
+             - GRAV * ( ( DENS(k+1) - REF_dens(k+1) ) + ( DENS(k) - REF_dens(k) ) ) * 0.5_RP &
              + Sw(k)
           call PRC_abort
        endif

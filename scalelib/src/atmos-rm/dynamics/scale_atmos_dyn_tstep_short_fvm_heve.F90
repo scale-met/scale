@@ -635,9 +635,10 @@ contains
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
+          ! use not density at the half level but mean density between CZ(k) and C(k+1)
           buoy(k,i,j) = GRAV * GSQRT(k,i,j,I_XYW) &
-               * ( F2H(k,1,I_XYZ) * ( DENS(k+1,i,j)-REF_dens(k+1,i,j) ) &
-                 + F2H(k,2,I_XYZ) * ( DENS(k  ,i,j)-REF_dens(k  ,i,j) ) )
+               * 0.5_RP * ( ( DENS(k+1,i,j)-REF_dens(k+1,i,j) ) &
+                          + ( DENS(k  ,i,j)-REF_dens(k  ,i,j) ) )
        enddo
        enddo
        enddo
