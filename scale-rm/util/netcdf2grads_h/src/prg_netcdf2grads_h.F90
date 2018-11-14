@@ -424,11 +424,11 @@ program netcdf2grads_h
            irec_timelev = irec_time
            do iz = 1, ZCOUNT        !--- level loop
               if ( atype == a_slice ) then
-                 zz = TARGET_ZLEV(iz)
+                 zz = int(TARGET_ZLEV(iz))
                  if ( LOUT ) write( FID_LOG, '(1X,A,I6)' ) "+++ Z LEVEL: ", zz
                  call check_targ_zlev( zz )
               elseif ( atype == a_conv ) then
-                 zz = TARGET_ZLEV(iz)
+                 zz = int(TARGET_ZLEV(iz))
                  if ( ctype == c_pres ) then
                     if ( LOUT ) write( FID_LOG, '(1X,A,I6,A)' ) "+++ Z LEVEL: ", zz, " [hPa]"
                  elseif ( ctype == c_height ) then
@@ -499,9 +499,9 @@ program netcdf2grads_h
               if ( .not. Z_MERGE_OUT ) then
                  do iz = 1, ZCOUNT                 !--- level loop
                     if ( atype == a_slice ) then
-                       zz = TARGET_ZLEV(iz)
+                       zz = int(TARGET_ZLEV(iz))
                     elseif ( atype == a_conv ) then
-                       zz = TARGET_ZLEV(iz)
+                       zz = int(TARGET_ZLEV(iz))
                     endif
                     call io_create_ctl( varname, atype, ctype, vtype, idom, &
                          nx, ny, zz, nt, cx, cy, vgrid, zlev,               &
@@ -671,7 +671,7 @@ contains
   subroutine read_conf()
     implicit none
 
-    integer :: n, m
+    integer :: n, m, iz
     !---------------------------------------------------------------------------
 
     !--- read namelist file
@@ -731,11 +731,11 @@ contains
     enddo
     if ( LOUT ) write( FID_LOG,* ) ""
 
-    if ( TARGET_ZLEV(1) >= 0 ) then
+    if ( int(TARGET_ZLEV(1)) >= 0 ) then
        if ( ZCOUNT == 0 ) then
           ZCOUNT = 0
           do n=1, max_zcount
-             if ( TARGET_ZLEV(n) < 0 ) exit
+             if ( int(TARGET_ZLEV(n)) < 0 ) exit
              ZCOUNT = ZCOUNT + 1
           enddo
        endif
@@ -744,23 +744,27 @@ contains
        select case( trim(Z_LEV_TYPE) )
        case ( "ZLEV", "zlev" )
           do n=1, ZCOUNT
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [m]"
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [m]"
           enddo
        case ( "PLEV", "plev" )
           do n=1, ZCOUNT
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [hPa]"
           enddo
        case ( "original" ) ! If Z_LEV_TYPE = original, then TARGET_ZLEV is ignored.
           Z_LEV_LIST = .false.
           m = ZSTART
           do n=1, ZCOUNT
-             TARGET_ZLEV(n) = m
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+             TARGET_ZLEV(n) = real(m)
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [grid]"
              m = m + 1
           enddo
        case default
           do n=1, ZCOUNT
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [grid]"
           enddo
        end select
     else
@@ -770,16 +774,18 @@ contains
           if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of HEGIHT LEVELs"
           ZCOUNT = num_std_zlev
           do n=1, ZCOUNT
-             TARGET_ZLEV(n) = std_zlev(n)
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [m]"
+             TARGET_ZLEV(n) = real(std_zlev(n))
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [m]"
           enddo
        case ( "PLEV", "plev" )
           Z_LEV_LIST = .true.
           if ( LOUT ) write( FID_LOG, '(1X,A)' ) "+++ Use Default set of PRESSURE LEVELs"
           ZCOUNT = num_std_plev
           do n=1, ZCOUNT
-             TARGET_ZLEV(n) = std_plev(n)
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [hPa]"
+             TARGET_ZLEV(n) = real(std_plev(n))
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [hPa]"
           enddo
        case default
           if ( ZCOUNT == 0 ) then
@@ -789,8 +795,9 @@ contains
           Z_LEV_LIST = .false.
           m = ZSTART
           do n=1, ZCOUNT
-             TARGET_ZLEV(n) = m
-             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",TARGET_ZLEV(n)," [grid]"
+             TARGET_ZLEV(n) = real(m)
+             iz = int(TARGET_ZLEV(n))
+             if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,I5,A)' ) "+++ Listing Levs: (", n, ") ",iz," [grid]"
              m = m + 1
           enddo
        end select
@@ -923,15 +930,15 @@ contains
 
     if ( atype == a_conv ) then
        do iz = 1, ZCOUNT
-          vgrid(iz) = TARGET_ZLEV(iz)
+          vgrid(iz) = int(TARGET_ZLEV(iz))
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2)' ) "+++ Target Height: (", iz, ") ", vgrid(iz)
        enddo
 
     else
        do iz = 1, ZCOUNT
-          vgrid(iz) = zlev( TARGET_ZLEV(iz) )
+          vgrid(iz) = zlev( int(TARGET_ZLEV(iz)) )
           if ( LOUT ) write( FID_LOG, '(1X,A,I3,A,F8.2,A,I3)' ) &
-                      "+++ Target Height: (", iz, ") ", vgrid(iz), " - req. lev = ", TARGET_ZLEV(iz)
+                      "+++ Target Height: (", iz, ") ", vgrid(iz), " - req. lev = ", int(TARGET_ZLEV(iz))
        enddo
 
     endif
