@@ -97,9 +97,9 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN  =  1.E-10_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX   =   1.E+3_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN   =   1.E-6_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN   =  -1.E-3_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX   = 10000.0_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN   =   1.E-6_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN   =  -1.E-3_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX   = 10000.0_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX   =   700.0_RP ! ~ 0.23 * 3 km
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE = .false.
@@ -475,7 +475,7 @@ contains
                KA, KS, KE_PBL,            & ! (in)
                q(:), ac(:),               & ! (in)
                l(:,i,j), n2_new(:),       & ! (in)
-               POTT(:,i,j), dudz2(:,i,j), & ! (in)
+               POTV(:,i,j), dudz2(:,i,j), & ! (in)
                tvsq(:), tvsq25(:),        & ! (in) ! dummy
                .false.,                   & ! (in)
                sm(:), sh(:)               ) ! (out)
@@ -576,7 +576,7 @@ contains
                KA, KS, KE_PBL,            & ! (in)
                q(:), ac(:),               & ! (in)
                l(:,i,j), n2_new(:),       & ! (in)
-               POTT(:,i,j), dudz2(:,i,j), & ! (in)
+               POTV(:,i,j), dudz2(:,i,j), & ! (in)
                tvsq(:), tvsq25(:),        & ! (in)
                mynn_level3,               & ! (in)
                sm(:), sh(:)               ) ! (out)
@@ -1131,7 +1131,7 @@ contains
        KA, KS, KE_PBL, &
        q, ac,        &
        l, n2,        &
-       pott, dudz2,  &
+       potv, dudz2,  &
        tvsq, tvsq25, &
        mynn_level3,  &
        sm, sh        )
@@ -1145,7 +1145,7 @@ contains
     real(RP), intent(in)  :: ac(KA)
     real(RP), intent(in)  :: l(KA)
     real(RP), intent(in)  :: n2(KA)
-    real(RP), intent(in)  :: pott(KA)
+    real(RP), intent(in)  :: potv(KA)
     real(RP), intent(in)  :: dudz2(KA)
     real(RP), intent(in)  :: tvsq(KA)
     real(RP), intent(in)  :: tvsq25(KA)
@@ -1223,7 +1223,7 @@ contains
 
           ew = ( 1.0_RP - C3 ) * ( p2 * ( p1 - p4 ) + p5 * ( p1 - p3 ) ) * rdp
           ew  = sign( max(abs(ew),EPS), ew )
-          fact = ( l2q2 * GRAV / ( l(k) * POTT(k) ) )**2 * ( tvsq(k) - tvsq25(k) ) / gh
+          fact = ( l2q2 * GRAV / ( l(k) * POTV(k) ) )**2 * ( tvsq(k) - tvsq25(k) ) / gh
           fact = fact * ew
           fact = min( max( fact, 0.12_RP - cw25 ), 0.76_RP - cw25 )
           fact = fact / ew
