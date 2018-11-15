@@ -1,55 +1,54 @@
-\section{\SecAdvancePostprosess} \label{sec:net2g}
+\section{netcdf2grads (net2g)} \label{sec:net2g}
 %====================================================================================
 
-本節では、\scalerm の後処理ツールnet2gについて説明する。net2gは、\scalerm で出力された
-ノード毎に分割された{\netcdf}形式historyデータ（\verb|history.***.nc|）を結合し
-{\grads}で読み込めるバイナリ形式に変換するツールである。
-分割データを結合することで、{\grads}で描画できるだけでなく、
-Fortranプログラムなどで解析しやすいデータになる。
-net2gはMPI並列実行も可能であり、単一プロセス実行に比べて変換に要する時間を短縮できる。
-その他、net2gの機能として次のものが利用できる。
-
+\verb|net2g|には2つの役割があり、
+[i] ノード毎に分割されたヒストリファイル\verb|history.***.nc|）を結合し、
+[ii] {\grads}で読み込めるバイナリ形式に変換することを行う。
+\verb|net2g|はMPI並列プログラムとしても実行可能である。
+その他、net2gの機能として以下が利用できる。
+%
 \begin{itemize}
- \item モデル面から任意の鉛直高度座標、鉛直気圧座標への内挿
- \item 3次元変数に対する鉛直の積算値、平均値、最大値、最小値の出力
- \item 3次元変数を鉛直層ごとに分割したファイルとしての出力
- \item 時間ステップごとに分割したファイルとしての出力
+ \item モデル面から任意の高度面や圧力面へのデータ内挿
+ \item 3次元変数に対する鉛直カラム中の平均値・最大値・最小値、鉛直積算値を出力
+ \item 3次元変数を鉛直層ごとに分割したファイルとして出力
+ \item 時間ステップごとに分割したファイルとして出力
 \end{itemize}
 
-特に大規模計算結果においては、鉛直層や時間ステップごとに分割することで
-扱いやすいサイズのデータを出力することができるため便利である。
+%特に大規模計算結果においては、鉛直層や時間ステップごとに分割することで
+%扱いやすいサイズのデータを出力することができるため便利である。
 %さらに、大規模計算結果を解析するだけのケースを踏まえてポータビリティを重視した設計とし、
 %SCALEライブラリに対する依存性をなくしたため、
 %net2gだけを独立にコンパイル・実行できることも特徴である。
-net2gのインストール方法については、\ref{sec:source_net2g}節を参照すること。
-ただし、現行のnet2gにおいては下記の制約がある。
+net2gのインストール方法は、\ref{sec:source_net2g}節を参照されたい。
+なお、現行のnet2gには、下記の制約があることに注意が必要である。
 \begin{itemize}
  \item net2gに使用するMPIプロセス数は、
-SCALE-RM実行時に使用したMPIプロセス数の約数でなければならない。
- \item SCALE-RM実行時のhistory出力形式は、\namelist{PARAM_HIST}の\nmitem{HIST_BND} が \verb| .false. | でなければならない。
+\scalerm 実行時のMPIプロセス数の約数でなければならない。
+\item \namelist{PARAM_FILE_HISTORY_CARTESC}の\nmitem{FILE_HISTORY_CARTESC_BOUNDARY}を\verb|.false. |に設定して、
+\scalerm のヒストリファイルを出力する必要がある。
  \item 2次元データと3次元データは同時に変換できない。
  \item 変換できるデータはhistoryデータのみである。
 \end{itemize}
 %これらの制約を無くすため、今後早急に対応を進める予定である。
+%実行時に注意すべき点は、net2g実行時のMPIプロセス数を大きくしすぎないことである。
+%net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
+%ストレージへの読み込み/書き込み要求が多くなり、
+%結果として、効率が下がり実行速度が落ちることもある。
+%特に大規模計算結果を手元のマシンで変換する際は注意が必要である。
+MPIプロセス数を多く取りすぎると、実行速度が落ちることに注意されたい。
 
-実行時に注意すべき点は、net2g実行時のMPIプロセス数を大きくしすぎないことである。
-net2gは実行内容のほとんどがデータ入出力であるため、MPIプロセス数を増やしすぎると
-ストレージへの読み込み/書き込み要求が多くなり、
-結果として、効率が下がり実行速度が落ちることもある。
-特に大規模計算結果を手元のマシンで変換する際は注意が必要である。\\
-
-net2gの実行はMPI並列を用いて、
+MPI並列を用いる場合には、\verb|net2g|は以下のように実行する。
 \begin{verbatim}
  $ mpirun  -n  [プロセス数]  ./net2g  net2g.conf
 \end{verbatim}
-とする。最後の\verb|net2g.conf|はnet2gの実行設定が
-記述された設定ファイルである。
-一方、シングルプロセス版としてコンパイルした場合はMPIコマンドを使わずに、
+最後の引数の\verb|net2g.conf|は、\verb|net2g|に対する設定ファイルである。
+一方、シングルプロセス版として\verb|net2g|をコンパイルした場合は、
 \begin{verbatim}
  $ ./net2g  net2g.conf
 \end{verbatim}
-とする。
-エラーメッセージがなく、次のメッセージだけが標準出力へ表示されて終了すれば変換完了である。\\
+と実行する。
+
+エラーなく次のメッセージだけが表示されていれば、実行は正常に終了している。\\
 
 \noindent {\gt
 \fbox{
@@ -58,20 +57,18 @@ net2gの実行はMPI並列を用いて、
 \end{tabularx}
 }}\\
 
-次に、3次元変数と2次元変数を変換する場合における設定ファイルの記述方法について説明する。
-それぞれ、\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} にあるサンプル設定ファイル
-``\verb|net2g.3d.conf|''と``\verb|net2g.2d.conf|''に基づいて説明する。
-本節では主要な設定項目だけを取り上げる。
-ここで触れなかったオプションについては、``\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}''
-サンプル設定ファイル``\verb|net2g.all.conf|''を参照してもらいたい。
+次に、2次元変数や3次元変数を変換する場合の設定ファイルの記述方法を説明する。
+ここでは、\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/} にあるサンプル設定ファイル
+\verb|net2g.3d.conf|と\verb|net2g.2d.conf|に基づいて説明する。
+本節では主要な設定項目だけを取り上げることにして、
+他のオプションについては、\texttt{scale-\version/scale-rm/util/netcdf2grads\_h/}にある
+ファイル\verb|README.net2g.conf|に記載されている説明を参照されたい。
 
 
-\subsubsection{設定ファイルサンプル：3次元変数の変換}
+\subsubsection{設定ファイル例：3次元変数の変換}
 %------------------------------------------------------
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_3d",| \\
 \verb| LOG_ALL_OUTPUT = .false.,| \\
@@ -92,52 +89,52 @@ net2gの実行はMPI並列を用いて、
 \verb| VNAME       = "PT","U","V","W","QHYD",| \\
 \verb| TARGET_ZLEV = 850,500,200,| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
-
-\noindent 上記はあるdomainの3次元変数を、気圧高度面へ内挿して出力する場合の
-例を示している。各々の設定項目は次のとおりである。
+}
+上記の例では、ある領域の3次元変数を気圧高度面へ内挿して出力する場合の設定を示している。
+各設定項目は次のとおりである。
 \begin{itemize}
  \item \namelist{LOGOUT}（このネームリストは必須ではない）
  \begin{itemize}
-  \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名``LOG''を変更したいときに指定する。
+  \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名「LOG」を変更したいときに指定する。
   \item \nmitem{LOG_ALL_OUTPUT}：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
         デフォルト値は``false''である。
  \end{itemize}
  \item \namelist{INFO}
  \begin{itemize}
-  \item \nmitem{TIME_STARTDATE}：変換するNetCDFデータの最初の日時
-  \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初のTime Stepを指定する。最初のいくつかの
-        ステップを飛ばして変換したい場合に任意の値を指定する。デフォルト値は1である。
-  \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後のTime Stepを指定する。必ず指定すること。
+  \item \nmitem{TIME_STARTDATE}：変換するNetCDFデータの最初の日時を指定。
+  \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初の時間ステップを指定する。
+  最初のいくつかのステップを飛ばしたい場合には適切な値を指定する。デフォルト値は1である。
+  \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後の時間ステップを指定する。必ず指定すること。
   \item \nmitem{DOMAIN_NUM}：ドメイン番号を指定する。デフォルト値は1である。
-  \item \nmitem{CONFFILE}：SCALE-RM本体を実行したときの\verb|run.***.conf|ファイルのPATHを指定する
+  \item \nmitem{CONFFILE}：\scalerm 実行時の\verb|run.***.conf|のパスを指定する
         （ファイル名を含む）。
-  \item \nmitem{IDIR}：SCALE-RM本体のhistory出力ファイルのPATHを指定する。
-  \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。``original''はモデル面、
-        ``plev''は気圧面に内挿、そして``zlev''は高度面に内挿して出力する。
-        ``anal''を指定すると別途指定の簡易解析を行なって出力する（次項で説明）。デフォルト値は``plev''である。
-  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応したctlファイルを出力するかどうか。ただし、現在はランベルト図法にのみ対応。
+  \item \nmitem{IDIR}：\scalerm のヒストリファイルのパスを指定する。
+  \item \nmitem{Z_LEV_TYPE}：鉛直方向のデータ変換の種類を指定する。\verb|"original"|はモデル面を表す。
+        \verb|"plev"|は気圧面、\verb|"zlev"|は高度面に内挿して出力する。
+        \verb|"anal"|を指定すると簡易解析を行なった結果を出力する（詳細は後ほど説明）。
+        デフォルト値は\verb|"plev"|である。
+  \item \nmitem{MAPPROJ_ctl}：\verb|pdef|を使った投影図法に対応した「ctl」ファイルを出力するかどうか。現在は、ランベルト図法にのみ対応。
  \end{itemize}
  \item \namelist{VARI}
  \begin{itemize}
-  \item \nmitem{VNAME}：変換したい変数名を指定する。デフォルトでは、``PT''、``PRES''、``U''、``V''、
-        ``W''、``QHYD''が指定される。
-  \item \nmitem{TARGET_ZLEV}：\nmitem{Z_LEV_TYPE}に応じた変換高度を指定する。plevの場合は``hPa''、
-        zlevの場合は``m''、そしてoriginalの場合は格子点番号で指定する。デフォルトでは、
-        1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、
-        300hPa、250hPa、200hPaの14層が指定される。
+  \item \nmitem{VNAME}：変換したい変数の名前を指定。
+  デフォルトでは、\verb|"PT"|,\verb|"PRES"|,\verb|"U"|,\verb|"V"|, \verb|"W"|,\verb|"QHYD"|が指定される。
+  \item \nmitem{TARGET_ZLEV}：\nmitem{Z_LEV_TYPE}に応じた変換高度を指定。
+        \verb|"plev"|の場合の単位は[hPa]、
+        \verb|"zlev"|の場合の単位は[m]である。
+        また、\verb|"original"|の場合には格子点番号で指定する。
+        デフォルトでは、14層(1000hPa、975hPa、950hPa、925hPa、900hPa、850hPa、800hPa、700hPa、600hPa、500hPa、400hPa、300hPa、250hPa、200 hPa)が
+        指定される。
  \end{itemize}
 \end{itemize}
 
-\subsubsection{設定ファイル変更例：3次元変数の変換：鉛直積算値を出す}
+\subsubsection{設定ファイルの変更例：3次元変数の鉛直積算値を出力}
 %------------------------------------------------------
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+以下の記述では、簡易解析を利用する場合の設定ファイルの例を示している。
+他の項目の設定は、前の設定と同じである。
+\editbox{
 \verb|&INFO| \\
-\verb|　 　 〜　中略　〜|\\
+\verb|   〜  ...  〜  |\\
 \verb| Z_LEV_TYPE  = "anal",| \\
 \verb| ZCOUNT      = 1,| \\
 \verb|/| \\
@@ -149,33 +146,31 @@ net2gの実行はMPI並列を用いて、
 \verb|&VARI| \\
 \verb| VNAME       = "QC","QI","QG",| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
 
-上記は、簡易解析を利用する場合の設定ファイル変更例の抜粋である。
-他の設定項目については先の3次元変数の変換の場合と同じである。
-\nmitem{Z_LEV_TYPE}を``anal''と指定することで、3次元変数の鉛直次元に対する簡易解析が有効になり、
-\namelist{ANAL}を指定できるようになる。
-このとき変換後のデータは必ず水平2次元データとなるため、\namelist{VARI}の\nmitem{TARGET_ZLEV}は
-指定できない。
-また、2次元データ出力を指定するため、\textcolor{red}{\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
+\nmitem{Z_LEV_TYPE}を\verb|"anal"|に指定すると、
+3次元変数に対して簡易解析が行われる。
+この設定によって、\namelist{ANAL}の項目を指定できるようになる。
+出力データは水平2次元データであるので、
+\namelist{VARI}の\nmitem{TARGET_ZLEV}は指定できず、
+\textcolor{blue}{\namelist{INFO}の\nmitem{ZCOUNT}は必ず「1」と指定する。}
 
 \begin{itemize}
  \item \namelist{ANAL}
  \begin{itemize}
-  \item \nmitem{ANALYSIS}：鉛直次元のの簡易解析の種類を指定する。``max''を指定すると鉛直カラム中の最大値、
-        ``min''を指定するすると最小値、``sum''を指定すると鉛直カラム積算値、そして``ave''を指定すると
-        鉛直カラム平均値を算出する。デフォルト値は``ave''である。
+  \item \nmitem{ANALYSIS}：鉛直次元のの簡易解析の種類を指定する。
+  \verb|"max"|と\verb|"min"|はそれぞれ鉛直カラム中の最大値と最小値を表す。
+  また、\verb|"max"|は鉛直カラム積算値、\verb|"ave"|を指定すると鉛直カラム平均値を算出する。デフォルト値は\verb|"ave"|である。
  \end{itemize}
 \end{itemize}
 
-\subsubsection{設定ファイルサンプル：2次元変数の変換}
+\subsubsection{設定ファイル例：2次元変数の変換}
 \label{subsec:net2g_2d}
 %------------------------------------------------------
+以下の例は、ある領域の2次元変数を変換する場合の設定を示している。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1."}
+\editbox{
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_2d",| \\
 \verb|/| \\
@@ -188,40 +183,36 @@ net2gの実行はMPI並列を用いて、
 \verb| CONFFILE    = "../run/run.d01.conf",| \\
 \verb| IDIR        = "../run",| \\
 \verb| ZCOUNT      = 1,| \\
-\verb| MAPPROJ_ctl    = .true.|\\
+\verb| MAPPROJ_ctl = .true.|\\
 \verb|/| \\
  \\
 \verb|&VARI| \\
 \verb| VNAME       = "T2","MSLP","PREC"| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
 
-\noindent 上記はあるdomainの2次元変数をデータ形式変換する場合の設定例である。
-\textcolor{red}{2次元変数の変換を指定するため、\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
-また、2次元データなので\namelist{VARI}の
-\nmitem{TARGET_ZLEV}は指定できない。その他の設定項目は3次元変数変換の場合と変わりない。
+%\textcolor{red}{2次元変数の変換を指定するため、\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
+%また、2次元データなので\namelist{VARI}の
+%\nmitem{TARGET_ZLEV}は指定できない。その他の設定項目は3次元変数変換の場合と変わりない。
 
 
-\subsubsection{設定ファイル変更例：特殊な時間軸を持つデータの変換}
+\subsubsection{設定ファイルの変更例：特殊な時間軸を持つデータの変換}
 %------------------------------------------------------
 
-\ref{sec:output}節で説明した通り、
-出力変数の出力間隔は\nmitem{HISTORY_DEFAULT_TINTERVAL}で設定されるが、
-\namelist{HISTITEM}の\nmitem{TINTERVAL}に\nmitem{HISTORY_DEFAULT_TINTERVAL}とは異なる値を与えることで、
-特定の変数の出力間隔を変更することが可能である。
-\nmitem{HISTORY_DEFAULT_TINTERVAL}以外の出力間隔を持つ変数についてnet2gを行う場合には、
-net2g.confの\namelist{EXTRA}を追加する。
-下記の例では、\ref{sec:output}節の最後で説明した例
-（``RAIN''のみの出力間隔を600秒とした）について追加、修正すべきところを示している。
+第\ref{sec:output}節で説明したように、
+変数の出力間隔は\nmitem{HISTORY_DEFAULT_TINTERVAL}で基本的に定義する。
+しかし、\namelist{HISTITEM}の\nmitem{TINTERVAL}に\nmitem{HISTORY_DEFAULT_TINTERVAL}とは異なる値を与えることで、特定の変数の出力間隔を変更することができる。
+\verb|net2g|では、異なる出力間隔を持った変数のデータ変換に対応しており、
+\namelist{EXTRA}を設定すればこれを行える。
+下記の例では、第\ref{sec:output}節の最後で説明した例
+（二次元データの\verb|"RAIN"|のみ600秒の間隔で出力）において、
+追加や修正が必要なネームリストを示している。
 
-net2gでは、異なる出力時間間隔を同時に取り扱うことはできないため、
-複数の異なる出力間隔が存在するhistoryデータにおいては、
-それぞれに独立してnet2gを走らせる必要がある。\\
+ヒストリファイルでは、複数の異なる時間間隔を持ったデータを取り扱うことができる。
+しかし、net2gでは異なる出力時間間隔をもつ変数を同時に変換することはできないため、
+その場合はこれらの変数に対して別々に\verb|net2g|を実行する必要がある。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&EXTRA| \\
 \verb| EXTRA_TINTERVAL = 600.0,| \\
 \verb| EXTRA_TUNIT     = "SEC",| \\
@@ -230,26 +221,23 @@ net2gでは、異なる出力時間間隔を同時に取り扱うことはでき
 \verb|&VARI| \\
 \verb| VNAME = "RAIN",| \\
 \verb|/| \\
-\end{tabularx}
-}}}\\
+}
 
+\subsubsection{緯度経度に関する注意点}
+\scalerm において、経度と緯度に対する変数名はそれぞれ「lon」と「lat」である。
+これらの名前は \grads で予約語として使われているため、\verb|net2g|による出力では経度の変数名を「long」、緯度の変数名を「lat」に置き換えている。
 
-
-\subsubsection{大型並列計算機での実行}
-スーパーコンピュータ「京」などの大型計算機で大規模並列計算を行った場合、出力ファイルの数が多く、
-それぞれのファイルのデータ容量も大きい。
-そのような場合には、手元のマシンへhistoryデータをコピーするだけのディスク容量がなかったり、
+\subsubsection{大型並列計算機における実行の注意点}
+スーパーコンピュータ「京」などの大型計算機で計算を行った場合は、
+出力ファイルの数が多く、各ファイルのサイズも大きい。
+そのような場合に、手元のディスクの容量がデータを保管するには不十分であったり、
 後処理に膨大な時間がかかることがある。
-こういった場合には、
-\scalerm 本体の計算を行ったスーパーコンピュータ上で後処理も行なってしまうことを
-おすすめする。
-
-スーパーコンピュータ「京」では、
-\ref{subsec:evniromnet}節で説明されている環境変数の設定がされていれば、
-net2gはそのままmakeコマンドでコンパイルできる。
-ジョブの投入・実行方法については、
-スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
-net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
+そのため、\scalerm 本体の計算を行ったスーパーコンピュータ上で後処理も行なうことを推奨する。
+「京」において、第\ref{subsec:evniromnet}節で説明した環境変数を適切に設定していれば、
+「make」コマンドだけで\verb|net2g|をコンパイルできる。
+%ジョブの投入・実行方法については、
+%スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
+%net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
 
 
 %% サポート外
@@ -322,4 +310,3 @@ net2gの実行方法や制約、注意点については通常のマシンで実
 
 
 %####################################################################################
-
