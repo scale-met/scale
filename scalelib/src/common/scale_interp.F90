@@ -501,8 +501,8 @@ contains
     integer,  intent(out) :: idx_i(IA,JA,npoints)          ! i-index in reference     (target)
     integer,  intent(out) :: idx_j(IA,JA,npoints)          ! j-index in reference     (target)
     real(RP), intent(out) :: hfact(IA,JA,npoints)          ! horizontal interp factor (target)
-    integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! i-index in reference     (target)
-    real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! horizontal interp factor (target)
+    integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! k-index in reference     (target)
+    real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! vertical interp factor   (target)
 
     integer :: nsize, psize, nidx_max
     integer, allocatable :: idx_blk(:,:,:), nidx(:,:)
@@ -655,6 +655,8 @@ contains
        val_ref,    &
        val,        &
        logwgt      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     integer,  intent(in) :: npoints                       ! number of interpolation point for horizontal
@@ -708,8 +710,13 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       val(k,i,j) = hfact(i,j,1) * vfact(k,1,i,j,1) * work(idx_k(k,1,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) &
-                  + hfact(i,j,1) * vfact(k,2,i,j,1) * work(idx_k(k,2,i,j,1),idx_i(i,j,1),idx_j(i,j,1))
+       if ( work(idx_k(k,1,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) == UNDEF .or.    &
+            work(idx_k(k,2,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) == UNDEF       ) then
+          val(k,i,j) = UNDEF
+       else
+          val(k,i,j) = hfact(i,j,1) * vfact(k,1,i,j,1) * work(idx_k(k,1,i,j,1),idx_i(i,j,1),idx_j(i,j,1)) &
+                     + hfact(i,j,1) * vfact(k,2,i,j,1) * work(idx_k(k,2,i,j,1),idx_i(i,j,1),idx_j(i,j,1))
+       endif
     enddo
     enddo
     enddo
@@ -721,9 +728,16 @@ contains
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE
-       val(k,i,j) = val(k,i,j) &
-                  + hfact(i,j,n) * vfact(k,1,i,j,n) * work(idx_k(k,1,i,j,n),idx_i(i,j,n),idx_j(i,j,n)) &
-                  + hfact(i,j,n) * vfact(k,2,i,j,n) * work(idx_k(k,2,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
+       if ( val(k,i,j) == UNDEF                                       .or.    &
+            work(idx_k(k,1,i,j,1),idx_i(i,j,n),idx_j(i,j,n)) == UNDEF .or.    &
+            work(idx_k(k,2,i,j,1),idx_i(i,j,n),idx_j(i,j,n)) == UNDEF       ) then
+          val(k,i,j) = UNDEF
+          exit
+       else
+          val(k,i,j) = val(k,i,j) &
+                     + hfact(i,j,n) * vfact(k,1,i,j,n) * work(idx_k(k,1,i,j,n),idx_i(i,j,n),idx_j(i,j,n)) &
+                     + hfact(i,j,n) * vfact(k,2,i,j,n) * work(idx_k(k,2,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
+       endif
     enddo
     enddo
     enddo
@@ -735,7 +749,9 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          val(k,i,j) = exp( val(k,i,j) )
+          if ( val(k,i,j) /= UNDEF ) then
+             val(k,i,j) = exp( val(k,i,j) )
+          endif
        end do
        end do
        end do
