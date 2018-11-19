@@ -2474,7 +2474,8 @@ contains
                                 vfact        (:,:,:,:,:,ig), & ! [IN]
                                 buffer_ref_3D(:,:,:),        & ! [INOUT]
                                 dvar         (:,:,:),        & ! [OUT]
-                                logwgt = logarithmic         ) ! [IN]
+                                logwgt = logarithmic         ) ! [IN, optional]
+
        else
           call INTERP_interp3d( itp_nh,                       & ! [IN]
                                 TILEAL_KA  (HANDLE)+1,        & ! [IN]
@@ -2492,7 +2493,7 @@ contains
                                 vfact         (:,:,:,:,:,ig), & ! [IN]
                                 buffer_ref_3DF(:,:,:),        & ! [INOUT]
                                 dvar          (:,:,:),        & ! [OUT]
-                                logwgt = logarithmic          ) ! [IN]
+                                logwgt = logarithmic          ) ! [IN, optional]
        endif
 
        do j = 1, DAUGHTER_JA(HANDLE)
