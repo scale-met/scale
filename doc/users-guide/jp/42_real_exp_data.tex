@@ -1,9 +1,9 @@
 %-------------------------------------------------------%
-\section{入力データ(境界データ)の準備} \label{sec:tutrial_real_data}
+\section{入力データ(境界値データ)の準備} \label{sec:tutrial_real_data}
 %-------------------------------------------------------%
 
-現実大気実験のシミュレーションを行うときには、\scalerm に境界データを与える必要がある。
-表\ref{tab:real_bnd}は、境界データの作成に必要な外部入力データの項目を示している。
+現実大気実験を行う場合には、\scalerm に境界値データを与える必要がある。
+表\ref{tab:real_bnd}に、境界値データの作成に必要な外部入力データの項目を示す。
 この表において、{\color{blue}青字}で書かれた変数は必須であり、その他(黒字)は任意である。
 
 \begin{table}[h]
@@ -32,19 +32,19 @@
 
 \subsubsection{標高データと土地利用区分データ}
 標高データと土地利用区分データは、
-それぞれの格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分を
+各格子点における標高、海陸比率、湖比率、都市被覆率、植生比率、土地(植生)利用区分を
 与えるために必要である。
-全球の任意の地域を対象とした計算ができるように、
+全球中の任意の地域を対象とした計算が行えるように、
 USGS(U.S. Geological Survey) の標高データ GTOPO30 と、
-GLCCv2 の土地利用区分データを{\scalerm}では提供している。 
-これらのファイルは、{\scalerm}用に形式を変換済みである。
+GLCCv2 の土地利用区分データを{\scalerm}では用意している。
+これらのファイルの形式は、{\scalerm}用に変換済みである。
 %これらのデータベースを作成にするにあたり、施された前処理手順の詳細については、〇〇を参照すること（Todo）。
 
 \begin{enumerate}
 \item データベースのダウンロード\\
-\scalerm 用に形式を変換した標高・土地利用区分のデータを\\
- \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}\\
-より入手し、任意のディレクトリに展開しておく。
+\scalerm 用に形式を変換した標高・土地利用区分のデータを
+ \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}
+から取得し、任意のディレクトリに展開する。
 \begin{alltt}
   $ tar -zxvf scale_database.tar.gz
   $ ls
@@ -53,16 +53,13 @@ GLCCv2 の土地利用区分データを{\scalerm}では提供している。
 \end{alltt}
 
 \item パスの設定\\
-現実大気実験に必要なファイル一式を準備するために、
-「実験セット一式作成ツール」を用いる。
-このツールを利用するためには、上記のデータベースがあるディレクトリの名称を
-環境変数\verb|SCALE_DB| に設定しておくことが必須である (以後、\verb|${SCALE_DB}|と表記)。
+現実大気実験に必要なファイル一式を準備するために、「{\makeconftool}」を用いる。
+このツールを利用するためには、上記のデータベースが存在するディレクトリの名前(以後\verb|${SCALE_DB}|と表記)を環境変数\verb|SCALE_DB|に設定しておかなければならない。
 \begin{verbatim}
   $ export SCALE_DB="${path_to_directory_of_scale_database}/scale_database"
 \end{verbatim}
 ここで、\verb|${path_to_directory_of_scale_database}|は、
-標高・土地利用区分データを含む\verb|tar|ファイルの展開先ディレクトリの名称である。
-%つまり、\verb|${path_to_directory_of_scale_database}|の部分を適切に置換した上で上記コマンドを実行する必要がある。
+標高・土地利用区分データを含む\verb|tar|ファイルの展開先ディレクトリの名前である。
 例えば、\verb|scale_database.tar.gz|を展開したディレクトリの絶対パスが
 \verb|/home/user/scale|であった場合は、以下のように設定する。
 \begin{verbatim}
@@ -70,33 +67,30 @@ GLCCv2 の土地利用区分データを{\scalerm}では提供している。
 \end{verbatim}
 \end{enumerate}
 
-
-
 \subsubsection{大気・陸面・海面水温データ}
-初期値境界値データは、4byteバイナリ(\grads 形式、以降「binary」形式と表記する)に変換すれば
-読み込むことができる。
-上述したように「バイナリ」データはユーザ自身が用意する. 
-ただし、「バイナリ」データを用意するためのプログラムは、
-チュートリアルを行うディレクトリ(\verb|${Tutorial_DIR}/real/tools/|)に提供される。
-手順を以下に説明する。 
-ただし、grib1形式の NCEP FNL (Final) Operational Global Analysis data を使用するために、
+初期値/境界値データは、4 byteバイナリ(\grads 形式。以降「binary」形式と表記)に変換すれば読み込める。
+上述したように「バイナリ」データはユーザーが用意する.
+ただし、本チュートリアルでは、この「バイナリ」データを準備するためのプログラムを
+ディレクトリ\verb|${Tutorial_DIR}/real/tools/|に用意してある。
+手順を以下で説明する。
+ただし、grib1 形式の NCEP FNL (Final) Operational Global Analysis data を使用するために、
 \verb|wgrib|\footnote{
 \url{http://www.cpc.ncep.noaa.gov/products/wesley/wgrib.html}
 }
 はインストール済みであるとする。
 
 \begin{enumerate}
-\item データのダウンロード\\
+\item データの取得 \\
 NCARのサイト\url{http://rda.ucar.edu/datasets/ds083.2/}から、
 2007年7月14日18時から12時間分のデータをダウンロードし、
 \verb|${Tutorial_DIR}/real/tools/FNL_input/grib1/2007|に配置する。
-以下が、grib1形式のデータのリストである。 
+以下が、grib1形式のデータのリストである。
 \begin{alltt}
   fnl_20070714_18_00.grib1
   fnl_20070715_00_00.grib1
 \end{alltt}
 
-\item データフォーマットをgrib形式からバイナリ形式に変換\\
+\item データ形式を grib 形式からバイナリ形式に変換\\
  \verb|${Tutorial_DIR}/real/tools/| にある\verb|convert_FNL-grib2grads.sh|を実行する。
 
 \begin{verbatim}
@@ -113,6 +107,6 @@ NCARのサイト\url{http://rda.ucar.edu/datasets/ds083.2/}から、
     FNL_output/200707/FNL_SFC_2007071418.grd
     FNL_output/200707/FNL_SFC_2007071500.grd
 \end{alltt}
-NCEP-FNLのデータ構造や変数名が変更された場合、意図したファイルが生成されない。
-その場合は、使用するNCEP-FNLデータに応じて、\verb|convert_FNL-grib2grads.sh|を修正する必要がある。
+NCEP-FNLのデータ構造や変数名が変更された場合には、意図したファイルが作成されない。
+その場合は、使用する NCEP-FNL データに応じて\verb|convert_FNL-grib2grads.sh|を修正する必要がある。
 \end{enumerate}

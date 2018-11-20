@@ -28,7 +28,7 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
 
 \begin{figure}[htb]
 \begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/topo_copy.eps}\\
+  \includegraphics[width=0.4\hsize]{./figure/topo_copy.pdf}\\
   \caption{地形コピー機能を適用したときの地形の水平分布。
 水色で塗られた最外にある格子は\texttt{HALO}領域であり、
 その格子数は水平移流スキームに依存する。
@@ -84,7 +84,7 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
 \end{tabularx}
 }}}\\
 
-\noindent 
+\noindent
 \namelist{PARAM_CNVTOPO}の\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすれば、
 地形のコピー機能が適用される。
 \nmitem{COPYTOPO_ENTIRE_REGION}は、子領域の全域に渡って親領域の地形をコピーするかどうかのオプションである。
@@ -109,4 +109,3 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
  $ mpirun -n [プロセス数] ./scale-rm_pp pp.d02.conf
  $ mpirun -n [プロセス数] ./scale-rm_pp pp.d03.conf
 \end{verbatim}
-

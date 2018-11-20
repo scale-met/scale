@@ -8,7 +8,7 @@
 \item  \texttt{pp}      : 地形データの作成
 \item  \texttt{init}    : 初期値・境界値データの作成
 \item  \texttt{run}     : シミュレーションの実行
-\item  \texttt{net2g}   : 出力データの\netcdf から\grads 形式への変換（オプション）
+\item  \texttt{net2g}   : 出力データを \netcdf から\grads 形式に変換（オプション）
 \end{enumerate}
 
 \begin{figure}[b]
@@ -19,24 +19,15 @@
 \end{center}
 \end{figure}
 
-
 これ以降の説明では、\texttt{scale-{\version}/scale-rm/test/tutorial/}の絶対パスを
-\verb|${Tutorial_DIR}|と示すこととする。
+\verb|${Tutorial_DIR}|と書くことにする。
 
-
-本章のチュートリアルで用いる計算領域の設定を表\ref{tab:grids}に示し、
-対象領域を図 \ref{fig:tutrial_real_domain}に示す。
-このチュートリアルでは、\scalerm を用いて現実大気実験を実施する方法を短時間で学ぶことを目的とする。
-そのため、計算が短い時間で完了するように実験を設定している。
-この設定が物理的に妥当な実験として適切とは限らないことに注意が必要である。
-実際の研究を行うときには、必要に応じて実験設定を検証すべきである。
-%本章のチュートリアルを比較的短時間で実行するには、下記の条件を満たす計算機環境が推奨される。
-%\begin{itemize}
-%\item CPU: 2コア以上の演算コアを持つCPU（4コア以上を推奨）
-%\item Memory容量: 4GB以上をプログラムに割当可能（8GB以上を搭載した計算機を推奨）
-%\item HDD空き容量: 7GB以上の空き容量
-%\end{itemize}
-
+本章のチュートリアルで用いる計算領域の設定を表\ref{tab:grids}に示す。
+また、対象とする計算領域を図\ref{fig:tutrial_real_domain}に示す。
+本チュートリアルの目的は、\scalerm を用いて現実大気実験を実施する方法を短時間で学ぶことである。
+そのために、計算が短時間で終わるように実験を設定している。
+したがって、この設定が物理的に妥当な実験として適切とは限らないことに注意が必要である。
+実際の研究を行うときには、必要に応じて実験設定を検討すべきである。
 
 \begin{table}[h]
 \begin{center}
@@ -56,7 +47,7 @@
 
 \begin{figure}[tb]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./figure/real_domain.eps}\\
+  \includegraphics[width=1.0\hsize]{./figure/real_domain.pdf}\\
   \caption{計算領域の地形と海陸分布。}
   \label{fig:tutrial_real_domain}
 \end{center}

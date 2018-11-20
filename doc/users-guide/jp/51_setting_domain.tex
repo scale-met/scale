@@ -50,7 +50,7 @@
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition.eps}\\
+  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition_v2.png}\\
   \caption{計算領域全体に対する、水平格子間隔(\texttt{DX}, \texttt{DY})、MPIプロセスあたりの格子数(\texttt{IMAX}, \texttt{JMAX})、MPIプロセス数(\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})の関係。水色の領域は、1つのMPIプロセスが担当する領域に対応する。}
   \label{fig:domain}
 \end{center}
@@ -68,49 +68,36 @@ MPIプロセス数は、設定ファイルの\namelist{PARAM_PRC_CARTESC}内で�
 MPIプロセス数を変更する場合には、
 \verb|pp.conf|、\verb|init.conf|、\verb|run.conf| 内の
 \namelist{PARAM_PRC_CARTESC}を編集し、
-\verb|pp|、\verb|init| の過程を再度行う必要がある。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\verb|pp|、\verb|init| の過程を再度行う必要がある。
+\editboxtwo{
 \verb|&PARAM_PRC| & \\
 \verb| PRC_NUM_X       = 2,| & ; {\XDIR}（東西方向）のMPI並列分割数 \\
 \verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
 \verb|/|\\
-\end{tabularx}
-}}}\\
-
+}
 
 総MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  によって与えられる。
 上記の例では、領域が\XDIR には2分割、\YDIR には分割なしの 2-MPI並列ということになる。
 この総プロセス数は、ジョブを投げる際のMPIコマンドに指定するMPIプロセス数として与える必要がある。
 この条件を満たさない場合には、プログラムは計算を行わずに直ちに終了し、
 下記のメッセージが標準出力に出力される。
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\msgbox{
 \verb|xxx total number of node does not match that requested. Check!| \\
-\end{tabularx}
-}}}\\
+}
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecGridNumSettng} \label{subsec:relation_dom_reso3}
 %-----------------------------------------------------------------------
 
 格子数は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}で指定する。
-指定する水平格子数は、１つのMPIプロセス当たりの値であることに注意が必要である。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+指定する水平格子数は、１つのMPIプロセス当たりの値であることに注意が必要である。
+\editboxtwo{
 \verb|&PARAM_INDEX| & \\
 \verb| KMAX = 97,|  & ; 鉛直層数 \\
 \verb| IMAX = 20,|  & ; プロセスあたりの{\XDIR}の格子点数 \\
 \verb| JMAX = 25,|  & ; プロセスあたりの{\YDIR}の格子点数 \\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecGridIntvSettng} \label{subsec:gridinterv}
@@ -121,18 +108,14 @@ MPIプロセス数を変更する場合には、
 全方向について格子間隔を等間隔で設定する場合には、
 \namelist{PARAM_ATMOS_GRID_CARTESC}内の\nmitem{DX, DY, DZ}にそれぞれ、
 東西、南北、鉛直方向の格子間隔を指定する。
-単位は[m]である。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+単位は[m]である。
+\editboxtwo{
 \verb|&PARAM_GRID  | & \\
 \verb| DX = 500.D0,| & ; {\XDIR}（東西方向）の格子間隔\\
 \verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
 \verb| DZ = 500.D0,| & ; {\ZDIR}（鉛直方向）の格子間隔\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
 
 以下の囲みに、等間隔でない格子系を指定する方法を示す。
@@ -148,11 +131,8 @@ MPIプロセス数を変更する場合には、
 詳細は、図\ref{fig:scale_grid}を参照されたい。
 また、\nmitem{FZ(:)}で指定する要素の数は、鉛直層数
 （\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{KMAX})と一致している必要があることに注意されたい。
-例として、理想実験の設定ファイルを下記に示す。\\
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+例として、理想実験の設定ファイルを下記に示す。
+\editboxtwo{
 \verb|&PARAM_GRID|     & \\
 \verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔) [m]\\
 \verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔) [m]\\
@@ -171,13 +151,11 @@ MPIプロセス数を変更する場合には、
 \verb| BUFFER_DZ = 5000.D0,|          & 第\ref{subsec:buffer}節参照\\
 \verb| BUFFFACT  =   1.0D0,|          & 第\ref{subsec:buffer}節参照\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
-
+}
 
 \begin{figure}[tb]
 \begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/verticalface.eps}\\
+  \includegraphics[width=0.4\hsize]{./figure/verticalface.pdf}\\
   \caption{\scalerm におけるフェイスポイントの定義点。
   \namelist{PARAM_ATMOS_GRID_CARTESC}で\nmitem{FZ}を指定する時は、
   $k=1$での値として第1層目上端の高さを与える。$k=1$での値は地表面の高さでないことに注意が必要である。}
@@ -190,7 +168,7 @@ MPIプロセス数を変更する場合には、
 
 
 鉛直格子点の位置は任意に設定できるが、変わった設定をすると計算不安定がしばしば生じる。
-これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に 
+これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
 必要があれば、参考として用いることができる。
 このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
@@ -271,20 +249,15 @@ MPIプロセス数を変更する場合には、
 
 以下に２種類の設定例を示す。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_NX = 30,   | & ; {\XDIR}（東西方向）の緩和領域の格子数\\
  \verb|BUFFER_NY = 30,   | & ; {\YDIR}（南北方向）の緩和領域の格子数\\
  \verb|BUFFFACT  = 1.D0, | & ; 全方向の緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\editboxtwo{
 \verb|&PARAM_GRID | & \\
  \verb|BUFFER_DZ  =   5000.D0, | & ; {\ZDIR}（モデル上端から下向き方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFER_DX  = 300000.D0, | & ; {\XDIR}（東西方向）の緩和領域の幅(参考値) [m]\\
@@ -293,8 +266,7 @@ MPIプロセス数を変更する場合には、
  \verb|BUFFFACT_X = 1.05D0,    | & ; {\XDIR}の緩和領域内の格子間隔に対するストレッチ係数\\
  \verb|BUFFFACT_Y = 1.05D0,    | & ; {\YDIR}の緩和領域内の格子間隔に対するストレッチ係数\\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
 具体的な緩和領域の設定のされ方について、{\XDIR}を例に説明する。
 緩和領域の格子数 \verb|ibuff|は、\nmitem{BUFFER_NX}に等しい。\nmitem{BUFFER_NX}を用いずに\nmitem{BUFFER_DX}で指定した場合、\verb|ibuff|は
@@ -320,7 +292,7 @@ MPIプロセス数を変更する場合には、
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.eps}\\
+  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.pdf}\\
   \caption{全計算領域内での緩和領域の配置：斜線部分が緩和領域を意味する。
   図はXZ断面を示しているが、YZ断面についても同様である。}
   \label{fig:buff_xz}
@@ -454,7 +426,7 @@ MPIプロセス数を変更する場合には、
 \label{eq:nudging}
 \end{eqnarray}
 と書かれる。
-ここで、$\Delta\phi$ は境界データとの差であり、 
+ここで、$\Delta\phi$ は境界データとの差であり、
 $\alpha_s = \alpha \times \nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$である。
 $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値である。
 これらの係数は、以下のような長さスケール$e$に依存する。
@@ -471,7 +443,7 @@ $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値で
   \alpha_z =  \sin^2(\pi e_z/2) / \tau_z,
 \end{equation}
 である。
-ここで、 $\tau_z$は\nmitem{ATMOS_BOUNDARY_TAUZ}である. 
+ここで、 $\tau_z$は\nmitem{ATMOS_BOUNDARY_TAUZ}である.
 水平方向については、\nmitem{ATMOS_BOUNDARY_LINEAR_H}が\verb|.true.|であれば、
 \begin{equation}
   \alpha_x = e_x / \tau_x,
@@ -497,4 +469,3 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 境界の種類として\verb|REAL|を用いて、上記と同様の設定が適用される。
 
 上端境界の周辺では同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。
-

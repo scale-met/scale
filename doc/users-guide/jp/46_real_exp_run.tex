@@ -7,19 +7,12 @@
  $ cd ${Tutorial_DIR}/real/experiment/run
 \end{verbatim}
 %
-このディレクトリの中には、\verb|run.d01.conf|という名前の
-設定ファイルが準備されており、
-チュートリアル用の設定（表\ref{tab:grids}に合わせて設定されている。
+このディレクトリの中には、表\ref{tab:grids}に示すチュートリアル用の設定を施した設定ファイルが準備されている。
 他に\verb|run.launch.conf|というファイルも存在するが、ここでは使用しない。
 
-モデル本体の実行には
-事前に作成した地形データや初期値・境界値データを利用する。
-これらのファイルの指定は、
-\verb|run.d01.conf|の下記部分で設定している。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+モデル本体の実行には、事前に作成した地形データや初期値/境界値データを使用する。
+これらのファイルの指定は、\verb|run.d01.conf|における下記の部分で設定している。
+\editbox{
 \verb|&PARAM_TOPO| \\
 \verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
@@ -45,95 +38,82 @@
 \verb| ATMOS_BOUNDARY_LINEAR_H       = .false.,    |\\
 \verb| ATMOS_BOUNDARY_EXP_H          = 2.0,        |\\
 \verb|/| \\
-\end{tabularx}
-}}\\
+}
 
 
-\verb|run.d01.conf|の中で、
-時間積分に関する設定は\namelist{PARAM_TIME}において設定する。
-初期時刻は、\nmitem{TIME_STARTDATE}にUTCで指定する。
-チュートリアルでは、2007年7月14日18時UTCに設定している。
-積分時間は、\nmitem{TIME_DURATION}で与える。
-物理過程に対する時間ステップは、
-それぞれの物理スキーム毎に設定できる。\\
+\verb|run.d01.conf|の中で、時間積分に関する設定は\namelist{PARAM_TIME}で行う。
+初期時刻は\nmitem{TIME_STARTDATE}にUTCで指定し、
+チュートリアルでは2007年7月14日18時UTCに設定している。
+積分時間は\nmitem{TIME_DURATION}で与える。
+物理過程に対する時間ステップは、各物理スキームごとに設定できる。
 
-\noindent {\gt\small
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+\editboxtwo{
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE         = 2007, 7, 14, 18, 0, 0,| & ← 時間積分を開始する時刻 \\
 \verb| TIME_STARTMS           = 0.D0,  | &\\
-\verb| TIME_DURATION          = 6.0D0, | & ← 積分期間 \\
-\verb| TIME_DURATION_UNIT     = "HOUR",| & ← \verb|TIME_DURATION|の単位\\
-\verb| TIME_DT                = 90.0D0,| & ← トレーサー移流計算の時間ステップ\\
-\verb| TIME_DT_UNIT           = "SEC", | & ← \verb|TIME_DT|の単位\\
-\verb| TIME_DT_ATMOS_DYN      = 45.0D0,| & ← トレーサー移流計算以外の力学過程の時間ステップ\\
-\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC", | & ← \verb|TIME_DT_ATMOS_DYN|の単位\\
+\verb| TIME_DURATION          = 6.0D0, | & : 積分期間 \\
+\verb| TIME_DURATION_UNIT     = "HOUR",| & : \verb|TIME_DURATION|の単位\\
+\verb| TIME_DT                = 90.0D0,| & : トレーサー移流計算の時間ステップ\\
+\verb| TIME_DT_UNIT           = "SEC", | & : \verb|TIME_DT|の単位\\
+\verb| TIME_DT_ATMOS_DYN      = 45.0D0,| & : トレーサー移流計算以外の力学過程の時間ステップ\\
+\verb| TIME_DT_ATMOS_DYN_UNIT = "SEC", | & : \verb|TIME_DT_ATMOS_DYN|の単位\\
  \\
 \verb|   ..... 略 .....              | & \\
  \\
 \verb|/| &\\
-\end{tabularx}
-}}\\
+}
 
+計算結果の出力に関する設定は、\nmitem{PARAM_HISTORY}で行う。
 
-計算結果の出力に関する設定は、\nmitem{PARAM_HISTORY}で行う。\\
-
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
-\verb|&PARAM_HISTORY| & \\
-\verb|   HISTORY_DEFAULT_BASENAME  = "history_d01",| & ← 出力するファイル名\\
-\verb|   HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & ← 出力時間間隔\\
-\verb|   HISTORY_DEFAULT_TUNIT     = "SEC",        | & ← 出力時間間隔の単位\\
-\verb|   HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
-\verb|   HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
-\verb|   HISTORY_DEFAULT_ZCOORD    = "model",      | & ← 鉛直内挿は適用しない\\
-\verb|   HISTORY_OUTPUT_STEP0      = .true.,       | & ← 初期時刻(t=0)の値を出力するかどうか\\
+\editboxtwo{
+\verb|&PARAM_FILE_HISTORY| & \\
+\verb|   FILE_HISTORY_DEFAULT_BASENAME  = "history_d01",| & : 出力するファイル名\\
+\verb|   FILE_HISTORY_DEFAULT_TINTERVAL = 3600.D0,      | & : 出力時間間隔\\
+\verb|   FILE_HISTORY_DEFAULT_TUNIT     = "SEC",        | & : 出力時間間隔の単位\\
+\verb|   FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,      | & \\
+\verb|   FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",      | & \\
+\verb|   FILE_HISTORY_DEFAULT_ZCOORD    = "model",      | & : 鉛直内挿は適用しない\\
+\verb|   FILE_HISTORY_OUTPUT_STEP0      = .true.,       | & : 初期時刻(t=0)の値を出力するかどうか\\
 \verb|/| \\
-\end{tabularx}
-}}\\
+}
 
 上記の設定に従って、下記の\nmitem{HISTITEM}に列挙した変数を出力する。
 必要があれば、\nmitem{HISTITEM}においてオプション変数を加えることで、変数毎に出力間隔を変更できる。
 また、瞬間値の代わりに平均値を出力することも可能である。
-これらの詳細は、\ref{sec:output}を参照されたい。\\
+これらの詳細は、\ref{sec:output}を参照されたい。
 
-\noindent {{\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
-\verb|&HISTITEM item="MSLP" /| 　   　  & 海面更正気圧 \\
-\verb|&HISTITEM item="PREC" /| 　   　  & 降水強度 (2次元) \\
-\verb|&HISTITEM item="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
-\verb|&HISTITEM item="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
-\verb|&HISTITEM item="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
-\verb|&HISTITEM item="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
-\verb|&HISTITEM item="Q2"  / |　     　 &  地表2mでの水蒸気比湿 (2次元) \\
-\verb|&HISTITEM item="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
-\verb|&HISTITEM item="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
-\verb|&HISTITEM item="DENS" /| 　  　   & 密度 (3次元) \\
-\verb|&HISTITEM item="QV"   /| 　  　   & 水蒸気比湿 (3次元) \\
-\verb|&HISTITEM item="QHYD" /| 　  　   & 全凝結物の全質量に対する比　(3次元) \\
-\verb|&HISTITEM item="PRES" /| 　  　   & 圧力 (3次元) \\
-\verb|&HISTITEM item="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
-\verb|&HISTITEM item="T"    /| 　  　   & 温度 (3次元) \\
-\verb|&HISTITEM item="W"    /| 　  　   & 鉛直方向速度成分 (3次元) \\
-\verb|&HISTITEM item="Uabs" /| 　  　   & 風速 (3次元) \\
-\verb|&HISTITEM item="PT"   /| 　  　   & 温位 (3次元) \\
-\verb|&HISTITEM item="RH"   /| 　   　  & 相対湿度 (3次元) \\
-\end{tabularx}
-}}}\\
+\editboxtwo{
+\verb|&HISTOTRY_ITEM item="MSLP" /| 　   　  & 海面更正気圧 \\
+\verb|&HISTOTRY_ITEM item="PREC" /| 　   　  & 降水強度 (2次元) \\
+\verb|&HISTOTRY_ITEM item="OLR"  /| 　    　 & 外向き赤外放射(2次元) \\
+\verb|&HISTOTRY_ITEM item="U10" / |　     　 & 地表10mでのX方向水平速度成分(2次元) \\
+\verb|&HISTOTRY_ITEM item="V10" / |　     　 & 地表10mでのY方向水平速度成分(2次元) \\
+\verb|&HISTOTRY_ITEM item="T2"  / |　     　 & 地表2mでの温度　(2次元) \\
+\verb|&HISTOTRY_ITEM item="Q2"  / |　     　 &  地表2mでの水蒸気比湿 (2次元) \\
+\verb|&HISTOTRY_ITEM item="SFC_PRES"   /| 　 & 地表気圧 (2次元) \\
+\verb|&HISTOTRY_ITEM item="SFC_TEMP"   /| 　 & バルクの地表面温度 (2次元) \\
+\verb|&HISTOTRY_ITEM item="DENS" /| 　  　   & 密度 (3次元) \\
+\verb|&HISTOTRY_ITEM item="QV"   /| 　  　   & 水蒸気比湿 (3次元) \\
+\verb|&HISTOTRY_ITEM item="QHYD" /| 　  　   & 全凝結物の全質量に対する比　(3次元) \\
+\verb|&HISTOTRY_ITEM item="PRES" /| 　  　   & 圧力 (3次元) \\
+\verb|&HISTOTRY_ITEM item="U"    /| 　  　   & X方向水平速度成分 (3次元) \\
+\verb|&HISTOTRY_ITEM item="V"    /| 　  　   & Y方向水平速度成分 (3次元) \\
+\verb|&HISTOTRY_ITEM item="T"    /| 　  　   & 温度 (3次元) \\
+\verb|&HISTOTRY_ITEM item="W"    /| 　  　   & 鉛直方向速度成分 (3次元) \\
+\verb|&HISTOTRY_ITEM item="Uabs" /| 　  　   & 風速 (3次元) \\
+\verb|&HISTOTRY_ITEM item="PT"   /| 　  　   & 温位 (3次元) \\
+\verb|&HISTOTRY_ITEM item="RH"   /| 　   　  & 相対湿度 (3次元) \\
+}
 
-力学過程や物理過程に対するスキームとして他のスキームを用いたいときには、
-力学過程に関しては\namelist{&PARAM_ATMOS_DYN}
-物理過程に関しては\namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}で設定すれば良い。
-詳細な内容については、第\ref{sec:atmos_dyn}節、\ref{sec:basic_usel_physics}節を参照されたい。
+力学過程や物理過程に対するスキームとして他のスキームを用いたい場合は、
+力学過程に関しては\namelist{&PARAM_ATMOS_DYN}、
+物理過程に関しては\namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}で設定できる。
+詳細は、第\ref{sec:atmos_dyn_cartesC}節、\ref{sec:basic_usel_physics}節を参照されたい。
 
 %
 \subsubsection{シミュレーションの実行}
 
-実行に必要なファイルは下記であり、これらはあらかじめ用意されている。
+実行に必要なファイルは下記であり、あらかじめ用意されている。
 \begin{alltt}
  $ ls
     MIPAS  PARAG.29  PARAPC.29  VARDATA.RM29  cira.nc
@@ -145,27 +125,22 @@
                        （チュートリアルでは使用しない）
 \end{alltt}
 %
-準備が整ったら、4-MPI並列により\scalerm を実行する。
+準備が整ったら、4-MPI 並列により\scalerm を実行する。
 \begin{verbatim}
   $ mpirun -n 4 ./scale-rm run.d01.conf >& log &
 \end{verbatim}
 
 
-実行が完了するまでには、ある程度時間を要する（推奨環境では10〜20分程度かかる)。
-そのため、上記のように標準出力をファイルへ書き出すようにして
+実行が完了するまでには、ある程度時間を要する(推奨環境において10〜20分程度かかる)。
+そのため、上記のように標準出力をファイルに書き出すようにして、
 バックグラウンドで実行すると便利である。
-計算が進みながら、途中経過のログは\verb|"LOG_d01.pe000000"|に出力される。
-ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|の最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+計算は進みながら、途中経過のログは\verb|"LOG_d01.pe000000"|に出力される。
+ジョブが正常に終了すると、\verb|"LOG_d01.pe000000"|の最後に
+\msgbox{
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
-
-\noindent と出力され、下記のファイルが作成される。
+}
+と出力され、下記のファイルが作成される。
 \begin{verbatim}
  $ ls
   history_d01.pe000000.nc
@@ -173,14 +148,12 @@
   history_d01.pe000002.nc
   history_d01.pe000003.nc
 \end{verbatim}
-各ファイルのサイズは、約 34 MB である。
-出力ファイル(\verb|history_d01.pe######.nc|)は、
-MPI のプロセス数に応じて分割されている。
+各ファイルのサイズは約 34 MB である。
+出力ファイル(\verb|history_d01.pe######.nc|)は、MPI プロセス数に応じて分割されている。
 ここで、\verb|######|はMPIプロセス番号を表す。
-これらのファイルには、\nmitem{HISTITEM}で指定した変数が出力されている。
-ファイル形式は、気候・予報(CF)メタデータ規約に対応したNetCDFである。
+これらのファイルには、\nmitem{HISTORY_ITEM}で指定した変数が出力されている。
+出力ファイルの形式は、気候・予報(CF)メタデータ規約に準拠した NetCDF である。
 
 
 
 %####################################################################################
-

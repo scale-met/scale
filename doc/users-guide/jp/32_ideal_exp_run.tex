@@ -5,9 +5,9 @@
 %====================================================================================
 
 理想実験のチュートリアルとして、積雲対流の理想実験を実施する。
-この実験では、典型的な大気の鉛直分布と対流圏下層に初期擾乱を与え、
+この実験では、典型的な大気の鉛直分布および対流圏下層に初期擾乱を与え、
 積乱雲が発生し発達する様子を準2次元モデルにおいて表現する。
-実験設定を表\ref{tab:setting_ideal}に示す。
+表\ref{tab:setting_ideal}に、実験設定を示す。
 
 \begin{table}[htb]
 \begin{minipage}{150mm}
@@ -36,26 +36,23 @@
 \end{table}
 
 
-\subsubsection{前準備} %\label{subsec:ideal_exp_prepare}
+\subsubsection{準備} %\label{subsec:ideal_exp_prepare}
 %------------------------------------------------------
-理想実験は、\verb|scale-rm/test/tutorial/ideal|のディレクトリにて実行する。
-このディレクトリに移動し、
-scale-{\version}/bin にある実行バイナリへの静的リンクを張る。
+理想実験は、ディレクトリ\verb|scale-rm/test/tutorial/ideal|の中で実行する。
+このディレクトリに移動し、scale-{\version}/bin にある実行バイナリへの静的リンクを張る。
 \begin{alltt}
   $ cd scale-rm/test/tutorial/ideal
   $ ln -s ../../../../bin/scale-rm      ./
   $ ln -s ../../../../bin/scale-rm_init ./
 \end{alltt}
 ここで、「\verb|scale-rm|」はモデル本体、
-「\verb|scale-rm_init|」は初期値・境界値作成ツールである。
+「\verb|scale-rm_init|」は初期値/境界値作成ツールである。
 
-\subsubsection{初期値作成} \label{subsec:ideal_exp_init}
+\subsubsection{初期値の作成} \label{subsec:ideal_exp_init}
 %------------------------------------------------------
-初期値の作成には、\verb|scale-rm_init|に対する設定ファイルが必要である。
-設定ファイル\\ \verb|init_R20kmDX500m.conf| には、
-表\ref{tab:setting_ideal} に対応した実験設定が書き込まれている。
-この設定ファイルを読み込ませると、
-大気の成層構造と初期擾乱が計算される。
+初期値を作成するには、\verb|scale-rm_init|に与える設定ファイルが必要である。
+設定ファイル\\ \verb|init_R20kmDX500m.conf| には、表\ref{tab:setting_ideal} に対応する実験設定が書かれている。
+この設定ファイルを読み込ませると、大気の成層構造と初期擾乱が計算される。
 
 \scalerm の実行コマンドの一般的な形式は、
 \begin{alltt}
@@ -67,14 +64,14 @@ scale-{\version}/bin にある実行バイナリへの静的リンクを張る�
 そして、[設定ファイル]には実験設定を記述した設定ファイルを指定する。
 %
 2 プロセスのMPI並列計算を行うように、
-\verb|init_R20kmDX500m.conf|を設定している場合には、
+\verb|init_R20kmDX500m.conf|を設定している場合は、
 \verb|scale-rm_init|を実行するコマンドは
 \begin{alltt}
   $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
 \end{alltt}
 %
 と記述する。
-\noindent 実行が成功した場合、コマンドラインのメッセージは
+\noindent 実行が成功すれば、コマンドラインのメッセージは
 下記のように表示される。\\
 
 \noindent {\small {\gt
@@ -96,63 +93,52 @@ scale-{\version}/bin にある実行バイナリへの静的リンクを張る�
   init_00000101-000000.000.pe000000.nc
   init_00000101-000000.000.pe000001.nc
 \end{alltt}
-全計算領域は、MPIプロセス数だけ水平方向に分割される。
-ファイル名の\verb|pe|に続く番号は、MPIのプロセス番号を示している。
+計算領域の全体は、MPIプロセス数だけ水平分割される。
+ファイル名において\verb|pe|に続く番号は、MPIのプロセス番号を示している。
 ログファイル(\verb|init_LOG.pe000000|)には、
-コマンドラインには表示されない詳しい実行ログが記録されている。
-例では2つのMPIプロセスを利用しているが、
-デフォルト設定では0番目のプロセス（マスターランク）のログファイルだけが出力される。
+コマンドラインには表示されない詳細情報が記録されている。
+この例では 2 つのMPIプロセスを使用しているが、
+0 番目のプロセス（マスターランク）に対するログファイルだけがデフォルト設定では出力される。
 %すべてのプロセスの実行ログを出力するよう設定を変更することも出来る。
-実行が正常に終了している場合、このLOGファイルの最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+実行が正常に終了すれば、LOGファイルの最後に\\
+\msgbox{
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
-
-\noindent と記述される。
+}
+が出力される。
 
 \verb|init_00000101-000000.000.pe000000.nc|と\verb|init_00000101-000000.000.pe000001.nc|の
-2つのファイルは初期値ファイルであり、それぞれ約600KBのファイルサイズになる。
-計算領域全体を2つのMPIプロセスで分割し担当するため、
-2つのファイルが生成される。
-もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。
+2つのファイルは初期値ファイルであり、それぞれ約 600 KBのファイルサイズになる。
+%計算領域全体を2つのMPIプロセスで分割し担当するため、
+%2つのファイルが生成される。
+%もし、4-MPI並列で実行すれば、4つの初期値ファイルが生成される。
 ファイル名の末尾が「.nc」で終わるファイルは {\netcdf}形式のファイルであり、
-GPhys/Ruby-DCLやncviewといったツールで直接読むことができる。
+GPhys/Ruby-DCL や ncview によって直接読み込める。
 
 
 
 \subsubsection{シミュレーションの実行} \label{subsec:ideal_exp_run}
 %------------------------------------------------------
-プロセス並列数は、初期値作成のときと同じ数を指定する必要がある。
-設定ファイルには \verb|run_R20kmDX500m.conf| を指定する。
+プロセス並列数は、初期値を作成した時と同じにする必要がある。
+シミュレーション実行用の設定ファイルは \verb|run_R20kmDX500m.conf| である。
 \begin{alltt}
   $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
 \end{alltt}
 
-本書の必要要件にあった計算機であれば、2分程度で計算が終わる。
-\noindent この実行によって、
+本書の必要要件にあった計算機であれば、2 分程度で計算が終わる。
+この実行によって、3つのファイル
 \begin{alltt}
   LOG.pe000000
   history.pe000000.nc
   history.pe000001.nc
 \end{alltt}
-の3つのファイルが、現在のディレクトリ下に作成される。
-実行が正常に終了すれば、LOGファイルの最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+が、現在のディレクトリ下に作成される。
+実行が正常に終了すれば、LOGファイルの最後に
+\msgbox{
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
-
-\noindent と記述される。
+}
+と出力される。
 \verb|history.pe000000.nc| と \verb|history.pe000001.nc|
-の2つのファイルは、計算結果が記録されたhistoryファイルである。
-ファイル形式はNetCDFであり、それぞれのファイルサイズは約5.8 MBである。
-
+の2つのファイルは、計算結果を含むヒストリファイルである。
+これらのファイル形式は{\netcdf}であり、各ファイルのサイズは約5.8 MBである。

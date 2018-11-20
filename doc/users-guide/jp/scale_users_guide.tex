@@ -47,10 +47,10 @@
 
 
 \begin{document}
-\CenterWallPaper{1.0}{figure/title_wallpaper.eps}
+\CenterWallPaper{1.0}{figure/title_wallpaper.pdf}
 \maketitle
 \ClearWallPaper
-\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.eps}
+\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.pdf}
 \tableofcontents
 
 %-----------------------------------------------------------------------
@@ -66,11 +66,11 @@
 
 \part{インストール} \label{part:install}
  \chapter{準備}
- \input{install_prep}
+ \input{21_install_prep}
  \chapter{\scalelib のコンパイル}
- \input{21_install}
- \chapter{後処理ツールのコンパイル(net2g)}
- \input{install_net2g}
+ \input{22_install_compile}
+ \chapter{後処理ツール(net2g)のコンパイル}
+ \input{23_install_net2g}
 
 \part{\scalerm のチュートリアル}
 \chapter{動作確認と基本操作について} \label{chap:tutorial_ideal}
@@ -128,7 +128,7 @@
 
  \chapter{物理過程の設定} \label{sec:basic_usel_physics}
  \input{58_setting_physics_mp}
- \input{58_setting_physics_cp} 
+ \input{58_setting_physics_cp}
  \input{58_setting_physics_tb}
  \input{58_setting_physics_bl}
  \input{58_setting_physics_rd}

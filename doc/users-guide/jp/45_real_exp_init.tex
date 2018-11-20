@@ -1,8 +1,8 @@
 %-------------------------------------------------------%
-\section{初期値・境界値データの作成：init} \label{sec:tutrial_real_init}
+\section{初期値/境界値データの作成：init} \label{sec:tutrial_real_init}
 %-------------------------------------------------------%
 
-\verb|init|ディレクトリに移動し、\scalerm によるシミュレーションに必要な初期値・境界値データを作成する。
+\verb|init|ディレクトリに移動し、\scalerm によるシミュレーションに必要な初期値/境界値データを作成する。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/experiment/init
  $ ls
@@ -12,16 +12,14 @@
     param.bucket.conf
     scale-rm_init
 \end{verbatim}
-ディレクトリの中には、\verb|init.d01.conf|という名前の設定ファイルが準備されている。\\
+ディレクトリの中には、設定ファイル\verb|init.d01.conf|が準備されている。
 他に\verb|init.launch.conf|というファイルも存在するが、ここでは使用しない。
-\verb|init.d01.conf|ファイルには、表\ref{tab:grids}に示すチュートリアル用の設定が
-すでになされているが、\verb|pp.d01.conf|と同様に実験設定に応じて変更されたい。
-初期値・境界値データの作成には、前節で作成した地形データを利用する。
-これは、\verb|init.d01.conf|の中で、下記のように相対パスを用いて参照するように設定される。\\
+\verb|init.d01.conf|ファイルには表\ref{tab:grids}に示すチュートリアル用の設定が
+既になされているが、\verb|pp.d01.conf|と同様に実験設定に応じて変更されたい。
+初期値/境界値データの生成には、前節で作成した地形データが使用される。
+地形データは、\verb|init.d01.conf|において相対パスで設定する。
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&PARAM_TOPO| \\
 \verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
@@ -29,17 +27,13 @@
 \verb|&PARAM_LANDUSE| \\
 \verb|   LANDUSE_IN_BASENAME = "../pp/landuse_d01",| \\
 \verb|/| \\
-\end{tabularx}
-}}\\
-
-\noindent その他に\verb|init.d01.conf|の設定の中で特に確認してほしいのは、
+}
+その他に、\verb|init.d01.conf|の設定の中で特に確認して欲しい項目は、
 \namelist{PARAM_MKINIT_REAL_ATMOS}、
 \namelist{PARAM_MKINIT_REAL_OCEAN}、
-\namelist{PARAM_MKINIT_REAL_LAND}の内容である。\\
+\namelist{PARAM_MKINIT_REAL_LAND}の項目である。
 
-\noindent {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\editboxtwo{
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
 \verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
 \verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}から選択する} \\
@@ -63,42 +57,35 @@
 \verb| INTRP_LAND_WATER     = "fill",|                              & {\small ← 土壌水分の欠測値処理方法} \\
 \verb| INTRP_LAND_SFC_TEMP  = "fill",|                              & {\small ← 地表面温度の欠測値処理方法} \\
 \verb|/| \\
-\end{tabularx}
-}}\\
+}
 
-\noindent 気象場データのファイル形式は、\nmitem{FILETYPE_ORG}で指定する。
-ここでは、{\grads}形式のデータを読み込むために``\verb|grads|''と与えている。
-入力ファイルの詳細は、第\ref{sec:adv_datainput}節を参照されたい。
+気象場データのファイル形式は\nmitem{FILETYPE_ORG}で指定する。
+ここでは、{\grads}形式のデータを読み込むために``\verb|grads|''を与えている。
+入力ファイルの詳細は第\ref{sec:adv_datainput}節を参照されたい。
 
-第\ref{sec:tutrial_real_data}節では、バイナリ形式に変換した入力データ(FNL)を準備したが、
-今の作業ディレクトリにこのファイルへのリンクを張る。リンクを適切に張るためのスクリプトとして、
-\verb|${Tutorial_DIR}/real/data|の中に\verb|"gradsinput-link_FNL.sh"|を用意している。
+第\ref{sec:tutrial_real_data}節でバイナリ形式に変換した入力データ(FNL)へのリンクを、
+作業ディレクトリに張る。リンクを適切に張るために、\verb|${Tutorial_DIR}/real/data|の中に「\verb|gradsinput-link_FNL.sh|」というスクリプトを用意している。
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
 \end{verbatim}
-上記のコマンドを実行し、下記のリンクが作成されていれば成功である。\\
-
-\noindent {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+上記のコマンドを実行し、下記のリンクが作成されていれば成功である。
+\msgbox{
 \verb|ATM_00000.grd -> ../tools/FNL_output/200707/FNL_ATM_2007071418.grd| \\
 \verb|ATM_00001.grd -> ../tools/FNL_output/200707/FNL_ATM_2007071500.grd| \\
 \verb|LND_00000.grd -> ../tools/FNL_output/200707/FNL_LND_2007071418.grd| \\
 \verb|LND_00001.grd -> ../tools/FNL_output/200707/FNL_LND_2007071500.grd| \\
 \verb|SFC_00000.grd -> ../tools/FNL_output/200707/FNL_SFC_2007071418.grd| \\
 \verb|SFC_00001.grd -> ../tools/FNL_output/200707/FNL_SFC_2007071500.grd| \\
-\end{tabularx}
-}}\\
+}
 
-
-次に、{\grads}形式のバイナリデータをSCALEで読み込むためのnamelistファイルを
-\verb|init|ディレクトリへリンクする。
+次に、{\grads}形式のバイナリデータを{\scalelib}で読み込むためのネームリストファイルを、
+ディレクトリ\verb|init|へリンクする。
 \begin{verbatim}
   $ ln -s ../../data/namelist.grads_boundary.FNL.2005053112-2016051106 ./
 \end{verbatim}
 %
-上記の準備が終わったら、4つのMPIプロセスを使用して\verb|scale-rm_init|を実行する。
+上記の準備が完了したら、4つのMPIプロセスを使用して\verb|scale-rm_init|を実行する。
 \begin{verbatim}
  $ mpirun -n 4 ./scale-rm_init init.d01.conf
 \end{verbatim}
@@ -117,27 +104,21 @@
     init_LOG_d01.pe000000
 \end{verbatim}
 \verb|init_LOG_d01.pe000000|はログファイルであり、
-処理が正常に完了していれば、ファイルの最後に\\
-
-\noindent {\small {\gt
-\fbox{
-\begin{tabularx}{150mm}{l}
+処理が正常に完了していれば、ファイルの最後に
+\msgbox{
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
-\end{tabularx}
-}}}\\
-
-\noindent
-という内容が出力される。
+}
+が出力される。
 \verb|boundary_d01.pe######.nc|は境界値データ、
 \verb|init_d01_20070714-180000.000.pe######.nc|は初期値データであり、
-それぞれのファイルサイズは約18.9 MB、約12.6 MB である。、
+各ファイルのサイズは約18.9 MB、約12.6 MB である。
 ここで、\verb|######|はMPIプロセス番号を表す。
 
 %% サポート外
 \vspace{1cm}
 \noindent {\Large\em OPTION} \hrulefill \\
-「gpview」がインストールされている場合には，以下のコマンドによって、
+「gpview」がインストールされている場合は、以下のコマンドによって
 初期値と境界値が正しく作成されているかを確認できる。
 
 \begin{verbatim}
@@ -150,10 +131,9 @@
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.eps}\\
+  \includegraphics[width=0.9\hsize]{./figure/real_init_qv-momxy.pdf}\\
   \caption{チュートリアル実験における初期場の様子($z=$1500 m)。
            色は比湿、ベクトルは水平運動量フラックスを表す。}
   \label{fig:init}
 \end{center}
 \end{figure}
-

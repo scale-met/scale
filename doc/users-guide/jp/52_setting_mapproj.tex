@@ -94,14 +94,11 @@
 \XDIR や \YDIR に対する左下角と基準位置の間の距離(単位は[m])である。
 これらを指定しない場合、地図投影の中心は計算領域の中心に設定される。
 図\ref{fig:map_lc}に、両方の場合における地図投影の中心と計算領域の関係を示す。
-%図\ref{fig:map_lc}(a)は、デフォルト設定で地図投影中心と計算領域中心が一致している場合、
-%図\ref{fig:map_lc}(b)は、地図投影中心をずらすよう指定した場合の関係を表している。
-%図\ref{fig:map_lc}(b)では計算領域の南西端から
-%\nmitem{MPRJ_basepoint_x, MPRJ_basepoint_y}で指定した距離だけ離れた位置に投影中心が設定される。
+
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/LC_latlon_xy.eps}\\
+  \includegraphics[width=0.8\hsize]{./figure/LC_latlon_xy.pdf}\\
   \caption{投影中心と計算領域の関係：(a)はデフォルト設定の場合、(b)は投影中心の位置を計算領域中心からずらした場合。
   赤線は計算領域の境界を表す。}
   \label{fig:map_lc}
