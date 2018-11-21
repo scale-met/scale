@@ -1,27 +1,27 @@
 \subsection{\SubsecCopyTopo} \label{subsec:nest_topo}
 %------------------------------------------------------
-ネスティング実験では、一般的に、親領域と子領域の間で空間解像度が異なるため地形の解像度も異なる。
+ネスティング実験では、一般的に、親領域と子領域の間で空間解像度が異なるために地形の解像度も異なる。
 子領域の緩和領域(第\ref{subsec:buffer}節を参照)では、大気の変数は親領域の変数へとナッジングされる。
 ２つの領域間で地形の表現が異なると、親領域で計算されるナッジングのための参照データが存在しないことがある。
 その場合は外挿により大気データを見積もることになるが、外挿による見積もりの精度が悪いと不整合が生じる。
 %
 地形の違いによる不整合を回避するために、
-\scalerm では「地形コピー」機能の使用を推奨している。
+\scalerm では「地形コピー」機能を使用することを推奨している。
 この機能は、子領域の緩和領域における地形として親領域の地形をコピーする。
-この機能を使えば、図\ref{fig_topocopy}に示すように、子領域における緩和領域の地形を
-親領域の地形と完全に一致させられる。
+この機能を使えば、図\ref{fig_topocopy}に示すように、子領域の緩和領域の地形と
+親領域の地形を完全に一致させられる。
 さらに、地形の解像度を外側から内側に行くに従って徐々に高めるために、
 緩和領域の内側に地形の遷移領域を置く。
 地形の遷移領域では、地形は親領域と子領域の地形を重み付けすることで生成される。
 地形遷移領域の幅は、デフォルト設定では緩和領域と同じ幅である。
 これよりも内側の計算領域では、地形は子領域の地形を与える。
-「実験セット一式準備ツール」(第\ref{sec:basic_makeconf}節)を利用する場合には、
-地形コピー機能は自動的に適用される。
+「{\makeconftool}」(第\ref{sec:basic_makeconf}節)を利用する場合は、
+地形コピー機能が自動的に適用される。
 
 
 本節で示す\verb|pp.d0*.conf|ファイルは、サンプル設定ファイル\\
 \verb|${Tutorial_dir}/real/sample/USER.online-nesting.sh|を
-USER.shに名前を変更して、「実験セット一式準備ツール」を実行することで作成される。
+USER.shに名前を変更して、「{\makeconftool}」を実行することで作成される。
 説明を読み進める上で参考にしてもらいたい。
 以降は、具体的な設定方法と実行手順を説明する。
 
@@ -44,24 +44,21 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
 
 \subsubsection{地形コピー機能の使い方}
 
-親領域の地形データを\verb|scale-rm_pp|によって作成する際に、
-親領域の大きさを子領域に与えるためのカタログファイルを出力させるためには、
+親領域の地形データを\verb|scale-rm_pp|で作成する際に、
+親領域の大きさを子領域に与えるためのカタログファイルを出力させるには、
 下記の設定が\verb|pp.d01.conf|に必要である。\\
 \editboxtwo{
 \verb|&PARAM_DOMAIN_CATALOGUE|  & \\
 \verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue.d01.txt",| & カタログファイルのファイル名\\
-\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,| & カタログファイルを出力するかどうか \\
+\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,| & カタログファイルを出力するか? \\
 \verb|/|  & \\
 }
 その他の設定項目は通常通りで良い。
 
 次に、地形コピー機能で親の地形を用いるために、
-以下のように子領域に対する\verb|pp.d02.conf|ファイルを編集する。
+子領域に対する\verb|pp.d02.conf|ファイルを以下のように編集する。
 ここでは、親領域の地形の出力データが\verb|topo_d01.pe***.nc|として保存されていると想定する。
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\editboxtwo{
 \verb|&PARAM_NEST| & \\
 \verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & 親領域のファイルのベース名 \\
 \verb| OFFLINE_PARENT_PRC_NUM_X  = 2,          | & 親領域の\verb|PRC_NUM_X| \\
@@ -81,15 +78,11 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
 \verb| COPYTOPO_ENTIRE_REGION = .false.,|    & 子領域の全域に親領域の地形をコピーするかどうか\\
 \verb| COPYTOPO_LINEAR_H      = .true.,|     & \\
 \verb|/| & \\
-\end{tabularx}
-}}}\\
-
-\noindent
-\namelist{PARAM_CNVTOPO}の\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすれば、
-地形のコピー機能が適用される。
-\nmitem{COPYTOPO_ENTIRE_REGION}は、子領域の全域に渡って親領域の地形をコピーするかどうかのオプションである。
+}
+\namelist{PARAM_CNVTOPO}の\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすれば、地形のコピー機能が適用される。
+\nmitem{COPYTOPO_ENTIRE_REGION}は、子領域の全域に渡って親領域の地形をコピーするかを決めるオプションである。
 これが\verb|.true.|の場合は、子領域の地形は親領域から完全にコピーされる。\\
-\nmitem{COPYTOPO_LINEAR_H}はどの地形の遷移方法を用いるかを決めるパラメータである。
+\nmitem{COPYTOPO_LINEAR_H}は地形の遷移方法を指定するパラメータである。
 \nmitem{COPYTOPO_LINEAR_H}が\verb|.true.|であれば子領域と親領域の地形の混合割合が
 線形的に変化し、そうでなければ指数関数的に変化する。
 遷移領域の幅は\nmitem{COPYTOPO_TRANSITION_DX}や\nmitem{COPYTOPO_TRANSITION_DY}で指定する。
@@ -99,10 +92,10 @@ USER.shに名前を変更して、「実験セット一式準備ツール」を�
 
 \subsubsection{地形の作成}
 
-地形コピー機能を使用する場合には、
+地形コピー機能を使用する場合は、
 子領域は親領域のカタログファイルを必要とするため、
-地形の作成は親領域から順番に実行しなければならない。
-領域が3つ以上あるならば、実行の順番は以下にようになる。
+親領域から順番に地形を作成しなければならない。
+領域が3つ以上ある場合は、実行の順番は以下にようになる。
 
 \begin{verbatim}
  $ mpirun -n [プロセス数] ./scale-rm_pp pp.d01.conf

@@ -1,7 +1,7 @@
 \section{積雲パラメタリゼーション} \label{sec:basic_usel_cumulus}
 
-積雲パラメタリゼーションは、設定ファイル\verb|init.conf|と\verb|run.conf|における
-\namelist{PARAM_ATMOS}内の\nmitem{ATMOS_PHY_CP_TYPE}で指定する。
+積雲パラメタリゼーションは、設定ファイル\verb|init.conf|と\verb|run.conf|中の
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_CP_TYPE}で指定する。
 積雲パラメタリゼーションを呼び出す時間間隔は、\namelist{PARAM_TIME}で設定する
 (詳細は第\ref{sec:timeintiv}節を参照)。
 
@@ -12,10 +12,10 @@
 }
 \begin{table}[h]
 \begin{center}
-  \caption{積雲パラメタリゼーションの選択}
+  \caption{積雲パラメタリゼーションの選択肢}
   \label{tab:nml_atm_cp}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  値 & スキームの参照 & 参考文献 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献 \\ \hline
       \verb|OFF|  & 積雲パラメタリゼーションを使用しない &  \\
       \verb|KF|   & Kain-Fritsch 対流パラメタリゼーション & \citet{kain_1990,kain_2004} \\
     \hline
@@ -23,22 +23,21 @@
 \end{center}
 \end{table}
 
-\scalerm の現在版では、積雲パラメタリゼーションとして\verb|KF|のみ対応している。
+\scalerm の現版では、積雲パラメタリゼーションとして\verb|KF|のみ対応している。
 \verb|KF| は質量フラックス保存型の積雲パラメタリゼーションスキームであり、
 サブグリッドスケールの一つの積雲を表現する。
-格子間隔が 5 km 以下の場合には、非自然な強力な深い対流が計算されることを避けるために
-積雲パラメタリゼーションを使用することを推奨する。
+格子間隔が 5 km 以下の場合に、非自然的な強力な深い対流が計算されることを避けるために、
+この積雲パラメタリゼーションを使用することを推奨する。
 積雲パラメタリゼーションと雲微物理のスキームは、
 \verb|RAIN_CP|\verb|RAIN_MP|という名前で別々に降水量を出力する。
 \verb|RAIN|と\verb|PREC|は、両者のスキームによる合計の降水量である。
 つまり、\verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|、
 \verb|PREC| = \verb|RAIN_CP| + \verb|RAIN_MP|である。
 %%%
-\verb|KF|は待機中の水蒸気と水物質(雲水・雲氷等)の変化を計算することに注意が必要である。
-水物質の変化は、さらに雲微物理の過程で計算される。
+\verb|KF|は大気中の水蒸気と水物質(雲水・雲氷等)の変化を計算することに注意が必要である。
+水物質の変化は、雲微物理の過程でさらに計算される。
 \verb|KF|では、雲水や雲氷等の数密度は考慮されない。
-したがって、\verb|KF|における水物質の変化と関係した数密度の変化は指定した関数によって見積もられ、
-2モーメントの雲微物理スキームへと渡される。
+したがって、\verb|KF|における水物質の変化と関係した数密度の変化は、指定した関数によって見積もられ、2モーメントの雲微物理スキームへと渡される。
 
 \subsubsection{\texttt{Kain-Fritsch}スキームに対する設定}
 
@@ -73,10 +72,10 @@
   この場合には、 \nmitem{PARAM_ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
 \end{enumerate}
 
-\namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する
+\namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する、
 KF を呼び出す時間間隔もまたチューニングパラメータであり、降水量に影響を及す。
 \nmitem{TIME_DT_ATMOS_PHY_CP}の初めの設定として 300 秒を推奨する。
 上昇流を駆動する層はしきい値(デフォルトでは 50 hPa)よりも厚い必要があるが、
 この条件を満たさない場合でも計算は止まらない。
-ただし、\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}をtrueにすれば、
+ただし、\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}を\verb|true|にすれば、
 「go off top/bottom of updraft source layer」という警告メッセージを出力する。

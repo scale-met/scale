@@ -3,43 +3,42 @@
 
 実験のための設定ファイル\verb|***.conf|は、
 \verb|pp, init, run|用にそれぞれ用意する必要がある。
-ネームリストのいくつかの項目はこれらの設定ファイルの間で共通でなければならず、
+ネームリストのいくつかの項目はこれらの設定ファイル間で共通でなければならず、
 不整合がある場合にはモデルは適切に動かない。
-そのような失敗を避けるために、設定ファイルの準備を行うための便利な補助ツールが
-下記のように用意されている。
+そのような失敗を避けるために、設定ファイルの準備を行うための便利な補助ツール(\makeconftool)を、下記のように用意している。
 \begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
-    Makefile 
+    Makefile
       : 実験に必要なファイルを生成するためのMakefile
-    README   
+    README
       : README ファイル
-    USER.sh  
+    USER.sh
       : 設定を指定するためのシェルスクリプト
-    config/  
+    config/
       : 各々の設定に対する設定ファイル (ユーザは書き換える必要はない)
-    sample   
+    sample
       : USER.sh のサンプルスクリプト
     data
       : 現実大気実験のチュートリアル用のファイル
     tools
       : 現実大気実験のチュートリアル用のファイル。FNL データを grib 形式からバイナリ形式に変換するときに使われる。
 \end{verbatim}
-初期設定としてこのツールは現実大気実験のチュートリアルに合わせているが、
+本ツールの初期設定は現実大気実験のチュートリアルに合わせているが、
 ユーザーは\verb|USER.sh|で設定を変更できる。
 
 \verb|sample/| ディレクトリの下に、いくつかのサンプルスクリプトを典型的な設定例として用意している。
 必要に応じて、これらの内容を\verb|USER.sh|にコピーして使用すると良いだろう。
 \begin{verbatim}
  $ ls sample/
-   USER.default.sh                 
+   USER.default.sh
      : 現実大気実験のチュートリアル用の USER.sh と同じ(シングルドメイン用)。
-   USER.offline-nesting-child.sh   
-     : オフラインネスティングによる実験の子領域用。
-   USER.offline-nesting-parent.sh  
-     : オフラインネスティングによる実験の親領域用。
-   USER.online-nesting.sh          
-     : オンラインネスティング用。
+   USER.offline-nesting-child.sh
+     : オフライン・ネスティングによる実験の子領域用。
+   USER.offline-nesting-parent.sh
+     : オフライン・ネスティングによる実験の親領域用。
+   USER.online-nesting.sh
+     : オンライン・ネスティング用。
 \end{verbatim}
 
 
@@ -52,15 +51,15 @@
 \end{enumerate}
 これにより、\verb|experiment|ディレクトリ以下に実験に必要な設定ファイル一式が作成される。
 
-\verb|USER.sh|の設定は現実大気の\verb|tutorial|に対する設定になっているので、
+\verb|USER.sh|の設定は現実大気のチュートリアルに対する設定になっているので、
 以下のようにチュートリアル設定を別ファイルとして残しておくことを勧める。
 \begin{verbatim}
- $ mv experiment/ tutorial/    
-     : (すでにexperimentディレクトリがある場合)
+ $ mv experiment/ tutorial/
+     : (既にexperimentディレクトリがある場合)
  $ cp USER.sh USER_tutorial.sh
  ... USER.shを編集 ...
  $ make
- $ cp -rL experiment 任意の場所/ 
+ $ cp -rL experiment 任意の場所/
      : 「任意の場所」は、任意の場所にあるディレクトリの名前を意味する。
 \end{verbatim}
 
@@ -70,12 +69,11 @@
 %まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
 %\verb|USER.sh| に上書きコピーする。
 スクリプトファイルの最初の方に、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
-その下には、スクリプトが生成する設定ファイルに指定される項目が並んでいて, 
+その下には、スクリプトが生成する設定ファイルに指定される項目が並んでいて、
 これらの項目を適切に変更すると良いだろう。
-項目の後に\verb|"# required parameters for each domain"| というコメントが存在する場合には、
+項目の後に「\verb|# required parameters for each domain|」というコメントが存在する場合には、
 項目の値をドメインの数だけスペースで区切って書く。
 項目の値の数と\verb|NUM_DOMAIN|で設定したネスティングドメインの数が異なれば、
 実験用のファイル一式が作成されないことに注意が必要である。
 \verb|USER.sh|にない項目については、\verb|experiment|ディレクトリ以下に作成された設定ファイルを
 直接編集されたい。
-

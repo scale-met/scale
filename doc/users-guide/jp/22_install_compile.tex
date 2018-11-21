@@ -5,20 +5,18 @@
 \section{ダウンロードと環境設定} \label{sec:scale_compile}
 %====================================================================================
 
-以下の説明で使用した環境は次のとおりである。
+以下の説明で使用する環境は次のとおりである。
 \begin{itemize}
 \item CPU: Intel Core i5 2410M 2コア/4スレッド
 \item Memory: DDR3-1333 4GB
 \item OS: CentOS 6.6 x86-64、CentOS 7.1 x86-64、openSUSE 13.2 x86-64
-\item GNU C/C++、Fortran compiler (付録\ref{achap:env_setting}章参照)
+\item GNU C/C++、Fortran コンパイラ
 \end{itemize}
 
 \subsubsection{ソースコードの入手} \label{subsec:get_source_code}
 %-----------------------------------------------------------------------------------
-最新のリリース版ソースコードは、\\
-\url{http://scale.aics.riken.jp/ja/download/index.html}\\
-よりダウンロードできる。
-ソースコードのtarballファイルを展開すると\texttt{scale-{\version}/} というディレクトリができる。
+最新のリリース版ソースコードは、\url{http://scale.aics.riken.jp/ja/download/index.html}から取得できる。
+ソースコードのtarballファイルを展開すると、\texttt{scale-{\version}/} というディレクトリができる。
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
  $ ls ./
@@ -28,17 +26,15 @@
 \subsubsection{Makedefファイルと環境変数の設定} \label{subsec:environment}
 %-----------------------------------------------------------------------------------
 
-\scalelib はコンパイルするとき、環境変数``\verb|SCALE_SYS|''に設定した
-Makedefファイルを使用してコンパイルが行われる。
-Makedefファイルは、\texttt{scale-{\version}/sysdep/} 内にいくつかの計算機環境に
-対応するファイル（\texttt{Makedef.***}）が準備されており、
-これらの中から自分の環境にあったものを設定する。
-動作確認済みの環境と対応するMakedefファイルを表\ref{tab:makedef}に示す。
-自分の環境に合致するものがなければ、既存ファイルを基にして各自作成する。
+環境変数「\verb|SCALE_SYS|」に設定したMakedefファイルを使用して、\scalelib はコンパイルされる。
+\texttt{scale-{\version}/sysdep/} には、いくつかの計算機環境に対応する Makedefファイルが用意されており、
+これらの中から自分の環境に合ったものを選択する。
+表\ref{tab:makedef}に、Makedefファイルが用意されている環境を示す。
+自分の環境に合致するファイルがなければ、既存のファイルを基に各自で作成する必要がある。
 %%
 \begin{table}[htb]
 \begin{center}
-\caption{環境例と対応するMakedefファイル}
+\caption{環境例およびそれに対応する Makedefファイル}
 \begin{tabularx}{150mm}{|l|l|X|l|} \hline
  \rowcolor[gray]{0.9} OS/計算機 & コンパイラ & MPI & Makedefファイル \\ \hline
                  & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
@@ -52,19 +48,17 @@ Makedefファイルは、\texttt{scale-{\version}/sysdep/} 内にいくつかの
 \end{center}
 \end{table}
 %%
-Linux x86-64 OS、GNUコンパイラ、openMPIを使用する場合には、
-\verb|"Makedef.Linux64-gnu-ompi"|が対応するファイルであり、
-下記の通り、環境変数を設定する。
+例えば Linux x86-64 OS、GNUコンパイラ、openMPI を使用する場合には、
+該当する Makedef ファイルは「\verb|Makedef.Linux64-gnu-ompi|」である。
+このとき、環境変数は下記のように設定する必要がある。
 \begin{alltt}
  $ export SCALE_SYS="Linux64-gnu-ompi"
 \end{alltt}
-実行環境が常に同じであるならば、
-環境変数の設定を\verb|.bashrc|などの環境設定ファイルに
-記述しておくと便利である。
+実行環境が常に同じならば、\verb|.bashrc|等の環境設定ファイルに環境変数の設定を陽に記述しておくと便利である。
 
 {\scalelib}は{\netcdf}を必要とする。
-多くの場合には、{\netcdf}のPATHは「nc-config」を用いることによって自動的に見つけられる。
-もし自動的に見つけることができない場合には、例えば以下のように{\netcdf}に関するPATHを設定しなければならない。
+多くの場合、{\netcdf}のパスは「nc-config」を用いることで自動的に見つけられる。
+しかし、自動的に見つけられない場合には、例えば以下のように{\netcdf}に関するPATHを設定しなければならない。
 \begin{verbatim}
  $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
  $ export SCALE_NETCDF_LIBS= \
@@ -77,28 +71,28 @@ Linux x86-64 OS、GNUコンパイラ、openMPIを使用する場合には、
 
 \subsubsection{\scalerm のコンパイル}
 
-\scalerm のソースディレクトリに移動し、下記のコマンドによってコンパイルを行う。
+\scalerm のソースディレクトリに移動し、下記のコマンドによってコンパイルする。
 \begin{alltt}
  $ cd scale-{\version}/scale-rm/src
  $ make -j 4
 \end{alltt}
-\verb|make|のあとの \verb|"-j 4"| は、
-コンパイル時の並列数(例では4並列)を示している。
-実行環境によって並列数を指定すれば良く、推奨の並列数は 2$\sim$8 である。
-コンパイルが成功すると、下記3つの実行ファイルがscale-{\version}/bin 以下に生成される。
+「\verb|-j 4|」はコンパイル時の並列数を示している(例では4並列)。
+コンパイルにかかる時間を短縮するために、並列コンパイルのオプションを指定することが望ましい。
+並列数は実行環境に応じて設定し、推奨の並列数は 2$\sim$8 である。
+コンパイルが成功すると、下記の 3 つの実行ファイルが scale-{\version}/bin 以下に生成される。
 \begin{alltt}
  scale-rm  scale-rm_init  scale-rm_pp
 \end{alltt}
 
 \subsubsection{{\scalegm}のコンパイル} %\label{subsec:compile}
 
-{\scalegm}のソースディレクトリに移動し、下記のコマンドによってコンパイルを行う。
+{\scalegm}のソースディレクトリに移動し、下記のコマンドによってコンパイルする。
 \begin{alltt}
   $  cd scale-{\version}/scale-gm/src
   $  make -j 4
 \end{alltt}
-コンパイルが成功すると、下記の実行ファイルがscale-{\version}/bin 以下に生成される。
-「fio」は、ヘッダー情報を含むバイナリに基づく独自の形式である。
+コンパイルが成功すると、下記の実行ファイルが scale-{\version}/bin 以下に生成される。
+「fio」は、ヘッダー情報を伴う、バイナリに基づく独自形式である。
 \begin{verbatim}
    scale-gm      (\scalegm の実行バイナリ)
    gm_fio_cat    (fio 形式のための cat コマンド)
@@ -115,26 +109,25 @@ Linux x86-64 OS、GNUコンパイラ、openMPIを使用する場合には、
 
 \subsubsection{注意点}
 
-コンパイルをやり直したい場合には、下記のコマンドで作成された実行バイナリを消去できる。
+コンパイルをやり直したい場合は、下記のコマンドで作成された実行バイナリを消去する。
 \begin{alltt}
  $ make clean
 \end{alltt}
 ただし、コンパイルされたライブラリは消去されないことに注意が必要である。
-全てのコンパイル済みファイルを消去したい場合は、
+全てのコンパイル済みファイルを消去したい場合は、以下のコマンドを使用する。
 \begin{alltt}
  $ make allclean
 \end{alltt}
-とする。
 コンパイル環境、コンパイルオプションを変更して再コンパイルする場合は、
-``allclean''を実行すること。\\
+「allclean」を実行されたい。\\
 
-\scalelib では、コンパイルとアーカイブは scale-{\version}/scalelib/ というディレクトリ内で行われる。
-オブジェクトファイルは、コンパイルを実行したディレクトリの下の
-\verb|".lib"|という名前の隠しディレクトリの中に置かれる。\\
+\scalelib においてコンパイルやアーカイブは、ディレクトリ scale-{\version}/scalelib/ の中で行われる。
+作成されたオブジェクトファイルは、コンパイルを実行したディレクトリ下の
+「\verb|.lib|」という名前の隠しディレクトリの中に置かれる。\\
 
- Debugモードでコンパイルしたい場合は、\verb|"make -j 4 SCALE_DEBUG=T"|としてコンパイルする。
- (コンパイル時に適用される全ての環境変数リストは表\ref{tab:env_var_list}を参照)
-細かくコンパイルオプションを変更したい場合は、\verb|Makedef.***|のファイルを編集する。
+ デバッグモードでコンパイルしたい場合は、「\verb|make -j 4 SCALE_DEBUG=T|」を実行してコンパイルする
+ (コンパイル時に適用される全ての環境変数リストは表\ref{tab:env_var_list}を参照)。
+細かくコンパイルオプションを変更したい場合は、\verb|Makedef|ファイルを編集されたい。
 
 \begin{table}[htb]
 \begin{center}
@@ -145,8 +138,8 @@ Linux x86-64 OS、GNUコンパイラ、openMPIを使用する場合には、
  SCALE\_DISABLE\_MPI      & MPIを使わない（utilsのみ）  \\ \hline
  SCALE\_DEBUG             & デバッグ用コンパイルオプションでコンパイル  \\ \hline
  SCALE\_QUICKDEBUG        & クイックデバッグ用コンパイルオプション利用（高速化そのまま＋浮動小数点エラー検出）  \\ \hline
- SCALE\_USE\_MASSCHECK    & 質量保存チェック用の計算を追加（RM力学過程のみ）  \\ \hline
-% SCALE\_USE\_SINGLEFP     & 単精度浮動小数点を使用（原則として全ソース）  \\ \hline
+ %SCALE\_USE\_MASSCHECK    & 質量保存チェック用の計算を追加（RM力学過程のみ）  \\ \hline
+ SCALE\_USE\_SINGLEFP     & 単精度浮動小数点を使用（全ソース）  \\ \hline
  SCALE\_USE\_FIXEDINDEX   & 格子サイズをコンパイル時に固定して最適化促進  \\ \hline
  SCALE\_ENABLE\_OPENMP    & OpenMP機能を有効にする  \\ \hline
  SCALE\_ENABLE\_OPENACC   & OpenACC機能を有効にする  \\ \hline

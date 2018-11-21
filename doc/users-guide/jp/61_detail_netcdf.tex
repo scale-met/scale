@@ -1,11 +1,11 @@
 \section{\scalenetcdf ファイルとは?} \label{sec:netcdf}
 本節では、{\scalelib}が直接読み書きする{\scalenetcdf}ファイルについて説明する。
-\scalelib では、データファイルフォーマットとして{\netcdf}(network Common Data Format)を採用している。
-\Netcdf は Unidata (\url{http://www.unidata.ucar.edu}) が開発を行っているソフトウェアであり、自己記述的かつ計算機に依存しないデータ形式を伴うファイルを生成することを可能にする。
+\scalelib では、データファイルの形式として{\netcdf}(network Common Data Format)を採用している。
+\Netcdf は Unidata (\url{http://www.unidata.ucar.edu}) が開発を行っているソフトウェアであり、自己記述的で計算機に依存しないデータ形式のファイルを生成することを可能にする。
 例えば、前者についてはファイル中に軸変数と一緒に変数を記述できる長所がある。
 また、後者については、どのエンディアンが使用されるかを気にせずにデータを扱える長所がある。
-上記の利点に基づいて、ある規約(\scalenetcdf convention )を\scalelib では定めている。
-これは、おおよそ CF convection (\url{http://cfconventions.org})に従っている。
+\scalelib では、上記の利点に基づいてある規約(\scalenetcdf convention )を定めている。
+この規約は、CF convection (\url{http://cfconventions.org})におおよそ従っている。
 
 \subsection{グローバル属性}
 \scalenetcdf ファイルには、ファイルに含まれるデータの情報(空間分割に関する情報等)がグローバル属性(global attribute)として格納されている(表\ref{table:netcdf_global_attrs})。
@@ -41,7 +41,7 @@
   \end{center}
 \end{table}
 
-\noindent \nmitem{PRC_NUM_X, PRC_NUM_Y}については、第\ref{sec:domain}節を参照のこと。
+\noindent \nmitem{PRC_NUM_X, PRC_NUM_Y}については、第\ref{sec:domain}節を参照されたい。
 
 
 \subsection{ハロ領域データ}
@@ -74,7 +74,7 @@
 図\ref{fig:netcdfhorizontalcoordinate}と図\ref{fig:netcdfverticalcoordinate}はそれぞれ、座標変数の水平位置や鉛直位置を示している。
 同時に、表\ref{table:netcdf_axes}も参照されたい。
 
-格子の面積データや体積データについても、それぞれ「cell\_area**」と「cell\_volume**」としてファイルに含まれる。
+格子の面積データや体積データもそれぞれ、「cell\_area**」と「cell\_volume**」としてファイルに格納されている。
 各変数の「cell\_measures」属性には、対応する面積や体積データを指定する。
 
 地図投影データは無次元変数として格納されおり、これらの名前は変数の属性「grid\_mapping」で指定する。
@@ -83,8 +83,7 @@
 SGRID 規約(\url{https://github.com/sgrid/sgrid})に従って格納している。
 無次元変数の名前は、各変数の「grid」属性で指定する。
 
-ファイルの中には、地表面高度データ「topo」や、
-陸に対するマスクのデータ「lsmask」も含まれる。
+ファイルには、地表面高度データ「topo」や陸に対するマスクのデータ「lsmask」も含まれる。
 
 
 \begin{longtable}{l|l}
@@ -207,7 +206,7 @@ height\_uvw & ヒストリファイル中の(zh,yh,xh) orリスタート/初期�
 \end{figure}
 
 \subsection{データ変数}
-データ変数は、long\_name, units に加えて、未定義値を表す \_FillValue および欠損値を表す missing\_value を attribute としてもつ。
+データ変数は、long\_name, units に加えて、未定義値を表す \_FillValue や欠損値を表す missing\_value を属性として持っている。
 
 初期値(リスタート)データファイル、境界値データのデータ構造はモデル内の配列構造と同じで、z, x, y の順番である。
 一方、ヒストリデータファイルは、x, y, z の順番である。
@@ -226,16 +225,16 @@ pnetCDF を使用するように \scalerm をコンパルした場合(環境変�
 地形ファイルや土地利用区分ファイルについてはそれぞれ、\namelist{PARAM_TOPO}の\nmitem{TOPO_(IN|OUT)_AGGREGATE}や\namelist{PARAM_LANDUSE}の\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
 
 \subsection{\Netcdf 3 に伴う制限}
-\scale を \netcdf version 3 と共にコンパイルした場合は、次の制限が存在する。
+{\netcdf} version 3 と共に\scale をコンパイルした場合は、次の制限が存在する。
 \begin{itemize}
 \item 異なる時間間隔の変数は、同じファイルに出力できない。
-\item データ圧縮が使用できない
+\item データ圧縮が使用できない。
 \item {\netcdf}4 形式のファイルは読み込めない。
 \end{itemize}
 異なる時間間隔で変数を出力したい場合は、それらを異なるファイルに出力するために\namelist{HISTORY_ITEM}の\nmitem{BASENAME}を設定されたい。
 
 pnetCDF は \netcdf 3 のファイル形式に基づくので、
-単一ファイルの入出力機能を用いる場合は複数の時間間隔や圧縮が制限されることに注意されたい。
+単一ファイルの入出力機能を用いる場合は複数の時間間隔や圧縮が制限されることに注意が必要である。
 
 \begin{table}
   \caption{{\netcdf}の各バージョンの機能性}

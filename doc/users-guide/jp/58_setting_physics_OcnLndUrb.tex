@@ -4,8 +4,8 @@
 これらの過程を計算する時間間隔は、\namelist{PARAM_TIME}で設定する
 (詳細は第\ref{sec:timeintiv}節を参照)。
 
-海洋モデルのスキームは、設定ファイル中の\namelist{PARAM_OCEAN}における
-\nmitem{OCEAN_DYN_TYPE}、\nmitem{OCEAN_SFC_TYPE}、 \nmitem{OCEAN_ICE_TYPE}, \nmitem{OCEAN_ALB_TYPE}、\nmitem{OCEAN_RGN_TYPE}で設定する。
+海洋モデルのスキームは、設定ファイル中の\namelist{PARAM_OCEAN}の
+\nmitem{OCEAN_DYN_TYPE}, \nmitem{OCEAN_SFC_TYPE}, \nmitem{OCEAN_ICE_TYPE}, \nmitem{OCEAN_ALB_TYPE}, \nmitem{OCEAN_RGN_TYPE}で設定する。
 
 \editboxtwo{
 \verb|&PARAM_OCEAN                    | & \\
@@ -19,10 +19,10 @@
 
 \begin{table}[h]
 \begin{center}
-  \caption{海洋表層モデルの選択肢}
+  \caption{海洋表層スキームの選択肢}
   \label{tab:nml_ocean_dyn}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
       \verb|NONEまたはOFF| & 海面モデルを利用しない              \\
       \verb|INIT|         & 初期値のまま固定する                \\
       \verb|OFFLINE|      & 外部データによって更新する           \\
@@ -34,10 +34,10 @@
 
 \begin{table}[h]
 \begin{center}
-  \caption{海面スキームの選択肢 (\texttt{OCEAN\_SFC\_TYPE})。現版では1種類のみ。}
+  \caption{海洋表面スキームの選択肢 (\texttt{OCEAN\_SFC\_TYPE})。現版では1種類のみ。}
   \label{tab:nml_ocean_sfc}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
       \verb|FIXED-TEMP| & 海面温度を診断せずにフラックスを計算する。\\
     \hline
   \end{tabularx}
@@ -49,7 +49,7 @@
   \caption{海氷スキームの選択肢 (\texttt{OCEAN\_ICE\_TYPE}).}
   \label{tab:nml_ocean_ice}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
       \verb|NONE|   & 海洋モデルを無効化 \\
       \verb|INIT|   & 初期条件に固定 \\
       \verb|SIMPLE| & 簡単な海氷モデル \\
@@ -63,7 +63,7 @@
   \caption{表面アルベドスキームの選択肢 (\texttt{OCEAN\_ALB\_TYPE}).}
   \label{tab:nml_ocean_alb}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 & 参考文献 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献 \\ \hline
       \verb|INIT|       & 初期条件に固定 \\
       \verb|CONST|      & 一定値を使用 \\
       \verb|NAKAJIMA00| & 太陽天頂角から短波放射に対するアルベドを計算 & \citet{nakajima_2000} \\
@@ -77,7 +77,7 @@
   \caption{海面粗度の計算方法の選択(\texttt{OCEAN\_RGN\_TYPE}).}
   \label{tab:nml_ocean_rgn}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 & 参考文献 \\ \hline
+    \rowcolor[gray]{0.9} スキーム名 & スキームの説明 & 参考文献 \\ \hline
       \verb|MOON07|   & 経験式に基づく(時間変化あり)   & \citet{moon_2007} \\
       \verb|INIT|     & 初期条件に固定 \\
       \verb|CONST|    & 一定値を使用 \\
@@ -93,10 +93,10 @@
 %-------------------------------------------------------------------------------
 
 海洋比率がゼロでない(すなわち陸面比率が1.0以下である)表面の格子点では、
-物理量は海洋表層モデルによって計算されなければならない。
+物理量は海洋サブモデルによって計算されなければならない。
 陸-海洋比率の設定は、\namelist{PARAM_LANDUSE}によって制御できる。
 海洋比率を持つ格子点が存在するにも関わらず、
-\nmitem{OCEAN_DYN_TYPE}が\verb|"NONE"|や\verb|"OFF"|に設定された場合は、
+\nmitem{OCEAN_DYN_TYPE}を\verb|"NONE"|や\verb|"OFF"|に設定した場合は、
 以下のエラーメッセージがログファイルに出力される。
 \msgbox{
 \verb|ERROR [CPL_vars_setup] Ocean fraction exists, but ocean component has not been called.|\\
@@ -143,7 +143,7 @@
 その制限を超える時間ステップのデータを読み込まず、最後に読み込んだデータをナッジングに用いる。
 この制限は、\nmitem{OCEAN_DYN_SLAB_nudging_step_limit}が0の場合には設定されない。
 
-\nmitem{OCEAN_DYN_TYPE}を\verb|"OFFLINE"|に設定した場合には, 海洋表層の力学過程や物理過程は計算されない。
+\nmitem{OCEAN_DYN_TYPE}を\verb|"OFFLINE"|に設定した場合は、海洋表層の力学過程や物理過程は計算されない。
 海面温度の時間変化は外部ファイルによって与えられる。
 この設定は、{\scale}の旧バージョンで \nmitem{OCEAN_TYPE} = \verb|"FILE"|とした場合と同じである。
 また、板海スキームで\nmitem{OCEAN_DYN_SLAB_nudging_tau}を0に設定した場合とも同じである。
@@ -191,10 +191,10 @@
    \end{itemize}
 \end{itemize}
 
-open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択したスキームによって選択される。
+open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択したスキームによって設定される。
 \nmitem{OCEAN_ALB_TYPE}を\verb|"CONST"|とした場合は, open ocean での海面アルベドは
-\nmitem{PARAM_OCEAN_PHY_ALBEDO_const}で指定した定数値である。
-\nmitem{OCEAN_ALB_TYPE}を\verb|"NAKAJIMA00"|とした場合は, 短波放射に対するアルベドは太陽天頂角に依存するように計算されるが、
+\nmitem{PARAM_OCEAN_PHY_ALBEDO_const}で指定した定数値となる。
+\nmitem{OCEAN_ALB_TYPE}を\verb|"NAKAJIMA00"|とした場合は、短波放射に対するアルベドは太陽天頂角に依存するように計算されるが、
 長波放射(IR)に対しては \nmitem{PARAM_OCEAN_PHY_ALBEDO_const}で設定したアルベドの値が用いられる。
 
 \editboxtwo{
@@ -223,7 +223,7 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 }
 
 海面粗度長は\nmitem{OCEAN_RGN_TYPE}で選択したスキームを用いて計算される。
-\nmitem{OCEAN_RGN_TYPE}を\verb|"CONST"|とした場合は, \nmitem{PARAM_OCEAN_PHY_ROUGHNESS_const}で設定したパラメータを用いる。
+\nmitem{OCEAN_RGN_TYPE}を\verb|"CONST"|とした場合は、 \nmitem{PARAM_OCEAN_PHY_ROUGHNESS_const}で設定したパラメータを用いる。
 
 \editboxtwo{
  \verb|&PARAM_OCEAN_PHY_ROUGHNESS_const  | & \\
@@ -233,7 +233,7 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
  \verb|/                                 | & \\
 }
 
-\nmitem{OCEAN_RGN_TYPE}を\verb|"MOON07"|あるいは\verb|"MILLER92"|に設定した場合は,
+\nmitem{OCEAN_RGN_TYPE}を\verb|"MOON07"|あるいは\verb|"MILLER92"|に設定した場合は、
 選択したスキーム内で運動量・熱・水蒸気に対する粗度長が計算される。
 \nmitem{PARAM_OCEAN_PHY_ROUGHNESS}を設定することで、これらの値の計算における幾つかの制限値を指定できる。
 
@@ -260,14 +260,13 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 
 上記の表面アルベドと粗度長を用いて、\nmitem{OCEAN_SFC_TYPE}で選択したスキームによって
 大気-海洋間や大気-海氷間の表面フラックスが計算される。
-この計算では、\namelist{PARAM_BULKFLUX}の \nmitem{BULKFLUX_TYPE}で指定したバルクスキーム
-(詳細は第\ref{sec:basic_usel_surface}節を参照)。
+この計算では、\namelist{PARAM_BULKFLUX}の \nmitem{BULKFLUX_TYPE}で指定したバルクスキームが用いられる(詳細は第\ref{sec:basic_usel_surface}節を参照)。
 
 %-------------------------------------------------------------------------------
 \subsubsection{海氷過程}
 %-------------------------------------------------------------------------------
 
-\nmitem{OCEAN_ICE_TYPE}を\verb|"SIMPLE"|とした場合、海氷過程が考慮されるようになる。
+\nmitem{OCEAN_ICE_TYPE}を\verb|"SIMPLE"|とした場合は、海氷過程が考慮されるようになる。
 海氷と海洋表層間の熱伝導は、\namelist{PARAM_OCEAN_PHY_TC_seaice}で指定したパラメータを用いて計算される。
 
 \editboxtwo{
@@ -303,10 +302,10 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 (詳細については第\ref{sec:timeintiv}節を参照)。\\
 
 
-\subsection{陸の力学スキームと表面スキーム}
+\subsection{陸面スキームと表面スキーム}
 %-------------------------------------------------------------------------------
 陸モデルでは、陸面温度と土壌温度、土壌水分量といった陸面の状態量の更新を行う。
-このスキームの設定は、init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_SFC_TYPE}や\nmitem{LAND_SFC_TYPE}で行う。
+このスキームは、init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_SFC_TYPE}や\nmitem{LAND_SFC_TYPE}で設定する。
 
 \editboxtwo{
 \verb|&PARAM_LAND                | & \\
@@ -317,11 +316,11 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 
 \begin{table}[hbt]
 \begin{center}
-  \caption{陸の力学スキームの選択肢}
+  \caption{陸面スキームの選択肢}
   \label{tab:nml_land_dyn}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 \\ \hline
-      \verb|NONE or OFF| & 陸の力学モデルを使用 \\
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
+      \verb|NONE or OFF| & 陸面モデルを使用 \\
       \verb|BUCKET|      & 熱拡散/バケツモデル \\
       \verb|INIT|        & 初期条件に固定 \\
     \hline
@@ -331,10 +330,10 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 
 \begin{table}[hbt]
 \begin{center}
-  \caption{陸の表面スキームの選択肢}
+  \caption{陸モデルの表面スキームの選択肢}
   \label{tab:nml_land_sfc}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
       \verb|SKIN|       & スキームにより表面温度を決定する。 \\
       \verb|FIXED-TEMP| & 表面温度が最上層の土壌温度と同じであると仮定する。 \\
     \hline
@@ -371,7 +370,7 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
  \verb|/                                                        | & \\
 }
 
-\nmitem{LAND_DYN_BUCKET_nudging_tau}が0であるときは,
+\nmitem{LAND_DYN_BUCKET_nudging_tau}が0である場合は,
 海面温度の値は外部ファイルによって完全に置き換わる。
 \nmitem{LAND_DYN_BUCKET_nudging_step_fixed}が1以下であば、
 現時刻における値は外部データを時間内挿することで計算される。
@@ -381,7 +380,7 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 その制限を超える時間ステップのデータを読み込まず、最後に読み込んだデータをナッジングに用いる。
 この制限は、\nmitem{LAND_DYN_BUCKET_nudging_step_limit}が0の場合には設定されない。
 
-\nmitem{LAND_DYN_TYPE}に対して\verb|"NONE"|、\verb|"OFF"|以外が指定されたときには、
+\nmitem{LAND_DYN_TYPE}に対して\verb|"NONE"|, \verb|"OFF"|以外を指定した場合は、
 粗度長に対するパラメータテーブルや土地利用分布の入力データを必要とする。
 パラメータテーブルは、ファイル\\
 \verb|scale-rm/test/data/land/param.bucket.conf|に用意してある.\\
@@ -402,7 +401,7 @@ open ocean での海面アルベドは、 \nmitem{OCEAN_ALB_TYPE}で選択した
 
 \subsection{大気-都市面間フラックス}
 %-------------------------------------------------------------------------------
-都市表面温度と水分量等の都市面の状態量の更新や、大気-都市面間のフラックス計算を担う都市スキームは、
+都市の表面温度や水分量等の都市面の状態量の更新、大気-都市面間のフラックス計算を担う都市スキームは、
 init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で以下のように設定する。
 
 \editboxtwo{
@@ -416,7 +415,7 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で以
   \caption{都市スキームの選択肢}
   \label{tab:nml_urban}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  値  & 説明 &  参考文献 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名  & スキームの説明 &  参考文献 \\ \hline
       \verb|NONE または OFF|   & 都市モデルを利用しない                      \\
       \verb|LAND|             & 都市域は陸モデルによって計算される            \\
       \verb|KUSAKA01|         & 単層キャノピーモデル  & \citet{kusaka_2001} \\
@@ -434,10 +433,10 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で以
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-\nmitem{URBAN_DYN_TYPE}として\verb|LAND|を選択したときには、
+\nmitem{URBAN_DYN_TYPE}として\verb|LAND|を選択した場合は、
 表面フラックスや都市域の土壌変数を計算するために陸モデルが用いられる。
 この場合、第\ref{sec:basic_usel_land}節に記述した陸面に対するパラメータテーブルに、
 都市域に対するパラメータを与える必要がある。
 
-\verb|KUSAKA01|スキームには、都市の形態を指定するパラメータがたくさん存在する。
+\verb|KUSAKA01|スキームには、都市の形態を指定するパラメータが数多く存在する。
 都市モデルのパラメータは、第\ref{sec:reference_manual}節のネームリストの記述を参照されたい。

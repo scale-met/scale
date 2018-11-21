@@ -2,9 +2,9 @@
 \section{ヒストリファイルと出力変数の設定} \label{sec:output}
 %-------------------------------------------------------------------------------
 
-ヒストリファイルと出力変数は、\verb|run.conf|内の\namelist{PARAM_FILE_HISTORY_CARTESC}、
-\namelist{PARAM_FILE_HISTORY}、\namelist{HISTORY_ITEM}によって設定する。
-ヒストリファイルのデフォルトの形式は、\namelist{PARAM_FILE_HISTORY}によって設定する。
+ヒストリファイルと出力変数は、\verb|run.conf|内の\namelist{PARAM_FILE_HISTORY_CARTESC},
+\namelist{PARAM_FILE_HISTORY}, \namelist{HISTORY_ITEM}で設定する。
+ヒストリファイルのデフォルトの形式は、\namelist{PARAM_FILE_HISTORY}で指定する。
 
 \editboxtwo{
 \verb|&PARAM_FILE_HISTORY_CARTESC                   | & \\
@@ -36,57 +36,58 @@
 \verb| FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL   = -1.D0,         | & ; ファイルを切り替える時間間隔 \\
 \verb| FILE_HISTORY_OUTPUT_SWITCH_TUNIT       = "SEC",         | & ; \verb|OUTPUT_SWITCH_TINTERVAL| の単位 \\
 \verb| FILE_HISTORY_ERROR_PUTMISS             = .true.,        | & ; データの準備状況の整合性を確認するか? \\
-\verb| FILE_HISTORY_AGGREGATE                 = .false.,       | & ; PnetCDF を用いて単一のファイルに集めるか? \\
+\verb| FILE_HISTORY_AGGREGATE                 = .false.,       | & ; PnetCDF を用いて単一のファイルにまとめるか? \\
 \verb|/                                                        | & \\
 }
 
 デフォルトでは、各プロセスがヒストリファイルを出力する。
-\nmitem{FILE_HISTORY_AGGREGATE}が\verb|.true.|に設定されている場合は, 
-分散された出力ファイルは parallel \Netcdf を用いることによって単一のファイルへと集められる。
-\nmitem{FILE_HISTORY_AGGREGATE}のデフォルト設定は、\namelist{PARAM_FILE}内の\nmitem{FILE_AGGREGATE}によって決定される。
-\ref{sec:netcdf}節を参考にされたい。
+\nmitem{FILE_HISTORY_AGGREGATE}を\verb|.true.|に設定した場合は、
+ parallel \Netcdf を用いることによって分散した出力ファイルが単一のファイルへとまとめられる。
+\nmitem{FILE_HISTORY_AGGREGATE}のデフォルト設定は、\namelist{PARAM_FILE}内の\nmitem{FILE_AGGREGATE}によって決定される(第\ref{sec:netcdf}節を参照)。
 
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}はヒストリ出力の時間間隔であり、その単位は\\
 \nmitem{FILE_HISTORY_DEFAULT_TUNIT}によって定義される。単位は、\\
-\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|から選択することができる。
+\verb|"MSEC", "msec", "SEC", "sec", "s", "MIN", "min", "HOUR", "hour", "h", "DAY", "day"|から選択できる。
 %
-\nmitem{FILE_HISTORY_DEFAULT_TAVERAGE}を\verb|.true.|として平均値の出力が設定されている場合には、
-\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}に指定された直近の期間に渡って平均されたヒストリデータを出力する。
+\nmitem{FILE_HISTORY_DEFAULT_TAVERAGE}を\verb|.true.|として平均値の出力を設定した場合は、
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}に指定した直近の期間に渡って平均されたヒストリデータを出力する。
 
 ヒストリ出力の時間間隔は、それと関係したスキームの時間間隔と等しいか倍数でなければならない。
 この整合性の確認を無効にしたい場合には、\nmitem{FILE_HISTORY_ERROR_PUTMISS}を\verb|.false.|に設定すれば良い.
 
-\nmitem{FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL}が\verb|.true.|に設定されている場合には, 
+\nmitem{FILE_HISTORY_DEFAULT_POSTFIX_TIMELABEL}を\verb|.true.|に設定した場合は、
 時間に関するラベルが出力ファイル名に付加される。
-時間のラベルは、シミュレーションの現時刻から生成され、その形式は\verb|YYYYMMDD-HHMMSS.msec|によって定義される。
+時間のラベルはシミュレーションの現時刻に基づいて生成され、その形式は\verb|YYYYMMDD-HHMMSS.msec|によって定義される。
 
-\nmitem{FILE_HISTORY_OUTPUT_STEP0}が\verb|.true.|に設定されている場合は, 
-時間積分の前の時刻における変数(初期値)をヒストリファイルに出力する。
-\nmitem{FILE_HISTORY_OUTPUT_WAIT}と\nmitem{FILE_HISTORY_OUTPUT_WAIT_TUNIT}によって定義されるシミュレーション時間の間、
-その値が負であれば、出力の抑制は起こらない。
+\nmitem{FILE_HISTORY_OUTPUT_STEP0}を\verb|.true.|に設定した場合は、
+時間積分前の時刻における変数(初期値)をヒストリファイルに出力する。
+\nmitem{FILE_HISTORY_OUTPUT_WAIT}と\nmitem{FILE_HISTORY_OUTPUT_WAIT_TUNIT}で定義した
+シミュレーションの期間、ヒストリ出力を抑制することができる。
+値が負であれば、出力の抑制は起こらない。
 \nmitem{FILE_HISTORY_OUTPUT_SWITCH_TINTERVAL}は出力ファイルの切り替えの時間間隔であり、
-その単位は\nmitem{FILE_HISTORY_OUTPUT_SWITCH_TUNIT}によって定義される。
-その値が負であれば、ヒストリ出力のために各プロセス毎に単一ファイルだけが使われる。
-このオプションが有効であれば、時間に関するラベルがファイル名に付加される。
+その単位は\nmitem{FILE_HISTORY_OUTPUT_SWITCH_TUNIT}で定義する。
+値が負であれば、ヒストリ出力のために各プロセス毎に単一ファイルだけが使われる。
+このオプションを有効にした場合は、時間に関するラベルがファイル名に付加される。
 
-大気の3次元変数を出力するために、3種類の鉛直座標が利用可能である。
+大気の3次元変数を出力するために、3種類の鉛直座標が利用できる。
 デフォルトでは\\
-\nmitem{FILE_HISTORY_DEFAULT_ZCOORD} \verb|= "model"|と選択される。
-この場合には、変数はモデルのもとの座標系({\scalerm}において地形に沿った、z*座標系)を用いて出力される。
-\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}が\verb|"z"|に設定されている場合は、 変数は絶対高度へと補間される。
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD} \verb|= "model"|が選択される。
+この場合は、変数はモデルのもとの座標系({\scalerm}において地形に沿った、z*座標系)を用いて出力される。
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}を\verb|"z"|に設定した場合は、 変数は絶対高度へと補間される。
 出力データのレベル数は、モデルのレベル数と同じである。
 各レベルにおける高度は、地形を伴わない格子セルにおけるモデル高度と同じである。
-\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}が\verb|"pressure"|に設定されている場合には、
+\nmitem{FILE_HISTORY_DEFAULT_ZCOORD}を\verb|"pressure"|に設定した場合は、
 変数は圧力レベルへと補間される。
-この場合には、\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_PRES_nlayer}と\nmitem{FILE_HISTORY_CARTESC_PRES}を設定する必要がある。
+この場合は、\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_PRES_nlayer}と\nmitem{FILE_HISTORY_CARTESC_PRES}を設定する必要がある。
 
-\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_BOUNDARY}が\verb|.true.|である場合には、
-周期境界条件の場合を除いて、ハロ(対象領域の外側に位置する)におけるデータも出力される。
+\namelist{PARAM_FILE_HISTORY_CARTESC}内の\nmitem{FILE_HISTORY_CARTESC_BOUNDARY}を\verb|.true.|にした場合は、
+周期境界条件の場合を除いて、対象領域の外側に位置するハロのデータも出力される。\\
 \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}の設定は、全ての出力変数に適用される。\\
 
-出力変数は、\namelist{HISTORY_ITEM}を加えることによって設定される。
+出力変数は、\namelist{HISTORY_ITEM}を加えることで設定される。
 出力の形式は、\namelist{PARAM_FILE_HISTORY}で指定されたデフォルト設定に従う。
-「(オプション)」を伴うネームリストを追加することによって、特定の変数に対する形式をデフォルト設定から変更することができる。
+下記のように、「(オプション)」と書かれたネームリストの項目を追加することで、
+特定の変数に対する形式をデフォルト設定から変更できる。
 
 \editboxtwo{
 \verb|&HISTORY_ITEM                    | & \\
@@ -102,17 +103,17 @@
 \verb|/                                | & \\
 }
 
-\namelist{HISTORY_ITEM}によって要求された変数がシミュレーションの時間スッテップ中に準備されていない場合には、
+\namelist{HISTORY_ITEM}で要求した変数がシミュレーションの時間スッテップ中に準備されていない場合は、
 実行が停止し、エラーログがログファイルに書かれる。
-この状況は、\nmitem{NAME}にスペルミスがある場合や、要求した変数が選択したスキーム内で用いられていない場合に起こりうる。
+この状況は、\nmitem{NAME}にスペルミスがある場合や、要求した変数が選択したスキーム内で使用されていない場合に発生し得る。
 
-「(オプション)」と書かれたネームリストは、変数\nmitem{NAME}に対してのみ適用される。
-変数に対してデフォルト設定を用いる場合には、「(オプション)」と書かれたネームリストは省略することができる。
-例えば、\namelist{PARAM_FILE_HISTORY}の上記の設定を維持して、\namelist{HISTORY_ITEM}に対する以下の設定を付け加えるとしよう。
-ファイル\verb|history_d01.xxxxxx.nc|には、\verb|U and V|の瞬間値が 3600 s 間隔で 4バイトの実数値として格納される一方で、
-\verb|RAIN|については 600 秒間隔でその期間に渡った平均値がファイルに格納される。
-\verb|T|の値は \verb|U|や\verb|V|と同じ規則において\verb|T|として出力され、
-圧力座標系に補間した値は\verb|T_pres|として出力される。
+「(オプション)」と書かれたネームリストの項目は、変数\nmitem{NAME}に対してのみ適用される。
+変数に対してデフォルト設定を用いる場合は、「(オプション)」の項目は省略できる。
+例えば、\namelist{PARAM_FILE_HISTORY}の上記の設定を維持しつつ、\namelist{HISTORY_ITEM}に対して以下の設定を付け加えるとしよう。
+ファイル\verb|history_d01.xxxxxx.nc|に、\verb|U|と\verb|V|の瞬間値を 3600 秒間隔で 4バイトの実数値として格納する。
+一方で、\verb|RAIN|については 600 秒間隔でその期間に渡った平均値をファイルに格納する。
+\verb|T|の値は、 \verb|U|や\verb|V|と同じ規則で\verb|T|として出力し、
+圧力座標系に補間した値を\verb|T_pres|として出力する。
 
 \editbox{
 \verb|&HISTORY_ITEM  NAME="T" /|\\

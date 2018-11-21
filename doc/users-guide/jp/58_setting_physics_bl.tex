@@ -4,10 +4,10 @@
 %------------------------------------------------------
 
 惑星境界層(PBL)パラメタリゼーションは、惑星境界層における乱流による鉛直混合を表現するためのスキームである。
-このスキームは、レイノルズ平均ナビエ-ストークス方程式の計算(RANS)において用いられる。
+このスキームは、レイノルズ平均ナビエ-ストークス方程式の計算(RANS)で用いられる。
 
-惑星境界層パラメタリゼーションスキームは、設定ファイル\verb|init.conf|、\verb|run.conf|において\namelist{PARAM_ATMOS}内の\nmitem{ATMOS_PHY_BL_TYPE}で指定する。
-このスキームを呼び出す時間間隔は\namelist{PARAM_TIME}で設定する(詳細は第\ref{sec:timeintiv}節を参照)。
+惑星境界層パラメタリゼーションスキームは、設定ファイル\verb|init.conf|、\verb|run.conf|中の\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_BL_TYPE}で指定する。
+このスキームを呼び出す時間間隔は、\namelist{PARAM_TIME}で設定する(詳細は第\ref{sec:timeintiv}節を参照)。
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
@@ -19,7 +19,7 @@
   \caption{惑星境界層スキームの選択}
   \label{tab:nml_atm_bl}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  値 & スキームの説明 & 参考文献\\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献\\ \hline
       \verb|OFF|          & 惑星境界層の過程を計算しない &  \\
       \verb|MYNN|         & MYNN level 2.5 boundary scheme & \citet{my_1982,nakanishi_2004} \\
     \hline
@@ -28,6 +28,6 @@
 \end{table}
 
 惑星境界層スキームは鉛直混合のみを計算する。
-RANS シミュレーションにおいて水平渦粘性を考慮したい場合には、
+RANS において水平渦粘性を考慮したい場合には、
 サブグリッドスケール乱流モデルを水平混合を表現するために
 用いることができる(第\ref{sec:basic_usel_turbulence}節を参照)。

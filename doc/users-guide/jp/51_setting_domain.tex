@@ -10,23 +10,20 @@
 格子点数およびMPIプロセス数は、
 \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX, JMAX}、\\
 \namelist{PARAM_PRC_CARTESC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}で設定する。
-%水平格子間隔については、\namelist{PARAM_GRID}内の\nmitem{DX, DY}で設定する。
-図\ref{fig:domain}に示すように、
-計算領域全体は、\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割される。
+図\ref{fig:domain}に示すように、計算領域全体は、
+\XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割される。
 プロセス数はゼロから始まり、左下から右上の順で番号付けされる(図\ref{fig:domain}における矢印)。
-分割された各領域は1つのMPIプロセスによって担当され、
-各MPIプロセスは\nmitem{IMAX, JMAX, KMAX}個の格子ブロックを受け持つ。
-ここで、注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、
-計算領域全体の格子点数ではないことである。
+分割された各領域は1つのMPIプロセスによって担当され、各MPIプロセスは\nmitem{IMAX, JMAX, KMAX}個の格子ブロックを受け持つ。
+ここで注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、計算領域全体の格子点数ではないことである。
 別の言い方をすれば、計算領域全体は、水平格子間隔、格子点数、MPIプロセス数に依存する。
 
 したがって、各方向の格子点と総格子点数は、以下のように計算される。
 \begin{eqnarray}
-&& 領域内{\XDIR} の格子数 = \verb|IMAX| \times \verb|PRC_NUM_X|
+&& {\rm 領域内{\XDIR} の格子数} = \verb|IMAX| \times \verb|PRC_NUM_X|
    \label{eq:xgridnum}\\
-&& 領域内{\YDIR}の格子数 = \verb|JMAX| \times \verb|PRC_NUM_Y|
+&& {\rm 領域内{\YDIR}の格子数} = \verb|JMAX| \times \verb|PRC_NUM_Y|
    \label{eq:ygridnum}\\
-&& 領域内の総格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
+&& {\rm 領域内の総格子数} = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
    \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
    \times (\verb|KMAX| )  \nonumber
 \end{eqnarray}
@@ -35,18 +32,17 @@
 
 また、領域全体の大きさは、式(\ref{eq:xgridnum}、\ref{eq:ygridnum})を使って、
 \begin{eqnarray}
-&& {\XDIR}の領域の長さ = {\XDIR}の格子点数 \times \verb|DX| \nonumber\\
-&& {\YDIR}の領域の長さ = {\YDIR}の格子点数 \times \verb|DY| \nonumber
+&& \rm{{\XDIR}の領域の長さ} = \rm{{\XDIR}の格子点数} \times \verb|DX| \nonumber\\
+&& \rm{{\YDIR}の領域の長さ} = \rm{{\YDIR}の格子点数} \times \verb|DY| \nonumber
 \end{eqnarray}
-と決定される。ここで、\nmitem{DX, DY}は、\ref{subsec:gridinterv}節に記述されるように、
-\namelist{PRAM_ATMOS_GRID_CARTESC}内で指定する。
-水平方向の解像度と領域の大きさが設定され、またMPIプロセス数が与えられるならば、
-上記の関係から 1 つのMPIプロセスが受け持つ格子点数は決まる。
+と決定される。ここで、第\ref{subsec:gridinterv}節で記述したように、
+\nmitem{DX, DY}は\namelist{PRAM_ATMOS_GRID_CARTESC}内で指定する。
+水平方向の解像度と領域の大きさを設定し、利用する MPI プロセス数を与えた場合は、
+1 つのMPIプロセスが受け持つ格子点数は上記の関係から決められる。
 
 次の小節では、MPIプロセス数、格子数、格子間隔の設定をより詳しく説明する。
-\textcolor{red}{これらの設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
+\textcolor{blue}{これらの設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
 ことに注意が必要である。
-
 
 \begin{figure}[h]
 \begin{center}
@@ -60,12 +56,12 @@
 \subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso2}
 %-----------------------------------------------------------------------
 
-MPIプロセス数は、設定ファイルの\namelist{PARAM_PRC_CARTESC}内で指定する。
+MPIプロセス数は設定ファイルの\namelist{PARAM_PRC_CARTESC}内で指定する。
 \scalerm の入出力ファイルはMPIプロセス毎に分割されているため、
 分割ファイルの総数はMPIプロセス数によって変化する。
 例えば、2-MPI並列用に作成した初期値ファイルは、
 4-MPI並列のモデル実行には使用できない。
-MPIプロセス数を変更する場合には、
+MPIプロセス数を変更する場合は、
 \verb|pp.conf|、\verb|init.conf|、\verb|run.conf| 内の
 \namelist{PARAM_PRC_CARTESC}を編集し、
 \verb|pp|、\verb|init| の過程を再度行う必要がある。
@@ -76,9 +72,10 @@ MPIプロセス数を変更する場合には、
 \verb|/|\\
 }
 
-総MPIプロセス数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  によって与えられる。
-上記の例では、領域が\XDIR には2分割、\YDIR には分割なしの 2-MPI並列ということになる。
-この総プロセス数は、ジョブを投げる際のMPIコマンドに指定するMPIプロセス数として与える必要がある。
+MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  によって与えられる。
+上記の例では、\XDIR に領域を2分割し、\YDIR には領域を分割しないので、
+2-MPI 並列ということになる。
+ジョブを投げる際のMPIコマンドに指定するMPIプロセス数として、この総プロセス数を与える必要がある。
 この条件を満たさない場合には、プログラムは計算を行わずに直ちに終了し、
 下記のメッセージが標準出力に出力される。
 \msgbox{
@@ -92,7 +89,7 @@ MPIプロセス数を変更する場合には、
 格子数は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}で指定する。
 指定する水平格子数は、１つのMPIプロセス当たりの値であることに注意が必要である。
 \editboxtwo{
-\verb|&PARAM_INDEX| & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 97,|  & ; 鉛直層数 \\
 \verb| IMAX = 20,|  & ; プロセスあたりの{\XDIR}の格子点数 \\
 \verb| JMAX = 25,|  & ; プロセスあたりの{\YDIR}の格子点数 \\
@@ -107,16 +104,14 @@ MPIプロセス数を変更する場合には、
 鉛直格子間隔は任意に設定できる。
 全方向について格子間隔を等間隔で設定する場合には、
 \namelist{PARAM_ATMOS_GRID_CARTESC}内の\nmitem{DX, DY, DZ}にそれぞれ、
-東西、南北、鉛直方向の格子間隔を指定する。
-単位は[m]である。
+東西、南北、鉛直方向の格子間隔を指定する(単位は[m])。
 \editboxtwo{
-\verb|&PARAM_GRID  | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC| & \\
 \verb| DX = 500.D0,| & ; {\XDIR}（東西方向）の格子間隔\\
 \verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
 \verb| DZ = 500.D0,| & ; {\ZDIR}（鉛直方向）の格子間隔\\
 \verb|/|\\
 }
-
 
 以下の囲みに、等間隔でない格子系を指定する方法を示す。
 モデルはローレンツ格子を採用しており、
@@ -127,13 +122,13 @@ MPIプロセス数を変更する場合には、
 \namelist{PARAM_ATMOS_GRID_CARTESC}内の\nmitem{FZ(:)}に配列として与えればよい
 \footnote{この場合には、シミュレーションで用いられたものと同じ浮動小数点の精度を用いることが望ましい。
 デフォルトでは、モデルは倍精度の浮動小数点を使用するとしてコンパイルされる。
-}
-詳細は、図\ref{fig:scale_grid}を参照されたい。
+}。
+詳細は図\ref{fig:scale_grid}を参照されたい。
 また、\nmitem{FZ(:)}で指定する要素の数は、鉛直層数
-（\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{KMAX})と一致している必要があることに注意されたい。
+（\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{KMAX})と一致している必要があることに注意が必要である。
 例として、理想実験の設定ファイルを下記に示す。
 \editboxtwo{
-\verb|&PARAM_GRID|     & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC|     & \\
 \verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔) [m]\\
 \verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔) [m]\\
 \verb| FZ(:) = |       & {\ZDIR}のフェイスポイントの位置 [m] \\
@@ -164,13 +159,13 @@ MPIプロセス数を変更する場合には、
 \end{figure}
 
 上記の設定は、標高 0 m の場所で処理される。
-標高がある場所での鉛直格子点の位置は、地形に沿った座標系によって適切に取り扱われる。
+地形が存在する場所での鉛直格子点の位置は、地形に沿った座標系によって適切に取り扱われる。
 
 
 鉛直格子点の位置は任意に設定できるが、変わった設定をすると計算不安定がしばしば生じる。
 これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
-必要があれば、参考として用いることができる。
+必要があれば参考として用いることができる。
 このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
 
 %-----------------------------------------------------------------------
@@ -180,26 +175,26 @@ MPIプロセス数を変更する場合には、
 \scalerm は高度座標を採用している。
 最上層の境界条件は剛体壁であり、モデル上端において音波や重力波がしばしば反射する。
 反射波の悪影響を軽減するために、モデル領域の上部に「スポンジ層」と呼ばれる減衰層を設ける。
-スポンジ層内では、鉛直速度をレイリー摩擦によって減衰させる。
-緩和の時定数(e-folding time)は、モデル上端で最も短く、高度が下がるにつれて長くする。
+スポンジ層内では、レイリー摩擦によって鉛直速度を減衰させる。
+緩和の時定数(e-folding time)はモデル上端で最も短く、高度が下がるにつれて長くする。
 スポンジ層の下端より下では、緩和の時定数は無限大に設定する。
-スポンジ層の厚さは、\namelist{PARAM_ATMOS_DYN}において以下のどちらかの方法で行う。
+スポンジ層の厚さの指定方法は2種類あり、\namelist{PARAM_ATMOS_DYN}で設定する。
 \begin{enumerate}
 \item スポンジ層の層数を指定\\
   \nmitem{ATMOS_DYN_wdamp_layer} でスポンジ層の層数を指定する。
-  その層数はモデル上端から数える。
+  この層数はモデル上端から数える。
 \item スポンジ層の下端高度[m]の指定\\
-  \nmitem{ATMOS_DYN_wdamp_height} で指定された高度よりも上部にある層をスポンジ層として設定する。
+  \nmitem{ATMOS_DYN_wdamp_height} で指定した高度よりも上部にある層を、スポンジ層として設定する。
 \end{enumerate}
 
 デフォルトでは上記のパラメータは両方とも設定されず、スポンジ層は適用されない、
 両方が指定された場合は、\nmitem{ATMOS_DYN_wdamp_layer} が優先される。
 
-スポンジ層上端での緩和の時定数は、\nmitem{ATMOS_DYN_wdamp_tau} で設定する。単位は秒である。\\
-\nmitem{TIME_DT_ATMOS_DYN}よりも小さい値を設定することはできない。
+スポンジ層上端での緩和の時定数は、\nmitem{ATMOS_DYN_wdamp_tau} で設定する(単位は秒)。\\
+これには\nmitem{TIME_DT_ATMOS_DYN}よりも小さな値は設定できない。
 時定数を陽に指定しない場合は、\nmitem{TIME_DT_ATMOS_DYN} の10倍の値が自動で設定される。
-\nmitem{TIME_DT_ATMOS_DYN}については、第\ref{sec:timeintiv}節を参照のこと。
-具体的な設定例は、第\ref{subsec:atmos_dyn_scheme}節を参照のこと。
+\nmitem{TIME_DT_ATMOS_DYN}については、第\ref{sec:timeintiv}節を参照されたい。
+また、具体的な設定例は、第\ref{subsec:atmos_dyn_scheme}節を参照されたい。
 
 %鉛直格子を一定間隔に設定する(第\ref{subsec:gridinterv}節参照)場合にも、スポンジ層の格子間隔は大きくとって鉛直格子数を節約したいという要望があるだろう。
 %この場合は次の第\ref{subsec:buffer}節で説明するように、鉛直方向の緩和領域を設定し、緩和領域の格子間隔をストレッチする方法を用いる。
@@ -217,31 +212,24 @@ MPIプロセス数を変更する場合には、
 %-----------------------------------------------------------------------
 
 一般に水平境界では、境界条件として与えられる入力データと
-実際の計算から得られる出力データの間に、値の不一致が起こる。
-計算において、この乖離は非物理的なモード等の幾つかの問題を生じさせる。
-%両者の乖離が大きくなると、境界から流入する情報を計算領域内にうまく取り込むことができない他、
-%音波や重力波の非物理的な生成や反射が起る。
-この問題を回避するために、領域に「緩和領域」を設ける。
+実際の計算で得られる出力データの間に値の不一致が起こる。
+計算において、この不一致は非物理的なモード等の幾つかの問題を生じさせる。
+この問題を回避するために、領域内に「緩和領域」を設ける。
 
-図\ref{fig:buff_xz}に示されるように、\scalerm では計算領域のすぐ内側に緩和領域を設置する。
-緩和領域では、境界値データや親モデルのデータによって指定した値にある時定数で近づけるために、
+図\ref{fig:buff_xz}に示すように、\scalerm では計算領域のすぐ内側に緩和領域を設置する。
+緩和領域では、境界値データや親モデルのデータによって指定した値にある時定数で近づけるように、
 予報変数を更新する。この緩和を以下ではナッジングと呼ぶ。
-%第\ref{subsec:raydamp}節で説明したように、レイリーダンピングを用いた大気最上層付近での鉛直速度の減衰を適用できるが、上端でのナッジングを行う場合はレイリーダンピングを切る（スポンジ層の厚さをゼロにする）必要がある。
-ただし\namelist{PARAM_ATMOS_BOUNDARY}で\nmitem{ATMOS_BOUNDARY_TYPE}を\verb|REAL|に設定する場合、緩和領域を設けて外部境界条件を与えても、デフォルトでは上部緩和領域でナッジングは適用されない。
 
 \subsubsection{緩和領域}
 緩和領域の幅は、設定ファイルの\namelist{PARAM_ATMOS_GRID_CARTSC}の中で設定する。
-設定はすべての設定ファイルにおいて共通していなければならないことを再度注意する。
-緩和領域の幅の設定は、以下のどちらかの方法で行う。
-
+この設定は全ての手順で共通していなければならないことを再度注意する。
+緩和領域の幅を設定する方法は、以下の2種類がある。
 \begin{enumerate}
 \item \nmitem{BUFFER_NX, BUFFER_NY, BUFFER_NZ} によって緩和領域とする格子数を指定\\
 \item \nmitem{BUFFER_DX, BUFFER_DY, BUFFER_DZ} によって緩和領域の幅(参考値)[m]を指定\\\
 \end{enumerate}
-デフォルトでは、上記のパラメータは両方とも指定されず、緩和領域は設定されない。
+デフォルトでは上記のパラメータは両方とも指定されず、緩和領域は設定されない。
 また、両方が指定された場合は、格子数による指定が優先される。
-%以下で説明するように、\nmitem{BUFFER_DZ, BUFFER_DX, BUFFER_DY}を用いて設定した場合も、最終的な緩和領域は格子数で決定される。
-%そのため、緩和領域の幅は指定した幅と必ずしも一致するわけではないことに注意が必要である。
 水平方向には東西南北の四方境界に緩和領域が設定されるが、鉛直方向には領域上端にのみ緩和領域が設定され、下端には設定されない。
 緩和領域は計算領域の内側に設定されるため、
 ナッジングの影響を受けない実際の対象領域(緩和領域を除いた範囲)は
@@ -258,7 +246,7 @@ MPIプロセス数を変更する場合には、
 }
 
 \editboxtwo{
-\verb|&PARAM_GRID | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_DZ  =   5000.D0, | & ; {\ZDIR}（モデル上端から下向き方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFER_DX  = 300000.D0, | & ; {\XDIR}（東西方向）の緩和領域の幅(参考値) [m]\\
  \verb|BUFFER_DY  = 300000.D0, | & ; {\YDIR}（南北方向）の緩和領域の幅(参考値) [m]\\
@@ -268,12 +256,13 @@ MPIプロセス数を変更する場合には、
 \verb|/|\\
 }
 
-具体的な緩和領域の設定のされ方について、{\XDIR}を例に説明する。
-緩和領域の格子数 \verb|ibuff|は、\nmitem{BUFFER_NX}に等しい。\nmitem{BUFFER_NX}を用いずに\nmitem{BUFFER_DX}で指定した場合、\verb|ibuff|は
+{\XDIR}の緩和領域の設定方法を以下で説明する。
+緩和領域の格子数 \verb|ibuff|は、\nmitem{BUFFER_NX}に等しい。
+\nmitem{BUFFER_NX}を用いずに\nmitem{BUFFER_DX}で指定した場合は、\verb|ibuff|は
 \[
 \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n) \ge \nmitemeq{BUFFER_DX} \nonumber
 \]
-の関係を満たす最小の整数で自動的に計算される。
+の関係を満たす最小の整数であるように自動的に計算される。
 したがって、緩和領域の幅 $\verb|BUFFER|_{\verb|X|}$ ($= \sum_{n=1}^{\verb|ibuff|} \verb|BDX|(n)$)
 は \nmitem{BUFFER_DX} と一致するとは限らないことに注意が必要である。
 最後に、緩和領域を除いた計算領域の大きさは、
@@ -320,10 +309,10 @@ MPIプロセス数を変更する場合には、
 緩和領域の格子間隔は、デフォルトでは
 \namelist{PARAM_ATMOS_GRID_CARTESC}の中の\nmitem{DX, DY, DZ}で指定した通りである。
 ただし、\nmitem{BUFFFACT}に1以上に設定することによって、ストレッチさせることもできる。
-格子間隔を等間隔で指定した場合、この\nmitem{BUFFFACT}の設定は全方向に対して適用される。
-それぞれの方向に別々に設定したい場合は、\nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}を指定する。
-\nmitem{FZ(:)}を与えることによって鉛直レベルを指定した場合
-(第\ref{subsec:gridinterv}節参照)には、上記のストレッチの設定は{\ZDIR}には適用されない。
+格子間隔を等間隔で指定した場合は、この\nmitem{BUFFFACT}の設定は全方向に対して適用される。
+各方向で別々に設定したい場合は、\nmitem{BUFFFACT_X, BUFFFACT_Y, BUFFFACT_Z}を指定する。
+\nmitem{FZ(:)}を与えることで鉛直レベルを指定した場合(第\ref{subsec:gridinterv}節参照)は、
+上記のストレッチの設定は{\ZDIR}には適用されない。
 
 緩和領域内の格子間隔 (\verb|BDX|) は次の通り決定される。
 \begin{eqnarray}
@@ -335,25 +324,24 @@ MPIプロセス数を変更する場合には、
 \nmitem{BUFFFACT=1.2}とした場合は内部から外側の領域に向かって1.2倍の割合で広がっていく。
 \nmitem{BUFFFACT}の値は任意に設定できるが、計算不安定を避けるために 1.0から1.2 までの値が推奨される。
 
-
-緩和領域の大きさ$\verb|BUFFER|_{\verb|X|}$は、
+最後に、緩和領域の大きさ$\verb|BUFFER|_{\verb|X|}$は、
 \[
   \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1}{ \nmitemeq{BUFFFACT}-1 }
 \]
 となる。
 %
-緩和領域の幅\nmitem{BUFFER_DX}が同じに設定された場合でも、
+緩和領域の幅\nmitem{BUFFER_DX}を同じに設定した場合でも、
 \nmitem{BUFFFACT}を大きくすると緩和領域の格子数は少なくなる。
 \nmitem{BUFFER_NX}を与えた場合は、緩和領域の幅のみが変わる。
 
 \subsubsection{緩和領域におけるナッジングの方法}
 
-緩和領域におけるナッジングの設定は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータによって行う。
+緩和領域におけるナッジングの設定は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータで行う。
 境界データの種類は、\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}によって設定する(表\ref{tab:nml_atmos_boundary_type})。
 
 \begin{table}[h]
 \begin{center}
-\caption{境界データの種類の選択}
+\caption{境界値データの種類の選択}
 \label{tab:nml_atmos_boundary_type}
 \begin{tabularx}{150mm}{lXX} \hline
   \rowcolor[gray]{0.9} 値 & 種類の説明 \\ \hline
@@ -371,20 +359,20 @@ MPIプロセス数を変更する場合には、
 以下は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータである.
 \editboxtwo{
   \verb|&PARAM_ATMOS_BOUNDARY | & \\
-  \verb| ATMOS_BOUNDARY_TYPE = 'NONE',         | & ; 境界データの種類。表\ref{tab:nml_atmos_boundary_type}を参照。 \\
-  \verb| ATMOS_BOUNDARY_IN_BASENAME = '',      | & ; 境界データのファイル名 (\verb|OFFLINE| または\verb|REAL| type の場合)\\
+  \verb| ATMOS_BOUNDARY_TYPE = 'NONE',         | & ; 境界値データの種類。表\ref{tab:nml_atmos_boundary_type}を参照。 \\
+  \verb| ATMOS_BOUNDARY_IN_BASENAME = '',      | & ; 境界値データのファイル名 (\verb|OFFLINE| または\verb|REAL| type の場合)\\
   \verb| ATMOS_BOUNDARY_IN_CHECK_COORDINATES | \textbackslash \\
   ~~\verb|                   = .true.,| & ; 境界データファイル内の座標変数を確認するかのフラグ \\
   \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
-  ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界データの開始時刻(\verb|REAL| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界データの時間間隔(\verb|REAL| type の場合のみ) \\
+  ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界値データの開始時刻(\verb|REAL| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界値データの時間間隔(\verb|REAL| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
   ~~\verb|                  = 'lerp_initpoint',| & ; 時間方向の補間の種類 \\
                                                  &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\
                                                  &  ~\verb|nearest_neighbor|: 最も近い時間ステップでの値を使用, \\
                                                  &  ~\verb|lerp_initpoint|: 2つの時間ステップでの値を用いて瞬間値として線形補間する,  \\
                                                  &  ~\verb|lerp_midpoint|: \verb|lerp_initpoint|と同様であるが、値は時間ステップに渡る時間平均値を使用 \\
-  \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; 初期境界データを出力するファイル名 \\
+  \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; 初期の境界値データを出力するファイル名 \\
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; 出力ファイルに対するタイトル \\
   \verb| ATMOS_BOUNDARY_OUT_DTYPE = 'DEFAULT', | & ; 出力のデータ型(\verb|REAL4| or \verb|REAL8|) \\
@@ -426,7 +414,7 @@ MPIプロセス数を変更する場合には、
 \label{eq:nudging}
 \end{eqnarray}
 と書かれる。
-ここで、$\Delta\phi$ は境界データとの差であり、
+ここで、$\Delta\phi$ は境界値データとの差であり、
 $\alpha_s = \alpha \times \nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$である。
 $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値である。
 これらの係数は、以下のような長さスケール$e$に依存する。
@@ -443,7 +431,7 @@ $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値で
   \alpha_z =  \sin^2(\pi e_z/2) / \tau_z,
 \end{equation}
 である。
-ここで、 $\tau_z$は\nmitem{ATMOS_BOUNDARY_TAUZ}である.
+ここで、 $\tau_z$は\nmitem{ATMOS_BOUNDARY_TAUZ}である。
 水平方向については、\nmitem{ATMOS_BOUNDARY_LINEAR_H}が\verb|.true.|であれば、
 \begin{equation}
   \alpha_x = e_x / \tau_x,
@@ -461,11 +449,11 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 \nmitem{TIME_DT}については第\ref{sec:timeintiv}節を参照されたい。
 
 
-\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が\verb|REAL|であれば, 水平速度・温位・水蒸気に対する側面境界でのナッジングは、
-強制的に適用される。
-この場合には、\nmitem{ATMOS_BOUNDARY_USE_VELX}, \nmitem{ATMOS_BOUNDARY_USE_VELY}, \\
+\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が\verb|REAL|であれば、
+水平速度・温位・水蒸気に対する側面境界でのナッジングが強制的に適用される。
+この場合は、\nmitem{ATMOS_BOUNDARY_USE_VELX}, \nmitem{ATMOS_BOUNDARY_USE_VELY},
 \nmitem{ATMOS_BOUNDARY_USE_POTT}, \nmitem{ATMOS_BOUNDARY_USE_QV} といったスイッチは、上端境界に対してのみ使われる。
-計算がオンラインネスティング(第\ref{subsec:nest_online}節を参照)の子領域で行われるとき、
-境界の種類として\verb|REAL|を用いて、上記と同様の設定が適用される。
+オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域で計算が行われるときには、
+境界の種類として\verb|REAL|を用いて上記と同様の設定が適用される。
 
-上端境界の周辺では同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。
+上端境界の周辺における同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。

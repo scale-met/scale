@@ -1,47 +1,33 @@
 \subsection{\SubsecOflineNesting} \label{subsec:nest_offline}
 %------------------------------------------------------
 
-以下の2点は、オフラインネスティング実験に対する制限事項である。
+以下の2点は、オフライン・ネスティング実験に対する制限事項である。
 \begin{itemize}
  \item 子領域は親領域に完全に含まれる。
- \item 子領域の積分期間は、親領域の積分期間と同じもしくはそれよりも短い。
+ \item 子領域の積分期間は、親領域の積分期間と同じかそれより短い。
 \end{itemize}
-
-~\\
 また、オフライン・ネスティング実験は次の順番でなされる。
 \begin{enumerate}
- \item 親領域の時間積分計算を行う。
- \item 親領域のhistory出力あるいはinit/restart出力を用いて、子領域の初期値/境界値を作成する。
- \item 作成した初期値/境界値を用いて、子領域の時間積分計算を行う。
+ \item 親領域の時間積分を行う。
+ \item 親領域のヒストリ出力あるいは初期値/リスタート出力を用いて、子領域の初期値/境界値を作成する。
+ \item 作成した初期値/境界値を用いて、子領域の時間積分を行う。
 \end{enumerate}
 以下では、上記の流れに沿って説明を進める。
 
-%親領域と子領域それぞれについて、\verb|pp.***.conf|、\verb|init.***.conf|、
-%そして\verb|run.***.conf|ファイルを事前に作成し、
-%親領域、子領域ともに地形・土地利用データの作成 (\verb|scale-rm_pp|) が、
-%親領域については、初期値/境界値データの作成 (\verb|scale-rm_init|) が終わっていることを想定して説明を進める。
-%ここで説明するオフライン・ネスティング実験の設定を記述した設定ファイルは、
-%サンプル設定ファイル
-%\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|および
-%\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|
-%をそれぞれUSER.shに置き換えて、実験セット一式準備ツールを実行すると作成される。
-%説明を読み進める上で参考にしてもらいたい。
-
 \subsubsection{親領域の時間積分}
 子領域の境界値データとして用いる親領域のデータを準備するために、いくつか必要な設定がある。
-親領域の計算に対する設定ファイルは、「実験セット一式準備ツール」(第\ref{sec:basic_makeconf}節を参照)
-によって作られる。
-サンプルファイル\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|を 
+親領域の計算に対する設定ファイルは、「\makeconftool」(第\ref{sec:basic_makeconf}節を参照)で作成する。
+サンプルファイル\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-parent.sh|を
 \verb|USER.sh|に名前を変更し、 \verb|make|を実行する。
 
 親領域の時間積分はシングルドメインの場合と同じ方法で実行するが、
-設定において次の5点に注意する必要がある。
+設定に関して次の5点に注意する必要がある。
 
 \begin{itemize}
- \item 子領域の計算に必要な変数全てが、親領域の計算時にhistory出力する。
- \item ヒストリ出力またはリスタート出力の間隔を十分に短くとる。
- \item 子領域のための親領域の計算領域に関する情報を与える「カタログファイル」を出力する。
- \item ヒストリファイルを用いる場合は、親領域のヒストリデータはモデル面におけるデータを出力させる。
+ \item 子領域の計算に必要な変数全てが、親領域の計算によってヒストリ/リスタート出力として作成されている。
+ \item ヒストリ/リスタート出力の間隔が十分に短い。
+ \item 親領域の計算領域の情報を子領域に与える「カタログファイル」を出力する。
+ \item ヒストリファイルを用いる場合は、親領域のヒストリデータはモデル面で出力させる。
  \item 子領域の計算開始時刻が親領域と同じ場合は、 親領域におけるt=0のヒストリ出力データが必要である。
 \end{itemize}
 
@@ -53,29 +39,29 @@
 \textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
 \verb|/| &\\
 }
-カタログファイルの出力が\verb|.true.|であれば, (この例の場合には)
+カタログファイルの出力が\verb|.true.|であれば、 (この例の場合には)
 \verb|latlon_domain_catalogue_d01.txt|が出力される。
-「実験セット一式準備ツール」を用いるならば、同じ名前のファイルがディレクトリ \verb|pp|の中に生成される。
-このファイルの中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度・経度が記述されている。
+「\makeconftool」を用いる場合は、これと同じ名前のファイルがディレクトリ \verb|pp|の中に生成される。
+このファイルの中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度経度が記述されている。
 
-ヒストリファイルを用いたいのであれば、次のような設定が必要である。
+ヒストリファイルを用いたければ、次のような設定が必要である。
 \editboxtwo{
-\verb|&PARAM_HISTORY| &\\
-\verb| HISTORY_DEFAULT_BASENAME  = "history",| & \\
-\textcolor{blue}{\verb| HISTORY_DEFAULT_TINTERVAL = 900.D0,|} & historyデータの出力時間間隔。\\
-\verb| HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb|HISTORY_DEFAULT_TINTERVAL|の単位。\\
-\verb| HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
-\verb| HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
-\textcolor{blue}{\verb| HISTORY_DEFAULT_ZCOORD   = "model",|}  & モデル面データを出力。\\
-\textcolor{blue}{\verb| HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
+\verb|&PARAM_FILE_HISTORY| &\\
+\verb| FILE_HISTORY_DEFAULT_BASENAME  = "history",| & \\
+\textcolor{blue}{\verb| FILE_HISTORY_DEFAULT_TINTERVAL = 900.D0,|} & ヒストリデータの出力時間間隔。\\
+\verb| FILE_HISTORY_DEFAULT_TUNIT     = "SEC",|   & \verb| FILE_HISTORY_DEFAULT_TINTERVAL|の単位。\\
+\verb| FILE_HISTORY_DEFAULT_TAVERAGE  = .false.,| & \\
+\verb| FILE_HISTORY_DEFAULT_DATATYPE  = "REAL4",| & \\
+\textcolor{blue}{\verb| FILE_HISTORY_DEFAULT_ZCOORD   = "model",|}  & モデル面データを出力。\\
+\textcolor{blue}{\verb| FILE_HISTORY_OUTPUT_STEP0      = .true.,|}  & t=0の値を出力に含める。 \\
 \verb|/| \\
 }
-\nmitem{HISTORY_DEFAULT_TINTERVAL}はヒストリデータの出力間隔であり、
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}はヒストリデータの出力間隔であり、
 子領域の計算で用いる更新時間間隔を設定する。
 相対的に短い時間間隔でデータを出力する場合には、ディスクの空き容量にも注意が必要である。
-その他、\namelist{PARAM_HISTORY}の各項目の詳細は、第\ref{sec:output}節を参照されたい。
+その他、\namelist{PARAM_FILE_HISTORY}の各項目の詳細は、第\ref{sec:output}節を参照されたい。
 
-リスタートファイルを用いたいのであれば、設定は次のようになる。
+リスタートファイルを用いたければ、設定は次のようになる。
 \editboxtwo{
   \verb|&PARAM_RESTART| & \\
   \textcolor{blue}{\verb| RESTART_OUTPUT = .true.|} & \\
@@ -92,20 +78,26 @@
   \textcolor{blue}{\verb| TIME_DT_URBASN_RESTART_UNIT = "SEC",|} & \\
   \verb|/|& \\
 }
-これらのパラメータの詳細については、第\ref{sec:restart}節を参照されたい。
+これらのパラメータの詳細は、第\ref{sec:restart}節を参照されたい。
 
-計算実行用の設定ファイル中の\namelist{HISTITEM}には、
+計算実行用の設定ファイル中の\namelist{FILE_HISTORY_ITEM}には、
 子領域の初期値/境界値データの作成に必要な変数を全て記述しなければならない。
 オフライン・ネスティングに必要な変数は子領域の計算設定に依存し、
 標準的な現実大気の計算における変数は以下である。
 \begin{alltt}
-  T2, Q2, MSLP, DENS, MOMZ, MOMX, MOMY, RHOT
+  T2, MSLP, DENS, MOMZ, MOMX, MOMY, RHOT, QV
   LAND_SFC_TEMP, URBAN_SFC_TEMP, OCEAN_SFC_TEMP
-  OCEAN_ALB_LW, OCEAN_ALB_SW, LAND_ALB_LW, LAND_ALB_SW
+  OCEAN_SFC_ALB_IR_dir OCEAN_SFC_ALB_IR_dif,
+  OCEAN_SFC_ALB_NIR_dir OCEAN_SFC_ALB_NIR_dif,
+  OCEAN_SFC_ALB_VIS_dir OCEAN_SFC_ALB_VIS_dif,
+  LAND_SFC_ALB_IR_dir, LAND_SFC_ALB_IR_dif,
+  LAND_SFC_ALB_NIR_dir, LAND_SFC_ALB_NIR_dif,
+  LAND_SFC_ALB_VIS_dir, LAND_SFC_ALB_VIS_dif,
   OCEAN_TEMP, OCEAN_SFC_Z0M, LAND_TEMP, LAND_WATER
-(親の雲微物理モデルに合わせて出力; 例えばTomita08なら全て)
-  QV, QC, QR, QI, QS, QG
-(親の雲微物理モデルに合わせて出力; 例えばTomita08なら不要)
+\end{alltt}
+(親モデルが用いる雲微物理モデルに応じて出力する)
+\begin{alltt}
+  QC, QR, QI, QS, QG
   NC, NR, NI, NS, NG
 \end{alltt}
 設定が完了したら、\verb|scale-rm|を実行して親領域の時間積分を行う。
@@ -115,16 +107,16 @@
 特に親計算の最下層が子計算の最下層よりも遥かに高い場合に問題となるだろう。
 この問題を避けるために、ヒストリファイルを用いる場合は、
 これらの変数を計算するために平均海面圧力と 2-m 温度を用いる。
-一方、リスタートファイルを用いる場合にはそういった量がファイルに含まれない。
+一方で、リスタートファイルを用いる場合にはそういった量がファイルに含まれない。
 したがって、親の最下層よりも低い層の変数は、最下層の変数の単なるコピーである。
 
 %-------------------------------------------------------------
 \subsubsection{子領域に対する初期値/境界値データの作成}
 
-子領域の計算用の設定ファイルは、「実験セット一式準備ツール」(第\ref{sec:basic_makeconf})節を参照を用いることで作成できる。
+子領域の計算用の設定ファイルは、「\makeconftool」(第\ref{sec:basic_makeconf}節を参照)を用いることで作成できる。
 サンプルスクリプト\verb|${Tutorial_dir}/real/sample/USER.offline-nesting-child.sh|を USER.sh に名前を変更し、 \verb|make| を実行する、
 
-親領域の計算から得られたヒストリデータを用いて初期値/境界値データを作成する場合には、
+親領域の計算で得られたヒストリデータを用いて初期値/境界値データを作成する場合は、
 \initconf を以下のように設定する。
 \editboxtwo{
 \textcolor{blue}{\verb|&PARAM_NEST|} & \\
@@ -161,16 +153,16 @@
 }
 \scalerm 形式の出力データから初期値/境界値データを作成する場合は、
 \nmitem{FILETYPE_ORG}に\verb|"SCALE-RM"|を指定する。
-\nmitem{BOUNDARY_UPDATE_DT}は、基本的に、親領域の設定ファイル(\verb|run.d01.conf|)の\\
+基本的に、\nmitem{BOUNDARY_UPDATE_DT}は親領域の設定ファイル(\verb|run.d01.conf|)の\\
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}と同じ値を設定する。
 %
 \namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
-オフライン・ネスティングでは、\nmitem{OFFLINE_PARENT_BASENAME}に親領域データのファイル名を設定する。
+オフライン・ネスティングでは、\nmitem{OFFLINE_PARENT_BASENAME}に親領域データのファイル名を指定する。
 また、\nmitem{OFFLINE_PARENT_PRC_NUM_*} に親領域のプロセス数を設定する。
-これの設定は、親領域の設定ファイル(\verb|run.d01.conf|) を参照して正しく行うこと。
+これらは、親領域の設定ファイル(\verb|run.d01.conf|) を参照して適切にの設定されたい。
 
 
-設定ファイルの編集が完了したら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。
+設定ファイルを編集し終えたら、\verb|scale-rm_init|を実行し、子領域の初期値/境界値を作成する。
 実行時に下記のようなメッセージが表示されて計算が止まる場合は、
 子領域が親領域に完全には含まれていないことを意味する。
 %この場合は、各領域の大きさや領域中心の設定を見直す必要がある。\\
@@ -181,7 +173,7 @@
 
 
 \subsubsection{子領域の時間積分}
-初期値/境界値の作成が終わったら、\verb|scale-rm| を実行して子領域の時間積分を行う。
+初期値/境界値データの作成が終わったら、\verb|scale-rm| を実行して子領域の時間積分を行う。
 これは、通常の現実大気実験と同じである。
 1点だけ注意すべき点として、
 \verb|run.d02.conf|の\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_UPDATE_DT}が

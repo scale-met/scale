@@ -1,11 +1,11 @@
 \section{\SubsecMicrophysicsSetting} \label{sec:basic_usel_microphys}
 %------------------------------------------------------
-雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|のうち、
+雲微物理スキームの選択は、\verb|init.conf|と\verb|run.conf|中の
 \namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_MP_TYPE}で設定する。
-このとき\nmitem{ATMOS_PHY_MP_TYPE}は初期値作成用とシミュレーション実行用の両方の設定ファイル
-で同じスキームを指定する必要がある。
+このとき、\nmitem{ATMOS_PHY_MP_TYPE}は初期値作成用とシミュレーション実行用の設定ファイル
+両方で同じスキームを指定する必要がある。
 雲微物理スキームに対する更新間隔は\namelist{PARAM_TIME}で設定する。
-呼び出しのタイミングの詳細な設定については、第\ref{sec:timeintiv}節を参照されたい。
+呼び出しの時間間隔の詳細な設定は、第\ref{sec:timeintiv}節を参照されたい。
 以下の例は、氷雲を含む 6-class 1モーメントバルク法を用いるときの設定を示している。\\
 
 \editboxtwo{
@@ -16,10 +16,10 @@
 
 \begin{table}[h]
 \begin{center}
-  \caption{選択可能な雲微物理スキーム}
+  \caption{雲微物理スキームの選択肢}
   \label{tab:nml_atm_mp}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献\\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献\\ \hline
      \verb|OFF|      & 雲微物理による水の相変化を計算しない &  \\
      \verb|KESSLER|  & 3-class 1モーメントバルク法 & \citet{kessler_1969} \\
      \verb|TOMITA08| & 6-class 1モーメントバルク法 & \citet{tomita_2008} \\

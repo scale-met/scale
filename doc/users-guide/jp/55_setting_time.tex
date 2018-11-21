@@ -1,15 +1,13 @@
 %\newpage
 \section{\SecBasicIntegrationSetting} \label{sec:timeintiv}
 %------------------------------------------------------
-積分時間や時間刻み幅は、実験の目的や設定によって適切に設定する必要がある。
+積分時間や時間刻み幅は、実験の目的や設定に応じて適切に設定する必要がある。
 時間刻み幅は、モデルの空間解像度に依存する。
 数値不安定を回避するために、より短い時間刻み幅がしばしば要求される。
 積分時間と時間刻み幅は、
-シミュレーション実行用の設定ファイルの\namelist{PARAM_TIME}において設定できる。\\
+シミュレーション実行用の設定ファイルの\namelist{PARAM_TIME}で設定できる。
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
+\editboxtwo{
 \verb|&PARAM_TIME| & \\
 \verb| TIME_STARTDATE             = 2014, 8, 10, 0, 0, 0,| & 積分を開始する日付:放射過程計算で必要\\
 \verb| TIME_STARTMS               = 0.D0,  | & 開始時刻[mili sec]\\
@@ -50,8 +48,7 @@
 \verb| TIME_WALLCLOCK_LIMIT         = 86400.D0,            | & 経過時間の制限 [sec]\\
 \verb| TIME_WALLCLOCK_SAFE          = 0.95D0,              | & 経過時間制限に対する安全率 \\
 \verb|/|\\
-\end{tabularx}
-}}}\\
+}
 
 
 \subsection{力学過程に対する時間刻み幅}
@@ -66,75 +63,75 @@ $\Delta t$はトレーサー移流に対する時間刻み幅であり、また�
 \nmitem{TIME_DT_ATMOS_DYN}の標準的な値として、
 \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE}が\verb|RK4|の場合は最小格子間隔を 420 m/s で割った値、
 \verb|RK3| の場合には最小格子間隔を 840 m/s で割った値が目安である。
-ただし、\nmitem{TIME_DT_ATMOS_DYN}は、\nmitem{TIME_DT}の約数である必要があることに注意すること。
+ただし、\nmitem{TIME_DT_ATMOS_DYN}は、\nmitem{TIME_DT}の約数でなければならないことに注意されたい。
 また、\nmitem{TIME_DT}の\nmitem{TIME_DT_ATMOS_DYN}に対する比が大きすぎる場合は
 計算不安定がしばしば起きる。
-\nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN}の比、2もしくは3に設定することを推奨する。
-これらの条件については、\ref{subsec:cfl_check}節も参照されたい。
+\nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN}が、2または3となるように設定することを推奨する。
+これらの条件については、第\ref{subsec:cfl_check}節も参照されたい。
 \nmitem{TIME_DT_ATMOS_DYN}と\nmitem{TIME_DT_ATMOS_DYN_UNIT}を設定する代わりに、
-\nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN}の比を\nmitem{TIME_NSTEP_ATMOS_DYN}によって指定することができる。
-\nmitem{TIME_NSTEP_ATMOS_DYN}は、整数でなければならない。
+この比(\nmitem{TIME_DT}/\nmitem{TIME_DT_ATMOS_DYN})を\nmitem{TIME_NSTEP_ATMOS_DYN}で指定することができる。
+\nmitem{TIME_NSTEP_ATMOS_DYN}は整数でなければならない。
+
+\subsection{CFL条件の確認} \label{subsec:cfl_check}
+
+移流対する時間刻み幅\nmitem{TIME_DT}は、格子幅を速度で割った値よりも小さくなければならない(すなわち、Courant-Friedrichs-Lewy (CFL) 条件)。
+無次元数$U \Delta t/\Delta x$はクーラン数と呼ばれる。
+ここで、 $U$は速度, $\Delta x$は格子幅、 $\Delta t$は時間刻み幅である。
+CFL条件とは、クーラン数が1よりも小さくなければならないことである。
+
+\scalerm には、クーラン数が制限値を超えているかを確認する機能がある。
+この機能を有効にするには、\namelist{PARAM_ATMOS_VARS}の\nmitem{ATMOS_VARS_CHECKCFL_SOFT}や\nmitem{ATMOS_VARS_CHECKCFL_HARD}を設定する。
+これらのデフォルト値はそれぞれ、1.0 と 2.0 である。
+シミュレーション中にクーラン数が\nmitem{ATMOS_VARS_CHECKCFL_SOFT}を超えれば、
+以下のメッセージをログファイルに出力される。
+\msgbox{
+\verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
+}
+もし\nmitem{ATMOS_VARS_CHECKCFL_HARD}を超えれば、以下のメッセージが標準出力に出力され、
+シミュレーションは強制終了される。
+\msgbox{
+\verb|ERROR [ATMOS_vars_monitor] Courant number = xxx exceeded the hard limit = yyy|
+}
 
 \subsection{物理過程に対する時間刻み幅}
 
-物理過程に対する時間刻み幅は、各物理過程によって与えられる時間変化率を更新するタイミングを表す。
-モデルが開始するとすぐに、初期の時間変化率を得るために、モデルのセットアップ時に各物理過程が呼ばれる。
+物理過程に対する時間刻み幅は、各物理過程が与える時間変化率を更新するタイミングを表す。
+モデルが開始するとすぐに、初期の時間変化率を得るためにモデルの初期化時に各物理過程が呼ばれる。
 その後、各物理過程ごとに指定した時間間隔で各時間変化率が更新される。
 物理過程に対する時間間隔は全て、\nmitem{TIME_DT}の倍数でなければならない。
 
-表面フラックスは、大気の表面過程によって計算される。
-対照的に、あるモデル格子がいくつかの種類の利用区分(海面・都市・陸面)を含むならば、
-海面・陸面・都市モデルが用いられ、これらのモデルによって表面フラックスが計算される。
+表面フラックスは大気に対する表面過程で計算される。
+対照的に、あるモデル格子がいくつかの種類の利用区分(海面・都市・陸面)を含む場合は海面・陸面・都市モデルが用いられ、
+これらのモデルによって表面フラックスが計算される。
 フラックスの格子平均値は、各利用区分に対するフラックスの利用区分の割合に応じた重み付き平均値として得られる。
 
 上述したように、各過程の初期の時間変化率はモデルの初期化中に更新される。
 したがって、リスタートファイルの出力間隔は、全過程の時間刻み幅の倍数であることが要求される。
-そうしない場合には、リスタート計算は、通しで時間積分を行った計算と一致しない。
-\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TIME_DT_LAND_RESTART}, \\ \nmitem{TIME_DT_URBAN_RESTART}を指定していない場合は、
-リスタートファイルはシミュレーションの最後(すなわち、\nmitem{TIME_DURATION})に生成される。
-リスタート計算の詳細は、第\ref{sec:restart}節を参照されたい。
+そうしなければ、リスタート計算は、通しで時間積分を行った計算と一致しない。
+\nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART},  \nmitem{TIME_DT_LAND_RESTART},  \nmitem{TIME_DT_URBAN_RESTART}を指定していない場合は、
+リスタートファイルはシミュレーションの最後(すなわち\nmitem{TIME_DURATION})に生成される。
+リスタート計算の詳細は第\ref{sec:restart}節を参照されたい。
 
 
 \subsection{経過時間タイマーによるモデルの終了} \label{subsec:wallclock_check}
 
 幾つかのバッチジョブシステムでは、実行時間の制限が大抵設けられている。
-しかし、長時間積分のシミュレーションの所要時間を推定することは難しく、しばしばジョブが時間の制限を超えることがある。
+しかし、長時間積分のシミュレーションの所要時間を推定することは難しく、しばしばジョブが時間制限を超えることがある。
 この問題を解決するために、{\scalerm}ではセルフタイマーを用いた終了オプションを提供している。
 
-経過時間が\nmitem{TIME_WALLCLOCK_LIMIT} (秒)によって指定された時間に達したときに、
-積分時間を終えていない場合でも、リスタートファイルが出力され、時間ループは終了される。
+経過時間が\nmitem{TIME_WALLCLOCK_LIMIT}(秒)で指定した時間に達したときに、
+積分時間を終えていない場合でもリスタートファイルを出力し、時間ループを終了させる。
 \nmitem{TIME_WALLCLOCK_LIMIT}に対する安全率が存在する。
-このデフォルトの値は 0.9 であり、\nmitem{TIME_WALLCLOCK_SAFE}によって指定される。 
+このデフォルトの値は 0.9 であり、\nmitem{TIME_WALLCLOCK_SAFE}で指定する。
 
-上述したように、リスタート出力の間隔は、全ての物理過程や表面サブモデルに対する時間刻み幅の倍数とするべきである。
+上述したように、リスタート出力の間隔は全ての物理過程や表面サブモデルに対する時間刻み幅の倍数とするべきである。
 しかしながら、セルフタイマーは唐突にシミュレーションを停止する。
 予期されるタイミングと異なるタイミングでリスタート出力が行われることを避けるために、
 経過時間を確認するタイミングを指定することができる。
-経過時間は、\nmitem{TIME_DT_WALLCLOCK_CHECK}と\nmitem{TIME_DT_WALLCLOCK_CHECK_UNIT}によって指定される時間間隔で確認される。
-これらのパラメータを指定しない場合には、物理過程と表面サブモデルの最大時間間隔が設定される。
-確認の時間間隔を非常に長く設定した場合には、終了のタイミングは遅れる可能性があることに注意が必要である。
+経過時間は、\nmitem{TIME_DT_WALLCLOCK_CHECK}と\nmitem{TIME_DT_WALLCLOCK_CHECK_UNIT}で指定した時間間隔で確認される。
+これらのパラメータを指定しない場合は、物理過程と表面サブモデルの最大時間間隔が設定される。
+確認の時間間隔を非常に長く設定した場合は、終了のタイミングが遅れる可能性があることに注意が必要である。
 
-上記の例では、\nmitem{TIME_WALLCLOCK_LIMIT}は24時間、\nmitem{TIME_WALLCLOCK_SAFE}は0.95に設定されている。
+上記の例では、\nmitem{TIME_WALLCLOCK_LIMIT}を24時間、\nmitem{TIME_WALLCLOCK_SAFE}を0.95に設定している。
 経過時間は、シミュレーション時間の 6 時間ごとに確認される。
-経過時間が22.8時間を超過すると、リスタートファイルが生成され、シミュレーションは停止するだろう。
-
-
-
-\subsection{CFL条件の確認} \label{subsec:cfl_check}
-
-移流対する時間刻み幅\nmitem{TIME_DT}は、格子幅を速度で割った値よりも小さくなければならない(Courant-Friedrichs-Lewy (CFL) 条件)。
-無次元数$U \Delta t/\Delta x$はクーラン数と呼ばれる。
-ここで、 $U$は速度, $Delta x$は格子幅、 $\Delta t$は時間刻み幅である。
-CFL条件とは、クーラン数が1よりも小さくなければならないことである。
-
-\scalerm は、クーラン数が制限を超えているかを確認する機能を持つ。
-この機能を有効にするためには、\namelist{PARAM_ATMOS_VARS}における \nmitem{ATMOS_VARS_CHECKCFL_SOFT}および/または\nmitem{ATMOS_VARS_CHECKCFL_HARD}を設定する。
-これらのデフォルト値はそれぞれ、1.0, 2.0 である。
-シミュレーション中にクーラン数が\nmitem{ATMOS_VARS_CHECKCFL_SOFT}を超えたならば、以下のメッセージをログファイルに出力される。
-\msgbox{
-\verb|INFO [ATMOS_vars_monitor] Courant number = xxx exceeded the soft limit = yyy|
-}
-もし\nmitem{ATMOS_VARS_CHECKCFL_HARD}を超えたならば、以下のメッセージが標準出力に出力され、シミュレーションは中断される。
-\msgbox{
-\verb|ERROR [ATMOS_vars_monitor] Courant number = xxx exceeded the hard limit = yyy|
-}
+経過時間が22.8時間を超過するとリスタートファイルが生成されて、シミュレーションは停止するだろう。

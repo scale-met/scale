@@ -17,7 +17,7 @@
 MPIプロセスあたりの格子数を$n$倍にすれば、
 領域全体の格子数も$n$倍となる。
 したがって、\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX, JMAX}のみ変更すれば良い。
-赤字の部分がデフォルトからの変更点を意味する。\\
+赤字の部分がデフォルトからの変更点である。\\
 
 \noindent {\small {\gt
 \ovalbox{
@@ -54,15 +54,15 @@ MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nm
 \end{tabularx}
 }}}\\
 
-MPI並列数も変更している場合には、\verb|&PARAM_ATMOS_GRID_CARTESC|の設定において、下記の関係を満たしていれば正解である。
+MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の設定において、下記の関係を満たしていれば正解である。
 \begin{eqnarray}
 && {\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
 && {\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
 \end{eqnarray}
 
-これに加えて、力学変数の時間積分のためのタイムステップ\\
-\nmitem{TIME_DT_ATMOS_DYN} と\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である（第\ref{sec:timeintiv}節参照）。
-緩和領域も、格子間隔の20倍から40倍となるように設定しなければならない。
+これに加えて、力学変数の時間積分に対する時間刻み幅\nmitem{TIME_DT_ATMOS_DYN} と \\
+\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である（第\ref{sec:timeintiv}節を参照）。
+また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない。
 以下はその解答例であり、緩和領域を格子間隔の20倍に取った場合を示している。
 
 \noindent {\small {\gt
@@ -119,9 +119,9 @@ MPI並列数も変更している場合には、\verb|&PARAM_ATMOS_GRID_CARTESC|
 
 %例えば、出力時間間隔を30分に変更したい時には、
 \namelist{PARAM_FILE_HISTORY}の中の
-\nmitem{HISTORY_DEFAULT_TINTERVAL}を下記のように変更する。
+\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}を下記のように変更する。
 出力変数は、\namelist{HISTORY_ITEM}の中の\nmitem{NAME}で指定する。
-ヒストリ変数の一覧は、リファレンスマニュアル(第\ref{sec:reference_manual}節を参照)で確認できる。 \\
+ヒストリ変数の一覧は、リファレンスマニュアルで確認できる(第\ref{sec:reference_manual}節を参照)。 \\
 %以下では、地表面での上向き、下向き短波フラックスを追加した例である。\\
 
 \noindent {\small {\gt
@@ -187,8 +187,7 @@ MPI並列数も変更している場合には、\verb|&PARAM_ATMOS_GRID_CARTESC|
 \nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}を設定する必要はない。
 \nmitem{TIME_DURATION}を3時間以上に設定した場合には、
 \nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
-\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}の値は、3時間(10800秒)の約数かつ\nmitem{TIME_DT}の倍数を指定する必要がある。
-
+\nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}に、3時間(10800秒)の約数かつ\nmitem{TIME_DT}の倍数を指定する必要がある。
 
 
 3時間目から６時間目までのリスタート計算に対する設定は下記である。\\

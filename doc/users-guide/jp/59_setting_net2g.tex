@@ -2,14 +2,14 @@
 %====================================================================================
 
 \verb|net2g|には2つの役割があり、
-[i] ノード毎に分割されたヒストリファイル\verb|history.***.nc|）を結合し、
+[i] ノード毎に分割されたヒストリファイル(\verb|history.***.nc|）を結合し、
 [ii] {\grads}で読み込めるバイナリ形式に変換することを行う。
-\verb|net2g|はMPI並列プログラムとしても実行可能である。
+\verb|net2g|はMPI並列プログラムとしても実行できる。
 その他、net2gの機能として以下が利用できる。
 %
 \begin{itemize}
  \item モデル面から任意の高度面や圧力面へのデータ内挿
- \item 3次元変数に対する鉛直カラム中の平均値・最大値・最小値、鉛直積算値を出力
+ \item 3次元変数に対する鉛直カラム中の平均値・最大値・最小値、鉛直積算値の出力
  \item 3次元変数を鉛直層ごとに分割したファイルとして出力
  \item 時間ステップごとに分割したファイルとして出力
 \end{itemize}
@@ -19,8 +19,8 @@
 %さらに、大規模計算結果を解析するだけのケースを踏まえてポータビリティを重視した設計とし、
 %SCALEライブラリに対する依存性をなくしたため、
 %net2gだけを独立にコンパイル・実行できることも特徴である。
-net2gのインストール方法は、\ref{sec:source_net2g}節を参照されたい。
-なお、現行のnet2gには、下記の制約があることに注意が必要である。
+net2gのインストール方法は、第\ref{sec:source_net2g}節を参照されたい。
+なお、現行のnet2gには下記の制約が存在することに注意が必要である。
 \begin{itemize}
  \item net2gに使用するMPIプロセス数は、
 \scalerm 実行時のMPIプロセス数の約数でなければならない。
@@ -35,7 +35,7 @@ net2gのインストール方法は、\ref{sec:source_net2g}節を参照され�
 %ストレージへの読み込み/書き込み要求が多くなり、
 %結果として、効率が下がり実行速度が落ちることもある。
 %特に大規模計算結果を手元のマシンで変換する際は注意が必要である。
-MPIプロセス数を多く取りすぎると、実行速度が落ちることに注意されたい。
+また、MPIプロセス数を多く取りすぎると、実行速度が落ちることに注意されたい。
 
 MPI並列を用いる場合には、\verb|net2g|は以下のように実行する。
 \begin{verbatim}
@@ -96,14 +96,14 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
  \item \namelist{LOGOUT}（このネームリストは必須ではない）
  \begin{itemize}
   \item \nmitem{LOG_BASENAME}：デフォルトのLOGファイル名「LOG」を変更したいときに指定する。
-  \item \nmitem{LOG_ALL_OUTPUT}：プロセス番号0番以外もLOGファイルを出力させたい場合に``true''にする。
-        デフォルト値は``false''である。
+  \item \nmitem{LOG_ALL_OUTPUT}：0番以外のプロセスもLOGファイルに出力させたい場合に、
+  ``true''にする。デフォルト値は``false''である。
  \end{itemize}
  \item \namelist{INFO}
  \begin{itemize}
   \item \nmitem{TIME_STARTDATE}：変換するNetCDFデータの最初の日時を指定。
   \item \nmitem{START_TSTEP}：変換するNetCDFデータの最初の時間ステップを指定する。
-  最初のいくつかのステップを飛ばしたい場合には適切な値を指定する。デフォルト値は1である。
+  最初のいくつかのステップを飛ばしたい場合に適切な値を指定する。デフォルト値は1である。
   \item \nmitem{END_TSTEP}：変換するNetCDFデータの最後の時間ステップを指定する。必ず指定すること。
   \item \nmitem{DOMAIN_NUM}：ドメイン番号を指定する。デフォルト値は1である。
   \item \nmitem{CONFFILE}：\scalerm 実行時の\verb|run.***.conf|のパスを指定する
@@ -130,7 +130,7 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
 
 \subsubsection{設定ファイルの変更例：3次元変数の鉛直積算値を出力}
 %------------------------------------------------------
-以下の記述では、簡易解析を利用する場合の設定ファイルの例を示している。
+以下では、簡易解析を利用する場合の設定ファイルの例を記述する。
 他の項目の設定は、前の設定と同じである。
 \editbox{
 \verb|&INFO| \\
@@ -168,8 +168,7 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
 \label{subsec:net2g_2d}
 %------------------------------------------------------
 以下の例は、ある領域の2次元変数を変換する場合の設定を示している。
-
-\textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1."}
+\textcolor{blue}{\namelist{INFO}の\nmitem{ZCOUNT}には必ず"1"を指定する。}
 \editbox{
 \verb|&LOGOUT| \\
 \verb| LOG_BASENAME   = "LOG_d01_2d",| \\
@@ -191,17 +190,13 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
 \verb|/| \\
 }
 
-%\textcolor{red}{2次元変数の変換を指定するため、\namelist{INFO}の\nmitem{ZCOUNT}を必ず``1''と指定する。}
-%また、2次元データなので\namelist{VARI}の
-%\nmitem{TARGET_ZLEV}は指定できない。その他の設定項目は3次元変数変換の場合と変わりない。
-
 
 \subsubsection{設定ファイルの変更例：特殊な時間軸を持つデータの変換}
 %------------------------------------------------------
 
 第\ref{sec:output}節で説明したように、
-変数の出力間隔は\nmitem{HISTORY_DEFAULT_TINTERVAL}で基本的に定義する。
-しかし、\namelist{HISTITEM}の\nmitem{TINTERVAL}に\nmitem{HISTORY_DEFAULT_TINTERVAL}とは異なる値を与えることで、特定の変数の出力間隔を変更することができる。
+変数の出力間隔は基本的に\nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}で定義する。
+しかし、\namelist{HISTORY_ITEM}の\nmitem{TINTERVAL}に\nmitem{HISTORY_DEFAULT_TINTERVAL}とは異なる値を与えることで、特定の変数の出力間隔を変更することができる。
 \verb|net2g|では、異なる出力間隔を持った変数のデータ変換に対応しており、
 \namelist{EXTRA}を設定すればこれを行える。
 下記の例では、第\ref{sec:output}節の最後で説明した例
@@ -233,12 +228,8 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
 そのような場合に、手元のディスクの容量がデータを保管するには不十分であったり、
 後処理に膨大な時間がかかることがある。
 そのため、\scalerm 本体の計算を行ったスーパーコンピュータ上で後処理も行うことを推奨する。
-「京」において、第\ref{subsec:evniromnet}節で説明した環境変数を適切に設定していれば、
+「京」において、第\ref{subsec:environment}節で説明した環境変数を適切に設定していれば、
 「make」コマンドだけで\verb|net2g|をコンパイルできる。
-%ジョブの投入・実行方法については、
-%スーパーコンピュータ「京」のユーザーズマニュアル等を参照されたい。
-%net2gの実行方法や制約、注意点については通常のマシンで実行する場合と何ら変わりない。
-
 
 %% サポート外
 %%
@@ -306,7 +297,6 @@ MPI並列を用いる場合には、\verb|net2g|は以下のように実行す�
 %% \begin{verbatim}
 %%  $ mpirun  -n  1488  ./net2g  launch.conf
 %% \end{verbatim}
-
 
 
 %####################################################################################

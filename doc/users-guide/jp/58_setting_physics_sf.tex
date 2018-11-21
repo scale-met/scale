@@ -2,7 +2,7 @@
 \label{sec:basic_usel_surface}
 %------------------------------------------------------
 大気下端境界における表面フラックススキームは、
-\namelist{PARAM_ATMOS}内の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。\\
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。\\
 
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
@@ -10,17 +10,11 @@
 \verb|/             | & \\
 }\\
 
-海面・陸面・都市モデルを用いない場合には、
+海面・陸面・都市モデルを使用しない場合は、
 大気下端境界は理想実験で用いられる仮想的な地表面であることを想定している。
 この表面フラックススキームが呼び出される時間間隔は、
 \namelist{PARAM_TIME}で設定する(詳細は第\ref{sec:timeintiv}節を参照)。
-海面・陸面・都市モデルを用いる場合には、\nmitem{ATMOS_PHY_SF_TYPE}は``COUPLE''に設定する。
-%NONEが設定されている場合は自動的にCOUPLEに変更される。
-%それ以外のスキームを海面・陸面・都市モデルの実行と同時に選択することは出来ない。
-%大気は状態量・フラックスを海面・陸面・都市モデルから毎ステップ受け取るが、毎ステップ更新されているとは限らない。
-%海面・陸面・都市モデルがそれらの値を更新する間隔はそれぞれのモデルの物理過程が呼び出されるタイミングに従う。
-%大気下端境界のフラックススキームが呼び出されるタイミングは、
-%受け取った状態量・フラックスを出力する間隔として用いられる。\\
+海面・陸面・都市モデルを用いる場合は、\nmitem{ATMOS_PHY_SF_TYPE}を``COUPLE''に設定する。
 
 
 \begin{table}[h]
@@ -28,7 +22,7 @@
   \caption{大気下端境界の選択肢}
   \label{tab:nml_atm_sf}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  値 & 説明\\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明\\ \hline
       \verb|NONE|         & 地表面フラックスを計算しない(海面・陸面・都市モデルの実行設定に応じてCOUPLEに変更される) \\
       \verb|OFF|          & 地表面フラックスを計算しない \\
       \verb|CONST|   　　　& 地表面フラックスを一定値に固定 \\
@@ -43,13 +37,10 @@
 \subsubsection{一定値を用いる場合の設定}
 
 \nmitem{ATMOS_PHY_SF_TYPE}を\verb|"CONST"|とした場合は、
-表面フラックスは run.conf で指定した値に固定することができる。
+表面フラックスは run.conf で指定した値に固定できる。
 下記の値はデフォルト設定である。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{lX}
- \\
+\editboxtwo{
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
  \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: バルク係数を一定にする \\
                                                   & 1: 摩擦速度を一定にする   \\
@@ -65,16 +56,14 @@
  \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & 顕熱フラックスに日変化を付けるときのサイクル [hour]\\
  \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & 一定地表面潜熱フラックス値 [W/m2] \\
  \verb|/|            & \\
- \\
-\end{tabularx}
-}}}\\
+}
 
 \subsubsection{バルクモデルを用いる場合の設定}
 %-------------------------------------------------------------------------------
 \nmitem{ATMOS_PHY_SF_TYPE}を\verb|BULK|とした場合は、
-指定した表面フラックスと粗度長を用いてバルクモデルによって表面フラックスが計算される。
+指定した表面温度と粗度長を用いてバルクモデルによって表面フラックスが計算される。
 蒸発効率は、0から1の範囲で任意に与えることができる。
-この柔軟性によって、海面だけでなく陸面を想定した理想実験を行うことができる。
+この柔軟性によって、海面だけでなく陸面を想定した理想実験を行える。
 蒸発効率は run.conf 中の\nmitem{ATMOS_PHY_SF_BULK_beta}の \namelist{PARAM_ATMOS_PHY_SF_BULK}で以下のように指定する。
 
 \editboxtwo{
@@ -83,30 +72,6 @@
 \verb|/             | & \\
 }
 
-%海面粗度を計算するスキームは、
-%run.conf中の\namelist{PARAM_ROUGHNESS}の\nmitem{ROUGHNESS_TYPE}で以下のように設定する。\\
-%\noindent {\gt
-%\ovalbox{
-%\begin{tabularx}{150mm}{ll}
-%\verb|&PARAM_ROUGHNESS  | & \\
-%\verb| ROUGHNESS_TYPE = "MOON07", | & ; 表\ref{tab:nml_roughness}より選択。\\
-%\verb|/             | & \\
-%\end{tabularx}
-%}}\\
-
-%\begin{table}[h]
-%\begin{center}
-%  \caption{海面粗度スキームの選択肢}
-%  \label{tab:nml_roughness}
-%  \begin{tabularx}{150mm}{llX} \hline
-%    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
-%      \verb|MOON07|   & 経験式に基づく値（時間発展あり）、デフォルト　& \citet{moon_2007} \\
-%      \verb|MILLER92| & 経験式に基づく値（時間発展なし）　　　　　　　& \citet{miller_1992} \\
-%      \verb|CONST|    & 定数を与える & \\
-%    \hline
-%  \end{tabularx}
-%\end{center}
-%\end{table}
 
 バルク交換係数のスキームは、
 run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のように設定する。\\
@@ -125,7 +90,7 @@ run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のよ�
   \caption{バルク交換係数スキームの選択肢}
   \label{tab:nml_bulk}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  設定名 & スキームの説明 & 文献 \\ \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献 \\ \hline
       \verb|B91W01| & 普遍関数によるバルク法(デフォルト) & \citet{beljaars_1991,wilson_2001} \\
       \verb|U95|    & Louis 型のバルク法、(\citet{louis_1979}の改良版) & \citet{uno_1995} \\
     \hline

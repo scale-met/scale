@@ -2,12 +2,12 @@
 %-----------------------------------------------------------------------
 
 \scalerm では地形を表現するために、地形に沿った座標系を採用している。
-この座標系において、最下層の格子の底面は標高に対して沿うように与えられる。
-許容される最大の地形傾斜角度$\theta_{\max}$[radian]は次の式で計算される。
+この座標系では、最下層の格子の底面が標高に対して沿うように与えられる。
+許容される最大の地形傾斜角度$\theta_{\max}$ [radian]は、次の式で計算する。
 \[
   \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )
 \]
-ここで、$\mathrm{DZ}$、$\mathrm{DX}$ は、それぞれ鉛直方向と水平方向の格子間隔である。
+ここで、$\mathrm{DZ}$と$\mathrm{DX}$はそれぞれ、鉛直方向と水平方向の格子間隔である。
 上記の計算式から分かるように、許容される最大傾斜角度は空間解像度に応じて変わる。
 $\mathrm{RATIO}$が1.0よりも大きければ地形はより細かく表現され、1.0よりも小さければ粗く表現される。
 $\mathrm{RATIO}$を非常に大きく設定した場合には、計算が途中で破綻する危険性が高くなることに注意が必要である。
@@ -33,13 +33,12 @@ $\mathrm{RATIO}$を非常に大きく設定した場合には、計算が途中�
 \verb|/                                            | \\
 }
 
-\scalerm では地形データの入力として、国土地理院が提供する 
+\scalerm では地形データの入力として、国土地理院が提供する
 GTOPO30 と DEM50M に対応している。
-プログラム\verb|scale-rm_pp|はユーザが準備した地形データを変化することができ、
-次の\ref{subsec:topo_userfile}節を参照されたい。
-これらのデータセットを組み合わせることも可能である。
+プログラム\verb|scale-rm_pp|によってユーザが準備した地形データを変換できる(第\ref{subsec:topo_userfile}節を参照)。
+また、上記のデータセットを組み合わせることもできる。
 \nmitem{CNVTOPO_UseGTOPO30}と\nmitem{CNVTOPO_UseDEM50M}の両方を
-\verb|true|に設定した場合は、以下のようにプログラムはデータを作成する。
+\verb|true|に設定した場合は、プログラムは以下のようにデータを作成する。
 
 \begin{itemize}
  \item GTOPO30 のデータセットを計算領域の格子点に内挿する。
@@ -48,32 +47,32 @@ GTOPO30 と DEM50M に対応している。
 \end{itemize}
 
 デフォルトでは、対象とする格子点の周辺にある、入力データの最寄りの5格子点が内挿に使われる。
-使用する格子点数は、\nmitem{CNVTOPO_interp_level}によって決定される。
-地形のリグリッドにおいて、急な傾斜を持つ標高を平滑化するためのフィルタとして、
+使用する格子点数は\nmitem{CNVTOPO_interp_level}によって決定される。
+地形のリグリッドにおいて、急な傾斜を含む標高を平滑化するためのフィルタとして、
 ラプラシアンフィルタとガウスシアンフィルタの2種類が存在する。
-これは\nmitem{CNVTOPO_smooth_type}によって選択することができ、
+これは\nmitem{CNVTOPO_smooth_type}で選択することができ、
 デフォルトではラプラシアンフィルタが用いられる。
 平滑化の操作において、傾斜角が最大許容角度$\theta_{\max}$を下回るまで、選択されたフィルタが適用される。
-\nmitem{CNVTOPO_smooth_maxslope_ratio}を指定することによって、上記した$\mathrm{RATIO}$を直接設定できる。
+\nmitem{CNVTOPO_smooth_maxslope_ratio}を指定することによって、上記の$\mathrm{RATIO}$を直接設定できる。
 または、度数で最大傾斜角を決める\nmitem{CNVTOPO_smooth_maxslope}を用いることができる。
 平滑化の繰り返し回数の上限はデフォルトでは 10000 回であるが、\nmitem{CNVTOPO_smooth_itelim}を設定することで繰り返し回数を増やせる。
 \nmitem{CNVTOPO_smooth_local}を\verb|.true.|に設定した場合は, 繰り返されるフィルタ操作は平滑化が完了していない格子点でのみ続けられる。
 
 小さな空間スケールのノイズを取り除くために、付加的な超粘性を地形に適用する。
 シミュレーションにおける数値的なノイズを減らすために、このフィルタリングを行うことを推奨する。
-このフィルタは、\nmitem{CNVTOPO_smooth_hypdiff_niter}に負の値を設定すれば適用されない。
+\nmitem{CNVTOPO_smooth_hypdiff_niter}に負の値を設定した場合は、このフィルタは適用されない。
 
 \nmitem{CNVTOPO_copy_parent}は、ネスティング計算のための設定項目である。
 一般的に、子ドメインは親ドメインよりも空間解像度が高いために、子ドメインの方が地形がより細かく表現される。
 このとき、子ドメインの緩和領域における大気データと親ドメインにおける大気データの間の不整合によって、問題がしばしば起きる。
-この問題を回避するために、\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすることで、親ドメインの地形を子ドメインの緩和領域にコピーすることができる。
+この問題を回避するために、\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすれば親ドメインの地形を子ドメインの緩和領域にコピーできる。
 親ドメインが存在しない場合は\nmitem{CNVTOPO_copy_parent}を\verb|.false.|に設定しなければならない。
-\nmitem{CNVTOPO_copy_parent}を利用する場合の設定については、第\ref{subsec:nest_topo}節で詳しく説明する。
+\nmitem{CNVTOPO_copy_parent}を利用する場合の設定は、第\ref{subsec:nest_topo}節で詳しく説明する。
 
 
 \section{ユーザー定義の地形の準備} \label{subsec:topo_userfile}
 
-\nmitem{CNVTOPO_UseUSERFILE}を\verb|.true.|に設定した場合、プログラム\verb|scale-rm_pp|は \\
+\nmitem{CNVTOPO_UseUSERFILE}を\verb|.true.|に設定した場合は、プログラム\verb|scale-rm_pp|は \\
 \namelist{PARAM_CNVTOPO_USERFILE}で指定したファイルの変換を試みる.
 以下はその設定例である。
 
@@ -94,7 +93,7 @@ GTOPO30 と DEM50M に対応している。
 
 この例では、\verb|GTOPO30_e100n40.grd|という名前のデータファイルが、ティレクトリ\verb|./input_topo|に存在する。
 データは、北緯40度から南緯10度、東経100度から東経140度までを対象としている。
-格子間隔は緯度経度ともに 30 秒角である。 
-よって、このデータは緯度方向に6000点、経度方向に4800点を含む。 
+格子間隔は緯度経度ともに 30 秒角である。
+よって、このデータは緯度方向に6000点、経度方向に4800点を含む。
 値は2バイトの整数で格納されている。
-ユーザー定義の地形データは、 \verb|USERFILE_IN_DATATYPE|を除いて\grads (direct access)形式と同様な単純なバイナリでなければならない。
+ユーザー定義の地形データは、 \verb|USERFILE_IN_DATATYPE|を除いて{\grads}(direct access)形式と同様な単純なバイナリでなければならない。

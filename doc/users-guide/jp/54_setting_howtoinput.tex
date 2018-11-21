@@ -15,34 +15,30 @@
 \end{center}
 \end{table}
 
-\scalerm では、表\ref{tab:inputdata_format}に示される様々な種類の外部データを読み込むことによって、
-初期値データや境界値データを作成できる。
-ファイル\verb|init.conf|の設定に従って、プログラム\verb|scale-rm_init|は外部データを初期値・境界値データに変換する。
+\scalerm では、表\ref{tab:inputdata_format}に示される様々な種類の外部データを読み込むことによって、初期値データや境界値データを作成できる。
+プログラム\verb|scale-rm_init|は、ファイル\verb|init.conf|の設定に従って外部データを初期値・境界値データに変換する。
 入力データの形式は、\namelist{PARAM_MKINIT_REAL_***}の\nmitem{FILETYPE_ORG}で指定する。
 
 SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
-詳細については、\ref{subsec:nest_offline}節を参照されたい。
+詳細については、第\ref{subsec:nest_offline}節を参照されたい。
 
-%NICAMデータ形式は正20面体格子座標系ではなく、緯度経度座標系に変換されたデータの読み込みにのみ対応している。
+WRFデータ形式も使用でき、WRFによるモデル出力データを直接使用できる。
+ただし、ファイルは{\scalerm}の境界値データの作成に必要な全てのデータを含まなければならない。
 
-WRFデータ形式も使用でき、WRFによるモデル出力データをそのまま使用できる。
-ただし、SCALEの境界値データ作成に必要な出力変数が全て出力されている必要がある。
+本書における「バイナリデータ形式」は、Fortran が直接アクセスできる単精度浮動小数点のバイナリデータとして定義される。
+GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
+この方法は、第\ref{sec:tutrial_real_data}節で説明される。
+その他の任意のデータについても、バイナリデータ形式に変換すれば使用できる。
 
-バイナリデータ形式とは、「4バイト単精度浮動小数点のダイレクトアクセス方式、Fortran型バイナリデータ」を指す。
-GRIB/GRIB2 データは、チュートリアルで説明した方法に基づいて、
-バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
-その他にも、任意のデータを境界値に使用したい場合は、
-バイナリデータ形式に変換すれば読み込ませることができる。
-下記では、バイナリデータの読み込み手続きについて説明する。
+{\scalelib}の最新版の出力ファイル形式は、バージョン5.2以前の形式とは異なる。
+そのため、バージョン5.2以前で作成された初期値/境界値ファイルは{\scalelib}{\version}では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{バイナリデータの読み込み} \label{sec:datainput_grads}
+\subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
 
 入力データの形式は、設定ファイル\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_***}で以下のように指定する。\\
 
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{l}
+\editbox{
 \verb|&PARAM_RESTART|\\
 \verb| RESTART_OUTPUT       = .true.,|\\
 \verb| RESTART_OUT_BASENAME = "init_d01",|\\
@@ -75,42 +71,38 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 \verb| INTRP_LAND_WATER     = "fill",|\\
 \verb| INTRP_LAND_SFC_TEMP  = "fill",|\\
 \verb|/|\\
-\\
-\end{tabularx}
-}}}\\
+}
 
 
 バイナリデータを読み込むときは、\nmitem{FILETYPE_ORG}に\verb|"GrADS"|を設定する。
-\scalerm では 「ctl」ファイルの代わりに、ファイル名やバイナリデータの構造が含まれる
-ネームリストファイル\verb|namelist.grads_boundary**|を準備する。
+\scalerm では ファイル名やバイナリデータの構造を含むネームリストファイル\verb|namelist.grads_boundary**|を「ctl」ファイルの代わりに準備する。
 
 \nmitem{NUMBER_OF_FILES}は入力ファイルの数である。
-単独の入力ファイルの場合には、ファイル\verb|"ファイル名.grd"|のみを準備する。
-複数の入力ファイルの場合には、時間の進む方向に\verb|"ファイル名.XXXXX.grd"|のように名前をつけたファイルを準備する。
-プログラム\verb|scale-rm_init|では、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1までの数字が付けられたファイルを読み込む。
-入力ファイルのヘッダー名(つまり、\verb|"ファイル名"|)はネームリストファイルで指定されるが、
-これについては後に説明する。
+単一の入力ファイルの場合は、ファイル「\verb|ファイル名.grd|」のみを準備する。
+複数の入力ファイルの場合には、時間の進む方向に「\verb|ファイル名.XXXXX.grd|」と名前をつけたファイルを準備する。
+プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを読み込む。
+入力ファイルのヘッダー名(つまり「\verb|ファイル名|」)はネームリストファイルで指定されるが、これについては後で説明する。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
 変換された初期値ファイルのヘッダー名は、\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。
 \nmitem{BASENAME_BOUNDARY}は、変換された境界値ファイルのヘッダー名である。
-\nmitem{BASENAME_BOUNDARY}を指定しなければ、 境界ファイルは出力されない。
+\nmitem{BASENAME_BOUNDARY}を指定しなければ、 境界値ファイルは出力されない。
 
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}、
-\namelist{PARAM_MKINIT_REAL_OCEAN}、\\ 
+\namelist{PARAM_MKINIT_REAL_OCEAN}、\\
 \namelist{PARAM_MKINIT_REAL_LAND}の間で共通である。
 \namelist{PARAM_MKINIT_REAL_OCEAN}や \\
 \namelist{PARAM_MKINIT_REAL_LAND}を別途指定しない限り、
 これらの情報は引き継がれる。
 %
-\nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|としたときのオプションであり、
-バイナリデータを選択するときには\verb|.false.|を与えなければならない。
+\nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|とした場合のオプションであり、
+バイナリデータを選択した場合は\verb|.false.|を与えなければならない。
 \nmitem{PARENT_MP_TYPE}は親モデルの水物質カテゴリーの種類であるが、
-バイナリデータを読み込む場合は\verb| 3 |を設定しなければならない。\\
+バイナリデータを読み込む場合は\verb| 3 |を設定しなければならない。
 
-土壌水分の設定については、親モデルからデータを与える方法と、
+土壌水分の設定は、親モデルからデータを与える方法と、
 領域全体で一定値を与える方法の２種類ある。
-前者の場合は、３次元の土壌水分データを必要とする。
+前者の場合は、3次元の土壌水分データを必要とする。
 後者の場合は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}に
 \verb|USE_FILE_LANDWATER = .false.| を設定する。
 また、土壌水分の条件は、土壌空隙率に対する水が占める割合(飽和度)として
@@ -170,11 +162,11 @@ GRIB/GRIB2 データは、チュートリアルで説明した方法に基づい
 }
 
 大気データの格子数を\verb|outer_nx, outer_ny, outer_nz|で指定し、
-土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|に指定する。
+土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|で指定する。
 
 QVやRHのデータは大気上層でしばしば提供されていない。
-そのような場合は、データが存在する層数を\verb|knum|で指定する。
-上層での値の与え方として２種類の手法が用意されている。
+そのような場合はデータが存在する層数を\verb|knum|で指定する。
+上層での値の与え方として２種類の方法を用意している。
 デフォルトでは、以下のように\verb| upper_qv_type = "ZERO"|である。\\
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS| & \\
