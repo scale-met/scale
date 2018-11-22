@@ -88,6 +88,7 @@ contains
        SFLX_SH, SFLX_LH, SFLX_QV,    &
        U10, V10, T2, Q2              )
     use scale_const, only: &
+       EPS    => CONST_EPS, &
        CPdry  => CONST_CPdry, &
        EPSvap => CONST_EPSvap
     use scale_atmos_hydrometeor, only: &
@@ -158,7 +159,7 @@ contains
 #ifndef __GFORTRAN__
     !$omp parallel do default(none) &
     !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
-    !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,CPdry,LHV,bulkflux,    &
+    !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,EPS,CPdry,LHV,bulkflux,&
     !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_W,ATM_U,ATM_V,ATM_Z1,               &
     !$omp         SFC_DENS,SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
     !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)
@@ -196,9 +197,16 @@ contains
                       SFC_Z0E (i,j)  ) ! [IN]
 
        !-----< momentum >-----
-       SFLX_MW(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_W(i,j)
-       SFLX_MU(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_U(i,j)
-       SFLX_MV(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_V(i,j)
+       Uabs = sqrt( ATM_W(i,j)**2 + ATM_U(i,j)**2 + ATM_V(i,j)**2 )
+       if ( Uabs < EPS ) then
+          SFLX_MW(i,j) = 0.0_RP
+          SFLX_MU(i,j) = 0.0_RP
+          SFLX_MV(i,j) = 0.0_RP
+       else
+          SFLX_MW(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_W(i,j)
+          SFLX_MU(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_U(i,j)
+          SFLX_MV(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_V(i,j)
+       end if
 
        !-----< heat flux >-----
        SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar * Tstar * CPdry

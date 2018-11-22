@@ -113,6 +113,7 @@ contains
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
@@ -214,7 +215,7 @@ contains
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
     !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2) &
-    !$omp shared(IS,IE,JS,JE,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
+    !$omp shared(IS,IE,JS,JE,EPS,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
@@ -441,9 +442,16 @@ contains
                          Z0H (i,j), & ! [IN]
                          Z0E (i,j)  ) ! [IN]
 
-          ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
-          XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
-          YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+          Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
+          if ( Uabs < EPS ) then
+             ZMFLX(i,j) = 0.0_RP
+             XMFLX(i,j) = 0.0_RP
+             YMFLX(i,j) = 0.0_RP
+          else
+             ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
+             XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
+             YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+          end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
           QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
 

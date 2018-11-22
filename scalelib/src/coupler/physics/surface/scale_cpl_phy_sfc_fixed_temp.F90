@@ -78,6 +78,7 @@ contains
        SHFLX, QVFLX, GFLX,  &
        U10, V10, T2, Q2     )
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
@@ -155,7 +156,7 @@ contains
 #ifndef __GFORTRAN__
     !$omp parallel do default(none) &
     !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU) &
-    !$omp shared(IS,IE,JS,JE,Rdry,CPdry,bulkflux, &
+    !$omp shared(IS,IE,JS,JE,EPS,Rdry,CPdry,bulkflux, &
     !$omp        calc_flag,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
     !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
 #else
@@ -196,9 +197,16 @@ contains
                          Z0H (i,j), & ! [IN]
                          Z0E (i,j)  ) ! [IN]
 
-          ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
-          XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
-          YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+          Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
+          if ( Uabs < EPS ) then
+             ZMFLX(i,j) = 0.0_RP
+             XMFLX(i,j) = 0.0_RP
+             YMFLX(i,j) = 0.0_RP
+          else
+             ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
+             XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
+             YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+          end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
           QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
 
