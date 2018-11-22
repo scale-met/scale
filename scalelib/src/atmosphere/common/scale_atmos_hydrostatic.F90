@@ -585,6 +585,8 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -623,7 +625,12 @@ contains
     if ( present(kref) ) then
        kref_ = kref
     else
-       kref_ = KS
+       do k = KS, KE
+          if ( dens(k) .ne. UNDEF ) then
+             kref_ = k
+             exit
+          end if
+       end do
     end if
 
     do k = kref_, KE
@@ -700,6 +707,8 @@ contains
        dens,         &
        temp, pres,   &
        kref          )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -738,7 +747,12 @@ contains
     if ( present(kref) ) then
        kref_ = kref
     else
-       kref_ = KE
+       do k = KE, KS, -1
+          if ( dens(k) .ne. UNDEF ) then
+             kref_ = k
+             exit
+          end if
+       end do
     end if
 
     do k = KS, kref_
