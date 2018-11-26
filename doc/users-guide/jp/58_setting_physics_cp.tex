@@ -32,7 +32,7 @@
 \verb|RAIN_CP|\verb|RAIN_MP|という名前で別々に降水量を出力する。
 \verb|RAIN|と\verb|PREC|は、両者のスキームによる合計の降水量である。
 つまり、\verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|、
-\verb|PREC| = \verb|RAIN_CP| + \verb|RAIN_MP|である。
+\verb|PREC| = \verb|PREC_CP| + \verb|PREC_MP|である。
 %%%
 \verb|KF|は大気中の水蒸気と水物質(雲水・雲氷等)の変化を計算することに注意が必要である。
 水物質の変化は、雲微物理の過程でさらに計算される。
@@ -44,38 +44,38 @@
 \verb|KF|では、以下のチューニングパラメータを設定できる。
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
-\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function の種類: 1=Kain, 3=Narita-Ohmori\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decleace rate\\
+\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; トリガー関数の種類: 1=Kain, 3=Narita-Ohmori\\
+\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; CAPE の減率 \\
 \verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; 深い対流の生存時間のスケール[sec]\\
 \verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; 浅い対流の生存時間のスケール[sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; updraft source layer の深さ[hPa]\\
+\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; 上昇流の発生源となる層(updraft source layer)の探索開始時の深さ[hPa]\\
 \verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; 降水の種類: 1=Ogura-Cho, 2=Kessler\\
-\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ogura-Cho precipitation function における雲水と降水の比 \\
-\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Kessler の precipitation function における Autoconversion の比 \\
+\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ogura-Cho の降水関数における雲水と降水の比 \\
+\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Kessler の降水関数における Autoconversion の比 \\
 \verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; 警告メッセージを出力するか? \\
 \verb|/             | & \\
 }\\
-ユーザーはtrigger fuctionとして以下の2つから選択できる。
+ユーザーはトリガー関数として以下の2つから選択できる。
 \begin{enumerate}
-\item Kain Type \citet{kain_2004} \\
+\item Kain タイプ \citet{kain_2004} \\
   \scalerm におけるデフォルト。
-\item Narita and Ohmori Type \citet{narita_2007} \\
-  日本域における KF 積雲パラメタリゼーションスキームに対する trigger function
+\item Narita and Ohmori タイプ \citet{narita_2007} \\
+  日本域における KF 積雲パラメタリゼーションスキームに対するトリガー関数。
 \end{enumerate}
-また、 precipitation fuctionとして以下の2つから選択できる。
+また、 降水関数は以下の2つから選択できる。
 \begin{enumerate}
-\item Ogura-Cho Type \citet{ogura_1973} \\
-  \scalerm におけるデフォルト。この場合には、
+\item Ogura-Cho タイプ \citet{ogura_1973} \\
+  \scalerm におけるデフォルト。この場合、
   \nmitem{PARAM_ATMOS_PHY_CP_kf_rate}というチューニングパラメータをさらに設定できる。
-\item Kessler Type \citet{kessler_1969} \\
-  Kessler type の簡単な precipitation fuction.
-  この場合には、 \nmitem{PARAM_ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
+\item Kessler タイプ \citet{kessler_1969} \\
+  Kessler type の簡単な降水関数。
+  この場合、 \nmitem{PARAM_ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
 \end{enumerate}
 
 \namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する、
 KF を呼び出す時間間隔もまたチューニングパラメータであり、降水量に影響を及す。
-\nmitem{TIME_DT_ATMOS_PHY_CP}の初めの設定として 300 秒を推奨する。
-上昇流を駆動する層はしきい値(デフォルトでは 50 hPa)よりも厚い必要があるが、
-この条件を満たさない場合でも計算は止まらない。
-ただし、\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}を\verb|true|にすれば、
-「go off top/bottom of updraft source layer」という警告メッセージを出力する。
+\nmitem{TIME_DT_ATMOS_PHY_CP}の最初の設定として 300 秒を推奨する。
+\nmitem{PALAM_ATMOS_PHY_CP_kf_LOG}を\verb|true|にした場合は、
+上昇流の発生源となる層がモデルの上下端を超えた際に警告メッセージを出力する。
+上昇流の発生源となる層はしきい値(デフォルトでは 50 hPa)よりも厚い必要があるが、
+この条件を満たさなくても計算は止まらない。

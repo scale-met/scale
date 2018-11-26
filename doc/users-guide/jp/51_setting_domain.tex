@@ -371,7 +371,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
                                                  &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\
                                                  &  ~\verb|nearest_neighbor|: 最も近い時間ステップでの値を使用, \\
                                                  &  ~\verb|lerp_initpoint|: 2つの時間ステップでの値を用いて瞬間値として線形補間する,  \\
-                                                 &  ~\verb|lerp_midpoint|: \verb|lerp_initpoint|と同様であるが、値は時間ステップに渡る時間平均値を使用 \\
+                                                 &  ~\verb|lerp_midpoint|: \verb|lerp_initpoint|と同様であるが、境界データの時間ステップ間の時間平均値を使用 \\
   \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; 初期の境界値データを出力するファイル名 \\
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; 出力ファイルに対するタイトル \\

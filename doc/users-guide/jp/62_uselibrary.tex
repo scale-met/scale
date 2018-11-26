@@ -55,12 +55,12 @@
   \verb|                         |\\
   \verb| call ATMOS_ADIABAT_setup|\\
   \verb| call ATMOS_ADIABAT_cape( kmax, 1, kmax, imax, 1, imax, jmax, 1, jmax,      & ! 配列サイズ|\\
-  \hspace{12em}\verb|             k0,                                               & ! percel initial layer|\\
-  \hspace{12em}\verb|             dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! input|\\
-  \hspace{12em}\verb|             qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! input|\\
-  \hspace{12em}\verb|             rtot(:,:,:), cptot(:,:,:),                        & ! input|\\
-  \hspace{12em}\verb|             z(:,:,:), zh(:,:,:),                              & ! input|\\
-  \hspace{12em}\verb|             cape(:,:), cin(:,:), lcl(:,:), lfc(:,:), lnb(:,:) ) ! output|\\
+  \hspace{12em}\verb|             k0,                                               & ! パーセルの持ち上げを開始する鉛直インデックス|\\
+  \hspace{12em}\verb|             dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! 入力|\\
+  \hspace{12em}\verb|             qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! 入力|\\
+  \hspace{12em}\verb|             rtot(:,:,:), cptot(:,:,:),                        & ! 入力|\\
+  \hspace{12em}\verb|             z(:,:,:), zh(:,:,:),                              & ! 入力|\\
+  \hspace{12em}\verb|             cape(:,:), cin(:,:), lcl(:,:), lfc(:,:), lnb(:,:) ) ! 出力|\\
   \verb| |\\
 }
 
