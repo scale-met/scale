@@ -50,6 +50,7 @@ module scale_topography
   !++ Private parameters & variables
   !
   character(len=H_LONG),  private :: TOPOGRAPHY_IN_BASENAME = ''                     !< basename of the input  file
+  character(len=H_LONG),  private :: TOPOGRAPHY_IN_VARNAME  = 'topo'                 !< variable name of topo in the input  file
   logical,                private :: TOPOGRAPHY_IN_AGGREGATE                          !> switch to use aggregated file
   logical,                private :: TOPOGRAPHY_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
   character(len=H_LONG),  private :: TOPOGRAPHY_OUT_BASENAME = ''                     !< basename of the output file
@@ -70,6 +71,7 @@ contains
 
     namelist / PARAM_TOPOGRAPHY / &
        TOPOGRAPHY_IN_BASENAME,          &
+       TOPOGRAPHY_IN_VARNAME,           &
        TOPOGRAPHY_IN_AGGREGATE,         &
        TOPOGRAPHY_IN_CHECK_COORDINATES, &
        TOPOGRAPHY_OUT_BASENAME,         &
@@ -159,7 +161,7 @@ contains
     if ( TOPOGRAPHY_IN_BASENAME /= '' ) then
 
        call FILE_CARTESC_open( TOPOGRAPHY_IN_BASENAME, fid, aggregate=TOPOGRAPHY_IN_AGGREGATE )
-       call FILE_CARTESC_read( fid, 'TOPO', 'XY', TOPOGRAPHY_Zsfc(:,:) )
+       call FILE_CARTESC_read( fid, TOPOGRAPHY_IN_VARNAME, 'XY', TOPOGRAPHY_Zsfc(:,:) )
 
        call FILE_CARTESC_flush( fid )
 
@@ -199,7 +201,7 @@ contains
 
        call FILE_CARTESC_write( TOPOGRAPHY_Zsfc(:,:),                                    & ! [IN]
                                 TOPOGRAPHY_OUT_BASENAME, TOPOGRAPHY_OUT_TITLE,           & ! [IN]
-                                'TOPO', 'Topography', 'm', 'XY',   TOPOGRAPHY_OUT_DTYPE, & ! [IN]
+                                'topo', 'Topography', 'm', 'XY',   TOPOGRAPHY_OUT_DTYPE, & ! [IN]
                                 standard_name="surface_altitude",                        & ! [IN]
                                 haszcoord=.false., aggregate=TOPOGRAPHY_OUT_AGGREGATE    ) ! [IN]
 
