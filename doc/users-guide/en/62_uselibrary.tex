@@ -12,7 +12,7 @@ The following is a template when you use \scalelib in your program.
   \verb||\\
   \verb|  call SCALE_init|\\
   \verb||\\
-  \verb|  ! user instractions|\\
+  \verb|  ! user instructions|\\
   \verb||\\
   \verb|  call SCALE_finalize|\\
   \verb||\\
@@ -56,7 +56,7 @@ Note that this is only a part of the program.
   \verb|                         |\\
   \verb| call ATMOS_ADIABAT_setup|\\
   \verb| call ATMOS_ADIABAT_cape( kmax, 1, kmax, imax, 1, imax, jmax, 1, jmax,      & ! array size|\\
-  \hspace{12em}\verb|             k0,                                               & ! percel initial layer|\\
+  \hspace{12em}\verb|             k0,                                               & ! vertical index from which a parcel is started  |\\
   \hspace{12em}\verb|             dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! input|\\
   \hspace{12em}\verb|             qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! input|\\
   \hspace{12em}\verb|             rtot(:,:,:), cptot(:,:,:),                        & ! input|\\

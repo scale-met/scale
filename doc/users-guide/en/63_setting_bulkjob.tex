@@ -12,8 +12,8 @@ In the following explanation, an independent execution in the bulk job is called
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=0.6\hsize]{./figure/bulkjob_directory_structure.pdf}\\
-  \caption{Structure of directories at the bulk job execution of \scalerm.
-Numbers such as ``0000'' are the directory names corresponding to job number, and called the job directory.   All necessary configuration files must be prepared in each job directory.
+  \caption{Structure of directories at the execution of \scalerm with bulk job.
+Numbers such as ``0000'' are the directory names corresponding to job number, and called the job directory.   All necessary configuration files to execute sub jobs must be prepared in each job directory.
 }
   \label{fig_bulkjob}
 \end{center}
@@ -39,16 +39,16 @@ Below is an example of such a case.
 }
 It is sufficient to add item \nmitem{NUM_BULKJOB} to the \verb|launch.conf|. The other configurations are similar to those in Section \ref{subsubsec:launch}. In case of a single-domain experiment (no nesting), specify \nmitem{NUM_DOMAIN} $=$ 1 and assign a file name to \nmitem{CONF_FILES}.
 
-Log of MPI communicator splitting will output, when \nmitem{LOG_SPLIT} is \verb|.true.|.
+Log of MPI communicator splitting will be output, when \nmitem{LOG_SPLIT} is \verb|.true.|.
 The default value of \nmitem{LOG_SPLIT} is \verb|.false.|.
 
-Option of \nmitem{COLOR_REORDER} is the switch fo job rearrangement in MPI communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
+Option of \nmitem{COLOR_REORDER} is the switch for job rearrangement in MPI communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
 this would be reasonable to gain the efficient inter-node communication.
 
 
 \section{Failure Process Management}
 In the \scalerm bulk job system, a failure process management (FPM) tool is available. FPM watches the job groups with a polling interval.
-If some jobs are unfortunately aborted, all other jobs are not aborted until the number of failure jobs reacheas to the limit number.
+If some jobs are unfortunately aborted, all other jobs are not aborted until the number of failure jobs reaches to the limit number.
 \nmitem{FAILURE_PRC_MANAGE} is a switch for use FPM tool.
 \nmitem{NUM_FAIL_TOLERANCE} and \nmitem{FREQ_FAIL_CHECK} are setting parameters for limit number of failure jobs and interval of checking failure job, respectively.
 Note, this version of FPM tool is available only for single domain calculation, not available of full system for online-nesting calculation. If you want to use FPM tool even in online-nesting calculation,
@@ -56,8 +56,8 @@ Note, this version of FPM tool is available only for single domain calculation, 
 
 
 \section{Preparation for Bulk Job}
-Prior to the execution of bulk jobs, prepare as many directories as the number of jobs, which are called ``sub-directories.'' As in Fig. \ref{fig_bulkjob}, these correspond to \verb|0000/  0001/  0002/|. The directory name is assigned as a four-digit number starting from zero. In each directory, all the necessary files (configuration files, input files, and output directories) must be prepared.
-Note than the path to directoies or files specified in the configuration files must be correctly set up as explained below.
+Prior to the execution of bulk jobs, prepare as many directories as the number of sub-jobs, which are called ``sub-directories.'' As in Fig. \ref{fig_bulkjob}, these correspond to \verb|0000/  0001/  0002/|. The directory name is assigned as a four-digit number starting from zero. In each directory, all the necessary files (configuration files, input files, and output directories) must be prepared.
+Note that the path to directories or files specified in the configuration files must be correctly set up as explained below.
 An excerpt of \verb|run.d01.conf| for job \verb|0000| are as follows:
 \editbox{
 \verb|&PARAM_IO| \\
@@ -90,7 +90,7 @@ An excerpt of \verb|run.d01.conf| for job \verb|0000| are as follows:
 \verb|/| \\
 }
 
-As shown in Fig. \ref{fig_bulkjob}, job directories exist in the same hierarchy as the directory of the executable binary. That is, a configuration file exists under each job directory, whereas the input files and the output directories must be described as relative paths from the location of  the executable binary. The output directory in the 0000 experiment is \verb|0000/| and the name of output files are as \verb|0000/***|. {\color{blue}{ Note that when the file name is common to all experiments without job directory settings, the output is written to the same file, and the data disappear as a result.
+As shown in Fig. \ref{fig_bulkjob}, job directories exist in the same hierarchy as the directory of the executable binary. That is, a configuration file exists under each job directory, whereas the input files and the output directories must be described as relative paths from the location of  the executable binary. The output directory in the 0000 experiment is \verb|0000/| and the name of output files are as \verb|0000/***|. {\color{blue}{ Note that when the file name is common to all experiments without adding the name of job directory, the output is written to the same file, and the data disappear as a result.
 }}
 
 
@@ -132,10 +132,9 @@ In this example, the number of processes per sub-job is 45 ($=9 + 36$) and the t
 \verb| *** master rank ID [each world] :        0| &\\
 &\\
 }
-The items belonging to \verb|[LOCAL]|, \verb|[GLOBAL]|, and \verb|[UNIVERSAL]| are the descriptions, respectively, of the process group in the domain, the nesting group, and the job group. The \verb|UNIVERSAL| group includes the \verb|GLOBAL| group and the \verb|GLOBAL| group includes the \verb|LOCAL| group. \verb|total process| represents the total number  of processes in each group and \verb|my process ID| the ID of the process in the group.
+The items belonging to \verb|[LOCAL]|, \verb|[GLOBAL]|, and \verb|[UNIVERSAL]| are the descriptions, respectively, of the process group in the domain, the nesting group, and the job group. The \verb|UNIVERSAL| group includes the \verb|GLOBAL| group and the \verb|GLOBAL| group includes the \verb|LOCAL| group. \verb|total process| represents the total number  of processes in each group and \verb|my process ID| is the ID of the process in the group.
 
-It can be confirmed in this case that 1) since \verb|total process [UNIVERSAL]| is 135, all these processes are completed executed; 2) since \verb|total process [GLOBAL]| is 45, these 45 processes are used in a sub-job; 3) since this example is the log file for Domain 1,  \verb|total process [LOCAL]| is correctly described as 9. If you see the log message for Domain 2,  it is 39. \verb|my process ID [UNIVERSAL]|  is the process number  corresponding to the LOG and history files. Since this notation is the same as in the abnormal completion of execution, you can immediately recognize the processes in which errors occur during the execution of the sub-jobs. \textcolor{blue}{Note that in the current version, all jobs are forcibly terminated if a job is abnormally finished.}
+It can be confirmed in this case that 1) since \verb|total process [UNIVERSAL]| is 135, all these processes are completed executed; 2) since \verb|total process [GLOBAL]| is 45, these 45 processes are used in a sub-job; 3) since the log file for Domain 1 is shown in this example, it is correct to describe \verb|total process [LOCAL]| as 9. If you see the log message for Domain 2,  it is 39. \verb|my process ID [UNIVERSAL]| is the process number  corresponding to the LOG and history files. Since this notation is the same as in the abnormal completion of execution, you can immediately recognize the processes in which errors occur during executing a considerable number of sub-jobs.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-

@@ -49,7 +49,7 @@ When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PA
 \end{tabularx}
 }}}\\
 
-In case the number of MPIs parallel are also changed, if the below conditions are satisfied in addition to \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
+In case the number of MPIs parallel are also changed, if the below conditions are satisfied in the setting of \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
 \begin{eqnarray}
 && \verb|Number of grids along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \nonumber \\
 && \verb|Number of grids along the Y direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
@@ -108,7 +108,7 @@ Furthermore, it is necessary to prepare a boundary condition of more than 12 hou
 
 \item {\bf How are output variables added and their output interval changed?}\\
 
-The output interval is set to \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_FILE_HISTORY} as below. The output variables are specified at \nmitem{ITEM} in \namelist{HISTORY_ITEM}. The list of the history variables is in the reference manual.
+The output interval is set to \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL} in \namelist{PARAM_FILE_HISTORY} as below. The output variables are specified at \nmitem{NAME} in \namelist{HISTORY_ITEM}. The list of the history variables is in the reference manual.
 See Section \ref{sec:reference_manual} for the reference manual.\\
 
 \noindent {\small {\rm
@@ -141,7 +141,7 @@ Once the three hours for integration have elapsed, the restart file is created.\
 \verb| TIME_STARTMS               = 0.D0, | & \\
 \textcolor{red}{\verb| TIME_DURATION              = 3.0D0, |} ~~~~~~~~~necessary for more than 3 hours & \\
 \verb| TIME_DURATION_UNIT         = "HOUR", | & \\
-\verb| ....(省略)....| & \\
+\verb| ....(omission)....| & \\
 \textcolor{red}{\verb| TIME_DT_ATMOS_RESTART      = 10800.D0, |} & \\
 \textcolor{red}{\verb| TIME_DT_ATMOS_RESTART_UNIT = "SEC",    |} & \\
 \textcolor{red}{\verb| TIME_DT_OCEAN_RESTART      = 10800.D0, |} & \\

@@ -2,7 +2,7 @@
 \section{SCALE NetCDF Operator (\sno)} \label{sec:snoutil}
 %-------------------------------------------------------------------------------
 
-In default, the output file of \scalerm (called as \scalenetcdf file) is divided according to the horizontal domain decomposition by the multiple processes. This style is efficient to the throughput of the file I/O during the model simulation. However, it is hard to handle a lot of files. The number of the file increases with increasing the number process, and we cannot use these files for the next simulation, with changing only the number of the MPI processes. Furthermore, many analytical and visualization tools do not support such distributed files. One solution to these problems is the aggregation of the output file. We can use the Parallel \netcdf (PnetCDF). Please refer to Section \ref{subsec:single_io}. The other solution is usage of the post process tool \sno. \sno has the feature as follows:
+In default, the output file of \scalerm (called as \scalenetcdf file) is divided according to the horizontal domain decomposition by the multiple processes. This style is efficient to the throughput of the file I/O during the model simulation. However, it is hard to handle a lot of files. The number of the file increases with increasing the number of process, and we cannot use these files for the next simulation, with changing only the number of the MPI processes. Furthermore, many analytical and visualization tools do not support such distributed files. One solution to these problems is the aggregation of the output file. We can use the Parallel \netcdf (PnetCDF). Please refer to Section \ref{subsec:single_io}. The other solution is usage of the post process tool \sno. \sno has the feature as follows:
 
 \begin{itemize}
  \item Combine the divided multiple files into a single file or multiple files
@@ -13,7 +13,7 @@ In default, the output file of \scalerm (called as \scalenetcdf file) is divided
  \item Regrid to geodesic (latitude-longitude) grid system
 \end{itemize}
 
-By using SNO, you can manipulate the history, topography, boundary, and initial/restart data whether the files have the halo grids or not.
+By using \sno, you can manipulate the history, topography, boundary, and initial/restart data whether the files have the halo grids or not.
 
 \subsubsection{Limitations}
 
@@ -21,7 +21,7 @@ By using SNO, you can manipulate the history, topography, boundary, and initial/
 \sno is executable with multiple processes. However, a maximum number of the available process is limited by the number of output files from \sno. For example, if you want to convert the hundreds of \scalenetcdf file to a single file, you can use only one MPI process for that operation.
 For GrADS format, it is difficult to contain the plural variables with the different vertical layer. Thus each variable is output to the individual aggregated file.
 
-Rearrange of the multiple file is still limited. Each file must have the same size of the horizontal grid (without considering halo grid). An example is described in the configuration sample below.
+Rearrangement of the multiple file is still limited. Each file must have the same size of the horizontal grid (without considering halo grid). An example is described in the configuration sample below.
 
 \subsubsection{Usage}
 
@@ -68,7 +68,7 @@ If no options are specified for \namelist{PARAM_IO}, the progress log is output 
 \verb|/                                       | \\
 }
 
-This example converts history file named \verb|history_d02.pe######.nc| in the directory \verb|./input| directory, where \verb|######| represents the MPI process number.
+This example converts history file named \verb|history_d02.pe######.nc| in the directory \verb|./input|, where \verb|######| represents the MPI process number.
 The information of the divided files, such as the total number of files and the 2-D topology, is read from the first file (in this case, \verb|history_d02.pe000000.nc|). The converted file is output to \verb|./output| directory with the new name \verb|history_d02_new.pe######.nc|.
 Options about the number of output file and variables are not not specified in this example. In this case, input files are combined to a single file and all variables are kept.
 
@@ -111,7 +111,7 @@ Generally, a single \netcdf file is readable by \grads without any extrnal metad
 If \nmitem{output_grads} is \verb|.true.|, \sno outputs \grads format file instead of the \scalenetcdf format. All of the decomposed data is combined spatially. Each variable is output individual file. Each file name is set to be the same as a variable name. The converted file is output to \verb|./output| directory. Note that the output path will not be set if you specify \nmitem{basename_out}. The control files are also generated.
 In this example, the conversion is applied only for the variables specified by \nmitem{vars}.
 
-\subsubsection{Multiple SCALE-NETCDF files to multiple NetCDF file}
+\subsubsection{Multiple \scalenetcdf files to multiple NetCDF file}
 
 \editbox{
 \verb|&PARAM_SNO                            | \\
@@ -162,7 +162,7 @@ Here we describe the detail of options in \namelist{PARAM_SNO}.
 \verb| nprocs_y_out    = 1,       | & ; division number of file in y-direction \\
 \verb| vars            = "",      | & ; name of variables to operate \\
 \verb| output_grads    = .false., | & ; output with grads format? \\
-\verb| output_gradsctl = .false., | & ; output grads control file for the single \scalenetcdf file? \\
+\verb| output_gradsctl = .false., | & ; output grads control file for the single \netcdf file? \\
 \verb| debug           = .false., | & ; output verbose log for debugging? \\
 \verb|/                           | & \\
 }
@@ -240,7 +240,7 @@ The other options in \namelist{PARAM_SNOPLGIN_HGRIDOPE} set the boundary of the 
 \begin{eqnarray}
   \nmitemeq{nlon} = \frac{\nmitemeq{SNOPLGIN_hgridope_lon_end} - \nmitemeq{SNOPLGIN_hgridope_lon_start} }{\nmitemeq{SNOPLGIN_hgridope_dlon}} \nonumber.
 \end{eqnarray}
-
+\noindent
 The result of this calculation is rounded to an integer. Thus, the longitude of the easternmost grid point may become smaller than \nmitem{SNOPLGIN_hgridope_lon_end}.
 The size of latitude grid point is calculated in the same manner as that of longitude.
 

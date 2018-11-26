@@ -29,7 +29,7 @@ Several variations of the Makedef file corresponding to computer environment are
 Choose a Makedef file according to your environment.
 Table \ref{tab:makedef} shows environments that Makedef files have supported. If there is no file for your environment, create a Makedif file by modifying any existing one.
 For example,
-if you use Linux x86-64 OS, a GNU compiler, and openMPI,
+if you use Linux x86-64 OS, a GNU compiler and openMPI,
 "Makedef.Linux64-gnu-ompi" is apropriate.
 An environment variable must also be specified as follows:
 \begin{verbatim}
@@ -56,7 +56,7 @@ If the environment is always the same, it is convenient to explicitly describe t
 
 \scalelib requires \netcdf.
 In the most cases, the pathes of \netcdf may be automatically found by using ``nc-config'' command.
-If the pathes cannot be found automatically, you should set the following pathes.
+If the paths cannot be found automatically, you should set the following paths.
 You must set the environmental variables for \netcdf as follows:
 \begin{verbatim}
  $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
@@ -79,7 +79,7 @@ and compile it by executing the following command:
 The number of \verb|-j| option shows a number of parallel compile processes;
 it is four-parallel in this example.
 To reduce elapsed time of compile,
-it is better to use this option to execute parallel compilation.
+it is better to specify this option to execute parallel compilation.
 Specify this number according to your environment.
 When a compilation is successful,
 the following three executable files are generated under the \texttt{scale-{\version}/bin} directory.
@@ -97,12 +97,12 @@ and compile it by executing the following command:
   $  make -j 4
 \end{alltt}
 
-The number of \verb|-j| option shows a number of parallel compile processes;
-it is four-parallel in this example.
-To reduce elapsed time of compile,
-it is better to use this option to execute parallel compilation.
-Specify this number according to your environment;
-we recommend the use of two $\sim$ eight processes.
+%The number of \verb|-j| option shows a number of parallel compile processes;
+%it is four-parallel in this example.
+%To reduce elapsed time of compile,
+%it is better to use this option to execute parallel compilation.
+%Specify this number according to your environment;
+%we recommend the use of two $\sim$ eight processes.
 When a compilation is successful,
 the following three executable files are generated under the scale-{\version}/bin directory.
 
@@ -111,7 +111,7 @@ the following executable files are created in the \texttt{scale-{\version}/bin} 
 ``fio'' is original format based on binary with header information.
 \begin{verbatim}
    scale-gm      (executable binary of \scalegm)
-   gm_fio_cat    (cat commant tool for fio format)
+   gm_fio_cat    (cat command tool for fio format)
    gm_fio_dump   (dump tool for fio format file)
    gm_fio_ico2ll (convert tool from icosahedral grid data with fio format to LatLon grid data)
    gm_fio_sel    (sel command tool for fio format)
@@ -139,9 +139,9 @@ When you recompile the files by changing the compilation environment and options
 In \scalelib, a compilation and an archive are conducted in directory \texttt{scale-{\version}/scalelib/}.
 Object files are placed in a hidden directory called \verb|".lib"| under this directory when you carry out a compilation.
 
-When you want to compile it in debug mode, compile it using \verb|"make -j 4 SCALE_DEBUG=T"|.
-(All the environment variables applied at compile time are listed in Table \ref{tab:env_var_list}.)
-If you want to change the compilation options in detail, edit \verb|Makedef.***|.
+When you want to compile it in debug mode, compile it using \verb|"make -j 4 SCALE_DEBUG=T"|
+(All the environment variables applied at compile time are listed in Table \ref{tab:env_var_list}).
+If you want to change the compilation options in detail, edit \verb|Makedef.***| file.
 
 \begin{table}[htb]
 \begin{center}
@@ -174,6 +174,4 @@ If you want to change the compilation options in detail, edit \verb|Makedef.***|
 \label{tab:env_var_list}
 \end{center}
 \end{table}
-
-
 

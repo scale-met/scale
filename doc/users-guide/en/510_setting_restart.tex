@@ -11,7 +11,7 @@ The example below indicates that the simulation restarts by the file \verb|resta
                                                          & Basename of input initial file or restart file. \\
 %\verb| RESTART_IN_AGGREGATE          = .false.,        | & Please refer to Section \ref{sec:netcdf} \\
 \verb| RESTART_IN_POSTFIX_TIMELABEL  = .false.         | & Add initial date and time after \verb|RESTART_IN_BASENAME|? \\
-\verb| RESTART_OUTPUT                = .false.,        | & Output restart file? Default is \verb|.false.| \\
+\verb| RESTART_OUTPUT                = .true.,        | & Output restart file? Default is \verb|.false.| \\
 \verb| RESTART_OUT_BASENAME          = "restart2_d01", | & Basename of output restart file. \\
 %\verb| RESTART_IN_AGGREGATE          = .false.,        | & Please refer to Section \ref{sec:netcdf} \\
 \verb| RESTART_OUT_POSTFIX_TIMELABEL = .true.          | & Add output date and time after \verb|RESTART_OUT_BASENAME|? \\
@@ -74,6 +74,6 @@ is needed in addition to the initial data. An example is as follows:
 \verb|/                                                            | & \\
 }
 
-In the restart simulation, an appropriate date of the boundary data at will be read from the boundary file \verb|boundary_***.nc|.
+In the restart simulation, an appropriate date of the boundary data will be read from the boundary file \verb|boundary_***.nc|.
 You should specify the first date of the boundary data to \nmitem{ATMOS_BOUNDARY_START_DATE} in \namelist{PARAM_ATMOS_BOUNDARY}.
 When \nmitem{ATMOS_BOUNDARY_START_DATE} is not given, the date of the first data in the file is set to the start date of the restart simulation, whether the actual date is different or not.

@@ -92,7 +92,9 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 \subsection{Subsurface ocean scheme}
 %-------------------------------------------------------------------------------
 
-The grid points, which have a ocean fraction (= land fraction is less than 1.0), must be calculated by the ocean submodel. The setting of land-ocean fraction is controlled by \namelist{PARAM_LANDUSE}.
+At a surface grid point whose ocean fraction exists (= land fraction is less than 1.0),
+the physical quantities must be calculated by the ocean submodel.
+The setting of land-ocean fraction is controlled by \namelist{PARAM_LANDUSE}.
 When \nmitem{OCEAN_DYN_TYPE} is set to \verb|"NONE"| or \verb|"OFF"| although the grid points with the ocean fraction exist, the following error message is displayed to the log file:
 
 \msgbox{
@@ -108,7 +110,8 @@ If \nmitem{OCEAN_DYN_TYPE} is set to \verb|"SLAB"|, the subsurface ocean is trea
  \verb|/                                | & \\
 }
 
-In the slab ocean model, you can apply SST relaxation (nudging) by using external data.
+In the slab ocean model, you can apply a relaxation (i.e., nudging) for sea surface temperature (SST)
+by using external data.
 The parameter of the nudging can be specified in \namelist{PARAM_OCEAN_DYN_SLAB}.
 
 \editboxtwo{
@@ -156,7 +159,7 @@ This is the same as \nmitem{OCEAN_TYPE} = \verb|"FILE"| in the old version of \s
  \verb|/                                                   | & \\
 }
 
-Each parameter for the external file in offline mode follows the parameter for the nudging file in the slab ocean scheme.
+Each parameter for the external file in offline mode follows the parameter for the nudging settings in the slab ocean scheme.
 
 
 
@@ -203,7 +206,7 @@ while the albedo parameters set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_const} are use
 }
 
 
-The albedos over the sea ice surface are constant regardress of \nmitem{OCEAN_ALB_TYPE}. The values are set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_seaice}.
+The albedos over the sea ice surface are constant regardless of \nmitem{OCEAN_ALB_TYPE}. The values are set by \nmitem{PARAM_OCEAN_PHY_ALBEDO_seaice}.
 
 \editboxtwo{
  \verb|&PARAM_OCEAN_PHY_ALBEDO_seaice             | & \\
@@ -283,7 +286,7 @@ The parameters of sea ice process is configured by \namelist{PARAM_OCEAN_PHY_ICE
  \verb|/                                         | & \\
 }
 
-In \scale, the mass amount of the sea ice is the prognostic variable and the ice fraction diagnosed by following equation:
+In \scale, the mass amount of the sea ice is the prognostic variable, and the ice fraction is diagnosed by following equation:
 
 \begin{eqnarray}
   && \nmitemeq{ICE_fraction} = \sqrt{ \frac{\nmitemeq{ICE_mass}}{\nmitemeq{OCEAN_PHY_ICE_mass_critical}} }\nonumber.
@@ -316,24 +319,24 @@ In \scale, the mass amount of the sea ice is the prognostic variable and the ice
 %-------------------------------------------------------------------------------
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
 
-\subsection{Land Dynamics and Surface Scheme}
+\subsection{Land and Surface Scheme}
 %-------------------------------------------------------------------------------
 The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_DYN_TYPE} and \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
 
 \editboxtwo{
 \verb|&PARAM_LAND                | & \\
-\verb| LAND_DYN_TYPE = "BUCKET", | & ; Select the land dynamics type shown in Table \ref{tab:nml_land_dyn}\\
+\verb| LAND_DYN_TYPE = "BUCKET", | & ; Select the land type shown in Table \ref{tab:nml_land_dyn}\\
 \verb| LAND_SFC_TYPE = "SKIN",   | & ; Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
 \verb|/                          | & \\
 }
 
 \begin{table}[hbt]
 \begin{center}
-  \caption{Choices of land dynamics scheme}
+  \caption{Choices of land scheme}
   \label{tab:nml_land_dyn}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
-      \verb|NONE or OFF| & Do not use land dynamics model \\
+      \verb|NONE or OFF| & Do not use land model \\
       \verb|BUCKET|      & Heat diffusion/bucket model \\
       \verb|INIT|        & Fixed to the initial condition \\
     \hline
@@ -391,7 +394,7 @@ it is necessary to prepare parameter tables for the length of roughness and the 
 A parameter table is provided
 in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
 
-\subsubsection{Flux in atmosphere and on land}
+\subsubsection{Flux between atmosphere and on land}
 %-------------------------------------------------------------------------------
 The albedo and roughness length of land surface are provided by the parameter table. The surface flux between atmosphere and land is calculated by the scheme selected by \nmitem{LAND_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
 
@@ -441,4 +444,3 @@ In this case, parameters for the urban area should be provided in the land param
 
 There are many parameters specifying urban morphology in the \verb|KUSAKA01| scheme.
 Regarding the urban parameters, please refer to description about namelist in Section \ref{sec:reference_manual}.
-
