@@ -124,7 +124,7 @@ contains
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_topography, only: &
-       TOPO_Zsfc
+       Zsfc    => TOPOGRAPHY_Zsfc
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
     use scale_statistics, only: &
@@ -212,12 +212,12 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( KA, KS,  KE,                        & ! [IN]
-                             IA, ISB, IEB,                       & ! [IN]
-                             JA, JSB, JEB,                       & ! [IN]
-                             DENS(:,:,:), PRES(:,:,:),           & ! [IN]
-                             CZ(:,:,:), TOPO_Zsfc(:,:), Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)        ) ! [OUT]
+       call BOTTOM_estimate( KA, KS,  KE,                   & ! [IN]
+                             IA, ISB, IEB,                  & ! [IN]
+                             JA, JSB, JEB,                  & ! [IN]
+                             DENS(:,:,:), PRES(:,:,:),      & ! [IN]
+                             CZ(:,:,:), Zsfc(:,:), Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)   ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
 
@@ -395,7 +395,7 @@ contains
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV
@@ -439,9 +439,9 @@ contains
     enddo
 
 
-    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                 & ! [IN]
-                              SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
-                              MSLP(:,:)                               ) ! [OUT]
+    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                       & ! [IN]
+                              SFC_PRES(:,:), T2(:,:), TOPOGRAPHY_Zsfc(:,:), & ! [IN]
+                              MSLP(:,:)                                     ) ! [OUT]
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )

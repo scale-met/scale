@@ -98,7 +98,7 @@ contains
     use scale_comm_cartesC, only: &
        COMM_setup
     use scale_topography, only: &
-       TOPO_setup
+       TOPOGRAPHY_setup
     use scale_landuse, only: &
        LANDUSE_setup
     use scale_atmos_grid_cartesC_real, only: &
@@ -274,7 +274,7 @@ contains
     call COMM_setup
 
     ! setup topography
-    call TOPO_setup
+    call TOPOGRAPHY_setup
     ! setup land use category index/fraction
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
 

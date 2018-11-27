@@ -26,7 +26,7 @@ module mod_mktopo
      CX => ATMOS_GRID_CARTESC_CX, &
      CY => ATMOS_GRID_CARTESC_CY
   use scale_topography, only: &
-     TOPO_Zsfc
+     TOPOGRAPHY_Zsfc
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -110,7 +110,7 @@ contains
   !> Driver
   subroutine MKTOPO
     use scale_topography, only: &
-       TOPO_write
+       TOPOGRAPHY_write
     implicit none
     !---------------------------------------------------------------------------
 
@@ -139,7 +139,7 @@ contains
        LOG_INFO("MKTOPO",*) 'END   MAKING TOPOGRAPHY DATA'
 
        ! output topography file
-       call TOPO_write
+       call TOPOGRAPHY_write
     endif
 
     return
@@ -176,7 +176,7 @@ contains
 
     do j = 1, JA
     do i = 1, IA
-       TOPO_Zsfc(i,j) = FLAT_HEIGHT
+       TOPOGRAPHY_Zsfc(i,j) = FLAT_HEIGHT
     enddo
     enddo
 
@@ -241,7 +241,7 @@ contains
        dist = ( (CX(i)-CX_offset-BELL_CX)/BELL_RX )**2 &
             + ( (CY(j)-CY_offset-BELL_CY)/BELL_RY )**2
 
-       TOPO_Zsfc(i,j) = BELL_HEIGHT / ( 1.0_RP + dist )
+       TOPOGRAPHY_Zsfc(i,j) = BELL_HEIGHT / ( 1.0_RP + dist )
 
     enddo
     enddo
@@ -299,7 +299,7 @@ contains
 
           dist = exp( -( (CX(i)-SCHAER_CX)/SCHAER_RX )**2 )
 
-          TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CX(i)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
+          TOPOGRAPHY_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CX(i)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
 
        enddo
        enddo
@@ -309,7 +309,7 @@ contains
 
           dist = exp( -( (CY(j)-SCHAER_CX)/SCHAER_RX )**2 )
 
-          TOPO_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CY(j)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
+          TOPOGRAPHY_Zsfc(i,j) = SCHAER_HEIGHT * dist * ( cos( PI*(CY(j)-SCHAER_CX)/SCHAER_LAMBDA ) )**2
 
        enddo
        enddo
