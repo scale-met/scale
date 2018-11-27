@@ -261,9 +261,9 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_topography, only: &
-       TOPO_fillhalo, &
-       TOPO_Zsfc, &
-       TOPO_write
+       TOPOGRAPHY_fillhalo, &
+       TOPOGRAPHY_Zsfc, &
+       TOPOGRAPHY_write
     use mod_copytopo, only: &
        COPYTOPO
     use scale_atmos_grid_cartesC_real, only: &
@@ -294,35 +294,35 @@ contains
 !OCL XFILL
        do j = 1, JA
        do i = 1, IA
-          TOPO_Zsfc(i,j) = 0.0_RP
+          TOPOGRAPHY_Zsfc(i,j) = 0.0_RP
        end do
        end do
 
        if ( CNVTOPO_UseGTOPO30 ) then
-          call CNVTOPO_GTOPO30( TOPO_Zsfc(:,:) ) ! [INOUT]
+          call CNVTOPO_GTOPO30( TOPOGRAPHY_Zsfc(:,:) ) ! [INOUT]
        endif
 
        if ( CNVTOPO_UseGMTED2010 ) then
-          call CNVTOPO_GMTED2010( TOPO_Zsfc(:,:) ) ! [INOUT]
+          call CNVTOPO_GMTED2010( TOPOGRAPHY_Zsfc(:,:) ) ! [INOUT]
        endif
 
        if ( CNVTOPO_UseDEM50M ) then
-          call CNVTOPO_DEM50M( TOPO_Zsfc(:,:) ) ! [INOUT]
+          call CNVTOPO_DEM50M( TOPOGRAPHY_Zsfc(:,:) ) ! [INOUT]
        endif
 
        if ( CNVTOPO_UseUSERFILE ) then
-          call CNVTOPO_USERFILE( TOPO_Zsfc(:,:) ) ! [INOUT]
+          call CNVTOPO_USERFILE( TOPOGRAPHY_Zsfc(:,:) ) ! [INOUT]
        endif
 
-       call CNVTOPO_smooth( TOPO_Zsfc(:,:) ) ! (inout)
-       call TOPO_fillhalo( FILL_BND=.true. )
+       call CNVTOPO_smooth( TOPOGRAPHY_Zsfc(:,:) ) ! (inout)
+       call TOPOGRAPHY_fillhalo( FILL_BND=.true. )
 
-       if( CNVTOPO_copy_parent ) call COPYTOPO( TOPO_Zsfc )
+       if( CNVTOPO_copy_parent ) call COPYTOPO( TOPOGRAPHY_Zsfc )
 
        LOG_PROGRESS(*) 'end   convert topography data'
 
        ! output topography file
-       call TOPO_write
+       call TOPOGRAPHY_write
     endif
 
     return
@@ -863,7 +863,7 @@ contains
        STATISTICS_detail, &
        STATISTICS_horizontal_max
     use scale_topography, only: &
-       TOPO_fillhalo
+       TOPOGRAPHY_fillhalo
     use scale_filter, only: &
        FILTER_hyperdiff
     use scale_landuse, only: &
@@ -928,7 +928,7 @@ contains
     do ite = 1, CNVTOPO_smooth_itelim+1
        LOG_PROGRESS(*) 'smoothing itelation : ', ite
 
-       call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
+       call TOPOGRAPHY_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
        !$omp parallel do
        do j = 1, JA
@@ -984,7 +984,7 @@ contains
 !             FLX_TMP(i,j) = Zsfc(i+1,j) - Zsfc(i,j)
           enddo
           enddo
-!!$          call TOPO_fillhalo( FLX_TMP )
+!!$          call TOPOGRAPHY_fillhalo( FLX_TMP )
 !!$          do j = JS  , JE
 !!$          do i = IS-1, IE
 !!$             FLX_X(i,j) = - ( FLX_TMP(i+1,j) - FLX_TMP(i,j) )
@@ -998,7 +998,7 @@ contains
 !             FLX_TMP(i,j) = Zsfc(i,j+1) - Zsfc(i,j)
           enddo
           enddo
-!!$          call TOPO_fillhalo( FLX_TMP )
+!!$          call TOPOGRAPHY_fillhalo( FLX_TMP )
 !!$          do j = JS-1, JE
 !!$          do i = IS  , IE
 !!$             FLX_Y(i,j) = - ( FLX_TMP(i,j+1) - FLX_TMP(i,j) )
@@ -1116,7 +1116,7 @@ contains
 
     end if
 
-    call TOPO_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
+    call TOPOGRAPHY_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
     call STATISTICS_detail( IA, IS, IE, JA, JS, JE, 2, &
                             varname(:), DZsfc_DXY(:,:,:) )

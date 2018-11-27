@@ -153,12 +153,17 @@ contains
   subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
     use scale_mapprojection, only: &
        MAPPROJECTION_mapfactor
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_RCDX, &
+       ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        ATMOS_GRID_CARTESC_REAL_LAT,          &
        ATMOS_GRID_CARTESC_REAL_LATUY,        &
        ATMOS_GRID_CARTESC_REAL_LATXV,        &
        ATMOS_GRID_CARTESC_REAL_LATUV
+    use scale_topography, only: &
+       TOPOGRAPHY_calc_tan_slope
     implicit none
     !---------------------------------------------------------------------------
 
@@ -172,6 +177,10 @@ contains
          ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
 
     call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
+
+    call TOPOGRAPHY_calc_tan_slope( IA, IS, IE, JA, JS, JE, &
+         ATMOS_GRID_CARTESC_RCDX(:), ATMOS_GRID_CARTESC_RCDY(:), &
+         ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,I_XY) )
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
@@ -356,7 +365,7 @@ contains
        ATMOS_GRID_CARTESC_FX, &
        ATMOS_GRID_CARTESC_FY
     use scale_topography, only : &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_comm_cartesC, only : &
        COMM_vars8, &
        COMM_wait
@@ -388,31 +397,31 @@ contains
     ! at (x,y)
     do j = 1, JA
     do i = 1, IA
-      TOPO_ZsfcXY(i,j) = TOPO_Zsfc(i,j)
+      TOPO_ZsfcXY(i,j) = TOPOGRAPHY_Zsfc(i,j)
     enddo
     enddo
     ! at (u,y)
     do j = 1, JA
     do i = 1, IA-1
-      TOPO_ZsfcUY(i,j) = 0.5_RP * ( TOPO_Zsfc(i,j) + TOPO_Zsfc(i+1,j) )
+      TOPO_ZsfcUY(i,j) = 0.5_RP * ( TOPOGRAPHY_Zsfc(i,j) + TOPOGRAPHY_Zsfc(i+1,j) )
     enddo
     enddo
     ! at (x,v)
     do j = 1, JA-1
     do i = 1, IA
-      TOPO_ZsfcXV(i,j) = 0.5_RP * ( TOPO_Zsfc(i,j) + TOPO_Zsfc(i,j+1) )
+      TOPO_ZsfcXV(i,j) = 0.5_RP * ( TOPOGRAPHY_Zsfc(i,j) + TOPOGRAPHY_Zsfc(i,j+1) )
     enddo
     enddo
     ! at (u,v)
     do j = 1, JA-1
     do i = 1, IA-1
-      TOPO_ZsfcUV(i,j) = 0.25_RP * ( TOPO_Zsfc(i  ,j  ) + TOPO_Zsfc(i  ,j+1) &
-                                   + TOPO_Zsfc(i  ,j+1) + TOPO_Zsfc(i+1,j+1) )
+      TOPO_ZsfcUV(i,j) = 0.25_RP * ( TOPOGRAPHY_Zsfc(i  ,j  ) + TOPOGRAPHY_Zsfc(i  ,j+1) &
+                                   + TOPOGRAPHY_Zsfc(i  ,j+1) + TOPOGRAPHY_Zsfc(i+1,j+1) )
     enddo
     enddo
 
     ! reset topography
-    TOPO_Zsfc(:,:) = 0.D0
+    TOPOGRAPHY_Zsfc(:,:) = 0.D0
 
     call COMM_vars8( TOPO_ZsfcXY(:,:), 1 )
     call COMM_vars8( TOPO_ZsfcUY(:,:), 2 )

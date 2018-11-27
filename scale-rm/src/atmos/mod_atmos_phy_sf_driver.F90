@@ -124,7 +124,9 @@ contains
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_topography, only: &
-       TOPO_Zsfc
+       Zsfc    => TOPOGRAPHY_Zsfc, &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
     use scale_statistics, only: &
@@ -212,12 +214,12 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( KA, KS,  KE,                        & ! [IN]
-                             IA, ISB, IEB,                       & ! [IN]
-                             JA, JSB, JEB,                       & ! [IN]
-                             DENS(:,:,:), PRES(:,:,:),           & ! [IN]
-                             CZ(:,:,:), TOPO_Zsfc(:,:), Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)        ) ! [OUT]
+       call BOTTOM_estimate( KA, KS,  KE,                   & ! [IN]
+                             IA, ISB, IEB,                  & ! [IN]
+                             JA, JSB, JEB,                  & ! [IN]
+                             DENS(:,:,:), PRES(:,:,:),      & ! [IN]
+                             CZ(:,:,:), Zsfc(:,:), Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)   ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
 
@@ -238,11 +240,12 @@ contains
           case ( 'BULK' )
 
              call ATMOS_PHY_SF_bulk_flux( IA, ISB, IEB, JA, JSB, JEB,                  & ! [IN]
-                                          ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
+                                          ATM_U(:,:), ATM_V(:,:),                      & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
                                           SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
                                           SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
-                                          PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
+                                          PBL_Zi(:,:),                                 & ! [IN]
+                                          Z1(:,:), TanSL_X(:,:), TanSL_Y(:,:),         & ! [IN]
                                           SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
                                           SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
@@ -395,7 +398,7 @@ contains
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV
@@ -439,9 +442,9 @@ contains
     enddo
 
 
-    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                 & ! [IN]
-                              SFC_PRES(:,:), T2(:,:), TOPO_Zsfc(:,:), & ! [IN]
-                              MSLP(:,:)                               ) ! [OUT]
+    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                       & ! [IN]
+                              SFC_PRES(:,:), T2(:,:), TOPOGRAPHY_Zsfc(:,:), & ! [IN]
+                              MSLP(:,:)                                     ) ! [OUT]
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )

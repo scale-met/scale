@@ -1099,7 +1099,7 @@ contains
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_file_history_cartesC, only: &
@@ -1111,9 +1111,9 @@ contains
     !---------------------------------------------------------------------------
 
     call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                          DENS_av(:,:,:), PRES(:,:,:),                  & ! [IN]
-                          REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                          SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
+                          DENS_av(:,:,:), PRES(:,:,:),                        & ! [IN]
+                          REAL_CZ(:,:,:), TOPOGRAPHY_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                          SFC_DENS(:,:), SFC_PRES(:,:)                        ) ! [OUT]
 
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]

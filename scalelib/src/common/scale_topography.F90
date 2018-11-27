@@ -24,87 +24,96 @@ module scale_topography
   !
   !++ Public procedure
   !
-  public :: TOPO_setup
-  public :: TOPO_fillhalo
-  public :: TOPO_write
+  public :: TOPOGRAPHY_setup
+  public :: TOPOGRAPHY_fillhalo
+  public :: TOPOGRAPHY_write
+  public :: TOPOGRAPHY_calc_tan_slope
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical, public :: TOPO_exist = .false. !< topography exists?
+  logical, public :: TOPOGRAPHY_exist = .false. !< topography exists?
 
-  real(RP), public, allocatable :: TOPO_Zsfc(:,:) !< absolute ground height [m]
+  real(RP), public, allocatable :: TOPOGRAPHY_Zsfc   (:,:) !< absolute ground height [m]
+  real(RP), public, allocatable :: TOPOGRAPHY_TanSL_X(:,:) !< tan(slope_x)
+  real(RP), public, allocatable :: TOPOGRAPHY_TanSL_Y(:,:) !< tan(slope_y)
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: TOPO_read
+  private :: TOPOGRAPHY_read
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
-  logical,                private :: TOPO_IN_AGGREGATE                          !> switch to use aggregated file
-  logical,                private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
-  character(len=H_LONG),  private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
-  logical,                private :: TOPO_OUT_AGGREGATE                         !> switch to use aggregated file
-  character(len=H_MID),   private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
-  character(len=H_SHORT), private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  private :: TOPOGRAPHY_IN_BASENAME = ''                     !< basename of the input  file
+  character(len=H_LONG),  private :: TOPOGRAPHY_IN_VARNAME  = 'topo'                 !< variable name of topo in the input  file
+  logical,                private :: TOPOGRAPHY_IN_AGGREGATE                          !> switch to use aggregated file
+  logical,                private :: TOPOGRAPHY_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
+  character(len=H_LONG),  private :: TOPOGRAPHY_OUT_BASENAME = ''                     !< basename of the output file
+  logical,                private :: TOPOGRAPHY_OUT_AGGREGATE                         !> switch to use aggregated file
+  character(len=H_MID),   private :: TOPOGRAPHY_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
+  character(len=H_SHORT), private :: TOPOGRAPHY_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine TOPO_setup
+  subroutine TOPOGRAPHY_setup
     use scale_file, only: &
        FILE_AGGREGATE
     use scale_prc, only: &
        PRC_abort
     implicit none
 
-    namelist / PARAM_TOPO / &
-       TOPO_IN_BASENAME,          &
-       TOPO_IN_AGGREGATE,         &
-       TOPO_IN_CHECK_COORDINATES, &
-       TOPO_OUT_BASENAME,         &
-       TOPO_OUT_AGGREGATE,        &
-       TOPO_OUT_DTYPE
+    namelist / PARAM_TOPOGRAPHY / &
+       TOPOGRAPHY_IN_BASENAME,          &
+       TOPOGRAPHY_IN_VARNAME,           &
+       TOPOGRAPHY_IN_AGGREGATE,         &
+       TOPOGRAPHY_IN_CHECK_COORDINATES, &
+       TOPOGRAPHY_OUT_BASENAME,         &
+       TOPOGRAPHY_OUT_AGGREGATE,        &
+       TOPOGRAPHY_OUT_DTYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("TOPO_setup",*) 'Setup'
+    LOG_INFO("TOPOGRAPHY_setup",*) 'Setup'
 
-    TOPO_IN_AGGREGATE  = FILE_AGGREGATE
-    TOPO_OUT_AGGREGATE = FILE_AGGREGATE
+    TOPOGRAPHY_IN_AGGREGATE  = FILE_AGGREGATE
+    TOPOGRAPHY_OUT_AGGREGATE = FILE_AGGREGATE
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_TOPOGRAPHY,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       LOG_INFO("TOPO_setup",*) 'Not found namelist. Default used.'
+       LOG_INFO("TOPOGRAPHY_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("TOPO_setup",*) 'Not appropriate names in namelist PARAM_TOPO. Check!'
+       LOG_ERROR("TOPOGRAPHY_setup",*) 'Not appropriate names in namelist PARAM_TOPOGRAPHY. Check!'
        call PRC_abort
     endif
-    LOG_NML(PARAM_TOPO)
+    LOG_NML(PARAM_TOPOGRAPHY)
 
-    allocate( TOPO_Zsfc(IA,JA) )
-    TOPO_Zsfc(:,:) = 0.0_RP
+    allocate( TOPOGRAPHY_Zsfc   (IA,JA) )
+    allocate( TOPOGRAPHY_TanSL_X(IA,JA) )
+    allocate( TOPOGRAPHY_TanSL_Y(IA,JA) )
+    TOPOGRAPHY_Zsfc(:,:) = 0.0_RP
+    TOPOGRAPHY_TanSL_X(:,:) = 0.0_RP
+    TOPOGRAPHY_TanSL_Y(:,:) = 0.0_RP
 
     ! read from file
-    call TOPO_read
+    call TOPOGRAPHY_read
 
     return
-  end subroutine TOPO_setup
+  end subroutine TOPOGRAPHY_setup
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
-  subroutine TOPO_fillhalo( Zsfc, FILL_BND )
+  subroutine TOPOGRAPHY_fillhalo( Zsfc, FILL_BND )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -123,16 +132,16 @@ contains
        call COMM_vars8( Zsfc(:,:), 1 )
        call COMM_wait ( Zsfc(:,:), 1, FILL_BND_ )
     else
-       call COMM_vars8( TOPO_Zsfc(:,:), 1 )
-       call COMM_wait ( TOPO_Zsfc(:,:), 1, FILL_BND_ )
+       call COMM_vars8( TOPOGRAPHY_Zsfc(:,:), 1 )
+       call COMM_wait ( TOPOGRAPHY_Zsfc(:,:), 1, FILL_BND_ )
     end if
 
     return
-  end subroutine TOPO_fillhalo
+  end subroutine TOPOGRAPHY_fillhalo
 
   !-----------------------------------------------------------------------------
   !> Read topography
-  subroutine TOPO_read
+  subroutine TOPOGRAPHY_read
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
        FILE_CARTESC_read, &
@@ -147,57 +156,85 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
-    LOG_INFO("TOPO_read",*) 'Input topography file '
+    LOG_INFO("TOPOGRAPHY_read",*) 'Input topography file '
 
-    if ( TOPO_IN_BASENAME /= '' ) then
+    if ( TOPOGRAPHY_IN_BASENAME /= '' ) then
 
-       call FILE_CARTESC_open( TOPO_IN_BASENAME, fid, aggregate=TOPO_IN_AGGREGATE )
-       call FILE_CARTESC_read( fid, 'TOPO', 'XY', TOPO_Zsfc(:,:) )
+       call FILE_CARTESC_open( TOPOGRAPHY_IN_BASENAME, fid, aggregate=TOPOGRAPHY_IN_AGGREGATE )
+       call FILE_CARTESC_read( fid, TOPOGRAPHY_IN_VARNAME, 'XY', TOPOGRAPHY_Zsfc(:,:) )
 
        call FILE_CARTESC_flush( fid )
 
-       if ( TOPO_IN_CHECK_COORDINATES ) then
+       if ( TOPOGRAPHY_IN_CHECK_COORDINATES ) then
           call FILE_CARTESC_check_coordinates( fid )
        end if
 
        call FILE_CARTESC_close( fid )
 
-       call TOPO_fillhalo( FILL_BND=.false. )
+       call TOPOGRAPHY_fillhalo( FILL_BND=.false. )
 
-       TOPO_exist = .true.
+       TOPOGRAPHY_exist = .true.
 
     else
        LOG_INFO_CONT(*) 'topography file is not specified.'
 
-       TOPO_exist = .false.
+       TOPOGRAPHY_exist = .false.
     endif
 
     return
-  end subroutine TOPO_read
+  end subroutine TOPOGRAPHY_read
 
   !-----------------------------------------------------------------------------
   !> Write topography
-  subroutine TOPO_write
+  subroutine TOPOGRAPHY_write
     use scale_file_cartesC, only: &
        FILE_CARTESC_write
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( TOPO_OUT_BASENAME /= '' ) then
+    if ( TOPOGRAPHY_OUT_BASENAME /= '' ) then
 
        LOG_NEWLINE
-       LOG_INFO("TOPO_write",*) 'Output topography file '
+       LOG_INFO("TOPOGRAPHY_write",*) 'Output topography file '
 
-       call TOPO_fillhalo( FILL_BND=.false. )
+       call TOPOGRAPHY_fillhalo( FILL_BND=.false. )
 
-       call FILE_CARTESC_write( TOPO_Zsfc(:,:), TOPO_OUT_BASENAME, TOPO_OUT_TITLE, & ! [IN]
-                                'TOPO', 'Topography', 'm', 'XY',   TOPO_OUT_DTYPE, & ! [IN]
-                                standard_name="surface_altitude",                  & ! [IN]
-                                haszcoord=.false., aggregate=TOPO_OUT_AGGREGATE    ) ! [IN]
+       call FILE_CARTESC_write( TOPOGRAPHY_Zsfc(:,:),                                    & ! [IN]
+                                TOPOGRAPHY_OUT_BASENAME, TOPOGRAPHY_OUT_TITLE,           & ! [IN]
+                                'topo', 'Topography', 'm', 'XY',   TOPOGRAPHY_OUT_DTYPE, & ! [IN]
+                                standard_name="surface_altitude",                        & ! [IN]
+                                haszcoord=.false., aggregate=TOPOGRAPHY_OUT_AGGREGATE    ) ! [IN]
 
     endif
 
     return
-  end subroutine TOPO_write
+  end subroutine TOPOGRAPHY_write
+
+  subroutine TOPOGRAPHY_calc_tan_slope( &
+       IA, IS, IE, JA, JS, JE, &
+       RCDX, RCDY, MAPF )
+       integer,  intent(in) :: IA, IS, IE
+       integer,  intent(in) :: JA, JS, JE
+       real(RP), intent(in) :: RCDX(IA), RCDY(JA)
+       real(RP), intent(in) :: MAPF(IA,JA,2)
+
+       integer :: i, j
+
+       do j = JS, JE
+       do i = IS, IE
+          TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
+                                    - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
+                                  * RCDX(i) * MAPF(i,j,1)
+          TOPOGRAPHY_TanSL_Y(i,j) = ( ( TOPOGRAPHY_Zsfc(i,j+1) + TOPOGRAPHY_Zsfc(i,j  ) ) * 0.5_RP &
+                                    - ( TOPOGRAPHY_Zsfc(i,j  ) + TOPOGRAPHY_Zsfc(i,j-1) ) * 0.5_RP ) &
+                                  * RCDY(j) * MAPF(i,j,2)
+       end do
+       end do
+
+       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_X(:,:), .true. )
+       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_Y(:,:), .true. )
+
+       return
+     end subroutine TOPOGRAPHY_calc_tan_slope
 
 end module scale_topography

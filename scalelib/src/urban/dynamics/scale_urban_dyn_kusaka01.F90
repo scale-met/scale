@@ -218,13 +218,14 @@ contains
   subroutine URBAN_DYN_kusaka01( &
        UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
        TMPA, PRSA,                      &
-       W1, U1, V1,                      &
+       U1, V1,                          &
        DENS, QA, LHV,                   &
        Z1, PBL,                         &
        RHOS, PRSS,                      &
        LWD, SWD,                        &
        RAIN, SNOW,                      &
        CDZ,                             &
+       TanSL_X, TanSL_Y,                &
        fact_urban,                      &
        tloc, dsec, dt,                  &
        TRL_URB, TBL_URB, TGL_URB,       &
@@ -239,6 +240,7 @@ contains
        Z0M, Z0H, Z0E,                   &
        U10, V10, T2, Q2                 )
     use scale_const, only: &
+       EPS  => CONST_EPS,  &
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
     use scale_atmos_saturation, only: &
@@ -252,7 +254,6 @@ contains
 
     real(RP), intent(in) :: TMPA(UIA,UJA)
     real(RP), intent(in) :: PRSA(UIA,UJA)
-    real(RP), intent(in) :: W1  (UIA,UJA)
     real(RP), intent(in) :: U1  (UIA,UJA)
     real(RP), intent(in) :: V1  (UIA,UJA)
     real(RP), intent(in) :: DENS(UIA,UJA)
@@ -267,6 +268,8 @@ contains
     real(RP), intent(in) :: RAIN(UIA,UJA)
     real(RP), intent(in) :: SNOW(UIA,UJA)
     real(RP), intent(in) :: CDZ(UKA)
+    real(RP), intent(in) :: TanSL_X(UIA,UJA)
+    real(RP), intent(in) :: TanSL_Y(UIA,UJA)
     real(RP), intent(in) :: fact_urban(UIA,UJA)
     integer,  intent(in) :: tloc
     real(RP), intent(in) :: dsec
@@ -344,9 +347,10 @@ contains
     real(RP) :: DZG(UKA)     ! thickness of each road layer [m]
 
 
-    real(RP) :: Ustar ! friction velocity [m]
+    real(RP) :: Ustar ! friction velocity [m/s]
     real(RP) :: Tstar ! friction temperature [K]
     real(RP) :: Qstar ! friction mixing rate [kg/kg]
+    real(RP) :: Wstar ! free convection velocity scale [m/s]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
@@ -357,6 +361,9 @@ contains
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    real(RP) :: MFLUX
+    real(RP) :: w
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -375,7 +382,8 @@ contains
        qdry = 1.0_RP - QA(i,j)
        Rtot = qdry * Rdry + QA(i,j) * Rvap
 
-       Uabs = max( sqrt( U1(i,j)**2 + V1(i,j)**2 + W1(i,j)**2 ), Uabs_min )
+       w = U1(i,j) * TanSL_X(i,j) + V1(i,j) * TanSL_Y(i,j)
+       Uabs = sqrt( U1(i,j)**2 + V1(i,j)**2 + w**2 )
 
        ! save
        TR = TR_URB(i,j)
@@ -484,7 +492,7 @@ contains
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
-                      Uabs,          & ! [OUT]
+                      Wstar,         & ! [OUT]
                       Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
@@ -495,17 +503,23 @@ contains
                       PRSS    (i,j), & ! [IN]
                       QA      (i,j), & ! [IN]
                       QVsat,         & ! [IN]
-                      U1      (i,j), & ! [IN]
-                      V1      (i,j), & ! [IN]
+                      Uabs,          & ! [IN]
                       Z1      (i,j), & ! [IN]
                       PBL     (i,j), & ! [IN]
                       Z0C,           & ! [IN]
                       Z0HC,          & ! [IN]
                       Z0HC           ) ! [IN]
 
-       MWFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * W1(i,j)
-       MUFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * U1(i,j)
-       MVFLX(i,j) = -RHOS(i,j) * Ustar**2 / Uabs * V1(i,j)
+       if ( Uabs < EPS ) then
+          MWFLX(i,j) = 0.0_RP
+          MUFLX(i,j) = 0.0_RP
+          MVFLX(i,j) = 0.0_RP
+       else
+          MFLUX = - RHOS(i,j) * Ustar**2
+          MWFLX(i,j) = MFLUX * w / Uabs
+          MUFLX(i,j) = MFLUX * U1(i,j) / Uabs
+          MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
+       end if
 
        Z0M(i,j) = Z0C
        Z0H(i,j) = Z0HC

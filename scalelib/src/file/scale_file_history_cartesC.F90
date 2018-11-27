@@ -908,7 +908,7 @@ contains
     use scale_urban_grid_cartesC_real, only: &
        VOLU => URBAN_GRID_CARTESC_REAL_VOL
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_landuse, only: &
        LANDUSE_frac_land
     implicit none
@@ -1439,7 +1439,7 @@ contains
 
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'topo', 'topography', 'm', AXIS_name(1:2),   &
-                                                TOPO_Zsfc(ims:ime,jms:jme), start=start(:,1) )
+                                                TOPOGRAPHY_Zsfc(ims:ime,jms:jme), start=start(:,1) )
 
     AXIS_name(1:2) = (/'x ', 'y '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'lsmask', 'fraction for land-sea mask', '1', AXIS_name(1:2), &

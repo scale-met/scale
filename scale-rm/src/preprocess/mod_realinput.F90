@@ -2104,7 +2104,7 @@ contains
          UNDEF => CONST_UNDEF, &
          LAPS => CONST_LAPS
     use scale_topography, only: &
-         TOPO_Zsfc
+         TOPOGRAPHY_Zsfc
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_interp2d
@@ -2622,7 +2622,7 @@ contains
 
           do j = 1, JA
           do i = 1, IA
-             tdiff = TOPO_Zsfc(i,j) * LAPS
+             tdiff = TOPOGRAPHY_Zsfc(i,j) * LAPS
              sst(i,j,nn) = sst(i,j,nn) - tdiff
              tw (i,j,nn) = tw (i,j,nn) - tdiff
           end do
@@ -2925,7 +2925,7 @@ contains
     use scale_filter, only: &
          FILTER_hyperdiff
     use scale_topography, only: &
-         TOPO_Zsfc
+         TOPOGRAPHY_Zsfc
     use mod_land_vars, only: &
          convert_WS2VWC
     implicit none
@@ -3303,7 +3303,7 @@ contains
        do j = 1, JA
        do i = 1, IA
           if ( topo(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
-             tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
+             tdiff = ( TOPOGRAPHY_Zsfc(i,j) - topo(i,j) ) * LAPS
              lst(i,j) = lst(i,j) - tdiff
              do k = 1, LKMAX
                 tg(k,i,j) = tg(k,i,j) - tdiff
@@ -3316,7 +3316,7 @@ contains
           do j = 1, JA
           do i = 1, IA
              if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
-                tdiff = ( TOPO_Zsfc(i,j) - topo(i,j) ) * LAPS
+                tdiff = ( TOPOGRAPHY_Zsfc(i,j) - topo(i,j) ) * LAPS
                 ust(i,j) = ust(i,j) - tdiff
              end if
           end do

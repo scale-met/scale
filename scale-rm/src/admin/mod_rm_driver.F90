@@ -111,7 +111,7 @@ contains
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_setup
     use scale_topography, only: &
-       TOPO_setup
+       TOPOGRAPHY_setup
     use scale_landuse, only: &
        LANDUSE_setup
     use scale_statistics, only: &
@@ -307,7 +307,7 @@ contains
     call COMM_setup
 
     ! setup topography
-    call TOPO_setup
+    call TOPOGRAPHY_setup
     ! setup land use category index/fraction
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
 

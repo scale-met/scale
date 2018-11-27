@@ -106,6 +106,9 @@ contains
        URBAN_GRID_CARTESC_REAL_TOTVOL, &
        URBAN_GRID_CARTESC_REAL_AREA,   &
        URBAN_GRID_CARTESC_REAL_TOTAREA
+    use scale_topography, only: &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_file_history, only: &
        FILE_HISTORY_in
     use mod_atmos_admin, only: &
@@ -115,7 +118,6 @@ contains
     use mod_urban_vars, only: &
        ATMOS_TEMP,      &
        ATMOS_PRES,      &
-       ATMOS_W,         &
        ATMOS_U,         &
        ATMOS_V,         &
        ATMOS_DENS,      &
@@ -294,13 +296,14 @@ contains
 
        call URBAN_DYN_kusaka01( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
                                 ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                            & ! [IN]
-                                ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                    & ! [IN]
+                                ATMOS_U(:,:), ATMOS_V(:,:),                                  & ! [IN]
                                 ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                    & ! [IN]
                                 REAL_Z1(:,:), ATMOS_PBL(:,:),                                & ! [IN]
                                 ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                    & ! [IN]
                                 ATMOS_SFLX_LW(:,:,:), ATMOS_SFLX_SW(:,:,:),                  & ! [IN]
                                 ATMOS_SFLX_rain(:,:), ATMOS_SFLX_snow(:,:),                  & ! [IN]
                                 CDZ(:),                                                      & ! [IN]
+                                TanSL_X(:,:), TanSL_Y(:,:),                                  & ! [IN]
                                 LANDUSE_fact_urban(:,:),                                     & ! [IN]
                                 tloc, dsec, dt,                                              & ! [IN]
                                 TRL(:,:,:), TBL(:,:,:), TGL(:,:,:),                          & ! [INOUT]

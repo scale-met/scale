@@ -2324,8 +2324,10 @@ contains
     axisname(1:2) = (/'xh','yh'/)
     call FILE_Def_AssociatedCoordinate( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
 
-    axisname(1:2) = (/'x ','y '/)
-    call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    if ( hasZ ) then
+       axisname(1:2) = (/'x ','y '/)
+       call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    end if
     axisname(1:2) = (/'x ','y '/)
     call FILE_Def_AssociatedCoordinate( fid, 'lsmask', 'fraction for land-sea mask', '1',            axisname(1:2), dtype )
 
@@ -3013,7 +3015,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
-       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       end if
        call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(:,:), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (:,:), start(2:3) )
@@ -3063,7 +3067,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(XSB:XEB,YSB:YEB), start(2:3) )
 
-       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       end if
        call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(XSB:XEB,YSB:YEB), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (XSB:XEB,YSB:YEB), start(2:3) )

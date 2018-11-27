@@ -523,7 +523,7 @@ contains
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
@@ -577,9 +577,9 @@ contains
 
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                             DENS(:,:,:), PRES(:,:,:),                     & ! [IN]
-                             REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
+                             DENS(:,:,:), PRES(:,:,:),                           & ! [IN]
+                             REAL_CZ(:,:,:), TOPOGRAPHY_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)                        ) ! [OUT]
 
        call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
                         PRES       (KS,:,:),   & ! [IN]

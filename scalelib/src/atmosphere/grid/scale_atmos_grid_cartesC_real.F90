@@ -113,7 +113,7 @@ contains
        ATMOS_GRID_CARTESC_CZ,              &
        ATMOS_GRID_CARTESC_FZ
     use scale_topography, only: &
-       TOPO_exist
+       TOPOGRAPHY_exist
     use scale_mapprojection, only: &
        MAPPROJECTION_setup
     use scale_interp_vert, only: &
@@ -194,12 +194,10 @@ contains
     ! calc real height
     call ATMOS_GRID_CARTESC_REAL_calc_Z
 
-    call INTERP_VERT_setcoef( KA, KS, KE,     & ! [IN]
-                              IA, 1,  IA,     & ! [IN]
-                              JA, 1,  JA,     & ! [IN]
-                              TOPO_exist,     & ! [IN]
-                              ATMOS_GRID_CARTESC_CZ(:),     & ! [IN]
-                              ATMOS_GRID_CARTESC_FZ(:),     & ! [IN]
+    call INTERP_VERT_setcoef( KA, KS, KE, IA, 1,  IA, JA, 1,  JA, & ! [IN]
+                              TOPOGRAPHY_exist,                  & ! [IN]
+                              ATMOS_GRID_CARTESC_CZ(:),          & ! [IN]
+                              ATMOS_GRID_CARTESC_FZ(:),          & ! [IN]
                               ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
                               ATMOS_GRID_CARTESC_REAL_FZ(:,:,:)  ) ! [IN]
 
@@ -212,7 +210,7 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates_atmos
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_landuse, only: &
        LANDUSE_frac_land
     implicit none
@@ -225,7 +223,7 @@ contains
     call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
-                                             TOPO_Zsfc, LANDUSE_frac_land,                                                                                                 & ! [IN]
+                                             TOPOGRAPHY_Zsfc, LANDUSE_frac_land,                                                                                           & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
                                                                              ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
@@ -397,7 +395,7 @@ contains
        ATMOS_GRID_CARTESC_CDX, &
        ATMOS_GRID_CARTESC_CDY
     use scale_topography, only: &
-       Zsfc => TOPO_Zsfc
+       Zsfc => TOPOGRAPHY_Zsfc
     implicit none
 
     real(RP) :: Htop
@@ -577,7 +575,7 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates_atmos
     use scale_topography, only: &
-       TOPO_Zsfc
+       TOPOGRAPHY_Zsfc
     use scale_landuse, only: &
        LANDUSE_frac_land
     implicit none
@@ -690,7 +688,7 @@ contains
     call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
-                                             TOPO_Zsfc, LANDUSE_frac_land,                                                                                                 & ! [IN]
+                                             TOPOGRAPHY_Zsfc, LANDUSE_frac_land,                                                                                           & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
                                                                              ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
                                              ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
