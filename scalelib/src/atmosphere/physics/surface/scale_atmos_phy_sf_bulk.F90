@@ -79,11 +79,12 @@ contains
   !> Calculate surface flux
   subroutine ATMOS_PHY_SF_bulk_flux( &
        IA, IS, IE, JA, JS, JE, &
-       ATM_W, ATM_U, ATM_V,          &
+       ATM_U, ATM_V,                 &
        ATM_TEMP, ATM_PRES, ATM_QV,   &
        SFC_DENS, SFC_TEMP, SFC_PRES, &
        SFC_Z0M, SFC_Z0H, SFC_Z0E,    &
-       PBL, ATM_Z1,                  &
+       PBL,                          &
+       ATM_Z1, TanSL_X, TanSL_Y,     &
        SFLX_MW, SFLX_MU, SFLX_MV,    &
        SFLX_SH, SFLX_LH, SFLX_QV,    &
        U10, V10, T2, Q2              )
@@ -101,7 +102,6 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in) :: ATM_W   (IA,JA) ! velocity w  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_U   (IA,JA) ! velocity u  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_V   (IA,JA) ! velocity v  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_TEMP(IA,JA) ! temperature at the lowermost layer (cell center) [K]
@@ -115,6 +115,8 @@ contains
     real(RP), intent(in) :: SFC_Z0E (IA,JA) ! surface roughness length (vapor) [m]
     real(RP), intent(in) :: PBL     (IA,JA) ! depth of the PBL [m]
     real(RP), intent(in) :: ATM_Z1  (IA,JA) ! height of the lowermost grid from surface (cell center) [m]
+    real(RP), intent(in) :: TanSL_X (IA,JA) ! tan(slope) in the x-direction
+    real(RP), intent(in) :: TanSL_Y (IA,JA) ! tan(slope) in the x-direction
 
     real(RP), intent(out) :: SFLX_MW(IA,JA) ! surface flux for z-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out) :: SFLX_MU(IA,JA) ! surface flux for x-momentum    (area center)   [m/s*kg/m2/s]
@@ -130,9 +132,10 @@ contains
     real(RP) :: SFC_PSAT (IA,JA) ! saturatad water vapor pressure [Pa]
     real(RP) :: LHV      (IA,JA)
 
-    real(RP) :: Ustar    ! friction velocity [m]
+    real(RP) :: Ustar    ! friction velocity [m/s]
     real(RP) :: Tstar    ! friction temperature [K]
     real(RP) :: Qstar    ! friction mixing rate [kg/kg]
+    real(RP) :: Wstar    ! free convection velocity scale [m/s]
     real(RP) :: Uabs     ! modified absolute velocity [m/s]
     real(RP) :: Ra       ! Aerodynamic resistance (=1/Ce) [1/s]
     real(RP) :: SFC_QSAT ! saturatad water vapor mixing ratio [kg/kg]
@@ -141,6 +144,9 @@ contains
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    real(RP) :: MFLUX
+    real(RP) :: w
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -155,29 +161,30 @@ contains
     call SATURATION_psat_all( IA, IS, IE, JA, JS, JE, &
                               SFC_TEMP(:,:), & ! [IN]
                               SFC_PSAT(:,:)  ) ! [OUT]
-
+    !$omp parallel do &
 #ifndef __GFORTRAN__
-    !$omp parallel do default(none) &
-    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2) &
+    !$omp default(none) &
     !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,EPS,CPdry,LHV,bulkflux,&
-    !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_W,ATM_U,ATM_V,ATM_Z1,               &
+    !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_U,ATM_V,ATM_Z1,TanSL_X,TanSL_y,     &
     !$omp         SFC_DENS,SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
-    !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)
+    !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)   &
 #else
-    !$omp parallel do default(shared) &
-    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2)
+    !$omp default(shared) &
 #endif
+    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Wstar,Uabs,Ra,FracU10,FracT2,FracQ2,MFLUX,w)
     do j = JS, JE
     do i = IS, IE
        ! qdry = 1 - psat
        SFC_QSAT = EPSvap * SFC_PSAT(i,j) / ( SFC_PRES(i,j) - ( 1.0_RP-EPSvap ) * SFC_PSAT(i,j) )
 
        SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_BULK_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_BULK_beta * SFC_QSAT
+       w = ATM_U(i,j) * TanSL_X(i,j) + ATM_V(i,j) * TanSL_Y(i,j)
+       Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + w**2 )
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
                       Qstar,         & ! [OUT]
-                      Uabs,          & ! [OUT]
+                      Wstar,         & ! [OUT]
                       Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
@@ -188,8 +195,7 @@ contains
                       SFC_PRES(i,j), & ! [IN]
                       ATM_QV  (i,j), & ! [IN]
                       SFC_QV       , & ! [IN]
-                      ATM_U   (i,j), & ! [IN]
-                      ATM_V   (i,j), & ! [IN]
+                      Uabs,          & ! [IN]
                       ATM_Z1  (i,j), & ! [IN]
                       PBL     (i,j), & ! [IN]
                       SFC_Z0M (i,j), & ! [IN]
@@ -197,15 +203,15 @@ contains
                       SFC_Z0E (i,j)  ) ! [IN]
 
        !-----< momentum >-----
-       Uabs = sqrt( ATM_W(i,j)**2 + ATM_U(i,j)**2 + ATM_V(i,j)**2 )
        if ( Uabs < EPS ) then
           SFLX_MW(i,j) = 0.0_RP
           SFLX_MU(i,j) = 0.0_RP
           SFLX_MV(i,j) = 0.0_RP
        else
-          SFLX_MW(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_W(i,j)
-          SFLX_MU(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_U(i,j)
-          SFLX_MV(i,j) = -SFC_DENS(i,j) * Ustar * Ustar / Uabs * ATM_V(i,j)
+          MFLUX = -SFC_DENS(i,j) * Ustar**2
+          SFLX_MW(i,j) = MFLUX * w / Uabs
+          SFLX_MU(i,j) = MFLUX * ATM_U(i,j) / Uabs
+          SFLX_MV(i,j) = MFLUX * ATM_V(i,j) / Uabs
        end if
 
        !-----< heat flux >-----

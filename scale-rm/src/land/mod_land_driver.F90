@@ -126,6 +126,9 @@ contains
        FILE_HISTORY_in
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+    use scale_topography, only: &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        ATMOS_HYDROMETEOR_dry,                    &
@@ -186,7 +189,6 @@ contains
        SNOW_nosnowsec,    &
        ATMOS_TEMP,        &
        ATMOS_PRES,        &
-       ATMOS_W,           &
        ATMOS_U,           &
        ATMOS_V,           &
        ATMOS_DENS,        &
@@ -307,8 +309,9 @@ contains
           call LAND_PHY_SNOW_KY90( LIA, LIS, LIE, LJA, LJS, LJE, &
                                    ATMOS_SFLX_rain(:,:), ATMOS_SFLX_snow(:,:),       & ! [IN]
                                    ATMOS_PRES(:,:), ATMOS_TEMP(:,:), ATMOS_QV(:,:),  & ! [IN]
-                                   ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),         & ! [IN]
+                                   ATMOS_U(:,:), ATMOS_V(:,:),                       & ! [IN]
                                    ATMOS_SFC_DENS(:,:),                              & ! [IN]
+                                   TanSL_X(:,:), TanSL_Y(:,:),                       & ! [IN]
                                    ATMOS_SFLX_rad_dn(:,:,:,:),                       & ! [IN]
                                    LANDUSE_fact_land(:,:), dt,                       & ! [IN]
                                    SNOW_SFC_TEMP(:,:), SNOW_SWE(:,:),                & ! [INOUT]
@@ -361,7 +364,7 @@ contains
        call LAND_PHY_SNOW_DIAGS( LIA, LIS, LIE, LJA, LJS, LJE, &
                                  SNOW_frac(:,:),                                                & ! [IN]
                                  ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                              & ! [IN]
-                                 ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                      & ! [IN]
+                                 ATMOS_U(:,:), ATMOS_V(:,:),                                    & ! [IN]
                                  ATMOS_DENS(:,:), ATMOS_QV(:,:),                                & ! [IN]
                                  REAL_Z1(:,:), ATMOS_PBL(:,:),                                  & ! [IN]
                                  ATMOS_SFC_DENS (:,:), ATMOS_SFC_PRES(:,:), SNOW_SFC_TEMP(:,:), & ! [IN]
@@ -369,6 +372,7 @@ contains
                                  LAND_PROPERTY(:,:,I_Z0M),                                      & ! [IN]
                                  LAND_PROPERTY(:,:,I_Z0H),                                      & ! [IN]
                                  LAND_PROPERTY(:,:,I_Z0E),                                      & ! [IN]
+                                 TanSL_X(:,:), TanSL_Y(:,:),                                    & ! [IN]
                                  SNOW_ATMOS_SFLX_MW(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MU(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MV(:,:),                                       & ! [OUT]
@@ -431,7 +435,7 @@ contains
 
        call CPL_PHY_SFC_skin( LIA, LIS, LIE, LJA, LJS, LJE, &
                               ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
-                              ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                & ! [IN]
+                              ATMOS_U(:,:), ATMOS_V(:,:),                              & ! [IN]
                               ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                               REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                               ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
@@ -443,6 +447,7 @@ contains
                               LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
+                              TanSL_X(:,:), TanSL_Y(:,:),                              & ! [IN]
                               LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
@@ -473,7 +478,7 @@ contains
 
        call CPL_PHY_SFC_fixed_temp( LIA, LIS, LIE, LJA, LJS, LJE, &
                                     ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
-                                    ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                & ! [IN]
+                                    ATMOS_U(:,:), ATMOS_V(:,:),                              & ! [IN]
                                     ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                                     REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                                     ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
@@ -484,6 +489,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
+                                    TanSL_X(:,:), TanSL_Y(:,:),                              & ! [IN]
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]

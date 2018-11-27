@@ -27,6 +27,7 @@ module scale_topography
   public :: TOPOGRAPHY_setup
   public :: TOPOGRAPHY_fillhalo
   public :: TOPOGRAPHY_write
+  public :: TOPOGRAPHY_calc_tan_slope
 
   !-----------------------------------------------------------------------------
   !
@@ -35,6 +36,8 @@ module scale_topography
   logical, public :: TOPOGRAPHY_exist = .false. !< topography exists?
 
   real(RP), public, allocatable :: TOPOGRAPHY_Zsfc   (:,:) !< absolute ground height [m]
+  real(RP), public, allocatable :: TOPOGRAPHY_TanSL_X(:,:) !< tan(slope_x)
+  real(RP), public, allocatable :: TOPOGRAPHY_TanSL_Y(:,:) !< tan(slope_y)
 
   !-----------------------------------------------------------------------------
   !
@@ -94,7 +97,11 @@ contains
     LOG_NML(PARAM_TOPOGRAPHY)
 
     allocate( TOPOGRAPHY_Zsfc   (IA,JA) )
+    allocate( TOPOGRAPHY_TanSL_X(IA,JA) )
+    allocate( TOPOGRAPHY_TanSL_Y(IA,JA) )
     TOPOGRAPHY_Zsfc(:,:) = 0.0_RP
+    TOPOGRAPHY_TanSL_X(:,:) = 0.0_RP
+    TOPOGRAPHY_TanSL_Y(:,:) = 0.0_RP
 
     ! read from file
     call TOPOGRAPHY_read
@@ -200,5 +207,32 @@ contains
 
     return
   end subroutine TOPOGRAPHY_write
+
+  subroutine TOPOGRAPHY_calc_tan_slope( &
+       IA, IS, IE, JA, JS, JE, &
+       RCDX, RCDY, MAPF )
+       integer,  intent(in) :: IA, IS, IE
+       integer,  intent(in) :: JA, JS, JE
+       real(RP), intent(in) :: RCDX(IA), RCDY(JA)
+       real(RP), intent(in) :: MAPF(IA,JA,2)
+
+       integer :: i, j
+
+       do j = JS, JE
+       do i = IS, IE
+          TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
+                                    - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
+                                  * RCDX(i) * MAPF(i,j,1)
+          TOPOGRAPHY_TanSL_Y(i,j) = ( ( TOPOGRAPHY_Zsfc(i,j+1) + TOPOGRAPHY_Zsfc(i,j  ) ) * 0.5_RP &
+                                    - ( TOPOGRAPHY_Zsfc(i,j  ) + TOPOGRAPHY_Zsfc(i,j-1) ) * 0.5_RP ) &
+                                  * RCDY(j) * MAPF(i,j,2)
+       end do
+       end do
+
+       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_X(:,:), .true. )
+       call TOPOGRAPHY_fillhalo( TOPOGRAPHY_TanSL_Y(:,:), .true. )
+
+       return
+     end subroutine TOPOGRAPHY_calc_tan_slope
 
 end module scale_topography

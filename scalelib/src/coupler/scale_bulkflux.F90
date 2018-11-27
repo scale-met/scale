@@ -31,7 +31,7 @@ module scale_bulkflux
           Ustar,   & ! (out)
           Tstar,   & ! (out)
           Qstar,   & ! (out)
-          Uabs,    & ! (out)
+          Wstar,   & ! (out)
           Ra,      & ! (out)
           FracU10, & ! (out)
           FracT2,  & ! (out)
@@ -42,8 +42,7 @@ module scale_bulkflux
           P0,      & ! (in)
           Q1,      & ! (in)
           Q0,      & ! (in)
-          U1,      & ! (in)
-          V1,      & ! (in)
+          Uabs,    & ! (in)
           Z1,      & ! (in)
           PBL,     & ! (in)
           Z0M,     & ! (in)
@@ -55,7 +54,7 @@ module scale_bulkflux
        real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
        real(RP), intent(out) :: Tstar   ! friction temperature [K]
        real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-       real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+       real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
        real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
        real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
        real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
@@ -67,8 +66,7 @@ module scale_bulkflux
        real(RP), intent(in) :: P0  ! surface pressure [Pa]
        real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
        real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
-       real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
-       real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+       real(RP), intent(in) :: Uabs! absolute velocity at the lowest atmospheric layer [m/s]
        real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
        real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
        real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
@@ -189,7 +187,7 @@ contains
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
-      Uabs,    & ! (out)
+      Wstar,   & ! (out)
       Ra,      & ! (out)
       FracU10, & ! (out)
       FracT2,  & ! (out)
@@ -200,8 +198,7 @@ contains
       P0,      & ! (in)
       Q1,      & ! (in)
       Q0,      & ! (in)
-      U1,      & ! (in)
-      V1,      & ! (in)
+      Uabs,    & ! (in)
       Z1,      & ! (in)
       PBL,     & ! (in)
       Z0M,     & ! (in)
@@ -226,7 +223,7 @@ contains
     real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
     real(RP), intent(out) :: Tstar   ! friction temperature [K]
     real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
     real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
@@ -238,8 +235,7 @@ contains
     real(RP), intent(in) :: P0  ! surface pressure [Pa]
     real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: Q0  ! surface mixing ratio [kg/kg]
-    real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Uabs! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
@@ -247,6 +243,7 @@ contains
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
 
     ! work
+    real(RP) :: UabsW
     real(RP) :: RiB0, RiB ! bulk Richardson number [-]
     real(RP) :: C0Z1, C010, C002 ! initial drag coefficient [-]
     real(RP) :: CmZ1, ChZ1, CqZ1, fmZ1, fhZ1, t0thZ1, q0qeZ1
@@ -265,12 +262,12 @@ contains
     logZ0MZ0E = max( log( Z0M/Z0E ), 1.0_RP )
     logZ0MZ0H = max( log( Z0M/Z0H ), 1.0_RP )
 
-    Uabs = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+    UabsW = max( Uabs, BULKFLUX_Uabs_min )
     TH1  = T1 * ( P0 / P1 )**( Rdry / CPdry )
     TH0  = T0
 
     ! bulk Richardson number
-    RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * Uabs**2 )
+    RiB0 = GRAV * Z1 * ( TH1 - TH0 ) / ( TH1 * UabsW**2 )
 
     C0Z1 = ( KARMAN / logZ1Z0M )**2
     C010 = ( KARMAN / log10Z0M )**2
@@ -330,15 +327,16 @@ contains
     Ch02 = C002 * fh02 * t0th02 / tPrn
     Cq02 = C002 * fh02 * q0qe02 / tPrn
 
-    Ustar = sqrt( CmZ1 ) * Uabs
-    Tstar = ChZ1 * Uabs / Ustar * ( TH1 - TH0 )
-    Qstar = CqZ1 * Uabs / Ustar * ( Q1  - Q0  )
+    Ustar = sqrt( CmZ1 ) * UabsW
+    Tstar = ChZ1 * UabsW / Ustar * ( TH1 - TH0 )
+    Qstar = CqZ1 * UabsW / Ustar * ( Q1  - Q0  )
+    Wstar = 0.0_RP
 
     FracU10 = sqrt( CmZ1 / Cm10 )
     FracT2  = ChZ1 / Ch02 * sqrt( Cm02 / CmZ1 )
     FracQ2  = CqZ1 / Cq02 * sqrt( Cm02 / CmZ1 )
 
-    Ra = 1.0_RP / ( CqZ1 * Uabs )
+    Ra = 1.0_RP / ( CqZ1 * UabsW )
 
     return
   end subroutine BULKFLUX_U95
@@ -358,7 +356,7 @@ contains
       Ustar,   & ! (out)
       Tstar,   & ! (out)
       Qstar,   & ! (out)
-      Uabs,    & ! (out)
+      Wstar,   & ! (out)
       Ra,      & ! (out)
       FracU10, & ! (out)
       FracT2,  & ! (out)
@@ -369,8 +367,7 @@ contains
       P0,      & ! (in)
       Q1,      & ! (in)
       Q0,      & ! (in)
-      U1,      & ! (in)
-      V1,      & ! (in)
+      Uabs,    & ! (in)
       Z1,      & ! (in)
       PBL,     & ! (in)
       Z0M,     & ! (in)
@@ -393,7 +390,7 @@ contains
     real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
     real(RP), intent(out) :: Tstar   ! friction temperature [K]
     real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Uabs    ! modified absolute velocity [m/s]
+    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
     real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
     real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
     real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
@@ -405,8 +402,7 @@ contains
     real(RP), intent(in) :: P0  ! surface pressure [Pa]
     real(RP), intent(in) :: Q1  ! mixing ratio at the lowest atmospheric layer [kg/kg]
     real(RP), intent(in) :: Q0  ! mixing ratio at surface [kg/kg]
-    real(RP), intent(in) :: U1  ! zonal wind at the lowest atmospheric layer [m/s]
-    real(RP), intent(in) :: V1  ! meridional wind at the lowest atmospheric layer [m/s]
+    real(RP), intent(in) :: Uabs! absolute velocity at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: Z1  ! height at the lowest atmospheric layer [m]
     real(RP), intent(in) :: PBL ! the top of atmospheric mixing layer [m]
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
@@ -421,7 +417,7 @@ contains
     real(DP) :: dres ! d(residual)/dIL
 
     real(DP) :: RiB0 ! bulk Richardson number [no unit]
-    real(DP) :: Wstar, dWstar ! free convection velocity scale [m/s]
+    real(DP) :: dWstar ! free convection velocity scale [m/s]
 
     real(DP) :: UabsUS, UabsS, UabsC
     real(DP) :: dUabsUS, dUabsS
@@ -463,7 +459,7 @@ contains
     DP_Z0H = real( Z0H, kind=DP )
     DP_Z0E = real( Z0E, kind=DP )
 
-    UabsC = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+    UabsC = max( Uabs, BULKFLUX_Uabs_min )
 
     TH1 = T1 * ( P0 / P1 )**( Rdry / CPdry )
     TH0 = T0
@@ -514,7 +510,7 @@ contains
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
       ! unstable condition
-      UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+      UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
       UstarUS = KARMAN / denoM * UabsUS
       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -538,7 +534,7 @@ contains
           denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
        end if
-       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
        UstarS = KARMAN / denoM * UabsS
        TstarS = KARMAN / denoH * ( TH1 - TH0 )
        QstarS = KARMAN / denoE * ( Q1  - Q0  )
@@ -589,7 +585,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
-       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
        UstarUS = KARMAN / denoM * UabsUS
        TstarUS = KARMAN / denoH * ( TH1 - TH0 )
        QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -613,7 +609,7 @@ contains
           denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
        end if
-       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
        UstarS = KARMAN / denoM * UabsS
        TstarS = KARMAN / denoH * ( TH1 - TH0 )
        QstarS = KARMAN / denoE * ( Q1  - Q0  )
@@ -660,7 +656,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL)
        end if
-       dUabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       dUabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
        dUstarUS = KARMAN / denoM * UabsUS
        dTstarUS = KARMAN / denoH * ( TH1 - TH0 )
        dQstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -684,7 +680,7 @@ contains
           denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL)
           denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL)
        end if
-       dUabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       dUabsS  = max( Uabs, BULKFLUX_Uabs_min )
        dUstarS = KARMAN / denoM * UabsS
        dTstarS = KARMAN / denoH * ( TH1 - TH0 )
        dQstarS = KARMAN / denoE * ( Q1  - Q0  )
@@ -746,7 +742,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
-       UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
        UstarUS = KARMAN / denoM * UabsUS
        TstarUS = KARMAN / denoH * ( TH1 - TH0 )
        QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -770,7 +766,7 @@ contains
           denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
        end if
-       UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
        UstarS = KARMAN / denoM * UabsS
        TstarS = KARMAN / denoH * ( TH1 - TH0 )
        QstarS = KARMAN / denoE * ( Q1  - Q0  )
@@ -821,7 +817,7 @@ contains
        denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
        denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
     end if
-    UabsUS  = max( sqrt( U1**2 + V1**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
     UstarUS = KARMAN / denoM * UabsUS
     TstarUS = KARMAN / denoH * ( TH1 - TH0 )
     QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -852,7 +848,7 @@ contains
        denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
        denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
     end if
-    UabsS  = max( sqrt( U1**2 + V1**2 ), BULKFLUX_Uabs_min )
+    UabsS  = max( Uabs, BULKFLUX_Uabs_min )
     UstarS = KARMAN / denoM * UabsS
     TstarS = KARMAN / denoH * ( TH1 - TH0 )
     QstarS = KARMAN / denoE * ( Q1  - Q0  )
@@ -872,7 +868,6 @@ contains
     UstarC   = ( sw ) * UstarUS   + ( 1.0_DP-sw ) * UstarS
     TstarC   = ( sw ) * TstarUS   + ( 1.0_DP-sw ) * TstarS
     QstarC   = ( sw ) * QstarUS   + ( 1.0_DP-sw ) * QstarS
-    UabsC    = ( sw ) * UabsUS    + ( 1.0_DP-sw ) * UabsS
     FracU10C = ( sw ) * FracU10US + ( 1.0_DP-sw ) * FracU10S
     FracT2C  = ( sw ) * FracT2US  + ( 1.0_DP-sw ) * FracT2S
     FracQ2C  = ( sw ) * FracQ2US  + ( 1.0_DP-sw ) * FracQ2S
@@ -881,7 +876,6 @@ contains
     Ustar   = real( UstarC,   kind=RP )
     Tstar   = real( TstarC,   kind=RP )
     Qstar   = real( QstarC,   kind=RP )
-    Uabs    = real( UabsC,    kind=RP )
     FracU10 = real( FracU10C, kind=RP )
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )

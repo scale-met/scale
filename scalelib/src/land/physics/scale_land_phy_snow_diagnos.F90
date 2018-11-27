@@ -44,16 +44,18 @@ contains
        LIA, LIS, LIE, LJA, LJS, LJE, &
        SNOW_frac,           &
        TMPA, PRSA,          &
-       WA, UA, VA,          &
+       UA, VA,              &
        RHOA, QVA,           &
        Z1, PBL,             &
        RHOS, PRSS, LST1,    &
        QVEF,                &
        Z0M, Z0H, Z0E,       &
+       TanSL_X, TanSL_Y,    &
        ZMFLX, XMFLX, YMFLX, &
        U10, V10,            &
        T2, Q2               )
     use scale_const, only: &
+      EPS   => CONST_EPS,   &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
@@ -70,7 +72,6 @@ contains
     real(RP), intent(in) :: SNOW_frac(LIA,LJA) ! snow fraction
     real(RP), intent(in) :: TMPA(LIA,LJA) ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: PRSA(LIA,LJA) ! pressure at the lowest atmospheric layer [Pa]
-    real(RP), intent(in) :: WA  (LIA,LJA) ! velocity w at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: UA  (LIA,LJA) ! velocity u at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: VA  (LIA,LJA) ! velocity v at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: RHOA(LIA,LJA) ! density at the lowest atmospheric layer [kg/m3]
@@ -80,12 +81,15 @@ contains
     real(RP), intent(in) :: RHOS(LIA,LJA) ! density  at the surface [kg/m3]
     real(RP), intent(in) :: PRSS(LIA,LJA) ! pressure at the surface [Pa]
 
-    real(RP), intent(in) :: LST1   (LIA,LJA) ! land surface temperature [K]
+    real(RP), intent(in) :: LST1  (LIA,LJA) ! land surface temperature [K]
     real(RP), intent(in) :: QVEF  (LIA,LJA) ! efficiency of evaporation (0-1)
 
     real(RP), intent(in) :: Z0M   (LIA,LJA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (LIA,LJA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (LIA,LJA) ! roughness length for vapor [m]
+
+    real(RP), intent(in) :: TanSL_X(LIA,LJA) ! tan(slope) in the x-direction
+    real(RP), intent(in) :: TanSL_Y(LIA,LJA) ! tan(slope) in the x-direction
 
     real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
@@ -97,9 +101,10 @@ contains
 
 
     ! works
-    real(RP) :: Ustar  ! friction velocity [m]
+    real(RP) :: Ustar  ! friction velocity [m/s]
     real(RP) :: Tstar  ! friction potential temperature [K]
     real(RP) :: Qstar  ! friction water vapor mass ratio [kg/kg]
+    real(RP) :: Wstar  ! free convection velocity scale [m/s]
     real(RP) :: Uabs   ! modified absolute velocity [m/s]
     real(RP) :: Ra     ! Aerodynamic resistance (=1/Ce) [1/s]
 
@@ -111,6 +116,9 @@ contains
     real(RP) :: FracU10 ! calculation parameter for U10 [-]
     real(RP) :: FracT2  ! calculation parameter for T2 [-]
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
+
+    real(RP) :: MFLUX
+    real(RP) :: w
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -131,11 +139,14 @@ contains
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
+        w = UA(i,j) * TanSL_X(i,j) + VA(i,j) * TanSL_Y(i,j)
+        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + w**2 )
+
         call BULKFLUX( &
             Ustar,     & ! [OUT]
             Tstar,     & ! [OUT]
             Qstar,     & ! [OUT]
-            Uabs,      & ! [OUT]
+            Wstar,     & ! [OUT]
             Ra,        & ! [OUT]
             FracU10,   & ! [OUT]
             FracT2,    & ! [OUT]
@@ -146,17 +157,23 @@ contains
             PRSS(i,j), & ! [IN]
             QVA (i,j), & ! [IN]
             QVS,       & ! [IN]
-            UA  (i,j), & ! [IN]
-            VA  (i,j), & ! [IN]
+            Uabs,      & ! [IN]
             Z1  (i,j), & ! [IN]
             PBL (i,j), & ! [IN]
             Z0M (i,j), & ! [IN]
             Z0H (i,j), & ! [IN]
             Z0E (i,j)  ) ! [IN]
 
-        ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
-        XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
-        YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+        if ( Uabs < EPS ) then
+           ZMFLX(i,j) = 0.0_RP
+           XMFLX(i,j) = 0.0_RP
+           YMFLX(i,j) = 0.0_RP
+        else
+           MFLUX = - RHOS(i,j) * Ustar**2
+           ZMFLX(i,j) = MFLUX * w / Uabs
+           XMFLX(i,j) = MFLUX * UA(i,j) / Uabs
+           YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
+        end if
 
         ! diagnostic variables for neutral state
         U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )

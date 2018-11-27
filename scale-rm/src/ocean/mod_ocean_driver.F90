@@ -182,6 +182,9 @@ contains
        FILE_HISTORY_in
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+    use scale_topography, &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
@@ -240,7 +243,6 @@ contains
        OCEAN_ICE_MASS_t,  &
        ATMOS_TEMP,        &
        ATMOS_PRES,        &
-       ATMOS_W,           &
        ATMOS_U,           &
        ATMOS_V,           &
        ATMOS_DENS,        &
@@ -448,7 +450,6 @@ contains
                                     OJA, OJS, OJE,              & ! [IN]
                                     ATMOS_TEMP       (:,:),     & ! [IN]
                                     ATMOS_PRES       (:,:),     & ! [IN]
-                                    ATMOS_W          (:,:),     & ! [IN]
                                     ATMOS_U          (:,:),     & ! [IN]
                                     ATMOS_V          (:,:),     & ! [IN]
                                     ATMOS_DENS       (:,:),     & ! [IN]
@@ -466,6 +467,8 @@ contains
                                     sfc_Z0M          (:,:),     & ! [IN]
                                     sfc_Z0H          (:,:),     & ! [IN]
                                     sfc_Z0E          (:,:),     & ! [IN]
+                                    TanSL_X          (:,:),     & ! [IN]
+                                    TanSL_Y          (:,:),     & ! [IN]
                                     exists_ocean     (:,:),     & ! [IN]
                                     dt,                         & ! [IN]
                                     sflx_MW          (:,:),     & ! [OUT]
@@ -610,7 +613,6 @@ contains
                                        OJA, OJS, OJE,              & ! [IN]
                                        ATMOS_TEMP       (:,:),     & ! [IN]
                                        ATMOS_PRES       (:,:),     & ! [IN]
-                                       ATMOS_W          (:,:),     & ! [IN]
                                        ATMOS_U          (:,:),     & ! [IN]
                                        ATMOS_V          (:,:),     & ! [IN]
                                        ATMOS_DENS       (:,:),     & ! [IN]
@@ -628,6 +630,8 @@ contains
                                        sfc_Z0M          (:,:),     & ! [IN]
                                        sfc_Z0H          (:,:),     & ! [IN]
                                        sfc_Z0E          (:,:),     & ! [IN]
+                                       TanSL_X          (:,:),     & ! [IN]
+                                       TanSL_Y          (:,:),     & ! [IN]
                                        exists_ice       (:,:),     & ! [IN]
                                        dt,                         & ! [IN]
                                        sflx_MW          (:,:),     & ! [OUT]

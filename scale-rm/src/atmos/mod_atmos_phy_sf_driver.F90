@@ -124,7 +124,9 @@ contains
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_topography, only: &
-       Zsfc    => TOPOGRAPHY_Zsfc
+       Zsfc    => TOPOGRAPHY_Zsfc, &
+       TanSL_X => TOPOGRAPHY_TanSL_X, &
+       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_time, only: &
        dt_SF => TIME_DTSEC_ATMOS_PHY_SF
     use scale_statistics, only: &
@@ -238,11 +240,12 @@ contains
           case ( 'BULK' )
 
              call ATMOS_PHY_SF_bulk_flux( IA, ISB, IEB, JA, JSB, JEB,                  & ! [IN]
-                                          ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
+                                          ATM_U(:,:), ATM_V(:,:),                      & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
                                           SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]
                                           SFC_Z0M(:,:), SFC_Z0H(:,:), SFC_Z0E(:,:),    & ! [IN]
-                                          PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
+                                          PBL_Zi(:,:),                                 & ! [IN]
+                                          Z1(:,:), TanSL_X(:,:), TanSL_Y(:,:),         & ! [IN]
                                           SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
                                           SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]

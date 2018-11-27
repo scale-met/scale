@@ -65,7 +65,7 @@ contains
        IA, IS, IE,          &
        JA, JS, JE,          &
        TMPA, PRSA,          &
-       WA, UA, VA,          &
+       UA, VA,              &
        RHOA, QVA, LH,       &
        Z1, PBL,             &
        RHOS, PRSS,          &
@@ -73,6 +73,7 @@ contains
        TMPS, QVEF,          &
        ALBEDO,              &
        Rb, Z0M, Z0H, Z0E,   &
+       TanSl_X, TanSl_Y,    &
        calc_flag, dt,       &
        ZMFLX, XMFLX, YMFLX, &
        SHFLX, QVFLX, GFLX,  &
@@ -94,7 +95,6 @@ contains
     integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(in)  :: TMPA     (IA,JA)                     ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in)  :: PRSA     (IA,JA)                     ! pressure    at the lowest atmospheric layer [Pa]
-    real(RP), intent(in)  :: WA       (IA,JA)                     ! velocity w  at the lowest atmospheric layer [m/s]
     real(RP), intent(in)  :: UA       (IA,JA)                     ! velocity u  at the lowest atmospheric layer [m/s]
     real(RP), intent(in)  :: VA       (IA,JA)                     ! velocity v  at the lowest atmospheric layer [m/s]
     real(RP), intent(in)  :: RHOA     (IA,JA)                     ! density     at the lowest atmospheric layer [kg/m3]
@@ -112,8 +112,11 @@ contains
     real(RP), intent(in)  :: Z0M      (IA,JA)                     ! roughness length for momemtum [m]
     real(RP), intent(in)  :: Z0H      (IA,JA)                     ! roughness length for heat     [m]
     real(RP), intent(in)  :: Z0E      (IA,JA)                     ! roughness length for vapor    [m]
+    real(RP), intent(in)  :: TanSl_X  (IA,JA)                     ! surface slope in the x-direction
+    real(RP), intent(in)  :: TanSl_Y  (IA,JA)                     ! surface slope in the y-direction
     logical,  intent(in)  :: calc_flag(IA,JA)                     ! to decide calculate or not
     real(DP), intent(in)  :: dt                                   ! delta time
+
     real(RP), intent(out) :: ZMFLX    (IA,JA)                     ! z-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: YMFLX    (IA,JA)                     ! y-momentum      flux at the surface [kg/m/s2]
@@ -132,10 +135,11 @@ contains
     real(RP) :: SWU     ! surface upward   shortwave radiation flux [J/m2/s]
     real(RP) :: res     ! residual
 
-    real(RP) :: Ustar   ! friction velocity               [m]
+    real(RP) :: Ustar   ! friction velocity               [m/s]
     real(RP) :: Tstar   ! friction potential temperature  [K]
     real(RP) :: Qstar   ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Uabs    ! modified absolute velocity      [m/s]
+    real(RP) :: Wstar   ! free convection velocity scale  [m/s]
+    real(RP) :: Uabs    ! absolute velocity               [m/s]
     real(RP) :: Ra      ! Aerodynamic resistance (=1/Ce)  [1/s]
 
     real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
@@ -147,22 +151,25 @@ contains
     real(RP) :: FracT2  ! calculation parameter for T2  [1]
     real(RP) :: FracQ2  ! calculation parameter for Q2  [1]
 
+    real(RP) :: MFLUX
+    real(RP) :: w
+
     integer  :: i, j
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'coupler / physics / surface / FIXED-TEMP'
 
     ! calculate surface flux
+    !$omp parallel do &
 #ifndef __GFORTRAN__
-    !$omp parallel do default(none) &
-    !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU) &
+    !$omp default(none) &
     !$omp shared(IS,IE,JS,JE,EPS,Rdry,CPdry,bulkflux, &
-    !$omp        calc_flag,TMPA,QVA,LH,UA,VA,WA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
-    !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2)
+    !$omp        calc_flag,TMPA,QVA,LH,UA,VA,Z1,TanSL_X,TanSL_Y,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,U10,V10,T2,Q2) &
 #else
-    !$omp parallel do default(shared) &
-    !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU)
+    !$omp default(shared) &
 #endif
+    !$omp private(qdry,Rtot,QVsat,QVS,Ustar,Tstar,Qstar,Wstar,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU,MFLUX,w)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
@@ -175,10 +182,13 @@ contains
           QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
               + (        QVEF(i,j) ) * QVsat
 
+          w = UA(i,j) * TanSL_X(i,j) + VA(i,j) * TanSL_Y(i,j)
+          Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + w**2 )
+
           call BULKFLUX( Ustar,     & ! [OUT]
                          Tstar,     & ! [OUT]
                          Qstar,     & ! [OUT]
-                         Uabs,      & ! [OUT]
+                         Wstar,     & ! [OUT]
                          Ra,        & ! [OUT]
                          FracU10,   & ! [OUT]
                          FracT2,    & ! [OUT]
@@ -189,23 +199,22 @@ contains
                          PRSS(i,j), & ! [IN]
                          QVA (i,j), & ! [IN]
                          QVS,       & ! [IN]
-                         UA  (i,j), & ! [IN]
-                         VA  (i,j), & ! [IN]
+                         Uabs,      & ! [IN]
                          Z1  (i,j), & ! [IN]
                          PBL (i,j), & ! [IN]
                          Z0M (i,j), & ! [IN]
                          Z0H (i,j), & ! [IN]
                          Z0E (i,j)  ) ! [IN]
 
-          Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
           if ( Uabs < EPS ) then
              ZMFLX(i,j) = 0.0_RP
              XMFLX(i,j) = 0.0_RP
              YMFLX(i,j) = 0.0_RP
           else
-             ZMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * WA(i,j)
-             XMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * UA(i,j)
-             YMFLX(i,j) = -RHOS(i,j) * Ustar * Ustar / Uabs * VA(i,j)
+             MFLUX = - RHOS(i,j) * Ustar**2
+             ZMFLX(i,j) = MFLUX * w / Uabs
+             XMFLX(i,j) = MFLUX * UA(i,j) / Uabs
+             YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
           end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
           QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
