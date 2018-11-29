@@ -159,7 +159,8 @@ contains
        TIME_DOend
     use mod_admin_restart, only: &
        ADMIN_restart_setup, &
-       ADMIN_restart_write
+       ADMIN_restart_write, &
+       ADMIN_restart_write_additional
     use mod_atmos_admin, only: &
        ATMOS_admin_setup, &
        ATMOS_do,          &
@@ -216,7 +217,9 @@ contains
        USER_tracer_setup,  &
        USER_setup,         &
        USER_calc_tendency, &
-       USER_update
+       USER_update,        &
+       USER_resume,        &
+       USER_resume_do
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -384,6 +387,9 @@ contains
          ! set state from restart files
          call restart_read
 
+         ! resume state 
+         if ( USER_resume_do ) call USER_resume
+
          ! history&monitor file output
          call MONITOR_write('MAIN', TIME_NOWSTEP)
          call FILE_HISTORY_write ! if needed
@@ -401,6 +407,7 @@ contains
                                              call USER_update
       ! restart output
       call ADMIN_restart_write
+      call ADMIN_restart_write_additional
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )

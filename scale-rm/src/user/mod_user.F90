@@ -34,11 +34,13 @@ module mod_user
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
+  public :: USER_resume
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
+  logical, public :: USER_resume_do = .false. !< do user resume step?
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -130,6 +132,7 @@ contains
 
     namelist / PARAM_USER / &
        USER_do, &
+       USER_resume_do, &
        LAND_RESTART_IN_BASENAME, &
        READ_LAND_TEMP, &
        READ_LAND_WATER, &
@@ -236,14 +239,14 @@ contains
     end if
 
     LOG_NEWLINE
-    LOG_INFO("USER_setup",*) 'This module is dummy.'
+    LOG_INFO("USER_setup",*) 'Finish reading namelist'
 
     return
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
-  !> Resuming operation, before calculating tendency
-  subroutine USER_resume0
+  !> Calculation tendency
+  subroutine USER_calc_tendency
     use scale_const, only: &
          I_SW  => CONST_I_SW, &
          I_LW  => CONST_I_LW
@@ -278,14 +281,64 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    ! If you need, calculate first step and put diagnostic value to history buffer.
-    ! USER_resume0 calls before setup of Atmos/Ocean/Land/Urban submodels.
-    ! All variables are set before surface coupling.
+    return
+  end subroutine USER_calc_tendency
 
-    !call USER_step
+  !> Make initial state
+  subroutine USER_mkinit
+    implicit none
+    !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) in mod_user ***'
+    return
+  end subroutine USER_mkinit
+
+  !-----------------------------------------------------------------------------
+  !> User step
+  subroutine USER_update
+    implicit none
+    !---------------------------------------------------------------------------
+
+    return
+  end subroutine USER_update
+
+  !-----------------------------------------------------------------------------
+  !> User step
+  subroutine USER_resume
+    use scale_file_cartesC, only: &
+         FILE_CARTESC_read
+    use mod_land_vars, only: &
+         LAND_TEMP, &
+         LAND_WATER, &
+         LAND_SFC_TEMP, &
+         LAND_SFC_albedo, &
+         LAND_SFLX_MW, &
+         LAND_SFLX_MU, &
+         LAND_SFLX_MV, &
+         LAND_SFLX_SH, &
+         LAND_SFLX_LH, &
+         LAND_SFLX_GH, &
+         LAND_SFLX_QTRC
+    use mod_ocean_vars, only: &
+         OCEAN_TEMP, &
+         OCEAN_SFC_TEMP, &
+         OCEAN_SFC_albedo, &
+         OCEAN_SFC_Z0M, &
+         OCEAN_SFC_Z0H, &
+         OCEAN_SFC_Z0E, &
+         OCEAN_SFLX_MW, &
+         OCEAN_SFLX_MU, &
+         OCEAN_SFLX_MV, &
+         OCEAN_SFLX_SH, &
+         OCEAN_SFLX_LH, &
+         OCEAN_SFLX_G,  &
+         OCEAN_SFLX_QTRC
+    implicit none
+    !---------------------------------------------------------------------------
+
+!    if( IO_L ) write(IO_FID_LOG,*)
+!    if( IO_L ) write(IO_FID_LOG,*) '*** Input restart file (LAND) in mod_user ***'
+    LOG_NEWLINE
+    LOG_INFO("USER_resume",*) 'Start user_resume'
 
     if ( READ_LAND_TEMP ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_TEMP', 'LXY', & ! [IN]
@@ -308,7 +361,7 @@ contains
     end if
 
     if ( READ_LAND_SFC_ALB_IR_dif ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_IR_dir', 'XY', & ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_IR_dif', 'XY', & ! [IN]
                                LAND_SFC_albedo(:,:,I_R_diffuse, I_R_IR), step=1        ) ! [OUT]
     end if
 
@@ -318,7 +371,7 @@ contains
     end if
 
     if ( READ_LAND_SFC_ALB_NIR_dif ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_NIR_dir', 'XY', & ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_NIR_dif', 'XY', & ! [IN]
                                LAND_SFC_albedo(:,:,I_R_diffuse, I_R_NIR), step=1        ) ! [OUT]
     end if
 
@@ -328,7 +381,7 @@ contains
     end if
 
     if ( READ_LAND_SFC_ALB_VIS_dif ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_VIS_dir', 'XY', & ! [IN]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_VIS_dif', 'XY', & ! [IN]
                                LAND_SFC_albedo(:,:,I_R_diffuse, I_R_VIS), step=1        ) ! [OUT]
     end if
 
@@ -422,6 +475,7 @@ contains
                                OCEAN_SFC_Z0H(:,:), step=1                        ) ! [OUT]
     endif
 
+
     if ( READ_OCEAN_SFC_Z0E ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0E', 'XY', & ! [IN]
                                OCEAN_SFC_Z0E(:,:), step=1                        ) ! [OUT]
@@ -462,39 +516,10 @@ contains
                                OCEAN_SFLX_QTRC(:,:,I_QV), step=1                   ) ! [OUT]
     endif
 
-    return
-  end subroutine USER_resume0
-
-  !> Make initial state
-  subroutine USER_mkinit
-    implicit none
-    !---------------------------------------------------------------------------
+    LOG_NEWLINE
+    LOG_INFO("USER_resume",*) 'Finish user_resume'
 
     return
-  end subroutine USER_mkinit
-
-  !-----------------------------------------------------------------------------
-  !> Calculation tendency
-  subroutine USER_calc_tendency
-    implicit none
-    !---------------------------------------------------------------------------
-
-    return
-  end subroutine USER_calc_tendency
-
-  !-----------------------------------------------------------------------------
-  !> User step
-  subroutine USER_update
-    use scale_prc, only: &
-       PRC_abort
-    implicit none
-    !---------------------------------------------------------------------------
-
-    if ( USER_do ) then
-       call PRC_abort
-    endif
-
-    return
-  end subroutine USER_update
+  end subroutine USER_resume
 
 end module mod_user
