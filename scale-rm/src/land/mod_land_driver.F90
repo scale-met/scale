@@ -216,6 +216,7 @@ contains
     real(RP) :: SFLX_QV   (LIA,LJA)
     real(RP) :: SFLX_GH   (LIA,LJA)
     real(RP) :: LHV       (LIA,LJA) ! latent heat of vaporization [J/kg]
+    real(RP) :: ATMOS_W  (LIA,LJA)
 
     ! for snow
     real(RP) :: SNOW_albedo         (LIA,LJA,2)
@@ -279,6 +280,13 @@ contains
     call HYDROMETEOR_LHV( LIA, LIS, LIE, LJA, LJS, LJE, &
                           ATMOS_TEMP(:,:), LHV(:,:) )
 
+    !$omp parallel do
+    do j = LJS, LJE
+    do i = LIS, LIE
+       ATMOS_W = ATMOS_U(i,j) * TanSL_X(i,j) + ATMOS_V(i,j) * TanSL_Y(i,j)
+    end do
+    end do
+
     if ( snow_flag ) then
        !------------------------------------------------------------------------
        !> snow area
@@ -309,9 +317,8 @@ contains
           call LAND_PHY_SNOW_KY90( LIA, LIS, LIE, LJA, LJS, LJE, &
                                    ATMOS_SFLX_rain(:,:), ATMOS_SFLX_snow(:,:),       & ! [IN]
                                    ATMOS_PRES(:,:), ATMOS_TEMP(:,:), ATMOS_QV(:,:),  & ! [IN]
-                                   ATMOS_U(:,:), ATMOS_V(:,:),                       & ! [IN]
+                                   ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),         & ! [IN]
                                    ATMOS_SFC_DENS(:,:),                              & ! [IN]
-                                   TanSL_X(:,:), TanSL_Y(:,:),                       & ! [IN]
                                    ATMOS_SFLX_rad_dn(:,:,:,:),                       & ! [IN]
                                    LANDUSE_fact_land(:,:), dt,                       & ! [IN]
                                    SNOW_SFC_TEMP(:,:), SNOW_SWE(:,:),                & ! [INOUT]
@@ -364,7 +371,7 @@ contains
        call LAND_PHY_SNOW_DIAGS( LIA, LIS, LIE, LJA, LJS, LJE, &
                                  SNOW_frac(:,:),                                                & ! [IN]
                                  ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                              & ! [IN]
-                                 ATMOS_U(:,:), ATMOS_V(:,:),                                    & ! [IN]
+                                 ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                      & ! [IN]
                                  ATMOS_DENS(:,:), ATMOS_QV(:,:),                                & ! [IN]
                                  REAL_Z1(:,:), ATMOS_PBL(:,:),                                  & ! [IN]
                                  ATMOS_SFC_DENS (:,:), ATMOS_SFC_PRES(:,:), SNOW_SFC_TEMP(:,:), & ! [IN]
@@ -372,7 +379,6 @@ contains
                                  LAND_PROPERTY(:,:,I_Z0M),                                      & ! [IN]
                                  LAND_PROPERTY(:,:,I_Z0H),                                      & ! [IN]
                                  LAND_PROPERTY(:,:,I_Z0E),                                      & ! [IN]
-                                 TanSL_X(:,:), TanSL_Y(:,:),                                    & ! [IN]
                                  SNOW_ATMOS_SFLX_MW(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MU(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MV(:,:),                                       & ! [OUT]
@@ -435,7 +441,7 @@ contains
 
        call CPL_PHY_SFC_skin( LIA, LIS, LIE, LJA, LJS, LJE, &
                               ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
-                              ATMOS_U(:,:), ATMOS_V(:,:),                              & ! [IN]
+                              ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                & ! [IN]
                               ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                               REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                               ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
@@ -447,7 +453,6 @@ contains
                               LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                              TanSL_X(:,:), TanSL_Y(:,:),                              & ! [IN]
                               LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
@@ -478,7 +483,7 @@ contains
 
        call CPL_PHY_SFC_fixed_temp( LIA, LIS, LIE, LJA, LJS, LJE, &
                                     ATMOS_TEMP(:,:), ATMOS_PRES(:,:),                        & ! [IN]
-                                    ATMOS_U(:,:), ATMOS_V(:,:),                              & ! [IN]
+                                    ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),                & ! [IN]
                                     ATMOS_DENS(:,:), ATMOS_QV(:,:), LHV(:,:),                & ! [IN]
                                     REAL_Z1(:,:), ATMOS_PBL(:,:),                            & ! [IN]
                                     ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                & ! [IN]
@@ -489,7 +494,6 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                                    TanSL_X(:,:), TanSL_Y(:,:),                              & ! [IN]
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]

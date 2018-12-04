@@ -44,13 +44,12 @@ contains
        LIA, LIS, LIE, LJA, LJS, LJE, &
        SNOW_frac,           &
        TMPA, PRSA,          &
-       UA, VA,              &
+       WA, UA, VA,          &
        RHOA, QVA,           &
        Z1, PBL,             &
        RHOS, PRSS, LST1,    &
        QVEF,                &
        Z0M, Z0H, Z0E,       &
-       TanSL_X, TanSL_Y,    &
        ZMFLX, XMFLX, YMFLX, &
        U10, V10,            &
        T2, Q2               )
@@ -72,6 +71,7 @@ contains
     real(RP), intent(in) :: SNOW_frac(LIA,LJA) ! snow fraction
     real(RP), intent(in) :: TMPA(LIA,LJA) ! temperature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: PRSA(LIA,LJA) ! pressure at the lowest atmospheric layer [Pa]
+    real(RP), intent(in) :: WA  (LIA,LJA) ! velocity w at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: UA  (LIA,LJA) ! velocity u at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: VA  (LIA,LJA) ! velocity v at the lowest atmospheric layer [m/s]
     real(RP), intent(in) :: RHOA(LIA,LJA) ! density at the lowest atmospheric layer [kg/m3]
@@ -87,9 +87,6 @@ contains
     real(RP), intent(in) :: Z0M   (LIA,LJA) ! roughness length for momemtum [m]
     real(RP), intent(in) :: Z0H   (LIA,LJA) ! roughness length for heat [m]
     real(RP), intent(in) :: Z0E   (LIA,LJA) ! roughness length for vapor [m]
-
-    real(RP), intent(in) :: TanSL_X(LIA,LJA) ! tan(slope) in the x-direction
-    real(RP), intent(in) :: TanSL_Y(LIA,LJA) ! tan(slope) in the x-direction
 
     real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
@@ -139,8 +136,7 @@ contains
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
-        w = UA(i,j) * TanSL_X(i,j) + VA(i,j) * TanSL_Y(i,j)
-        Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + w**2 )
+        Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
         call BULKFLUX( &
             Ustar,     & ! [OUT]

@@ -134,9 +134,8 @@ contains
        LIA, LIS, LIE, LJA, LJS, LJE, &
        SFLX_rain, SFLX_snow,   & ! [IN]
        PRSA, TA, QA,           & ! [IN]
-       UA, VA,                 & ! [IN]
+       WA, UA, VA,             & ! [IN]
        DENS,                   & ! [IN]
-       TanSL_X, TanSL_Y,       & ! [IN]
        SFLX_RAD_dn,            & ! [IN]
        LANDUSE_fact_land, dt,  & ! [IN]
        TSNOW, SWE,             & ! [INOUT]
@@ -168,12 +167,11 @@ contains
     real(RP), intent(in)      :: SFLX_snow (LIA,LJA)
     real(RP), intent(in)      :: PRSA      (LIA,LJA)
     real(RP), intent(in)      :: TA        (LIA,LJA)
+    real(RP), intent(in)      :: WA        (LIA,LJA)
     real(RP), intent(in)      :: UA        (LIA,LJA)
     real(RP), intent(in)      :: VA        (LIA,LJA)
     real(RP), intent(in)      :: QA        (LIA,LJA)      ! specific humidity [kg/kg]
     real(RP), intent(in)      :: DENS      (LIA,LJA)
-    real(RP), intent(in)      :: TanSL_X   (LIA,LJA)
-    real(RP), intent(in)      :: TanSL_Y   (LIA,LJA)
     real(RP), intent(in)      :: SFLX_RAD_dn(LIA,LJA,N_RAD_DIR,N_RAD_RGN)
     real(DP), intent(in)      :: dt                     ! dt of land
     real(RP), intent(in)      :: LANDUSE_fact_land(LIA,LJA)
@@ -225,8 +223,7 @@ contains
     if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
         ( SWE(i,j)>0. .or. SFLX_snow(i,j)>0. ) )then
 
-       w = UA(i,j) * TanSL_X(i,j) + VA(i,j) * TanSL_Y(i,j)
-       Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + w**2 )
+       Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
        !qdry = 1.0_RP - QA(i,j)
        !call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
