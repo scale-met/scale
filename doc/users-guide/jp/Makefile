@@ -38,10 +38,10 @@ update_images:
 	done
 
 clean:
-	rm -f *.pdf *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
+	rm -f *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
 
 allclean: clean
-		rm -rf *.pdf figure
+	rm -rf *.pdf figure
 
 $(TEXNAME).pdf: $(TEXNAME).dvi
 	$(DVIPDF) $(TEXNAME)
@@ -60,7 +60,7 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 
 .SUFFIXES:
-.SUFFIXES: .tex .bbl .dvi .pdf .bib .html
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .png .eps
 
 figure/%.png:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
