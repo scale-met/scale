@@ -1,0 +1,133 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  File install_prep.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+本章では、\scalelib や \scalerm のコンパイル方法、実行に必要とされる最小の計算環境を説明する。
+
+\section{システム環境} \label{sec:req_env}
+%====================================================================================
+\subsubsection{\bf 推奨のハードウェア構成}
+
+必要なハードウェアは実験設定に依存するが、
+ここでは第\ref{chap:tutorial_ideal}章と第\ref{chap:tutorial_real}章の
+チュートリアルを実行するために必要なスベックを示す。
+
+  \begin{itemize}
+    \item {\bf CPU} : チュートリアルの理想実験でに物理コアが2コア以上、現実大気実験には4コア以上が望ましい。
+    \item {\bf Memory} : 理想実験には512MB以上、現実大気実験には2GB以上のメモリ容量が必要とされる。 ただし、この要件は倍精度浮動小数点を使用した場合である。
+    \item {\bf HDD} : 現実大気実験には約3GBのディスク空き容量が必要とされる。
+  \end{itemize}
+
+\subsubsection{\bf 必要なソフトウェア}
+  \begin{itemize}
+  \item {\bf OS} : Linux OS、MacOS
+%        対応確認済みOSについては、表\ref{tab:compatible_os}を参照のこと。
+  \item {\bf コンパイラ} : C、Fortran
+  \end{itemize}
+
+  \scalelib のソースコードは Fortran 2003 規格に基づく機能を一部利用しているため、
+  それに対応するコンパイラが必要である。
+  例えば、GNU GFortran のバージョン 4.3 以前では Fortran 2003 規格の対応が不十分であるので、
+  \scalelib のコンパイルには利用できない。
+  対応確認済みのコンパイラは、表\ref{tab:compatible_compiler}を参照されたい。
+
+%\begin{table}[htb]
+%\begin{center}
+%\caption{対応確認済みOS（全てx86-64の64bit版）}
+%\begin{tabularx}{150mm}{|l|l|X|} \hline
+% \rowcolor[gray]{0.9} OS名 & 確認済みバージョン & 備考 \\ \hline
+% CentOS                & 6.6、6.9、7.0、7.2、7.3 &  \\ \hline
+% openSUSE              & 13.2、42.1、42.2        &  \\ \hline
+% SUSE Enterprise Linux & 11.3、12.1         &  \\ \hline
+% fedora                & 24、25、26         &  \\ \hline
+% Mac OS X              & 10.11 (El Capitan) &  \\ \hline
+%\end{tabularx}
+%\label{tab:compatible_os}
+%\end{center}
+%\end{table}
+
+
+\begin{table}[htb]
+\begin{center}
+\caption{対応確認済みのコンパイラ}
+\begin{tabularx}{150mm}{|l|X|X|} \hline
+ \rowcolor[gray]{0.9} コンパイラ名 & \\ \hline
+ GNU (gcc/gfortran)    & 4.3以前は非対応。4.4.xではコンパイル時にWarningが出ることがある。 \\ \hline
+ Intel (icc/ifort)     & 2013年以降のバージョンを推奨。 \\ \hline
+ PGI (gcc/pgfortran)   & 17.1 は確認済み              \\ \hline
+\end{tabularx}
+\label{tab:compatible_compiler}
+\end{center}
+\end{table}
+
+\subsubsection{\bf 必要なライブラリ}\label{sec:inst_env}
+  \begin{itemize}
+   \item {\netcdf} ライブラリ (\url{http://www.unidata.ucar.edu/software/netcdf/})
+   \item MPI ライブラリ (e.g., openMPI \url{http://www.open-mpi.org/})
+   \item LAPACK ( \url{http://www.netlib.org/lapack/} ) (\scalegm のみが要求)
+  \end{itemize}
+
+{\netcdf}4 が推奨されるが、{\netcdf}3 も利用できる。
+{\netcdf}3 を用いる場合は、いくつか制限が発生することに注意が必要である(第\ref{sec:netcdf}節を参照)。
+Linux や Mac 用に配布された NetCDF のバイナリパッケージも使用することができる。
+また、「京」には、既にこれらの{\netcdf}ライブラリがインストールされている。
+詳細は「京」のポータルサイトにある「R-CCS ソフトウエア」の記述や
+リンク先(\url{https://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf/})
+を参照されたい。
+
+MPI 1.0/2.0 プロトコルに対応した MPI ライブラリを必要とする。
+対応確認済みの MPI ライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
+
+\begin{table}[htb]
+\begin{center}
+\caption{対応確認済みの MPIライブラリ}
+\begin{tabularx}{150mm}{|l|X|X|} \hline
+ \rowcolor[gray]{0.9} MPIライブラリ名 & \\ \hline
+ openMPI   & 1.7.2 以降に対応。 \\ \hline
+ Intel MPI & 2013 年以降のバージョンに対応。 \\ \hline
+ SGI MPT   & 2.09 以降に対応。 \\ \hline
+\end{tabularx}
+\label{tab:compatible_mpi}
+\end{center}
+\end{table}
+
+
+第\ref{chap:tutorial_ideal}章や第\ref{chap:tutorial_real}章のチュートリアルでは、
+上記のライブラリの準備が完了しているとする。
+
+\subsubsection{\bf 描画ツール}
+\begin{itemize}
+  \item {\bf GPhys / Ruby-DCL by 地球流体電脳倶楽部}
+  \begin{itemize}
+    \item URL: \url{http://ruby.gfd-dennou.org/products/gphys/}
+    \item 特徴: {\scalelib}は、MPI プロセスによる領域分割に従った {\netcdf} 形式の分割ファイルを出力する。
+    {\gphys}に含まれる「gpview」や「gpvect」コマンドは、後処理を行わずに分割ファイルを直接可視化できる。
+    \item インストール方法: 主要な OS に対するインストール方法は、地球流体電脳倶楽部のWebページ
+    (\url{http://ruby.gfd-dennou.org/tutorial/install/})に書かれている.
+  \end{itemize}
+  %%
+  \item Grid Analysis and Display System ({\grads}) by COLA
+  \begin{itemize}
+    \item URL: \url{http://cola.gmu.edu/grads/}
+    \item 特徴: 非常によく使われている描画ツールであるが、 \scalelib によって生成された {\netcdf}形式の分割ファイルを
+    直接読み込めない。\scalelib が出力したファイルを {\grads} から読み込める単一のファイルに結合するためには、後処理ツール \verb|netcdf2grads| (net2g)が必要である。
+    net2g のインストール方法は第\ref{sec:source_net2g}章、使用方法の詳細は第 3、4 部および
+    第\ref{sec:net2g}章を参照されたい。
+ \end{itemize}
+  %%
+ \item Ncview: {\netcdf} の可視化ブラウザ (David W. Pierce により開発された)
+  \begin{itemize}
+  \item URL: \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}
+  \item 特徴: Ncview は {\netcdf}形式のファイルのためのクイックビューアである。
+  \scalelib によって生成された分割ファイルの結合はできないが、各ファイルごとに結果を描画するときに便利である。
+  \item インストール方法: \url{http://meteora.ucsd.edu/~pierce/ncview_home_page.html}を参照。
+ \end{itemize}
+\end{itemize}
+
+\subsubsection{\bf 便利なツール(必須ではない)}
+\begin{itemize}
+  \item {\bf データ変換ツール}：wgrib、wgrib2、NCL \\
+  \scalerm で読込可能な入力データを作成できる。
+  チュートリアルの現実大気実験では wgrib を使用する。
+  \item {\bf 演算性能の評価ツール}：PAPIライブラリ\footnote{\url{http://icl.utk.edu/papi/}}が使用可能。
+\end{itemize}

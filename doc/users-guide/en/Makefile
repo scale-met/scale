@@ -57,7 +57,7 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 
 .SUFFIXES:
-.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .pdf .png .eps
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .png .eps
 
 figure/%.png:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))

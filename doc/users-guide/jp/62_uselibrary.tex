@@ -1,0 +1,93 @@
+\section{{\scalelib}を使用するユーザープログラム}
+
+\scalelib はサブルーチンの集合体である。
+これらのサブルーチンは、任意のプログラムで利用できる。
+ライブラリファイルは、\scalelib をコンパイルした後に\texttt{scale-{\version}/lib/}の下に「\verb|scalelib.a|」として作成される。
+
+以下は、ユーザがプログラム中で{\scalelib}を使用するときのテンプレートである。
+\editbox{
+  \verb|program template|\\
+  \verb|  use scalelib|\\
+  \verb|  implicit none|\\
+  \verb||\\
+  \verb|  call SCALE_init|\\
+  \verb||\\
+  \verb|  ! user instractions|\\
+  \verb||\\
+  \verb|  call SCALE_finalize|\\
+  \verb||\\
+  \verb|  stop|\\
+  \verb|end program template|\\
+}
+
+以下は、ファイルから読み込まれた大気の物理量から対流有効位置エネルギー(CAPE)を計算する擬プログラムである。
+メイン部分の前に、必要なモジュールを引用(use)し、また必要な入力変数を用意しなければならない。
+以下の例は、プログラムの一部分であることに注意されたい。
+\editbox{
+  \verb|                         |\\
+  \verb|use scale_const, only: & | \\
+  \verb|      Rdry => CONST_Rdry, Rvap => CONST_Rvap, CPdry => CONST_CPdry|\\
+  \verb|use scale_atmos_hydrometeor, only:  &  |\\
+  \verb|      CPvap => CP_VAPOR, CL => CP_WATER|\\
+  \verb|use scale_file, only:  &  | \\
+  \verb|     FILE_open, FILE_read, FILE_close|\\
+  \verb|use scale_atmos_adiabat, only:  & | \\
+  \verb|     ATMOS_ADIABAT_setup, ATMOS_ADIABAT_cape|\\
+  \verb|                  :      |\\
+  \verb| real(8) :: z(kmax,imax,jmax), zh(0:kmax,imax,jmax)|\\
+  \verb| real(8) :: temp(kmax,imax,jmax), pres(kmax,imax,jmax), dens(kmax,imax,jmax)|\\
+  \verb| real(8) :: qv(kmax,imax,jmax), qc(kmax,imax,jmax), qdry(kmax,imax,jmax)|\\
+  \verb| real(8) :: rtot(kmax,imax,jmax), cptot(kmax,imax,jmax)|\\
+  \verb| real(8) :: cape(imax,jmax), cin(imax,jmax)|\\
+  \verb| real(8) :: lcl(imax,jmax), lfc(imax,jmax), lnb(imax,jmax)|\\
+  \verb|                  :      |\\
+  \verb| call FILE_open( basename, fid )                ! ファイルを開く|\\
+  \verb| call FILE_read( fid, 'height', z(:,:,:) )      ! full-level での高度データを読み込む|\\
+  \verb| call FILE_read( fid, 'height_xyw', zh(:,:,:) ) ! half-level での高度データを読み込む|\\
+  \verb| call FILE_read( fid, 'T', temp(:,:,:) )        ! 温度データを読み込む|\\
+  \verb|                  : ! PRES, DENS, QV, QC を読み込む|\\
+  \verb| call FILE_close( fid )  |\\
+  \verb|                         |\\
+  \verb|! CAPE を計算するために必要ないくつかの変数を計算する|\\
+  \verb| qdry(:,:,:)  = 1.0D0 - qv(:,:,:) - qc(:,:,:)                            ! 乾燥空気の質量比|\\
+  \verb| rtot(:,:,:)  = qdry(:,:,:) * Rdry + qv(:,:,:) * Rvap                    ! 気体定数＼|\\
+  \verb| cptot(:,:,:) = qdry(:,:,:) * CPdry + qv(:,:,:) * CPvap + ql(:,:,:) * CL ! 熱容量|\\
+  \verb|                         |\\
+  \verb| call ATMOS_ADIABAT_setup|\\
+  \verb| call ATMOS_ADIABAT_cape( kmax, 1, kmax, imax, 1, imax, jmax, 1, jmax,      & ! 配列サイズ|\\
+  \hspace{12em}\verb|             k0,                                               & ! パーセルの持ち上げを開始する鉛直インデックス|\\
+  \hspace{12em}\verb|             dens(:,:,:), temp(:,:,:), pres(:,:,:),            & ! 入力|\\
+  \hspace{12em}\verb|             qv(:,:,:), qc(:,:,:), qdry(:,:,:),                & ! 入力|\\
+  \hspace{12em}\verb|             rtot(:,:,:), cptot(:,:,:),                        & ! 入力|\\
+  \hspace{12em}\verb|             z(:,:,:), zh(:,:,:),                              & ! 入力|\\
+  \hspace{12em}\verb|             cape(:,:), cin(:,:), lcl(:,:), lfc(:,:), lnb(:,:) ) ! 出力|\\
+  \verb| |\\
+}
+
+リファレンスマニュアル(第\ref{sec:reference_manual}節を参照)では、利用できるサブルーチンの一覧やそれらのサブルーチンの詳細を確認できる。
+ディレクトリ\texttt{scale-\version/scalelib/test/analysis}に、\scalerm が出力したヒストリファイルを解析するサンプルプログラムを用意してあるので、必要に応じて参照されたい。
+
+
+\subsection{コンパイル}
+
+\scalelib を用いたプログラムをコンパイルする前に、\scalelib をコンパイルする必要がある。\\
+\texttt{ \$ cd scale-\version/scalelib/src}\\
+\texttt{ \$ make}
+
+ユーザーが作成したプログラムをコンパイルするときに、\texttt{scale-\version/lib}に置かれている
+\verb|libscale.a|をリンクする必要がある。
+また、モジュールファイルのパスをコンパイラに伝えなければならない。
+モジュールファイルのパスは\texttt{scale-\version/include}であり、
+このパスを指定するオプションはコンパイラに依存する。
+オプションは、sysdep ディレクトリ下のファイル内で指定される変数 \verb|MODDIROPT| の値を見れば分かる(第\ref{subsec:environment}節を参照)。\\
+\verb| $ ${FC} your-program ${MODDIROPT} scale-top-dir/include \\|\\
+\verb|            `nc-config --cflags` -Lscale-top-dir/lib -lscale `nc-config --libs`|
+
+ユーザーが作成したプログラムをコンパイルするために、サンプルにある Makefile を以下のように利用することもできる。\\
+\texttt{ \$ cd scale-\version/scalelib/test/analysis}\\
+\texttt{ \$ mkdir your\_dir}\\
+\texttt{ \$ cd your\_dir}\\
+\texttt{ \$ cp ../horizontal\_mean/Makefile .}\\
+プログラムファイルを本ディレクトリにコピーする。\\
+Makefile を編集する (BINNAME = your\_program\_name)。\\
+\texttt{ \$ make}

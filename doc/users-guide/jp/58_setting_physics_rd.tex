@@ -1,0 +1,229 @@
+\section{\SubsecRadiationSetting} \label{sec:basic_usel_radiation} %-------------------------------------------------------------------------------
+放射スキームの選択は、init.confとrun.conf中の
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_RD_TYPE}で設定する。
+放射スキームが呼び出される時間間隔は、\namelist{PARAM_TIME}で設定する(第\ref{sec:timeintiv}節を参照)。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_RD_TYPE = "MSTRNX", | & ; 表\ref{tab:nml_atm_rd}に示した放射スキームから選択。\\
+\verb|/             | & \\
+}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{放射スキームの選択肢}
+  \label{tab:nml_atm_rd}
+  \begin{tabularx}{150mm}{lXX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献\\ \hline
+      \verb|OFFまたはNONE| & 放射過程を計算しない & \\
+      \verb|OFFLINE|      & 外部ファイルから与えた放射データを指定 & \\
+      \verb|MSTRNX|       & mstrnX (相関k分布法ブロードバンド大気放射伝達モデル)& \citet{sekiguchi_2008} \\
+%      \verb|WRF|          & mstrnX(長波)+Dudhia(短波) & \citet{dudhia_1989} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\subsubsection{\texttt{OFFLINE}の場合の設定}
+
+\namelist{PARAM_ATMOS} の \nmitem{ATMOS_PHY_RD_TYPE} を \verb|OFFLINE| とした場合は、
+データのファイル名やその情報は\namelist{PARAM_ATMOS_PHY_RD_OFFLINE} で設定する。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_OFFLINE        | & \\
+\verb| ATMOS_PHY_RD_OFFLINE_BASENAME              = "",          | & ; 外部データのファイルのベース名 \\
+\verb| ATMOS_PHY_RD_OFFLINE_AXISTYPE              = "XYZ",       | & ; ファイルにおける3次元データの空間次元順。 'XYZ' or 'ZXY' \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_YEAR  = .false.,     | & ; 年ごとの繰り返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_MONTH = .false.,     | & ; 月ごとの繰り返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_ENABLE_PERIODIC_DAY   = .false.,     | & ; 日ごとの繰り返しデータかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_FIXED            = 0,           | & ; とある決まった時間ステップのデータのみを使う場合に、そのステップ番号を指定する。時間変化するデータを与える場合は 0 以下を指定する。\\
+\verb| ATMOS_PHY_RD_OFFLINE_CHECK_COORDINATES     = .true.,      | & ; ファイル内の座標変数とモデル実行時の値の整合性を確認するかどうか \\
+\verb| ATMOS_PHY_RD_OFFLINE_STEP_LIMIT            = 0,           | & ; 読み出すデータの時間ステップ数の上限。この数を越える時間ステップのデータは読まれない。0 を与えると上限無し。\\
+\verb| ATMOS_PHY_RD_OFFLINE_DIFFUSE_RATE          = 0.5D0,       | & ; 地表面下向き直達短波放射のデータを与えない場合に使われる散乱率(散乱日射/全天日射) \\
+\verb|/|            & \\
+}
+
+\noindent
+外部データのファイル形式は、初期値/境界値データのファイルと同じ軸情報を持つ{\netcdf}形式のファイルである。
+外部データとして、表\ref{tab:var_list_atm_rd_offline} にある変数を与える。
+\begin{table}[h]
+\begin{center}
+  \caption{外部ファイルとして与える放射データ}
+  \label{tab:var_list_atm_rd_offline}
+  \begin{tabularx}{150mm}{lXll} \hline
+    \rowcolor[gray]{0.9}  変数名 & 変数の説明 & 次元数 & \\ \hline
+      \verb|RFLX_LW_up|     & 上向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_LW_dn|     & 下向き長波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_up|     & 上向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|RFLX_SW_dn|     & 下向き短波放射フラックス & 空間3次元+時間1次元 \\
+      \verb|SFLX_LW_up|     & 地表面上向き長波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_LW_dn|     & 地表面下向き長波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_up|     & 地表面上向き短波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn|     & 地表面下向き短波放射　　 & 空間2次元+時間1次元 \\
+      \verb|SFLX_SW_dn_dir| & 地表面下向き直達短波放射 & 空間2次元+時間1次元 & オプション \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\subsubsection{\texttt{MSTRNX}に対する設定}
+
+放射計算のための太陽放射量は、モデルの計算設定に従って日付、時刻、緯度経度を用いて計算される。
+理想実験のために、計算領域全域で緯度経度や時刻を固定した値を任意に与えることもできる。
+また、太陽定数の変更が可能である。
+これらは、以下のように\namelist{PARAM_ATMOS_SOLARINS}で設定する。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_SOLARINS                             | & \\
+\verb| ATMOS_SOLARINS_constant     = 1360.250117        | & 太陽定数 [W/m2] \\
+\verb| ATMOS_SOLARINS_set_ve       = .false.            | & 春分点条件に設定するかどうか \\
+\verb| ATMOS_SOLARINS_set_ideal    = .false.            | & 黄道傾斜角と離心率を固定するかどうか \\
+\verb| ATMOS_SOLARINS_obliquity    = 0.0                | & \verb|ATMOS_SOLARINS_set_ideal=.true.|の場合の黄道傾斜角 [deg.] \\
+\verb| ATMOS_SOLARINS_eccentricity = 0.0                | & \verb|ATMOS_SOLARINS_set_ideal=.true.|の場合の離心率 \\
+\verb| ATMOS_SOLARINS_fixedlatlon  = .false.            | & 放射計算の緯度経度を固定するかどうか\\
+\verb| ATMOS_SOLARINS_lon          = 135.221            | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の経度 [deg.] \\
+\verb| ATMOS_SOLARINS_lat          =  34.653            | & \verb|ATMOS_SOLARINS_fixedlatlon=.true.|の場合の緯度 [deg.]\\
+\verb| ATMOS_SOLARINS_fixeddate    = .false.            | & 放射計算の日時を固定するかどうか\\
+\verb| ATMOS_SOLARINS_date         = -1,-1,-1,-1,-1,-1, | & \verb|ATMOS_SOLARINS_fixeddate=.true.|の場合の年月日時刻 [Y,M,D,H,M,S]\\
+\verb|/                                                 | & \\
+}\\
+
+\nmitem{ATMOS_SOLARINS_set_ideal}を\verb|.true.|とした場合は、
+\nmitem{ATMOS_SOLARINS_obliquity}や \\
+\nmitem{ATMOS_SOLARINS_eccentricity}でそれぞれ指定した黄道傾斜角＝地軸（deg.）と離心率を用いて太陽放射を計算する。
+これらの設定は理想実験や地球以外の惑星を想定した実験を行うときに有用である。\\
+%
+\nmitem{ATMOS_SOLARINS_fixedlatlon}を\verb|.true.|とした場合は、
+計算領域全域において\nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat}で指定した緯度経度をもとに太陽放射を計算する。
+これらのデフォルト値は、
+\namelist{PARAM_MAPPROJECTION}で設定した
+\nmitem{MAPPROJECTION_basepoint_lon, MAPPROJECTION_basepoint_lat}である。
+\namelist{PARAM_MAPPROJECTION}の説明は第\ref{subsec:adv_mapproj}節を参照されたい。
+%
+\nmitem{ATMOS_SOLARINS_fixeddate}を\verb|.true.|とした場合は、
+\nmitem{ATMOS_SOLARINS_date}で指定した日時（年、月、日、時、分、秒）を用いて太陽放射を計算する。
+このとき、負の値を指定したものは固定されない。
+例えば、\nmitem{ATMOS_SOLARINS_date}を\verb|1950,3,21,-1,-1,-1|と指定したときには、
+日付は1950年3月21日（春分）に固定されるが、太陽放射の日変化が計算で考慮される。
+%
+\nmitem{ATMOS_SOLARINS_set_ve}を\verb|.true.|とした場合は、
+理想実験で用いる春分点条件のための設定がまとめて行われる。
+このオプションは、黄道傾斜角と離心率をゼロ、計算領域全域を緯度０度、経度０度、
+日時を1950年3月21日12時00分00秒に設定する。
+上述した\nmitem{ATMOS_SOLARINS_set_ideal, ATMOS_SOLARINS_fixedlatlon, ATMOS_SOLARINS_fixeddate}を用いてこれらの値を設定した場合は、それらの設定が優先される。
+
+実験設定によっては、モデル上端の高度が大気の高さと比べて随分と低く、
+10-20 km ということがしばしばある。
+この状況に対処するために、放射計算に対する上端高度を、モデル上端の高度とは別に設定できる。
+放射計算用の上端高度のとり方は、放射スキームのパラメータファイルに依存する。
+例えば、\verb|MSTRNX|を使う場合は、そのデフォルトのパラメータテーブルは最上層が 100 km であることを想定している。
+モデル上端よりも高高度で放射計算を行うために、いくつかの層が用意される。
+デフォルトでは追加される層は10層である。もしモデル上端が 22 kmであれば、放射計算のために、
+格子間隔 7.8 km の層を 10 層追加する。
+これらは\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で設定する。\\
+
+\verb|MSTRNX|では、放射計算のためのパラメータテーブルが必要である。
+デフォルトでは、太陽放射から赤外放射までの波長帯を29バンド111チャンネルに分割し、
+雲・エアロゾル粒子は9種類、粒径を8ビンで表した時のテーブルを用いる。
+ディレクトリ\verb|scale-rm/test/data/rad/|に、
+3種類のパラメータファイルを用意している。
+\begin{verbatim}
+  scale-rm/test/data/rad/PARAG.29     ; 気体吸収パラメータファイル
+  scale-rm/test/data/rad/PARAPC.29    ; 雲・エアロゾル吸収・散乱パラメータファイル
+  scale-rm/test/data/rad/VARDATA.RM29 ; 雲・エアロゾル粒径パラメータファイル
+\end{verbatim}
+これらのファイルは、\namelist{PARAM_ATMOS_PHY_RD_MSTRN}で以下のように指定する。\\
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_MSTRN | & \\
+\verb| ATMOS_PHY_RD_MSTRN_KADD                  = 10             | & モデルトップからTOAまでの間の大気層数\\
+\verb| ATMOS_PHY_RD_MSTRN_TOA                   = 100.0          | & 放射計算で考慮する大気最上層(TOA)の高さ [km](パラメータファイルに依存)\\
+\verb| ATMOS_PHY_RD_MSTRN_nband                 = 29             | & 波長帯ビンの数(パラメータファイルに依存)\\
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 9              | & エアロゾルの種類の数(パラメータファイルに依存)\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 8              | & エアロゾル粒径ビンの数(パラメータファイルに依存)\\
+\verb| ATMOS_PHY_RD_MSTRN_GASPARA_IN_FILENAME   = "PARAG.29"     | & 気体吸収パラメータの入力ファイル\\
+\verb| ATMOS_PHY_RD_MSTRN_AEROPARA_IN_FILENAME  = "PARAPC.29"    | & 雲・エアロゾル吸収・散乱パラメータの入力ファイル\\
+\verb| ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME = "VARDATA.RM29" | & 雲・エアロゾル粒径パラメータの入力ファイル\\
+\verb| ATMOS_PHY_RD_MSTRN_ONLY_QCI              = .false.        | & 放射計算で雲水・雲氷のみを考慮する（雨・雪・あられを無視する）かどうか\\
+\verb|/| & \\
+}\\
+
+上記の\verb|MSTRNX|のパラメータファイルは、version 5.2 リリース時に更新された。
+そのため、{\scalerm}の最新版では新しいパラメータファイルを用いることを推奨する。
+version 5.1以前で提供していた\verb|MSTRNX|のパラメータファイルは、
+ディレクトリ\verb|scale-rm/test/data/rad/OpenCLASTR|以下に置いている。
+粒子の種類の数や粒径のビン数が、新しいパラメータファイルとは異なる。
+これらの古いパラメータファイルを利用したい場合は、
+\namelist{PARAM_ATMOS_PHY_RD_MSTRN}において下記のように\nmitem{ATMOS_PHY_RD_MSTRN_nptype, ATMOS_PHY_RD_MSTRN_nradius}を変更する必要がある。\\
+
+\editboxtwo{
+\verb| ATMOS_PHY_RD_MSTRN_nptype                = 11             |\\
+\verb| ATMOS_PHY_RD_MSTRN_nradius               = 6              |\\
+}\\
+
+放射計算のために追加した層では、気温、気圧、二酸化炭素やオゾン等の気体濃度の鉛直分布を
+与える必要がある。
+この鉛直分布の与え方は2種類あり、
+気候値またはユーザが準備したASCII形式の入力データを用いることができる。\\
+
+気候値を与える場合は、\scalerm では気温・気圧についてはCIRA86
+\footnote{http://catalogue.ceda.ac.uk/uuid/4996e5b2f53ce0b1f2072adadaeda262}\citep{CSR_2006}、
+気体種についてはMIPAS2001\citep{Remedios_2007}をデータベースとして用意している。
+気候値の分布は、これらのデータベースを日付・時刻・緯度経度について内挿することで得られる。
+\namelist{PARAM_ATMOS_SOLARINS}において日付と位置を固定した場合には、
+これらの設定に従って分布の計算は行われる。
+気候値の入力ファイルもまた、ディレクトリ\verb|scale-rm/test/data/rad/|に用意している。
+\begin{verbatim}
+  scale-rm/test/data/rad/cira.nc       ; CIRA86データ (NetCDF format)
+  scale-rm/test/data/rad/MIPAS/day.atm ; MIPAS2011データ(中緯度) (ASCII format)
+  scale-rm/test/data/rad/MIPAS/equ.atm ; MIPAS2011データ(熱帯) (ASCII format)
+  scale-rm/test/data/rad/MIPAS/sum.atm ; MIPAS2011データ(夏半球高緯度) (ASCII format)
+  scale-rm/test/data/rad/MIPAS/win.atm ; MIPAS2011データ(冬半球高緯度) (ASCII format)
+\end{verbatim}
+これらのファイル名やディレクトリ名は、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でを指定する。
+例えば、上記の５ファイルを実行ディレクトリに配置した場合は以下のように設定する。\\
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_use_climatology       = .true.    | & CIRA86とMIPAS2001の気候値を利用するかどうか\\
+\verb| ATMOS_PHY_RD_PROFILE_CIRA86_IN_FILENAME    = "cira.nc" | & \verb|CIRA86|ファイル名 \\
+\verb| ATMOS_PHY_RD_PROFILE_MIPAS2001_IN_BASENAME = "."       | & \verb|MIPAS2001|ファイルがあるディレクトリ名\\
+}\\
+
+放射計算で考慮される気体は、水蒸気(H$_{2}$O)、二酸化炭素(CO$_{2}$)、オゾン(O$_{3}$)、一酸化二窒素(N$_{2}$O)、一酸化炭素(CO)、メタン(CH$_{4}$)、酸素(O$_{2}$)、クロロフルオロカーボン類(CFCs)である。
+これらの濃度は以下のように、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}でゼロに設定することができる。\\
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO2 = .true. | & falseの場合、CO2濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O3  = .true. | & falseの場合、O3濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_N2O = .true. | & falseの場合、N2O濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CO  = .true. | & falseの場合、CO濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CH4 = .true. | & falseの場合、CH4濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_O2  = .true. | & falseの場合、O2濃度を常に0に設定する\\
+\verb| ATMOS_PHY_RD_PROFILE_USE_CFC = .true. | & falseの場合、すべてのCFC濃度を常に0に設定する\\
+}\\
+
+ユーザが指定した分布を用いる場合は、
+高度 [m]、気圧 [Pa]、気温 [K]、水蒸気量 [kg/kg]、オゾン濃度 [kg/kg]をASCII形式で準備しなければならない。
+水蒸気とオゾン以外の気体濃度はゼロと設定され、時間変化は取り扱われない。
+ユーザが用意したファイルの例は、以下に用意されている.
+\begin{verbatim}
+  scale-rm/test/data/rad/rad_o3_profs.txt
+\end{verbatim}
+これを用いるには、\namelist{PARAM_ATMOS_PHY_RD_PROFILE}内の
+\nmitem{ATMOS_PHY_RD_PROFILE_use_climatology}を\verb|.false.|に設定し、
+\nmitem{ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME}にファイル名とディレクトリ名を指定する必要がある。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
+\verb| ATMOS_PHY_RD_PROFILE_use_climatology  = .false.            | & CIRA86とMIPAS2001の気候値を利用するかどうか\\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME = "rad_o3_profs.txt" | & 気候値を利用しない場合に用いるユーザ指定ファイルの名前 (ASCII形式)\\
+\verb|/| & \\
+}\\
+
+ユーザが準備するファイルにおいて、デフォルトのモデル設定とは独立に層数や層の高度を与えることができる。
+実行時に、モデルの層での値は与えた分布から内挿される。
+ただし、放射計算で想定される最上層の高度が、入力した分布の高度よりも高い場合は、
+外挿が行われることに注意が必要である。\\
