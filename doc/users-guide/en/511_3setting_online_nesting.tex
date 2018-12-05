@@ -76,7 +76,7 @@ Table \ref{tab:triple_nested} gives the configuration for an $N$-domain nesting 
 
 \nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation is used for the boundary condition. When the boundary condition is generated from external input data, water condensations are not usually employed. However, in the nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because there is often no difference in physical schemes between the two domains.
 %, and the resolution of both are similar.
-The delay in the generation of clouds and rain, as influence on the target domain, is expected to be suppressed by this remedy.
+The delay in the generation of clouds and rain, possible to have the influence on interior target domain, is expected to be suppressed by this remedy.
 
 \subsubsection{Configuration of Launcher}
 \label{subsubsec:launch}
@@ -120,7 +120,7 @@ The calculation may sometimes abort, outputting the message below. This is the e
 \subsubsection{Guideline for Distribution of MPI Processes}
 %-------------------------------------------------------------------------
 
-As shown in Fig. \ref{fig_mpisplit}, no MPI process is shared between the multiple domains in the online nesting experiment. In other words, each MPI process takes charge of a part of a specific domain. Therefore, the user should determine how many MPI processes to allocate to each domain. When this allocation is not appropriate, a long waiting time is incurred. To avoid this situation, it is reasonable to allocate processes such the magnitude of time integrations for each process is as similar in value as is possible among processes\footnote{More accurately, floating-point operations should be estimated.}. Here, the magnitude of time integration, i.e., computational effort, is defined as the product of the number of grids and time steps.
+As shown in Fig. \ref{fig_mpisplit}, no MPI process is shared between the multiple domains in the online nesting experiment. In other words, each MPI process takes charge of a part of a specific domain. Therefore, the user should determine how many MPI processes to allocate to each domain. When this allocation is not appropriate, a long waiting time is incurred. To avoid this situation, it is reasonable to allocate processes so that the magnitude of time integrations for each process is as similar as possible among processes\footnote{More accurately, floating-point operations should be estimated.}. Here, the magnitude of time integration, i.e., computational effort, is defined as the product of the number of grids and time steps.
 
 Let us consider $N$-domain nesting. The number of grids in the x, y, and z directions in n-th domain are denoted by
 \verb|IMAX_n|, \verb|JMAX_n|, and \verb|KMAX_n|, respectively.
@@ -134,7 +134,7 @@ The calculation for the n-th domain is derived by multiplying the number of grid
 \begin{eqnarray}
  \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
-The standard number of processes allocated to the n-th domain is estimated as
+Therefore, the standard number of processes allocated to the n-th domain is estimated as
 \begin{eqnarray}
  \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} },
 \end{eqnarray}
@@ -144,5 +144,5 @@ The number of processes distributed along the x and y directions \nmitem{PRC_NUM
 It is recommended to configure them so that the difference between \verb|IMAX| and \verb|JMAX| is as small as possible. This is because such a configuration can reduce the area of the halo. As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism,  e.g., in the K computer, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}. 
 
 
-In the above explanation, only the number of grids and time steps are considered. However, in actual calculations such as nesting simulation in real atmospheric experiment, the time interval for each physical process, and intra-domain and inter-domain communications affect the elapsed time. In the online nesting configuration, the calculation in the innermost domain is largest in general.  In case of large-scale computations, long integration and many ensemble simulations, it is recommended to tune for the distribution of processes following the above rough estimation.
+In the above explanation, only the number of grids and time steps are considered. However, in actual calculations such as nesting simulation in real atmospheric experiment, the time interval for each physical process, and intra-domain and inter-domain communications affect the elapsed time. In the online nesting configuration, because the calculation in the innermost domain is largest in general, it is reasonable to distribute MPI processes so that waiting time caused by MPI communications is minimized in the innermost domain.  In case of large-scale computations, long integration and many ensemble simulations, it is recommended to tune for the distribution of processes following the above rough estimation.
 

@@ -8,7 +8,8 @@ and 2) to convert from the \netcdf format to binary format that is readable in \
 In addition, the following functions are also available
 \begin{itemize}
  \item Interpolate data from the model level to arbitrary height levels or pressure levels.
- \item Output the mean, maximum, and minimum values of the vertical integration of 3D variables.
+ \item Output the mean, maximum and minimum values in the vertical column,
+ and vertical integration of 3D variables.
  \item Output multiple files for 3D variables, layer by layer.
  \item Output multiple files, time-step by time-step.
 \end{itemize}
@@ -104,8 +105,8 @@ The above example shows a configuration in the case where 3D variables in a doma
   \item \nmitem{VNAME}:The variables converted are specified.
     As default, \verb|"PT"|,\verb|"PRES"|,\verb|"U"|,\verb|"V"|, \verb|"W"|,\verb|"QHYD"| are given.
   \item \nmitem{TARGET_ZLEV}: The heights corresponding to \nmitem{Z_LEV_TYPE} are specified.
-    In the case of \verb|"plev"|, the unit is [$hPa$],
-    in the case of \verb|"zlev"|, the unit is [$m$], and
+    In the case of \verb|"plev"|, the unit is [hPa],
+    in the case of \verb|"zlev"|, the unit is [m], and
     in the case of \verb|"original"|, the grid numbers are specified.
     As default, 14 layers (1000 hPa, 975 hPa, 950 hPa, 925 hPa, 900 hPa, 850 hPa, 800 hPa, 700 hPa, 600 hPa, 500 hPa, 400 hPa,
         300 hPa, 250 hPa, and 200 hPa ) are given.
@@ -114,7 +115,7 @@ The above example shows a configuration in the case where 3D variables in a doma
 
 \subsubsection{Example of configuration file: Vertical integration of 3D variable data}
 %------------------------------------------------------
-The description below presents an excerpt of a configuration file along with a simple analysis.
+The description below presents an example of a configuration file along with a simple analysis.
 The other item settings are the same as in the previous configuration.
 \editbox{
 \verb|&INFO| \\
@@ -132,10 +133,10 @@ The other item settings are the same as in the previous configuration.
 \verb|/| \\
 }
 If \nmitem{Z_LEV_TYPE}$=$\verb|"anal"|, simple analysis is applied to the 3D variable.
-This setting enables \namelist{ANAL}.
-The specification of \nmitem{TARGET_ZLEV} in \namelist{VARI} is disabled,
-and \textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1"}
-because of the output of 2D data.
+This setting enables a user to specify items of \namelist{ANAL}.
+Because output data is horizontal 2-dimensional data,
+specification of \nmitem{TARGET_ZLEV} in \namelist{VARI} is disabled,
+and \textcolor{blue}{\nmitem{ZCOUNT} in \namelist{INFO} is necessarily given as "1"}.
 \begin{itemize}
  \item \namelist{ANAL}
  \begin{itemize}
@@ -183,7 +184,7 @@ for the case described in the last paragraph of Section \ref{sec:output}
 (only 2D data \verb|"RAIN"| are output at a time interval of 600 s).
 
 The history file can handle data with multiple different time intervals.
-Since \verb|net2g| does not support the simultaneous conversion of variables with different output intervals,
+However, since \verb|net2g| does not support the simultaneous conversion of variables with different output intervals,
 it is required to execute \verb|net2g| separately for these variables.
 
 \editbox{
@@ -204,7 +205,7 @@ so variable names in output from \verb|net2g| are replaced to ``long'' for longi
 
 
 \subsubsection{Note for execution on supercomputer}
-When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated, where the size of each file is large.
+When a simulation is conducted on a supercomputer such as the K Computer, many output files are generated and the size of each file is large.
 In such cases, the local disk space is often not large enough to store them, and post-processing may take a long time.
-In this case, both a simulation by \scalerm and its post-processing on the same supercomputer are recommended.
+In this case, we recommend both a simulation by \scalerm and its post-processing are performed on the same supercomputer.
 On the K Computer, \verb|net2g| can be compiled by the ``make'' command  if the environmental variable is appropriately set as described in Section \ref{subsec:environment}.

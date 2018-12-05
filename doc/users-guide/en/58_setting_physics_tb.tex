@@ -20,7 +20,7 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
   \begin{tabularx}{150mm}{lXX} \hline
     \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
       \verb|OFF|          & Do not calculate the turbulence process &  \\
-      \verb|SMAGORINSKY|  & Smagorinsky—Lily-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
+      \verb|SMAGORINSKY|  & Smagorinsky—Lilly-type sub-grid model & \citet{smagorinsky_1963,lilly_1962,Brown_etal_1994,Scotti_1993} \\
       \verb|D1980|        & Deardorff-type sub-grid model & \citet{Deardorff_1980} \\
     \hline
   \end{tabularx}
@@ -28,9 +28,9 @@ The turbulence scheme is specified in \nmitem{ATMOS_PHY_TB_TYPE} in \namelist{PA
 \end{table}
 
 The \verb|SMAGORINSKY| scheme can be also used for the horizontal eddy viscosity in RANS simulations.
-The planetary boundarly layer parameterization (Section \ref{sec:basic_usel_pbl}) is a scheme considering only vertical mixing.
+The planetary boundary layer parameterization (Section \ref{sec:basic_usel_pbl}) is a scheme considering only vertical mixing.
 If you want to consider the horizontal eddy viscosity in RANS simulations,
-use the sug-grid scale turbulence model for horizontal mixing.
+use the sub-grid scale turbulence model for horizontal mixing.
 Then, \nmitem{ATMOS_PHY_TB_SMG_horizontal} in \namelist{PARAM_ATMOS_PHY_TB_SMG} should be \verb|.true.| as follows:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_TB_SMG  | & \\

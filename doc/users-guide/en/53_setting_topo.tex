@@ -52,7 +52,7 @@ If \nmitem{CNVTOPO_smooth_hypdiff_niter} is set to negative, the filter is not a
 
 \nmitem{CNVTOPO_copy_parent} is the item used for the nesting computation.
 In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
-At this time, problems often occers due to
+At this time, problems often occurs due to
 an inconsistency between
 the atmospheric data in the buffer region of the child domain and that in the parent domain.
 To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copy_parent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copy_parent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copy_parent}.
