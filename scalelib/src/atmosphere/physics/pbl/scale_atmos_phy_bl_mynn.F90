@@ -329,7 +329,6 @@ contains
     real(RP) :: RHONu (KA) !> dens * Nu at the half level
     real(RP) :: RHOKh (KA) !> dens * Kh at the half level for level 2.5
     real(RP) :: LHVL  (KA) !> latent heat
-    real(RP) :: CPtot      !> specific heat
     real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
     real(RP) :: SFLX_PT    !> surface potential temperature flux
     real(RP) :: sm    (KA) !> stability function for velocity for level 2.5
@@ -482,7 +481,7 @@ contains
 
 
           call partial_condensation( KA, KS, KE_PBL, &
-                                     DENS(:,i,j), POTT(:,i,j),  & ! (in)
+                                     PRES(:,i,j), POTT(:,i,j),  & ! (in)
                                      POTL(:,i,j), Qw(:,i,j),    & ! (in)
                                      Qdry(:,i,j), EXNER(:,i,j), & ! (in)
                                      dtldz(:), dqwdz(:),        & ! (in)
@@ -1302,7 +1301,7 @@ contains
 !OCL SERIAL
   subroutine partial_condensation( &
        KA, KS, KE, &
-       DENS, POTT, POTL, Qw, Qdry, EXNER, &
+       PRES, POTT, POTL, Qw, Qdry, EXNER, &
        dtldz, dqwdz, l, sh, ac,           &
        tsq, qsq, cov,                     &
        mynn_level3,                       &
@@ -1311,13 +1310,14 @@ contains
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
        CPvap   => CONST_CPvap,  &
+       EPSvap  => CONST_EPSvap, &
        EPSTvap => CONST_EPSTvap
     use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_dens2qsat => ATMOS_SATURATION_dens2qsat_all
+       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_liq
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     integer,  intent(in)  :: KA, KS, KE
-    real(RP), intent(in)  :: DENS (KA)
+    real(RP), intent(in)  :: PRES (KA)
     real(RP), intent(in)  :: POTT (KA)
     real(RP), intent(in)  :: POTL (KA)
     real(RP), intent(in)  :: Qw   (KA)
@@ -1352,10 +1352,10 @@ contains
        TEML(k) = POTL(k) * EXNER(k)
     end do
 
-    call ATMOS_SATURATION_dens2qsat( &
+    call ATMOS_SATURATION_pres2qsat( &
          KA, KS, KE, &
-         TEML(:), DENS(:), & ! (in)
-         Qsl(:)            ) ! (out)
+         TEML(:), PRES(:), Qdry(:), & ! (in)
+         Qsl(:)                     ) ! (out)
 
     call HYDROMETEOR_LHV( &
          KA, KS, KE, & ! (in)
@@ -1364,7 +1364,7 @@ contains
 
     do k = KS, KE
 
-       dQsl = Qsl(k) * LHVL(k) / ( Rvap * TEML(k)**2 )
+       dQsl = ( 1.0_RP + Qsl(k) / ( Qdry(k) * EPSvap ) ) * Qsl(k) * LHVL(k) / ( Rvap * TEML(k)**2 )
        CPtot = Qdry(k) * CPdry + Qsl(k) * CPvap
        aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
        bb = EXNER(k) * dQsl
@@ -1386,8 +1386,8 @@ contains
                * exp(-0.5_RP*Q1**2) &
 #endif
                ), 0.0_RP ), Qw(k) * 0.5_RP )
-       cc = ( 1.0_RP + EPSTvap * Qw(k) - (1.0_RP+EPSTvap) * Qlp ) / EXNER(k) * LHVL(k) / CPtot &
-             - (1.0_RP+EPSTvap) * POTT(k)
+       cc = ( 1.0_RP + EPSTvap * Qw(k) - Qlp / EPSvap ) / EXNER(k) * LHVL(k) / CPtot &
+             - POTT(k) / EPSvap
        Rt = min( max( RR - Qlp / (2.0_RP*sigma_s*sqrt_2pi) &
 #if defined(PGI) || defined(SX)
                * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) & ! apply exp limiter
@@ -1395,7 +1395,7 @@ contains
                * exp(-Q1**2 * 0.5_RP) &
 #endif
                , 0.0_RP ), 1.0_RP )
-       betat(k) = 1.0_RP + EPSTvap * Qw(k) - (1.0_RP+EPSTvap) * Qlp - Rt * aa * bb * cc
+       betat(k) = 1.0_RP + EPSTvap * Qw(k) - Qlp / EPSvap - Rt * aa * bb * cc
        betaq(k) = EPSTvap * POTT(k) + Rt * aa * cc
 
     end do
