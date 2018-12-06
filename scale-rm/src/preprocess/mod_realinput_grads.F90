@@ -1110,17 +1110,18 @@ contains
       do j = 1, dims(3)
       do i = 1, dims(2)
       do k = 3, dims(1)+2
-        if( abs( velz_org(k,i,j) - UNDEF ) < EPS ) velz_org(k,i,j) = velz_org(2,i,j)
-        if( abs( velx_org(k,i,j) - UNDEF ) < EPS ) velx_org(k,i,j) = velx_org(2,i,j)
-        if( abs( vely_org(k,i,j) - UNDEF ) < EPS ) vely_org(k,i,j) = vely_org(2,i,j)
-        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
-        if( abs( dens_org(k,i,j) - UNDEF ) < EPS ) dens_org(k,i,j) = dens_org(2,i,j)
-        if( abs( temp_org(k,i,j) - UNDEF ) < EPS ) temp_org(k,i,j) = temp_org(2,i,j)
-        if( abs( qv_org  (k,i,j) - UNDEF ) < EPS ) qv_org  (k,i,j) = qv_org  (2,i,j)
-        do iq = 1, N_HYD
-          if( abs( qhyd_org(k,i,j,iq) - UNDEF ) < EPS ) qhyd_org(k,i,j,iq) = 0.0_RP
-        end do
-        if( abs( RN222_org(k,i,j) - UNDEF ) < EPS ) RN222_org(k,i,j) = 0.0_RP
+         if( cz_org  (k,i,j) < cz_org  (2,i,j) ) then
+           velz_org(k,i,j)   = velz_org(2,i,j)
+           velx_org(k,i,j)   = velx_org(2,i,j)
+           vely_org(k,i,j)   = vely_org(2,i,j)
+           pres_org(k,i,j)   = pres_org(2,i,j)
+           dens_org(k,i,j)   = dens_org(2,i,j)
+           temp_org(k,i,j)   = temp_org(2,i,j)
+           qv_org  (k,i,j)   = qv_org  (2,i,j)
+           qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
+           cz_org  (k,i,j)   = cz_org  (2,i,j)
+           RN222_org(k,i,j)  = 0.0_RP
+        endif
       enddo
       enddo
       enddo
