@@ -1094,6 +1094,7 @@ contains
           velz_org(k,i,j)   = velz_org(2,i,j)
           velx_org(k,i,j)   = velx_org(2,i,j)
           vely_org(k,i,j)   = vely_org(2,i,j)
+          pres_org(k,i,j)   = pres_org(2,i,j)
           dens_org(k,i,j)   = dens_org(2,i,j)
           temp_org(k,i,j)   = temp_org(2,i,j)
           qv_org  (k,i,j)   = qv_org  (2,i,j)
