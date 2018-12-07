@@ -44,8 +44,9 @@ module mod_ocean_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: QVEF(:,:)
-  real(RP), private, allocatable :: SR  (:,:)
+  real(RP), private, allocatable :: QVEF   (:,:)
+  real(RP), private, allocatable :: SR     (:,:)
+  real(RP), private, allocatable :: ATMOS_W(:,:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -158,10 +159,12 @@ contains
        ! thermal conductivity
        call OCEAN_PHY_TC_seaice_setup
 
-       allocate( QVEF(OIA,OJA) )
-       allocate( SR  (OIA,OJA) )
-       QVEF(:,:) = 1.0_RP
-       SR  (:,:) = 0.0_RP
+       allocate( QVEF    (OIA,OJA) )
+       allocate( SR     (OIA,OJA) )
+       allocate( ATMOS_W(OIA,OJA) )
+       QVEF   (:,:) = 1.0_RP
+       SR     (:,:) = 0.0_RP
+       ATMOS_W(:,:) = 0.0_RP ! slope of the sea surface is zero
 
     endif
 
@@ -182,9 +185,6 @@ contains
        FILE_HISTORY_in
     use scale_atmos_grid_cartesC_real, only: &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_topography, &
-       TanSL_X => TOPOGRAPHY_TanSL_X, &
-       TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
        HYDROMETEOR_LHS => ATMOS_HYDROMETEOR_LHS, &
@@ -450,6 +450,7 @@ contains
                                     OJA, OJS, OJE,              & ! [IN]
                                     ATMOS_TEMP       (:,:),     & ! [IN]
                                     ATMOS_PRES       (:,:),     & ! [IN]
+                                    ATMOS_W          (:,:),     & ! [IN]
                                     ATMOS_U          (:,:),     & ! [IN]
                                     ATMOS_V          (:,:),     & ! [IN]
                                     ATMOS_DENS       (:,:),     & ! [IN]
@@ -467,8 +468,6 @@ contains
                                     sfc_Z0M          (:,:),     & ! [IN]
                                     sfc_Z0H          (:,:),     & ! [IN]
                                     sfc_Z0E          (:,:),     & ! [IN]
-                                    TanSL_X          (:,:),     & ! [IN]
-                                    TanSL_Y          (:,:),     & ! [IN]
                                     exists_ocean     (:,:),     & ! [IN]
                                     dt,                         & ! [IN]
                                     sflx_MW          (:,:),     & ! [OUT]
@@ -613,6 +612,7 @@ contains
                                        OJA, OJS, OJE,              & ! [IN]
                                        ATMOS_TEMP       (:,:),     & ! [IN]
                                        ATMOS_PRES       (:,:),     & ! [IN]
+                                       ATMOS_W          (:,:),     & ! [IN]
                                        ATMOS_U          (:,:),     & ! [IN]
                                        ATMOS_V          (:,:),     & ! [IN]
                                        ATMOS_DENS       (:,:),     & ! [IN]
@@ -630,8 +630,6 @@ contains
                                        sfc_Z0M          (:,:),     & ! [IN]
                                        sfc_Z0H          (:,:),     & ! [IN]
                                        sfc_Z0E          (:,:),     & ! [IN]
-                                       TanSL_X          (:,:),     & ! [IN]
-                                       TanSL_Y          (:,:),     & ! [IN]
                                        exists_ice       (:,:),     & ! [IN]
                                        dt,                         & ! [IN]
                                        sflx_MW          (:,:),     & ! [OUT]

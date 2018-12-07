@@ -79,12 +79,11 @@ contains
   !> Calculate surface flux
   subroutine ATMOS_PHY_SF_bulk_flux( &
        IA, IS, IE, JA, JS, JE, &
-       ATM_U, ATM_V,                 &
+       ATM_W, ATM_U, ATM_V,          &
        ATM_TEMP, ATM_PRES, ATM_QV,   &
        SFC_DENS, SFC_TEMP, SFC_PRES, &
        SFC_Z0M, SFC_Z0H, SFC_Z0E,    &
-       PBL,                          &
-       ATM_Z1, TanSL_X, TanSL_Y,     &
+       PBL, ATM_Z1,                  &
        SFLX_MW, SFLX_MU, SFLX_MV,    &
        SFLX_SH, SFLX_LH, SFLX_QV,    &
        U10, V10, T2, Q2              )
@@ -102,6 +101,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
+    real(RP), intent(in) :: ATM_W   (IA,JA) ! velocity w  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_U   (IA,JA) ! velocity u  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_V   (IA,JA) ! velocity v  at the lowermost layer (cell center) [m/s]
     real(RP), intent(in) :: ATM_TEMP(IA,JA) ! temperature at the lowermost layer (cell center) [K]
@@ -115,8 +115,6 @@ contains
     real(RP), intent(in) :: SFC_Z0E (IA,JA) ! surface roughness length (vapor) [m]
     real(RP), intent(in) :: PBL     (IA,JA) ! depth of the PBL [m]
     real(RP), intent(in) :: ATM_Z1  (IA,JA) ! height of the lowermost grid from surface (cell center) [m]
-    real(RP), intent(in) :: TanSL_X (IA,JA) ! tan(slope) in the x-direction
-    real(RP), intent(in) :: TanSL_Y (IA,JA) ! tan(slope) in the x-direction
 
     real(RP), intent(out) :: SFLX_MW(IA,JA) ! surface flux for z-momentum    (area center)   [m/s*kg/m2/s]
     real(RP), intent(out) :: SFLX_MU(IA,JA) ! surface flux for x-momentum    (area center)   [m/s*kg/m2/s]
@@ -146,7 +144,6 @@ contains
     real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
 
     real(RP) :: MFLUX
-    real(RP) :: w
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -165,21 +162,20 @@ contains
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,EPS,CPdry,LHV,bulkflux,&
-    !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_U,ATM_V,ATM_Z1,TanSL_X,TanSL_y,     &
+    !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_W,ATM_U,ATM_V,ATM_Z1,               &
     !$omp         SFC_DENS,SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
     !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)   &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Wstar,Uabs,Ra,FracU10,FracT2,FracQ2,MFLUX,w)
+    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Wstar,Uabs,Ra,FracU10,FracT2,FracQ2,MFLUX)
     do j = JS, JE
     do i = IS, IE
        ! qdry = 1 - psat
        SFC_QSAT = EPSvap * SFC_PSAT(i,j) / ( SFC_PRES(i,j) - ( 1.0_RP-EPSvap ) * SFC_PSAT(i,j) )
 
        SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_BULK_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_BULK_beta * SFC_QSAT
-       w = ATM_U(i,j) * TanSL_X(i,j) + ATM_V(i,j) * TanSL_Y(i,j)
-       Uabs = sqrt( ATM_U(i,j)**2 + ATM_V(i,j)**2 + w**2 )
+       Uabs = sqrt( ATM_W(i,j)**2 + ATM_U(i,j)**2 + ATM_V(i,j)**2 )
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
@@ -209,7 +205,7 @@ contains
           SFLX_MV(i,j) = 0.0_RP
        else
           MFLUX = -SFC_DENS(i,j) * Ustar**2
-          SFLX_MW(i,j) = MFLUX * w / Uabs
+          SFLX_MW(i,j) = MFLUX * ATM_W(i,j) / Uabs
           SFLX_MU(i,j) = MFLUX * ATM_U(i,j) / Uabs
           SFLX_MV(i,j) = MFLUX * ATM_V(i,j) / Uabs
        end if

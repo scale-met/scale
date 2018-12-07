@@ -510,7 +510,7 @@ contains
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
       ! unstable condition
-      UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+      UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
       UstarUS = KARMAN / denoM * UabsUS
       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -585,7 +585,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
-       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
        UstarUS = KARMAN / denoM * UabsUS
        TstarUS = KARMAN / denoH * ( TH1 - TH0 )
        QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -656,7 +656,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL)
        end if
-       dUabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       dUabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
        dUstarUS = KARMAN / denoM * UabsUS
        dTstarUS = KARMAN / denoH * ( TH1 - TH0 )
        dQstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -742,7 +742,7 @@ contains
           denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
           denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
        end if
-       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
        UstarUS = KARMAN / denoM * UabsUS
        TstarUS = KARMAN / denoH * ( TH1 - TH0 )
        QstarUS = KARMAN / denoE * ( Q1  - Q0  )
@@ -817,7 +817,7 @@ contains
        denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
        denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
     end if
-    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real( BULKFLUX_Uabs_min, kind=DP ) )
+    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
     UstarUS = KARMAN / denoM * UabsUS
     TstarUS = KARMAN / denoH * ( TH1 - TH0 )
     QstarUS = KARMAN / denoE * ( Q1  - Q0  )
