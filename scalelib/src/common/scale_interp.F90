@@ -1144,8 +1144,8 @@ contains
           end if
        elseif( hgt(k) >= hgt_ref(KE_ref) ) then
           if ( flag_extrap_ ) then
-             idx_k(k,1) = KS_ref
-             idx_k(k,2) = KS_ref ! dummy
+             idx_k(k,1) = KE_ref
+             idx_k(k,2) = KE_ref ! dummy
              vfact(k,1) = 1.0_RP
              vfact(k,2) = 0.0_RP
           else
