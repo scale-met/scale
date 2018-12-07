@@ -47,6 +47,7 @@ module mod_copytopo
   integer, private, parameter :: handle = 1
 
   character(len=H_LONG), private :: COPYTOPO_IN_BASENAME   = ''
+  character(len=H_LONG), private :: COPYTOPO_IN_VARNAME    = 'topo'
   real(RP),              private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
   real(RP),              private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
   real(RP),              private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
@@ -78,6 +79,7 @@ contains
 
     namelist / PARAM_COPYTOPO / &
        COPYTOPO_IN_BASENAME,    &
+       COPYTOPO_IN_VARNAME,     &
        COPYTOPO_TRANSITION_DX,  &
        COPYTOPO_TRANSITION_DY,  &
        COPYTOPO_FRACX,          &
@@ -497,7 +499,7 @@ contains
        LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
        call FILE_read( fid, "lat",  read2D(:,:) )
        LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_read( fid, "TOPO", read2D(:,:) )
+       call FILE_read( fid, COPYTOPO_IN_VARNAME, read2D(:,:) )
        TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
        deallocate( read2D )
 

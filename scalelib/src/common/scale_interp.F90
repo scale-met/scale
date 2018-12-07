@@ -616,7 +616,7 @@ contains
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
     end if
-    th_undef = max( threshold_undef, EPS * 2.0_RP )
+    th_undef = max( th_undef, EPS * 2.0_RP )
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(fact,valn,f,w,sw)
@@ -710,7 +710,7 @@ contains
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
     end if
-    th_undef = max( threshold_undef, EPS * 2.0_RP )
+    th_undef = max( th_undef, EPS * 2.0_RP )
 
     if ( logwgt_ ) then
        allocate( work(KA_ref,IA_ref,JA_ref) )
