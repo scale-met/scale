@@ -1542,7 +1542,7 @@ contains
                              vfact   (:,:,:,:,:),         & ! [IN]
                              DENS_org(:,:,:),             & ! [IN]
                              DENS    (:,:,:),             & ! [OUT]
-                             logwgt = .true.              ) ! [IN]
+                             logwgt = .true.              ) ! [IN, optional]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
@@ -1562,7 +1562,7 @@ contains
                              vfact   (:,:,:,:,:),         & ! [IN]
                              PRES_org(:,:,:),             & ! [IN]
                              PRES    (:,:,:),             & ! [OUT]
-                             logwgt = .true.              ) ! [IN]
+                             logwgt = .true.             ) ! [IN, optional]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  PRES(:,:,:), FILTER_ORDER, FILTER_NITER, &
@@ -3122,7 +3122,8 @@ contains
                           jgrd    (    :,:,:),   & ! [OUT]
                           hfact   (    :,:,:),   & ! [OUT]
                           kgrdl   (:,:,:,:,:),   & ! [OUT]
-                          vfactl  (:,:,:,:,:)    ) ! [OUT]
+                          vfactl  (:,:,:,:,:),   & ! [OUT]
+                          flag_extrap = .true.   ) ! [IN, optional]
 
     call INTERP_interp2d( itp_nh,             & ! [IN]
                           ldims(2), ldims(3), & ! [IN]
