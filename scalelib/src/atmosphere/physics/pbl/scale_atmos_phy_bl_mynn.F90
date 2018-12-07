@@ -95,7 +95,7 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: initialize
 
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN  =  1.E-10_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN  =  1.E-20_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX   =   1.E+3_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN   =  -1.E-3_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX   = 10000.0_RP
@@ -269,7 +269,8 @@ contains
     use scale_const, only: &
        GRAV    => CONST_GRAV,   &
        KARMAN  => CONST_KARMAN, &
-       CPdry   => CONST_CPdry
+       CPdry   => CONST_CPdry,  &
+       EPSTvap => CONST_EPSTvap
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
@@ -331,6 +332,7 @@ contains
     real(RP) :: LHVL  (KA) !> latent heat
     real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
     real(RP) :: SFLX_PT    !> surface potential temperature flux
+    real(RP) :: SFLX_PTV   !> surface virtual potential temperature flux
     real(RP) :: sm    (KA) !> stability function for velocity for level 2.5
     real(RP) :: sh    (KA) !> stability function for scalars for level 2.5
     real(RP) :: q     (KA) !> q
@@ -395,7 +397,7 @@ contains
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE, &
-    !$omp        GRAV,CPdry,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
+    !$omp        GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
@@ -404,7 +406,7 @@ contains
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
-    !$omp private(N2_new,sm,sh,q,q2_2,ac,SFLX_PT,TEML,RHONu,RHOKh, &
+    !$omp private(N2_new,sm,sh,q,q2_2,ac,SFLX_PT,SFLX_PTV,TEML,RHONu,RHOKh, &
     !$omp         dtldz,dqwdz,betat,betaq, &
     !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us,us3,f2h,z1, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
@@ -448,10 +450,11 @@ contains
        do it = 1, nit
 
           ! length
+          SFLX_PTV = SFLX_PT * ( 1.0_RP + EPSTvap * Qw(KS,i,j) ) + SFLX_QV(i,j) * EPSTvap * POTT(KS,i,j)
           call get_length( &
                KA, KS, KE_PBL, &
-               POTT(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PT, l_mo(i,j),            & ! (in)
+               POTV(KS,i,j), q(:), n2_new(:), & ! (in)
+               SFLX_PTV, l_mo(i,j),           & ! (in)
                FZ(:,i,j),                     & ! (in)
                l(:,i,j)                       ) ! (out)
 
@@ -493,8 +496,8 @@ contains
           if ( mynn_level3 ) then
 
              ! production at KS
-             ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
-             us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
+             us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
+             !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
              zeta = z1 / l_mo(i,j)
              ! Businger et al. (1971)
 !!$             if ( zeta > 0 ) then
@@ -555,10 +558,11 @@ contains
           end do
 
           ! length
+          SFLX_PTV = SFLX_PT * betat(KS) + SFLX_QV(i,j) * betaq(KS)
           call get_length( &
                KA, KS, KE_PBL, &
-               POTT(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PT, l_mo(i,j),            & ! (in)
+               POTV(KS,i,j), q(:), n2_new(:), & ! (in)
+               SFLX_PTV, l_mo(i,j),           & ! (in)
                FZ(:,i,j),                     & ! (in)
                l(:,i,j)                       ) ! (out)
 
@@ -696,8 +700,9 @@ contains
           end if
 
           ! dens * TKE
-          ! production at KS: us3 * phi_m(zeta) / ( KARMAN * z1 )
-          us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
+          ! production at KS
+          us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
+          !us3 = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )**3
           zeta = z1 / l_mo(i,j)
 !!$       ! Businger et al. (1971)
 !!$       if ( zeta > 0 ) then
@@ -711,7 +716,7 @@ contains
           else
              phi_m = 1.0_RP / sqrt(sqrt(1.0_RP - 16.0_RP * zeta))
           end if
-          prod(KS,i,j) = us3 * phi_m / ( KARMAN * z1 )
+          prod(KS,i,j) = us3 * ( phi_m - zeta ) / ( KARMAN * z1 )
           do k = KS+1, KE_PBL
 !          do k = KS, KE_PBL
              prod(k,i,j) = Nu(k,i,j) * dudz2(k,i,j) - Kh(k,i,j) * n2_new(k)
@@ -1012,10 +1017,10 @@ contains
 !OCL SERIAL
   subroutine get_length( &
        KA, KS, KE_PBL, &
-       PT0, q, n2,    &
-       SFLX_PT, l_mo, &
-       FZ,            &
-       l              )
+       PT0, q, n2,     &
+       SFLX_PTV, l_mo, &
+       FZ,             &
+       l               )
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
        KARMAN => CONST_KARMAN, &
@@ -1026,7 +1031,7 @@ contains
     real(RP), intent(in) :: PT0
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
-    real(RP), intent(in) :: SFLX_PT  !> surface temerture flux
+    real(RP), intent(in) :: SFLX_PTV  !> surface virtual temperature flux
     real(RP), intent(in) :: l_mo     !> Monin-Obukhov length
     real(RP), intent(in) :: FZ(0:KA)
 
@@ -1065,7 +1070,7 @@ contains
 
     rlm = 1.0_RP / l_mo
 
-    qc = ( GRAV / PT0 * max(SFLX_PT,0.0_RP) * lt )**OneOverThree
+    qc = ( GRAV / PT0 * max(SFLX_PTV,0.0_RP) * lt )**OneOverThree
 
     do k = KS, KE_PBL
        z = ( FZ(k)+FZ(k-1) )*0.5_RP - FZ(KS-1)
@@ -1081,7 +1086,7 @@ contains
        sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
        rn2sr = 1.0_RP / ( sqrt(n2(k)*sw) + 1.0_RP-sw)
        lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k) * rn2sr * sw & ! qc=0 when l_mo > 0
-           +  999.E10_RP * (1.0_RP-sw)
+           +  1.E10_RP * (1.0_RP-sw)
 
        ! L
        l(k) = 1.0_RP / ( 1.0_RP/ls + rlt + 1.0_RP/lb )
@@ -1254,7 +1259,7 @@ contains
     real(RP), intent(in) :: POTL(KA)
     real(RP), intent(in) :: Qw  (KA)
     real(RP), intent(in) :: CZ  (KA)
-    real(RP), intent(in) :: FZ  (KA)
+    real(RP), intent(in) :: FZ  (0:KA)
     real(RP), intent(in) :: F2H  (KA,2)
 
     real(RP), intent(out) :: dudz2(KA)
@@ -1273,6 +1278,8 @@ contains
 
     dudz2(KS) = ( ( Uh(KS) - U(KS) )**2 + ( Vh(KS) - V(KS) )**2 ) &
                 / ( FZ(KS) - CZ(KS) )**2
+!    dudz2(KS) = ( ( Uh(KS) )**2 + ( Vh(KS) )**2 ) &
+!                / ( FZ(KS) - FZ(KS-1) )**2
     do k = KS+1, KE
        dudz2(k) = ( ( Uh(k) - Uh(k-1) )**2 + ( Vh(k) - Vh(k-1) )**2 ) &
                 / ( FZ(k) - FZ(k-1) )**2
@@ -1283,6 +1290,7 @@ contains
        qh(k) = f2h(k,1) * POTL(k+1) + f2h(k,2) * POTL(k)
     end do
     dtldz(KS) = ( qh(KS) - POTL(KS) ) / ( FZ(KS) - CZ(KS) )
+!    dtldz(KS) = ( POTL(KS+1) - POTL(KS) ) / ( CZ(KS+1) - CZ(KS) )
     do k = KS+1, KE
        dtldz(k) = ( qh(k) - qh(k-1) ) / ( FZ(k) - FZ(k-1) )
     end do
@@ -1291,6 +1299,7 @@ contains
        qh(k) = f2h(k,1) * Qw(k+1) + f2h(k,2) * Qw(k)
     end do
     dqwdz(KS) = ( qh(KS) - Qw(KS) ) / ( FZ(KS) - CZ(KS) )
+!    dqwdz(KS) = ( Qw(KS+1) - Qw(KS) ) / ( CZ(KS+1) - CZ(KS) )
     do k = KS+1, KE
        dqwdz(k) = ( qh(k) - qh(k-1) ) / ( FZ(k) - FZ(k-1) )
     end do
