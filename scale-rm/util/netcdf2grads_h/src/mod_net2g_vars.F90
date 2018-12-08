@@ -36,7 +36,7 @@ module mod_net2g_vars
   integer,         public :: VCOUNT         = 1
   integer,         public :: ZCOUNT         = 0
   integer,         public :: ZSTART         = 1
-  integer,         public :: TARGET_ZLEV(max_zcount) = -1
+  real,            public :: TARGET_ZLEV(max_zcount) = -1.
   real(DP),        public :: EXTRA_TINTERVAL = -9.999
   character(5),    public :: EXTRA_TUNIT    = ""
   character(CLNG), public :: IDIR           = "./"

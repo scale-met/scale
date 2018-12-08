@@ -504,7 +504,7 @@ contains
           endif
        case("plev")
           if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for plev. knum:',knum,'> outer_nz:',dims(1)
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
              call PRC_abort
           endif
           if ( trim(dtype) == "levels" ) then
@@ -536,6 +536,10 @@ contains
              enddo
           endif
        case('DENS')
+          if(dims(1)/=knum)then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+             call PRC_abort
+          endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
@@ -551,6 +555,10 @@ contains
              enddo
           endif
        case('U')
+          if(dims(1)/=knum)then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+             call PRC_abort
+          endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
@@ -563,15 +571,14 @@ contains
                       velx_org(k+2,i,j) = UNDEF
                    end if
                 enddo
-                if(dims(1)>knum)then
-                   do k = knum+1, dims(1)
-                      velx_org(k+2,i,j) = velx_org(knum+2,i,j)
-                   enddo
-                endif
              enddo
              enddo
           endif
        case('V')
+          if(dims(1)/=knum)then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+             call PRC_abort
+          endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
@@ -584,15 +591,14 @@ contains
                       vely_org(k+2,i,j) = UNDEF
                    end if
                 enddo
-                if(dims(1)>knum)then
-                   do k = knum+1, dims(1)
-                      vely_org(k+2,i,j) = vely_org(knum+2,i,j)
-                   enddo
-                endif
              enddo
              enddo
           endif
        case('W')
+          if(dims(1)/=knum)then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+             call PRC_abort
+          endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
@@ -609,6 +615,10 @@ contains
              enddo
           endif
        case('T')
+          if(dims(1)/=knum)then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+             call PRC_abort
+          endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
              do j = 1, dims(3)
@@ -620,17 +630,12 @@ contains
                       temp_org(k+2,i,j) = UNDEF
                    end if
                 enddo
-                if(dims(1)>knum)then
-                   do k = knum+1, dims(1)
-                      temp_org(k+2,i,j) = temp_org(knum+2,i,j)
-                   enddo
-                endif
              enddo
              enddo
           endif
        case('HGT')
           if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) 'The number of levels for HGT must be same as plevs! knum:',knum,'> outer_nz:',dims(1)
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
              call PRC_abort
           endif
           if ( trim(dtype) == "levels" ) then
@@ -707,6 +712,7 @@ contains
                    end if
                 enddo
                 qhyd_org(1:2,i,j,I_HC) = qhyd_org(3,i,j,I_HC)
+                ! if dims(1)>knum, QC is assumed to be zero.
              enddo
              enddo
           endif
@@ -723,6 +729,7 @@ contains
                    end if
                 enddo
                 qhyd_org(1:2,i,j,I_HR) = qhyd_org(3,i,j,I_HR)
+                ! if dims(1)>knum, QR is assumed to be zero.
              enddo
              enddo
           endif
@@ -739,6 +746,7 @@ contains
                    end if
                 enddo
                 qhyd_org(1:2,i,j,I_HI) = qhyd_org(3,i,j,I_HI)
+                ! if dims(1)>knum, QI is assumed to be zero.
              enddo
              enddo
           endif
@@ -755,6 +763,7 @@ contains
                    end if
                 enddo
                 qhyd_org(1:2,i,j,I_HS) = qhyd_org(3,i,j,I_HS)
+                ! if dims(1)>knum, QS is assumed to be zero.
              enddo
              enddo
           endif
@@ -771,6 +780,7 @@ contains
                    end if
                 enddo
                 qhyd_org(1:2,i,j,I_HG) = qhyd_org(3,i,j,I_HG)
+                ! if dims(1)>knum, QG is assumed to be zero.
              enddo
              enddo
           endif
@@ -796,7 +806,7 @@ contains
                 qv_org(1:2,i,j) = qv_org(3,i,j)
              enddo
              enddo
-             if( dims(3)>knum ) then
+             if( dims(1)>knum ) then
                 select case( upper_qv_type )
                 case("COPY")
                    do j = 1, dims(3)
@@ -1084,6 +1094,7 @@ contains
           velz_org(k,i,j)   = velz_org(2,i,j)
           velx_org(k,i,j)   = velx_org(2,i,j)
           vely_org(k,i,j)   = vely_org(2,i,j)
+          pres_org(k,i,j)   = pres_org(2,i,j)
           dens_org(k,i,j)   = dens_org(2,i,j)
           temp_org(k,i,j)   = temp_org(2,i,j)
           qv_org  (k,i,j)   = qv_org  (2,i,j)
@@ -1099,17 +1110,18 @@ contains
       do j = 1, dims(3)
       do i = 1, dims(2)
       do k = 3, dims(1)+2
-        if( abs( velz_org(k,i,j) - UNDEF ) < EPS ) velz_org(k,i,j) = velz_org(2,i,j)
-        if( abs( velx_org(k,i,j) - UNDEF ) < EPS ) velx_org(k,i,j) = velx_org(2,i,j)
-        if( abs( vely_org(k,i,j) - UNDEF ) < EPS ) vely_org(k,i,j) = vely_org(2,i,j)
-        if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) pres_org(k,i,j) = pres_org(2,i,j)
-        if( abs( dens_org(k,i,j) - UNDEF ) < EPS ) dens_org(k,i,j) = dens_org(2,i,j)
-        if( abs( temp_org(k,i,j) - UNDEF ) < EPS ) temp_org(k,i,j) = temp_org(2,i,j)
-        if( abs( qv_org  (k,i,j) - UNDEF ) < EPS ) qv_org  (k,i,j) = qv_org  (2,i,j)
-        do iq = 1, N_HYD
-          if( abs( qhyd_org(k,i,j,iq) - UNDEF ) < EPS ) qhyd_org(k,i,j,iq) = 0.0_RP
-        end do
-        if( abs( RN222_org(k,i,j) - UNDEF ) < EPS ) RN222_org(k,i,j) = 0.0_RP
+         if( cz_org  (k,i,j) < cz_org  (2,i,j) ) then
+           velz_org(k,i,j)   = velz_org(2,i,j)
+           velx_org(k,i,j)   = velx_org(2,i,j)
+           vely_org(k,i,j)   = vely_org(2,i,j)
+           pres_org(k,i,j)   = pres_org(2,i,j)
+           dens_org(k,i,j)   = dens_org(2,i,j)
+           temp_org(k,i,j)   = temp_org(2,i,j)
+           qv_org  (k,i,j)   = qv_org  (2,i,j)
+           qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
+           cz_org  (k,i,j)   = cz_org  (2,i,j)
+           RN222_org(k,i,j)  = 0.0_RP
+        endif
       enddo
       enddo
       enddo
