@@ -139,7 +139,7 @@ module scale_file_cartesC
      character(len=H_SHORT) :: location
      character(len=H_SHORT) :: grid
   end type dims
-  integer, parameter :: FILE_CARTESC_ndims = 40
+  integer, parameter :: FILE_CARTESC_ndims = 44
   type(dims) :: FILE_CARTESC_dims(FILE_CARTESC_ndims)
 
   type(axisattinfo) :: FILE_CARTESC_AXIS_info(4) ! x, xh, y, yh
@@ -3185,7 +3185,7 @@ contains
           exit
        end if
     end do
-    if ( dimid < -1 ) then
+    if ( dimid <= -1 ) then
        LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dim_type)
        call PRC_abort
     end if
@@ -3562,13 +3562,16 @@ contains
     start(2) = ISGA
     start(3) = JSGA
 
-    if (      dim_type == 'ZXY'  &
-         .OR. dim_type == 'ZXHY' &
-         .OR. dim_type == 'ZXYH' ) then
+    if (      dim_type == 'ZXY'   &
+         .OR. dim_type == 'ZXHY'  &
+         .OR. dim_type == 'ZXYH'  &
+         .OR. dim_type == 'ZXHYH' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
-    elseif ( dim_type == 'ZHXY' ) then
+    elseif (  dim_type == 'ZHXY'  &
+         .OR. dim_type == 'ZHXHY' &
+         .OR. dim_type == 'ZHXYH' ) then
        dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
@@ -4296,6 +4299,12 @@ contains
     call set_dimension( 'ZXHYH', 3, (/ 'z ', 'xh', 'yh' /), KA*IA*JA,     .true., &
                                              area_x='cell_area_zuv_x', area_y='cell_area_zuv_y', &
                                                   location='node'                                )
+    call set_dimension( 'ZHXHY', 3, (/ 'zh', 'xh', 'y ' /), (KA+1)*IA*JA, .true., &
+                                             area_x='cell_area_wuy_x',                           &
+                                                  location='edge1'                               )
+    call set_dimension( 'ZHXYH', 3, (/ 'zh', 'x ', 'yh' /), (KA+1)*IA*JA, .true., &
+                                                                       area_y='cell_area_wxv_y', &
+                                                  location='edge2'                               )
 
     if ( OKMAX > 0 ) then
        call set_dimension( 'OXY',  3, (/ 'oz',  'x ',  'y '  /), OKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
@@ -4411,7 +4420,7 @@ contains
     do n = 1, 2
        dimid = dimid + 1
        if ( dimid > FILE_CARTESC_ndims ) then
-          LOG_ERROR("set_dimension",*) 'number of dimensions exceeds the limit'
+          LOG_ERROR("set_dimension",*) 'number of dimensions exceeds the limit', dimid, FILE_CARTESC_ndims
           call PRC_abort
        end if
 
