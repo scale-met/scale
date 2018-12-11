@@ -112,8 +112,9 @@ contains
        CY   => ATMOS_GRID_CARTESC_CY, &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY
-    use scale_atmos_dyn, only: &
-       CORIOLIS
+    use scale_coriolis, only: &
+       CORIOLIS_f, &
+       CORIOLIS_beta
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -122,9 +123,6 @@ contains
        MOMX, &
        MOMY, &
        RHOT
-    use mod_atmos_dyn_driver, only: &
-       ATMOS_DYN_driver_setup, &
-       ATMOS_DYN_coriolis_beta
     implicit none
 
     real(RP) :: pres(KA,IA,JA), pres_toa, temp
@@ -132,11 +130,10 @@ contains
     real(RP) :: RovCP
     real(RP) :: wn_k, wn_l !> wave number
     real(RP) :: c          !> phase speed
-    integer :: k, i, j
+
+    integer  :: k, i, j
 
     !---------------------------------------------------------------------------
-
-    call ATMOS_DYN_driver_setup
 
     call COMM_vars8( DENS(:,:,:), 1 )
     call COMM_vars8( RHOT(:,:,:), 2 )
@@ -153,7 +150,7 @@ contains
     Lx = FXG(IAG-IHALO) - FXG(IHALO)
     wn_k = 2.0_RP * PI / Lx
     wn_l = PI / JET_RY
-    c = ATMOS_DYN_coriolis_beta / ( wn_k**2 + wn_l**2 )
+    c = CORIOLIS_beta / ( wn_k**2 + wn_l**2 )
 
     if( IO_L ) then
        LOG_NEWLINE
@@ -196,10 +193,10 @@ contains
     do k = KS, KE
        MOMX(k,i,j) = - ( ( pres(k,i,j+1) + pres(k,i+1,j+1) ) &
                        - ( pres(k,i,j-1) + pres(k,i+1,j-1) ) ) * 0.25_RP * RCDY(j) &
-                     / CORIOLIS(i,j)
+                     / CORIOLIS_f(i,j)
        MOMY(k,i,j) =   ( ( pres(k,i+1,j) + pres(k,i+1,j+1) ) &
                        - ( pres(k,i-1,j) + pres(k,i-1,j+1) ) ) * 0.25_RP * RCDX(i) &
-                     / CORIOLIS(i,j)
+                     / CORIOLIS_f(i,j)
     end do
     end do
     end do

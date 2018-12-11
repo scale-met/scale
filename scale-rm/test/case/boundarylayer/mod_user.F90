@@ -289,8 +289,8 @@ contains
        FDZ  => ATMOS_GRID_CARTESC_FDZ, &
        RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ
-    use scale_atmos_dyn, only: &
-       CORIOLIS
+    use scale_coriolis, only: &
+       CORIOLIS_f
     use mod_atmos_vars, only: &
        DENS,    &
        MOMZ,    &
@@ -384,8 +384,8 @@ contains
 
        ! geostrophic forcing
        do k = KS, KE
-          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS(i,j) * Vg * DENS(k,i,j)
-          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) + CORIOLIS(i,j) * Ug * DENS(k,i,j)
+          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS_f(i,j) * Vg * DENS(k,i,j)
+          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) + CORIOLIS_f(i,j) * Ug * DENS(k,i,j)
        end do
 
 
