@@ -56,15 +56,6 @@ module mod_atmos_dyn_driver
                                                                    ! 'UD5'
                                                                    ! 'CD6'
 
-  ! Coriolis force
-  !> If ATMOS_DYN_coriolis_type=='PLANE', then f = ATMOS_DYN_coriolis_f0 + ATMOS_DYN_coriolis_beta * ( CY - ATMOS_DYN_coriolis_y0 )
-  !> If ATMOS_DYN_coriolis_type=='SPHERE', then f = 2 * CONST_OHM * sin( lat )
-  character(len=H_SHORT), public :: ATMOS_DYN_coriolis_type = 'PLANE'   ! type of coriolis force: 'PLANE', 'SPHERE'
-  real(RP), public :: ATMOS_DYN_coriolis_f0                 = 0.0_RP
-  real(RP), public :: ATMOS_DYN_coriolis_beta               = 0.0_RP
-  real(RP), public :: ATMOS_DYN_coriolis_y0                             ! default is domain center
-
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -145,10 +136,6 @@ contains
        ATMOS_DYN_wdamp_tau,                   &
        ATMOS_DYN_wdamp_height,                &
        ATMOS_DYN_wdamp_layer,                 &
-       ATMOS_DYN_coriolis_type,               &
-       ATMOS_DYN_coriolis_f0,                 &
-       ATMOS_DYN_coriolis_beta,               &
-       ATMOS_DYN_coriolis_y0,                 &
        ATMOS_DYN_divdmp_coef,                 &
        ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,      &
        ATMOS_DYN_FLAG_FCT_momentum,           &
@@ -165,7 +152,6 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
-       ATMOS_DYN_coriolis_y0 = DOMAIN_CENTER_Y
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -212,13 +198,7 @@ contains
                              CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! [IN]
                              ATMOS_DYN_wdamp_tau,                & ! [IN]
                              ATMOS_DYN_wdamp_height,             & ! [IN]
-                             FZ,                            & ! [IN]
-                             ATMOS_DYN_coriolis_type,            & ! [IN]
-                             ATMOS_DYN_coriolis_f0,              & ! [IN]
-                             ATMOS_DYN_coriolis_beta,            & ! [IN]
-                             ATMOS_DYN_coriolis_y0,              & ! [IN]
-                             CY,                            & ! [IN]
-                             REAL_LAT,                           & ! [IN]
+                             FZ,                                 & ! [IN]
                              none = ATMOS_DYN_TYPE=='NONE'       ) ! [IN]
     endif
 
@@ -283,6 +263,8 @@ contains
        EXNER
     use mod_atmos_dyn_vars, only: &
        PROG
+    use scale_coriolis, only: &
+       CORIOLIS_f
     use scale_atmos_refstate, only: &
        ATMOS_REFSTATE_dens, &
        ATMOS_REFSTATE_pott, &
@@ -390,6 +372,7 @@ contains
                        PROG,                                                 & ! [IN]
                        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
                        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
+                       CORIOLIS_f,                                           & ! [IN]
                        CDZ,  CDX,  CDY,  FDZ,  FDX,  FDY,                    & ! [IN]
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
                        REAL_PHI,                                             & ! [IN]

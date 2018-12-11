@@ -69,9 +69,13 @@ contains
     use scale_random, only: &
        RANDOM_setup
     use scale_atmos_grid_cartesC_index, only: &
-       ATMOS_GRID_CARTESC_INDEX_setup
+       ATMOS_GRID_CARTESC_INDEX_setup, &
+       IA, JA
     use scale_atmos_grid_cartesC, only: &
-       ATMOS_GRID_CARTESC_setup
+       ATMOS_GRID_CARTESC_setup, &
+       DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       DX, DY
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_setup
     use scale_ocean_grid_cartesC_index, only: &
@@ -102,12 +106,15 @@ contains
     use scale_landuse, only: &
        LANDUSE_setup
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_setup,   &
-       ATMOS_GRID_CARTESC_REAL_update_Z
+       ATMOS_GRID_CARTESC_REAL_setup,    &
+       ATMOS_GRID_CARTESC_REAL_update_Z, &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
        ATMOS_GRID_CARTESC_METRIC_setup
     use scale_statistics, only: &
        STATISTICS_setup
+    use scale_coriolis, only: &
+       CORIOLIS_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -298,6 +305,8 @@ contains
     ! setup nesting grid
     call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
 
+    ! setup coriolis parameter
+    call CORIOLIS_setup( IA, JA, REAL_LAT(:,:), CY(:), DOMAIN_CENTER_Y )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
