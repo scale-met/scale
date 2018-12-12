@@ -64,8 +64,6 @@ module scale_atmos_dyn
   logical,  private              :: BND_S
   logical,  private              :: BND_N
 
-  real(RP), private, allocatable :: mflx_hi   (:,:,:,:)   ! rho * vel(x,y,z) @ (u,v,w)-face high order
-
   real(RP), private, allocatable :: num_diff  (:,:,:,:,:)
   real(RP), private, allocatable :: num_diff_q(:,:,:,:)
   real(RP), private, allocatable :: wdamp_coef(:)         ! coefficient for Rayleigh damping of w
@@ -165,11 +163,9 @@ contains
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
-       allocate( mflx_hi   (KA,IA,JA,3)   )
        allocate( num_diff  (KA,IA,JA,5,3) )
        allocate( num_diff_q(KA,IA,JA,3)   )
        allocate( wdamp_coef(KA)           )
-       mflx_hi   (:,:,:,:)   = UNDEF
        num_diff  (:,:,:,:,:) = UNDEF
        num_diff_q(:,:,:,:)   = UNDEF
 
@@ -182,8 +178,7 @@ contains
 
        call ATMOS_DYN_tstep_large_setup  ( DYN_Tstep_Large_TYPE,         & ! [IN]
                                            DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
-                                           QTRC, PROG,                   & ! [INOUT]
-                                           mflx_hi                       ) ! [INOUT]
+                                           QTRC, PROG                    ) ! [INOUT]
 
        call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE  ) ! [IN]
 
@@ -352,7 +347,6 @@ contains
     real(RP) :: DENS00 (KA,IA,JA)   ! saved density before update
 
     ! For tracer advection
-    real(RP) :: tflx_hi(KA,IA,JA,3) ! rho * theta * vel(x,y,z) @ (u,v,w)-face high order
     real(RP) :: dt
 
     integer  :: i, j, k, iq
@@ -457,7 +451,6 @@ contains
     call ATMOS_DYN_tinteg_large( DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    & ! [INOUT]
                                  PROG,                                                 & ! [INOUT]
                                  DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! [INOUT]
-                                 mflx_hi, tflx_hi,                                     & ! [OUT]
                                  num_diff, num_diff_q,                                 & ! [OUT;WORK]
                                  DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! [IN]
                                  CORIOLIS,                                             & ! [IN]
@@ -485,179 +478,7 @@ contains
 
     call PROF_rapend  ("DYN_Tinteg", 2)
 
-#ifdef CHECK_MASS
-    call check_mass( DENS, DAMP_DENS,           & ! [IN]
-                     mflx_hi, tflx_hi,          & ! [IN]
-                     GSQRT, MAPF,               & ! [IN]
-                     RCDX, RCDY,                & ! [IN]
-                     dt,                        & ! [IN]
-                     BND_W, BND_E, BND_S, BND_N ) ! [IN]
-#endif
-
     return
   end subroutine ATMOS_DYN
-
-#ifdef CHECK_MASS
-  !-----------------------------------------------------------------------------
-  subroutine check_mass( &
-       DENS, DAMP_DENS,           &
-       mflx_hi, tflx_hi,          &
-       GSQRT, MAPF,               &
-       RCDX, RCDY,                &
-       dt,                        &
-       BND_W, BND_E, BND_S, BND_N )
-    use mpi
-    use scale_atmos_grid_cartesC_real, only: &
-       vol => ATMOS_GRID_CARTESC_REAL_VOL
-    use scale_comm_cartesC, only: &
-       COMM_datatype, &
-       COMM_world
-    use scale_file_history, only: &
-       FILE_HISTORY_in
-    implicit none
-
-    real(RP), intent(in) :: DENS     (KA,IA,JA)
-    real(RP), intent(in) :: DAMP_DENS(KA,IA,JA)
-    real(RP), intent(in) :: mflx_hi  (KA,IA,JA,3)
-    real(RP), intent(in) :: tflx_hi  (KA,IA,JA,3)
-    real(RP), intent(in) :: GSQRT    (KA,IA,JA,7)
-    real(RP), intent(in) :: MAPF     (   IA,JA,2,7)
-    real(RP), intent(in) :: RCDX(IA)
-    real(RP), intent(in) :: RCDY(JA)
-    real(RP), intent(in) :: dt
-    logical,  intent(in) :: BND_W
-    logical,  intent(in) :: BND_E
-    logical,  intent(in) :: BND_S
-    logical,  intent(in) :: BND_N
-
-    ! lateral boundary flux
-    real(RP) :: mflx_lb_horizontal(KA)
-    real(RP) :: allmflx_lb_horizontal(KA)
-    real(RP) :: mflx_lb_total
-    real(RP) :: mass_total
-    real(RP) :: mass_total2
-    real(RP) :: allmflx_lb_total
-    real(RP) :: allmass_total
-    real(RP) :: allmass_total2
-
-    integer :: k, i, j
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXYH' )
-
-    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXYH' )
-
-    mflx_lb_total            = 0.0_RP
-    mflx_lb_horizontal(:)    = 0.0_RP
-    allmflx_lb_horizontal(:) = 0.0_RP
-
-    if ( BND_W ) then ! for western boundary
-       i = IS
-       do j = JS, JE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-
-       enddo
-       enddo
-    endif
-    if ( BND_E ) then ! for eastern boundary
-       i = IE
-       do j = JS, JE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       enddo
-       enddo
-    endif
-    if ( BND_S ) then ! for sourthern boundary
-       j = JS
-       do i = IS, IE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       enddo
-       enddo
-    endif
-    if ( BND_N ) then ! for northern boundary
-       j = JE
-       do i = IS, IE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       enddo
-       enddo
-    endif
-
-    mass_total  = 0.0_RP
-    mass_total2 = 0.0_RP
-
-    ! check total mass in the inner region
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
-       mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
-    enddo
-    enddo
-    enddo
-
-    call MPI_Allreduce( mflx_lb_total,    &
-                        allmflx_lb_total, &
-                        1,                &
-                        COMM_datatype,    &
-                        MPI_SUM,          &
-                        COMM_world,       &
-                        ierr              )
-
-    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mflx_lb:', allmflx_lb_total
-
-    call MPI_Allreduce( mass_total,    &
-                        allmass_total, &
-                        1,             &
-                        COMM_datatype, &
-                        MPI_SUM,       &
-                        COMM_world,    &
-                        ierr           )
-
-    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass   :', allmass_total
-
-    call MPI_Allreduce( mass_total2,    &
-                        allmass_total2, &
-                        1,              &
-                        COMM_datatype,  &
-                        MPI_SUM,        &
-                        COMM_world,     &
-                        ierr            )
-
-    LOG_INFO("check_mass",'(A,1x,ES24.17)') 'total mass2  :', allmass_total2
-
-    call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
-                        allmflx_lb_horizontal(KS:KE), &
-                        KMAX,                         &
-                        COMM_datatype,                &
-                        MPI_SUM,                      &
-                        COMM_world,                   &
-                        ierr                          )
-
-    call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
-                    'horizontally total momentum flux from lateral boundary', 'kg/m2/s' )
-
-    return
-  end subroutine check_mass
-#endif
 
 end module scale_atmos_dyn

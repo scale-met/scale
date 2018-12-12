@@ -33,6 +33,7 @@ module scale_atmos_dyn_tinteg_tracer
   abstract interface
      subroutine tinteg( &
           QTRC, & ! (out)
+          qflx, & ! (out)
           QTRC0, RHOQ_t, &! (in)
           DENS0, DENS, & ! (in)
           mflx_hi, num_diff, & ! (in)
@@ -46,6 +47,7 @@ module scale_atmos_dyn_tinteg_tracer
        use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+       real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
        real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
        real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
        real(RP), intent(in)    :: DENS0   (KA,IA,JA)

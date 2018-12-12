@@ -79,6 +79,7 @@ contains
   !> EULER
   subroutine ATMOS_DYN_tinteg_tracer_euler( &
        QTRC, & ! (out)
+       qflx, & ! (out)
        QTRC0, RHOQ_t, &! (in)
        DENS0, DENS, & ! (in)
        mflx_hi, num_diff, & ! (in)
@@ -95,6 +96,7 @@ contains
        ATMOS_DYN_tstep_tracer
     implicit none
     real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+    real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
     real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
     real(RP), intent(in)    :: DENS0   (KA,IA,JA)
@@ -121,6 +123,7 @@ contains
 
     call ATMOS_DYN_tstep_tracer( &
          QTRC, & ! (out)
+         qflx, & ! (out)
          QTRC, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS, & ! (in)
          mflx_hi, num_diff, & ! (in)

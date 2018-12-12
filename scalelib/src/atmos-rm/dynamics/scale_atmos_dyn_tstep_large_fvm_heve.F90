@@ -60,8 +60,9 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, allocatable, target :: ZERO(:,:,:)
   real(RP), private, pointer     :: RHOQ_tn(:,:,:)
 
-  real(RP), private, allocatable :: mflx_hi(:,:,:,:)        ! rho * vel(x,y,z) @ (u,v,w)-face high order
-
+  ! flux
+  real(RP), private, allocatable :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
+  real(RP), private, allocatable :: tflx(:,:,:,:) ! rho * theta * vel(x,y,z) * GSQRT / mapf
 
   ! for communication
   integer :: I_COMM_DENS = 1
@@ -84,14 +85,22 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   integer :: I_COMM_mflx_x = 2
   integer :: I_COMM_mflx_y = 3
 
+  ! for history
+  integer :: HIST_mflx(3)
+  integer :: HIST_tflx(3)
+  integer :: HIST_phys(5)
+  integer :: HIST_damp(5)
+  integer, allocatable :: HIST_qflx(:,:)
+  integer, allocatable :: HIST_phys_QTRC(:)
+  integer, allocatable :: HIST_damp_QTRC(:)
+
   !-----------------------------------------------------------------------------
 contains
 
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup( &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-       mflx_hi )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
     use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
@@ -104,6 +113,9 @@ contains
        UNDEF => CONST_UNDEF
     use scale_comm_cartesC, only: &
        COMM_vars8_init
+    use scale_file_history, only: &
+       FILE_HISTORY_reg, &
+       FILE_HISTORY_put
     implicit none
 
     ! MPI_RECV_INIT requires intent(inout)
@@ -114,7 +126,6 @@ contains
     real(RP),               intent(inout) :: RHOT(KA,IA,JA)
     real(RP),               intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP),               intent(inout) :: PROG(KA,IA,JA,VA)
-    real(RP),               intent(inout) :: mflx_hi(KA,IA,JA,3)
 
     integer :: iv, iq
     !---------------------------------------------------------------------------
@@ -125,6 +136,9 @@ contains
     allocate( MOMY_t(KA,IA,JA) )
     allocate( RHOT_t(KA,IA,JA) )
     allocate( RHOQ_t(KA,IA,JA,QA) )
+
+    allocate( mflx(KA,IA,JA,3) )
+    allocate( tflx(KA,IA,JA,3) )
 
     allocate( I_COMM_PROG    (max(VA,1)) )
     allocate( I_COMM_QTRC(QA) )
@@ -154,14 +168,102 @@ contains
        call COMM_vars8_init( 'QTRC',   QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
     end do
 
-    call COMM_vars8_init( 'mflx_Z', mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
-    call COMM_vars8_init( 'mflx_X', mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
-    call COMM_vars8_init( 'mflx_Y', mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
+    call COMM_vars8_init( 'mflx_Z', mflx(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8_init( 'mflx_X', mflx(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8_init( 'mflx_Y', mflx(:,:,:,YDIR), I_COMM_mflx_y )
 
     allocate( ZERO(KA,IA,JA) )
     ZERO(:,:,:) = 0.0_RP
 
-    mflx_hi(:,:,:,:) = UNDEF
+    mflx(:,:,:,:) = UNDEF
+    tflx(:,:,:,:) = UNDEF
+
+
+    ! history
+    call FILE_HISTORY_reg( 'ZFLX_MOM', 'momentum flux of z-direction', 'kg/m2/s', & ! [IN]
+                           HIST_mflx(1),                                          & ! [OUT]
+                           dim_type='ZHXY'                                        ) ! [IN]
+    call FILE_HISTORY_reg( 'XFLX_MOM', 'momentum flux of x-direction', 'kg/m2/s', & ! [IN]
+                           HIST_mflx(2),                                          & ! [OUT]
+                           dim_type='ZXHY'                                        ) ! [IN]
+    call FILE_HISTORY_reg( 'YFLX_MOM', 'momentum flux of y-direction', 'kg/m2/s', & ! [IN]
+                           HIST_mflx(3),                                          & ! [OUT]
+                           dim_type='ZXYH'                                        ) ! [IN]
+
+    call FILE_HISTORY_reg( 'ZFLX_RHOT', 'potential temperature flux of z-direction', 'K*kg/m2/s', & ! [IN]
+                           HIST_tflx(1),                                                          & ! [OUT]
+                           dim_type='ZHXY'                                                        ) ! [IN]
+    call FILE_HISTORY_reg( 'XFLX_RHOT', 'potential temperature flux of x-direction', 'K*kg/m2/s', & ! [IN]
+                           HIST_tflx(2),                                                          & ! [OUT]
+                           dim_type='ZXHY'                                                        ) ! [IN]
+    call FILE_HISTORY_reg( 'YFLX_RHOT', 'potential temperature flux of y-direction', 'K*kg/m2/s', & ! [IN]
+                           HIST_tflx(3),                                                          & ! [OUT]
+                           dim_type='ZXYH'                                                        ) ! [IN]
+
+    call FILE_HISTORY_reg( 'DENS_t_phys', 'tendency of dencity due to physics', 'kg/m3/s', & ! [IN]
+                           HIST_phys(1)                                                    ) ! [OUT]
+    call FILE_HISTORY_reg( 'MOMZ_t_phys', 'tendency of momentum z due to physics', 'kg/m2/s2', & ! [IN]
+                           HIST_phys(2),                                                       & ! [OUT]
+                           dim_type='ZHXY'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'MOMX_t_phys', 'tendency of momentum x due to physics', 'kg/m2/s2', & ! [IN]
+                           HIST_phys(3),                                                       & ! [OUT]
+                           dim_type='ZXHY'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'MOMY_t_phys', 'tendency of momentum y due to physics', 'kg/m2/s2', & ! [IN]
+                           HIST_phys(4),                                                       & ! [OUT]
+                           dim_type='ZXYH'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics', 'K*kg/m3/s', & ! [IN]
+                           HIST_phys(5)                                                                    ) ! [OUT]
+
+    call FILE_HISTORY_reg( 'DENS_t_damp', 'tendency of dencity due to damping', 'kg/m3/s', & ! [IN]
+                           HIST_damp(1)                                                    ) ! [OUT]
+    call FILE_HISTORY_reg( 'MOMZ_t_damp', 'tendency of momentum z due to damping', 'kg/m2/s2', & ! [IN]
+                           HIST_damp(2),                                                       & ! [OUT]
+                           dim_type='ZHXY'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'MOMX_t_damp', 'tendency of momentum x due to damping', 'kg/m2/s2', & ! [IN]
+                           HIST_damp(3),                                                       & ! [OUT]
+                           dim_type='ZXHY'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'MOMY_t_damp', 'tendency of momentum y due to damping', 'kg/m2/s2', & ! [IN]
+                           HIST_damp(4),                                                       & ! [OUT]
+                           dim_type='ZXYH'                                                     ) ! [IN]
+    call FILE_HISTORY_reg( 'RHOT_t_damp', 'tendency of rho*theta temperature due to damping', 'K kg/m3/s', & ! [IN]
+                           HIST_damp(5)                                                                    ) ! [OUT]
+
+    allocate( HIST_qflx(3,QA) )
+    allocate( HIST_phys_QTRC(QA) )
+    allocate( HIST_damp_QTRC(QA) )
+    do iq = 1, QA
+       call FILE_HISTORY_reg( 'ZFLX_'//trim(TRACER_NAME(iq)), trim(TRACER_NAME(iq))//' flux of z-direction', 'kg/m2/s', & ! [IN]
+                              HIST_qflx(1,iq),                                                                          & ! [OUT]
+                              dim_type='ZHXY'                                                                           ) ! [IN]
+       call FILE_HISTORY_reg( 'XFLX_'//trim(TRACER_NAME(iq)), trim(TRACER_NAME(iq))//' flux of x-direction', 'kg/m2/s', & ! [IN]
+                              HIST_qflx(2,iq),                                                                          & ! [OUT]
+                              dim_type='ZXHY'                                                                           ) ! [IN]
+       call FILE_HISTORY_reg( 'YFLX_'//trim(TRACER_NAME(iq)), trim(TRACER_NAME(iq))//' flux of y-direction', 'kg/m2/s', & ! [IN]
+                              HIST_qflx(3,iq),                                                                          & ! [OUT]
+                              dim_type='ZXYH'                                                                           ) ! [IN]
+       call FILE_HISTORY_reg( trim(TRACER_NAME(iq))//'_t_phys', 'tendency of '//trim(TRACER_NAME(iq))//' due to physics', 'kg/m3/s', &
+                              HIST_phys_QTRC(iq) )
+       call FILE_HISTORY_reg( trim(TRACER_NAME(iq))//'_t_damp', 'tendency of '//trim(TRACER_NAME(iq))//' due to damping', 'kg/m3/s', &
+                              HIST_damp_QTRC(iq) )
+    end do
+
+    ! for history at t=0
+    do iv = 1, 3
+       call FILE_HISTORY_put( HIST_mflx(iv), ZERO(:,:,:) )
+       call FILE_HISTORY_put( HIST_tflx(iv), ZERO(:,:,:) )
+    end do
+    do iv = 1, 5
+       call FILE_HISTORY_put( HIST_phys(iv), ZERO(:,:,:) )
+       call FILE_HISTORY_put( HIST_damp(iv), ZERO(:,:,:) )
+    end do
+    do iq = 1, QA
+       do iv = 1, 3
+          call FILE_HISTORY_put( HIST_qflx(iv,iq), ZERO(:,:,:) )
+       end do
+       call FILE_HISTORY_put( HIST_phys_QTRC(iq), ZERO(:,:,:) )
+       call FILE_HISTORY_put( HIST_damp_QTRC(iq), ZERO(:,:,:) )
+    end do
+
 
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
@@ -171,7 +273,6 @@ contains
   subroutine ATMOS_DYN_Tstep_large_fvm_heve( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-       mflx_hi, tflx_hi,                                     &
        num_diff, num_diff_q,                                 &
        QTRC0,                                                &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
@@ -220,9 +321,8 @@ contains
        ATMOS_DYN_FVM_fluxX_XYZ, &
        ATMOS_DYN_FVM_fluxY_XYZ
     use scale_file_history, only: &
-#ifdef HIST_TEND
-       FILE_HISTORY_in, &
-#endif
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put,   &
        FILE_HISTORY_set_disable
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short
@@ -244,9 +344,6 @@ contains
     real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
     real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
     real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
-
-    real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
@@ -339,6 +436,7 @@ contains
 
     ! for time integartion
     real(RP) :: DENS00  (KA,IA,JA) ! saved density before small step loop
+    real(RP) :: qflx    (KA,IA,JA,3)
 
     ! diagnostic variables
     real(RP) :: DDIV    (KA,IA,JA) ! 3 dimensional divergence
@@ -358,9 +456,12 @@ contains
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA)
     real(RP) :: damp
-#ifdef HIST_TEND
-    real(RP) :: damp_t(KA,IA,JA)
-#endif
+    real(RP) :: damp_t_DENS(KA,IA,JA)
+    real(RP) :: damp_t_MOMZ(KA,IA,JA)
+    real(RP) :: damp_t_MOMX(KA,IA,JA)
+    real(RP) :: damp_t_MOMY(KA,IA,JA)
+    real(RP) :: damp_t_RHOT(KA,IA,JA)
+    real(RP) :: damp_t_QTRC(KA,IA,JA)
 
     ! For tracer advection
     real(RP) :: mflx_av  (KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
@@ -368,6 +469,9 @@ contains
     real(RP) :: dtl
     real(RP) :: dts
     integer  :: nstep
+
+    ! for history
+    logical :: do_put
 
     integer  :: i, j, k, iq, step
     integer  :: iv
@@ -390,8 +494,6 @@ contains
 
     num_diff (:,:,:,:,:) = UNDEF
 
-    mflx_hi(:,:,:,:) = UNDEF
-    tflx_hi(:,:,:,:) = UNDEF
 #endif
 
 !OCL XFILL
@@ -399,22 +501,23 @@ contains
 
     if ( USE_AVERAGE ) then
 !OCL XFILL
-       DENS_av(:,:,:) = 0.0_RP
-!OCL XFILL
-       MOMZ_av(:,:,:) = 0.0_RP
-!OCL XFILL
-       MOMX_av(:,:,:) = 0.0_RP
-!OCL XFILL
-       MOMY_av(:,:,:) = 0.0_RP
-!OCL XFILL
-       RHOT_av(:,:,:) = 0.0_RP
+       !$omp parallel do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          DENS_av(k,i,j) = 0.0_RP
+          MOMZ_av(k,i,j) = 0.0_RP
+          MOMX_av(k,i,j) = 0.0_RP
+          MOMY_av(k,i,j) = 0.0_RP
+          RHOT_av(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
     endif
 
-#ifndef DRY
 !OCL XFILL
     mflx_av(:,:,:,:) = 0.0_RP
 
-#endif
 
 #ifdef DRY
     CPovCV = CPdry / CVdry
@@ -479,11 +582,6 @@ contains
 
     call PROF_rapstart("DYN_Large_Tendency", 2)
 
-#ifdef HIST_TEND
-!OCL XFILL
-    damp_t(:,:,:) = 0.0_RP
-#endif
-
 !OCL XFILL
     DENS_tq(:,:,:) = 0.0_RP
 
@@ -500,13 +598,13 @@ contains
           enddo
           enddo
           enddo
+
+          call FILE_HISTORY_query( HIST_damp_QTRC(iq), do_put )
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-          !$omp shared(damp_t) &
-#endif
           !$omp shared(JS,JE,IS,IE,KS,KE,iq) &
-          !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV)
+          !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV) &
+          !$omp shared(damp_t_QTRC,do_put)
 !OCL XFILL
           do j = JS, JE
           do i = IS, IE
@@ -515,21 +613,19 @@ contains
                   * ( diff(k,i,j) & ! rayleigh damping
                     - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                     * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
-#ifdef HIST_TEND
-             damp_t(k,i,j) = damp
-#endif
              damp = damp * DENS00(k,i,j)
+             if ( do_put ) damp_t_QTRC(k,i,j) = damp
              RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp
              DENS_tq(k,i,j) = DENS_tq(k,i,j) + damp * TRACER_MASS(iq) ! only for mass tracer
           enddo
           enddo
           enddo
-#ifdef HIST_TEND
-          call FILE_HISTORY_in(RHOQ_tp(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_phys', &
-               'tendency of '//trim(TRACER_NAME(iq))//' due to physics (w/ HIST_TEND)', 'kg/kg/s' )
-          call FILE_HISTORY_in(damp_t,            trim(TRACER_NAME(iq))//'_t_damp', &
-               'tendency of '//trim(TRACER_NAME(iq))//' due to damping (w/ HIST_TEND)', 'kg/kg/s' )
-#endif
+
+          if ( Llast ) then
+             if ( do_put ) call FILE_HISTORY_put( HIST_damp_QTRC(iq), damp_t_QTRC(:,:,:) )
+             call FILE_HISTORY_put( HIST_phys_QTRC(iq), RHOQ_tp(:,:,:,iq) )
+          end if
+
 !OCL XFILL
           do j = JS, JE
           do i = IS, IE
@@ -562,34 +658,34 @@ contains
     call PROF_rapstart("DYN_Large_Boundary", 2)
 
     if ( BND_W ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
        do j = JS, JE
        do k = KS, KE
-          mflx_hi(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
+          mflx(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
        enddo
        enddo
     end if
     if ( BND_E ) then
-       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
        do j = JS, JE
        do k = KS, KE
-          mflx_hi(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
+          mflx(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
        enddo
        enddo
     end if
     if ( BND_S ) then
-       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,k) OMP_SCHEDULE_
        do i = IS, IE
        do k = KS, KE
-          mflx_hi(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
+          mflx(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
        enddo
        enddo
     end if
     if ( BND_N ) then
-       !$omp parallel do private(i,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,k) OMP_SCHEDULE_
        do i = IS, IE
        do k = KS, KE
-          mflx_hi(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
+          mflx(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
        enddo
        enddo
     end if
@@ -597,9 +693,21 @@ contains
     call PROF_rapend  ("DYN_Large_Boundary", 2)
 
 
-    do step = 1, nstep
+!OCL XIFLL
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = 1, KA
+       damp_t_DENS(k,i,j) = 0.0_RP
+       damp_t_MOMZ(k,i,j) = 0.0_RP
+       damp_t_MOMX(k,i,j) = 0.0_RP
+       damp_t_MOMY(k,i,j) = 0.0_RP
+       damp_t_RHOT(k,i,j) = 0.0_RP
+    end do
+    end do
+    end do
 
-       call FILE_HISTORY_set_disable( .not. (Llast .AND. step == nstep ) )
+    do step = 1, nstep
 
        !-----< prepare tendency >-----
 
@@ -614,13 +722,13 @@ contains
        enddo
        enddo
        enddo
+
+       call FILE_HISTORY_query( HIST_damp(1), do_put )
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-       !$omp shared(damp_t) &
-#endif
        !$omp shared(JS,JE,IS,IE,KS,KE) &
-       !$omp shared(DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT)
+       !$omp shared(DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT,EPS) &
+       !$omp shared(damp_t_DENS,do_put,nstep)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -629,12 +737,10 @@ contains
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
-               + DENS_tq(k,i,j) ! dencity change due to rayleigh damping for tracers
+               + DENS_tq(k,i,j) * ( 0.5_RP - sign( 0.5_RP, DAMP_alpha_DENS(k,i,j)-EPS ) ) ! dencity change due to rayleigh damping for tracers
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
                         + damp
-#ifdef HIST_TEND
-          damp_t(k,i,j) = damp
-#endif
+          if ( do_put ) damp_t_DENS(k,i,j) = damp_t_DENS(k,i,j) + damp / nstep
        enddo
        enddo
        enddo
@@ -646,10 +752,6 @@ contains
        enddo
        enddo
        call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
-#ifdef HIST_TEND
-       call FILE_HISTORY_in(DENS_tp, 'DENS_t_phys', 'tendency of dencity due to physics (w/ HIST_TEND)', 'kg/m3/s' )
-       call FILE_HISTORY_in(damp_t,  'DENS_t_damp', 'tendency of dencity due to damping (w/ HIST_TEND)', 'kg/m3/s' )
-#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -660,13 +762,13 @@ contains
        enddo
        enddo
        enddo
+
+       call FILE_HISTORY_query( HIST_damp(2), do_put )
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-       !$omp shared(damp_t) &
-#endif
        !$omp shared(JS,JE,IS,IE,KS,KE) &
-       !$omp shared(DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp)
+       !$omp shared(DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp) &
+       !$omp shared(damp_t_MOMZ,do_put,nstep)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -678,9 +780,7 @@ contains
 
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
                         + damp
-#ifdef HIST_TEND
-          damp_t(k,i,j) = damp
-#endif
+          if ( do_put ) damp_t_MOMZ(k,i,j) = damp_t_MOMZ(k,i,j) + damp / nstep
        enddo
        enddo
        enddo
@@ -692,10 +792,6 @@ contains
        enddo
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
-#ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMZ_tp, 'MOMZ_t_phys', 'tendency of momentum z due to physics (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZHXY' )
-       call FILE_HISTORY_in(damp_t,  'MOMZ_t_damp', 'tendency of momentum z due to damping (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZHXY' )
-#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -706,14 +802,14 @@ contains
        enddo
        enddo
        enddo
+
+       call FILE_HISTORY_query( HIST_damp(3), do_put )
 !OCL XFILL
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-       !$omp shared(damp_t) &
-#endif
        !$omp shared(JS,JE,IS,IE,KS,KE) &
-       !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t)
+       !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t) &
+       !$omp shared(damp_t_MOMX,do_put,nstep)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -723,9 +819,7 @@ contains
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
                         + damp
-#ifdef HIST_TEND
-          damp_t(k,i,j) = damp
-#endif
+          if ( do_put ) damp_t_MOMX(k,i,j) = damp_t_MOMX(k,i,j) + damp / nstep
        enddo
        enddo
        enddo
@@ -737,10 +831,6 @@ contains
        enddo
        enddo
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
-#ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMX_tp, 'MOMX_t_phys', 'tendency of momentum x due to physics (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXHY' )
-       call FILE_HISTORY_in(damp_t,  'MOMX_t_damp', 'tendency of momentum x due to damping (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXHY' )
-#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -751,14 +841,14 @@ contains
        enddo
        enddo
        enddo
+
+       call FILE_HISTORY_query( HIST_damp(4), do_put )
 !OCL XFILL
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-       !$omp shared(damp_t) &
-#endif
        !$omp shared(JS,JE,IS,IE,KS,KE) &
-       !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t)
+       !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t) &
+       !$omp shared(damp_t_MOMY,do_put,nstep)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -768,9 +858,7 @@ contains
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
                         + damp
-#ifdef HIST_TEND
-          damp_t(k,i,j) = damp
-#endif
+          if ( do_put ) damp_t_MOMY(k,i,j) = damp_t_MOMY(k,i,j) + damp / nstep
        enddo
        enddo
        enddo
@@ -782,10 +870,6 @@ contains
        enddo
        enddo
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
-#ifdef HIST_TEND
-       call FILE_HISTORY_in(MOMY_tp, 'MOMY_t_phys', 'tendency of momentum y due to physics (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXYH' )
-       call FILE_HISTORY_in(damp_t,  'MOMY_t_damp', 'tendency of momentum y due to damping (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXYH' )
-#endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -796,14 +880,14 @@ contains
        enddo
        enddo
        enddo
+
+       call FILE_HISTORY_query( HIST_damp(5), do_put )
 !OCL XFILL
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
-#ifdef HIST_TEND
-       !$omp shared(damp_t) &
-#endif
        !$omp shared(JS,JE,IS,IE,KS,KE) &
-       !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp)
+       !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp) &
+       !$omp shared(damp_t_RHOT,do_put,nstep)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -813,9 +897,7 @@ contains
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
                         + damp
-#ifdef HIST_TEND
-          damp_t(k,i,j) = damp
-#endif
+          if ( do_put ) damp_t_RHOT(k,i,j) = damp_t_RHOT(k,i,j) + damp / nstep
        enddo
        enddo
        enddo
@@ -827,10 +909,6 @@ contains
        enddo
        enddo
        call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
-#ifdef HIST_TEND
-       call FILE_HISTORY_in(RHOT_tp, 'RHOT_t_phys', 'tendency of rho*theta temperature due to physics (w/ HIST_TEND)', 'K kg/m3/s' )
-       call FILE_HISTORY_in(damp_t,  'RHOT_t_damp', 'tendency of rho*theta temperature due to damping (w/ HIST_TEND)', 'K kg/m3/s' )
-#endif
 
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
        call COMM_wait ( MOMZ_t(:,:,:), I_COMM_MOMZ_t, .false. )
@@ -875,33 +953,28 @@ contains
        ! Start short time integration
        !------------------------------------------------------------------------
 
+       call FILE_HISTORY_set_disable( .not. ( Llast .and. ( step==nstep ) ) )
+
        call PROF_rapstart("DYN_Short_Tinteg", 2)
 
-       call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-                                    mflx_hi, tflx_hi,                         & ! (inout)
-                                    DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
-                                    DPRES0, RT2P, CORIOLI,                    & ! (in)
-                                    num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
-                                    FLAG_FCT_MOMENTUM, FLAG_FCT_T,            & ! (in)
-                                    FLAG_FCT_ALONG_STREAM,                    & ! (in)
-                                    CDZ, FDZ, FDX, FDY,                       & ! (in)
-                                    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
-                                    PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
-                                    REF_dens, REF_rhot,                       & ! (in)
-                                    BND_W, BND_E, BND_S, BND_N,               & ! (in)
-                                    dts                                       ) ! (in)
+       call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,      & ! (inout)
+                                    mflx, tflx,                              & ! (inout)
+                                    DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,  & ! (in)
+                                    DPRES0, RT2P, CORIOLI,                   & ! (in)
+                                    num_diff, wdamp_coef, divdmp_coef, DDIV, & ! (in)
+                                    FLAG_FCT_MOMENTUM, FLAG_FCT_T,           & ! (in)
+                                    FLAG_FCT_ALONG_STREAM,                   & ! (in)
+                                    CDZ, FDZ, FDX, FDY,                      & ! (in)
+                                    RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      & ! (in)
+                                    PHI, GSQRT, J13G, J23G, J33G, MAPF,      & ! (in)
+                                    REF_dens, REF_rhot,                      & ! (in)
+                                    BND_W, BND_E, BND_S, BND_N,              & ! (in)
+                                    dts                                      ) ! (in)
 
        call PROF_rapend  ("DYN_Short_Tinteg", 2)
 
-#ifdef CHECK_MASS
-       call check_mass( &
-            DENS, DAMP_DENS, &
-            mflx_hi, tflx_hi, &
-            GSQRT, MAPF, &
-            RCDX, RCDY, &
-            dts, step, &
-            BND_W, BND_E, BND_S, BND_N )
-#endif
+
+       call FILE_HISTORY_set_disable( .false. )
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
@@ -944,106 +1017,62 @@ contains
        end do
 
        if ( USE_AVERAGE ) then
+          !$omp parallel do
           do j = JSB, JEB
           do i = ISB, IEB
           do k = KS, KE
-             DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j)
-             MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j)
-             MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j)
-             MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j)
-             RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j)
+             DENS_av(k,i,j) = DENS_av(k,i,j) + DENS(k,i,j) / nstep
+             MOMZ_av(k,i,j) = MOMZ_av(k,i,j) + MOMZ(k,i,j) / nstep
+             MOMX_av(k,i,j) = MOMX_av(k,i,j) + MOMX(k,i,j) / nstep
+             MOMY_av(k,i,j) = MOMY_av(k,i,j) + MOMY(k,i,j) / nstep
+             RHOT_av(k,i,j) = RHOT_av(k,i,j) + RHOT(k,i,j) / nstep
           end do
           end do
           end do
        endif
 
-#ifndef DRY
+       !$omp parallel do
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          mflx_av(k,i,j,:) = mflx_av(k,i,j,:) + mflx_hi(k,i,j,:)
+          mflx_av(k,i,j,:) = mflx_av(k,i,j,:) + mflx(k,i,j,:)
        end do
        end do
        end do
-#endif
 
     enddo ! dynamical steps
 
-    if ( USE_AVERAGE ) then
-       do j = JSB, JEB
-       do i = ISB, IEB
-       do k = KS, KE
-          DENS_av(k,i,j) = DENS_av(k,i,j) / nstep
-       end do
-       end do
-       end do
-       do j = JSB, JEB
-       do i = ISB, IEB
-       do k = KS, KE
-          MOMZ_av(k,i,j) = MOMZ_av(k,i,j) / nstep
-       end do
-       end do
-       end do
-       do j = JSB, JEB
-       do i = ISB, IEB
-       do k = KS, KE
-          MOMX_av(k,i,j) = MOMX_av(k,i,j) / nstep
-       end do
-       end do
-       end do
-       do j = JSB, JEB
-       do i = ISB, IEB
-       do k = KS, KE
-          MOMY_av(k,i,j) = MOMY_av(k,i,j) / nstep
-       end do
-       end do
-       end do
-       do j = JSB, JEB
-       do i = ISB, IEB
-       do k = KS, KE
-          RHOT_av(k,i,j) = RHOT_av(k,i,j) / nstep
-       end do
-       end do
-       end do
-    endif
 
-#ifndef DRY
     !###########################################################################
     ! Update Tracers
     !###########################################################################
 
-!OCL XFILL
     do n = 1, 3
-    do j = JSB, JEB
-    do i = ISB, IEB
-    do k = KS, KE
-       mflx_hi(k,i,j,n) = mflx_av(k,i,j,n) / nstep
-    end do
-    end do
-    end do
-    end do
-
-    call COMM_vars8( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z )
-    call COMM_vars8( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x )
-    call COMM_vars8( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y )
-    call COMM_wait ( mflx_hi(:,:,:,ZDIR), I_COMM_mflx_z, .false. )
-    call COMM_wait ( mflx_hi(:,:,:,XDIR), I_COMM_mflx_x, .false. )
-    call COMM_wait ( mflx_hi(:,:,:,YDIR), I_COMM_mflx_y, .false. )
-
-    if ( USE_AVERAGE ) then
 !OCL XFILL
-       QTRC_av(:,:,:,:) = 0.0_RP
-    endif
+       !$omp parallel do
+       do j = JSB, JEB
+       do i = ISB, IEB
+       do k = KS, KE
+          mflx(k,i,j,n) = mflx_av(k,i,j,n) / nstep
+       end do
+       end do
+       end do
+    end do
+
+    call COMM_vars8( mflx(:,:,:,ZDIR), I_COMM_mflx_z )
+    call COMM_vars8( mflx(:,:,:,XDIR), I_COMM_mflx_x )
+    call COMM_vars8( mflx(:,:,:,YDIR), I_COMM_mflx_y )
+    call COMM_wait ( mflx(:,:,:,ZDIR), I_COMM_mflx_z, .false. )
+    call COMM_wait ( mflx(:,:,:,XDIR), I_COMM_mflx_x, .false. )
+    call COMM_wait ( mflx(:,:,:,YDIR), I_COMM_mflx_y, .false. )
+
+#ifndef DRY
 
     !------------------------------------------------------------------------
     ! Update each tracer
     !------------------------------------------------------------------------
 
-#ifdef SDM
-    do iq = 1, I_QV
-#else
     do iq = 1, QA
-#endif
 
        if ( TRACER_ADVC(iq) ) then
 
@@ -1081,21 +1110,62 @@ contains
           end if
 
           call ATMOS_DYN_tinteg_tracer( &
-               QTRC(:,:,:,iq), & ! (inout)
-               QTRC0(:,:,:,iq), RHOQ_tn, &! (in)
-               DENS00, DENS, & ! (in)
-               mflx_hi, num_diff_q, & ! (in)
-               GSQRT, MAPF(:,:,:,I_XY), & ! (in)
-               CDZ, RCDZ, RCDX, RCDY,             & ! (in)
-               BND_W, BND_E, BND_S, BND_N, & ! (in)
-               dtl, & ! (in)
+               QTRC(:,:,:,iq),              & ! (inout)
+               qflx(:,:,:,:),               & ! (out)
+               QTRC0(:,:,:,iq), RHOQ_tn,    & ! (in)
+               DENS00, DENS,                & ! (in)
+               mflx, num_diff_q,            & ! (in)
+               GSQRT, MAPF(:,:,:,I_XY),     & ! (in)
+               CDZ, RCDZ, RCDX, RCDY,       & ! (in)
+               BND_W, BND_E, BND_S, BND_N,  & ! (in)
+               dtl,                         & ! (in)
                Llast .AND. FLAG_FCT_TRACER, & ! (in)
-               FLAG_FCT_ALONG_STREAM         ) ! (in)
+               FLAG_FCT_ALONG_STREAM        ) ! (in)
 
           call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
 
+          if ( Llast ) then
+             call FILE_HISTORY_query( HIST_qflx(1,iq), do_put )
+             if ( do_put ) then
+                !$omp parallel do
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS-1, KE
+                   qflx(k,i,j,ZDIR) = qflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
+                end do
+                end do
+                end do
+                call FILE_HISTORY_put( HIST_qflx(1,iq), qflx(:,:,:,ZDIR) )
+             end if
+             call FILE_HISTORY_query( HIST_qflx(2,iq), do_put )
+             if ( do_put ) then
+                !$omp parallel do
+                do j = JS, JE
+                do i = ISB, IEB
+                do k = KS, KE
+                   qflx(k,i,j,XDIR) = qflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
+                end do
+                end do
+                end do
+                call FILE_HISTORY_put( HIST_qflx(2,iq), qflx(:,:,:,XDIR) )
+             end if
+             call FILE_HISTORY_query( HIST_qflx(3,iq), do_put )
+             if ( do_put ) then
+                !$omp parallel do
+                do j = JSB, JEB
+                do i = IS, IE
+                do k = KS, KE
+                   qflx(k,i,j,YDIR) = qflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
+                end do
+                end do
+                end do
+                call FILE_HISTORY_put( HIST_qflx(3,iq), qflx(:,:,:,YDIR) )
+             end if
+          end if
+
        else
 
+          !$omp parallel do
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1126,170 +1196,97 @@ contains
     enddo
 #endif
 
+    if ( Llast ) then
+
+       call FILE_HISTORY_put( HIST_phys(1), DENS_tp )
+       call FILE_HISTORY_put( HIST_phys(2), MOMZ_tp )
+       call FILE_HISTORY_put( HIST_phys(3), MOMX_tp )
+       call FILE_HISTORY_put( HIST_phys(4), MOMY_tp )
+       call FILE_HISTORY_put( HIST_phys(5), RHOT_tp )
+
+       call FILE_HISTORY_put( HIST_damp(1), damp_t_DENS )
+       call FILE_HISTORY_put( HIST_damp(2), damp_t_MOMZ )
+       call FILE_HISTORY_put( HIST_damp(3), damp_t_MOMX )
+       call FILE_HISTORY_put( HIST_damp(4), damp_t_MOMY )
+       call FILE_HISTORY_put( HIST_damp(5), damp_t_RHOT )
+
+       call FILE_HISTORY_query( HIST_mflx(1), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS-1, KE
+             mflx(k,i,j,ZDIR) = mflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_mflx(1), mflx(:,:,:,ZDIR) )
+       end if
+       call FILE_HISTORY_query( HIST_mflx(2), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = ISB, IEB
+          do k = KS, KE
+             mflx(k,i,j,XDIR) = mflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_mflx(2), mflx(:,:,:,XDIR) )
+       end if
+       call FILE_HISTORY_query( HIST_mflx(3), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JSB, JEB
+          do i = IS, IE
+          do k = KS, KE
+             mflx(k,i,j,YDIR) = mflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_mflx(3), mflx(:,:,:,YDIR) )
+       end if
+
+       call FILE_HISTORY_query( HIST_tflx(1), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS-1, KE
+             tflx(k,i,j,ZDIR) = tflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_tflx(1), tflx(:,:,:,ZDIR) )
+       end if
+       call FILE_HISTORY_query( HIST_tflx(2), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = ISB, IEB
+          do k = KS, KE
+             tflx(k,i,j,XDIR) = tflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_tflx(2), tflx(:,:,:,XDIR) )
+       end if
+       call FILE_HISTORY_query( HIST_tflx(3), do_put )
+       if ( do_put ) then
+          !$omp parallel do
+          do j = JSB, JEB
+          do i = IS, IE
+          do k = KS, KE
+             tflx(k,i,j,YDIR) = tflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( HIST_tflx(3), tflx(:,:,:,YDIR) )
+       end if
+
+    end if
+
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve
-
-#ifdef CHECK_MASS
-  subroutine check_mass( &
-       DENS, DAMP_DENS, &
-       mflx_hi, tflx_hi, &
-       GSQRT, MAPF, &
-       RCDX, RCDY, &
-       dt, step, &
-       BND_W, BND_E, BND_S, BND_N &
-       )
-    use mpi
-    use scale_atmos_grid_cartesC_real, only: &
-       vol => ATMOS_GRID_CARTESC_REAL_VOL
-    use scale_comm_cartesC, only: &
-       COMM_datatype, &
-       COMM_world
-    use scale_file_history, only: &
-       FILE_HISTORY_in
-    implicit none
-    real(RP), intent(in) :: DENS     (KA,IA,JA)
-    real(RP), intent(in) :: DAMP_DENS(KA,IA,JA)
-    real(RP), intent(in) :: mflx_hi  (KA,IA,JA,3)
-    real(RP), intent(in) :: tflx_hi  (KA,IA,JA,3)
-    real(RP), intent(in) :: GSQRT    (KA,IA,JA,7)
-    real(RP), intent(in) :: MAPF     (   IA,JA,2,7)
-    real(RP), intent(in) :: RCDX(IA)
-    real(RP), intent(in) :: RCDY(JA)
-    real(RP), intent(in) :: dt
-    integer,  intent(in) :: step
-    logical,  intent(in) :: BND_W
-    logical,  intent(in) :: BND_E
-    logical,  intent(in) :: BND_S
-    logical,  intent(in) :: BND_N
-
-    ! lateral boundary flux
-    real(RP) :: mflx_lb_horizontal(KA)
-    real(RP) :: allmflx_lb_horizontal(KA)
-    real(RP) :: mflx_lb_total
-    real(RP) :: mass_total
-    real(RP) :: mass_total2
-    real(RP) :: allmflx_lb_total
-    real(RP) :: allmass_total
-    real(RP) :: allmass_total2
-
-    integer :: k, i, j
-    integer :: ierr
-
-
-    call FILE_HISTORY_in(mflx_hi(:,:,:,ZDIR), 'MFLXZ', 'momentum flux of z-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,XDIR), 'MFLXX', 'momentum flux of x-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(mflx_hi(:,:,:,YDIR), 'MFLXY', 'momentum flux of y-direction (w/ CHECK_MASS)', 'kg/m2/s', dim_type='ZXYH' )
-
-    call FILE_HISTORY_in(tflx_hi(:,:,:,ZDIR), 'TFLXZ', 'potential temperature flux of z-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZHXY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,XDIR), 'TFLXX', 'potential temperature flux of x-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXHY' )
-    call FILE_HISTORY_in(tflx_hi(:,:,:,YDIR), 'TFLXY', 'potential temperature flux of y-direction (w/ CHECK_MASS)', 'K*kg/m2/s', dim_type='ZXYH' )
-
-    mflx_lb_total            = 0.0_RP
-    mflx_lb_horizontal(:)    = 0.0_RP
-    allmflx_lb_horizontal(:) = 0.0_RP
-
-    if ( BND_W ) then ! for western boundary
-       i = IS
-       do j = JS, JE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i-1,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-
-       end do
-       end do
-    end if
-    if ( BND_E ) then ! for eastern boundary
-       i = IE
-       do j = JS, JE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,XDIR) * RCDX(i) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
-    if ( BND_S ) then ! for sourthern boundary
-       j = JS
-       do i = IS, IE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) + mflx_hi(k,i,j-1,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
-    if ( BND_N ) then ! for northern boundary
-       j = JE
-       do i = IS, IE
-       do k = KS, KE
-          mflx_lb_total = mflx_lb_total - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-          mflx_lb_horizontal(k) = mflx_lb_horizontal(k) - mflx_hi(k,i,j,YDIR) * RCDY(j) * vol(k,i,j) &
-               * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) * dt
-       end do
-       end do
-    end if
-
-    mass_total  = 0.0_RP
-    mass_total2 = 0.0_RP
-
-    ! check total mass in the inner region
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       mass_total  = mass_total  + DENS     (k,i,j) * vol(k,i,j)
-       mass_total2 = mass_total2 + DAMP_DENS(k,i,j) * vol(k,i,j)
-    end do
-    end do
-    end do
-
-    call MPI_Allreduce( mflx_lb_total,        &
-                        allmflx_lb_total,     &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
-
-    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mflx_lb:', step, allmflx_lb_total
-
-    call MPI_Allreduce( mass_total,           &
-                        allmass_total,        &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
-
-    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mass   :', step, allmass_total
-
-    call MPI_Allreduce( mass_total2,          &
-                        allmass_total2,       &
-                        1,                    &
-                        COMM_datatype,        &
-                        MPI_SUM,              &
-                        COMM_world,           &
-                        ierr                  )
-
-    LOG_INFO("check_mass",'(A,1x,I1,1x,ES24.17)') 'total mass2  :', step, allmass_total2
-
-    call MPI_Allreduce( mflx_lb_horizontal(KS:KE),    &
-                        allmflx_lb_horizontal(KS:KE), &
-                        KMAX,                         &
-                        COMM_datatype,                &
-                        MPI_SUM,                      &
-                        COMM_world,                   &
-                        ierr                          )
-
-    call FILE_HISTORY_in(allmflx_lb_horizontal(:), 'ALLMOM_lb_hz',                           &
-                    'horizontally total momentum flux from lateral boundary (w/ CHECK_MASS)', 'kg/m2/s' )
-
-    return
-  end subroutine check_mass
-#endif
 
 end module scale_atmos_dyn_tstep_large_fvm_heve
