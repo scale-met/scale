@@ -61,8 +61,8 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, pointer     :: RHOQ_tn(:,:,:)
 
   ! flux
-  real(RP), private, allocatable :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
-  real(RP), private, allocatable :: tflx(:,:,:,:) ! rho * theta * vel(x,y,z) * GSQRT / mapf
+  real(RP), private, allocatable, target :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
+  real(RP), private, allocatable         :: tflx(:,:,:,:) ! rho * theta * vel(x,y,z) * GSQRT / mapf
 
   ! for communication
   integer :: I_COMM_DENS = 1
@@ -94,6 +94,20 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   integer, allocatable :: HIST_phys_QTRC(:)
   integer, allocatable :: HIST_damp_QTRC(:)
 
+  ! for monitor
+  real(RP), allocatable, target :: zero_x(:,:)
+  real(RP), allocatable, target :: zero_y(:,:)
+  integer :: MONIT_damp_mass
+  integer :: MONIT_damp_qtot
+  integer :: MONIT_mflx_west
+  integer :: MONIT_mflx_east
+  integer :: MONIT_mflx_south
+  integer :: MONIT_mflx_north
+  integer :: MONIT_qflx_west
+  integer :: MONIT_qflx_east
+  integer :: MONIT_qflx_south
+  integer :: MONIT_qflx_north
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -116,6 +130,9 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg, &
        FILE_HISTORY_put
+    use scale_monitor, only: &
+       MONITOR_reg, &
+       MONITOR_put
     implicit none
 
     ! MPI_RECV_INIT requires intent(inout)
@@ -265,6 +282,59 @@ contains
     end do
 
 
+    ! for monitor
+    allocate( zero_x(KA,JA) )
+    allocate( zero_y(KA,IA) )
+    zero_x(:,:) = 0.0_RP
+    zero_y(:,:) = 0.0_RP
+
+    call MONITOR_reg( "MASSTND_DAMP", "mass tendency by the damping", "kg/s", & ! [IN]
+                      MONIT_damp_mass,                                        & ! [OUT]
+                      is_tendency=.true.                                      ) ! [IN]
+
+    call MONITOR_reg( "MASSFLX_WEST",  "mass flux at the western boundary",  "kg/s", & ! [IN]
+                      MONIT_mflx_west,                                               & ! [OUT]
+                      dim_type="ZY-W", is_tendency=.true.                            ) ! [IN]
+    call MONITOR_reg( "MASSFLX_EAST",  "mass flux at the eastern boundary",  "kg/s", & ! [IN]
+                      MONIT_mflx_east,                                               & ! [OUT]
+                      dim_type="ZY-E", is_tendency=.true.                            ) ! [IN]
+    call MONITOR_reg( "MASSFLX_SOUTH", "mass flux at the southern boundary", "kg/s", & ! [IN]
+                      MONIT_mflx_south,                                              & ! [OUT]
+                      dim_type="ZX-S", is_tendency=.true.                            ) ! [IN]
+    call MONITOR_reg( "MASSFLX_NORTH", "mass flux at the northern boundary", "kg/s", & ! [IN]
+                      MONIT_mflx_north,                                              & ! [OUT]
+                      dim_type="ZX-N", is_tendency=.true.                            ) ! [IN]
+
+    call MONITOR_reg( "QTOTTND_DAMP", "water mass tendency by the damping", "kg/s", & ! [IN]
+                      MONIT_damp_qtot,                                              & ! [OUT]
+                      is_tendency=.true.                                            ) ! [IN]
+
+    call MONITOR_reg( "QTOTFLX_WEST",  "water mass flux at the western boundary",  "kg/s", & ! [IN]
+                      MONIT_qflx_west,                                                     & ! [OUT]
+                      dim_type="ZY-W", is_tendency=.true.                                  ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_EAST",  "water mass flux at the eastern boundary",  "kg/s", & ! [IN]
+                      MONIT_qflx_east,                                                     & ! [OUT]
+                      dim_type="ZY-E", is_tendency=.true.                                  ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_SOUTH", "water mass flux at the southern boundary", "kg/s", & ! [IN]
+                      MONIT_qflx_south,                                                    & ! [OUT]
+                      dim_type="ZX-S", is_tendency=.true.                                  ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_NORTH", "water mass flux at the northern boundary", "kg/s", & ! [IN]
+                      MONIT_qflx_north,                                                    & ! [OUT]
+                      dim_type="ZX-N", is_tendency=.true.                                  ) ! [IN]
+
+    ! at t=0
+    call MONITOR_put( MONIT_damp_mass,  ZERO(:,:,:) )
+    call MONITOR_put( MONIT_mflx_west,  zero_x(:,:) )
+    call MONITOR_put( MONIT_mflx_east,  zero_x(:,:) )
+    call MONITOR_put( MONIT_mflx_south, zero_y(:,:) )
+    call MONITOR_put( MONIT_mflx_north, zero_y(:,:) )
+
+    call MONITOR_put( MONIT_damp_qtot,  ZERO(:,:,:) )
+    call MONITOR_put( MONIT_qflx_west,  zero_x(:,:) )
+    call MONITOR_put( MONIT_qflx_east,  zero_x(:,:) )
+    call MONITOR_put( MONIT_qflx_south, zero_y(:,:) )
+    call MONITOR_put( MONIT_qflx_north, zero_y(:,:) )
+
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
 
@@ -324,6 +394,8 @@ contains
        FILE_HISTORY_query, &
        FILE_HISTORY_put,   &
        FILE_HISTORY_set_disable
+    use scale_monitor, only: &
+       MONITOR_put
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short
     use scale_atmos_dyn_tinteg_tracer, only: &
@@ -473,6 +545,14 @@ contains
     ! for history
     logical :: do_put
 
+    ! for monitor
+    real(RP), pointer :: mflx_x(:,:)
+    real(RP), pointer :: mflx_y(:,:)
+    real(RP), target  :: qflx_west (KA,JA)
+    real(RP), target  :: qflx_east (KA,JA)
+    real(RP), target  :: qflx_south(KA,IA)
+    real(RP), target  :: qflx_north(KA,IA)
+
     integer  :: i, j, k, iq, step
     integer  :: iv
     integer  :: n
@@ -518,6 +598,23 @@ contains
 !OCL XFILL
     mflx_av(:,:,:,:) = 0.0_RP
 
+
+!OCL XFILL
+    !$omp parallel do
+    do j = JS, JE
+    do k = KS, KE
+       qflx_west(k,j) = 0.0_RP
+       qflx_east(k,j) = 0.0_RP
+    end do
+    end do
+!OCL XFILL
+    !$omp parallel do
+    do i = IS, IE
+    do k = KS, KE
+       qflx_south(k,i) = 0.0_RP
+       qflx_north(k,i) = 0.0_RP
+    end do
+    end do
 
 #ifdef DRY
     CPovCV = CPdry / CVdry
@@ -1138,7 +1235,7 @@ contains
                 call FILE_HISTORY_put( HIST_qflx(1,iq), qflx(:,:,:,ZDIR) )
              end if
              call FILE_HISTORY_query( HIST_qflx(2,iq), do_put )
-             if ( do_put ) then
+             if ( do_put .or. MONIT_qflx_west > 0 .or. MONIT_qflx_east > 0 ) then
                 !$omp parallel do
                 do j = JS, JE
                 do i = ISB, IEB
@@ -1150,7 +1247,7 @@ contains
                 call FILE_HISTORY_put( HIST_qflx(2,iq), qflx(:,:,:,XDIR) )
              end if
              call FILE_HISTORY_query( HIST_qflx(3,iq), do_put )
-             if ( do_put ) then
+             if ( do_put .or. MONIT_qflx_south > 0 .or. MONIT_qflx_north > 0 ) then
                 !$omp parallel do
                 do j = JSB, JEB
                 do i = IS, IE
@@ -1161,6 +1258,43 @@ contains
                 end do
                 call FILE_HISTORY_put( HIST_qflx(3,iq), qflx(:,:,:,YDIR) )
              end if
+
+             if ( TRACER_MASS(iq) == 1.0_RP ) then
+                if ( BND_W .and. MONIT_qflx_west > 0 ) then
+                   !$omp parallel do
+                   do j = JS, JE
+                   do k = KS, KE
+                      qflx_west(k,j) = qflx_west(k,j) + qflx(k,IS-1,j,XDIR)
+                   end do
+                   end do
+                end if
+                if ( BND_E .and. MONIT_qflx_east > 0 ) then
+                   !$omp parallel do
+                   do j = JS, JE
+                   do k = KS, KE
+                      qflx_east(k,j) = qflx_east(k,j) + qflx(k,IE,j,XDIR)
+                   end do
+                   end do
+                end if
+                if ( BND_S .and. MONIT_qflx_south > 0 ) then
+                   !$omp parallel do
+                   do i = IS, IE
+                   do k = KS, KE
+                      qflx_south(k,i) = qflx_south(k,i) + qflx(k,i,JS-1,YDIR)
+                   end do
+                   end do
+                end if
+                if ( BND_N .and. MONIT_qflx_north > 0 ) then
+                   !$omp parallel do
+                   do i = IS, IE
+                   do k = KS, KE
+                      qflx_north(k,i) = qflx_north(k,i) + qflx(k,i,JE,YDIR)
+                   end do
+                   end do
+                end if
+
+             end if
+
           end if
 
        else
@@ -1198,6 +1332,7 @@ contains
 
     if ( Llast ) then
 
+       ! history
        call FILE_HISTORY_put( HIST_phys(1), DENS_tp )
        call FILE_HISTORY_put( HIST_phys(2), MOMZ_tp )
        call FILE_HISTORY_put( HIST_phys(3), MOMX_tp )
@@ -1223,7 +1358,7 @@ contains
           call FILE_HISTORY_put( HIST_mflx(1), mflx(:,:,:,ZDIR) )
        end if
        call FILE_HISTORY_query( HIST_mflx(2), do_put )
-       if ( do_put ) then
+       if ( do_put .or. MONIT_mflx_west > 0 .or. MONIT_mflx_east > 0 ) then
           !$omp parallel do
           do j = JS, JE
           do i = ISB, IEB
@@ -1235,7 +1370,7 @@ contains
           call FILE_HISTORY_put( HIST_mflx(2), mflx(:,:,:,XDIR) )
        end if
        call FILE_HISTORY_query( HIST_mflx(3), do_put )
-       if ( do_put ) then
+       if ( do_put .or. MONIT_mflx_south > 0 .or. MONIT_mflx_north > 0 ) then
           !$omp parallel do
           do j = JSB, JEB
           do i = IS, IE
@@ -1283,6 +1418,69 @@ contains
           end do
           call FILE_HISTORY_put( HIST_tflx(3), tflx(:,:,:,YDIR) )
        end if
+
+
+       ! monitor
+       call MONITOR_put( MONIT_damp_mass, damp_t_DENS(:,:,:) )
+
+       if ( BND_W .and. MONIT_mflx_west > 0 ) then
+          mflx_x => mflx(:,IS-1,:,XDIR)
+       else
+          mflx_x => zero_x
+       end if
+       call MONITOR_put( MONIT_mflx_west, mflx_x(:,:) )
+
+       if ( BND_E .and. MONIT_mflx_east > 0 ) then
+          mflx_x => mflx(:,IE,:,XDIR)
+       else
+          mflx_x => zero_x
+       end if
+       call MONITOR_put( MONIT_mflx_east, mflx_x(:,:) )
+
+       if ( BND_S .and. MONIT_mflx_south > 0 ) then
+          mflx_y => mflx(:,:,JS-1,YDIR)
+       else
+          mflx_y => zero_y
+       end if
+       call MONITOR_put( MONIT_mflx_south, mflx_y(:,:) )
+
+       if ( BND_N .and. MONIT_mflx_north > 0 ) then
+          mflx_y => mflx(:,:,JE,YDIR)
+       else
+          mflx_y => zero_y
+       end if
+       call MONITOR_put( MONIT_mflx_north, mflx_y(:,:) )
+
+
+       call MONITOR_put( MONIT_damp_qtot, DENS_tq(:,:,:) )
+
+       if ( BND_W ) then
+          mflx_x => qflx_west
+       else
+          mflx_x => zero_x
+       end if
+       call MONITOR_put( MONIT_qflx_west, mflx_x(:,:) )
+
+       if ( BND_E ) then
+          mflx_x => qflx_east
+       else
+          mflx_x => zero_x
+       end if
+       call MONITOR_put( MONIT_qflx_east, mflx_x(:,:) )
+
+       if ( BND_S ) then
+          mflx_y => qflx_south
+       else
+          mflx_y => zero_y
+       end if
+       call MONITOR_put( MONIT_qflx_south, mflx_y(:,:) )
+
+       if ( BND_N ) then
+          mflx_y => qflx_north
+       else
+          mflx_y => zero_y
+       end if
+       call MONITOR_put( MONIT_qflx_north, mflx_y(:,:) )
 
     end if
 
