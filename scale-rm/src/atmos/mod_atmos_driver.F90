@@ -402,14 +402,14 @@ contains
 
     !########## Adjustment ##########
     ! Microphysics
-    if ( ATMOS_sw_phy_mp .and. do_phy_mp ) then
+    if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver_adjustment
        call PROF_rapend  ('ATM_Microphysics', 1)
        call ATMOS_vars_calc_diagnostics
     endif
     ! Aerosol
-    if ( ATMOS_sw_phy_ae .and. do_phy_ae ) then
+    if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver_adjustment
        call PROF_rapend  ('ATM_Aerosol', 1)

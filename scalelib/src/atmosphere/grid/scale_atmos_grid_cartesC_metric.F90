@@ -232,8 +232,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! G^1/2
-    do j = JS, JE
-    do i = IS, IE
+    do j = 1, JA
+    do i = 1, IA
        ! at (x,y,z)
        do k = 1, KA
           ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XYZ) = ( ATMOS_GRID_CARTESC_REAL_FZ(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
@@ -274,24 +274,9 @@ contains
     enddo
     enddo
 
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,1), 1 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,2), 2 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,3), 3 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,4), 4 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,5), 5 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,6), 6 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,7), 7 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,1), 1 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,2), 2 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,3), 3 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,4), 4 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,5), 5 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,6), 6 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,7), 7 )
-
     ! Jacobian * G^1/2
-    do j = JS, JE
-    do i = IS, IE
+    do j = 2, JA-1
+    do i = 2, IA-1
     do k = 1,  KA
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
@@ -304,8 +289,8 @@ contains
     enddo
     enddo
 
-    do j = JS, JE
-    do i = IS, IE
+    do j = 2, JA-1
+    do i = 2, IA-1
     do k = 1,  KA
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
@@ -327,13 +312,13 @@ contains
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14, .false. )
 
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16 )
@@ -342,13 +327,13 @@ contains
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20 )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21 )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21, .false. )
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_terrainfollowing
