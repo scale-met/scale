@@ -71,6 +71,8 @@ module test_atmos_dyn
   real(RP), allocatable :: RHOT_o(:,:,:)
   real(RP), allocatable :: QTRC_o(:,:,:,:)
 
+  real(RP), allocatable :: CORIOLIS(:,:)
+
   real(RP), allocatable :: REF_dens(:,:,:)
   real(RP), allocatable :: REF_pott(:,:,:)
   real(RP), allocatable :: REF_qv  (:,:,:)
@@ -187,6 +189,8 @@ contains
   allocate( RHOT_o(KA,IA,JA) )
   allocate( QTRC_o(KA,IA,JA,QA) )
 
+  allocate( CORIOLIS(IA,JA) )
+
   allocate( REF_dens(KA,IA,JA) )
   allocate( REF_pott(KA,IA,JA) )
   allocate( REF_qv  (KA,IA,JA) )
@@ -215,6 +219,8 @@ contains
   BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
+
+  CORIOLIS(:,:) = 0.0_RP
 
   nd_order = 2
   nd_coef = 0.01_RP
@@ -249,9 +255,7 @@ contains
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
-       wdamp_tau, wdamp_height, FZ,        & ! (in)
-       'PLANE', 0.0_RP, 0.0_RP,            & ! (in)
-       DOMAIN_CENTER_Y, CY, lat            ) ! (in)
+       wdamp_tau, wdamp_height, FZ         ) ! (in)
 
   do k = KS+1, KE
      if ( CBFZ(k) > 0.0_RP ) then
@@ -347,6 +351,7 @@ subroutine test_undef
           PROG,                                        & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+          CORIOLIS,                                    & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
@@ -404,6 +409,7 @@ subroutine test_const
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
@@ -507,6 +513,7 @@ subroutine test_conserve
          PROG,                                        & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+         CORIOLIS,                                    & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
@@ -638,6 +645,7 @@ subroutine test_cwc
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
@@ -730,6 +738,7 @@ subroutine test_fctminmax
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)

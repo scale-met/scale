@@ -42,8 +42,6 @@ module scale_atmos_dyn
   !
   !++ Public parameters & variables
   !
-  real(RP), public, allocatable :: CORIOLIS(:,:) ! coriolis term
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -93,12 +91,6 @@ contains
        wdamp_tau,                    &
        wdamp_height,                 &
        FZ,                           &
-       coriolis_type,                &
-       coriolis_f0,                  &
-       coriolis_beta,                &
-       coriolis_y0,                  &
-       CY,                           &
-       lat,                          &
        none                          )
     use scale_prc, only: &
        PRC_abort
@@ -108,7 +100,6 @@ contains
        PRC_HAS_N, &
        PRC_HAS_S
     use scale_const, only: &
-       OHM   => CONST_OHM,  &
        UNDEF => CONST_UNDEF
     use scale_comm_cartesC, only: &
        COMM_vars8_init
@@ -154,15 +145,8 @@ contains
     real(RP),          intent(in)    :: wdamp_tau
     real(RP),          intent(in)    :: wdamp_height
     real(RP),          intent(in)    :: FZ(0:KA)
-    character(len=*),  intent(in)    :: coriolis_type
-    real(RP),          intent(in)    :: coriolis_f0
-    real(RP),          intent(in)    :: coriolis_beta
-    real(RP),          intent(in)    :: coriolis_y0
-    real(RP),          intent(in)    :: CY(JA)
-    real(RP),          intent(in)    :: lat(IA,JA)
     logical, optional, intent(in)    :: none
 
-    integer :: j
     integer :: iv, iq
     !---------------------------------------------------------------------------
 
@@ -181,7 +165,6 @@ contains
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
-       allocate( CORIOLIS  (IA,JA)        )
        allocate( mflx_hi   (KA,IA,JA,3)   )
        allocate( num_diff  (KA,IA,JA,5,3) )
        allocate( num_diff_q(KA,IA,JA,3)   )
@@ -217,20 +200,6 @@ contains
                                    wdamp_tau, wdamp_height, & ! [IN]
                                    FZ(:)                    ) ! [IN]
 
-       ! coriolis parameter
-       select case ( coriolis_type )
-       case ( 'PLANE' )
-          do j = 1, JA
-             CORIOLIS(:,j) = coriolis_f0 + coriolis_beta * ( CY(j) - coriolis_y0 )
-          end do
-       case ( 'SPHERE' )
-          CORIOLIS(:,:) = 2.0_RP * OHM * sin( lat(:,:) )
-       case default
-          LOG_ERROR("ATMOS_DYN_setup",*) 'Coriolis type is invalid: ', trim(coriolis_type)
-          LOG_ERROR_CONT(*) 'The type must be PLANE or SPHERE'
-          call PRC_abort
-       end select
-
     else
 
        call COMM_vars8_init( 'DENS', DENS, I_COMM_DENS )
@@ -261,6 +230,7 @@ contains
        PROG,                                                 &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
+       CORIOLIS,                                             &
        CDZ, CDX, CDY, FDZ, FDX, FDY,                         &
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   &
        PHI, GSQRT,                                           &
@@ -308,6 +278,8 @@ contains
     real(RP), intent(in)    :: MOMY_tp(KA,IA,JA)
     real(RP), intent(in)    :: RHOT_tp(KA,IA,JA)
     real(RP), intent(in)    :: RHOQ_tp(KA,IA,JA,QA)
+
+    real(RP), intent(in)    :: CORIOLIS(IA,JA)
 
     real(RP), intent(in)    :: CDZ (KA)
     real(RP), intent(in)    :: CDX (IA)
