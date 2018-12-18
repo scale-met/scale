@@ -445,7 +445,7 @@ contains
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,advcv,advch) &
 #ifdef HIST_TEND
-       !$omp shared(advcv_t,advch_t,lhist) &
+       !$omp shared(advch_t,lhist) &
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(DENS0,Sr,mflx_hi,DENS_t) &
@@ -463,13 +463,11 @@ contains
 #endif
           advcv = -   ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k)
           advch = - ( ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                    + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
-          Sr(k,i,j) =  ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + DENS_t(k,i,j)
+                    + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) )
+          Sr(k,i,j) =  ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) + DENS_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advcv_t(k,i,j,I_DENS) = advcv / GSQRT(k,i,j,I_XYZ)
-             advch_t(k,i,j,I_DENS) = advch / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_DENS) = ( advch + advcv ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
           end if
 #endif
        enddo
@@ -647,13 +645,11 @@ contains
 #endif
           advcv = -   ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
           advch = - ( ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                    + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
-          St(k,i,j) = ( advcv + advch ) / GSQRT(k,i,j,I_XYZ) + RHOT_t(k,i,j)
+                    + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) )
+          St(k,i,j) = ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) + RHOT_t(k,i,j)
 #ifdef HIST_TEND
           if ( lhist ) then
-             advcv_t(k,i,j,I_RHOT) = advcv / GSQRT(k,i,j,I_XYZ)
-             advch_t(k,i,j,I_RHOT) = advch / GSQRT(k,i,j,I_XYZ)
+             advch_t(k,i,j,I_RHOT) = ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
           endif
 #endif
        enddo
@@ -680,7 +676,7 @@ contains
        !$omp shared(RHOT) &
 #endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
-       !$omp shared(mflx_hi,MOMZ_RK,MOMZ0) &
+       !$omp shared(mflx_hi,tflx_hi,MOMZ_RK,MOMZ0) &
        !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,POTT,DPRES) &
        !$omp shared(GRAV,dtrk,REF_dens,Sr,Sw,St,RT2P) &
        !$omp shared(ATMOS_DYN_FVM_flux_valueW_Z) &
@@ -734,7 +730,9 @@ contains
           ! for debug (change to explicit integration)
              C(k-KS+1) = MOMZ(k,i,j)
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-                                 + J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+                                 + J33G * MOMZ(k,i,j)         / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+             tflx_hi(k,i,j,ZDIR) = tflx_hi(k,i,j,ZDIR) &
+                                 + J33G * MOMZ(k,i,j) * PT(k) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              ! use not density at the half level but mean density between CZ(k) and C(k+1)
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                   + dtrk*( &
@@ -742,9 +740,11 @@ contains
                   - GRAV * 0.5_RP * ( (DENS(k,i,j)-REF_dens(k,i,j)) + (DENS(k+1,i,j)-REF_dens(k+1,i,j)) ) &
                   + Sw(k,i,j) )
 #else
-             ! z-momentum flux
+             ! z-flux
              mflx_hi(k,i,j,ZDIR) = mflx_hi(k,i,j,ZDIR) &
-                                 + J33G * C(k-KS+1) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+                                 + J33G * C(k-KS+1)         / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
+             tflx_hi(k,i,j,ZDIR) = tflx_hi(k,i,j,ZDIR) &
+                                 + J33G * C(k-KS+1) * PT(k) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
              ! z-momentum
              MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
                             + ( C(k-KS+1) - MOMZ(k,i,j) )
@@ -754,31 +754,31 @@ contains
           MOMZ_RK(KE  ,i,j) = 0.0_RP
 
           ! density and rho*theta
-          advcv = - C(1)            * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1)          * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           DENS_RK(KS,i,j) = DENS0(KS,i,j) + dtrk * ( advcv + Sr(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_DENS) = advcv
 #endif
-          advcv = - C(1)*PT(KS) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
+          advcv = - C(1) * PT(KS) * J33G * RCDZ(KS) / GSQRT(KS,i,j,I_XYZ) ! C(0) = 0
           RHOT_RK(KS,i,j) = RHOT0(KS,i,j) + dtrk * ( advcv + St(KS,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KS,i,j,I_RHOT) = advcv
 #endif
           do k = KS+1, KE-1
-             advcv = - ( C(k-KS+1)           - C(k-KS) ) &
+             advcv = - ( C(k-KS+1)         - C(k-KS) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              DENS_RK(k,i,j) = DENS0(k,i,j) + dtrk * ( advcv + Sr(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_DENS) = advcv
 #endif
-             advcv = - ( C(k-KS+1)*PT(k) - C(k-KS)*PT(k-1) ) &
+             advcv = - ( C(k-KS+1) * PT(k) - C(k-KS) * PT(k-1) ) &
                    * J33G * RCDZ(k) / GSQRT(k,i,j,I_XYZ)
              RHOT_RK(k,i,j) = RHOT0(k,i,j) + dtrk * ( advcv + St(k,i,j) )
 #ifdef HIST_TEND
              if ( lhist ) advcv_t(k,i,j,I_RHOT) = advcv
 #endif
           enddo
-          advcv = C(KE-KS)                * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
+          advcv = C(KE-KS)            * J33G * RCDZ(KE) / GSQRT(KE,i,j,I_XYZ) ! C(KE-KS+1) = 0
           DENS_RK(KE,i,j) = DENS0(KE,i,j) + dtrk * ( advcv + Sr(KE,i,j) )
 #ifdef HIST_TEND
           if ( lhist ) advcv_t(KE,i,j,I_DENS) = advcv
