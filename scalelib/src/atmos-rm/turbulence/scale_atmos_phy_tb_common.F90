@@ -1232,7 +1232,7 @@ contains
        a, b, c, dt, &
        IIS, IIE, JJS, JJE )
     use scale_atmos_grid_cartesC, only: &
-       FDZ  => ATMOS_GRID_CARTESC_FDZ,  &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
        RFDY => ATMOS_GRID_CARTESC_RFDY
@@ -1270,8 +1270,7 @@ contains
        qflx_phi(:,:,:,ZDIR) = 0.0_RP
     else
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G) &
-       !$omp shared(FDZ)
+       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYW,RFDZ,J33G)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1310,7 +1309,7 @@ contains
     ! (y-z plane; u,y,z)
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,Kh,FACT,PHI,qflx_phi,GSQRT,I_XYZ,RFDX,J13G,I_UYZ) &
-    !$omp shared(FDZ)
+    !$omp shared(RCDZ)
     do j = JJS,   JJE
     do i = IIS-1, IIE
     do k = KS+1,  KE-1
@@ -1324,14 +1323,14 @@ contains
        call CHECK( __LINE__, RFDX(i) )
 #endif
        qflx_phi(k,i,j,XDIR) = - 0.25_RP & ! 1/2/2
-               * ( DENS(k,i,j)+DENS(k,i+1,j) ) &
-               * ( Kh(k,i,j) + Kh(k,i+1,j) ) * FACT &
+               * ( DENS(k,i,j) + DENS(k,i+1,j) ) &
+               * ( Kh  (k,i,j) + Kh  (k,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(k,i+1,j,I_XYZ) * PHI(k,i+1,j) &
                    - GSQRT(k,i  ,j,I_XYZ) * PHI(k,i  ,j) ) * RFDX(i) &
-                 + ( J13G(k+1,i,j,I_UYZ) * ( PHI(k+1,i+1,j)+PHI(k+1,i,j) ) &
-                   - J13G(k-1,i,j,I_UYZ) * ( PHI(k-1,i+1,j)+PHI(k-1,i,j) ) &
-                   ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                 + ( J13G(k  ,i,j,I_UYZ) * ( PHI(k+1,i+1,j)+PHI(k+1,i,j)+PHI(k  ,i+1,j)+PHI(k  ,i,j) ) &
+                   - J13G(k-1,i,j,I_UYZ) * ( PHI(k  ,i+1,j)+PHI(k  ,i,j)+PHI(k-1,i+1,j)+PHI(k-1,i,j) ) &
+                   ) * 0.25_RP * RCDZ(k) &
                ) / GSQRT(k,i,j,I_UYZ)
     enddo
     enddo
@@ -1352,8 +1351,8 @@ contains
        call CHECK( __LINE__, RFDX(i) )
 #endif
        qflx_phi(KS,i,j,XDIR) = - 0.25_RP & ! 1/2/2
-               * ( DENS(KS,i,j)+DENS(KS,i+1,j) ) &
-               * ( Kh(KS,i,j) + Kh(KS,i+1,j) ) * FACT &
+               * ( DENS(KS,i,j) + DENS(KS,i+1,j) ) &
+               * ( Kh  (KS,i,j) + Kh  (KS,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(KS,i+1,j,I_XYZ) * PHI(KS,i+1,j) &
                    - GSQRT(KS,i  ,j,I_XYZ) * PHI(KS,i  ,j) ) * RFDX(i) &
@@ -1362,8 +1361,8 @@ contains
                    ) * 0.5_RP * RFDZ(KS) &
                ) * MAPF(i,j,1,I_UY) / GSQRT(KS,i,j,I_UYZ)
        qflx_phi(KE,i,j,XDIR) = - 0.25_RP & ! 1/2/2
-               * ( DENS(KE,i,j)+DENS(KE,i+1,j) ) &
-               * ( Kh(KE,i,j) + Kh(KE,i+1,j) ) * FACT &
+               * ( DENS(KE,i,j) + DENS(KE,i+1,j) ) &
+               * ( Kh  (KE,i,j) + Kh  (KE,i+1,j) ) * FACT &
                * ( &
                    ( GSQRT(KE,i+1,j,I_XYZ) * PHI(KE,i+1,j) &
                    - GSQRT(KE,i  ,j,I_XYZ) * PHI(KE,i  ,j) ) * RFDX(i) &
@@ -1377,10 +1376,10 @@ contains
     i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
     ! (z-x plane; x,v,z)
-    !$omp parallel do default(none)                                                          &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,FACT,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,FDZ) &
-    !$omp shared(MAPF,I_XV)                                                                  &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,Kh,FACT,PHI,RFDY,DENS,qflx_phi,GSQRT,I_XYZ,J23G,I_XVZ,RCDZ) &
+    !$omp shared(MAPF,I_XV)
     do j = JJS-1, JJE
     do i = IIS,   IIE
     do k = KS+1,  KE-1
@@ -1394,14 +1393,14 @@ contains
        call CHECK( __LINE__, RFDY(j) )
 #endif
        qflx_phi(k,i,j,YDIR) = - 0.25_RP &
-               * ( DENS(k,i,j)+DENS(k,i,j+1) ) &
-               * ( Kh(k,i,j) + Kh(k,i,j+1) ) * FACT &
+               * ( DENS(k,i,j) + DENS(k,i,j+1) ) &
+               * ( Kh  (k,i,j) + Kh  (k,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(k,i,j+1,I_XYZ) * PHI(k,i,j+1) &
                      - GSQRT(k,i,j  ,I_XYZ) * PHI(k,i,j  ) ) * RFDY(j) &
-                   + ( J23G(k+1,i,j,I_XVZ) * ( PHI(k+1,i,j+1)+PHI(k+1,i,j) ) &
-                     - J23G(k-1,i,j,I_XVZ) * ( PHI(k-1,i,j+1)+PHI(k-1,i,j) ) &
-                     ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
+                   + ( J23G(k  ,i,j,I_XVZ) * ( PHI(k+1,i,j+1)+PHI(k+1,i,j)+PHI(k  ,i,j+1)+PHI(k  ,i,j) ) &
+                     - J23G(k-1,i,j,I_XVZ) * ( PHI(k  ,i,j+1)+PHI(k  ,i,j)+PHI(k-1,i,j+1)+PHI(k-1,i,j) ) &
+                     ) * 0.25_RP * RCDZ(k) &
                ) * MAPF(i,j,2,I_XV) / GSQRT(k,i,j,I_XVZ)
     enddo
     enddo
@@ -1422,8 +1421,8 @@ contains
        call CHECK( __LINE__, RFDY(j) )
 #endif
        qflx_phi(KS,i,j,YDIR) = - 0.25_RP &
-               * ( DENS(KS,i,j)+DENS(KS,i,j+1) ) &
-               * ( Kh(KS,i,j) + Kh(KS,i,j+1) ) * FACT &
+               * ( DENS(KS,i,j) + DENS(KS,i,j+1) ) &
+               * ( Kh  (KS,i,j) + Kh  (KS,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(KS,i,j+1,I_XYZ) * PHI(KS,i,j+1) &
                      - GSQRT(KS,i,j  ,I_XYZ) * PHI(KS,i,j  ) ) * RFDY(j) &
@@ -1432,8 +1431,8 @@ contains
                      ) * 0.5_RP * RFDZ(KS) &
                ) * MAPF(i,j,2,I_XV) / GSQRT(KS,i,j,I_XVZ)
        qflx_phi(KE,i,j,YDIR) = - 0.25_RP &
-               * ( DENS(KE,i,j)+DENS(KE,i,j+1) ) &
-               * ( Kh(KE,i,j) + Kh(KE,i,j+1) ) * FACT &
+               * ( DENS(KE,i,j) + DENS(KE,i,j+1) ) &
+               * ( Kh  (KE,i,j) + Kh  (KE,i,j+1) ) * FACT &
                * ( &
                      ( GSQRT(KE,i,j+1,I_XYZ) * PHI(KE,i,j+1) &
                      - GSQRT(KE,i,j  ,I_XYZ) * PHI(KE,i,j  ) ) * RFDY(j) &
@@ -1535,8 +1534,7 @@ contains
     use scale_atmos_grid_cartesC, only: &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
-       CDZ  => ATMOS_GRID_CARTESC_CDZ
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ
     implicit none
 
     real(RP), intent(out) :: MOMZ_t_TB(KA,IA,JA)
@@ -1552,63 +1550,36 @@ contains
     integer , intent(in)  :: JJS
     integer , intent(in)  :: JJE
 
-    integer :: k, i, j
+    real(RP) :: fluxZ(KA)
+    integer  :: k, i, j
 
-    !$omp parallel do default(none)                                                          &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMZ_t_TB,GSQRT,I_UYW,I_XVW,QFLX_MOMZ,RCDX,MAPF,I_XY) &
-    !$omp shared(RCDY,J13G,I_XYZ,J23G,CDZ,J33G,RFDZ,I_XYW)                                   &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         fluxZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_XYW,I_UYW,I_XVW,I_XY,I_XV,I_UY, &
+    !$omp        MOMZ_t_TB,QFLX_MOMZ,GSQRT,J13G,J23G,J33G,MAPF,RFDZ,RCDX,RCDY)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-2
-       MOMZ_t_TB(k,i,j) = &
-            - ( ( GSQRT(k,i  ,j,I_UYW) * QFLX_MOMZ(k,i  ,j,XDIR) &
-                - GSQRT(k,i-1,j,I_UYW) * QFLX_MOMZ(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(k,i,j  ,I_XVW) * QFLX_MOMZ(k,i,j  ,YDIR) &
-                - GSQRT(k,i,j-1,I_XVW) * QFLX_MOMZ(k,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,i_XY) &
-              + ( ( J13G (k+1,i,j,I_XYZ) * ( QFLX_MOMZ(k+1,i,j,XDIR) + QFLX_MOMZ(k+1,i-1,j,XDIR) ) &
-                  - J13G (k-1,i,j,I_XYZ) * ( QFLX_MOMZ(k-1,i,j,XDIR) + QFLX_MOMZ(k-1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( J23G (k+1,i,j,I_XYZ) * ( QFLX_MOMZ(k+1,i,j,YDIR) + QFLX_MOMZ(k+1,i,j-1,YDIR) ) &
-                  - J23G (k-1,i,j,I_XYZ) * ( QFLX_MOMZ(k-1,i,j,YDIR) + QFLX_MOMZ(k-1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( CDZ(k+1)+CDZ(k) ) &
-              + J33G * ( QFLX_MOMZ(k+1,i,j,ZDIR) - QFLX_MOMZ(k,i,j,ZDIR) ) * RFDZ(k) ) &
-              / GSQRT(k,i,j,I_XYW)
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do
-    do j = JJS, JJE
-    do i = IIS, IIE
-       MOMZ_t_TB(KS,i,j) = &
-            - ( ( GSQRT(KS,i  ,j,I_UYW) * QFLX_MOMZ(KS,i  ,j,XDIR) &
-                - GSQRT(KS,i-1,j,I_UYW) * QFLX_MOMZ(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(KS,i,j  ,I_XVW) * QFLX_MOMZ(KS,i,j  ,YDIR) &
-                - GSQRT(KS,i,j-1,I_XVW) * QFLX_MOMZ(KS,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_XY) &
-              + ( ( J13G (KS+1,i,j,I_XYZ) * ( QFLX_MOMZ(KS+1,i,j,XDIR) + QFLX_MOMZ(KS+1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( J23G (KS+1,i,j,I_XYZ) * ( QFLX_MOMZ(KS+1,i,j,YDIR) + QFLX_MOMZ(KS+1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( CDZ(KS+1)+CDZ(KS) ) &
-              + J33G * ( QFLX_MOMZ(KS+1,i,j,ZDIR) - QFLX_MOMZ(KS,i,j,ZDIR) ) * RFDZ(KS) ) &
-              / GSQRT(KS,i,j,I_XYW)
-
-       MOMZ_t_TB(KE-1,i,j) = &
-            - ( ( GSQRT(KE-1,i  ,j,I_UYW) * QFLX_MOMZ(KE-1,i  ,j,XDIR) &
-                - GSQRT(KE-1,i-1,j,I_UYW) * QFLX_MOMZ(KE-1,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(KE-1,i,j  ,I_XVW) * QFLX_MOMZ(KE-1,i,j  ,YDIR) &
-                - GSQRT(KE-1,i,j-1,I_XVW) * QFLX_MOMZ(KE-1,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_XY) &
-              + ( ( &
-                  - J13G (KE-2,i,j,I_XYZ) * ( QFLX_MOMZ(KE-2,i,j,XDIR) + QFLX_MOMZ(KE-2,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( &
-                  - J23G (KE-2,i,j,I_XYZ) * ( QFLX_MOMZ(KE-2,i,j,YDIR) + QFLX_MOMZ(KE-2,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( CDZ(KE)+CDZ(KE-1) ) &
-              + J33G * ( QFLX_MOMZ(KE,i,j,ZDIR) - QFLX_MOMZ(KE-1,i,j,ZDIR) ) * RFDZ(KE-1) ) &
-              / GSQRT(KE-1,i,j,I_XYW)
+       do k = KS+1, KE-1
+          fluxZ(k) = ( ( QFLX_MOMZ(k  ,i,j,XDIR) + QFLX_MOMZ(k  ,i-1,j,XDIR) &
+                       + QFLX_MOMZ(k-1,i,j,XDIR) + QFLX_MOMZ(k-1,i-1,j,XDIR) ) * J13G(k,i,j,I_XYZ) * MAPF(i,j,1,I_XY) &
+                     + ( QFLX_MOMZ(k  ,i,j,YDIR) + QFLX_MOMZ(k  ,i,j-1,YDIR) &
+                       + QFLX_MOMZ(k-1,i,j,YDIR) + QFLX_MOMZ(k-1,i,j-1,YDIR) ) * J23G(k,i,j,I_XYZ) * MAPF(i,j,2,I_XY) &
+                     ) * 0.25_RP &
+                   + J33G * QFLX_MOMZ(k,i,j,ZDIR)
+       end do
+       fluxZ(KS) = 0.0_RP
+       fluxZ(KE) = 0.0_RP
+       do k = KS, KE-1
+          MOMZ_t_TB(k,i,j) = &
+            - ( ( ( GSQRT(k,i  ,j,I_UYW) * QFLX_MOMZ(k,i  ,j,XDIR) / MAPF(i  ,j,2,I_UY) &
+                  - GSQRT(k,i-1,j,I_UYW) * QFLX_MOMZ(k,i-1,j,XDIR) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                + ( GSQRT(k,i,j  ,I_XVW) * QFLX_MOMZ(k,i,j  ,YDIR) / MAPF(i,j  ,1,I_XV) &
+                  - GSQRT(k,i,j-1,I_XVW) * QFLX_MOMZ(k,i,j-1,YDIR) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+              + ( fluxZ(k+1) - fluxZ(k) ) * RFDZ(k) &
+              ) / GSQRT(k,i,j,I_XYW)
+       enddo
     enddo
     enddo
 
@@ -1623,8 +1594,7 @@ contains
     use scale_atmos_grid_cartesC, only: &
        RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       FDZ  => ATMOS_GRID_CARTESC_FDZ
+       RFDX => ATMOS_GRID_CARTESC_RFDX
     implicit none
     real(RP), intent(out) :: MOMX_t_TB(KA,IA,JA)
 
@@ -1639,62 +1609,36 @@ contains
     integer , intent(in)  :: JJS
     integer , intent(in)  :: JJE
 
-    integer :: k, i, j
+    real(RP) :: fluxZ(KA)
+    integer  :: k, i, j
 
-    !$omp parallel do default(none)                                                          &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMX_t_TB,GSQRT,I_UVZ,I_XYZ,QFLX_MOMX,RFDX,MAPF,I_UY) &
-    !$omp shared(RCDY,J13G,I_UYW,J23G,FDZ,J33G,RCDZ,I_UYZ)                                   &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp        fluxZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_UYZ,I_UVZ,I_UYW,I_UY,I_XY,I_UV, &
+    !$omp        MOMX_t_TB,QFLX_MOMX,GSQRT,J13G,J23G,J33G,MAPF,RCDZ,RFDX,RCDY)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
-       MOMX_t_TB(k,i,j) = &
-            - ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) &
-                - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
-              + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) &
-                - GSQRT(k,i,j-1,I_UVZ) * QFLX_MOMX(k,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_UY) &
-              + ( ( J13G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i+1,j,XDIR) + QFLX_MOMX(k+1,i,j  ,XDIR) ) &
-                  - J13G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i+1,j,XDIR) + QFLX_MOMX(k-1,i,j  ,XDIR) ) &
-                  ) * MAPF(i,j,1,I_UY) &
-                + ( J23G (k+1,i,j,I_UYW) * ( QFLX_MOMX(k+1,i  ,j,YDIR) + QFLX_MOMX(k+1,i,j-1,YDIR) ) &
-                  - J23G (k-1,i,j,I_UYW) * ( QFLX_MOMX(k-1,i  ,j,YDIR) + QFLX_MOMX(k-1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_UY) &
-                ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-              + J33G * ( QFLX_MOMX(k,i,j,ZDIR) - QFLX_MOMX(k-1,i,j,ZDIR) ) * RCDZ(k) ) &
-            / GSQRT(k,i,j,I_UYZ)
-    enddo
-    enddo
-    enddo
-    !$omp parallel do
-    do j = JJS, JJE
-    do i = IIS, IIE
-       MOMX_t_TB(KS,i,j) = &
-            - ( ( GSQRT(KS,i+1,j,I_XYZ) * QFLX_MOMX(KS,i+1,j,XDIR) &
-                - GSQRT(KS,i  ,j,I_XYZ) * QFLX_MOMX(KS,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
-              + ( GSQRT(KS,i,j  ,I_UVZ) * QFLX_MOMX(KS,i,j  ,YDIR) &
-                - GSQRT(KS,i,j-1,I_UVZ) * QFLX_MOMX(KS,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_UY) &
-              + ( ( J13G (KS+1,i,j,I_UYW) * ( QFLX_MOMX(KS+1,i+1,j,XDIR) + QFLX_MOMX(KS+1,i,j  ,XDIR) ) &
-                  ) * MAPF(i,j,1,I_UY) &
-                + ( J23G (KS+1,i,j,I_UYW) * ( QFLX_MOMX(KS+1,i  ,j,YDIR) + QFLX_MOMX(KS+1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_UY) &
-                ) * 0.5_RP / ( FDZ(KS)+FDZ(KS-1) ) &
-              + J33G * ( QFLX_MOMX(KS,i,j,ZDIR) ) * RCDZ(KS) ) &
-            / GSQRT(KS,i,j,I_UYZ)
-
-       MOMX_t_TB(KE,i,j) = &
-            - ( ( GSQRT(KE,i+1,j,I_XYZ) * QFLX_MOMX(KE,i+1,j,XDIR) &
-                - GSQRT(KE,i  ,j,I_XYZ) * QFLX_MOMX(KE,i  ,j,XDIR) ) * RFDX(i) * MAPF(i,j,1,I_UY) &
-              + ( GSQRT(KE,i,j  ,I_UVZ) * QFLX_MOMX(KE,i,j  ,YDIR) &
-                - GSQRT(KE,i,j-1,I_UVZ) * QFLX_MOMX(KE,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_UY) &
-              + ( ( &
-                  - J13G (KE-1,i,j,I_UYW) * ( QFLX_MOMX(KE-1,i+1,j,XDIR) + QFLX_MOMX(KE-1,i,j  ,XDIR) ) &
-                  ) * MAPF(i,j,1,I_UY) &
-                + ( &
-                  - J23G (KE-1,i,j,I_UYW) * ( QFLX_MOMX(KE-1,i  ,j,YDIR) + QFLX_MOMX(KE-1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_UY) &
-                ) * 0.5_RP / ( FDZ(KE)+FDZ(KE-1) ) &
-              + J33G * ( - QFLX_MOMX(KE-1,i,j,ZDIR) ) * RCDZ(KE) ) &
-            / GSQRT(KE,i,j,I_UYZ)
+       do k = KS, KE-1
+          fluxZ(k) = ( ( QFLX_MOMX(k+1,i+1,j,XDIR) + QFLX_MOMX(k+1,i,j  ,XDIR) &
+                       + QFLX_MOMX(k  ,i+1,j,XDIR) + QFLX_MOMX(k  ,i,j  ,XDIR) ) * J13G(k,i,j,I_UYW) * MAPF(i,j,1,I_UY) &
+                     + ( QFLX_MOMX(k+1,i  ,j,YDIR) + QFLX_MOMX(k+1,i,j-1,YDIR) &
+                       + QFLX_MOMX(k  ,i  ,j,YDIR) + QFLX_MOMX(k  ,i,j-1,YDIR) ) * J23G(k,i,j,I_UYW) * MAPF(i,j,2,I_UY) &
+                     ) * 0.25_RP &
+                   + J33G * QFLX_MOMX(k,i,j,ZDIR)
+       end do
+       fluxZ(KS-1) = 0.0_RP
+       fluxZ(KE  ) = 0.0_RP
+       do k = KS, KE
+          MOMX_t_TB(k,i,j) = &
+               - ( ( ( GSQRT(k,i+1,j,I_XYZ) * QFLX_MOMX(k,i+1,j,XDIR) / MAPF(i+1,j  ,2,I_XY) &
+                     - GSQRT(k,i  ,j,I_XYZ) * QFLX_MOMX(k,i  ,j,XDIR) / MAPF(i  ,j  ,2,I_XY) ) * RFDX(i) &
+                   + ( GSQRT(k,i,j  ,I_UVZ) * QFLX_MOMX(k,i,j  ,YDIR) / MAPF(i  ,j  ,1,I_UV) &
+                     - GSQRT(k,i,j-1,I_UVZ) * QFLX_MOMX(k,i,j-1,YDIR) / MAPF(i  ,j-1,1,I_UV) ) * RCDY(j) &
+                   ) * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+                 + ( fluxZ(k) - fluxZ(k-1) ) * RCDZ(k) &
+                 ) / GSQRT(k,i,j,I_UYZ)
+       enddo
     enddo
     enddo
 
@@ -1709,8 +1653,7 @@ contains
     use scale_atmos_grid_cartesC, only: &
        RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY, &
-       FDZ  => ATMOS_GRID_CARTESC_FDZ
+       RFDY => ATMOS_GRID_CARTESC_RFDY
     implicit none
 
     real(RP), intent(out) :: MOMY_t_TB(KA,IA,JA)
@@ -1726,65 +1669,38 @@ contains
     integer , intent(in)  :: JJS
     integer , intent(in)  :: JJE
 
-    integer :: k, i, j
+    real(RP) :: fluxZ(KA)
+    integer  :: k, i, j
 
-    !$omp parallel do default(none)                                                          &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,MOMY_t_TB,GSQRT,I_UVZ,I_XYZ,QFLX_MOMY,RCDX,MAPF,I_XV) &
-    !$omp shared(RFDY,J13G,I_XVW,J23G,FDZ,J33G,RCDZ)                                         &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         fluxZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XVZ,I_UVZ,I_XYZ,I_XVW,I_XV,I_UV,I_XY, &
+    !$omp        MOMY_t_TB,QFLX_MOMY,GSQRT,J13G,J23G,J33G,MAPF,RCDZ,RCDX,RFDY)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
-       MOMY_t_TB(k,i,j) = &
-            - ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) &
-                - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
-              + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) &
-                - GSQRT(k,i  ,j  ,I_XYZ) * QFLX_MOMY(k,i,j  ,YDIR) ) * RFDY(j) * MAPF(i,j,2,I_XV) &
-              + ( ( J13G (k+1,i,j,I_XVW) * ( QFLX_MOMY(k+1,i,j  ,XDIR) + QFLX_MOMY(k+1,i-1,j,XDIR) ) &
-                  - J13G (k-1,i,j,I_XVW) * ( QFLX_MOMY(k-1,i,j  ,XDIR) + QFLX_MOMY(k-1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XV) &
-                + ( J23G (k+1,i,j,I_XVW) * ( QFLX_MOMY(k+1,i,j+1,YDIR) + QFLX_MOMY(k+1,i  ,j,YDIR) ) &
-                  - J23G (k-1,i,j,I_XVW) * ( QFLX_MOMY(k-1,i,j+1,YDIR) + QFLX_MOMY(k-1,i  ,j,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XV) &
-                ) * 0.5_RP / ( FDZ(k)+FDZ(k-1) ) &
-              + J33G * ( QFLX_MOMY(k,i,j,ZDIR) - QFLX_MOMY(k-1,i,j,ZDIR) ) * RCDZ(k) ) &
-            / GSQRT(k,i,j,I_XVW)
+       do k = KS, KE-1
+          fluxZ(k) = ( ( QFLX_MOMY(k+1,i,j  ,XDIR) + QFLX_MOMY(k+1,i-1,j,XDIR) &
+                       + QFLX_MOMY(k  ,i,j  ,XDIR) + QFLX_MOMY(k  ,i-1,j,XDIR) ) * J13G(k,i,j,I_XVW) * MAPF(i,j,1,I_XV) &
+                     + ( QFLX_MOMY(k+1,i,j+1,YDIR) + QFLX_MOMY(k+1,i  ,j,YDIR) &
+                       + QFLX_MOMY(k  ,i,j+1,YDIR) + QFLX_MOMY(k  ,i  ,j,YDIR) ) * J23G(k,i,j,I_XVW) * MAPF(i,j,2,I_XV) &
+                     ) * 0.25_RP &
+                   + J33G * QFLX_MOMY(k,i,j,ZDIR)
+       end do
+       fluxZ(KS-1) = 0.0_RP
+       fluxZ(KE  ) = 0.0_RP
+       do k = KS, KE
+          MOMY_t_TB(k,i,j) = &
+               - ( ( ( GSQRT(k,i  ,j  ,I_UVZ) * QFLX_MOMY(k,i  ,j,XDIR) / MAPF(i  ,j,2,I_UV) &
+                     - GSQRT(k,i-1,j  ,I_UVZ) * QFLX_MOMY(k,i-1,j,XDIR) / MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
+                   + ( GSQRT(k,i  ,j+1,I_XYZ) * QFLX_MOMY(k,i,j+1,YDIR) / MAPF(i,j+1,2,I_XY) &
+                     - GSQRT(k,i  ,j  ,I_XYZ) * QFLX_MOMY(k,i,j  ,YDIR) / MAPF(i,j  ,2,I_XY) ) * RFDY(j) &
+                   ) * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
+                 + ( fluxZ(k) - fluxZ(k-1) ) * RCDZ(k) &
+                 ) / GSQRT(k,i,j,I_XVZ)
+       enddo
     enddo
     enddo
-    enddo
-    !$omp parallel do
-    do j = JJS, JJE
-    do i = IIS, IIE
-       MOMY_t_TB(KS,i,j) = &
-            - ( ( GSQRT(KS,i  ,j  ,I_UVZ) * QFLX_MOMY(KS,i  ,j,XDIR) &
-                - GSQRT(KS,i-1,j  ,I_UVZ) * QFLX_MOMY(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
-              + ( GSQRT(KS,i  ,j+1,I_XYZ) * QFLX_MOMY(KS,i,j+1,YDIR) &
-                - GSQRT(KS,i  ,j  ,I_XYZ) * QFLX_MOMY(KS,i,j  ,YDIR) ) * RFDY(j) * MAPF(i,j,2,I_XV) &
-              + ( ( J13G (KS+1,i,j,I_XVW) * ( QFLX_MOMY(KS+1,i,j  ,XDIR) + QFLX_MOMY(KS+1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XV) &
-                + ( J23G (KS+1,i,j,I_XVW) * ( QFLX_MOMY(KS+1,i,j+1,YDIR) + QFLX_MOMY(KS+1,i  ,j,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XV) &
-                ) * 0.5_RP / ( FDZ(KS)+FDZ(KS-1) ) &
-              + J33G * ( QFLX_MOMY(KS,i,j,ZDIR) ) * RCDZ(KS) ) &
-            / GSQRT(KS,i,j,I_XVW)
-
-       MOMY_t_TB(KE,i,j) = &
-            - ( ( GSQRT(KE,i  ,j  ,I_UVZ) * QFLX_MOMY(KE,i  ,j,XDIR) &
-                - GSQRT(KE,i-1,j  ,I_UVZ) * QFLX_MOMY(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XV) &
-              + ( GSQRT(KE,i  ,j+1,I_XYZ) * QFLX_MOMY(KE,i,j+1,YDIR) &
-                - GSQRT(KE,i  ,j  ,I_XYZ) * QFLX_MOMY(KE,i,j  ,YDIR) ) * RFDY(j) * MAPF(i,j,2,I_XV) &
-              + ( ( &
-                  - J13G (KE-1,i,j,I_XVW) * ( QFLX_MOMY(KE-1,i,j  ,XDIR) + QFLX_MOMY(KE-1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XV) &
-                + ( &
-                  - J23G (KE-1,i,j,I_XVW) * ( QFLX_MOMY(KE-1,i,j+1,YDIR) + QFLX_MOMY(KE-1,i  ,j,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XV) &
-                ) * 0.5_RP / ( FDZ(KE)+FDZ(KE-1) ) &
-              + J33G * ( - QFLX_MOMY(KE-1,i,j,ZDIR) ) * RCDZ(KE) ) &
-            / GSQRT(KE,i,j,I_XVW)
-
-    end do
-    end do
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_MOMY
@@ -1805,72 +1721,48 @@ contains
 
     real(RP), intent(in)  :: QFLX_phi(KA,IA,JA,3)
     real(RP), intent(in)  :: GSQRT(KA,IA,JA,7)
-    real(RP), intent(in)  :: MAPF(IA,JA,2,4)
     real(RP), intent(in)  :: J13G(KA,IA,JA,7)
     real(RP), intent(in)  :: J23G(KA,IA,JA,7)
     real(RP), intent(in)  :: J33G
+    real(RP), intent(in)  :: MAPF(IA,JA,2,4)
     integer , intent(in)  :: IIS
     integer , intent(in)  :: IIE
     integer , intent(in)  :: JJS
     integer , intent(in)  :: JJE
 
-    integer :: k, i, j
+    real(RP) :: fluxZ(0:KA)
+    integer  :: k, i, j
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,phi_t_TB,GSQRT,I_UYZ,QFLX_phi,I_UVZ,RCDX,MAPF,I_XY) &
-    !$omp shared(I_XVZ,J13G,I_XYW,J23G,FDZ,J33G,RCDZ,I_XYZ,RCDY)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         fluxZ) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,I_XYZ,I_UYZ,I_XVZ,I_XYW,I_XY,I_UY,I_XV, &
+    !$omp        phi_t_TB,QFLX_phi,GSQRT,MAPF, &
+    !$omp        J13G,J23G,J33G,RCDZ,RCDX,RCDY)
     do j = JJS, JJE
     do i = IIS, IIE
-    do k = KS+1, KE-1
-       phi_t_TB(k,i,j) = &
-            - ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_phi(k,i  ,j,XDIR) &
-                - GSQRT(k,i-1,j,I_UVZ) * QFLX_phi(k,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_phi(k,i,j  ,YDIR) &
-                - GSQRT(k,i,j-1,I_XVZ) * QFLX_phi(k,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_XY) &
-              + ( ( J13G(k+1,i,j,I_XYW) * ( QFLX_phi(k+1,i,j,XDIR) + QFLX_phi(k+1,i-1,j,XDIR) ) &
-                  - J13G(k-1,i,j,I_XYW) * ( QFLX_phi(k-1,i,j,XDIR) + QFLX_phi(k-1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( J23G(k+1,i,j,I_XYW) * ( QFLX_phi(k+1,i,j,YDIR) + QFLX_phi(k+1,i,j-1,YDIR) ) &
-                  - J23G(k-1,i,j,I_XYW) * ( QFLX_phi(k-1,i,j,YDIR) + QFLX_phi(k-1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( FDZ(k) + FDZ(k-1) ) &
-              + J33G * ( QFLX_phi(k,i,j,ZDIR) - QFLX_phi(k-1,i,j,ZDIR) ) * RCDZ(k) ) &
-            / GSQRT(k,i,j,I_XYZ)
+       do k = KS, KE-1
+          fluxZ(k) = ( ( QFLX_phi(k+1,i,j,XDIR) + QFLX_phi(k+1,i-1,j,XDIR) &
+                       + QFLX_phi(k  ,i,j,XDIR) + QFLX_phi(k  ,i-1,j,XDIR) ) * J13G(k,i,j,I_XYW) * MAPF(i,j,1,I_XY) &
+                     + ( QFLX_phi(k+1,i,j,YDIR) + QFLX_phi(k+1,i,j-1,YDIR) &
+                       + QFLX_phi(k  ,i,j,YDIR) + QFLX_phi(k  ,i,j-1,YDIR) ) * J23G(k,i,j,I_XYW) * MAPF(i,j,2,I_XY) &
+                     ) * 0.25_RP &
+                   + J33G * QFLX_phi(k,i,j,ZDIR)
+       end do
+       fluxZ(KS-1) = 0.0_RP
+       fluxZ(KE  ) = 0.0_RP
+       do k = KS, KE
+          phi_t_TB(k,i,j) = &
+               - ( ( ( GSQRT(k,i  ,j,I_UYZ) * QFLX_phi(k,i  ,j,XDIR) / MAPF(i  ,j,2,I_UY) &
+                     - GSQRT(k,i-1,j,I_UYZ) * QFLX_phi(k,i-1,j,XDIR) / MAPF(i-1,j,2,I_UY) ) * RCDX(i) &
+                   + ( GSQRT(k,i,j  ,I_XVZ) * QFLX_phi(k,i,j  ,YDIR) / MAPF(i,j  ,1,I_XV) &
+                     - GSQRT(k,i,j-1,I_XVZ) * QFLX_phi(k,i,j-1,YDIR) / MAPF(i,j-1,1,I_XV) ) * RCDY(j) &
+                   ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                 + ( fluxZ(k) - fluxZ(k-1) ) * RCDZ(k) &
+                 ) / GSQRT(k,i,j,I_XYZ)
+       enddo
     enddo
     enddo
-    enddo
-    !$omp parallel do
-    do j = JJS, JJE
-    do i = IIS, IIE
-       phi_t_TB(KS,i,j) = &
-            - ( ( GSQRT(KS,i  ,j,I_UYZ) * QFLX_phi(KS,i  ,j,XDIR) &
-                - GSQRT(KS,i-1,j,I_UVZ) * QFLX_phi(KS,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(KS,i,j  ,I_XVZ) * QFLX_phi(KS,i,j  ,YDIR) &
-                - GSQRT(KS,i,j-1,I_XVZ) * QFLX_phi(KS,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_XY) &
-              + ( ( J13G(KS+1,i,j,I_XYW) * ( QFLX_phi(KS+1,i,j,XDIR) + QFLX_phi(KS+1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( J23G(KS+1,i,j,I_XYW) * ( QFLX_phi(KS+1,i,j,YDIR) + QFLX_phi(KS+1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( FDZ(KS) + FDZ(KS-1) ) &
-              + J33G * ( QFLX_phi(KS,i,j,ZDIR) ) * RCDZ(KS) ) &
-            / GSQRT(KS,i,j,I_XYZ)
-
-       phi_t_TB(KE,i,j) = &
-            - ( ( GSQRT(KE,i  ,j,I_UYZ) * QFLX_phi(KE,i  ,j,XDIR) &
-                - GSQRT(KE,i-1,j,I_UVZ) * QFLX_phi(KE,i-1,j,XDIR) ) * RCDX(i) * MAPF(i,j,1,I_XY) &
-              + ( GSQRT(KE,i,j  ,I_XVZ) * QFLX_phi(KE,i,j  ,YDIR) &
-                - GSQRT(KE,i,j-1,I_XVZ) * QFLX_phi(KE,i,j-1,YDIR) ) * RCDY(j) * MAPF(i,j,2,I_XY) &
-              + ( ( &
-                  - J13G(KE-1,i,j,I_XYW) * ( QFLX_phi(KE-1,i,j,XDIR) + QFLX_phi(KE-1,i-1,j,XDIR) ) &
-                  ) * MAPF(i,j,1,I_XY) &
-                + ( &
-                  - J23G(KE-1,i,j,I_XYW) * ( QFLX_phi(KE-1,i,j,YDIR) + QFLX_phi(KE-1,i,j-1,YDIR) ) &
-                  ) * MAPF(i,j,2,I_XY) &
-                ) * 0.5_RP / ( FDZ(KE) + FDZ(KE-1) ) &
-              + J33G * ( - QFLX_phi(KE-1,i,j,ZDIR) ) * RCDZ(KE) ) &
-            / GSQRT(KE,i,j,I_XYZ)
-    end do
-    end do
 
     return
   end subroutine ATMOS_PHY_TB_calc_tend_phi

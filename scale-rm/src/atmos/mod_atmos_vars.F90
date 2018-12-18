@@ -845,7 +845,7 @@ contains
     do j  = JSB, JEB
     do i  = ISB, IEB
        DENS(   1:KS-1,i,j) = DENS(KS,i,j)
-       MOMZ(   1:KS-1,i,j) = MOMZ(KS,i,j)
+       MOMZ(   1:KS-2,i,j) = MOMZ(KS-1,i,j)
        MOMX(   1:KS-1,i,j) = MOMX(KS,i,j)
        MOMY(   1:KS-1,i,j) = MOMY(KS,i,j)
        RHOT(   1:KS-1,i,j) = RHOT(KS,i,j)

@@ -549,7 +549,7 @@ contains
        ! calculate delta P by hydrostatic balance
        ! deltap is the pressure interval between half levels(face levels) @ SCALE
        do k = KS, KE
-          deltap(k) = RHOD(k) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) ) ! rho*g*dz
+          deltap(k) = RHOD(k) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) ) ! rho*g*dz
        enddo
 
        cldfrac_KF(KS:KE,:) = 0.0_RP
