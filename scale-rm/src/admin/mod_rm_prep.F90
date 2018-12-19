@@ -83,19 +83,22 @@ contains
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_setup
     use scale_ocean_grid_cartesC_real, only: &
-       OCEAN_GRID_CARTESC_REAL_setup
+       OCEAN_GRID_CARTESC_REAL_setup, &
+       OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
        LAND_GRID_CARTESC_setup
     use scale_land_grid_cartesC_real, only: &
-       LAND_GRID_CARTESC_REAL_setup
+       LAND_GRID_CARTESC_REAL_setup, &
+       LAND_GRID_CARTESC_REAL_set_areavol
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_setup
     use scale_urban_grid_cartesC_real, only: &
-       URBAN_GRID_CARTESC_REAL_setup
+       URBAN_GRID_CARTESC_REAL_setup, &
+       URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -347,6 +350,9 @@ contains
     ! re-setup
     call ATMOS_GRID_CARTESC_REAL_update_Z
     call ATMOS_GRID_CARTESC_METRIC_setup
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_set_areavol
+    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_set_areavol
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_set_areavol
 
     ! execute mkinit
     call PROF_rapstart('MkInit',1)

@@ -27,6 +27,7 @@ module scale_ocean_grid_cartesC_real
   !++ Public procedure
   !
   public :: OCEAN_GRID_CARTESC_REAL_setup
+  public :: OCEAN_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -50,6 +51,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup area and volume
   subroutine OCEAN_GRID_CARTESC_REAL_setup
+
+    ! at this moment, horizontal grid is identical to that of the atmosphere
+    allocate( OCEAN_GRID_CARTESC_REAL_AREA(    OIA,OJA) )
+    allocate( OCEAN_GRID_CARTESC_REAL_VOL (OKA,OIA,OJA) )
+
+    return
+  end subroutine OCEAN_GRID_CARTESC_REAL_setup
+
+  subroutine OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
@@ -57,11 +67,9 @@ contains
        OCEAN_GRID_CARTESC_CDZ
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates_ocean
+
     integer :: k, i, j
 
-    ! at this moment, horizontal grid is identical to that of the atmosphere
-    allocate( OCEAN_GRID_CARTESC_REAL_AREA(    OIA,OJA) )
-    allocate( OCEAN_GRID_CARTESC_REAL_VOL (OKA,OIA,OJA) )
     OCEAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     OCEAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
 
@@ -85,6 +93,6 @@ contains
     call FILE_CARTESC_set_coordinates_ocean( OCEAN_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
     return
-  end subroutine OCEAN_GRID_CARTESC_REAL_setup
+  end subroutine OCEAN_GRID_CARTESC_REAL_set_areavol
 
 end module scale_ocean_grid_cartesC_real

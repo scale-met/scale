@@ -92,19 +92,22 @@ contains
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_setup
     use scale_ocean_grid_cartesC_real, only: &
-       OCEAN_GRID_CARTESC_REAL_setup
+       OCEAN_GRID_CARTESC_REAL_setup, &
+       OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
        LAND_GRID_CARTESC_setup
     use scale_land_grid_cartesC_real, only: &
-       LAND_GRID_CARTESC_REAL_setup
+       LAND_GRID_CARTESC_REAL_setup, &
+       LAND_GRID_CARTESC_REAL_set_areavol
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_setup
     use scale_urban_grid_cartesC_real, only: &
-       URBAN_GRID_CARTESC_REAL_setup
+       URBAN_GRID_CARTESC_REAL_setup, &
+       URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -322,9 +325,18 @@ contains
        ! setup grid transfer metrics (uses in ATMOS_dynamics)
        call ATMOS_GRID_CARTESC_METRIC_setup
     endif
-    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
-    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
-    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_CARTESC_REAL_setup
+       call OCEAN_GRID_CARTESC_REAL_set_areavol
+    end if
+    if ( LAND_do  ) then
+       call LAND_GRID_CARTESC_REAL_setup
+       call LAND_GRID_CARTESC_REAL_set_areavol
+    end if
+    if ( URBAN_do ) then
+       call URBAN_GRID_CARTESC_REAL_setup
+       call URBAN_GRID_CARTESC_REAL_set_areavol
+    end if
 
     ! setup restart
     call ADMIN_restart_setup

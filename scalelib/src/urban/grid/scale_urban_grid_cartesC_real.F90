@@ -27,6 +27,7 @@ module scale_urban_grid_cartesC_real
   !++ Public procedure
   !
   public :: URBAN_GRID_CARTESC_REAL_setup
+  public :: URBAN_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -50,6 +51,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup real grid
   subroutine URBAN_GRID_CARTESC_REAL_setup
+
+    ! at this moment, horizontal grid is identical to that of the atmosphere
+    allocate( URBAN_GRID_CARTESC_REAL_AREA(    UIA,UJA) )
+    allocate( URBAN_GRID_CARTESC_REAL_VOL (UKA,UIA,UJA) )
+
+    return
+  end subroutine URBAN_GRID_CARTESC_REAL_setup
+
+  subroutine URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
@@ -60,9 +70,6 @@ contains
 
     integer :: k, i, j
 
-    ! at this moment, horizontal grid is identical to that of the atmosphere
-    allocate( URBAN_GRID_CARTESC_REAL_AREA(    UIA,UJA) )
-    allocate( URBAN_GRID_CARTESC_REAL_VOL (UKA,UIA,UJA) )
     URBAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     URBAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
 
@@ -86,6 +93,6 @@ contains
     call FILE_CARTESC_set_coordinates_urban( URBAN_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
     return
-  end subroutine URBAN_GRID_CARTESC_REAL_setup
+  end subroutine URBAN_GRID_CARTESC_REAL_set_areavol
 
 end module scale_urban_grid_cartesC_real

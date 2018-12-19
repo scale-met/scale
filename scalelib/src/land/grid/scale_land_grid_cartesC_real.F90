@@ -26,6 +26,7 @@ module scale_land_grid_cartesC_real
   !++ Public procedure
   !
   public :: LAND_GRID_CARTESC_REAL_setup
+  public :: LAND_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -49,6 +50,15 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup real grid
   subroutine LAND_GRID_CARTESC_REAL_setup
+
+    ! at this moment, horizontal grid is identical to that of the atmosphere
+    allocate( LAND_GRID_CARTESC_REAL_AREA(    LIA,LJA) )
+    allocate( LAND_GRID_CARTESC_REAL_VOL (LKA,LIA,LJA) )
+
+    return
+  end subroutine LAND_GRID_CARTESC_REAL_setup
+
+  subroutine LAND_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
@@ -59,9 +69,6 @@ contains
 
     integer :: k, i, j
 
-    ! at this moment, horizontal grid is identical to that of the atmosphere
-    allocate( LAND_GRID_CARTESC_REAL_AREA(    LIA,LJA) )
-    allocate( LAND_GRID_CARTESC_REAL_VOL (LKA,LIA,LJA) )
     LAND_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
     LAND_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
 
@@ -85,5 +92,6 @@ contains
     call FILE_CARTESC_set_coordinates_land( LAND_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
     return
-  end subroutine LAND_GRID_CARTESC_REAL_setup
+  end subroutine LAND_GRID_CARTESC_REAL_set_areavol
+
 end module scale_land_grid_cartesC_real
