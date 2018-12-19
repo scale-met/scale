@@ -71,6 +71,7 @@ contains
 
   subroutine ATMOS_DYN_Tstep_tracer_fvm_heve( &
        QTRCo, & ! (out)
+       qflx_hi,  & ! (out)
        QTRC, QTRC0, RHOQ_t, &! (in)
        DENS0, DENS, & ! (in)
        mflx_hi, num_diff, & ! (in)
@@ -91,6 +92,7 @@ contains
        ATMOS_DYN_FVM_fluxY_XYZ_ud1
     implicit none
     real(RP), intent(inout) :: QTRCo   (KA,IA,JA) ! could be identical to QTRC0
+    real(RP), intent(out) :: qflx_hi (KA,IA,JA,3) ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
     real(RP), intent(in)  :: QTRC    (KA,IA,JA)
     real(RP), intent(in)  :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)  :: RHOQ_t  (KA,IA,JA)
@@ -110,12 +112,12 @@ contains
 
 
     ! For tracer advection
-    real(RP) :: qflx_hi  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi @ (u,v,w)-face high order
     real(RP) :: qflx_lo  (KA,IA,JA,3)  ! rho * vel(x,y,z) * phi,  monotone flux
     real(RP) :: qflx_anti(KA,IA,JA,3)  ! anti-diffusive flux
 
     integer  :: IIS, IIE
     integer  :: JJS, JJE
+    integer  :: IIS0, JJS0
     integer  :: i, j, k
     !---------------------------------------------------------------------------
 
@@ -193,14 +195,49 @@ contains
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
+          do k = KS-1, KE
+             qflx_hi(k,i,j,ZDIR) = qflx_hi(k,i,j,ZDIR) - qflx_anti(k,i,j,ZDIR)
+          end do
+          end do
+          end do
+
+          if ( IIS == IS ) then
+             IIS0 = IIS-1
+          else
+             IIS0 = IIS
+          end if
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS0, IIE
+          do k = KS, KE
+             qflx_hi(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_anti(k,i,j,XDIR)
+          end do
+          end do
+          end do
+
+          if ( JJS == JS ) then
+             JJS0 = JJS-1
+          else
+             JJS0 = JJS
+          end if
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS0, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             qflx_hi(k,i,j,YDIR) = qflx_hi(k,i,j,YDIR) - qflx_anti(k,i,j,YDIR)
+          end do
+          end do
+          end do
+
+
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
           do k = KS, KE
              QTRCo(k,i,j) = ( QTRC0(k,i,j) * DENS0(k,i,j) &
-                            + dtl * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_anti(k  ,i  ,j  ,ZDIR) &
-                                          - qflx_hi(k-1,i  ,j  ,ZDIR) + qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_anti(k  ,i  ,j  ,XDIR) &
-                                          - qflx_hi(k  ,i-1,j  ,XDIR) + qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_anti(k  ,i  ,j  ,YDIR) &
-                                          - qflx_hi(k  ,i  ,j-1,YDIR) + qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                            + dtl * ( - ( ( qflx_hi(k  ,i  ,j  ,ZDIR) - qflx_hi(k-1,i  ,j  ,ZDIR)  ) * RCDZ(k) &
+                                        + ( qflx_hi(k  ,i  ,j  ,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR)  ) * RCDX(i) &
+                                        + ( qflx_hi(k  ,i  ,j  ,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR)  ) * RCDY(j) &
                                       ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j,I_XYZ) &
                                + RHOQ_t(k,i,j) ) ) / DENS(k,i,j)
           enddo

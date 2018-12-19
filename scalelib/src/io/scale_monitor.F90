@@ -69,14 +69,14 @@ module scale_monitor
   character(len=H_SHORT) :: MONITOR_reqs(MONITOR_req_max) !< name of requested monitor item
 
   type item
-     character(len=H_SHORT) :: name   !< name
-     character(len=H_MID)   :: desc   !< description
-     character(len=H_SHORT) :: unit   !< unit
-     real(DP)               :: var    !< value
-     real(DP)               :: var0   !< value at first time
-     logical                :: first  !< first time?
-     logical                :: flux   !< integrate value?
-     integer                :: dimid  !< dimension type
+     character(len=H_SHORT) :: name     !< name
+     character(len=H_MID)   :: desc     !< description
+     character(len=H_SHORT) :: unit     !< unit
+     real(DP)               :: var      !< value
+     real(DP)               :: var0     !< value at first time
+     logical                :: first    !< first time?
+     logical                :: tendency !< integrate value?
+     integer                :: dimid    !< dimension type
   end type item
   integer                 :: MONITOR_nitems = 0 !< number of item to output
   type(item), allocatable :: MONITOR_items(:)
@@ -235,7 +235,7 @@ contains
        name, desc, unit, &
        itemid,           &
        ndims, dim_type,  &
-       isflux            )
+       is_tendency       )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -246,9 +246,9 @@ contains
 
     integer, intent(out) :: itemid !< index number of the item
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate value?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate value?
 
     integer :: n, reqid, dimid
     !---------------------------------------------------------------------------
@@ -310,10 +310,10 @@ contains
           MONITOR_items(itemid)%var   = 0.0_DP
           MONITOR_items(itemid)%var0  = 0.0_DP
           MONITOR_items(itemid)%first = .true.
-          if ( present(isflux) ) then
-             MONITOR_items(itemid)%flux  = isflux
+          if ( present(is_tendency) ) then
+             MONITOR_items(itemid)%tendency = is_tendency
           else
-             MONITOR_items(itemid)%flux  = .false.
+             MONITOR_items(itemid)%tendency = .false.
           end if
 
           LOG_NEWLINE
@@ -322,7 +322,7 @@ contains
           LOG_INFO_CONT(*) 'Description     : ', trim(MONITOR_items(itemid)%desc)
           LOG_INFO_CONT(*) 'Unit            : ', trim(MONITOR_items(itemid)%unit)
           LOG_INFO_CONT(*) 'Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
-          LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%flux
+          LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%tendency
 
           return
        end if
@@ -358,9 +358,9 @@ contains
                            log_suppress = .true.,                                         & ! (in)
                            sum = total                                                    ) ! (out)
 
-    if ( MONITOR_items(itemid)%flux ) then
+    if ( MONITOR_items(itemid)%tendency ) then
        if ( MONITOR_items(itemid)%first ) then
-          MONITOR_items(itemid)%var = total * MONITOR_dt ! first put
+          MONITOR_items(itemid)%var = 0.0_RP
           MONITOR_items(itemid)%first = .false.
        else
           MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
@@ -411,7 +411,7 @@ contains
                            log_suppress = .true.,                                               & ! (in)
                            sum = total                                                          ) ! (out)
 
-    if ( MONITOR_items(itemid)%flux ) then
+    if ( MONITOR_items(itemid)%tendency ) then
        if ( MONITOR_items(itemid)%first ) then
           MONITOR_items(itemid)%var   = total * MONITOR_dt ! first put
           MONITOR_items(itemid)%first = .false.
@@ -441,7 +441,7 @@ contains
       var,              &
       name, desc, unit, &
       ndims, dim_type,  &
-      isflux            )
+      is_tendency       )
     implicit none
 
     real(RP),         intent(in) :: var(:,:)   !< value
@@ -449,17 +449,17 @@ contains
     character(len=*), intent(in) :: desc       !< description
     character(len=*), intent(in) :: unit       !< unit
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate values?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONITOR_reg( name, desc, unit,               & ! (in)
+    call MONITOR_reg( name, desc, unit,             & ! (in)
                     itemid,                         & ! (out)
                     ndims=ndims, dim_type=dim_type, & ! (in)
-                    isflux=isflux                   ) ! (in)
+                    is_tendency=is_tendency         ) ! (in)
     call MONITOR_put( itemid, var(:,:) )
 
     return
@@ -471,7 +471,7 @@ contains
       var,              &
       name, desc, unit, &
       ndims, dim_type,  &
-      isflux            )
+      is_tendency       )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value
@@ -479,17 +479,17 @@ contains
     character(len=*), intent(in) :: desc       !< description
     character(len=*), intent(in) :: unit       !< unit
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate values?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONITOR_reg( name, desc, unit,               & ! (in)
+    call MONITOR_reg( name, desc, unit,             & ! (in)
                     itemid,                         & ! (out)
                     ndims=ndims, dim_type=dim_type, & ! (in)
-                    isflux=isflux                   ) ! (in)
+                    is_tendency=is_tendency         ) ! (in)
     call MONITOR_put( itemid, var(:,:,:) )
 
     return

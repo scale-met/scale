@@ -407,8 +407,9 @@ contains
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
                                              call USER_update
-      ! restart output
+      ! restart & monitor output
       call ADMIN_restart_write
+      call MONITOR_write('MAIN', TIME_NOWSTEP)
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -418,8 +419,7 @@ contains
       if( CPL_sw   .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency_from_sflux( force = .false. )
                                              call USER_calc_tendency
 
-      ! history&monitor file output
-      call MONITOR_write('MAIN', TIME_NOWSTEP)
+      ! history file output
       call FILE_HISTORY_write
 
       if( TIME_DOend ) exit

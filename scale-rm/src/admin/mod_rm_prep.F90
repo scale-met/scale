@@ -288,8 +288,6 @@ contains
     ! setup grid coordinates (real world)
     if ( ATMOS_do ) then
        call ATMOS_GRID_CARTESC_REAL_setup
-       ! setup grid transfer metrics (uses in ATMOS_dynamics)
-       call ATMOS_GRID_CARTESC_METRIC_setup
     end if
     if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
     if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
@@ -348,6 +346,7 @@ contains
 
     ! re-setup
     call ATMOS_GRID_CARTESC_REAL_update_Z
+    call ATMOS_GRID_CARTESC_METRIC_setup
 
     ! execute mkinit
     call PROF_rapstart('MkInit',1)

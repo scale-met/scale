@@ -33,7 +33,6 @@ module scale_atmos_dyn_tinteg_large
      subroutine large( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             &
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-          mflx_hi, tflx_hi,                                     &
           num_diff, num_diff_q,                                 &
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
           CORIOLI,                                              &
@@ -77,8 +76,6 @@ module scale_atmos_dyn_tinteg_large
        real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
        real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
 
-       real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
        real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
 

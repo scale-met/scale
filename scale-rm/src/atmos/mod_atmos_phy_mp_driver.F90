@@ -76,6 +76,7 @@ module mod_atmos_phy_mp_driver
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
   integer, private, allocatable :: hist_vterm_id(:)
+  integer, private              :: monit_id
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -226,6 +227,9 @@ contains
        ATMOS_PHY_MP_suzuki10_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
+    use scale_monitor, only: &
+       MONITOR_reg, &
+       MONITOR_put
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -245,6 +249,8 @@ contains
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
        MP_cldfrac_thleshold
+
+    real(RP) :: ZERO(KA,IA,JA)
 
     integer :: nstep_max
 
@@ -310,7 +316,7 @@ contains
     endif
 
 
-    ! history putput
+    ! history output
     if ( MP_do_precipitation ) then
        allocate( hist_vterm_id(QS_MP+1:QE_MP) )
        do iq = QS_MP+1, QE_MP
@@ -318,6 +324,15 @@ contains
        end do
     end if
 
+
+    ! monitor
+    if ( MP_do_negative_fixer ) then
+       call MONITOR_reg( "QTOTTND_NF", "water mass tendency by the negative fixer", "kg/s", & ! [IN]
+                         monit_id,                                                          & ! [OUT]
+                      is_tendency=.true.                                                    ) ! [IN]
+       ZERO(:,:,:) = 0.0_RP
+       call MONITOR_put( MONIT_id, ZERO(:,:,:) )
+    end if
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
@@ -339,8 +354,13 @@ contains
        QTRC
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
+    use scale_time, only: &
+       dt => TIME_DTSEC
+    use scale_monitor, only: &
+       MONITOR_put
 
     real(RP) :: DENS0(KA,IA,JA)
+    real(RP) :: TEND (KA,IA,JA)
 
     integer :: k, i, j, iq
 
@@ -373,6 +393,17 @@ contains
        end do
        end do
        end do
+
+       if ( monit_id > 0 ) then
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             TEND(k,i,j) = ( DENS(k,i,j) - DENS0(k,i,j) ) / dt
+          end do
+          end do
+          end do
+          call MONITOR_put( MONIT_id, TEND(:,:,:) )
+       end if
 
     end if
 

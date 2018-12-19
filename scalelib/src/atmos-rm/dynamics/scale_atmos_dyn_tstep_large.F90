@@ -34,7 +34,6 @@ module scale_atmos_dyn_tstep_large
      subroutine large( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             &
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-          mflx_hi, tflx_hi,                                     &
           num_diff, num_diff_q,                                 &
           QTRC0,                                                &
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
@@ -78,9 +77,6 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
        real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
        real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
-
-       real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
        real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
@@ -196,8 +192,7 @@ contains
   !> Register
   subroutine ATMOS_DYN_Tstep_large_setup( &
        Tstep_large_type, &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-       mflx_hi )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
@@ -215,15 +210,13 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
-    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
 
     !---------------------------------------------------------------------------
 
     select case( Tstep_large_type )
     case( 'FVM-HEVE' )
        call ATMOS_DYN_Tstep_large_fvm_heve_setup( &
-            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-            mflx_hi )
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
        ATMOS_DYN_Tstep_large => ATMOS_DYN_Tstep_large_fvm_heve
     case default
        LOG_ERROR("ATMOS_DYN_Tstep_large_setup",*) 'ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type

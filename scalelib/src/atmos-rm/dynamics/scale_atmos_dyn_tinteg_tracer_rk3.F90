@@ -91,6 +91,7 @@ contains
   !> RK3
   subroutine ATMOS_DYN_tinteg_tracer_rk3( &
        QTRC, & ! (out)
+       qflx, & ! (out)
        QTRC0, RHOQ_t, &! (in)
        DENS0, DENS, & ! (in)
        mflx_hi, num_diff, & ! (in)
@@ -109,6 +110,7 @@ contains
        ATMOS_DYN_Copy_Boundary_tracer
     implicit none
     real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+    real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
     real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
     real(RP), intent(in)    :: DENS0   (KA,IA,JA)
@@ -149,6 +151,7 @@ contains
     dtrk = DTL / 3.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK1, & ! (out)
+         qflx, & ! (out)
          QTRC, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
@@ -177,6 +180,7 @@ contains
     dtrk = DTL / 2.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK2, & ! (out)
+         qflx, & ! (out)
          QTRC_RK1, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
@@ -196,6 +200,7 @@ contains
     dtrk = DTL
     call ATMOS_DYN_tstep_tracer( &
          QTRC, & ! (out)
+         qflx, & ! (out)
          QTRC_RK2, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS, & ! (in)
          mflx_hi, num_diff, & ! (in)
