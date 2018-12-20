@@ -262,8 +262,7 @@ contains
        PRC_abort
     use scale_topography, only: &
        TOPOGRAPHY_fillhalo, &
-       TOPOGRAPHY_Zsfc, &
-       TOPOGRAPHY_write
+       TOPOGRAPHY_Zsfc
     use mod_copytopo, only: &
        COPYTOPO
     use scale_atmos_grid_cartesC_real, only: &
@@ -321,8 +320,6 @@ contains
 
        LOG_PROGRESS(*) 'end   convert topography data'
 
-       ! output topography file
-       call TOPOGRAPHY_write
     endif
 
     return

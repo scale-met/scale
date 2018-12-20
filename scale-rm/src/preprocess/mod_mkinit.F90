@@ -3996,8 +3996,7 @@ contains
     use scale_landuse, only: &
        LANDUSE_frac_land, &
        LANDUSE_calc_fact, &
-       LANDUSE_fillhalo,  &
-       LANDUSE_write
+       LANDUSE_fillhalo
     use scale_atmos_grid_cartesC, only: &
        DOMAIN_CENTER_X => ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
     implicit none
@@ -4049,9 +4048,6 @@ contains
     call LANDUSE_fillhalo( FILL_BND=.true. )
     call LANDUSE_calc_fact
 
-    ! output landuse file
-    call LANDUSE_write
-
     return
   end subroutine MKINIT_seabreeze
 
@@ -4064,8 +4060,7 @@ contains
        LANDUSE_frac_land,  &
        LANDUSE_frac_urban, &
        LANDUSE_calc_fact,  &
-       LANDUSE_fillhalo,   &
-       LANDUSE_write
+       LANDUSE_fillhalo
     implicit none
 
     real(RP) :: dist
@@ -4102,9 +4097,6 @@ contains
     ! calculate landuse factors
     call LANDUSE_fillhalo( FILL_BND=.true. )
     call LANDUSE_calc_fact
-
-    ! output landuse file
-    call LANDUSE_write
 
     return
   end subroutine MKINIT_heatisland

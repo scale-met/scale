@@ -159,8 +159,7 @@ contains
        LANDUSE_frac_PFT,   &
        LANDUSE_index_PFT,  &
        LANDUSE_calc_fact,  &
-       LANDUSE_fillhalo,   &
-       LANDUSE_write
+       LANDUSE_fillhalo
     use scale_atmos_grid_cartesC_real, only: &
        LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
        LONUY => ATMOS_GRID_CARTESC_REAL_LONUY, &
@@ -296,9 +295,6 @@ contains
        call LANDUSE_calc_fact
 
        LOG_PROGRESS(*) 'end   convert landuse data'
-
-       ! output landuse file
-       call LANDUSE_write
 
     endif
 

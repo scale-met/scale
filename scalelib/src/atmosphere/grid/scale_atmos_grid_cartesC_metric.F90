@@ -157,7 +157,6 @@ contains
        ATMOS_GRID_CARTESC_RCDX, &
        ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        ATMOS_GRID_CARTESC_REAL_LAT,          &
        ATMOS_GRID_CARTESC_REAL_LATUY,        &
        ATMOS_GRID_CARTESC_REAL_LATXV,        &
@@ -175,8 +174,6 @@ contains
          ATMOS_GRID_CARTESC_REAL_LATXV( :,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
          ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
-
-    call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
 
     call TOPOGRAPHY_calc_tan_slope( IA, IS, IE, JA, JS, JE, &
          ATMOS_GRID_CARTESC_RCDX(:), ATMOS_GRID_CARTESC_RCDY(:), &

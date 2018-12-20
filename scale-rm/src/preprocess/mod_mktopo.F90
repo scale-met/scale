@@ -109,8 +109,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine MKTOPO
-    use scale_topography, only: &
-       TOPOGRAPHY_write
     implicit none
     !---------------------------------------------------------------------------
 
@@ -138,8 +136,6 @@ contains
 
        LOG_INFO("MKTOPO",*) 'END   MAKING TOPOGRAPHY DATA'
 
-       ! output topography file
-       call TOPOGRAPHY_write
     endif
 
     return

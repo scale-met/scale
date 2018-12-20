@@ -105,15 +105,19 @@ contains
     use scale_comm_cartesC, only: &
        COMM_setup
     use scale_topography, only: &
-       TOPOGRAPHY_setup
+       TOPOGRAPHY_setup, &
+       TOPOGRAPHY_write
     use scale_landuse, only: &
-       LANDUSE_setup
+       LANDUSE_setup, &
+       LANDUSE_write
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_setup,    &
        ATMOS_GRID_CARTESC_REAL_update_Z, &
+       ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
-       ATMOS_GRID_CARTESC_METRIC_setup
+       ATMOS_GRID_CARTESC_METRIC_setup, &
+       ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_coriolis, only: &
@@ -289,9 +293,7 @@ contains
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
 
     ! setup grid coordinates (real world)
-    if ( ATMOS_do ) then
-       call ATMOS_GRID_CARTESC_REAL_setup
-    end if
+    if ( ATMOS_do ) call ATMOS_GRID_CARTESC_REAL_setup
     if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
     if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
     if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
@@ -350,6 +352,7 @@ contains
     ! re-setup
     call ATMOS_GRID_CARTESC_REAL_update_Z
     call ATMOS_GRID_CARTESC_METRIC_setup
+    call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
     if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_set_areavol
     if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_set_areavol
     if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_set_areavol
@@ -359,6 +362,12 @@ contains
     call MKINIT( output )
     call USER_mkinit
     call PROF_rapend  ('MkInit',1)
+
+
+    ! output
+    call TOPOGRAPHY_write
+    call LANDUSE_write
+
 
     if ( output ) then
       call PROF_rapstart('MkInit_restart',1)
