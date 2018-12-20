@@ -111,8 +111,8 @@ contains
        LANDUSE_setup, &
        LANDUSE_write
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_setup,    &
-       ATMOS_GRID_CARTESC_REAL_update_Z, &
+       ATMOS_GRID_CARTESC_REAL_setup,        &
+       ATMOS_GRID_CARTESC_REAL_calc_Z,       &
        ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
@@ -350,7 +350,7 @@ contains
     call PROF_rapend  ('MkTopo',1)
 
     ! re-setup
-    call ATMOS_GRID_CARTESC_REAL_update_Z
+    call ATMOS_GRID_CARTESC_REAL_calc_Z
     call ATMOS_GRID_CARTESC_METRIC_setup
     call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
     if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_set_areavol

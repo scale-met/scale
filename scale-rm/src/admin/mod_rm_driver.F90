@@ -83,10 +83,12 @@ contains
        CY => ATMOS_GRID_CARTESC_CY, &
        DX, DY
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_setup, &
+       ATMOS_GRID_CARTESC_REAL_setup,        &
+       ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
-       ATMOS_GRID_CARTESC_METRIC_setup
+       ATMOS_GRID_CARTESC_METRIC_setup, &
+       ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_ocean_grid_cartesC_index, only: &
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
@@ -324,6 +326,7 @@ contains
        call ATMOS_GRID_CARTESC_REAL_setup
        ! setup grid transfer metrics (uses in ATMOS_dynamics)
        call ATMOS_GRID_CARTESC_METRIC_setup
+       call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
     endif
     if ( OCEAN_do ) then
        call OCEAN_GRID_CARTESC_REAL_setup

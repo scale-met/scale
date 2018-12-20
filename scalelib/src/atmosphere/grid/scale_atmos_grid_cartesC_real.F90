@@ -25,7 +25,7 @@ module scale_atmos_grid_cartesC_real
   !++ Public procedure
   !
   public :: ATMOS_GRID_CARTESC_REAL_setup
-  public :: ATMOS_GRID_CARTESC_REAL_update_Z
+  public :: ATMOS_GRID_CARTESC_REAL_calc_Z
   public :: ATMOS_GRID_CARTESC_REAL_calc_areavol
 
   !-----------------------------------------------------------------------------
@@ -95,7 +95,6 @@ module scale_atmos_grid_cartesC_real
   !++ Private procedure
   !
   private :: ATMOS_GRID_CARTESC_REAL_calc_latlon
-  private :: ATMOS_GRID_CARTESC_REAL_calc_Z
 
   !-----------------------------------------------------------------------------
   !
@@ -208,35 +207,6 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_setup
-
-  !-----------------------------------------------------------------------------
-  !> Re-setup with updated topography
-  subroutine ATMOS_GRID_CARTESC_REAL_update_Z
-    use scale_file_cartesC, only: &
-       FILE_CARTESC_set_coordinates_atmos
-    use scale_topography, only: &
-       TOPOGRAPHY_Zsfc
-    use scale_landuse, only: &
-       LANDUSE_frac_land
-    implicit none
-    !---------------------------------------------------------------------------
-
-    ! calc real height
-    call ATMOS_GRID_CARTESC_REAL_calc_Z
-
-    ! set latlon and z to fileio module
-    call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
-                                             TOPOGRAPHY_Zsfc, LANDUSE_frac_land,                                                                                           & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
-                                                                             ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y,                         & ! [IN]
-                                             ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV   ) ! [IN]
-
-    return
-  end subroutine ATMOS_GRID_CARTESC_REAL_update_Z
 
   !-----------------------------------------------------------------------------
   !> Calc longitude & latitude
@@ -399,8 +369,12 @@ contains
        ATMOS_GRID_CARTESC_FZ,  &
        ATMOS_GRID_CARTESC_CDX, &
        ATMOS_GRID_CARTESC_CDY
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates_atmos
     use scale_topography, only: &
        Zsfc => TOPOGRAPHY_Zsfc
+    use scale_landuse, only: &
+       LANDUSE_frac_land
     implicit none
 
     real(RP) :: Htop
@@ -561,6 +535,18 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_Z",*) 'Minimum & maximum aspect ratio'
     LOG_INFO_CONT(*) '-> (',ATMOS_GRID_CARTESC_REAL_ASPECT_MIN,',',ATMOS_GRID_CARTESC_REAL_ASPECT_MAX,')'
+
+    ! set latlon and z to fileio module
+    call FILE_CARTESC_set_coordinates_atmos( ATMOS_GRID_CARTESC_REAL_CZ,  ATMOS_GRID_CARTESC_REAL_FZ,                                                                      & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LON, ATMOS_GRID_CARTESC_REAL_LONUY, ATMOS_GRID_CARTESC_REAL_LONXV, ATMOS_GRID_CARTESC_REAL_LONUV,     & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_LAT, ATMOS_GRID_CARTESC_REAL_LATUY, ATMOS_GRID_CARTESC_REAL_LATXV, ATMOS_GRID_CARTESC_REAL_LATUV,     & ! [IN]
+                                             Zsfc, LANDUSE_frac_land,                                                                                                      & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]
+                                                                             ATMOS_GRID_CARTESC_REAL_AREAWUY_X, ATMOS_GRID_CARTESC_REAL_AREAWXV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAUY, ATMOS_GRID_CARTESC_REAL_AREAZXY_X, ATMOS_GRID_CARTESC_REAL_AREAZUV_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_AREAXV, ATMOS_GRID_CARTESC_REAL_AREAZUV_X, ATMOS_GRID_CARTESC_REAL_AREAZXY_Y,                         & ! [IN]
+                                             ATMOS_GRID_CARTESC_REAL_VOL, ATMOS_GRID_CARTESC_REAL_VOLWXY, ATMOS_GRID_CARTESC_REAL_VOLZUY, ATMOS_GRID_CARTESC_REAL_VOLZXV   ) ! [IN]
+
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_Z
