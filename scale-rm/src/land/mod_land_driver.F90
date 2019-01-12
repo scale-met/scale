@@ -283,7 +283,7 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
-       ATMOS_W = ATMOS_U(i,j) * TanSL_X(i,j) + ATMOS_V(i,j) * TanSL_Y(i,j)
+       ATMOS_W(i,j) = ATMOS_U(i,j) * TanSL_X(i,j) + ATMOS_V(i,j) * TanSL_Y(i,j)
     end do
     end do
 
