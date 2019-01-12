@@ -78,6 +78,7 @@ contains
        SHFLX, QVFLX, GFLX,  &
        U10, V10, T2, Q2     )
     use scale_const, only: &
+       EPSvap => CONST_EPSvap, &
        EPS   => CONST_EPS, &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
@@ -85,7 +86,8 @@ contains
        Rvap  => CONST_Rvap,  &
        STB   => CONST_STB
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+!       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_dens2qsat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -171,10 +173,10 @@ contains
     do i = IS, IE
        if ( calc_flag(i,j) ) then
 
-          qdry = 1.0_RP - QVA(i,j)
-          Rtot = qdry * Rdry + QVA(i,j) * Rvap
-
-          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
+!          qdry = 1.0_RP - QVA(i,j)
+!          Rtot = qdry * Rdry + QVA(i,j) * Rvap
+!          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
+          call qsat( TMPS(i,j), RHOS(i,j), QVsat )
 
           QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
               + (        QVEF(i,j) ) * QVsat

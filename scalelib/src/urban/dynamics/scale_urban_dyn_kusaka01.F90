@@ -244,7 +244,8 @@ contains
        Rdry => CONST_Rdry, &
        Rvap => CONST_Rvap
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_dens2qsat_all
+!       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -379,8 +380,8 @@ contains
 
     if( fact_urban(i,j) > 0.0_RP ) then
 
-       qdry = 1.0_RP - QA(i,j)
-       Rtot = qdry * Rdry + QA(i,j) * Rvap
+!       qdry = 1.0_RP - QA(i,j)
+!       Rtot = qdry * Rdry + QA(i,j) * Rvap
 
        w = U1(i,j) * TanSL_X(i,j) + V1(i,j) * TanSL_Y(i,j)
        Uabs = sqrt( U1(i,j)**2 + V1(i,j)**2 + w**2 )
@@ -445,6 +446,7 @@ contains
                       PRSA    (i,j),      & ! [IN]
                       PRSS    (i,j),      & ! [IN]
                       TMPA    (i,j),      & ! [IN]
+                      RHOS    (i,j),      & ! [IN]
                       QA      (i,j),      & ! [IN]
                       Uabs,               & ! [IN]
                       U1      (i,j),      & ! [IN]
@@ -486,8 +488,10 @@ contains
        ALBEDO(i,j,I_R_diffuse,I_R_VIS) = ALBD_SW
 
        ! saturation at the surface
-       call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
-                  QVsat                           ) ! [OUT]
+!       call qsat( SFC_TEMP(i,j), PRSS(i,j), qdry, & ! [IN]
+!                  QVsat                           ) ! [OUT]
+       call qsat( SFC_TEMP(i,j), RHOS(i,j), & ! [IN]
+                  QVsat                     ) ! [OUT]
 
        call BULKFLUX( Ustar,         & ! [OUT]
                       Tstar,         & ! [OUT]
@@ -612,6 +616,7 @@ contains
         PRSA,         & ! (in)
         PRSS,         & ! (in)
         TA,           & ! (in)
+        RHOS,         & ! (in)
         QA,           & ! (in)
         UA,           & ! (in)
         U1,           & ! (in)
@@ -643,7 +648,8 @@ contains
     use scale_atmos_hydrometeor, only: &
        HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_dens2qsat_all
+!       qsat => ATMOS_SATURATION_pres2qsat_all
     implicit none
 
     integer, intent(in) :: UKA, UKS, UKE
@@ -657,6 +663,7 @@ contains
     real(RP), intent(in)    :: PRSA ! Pressure at 1st atmospheric layer      [Pa]
     real(RP), intent(in)    :: PRSS ! Surface Pressure                       [Pa]
     real(RP), intent(in)    :: TA   ! temp at 1st atmospheric level          [K]
+    real(RP), intent(in)    :: RHOS ! surface density                        [kg/m^3]
     real(RP), intent(in)    :: QA   ! specific humidity at 1st atmospheric level  [kg/kg]
     real(RP), intent(in)    :: UA   ! wind speed at 1st atmospheric level    [m/s]
     real(RP), intent(in)    :: U1   ! u at 1st atmospheric level             [m/s]
@@ -931,8 +938,10 @@ contains
       RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-      call qsat( TR, PRSS, qdry, & ! [IN]
-                 QS0R            ) ! [OUT]
+      call qsat( TR, RHOS, & ! [IN]
+                 QS0R      ) ! [OUT]
+!      call qsat( TR, PRSS, qdry, & ! [IN]
+!                 QS0R            ) ! [OUT]
 
       RR    = EPSR * ( RX - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
@@ -1018,8 +1027,10 @@ contains
      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
-     call qsat( TR, PRSS, qdry, & ! [IN]
-                QS0R            ) ! [OUT]
+     call qsat( TR, RHOS, & ! [IN]
+                QS0R      ) ! [OUT]
+!     call qsat( TR, PRSS, qdry, & ! [IN]
+!                QS0R            ) ! [OUT]
 
      RR      = EPSR * ( RX - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
@@ -1073,8 +1084,10 @@ contains
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
-      call qsat( TB, PRSS, qdry, QS0B )
-      call qsat( TG, PRSS, qdry, QS0G )
+      call qsat( TB, RHOS, QS0B )
+      call qsat( TG, RHOS, QS0G )
+!      call qsat( TB, PRSS, qdry, QS0B )
+!      call qsat( TG, PRSS, qdry, QS0G )
 
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
@@ -1162,8 +1175,10 @@ contains
       resi2p = resi2
 
       ! this is for TC, QC
-      call qsat( TB, PRSS, qdry, QS0B )
-      call qsat( TG, PRSS, qdry, QS0G )
+      call qsat( TB, RHOS, QS0B )
+      call qsat( TG, RHOS, QS0G )
+!      call qsat( TB, PRSS, qdry, QS0B )
+!      call qsat( TG, PRSS, qdry, QS0G )
 
       THS1   = TB / EXN
       THS2   = TG / EXN

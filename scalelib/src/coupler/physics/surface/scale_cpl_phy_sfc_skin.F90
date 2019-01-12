@@ -120,7 +120,8 @@ contains
        Rvap  => CONST_Rvap,  &
        STB   => CONST_STB
     use scale_atmos_saturation, only: &
-       qsat => ATMOS_SATURATION_pres2qsat_all
+       qsat => ATMOS_SATURATION_dens2qsat_all
+!       qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -234,8 +235,8 @@ contains
     do i = IS, IE
        if ( calc_flag(i,j) ) then
 
-          qdry = 1.0_RP - QVA(i,j)
-          Rtot = qdry * Rdry + QVA(i,j) * Rvap
+!          qdry = 1.0_RP - QVA(i,j)
+!          Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
           redf   = 1.0_RP
           oldres = huge(0.0_RP)
@@ -243,8 +244,10 @@ contains
           ! modified Newton-Raphson method (Tomita 2009)
           do n = 1, CPL_PHY_SFC_SKIN_itr_max
 
-             call qsat( TMPS1(i,j),      PRSS(i,j), qdry, QVsat  )
-             call qsat( TMPS1(i,j)+dTS0, PRSS(i,j), qdry, dQVsat )
+             call qsat( TMPS1(i,j),      RHOS(i,j), QVsat  )
+             call qsat( TMPS1(i,j)+dTS0, RHOS(i,j), dQVsat )
+!             call qsat( TMPS1(i,j),      PRSS(i,j), qdry, QVsat  )
+!             call qsat( TMPS1(i,j)+dTS0, PRSS(i,j), qdry, dQVsat )
 
              QVS  = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
                   + (        QVEF(i,j) ) * QVsat
@@ -419,10 +422,11 @@ contains
           ! calculate surface flux
           TMPS(i,j) = TMPS1(i,j)
 
-          qdry = 1.0_RP - QVA(i,j)
-          Rtot = qdry * Rdry + QVA(i,j) * Rvap
+!          qdry = 1.0_RP - QVA(i,j)
+ !         Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
-          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
+          call qsat( TMPS(i,j), RHOS(i,j), QVsat )
+!          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
 
           QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
               + (        QVEF(i,j) ) * QVsat
