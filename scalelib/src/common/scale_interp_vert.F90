@@ -178,7 +178,7 @@ contains
           INTERP_z2xi_idx (k,i,j,2) = KS
           INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
           INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
-!          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
+          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
 
        elseif( Z(k,i,j) <= Xi(KS) ) then
 

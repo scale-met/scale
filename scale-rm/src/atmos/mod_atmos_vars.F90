@@ -2570,15 +2570,40 @@ contains
        end if
        select case ( vname )
        case ( 'CAPE' )
-          var(:,:) = CAPE(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = CAPE(i,j)
+          end do
+          end do
        case ( 'CIN' )
-          var(:,:) = CIN(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = CIN(i,j)
+          end do
+          end do
        case ( 'LCL' )
-          var(:,:) = LCL(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LCL(i,j)
+          end do
+          end do
        case ( 'LFC' )
-          var(:,:) = LFC(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LFC(i,j)
+          end do
+          end do
        case ( 'LNB' )
-          var(:,:) = LNB(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LNB(i,j)
+          end do
+          end do
        end select
 
     case ( 'PREC', 'RAIN', 'SNOW' )
@@ -2587,8 +2612,8 @@ contains
           call allocate_2D( RAIN )
           call allocate_2D( SNOW )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          do j = 1, JA
-          do i = 1, IA
+          do j = JS, JE
+          do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
              SNOW(i,j) = SFLX_snow_MP(i,j)
              PREC(i,j) = RAIN(i,j) + SNOW(i,j)
@@ -2598,11 +2623,26 @@ contains
        end if
        select case (vname)
        case ( 'RAIN' )
-          var(:,:) = RAIN(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = RAIN(i,j)
+          end do
+          end do
        case ( 'SNOW' )
-          var(:,:) = SNOW(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = SNOW(i,j)
+          end do
+          end do
        case ( 'PREC' )
-          var(:,:) = PREC(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = PREC(i,j)
+          end do
+          end do
        end select
 
     case default
