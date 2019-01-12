@@ -44,11 +44,14 @@ contains
   !> Calc bottom boundary of atmosphere (just above surface)
   subroutine ATMOS_BOTTOM_estimate( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, PRES,        &
-       CZ, Zsfc, Z1,      &
+       DENS, PRES, QV, &
+       SFC_TEMP,       &
+       Z1,             &
        SFC_DENS, SFC_PRES )
     use scale_const, only: &
-       GRAV  => CONST_GRAV
+       GRAV    => CONST_GRAV, &
+       Rdry    => CONST_Rdry, &
+       EPSTvap => CONST_EPSTvap
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -56,31 +59,26 @@ contains
 
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: PRES    (KA,IA,JA)
-    real(RP), intent(in)  :: CZ      (KA,IA,JA)
-    real(RP), intent(in)  :: Zsfc    (IA,JA)
+    real(RP), intent(in)  :: QV      (KA,IA,JA)
+    real(RP), intent(in)  :: SFC_TEMP(IA,JA)
     real(RP), intent(in)  :: Z1      (IA,JA)
     real(RP), intent(out) :: SFC_DENS(IA,JA)
     real(RP), intent(out) :: SFC_PRES(IA,JA)
 
+    real(RP) :: Rtot
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! estimate surface density (extrapolation)
-    !$omp parallel do OMP_SCHEDULE_
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private (Rtot)
     do j = JS, JE
     do i = IS, IE
-       SFC_DENS(i,j) = lagrange_interp( Zsfc(i,j),         & ! [IN]
-                                        CZ  (KS:KS+2,i,j), & ! [IN]
-                                        DENS(KS:KS+2,i,j)  ) ! [IN]
-    enddo
-    enddo
-
-    ! estimate surface pressure (hydrostatic balance)
-    !$omp parallel do OMP_SCHEDULE_
-    do j = JS, JE
-    do i = IS, IE
-       SFC_PRES(i,j) = PRES(KS,i,j) &
-                     + 0.5_RP * ( SFC_DENS(i,j) + DENS(KS,i,j) ) * GRAV * Z1(i,j)
+       Rtot = Rdry * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
+       ! ( PRES(KS) - ( SFC_DENS * Rtot * SFC_TEMP ) ) / Z1 = - GRAV * ( DENS(KS) + SFC_DENS ) * 0.5
+       SFC_DENS(i,j) = ( PRES(KS,i,j) + GRAV * Z1(i,j) * DENS(KS,i,j) * 0.5_RP ) &
+                     / ( Rtot * SFC_TEMP(i,j) - GRAV * Z1(i,j) * 0.5_RP )
+       SFC_PRES(i,j) = SFC_DENS(i,j) * Rtot * SFC_TEMP(i,j)
     enddo
     enddo
 

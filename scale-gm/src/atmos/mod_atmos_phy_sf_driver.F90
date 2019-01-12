@@ -146,8 +146,7 @@ contains
        QV,   &
        CZ,   &
        FZ,   &
-       Z1,   &
-       TOPO_Zsfc
+       Z1
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
@@ -198,9 +197,10 @@ contains
 
        ! update surface density, surface pressure
        call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                             DENS(:,:,:,l), PRES(:,:,:,l),             & ! [IN]
-                             CZ(:,:,:,l), TOPO_Zsfc(:,:,l), Z1(:,:,l), & ! [IN]
-                             SFC_DENS(:,:,l), SFC_PRES(:,:,l)          ) ! [OUT]
+                             DENS(:,:,:,l), PRES(:,:,:,l), QV(:,:,:,l), & ! [IN]
+                             SFC_TEMP(:,:,l),                           & ! [IN]
+                             Z1(:,:,l),                                 & ! [IN]
+                             SFC_DENS(:,:,l), SFC_PRES(:,:,l)           ) ! [OUT]
 
     end do
 

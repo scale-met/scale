@@ -124,7 +124,6 @@ contains
        ATMOS_GRID_CARTESC_REAL_AREA, &
        ATMOS_GRID_CARTESC_REAL_TOTAREA
     use scale_topography, only: &
-       Zsfc    => TOPOGRAPHY_Zsfc, &
        TanSL_X => TOPOGRAPHY_TanSL_X, &
        TanSL_Y => TOPOGRAPHY_TanSL_Y
     use scale_time, only: &
@@ -214,12 +213,11 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( KA, KS,  KE,                   & ! [IN]
-                             IA, ISB, IEB,                  & ! [IN]
-                             JA, JSB, JEB,                  & ! [IN]
-                             DENS(:,:,:), PRES(:,:,:),      & ! [IN]
-                             CZ(:,:,:), Zsfc(:,:), Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)   ) ! [OUT]
+       call BOTTOM_estimate( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, &
+                             DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                             SFC_TEMP(:,:),                       & ! [IN]
+                             Z1(:,:),                             & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        if ( .NOT. CPL_sw ) then
 
