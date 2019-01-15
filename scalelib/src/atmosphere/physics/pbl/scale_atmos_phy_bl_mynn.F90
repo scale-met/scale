@@ -95,14 +95,15 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: initialize
 
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN  =  1.E-20_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX   =   1.E+3_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN   =  -1.E-3_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX   = 10000.0_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN   =  -1.E-3_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX   = 10000.0_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX   =   700.0_RP ! ~ 0.23 * 3 km
-  logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE = .false.
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN   =  1.E-20_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX    =   1.E+3_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN    =  -1.E-3_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX    = 10000.0_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN    =  -1.E-3_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX    = 10000.0_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX    =   700.0_RP ! ~ 0.23 * 3 km
+  logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE  = .false.
+  logical,  private            :: ATMOS_PHY_BL_MYNN_prod_surf = .false.
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3"
 
@@ -115,7 +116,8 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_KH_MAX,   &
        ATMOS_PHY_BL_MYNN_Lt_MAX,   &
        ATMOS_PHY_BL_MYNN_LEVEL,    &
-       ATMOS_PHY_BL_MYNN_init_TKE
+       ATMOS_PHY_BL_MYNN_init_TKE, &
+       ATMOS_PHY_BL_MYNN_prod_surf
 
 
   !-----------------------------------------------------------------------------
@@ -401,6 +403,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
+    !$omp        ATMOS_PHY_BL_MYNN_prod_surf, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RPROG_t,Nu,Kh, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,l_mo, &
     !$omp        mynn_level3,initialize,nit, &
@@ -495,32 +498,34 @@ contains
 
           if ( mynn_level3 ) then
 
-             ! production at KS
-             us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
-             !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
-             zeta = z1 / l_mo(i,j)
-             ! Businger et al. (1971)
-!!$             if ( zeta > 0 ) then
-!!$                phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
-!!$             else
-!!$                phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
-!!$             end if
-             ! Beljaars and Holtslag (1991)
-             if ( zeta > 0 ) then
-                phi_h = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
-             else
-                phi_h = 1.0_RP / sqrt( 1.0_RP - 16.0_RP * zeta )
+             if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+                ! production at KS
+                us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
+                !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
+                zeta = z1 / l_mo(i,j)
+!!$                ! Businger et al. (1971)
+!!$                if ( zeta > 0 ) then
+!!$                   phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
+!!$                else
+!!$                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
+!!$                end if
+                ! Beljaars and Holtslag (1991)
+                if ( zeta > 0 ) then
+                   phi_h = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
+                else
+                   phi_h = 1.0_RP / sqrt( 1.0_RP - 16.0_RP * zeta )
+                end if
+                ! TSQ
+                prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
+                ! QSQ
+                prod_q1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
+                ! COV
+                prod_c1 = 1.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
              end if
-             ! TSQ
-             prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
-             ! QSQ
-             prod_q1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
-             ! COV
-             prod_c1 = 1.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
 
              do k = KS, KE_PBL
 
-                if ( k == KS ) then
+                if ( ATMOS_PHY_BL_MYNN_prod_surf .and. k == KS ) then
                    tsq25 = prod_t1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                    qsq25 = prod_q1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                    cov25 = prod_c1 * B2 * l(k,i,j) / q(k) * 0.5_RP
@@ -700,27 +705,28 @@ contains
           end if
 
           ! dens * TKE
-          ! production at KS
-          us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
-          !us3 = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )**3
-          zeta = z1 / l_mo(i,j)
-!!$       ! Businger et al. (1971)
-!!$       if ( zeta > 0 ) then
-!!$          phi_m = 4.7_RP * zeta + 1.0_RP
-!!$       else
-!!$          phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-!!$       end if
-          ! Beljaars and Holtslag (1991)
-          if ( zeta > 0 ) then
-             phi_m = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * zeta * exp(-0.35_RP*zeta) + zeta + 1.0_RP
-          else
-             phi_m = 1.0_RP / sqrt(sqrt(1.0_RP - 16.0_RP * zeta))
-          end if
-          prod(KS,i,j) = us3 * ( phi_m - zeta ) / ( KARMAN * z1 )
-          do k = KS+1, KE_PBL
-!          do k = KS, KE_PBL
+          do k = KS, KE_PBL
              prod(k,i,j) = Nu(k,i,j) * dudz2(k,i,j) - Kh(k,i,j) * n2_new(k)
           end do
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             ! production at KS
+             us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
+             !us3 = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )**3
+             zeta = z1 / l_mo(i,j)
+!!$             ! Businger et al. (1971)
+!!$             if ( zeta > 0 ) then
+!!$                phi_m = 4.7_RP * zeta + 1.0_RP
+!!$             else
+!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+!!$             end if
+             ! Beljaars and Holtslag (1991)
+             if ( zeta > 0 ) then
+                phi_m = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * zeta * exp(-0.35_RP*zeta) + zeta + 1.0_RP
+             else
+                phi_m = 1.0_RP / sqrt(sqrt(1.0_RP - 16.0_RP * zeta))
+             end if
+             prod(KS,i,j) = us3 * ( phi_m - zeta ) / ( KARMAN * z1 )
+          end if
           do k = KS, KE_PBL
              tke_p = q(k)**2 * 0.5_RP
              prod(k,i,j) = max( prod(k,i,j), - tke_p / dt)
@@ -772,11 +778,12 @@ contains
 
 
           ! dens * tsq
-          d(KS) = max(tsq(KS) + dt * prod_t1, 0.0_RP)
-          do k = KS+1, KE_PBL
-!          do k = KS, KE_PBL
+          do k = KS, KE_PBL
              d(k) = max(tsq(k) + dt * 2.0_RP * l(k,i,j) * q(k) * sh(k) * dtldz(k)**2, 0.0_RP)
           end do
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             d(KS) = max(tsq(KS) + dt * prod_t1, 0.0_RP)
+          end if
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
              ap = - dt * RHONu(k) / ( CZ(k+1,i,j) - CZ(k,i,j) )
@@ -807,11 +814,12 @@ contains
 
 
           ! dens * qsq
-          d(KS) = max(qsq(KS) + dt * prod_q1, 0.0_RP)
-          do k = KS+1, KE_PBL
-!          do k = KS, KE_PBL
+          do k = KS, KE_PBL
              d(k) = max(qsq(k) + dt * 2.0_RP * l(k,i,j) * q(k) * sh(k) * dqwdz(k)**2, 0.0_RP)
           end do
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             d(KS) = max(qsq(KS) + dt * prod_q1, 0.0_RP)
+          end if
           ! a, b, c are same as those for tsq
 
           call MATRIX_SOLVER_tridiagonal( &
@@ -834,11 +842,12 @@ contains
 
 
           ! dens * cov
-          d(KS) = cov(KS) + dt * prod_c1
-          do k = KS+1, KE_PBL
-!          do k = KS, KE_PBL
+          do k = KS, KE_PBL
              d(k) = cov(k) + dt * 2.0_RP * l(k,i,j) * q(k) * sh(k) * dtldz(k) * dqwdz(k)
           end do
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             d(KS) = cov(KS) + dt * prod_c1
+          end if
           ! a, b, c are same as those for tsq
 
           call MATRIX_SOLVER_tridiagonal( &
