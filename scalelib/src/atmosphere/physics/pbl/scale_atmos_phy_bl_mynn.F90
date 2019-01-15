@@ -269,6 +269,7 @@ contains
        RHOU_t, RHOV_t, RHOT_t, RPROG_t,    &
        Nu, Kh                              )
     use scale_const, only: &
+       EPS     => CONST_EPS,    &
        GRAV    => CONST_GRAV,   &
        KARMAN  => CONST_KARMAN, &
        CPdry   => CONST_CPdry,  &
@@ -328,10 +329,8 @@ contains
     real(RP) :: flxV(KA,IA,JA) !> dens * w * v
     real(RP) :: flxT(KA,IA,JA) !> dens * w * pt
 
-    real(RP) :: TEML  (KA) !> liquid water temperature
     real(RP) :: RHONu (KA) !> dens * Nu at the half level
     real(RP) :: RHOKh (KA) !> dens * Kh at the half level for level 2.5
-    real(RP) :: LHVL  (KA) !> latent heat
     real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
     real(RP) :: SFLX_PT    !> surface potential temperature flux
     real(RP) :: SFLX_PTV   !> surface virtual potential temperature flux
@@ -379,6 +378,8 @@ contains
 
     real(RP) :: dt
 
+    real(RP) :: sw
+
     integer :: k, i, j
     integer :: nit, it
     !---------------------------------------------------------------------------
@@ -399,7 +400,7 @@ contains
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE, &
-    !$omp        GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
+    !$omp        EPS,GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
@@ -409,9 +410,9 @@ contains
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
-    !$omp private(N2_new,sm,sh,q,q2_2,ac,SFLX_PT,SFLX_PTV,TEML,RHONu,RHOKh, &
+    !$omp private(N2_new,sm,sh,q,q2_2,ac,SFLX_PT,SFLX_PTV,RHONu,RHOKh, &
     !$omp         dtldz,dqwdz,betat,betaq, &
-    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us,us3,f2h,z1, &
+    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us,us3,f2h,z1,sw, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
     !$omp         k,i,j,it)
     do j = JS, JE
@@ -594,10 +595,12 @@ contains
              Nu(k,i,j) = max( min( l(k,i,j) * q(k) * sm(k), &
                               ATMOS_PHY_BL_MYNN_NU_MAX ), &
                               ATMOS_PHY_BL_MYNN_NU_MIN )
-             Kh(k,i,j) = MAX( min( l(k,i,j) * q(k) * sh(k), &
+             Kh(k,i,j) = max( min( l(k,i,j) * q(k) * sh(k), &
                               ATMOS_PHY_BL_MYNN_KH_MAX ), &
                               ATMOS_PHY_BL_MYNN_KH_MIN )
-             Pr(k,i,j) = Nu(k,i,j) / Kh(k,i,j)
+             sw = 0.5_RP - sign(0.5_RP, abs(Kh(k,i,j)) - EPS)
+             Pr(k,i,j) = Nu(k,i,j) / ( Kh(k,i,j) + sw ) * ( 1.0_RP - sw ) &
+                       + 1.0_RP * sw
           end do
 
           ! dens * coefficient at the half level
