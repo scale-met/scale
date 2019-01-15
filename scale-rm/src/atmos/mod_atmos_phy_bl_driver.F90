@@ -177,8 +177,11 @@ contains
 
     logical, intent(in) :: update_flag
 
-    real(RP) :: Nu(KA,IA,JA) !> eddy viscosity
-    real(RP) :: Kh(KA,IA,JA) !> eddy diffution
+    real(RP) :: Nu   (KA,IA,JA) !> eddy viscosity
+    real(RP) :: Nu_cg(KA,IA,JA) !> eddy viscosity for the countergradient
+    real(RP) :: Kh   (KA,IA,JA) !> eddy diffution
+    real(RP) :: Kh_cg(KA,IA,JA) !> eddy diffution for the countergradient
+
     real(RP) :: QW(KA,IA,JA) !> total water
 
     real(RP) :: N2  (KA,IA,JA) !> static stability
@@ -216,13 +219,14 @@ contains
                CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                     & ! (out)
                RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),               & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)
+               Nu(:,:,:), Nu_cg(:,:,:), Kh(:,:,:), Kh_cg(:,:,:)        ) ! (out)
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
-                  SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
+                  SFLX_Q(:,:,iq),              & ! (in)
+                  Kh(:,:,:), Kh_cg(:,:,:),     & ! (in)
                   TRACER_MASS(iq),             & ! (in)
                   CZ(:,:,:), FZ(:,:,:),        & ! (in)
                   dt_BL, TRACER_NAME(iq),      & ! (in)
@@ -230,12 +234,14 @@ contains
           end do
        end select
 
-       call FILE_HISTORY_in( Nu(:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
-       call FILE_HISTORY_in( Kh(:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+       call FILE_HISTORY_in( Nu   (:,:,:),     'Nu_BL',     'eddy viscosity',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
+       call FILE_HISTORY_in( Nu_cg(:,:,:),     'Nu_cg_BL',  'eddy viscosity for the countergradient', 'm2/s',      fill_halo=.true., dim_type="ZHXY" )
+       call FILE_HISTORY_in( Kh   (:,:,:),     'Kh_BL',     'eddy diffusion',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
+       call FILE_HISTORY_in( Kh_cg(:,:,:),     'Kh_cg_BL',  'eddy diffusion for the countergradient', 'm2/s',      fill_halo=.true., dim_type="ZHXY" )
 
-       call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
-       call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)', 'kg/m2/s2',  fill_halo=.true. )
-       call FILE_HISTORY_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)', 'K.kg/m3/s', fill_halo=.true. )
+       call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
+       call FILE_HISTORY_in( RHOT_t_BL(:,:,:), 'RHOT_t_BL', 'RHOT tendency (BL)',                     'K.kg/m3/s', fill_halo=.true. )
 
        do iq = 1, QA
           if ( .not. TRACER_ADVC(iq) ) cycle
