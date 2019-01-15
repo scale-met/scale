@@ -223,6 +223,7 @@ contains
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
                   SFLX_Q(:,:,iq), Kh(:,:,:),   & ! (in)
+                  TRACER_MASS(iq),             & ! (in)
                   CZ(:,:,:), FZ(:,:,:),        & ! (in)
                   dt_BL, TRACER_NAME(iq),      & ! (in)
                   RHOQ_t_BL(:,:,:,iq)          ) ! (out)

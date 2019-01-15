@@ -921,9 +921,11 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_tendency_tracer( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, QTRC, SFLX_Q, Kh,  &
-       CZ, FZ, DT, TRACER_NAME, &
-       RHOQ_t                   )
+       DENS, QTRC, SFLX_Q, &
+       Kh, MASS,           &
+       CZ, FZ, DT,         &
+       TRACER_NAME,        &
+       RHOQ_t              )
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     use scale_file_history, only: &
@@ -936,6 +938,7 @@ contains
     real(RP),         intent(in) :: QTRC  (KA,IA,JA) !> tracers
     real(RP),         intent(in) :: SFLX_Q(   IA,JA) !> surface flux
     real(RP),         intent(in) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient
+    real(RP),         intent(in) :: MASS             !> mass
     real(RP),         intent(in) :: CZ (  KA,IA,JA)  !> z at the full level
     real(RP),         intent(in) :: FZ (0:KA,IA,JA)  !> z at the half level
     real(DP),         intent(in) :: DT               !> time step
@@ -944,7 +947,8 @@ contains
     real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
 
     real(RP) :: QTRC_n(KA) !> value at the next time step
-    real(RP) :: RHOKh(KA)
+    real(RP) :: RHO   (KA)
+    real(RP) :: RHOKh (KA)
     real(RP) :: a(KA)
     real(RP) :: b(KA)
     real(RP) :: c(KA)
@@ -961,8 +965,8 @@ contains
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE) &
-    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,CZ,FZ,DT,flx) &
-    !$omp private(QTRC_n,RHOKh,a,b,c,d,ap,sf_t,f2h) &
+    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,MASS,CZ,FZ,DT,flx) &
+    !$omp private(QTRC_n,RHO,RHOKh,a,b,c,d,ap,sf_t,f2h) &
     !$omp private(k,i,j)
     do j = JS, JE
     do i = IS, IE
@@ -972,14 +976,20 @@ contains
             FZ(:,i,j), & ! (in)
             f2h(:,:)   ) ! (out)
 
-       ! dens * coefficient at the half level
-       do k = KS, KE_PBL-1
-          RHOKh(k) = f2h(k,1) * DENS(k+1,i,j) * Kh(k+1,i,j) &
-                   + f2h(k,2) * DENS(k  ,i,j) * Kh(k  ,i,j)
+       sf_t = SFLX_Q(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+
+       RHO(KS) = DENS(KS,i,j) + sf_t * dt * MASS
+       do k = KS+1, KE_PBL
+          RHO(k) = DENS(k,i,j)
        end do
 
-       sf_t = SFLX_Q(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-       d(KS) = QTRC(KS,i,j) + dt * sf_t / DENS(KS,i,j)
+       ! dens * coefficient at the half level
+       do k = KS, KE_PBL-1
+          RHOKh(k) = f2h(k,1) * RHO(k+1) * Kh(k+1,i,j) &
+                   + f2h(k,2) * RHO(k  ) * Kh(k  ,i,j)
+       end do
+
+       d(KS) = ( QTRC(KS,i,j) * DENS(KS,i,j) + sf_t * dt ) / RHO(KS)
        do k = KS+1, KE_PBL
           d(k) = QTRC(k,i,j)
        end do
@@ -987,9 +997,9 @@ contains
        c(KS) = 0.0_RP
        do k = KS, KE_PBL-1
           ap = - dt * RHOKh(k) / ( CZ(k+1,i,j) - CZ(k,i,j) )
-          a(k) = ap / ( DENS(k,i,j) * ( FZ(k,i,j) - FZ(k-1,i,j) ) )
+          a(k) = ap / ( RHO(k) * ( FZ(k,i,j) - FZ(k-1,i,j) ) )
           b(k) = - a(k) - c(k) + 1.0_RP
-          c(k+1) = ap / ( DENS(k+1,i,j) * ( FZ(k+1,i,j) - FZ(k,i,j) ) )
+          c(k+1) = ap / ( RHO(k+1) * ( FZ(k+1,i,j) - FZ(k,i,j) ) )
        end do
        a(KE_PBL) = 0.0_RP
        b(KE_PBL) = - c(KE_PBL) + 1.0_RP
@@ -999,9 +1009,9 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                QTRC_n(:)               ) ! (out)
 
-       RHOQ_t(KS,i,j) = ( QTRC_n(KS) - QTRC(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
+       RHOQ_t(KS,i,j) = ( QTRC_n(KS) * RHO(KS) - QTRC(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
        do k = KS+1, KE_PBL
-          RHOQ_t(k,i,j) = ( QTRC_n(k) - QTRC(k,i,j) ) * DENS(k,i,j) / dt
+          RHOQ_t(k,i,j) = ( QTRC_n(k) - QTRC(k,i,j) ) * RHO(k) / dt
        end do
        do k = KE_PBL+1, KE
           RHOQ_t(k,i,j) = 0.0_RP
