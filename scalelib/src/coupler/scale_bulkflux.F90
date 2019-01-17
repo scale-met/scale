@@ -435,6 +435,7 @@ contains
     real(DP) :: TV1, TV0, TVM
     real(DP) :: sw
 
+    real(DP) :: IL2
     real(DP) :: BFLX, dBFLX
 
     real(DP) :: DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E
@@ -516,8 +517,9 @@ contains
             WstarC,                                & ! (inout)
             UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
+       IL2 = sign( abs(IL) + dIL, IL )
        call calc_scales_B91W01( &
-            IL+dIL, UabsC, TH1, TH0, Q1, Q0, PBL,  & ! (in)
+            IL2, UabsC, TH1, TH0, Q1, Q0, PBL,     & ! (in)
             log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
             DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
             RzM, RzH, RzE,                         & ! (in)
@@ -527,7 +529,7 @@ contains
        res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
 
        ! calculate d(residual)/dIL
-       dres = 1.0_DP + KARMAN * GRAV / ( TH0 * dIL ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
+       dres = 1.0_DP + KARMAN * GRAV / ( TH0 * sign(dIL,IL) ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
 
        ! stop iteration to prevent numerical error
        if( abs( dres ) < EPS ) exit
