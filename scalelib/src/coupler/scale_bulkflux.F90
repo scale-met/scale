@@ -377,7 +377,9 @@ contains
       GRAV    => CONST_GRAV,    &
       KARMAN  => CONST_KARMAN,  &
       Rdry    => CONST_Rdry,    &
+      Rvap    => CONST_Rvap,    &
       CPdry   => CONST_CPdry,   &
+      CPvap   => CONST_CPvap,   &
       EPSTvap => CONST_EPSTvap, &
       EPS     => CONST_EPS,     &
       PRE00   => CONST_PRE00
@@ -434,10 +436,10 @@ contains
     real(DP) :: FracT2US,  FracT2S,  FracT2C
     real(DP) :: FracQ2US,  FracQ2S,  FracQ2C
 
-    real(DP) :: TH1, TH0, THM
+    real(DP) :: Rtot, CPtot
+    real(DP) :: TH1, TH0
     real(DP) :: TV1, TV0, TVM
-    real(DP) :: QM
-    real(DP) :: sw, tmp
+    real(DP) :: sw
 
     real(DP) :: BFLX, dBFLX
 
@@ -461,10 +463,10 @@ contains
 
     UabsC = max( Uabs, BULKFLUX_Uabs_min )
 
-    TH1 = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    Rtot  = Rdry  * ( 1.0_DP - Q1 ) + Rvap  * Q1
+    CPtot = CPdry * ( 1.0_DP - Q1 ) + CPvap * Q1
+    TH1 = T1 * ( P0 / P1 )**( Rtot / CPtot )
     TH0 = T0
-    THM = ( TH1 + TH0 ) * 0.5_RP
-    QM  = ( Q1  + Q0  ) * 0.5_RP
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
     TV0 = TH0 * ( 1.0_DP + EPSTvap * Q0 )
     TVM = ( TV1 + TV0 ) * 0.5_RP
@@ -549,7 +551,7 @@ contains
       QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
 
       ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
+      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * Q0 ) - EPSTvap * UstarC * QstarC * TH0
 
       ! update free convection velocity scale
       tmp = PBL * GRAV / T1 * BFLX
@@ -563,7 +565,7 @@ contains
       UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
 
       ! estimate the inversed Obukhov length
-      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
     end do
 
 
@@ -624,7 +626,7 @@ contains
       QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
 
       ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
+      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * Q0 ) - EPSTvap * UstarC * QstarC * TH0
 
       ! update free convection velocity scale
       tmp = PBL * GRAV / T1 * BFLX
@@ -692,7 +694,7 @@ contains
       dQstarC = ( sw ) * dQstarUS + ( 1.0_DP-sw ) * dQstarS
 
       ! estimate buoyancy flux
-      dBFLX = - dUstarC * dTstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * dUstarC * dQstarC * THM
+      dBFLX = - dUstarC * dTstarC * ( 1.0_RP + EPSTvap * Q0 ) - EPSTvap * dUstarC * dQstarC * TH0
 
       ! update d(free convection velocity scale)
       tmp = PBL * GRAV / T1 * dBFLX
@@ -706,10 +708,10 @@ contains
       dUstarC = ( sw ) * dUstarC + ( 1.0_DP-sw ) * EPS
 
       ! calculate residual
-      res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+      res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
 
       ! calculate d(residual)/dIL
-      dres = 1.0_DP + KARMAN * GRAV / ( THM * dIL ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
+      dres = 1.0_DP + KARMAN * GRAV / ( TH0 * dIL ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
 
       ! stop iteration to prevent numerical error
       if( abs( dres ) < EPS ) exit
@@ -784,7 +786,7 @@ contains
       QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
 
       ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
+      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * Q0 ) - EPSTvap * UstarC * QstarC * TH0
 
       ! update free convection velocity scale
       tmp = PBL * GRAV / T1 * BFLX
@@ -798,7 +800,7 @@ contains
       UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
 
       ! estimate the inversed Obukhov length
-      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
     end if
 
 
