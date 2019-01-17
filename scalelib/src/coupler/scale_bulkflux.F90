@@ -99,7 +99,7 @@ module scale_bulkflux
   !
   character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
 
-  logical,  private :: BULKFLUX_use_mean = .true.
+  logical,  private :: BULKFLUX_NK2018 = .true. !> Nishizawa and Kitamura (2018)
 
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
@@ -127,7 +127,7 @@ contains
 
     namelist / PARAM_BULKFLUX / &
        BULKFLUX_type,       &
-       BULKFLUX_use_mean,   &
+       BULKFLUX_NK2018,     &
        BULKFLUX_itr_sa_max, &
        BULKFLUX_itr_nr_max, &
        BULKFLUX_err_min,    &
@@ -445,7 +445,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! convert to DP
-    if ( BULKFLUX_use_mean ) then
+    if ( BULKFLUX_NK2018 ) then
        DP_Z1  = real( Z1*2.0_RP,  kind=DP )
     else
        DP_Z1  = real( Z1,  kind=DP )
@@ -652,7 +652,7 @@ contains
     real(DP) :: tmp, sw
 
     ! unstable condition
-    if ( BULKFLUX_use_mean ) then
+    if ( BULKFLUX_NK2018 ) then
        denoM = log_Z1ovZ0M &
              - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
              + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
@@ -675,7 +675,7 @@ contains
     QstarUS = KARMAN / denoE * ( Q1  - Q0  )
 
     ! stable condition
-    if ( BULKFLUX_use_mean ) then
+    if ( BULKFLUX_NK2018 ) then
        denoM = log_Z1ovZ0M &
              - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
              + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
