@@ -104,7 +104,7 @@ module scale_bulkflux
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
 
-  real(RP), private :: BULKFLUX_err_min = 1.0E-3_RP ! minimum value of error
+  real(RP), private :: BULKFLUX_err_min = 1.0E-4_RP ! minimum value of error
 
   real(RP), private :: BULKFLUX_WSCF ! empirical scaling factor of Wstar (Beljaars 1994)
 
@@ -637,9 +637,6 @@ contains
 
       UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
 
-      ! calculate residual
-      res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
-
       ! unstable condition
        if ( BULKFLUX_use_mean ) then
           denoM = log_Z1ovZ0M &
@@ -708,6 +705,9 @@ contains
 
       dUstarC = ( sw ) * dUstarC + ( 1.0_DP-sw ) * EPS
 
+      ! calculate residual
+      res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+
       ! calculate d(residual)/dIL
       dres = 1.0_DP + KARMAN * GRAV / ( THM * dIL ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
 
@@ -718,7 +718,10 @@ contains
       if( abs( res/dres ) < BULKFLUX_err_min ) exit
 
       ! avoid sign changing
-      if( IL * ( IL - res / dres ) < 0.0_RP ) exit
+      if( IL * ( IL - res / dres ) < 0.0_RP ) then
+         if ( abs(IL) <= EPS ) exit
+         IL = sign(EPS, IL)
+      end if
 
       ! update the inversed Obukhov length
       IL = IL - res / dres
