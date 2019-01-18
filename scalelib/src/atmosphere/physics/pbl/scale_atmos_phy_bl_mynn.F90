@@ -878,13 +878,13 @@ contains
           do k = KS, KE_PBL-1
              ap = - dt * ATMOS_PHY_BL_MYNN_Sq_fact * RHONu(k) / FDZ(k)
              a(k) = ap / ( DENS(k,i,j) * CDZ(k) )
-             diss(k,i,j) = 2.0_RP * q(k) / ( B1 * l(k,i,j) )
-             b(k) = - a(k) - c(k) + 1.0_RP + diss(k,i,j) * dt
+             diss(k,i,j) = - 2.0_RP * q(k) / ( B1 * l(k,i,j) )
+             b(k) = - a(k) - c(k) + 1.0_RP - diss(k,i,j) * dt
              c(k+1) = ap / ( DENS(k+1,i,j) * CDZ(k+1) )
           end do
           a(KE_PBL) = 0.0_RP
-          diss(KE_PBL,i,j) = 2.0_RP * q(KE_PBL) / ( B1 * l(KE_PBL,i,j) )
-          b(KE_PBL) = - c(KE_PBL) + 1.0_RP + diss(KE_PBL,i,j) * dt
+          diss(KE_PBL,i,j) = - 2.0_RP * q(KE_PBL) / ( B1 * l(KE_PBL,i,j) )
+          b(KE_PBL) = - c(KE_PBL) + 1.0_RP - diss(KE_PBL,i,j) * dt
           do k = KE_PBL+1, KE
              diss(k,i,j) = 0.0_RP
           end do
@@ -1056,12 +1056,14 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       do k = KE_PBL+1, KE
+       do k = KE_PBL, KE
           Nu   (k,i,j) = 0.0_RP
           Nu_cg(k,i,j) = 0.0_RP
           Kh   (k,i,j) = 0.0_RP
           Kh_cg(k,i,j) = 0.0_RP
           Pr   (k,i,j) = 1.0_RP
+       end do
+       do k = KE_PBL+1, KE
           Ri   (k,i,j) = UNDEF
           prod (k,i,j) = UNDEF
           diss (k,i,j) = UNDEF
@@ -1073,7 +1075,7 @@ contains
 
 
     call FILE_HISTORY_in(Ri(:,:,:), 'Ri_MYNN', 'Richardson number', '1',     fill_halo=.true. )
-    call FILE_HISTORY_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     fill_halo=.true. )
+    call FILE_HISTORY_in(Pr(:,:,:), 'Pr_MYNN', 'Prandtl number',    '1',     fill_halo=.true., dim_type="ZHXY" )
     call FILE_HISTORY_in(prod(:,:,:), 'TKE_prod_MYNN', 'TKE production',  'm2/s3', fill_halo=.true.)
     call FILE_HISTORY_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', fill_halo=.true.)
     call FILE_HISTORY_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', fill_halo=.true.)
