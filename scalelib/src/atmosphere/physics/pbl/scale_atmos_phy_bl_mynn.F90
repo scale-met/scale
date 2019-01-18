@@ -389,7 +389,10 @@ contains
     real(RP) :: tke_P(KA)
 
     real(RP) :: sf_t
-    real(RP) :: us, us3, zeta, phi_m, phi_h
+    real(RP) :: us, us3
+    real(RP) :: zeta
+    real(RP) :: phi_m, phi_h
+    real(RP) :: rl_mo
 
     real(RP) :: FDZ(KA)
     real(RP) :: CDZ(KA)
@@ -434,7 +437,7 @@ contains
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm25,smp,sh25,shpgh,Nu_f,Kh_f,q,q2_2,ac,SFLX_PT,SFLX_PTV,RHONu,RHONuc,RHOKh,RHOKhc, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,wtl,wqw, &
-    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us,us3,CDZ,FDZ,f2h,z1, &
+    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,rl_mo,zeta,phi_m,phi_h,us,us3,CDZ,FDZ,f2h,z1, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,tltv25,qwtv25,prod_t1,prod_q1,prod_c1, &
     !$omp         sw,tmp, &
     !$omp         k,i,j,it)
@@ -537,14 +540,15 @@ contains
 
              if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
                 ! production at KS
-                us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
+                us = max(-l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
                 !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
-                zeta = z1 / l_mo(i,j)
+                rl_mo = 1.0_RP / sign( max(abs(l_mo(i,j)), EPS), l_mo(i,j) )
+                zeta = z1 * rl_mo
 !!$                ! Businger et al. (1971)
 !!$                if ( zeta > 0 ) then
-!!$                   phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
+!!$                   phi_h = 4.7_RP * z1 * rl_mo / 0.74_RP + 1.0_RP
 !!$                else
-!!$                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
+!!$                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 * rl_mo )
 !!$                end if
                 ! Beljaars and Holtslag (1991)
                 if ( zeta > 0 ) then
@@ -832,8 +836,9 @@ contains
           if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
              ! production at KS
              us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
+             rl_mo = 1.0_RP / sign( max( abs(l_mo(i,j)),EPS ), l_mo(i,j) )
              !us3 = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )**3
-             zeta = z1 / l_mo(i,j)
+             zeta = z1 * rl_mo
 !!$             ! Businger et al. (1971)
 !!$             if ( zeta > 0 ) then
 !!$                phi_m = 4.7_RP * zeta + 1.0_RP
@@ -1282,7 +1287,7 @@ contains
                   ATMOS_PHY_BL_MYNN_Lt_MAX )
     rlt = 1.0_RP / lt
 
-    rlm = 1.0_RP / l_mo
+    rlm = 1.0_RP / sign( max(abs(l_mo),EPS), l_mo )
 
     qc = ( GRAV / PT0 * max(SFLX_PTV,0.0_RP) * lt )**OneOverThree
 
