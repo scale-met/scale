@@ -99,12 +99,12 @@ module scale_bulkflux
   !
   character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
 
-  logical,  private :: BULKFLUX_use_mean = .true.
+  logical,  private :: BULKFLUX_NK2018 = .true. !> Nishizawa and Kitamura (2018)
 
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
 
-  real(RP), private :: BULKFLUX_err_min = 1.0E-3_RP ! minimum value of error
+  real(RP), private :: BULKFLUX_err_min = 1.0E-4_RP ! minimum value of error
 
   real(RP), private :: BULKFLUX_WSCF ! empirical scaling factor of Wstar (Beljaars 1994)
 
@@ -127,7 +127,7 @@ contains
 
     namelist / PARAM_BULKFLUX / &
        BULKFLUX_type,       &
-       BULKFLUX_use_mean,   &
+       BULKFLUX_NK2018,     &
        BULKFLUX_itr_sa_max, &
        BULKFLUX_itr_nr_max, &
        BULKFLUX_err_min,    &
@@ -377,7 +377,9 @@ contains
       GRAV    => CONST_GRAV,    &
       KARMAN  => CONST_KARMAN,  &
       Rdry    => CONST_Rdry,    &
+      Rvap    => CONST_Rvap,    &
       CPdry   => CONST_CPdry,   &
+      CPvap   => CONST_CPvap,   &
       EPSTvap => CONST_EPSTvap, &
       EPS     => CONST_EPS,     &
       PRE00   => CONST_PRE00
@@ -417,40 +419,34 @@ contains
     real(DP) :: dres ! d(residual)/dIL
 
     real(DP) :: RiB0 ! bulk Richardson number [no unit]
-    real(DP) :: dWstar ! free convection velocity scale [m/s]
 
-    real(DP) :: UabsUS, UabsS, UabsC
-    real(DP) :: dUabsUS, dUabsS
-
-    real(DP) :: UstarUS, UstarS, UstarC
-    real(DP) :: TstarUS, TstarS, TstarC
-    real(DP) :: QstarUS, QstarS, QstarC
-
-    real(DP) :: dUstarUS, dUstarS, dUstarC
-    real(DP) :: dTstarUS, dTstarS, dTstarC
-    real(DP) :: dQstarUS, dQstarS, dQstarC
+    real(DP) :: UabsC
+    real(DP) :: UstarC, dUstarC
+    real(DP) :: TstarC, dTstarC
+    real(DP) :: QstarC, dQstarC
+    real(DP) :: WstarC, dWstar
 
     real(DP) :: FracU10US, FracU10S, FracU10C
     real(DP) :: FracT2US,  FracT2S,  FracT2C
     real(DP) :: FracQ2US,  FracQ2S,  FracQ2C
 
-    real(DP) :: TH1, TH0, THM
+    real(DP) :: Rtot, CPtot
+    real(DP) :: TH1, TH0
     real(DP) :: TV1, TV0, TVM
-    real(DP) :: QM
-    real(DP) :: sw, tmp
+    real(DP) :: sw
 
+    real(DP) :: IL2
     real(DP) :: BFLX, dBFLX
 
     real(DP) :: DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E
     real(DP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
     real(DP) :: log_10ovZ0M, log_02ovZ0H, log_02ovZ0E
 
-    real(DP) :: denoM, denoH, denoE
     real(DP) :: RzM, RzH, RzE
     !---------------------------------------------------------------------------
 
     ! convert to DP
-    if ( BULKFLUX_use_mean ) then
+    if ( BULKFLUX_NK2018 ) then
        DP_Z1  = real( Z1*2.0_RP,  kind=DP )
     else
        DP_Z1  = real( Z1,  kind=DP )
@@ -461,10 +457,10 @@ contains
 
     UabsC = max( Uabs, BULKFLUX_Uabs_min )
 
-    TH1 = T1 * ( P0 / P1 )**( Rdry / CPdry )
+    Rtot  = Rdry  * ( 1.0_DP - Q1 ) + Rvap  * Q1
+    CPtot = CPdry * ( 1.0_DP - Q1 ) + CPvap * Q1
+    TH1 = T1 * ( P0 / P1 )**( Rtot / CPtot )
     TH0 = T0
-    THM = ( TH1 + TH0 ) * 0.5_RP
-    QM  = ( Q1  + Q0  ) * 0.5_RP
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
     TV0 = TH0 * ( 1.0_DP + EPSTvap * Q0 )
     TVM = ( TV1 + TV0 ) * 0.5_RP
@@ -489,341 +485,93 @@ contains
     IL = RiB0 / DP_Z1 * log_Z1ovZ0M**2 / log_Z1ovZ0H
 
     ! free convection velocity scale at initial step
-    Wstar  = BULKFLUX_Wstar_min
+    WstarC = BULKFLUX_Wstar_min
     dWstar = BULKFLUX_Wstar_min
 
     ! Successive approximation
     do n = 1, BULKFLUX_itr_sa_max
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
-       end if
-      ! unstable condition
-      UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-      UstarUS = KARMAN / denoM * UabsUS
-      TstarUS = KARMAN / denoH * ( TH1 - TH0 )
-      QstarUS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
-      ! stable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
-       end if
-       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
-       UstarS = KARMAN / denoM * UabsS
-       TstarS = KARMAN / denoH * ( TH1 - TH0 )
-       QstarS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       call calc_scales_B91W01( &
+            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+            RzM, RzH, RzE,                         & ! (in)
+            WstarC,                                & ! (inout)
+            UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
-      sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
-
-      UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
-      TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
-      QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
-
-      ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
-
-      ! update free convection velocity scale
-      tmp = PBL * GRAV / T1 * BFLX
-      sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
-
-      Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
-
-      ! avoid zero division with UstarC = 0
-      sw = 0.5_DP + sign( 0.5_DP, abs( UstarC ) - EPS )
-
-      UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
-
-      ! estimate the inversed Obukhov length
-      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+       ! estimate the inversed Obukhov length
+       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
     end do
 
 
     ! Newton-Raphson method
     do n = 1, BULKFLUX_itr_nr_max
-      ! unstable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
+
+       dWstar = WstarC
+
+       call calc_scales_B91W01( &
+            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+            RzM, RzH, RzE,                         & ! (in)
+            WstarC,                                & ! (inout)
+            UstarC, TstarC, QstarC, BFLX           ) ! (out)
+
+       IL2 = sign( abs(IL) + dIL, IL )
+       call calc_scales_B91W01( &
+            IL2, UabsC, TH1, TH0, Q1, Q0, PBL,     & ! (in)
+            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+            RzM, RzH, RzE,                         & ! (in)
+            dWstar,                                & ! (inout)
+            dUstarC, dTstarC, dQstarC, dBFLX       ) ! (out)
+
+       res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
+
+       ! calculate d(residual)/dIL
+       dres = 1.0_DP + KARMAN * GRAV / ( TH0 * sign(dIL,IL) ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
+
+       ! stop iteration to prevent numerical error
+       if( abs( dres ) < EPS ) exit
+
+       ! convergence test with error levels
+       if( abs( res/dres ) < BULKFLUX_err_min ) exit
+
+       ! avoid sign changing
+       if( IL * ( IL - res / dres ) < 0.0_RP ) then
+          if ( abs(IL) <= EPS ) exit
+          IL = sign(EPS, IL)
        end if
-       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-       UstarUS = KARMAN / denoM * UabsUS
-       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
-       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
-      ! stable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
-       end if
-       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
-       UstarS = KARMAN / denoM * UabsS
-       TstarS = KARMAN / denoH * ( TH1 - TH0 )
-       QstarS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
-
-      sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
-
-      UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
-      TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
-      QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
-
-      ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
-
-      ! update free convection velocity scale
-      tmp = PBL * GRAV / T1 * BFLX
-      sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
-
-      Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
-
-      ! avoid zero division with UstarC = 0
-      sw = 0.5_DP + sign( 0.5_DP, abs( UstarC ) - EPS )
-
-      UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
-
-      ! calculate residual
-      res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
-
-      ! unstable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_unstable(DP_Z1,IL+dIL) + fmm_unstable(DP_Z0M,IL+dIL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_unstable(DP_Z0M,IL+dIL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0H,IL+dIL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_unstable(DP_Z0H,IL+dIL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_unstable(DP_Z1,IL+dIL) + fhm_unstable(DP_Z0E,IL+dIL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_unstable(DP_Z0E,IL+dIL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL)
-          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL)
-          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL)
-       end if
-       dUabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-       dUstarUS = KARMAN / denoM * UabsUS
-       dTstarUS = KARMAN / denoH * ( TH1 - TH0 )
-       dQstarUS = KARMAN / denoE * ( Q1  - Q0  )
-!      dUstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL+dIL) + fm_unstable(DP_Z0M,IL+dIL) ) * dUabsUS
-!      dTstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
-!      dQstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL+dIL) + fh_unstable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
-
-      ! stable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_stable(DP_Z1,IL+dIL) + fmm_stable(DP_Z0M,IL+dIL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_stable(DP_Z0M,IL+dIL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_stable(DP_Z1,IL+dIL) + fhm_stable(DP_Z0H,IL+dIL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_stable(DP_Z0H,IL+dIL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_stable(DP_Z1,IL+dIL) + fhm_stable(DP_Z0E,IL+dIL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_stable(DP_Z0E,IL+dIL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL)
-          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL)
-          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL)
-       end if
-       dUabsS  = max( Uabs, BULKFLUX_Uabs_min )
-       dUstarS = KARMAN / denoM * UabsS
-       dTstarS = KARMAN / denoH * ( TH1 - TH0 )
-       dQstarS = KARMAN / denoE * ( Q1  - Q0  )
-!      dUstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL+dIL) + fm_stable(DP_Z0M,IL+dIL) ) * dUabsS
-!      dTstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0H,IL+dIL) ) * ( TH1 - TH0 )
-!      dQstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL+dIL) + fh_stable(DP_Z0E,IL+dIL) ) * ( Q1  - Q0  )
-
-      sw = 0.5_DP - sign( 0.5_DP, IL+dIL ) ! if unstable, sw = 1
-
-      dUstarC = ( sw ) * dUstarUS + ( 1.0_DP-sw ) * dUstarS
-      dTstarC = ( sw ) * dTstarUS + ( 1.0_DP-sw ) * dTstarS
-      dQstarC = ( sw ) * dQstarUS + ( 1.0_DP-sw ) * dQstarS
-
-      ! estimate buoyancy flux
-      dBFLX = - dUstarC * dTstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * dUstarC * dQstarC * THM
-
-      ! update d(free convection velocity scale)
-      tmp = PBL * GRAV / T1 * dBFLX
-      sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
-
-      dWstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
-
-      ! avoid zero division with dUstarC = 0
-      sw = 0.5_DP + sign( 0.5_DP, abs( dUstarC ) - EPS )
-
-      dUstarC = ( sw ) * dUstarC + ( 1.0_DP-sw ) * EPS
-
-      ! calculate d(residual)/dIL
-      dres = 1.0_DP + KARMAN * GRAV / ( THM * dIL ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
-
-      ! stop iteration to prevent numerical error
-      if( abs( dres ) < EPS ) exit
-
-      ! convergence test with error levels
-      if( abs( res/dres ) < BULKFLUX_err_min ) exit
-
-      ! avoid sign changing
-      if( IL * ( IL - res / dres ) < 0.0_RP ) exit
-
-      ! update the inversed Obukhov length
-      IL = IL - res / dres
+       ! update the inversed Obukhov length
+       IL = IL - res / dres
     end do
 
     ! Successive approximation after Newton-Raphson method
     if( .NOT. abs( res/dres ) < BULKFLUX_err_min ) then
-      ! unstable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
-       end if
-       UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-       UstarUS = KARMAN / denoM * UabsUS
-       TstarUS = KARMAN / denoH * ( TH1 - TH0 )
-       QstarUS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-!      TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
-      ! stable condition
-       if ( BULKFLUX_use_mean ) then
-          denoM = log_Z1ovZ0M &
-                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
-          denoH = log_Z1ovZ0H &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
-          denoE = log_Z1ovZ0E &
-                - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
-       else
-          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
-          denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
-          denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
-       end if
-       UabsS  = max( Uabs, BULKFLUX_Uabs_min )
-       UstarS = KARMAN / denoM * UabsS
-       TstarS = KARMAN / denoH * ( TH1 - TH0 )
-       QstarS = KARMAN / denoE * ( Q1  - Q0  )
-!      UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-!      TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!      QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+       call calc_scales_B91W01( &
+            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+            RzM, RzH, RzE,                         & ! (in)
+            WstarC,                                & ! (inout)
+            UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
-      sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
-
-      UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
-      TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
-      QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
-
-      ! estimate buoyancy flux
-      BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * QM ) - EPSTvap * UstarC * QstarC * THM
-
-      ! update free convection velocity scale
-      tmp = PBL * GRAV / T1 * BFLX
-      sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
-
-      Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
-
-      ! avoid zero division with UstarC = 0
-      sw = 0.5_DP + sign( 0.5_DP, abs( UstarC ) - EPS )
-
-      UstarC = ( sw ) * UstarC + ( 1.0_DP-sw ) * EPS
-
-      ! estimate the inversed Obukhov length
-      IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * THM )
+       ! estimate the inversed Obukhov length
+       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
     end if
 
 
     ! calculate Ustar, Tstar, and Qstar based on IL
 
-    ! unstable condition
-    if ( BULKFLUX_use_mean ) then
-       denoM = log_Z1ovZ0M &
-             - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-             + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
-       denoH = log_Z1ovZ0H &
-             - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-             + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
-       denoE = log_Z1ovZ0E &
-             - fhm_unstable(DP_Z1,IL) + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-             + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
-    else
-       denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
-       denoH = log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL)
-       denoE = log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL)
-    end if
-    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), BULKFLUX_Uabs_min )
-    UstarUS = KARMAN / denoM * UabsUS
-    TstarUS = KARMAN / denoH * ( TH1 - TH0 )
-    QstarUS = KARMAN / denoE * ( Q1  - Q0  )
-!    UstarUS = KARMAN / ( log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL) ) * UabsUS
-!    TstarUS = KARMAN / ( log_Z1ovZ0H - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!    QstarUS = KARMAN / ( log_Z1ovZ0E - fh_unstable(DP_Z1,IL) + fh_unstable(DP_Z0E,IL) ) * ( Q1  - Q0  )
+    call calc_scales_B91W01( &
+         IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+         log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
+         DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
+         RzM, RzH, RzE,                         & ! (in)
+         WstarC,                                & ! (inout)
+         UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
     FracU10US = ( log_10ovZ0M - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) &
               / ( log_Z1ovZ0M - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0M,IL) )
@@ -831,30 +579,6 @@ contains
               / ( log_Z1ovZ0H - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0H,IL) )
     FracQ2US  = ( log_02ovZ0E - fm_unstable( 2.0_DP,IL) + fm_unstable(DP_Z0E,IL) ) &
               / ( log_Z1ovZ0E - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0E,IL) )
-
-    ! stable condition
-    if ( BULKFLUX_use_mean ) then
-       denoM = log_Z1ovZ0M &
-             - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-             + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
-       denoH = log_Z1ovZ0H &
-             - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-             + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
-       denoE = log_Z1ovZ0E &
-             - fhm_stable(DP_Z1,IL) + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-             + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
-    else
-       denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
-       denoH = log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL)
-       denoE = log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL)
-    end if
-    UabsS  = max( Uabs, BULKFLUX_Uabs_min )
-    UstarS = KARMAN / denoM * UabsS
-    TstarS = KARMAN / denoH * ( TH1 - TH0 )
-    QstarS = KARMAN / denoE * ( Q1  - Q0  )
-!    UstarS = KARMAN / ( log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL) ) * UabsS
-!    TstarS = KARMAN / ( log_Z1ovZ0H - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0H,IL) ) * ( TH1 - TH0 )
-!    QstarS = KARMAN / ( log_Z1ovZ0E - fh_stable(DP_Z1,IL) + fh_stable(DP_Z0E,IL) ) * ( Q1  - Q0  )
 
     FracU10S = ( log_10ovZ0M - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) &
              / ( log_Z1ovZ0M - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0M,IL) )
@@ -865,9 +589,6 @@ contains
 
     sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
 
-    UstarC   = ( sw ) * UstarUS   + ( 1.0_DP-sw ) * UstarS
-    TstarC   = ( sw ) * TstarUS   + ( 1.0_DP-sw ) * TstarS
-    QstarC   = ( sw ) * QstarUS   + ( 1.0_DP-sw ) * QstarS
     FracU10C = ( sw ) * FracU10US + ( 1.0_DP-sw ) * FracU10S
     FracT2C  = ( sw ) * FracT2US  + ( 1.0_DP-sw ) * FracT2S
     FracQ2C  = ( sw ) * FracQ2US  + ( 1.0_DP-sw ) * FracQ2S
@@ -876,15 +597,127 @@ contains
     Ustar   = real( UstarC,   kind=RP )
     Tstar   = real( TstarC,   kind=RP )
     Qstar   = real( QstarC,   kind=RP )
+    Wstar   = real( WstarC,   kind=RP )
     FracU10 = real( FracU10C, kind=RP )
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )
 
     Ra = max( ( Q1 - Q0 ) / real(UstarC * QstarC + EPS,kind=RP), EPS )
 
-
     return
   end subroutine BULKFLUX_B91W01
+
+  subroutine calc_scales_B91W01( &
+       IL, Uabs, TH1, TH0, Q1, Q0, PBL,       &
+       log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, &
+       DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         &
+       RzM, RzH, RzE,                         &
+       Wstar,                                 &
+       UstarC, TstarC, QstarC, BFLX           )
+    use scale_const, only: &
+       GRAV    => CONST_GRAV,    &
+       KARMAN  => CONST_KARMAN,  &
+       EPSTvap => CONST_EPSTvap, &
+       EPS     => CONST_EPS
+    implicit none
+    real(DP), intent(in) :: IL
+    real(DP), intent(in) :: Uabs
+    real(DP), intent(in) :: TH1
+    real(DP), intent(in) :: TH0
+    real(RP), intent(in) :: Q1
+    real(RP), intent(in) :: Q0
+    real(RP), intent(in) :: PBL
+    real(DP), intent(in) :: log_Z1ovZ0M
+    real(DP), intent(in) :: log_Z1ovZ0H
+    real(DP), intent(in) :: log_Z1ovZ0E
+    real(DP), intent(in) :: DP_Z1
+    real(DP), intent(in) :: DP_Z0M
+    real(DP), intent(in) :: DP_Z0H
+    real(DP), intent(in) :: DP_Z0E
+    real(DP), intent(in) :: RzM
+    real(DP), intent(in) :: RzH
+    real(DP), intent(in) :: RzE
+
+    real(DP), intent(inout) :: Wstar
+
+    real(DP), intent(out) :: UstarC
+    real(DP), intent(out) :: TstarC
+    real(DP), intent(out) :: QstarC
+    real(DP), intent(out) :: BFLX
+
+    real(DP) :: UabsUS, UabsS
+    real(DP) :: UstarUS, UstarS
+    real(DP) :: TstarUS, TstarS
+    real(DP) :: QstarUS, QstarS
+    real(DP) :: denoM, denoH, denoE
+
+    real(DP) :: tmp, sw
+
+    ! unstable condition
+    if ( BULKFLUX_NK2018 ) then
+       denoM = log_Z1ovZ0M &
+             - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+             + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+       tmp = fhm_unstable(DP_Z1,IL)
+       denoH = log_Z1ovZ0H &
+             - tmp + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+             + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+       denoE = log_Z1ovZ0E &
+             - tmp + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+             + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+    else
+       denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+       tmp = fh_unstable(DP_Z1,IL)
+       denoH = log_Z1ovZ0H - tmp + fh_unstable(DP_Z0H,IL)
+       denoE = log_Z1ovZ0E - tmp + fh_unstable(DP_Z0E,IL)
+    end if
+    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real(BULKFLUX_Uabs_min, kind=DP) )
+    UstarUS = KARMAN / denoM * UabsUS
+    TstarUS = KARMAN / denoH * ( TH1 - TH0 )
+    QstarUS = KARMAN / denoE * ( Q1  - Q0  )
+
+    ! stable condition
+    if ( BULKFLUX_NK2018 ) then
+       denoM = log_Z1ovZ0M &
+             - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+             + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+       tmp = fhm_stable(DP_Z1,IL)
+       denoH = log_Z1ovZ0H &
+             - tmp + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+             + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+       denoE = log_Z1ovZ0E &
+             - tmp + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+             + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+    else
+       denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+       tmp = fh_stable(DP_Z1,IL)
+       denoH = log_Z1ovZ0H - tmp + fh_stable(DP_Z0H,IL)
+       denoE = log_Z1ovZ0E - tmp + fh_stable(DP_Z0E,IL)
+    end if
+    UabsS  = max( Uabs, real(BULKFLUX_Uabs_min, kind=DP) )
+    UstarS = KARMAN / denoM * UabsS
+    TstarS = KARMAN / denoH * ( TH1 - TH0 )
+    QstarS = KARMAN / denoE * ( Q1  - Q0  )
+
+    sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
+
+    UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
+    TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
+    QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
+
+    ! estimate buoyancy flux
+    BFLX = - UstarC * TstarC * ( 1.0_RP + EPSTvap * Q0 ) - EPSTvap * UstarC * QstarC * TH0
+
+    ! update free convection velocity scale
+    tmp = PBL * GRAV / TH0 * BFLX
+    sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
+    Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
+
+    ! avoid zero division with UstarC = 0
+    UstarC = sign( max( abs(UstarC), EPS ), UstarC )
+
+    return
+  end subroutine calc_scales_B91W01
 
   !-----------------------------------------------------------------------------
   ! stability function for momemtum in unstable condition
@@ -900,6 +733,9 @@ contains
     ! function
     real(DP) :: fm_unstable
 
+    ! Wilson (2001)
+    real(DP), parameter :: gamma = 3.6_DP
+
     ! works
     real(DP) :: R
     real(DP) :: r4R
@@ -909,10 +745,10 @@ contains
 
     if ( flag_W01 ) then
        ! Wilson (2001)
-       fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
+       fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
-       r4R = ( 1.0_DP - 16.0_DP * R )**0.25_DP
+       r4R = sqrt( sqrt( 1.0_DP - 16.0_DP * R ) )
        fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
     end if
 
@@ -932,8 +768,7 @@ contains
     real(DP) :: fmm_unstable
 
     ! Wilson (2001)
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
-    real(DP), parameter :: gamma = 2.6_DP
+    real(DP), parameter :: gamma = 3.6_DP
 
     ! works
     real(DP) :: R
@@ -954,7 +789,6 @@ contains
                        + 1.5_DP / ( sqrt(gamma)**3 * R) * asinh( sqrt(gamma) * r3 ) &
                        + 1.5_DP * f / ( gamma * r3**2 ) &
                        - 1.0_DP
-          fmm_unstable = fmm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
        end if
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
@@ -987,6 +821,7 @@ contains
 
     ! Wilson (2001)
     real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: gamma = 7.9_DP
 
     ! works
     real(DP) :: R
@@ -996,7 +831,7 @@ contains
 
     if ( flag_W01 ) then
        ! Wilson (2001)
-       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
+       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
                    + log( Z ) * ( 1.0_DP - Pt )
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
@@ -1200,7 +1035,7 @@ contains
                     * exp( -d*R ) &
 #endif
                   - 3.0_DP * sqrt( 1.0_DP + 2.0_DP*a*R/3.0_DP )**5 / ( 5.0_DP * a * R ) &
-                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )&
+                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R ) &
                   + 0.6_RP / ( a * R ) + 1.0_DP
     end if
 

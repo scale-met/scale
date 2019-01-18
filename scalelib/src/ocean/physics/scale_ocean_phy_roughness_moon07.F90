@@ -103,7 +103,7 @@ contains
     real(RP), intent(out)   :: Z0E(OIA,OJA) ! roughness length for vapor [m]
 
     ! works
-    real(RP) :: Ustar(OIA,OJA)
+    real(RP) :: Ustar
     real(RP) :: U10M
 
     integer  :: ite
@@ -111,42 +111,36 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) OMP_SCHEDULE_ &
-    !$omp shared(OJS,OJE,OIS,OIE,Z0M,OCEAN_PHY_ROUGHNESS_Z0M_min)
+    !$omp shared(OJS,OJE,OIS,OIE, &
+    !$omp        GRAV, &
+    !$omp        OCEAN_PHY_ROUGHNESS_Z0M_min,OCEAN_PHY_ROUGHNESS_Z0H_min,OCEAN_PHY_ROUGHNESS_Z0E_min, &
+    !$omp        OCEAN_PHY_ROUGHNESS_Ustar_min,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_moon07_itelim, &
+    !$omp        Z0M,Z0H,Z0E,Uabs,Z1) &
+    !$omp private(i,j,ite,U10M,Ustar)
     do j = OJS, OJE
     do i = OIS, OIE
-       Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
-    enddo
-    enddo
 
-    do ite = 1, OCEAN_PHY_ROUGHNESS_moon07_itelim
-       !$omp parallel do default(none) OMP_SCHEDULE_ &
-       !$omp shared(OJS,OJE,OIS,OIE,Ustar,Z0M,Uabs,Z1,OCEAN_PHY_ROUGHNESS_Ustar_min,GRAV,OCEAN_PHY_ROUGHNESS_Z0M_min) &
-       !$omp private(i,j,U10M)
-       do j = OJS, OJE
-       do i = OIS, OIE
-          Ustar(i,j) = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_PHY_ROUGHNESS_Ustar_min )
-          U10M = Ustar(i,j) / KARMAN * log( 10.0_RP/Z0M(i,j) )
+       Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
+
+       do ite = 1, OCEAN_PHY_ROUGHNESS_moon07_itelim
+          Ustar = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_PHY_ROUGHNESS_Ustar_min )
+          U10M = Ustar / KARMAN * log( 10.0_RP/Z0M(i,j) )
 
           if ( U10M <= 12.5_RP ) then
-             Z0M(i,j) = max( 0.0185_RP * Ustar(i,j)**2 / GRAV, OCEAN_PHY_ROUGHNESS_Z0M_min )
+             Z0M(i,j) = 0.0185_RP * Ustar**2 / GRAV
           else
-             Z0M(i,j) = max( 1.0E-3_RP * ( 0.085_RP * (  -0.56_RP*Ustar(i,j)**2 &
-                                                      + 20.255_RP*Ustar(i,j)    &
-                                                      +  2.458_RP               ) - 0.58_RP ), &
-                             OCEAN_PHY_ROUGHNESS_Z0M_min )
+             Z0M(i,j) = ( 0.085_RP * ( -  0.56_RP  * Ustar**2   &
+                                       + 20.255_RP * Ustar      &
+                                       +  2.458_RP            ) &
+                        - 0.58_RP ) *  1.0E-3_RP
           end if
+          Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
        enddo
-       enddo
-    enddo
 
-    !  Fairall et al. TOGA V3.0
-    !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
-    !$omp parallel do default(none) OMP_SCHEDULE_ &
-    !$omp shared(OJS,OJE,OIS,OIE, &
-    !$omp        Z0H,Z0E,Z0M,Ustar,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_Z0H_min,OCEAN_PHY_ROUGHNESS_Z0E_min)
-    do j = OJS, OJE
-    do i = OIS, OIE
-       Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar(i,j) / OCEAN_PHY_ROUGHNESS_visck )**0.6_RP, 1.1E-4_RP )
+       !  Fairall et al. TOGA V3.0
+       !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
+       Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar / OCEAN_PHY_ROUGHNESS_visck )**0.6_RP, &
+                       1.1E-4_RP )
        Z0E(i,j) = Z0H(i,j)
        Z0H(i,j) = max( Z0H(i,j), OCEAN_PHY_ROUGHNESS_Z0H_min )
        Z0E(i,j) = max( Z0E(i,j), OCEAN_PHY_ROUGHNESS_Z0E_min )
