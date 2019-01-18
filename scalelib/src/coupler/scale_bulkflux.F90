@@ -97,6 +97,8 @@ module scale_bulkflux
   !
   !++ Private parameters & variables
   !
+  real(RP), parameter, private :: EPS = 1.E-16_DP
+
   character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
 
   logical,  private :: BULKFLUX_NK2018 = .true. !> Nishizawa and Kitamura (2018)
@@ -381,7 +383,6 @@ contains
       CPdry   => CONST_CPdry,   &
       CPvap   => CONST_CPvap,   &
       EPSTvap => CONST_EPSTvap, &
-      EPS     => CONST_EPS,     &
       PRE00   => CONST_PRE00
     implicit none
 
@@ -602,7 +603,7 @@ contains
     FracT2  = real( FracT2C,  kind=RP )
     FracQ2  = real( FracQ2C,  kind=RP )
 
-    Ra = max( ( Q1 - Q0 ) / real(UstarC * QstarC + EPS,kind=RP), EPS )
+    Ra = max( ( Q1 - Q0 ) / real(UstarC * QstarC + EPS,kind=RP), real(EPS,kind=RP) )
 
     return
   end subroutine BULKFLUX_B91W01
@@ -617,8 +618,7 @@ contains
     use scale_const, only: &
        GRAV    => CONST_GRAV,    &
        KARMAN  => CONST_KARMAN,  &
-       EPSTvap => CONST_EPSTvap, &
-       EPS     => CONST_EPS
+       EPSTvap => CONST_EPSTvap
     implicit none
     real(DP), intent(in) :: IL
     real(DP), intent(in) :: Uabs
@@ -756,8 +756,7 @@ contains
   end function fm_unstable
   function fmm_unstable( Z, IL )
     use scale_const, only: &
-      PI  => CONST_PI, &
-      EPS => CONST_EPS
+      PI  => CONST_PI
     implicit none
 
     ! argument
@@ -841,8 +840,6 @@ contains
     return
   end function fh_unstable
   function fhm_unstable( Z, IL )
-    use scale_const, only: &
-      EPS => CONST_EPS
     implicit none
 
     ! argument
@@ -926,8 +923,6 @@ contains
     return
   end function fm_stable
   function fmm_stable( Z, IL )
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     ! argument
@@ -1001,8 +996,6 @@ contains
     return
   end function fh_stable
   function fhm_stable( Z, IL )
-    use scale_const, only: &
-       EPS => CONST_EPS
     implicit none
 
     ! argument
