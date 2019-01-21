@@ -97,7 +97,7 @@ module scale_bulkflux
   !
   !++ Private parameters & variables
   !
-  real(RP), parameter, private :: EPS = 1.E-16_DP
+  real(DP), parameter, private :: EPS = 1.E-16_DP
 
   character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
 
