@@ -32,6 +32,7 @@ module scale_file_cartesC
   public :: FILE_CARTESC_setup
   public :: FILE_CARTESC_cleanup
   public :: FILE_CARTESC_set_coordinates_atmos
+  public :: FILE_CARTESC_set_areavol_atmos
   public :: FILE_CARTESC_set_coordinates_ocean
   public :: FILE_CARTESC_set_coordinates_land
   public :: FILE_CARTESC_set_coordinates_urban
@@ -463,13 +464,7 @@ contains
        CZ, FZ,                       &
        LON, LONUY, LONXV, LONUV,     &
        LAT, LATUY, LATXV, LATUV,     &
-       TOPO, LSMASK,                 &
-       AREA,   AREAZUY_X, AREAZXV_Y, &
-               AREAWUY_X, AREAWXV_Y, &
-       AREAUY, AREAZXY_X, AREAZUV_Y, &
-       AREAXV, AREAZUV_X, AREAZXY_Y, &
-       VOL, VOLWXY, VOLZUY, VOLZXV   )
-
+       TOPO, LSMASK                 )
     use scale_const, only: &
        D2R => CONST_D2R
     implicit none
@@ -486,21 +481,6 @@ contains
     real(RP), intent(in) :: LATUV(0:IA,0:JA)
     real(RP), intent(in) :: TOPO  (  IA,  JA)
     real(RP), intent(in) :: LSMASK(  IA,  JA)
-    real(RP), intent(in) :: AREA     (     IA,JA)
-    real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
-    real(RP), intent(in) :: AREAWUY_X(0:KA,IA,JA)
-    real(RP), intent(in) :: AREAWXV_Y(0:KA,IA,JA)
-    real(RP), intent(in) :: AREAUY   (     IA,JA)
-    real(RP), intent(in) :: AREAZXY_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZUV_Y(  KA,IA,JA)
-    real(RP), intent(in) :: AREAXV   (     IA,JA)
-    real(RP), intent(in) :: AREAZUV_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZXY_Y(  KA,IA,JA)
-    real(RP), intent(in) :: VOL   (  KA,IA,JA)
-    real(RP), intent(in) :: VOLWXY(0:KA,IA,JA)
-    real(RP), intent(in) :: VOLZUY(  KA,IA,JA)
-    real(RP), intent(in) :: VOLZXV(  KA,IA,JA)
     !---------------------------------------------------------------------------
 
     AXIS_HGT   (:,:,:) = CZ(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -517,6 +497,38 @@ contains
 
     AXIS_TOPO  (:,:) = TOPO  (ISB2:IEB2,JSB2:JEB2)
     AXIS_LSMASK(:,:) = LSMASK(ISB2:IEB2,JSB2:JEB2)
+
+    set_coordinates = .true.
+
+    return
+  end subroutine FILE_CARTESC_set_coordinates_atmos
+
+  !-----------------------------------------------------------------------------
+  !> set area and volume
+  subroutine FILE_CARTESC_set_areavol_atmos( &
+       AREA,   AREAZUY_X, AREAZXV_Y, &
+               AREAWUY_X, AREAWXV_Y, &
+       AREAUY, AREAZXY_X, AREAZUV_Y, &
+       AREAXV, AREAZUV_X, AREAZXY_Y, &
+       VOL, VOLWXY, VOLZUY, VOLZXV   )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    implicit none
+    real(RP), intent(in) :: AREA     (     IA,JA)
+    real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
+    real(RP), intent(in) :: AREAWUY_X(0:KA,IA,JA)
+    real(RP), intent(in) :: AREAWXV_Y(0:KA,IA,JA)
+    real(RP), intent(in) :: AREAUY   (     IA,JA)
+    real(RP), intent(in) :: AREAZXY_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZUV_Y(  KA,IA,JA)
+    real(RP), intent(in) :: AREAXV   (     IA,JA)
+    real(RP), intent(in) :: AREAZUV_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZXY_Y(  KA,IA,JA)
+    real(RP), intent(in) :: VOL   (  KA,IA,JA)
+    real(RP), intent(in) :: VOLWXY(0:KA,IA,JA)
+    real(RP), intent(in) :: VOLZUY(  KA,IA,JA)
+    real(RP), intent(in) :: VOLZXV(  KA,IA,JA)
 
     AXIS_AREA     (:,:)   = AREA     (        ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZUY_X(:,:,:) = AREAZUY_X(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -535,10 +547,8 @@ contains
     AXIS_VOLZUY(:,:,:) = VOLZUY(KS  :KE,ISB2:IEB2,JSB2:JEB2)
     AXIS_VOLZXV(:,:,:) = VOLZXV(KS  :KE,ISB2:IEB2,JSB2:JEB2)
 
-    set_coordinates = .true.
-
     return
-  end subroutine FILE_CARTESC_set_coordinates_atmos
+  end subroutine FILE_CARTESC_set_areavol_atmos
 
   !-----------------------------------------------------------------------------
   !> set volume for ocean
