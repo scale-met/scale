@@ -89,7 +89,7 @@ contains
     !$omp private(i,j,k, &
     !$omp         iq,diffq) &
     !$omp shared(KS,KE,IS,IE,JS,JE,QHA, &
-    !$omp        QV,QTRC,DENS,diffq_check)
+    !$omp        QV,QTRC,diffq_check)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -113,6 +113,40 @@ contains
 
        ! TODO: We have to consider energy conservation (but very small)
 
+    enddo
+    enddo
+    enddo
+
+
+    diffq_min = minval( diffq_check(KS:KE,IS:IE,JS:JE) )
+
+    if (       abs(limit_negative) > 0.0_RP         &
+         .AND. abs(limit_negative) < abs(diffq_min) ) then
+       LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found. rank = ', PRC_myrank
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
+              .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
+             LOG_ERROR_CONT(*) 'k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
+          endif
+       enddo
+       enddo
+       enddo
+       LOG_ERROR_CONT(*) 'maximum negative hydrometeor ', diffq_min, ' < ', - abs(limit_negative)
+
+       call PRC_abort
+    endif
+
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k, &
+    !$omp         diffq) &
+    !$omp shared(KS,KE,IS,IE,JS,JE, &
+    !$omp        QV,DENS)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
        ! remove negative value of water vapor (mass)
        diffq = QV(k,i,j)
        QV(k,i,j) = max( QV(k,i,j), 0.0_RP )
@@ -125,27 +159,6 @@ contains
     enddo
     enddo
     enddo
-
-    diffq_min = minval( diffq_check(KS:KE,IS:IE,JS:JE) )
-
-    if (       abs(limit_negative) > 0.0_RP         &
-         .AND. abs(limit_negative) < abs(diffq_min) ) then
-       LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found. rank = ', PRC_myrank
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS,  KE
-          if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
-              .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
-             LOG_ERROR_CONT(*) 'k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
-          endif
-       enddo
-       enddo
-       enddo
-       LOG_ERROR_CONT(*) 'total negative hydrometeor < ', abs(limit_negative)
-
-       call PRC_abort
-    endif
 
     call PROF_rapend('MP_filter', 3)
 
