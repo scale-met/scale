@@ -736,7 +736,7 @@ contains
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
 
     real(RP) :: W, VFGS, VFGW, VFWG, VFWS, VFWW
-    real(RP) :: SX, RX
+    real(RP) :: rflux_SW, rflux_LW
 
     real(RP) :: TRP              ! TRP: at previous time step [K]
     real(RP) :: TBP              ! TBP: at previous time step [K]
@@ -856,8 +856,8 @@ contains
     VFWS = VFWG
     VFWW = 1.0_RP - 2.0_RP * VFWG
 
-    SX   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
-    RX   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
+    rflux_SW   = SSG(1) + SSG(2) ! downward shortwave radiation [W/m2]
+    rflux_LW   = LLG(1) + LLG(2) ! downward longwave  radiation [W/m2]
 
     SSGD = SSG(1)          ! downward direct  shortwave radiation [W/m2]
     SSGQ = SSG(2)          ! downward diffuse shortwave radiation [W/m2]
@@ -886,14 +886,14 @@ contains
     ! Radiation : Net Short Wave Radiation at roof/wall/road
     !-----------------------------------------------------------
 
-    if( SX > 0.0_RP ) then !  SSG is downward short
+    if( rflux_SW > 0.0_RP ) then !  SSG is downward short
 
       ! currently we use no shadow effect model
       !!     IF(.NOT.SHADOW) THEN              ! no shadow effects model
 
-      SR1  = SX * ( 1.0_RP - ALBR )
-      SG1  = SX * VFGS * ( 1.0_RP - ALBG )
-      SB1  = SX * VFWS * ( 1.0_RP - ALBB )
+      SR1  = rflux_SW * ( 1.0_RP - ALBR )
+      SG1  = rflux_SW * VFGS * ( 1.0_RP - ALBG )
+      SB1  = rflux_SW * VFWS * ( 1.0_RP - ALBB )
       SG2  = SB1 * ALBB / ( 1.0_RP - ALBB ) * VFGW * ( 1.0_RP - ALBG )
       SB2  = SG1 * ALBG / ( 1.0_RP - ALBG ) * VFWG * ( 1.0_RP - ALBB )
 
@@ -943,7 +943,7 @@ contains
 !      call qsat( TR, PRSS, qdry, & ! [IN]
 !                 QS0R            ) ! [OUT]
 
-      RR    = EPSR * ( RX - STB * (TR**4)  )
+      RR    = EPSR * ( rflux_LW - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
       HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
       ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
@@ -998,8 +998,8 @@ contains
        LOG_INFO_CONT(*) 'DEBUG Message --- TRP : Initial TR                                  [K] :', TRP
        LOG_INFO_CONT(*) 'DEBUG Message --- TRLP: Initial TRL                                 [K] :', TRLP
        LOG_NEWLINE
-       LOG_INFO_CONT(*) 'DEBUG Message --- SX  : Shortwave radiation                      [W/m2] :', SX
-       LOG_INFO_CONT(*) 'DEBUG Message --- RX  : Longwave radiation                       [W/m2] :', RX
+       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                      [W/m2] :', rflux_SW
+       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                       [W/m2] :', rflux_LW
        LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                           [Pa] :', PRSS
        LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer                 [m] :', PRSA
        LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                             [kg/m3] :', RHOO
@@ -1032,7 +1032,7 @@ contains
 !     call qsat( TR, PRSS, qdry, & ! [IN]
 !                QS0R            ) ! [OUT]
 
-     RR      = EPSR * ( RX - STB * (TR**4) )
+     RR      = EPSR * ( rflux_LW - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
      ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
      G0R     = SR + RR - HR - ELER
@@ -1097,22 +1097,22 @@ contains
       QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
       QC    = QC2 / QC1
 
-      RG1   = EPSG * ( RX * VFGS                  &
+      RG1   = EPSG * ( rflux_LW * VFGS                  &
                      + EPSB * VFGW * STB * TB**4  &
                      - STB * TG**4                )
 
-      RB1   = EPSB * ( RX * VFWS                  &
+      RB1   = EPSB * ( rflux_LW * VFWS                  &
                      + EPSG * VFWG * STB * TG**4  &
                      + EPSB * VFWW * STB * TB**4  &
                      - STB * TB**4                )
 
-      RG2   = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                   &
+      RG2   = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * rflux_LW                   &
                      + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
                      + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
 
-      RB2   = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                  &
+      RB2   = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * rflux_LW                                  &
                      + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                  &
-                     + (1.0_RP-EPSB) * VFWS * VFWW * RX                                  &
+                     + (1.0_RP-EPSB) * VFWS * VFWW * rflux_LW                                  &
                      + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                  &
                      + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4  )
 
@@ -1205,7 +1205,7 @@ contains
 !                  ZA, ZDC, Z0C, Z0HC, &
 !                  CHG, CHB, &
 !                  W, RW, ALPHAG, ALPHAB, BETG, BETB, &
-!                  RX, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
+!                  rflux_LW, VFGS, VFGW, VFWG, VFWW, VFWS, STB, &
 !                  SB, SG, LHV, TBLP, TGLP
 !       LOG_INFO_CONT(*) "6",VFGS, VFGW, VFWG, VFWW, VFWS
 !    end if
@@ -1224,8 +1224,8 @@ contains
        LOG_INFO_CONT(*) 'DEBUG Message --- QCP : Initial QC                               [K] :', QCP
        LOG_NEWLINE
        LOG_INFO_CONT(*) 'DEBUG Message --- UC  : Canopy wind                            [m/s] :', UC
-       LOG_INFO_CONT(*) 'DEBUG Message --- SX  : Shortwave radiation                   [W/m2] :', SX
-       LOG_INFO_CONT(*) 'DEBUG Message --- RX  : Longwave radiation                    [W/m2] :', RX
+       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_SW  : Shortwave radiation                   [W/m2] :', rflux_SW
+       LOG_INFO_CONT(*) 'DEBUG Message --- rflux_LW  : Longwave radiation                    [W/m2] :', rflux_LW
        LOG_INFO_CONT(*) 'DEBUG Message --- PRSS: Surface pressure                        [Pa] :', PRSS
        LOG_INFO_CONT(*) 'DEBUG Message --- PRSA: Pressure at 1st atmos layer              [m] :', PRSA
        LOG_INFO_CONT(*) 'DEBUG Message --- RHOO: Air density                          [kg/m3] :', RHOO
@@ -1251,20 +1251,20 @@ contains
 
 
     !--- update only fluxes ----
-     RG1      = EPSG * ( RX * VFGS                  &
+     RG1      = EPSG * ( rflux_LW * VFGS                  &
                        + EPSB * VFGW * STB * TB**4  &
                        - STB * TG**4                )
-     RB1      = EPSB * ( RX * VFWS                  &
+     RB1      = EPSB * ( rflux_LW * VFWS                  &
                        + EPSG * VFWG * STB * TG**4  &
                        + EPSB * VFWW * STB * TB**4  &
                        - STB * TB**4                )
 
-     RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * RX                  &
+     RG2      = EPSG * ( (1.0_RP-EPSB) * VFGW * VFWS * rflux_LW                  &
                        + (1.0_RP-EPSB) * VFGW * VFWG * EPSG * STB * TG**4  &
                        + EPSB * (1.0_RP-EPSB) * VFGW * VFWW * STB * TB**4  )
-     RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * RX                                 &
+     RB2      = EPSB * ( (1.0_RP-EPSG) * VFWG * VFGS * rflux_LW                                 &
                        + (1.0_RP-EPSG) * EPSB * VFGW * VFWG * STB * TB**4                 &
-                       + (1.0_RP-EPSB) * VFWS * VFWW * RX                                 &
+                       + (1.0_RP-EPSB) * VFWS * VFWW * rflux_LW                                 &
                        + (1.0_RP-EPSB) * VFWG * VFWW * STB * EPSG * TG**4                 &
                        + EPSB * (1.0_RP-EPSB) * VFWW * (1.0_RP-2.0_RP*VFWS) * STB * TB**4 )
 
@@ -1327,8 +1327,8 @@ contains
     ! Grid average
     !-----------------------------------------------------------
 
-    LW = RX - LNET     ! Upward longwave radiation   [W/m/m]
-    SW = SX - SNET     ! Upward shortwave radiation  [W/m/m]
+    LW = rflux_LW - LNET     ! Upward longwave radiation   [W/m/m]
+    SW = rflux_SW - SNET     ! Upward shortwave radiation  [W/m/m]
     RN = (SNET+LNET)    ! Net radiation [W/m/m]
 
     !--- shortwave radiation
@@ -1345,7 +1345,7 @@ contains
          + W*( (1.0_RP-EPSB*VFWW)*(1.0_RP-EPSB)*VFWS - EPSB*VFWG*(1.0_RP-EPSG)*VFGS )  &
          + RW*( (1.0_RP-EPSG)*VFGS - EPSG*(1.0_RP-VFGS)*(1.0_RP-EPSB)*VFWS )
 
-    RUP = (LDN - LUP) * RX - LNET
+    RUP = (LDN - LUP) * rflux_LW - LNET
     ALBD_LW_grid = LUP / LDN
 
 
