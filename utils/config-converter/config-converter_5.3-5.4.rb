@@ -68,6 +68,17 @@ params.each do |param|
   end
 
 
+  # topo
+  if /^&PARAM_TOPO$/i =~ param_name
+    print "&PARAM_TOPOGRAPHY\n"
+    param_items.each do |item|
+      print item.sub("TOPO", "TOPOGRAPHY"), "\n"
+    end
+    print "/\n"
+    next
+  end
+
+
   # Others
   print param_name, "\n"
   if param_items
