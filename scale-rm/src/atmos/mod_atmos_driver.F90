@@ -520,20 +520,20 @@ contains
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_topography, only: &
-       TOPOGRAPHY_Zsfc
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
        DENS, &
        QTRC, &
+       QV,   &
        TEMP, &
        PRES, &
        W,    &
        U,    &
        V
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
@@ -568,8 +568,8 @@ contains
     if ( CPL_sw ) then
        ! sum of rainfall from mp and cp
        !$omp parallel do private(i,j) OMP_SCHEDULE_
-       do j = 1, JA
-       do i = 1, IA
+       do j = JSB, JEB
+       do i = ISB, IEB
           SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
           SFLX_snow(i,j) = SFLX_snow_MP(i,j)
        enddo
@@ -577,9 +577,10 @@ contains
 
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                             DENS(:,:,:), PRES(:,:,:),                           & ! [IN]
-                             REAL_CZ(:,:,:), TOPOGRAPHY_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)                        ) ! [OUT]
+                             DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                             SFC_TEMP(:,:),                       & ! [IN]
+                             REAL_Z1(:,:),                        & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
                         PRES       (KS,:,:),   & ! [IN]

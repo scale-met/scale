@@ -61,7 +61,8 @@ contains
       Rvap  => CONST_Rvap,  &
       STB   => CONST_STB
     use scale_atmos_saturation, only: &
-      qsat => ATMOS_SATURATION_pres2qsat_all
+      qsat => ATMOS_SATURATION_dens2qsat_all
+!      qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
       BULKFLUX
     implicit none
@@ -128,11 +129,13 @@ contains
 
       if( SNOW_frac(i,j) > 0.0_RP ) then
 
-        qdry = 1.0_RP - QVA(i,j)
-        Rtot = qdry * Rdry + QVA(i,j) * Rvap
+!        qdry = 1.0_RP - QVA(i,j)
+!        Rtot = qdry * Rdry + QVA(i,j) * Rvap
 
-        call qsat( LST1(i,j),  PRSS(i,j), qdry, & ! [IN]
-                   QVsat                        ) ! [OUT]
+!        call qsat( LST1(i,j),  PRSS(i,j), qdry, & ! [IN]
+!                   QVsat                        ) ! [OUT]
+        call qsat( LST1(i,j),  RHOS(i,j), & ! [IN]
+                   QVsat                  ) ! [OUT]
 
         QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 

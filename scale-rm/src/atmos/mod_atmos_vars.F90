@@ -1096,14 +1096,13 @@ contains
   !> Set pressure for history output
   subroutine ATMOS_vars_history_setpres
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_topography, only: &
-       TOPOGRAPHY_Zsfc
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_file_history_cartesC, only: &
        FILE_HISTORY_CARTESC_set_pres
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
     implicit none
 
     real(RP) :: SFC_DENS(IA,JA)
@@ -1111,9 +1110,10 @@ contains
     !---------------------------------------------------------------------------
 
     call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                          DENS_av(:,:,:), PRES(:,:,:),                        & ! [IN]
-                          REAL_CZ(:,:,:), TOPOGRAPHY_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                          SFC_DENS(:,:), SFC_PRES(:,:)                        ) ! [OUT]
+                          DENS_av(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                          SFC_TEMP(:,:),                          & ! [IN]
+                          REAL_Z1(:,:),                           & ! [IN]
+                          SFC_DENS(:,:), SFC_PRES(:,:)            ) ! [OUT]
 
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
