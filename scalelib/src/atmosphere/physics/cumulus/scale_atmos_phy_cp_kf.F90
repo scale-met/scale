@@ -337,7 +337,7 @@ contains
        Rtot, CPtot,    &
        w0avg,          &
        FZ,             &
-       KF_DTSEC,       &
+       KF_DTSECD,      &
        DENS_t_CP,      &
        RHOT_t_CP,      &
        RHOQV_t_CP,     &
@@ -383,7 +383,7 @@ contains
     real(RP), intent(in)    :: CPtot(KA,IA,JA)   !< specific heat
     real(RP), intent(in)    :: w0avg(KA,IA,JA)   !< running mean of vertical velocity [m/s]
     real(RP), intent(in)    :: FZ   (0:KA,IA,JA)
-    real(DP), intent(in)    :: KF_DTSEC
+    real(DP), intent(in)    :: KF_DTSECD
 
     real(RP), intent(inout) :: DENS_t_CP    (KA,IA,JA)       !< tendency DENS [kg/m3/s]
     real(RP), intent(inout) :: RHOT_t_CP    (KA,IA,JA)       !< tendency RHOT [K*kg/m3/s]
@@ -470,10 +470,14 @@ contains
     real(RP) :: CPtot_nw(KA)                               !< new specific heat
 
     real(RP) :: R_convflag(IA,JA)
+
+    real(RP) :: KF_DTSEC
     ! ------
 
     LOG_PROGRESS(*) 'atmosphere / physics / cumulus / KF'
     LOG_INFO("ATMOS_PHY_CP_kf_tendency",*) 'KF Convection Check '
+
+    KF_DTSEC = KF_DTSECD ! DP to RP
 
     call PROF_rapstart('CP_kf', 3)
 
@@ -498,7 +502,7 @@ contains
        nca(i,j) = nca(i,j) - KF_DTSEC
 
        ! check convection
-       if ( nca(i,j) .ge. 0.5_DP * KF_DTSEC ) cycle
+       if ( nca(i,j) .ge. 0.5_RP * KF_DTSEC ) cycle
 
        do k = KS, KE
           ! preparing a NON Hydriometeor condition to fit assumption in KF scheme
@@ -590,6 +594,7 @@ contains
                wspd(:),                                                      & ! [IN]
                qv_d(:), theta_d(:),                                          & ! [IN]
                cpr,                                                          & ! [IN]
+               KF_DTSEC,                                                     & ! [IN]
                I_convflag(i,j), k_lcl,                                       & ! [INOUT]
                umf(:), upent(:), updet(:),                                   & ! [INOUT]
                qcdet(:), qidet(:), dmf(:), downent(:), downdet(:),           & ! [INOUT]
@@ -628,7 +633,7 @@ contains
           !
           if (I_convflag(i,j) == 0) then ! deep
              if (time_advec < lifetime(i,j)) nic=nint(time_advec/KF_DTSEC)
-             nca(i,j) = real(nic,RP)*KF_DTSEC ! convection feed back act this time span
+             nca(i,j) = nic * KF_DTSEC ! convection feed back act this time span
           elseif (I_convflag(i,j) == 1) then ! shallow
              lifetime(i,j) = max(SHALLOWLIFETIME, KF_DTSEC)
              nca     (i,j) = KF_DTSEC ! convection feed back act this time span
@@ -2011,6 +2016,7 @@ contains
        wspd,                                     &
        qv_d, theta_d,                            &
        cpr,                                      &
+       KF_DTSEC,                                 &
        I_convflag, k_lcl_bf,                     &
        umf, upent, updet,                        &
        qcdet, qidet, dmf, downent, downdet,      &
@@ -2027,8 +2033,6 @@ contains
          EMELT => CONST_EMELT
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
-    use scale_time , only :&
-         KF_DTSEC => TIME_DTSEC_ATMOS_PHY_CP
     use scale_prc, only: &
          PRC_abort
     implicit none
@@ -2062,6 +2066,7 @@ contains
     real(RP), intent(in)    :: qv_d(KA)           !< downdraft detrainment qv
     real(RP), intent(in)    :: theta_d(KA)        !< potential temperature at downdraft
     real(RP), intent(in)    :: cpr                !< all precipitation  before consider cloud bottom evaporation
+    real(RP), intent(in)    :: KF_DTSEC           !< time step
 
     integer,  intent(inout) :: I_convflag         !< intent inout
     integer,  intent(inout) :: k_lcl_bf           !< index at lcl
@@ -2186,7 +2191,7 @@ contains
     timecp = min(3600._RP, timecp)
     if(I_convflag == 1) timecp = SHALLOWLIFETIME ! shallow convection timescale is 40 minutes
     nic = nint(timecp/KF_DTSEC)
-    timecp = real( nic,RP )*KF_DTSEC             ! determin timecp not change below
+    timecp = nic * KF_DTSEC             ! determin timecp not change below
     !
     ! maximam of ainc calculate
     aincmx = 1000._RP
