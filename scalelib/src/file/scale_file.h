@@ -218,6 +218,7 @@ extern int32_t file_detach_buffer_c( const int32_t fid ); // (in)
 
 extern int32_t file_flush_c( const int32_t fid ); // (in)
 
-extern int32_t file_close_c( const int32_t fid ); // (in)
+extern int32_t file_close_c( const int32_t fid,     // (in)
+			     const int32_t abort ); // (in)
 
 #endif
