@@ -695,9 +695,10 @@ void file_write_data_c_( const int32_t  *fid,       // (in)
 }
 
 void file_close_c_( const int32_t *fid ,   // (in)
+		    const int32_t *abort,  // (in)
 		          int32_t *error ) // (out)
 {
-  *error = file_close_c( *fid );
+  *error = file_close_c( *fid, *abort );
 }
 
 void file_enddef_c_( const int32_t *fid ,   // (in)

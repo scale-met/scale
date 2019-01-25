@@ -2393,12 +2393,12 @@ contains
   end subroutine FILE_flush
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_close( fid, skip_abort )
+  subroutine FILE_close( fid, abort )
     implicit none
     integer, intent(in) :: fid
-    logical, intent(in), optional :: skip_abort
+    logical, intent(in), optional :: abort !> true when this is called in the abort process
 
-    logical :: skip_abort_
+    logical :: abort_
     integer :: error
     integer :: n
     !---------------------------------------------------------------------------
@@ -2407,13 +2407,13 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    if ( present(skip_abort) ) then
-       skip_abort_ = skip_abort
+    if ( present(abort) ) then
+       abort_ = abort
     else
-       skip_abort_ = .false.
+       abort_ = .false.
     end if
 
-    call file_close_c( FILE_files(fid)%fid, error )
+    call file_close_c( FILE_files(fid)%fid, abort_, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -2423,7 +2423,7 @@ contains
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        LOG_ERROR("FILE_close",*) 'failed to close file'
-       if ( .not. skip_abort_ ) call PRC_abort
+       if ( .not. abort_ ) call PRC_abort
     end if
 
     FILE_files(fid)%fid = -1

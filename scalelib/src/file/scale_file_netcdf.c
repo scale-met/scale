@@ -1950,7 +1950,8 @@ int32_t file_write_data_c( const int32_t   fid,       // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_close_c( const int32_t fid ) // (in)
+int32_t file_close_c( const int32_t fid,    // (in)
+		      const int32_t abort ) // (in)
 {
   int ncid;
   int i;
@@ -1975,9 +1976,9 @@ int32_t file_close_c( const int32_t fid ) // (in)
     }
   }
 
-  if ( files[fid]->shared_mode )
-    CHECK_PNC_ERROR( ncmpi_close(ncid) )
-  else
+  if ( files[fid]->shared_mode ) {
+    if ( ! abort ) CHECK_PNC_ERROR( ncmpi_close(ncid) )
+  } else
     CHECK_ERROR( nc_close(ncid) )
 
   free( files[fid] );
