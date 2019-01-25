@@ -43,6 +43,7 @@ module scale_atmos_grid_cartesC_real
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZUY(:,:,:)    !< geopotential height [m] (wuy)
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZXV(:,:,:)    !< geopotential height [m] (wxv)
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_FZUV(:,:,:)    !< geopotential height [m] (wuv)
+  real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_F2H (:,:,:,:)  !< coefficient for interpolation from full to half levels
 
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LON  (:,:)     !< longitude [rad,0-2pi]
   real(RP), public, allocatable :: ATMOS_GRID_CARTESC_REAL_LONUY(:,:)     !< longitude at staggered point (uy) [rad,0-2pi]
@@ -164,6 +165,7 @@ contains
     allocate( ATMOS_GRID_CARTESC_REAL_FZUY(0:KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_FZXV(0:KA,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_FZUV(0:KA,IA,JA) )
+    allocate( ATMOS_GRID_CARTESC_REAL_F2H (KA,2,IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_Z1 (     IA,JA) )
     allocate( ATMOS_GRID_CARTESC_REAL_PHI(  KA,IA,JA) )
 
@@ -381,6 +383,8 @@ contains
     real(RP) :: Zs
     real(RP) :: DFZ
 
+    real(RP) :: dz1, dz2
+
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -514,6 +518,21 @@ contains
     do k = 0, KA
        ATMOS_GRID_CARTESC_REAL_FZUV(k,IA,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
     enddo
+
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KE-1
+          dz1 = ATMOS_GRID_CARTESC_REAL_FZ(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k  ,i,j)
+          dz2 = ATMOS_GRID_CARTESC_REAL_FZ(k  ,i,j) - ATMOS_GRID_CARTESC_REAL_FZ(k-1,i,j)
+          ATMOS_GRID_CARTESC_REAL_F2H(k,1,i,j) = dz2 / ( dz1 + dz2 )
+          ATMOS_GRID_CARTESC_REAL_F2H(k,2,i,j) = dz1 / ( dz1 + dz2 )
+       end do
+       ATMOS_GRID_CARTESC_REAL_F2H(1:KS-1,1,i,j) = 0.5_RP
+       ATMOS_GRID_CARTESC_REAL_F2H(1:KS-1,2,i,j) = 0.5_RP
+       ATMOS_GRID_CARTESC_REAL_F2H(KE:KA ,1,i,j) = 0.5_RP
+       ATMOS_GRID_CARTESC_REAL_F2H(KE:KA ,2,i,j) = 0.5_RP
+    end do
+    end do
 
 
     ATMOS_GRID_CARTESC_REAL_Z1(:,:) = ATMOS_GRID_CARTESC_REAL_CZ(KS,:,:) - Zsfc(:,:)

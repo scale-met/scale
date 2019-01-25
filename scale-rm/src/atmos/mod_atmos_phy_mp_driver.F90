@@ -306,6 +306,23 @@ contains
                KA, IA, JA )
        end select
 
+       ! history putput
+       if ( MP_do_precipitation ) then
+          allocate( hist_vterm_id(QS_MP+1:QE_MP) )
+          do iq = QS_MP+1, QE_MP
+             call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
+          end do
+       end if
+
+       ! monitor
+       if ( MP_do_negative_fixer ) then
+          call MONITOR_reg( "QTOTTND_NF", "water mass tendency by the negative fixer", "kg/s", & ! [IN]
+                            monit_id,                                                          & ! [OUT]
+                            is_tendency=.true.                                                    ) ! [IN]
+          ZERO(:,:,:) = 0.0_RP
+          call MONITOR_put( MONIT_id, ZERO(:,:,:) )
+       end if
+
     else
 
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'this component is never called.'
@@ -315,24 +332,6 @@ contains
 
     endif
 
-
-    ! history output
-    if ( MP_do_precipitation ) then
-       allocate( hist_vterm_id(QS_MP+1:QE_MP) )
-       do iq = QS_MP+1, QE_MP
-          call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
-       end do
-    end if
-
-
-    ! monitor
-    if ( MP_do_negative_fixer ) then
-       call MONITOR_reg( "QTOTTND_NF", "water mass tendency by the negative fixer", "kg/s", & ! [IN]
-                         monit_id,                                                          & ! [OUT]
-                      is_tendency=.true.                                                    ) ! [IN]
-       ZERO(:,:,:) = 0.0_RP
-       call MONITOR_put( MONIT_id, ZERO(:,:,:) )
-    end if
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup

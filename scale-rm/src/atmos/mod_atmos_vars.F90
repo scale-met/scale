@@ -1535,7 +1535,8 @@ contains
        RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       F2H     => ATMOS_GRID_CARTESC_REAL_F2H
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_comm_cartesC, only: &
@@ -1766,6 +1767,7 @@ contains
     case ( 'QLIQ' )
        if ( .not. DV_calculated(I_QLIQ) ) then
           call allocate_3D( QLIQ )
+!OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp private(i,j,k,iq) &
           !$omp shared(QLIQ,QC,QR) &
@@ -1773,7 +1775,6 @@ contains
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
-!OCL XFILL
              QLIQ(k,i,j) = QC(k,i,j) + QR(k,i,j)
           enddo
           enddo
@@ -2058,9 +2059,10 @@ contains
           call allocate_3D( N2 )
           call ATMOS_DIAGNOSTIC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-               POTT(:,:,:), Rtot(:,:,:), & !(in)
-               REAL_CZ(:,:,:),           & !(in)
-               N2(:,:,:)                 ) ! (out)
+               POTT(:,:,:), Rtot(:,:,:),       & !(in)
+               REAL_CZ(:,:,:), REAL_FZ(:,:,:), & !(in)
+               F2H(:,:,:,:),                   & !(in)
+               N2(:,:,:)                       ) ! (out)
           DV_calculated(I_N2) = .true.
        end if
        var(KS:KE,:,:) = N2(KS:KE,:,:)
