@@ -341,8 +341,8 @@ exit if debug
 llev = [0.02, 0.115, 0.39]
 
 vars_air = [
-    ["long", 1, "longitude [degree]"],
-    ["lati", 1, "latitude [degree]"],
+    ["lon", 1, "longitude [degree]"],
+    ["lat", 1, "latitude [degree]"],
     ["plev", nlev, "pressure level [Pa]"],
     ["MSLP", 1, "mean sea level Pressure [Pa]"],
     ["PSFC", 1, "surface Pressure [Pa]"],
@@ -365,8 +365,8 @@ vars_air = [
 ]
 
 vars_land = [
-    ["long_sfc", 1, "longitude [degree]"],
-    ["lati_sfc", 1, "latitude [degree]"],
+    ["lon_sfc", 1, "longitude [degree]"],
+    ["lat_sfc", 1, "latitude [degree]"],
     ["lsmask", 1, "land mask [1]"],
     ["SKINT", 1, "skin Temperature [K]"],
     ["SST", 1, "sea surface Temperature [K]"],
