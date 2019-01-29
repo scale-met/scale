@@ -180,8 +180,10 @@ contains
        FZ
     implicit none
 
-    real(RP) :: Nu(KA,IA,JA,ADM_lall) !> eddy viscosity
-    real(RP) :: Kh(KA,IA,JA,ADM_lall) !> eddy diffution
+    real(RP) :: Nu   (KA,IA,JA,ADM_lall) !> eddy viscosity
+    real(RP) :: Nu_cg(KA,IA,JA,ADM_lall) !> eddy viscosity for the counter gradient
+    real(RP) :: Kh   (KA,IA,JA,ADM_lall) !> eddy diffution
+    real(RP) :: Kh_cg(KA,IA,JA,ADM_lall) !> eddy diffution for the counter gradient
     real(RP) :: QW(KA,IA,JA)          !> total water
 
     real(RP) :: N2  (KA,IA,JA,ADM_lall) !> static stability
@@ -222,7 +224,7 @@ contains
                CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                                & ! (in)
                RHOU_t(:,:,:), RHOV_t(:,:,:),                                   & ! (out)
                RHOT_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                             & ! (out)
-               Nu(:,:,:,l), Kh(:,:,:,l)                                        ) ! (out)
+               Nu(:,:,:,l), Nu_cg(:,:,:,l), Kh(:,:,:,l), Kh_cg(:,:,:,l)        ) ! (out)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -238,11 +240,11 @@ contains
              if ( ( .not. TRACER_ADVC(iq) ) .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:,l), QTRC(:,:,:,iq,l), & ! (in)
-                  SFLX_Q(:,:,iq,l), Kh(:,:,:,l),   & ! (in)
-                  CZ(:,:,:,l), FZ(:,:,:,l),        & ! (in)
-                  dt_BL, TRACER_NAME(iq),          & ! (in)
-                  RHOQ_t(:,:,:,iq)                 ) ! (out)
+                  DENS(:,:,:,l), QTRC(:,:,:,iq,l), SFLX_Q(:,:,iq,l), &
+                  Kh(:,:,:,l), Kh_cg(:,:,:,l), TRACER_MASS(iq),      & ! (in)
+                  CZ(:,:,:,l), FZ(:,:,:,l),                          & ! (in)
+                  dt_BL, TRACER_NAME(iq),                            & ! (in)
+                  RHOQ_t(:,:,:,iq)                                   ) ! (out)
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
