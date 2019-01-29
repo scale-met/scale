@@ -1099,7 +1099,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, QTRC, SFLX_Q, &
        Kh, Kh_cg, MASS,    &
-       CZ, FZ, DT,         &
+       CZ, FZ, DDT,        &
        TRACER_NAME,        &
        RHOQ_t              )
     use scale_matrix, only: &
@@ -1118,7 +1118,7 @@ contains
     real(RP),         intent(in) :: MASS             !> mass
     real(RP),         intent(in) :: CZ (  KA,IA,JA)  !> z at the full level
     real(RP),         intent(in) :: FZ (0:KA,IA,JA)  !> z at the half level
-    real(DP),         intent(in) :: DT               !> time step
+    real(DP),         intent(in) :: DDT              !> time step
     character(len=*), intent(in) :: TRACER_NAME      !> name of tracer (for history output)
 
     real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
@@ -1141,7 +1141,11 @@ contains
     real(RP) :: FDZ(KA)
     real(RP) :: f2h(KA,2) !> coefficient to convert from full to half level
 
+    real(RP) :: dt
+
     integer :: k, i, j
+
+    dt = real( DDT, kind=RP )
 
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
