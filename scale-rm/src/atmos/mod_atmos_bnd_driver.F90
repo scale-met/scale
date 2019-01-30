@@ -2182,8 +2182,6 @@ contains
        call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                            Q(:,:,:,1), Q(:,:,:,2:),                 & ! (in)
                                            ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! (out)
-    else if ( NESTQA > 0 ) then
-       ATMOS_BOUNDARY_ref_QTRC(:,:,:,1,ref_idx) = Q(:,:,:,1)
     end if
 
     return
