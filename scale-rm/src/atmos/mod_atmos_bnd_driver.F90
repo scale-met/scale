@@ -1677,8 +1677,7 @@ contains
                 if ( iqb > 0 ) then
                    QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
                 else
-                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq) &
-                                  * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IS-1,j)) )
+                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq)
                 end if
              end do
           end do
@@ -1737,8 +1736,7 @@ contains
                 if ( iqb > 0 ) then
                    QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
                 else
-                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq) &
-                                  * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IE,j)) )
+                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq)
                 end if
              end do
           end do
@@ -1812,8 +1810,7 @@ contains
                 if ( iqb > 0 ) then
                    QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
                 else
-                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq) &
-                                  * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JS-1)) )
+                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq)
                 end if
              end do
           end do
@@ -1872,8 +1869,7 @@ contains
                 if ( iqb > 0 ) then
                    QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
                 else
-                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq) &
-                                  * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JE)) )
+                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq)
                 end if
              end do
           end do
