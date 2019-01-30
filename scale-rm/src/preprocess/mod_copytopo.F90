@@ -542,7 +542,7 @@ contains
        end do
        end do
 
-       call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
+       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
                               TOPO_parent(:,:), COPYTOPO_FILTER_ORDER, COPYTOPO_FILTER_NITER, &
                               limiter_sign = TOPO_sign(:,:) )
     end if

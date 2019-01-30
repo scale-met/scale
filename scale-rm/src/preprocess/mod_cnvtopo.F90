@@ -1086,9 +1086,11 @@ contains
        LOG_INFO("CNVTOPO_smooth",*) 'Apply hyperdiffusion.'
 
        call FILTER_hyperdiff( IA, IS, IE, JA, JS, JE, &
-                              Zsfc(:,:), &
-                              CNVTOPO_smooth_hypdiff_order, CNVTOPO_smooth_hypdiff_niter, &
-                              limiter_sign = TOPO_sign(:,:)                               )
+                              Zsfc(:,:),                                                  & ! (inout)
+                              CNVTOPO_smooth_hypdiff_order, CNVTOPO_smooth_hypdiff_niter, & ! (in)
+                              limiter_sign = TOPO_sign(:,:)                               ) ! (in)
+
+       call TOPOGRAPHY_fillhalo( Zsfc=Zsfc(:,:), FILL_BND=.true. )
 
        !$omp parallel do
        do j = 1, JA
