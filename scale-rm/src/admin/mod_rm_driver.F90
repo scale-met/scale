@@ -175,9 +175,12 @@ contains
        ATMOS_do,          &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
-       ATMOS_vars_setup,       &
-       ATMOS_RESTART_CHECK,    &
-       ATMOS_vars_restart_check
+       ATMOS_vars_setup,           &
+       ATMOS_RESTART_CHECK,        &
+       ATMOS_vars_restart_check,   &
+       ATMOS_vars_history_setpres, &
+       ATMOS_vars_history,         &
+       ATMOS_vars_monitor
     use mod_atmos_driver, only: &
        ATMOS_driver_setup,                    &
        ATMOS_driver_calc_tendency,            &
@@ -190,7 +193,8 @@ contains
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup
+       OCEAN_vars_setup,  &
+       OCEAN_vars_history
     use mod_ocean_driver, only: &
        OCEAN_driver_setup,         &
        OCEAN_driver_calc_tendency, &
@@ -199,7 +203,8 @@ contains
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup
+       LAND_vars_setup,  &
+       LAND_vars_history
     use mod_land_driver, only: &
        LAND_driver_setup,         &
        LAND_driver_calc_tendency, &
@@ -209,7 +214,8 @@ contains
        URBAN_do,          &
        URBAN_land
     use mod_urban_vars, only: &
-       URBAN_vars_setup
+       URBAN_vars_setup,  &
+       URBAN_vars_history
     use mod_urban_driver, only: &
        URBAN_driver_setup,         &
        URBAN_driver_calc_tendency, &
@@ -423,6 +429,7 @@ contains
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
                                              call USER_update
       ! restart & monitor output
+      if ( ATMOS_do ) call ATMOS_vars_monitor
       call ADMIN_restart_write
       call MONITOR_write('MAIN', TIME_NOWSTEP)
 
@@ -435,6 +442,13 @@ contains
                                              call USER_calc_tendency
 
       ! history file output
+      !   Set hydrostatic pressure coordinate
+      if ( ATMOS_do ) call ATMOS_vars_history_setpres
+      if ( ATMOS_do ) call ATMOS_vars_history
+      if ( OCEAN_do ) call OCEAN_vars_history
+      if ( LAND_do  ) call LAND_vars_history
+      if ( URBAN_do ) call URBAN_vars_history
+
       call FILE_HISTORY_write
 
       if( TIME_DOend ) exit

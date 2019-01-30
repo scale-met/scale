@@ -157,8 +157,8 @@ contains
        I_ThermalCond,     &
        I_HeatCapacity,    &
        I_WaterDiff,       &
-       I_ALBLW,          &
-       I_ALBSW,          &
+       I_ALBLW,           &
+       I_ALBSW,           &
        I_Z0M,             &
        I_Z0H,             &
        I_Z0E,             &
@@ -616,8 +616,7 @@ contains
        LAND_SFC_TEMP,     &
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
-       LAND_vars_total,   &
-       LAND_vars_history
+       LAND_vars_total
     use scale_land_grid_cartesC, only: &
        LCDZ => LAND_GRID_CARTESC_CDZ
     use scale_land_dyn_bucket, only: &
@@ -673,10 +672,6 @@ contains
     enddo
 
     call LAND_vars_total
-
-    !########## History & Monitor ##########
-    call LAND_vars_history
-
 
     call PROF_rapend  ('LND_Update', 1)
 

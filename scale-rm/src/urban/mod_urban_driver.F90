@@ -508,8 +508,7 @@ contains
        URBAN_RAING,       &
        URBAN_ROFF,        &
        URBAN_SFC_TEMP,    &
-       URBAN_vars_total,  &
-       URBAN_vars_history
+       URBAN_vars_total
     use scale_landuse, only: &
        LANDUSE_fact_urban
     use mod_urban_admin, only: &
@@ -560,10 +559,6 @@ contains
     end select
 
     call URBAN_vars_total
-
-    !########## History & Monitor ##########
-    call URBAN_vars_history
-
 
     call PROF_rapend  ('URB_Update', 1)
 
