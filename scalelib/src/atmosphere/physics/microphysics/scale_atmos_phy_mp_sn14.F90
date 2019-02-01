@@ -849,20 +849,23 @@ contains
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1) ! tracer mass concentration [kg/kg]
 
     real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)   ! mixing ratio of each cateory [kg/kg]
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
 !OCL XFILL
-    Qe(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_QC)
-!OCL XFILL
-    Qe(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_QR)
-!OCL XFILL
-    Qe(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_QI)
-!OCL XFILL
-    Qe(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_QS)
-!OCL XFILL
-    Qe(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_QG)
-!OCL XFILL
-    Qe(:,:,:,I_HG+1:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Qe(k,i,j,I_HC) = QTRC0(k,i,j,I_mp_QC)
+       Qe(k,i,j,I_HR) = QTRC0(k,i,j,I_mp_QR)
+       Qe(k,i,j,I_HI) = QTRC0(k,i,j,I_mp_QI)
+       Qe(k,i,j,I_HS) = QTRC0(k,i,j,I_mp_QS)
+       Qe(k,i,j,I_HG) = QTRC0(k,i,j,I_mp_QG)
+       Qe(k,i,j,I_HG+1:) = 0.0_RP
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_sn14_qtrc2qhyd
@@ -887,20 +890,23 @@ contains
     real(RP), intent(in)  :: QTRC0(KA,IA,JA,QA_MP-1) ! tracer mass concentration [kg/kg]
 
     real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)   ! number density of each cateory [1/m3]
+
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
 !OCL XFILL
-    Ne(:,:,:,I_HC) = QTRC0(:,:,:,I_mp_NC)
-!OCL XFILL
-    Ne(:,:,:,I_HR) = QTRC0(:,:,:,I_mp_NR)
-!OCL XFILL
-    Ne(:,:,:,I_HI) = QTRC0(:,:,:,I_mp_NI)
-!OCL XFILL
-    Ne(:,:,:,I_HS) = QTRC0(:,:,:,I_mp_NS)
-!OCL XFILL
-    Ne(:,:,:,I_HG) = QTRC0(:,:,:,I_mp_NG)
-!OCL XFILL
-    Ne(:,:,:,I_HG+1:) = 0.0_RP
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       Ne(k,i,j,I_HC) = QTRC0(k,i,j,I_mp_NC)
+       Ne(k,i,j,I_HR) = QTRC0(k,i,j,I_mp_NR)
+       Ne(k,i,j,I_HI) = QTRC0(k,i,j,I_mp_NI)
+       Ne(k,i,j,I_HS) = QTRC0(k,i,j,I_mp_NS)
+       Ne(k,i,j,I_HG) = QTRC0(k,i,j,I_mp_NG)
+       Ne(k,i,j,I_HG+1:) = 0.0_RP
+    end do
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_MP_sn14_qtrc2nhyd
