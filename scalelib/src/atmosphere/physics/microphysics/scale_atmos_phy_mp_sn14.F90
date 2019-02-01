@@ -1883,6 +1883,10 @@ contains
     real(RP), parameter :: eps_rhog  = 1.E-19_RP
     integer :: ntdiv
 
+    ! for limitter
+    real(RP) :: di2l, dtem
+    real(RP) :: fact
+
     real(RP) :: sw
 
     integer  :: k, i, j, iq
@@ -2474,22 +2478,34 @@ contains
        fac9    = (spl_dqg-eps)/(dt*PQ(I_LGspl,k,i,j)-eps)
        fac10   = (spl_dqs-eps)/(dt*PQ(I_LSspl,k,i,j)-eps)
        spl_dni = dt*PQ(I_NIspl,k,i,j)*fac9*fac10
+
+
+       !
+       ! melting and freezing limiter
+       di2l = clp_dqc + clp_dqr + clm_dqc + clm_dqr + eml_dqc + eml_dqr ! = - ( clp_dqi + clp_dqs + clp_dqg + clm_dqi + clm_dqs + clm_dqg + eml_dqi + eml_dqs + eml_dqg )
+       dtem = - di2l * LHF0 /  ( cva(k,i,j) * DENS(k,i,j) )
+       if ( abs(dtem) < EPS ) then
+          fact = 1.0_RP
+       else
+          fact = min( 1.0_RP, max( 0.0_RP, ( T00 - temp(k,i,j) ) / dtem ) )
+       end if
+
        !
        ! total cloud change
-       drhogqc = (wrm_dqc + clp_dqc + clm_dqc           + eml_dqc )
-       drhognc = (wrm_dnc + clp_dnc + clm_dnc           + eml_dnc )
+       drhogqc = wrm_dqc + ( clp_dqc + clm_dqc + eml_dqc ) * fact
+       drhognc = wrm_dnc + ( clp_dnc + clm_dnc + eml_dnc ) * fact
        ! total rain change
-       drhogqr = (wrm_dqr + clp_dqr + clm_dqr           + eml_dqr )
-       drhognr = (wrm_dnr + clp_dnr + clm_dnr           + eml_dnr )
+       drhogqr = wrm_dqr + ( clp_dqr + clm_dqr + eml_dqr ) * fact
+       drhognr = wrm_dnr + ( clp_dnr + clm_dnr + eml_dnr ) * fact
        ! total ice change
-       drhogqi = (          clp_dqi + clm_dqi + pco_dqi + eml_dqi + spl_dqi)
-       drhogni = (          clp_dni + clm_dni + pco_dni + eml_dni + spl_dni)
+       drhogqi =           ( clp_dqi + clm_dqi + eml_dqi ) * fact + pco_dqi + spl_dqi
+       drhogni =           ( clp_dni + clm_dni + eml_dni ) * fact + pco_dni + spl_dni
        ! total snow change
-       drhogqs = (          clp_dqs + clm_dqs + pco_dqs + eml_dqs + spl_dqs)
-       drhogns = (          clp_dns + clm_dns + pco_dns + eml_dns )
+       drhogqs =           ( clp_dqs + clm_dqs + eml_dqs ) * fact + pco_dqs + spl_dqs
+       drhogns =           ( clp_dns + clm_dns + eml_dns ) * fact + pco_dns
        ! total graupel change
-       drhogqg = (          clp_dqg + clm_dqg + pco_dqg + eml_dqg + spl_dqg)
-       drhogng = (          clp_dng + clm_dng + pco_dng + eml_dng )
+       drhogqg =           ( clp_dqg + clm_dqg + eml_dqg ) * fact + pco_dqg + spl_dqg
+       drhogng =           ( clp_dng + clm_dng + eml_dng ) * fact + pco_dng
        !
 
        ! tendency
