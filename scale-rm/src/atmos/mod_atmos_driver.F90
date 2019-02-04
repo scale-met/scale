@@ -349,10 +349,7 @@ contains
        ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
     use mod_atmos_vars, only: &
-       ATMOS_vars_history,         &
        ATMOS_vars_calc_diagnostics,&
-       ATMOS_vars_history_setpres, &
-       ATMOS_vars_monitor,         &
        DENS,                       &
        TEMP,                       &
        PRES,                       &
@@ -428,14 +425,6 @@ contains
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
 
-
-    !########## Set hydrostatic pressure coordinate ##########
-    call ATMOS_vars_history_setpres
-
-
-    !########## History & Monitor ##########
-    call ATMOS_vars_history
-    call ATMOS_vars_monitor
 
     return
   end subroutine ATMOS_driver_update

@@ -801,8 +801,7 @@ contains
        OCEAN_SFLX_G,       &
        OCEAN_SFLX_water,   &
        OCEAN_SFLX_ice,     &
-       OCEAN_vars_total,   &
-       OCEAN_vars_history
+       OCEAN_vars_total
     use scale_ocean_dyn_slab, only: &
        OCEAN_DYN_SLAB, &
        OCEAN_DYN_SLAB_DEPTH
@@ -881,9 +880,6 @@ contains
     end select
 
     call OCEAN_vars_total
-
-    !########## History & Monitor ##########
-    call OCEAN_vars_history
 
     call PROF_rapend  ('OCN_Update', 2)
 
