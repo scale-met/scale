@@ -4346,22 +4346,22 @@ contains
     integer, intent(in)    :: ntdiv               ! [Add] 10/08/03
     integer, intent(in)    :: ntmax               ! [Add] 10/08/03
     !
-    real(RP), intent(in)    :: dt                 ! time step[s]
-    !real(RP), intent(in)    :: gsgam2(KA,IA,JA)   ! metric
-    real(RP), intent(in)    :: cz(KA,IA,JA)        ! altitude [m]
-    real(RP), intent(in)    :: fz(KA,IA,JA)       ! altitude difference [m]
-    real(RP), intent(in)    :: w(KA,IA,JA)        ! vertical velocity @ full level [m/s]
-    real(RP), intent(in)    :: dTdt_rad(KA,IA,JA) ! temperture tendency by radiation[K/s]
-    real(RP), intent(in)    :: rho(KA,IA,JA)      ! density[kg/m3]
-    real(RP), intent(in)    :: qdry(KA,IA,JA)     ! dry air mass ratio [kg/kg]
-    real(RP), intent(in)    :: esw(KA,IA,JA)      ! saturated vapor pressure for liquid
-    real(RP), intent(in)    :: esi(KA,IA,JA)      !                          for ice
-    real(RP), intent(in)    :: rhoq2(I_QV:I_NG,KA,IA,JA)
+    real(RP), intent(in)   :: dt                 ! time step[s]
+    !real(RP), intent(in)   :: gsgam2(KA,IA,JA)   ! metric
+    real(RP), intent(in)   :: cz(KA,IA,JA)        ! altitude [m]
+    real(RP), intent(in)   :: fz(KA,IA,JA)       ! altitude difference [m]
+    real(RP), intent(in)   :: w(KA,IA,JA)        ! vertical velocity @ full level [m/s]
+    real(RP), intent(in)   :: dTdt_rad(KA,IA,JA) ! temperture tendency by radiation[K/s]
+    real(RP), intent(in)   :: rho(KA,IA,JA)      ! density[kg/m3]
+    real(RP), intent(in)   :: qdry(KA,IA,JA)     ! dry air mass ratio [kg/kg]
+    real(RP), intent(in)   :: esw(KA,IA,JA)      ! saturated vapor pressure for liquid
+    real(RP), intent(in)   :: esi(KA,IA,JA)      !                          for ice
+    real(RP), intent(in)   :: rhoq2(I_QV:I_NG,KA,IA,JA)
 
-    real(RP), intent(in) :: tem(KA,IA,JA)      ! temperature[K]
-    real(RP), intent(in) :: pre(KA,IA,JA)      ! pressure[Pa]
-    real(RP), intent(in)   :: cva(KA,IA,JA)      ! specific heat at constant volume
+    real(RP), intent(in)   :: tem(KA,IA,JA)      ! temperature[K]
+    real(RP), intent(in)   :: pre(KA,IA,JA)      ! pressure[Pa]
     real(RP), intent(in)   :: cpa(KA,IA,JA)      !
+    real(RP), intent(in)   :: cva(KA,IA,JA)      ! specific heat at constant volume
 
     !+++ tendency[kg/m3/s]
     real(RP), intent(inout) :: PQ(PQ_MAX,KA,IA,JA)
@@ -4482,6 +4482,7 @@ contains
     real(RP) :: sw
     real(RP) :: dqv, dqc, dqr, dqi, dqs, dqg, dcv, dcp
     !
+    real(RP) :: fact
 
     ! [Add] 11/08/30 T.Mitsui
     if( flag_first )then
@@ -4797,6 +4798,25 @@ contains
        ! water vapor change
        drhoqv = -(dep_dqc+dep_dqi+dep_dqs+dep_dqg+dep_dqr)
 
+       ! limiter
+       sw = 0.5_RP - sign(0.5_RP, abs(drhoqv) - eps) ! if |drhoqv| < eps then sw = 1
+       fact = ( max( rhoq2(I_QV,k,i,j) + drhoqv * dt, 0.0_RP ) - rhoq2(I_QV,k,i,j) ) / dt / ( drhoqv + sw ) * ( 1.0_RP - sw ) &
+            + 1.0_RP * sw
+       fact = min( 1.0_RP, max( 0.0_RP, fact ) )
+
+       drhoqv = drhoqv * fact
+       dep_dqc = dep_dqc * fact
+       dep_dnc = dep_dnc * fact
+       dep_dqr = dep_dqr * fact
+       dep_dnr = dep_dnr * fact
+       dep_dqi = dep_dqi * fact
+       dep_dni = dep_dni * fact
+       dep_dqs = dep_dqs * fact
+       dep_dns = dep_dns * fact
+       dep_dqg = dep_dqg * fact
+       dep_dng = dep_dng * fact
+
+
        xi = min(xi_max, max(xi_min, rhoq2(I_QI,k,i,j)/(rhoq2(I_NI,k,i,j)+ni_min) ))
        sw = 0.5_RP + sign(0.5_RP,xi-x_sep) ! if (xi>=x_sep) then sw=1 else sw=0
                                                   ! sw=1: large ice crystals turn into rain by melting
@@ -4804,6 +4824,7 @@ contains
        ! total cloud change
        drhoqc = ( frz_dqc - mlt_dqi*(1.0_RP-sw) + dep_dqc )
        drhonc = ( frz_dnc - mlt_dni*(1.0_RP-sw) + dep_dnc )
+
        ! total rain change
        drhoqr = ( frz_dqr - mlt_dqg - mlt_dqs - mlt_dqi*sw + dep_dqr )
        drhonr = ( frz_dnr - mlt_dng - mlt_dns - mlt_dni*sw + dep_dnr )
@@ -4819,6 +4840,7 @@ contains
        ! total graupel change
        drhoqg = (-frz_dqr + mlt_dqg             + dep_dqg )
        drhong = (-frz_dnr + mlt_dng             + dep_dng )
+
 
        ! tendency
        RHOQ_t(k,i,j,I_QV) = drhoqv / dt
