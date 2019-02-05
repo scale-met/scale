@@ -1331,12 +1331,6 @@ contains
                       exit
                    endif
                 enddo
-                ! indexR == -1 if some variables have NaN value.
-                !write operation prevents optimization (auto parallelization)
-                !if ( indexR(k,iaero) == -1 ) then
-                   !LOG_ERROR("RD_MSTRN_DTRN3",*) 'invalid index', k,i,j, iaero, aerosol_radi(k,i,j,iaero)
-                   !call PRC_abort
-                !end if
              endif
           enddo
        enddo
@@ -1477,12 +1471,14 @@ contains
                 do im = 1, MSTRN_nstream*2+2
                    q_fit = q(ir  ,iptype,im,iw) * ( 1.0_RP-factR(k,iaero) ) &
                          + q(ir+1,iptype,im,iw) * (        factR(k,iaero) )
+                   q_fit = max( q_fit, 0.0_RP )
 
                    optparam(k,im,I_Cloud) = optparam(k,im,I_Cloud) + q_fit * length
                 enddo
 
                 q_fit = q(ir  ,iptype,1,iw) * ( 1.0_RP-factR(k,iaero) ) &
                       + q(ir+1,iptype,1,iw) * (        factR(k,iaero) )
+                q_fit = max( q_fit, 0.0_RP )
 
                 tauCLD(k) = tauCLD(k) + q_fit * length
              enddo
@@ -1502,6 +1498,7 @@ contains
                 do im = 1, MSTRN_nstream*2+2
                    q_fit = q(ir  ,iptype,im,iw) * ( 1.0_RP-factR(k,iaero) ) &
                          + q(ir+1,iptype,im,iw) * (        factR(k,iaero) )
+                   q_fit = max( q_fit, 0.0_RP )
 
                    optparam(k,im,I_Cloud   ) = optparam(k,im,I_Cloud   ) + q_fit * length
                    optparam(k,im,I_ClearSky) = optparam(k,im,I_ClearSky) + q_fit * length
