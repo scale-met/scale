@@ -449,12 +449,14 @@ contains
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) * EXNER(KS,i,j) )
 
        do k = KS, KE_PBL
-          CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
           FDZ(k) = CZ(k+1,i,j) - CZ(k  ,i,j)
+       end do
+       do k = KS, KE_PBL+1
+          CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
        end do
 
        call get_f2h( &
-            KA, KS, KE_PBL+1, &
+            KA, KS, KE_PBL, &
             CDZ(:),  & ! (in)
             f2h(:,:) ) ! (out)
 
@@ -1162,7 +1164,7 @@ contains
        end do
 
        call get_f2h( &
-            KA, KS, KE_PBL, &
+            KA, KS, KE_PBL-1, &
             CDZ(:),  & ! (in)
             f2h(:,:) ) ! (out)
 
@@ -1689,7 +1691,7 @@ contains
     real(RP) :: dz1, dz2
     integer :: k
 
-    do k = KS, KE-1
+    do k = KS, KE
        dz1 = CDZ(k+1)
        dz2 = CDZ(k)
        f2h(k,1) = dz2 / ( dz1 + dz2 )
