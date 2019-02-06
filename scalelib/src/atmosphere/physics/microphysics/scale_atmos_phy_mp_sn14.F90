@@ -3748,16 +3748,14 @@ contains
        !
        ! Collisional breakup of rain
        ddr           = min(1.E-3_RP, dq_xave(I_mp_QR,k,i,j) - dr_eq )
-       if      (dq_xave(I_mp_QR,k,i,j) < dr_min )then                          ! negligible
+       if      ( dq_xave(I_mp_QR,k,i,j) < dr_min ) then            ! negligible
           psi_brk      = -1.0_RP
-          PQ(I_NRbrk,k,i,j) = 0.0_RP
-       else if (dq_xave(I_mp_QR,k,i,j) <= dr_eq  )then
-          psi_brk      = kbr*ddr + 1.0_RP                               ! (14) SB06 (+1 is necessary)
-          PQ(I_NRbrk,k,i,j) = - (psi_brk + 1.0_RP)*PQ(I_NRslc,k,i,j)              ! (13) SB06
+       else if ( dq_xave(I_mp_QR,k,i,j) <= dr_eq  ) then
+          psi_brk      = kbr*ddr                                   ! (14) SB06
        else
-          psi_brk      = 2.0_RP*exp(kapbr*ddr) - 1.0_RP                   ! (15) SB06
-          PQ(I_NRbrk,k,i,j) = - (psi_brk + 1.0_RP)*PQ(I_NRslc,k,i,j)              ! (13) SB06
+          psi_brk      = exp(kapbr*ddr) - 1.0_RP                   ! (15) SB06 (SB06 has a typo)
        end if
+       PQ(I_NRbrk,k,i,j) = - (psi_brk + 1.0_RP)*PQ(I_NRslc,k,i,j)  ! (13) SB06
        !
     end do
     end do
