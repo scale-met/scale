@@ -569,14 +569,18 @@ contains
     if ( PRC_IsMaster ) then ! master node
        MONITOR_L = .true.
     else
-       MONITOR_L = IO_LOG_ALLNODE
+       MONITOR_L = IO_LOG_ALLNODE .and. ( .not. MONITOR_GLOBAL_SUM )
     endif
 
     if ( MONITOR_L ) then
 
        !--- Open logfile
        MONITOR_FID = IO_get_available_fid()
-       call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+       if ( MONITOR_GLOBAL_SUM ) then
+          fname = trim(MONITOR_OUT_BASENAME) // '.peall'
+       else
+          call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+       end if
        open( unit   = MONITOR_FID,  &
              file   = trim(fname),  &
              form   = 'formatted',  &
