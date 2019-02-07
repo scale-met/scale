@@ -125,6 +125,7 @@ contains
        var, varname, &
        area, total,  &
        log_suppress, &
+       global,       &
        mean, sum     )
     use scale_prc, only: &
        PRC_myrank, &
@@ -142,6 +143,7 @@ contains
     real(RP),         intent(in) :: total       !< total area
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
+    logical,  intent(in),  optional :: global       !< global or local sum
     real(RP), intent(out), optional :: mean !< area-weighted mean
     real(DP), intent(out), optional :: sum  !< domain sum
 
@@ -149,7 +151,7 @@ contains
     real(DP) :: sendbuf(2), recvbuf(2)
     real(DP) :: sum_, mean_
 
-    logical :: suppress_
+    logical :: suppress_, global_
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -175,7 +177,13 @@ contains
        suppress_ = .false.
     end if
 
-    if ( STATISTICS_use_globalcomm ) then
+    if ( present(global) ) then
+       global_ = global
+    else
+       global_ = STATISTICS_use_globalcomm
+    end if
+
+    if ( global_ ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
        sendbuf(2) = total
@@ -219,6 +227,7 @@ contains
        var, varname, &
        vol, total,   &
        log_suppress, &
+       global,       &
        mean, sum     )
     use scale_prc, only: &
        PRC_myrank, &
@@ -237,6 +246,7 @@ contains
     real(RP),         intent(in) :: total         !< total volume
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
+    logical,  intent(in),  optional :: global       !< global or local sum
     real(RP), intent(out), optional :: mean !< volume/area-weighted total
     real(DP), intent(out), optional :: sum  !< domain sum
 
@@ -244,7 +254,7 @@ contains
     real(DP) :: sendbuf(2), recvbuf(2)
     real(DP) :: mean_, sum_
 
-    logical :: suppress_
+    logical :: suppress_, global_
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -272,7 +282,13 @@ contains
        suppress_ = .false.
     end if
 
-    if ( STATISTICS_use_globalcomm ) then
+    if ( present(global) ) then
+       global_ = global
+    else
+       global_ = STATISTICS_use_globalcomm
+    end if
+
+    if ( global_ ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
        sendbuf(2) = total
