@@ -11,7 +11,7 @@ do
       echo ${line[1]} ${line[6]} ${line[8]}  ${line[9]}  ${line[10]} ${line[11]} >> energy_sfc.dat
       echo ${line[1]} ${line[7]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} >> energy_toa.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt || exit
 gnuplot < ./visualize/energy_sfc.plt || exit

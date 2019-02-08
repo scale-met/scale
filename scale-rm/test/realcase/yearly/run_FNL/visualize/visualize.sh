@@ -13,7 +13,7 @@ do
       echo ${line[1]} ${line[3]}  ${line[4]}  ${line[5]}  ${line[6]}              >> mass.dat
       echo ${line[1]} ${line[4]}  ${line[16]} ${line[17]} ${line[18]} ${line[19]} ${line[20]} ${line[21]} >> mass_q.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt     || exit
 gnuplot < ./visualize/energy_flx.plt || exit
