@@ -10,7 +10,7 @@ do
       echo ${line[1]} ${line[4]} ${line[5]} ${line[6]} ${line[7]} >> energy.dat
       echo ${line[1]} ${line[4]}                                  >> mass.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt || exit
 gnuplot < ./visualize/mass.plt   || exit
