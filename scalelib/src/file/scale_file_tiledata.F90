@@ -56,8 +56,10 @@ contains
        TILE_nmax,                                          &
        TILE_fname, TILE_hit,                               &
        TILE_JS, TILE_JE, TILE_IS, TILE_IE,                 &
-       nLATH, nLONH, jsh, jeh, ish, ieh,                   &
+       nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole,      &
        single_fname, LATS, LATE, LONS, LONE                )
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: TILE_nlim
@@ -71,6 +73,7 @@ contains
     integer,          intent(out) :: TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:)
     integer,          intent(out) :: nLATH, nLONH
     integer,          intent(out) :: jsh, jeh, ish, ieh
+    logical,          intent(out) :: zonal, pole
 
     character(len=*), intent(in), optional :: single_fname
     real(RP),         intent(in), optional :: LATS
@@ -80,6 +83,7 @@ contains
 
     real(RP) :: TILE_LATS(TILE_nlim), TILE_LATE(TILE_nlim)
     real(RP) :: TILE_LONS(TILE_nlim), TILE_LONE(TILE_nlim)
+    real(RP) :: LAT_MIN, LAT_MAX
 
     integer :: DOMAIN_JS, DOMAIN_JE, DOMAIN_IS, DOMAIN_IE
 
@@ -100,6 +104,8 @@ contains
                                              TILE_fname(:),              & ! [OUT]
                                              TILE_LATS(:), TILE_LATE(:), & ! [OUT]
                                              TILE_LONS(:), TILE_LONE(:)  ) ! [OUT]
+       LAT_MIN = minval( TILE_LATS(1:TILE_nmax) )
+       LAT_MAX = maxval( TILE_LATE(1:TILE_nmax) )
 
     else
        if ( .not. present(single_fname) ) then
@@ -129,7 +135,17 @@ contains
        TILE_LATE (1) = LATE
        TILE_LONS (1) = LONS
        TILE_LONE (1) = LONE
+
+       LAT_MIN = LATS
+       LAT_MAX = LATE
     end if
+
+    zonal = ( DOMAIN_LONE - DOMAIN_LONS ) / ( 2.0_RP * PI ) > 0.9_RP
+
+    pole =    ( DOMAIN_LATS < - PI * 0.5_RP + ( DOMAIN_LATE - DOMAIN_LATS ) * 0.1_RP ) &
+         .or. ( DOMAIN_LATE >   PI * 0.5_RP - ( DOMAIN_LATE - DOMAIN_LATS ) * 0.1_RP )
+
+    zonal = zonal .or. pole
 
     call FILE_TILEDATA_get_tile_info( TILE_nmax,                  & ! [IN]
                                       DOMAIN_JS, DOMAIN_JE,       & ! [IN]
@@ -138,6 +154,7 @@ contains
                                       TILE_DLAT, TILE_DLON,       & ! [IN]
                                       TILE_LATS(:), TILE_LATE(:), & ! [IN]
                                       TILE_LONS(:), TILE_LONE(:), & ! [IN]
+                                      zonal,                      & ! [IN]
                                       TILE_hit(:),                & ! [OUT]
                                       TILE_JS(:), TILE_JE(:),     & ! [OUT]
                                       TILE_IS(:), TILE_IE(:),     & ! [OUT]
@@ -565,6 +582,7 @@ contains
        TILE_DLAT, TILE_DLON, &
        TILE_LATS, TILE_LATE, &
        TILE_LONS, TILE_LONE, &
+       zonal,                &
        TILE_hit,             &
        TILE_JS, TILE_JE,     &
        TILE_IS, TILE_IE,     &
@@ -577,6 +595,7 @@ contains
     integer,  intent(in)  :: GLOBAL_IA
     real(RP), intent(in)  :: TILE_DLAT, TILE_DLON
     real(RP), intent(in)  :: TILE_LATS(:), TILE_LATE(:), TILE_LONS(:), TILE_LONE(:)
+    logical,  intent(in)  :: zonal
     logical,  intent(out) :: TILE_hit(:)
     integer,  intent(out) :: TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:)
     integer,  intent(out) :: jsh, jeh, ish, ieh
@@ -592,9 +611,6 @@ contains
     jeh = min( DOMAIN_JE + nhalo,  floor( 0.5_RP * PI / TILE_DLAT ) )
     ish = DOMAIN_IS - nhalo
     ieh = DOMAIN_IE + nhalo
-
-    nLONH = ieh - ish + 1
-    nLATH = jeh - jsh + 1
 
     ! data file
     !$omp parallel do &
@@ -625,7 +641,9 @@ contains
           hit_lat = .false.
        endif
 
-       if (      ( TILE_IS(t) <= ieh             ) &
+       if ( zonal ) then
+          hit_lon = .true.
+       else if ( ( TILE_IS(t) <= ieh             ) &
             .OR. ( ish <= TILE_IE(t) - GLOBAL_IA ) ) then
           hit_lon = .true.
        else
@@ -634,6 +652,17 @@ contains
 
        TILE_hit(t) = ( hit_lat .AND. hit_lon )
     end do
+
+    if ( zonal ) then
+       ish = minval(TILE_IS(1:TILE_nmax))
+       ieh = maxval(TILE_IE(1:TILE_nmax))
+       jsh = min( jsh, minval(TILE_JS(1:TILE_nmax)) )
+       jeh = max( jeh, maxval(TILE_JE(1:TILE_nmax)) )
+    end if
+
+    nLONH = ieh - ish + 1
+    nLATH = jeh - jsh + 1
+
 
     return
   end subroutine FILE_TILEDATA_get_tile_info
