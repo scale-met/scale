@@ -280,6 +280,11 @@ contains
        INTERP_factor3d
     use scale_comm_cartesC, only: &
        COMM_Bcast
+    use scale_atmos_grid_cartesC, only: &
+       ATMOS_GRID_CARTESC_CX, &
+       ATMOS_GRID_CARTESC_FX, &
+       ATMOS_GRID_CARTESC_CY, &
+       ATMOS_GRID_CARTESC_FY
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,   &
        ATMOS_GRID_CARTESC_REAL_LAT,   &
@@ -293,6 +298,8 @@ contains
        ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
     implicit none
 
     integer,          intent(in) :: QA_MP
@@ -300,8 +307,15 @@ contains
     integer,          intent(in), optional :: inter_parent
     integer,          intent(in), optional :: inter_child
 
+    character(len=H_SHORT) :: COMM_CARTESC_NEST_INTERP_TYPE = 'LINEAR' ! "LINEAR" or "DIST-WEIGHT"
+                                                                       !   LINEAR     : bi-linear interpolation
+                                                                       !   DIST-WEIGHT: distance-weighted mean of the nearest N-neighbors
+
     !< metadata files for lat-lon domain for all processes
     character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
+
+    real(RP), allocatable :: X_ref(:,:)
+    real(RP), allocatable :: Y_ref(:,:)
 
     integer :: ONLINE_SPECIFIED_MAXRQ = 0
     integer :: i
@@ -330,7 +344,8 @@ contains
        ONLINE_AGGRESSIVE_COMM,   &
        ONLINE_WAIT_LIMIT,        &
        ONLINE_SPECIFIED_MAXRQ,   &
-       COMM_CARTESC_NEST_INTERP_LEVEL,        &
+       COMM_CARTESC_NEST_INTERP_TYPE,  &
+       COMM_CARTESC_NEST_INTERP_LEVEL, &
        COMM_CARTESC_NEST_INTERP_WEIGHT_ORDER
 
     !---------------------------------------------------------------------------
@@ -469,7 +484,17 @@ contains
 
     call INTERP_setup( COMM_CARTESC_NEST_INTERP_WEIGHT_ORDER ) ! [IN]
 
-    itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
+    select case ( COMM_CARTESC_NEST_INTERP_TYPE )
+    case ( 'LINEAR' )
+       itp_nh = 4
+    case ( 'DIST-WEIGHT' )
+       itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
+    case default
+       LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'Unsupported type of COMM_CARTESC_NEST_INTERP_TYPE : ', trim(COMM_CARTESC_NEST_INTERP_TYPE)
+       LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
+       call PRC_abort
+    end select
+
     itp_nv = 2
 
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
@@ -715,101 +740,217 @@ contains
             call COMM_CARTESC_NEST_setup_nestdown( HANDLING_NUM )
 
 
-            ! for scalar points
-            call INTERP_factor3d( itp_nh,                             & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),            & ! [IN]
-                                  KHALO+1,                            & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)-KHALO,      & ! [IN]
-                                  TILEAL_IA(HANDLING_NUM),            & ! [IN]
-                                  TILEAL_JA(HANDLING_NUM),            & ! [IN]
-                                  buffer_ref_LON(:,:),                & ! [IN]
-                                  buffer_ref_LAT(:,:),                & ! [IN]
-                                  buffer_ref_CZ (:,:,:),              & ! [IN]
-                                  DAUGHTER_KA(HANDLING_NUM),          & ! [IN]
-                                  DATR_KS    (HANDLING_NUM),          & ! [IN]
-                                  DATR_KE    (HANDLING_NUM),          & ! [IN]
-                                  DAUGHTER_IA(HANDLING_NUM),          & ! [IN]
-                                  DAUGHTER_JA(HANDLING_NUM),          & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LON(:,:),   & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LAT(:,:),   & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_CZ (:,:,:), & ! [IN]
-                                  igrd (    :,:,:,I_SCLR),            & ! [OUT]
-                                  jgrd (    :,:,:,I_SCLR),            & ! [OUT]
-                                  hfact(    :,:,:,I_SCLR),            & ! [OUT]
-                                  kgrd (:,:,:,:,:,I_SCLR),            & ! [OUT]
-                                  vfact(:,:,:,:,:,I_SCLR)             ) ! [OUT]
+            select case ( COMM_CARTESC_NEST_INTERP_TYPE )
+            case ( 'LINEAR' )
 
-            ! for z staggered points
-            call INTERP_factor3d( itp_nh,                                & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)+1,             & ! [IN]
-                                  KHALO+1,                               & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)+1-KHALO,       & ! [IN]
-                                  TILEAL_IA(HANDLING_NUM),               & ! [IN]
-                                  TILEAL_JA(HANDLING_NUM),               & ! [IN]
-                                  buffer_ref_LON(:,:),                   & ! [IN]
-                                  buffer_ref_LAT(:,:),                   & ! [IN]
-                                  buffer_ref_FZ (:,:,:),                 & ! [IN]
-                                  DAUGHTER_KA(HANDLING_NUM),             & ! [IN]
-                                  DATR_KS    (HANDLING_NUM),             & ! [IN]
-                                  DATR_KE    (HANDLING_NUM),             & ! [IN]
-                                  DAUGHTER_IA(HANDLING_NUM),             & ! [IN]
-                                  DAUGHTER_JA(HANDLING_NUM),             & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LON(:,:),      & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LAT(:,:),      & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_FZ (1:KA,:,:), & ! [IN]
-                                  igrd (    :,:,:,I_ZSTG),               & ! [OUT]
-                                  jgrd (    :,:,:,I_ZSTG),               & ! [OUT]
-                                  hfact(    :,:,:,I_ZSTG),               & ! [OUT]
-                                  kgrd (:,:,:,:,:,I_ZSTG),               & ! [OUT]
-                                  vfact(:,:,:,:,:,I_ZSTG)                ) ! [OUT]
+               allocate( X_ref(TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+               allocate( Y_ref(TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            ! for x staggered points
-            call INTERP_factor3d( itp_nh,                                   & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),                  & ! [IN]
-                                  KHALO+1,                                  & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
-                                  TILEAL_IA(HANDLING_NUM),                  & ! [IN]
-                                  TILEAL_JA(HANDLING_NUM),                  & ! [IN]
-                                  buffer_ref_LONUY(:,:),                    & ! [IN]
-                                  buffer_ref_LATXV(:,:),                    & ! [IN]
-                                  buffer_ref_CZ  (:,:,:),                   & ! [IN]
-                                  DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
-                                  DATR_KS    (HANDLING_NUM),                & ! [IN]
-                                  DATR_KE    (HANDLING_NUM),                & ! [IN]
-                                  DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
-                                  DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
-                                  igrd (    :,:,:,I_XSTG),                  & ! [OUT]
-                                  jgrd (    :,:,:,I_XSTG),                  & ! [OUT]
-                                  hfact(    :,:,:,I_XSTG),                  & ! [OUT]
-                                  kgrd (:,:,:,:,:,I_XSTG),                  & ! [OUT]
-                                  vfact(:,:,:,:,:,I_XSTG)                   ) ! [OUT]
+               ! for scalar points
+               call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
+                                             TILEAL_JA(HANDLING_NUM), 1, TILEAL_JA(HANDLING_NUM), &
+                                             buffer_ref_LON(:,:),   & ! [IN]
+                                             buffer_ref_LAT(:,:),   & ! [IN]
+                                             X_ref(:,:), Y_ref(:,:) ) ! [OUT]
+               call INTERP_factor3d( TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                     KHALO+1,                           & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ (:,:,:),             & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),         & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     ATMOS_GRID_CARTESC_CX(:),          & ! [IN]
+                                     ATMOS_GRID_CARTESC_CY(:),          & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_SCLR),           & ! [OUT]
+                                     jgrd (    :,:,:,I_SCLR),           & ! [OUT]
+                                     hfact(    :,:,:,I_SCLR),           & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_SCLR),           & ! [OUT]
+                                     vfact(:,:,:,:,:,I_SCLR)            ) ! [OUT]
 
-            ! for y staggered points
-            call INTERP_factor3d( itp_nh,                                   & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM),                  & ! [IN]
-                                  KHALO+1,                                  & ! [IN]
-                                  TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
-                                  TILEAL_IA(HANDLING_NUM),                  & ! [IN]
-                                  TILEAL_JA(HANDLING_NUM),                  & ! [IN]
-                                  buffer_ref_LONXV(:,:),                    & ! [IN]
-                                  buffer_ref_LATXV(:,:),                    & ! [IN]
-                                  buffer_ref_CZ  (:,:,:),                   & ! [IN]
-                                  DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
-                                  DATR_KS    (HANDLING_NUM),                & ! [IN]
-                                  DATR_KE    (HANDLING_NUM),                & ! [IN]
-                                  DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
-                                  DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), & ! [IN]
-                                  ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
-                                  igrd (    :,:,:,I_YSTG),                  & ! [OUT]
-                                  jgrd (    :,:,:,I_YSTG),                  & ! [OUT]
-                                  hfact(    :,:,:,I_YSTG),                  & ! [OUT]
-                                  kgrd (:,:,:,:,:,I_YSTG),                  & ! [OUT]
-                                  vfact(:,:,:,:,:,I_YSTG)                   ) ! [OUT]
+               ! for z staggered points
+               call INTERP_factor3d( TILEAL_KA(HANDLING_NUM)+1,            & ! [IN]
+                                     KHALO+1,                              & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)+1-KHALO,      & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),              & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),              & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),               & ! [IN]
+                                     buffer_ref_FZ (:,:,:),                & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),            & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),            & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),            & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),            & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),            & ! [IN]
+                                     ATMOS_GRID_CARTESC_CX(:),             & ! [IN]
+                                     ATMOS_GRID_CARTESC_CY(:),             & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_FZ(1:KA,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_ZSTG),              & ! [OUT]
+                                     jgrd (    :,:,:,I_ZSTG),              & ! [OUT]
+                                     hfact(    :,:,:,I_ZSTG),              & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_ZSTG),              & ! [OUT]
+                                     vfact(:,:,:,:,:,I_ZSTG)               ) ! [OUT]
+
+               ! for x staggered points
+               call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
+                                             TILEAL_JA(HANDLING_NUM), 1, TILEAL_JA(HANDLING_NUM), &
+                                             buffer_ref_LONUY(:,:),   & ! [IN]
+                                             buffer_ref_LATUY(:,:),   & ! [IN]
+                                             X_ref(:,:), Y_ref(:,:)   ) ! [OUT]
+               call INTERP_factor3d( TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                     KHALO+1,                           & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),         & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     ATMOS_GRID_CARTESC_FX(1:IA),       & ! [IN]
+                                     ATMOS_GRID_CARTESC_CY(:),          & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_XSTG),           & ! [OUT]
+                                     jgrd (    :,:,:,I_XSTG),           & ! [OUT]
+                                     hfact(    :,:,:,I_XSTG),           & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_XSTG),           & ! [OUT]
+                                     vfact(:,:,:,:,:,I_XSTG)            ) ! [OUT]
+
+               ! for y staggered points
+               call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
+                                             TILEAL_JA(HANDLING_NUM), 1, TILEAL_JA(HANDLING_NUM), &
+                                             buffer_ref_LONXV(:,:),   & ! [IN]
+                                             buffer_ref_LATXV(:,:),   & ! [IN]
+                                             X_ref(:,:), Y_ref(:,:)   ) ! [OUT]
+               call INTERP_factor3d( TILEAL_KA(HANDLING_NUM),           & ! [IN]
+                                     KHALO+1,                           & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),           & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),           & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),         & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     ATMOS_GRID_CARTESC_CX(:),          & ! [IN]
+                                     ATMOS_GRID_CARTESC_FY(1:JA),       & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_YSTG),           & ! [OUT]
+                                     jgrd (    :,:,:,I_YSTG),           & ! [OUT]
+                                     hfact(    :,:,:,I_YSTG),           & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_YSTG),           & ! [OUT]
+                                     vfact(:,:,:,:,:,I_YSTG)            ) ! [OUT]
+
+               deallocate( X_ref, Y_ref )
+
+            case ( 'DIST-WEIGHT' )
+
+               ! for scalar points
+               call INTERP_factor3d( itp_nh,                             & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM),            & ! [IN]
+                                     KHALO+1,                            & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,      & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),            & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),            & ! [IN]
+                                     buffer_ref_LON(:,:),                & ! [IN]
+                                     buffer_ref_LAT(:,:),                & ! [IN]
+                                     buffer_ref_CZ (:,:,:),              & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),          & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),          & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),          & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),          & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),          & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LON(:,:),   & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LAT(:,:),   & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ (:,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_SCLR),            & ! [OUT]
+                                     jgrd (    :,:,:,I_SCLR),            & ! [OUT]
+                                     hfact(    :,:,:,I_SCLR),            & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_SCLR),            & ! [OUT]
+                                     vfact(:,:,:,:,:,I_SCLR)             ) ! [OUT]
+
+               ! for z staggered points
+               call INTERP_factor3d( itp_nh,                                & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)+1,             & ! [IN]
+                                     KHALO+1,                               & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)+1-KHALO,       & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),               & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),               & ! [IN]
+                                     buffer_ref_LON(:,:),                   & ! [IN]
+                                     buffer_ref_LAT(:,:),                   & ! [IN]
+                                     buffer_ref_FZ (:,:,:),                 & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),             & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),             & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),             & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),             & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),             & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LON(:,:),      & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LAT(:,:),      & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_FZ (1:KA,:,:), & ! [IN]
+                                     igrd (    :,:,:,I_ZSTG),               & ! [OUT]
+                                     jgrd (    :,:,:,I_ZSTG),               & ! [OUT]
+                                     hfact(    :,:,:,I_ZSTG),               & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_ZSTG),               & ! [OUT]
+                                     vfact(:,:,:,:,:,I_ZSTG)                ) ! [OUT]
+
+               ! for x staggered points
+               call INTERP_factor3d( itp_nh,                                   & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM),                  & ! [IN]
+                                     KHALO+1,                                  & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),                  & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),                  & ! [IN]
+                                     buffer_ref_LONUY(:,:),                    & ! [IN]
+                                     buffer_ref_LATUY(:,:),                    & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),                & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),                & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
+                                     igrd (    :,:,:,I_XSTG),                  & ! [OUT]
+                                     jgrd (    :,:,:,I_XSTG),                  & ! [OUT]
+                                     hfact(    :,:,:,I_XSTG),                  & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_XSTG),                  & ! [OUT]
+                                     vfact(:,:,:,:,:,I_XSTG)                   ) ! [OUT]
+
+               ! for y staggered points
+               call INTERP_factor3d( itp_nh,                                   & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM),                  & ! [IN]
+                                     KHALO+1,                                  & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
+                                     TILEAL_IA(HANDLING_NUM),                  & ! [IN]
+                                     TILEAL_JA(HANDLING_NUM),                  & ! [IN]
+                                     buffer_ref_LONXV(:,:),                    & ! [IN]
+                                     buffer_ref_LATXV(:,:),                    & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
+                                     DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
+                                     DATR_KS    (HANDLING_NUM),                & ! [IN]
+                                     DATR_KE    (HANDLING_NUM),                & ! [IN]
+                                     DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
+                                     DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), & ! [IN]
+                                     ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
+                                     igrd (    :,:,:,I_YSTG),                  & ! [OUT]
+                                     jgrd (    :,:,:,I_YSTG),                  & ! [OUT]
+                                     hfact(    :,:,:,I_YSTG),                  & ! [OUT]
+                                     kgrd (:,:,:,:,:,I_YSTG),                  & ! [OUT]
+                                     vfact(:,:,:,:,:,I_YSTG)                   ) ! [OUT]
+
+            end select
+
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
