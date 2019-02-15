@@ -92,12 +92,6 @@ module mod_realinput
 
   real(RP), private, allocatable :: RN222_org(:,:,:)
 
-  integer,  private, allocatable :: igrd (:,:,:)
-  integer,  private, allocatable :: jgrd (:,:,:)
-  real(RP), private, allocatable :: hfact(:,:,:)
-  integer,  private, allocatable :: kgrd (:,:,:,:,:)
-  real(RP), private, allocatable :: vfact(:,:,:,:,:)
-
   real(RP), private, allocatable :: tw_org   (:,:)
   real(RP), private, allocatable :: sst_org  (:,:)
   real(RP), private, allocatable :: albw_org (:,:,:,:)
@@ -105,8 +99,17 @@ module mod_realinput
   real(RP), private, allocatable :: olat_org (:,:)
   real(RP), private, allocatable :: omask_org(:,:)
 
-  integer,  private              :: itp_nh = 4
-  integer,  private              :: itp_nv = 2
+  integer,  private, parameter   :: itp_nv = 2
+  integer,  private              :: itp_nh_a = 4  ! for atmos
+  integer,  private              :: itp_nh_l = 4  ! for land
+  integer,  private              :: itp_nh_o = 4  ! for ocean
+  integer,  private              :: itp_nh_ol = 5 ! for ocean-land
+
+  integer,  private, parameter   :: I_intrp_linear = 0
+  integer,  private, parameter   :: I_intrp_dstwgt = 1
+  integer,  private              :: itp_type_a
+  integer,  private              :: itp_type_l
+  integer,  private              :: itp_type_o
 
   logical,  private              :: serial_atmos
   logical,  private              :: serial_land
@@ -159,6 +162,10 @@ module mod_realinput
   logical,                private :: USE_FILE_DENSITY           = .false. ! use density data from files
   logical,                private :: SAME_MP_TYPE               = .false. ! microphysics type of the parent model is same as it in this model
 
+  character(len=H_SHORT), private :: INTRP_TYPE                 = "LINEAR" ! "LINEAR" or "DIST-WEIGHT"
+                                                                           !   LINEAR     : bi-linear interpolation
+                                                                           !   DIST-WEIGHT: distance-weighted mean of the nearest N-neighbors
+
   logical, private :: first = .true.
   !-----------------------------------------------------------------------------
 contains
@@ -193,7 +200,8 @@ contains
        FILTER_ORDER,               &
        FILTER_NITER,               &
        USE_FILE_DENSITY,           &
-       SAME_MP_TYPE
+       SAME_MP_TYPE,               &
+       INTRP_TYPE
 
     character(len=H_LONG) :: basename_mod
     character(len=H_LONG) :: basename_out_mod
@@ -251,6 +259,19 @@ contains
        endif
     endif
 
+    select case( INTRP_TYPE )
+    case ( "LINEAR" )
+       itp_nh_a = 4
+       itp_type_a = I_intrp_linear
+    case ( "DIST-WEIGHT" )
+       itp_nh_a = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_type_a = I_intrp_dstwgt
+    case default
+       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
+       call PRC_abort
+    end select
+
     call ParentAtmosSetup( FILETYPE_ORG,     & ![IN]
                            basename_mod,     & ![IN]
                            SERIAL_PROC_READ, & ![IN]
@@ -279,7 +300,7 @@ contains
           else
              basename_mod = trim(BASENAME_ORG)
           endif
-       endif
+      endif
 
        LOG_NEWLINE
        LOG_INFO("REALINPUT_atmos",*) 'read external data from : ', trim(basename_mod)
@@ -479,6 +500,7 @@ contains
        BOUNDARY_UPDATE_DT,         &
        USE_FILE_LANDWATER,         &
        INIT_LANDWATER_RATIO,       &
+       INTRP_TYPE,                 &
        INTRP_LAND_TEMP,            &
        INTRP_LAND_WATER,           &
        INTRP_LAND_SFC_TEMP,        &
@@ -503,6 +525,7 @@ contains
        INIT_OCEAN_ALB_LW,          &
        INIT_OCEAN_ALB_SW,          &
        INIT_OCEAN_Z0W,             &
+       INTRP_TYPE,                 &
        INTRP_OCEAN_TEMP,           &
        INTRP_OCEAN_SFC_TEMP,       &
        INTRP_ITER_MAX,             &
@@ -623,6 +646,21 @@ contains
 
     serial_land = SERIAL_PROC_READ
 
+    select case( INTRP_TYPE )
+    case ( "LINEAR" )
+       itp_nh_l = 4
+       itp_type_l = I_intrp_linear
+    case ( "DIST-WEIGHT" )
+       itp_nh_l = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_type_l = I_intrp_dstwgt
+    case default
+       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
+       call PRC_abort
+    end select
+
+
+
     LOG_NEWLINE
     LOG_INFO('REALINPUT_surface',*) 'Setup OCEAN'
 
@@ -654,6 +692,20 @@ contains
     endif
 
     serial_ocean = SERIAL_PROC_READ
+
+    select case( INTRP_TYPE )
+    case ( "LINEAR" )
+       itp_nh_o = 4
+       itp_type_o = I_intrp_linear
+    case ( "DIST-WEIGHT" )
+       itp_nh_o = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_type_o = I_intrp_dstwgt
+    case default
+       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
+       call PRC_abort
+    end select
+
 
     ! check land/ocean parameters
     if( NUMBER_OF_FILES_LAND            .NE.   NUMBER_OF_FILES_OCEAN            .OR. &
@@ -1030,16 +1082,6 @@ contains
     allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
     allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
 
-    LOG_INFO("ParentAtmosSetup",*) 'Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
-    itp_nh = COMM_CARTESC_NEST_INTERP_LEVEL
-    itp_nv = 2
-
-    allocate( igrd (          IA,JA,itp_nh) )
-    allocate( jgrd (          IA,JA,itp_nh) )
-    allocate( hfact(          IA,JA,itp_nh) )
-    allocate( kgrd (KA,itp_nv,IA,JA,itp_nh) )
-    allocate( vfact(KA,itp_nv,IA,JA,itp_nh) )
-
     return
   end subroutine ParentAtmosSetup
 
@@ -1108,6 +1150,8 @@ contains
        VELX,          &
        VELY,          &
        POTT           )
+    use scale_const, only: &
+       PI => CONST_PI
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -1149,8 +1193,13 @@ contains
        QE_CH
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
+    use scale_atmos_grid_cartesC, only: &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
     implicit none
 
     character(len=*), intent(in)  :: inputtype
@@ -1179,6 +1228,16 @@ contains
     real(RP) :: u_on_map, v_on_map
 
     real(RP) :: qdry, Rtot, CPtot
+
+    integer  :: igrd (          IA,JA,itp_nh_a)
+    integer  :: jgrd (          IA,JA,itp_nh_a)
+    real(RP) :: hfact(          IA,JA,itp_nh_a)
+    integer  :: kgrd (KA,itp_nv,IA,JA,itp_nh_a)
+    real(RP) :: vfact(KA,itp_nv,IA,JA,itp_nh_a)
+
+    real(RP) :: X_org(dims(2),dims(3))
+    real(RP) :: Y_org(dims(2),dims(3))
+    logical  :: zonal, pole
 
     logical, save :: first = .true.
 
@@ -1331,26 +1390,54 @@ contains
                                          CZ     (KE,:,:), & ! [IN]
                                          FZ     (KE,:,:)  ) ! [IN]
 
-       ! full level
-       call INTERP_factor3d( itp_nh,                  & ! [IN]
-                             dims(1)+2, 1, dims(1)+2, & ! [IN]
-                             dims(2), dims(3),        & ! [IN]
-                             LON_org(:,:),            & ! [IN]
-                             LAT_org(:,:),            & ! [IN]
-                             CZ_org (:,:,:),          & ! [IN]
-                             KA, KS, KE,              & ! [IN]
-                             IA, JA,                  & ! [IN]
-                             LON    (:,:),            & ! [IN]
-                             LAT    (:,:),            & ! [IN]
-                             CZ     (:,:,:),          & ! [IN]
-                             igrd   (    :,:,:),      & ! [OUT]
-                             jgrd   (    :,:,:),      & ! [OUT]
-                             hfact  (    :,:,:),      & ! [OUT]
-                             kgrd   (:,:,:,:,:),      & ! [OUT]
-                             vfact  (:,:,:,:,:)       ) ! [OUT]
+       select case( itp_type_a )
+       case ( i_intrp_linear )
+
+          call MAPPROJECTION_lonlat2xy( dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                        LON_org(:,:), LAT_org(:,:), & ! [IN]
+                                        X_org(:,:), Y_org(:,:)      ) ! [OUT]
+
+          zonal = ( maxval(LON_org) - minval(LAT_org) ) > 2.0_RP * PI * 0.9_RP
+          pole = ( maxval(LAT_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(LAT_org) < - PI * 0.5_RP * 0.9_RP )
+          call INTERP_factor3d( dims(1)+2, 1, dims(1)+2, & ! [IN]
+                                dims(2), dims(3),        & ! [IN]
+                                X_org(:,:), Y_org(:,:),  & ! [IN]
+                                CZ_org (:,:,:),          & ! [IN]
+                                KA, KS, KE,              & ! [IN]
+                                IA, JA,                  & ! [IN]
+                                CX(:), CY(:),            & ! [IN]
+                                CZ     (:,:,:),          & ! [IN]
+                                igrd   (    :,:,:),      & ! [OUT]
+                                jgrd   (    :,:,:),      & ! [OUT]
+                                hfact  (    :,:,:),      & ! [OUT]
+                                kgrd   (:,:,:,:,:),      & ! [OUT]
+                                vfact  (:,:,:,:,:),      & ! [OUT]
+                                zonal = zonal,           & ! [IN]
+                                pole  = pole             ) ! [IN]
+
+       case ( I_intrp_dstwgt )
+
+          call INTERP_factor3d( itp_nh_a,                & ! [IN]
+                                dims(1)+2, 1, dims(1)+2, & ! [IN]
+                                dims(2), dims(3),        & ! [IN]
+                                LON_org(:,:),            & ! [IN]
+                                LAT_org(:,:),            & ! [IN]
+                                CZ_org (:,:,:),          & ! [IN]
+                                KA, KS, KE,              & ! [IN]
+                                IA, JA,                  & ! [IN]
+                                LON(:,:), LAT(:,:),      & ! [IN]
+                                CZ     (:,:,:),          & ! [IN]
+                                igrd   (    :,:,:),      & ! [OUT]
+                                jgrd   (    :,:,:),      & ! [OUT]
+                                hfact  (    :,:,:),      & ! [OUT]
+                                kgrd   (:,:,:,:,:),      & ! [OUT]
+                                vfact  (:,:,:,:,:)       ) ! [OUT]
+
+       end select
+
     endif
 
-    call INTERP_interp3d( itp_nh,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
@@ -1369,7 +1456,7 @@ contains
     end if
 
 
-    call INTERP_interp3d( itp_nh,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
@@ -1387,7 +1474,7 @@ contains
        call COMM_wait ( U(:,:,:), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
@@ -1476,7 +1563,7 @@ contains
     call COMM_wait ( VELX(:,:,:), 2, .false. )
     call COMM_wait ( VELY(:,:,:), 3, .false. )
 
-    call INTERP_interp3d( itp_nh,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
@@ -1502,7 +1589,7 @@ contains
     enddo
 
     do iq = 1, QA
-       call INTERP_interp3d( itp_nh,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
@@ -1531,7 +1618,7 @@ contains
     enddo
 
     if ( use_file_density ) then
-       call INTERP_interp3d( itp_nh,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
@@ -1551,7 +1638,7 @@ contains
           call COMM_wait ( DENS(:,:,:), 1, .false. )
        end if
     else
-       call INTERP_interp3d( itp_nh,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
@@ -1878,6 +1965,10 @@ contains
        call PRC_abort
     endif
 
+    LOG_INFO("ParentSurfaceSetup",*) 'Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
+    itp_nh_ol = COMM_CARTESC_NEST_INTERP_LEVEL
+
+
     if( serial_land ) then
        if( PRC_IsMaster ) then
           do_read_land = .true.
@@ -2100,9 +2191,10 @@ contains
          COMM_vars8, &
          COMM_wait
     use scale_const, only: &
-         EPS => CONST_EPS, &
+         EPS   => CONST_EPS,   &
          UNDEF => CONST_UNDEF, &
-         LAPS => CONST_LAPS
+         PI    => CONST_PI,    &
+         LAPS  => CONST_LAPS
     use scale_topography, only: &
          TOPOGRAPHY_Zsfc
     use scale_interp, only: &
@@ -2110,8 +2202,13 @@ contains
          INTERP_interp2d
     use scale_filter, only: &
          FILTER_hyperdiff
+    use scale_atmos_grid_cartesC, only: &
+         CX  => ATMOS_GRID_CARTESC_CX, &
+         CY  => ATMOS_GRID_CARTESC_CY
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
+    use scale_mapprojection, only: &
+         MAPPROJECTION_lonlat2xy
     use scale_atmos_thermodyn, only: &
          THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
          THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
@@ -2142,6 +2239,8 @@ contains
          MOMY, &
          RHOT, &
          QTRC
+    use scale_mapprojection, only: &
+         MAPPROJECTION_lonlat2xy
     implicit none
 
     real(RP),         intent(out) :: tg  (:,:,:,:)
@@ -2193,15 +2292,22 @@ contains
     real(RP) :: llat_org (         ldims(2),ldims(3))
 
     ! ocean
-    real(RP) :: z0w_org  (        odims(1),odims(2))
-    real(RP) :: omask    (        odims(1),odims(2))
-    real(RP) :: lst_ocean(        odims(1),odims(2))
+    real(RP) :: z0w_org  (         odims(1),odims(2))
+    real(RP) :: omask    (         odims(1),odims(2))
+    real(RP) :: lst_ocean(         odims(1),odims(2))
+    real(RP) :: oX_org   (         odims(1),odims(2))
+    real(RP) :: oY_org   (         odims(1),odims(2))
+    logical  :: zonal, pole
 
-    logical :: ol_interp
+    ! interpolation
+    logical  :: ol_interp
 
-    real(RP) :: hfact_o(odims(1),odims(2),itp_nh)
-    integer  :: igrd_o (odims(1),odims(2),itp_nh)
-    integer  :: jgrd_o (odims(1),odims(2),itp_nh)
+    real(RP) :: hfact_o(odims(1),odims(2),itp_nh_ol)
+    integer  :: igrd_o (odims(1),odims(2),itp_nh_ol)
+    integer  :: jgrd_o (odims(1),odims(2),itp_nh_ol)
+    integer  :: igrd   (IA,JA,itp_nh_o)
+    integer  :: jgrd   (IA,JA,itp_nh_o)
+    real(RP) :: hfact  (IA,JA,itp_nh_o)
 
     real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp, pres
@@ -2475,8 +2581,9 @@ contains
           end if
 
           if ( ol_interp ) then
+
              ! interpolation factor between outer ocean grid and land grid
-             call INTERP_factor2d( itp_nh,             & ! [IN]
+             call INTERP_factor2d( itp_nh_ol,          & ! [IN]
                                    ldims(2), ldims(3), & ! [IN]
                                    llon_org(:,:),      & ! [IN]
                                    llat_org(:,:),      & ! [IN]
@@ -2523,7 +2630,7 @@ contains
             lsmask_nest,                   & ! (in)
             topo_org,                      & ! (in)
             lz_org, llon_org, llat_org,    & ! (in)
-            LCZ, LON, LAT,                 & ! (in)
+            LCZ, CX, CY, LON, LAT,         & ! (in)
             ldims, odims,                  & ! (in)
             maskval_tg, maskval_strg,      & ! (in)
             init_landwater_ratio,          & ! (in)
@@ -2545,7 +2652,7 @@ contains
 
        if ( ol_interp ) then
           ! land surface temperature at ocean grid
-          call INTERP_interp2d( itp_nh,             & ! [IN]
+          call INTERP_interp2d( itp_nh_ol,          & ! [IN]
                                 ldims(2), ldims(3), & ! [IN]
                                 odims(1), odims(2), & ! [IN]
                                 igrd_o   (:,:,:),   & ! [IN]
@@ -2574,20 +2681,46 @@ contains
 
 
        if ( first .or. update_coord ) then
+
           ! interporation for ocean variables
-          call INTERP_factor2d( itp_nh,             & ! [IN]
-                                odims(1), odims(2), & ! [IN]
-                                olon_org(:,:),      & ! [IN]
-                                olat_org(:,:),      & ! [IN]
-                                IA, JA,             & ! [IN]
-                                lon     (:,:),      & ! [IN]
-                                lat     (:,:),      & ! [IN]
-                                igrd    (:,:,:),    & ! [OUT]
-                                jgrd    (:,:,:),    & ! [OUT]
-                                hfact   (:,:,:)     ) ! [OUT]
+
+          select case( itp_type_a )
+          case ( i_intrp_linear )
+
+             call MAPPROJECTION_lonlat2xy( odims(1), 1, odims(1), odims(2), 1, odims(2), &
+                                           olon_org(:,:), olat_org(:,:), & ! [IN]
+                                           oX_org(:,:), oY_org(:,:)      ) ! [OUT]
+
+             zonal = ( maxval(olon_org) - minval(olon_org) ) > 2.0_RP * PI * 0.9_RP
+             pole = ( maxval(olat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(olat_org) < - PI * 0.5_RP * 0.9_RP )
+             call INTERP_factor2d( odims(1), odims(2), & ! [IN]
+                                   oX_org(:,:),        & ! [IN]
+                                   oY_org(:,:),        & ! [IN]
+                                   IA, JA,             & ! [IN]
+                                   CX(:), CY(:),       & ! [IN]
+                                   igrd    (:,:,:),    & ! [OUT]
+                                   jgrd    (:,:,:),    & ! [OUT]
+                                   hfact   (:,:,:),    & ! [OUT]
+                                   zonal = zonal,      & ! [IN]
+                                   pole  = pole        ) ! [IN]
+
+          case ( I_intrp_dstwgt )
+
+             call INTERP_factor2d( itp_nh_o,           & ! [IN]
+                                   odims(1), odims(2), & ! [IN]
+                                   olon_org(:,:),      & ! [IN]
+                                   olat_org(:,:),      & ! [IN]
+                                   IA, JA,             & ! [IN]
+                                   LON(:,:), LAT(:,:), & ! [IN]
+                                   igrd    (:,:,:),    & ! [OUT]
+                                   jgrd    (:,:,:),    & ! [OUT]
+                                   hfact   (:,:,:)     ) ! [OUT]
+
+          end select
+
        end if
 
-       call INTERP_interp2d( itp_nh,               & ! [IN]
+       call INTERP_interp2d( itp_nh_o,             & ! [IN]
                              odims(1), odims(2),   & ! [IN]
                              IA, JA,               & ! [IN]
                              igrd    (:,:,:),      & ! [IN]
@@ -2602,7 +2735,7 @@ contains
           call COMM_wait ( tw(:,:,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,               & ! [IN]
+       call INTERP_interp2d( itp_nh_o,             & ! [IN]
                              odims(1), odims(2),   & ! [IN]
                              IA, JA,               & ! [IN]
                              igrd    (:,:,:),      & ! [IN]
@@ -2630,7 +2763,7 @@ contains
 
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2647,7 +2780,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_direct,I_R_IR,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2663,7 +2796,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_diffuse,I_R_IR,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2679,7 +2812,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_direct,I_R_NIR,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2695,7 +2828,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_diffuse,I_R_NIR,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2711,7 +2844,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_direct,I_R_VIS,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,                              & ! [IN]
+       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
                              igrd    (:,:,:),                     & ! [IN]
@@ -2727,7 +2860,7 @@ contains
           call COMM_wait ( albw(:,:,I_R_diffuse,I_R_VIS,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh,               & ! [IN]
+       call INTERP_interp2d( itp_nh_o,             & ! [IN]
                              odims(1), odims(2),   & ! [IN]
                              IA, JA,               & ! [IN]
                              igrd    (:,:,:),      & ! [IN]
@@ -2872,53 +3005,43 @@ contains
 
   !-------------------------------
   subroutine land_interporation( &
-       tg,                   &
-       strg,                 &
-       lst,                  &
-       albg,                 &
-       ust,                  &
-       albu,                 &
-       tg_org,               &
-       strg_org,             &
-       smds_org,             &
-       lst_org,              &
-       albg_org,             &
-       ust_org,              &
-       sst_org,              &
-       lmask_org,            &
-       lsmask_nest,          &
-       topo_org,             &
-       lz_org,               &
-       llon_org,             &
-       llat_org,             &
-       LCZ,                  &
-       LON,                  &
-       LAT,                  &
-       ldims,                &
-       odims,                &
-       maskval_tg,           &
-       maskval_strg,         &
-       init_landwater_ratio, &
-       use_file_landwater,   &
-       use_waterratio,       &
-       soilwater_ds2vc_flag, &
-       elevation_collection, &
-       intrp_iter_max,       &
-       ol_interp,            &
-       URBAN_do              )
+       tg, strg, lst, albg,        &
+       ust, albu,                  &
+       tg_org, strg_org, smds_org, &
+       lst_org, albg_org,          &
+       ust_org,                    &
+       sst_org,                    &
+       lmask_org, lsmask_nest,     &
+       topo_org,                   &
+       lz_org, llon_org, llat_org, &
+       LCZ, CX, CY,                &
+       LON, LAT,                   &
+       ldims, odims,               &
+       maskval_tg, maskval_strg,   &
+       init_landwater_ratio,       &
+       use_file_landwater,         &
+       use_waterratio,             &
+       soilwater_ds2vc_flag,       &
+       elevation_collection,       &
+       intrp_iter_max,             &
+       ol_interp,                  &
+       URBAN_do                    )
     use scale_prc, only: &
          PRC_abort
     use scale_const, only: &
          UNDEF => CONST_UNDEF, &
-         EPS   => CONST_EPS, &
-         I_SW => CONST_I_SW, &
-         I_LW => CONST_I_LW, &
-         LAPS => CONST_LAPS
+         EPS   => CONST_EPS,   &
+         I_SW  => CONST_I_SW,  &
+         I_LW  => CONST_I_LW,  &
+         PI    => CONST_PI,    &
+         LAPS  => CONST_LAPS
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_factor3d, &
          INTERP_interp2d, &
          INTERP_interp3d
+    use scale_mapprojection, only: &
+         MAPPROJECTION_lonlat2xy
     use scale_comm_cartesC, only: &
          COMM_vars8, &
          COMM_wait
@@ -2949,6 +3072,8 @@ contains
     real(RP), intent(in)    :: llon_org(:,:)
     real(RP), intent(in)    :: llat_org(:,:)
     real(RP), intent(in)    :: LCZ(LKMAX)
+    real(RP), intent(in)    :: CX(IA)
+    real(RP), intent(in)    :: CY(JA)
     real(RP), intent(in)    :: LON(IA,JA)
     real(RP), intent(in)    :: LAT(IA,JA)
     integer,  intent(in)    :: ldims(3)
@@ -2968,11 +3093,18 @@ contains
     real(RP) :: smds(LKMAX,IA,JA)
 
     ! data for interporation
-    real(RP) :: hfact_l(ldims(2), ldims(3), itp_nh)
-    integer  :: igrd_l (ldims(2), ldims(3), itp_nh)
-    integer  :: jgrd_l (ldims(2), ldims(3), itp_nh)
-    real(RP) :: vfactl(LKMAX,IA,JA,itp_nh,itp_nv)
-    integer  :: kgrdl (LKMAX,IA,JA,itp_nh,itp_nv)
+    real(RP) :: hfact_l(ldims(2), ldims(3), itp_nh_ol)
+    integer  :: igrd_l (ldims(2), ldims(3), itp_nh_ol)
+    integer  :: jgrd_l (ldims(2), ldims(3), itp_nh_ol)
+    real(RP) :: lX_org (ldims(2), ldims(3))
+    real(RP) :: lY_org (ldims(2), ldims(3))
+    logical  :: zonal, pole
+    integer  :: igrd (       IA,JA,itp_nh_l)
+    integer  :: jgrd (       IA,JA,itp_nh_l)
+    real(RP) :: hfact(       IA,JA,itp_nh_l)
+    real(RP) :: vfactl(LKMAX,IA,JA,itp_nh_l,itp_nv)
+    integer  :: kgrdl (LKMAX,IA,JA,itp_nh_l,itp_nv)
+
 
     real(RP) :: sst_land(ldims(2), ldims(3))
     real(RP) :: work(ldims(2), ldims(3))
@@ -3020,7 +3152,7 @@ contains
 
     if ( ol_interp ) then
        ! interpolation facter between outer land grid and ocean grid
-       call INTERP_factor2d( itp_nh,             & ! [IN]
+       call INTERP_factor2d( itp_nh_ol,          & ! [IN]
                              odims(1), odims(2), & ! [IN]
                              olon_org(:,:),      & ! [IN]
                              olat_org(:,:),      & ! [IN]
@@ -3032,7 +3164,7 @@ contains
                              hfact_l (:,:,:)     ) ! [OUT]
 
        ! sst on land grid
-       call INTERP_interp2d( itp_nh,             & ! [IN]
+       call INTERP_interp2d( itp_nh_ol,          & ! [IN]
                              odims(1), odims(2), & ! [IN]
                              ldims(2), ldims(3), & ! [IN]
                              igrd_l   (:,:,:),   & ! [IN]
@@ -3107,25 +3239,55 @@ contains
     enddo
     enddo
 
-    call INTERP_factor3d( itp_nh,                & ! [IN]
-                          ldims(1), 1, ldims(1), & ! [IN]
-                          ldims(2), ldims(3),    & ! [IN]
-                          llon_org(:,:),         & ! [IN]
-                          llat_org(:,:),         & ! [IN]
-                          lz3d_org(:,:,:),       & ! [IN]
-                          LKMAX, LKS, LKE,       & ! [IN]
-                          IA, JA,                & ! [IN]
-                          lon     (:,:),         & ! [IN]
-                          lat     (:,:),         & ! [IN]
-                          lcz_3D  (:,:,:),       & ! [IN]
-                          igrd    (    :,:,:),   & ! [OUT]
-                          jgrd    (    :,:,:),   & ! [OUT]
-                          hfact   (    :,:,:),   & ! [OUT]
-                          kgrdl   (:,:,:,:,:),   & ! [OUT]
-                          vfactl  (:,:,:,:,:),   & ! [OUT]
-                          flag_extrap = .true.   ) ! [IN, optional]
+    select case( itp_type_l )
+    case ( i_intrp_linear )
 
-    call INTERP_interp2d( itp_nh,             & ! [IN]
+       call MAPPROJECTION_lonlat2xy( ldims(2), 1, ldims(2), ldims(3), 1, ldims(3), &
+                                     llon_org(:,:), llat_org(:,:), & ! [IN]
+                                     lX_org(:,:), lY_org(:,:)      ) ! [OUT]
+
+       zonal = ( maxval(llon_org) - minval(llon_org) ) > 2.0_RP * PI * 0.9_RP
+       pole = ( maxval(llat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(llat_org) < - PI * 0.5_RP * 0.9_RP )
+       call INTERP_factor3d( ldims(1), 1, ldims(1), & ! [IN]
+                             ldims(2), ldims(3),    & ! [IN]
+                             lX_org(:,:),           & ! [IN]
+                             lY_org(:,:),           & ! [IN]
+                             lz3d_org(:,:,:),       & ! [IN]
+                             LKMAX, LKS, LKE,       & ! [IN]
+                             IA, JA,                & ! [IN]
+                             CX(:), CY(:),          & ! [IN]
+                             lcz_3D  (:,:,:),       & ! [IN]
+                             igrd    (    :,:,:),   & ! [OUT]
+                             jgrd    (    :,:,:),   & ! [OUT]
+                             hfact   (    :,:,:),   & ! [OUT]
+                             kgrdl   (:,:,:,:,:),   & ! [OUT]
+                             vfactl  (:,:,:,:,:),   & ! [OUT]
+                             flag_extrap = .true.,  & ! [IN, optional]
+                             zonal = zonal,         & ! [IN, optional]
+                             pole  = pole           ) ! [IN, optional]
+
+    case ( I_intrp_dstwgt )
+
+       call INTERP_factor3d( itp_nh_l,              & ! [IN]
+                             ldims(1), 1, ldims(1), & ! [IN]
+                             ldims(2), ldims(3),    & ! [IN]
+                             llon_org(:,:),         & ! [IN]
+                             llat_org(:,:),         & ! [IN]
+                             lz3d_org(:,:,:),       & ! [IN]
+                             LKMAX, LKS, LKE,       & ! [IN]
+                             IA, JA,                & ! [IN]
+                             LON(:,:), LAT(:,:),    & ! [IN]
+                             lcz_3D  (:,:,:),       & ! [IN]
+                             igrd    (    :,:,:),   & ! [OUT]
+                             jgrd    (    :,:,:),   & ! [OUT]
+                             hfact   (    :,:,:),   & ! [OUT]
+                             kgrdl   (:,:,:,:,:),   & ! [OUT]
+                             vfactl  (:,:,:,:,:),   & ! [OUT]
+                             flag_extrap = .true.   ) ! [IN, optional]
+
+    end select
+
+    call INTERP_interp2d( itp_nh_l,           & ! [IN]
                           ldims(2), ldims(3), & ! [IN]
                           IA, JA,             & ! [IN]
                           igrd    (:,:,:),    & ! [IN]
@@ -3141,7 +3303,7 @@ contains
     end if
 
     if ( URBAN_do ) then
-       call INTERP_interp2d( itp_nh,             & ! [IN]
+       call INTERP_interp2d( itp_nh_l,           & ! [IN]
                              ldims(2), ldims(3), & ! [IN]
                              IA, JA,             & ! [IN]
                              igrd    (:,:,:),    & ! [IN]
@@ -3157,7 +3319,7 @@ contains
        end if
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3174,7 +3336,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_direct,I_R_IR), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3190,7 +3352,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_diffuse,I_R_IR), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3206,7 +3368,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_direct,I_R_NIR), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3222,7 +3384,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_diffuse,I_R_NIR), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3238,7 +3400,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_direct,I_R_VIS), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh,                            & ! [IN]
+    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
                           ldims(2), ldims(3),                & ! [IN]
                           IA, JA,                            & ! [IN]
                           igrd    (:,:,:),                   & ! [IN]
@@ -3254,7 +3416,7 @@ contains
        call COMM_wait ( albg(:,:,I_R_diffuse,I_R_VIS), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh,                       & ! [IN]
+    call INTERP_interp3d( itp_nh_l,                     & ! [IN]
                           ldims(1), ldims(2), ldims(3), & ! [IN]
                           LKMAX, LKS, LKE,              & ! [IN]
                           IA, JA,                       & ! [IN]
@@ -3286,7 +3448,7 @@ contains
 
     ! elevation collection
     if ( elevation_collection ) then
-       call INTERP_interp2d( itp_nh,             & ! [IN]
+       call INTERP_interp2d( itp_nh_l,           & ! [IN]
                              ldims(2), ldims(3), & ! [IN]
                              IA, JA,             & ! [IN]
                              igrd    (:,:,:),    & ! [IN]
@@ -3350,7 +3512,7 @@ contains
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh,                       & ! [IN]
+          call INTERP_interp3d( itp_nh_l,                     & ! [IN]
                                 ldims(1), ldims(2), ldims(3), & ! [IN]
                                 LKMAX, LKS, LKE,              & ! [IN]
                                 IA, JA,                       & ! [IN]
@@ -3385,7 +3547,7 @@ contains
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh,                       & ! [IN]
+          call INTERP_interp3d( itp_nh_l,                     & ! [IN]
                                 ldims(1), ldims(2), ldims(3), & ! [IN]
                                 LKMAX, LKS, LKE,              & ! [IN]
                                 IA, JA,                       & ! [IN]
