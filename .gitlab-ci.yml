@@ -1,0 +1,94 @@
+before_script:
+  - apt-get update -qq
+  - export SCALE_SYS=Linux64-gnu-ompi
+
+stages:
+  - build
+  - test
+  - doc
+
+
+# BUILD
+
+double:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scale-rm/src
+    - make -j 4
+
+single:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scale-rm/src
+    - SCALE_ENABLE_SINGLEFP=T make -j 4
+
+openmp:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scale-rm/src
+    - make -j 4 SCALE_ENABLE_OPENMP=T
+
+
+# TEST
+
+lib-unit:
+  stage: test
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scalelib/test/unit
+    - make makedir
+    - make makelib
+    - make makebin
+    - mpirun --allow-run-as-root -n 4 ./unit run.conf
+
+
+# DOC
+
+ug-en:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra
+    - cd doc/users-guide/en
+    - make
+  artifacts:
+    paths:
+      - doc/users-guide/en/scale_users_guide_En.pdf
+    expire_in: 1 mos
+
+ug-jp:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra
+    - cd doc/users-guide/jp
+    - make
+  artifacts:
+    paths:
+      - doc/users-guide/jp/scale_users_guide.pdf
+    expire_in: 1 mos
+
+description:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-science
+    - cd doc/descriptions
+    - make
+  artifacts:
+    paths:
+      - doc/descriptions/scale_rm_description.pdf
+    expire_in: 1 mos
+
+reference:
+  stage: doc
+  script:
+    - apt-get install -y -qq doxygen graphviz
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
+    - cd doc/reference
+    - make
+  artifacts:
+    paths:
+      - doc/reference/latex/refman.pdf
+      - doc/reference/html/
+    expire_in: 1 mos
