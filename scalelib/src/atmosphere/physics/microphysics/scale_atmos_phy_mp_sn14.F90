@@ -2757,7 +2757,7 @@ contains
 
 #ifdef DEBUG
        call debug_tem( KA, KS, KE, &
-            4, i, jtemp(:), DENS(:,i,j), pres(:), QTRC(:,i,j,I_QV) )
+            4, i, j, temp(:), DENS(:,i,j), pres(:), QTRC(:,i,j,I_QV) )
 #endif
 
     end do
