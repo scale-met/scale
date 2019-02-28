@@ -32,12 +32,6 @@ module mod_cnvtopo
   !
   !++ Public parameters & variables
   !
-  logical, public :: CNVTOPO_DoNothing
-  logical, public :: CNVTOPO_UseGTOPO30   = .false.
-  logical, public :: CNVTOPO_UseGMTED2010 = .false.
-  logical, public :: CNVTOPO_UseDEM50M    = .false.
-  logical, public :: CNVTOPO_UseUSERFILE  = .false.
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -56,6 +50,12 @@ module mod_cnvtopo
                                                                    ! 'OFF'         Do not apply smoothing
                                                                    ! 'LAPLACIAN'   Laplacian filter
                                                                    ! 'GAUSSIAN'    Gaussian filter
+  logical, private :: CNVTOPO_DoNothing
+  logical, private :: CNVTOPO_UseGTOPO30   = .false.
+  logical, private :: CNVTOPO_UseGMTED2010 = .false.
+  logical, private :: CNVTOPO_UseDEM50M    = .false.
+  logical, private :: CNVTOPO_UseUSERFILE  = .false.
+
   integer,  private :: CNVTOPO_smooth_hypdiff_order  = 4
   integer,  private :: CNVTOPO_smooth_hypdiff_niter  = 20
   logical,  private :: CNVTOPO_smooth_local          = .true.
@@ -67,6 +67,8 @@ module mod_cnvtopo
 
   logical,  private :: CNVTOPO_copy_parent           = .false.
 
+  ! for USERFILE
+  logical,  private :: CNVTOPO_linear_interp         = .false.
   integer,  private :: CNVTOPO_interp_level          = 5
 
   real(RP), private :: DOMAIN_LATS, DOMAIN_LATE
@@ -340,7 +342,7 @@ contains
        FILE_TILEDATA_get_info, &
        FILE_TILEDATA_get_data
     use scale_interp, only: &
-       INTERP_factor2d, &
+       INTERP_factor2d_linear_latlon, &
        INTERP_interp2d
     implicit none
     real(RP), intent(inout) :: TOPO_Zsfc(IA,JA)
@@ -370,9 +372,11 @@ contains
     integer               :: TILE_IE   (TILE_nlim)
     real(RP)              :: TILE_DLAT, TILE_DLON
 
-    real(RP), allocatable :: HEIGHT(:,:)
-    real(RP), allocatable :: LATH  (:,:)
-    real(RP), allocatable :: LONH  (:,:)
+    real(RP), allocatable :: HEIGHT (:,:)
+    real(RP), allocatable :: LATH   (:,:)
+    real(RP), allocatable :: LONH   (:,:)
+    real(RP), allocatable :: LATH_1d(:)
+    real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
 
     integer  :: GLOBAL_IA
@@ -383,6 +387,8 @@ contains
     real(RP), allocatable :: hfact(:,:,:)
 
     character(len=H_LONG) :: fname
+
+    logical :: zonal, pole
 
     integer :: ish, ieh, jsh, jeh
     integer :: ierr
@@ -415,7 +421,7 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     allocate( HEIGHT(nLONH,nLATH) )
     allocate( LATH  (nLONH,nLATH) )
@@ -434,19 +440,25 @@ contains
                                  min_value = -9000.0_RP, yrevers = .true.        ) ! [IN]
 
     ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
-    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
-    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
+    allocate( idx_i(IA,JA,4) )
+    allocate( idx_j(IA,JA,4) )
+    allocate( hfact(IA,JA,4) )
 
-    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
-                          nLONH, nLATH,               & ! [IN]
-                          LONH(:,:), LATH(:,:),       & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          LON(:,:), LAT(:,:),         & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                          hfact(:,:,:)                ) ! [OUT]
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
 
-    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
+    call get_latlon_1d( nLONH, nLATH, &
+                        LONH(:,:), LATH(:,:),  & ! [IN]
+                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
+
+    call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
+                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
+                                        IA, JA,                     & ! [IN]
+                                        LON(:,:), LAT(:,:),         & ! [IN]
+                                        idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                                        hfact(:,:,:)                ) ! [OUT]
+
+    call INTERP_interp2d( 4,                          & ! [IN]
                           nLONH,nLATH,                & ! [IN]
                           IA, JA,                     & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
@@ -456,6 +468,7 @@ contains
 
 
     deallocate( HEIGHT, LATH, LONH )
+    deallocate( LATH_1d, LONH_1d )
     deallocate( idx_j, idx_i, hfact )
 
     !$omp parallel do
@@ -497,7 +510,7 @@ contains
        FILE_TILEDATA_get_info, &
        FILE_TILEDATA_get_data
     use scale_interp, only: &
-       INTERP_factor2d, &
+       INTERP_factor2d_linear_latlon, &
        INTERP_interp2d
     implicit none
     real(RP), intent(inout) :: TOPO_Zsfc(IA,JA)
@@ -526,9 +539,11 @@ contains
     integer               :: TILE_IE   (TILE_nlim)
     real(RP)              :: TILE_DLAT, TILE_DLON
 
-    real(RP), allocatable :: HEIGHT(:,:)
-    real(RP), allocatable :: LATH  (:,:)
-    real(RP), allocatable :: LONH  (:,:)
+    real(RP), allocatable :: HEIGHT (:,:)
+    real(RP), allocatable :: LATH   (:,:)
+    real(RP), allocatable :: LONH   (:,:)
+    real(RP), allocatable :: LATH_1d(:)
+    real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
 
     integer  :: GLOBAL_IA
@@ -542,6 +557,7 @@ contains
     character(len=H_LONG) :: fname
 
     integer :: ish, ieh, jsh, jeh
+    logical :: zonal, pole
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -572,7 +588,7 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
 
@@ -593,23 +609,26 @@ contains
                                  min_value = -900.0_RP                           ) ! [IN]
 
     ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
-    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
-    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
+    allocate( idx_i(IA,JA,4) )
+    allocate( idx_j(IA,JA,4) )
+    allocate( hfact(IA,JA,4) )
 
-    search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
-    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
+
+    call get_latlon_1d( nLONH, nLATH, &
+                        LONH(:,:), LATH(:,:),  & ! [IN]
+                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
+
+    call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
+                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
+                                        IA, JA,                     & ! [IN]
+                                        LON(:,:), LAT(:,:),         & ! [IN]
+                                        idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                                        hfact(:,:,:)                ) ! [OUT]
+
+    call INTERP_interp2d( 4,                          & ! [IN]
                           nLONH, nLATH,               & ! [IN]
-                          LONH(:,:), LATH(:,:),       & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          LON(:,:), LAT(:,:),         & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                          hfact(:,:,:),               & ! [OUT]
-                          latlon_structure = .true.,  & ! [OUT]
-                          search_limit = search_limit ) ! [IN]
-
-    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
-                          nLONH,nLATH,                & ! [IN]
                           IA, JA,                     & ! [IN]
                           idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
                           hfact(:,:,:),               & ! [IN]
@@ -618,6 +637,7 @@ contains
 
 
     deallocate( HEIGHT, LATH, LONH )
+    deallocate( LATH_1d, LONH_1d )
     deallocate( idx_j, idx_i, hfact )
 
     !$omp parallel do
@@ -693,9 +713,11 @@ contains
     integer               :: TILE_IE   (TILE_nlim)
     real(RP)              :: TILE_DLAT, TILE_DLON
 
-    real(RP), allocatable :: HEIGHT(:,:)
-    real(RP), allocatable :: LATH  (:,:)
-    real(RP), allocatable :: LONH  (:,:)
+    real(RP), allocatable :: HEIGHT (:,:)
+    real(RP), allocatable :: LATH   (:,:)
+    real(RP), allocatable :: LONH   (:,:)
+    real(RP), allocatable :: LATH_1d(:)
+    real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
 
     integer  :: GLOBAL_IA
@@ -710,6 +732,8 @@ contains
 
     real(RP) :: LATS, LATE, LONS, LONE
     logical  :: yrevers
+
+    logical :: zonal, pole
 
     integer :: ish, ieh, jsh, jeh
     integer :: ierr
@@ -770,7 +794,7 @@ contains
                                     TILE_nmax,                                          & ! [OUT]
                                     TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                     TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                    nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                    nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
     else
        LATS = USERFILE_LAT_START * D2R
        LATE = USERFILE_LAT_END   * D2R
@@ -784,9 +808,10 @@ contains
                                     TILE_nmax,                                          & ! [OUT]
                                     TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                     TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                    nLATH, nLONH, jsh, jeh, ish, ieh,                   & ! [OUT]
+                                    nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole,      & ! [OUT]
                                     single_fname = USERFILE_IN_FILENAME,                & ! [IN]
                                     LATS = LATS, LATE = LATE, LONS = LONS, LONE = LONE  ) ! [IN]
+       CNVTOPO_linear_interp = .true.
     end if
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
@@ -807,21 +832,50 @@ contains
                                  HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
                                  min_value = 0.0_RP, yrevers = yrevers           ) ! [IN]
 
+    if ( CNVTOPO_linear_interp ) then
+       CNVTOPO_interp_level = 4
+    end if
+
+
     ! interporation
     allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
     allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
     allocate( hfact(IA,JA,CNVTOPO_interp_level) )
 
-    search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
-    call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
-                          nLONH, nLATH,               & ! [IN]
-                          LONH(:,:), LATH(:,:),       & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          LON(:,:), LAT(:,:),         & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                          hfact(:,:,:),               & ! [OUT]
-                          latlon_structure = .true.,  & ! [OUT]
-                          search_limit = search_limit ) ! [IN]
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
+
+    call get_latlon_1d( nLONH, nLATH, &
+         LONH(:,:), LATH(:,:),  & ! [IN]
+         LONH_1d(:), LATH_1d(:) ) ! [OUT]
+
+    if ( CNVTOPO_linear_interp ) then
+
+       call INTERP_factor2d( nLONH, nLATH,               & ! [IN]
+                             LONH_1d(:), LATH_1d(:),     & ! [IN]
+                             IA, JA,                     & ! [IN]
+                             LON(:,:), LAT(:,:),         & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:)                ) ! [OUT]
+
+       deallocate( LONH_1d, LATH_1d )
+
+    else
+
+       search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
+       call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
+                             nLONH, nLATH,               & ! [IN]
+                             LONH(:,:), LATH(:,:),       & ! [IN]
+                             IA, JA,                     & ! [IN]
+                             LON(:,:), LAT(:,:),         & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:),               & ! [OUT]
+                             latlon_structure = .true.,  & ! [IN]
+                             lon_1d = LONH_1d(:),        & ! [IN]
+                             lat_1d = LATH_1d(:),        & ! [IN]
+                             search_limit = search_limit ) ! [IN]
+
+    end if
 
     call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
                           nLONH,nLATH,                & ! [IN]
@@ -1124,5 +1178,82 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
+
+  subroutine get_latlon_1d( &
+       IA, JA, &
+       LON, LAT, &
+       LON_1d, LAT_1d )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    integer,  intent(in) :: IA, JA
+    real(RP), intent(in) :: LON(IA,JA)
+    real(RP), intent(in) :: LAT(IA,JA)
+
+    real(RP), intent(out) :: LON_1d(IA)
+    real(RP), intent(out) :: LAT_1d(JA)
+
+    real(RP) :: lon_min, lon_max
+    real(RP) :: lat_min, lat_max
+    real(RP) :: dlon, dlat
+    integer :: is, ie, js, je
+    integer :: i, j
+
+    LON_1d(:) = UNDEF
+    lon_min   = UNDEF
+
+    do i = 1, IA
+       do j = 1, JA
+          if ( LON(i,j) .ne. UNDEF ) then
+             LON_1d(i) = LON(i,j)
+             exit
+          end if
+       end do
+       if ( lon_min == UNDEF .and. LON_1d(i) .ne. UNDEF ) then
+          lon_min = LON_1d(i)
+          is = i
+       endif
+       if ( lon_min .ne. UNDEF ) then
+          if ( LON_1d(i) .ne. UNDEF ) then
+             lon_max = LON_1d(i)
+             ie = i
+          end if
+       end if
+    end do
+
+    LAT_1d(:) = UNDEF
+    lat_min   = UNDEF
+    do j = 1, JA
+       do i = 1, IA
+          if ( LAT(i,j) .ne. UNDEF ) then
+             LAT_1d(j) = LAT(i,j)
+             exit
+          end if
+       end do
+       if ( lat_min == UNDEF .and. LAT_1d(j) .ne. UNDEF ) then
+          lat_min = LAT_1d(j)
+          js = j
+       endif
+       if ( lat_min .ne. UNDEF ) then
+          if ( LAT_1d(j) .ne. UNDEF ) then
+             lat_max = LAT_1d(j)
+             je = j
+          end if
+       end if
+    end do
+
+    ! fill undef
+    dlon = ( lon_max - lon_min ) / ( ie - is )
+    do i = 1, IA
+       if ( LON_1d(i) == UNDEF ) LON_1d(i) = lon_min + dlon * ( i - is )
+    end do
+    dlat = ( lat_max - lat_min ) / ( je - js )
+    do j = 1, JA
+       if ( LAT_1d(j) == UNDEF ) LAT_1d(j) = lat_min + dlat * ( j - js )
+    end do
+
+    return
+  end subroutine get_latlon_1d
+
 
 end module mod_cnvtopo

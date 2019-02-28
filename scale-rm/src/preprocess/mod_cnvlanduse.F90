@@ -392,6 +392,7 @@ contains
     real(RP) :: limit
 
     integer :: ish, ieh, jsh, jeh
+    logical :: zonal, pole
     integer :: lu
     integer :: ierr
     integer :: i, j, ii, jj, p
@@ -423,7 +424,7 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     allocate( LANDUSE(nLONH,nLATH) )
     allocate( LATH   (nLONH,nLATH) )
@@ -577,6 +578,7 @@ contains
     real(RP) :: limit
 
     integer :: ish, ieh, jsh, jeh
+    logical :: zonal, pole
     integer :: lu
     integer :: ierr
     integer :: i, j, ii, jj, p
@@ -608,7 +610,7 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
 

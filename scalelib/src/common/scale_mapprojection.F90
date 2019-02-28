@@ -288,6 +288,8 @@ contains
   subroutine MAPPROJECTION_xy2lonlat_0D( &
        x, y,    &
        lon, lat )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP), intent(in)  :: x
     real(RP), intent(in)  :: y
@@ -296,6 +298,13 @@ contains
 
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( x == UNDEF .or. y == UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     xx = MAPPROJECTION_basepoint_x &
        + ( x - MAPPROJECTION_basepoint_x ) * MAPPROJECTION_rot_fact_cos &
@@ -340,6 +349,8 @@ contains
   subroutine MAPPROJECTION_lonlat2xy_0D( &
        lon, lat, &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP), intent(in)  :: lon ! [rad]
     real(RP), intent(in)  :: lat ! [rad]
@@ -348,6 +359,13 @@ contains
 
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( lon == UNDEF .or. lat == UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     call lonlat2xy( lon, lat, xx, yy )
 

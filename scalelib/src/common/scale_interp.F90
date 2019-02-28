@@ -32,8 +32,26 @@ module scale_interp
   public :: INTERP_domain_compatibility
   public :: INTERP_factor2d
   public :: INTERP_factor3d
+  public :: INTERP_factor2d_linear_latlon
+  public :: INTERP_factor2d_linear_xy
+  public :: INTERP_factor2d_weight
+  public :: INTERP_factor3d_linear_latlon
+  public :: INTERP_factor3d_linear_xy
+  public :: INTERP_factor3d_weight
+
   public :: INTERP_interp2d
   public :: INTERP_interp3d
+
+  interface INTERP_factor2d
+     procedure INTERP_factor2d_linear_latlon
+     procedure INTERP_factor2d_linear_xy
+     procedure INTERP_factor2d_weight
+  end interface INTERP_factor2d
+  interface INTERP_factor3d
+     procedure INTERP_factor3d_linear_latlon
+     procedure INTERP_factor3d_linear_xy
+     procedure INTERP_factor3d_weight
+  end interface INTERP_factor3d
 
   !-----------------------------------------------------------------------------
   !
@@ -212,8 +230,325 @@ contains
   end subroutine INTERP_domain_compatibility
 
   !-----------------------------------------------------------------------------
-  ! make interpolation factor using Lat-Lon
-  subroutine INTERP_factor2d( &
+  ! make interpolation factor using bi-linear method on the latlon coordinate
+  ! This can be used only for structured grid
+  subroutine INTERP_factor2d_linear_latlon( &
+       IA_ref, JA_ref,     &
+       lon_ref, lat_ref,   &
+       IA, JA,             &
+       lon, lat,           &
+       idx_i, idx_j, hfact )
+    implicit none
+    integer,  intent(in)  :: IA_ref
+    integer,  intent(in)  :: JA_ref
+    real(RP), intent(in)  :: lon_ref(IA_ref)
+    real(RP), intent(in)  :: lat_ref(JA_ref)
+    integer,  intent(in)  :: IA
+    integer,  intent(in)  :: JA
+    real(RP), intent(in)  :: lon(IA,JA)
+    real(RP), intent(in)  :: lat(IA,JA)
+    integer,  intent(out) :: idx_i(IA,JA,4)
+    integer,  intent(out) :: idx_j(IA,JA,4)
+    real(RP), intent(out) :: hfact(IA,JA,4)
+
+    real(RP) :: f1, f2
+    integer  :: i, j, ii, jj
+
+    call PROF_rapstart('INTERP_fact',3)
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(f1,f2)
+    do j = 1, JA
+    do i = 1, IA
+
+       ! longitude
+       if ( lon(i,j) < lon_ref(1) ) then
+          idx_i(i,j,:) = 1
+          hfact(i,j,:) = 0.0_RP
+       else if ( lon(i,j) > lon_ref(IA_ref) ) then
+          idx_i(i,j,:) = IA_ref
+          hfact(i,j,:) = 0.0_RP
+       else if ( lon(i,j) == lon_ref(IA_ref) ) then
+          idx_i(i,j,:) = IA_ref
+          hfact(i,j,1) = 0.0_RP
+          hfact(i,j,2) = 1.0_RP
+          hfact(i,j,3) = 0.0_RP
+          hfact(i,j,4) = 1.0_RP
+       else
+          do ii = 1, IA_ref
+             if ( lon(i,j) < lon_ref(ii) ) then
+                f1 = ( lon_ref(ii) - lon(i,j)      ) / ( lon_ref(ii) - lon_ref(ii-1) )
+                f2 = ( lon(i,j)    - lon_ref(ii-1) ) / ( lon_ref(ii) - lon_ref(ii-1) )
+                hfact(i,j,1) = f1
+                hfact(i,j,2) = f2
+                hfact(i,j,3) = f1
+                hfact(i,j,4) = f2
+                idx_i(i,j,1) = ii-1
+                idx_i(i,j,2) = ii
+                idx_i(i,j,3) = ii-1
+                idx_i(i,j,4) = ii
+                exit
+             end if
+          end do
+       end if
+
+       ! latitude
+       if ( lat(i,j) < lat_ref(1) ) then
+          idx_j(i,j,:) = 1
+          hfact(i,j,:) = 0.0_RP
+       else if ( lat(i,j) > lat_ref(JA_ref) ) then
+          idx_j(i,j,:) = JA_ref
+          hfact(i,j,:) = 0.0_RP
+       else if ( lat(i,j) == lat_ref(JA_ref) ) then
+          idx_j(i,j,:) = JA_ref
+          hfact(i,j,1) = 0.0_RP
+          hfact(i,j,2) = 0.0_RP
+          !hfact(i,j,3) = hfact(i,j,3)
+          !hfact(i,j,4) = hfact(i,j,4)
+       else
+          do jj = 1, JA_ref
+             if ( lat(i,j) < lat_ref(jj) ) then
+                f1 = ( lat_ref(jj) - lat(i,j)      ) / ( lat_ref(jj) - lat_ref(jj-1) )
+                f2 = ( lat(i,j)    - lat_ref(jj-1) ) / ( lat_ref(jj) - lat_ref(jj-1) )
+                hfact(i,j,1) = hfact(i,j,1) * f1
+                hfact(i,j,2) = hfact(i,j,2) * f1
+                hfact(i,j,3) = hfact(i,j,3) * f2
+                hfact(i,j,4) = hfact(i,j,4) * f2
+                idx_j(i,j,1) = jj-1
+                idx_j(i,j,2) = jj-1
+                idx_j(i,j,3) = jj
+                idx_j(i,j,4) = jj
+                exit
+             end if
+          end do
+       end if
+
+    end do
+    end do
+
+    call PROF_rapend  ('INTERP_fact',3)
+
+    return
+  end subroutine INTERP_factor2d_linear_latlon
+
+  !-----------------------------------------------------------------------------
+  ! make interpolation factor using bi-linear method on the xy coordinate
+  ! This can be used only for structured grid
+  subroutine INTERP_factor2d_linear_xy( &
+       IA_ref, JA_ref,     &
+       x_ref, y_ref,       &
+       IA, JA,             &
+       x, y,               &
+       idx_i, idx_j,       &
+       hfact,              &
+       zonal, pole         )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    integer,  intent(in)  :: IA_ref
+    integer,  intent(in)  :: JA_ref
+    real(RP), intent(in)  :: x_ref(IA_ref,JA_ref)
+    real(RP), intent(in)  :: y_ref(IA_ref,JA_ref)
+    integer,  intent(in)  :: IA
+    integer,  intent(in)  :: JA
+    real(RP), intent(in)  :: x(IA)
+    real(RP), intent(in)  :: y(JA)
+
+    integer,  intent(out) :: idx_i(IA,JA,4)
+    integer,  intent(out) :: idx_j(IA,JA,4)
+    real(RP), intent(out) :: hfact(IA,JA,4)
+
+    logical, intent(in), optional :: zonal
+    logical, intent(in), optional :: pole
+
+    real(RP) :: u, v
+    integer  :: inc_i, inc_j
+    logical  :: error, err
+    logical  :: zonal_, pole_
+
+    integer :: ii0, jj0
+    integer :: ii, jj
+    integer :: i1, i2, i3, i4
+    integer :: j1, j2, j3, j4
+    integer :: i, j
+    integer :: ite, ite_max
+
+    call PROF_rapstart('INTERP_fact',3)
+
+    if ( present(zonal) ) then
+       zonal_ = zonal
+    else
+       zonal_ = .false.
+    end if
+    if ( present(pole) ) then
+       pole_ = pole
+    else
+       pole_ = .false.
+    end if
+
+    ii0 = IA_ref * 0.5_RP
+    jj0 = JA_ref * 0.5_RP
+    error = .false.
+
+    ite_max = IA_ref * JA_ref / 4
+
+    !$omp parallel do &
+    !$omp private(inc_i,inc_j,ii,jj,i1,i2,i3,i4,j1,j2,j3,j4,u,v,err) &
+    !$omp firstprivate(ii0,jj0)
+    do j = 1, JA
+    do i = 1, IA
+
+       if ( i==1 ) then
+          ii = ii0
+          jj = jj0
+       end if
+       do ite = 1, ite_max
+          i1 = ii
+          i2 = ii + 1
+          i3 = ii + 1
+          i4 = ii
+          j1 = jj
+          j2 = jj
+          j3 = jj + 1
+          j4 = jj + 1
+          if ( ii == IA_ref ) then ! zonal_ must be .true.
+             i2 = 1
+             i3 = 1
+          end if
+          if ( jj == 0 ) then ! pole_ must be .true.
+             j1 = 1
+             j2 = 1
+             i2 = IA_ref / 2 + ii
+             if ( i2 > IA_ref ) i2 = i2 - IA_ref
+             i1 = i2 + 1
+             if ( i1 > IA_ref ) i1 = i1 - IA_ref
+          end if
+          if ( jj == JA_ref ) then ! pole_ must be .true.
+             j3 = JA_ref
+             j4 = JA_ref
+             i3 = IA_ref / 2 + ii
+             if ( i3 > IA_ref ) i3 = i3 - IA_ref
+             i4 = i3 + 1
+             if ( i4 > IA_ref ) i4 = i4 - IA_ref
+          end if
+          if ( x_ref(i1,j1)==UNDEF .or. x_ref(i2,j2)==UNDEF .or. x_ref(i3,j3)==UNDEF .or. x_ref(i4,j4)==UNDEF ) then
+             if ( ii == IA_ref-1 ) then
+                ii = 1
+                if ( jj == JA_ref-1 ) then
+                   jj = 1
+                else
+                   jj = jj + 2
+                end if
+             else
+                ii = ii + 2
+             end if
+             if ( ii == IA_ref ) then
+                ii = 1
+                jj = jj + 2
+             end if
+             if ( jj == JA_ref ) then
+                jj = 1
+                ii = ii + 2
+                if ( ii == IA_ref ) ii = 1
+             end if
+          else
+             call INTERP_check_inside( &
+                  x_ref(i1,j1), x_ref(i2,j2), x_ref(i3,j3), x_ref(i4,j4), & ! (in)
+                  y_ref(i1,j1), y_ref(i2,j2), y_ref(i3,j3), y_ref(i4,j4), & ! (in)
+                  x(i), y(j),                                             & ! (in)
+                  inc_i, inc_j,                                           & ! (out)
+                  err                                                     ) ! (out)
+             if ( err ) error = .true.
+             if ( error ) exit
+             if ( inc_i == 0 .and. inc_j == 0 ) then ! inside the quadrilateral
+                call INTERP_bilinear_inv( &
+                     x_ref(i1,j1), x_ref(i2,j2), x_ref(i3,j3), x_ref(i4,j4), & ! (in)
+                     y_ref(i1,j1), y_ref(i2,j2), y_ref(i3,j3), y_ref(i4,j4), & ! (in)
+                     x(i), y(j),                                             & ! (in)
+                     u, v,                                                   & ! (out)
+                     err                                                     ) ! (out)
+                if ( err ) error = .true.
+                if ( error ) exit
+                idx_i(i,j,1) = i1
+                idx_i(i,j,2) = i2
+                idx_i(i,j,3) = i3
+                idx_i(i,j,4) = i4
+                idx_j(i,j,1) = j1
+                idx_j(i,j,2) = j2
+                idx_j(i,j,3) = j3
+                idx_j(i,j,4) = j4
+                hfact(i,j,1) = ( 1.0_RP - u ) * ( 1.0_RP - v )
+                hfact(i,j,2) = ( u          ) * ( 1.0_RP - v )
+                hfact(i,j,3) = ( u          ) * ( v          )
+                hfact(i,j,4) = ( 1.0_RP - u ) * ( v          )
+                exit
+             end if
+             ii = ii + inc_i
+             jj = jj + inc_j
+             if ( zonal_ .or. pole_ ) then
+                if ( ii == 0        ) ii = IA_ref
+                if ( ii == IA_ref+1 ) ii = 1
+                if ( pole_ ) then
+                   jj = max( jj, 0 )
+                   jj = min( jj, JA_ref )
+                else
+                   jj = max( jj, 1 )
+                   jj = min( jj, JA_ref-1 )
+                end if
+             else
+                if ( ii == 0 .and. jj == 0 ) then
+                   ii = IA_ref - 1
+                   jj = JA_ref - 1
+                end if
+                if ( ii == 0 .and. jj == JA_ref ) then
+                   ii = IA_ref - 1
+                   jj = 1
+                end if
+                if ( ii == IA_ref .and. jj == 0 ) then
+                   ii = 1
+                   jj = JA_ref - 1
+                end if
+                if ( ii == IA_ref .and. jj == JA_ref  ) then
+                   ii = 1
+                   jj = 1
+                end if
+                ii = max( min( ii, IA_ref-1 ), 1 )
+                jj = max( min( jj, JA_ref-1 ), 1 )
+             end if
+          end if
+       end do
+       if ( ite == ite_max+1 ) then
+          LOG_ERROR("INTERP_factor2d_linear_xy",*) 'iteration max has been reached', i, j, x(i), y(j)
+          LOG_ERROR_CONT(*) minval(x_ref), maxval(x_ref), minval(y_ref), maxval(y_ref)
+          LOG_ERROR_CONT(*) x_ref(1,1), x_ref(IA_ref,1),x_ref(1,JA_ref)
+          LOG_ERROR_CONT(*) y_ref(1,1), y_ref(IA_ref,1),y_ref(1,JA_ref)
+          idx_i(i,j,:) = 1
+          idx_j(i,j,:) = 1
+          hfact(i,j,:) = 0.0_RP
+          call PRC_abort
+       end if
+
+       if ( i==1 ) then
+          ii0 = ii
+          jj0 = jj
+       end if
+
+       if ( error ) exit
+    end do
+    end do
+
+    if ( error ) call PRC_abort
+
+    call PROF_rapend  ('INTERP_fact',3)
+
+    return
+  end subroutine INTERP_factor2d_linear_xy
+
+  !-----------------------------------------------------------------------------
+  ! make interpolation factor using Lat-Lon with weight based on the distance
+  subroutine INTERP_factor2d_weight( &
        npoints,             &
        IA_ref, JA_ref,      &
        lon_ref,lat_ref,     &
@@ -222,6 +557,7 @@ contains
        idx_i, idx_j, hfact, &
        search_limit,        &
        latlon_structure,    &
+       lon_1d, lat_1d,      &
        weight_order         )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -244,6 +580,7 @@ contains
 
     real(RP), intent(in), optional :: search_limit
     logical,  intent(in), optional :: latlon_structure
+    real(RP), intent(in), optional :: lon_1d(IA_ref), lat_1d(JA_ref)
     integer,  intent(in), optional :: weight_order
 
     logical :: ll_struct_
@@ -255,7 +592,6 @@ contains
     ! for structure grid
     integer  :: is, ie, js, je
     integer  :: psizex, psizey
-    real(RP) :: lon1d(IA_ref), lat1d(JA_ref)
     real(RP) :: lon0, lat0
     integer, allocatable :: i0(:), i1(:), j0(:), j1(:)
 
@@ -281,60 +617,6 @@ contains
 
     if ( ll_struct_ ) then
 
-       lon1d(:) = UNDEF
-       lon_min  = UNDEF
-       do i = 1, IA_ref
-          do j = 1, JA_ref
-             if ( lon_ref(i,j) .ne. UNDEF ) then
-                lon1d(i) = lon_ref(i,j)
-                exit
-             end if
-          end do
-          if ( lon_min == UNDEF .and. lon1d(i) .ne. UNDEF ) then
-             lon_min = lon1d(i)
-             is = i
-          endif
-          if ( lon_min .ne. UNDEF ) then
-             if ( lon1d(i) .ne. UNDEF ) then
-                lon_max = lon1d(i)
-                ie = i
-             end if
-          end if
-       end do
-
-       lat1d(:) = UNDEF
-       lat_min  = UNDEF
-       do j = 1, JA_ref
-          do i = 1, IA_ref
-             if ( lat_ref(i,j) .ne. UNDEF ) then
-                lat1d(j) = lat_ref(i,j)
-                exit
-             end if
-          end do
-          if ( lat_min == UNDEF .and. lat1d(j) .ne. UNDEF ) then
-             lat_min = lat1d(j)
-             js = j
-          endif
-          if ( lat_min .ne. UNDEF ) then
-             if ( lat1d(j) .ne. UNDEF ) then
-                lat_max = lat1d(j)
-                je = j
-             end if
-          end if
-       end do
-
-       ! fill undef
-       dlon = ( lon_max - lon_min ) / ( ie - is )
-       do i = is, ie
-          if ( lon1d(i) == UNDEF ) lon1d(i) = lon_min + dlon * ( i - is )
-       end do
-       dlat = ( lat_max - lat_min ) / ( je - js )
-       do j = js, je
-          if ( lat1d(j) == UNDEF ) lat1d(j) = lat_min + dlat * ( j - js )
-       end do
-
-
-
        if ( ie-is > 10 ) then
           psizex = int( 2.0_RP*sqrt(real(ie-is+1,RP)) )
        else
@@ -355,7 +637,7 @@ contains
        do ii = 1, psizex
           lon0 = lon_min + dlon * (ii-1)
           do i = is, ie
-             if ( lon1d(i) >= lon0 ) then
+             if ( lon_1d(i) >= lon0 ) then
                 i0(ii) = i
                 exit
              end if
@@ -369,7 +651,7 @@ contains
        do jj = 1, psizey
           lat0 = lat_min + dlat * (jj-1)
           do j = js, je
-             if ( lat1d(j) >= lat0 ) then
+             if ( lat_1d(j) >= lat0 ) then
                 j0(jj) = j
                 exit
              end if
@@ -387,7 +669,7 @@ contains
           call INTERP_search_horiz_struct( npoints,                     & ! [IN]
                                            psizex, psizey,              & ! [IN]
                                            IA_ref, JA_ref,              & ! [IN]
-                                           lon1d(:), lat1d(:),          & ! [IN]
+                                           lon_1d(:), lat_1d(:),        & ! [IN]
                                            lon_min, lat_min,            & ! [IN]
                                            dlon, dlat,                  & ! [IN]
                                            i0(:), i1(:), j0(:), j1(:),  & ! [IN]
@@ -454,11 +736,165 @@ contains
     call PROF_rapend  ('INTERP_fact',3)
 
     return
-  end subroutine INTERP_factor2d
+  end subroutine INTERP_factor2d_weight
+
+  !-----------------------------------------------------------------------------
+  ! make interpolation factor using bi-linear method for the horizontal direction on latlon grid
+  ! This can be used only for structured grid
+  subroutine INTERP_factor3d_linear_latlon( &
+       KA_ref, KS_ref, KE_ref, &
+       IA_ref, JA_ref,         &
+       lon_ref, lat_ref,       &
+       hgt_ref,                &
+       KA, KS, KE,             &
+       IA, JA,                 &
+       lon, lat,               &
+       hgt,                    &
+       idx_i, idx_j,           &
+       hfact,                  &
+       idx_k,                  &
+       vfact,                  &
+       flag_extrap             )
+    implicit none
+
+    integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
+    integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
+    integer,  intent(in)  :: JA_ref                        ! number of y-direction    (reference)
+    real(RP), intent(in)  :: lon_ref(IA_ref)               ! longitude                (reference)
+    real(RP), intent(in)  :: lat_ref(JA_ref)               ! latitude                 (reference)
+    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
+    integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
+    integer,  intent(in)  :: IA                            ! number of x-direction    (target)
+    integer,  intent(in)  :: JA                            ! number of y-direction    (target)
+    real(RP), intent(in)  :: lon(IA,JA)                    ! longitude                (target)
+    real(RP), intent(in)  :: lat(IA,JA)                    ! latitude                 (target)
+    real(RP), intent(in)  :: hgt(KA,IA,JA)                 ! longitude [m]            (target)
+
+    integer,  intent(out) :: idx_i(IA,JA,4)                ! i-index in reference     (target)
+    integer,  intent(out) :: idx_j(IA,JA,4)                ! j-index in reference     (target)
+    real(RP), intent(out) :: hfact(IA,JA,4)                ! horizontal interp factor (target)
+    integer,  intent(out) :: idx_k(KA,2,IA,JA,4)           ! k-index in reference     (target)
+    real(RP), intent(out) :: vfact(KA,2,IA,JA,4)           ! vertical interp factor   (target)
+
+    logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
+
+    integer :: i, j, ii, jj, n
+
+    call INTERP_factor2d_linear_latlon( &
+         IA_ref, JA_ref,                          & ! [IN]
+         lon_ref(:), lat_ref(:),                  & ! [IN]
+         IA, JA,                                  & ! [IN]
+         lon(:,:), lat(:,:),                      & ! [IN]
+         idx_i(:,:,:), idx_j(:,:,:), hfact(:,:,:) ) ! [OUT]
+
+    call PROF_rapstart('INTERP_fact',3)
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(ii,jj)
+    do j = 1, JA
+    do i = 1, IA
+       do n = 1, 4
+          ii = idx_i(i,j,n)
+          jj = idx_j(i,j,n)
+          call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
+                                   KA,     KS,     KE,       & ! [IN]
+                                   hgt_ref(:,ii,jj),         & ! [IN]
+                                   hgt    (:,i,j),           & ! [IN]
+                                   idx_k  (:,:,i,j,n),       & ! [OUT]
+                                   vfact  (:,:,i,j,n),       & ! [OUT]
+                                   flag_extrap = flag_extrap ) ! [IN, optional]
+
+       enddo
+    enddo
+    enddo
+
+    call PROF_rapend('INTERP_fact',3)
+
+    return
+  end subroutine INTERP_factor3d_linear_latlon
+
+  !-----------------------------------------------------------------------------
+  ! make interpolation factor using bi-linear method for the horizontal direction on the xy coordinate
+  ! This can be used only for structured grid
+  subroutine INTERP_factor3d_linear_xy( &
+       KA_ref, KS_ref, KE_ref, &
+       IA_ref, JA_ref,         &
+       x_ref, y_ref,           &
+       hgt_ref,                &
+       KA, KS, KE,             &
+       IA, JA,                 &
+       x, y,                   &
+       hgt,                    &
+       idx_i, idx_j,           &
+       hfact,                  &
+       idx_k,                  &
+       vfact,                  &
+       flag_extrap,            &
+       zonal, pole             )
+    implicit none
+
+    integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
+    integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
+    integer,  intent(in)  :: JA_ref                        ! number of y-direction    (reference)
+    real(RP), intent(in)  :: x_ref(IA_ref,JA_ref)          ! x point                  (reference)
+    real(RP), intent(in)  :: y_ref(IA_ref,JA_ref)          ! y point                  (reference)
+    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
+    integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
+    integer,  intent(in)  :: IA                            ! number of x-direction    (target)
+    integer,  intent(in)  :: JA                            ! number of y-direction    (target)
+    real(RP), intent(in)  :: x  (IA)                       ! x point                  (target)
+    real(RP), intent(in)  :: y  (JA)                       ! y point                  (target)
+    real(RP), intent(in)  :: hgt(KA,IA,JA)                 ! longitude [m]            (target)
+
+    integer,  intent(out) :: idx_i(IA,JA,4)                ! i-index in reference     (target)
+    integer,  intent(out) :: idx_j(IA,JA,4)                ! j-index in reference     (target)
+    real(RP), intent(out) :: hfact(IA,JA,4)                ! horizontal interp factor (target)
+    integer,  intent(out) :: idx_k(KA,2,IA,JA,4)           ! k-index in reference     (target)
+    real(RP), intent(out) :: vfact(KA,2,IA,JA,4)           ! vertical interp factor   (target)
+
+    logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
+    logical,  intent(in), optional :: zonal
+    logical,  intent(in), optional :: pole
+
+    integer :: i, j, ii, jj, n
+
+    call INTERP_factor2d_linear_xy( &
+         IA_ref, JA_ref,                           & ! [IN]
+         x_ref(:,:), y_ref(:,:),                   & ! [IN]
+         IA, JA,                                   & ! [IN]
+         x(:), y(:),                               & ! [IN]
+         idx_i(:,:,:), idx_j(:,:,:), hfact(:,:,:), & ! [OUT]
+         zonal = zonal, pole = pole                ) ! [IN]
+
+    call PROF_rapstart('INTERP_fact',3)
+
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(ii,jj)
+    do j = 1, JA
+    do i = 1, IA
+       do n = 1, 4
+          ii = idx_i(i,j,n)
+          jj = idx_j(i,j,n)
+          call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
+                                   KA,     KS,     KE,       & ! [IN]
+                                   hgt_ref(:,ii,jj),         & ! [IN]
+                                   hgt    (:,i,j),           & ! [IN]
+                                   idx_k  (:,:,i,j,n),       & ! [OUT]
+                                   vfact  (:,:,i,j,n),       & ! [OUT]
+                                   flag_extrap = flag_extrap ) ! [IN, optional]
+
+       enddo
+    enddo
+    enddo
+
+    call PROF_rapend('INTERP_fact',3)
+
+    return
+  end subroutine INTERP_factor3d_linear_xy
 
   !-----------------------------------------------------------------------------
   ! make interpolation factor using Lat-Lon and Z-Height information
-  subroutine INTERP_factor3d( &
+  subroutine INTERP_factor3d_weight( &
        npoints, &
        KA_ref, KS_ref, KE_ref, &
        IA_ref, JA_ref,         &
@@ -570,7 +1006,7 @@ contains
     call PROF_rapend  ('INTERP_fact',3)
 
     return
-  end subroutine INTERP_factor3d
+  end subroutine INTERP_factor3d_weight
 
   !-----------------------------------------------------------------------------
   ! interpolation using one-points for 2D data (nearest-neighbor)
@@ -1315,6 +1751,156 @@ contains
 
     return
   end subroutine INTERP_div_block
+
+  !-----------------------------------------------------------------------------
+  subroutine INTERP_bilinear_inv( &
+       x_ref0, x_ref1, x_ref2, x_ref3, &
+       y_ref0, y_ref1, y_ref2, y_ref3, &
+       x, y,                           &
+       u, v,                           &
+       error                           )
+    implicit none
+    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in) :: x, y
+
+    real(RP), intent(out) :: u, v
+    logical,  intent(out) :: error
+
+    real(RP), parameter :: EPS = 1E-6_RP
+
+    real(RP) :: e_x, e_y
+    real(RP) :: f_x, f_y
+    real(RP) :: g_x, g_y
+    real(RP) :: h_x, h_y
+    real(RP) :: k0, k1, k2
+    real(RP) :: w
+    real(RP) :: sig
+
+    e_x = x_ref1 - x_ref0
+    e_y = y_ref1 - y_ref0
+
+    f_x = x_ref3 - x_ref0
+    f_y = y_ref3 - y_ref0
+
+    g_x = x_ref0 - x_ref1 + x_ref2 - x_ref3
+    g_y = y_ref0 - y_ref1 + y_ref2 - y_ref3
+
+    h_x = x - x_ref0
+    h_y = y - y_ref0
+
+    k0 = cross(h_x, h_y, e_x, e_y)
+    k1 = cross(e_x, e_y, f_x, f_y) + cross(h_x, h_y, g_x, g_y)
+    k2 = cross(g_x, g_y, f_x, f_y)
+
+    w = k1**2 - 4.0_RP * k0 * k2
+    if ( w < 0.0_RP ) then
+       LOG_ERROR("INTERP_bilinear_inv",*) 'Outside of the quadrilateral'
+       error = .true.
+       return
+    end if
+
+    if ( abs(k1) < EPS ) then
+       LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', k1
+       LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
+       LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
+       LOG_ERROR_CONT(*) x, y
+       error = .true.
+       return
+    end if
+    if ( abs(k2) < EPS * sqrt( (x_ref2-x_ref0)**2+(y_ref2-y_ref0)**2 ) ) then
+       v = - k0 / k1
+    else
+       sig = sign( 1.0_RP, cross(x_ref1-x_ref0, y_ref1-y_ref0, x_ref3-x_ref0, y_ref3-y_ref0) )
+       v = ( - k1 + sig * sqrt(w) ) / ( 2.0_RP * k2 )
+    end if
+    u = ( h_x - f_x * v ) / ( e_x + g_x * v )
+
+    if ( u < -EPS .or. u > 1.0_RP+EPS .or. v < -EPS .or. v > 1.0_RP+EPS ) then
+       LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', u, v
+       LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
+       LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
+       LOG_ERROR_CONT(*) x, y
+       LOG_ERROR_CONT(*) k0, k1, k2, sig
+       error = .true.
+       return
+    end if
+    u = min( max( u, 0.0_RP ), 1.0_RP )
+    v = min( max( v, 0.0_RP ), 1.0_RP )
+
+    error = .false.
+
+    return
+  end subroutine INTERP_bilinear_inv
+
+  !-----------------------------------------------------------------------------
+  ! check whether the point is inside of the quadrilateral
+  subroutine INTERP_check_inside( &
+       x_ref0, x_ref1, x_ref2, x_ref3, &
+       y_ref0, y_ref1, y_ref2, y_ref3, &
+       x, y,                           &
+       inc_i, inc_j,                   &
+       error                           )
+    implicit none
+    real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
+    real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
+    real(RP), intent(in) :: x, y
+
+    integer,  intent(out) :: inc_i, inc_j
+    logical,  intent(out) :: error
+
+    real(RP) :: sig
+    real(RP) :: c1, c2, c3, c4
+    logical :: fx, fy
+
+    error = .false.
+
+    sig = sign( 1.0_RP, cross(x_ref1-x_ref0, y_ref1-y_ref0, x_ref3-x_ref0, y_ref3-y_ref0) )
+
+    c1 = sig * cross(x_ref1-x_ref0, y_ref1-y_ref0, x-x_ref0, y-y_ref0)
+    c2 = sig * cross(x_ref2-x_ref1, y_ref2-y_ref1, x-x_ref1, y-y_ref1)
+    c3 = sig * cross(x_ref3-x_ref2, y_ref3-y_ref2, x-x_ref2, y-y_ref2)
+    c4 = sig * cross(x_ref0-x_ref3, y_ref0-y_ref3, x-x_ref3, y-y_ref3)
+
+    ! if all the c1 - c4 are positive, the point is inside the quadrilateral
+    inc_i = 0
+    inc_j = 0
+    if ( c1 < 0.0_RP ) inc_j = -1
+    if ( c2 < 0.0_RP ) inc_i =  1
+    if ( c3 < 0.0_RP ) inc_j =  1
+    if ( c4 < 0.0_RP ) inc_i = -1
+
+    fx = c2 < 0.0_RP .and. c4 < 0.0_RP
+    fy = c1 < 0.0_RP .and. c3 < 0.0_RP
+    if ( fx .and. fy ) then
+       LOG_ERROR("INTERP_check_inside",*) 'Unexpected error occured', c1, c2, c3, c4
+       LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
+       LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
+       LOG_ERROR_CONT(*) x, y
+       error = .true.
+       return
+    else if ( fx ) then
+       inc_i = 0
+    else if ( fy ) then
+       inc_j = 0
+    end if
+
+    return
+  end subroutine INTERP_check_inside
+
+  !-----------------------------------------------------------------------------
+  !> cross product
+  function cross( &
+       x0, y0, &
+       x1, y1 )
+    implicit none
+    real(RP), intent(in) :: x0, y0
+    real(RP), intent(in) :: x1, y1
+    real(RP) :: cross
+
+    cross = x0 * y1 - x1 * y0
+
+  end function cross
 
   !-----------------------------------------------------------------------------
   ! Haversine Formula (from R.W. Sinnott, "Virtues of the Haversine",
