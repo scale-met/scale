@@ -181,6 +181,7 @@ contains
        MKINIT
     use mod_user, only: &
        USER_tracer_setup, &
+       USER_setup, &
        USER_mkinit
     use mod_atmos_driver, only: &
        ATMOS_SURFACE_GET
@@ -331,6 +332,9 @@ contains
 
     ! setup mkinit
     call MKINIT_setup
+
+    ! setup mod_user
+    call USER_setup
 
     call PROF_rapend('Initialize',0)
 
