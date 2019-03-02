@@ -6,8 +6,6 @@
 
 TOPDIR = ../..
 
-include $(TOPDIR)/Mkinclude
-
 all: dox
 
 dox:
