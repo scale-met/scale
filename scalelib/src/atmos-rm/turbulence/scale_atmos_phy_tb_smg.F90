@@ -575,22 +575,22 @@ contains
              lambda_r(k) = min( 1.8_RP * lambda0(k,i,j), lambda_r(k) )
              leOvleo5 = ( lambda_r(k) / lambda0(k,i,j) )**5
              C2 = CB  * leOvleo5 / ( 1.0_RP + CB * leOvleo5 )
-             D2 = C2 * CBt / CB
+             D2 = CBt  * leOvleo5 / ( 1.0_RP + CBt * leOvleo5 )
              C1(k) = C1o / sqrt( 1.0_RP - C2 )
              ! D1 = D1o / sqrt( 1.0_RP - C2 )
              e(k) = nu(k,i,j)**3 * ( 1.0_RP - C2 ) / ( lambda_r(k)**4 + EPS )
-             et = Kh(k,i,j) * ( 1.0_RP - D2 )
+             et = Kh(k,i,j) * ( 1.0_RP - D2 ) ! epsilon_t / D^2
 
              dz = FZ(k,i,j) - FZ(k-1,i,j)
              dx = CDX(i) / MAPF(i,j,1,I_XY)
              dy = CDY(j) / MAPF(i,j,2,I_XY)
 
-             fact = sqrt( CB * leovleo5 * e(k) / ( dt * ( dz**2 + dx**2 + dy**2 ) ) ) * DENS(k,i,j)
-             random_mz(k,i,j) = random_mz(k,i,j) * fact * dx * dy
-             random_mx(k,i,j) = random_mx(k,i,j) * fact * dy * dz
-             random_my(k,i,j) = random_my(k,i,j) * fact * dz * dx
+             fact = sqrt( CB * leovleo5 * e(k) / ( 3.0_RP * dt ) ) * DENS(k,i,j)
+             random_mz(k,i,j) = random_mz(k,i,j) * fact * dx * dy / sqrt( dx**2 + dy**2 )
+             random_mx(k,i,j) = random_mx(k,i,j) * fact * dy * dz / sqrt( dy**2 + dz**2 )
+             random_my(k,i,j) = random_my(k,i,j) * fact * dz * dx / sqrt( dz**2 + dx**2 )
 
-             fact = sqrt( twoOverThree * CBt * leovleo5 * et / dt ) * DENS(k,i,j)
+             fact = sqrt( CBt * leovleo5 * et / ( 3.0_RP * dt ) ) * DENS(k,i,j)
              random_qz(k,i,j) = random_qz(k,i,j) * fact * dz
              random_qx(k,i,j) = random_qx(k,i,j) * fact * dx
              random_qy(k,i,j) = random_qy(k,i,j) * fact * dy
