@@ -180,13 +180,13 @@ contains
     !$omp parallel do &
     !$omp private(fact,theta)
     do i = 1, n/2
-       fact = sqrt(-2.0_RP * log( rnd(i*2-1) ) )
+       fact = sqrt(-2.0_RP * log( 1.0_RP - rnd(i*2-1) ) ) ! 0 <= rnd < 1
        theta = 2.0_RP * PI * rnd(i*2)
        var(i*2-1) = fact * cos(theta)
        var(i*2  ) = fact * sin(theta)
     end do
     if ( mod(n,2) == 1 ) then
-       fact = sqrt(-2.0_RP * log( rnd(n) ) )
+       fact = sqrt(-2.0_RP * log( 1.0_RP - rnd(n) ) )
        theta = 2.0_RP * PI * rnd(n+1)
        var(n) = fact * cos(theta)
     end if
