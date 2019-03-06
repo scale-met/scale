@@ -238,6 +238,8 @@ contains
        IA, JA,             &
        lon, lat,           &
        idx_i, idx_j, hfact )
+    use scale_sort, only: &
+       SORT_exec
     implicit none
     integer,  intent(in)  :: IA_ref
     integer,  intent(in)  :: JA_ref
@@ -323,6 +325,10 @@ contains
           end do
        end if
 
+       call SORT_exec( 4,                                        & ! [IN]
+                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       reverse = .true.                          ) ! [IN]
+
     end do
     end do
 
@@ -346,6 +352,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_sort, only: &
+       SORT_exec
     implicit none
     integer,  intent(in)  :: IA_ref
     integer,  intent(in)  :: JA_ref
@@ -536,6 +544,11 @@ contains
        end if
 
        if ( error ) exit
+
+       call SORT_exec( 4,                                        & ! [IN]
+                       hfact(i,j,:), idx_i(i,j,:), idx_j(i,j,:), & ! [INOUT]
+                       reverse = .true.                          ) ! [IN]
+
     end do
     end do
 
