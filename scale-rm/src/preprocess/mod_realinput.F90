@@ -111,6 +111,16 @@ module mod_realinput
   integer,  private              :: itp_type_l
   integer,  private              :: itp_type_o
 
+  integer,  private, allocatable :: igrd (    :,:,:)
+  integer,  private, allocatable :: jgrd (    :,:,:)
+  real(RP), private, allocatable :: hfact(    :,:,:)
+  integer,  private, allocatable :: kgrd (:,:,:,:,:)
+  real(RP), private, allocatable :: vfact(:,:,:,:,:)
+
+  integer,  private, allocatable :: oigrd (:,:,:)
+  integer,  private, allocatable :: ojgrd (:,:,:)
+  real(RP), private, allocatable :: ohfact(:,:,:)
+
   logical,  private              :: serial_atmos
   logical,  private              :: serial_land
   logical,  private              :: serial_ocean
@@ -166,7 +176,8 @@ module mod_realinput
                                                                            !   LINEAR     : bi-linear interpolation
                                                                            !   DIST-WEIGHT: distance-weighted mean of the nearest N-neighbors
 
-  logical, private :: first = .true.
+  logical, private :: first_atmos   = .true.
+  logical, private :: first_surface = .true.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -267,7 +278,7 @@ contains
        itp_nh_a = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_a = I_intrp_dstwgt
     case default
-       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR("REALINPUT_atmos",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
        LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
        call PRC_abort
     end select
@@ -654,7 +665,7 @@ contains
        itp_nh_l = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_l = I_intrp_dstwgt
     case default
-       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR("REALINPUT_surface",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
        LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
        call PRC_abort
     end select
@@ -701,7 +712,7 @@ contains
        itp_nh_o = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_o = I_intrp_dstwgt
     case default
-       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
+       LOG_ERROR("REALINPUT_surface",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
        LOG_ERROR_CONT(*) '       It must be "LINEAR" or "DIST-WEIGHT"'
        call PRC_abort
     end select
@@ -1082,6 +1093,14 @@ contains
     allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
     allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
 
+
+    allocate( igrd (          IA,JA,itp_nh_a) )
+    allocate( jgrd (          IA,JA,itp_nh_a) )
+    allocate( hfact(          IA,JA,itp_nh_a) )
+    allocate( kgrd (KA,itp_nv,IA,JA,itp_nh_a) )
+    allocate( vfact(KA,itp_nv,IA,JA,itp_nh_a) )
+
+
     return
   end subroutine ParentAtmosSetup
 
@@ -1229,17 +1248,9 @@ contains
 
     real(RP) :: qdry, Rtot, CPtot
 
-    integer  :: igrd (          IA,JA,itp_nh_a)
-    integer  :: jgrd (          IA,JA,itp_nh_a)
-    real(RP) :: hfact(          IA,JA,itp_nh_a)
-    integer  :: kgrd (KA,itp_nv,IA,JA,itp_nh_a)
-    real(RP) :: vfact(KA,itp_nv,IA,JA,itp_nh_a)
-
     real(RP) :: X_org(dims(2),dims(3))
     real(RP) :: Y_org(dims(2),dims(3))
     logical  :: zonal, pole
-
-    logical, save :: first = .true.
 
     logical :: same_mptype_ = .false.
 
@@ -1347,7 +1358,7 @@ contains
     call PROF_rapstart('___AtmosBcast',3)
 
     if ( serial_atmos ) then
-       if ( first .OR. update_coord ) then
+       if ( first_atmos .OR. update_coord ) then
           call COMM_bcast( LON_org,            dims(2), dims(3) )
           call COMM_bcast( LAT_org,            dims(2), dims(3) )
           call COMM_bcast( CZ_org,  dims(1)+2, dims(2), dims(3) )
@@ -1378,8 +1389,7 @@ contains
     ! interpolation
     call PROF_rapstart('___AtmosInterp',3)
 
-    if ( first .OR. update_coord ) then
-       first = .false.
+    if ( first_atmos .OR. update_coord ) then
 
        k = dims(1) + 2
        call INTERP_domain_compatibility( LON_org(:,:),    & ! [IN]
@@ -1749,6 +1759,8 @@ contains
     call COMM_wait ( MOMZ(:,:,:), 1, .false. )
     call COMM_wait ( MOMX(:,:,:), 2, .false. )
     call COMM_wait ( MOMY(:,:,:), 3, .false. )
+
+    first_atmos = .false.
 
     call PROF_rapend  ('___AtmosInterp',3)
 
@@ -2160,7 +2172,9 @@ contains
     allocate( olat_org (odims(1),odims(2)) )
     allocate( omask_org(odims(1),odims(2)) )
 
-    first = .true.
+    allocate( oigrd (IA,JA,itp_nh_o) )
+    allocate( ojgrd (IA,JA,itp_nh_o) )
+    allocate( ohfact(IA,JA,itp_nh_o) )
 
     return
   end subroutine ParentSurfaceSetup
@@ -2302,12 +2316,9 @@ contains
     ! interpolation
     logical  :: ol_interp
 
-    real(RP) :: hfact_o(odims(1),odims(2),itp_nh_ol)
-    integer  :: igrd_o (odims(1),odims(2),itp_nh_ol)
-    integer  :: jgrd_o (odims(1),odims(2),itp_nh_ol)
-    integer  :: igrd   (IA,JA,itp_nh_o)
-    integer  :: jgrd   (IA,JA,itp_nh_o)
-    real(RP) :: hfact  (IA,JA,itp_nh_o)
+    real(RP) :: hfact_ol(odims(1),odims(2),itp_nh_ol)
+    integer  :: igrd_ol (odims(1),odims(2),itp_nh_ol)
+    integer  :: jgrd_ol (odims(1),odims(2),itp_nh_ol)
 
     real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp, pres
@@ -2322,9 +2333,7 @@ contains
     integer :: n, nn
     !---------------------------------------------------------------------------
 
-    first = .true.
-
-    if ( first ) then ! read data only once
+    if ( first_surface ) then ! read data only once
 
        ! urban data
 
@@ -2371,7 +2380,7 @@ contains
 
        end if
 
-    end if ! first
+    end if ! first_surface
 
 
     if ( do_read_ocean ) then
@@ -2552,7 +2561,7 @@ contains
           call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_VIS), odims(1), odims(2) )
           call COMM_bcast( z0w_org, odims(1), odims(2) )
           call COMM_bcast( omask_org, odims(1), odims(2) )
-          if ( first .or. update_coord ) then
+          if ( first_surface .or. update_coord ) then
              call COMM_bcast( olon_org, odims(1), odims(2) )
              call COMM_bcast( olat_org, odims(1), odims(2) )
           end if
@@ -2562,7 +2571,7 @@ contains
 
        call PROF_rapstart('___SurfaceInterp',3)
 
-       if ( first .or. update_coord ) then
+       if ( first_surface .or. update_coord ) then
 
           if (    ldims(2) .ne. odims(1) &
              .or. ldims(3) .ne. odims(2) ) then
@@ -2590,9 +2599,9 @@ contains
                                    odims(1), odims(2), & ! [IN]
                                    olon_org(:,:),      & ! [IN]
                                    olat_org(:,:),      & ! [IN]
-                                   igrd_o  (:,:,:),    & ! [OUT]
-                                   jgrd_o  (:,:,:),    & ! [OUT]
-                                   hfact_o (:,:,:)     ) ! [OUT]
+                                   igrd_ol (:,:,:),    & ! [OUT]
+                                   jgrd_ol (:,:,:),    & ! [OUT]
+                                   hfact_ol(:,:,:)     ) ! [OUT]
           end if
        end if
 
@@ -2655,9 +2664,9 @@ contains
           call INTERP_interp2d( itp_nh_ol,          & ! [IN]
                                 ldims(2), ldims(3), & ! [IN]
                                 odims(1), odims(2), & ! [IN]
-                                igrd_o   (:,:,:),   & ! [IN]
-                                jgrd_o   (:,:,:),   & ! [IN]
-                                hfact_o  (:,:,:),   & ! [IN]
+                                igrd_ol  (:,:,:),   & ! [IN]
+                                jgrd_ol  (:,:,:),   & ! [IN]
+                                hfact_ol (:,:,:),   & ! [IN]
                                 work     (:,:),     & ! [IN]
                                 lst_ocean(:,:)      ) ! [OUT]
        else
@@ -2680,7 +2689,7 @@ contains
        end do
 
 
-       if ( first .or. update_coord ) then
+       if ( first_surface .or. update_coord ) then
 
           ! interporation for ocean variables
 
@@ -2698,9 +2707,9 @@ contains
                                    oY_org(:,:),        & ! [IN]
                                    IA, JA,             & ! [IN]
                                    CX(:), CY(:),       & ! [IN]
-                                   igrd    (:,:,:),    & ! [OUT]
-                                   jgrd    (:,:,:),    & ! [OUT]
-                                   hfact   (:,:,:),    & ! [OUT]
+                                   oigrd (:,:,:),      & ! [OUT]
+                                   ojgrd (:,:,:),      & ! [OUT]
+                                   ohfact(:,:,:),      & ! [OUT]
                                    zonal = zonal,      & ! [IN]
                                    pole  = pole        ) ! [IN]
 
@@ -2712,22 +2721,22 @@ contains
                                    olat_org(:,:),      & ! [IN]
                                    IA, JA,             & ! [IN]
                                    LON(:,:), LAT(:,:), & ! [IN]
-                                   igrd    (:,:,:),    & ! [OUT]
-                                   jgrd    (:,:,:),    & ! [OUT]
-                                   hfact   (:,:,:)     ) ! [OUT]
+                                   oigrd (:,:,:),      & ! [OUT]
+                                   ojgrd (:,:,:),      & ! [OUT]
+                                   ohfact(:,:,:)       ) ! [OUT]
 
           end select
 
        end if
 
-       call INTERP_interp2d( itp_nh_o,             & ! [IN]
-                             odims(1), odims(2),   & ! [IN]
-                             IA, JA,               & ! [IN]
-                             igrd    (:,:,:),      & ! [IN]
-                             jgrd    (:,:,:),      & ! [IN]
-                             hfact   (:,:,:),      & ! [IN]
-                             tw_org  (:,:),        & ! [IN]
-                             tw      (:,:,nn)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh_o,           & ! [IN]
+                             odims(1), odims(2), & ! [IN]
+                             IA, JA,             & ! [IN]
+                             oigrd (:,:,:),      & ! [IN]
+                             ojgrd (:,:,:),      & ! [IN]
+                             ohfact(:,:,:),      & ! [IN]
+                             tw_org(:,:),        & ! [IN]
+                             tw    (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
                                  tw(:,:,nn), FILTER_ORDER, FILTER_NITER )
@@ -2735,14 +2744,14 @@ contains
           call COMM_wait ( tw(:,:,nn), 1, .false. )
        end if
 
-       call INTERP_interp2d( itp_nh_o,             & ! [IN]
-                             odims(1), odims(2),   & ! [IN]
-                             IA, JA,               & ! [IN]
-                             igrd    (:,:,:),      & ! [IN]
-                             jgrd    (:,:,:),      & ! [IN]
-                             hfact   (:,:,:),      & ! [IN]
-                             sst_org (:,:),        & ! [IN]
-                             sst     (:,:,nn)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh_o,            & ! [IN]
+                             odims(1), odims(2),  & ! [IN]
+                             IA, JA,              & ! [IN]
+                             oigrd  (:,:,:),      & ! [IN]
+                             ojgrd  (:,:,:),      & ! [IN]
+                             ohfact (:,:,:),      & ! [IN]
+                             sst_org(:,:),        & ! [IN]
+                             sst    (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
                                  sst(:,:,nn), FILTER_ORDER, FILTER_NITER )
@@ -2766,9 +2775,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_IR ),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_IR ,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2783,9 +2792,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_IR ),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_IR ,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2799,9 +2808,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_NIR,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2815,9 +2824,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_NIR),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_NIR,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2831,9 +2840,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_direct ,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_direct ,I_R_VIS,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2847,9 +2856,9 @@ contains
        call INTERP_interp2d( itp_nh_o,                            & ! [IN]
                              odims(1), odims(2),                  & ! [IN]
                              IA, JA,                              & ! [IN]
-                             igrd    (:,:,:),                     & ! [IN]
-                             jgrd    (:,:,:),                     & ! [IN]
-                             hfact   (:,:,:),                     & ! [IN]
+                             oigrd   (:,:,:),                     & ! [IN]
+                             ojgrd   (:,:,:),                     & ! [IN]
+                             ohfact  (:,:,:),                     & ! [IN]
                              albw_org(:,:,I_R_diffuse,I_R_VIS),   & ! [IN]
                              albw    (:,:,I_R_diffuse,I_R_VIS,nn) ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2863,9 +2872,9 @@ contains
        call INTERP_interp2d( itp_nh_o,             & ! [IN]
                              odims(1), odims(2),   & ! [IN]
                              IA, JA,               & ! [IN]
-                             igrd    (:,:,:),      & ! [IN]
-                             jgrd    (:,:,:),      & ! [IN]
-                             hfact   (:,:,:),      & ! [IN]
+                             oigrd   (:,:,:),      & ! [IN]
+                             ojgrd   (:,:,:),      & ! [IN]
+                             ohfact  (:,:,:),      & ! [IN]
                              z0w_org (:,:),        & ! [IN]
                              z0w     (:,:,nn)      ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
@@ -2884,7 +2893,7 @@ contains
           endif
        enddo
        enddo
-       if ( URBAN_do .and. first ) then
+       if ( URBAN_do .and. first_surface ) then
           do j = 1, JA
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
@@ -2894,7 +2903,7 @@ contains
           enddo
        end if
 
-       first = .false.
+       first_surface = .false.
 
        call PROF_rapend  ('___SurfaceInterp',3)
 
