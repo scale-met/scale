@@ -850,101 +850,59 @@ contains
 
 
        if ( l_bnd ) then
-          if ( do_daughter_process ) then ! online
-             if ( ONLINE_USE_VELZ ) then
-                if( ATMOS_BOUNDARY_USE_VELZ ) then
-                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-                else
-                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-                endif
-             else
-                if ( ATMOS_BOUNDARY_USE_VELZ ) then
-                   ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = alpha_z2 * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-                end if
-             end if
-          else ! offline
-             if ( ATMOS_BOUNDARY_USE_VELZ ) then
-                ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-             endif
+          if (      (       do_daughter_process .and. ONLINE_USE_VELZ ) &
+               .or. ( .not. do_daughter_process .and. ATMOS_BOUNDARY_USE_VELZ ) ) then
+             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+          else
+             ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
           end if
+          ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
+          ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
+          ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
+          ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
+          if ( BND_QA > 0 ) then
+             do iq = 1, BND_QA
+                ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
+             end do
+          end if
+       else
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
           else
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = 0.0_RP
-!             ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
-          endif
+          end if
+          if ( ATMOS_BOUNDARY_USE_VELZ ) then
+             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
+          else
+             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = 0.0_RP
+          end if
           if ( ATMOS_BOUNDARY_USE_VELX ) then
              ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
           else
-             ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
-          endif
+             ATMOS_BOUNDARY_alpha_VELX(k,i,j) = 0.0_RP
+          end if
           if ( ATMOS_BOUNDARY_USE_VELY ) then
              ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
           else
-             ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
-          endif
+             ATMOS_BOUNDARY_alpha_VELY(k,i,j) = 0.0_RP
+          end if
           if ( ATMOS_BOUNDARY_USE_POTT ) then
              ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
           else
-             ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
-          endif
-          if ( ATMOS_BOUNDARY_USE_QV   ) then
+             ATMOS_BOUNDARY_alpha_POTT(k,i,j) = 0.0_RP
+          end if
+          if ( BND_QA > 0 .and. ATMOS_BOUNDARY_USE_QV ) then
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           else
-             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-          endif
-          if ( ATMOS_BOUNDARY_USE_QHYD ) then
-             do iq = 2, BND_QA
-                ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-             end do
-          else
-             do iq = 2, BND_QA
-                ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-             end do
-          endif
-       else
-          ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
-          ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
-          ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
-          ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
-          ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
-          do iq = 1, BND_QA
+             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = 0.0_RP
+          end if
+          do iq = 2, BND_QA
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           end do
        end if
     enddo
     enddo
     enddo
-
-    if ( l_bnd ) then
-       if ( .NOT. ONLINE_USE_VELZ .AND. .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
-          ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
-       end if
-    else
-       if ( .NOT. ATMOS_BOUNDARY_USE_DENS ) then
-          ATMOS_BOUNDARY_alpha_DENS(:,:,:) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_VELZ ) then
-          ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_VELX ) then
-          ATMOS_BOUNDARY_alpha_VELX(:,:,:) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_VELY ) then
-          ATMOS_BOUNDARY_alpha_VELY(:,:,:) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_POTT ) then
-          ATMOS_BOUNDARY_alpha_POTT(:,:,:) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_QV   ) then
-          if ( BND_QA > 0 ) ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) = 0.0_RP
-       end if
-       if ( .NOT. ATMOS_BOUNDARY_USE_QHYD ) then
-          do iq = 2, BND_QA
-             ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq) = 0.0_RP
-          end do
-       end if
-    end if
 
 
     call ATMOS_BOUNDARY_alpha_fillhalo
