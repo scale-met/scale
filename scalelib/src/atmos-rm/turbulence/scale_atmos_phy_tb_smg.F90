@@ -1087,10 +1087,16 @@ contains
              flxz(KS) = 0.0_RP
              flxz(KE) = 0.0_RP
              do k = KS, KE-1
-                MOMZ_t(k,i,j) = ( ( GSQRT(k,i+1,j,I_XYW) * ( f2h(k,i+1,j,1) * random_my(k+1,i+1,j) + f2h(k,i+1,j,2) * random_my(k,i+1,j) ) &
-                                  - GSQRT(k,i-1,j,I_XYW) * ( f2h(k,i-1,j,1) * random_my(k+1,i-1,j) + f2h(k,i-1,j,2) * random_my(k,i-1,j) ) ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
-                                - ( GSQRT(k,i,j+1,I_XYW) * ( f2h(k,i,j+1,1) * random_mx(k+1,i,j+1) + f2h(k,i,j+1,2) * random_mx(k,i,j+1) ) &
-                                  - GSQRT(k,i,j-1,I_XYW) * ( f2h(k,i,j-1,1) * random_mx(k+1,i,j-1) + f2h(k,i,j+1,2) * random_mx(k,i,j-1) ) ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
+                MOMZ_t(k,i,j) = ( ( GSQRT(k,i+1,j,I_XYW) * ( f2h(k,i+1,j,1) * random_my(k+1,i+1,j) &
+                                                           + f2h(k,i+1,j,2) * random_my(k,i+1,j) ) &
+                                  - GSQRT(k,i-1,j,I_XYW) * ( f2h(k,i-1,j,1) * random_my(k+1,i-1,j) &
+                                                           + f2h(k,i-1,j,2) * random_my(k,i-1,j) ) &
+                                  ) / ( FDX(i) + FDX(i-1) ) * MAPF(i,j,1,I_XY) &
+                                - ( GSQRT(k,i,j+1,I_XYW) * ( f2h(k,i,j+1,1) * random_mx(k+1,i,j+1) &
+                                                           + f2h(k,i,j+1,2) * random_mx(k,i,j+1) ) &
+                                  - GSQRT(k,i,j-1,I_XYW) * ( f2h(k,i,j-1,1) * random_mx(k+1,i,j-1) &
+                                                           + f2h(k,i,j+1,2) * random_mx(k,i,j-1) ) &
+                                  ) / ( FDY(j) + FDY(j-1) ) * MAPF(i,j,2,I_XY) &
                              + ( flxz(k+1) - flxz(k) ) * RFDZ(k) &
                                 ) / GSQRT(k,i,j,I_XYW)
              end do
