@@ -935,7 +935,7 @@ contains
 
       Z    = ZA - ZDC
       BHR  = LOG(Z0R/Z0HR) / 0.4_RP
-      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
+      RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
       call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
       call qsat( TR, RHOS, & ! [IN]
@@ -1024,7 +1024,7 @@ contains
 
     !--- update only fluxes ----
      THS   = TR / EXN
-     RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA)
+     RIBR = ( GRAV * 2.0_RP / (THA+THS) ) * (THA-THS) * (Z+Z0R) / (UA*UA+EPS)
      call mos(XXXR,CHR,CDR,BHR,RIBR,Z,Z0R,UA,THA,THS,RHOO)
 
      call qsat( TR, RHOS, & ! [IN]
@@ -1080,7 +1080,7 @@ contains
 
       Z    = ZA - ZDC
       BHC  = LOG(Z0C/Z0HC) / 0.4_RP
-      RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA)
+      RIBC = ( GRAV * 2.0_RP / (THA+THC) ) * (THA-THC) * (Z+Z0C) / (UA*UA+EPS)
       call mos(XXXC,CHC,CDC,BHC,RIBC,Z,Z0C,UA,THA,THC,RHOO)
       ALPHAC = CHC * RHOO * CPdry * UA
 
@@ -1095,7 +1095,7 @@ contains
       THC   = TC2 / TC1
       QC1   = RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2   = RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      QC    = QC2 / QC1
+      QC    = max( QC2 / ( QC1 + EPS ), 0.0_RP )
 
       RG1   = EPSG * ( rflux_LW * VFGS                  &
                      + EPSB * VFGW * STB * TB**4  &
@@ -1191,7 +1191,7 @@ contains
 
       QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
       QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      QC     =  QC2 / QC1
+      QC     =  max( QC2 / ( QC1 + EPS ), 0.0_RP )
 
     enddo
 
@@ -1503,6 +1503,7 @@ contains
   !  PSIH:  = PSIT of LSM
   subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        CPdry => CONST_CPdry ! CPP : heat capacity of dry air [J/K/kg]
     implicit none
 
@@ -1581,8 +1582,8 @@ contains
     if( US <= 0.01_RP ) US = 0.01_RP
     TS = 0.4_RP * (TA-TSF) / PSIH       ! T*
 
-    CD    = US * US / UA**2             ! CD
-    CH    = 0.4_RP * US / PSIH / UA     ! CH
+    CD    = US * US / (UA+EPS)**2         ! CD
+    CH    = 0.4_RP * US / PSIH / (UA+EPS) ! CH
     !ALPHA = RHO * CPdry * 0.4_RP * US / PSIH  ! RHO*CP*CH*U
 
     return
