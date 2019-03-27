@@ -60,6 +60,8 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, allocatable, target :: ZERO(:,:,:)
   real(RP), private, pointer     :: RHOQ_tn(:,:,:)
 
+  real(RP), private, allocatable :: DENS_damp(:,:,:)
+
   ! flux
   real(RP), private, allocatable, target :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
   real(RP), private, allocatable         :: tflx(:,:,:,:) ! rho * theta * vel(x,y,z) * GSQRT / mapf
@@ -77,6 +79,8 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   integer :: I_COMM_MOMX_t = 3
   integer :: I_COMM_MOMY_t = 4
   integer :: I_COMM_RHOT_t = 5
+
+  integer :: I_COMM_DENS_damp = 6
 
   integer, allocatable :: I_COMM_RHOQ_t(:)
   integer, allocatable :: I_COMM_QTRC(:)
@@ -154,6 +158,8 @@ contains
     allocate( RHOT_t(KA,IA,JA) )
     allocate( RHOQ_t(KA,IA,JA,QA) )
 
+    allocate( DENS_damp(KA,IA,JA) )
+
     allocate( mflx(KA,IA,JA,3) )
     allocate( tflx(KA,IA,JA,3) )
 
@@ -184,6 +190,8 @@ contains
        call COMM_vars8_init( 'RHOQ_t', RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
        call COMM_vars8_init( 'QTRC',   QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
     end do
+
+    call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_damp )
 
     call COMM_vars8_init( 'mflx_Z', mflx(:,:,:,ZDIR), I_COMM_mflx_z )
     call COMM_vars8_init( 'mflx_X', mflx(:,:,:,XDIR), I_COMM_mflx_x )
@@ -790,7 +798,7 @@ contains
     call PROF_rapend  ("DYN_Large_Boundary", 2)
 
 
-!OCL XIFLL
+!OCL XFILL
     !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
@@ -803,6 +811,52 @@ contains
     end do
     end do
     end do
+
+!OCL XFILL
+    do j = 1, JA
+    do i = 1, ISB-1
+    do k = 1, KA
+       DENS_damp(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    do i = IEB+1, IA
+    do k = 1, KA
+       DENS_damp(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+!OCL XFILL
+    do j = 1, JSB-1
+    do i = 1, IA
+    do k = 1, KA
+       DENS_damp(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+!OCL XFILL
+    do j = JEB+1, JA
+    do i = 1, IA
+    do k = 1, KA
+       DENS_damp(k,i,j) = 0.0_RP
+    enddo
+    enddo
+    enddo
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+       DENS_damp(   1:KS-1,i,j) = 0.0_RP
+       DENS_damp(KE+1:KA  ,i,j) = 0.0_RP
+    enddo
+    enddo
+
+!OCL XFILL
+    do j = JS, JE
+    do i = IS, IE
+       DENS_t(   1:KS-1,i,j) = 0.0_RP
+       DENS_t(KE+1:KA  ,i,j) = 0.0_RP
+    enddo
+    enddo
+
 
     do step = 1, nstep
 
@@ -822,32 +876,27 @@ contains
 
        call FILE_HISTORY_query( HIST_damp(1), do_put )
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k,damp) &
+       !$omp private(i,j,k) &
        !$omp shared(JS,JE,IS,IE,KS,KE) &
        !$omp shared(DAMP_alpha_DENS,diff,DENS_tq,DENS_t,DENS_tp,BND_SMOOTHER_FACT,EPS) &
-       !$omp shared(damp_t_DENS,do_put,nstep)
+       !$omp shared(damp_t_DENS,DENS_damp,do_put,nstep)
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          damp = - DAMP_alpha_DENS(k,i,j) &
+          DENS_damp(k,i,j) = - DAMP_alpha_DENS(k,i,j) &
                * ( diff(k,i,j) & ! rayleigh damping
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
                + DENS_tq(k,i,j) * ( 0.5_RP - sign( 0.5_RP, DAMP_alpha_DENS(k,i,j)-EPS ) ) ! dencity change due to rayleigh damping for tracers
           DENS_t(k,i,j) = DENS_tp(k,i,j) & ! tendency from physical step
-                        + damp
-          if ( do_put ) damp_t_DENS(k,i,j) = damp_t_DENS(k,i,j) + damp / nstep
+                        + DENS_damp(k,i,j)
+          if ( do_put ) damp_t_DENS(k,i,j) = damp_t_DENS(k,i,j) + DENS_damp(k,i,j) / nstep
        enddo
        enddo
        enddo
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          DENS_t(   1:KS-1,i,j) = 0.0_RP
-          DENS_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
+
+       call COMM_vars8( DENS_damp(:,:,:), I_COMM_DENS_damp )
        call COMM_vars8( DENS_t(:,:,:), I_COMM_DENS_t )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -864,6 +913,7 @@ contains
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
        !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DENS_damp,DENS,MOMZ) &
        !$omp shared(DAMP_alpha_VELZ,diff,BND_SMOOTHER_FACT,MOMZ_t,MOMZ_tp) &
        !$omp shared(damp_t_MOMZ,do_put,nstep)
 !OCL XFILL
@@ -876,7 +926,8 @@ contains
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
 
           MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
-                        + damp
+                        + damp &
+                        + ( DENS_damp(k,i,j) + DENS_damp(k+1,i,j) ) * MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k,i,j) )
           if ( do_put ) damp_t_MOMZ(k,i,j) = damp_t_MOMZ(k,i,j) + damp / nstep
        enddo
        enddo
@@ -889,6 +940,8 @@ contains
        enddo
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
+
+       call COMM_wait( DENS_damp(:,:,:), I_COMM_DENS_damp, .false. )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -905,6 +958,7 @@ contains
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
        !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DENS_damp,DENS,MOMX) &
        !$omp shared(DAMP_alpha_VELX,diff,BND_SMOOTHER_FACT,MOMX_tp,MOMX_t) &
        !$omp shared(damp_t_MOMX,do_put,nstep)
        do j = JS, JE
@@ -915,7 +969,8 @@ contains
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMX_t(k,i,j) = MOMX_tp(k,i,j) & ! tendency from physical step
-                        + damp
+                        + damp &
+                        + ( DENS_damp(k,i,j) + DENS_damp(k,i+1,j) ) * MOMX(k,i,j) / ( DENS(k,i,j) + DENS(k,i+1,j) )
           if ( do_put ) damp_t_MOMX(k,i,j) = damp_t_MOMX(k,i,j) + damp / nstep
        enddo
        enddo
@@ -944,6 +999,7 @@ contains
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
        !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DENS_damp,DENS,MOMY) &
        !$omp shared(DAMP_alpha_VELY,diff,BND_SMOOTHER_FACT,MOMY_tp,MOMY_t) &
        !$omp shared(damp_t_MOMY,do_put,nstep)
        do j = JS, JE
@@ -954,7 +1010,8 @@ contains
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
-                        + damp
+                        + damp &
+                        + ( DENS_damp(k,i,j) + DENS_damp(k,i,j+1) ) * MOMY(k,i,j) / ( DENS(k,i,j) + DENS(i,i,j+1) )
           if ( do_put ) damp_t_MOMY(k,i,j) = damp_t_MOMY(k,i,j) + damp / nstep
        enddo
        enddo
@@ -983,6 +1040,7 @@ contains
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,j,k,damp) &
        !$omp shared(JS,JE,IS,IE,KS,KE) &
+       !$omp shared(DENS_damp,DENS,RHOT) &
        !$omp shared(DAMP_alpha_POTT,diff,BND_SMOOTHER_FACT,RHOT_t,RHOT_tp) &
        !$omp shared(damp_t_RHOT,do_put,nstep)
        do j = JS, JE
@@ -993,7 +1051,8 @@ contains
                  - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           RHOT_t(k,i,j) = RHOT_tp(k,i,j) & ! tendency from physical step
-                        + damp
+                        + damp &
+                        + DENS_damp(k,i,j) * RHOT(k,i,j) / DENS(k,i,j)
           if ( do_put ) damp_t_RHOT(k,i,j) = damp_t_RHOT(k,i,j) + damp / nstep
        enddo
        enddo

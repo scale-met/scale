@@ -89,7 +89,7 @@ DEF_Z=(
           23019.2383, 24019.2383, 25019.2383, 26019.2383, 27019.2383,"
 ) # required num. of parameters for each domain
 
-BUFFER_DZ=( "5000.0"   ) # required parameters for each domain
+BUFFER_DZ=( "0.0"      ) # required parameters for each domain
 BUFFER_DX=( "140000.0" ) # required parameters for each domain
 BUFFER_DY=( "140000.0" ) # required parameters for each domain
 
