@@ -893,7 +893,7 @@ contains
           end if
           if ( BND_QA > 0 .and. ATMOS_BOUNDARY_USE_QV ) then
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-          else
+          else if ( BND_QA > 0 ) then
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = 0.0_RP
           end if
           do iq = 2, BND_QA
