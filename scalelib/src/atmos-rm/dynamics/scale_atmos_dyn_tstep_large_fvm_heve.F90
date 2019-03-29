@@ -1011,7 +1011,7 @@ contains
                  * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
           MOMY_t(k,i,j) = MOMY_tp(k,i,j) & ! tendency from physical step
                         + damp &
-                        + ( DENS_damp(k,i,j) + DENS_damp(k,i,j+1) ) * MOMY(k,i,j) / ( DENS(k,i,j) + DENS(i,i,j+1) )
+                        + ( DENS_damp(k,i,j) + DENS_damp(k,i,j+1) ) * MOMY(k,i,j) / ( DENS(k,i,j) + DENS(k,i,j+1) )
           if ( do_put ) damp_t_MOMY(k,i,j) = damp_t_MOMY(k,i,j) + damp / nstep
        enddo
        enddo
