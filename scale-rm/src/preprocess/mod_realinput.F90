@@ -100,10 +100,10 @@ module mod_realinput
   real(RP), private, allocatable :: omask_org(:,:)
 
   integer,  private, parameter   :: itp_nv = 2
-  integer,  private              :: itp_nh_a = 4  ! for atmos
-  integer,  private              :: itp_nh_l = 4  ! for land
-  integer,  private              :: itp_nh_o = 4  ! for ocean
-  integer,  private              :: itp_nh_ol = 5 ! for ocean-land
+  integer,  private              :: itp_nh_a  = 4 ! for atmos
+  integer,  private              :: itp_nh_l  = 4 ! for land
+  integer,  private              :: itp_nh_o  = 4 ! for ocean
+  integer,  private              :: itp_nh_ol = 4 ! for ocean-land
 
   integer,  private, parameter   :: I_intrp_linear = 0
   integer,  private, parameter   :: I_intrp_dstwgt = 1
@@ -120,6 +120,12 @@ module mod_realinput
   integer,  private, allocatable :: oigrd (:,:,:)
   integer,  private, allocatable :: ojgrd (:,:,:)
   real(RP), private, allocatable :: ohfact(:,:,:)
+
+  logical,  private              :: ol_interp
+  real(RP), private, allocatable :: hfact_ol(:,:,:)
+  integer,  private, allocatable :: igrd_ol (:,:,:)
+  integer,  private, allocatable :: jgrd_ol (:,:,:)
+
 
   logical,  private              :: serial_atmos
   logical,  private              :: serial_land
@@ -659,10 +665,10 @@ contains
 
     select case( INTRP_TYPE )
     case ( "LINEAR" )
-       itp_nh_l = 4
+       itp_nh_l  = 4
        itp_type_l = I_intrp_linear
     case ( "DIST-WEIGHT" )
-       itp_nh_l = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_nh_l  = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_l = I_intrp_dstwgt
     case default
        LOG_ERROR("REALINPUT_surface",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
@@ -706,10 +712,12 @@ contains
 
     select case( INTRP_TYPE )
     case ( "LINEAR" )
-       itp_nh_o = 4
+       itp_nh_o  = 4
+       itp_nh_ol = 4
        itp_type_o = I_intrp_linear
     case ( "DIST-WEIGHT" )
-       itp_nh_o = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_nh_o  = COMM_CARTESC_NEST_INTERP_LEVEL
+       itp_nh_ol = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_o = I_intrp_dstwgt
     case default
        LOG_ERROR("REALINPUT_surface",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
@@ -1978,7 +1986,6 @@ contains
     endif
 
     LOG_INFO("ParentSurfaceSetup",*) 'Horizontal Interpolation Level: ', COMM_CARTESC_NEST_INTERP_LEVEL
-    itp_nh_ol = COMM_CARTESC_NEST_INTERP_LEVEL
 
 
     if( serial_land ) then
@@ -2176,6 +2183,10 @@ contains
     allocate( ojgrd (IA,JA,itp_nh_o) )
     allocate( ohfact(IA,JA,itp_nh_o) )
 
+    allocate( hfact_ol(odims(1),odims(2),itp_nh_ol) )
+    allocate( igrd_ol (odims(1),odims(2),itp_nh_ol) )
+    allocate( jgrd_ol (odims(1),odims(2),itp_nh_ol) )
+
     return
   end subroutine ParentSurfaceSetup
 
@@ -2312,13 +2323,6 @@ contains
     real(RP) :: oX_org   (         odims(1),odims(2))
     real(RP) :: oY_org   (         odims(1),odims(2))
     logical  :: zonal, pole
-
-    ! interpolation
-    logical  :: ol_interp
-
-    real(RP) :: hfact_ol(odims(1),odims(2),itp_nh_ol)
-    integer  :: igrd_ol (odims(1),odims(2),itp_nh_ol)
-    integer  :: jgrd_ol (odims(1),odims(2),itp_nh_ol)
 
     real(RP) :: Qdry, Rtot, CVtot, CPtot
     real(RP) :: temp, pres
@@ -2655,6 +2659,8 @@ contains
        do i = 1, ldims(2)
           if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
              work(i,j) = lst_org(i,j) + topo_org(i,j) * LAPS
+          else
+             work(i,j) = lst_org(i,j)
           end if
        end do
        end do
