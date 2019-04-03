@@ -547,7 +547,7 @@ contains
           URBAN_TB(i,j) = URBAN_TB(i,j) + URBAN_TB_t(i,j) * dt
           URBAN_TG(i,j) = URBAN_TG(i,j) + URBAN_TG_t(i,j) * dt
           URBAN_TC(i,j) = URBAN_TC(i,j) + URBAN_TC_t(i,j) * dt
-          URBAN_QC(i,j) = URBAN_QC(i,j) + URBAN_QC_t(i,j) * dt
+          URBAN_QC(i,j) = max( URBAN_QC(i,j) + URBAN_QC_t(i,j) * dt, 0.0_RP )
           URBAN_UC(i,j) = URBAN_UC(i,j) + URBAN_UC_t(i,j) * dt
           URBAN_RAINR(i,j) = URBAN_RAINR(i,j) + URBAN_RAINR_t(i,j) * dt
           URBAN_RAINB(i,j) = URBAN_RAINB(i,j) + URBAN_RAINB_t(i,j) * dt
