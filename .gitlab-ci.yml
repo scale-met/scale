@@ -22,7 +22,7 @@ single:
   script:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
     - cd scale-rm/src
-    - SCALE_ENABLE_SINGLEFP=T make -j 4
+    - SCALE_USE_SINGLEFP=T make -j 4
 
 openmp:
   stage: build
