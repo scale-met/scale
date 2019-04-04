@@ -1397,7 +1397,7 @@ contains
                               ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
+          RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QTRC(KS:KE,IS:IE,JS:JE,iq)
 
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  RHOQ(:,:,:), TRACER_NAME(iq),       & ! (in)
