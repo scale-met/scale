@@ -342,7 +342,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    do k = 1, Kstr
+    do k = KS, Kstr
        DENS_p1D(k) = DENS(k)
        TEMP_p1D(k) = TEMP(k)
        QV_p1D  (k) = QV  (k)

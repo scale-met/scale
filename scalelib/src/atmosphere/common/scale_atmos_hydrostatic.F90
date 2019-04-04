@@ -687,11 +687,8 @@ contains
        temp(k) = pres(k) / ( dens(k) * Rtot(k) )
     enddo
 
-    dens(   1:KS-1) = dens(KS)
     dens(KE+1:KA  ) = dens(KE)
-    pres(   1:KS-1) = pres(KS)
     pres(KE+1:KA  ) = pres(KE)
-    temp(   1:KS-1) = temp(KS)
     temp(KE+1:KA  ) = temp(KE)
 
     return
@@ -810,11 +807,8 @@ contains
     enddo
 
     dens(   1:KS-1) = dens(KS)
-    dens(KE+1:KA  ) = dens(KE)
     pres(   1:KS-1) = pres(KS)
-    pres(KE+1:KA  ) = pres(KE)
     temp(   1:KS-1) = temp(KS)
-    temp(KE+1:KA  ) = temp(KE)
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D
