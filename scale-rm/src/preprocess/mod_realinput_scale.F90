@@ -195,8 +195,6 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
        THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
-    use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_hydrometeor, only: &
        N_HYD,    &
        HYD_NAME, &
@@ -268,12 +266,16 @@ contains
                        aggregate=.false., rankid=rank ) ! (in)
 
        call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
+       if ( existed_t2 ) then
 !OCL XFILL
-       if ( existed_t2 ) tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+          tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+       end if
 
        call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
+       if ( existed_mslp ) then
 !OCL XFILL
-       if ( existed_mslp ) pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+          pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+       end if
 
        call FILE_CARTESC_read( fid, "DENS", read3D(:,:,:), step=it )
 !OCL XFILL
@@ -296,11 +298,6 @@ contains
 !OCL XFILL
        rhot_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-!OCL XFILL
-       do iq = 1, N_HYD
-          qhyd_org(:,xs:xe,ys:ye,iq) = 0.0_RP
-          qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
-       end do
 
        if ( same_mptype ) then
 
@@ -315,6 +312,12 @@ contains
           enddo
 
        else
+
+!OCL XFILL
+          do iq = 1, N_HYD
+             qhyd_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+             qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+          end do
 
           call FILE_CARTESC_read( fid, "QV", read3D(:,:,:), step=it, existed=existed )
           if ( existed ) then
@@ -422,6 +425,12 @@ contains
     !!! must be rotate !!!
 
 
+    do iq = 1, size(qtrc_org,4)
+       if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
+!OCL XFILL
+       qtrc_org(:,:,:,iq) = 0.0_RP
+    end do
+
     if ( QA_MP > 0 .AND. .NOT. same_mptype ) then
        call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
                                            qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
@@ -438,18 +447,15 @@ contains
     do i = 1, dims(2)
 
        ! diagnose temp and pres
-       do k = 3, dims(1)+2
+       call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA,                             & ! [IN]
+                                     qtrc_org(:,i,j,:),                                       & ! [IN]
+                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                     qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
 
-          call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA,                             & ! [IN]
-                                        qtrc_org(:,i,j,:),                                       & ! [IN]
-                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                        qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
-
-          call THERMODYN_rhot2temp_pres( dims(1)+2, 3, dims(1)+2,                              & ! [IN]
-                                         dens_org(:,i,j), rhot_org(:,i,j), Rtot, CVtot, CPtot, & ! [IN]
-                                         temp_org(:), pres_org(:,i,j)                          ) ! [OUT]
-
-       end do
+       call THERMODYN_rhot2temp_pres( dims(1), 1, dims(1),                                       & ! [IN]
+                                      dens_org(3:dims(1)+2,i,j), rhot_org(3:dims(1)+2,i,j),      & ! [IN]
+                                      Rtot(3:dims(1)+2), CVtot(3:dims(1)+2), CPtot(3:dims(1)+2), & ! [IN]
+                                      temp_org(3:dims(1)+2), pres_org(3:dims(1)+2,i,j)           ) ! [OUT]
 
 !OCL XFILL
        do k = 3, dims(1)+2
@@ -469,14 +475,14 @@ contains
 
        ! at the sea-level
        temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
-       if ( .not. existed_mslp ) then
+       if ( existed_mslp ) then
+          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+       else
           dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
                           / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
           pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
           pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
-       else
-          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
-          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
        end if
 
     end do
