@@ -538,26 +538,45 @@ contains
                                      mynn_level3,               & ! (in)
                                      betat(:), betaq(:)         ) ! (out)
 
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
+             us = max(us3, 0.0_RP)**(1.0_RP/3.0_RP)
+             !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
+             rl_mo = 1.0_RP / sign( max(abs(l_mo(i,j)), EPS), l_mo(i,j) )
+             zeta = z1 * rl_mo
+
+!!$             ! Businger et al. (1971)
+!!$             if ( zeta >= 0 ) then
+!!$                phi_m = 4.7_RP * zeta + 1.0_RP
+!!$                phi_h = 4.7_RP * zeta + 0.74_RP
+!!$             else
+!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+!!$                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
+!!$             end if
+
+             ! Beljaars and Holtslag (1991)
+             if ( zeta >= 0 ) then
+                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
+                phi_m = tmp * zeta + zeta + 1.0_RP
+                phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
+!!$             else
+!!$                tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+!!$                phi_m = 1.0_RP / sqrt(tmp)
+!!$                phi_h = 1.0_RP / tmp
+             end if
+
+             ! Wilson (2001)
+             if ( zeta < 0 ) then
+                tmp = (-zeta)**(2.0_RP/3.0_RP)
+                phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
+                phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
+             end if
+
+          end if
+
           if ( mynn_level3 ) then
 
              if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
-                ! production at KS
-                us = max(-l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
-                !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
-                rl_mo = 1.0_RP / sign( max(abs(l_mo(i,j)), EPS), l_mo(i,j) )
-                zeta = z1 * rl_mo
-!!$                ! Businger et al. (1971)
-!!$                if ( zeta > 0 ) then
-!!$                   phi_h = 4.7_RP * z1 * rl_mo / 0.74_RP + 1.0_RP
-!!$                else
-!!$                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 * rl_mo )
-!!$                end if
-                ! Beljaars and Holtslag (1991)
-                if ( zeta > 0 ) then
-                   phi_h = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
-                else
-                   phi_h = 1.0_RP / sqrt( 1.0_RP - 16.0_RP * zeta )
-                end if
                 ! TSQ
                 prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
                 ! QSQ
@@ -673,6 +692,13 @@ contains
              end if
           end do
 
+          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             Nu(KS,i,j) = KARMAN * CDZ(KS) * us / phi_m
+             Kh(KS,i,j) = KARMAN * CDZ(KS) * us / phi_h
+             Nu_cg(KS,i,j) = 0.0_RP
+             Kh_cg(KS,i,j) = 0.0_RP
+          end if
+
           do k = KS, KE_PBL-1
              sw = 0.5_RP - sign(0.5_RP, abs(Kh(k,i,j)) - EPS)
              Pr(k,i,j) = Nu(k,i,j) / ( Kh(k,i,j) + sw ) * ( 1.0_RP - sw ) &
@@ -686,7 +712,6 @@ contains
              RHOKh (k) = tmp * Kh   (k,i,j)
              RHOKhc(k) = tmp * Kh_cg(k,i,j)
           end do
-
 
           ! time integration
 
@@ -836,24 +861,7 @@ contains
                                              - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
           if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
-             ! production at KS
-             us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
-             rl_mo = 1.0_RP / sign( max( abs(l_mo(i,j)),EPS ), l_mo(i,j) )
-             !us3 = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )**3
-             zeta = z1 * rl_mo
-!!$             ! Businger et al. (1971)
-!!$             if ( zeta > 0 ) then
-!!$                phi_m = 4.7_RP * zeta + 1.0_RP
-!!$             else
-!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-!!$             end if
-             ! Beljaars and Holtslag (1991)
-             if ( zeta > 0 ) then
-                phi_m = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * zeta * exp(-0.35_RP*zeta) + zeta + 1.0_RP
-             else
-                phi_m = 1.0_RP / sqrt(sqrt(1.0_RP - 16.0_RP * zeta))
-             end if
-             prod(KS,i,j) = us3 * ( phi_m - zeta ) / ( KARMAN * z1 )
+             prod(KS,i,j) = us3 * phi_m / ( KARMAN * z1 )
           end if
 
           do k = KS, KE_PBL
