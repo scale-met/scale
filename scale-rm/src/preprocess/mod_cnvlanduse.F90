@@ -54,7 +54,6 @@ module mod_cnvlanduse
   real(RP), private :: DOMAIN_LATS, DOMAIN_LATE
   real(RP), private :: DOMAIN_LONS, DOMAIN_LONE
   real(RP), private :: DOMAIN_DLAT
-  real(RP), private, allocatable :: DOMAIN_DXY(:,:)
 
   real(RP), private, parameter :: d_large = 1e20_RP
   !-----------------------------------------------------------------------------
@@ -163,8 +162,7 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
        LONUY => ATMOS_GRID_CARTESC_REAL_LONUY, &
-       DLAT  => ATMOS_GRID_CARTESC_REAL_DLAT,  &
-       AREA  => ATMOS_GRID_CARTESC_REAL_AREA
+       DLAT  => ATMOS_GRID_CARTESC_REAL_DLAT
     implicit none
 
     real(RP) :: PFT_weight(-2:LANDUSE_PFT_nmax,IA,JA)
@@ -188,13 +186,6 @@ contains
        DOMAIN_LONS = minval( LONUY(:,:) )
        DOMAIN_LONE = maxval( LONUY(:,:) )
        DOMAIN_DLAT = maxval( DLAT(:,:) )
-
-       allocate( DOMAIN_DXY(IA,JA) )
-       do j = 1, JA
-       do i = 1, IA
-          DOMAIN_DXY(i,j) = sqrt( AREA(i,j) )
-       end do
-       end do
 
        LOG_INFO("CNVLANDUSE",*) 'Domain Information'
        LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
@@ -220,8 +211,6 @@ contains
        if ( CNVLANDUSE_UseJIBIS ) then
           call CNVLANDUSE_JIBIS( PFT_weight(:,:,:) ) ! [INOUT]
        endif
-
-       deallocate( DOMAIN_DXY )
 
        !$omp parallel do &
        !$omp private(lake_wgt,ocean_wgt,urban_wgt,land_wgt,allsum,zerosw,PFT_idx)

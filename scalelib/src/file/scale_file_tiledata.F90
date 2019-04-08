@@ -336,6 +336,7 @@ contains
        min_value,            &
        yrevers               )
     use scale_const, only: &
+       UNDEF  => CONST_UNDEF, &
        UNDEF2 => CONST_UNDEF2, &
        PI    => CONST_PI, &
        D2R   => CONST_D2R
@@ -415,6 +416,8 @@ contains
     do j = 1, nLATH
     do i = 1, nLONH
        DATA(i,j) = - 1
+       LATH(i,j) = UNDEF
+       LONH(i,j) = UNDEF
     end do
     end do
 
@@ -441,31 +444,31 @@ contains
        !$omp parallel do &
        !$omp private(i,j)
        do jj = 1, jsize
-       do ii = 1, isize
-          i = TILE_IS(t) + ii - 1
           j = TILE_JS(t) + jj - 1
           if ( jsh <= j .and. j <= jeh ) then
-             if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_DATA(ii,jj) < min_value_ ) then
-                   DATA(i-ish+1,j-jsh+1) = UNDEF2
-                else
-                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+             do ii = 1, isize
+                i = TILE_IS(t) + ii - 1
+                if ( ish <= i .and. i <= ieh ) then
+                   if ( TILE_DATA(ii,jj) < min_value_ ) then
+                      DATA(i-ish+1,j-jsh+1) = UNDEF2
+                   else
+                      DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                   end if
+                   LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                   LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
                 end if
-                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
-             end if
-             i = i - GLOBAL_IA
-             if ( ish <= i .and. i <= ieh ) then
-                if ( TILE_DATA(ii,jj) < min_value_ ) then
-                   DATA(i-ish+1,j-jsh+1) = UNDEF2
-                else
-                   DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                i = i - GLOBAL_IA
+                if ( ish <= i .and. i <= ieh ) then
+                   if ( TILE_DATA(ii,jj) < min_value_ ) then
+                      DATA(i-ish+1,j-jsh+1) = UNDEF2
+                   else
+                      DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
+                   end if
+                   LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
+                   LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
                 end if
-                LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
-             end if
+             end do
           end if
-       end do
        end do
 
        deallocate( TILE_DATA )
