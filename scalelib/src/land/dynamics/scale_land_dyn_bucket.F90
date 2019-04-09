@@ -326,7 +326,7 @@ contains
       end do
       end do
 
-      call MATRIX_SOLVER_tridiagonal( LKMAX,         & ! [IN]
+      call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, & ! [IN]
                                       LIA, LIS, LIE, & ! [IN]
                                       LJA, LJS, LJE, & ! [IN]
                                       U     (:,:,:), & ! [IN]
@@ -403,7 +403,7 @@ contains
       end do
       end do
 
-      call MATRIX_SOLVER_tridiagonal( LKMAX,         & ! [IN]
+      call MATRIX_SOLVER_tridiagonal( LKMAX, 1, LKMAX, & ! [IN]
                                       LIA, LIS, LIE, & ! [IN]
                                       LJA, LJS, LJE, & ! [IN]
                                       U    (:,:,:),  & ! [IN]

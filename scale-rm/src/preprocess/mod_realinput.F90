@@ -99,7 +99,6 @@ module mod_realinput
   real(RP), private, allocatable :: olat_org (:,:)
   real(RP), private, allocatable :: omask_org(:,:)
 
-  integer,  private, parameter   :: itp_nv = 2
   integer,  private              :: itp_nh_a  = 4 ! for atmos
   integer,  private              :: itp_nh_l  = 4 ! for land
   integer,  private              :: itp_nh_o  = 4 ! for ocean
@@ -115,7 +114,7 @@ module mod_realinput
   integer,  private, allocatable :: jgrd (    :,:,:)
   real(RP), private, allocatable :: hfact(    :,:,:)
   integer,  private, allocatable :: kgrd (:,:,:,:,:)
-  real(RP), private, allocatable :: vfact(:,:,:,:,:)
+  real(RP), private, allocatable :: vfact(:,  :,:,:)
 
   integer,  private, allocatable :: oigrd (:,:,:)
   integer,  private, allocatable :: ojgrd (:,:,:)
@@ -1102,11 +1101,11 @@ contains
     allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
 
 
-    allocate( igrd (          IA,JA,itp_nh_a) )
-    allocate( jgrd (          IA,JA,itp_nh_a) )
-    allocate( hfact(          IA,JA,itp_nh_a) )
-    allocate( kgrd (KA,itp_nv,IA,JA,itp_nh_a) )
-    allocate( vfact(KA,itp_nv,IA,JA,itp_nh_a) )
+    allocate( igrd (     IA,JA,itp_nh_a) )
+    allocate( jgrd (     IA,JA,itp_nh_a) )
+    allocate( hfact(     IA,JA,itp_nh_a) )
+    allocate( kgrd (KA,2,IA,JA,itp_nh_a) )
+    allocate( vfact(KA,  IA,JA,itp_nh_a) )
 
 
     return
@@ -1335,6 +1334,8 @@ contains
        end select
 
        if ( .not. same_mptype_ ) then
+          QTRC_org(:,:,:,:QS_MP-1) = 0.0_RP
+          QTRC_org(:,:,:,QE_MP+1:) = 0.0_RP
           call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
                                               QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                               QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
@@ -1429,7 +1430,7 @@ contains
                                 jgrd   (    :,:,:),      & ! [OUT]
                                 hfact  (    :,:,:),      & ! [OUT]
                                 kgrd   (:,:,:,:,:),      & ! [OUT]
-                                vfact  (:,:,:,:,:),      & ! [OUT]
+                                vfact  (:,  :,:,:),      & ! [OUT]
                                 zonal = zonal,           & ! [IN]
                                 pole  = pole             ) ! [IN]
 
@@ -1449,7 +1450,7 @@ contains
                                 jgrd   (    :,:,:),      & ! [OUT]
                                 hfact  (    :,:,:),      & ! [OUT]
                                 kgrd   (:,:,:,:,:),      & ! [OUT]
-                                vfact  (:,:,:,:,:)       ) ! [OUT]
+                                vfact  (:,  :,:,:)       ) ! [OUT]
 
        end select
 
@@ -1459,13 +1460,15 @@ contains
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
-                          igrd    (    :,:,:),         & ! [IN]
-                          jgrd    (    :,:,:),         & ! [IN]
-                          hfact   (    :,:,:),         & ! [IN]
-                          kgrd    (:,:,:,:,:),         & ! [IN]
-                          vfact   (:,:,:,:,:),         & ! [IN]
-                          W_org   (:,:,:),             & ! [IN]
-                          W       (:,:,:)              ) ! [OUT]
+                          igrd  (    :,:,:), & ! [IN]
+                          jgrd  (    :,:,:), & ! [IN]
+                          hfact (    :,:,:), & ! [IN]
+                          kgrd  (:,:,:,:,:), & ! [IN]
+                          vfact (:,  :,:,:), & ! [IN]
+                          CZ_org(:,:,:),     & ! [IN]
+                          CZ    (:,:,:),     & ! [IN]
+                          W_org (:,:,:),     & ! [IN]
+                          W     (:,:,:)      ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               W(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1478,13 +1481,15 @@ contains
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
-                          igrd    (    :,:,:),         & ! [IN]
-                          jgrd    (    :,:,:),         & ! [IN]
-                          hfact   (    :,:,:),         & ! [IN]
-                          kgrd    (:,:,:,:,:),         & ! [IN]
-                          vfact   (:,:,:,:,:),         & ! [IN]
-                          U_org   (:,:,:),             & ! [IN]
-                          U       (:,:,:)              ) ! [OUT]
+                          igrd  (    :,:,:), & ! [IN]
+                          jgrd  (    :,:,:), & ! [IN]
+                          hfact (    :,:,:), & ! [IN]
+                          kgrd  (:,:,:,:,:), & ! [IN]
+                          vfact (:,  :,:,:), & ! [IN]
+                          CZ_org(:,:,:),     & ! [IN]
+                          CZ    (:,:,:),     & ! [IN]
+                          U_org (:,:,:),     & ! [IN]
+                          U     (:,:,:)      ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               U(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1496,13 +1501,15 @@ contains
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
-                          igrd    (    :,:,:),         & ! [IN]
-                          jgrd    (    :,:,:),         & ! [IN]
-                          hfact   (    :,:,:),         & ! [IN]
-                          kgrd    (:,:,:,:,:),         & ! [IN]
-                          vfact   (:,:,:,:,:),         & ! [IN]
-                          V_org   (:,:,:),             & ! [IN]
-                          V       (:,:,:)              ) ! [OUT]
+                          igrd  (    :,:,:), & ! [IN]
+                          jgrd  (    :,:,:), & ! [IN]
+                          hfact (    :,:,:), & ! [IN]
+                          kgrd  (:,:,:,:,:), & ! [IN]
+                          vfact (:,  :,:,:), & ! [IN]
+                          CZ_org(:,:,:),     & ! [IN]
+                          CZ    (:,:,:),     & ! [IN]
+                          V_org (:,:,:),     & ! [IN]
+                          V     (:,:,:)      ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               V(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1585,13 +1592,15 @@ contains
                           dims(1)+2, dims(2), dims(3), & ! [IN]
                           KA, KS, KE,                  & ! [IN]
                           IA, JA,                      & ! [IN]
-                          igrd    (    :,:,:),         & ! [IN]
-                          jgrd    (    :,:,:),         & ! [IN]
-                          hfact   (    :,:,:),         & ! [IN]
-                          kgrd    (:,:,:,:,:),         & ! [IN]
-                          vfact   (:,:,:,:,:),         & ! [IN]
-                          POTT_org(:,:,:),             & ! [IN]
-                          POTT    (:,:,:)              ) ! [OUT]
+                          igrd    (    :,:,:), & ! [IN]
+                          jgrd    (    :,:,:), & ! [IN]
+                          hfact   (    :,:,:), & ! [IN]
+                          kgrd    (:,:,:,:,:), & ! [IN]
+                          vfact   (:,  :,:,:), & ! [IN]
+                          CZ_org  (:,:,:),     & ! [IN]
+                          CZ      (:,:,:),     & ! [IN]
+                          POTT_org(:,:,:),     & ! [IN]
+                          POTT    (:,:,:)      ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               POTT(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1611,13 +1620,15 @@ contains
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
-                             igrd    (    :,:,:),         & ! [IN]
-                             jgrd    (    :,:,:),         & ! [IN]
-                             hfact   (    :,:,:),         & ! [IN]
-                             kgrd    (:,:,:,:,:),         & ! [IN]
-                             vfact   (:,:,:,:,:),         & ! [IN]
-                             QTRC_org(:,:,:,iq),          & ! [IN]
-                             QTRC    (:,:,:,iq)           ) ! [OUT]
+                             igrd    (    :,:,:), & ! [IN]
+                             jgrd    (    :,:,:), & ! [IN]
+                             hfact   (    :,:,:), & ! [IN]
+                             kgrd    (:,:,:,:,:), & ! [IN]
+                             vfact   (:,  :,:,:), & ! [IN]
+                             CZ_org  (:,:,:),     & ! [IN]
+                             CZ      (:,:,:),     & ! [IN]
+                             QTRC_org(:,:,:,iq),  & ! [IN]
+                             QTRC    (:,:,:,iq)   ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           one(:,:,:) = 1.0_RP
           call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -1640,14 +1651,16 @@ contains
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
-                             igrd    (    :,:,:),         & ! [IN]
-                             jgrd    (    :,:,:),         & ! [IN]
-                             hfact   (    :,:,:),         & ! [IN]
-                             kgrd    (:,:,:,:,:),         & ! [IN]
-                             vfact   (:,:,:,:,:),         & ! [IN]
-                             DENS_org(:,:,:),             & ! [IN]
-                             DENS    (:,:,:),             & ! [OUT]
-                             logwgt = .true.              ) ! [IN, optional]
+                             igrd    (    :,:,:), & ! [IN]
+                             jgrd    (    :,:,:), & ! [IN]
+                             hfact   (    :,:,:), & ! [IN]
+                             kgrd    (:,:,:,:,:), & ! [IN]
+                             vfact   (:,  :,:,:), & ! [IN]
+                             CZ_org  (:,:,:),     & ! [IN]
+                             CZ      (:,:,:),     & ! [IN]
+                             DENS_org(:,:,:),     & ! [IN]
+                             DENS    (:,:,:),     & ! [OUT]
+                             logwgt = .true.      ) ! [IN, optional]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                  DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
@@ -1660,14 +1673,16 @@ contains
                              dims(1)+2, dims(2), dims(3), & ! [IN]
                              KA, KS, KE,                  & ! [IN]
                              IA, JA,                      & ! [IN]
-                             igrd    (    :,:,:),         & ! [IN]
-                             jgrd    (    :,:,:),         & ! [IN]
-                             hfact   (    :,:,:),         & ! [IN]
-                             kgrd    (:,:,:,:,:),         & ! [IN]
-                             vfact   (:,:,:,:,:),         & ! [IN]
-                             PRES_org(:,:,:),             & ! [IN]
-                             PRES    (:,:,:),             & ! [OUT]
-                             logwgt = .true.             ) ! [IN, optional]
+                             igrd    (    :,:,:), & ! [IN]
+                             jgrd    (    :,:,:), & ! [IN]
+                             hfact   (    :,:,:), & ! [IN]
+                             kgrd    (:,:,:,:,:), & ! [IN]
+                             vfact   (:,  :,:,:), & ! [IN]
+                             CZ_org  (:,:,:),     & ! [IN]
+                             CZ      (:,:,:),     & ! [IN]
+                             PRES_org(:,:,:),     & ! [IN]
+                             PRES    (:,:,:),     & ! [OUT]
+                             logwgt = .true.      ) ! [IN, optional]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                  PRES(:,:,:), FILTER_ORDER, FILTER_NITER, &
@@ -3114,11 +3129,11 @@ contains
     real(RP) :: lX_org (ldims(2), ldims(3))
     real(RP) :: lY_org (ldims(2), ldims(3))
     logical  :: zonal, pole
-    integer  :: igrd (       IA,JA,itp_nh_l)
-    integer  :: jgrd (       IA,JA,itp_nh_l)
-    real(RP) :: hfact(       IA,JA,itp_nh_l)
-    real(RP) :: vfactl(LKMAX,IA,JA,itp_nh_l,itp_nv)
-    integer  :: kgrdl (LKMAX,IA,JA,itp_nh_l,itp_nv)
+    integer  :: igrd (         IA,JA,itp_nh_l)
+    integer  :: jgrd (         IA,JA,itp_nh_l)
+    real(RP) :: hfact(         IA,JA,itp_nh_l)
+    integer  :: kgrdl (LKMAX,2,IA,JA,itp_nh_l)
+    real(RP) :: vfactl(LKMAX,  IA,JA,itp_nh_l)
 
 
     real(RP) :: sst_land(ldims(2), ldims(3))
@@ -3276,7 +3291,7 @@ contains
                              jgrd    (    :,:,:),   & ! [OUT]
                              hfact   (    :,:,:),   & ! [OUT]
                              kgrdl   (:,:,:,:,:),   & ! [OUT]
-                             vfactl  (:,:,:,:,:),   & ! [OUT]
+                             vfactl  (:,  :,:,:),   & ! [OUT]
                              flag_extrap = .true.,  & ! [IN, optional]
                              zonal = zonal,         & ! [IN, optional]
                              pole  = pole           ) ! [IN, optional]
@@ -3297,7 +3312,7 @@ contains
                              jgrd    (    :,:,:),   & ! [OUT]
                              hfact   (    :,:,:),   & ! [OUT]
                              kgrdl   (:,:,:,:,:),   & ! [OUT]
-                             vfactl  (:,:,:,:,:),   & ! [OUT]
+                             vfactl  (:,  :,:,:),   & ! [OUT]
                              flag_extrap = .true.   ) ! [IN, optional]
 
     end select
@@ -3435,13 +3450,15 @@ contains
                           ldims(1), ldims(2), ldims(3), & ! [IN]
                           LKMAX, LKS, LKE,              & ! [IN]
                           IA, JA,                       & ! [IN]
-                          igrd  (    :,:,:),            & ! [IN]
-                          jgrd  (    :,:,:),            & ! [IN]
-                          hfact (    :,:,:),            & ! [IN]
-                          kgrdl (:,:,:,:,:),            & ! [IN]
-                          vfactl(:,:,:,:,:),            & ! [IN]
-                          tg_org(:,:,:),                & ! [IN]
-                          tg    (:,:,:)                 ) ! [OUT]
+                          igrd    (    :,:,:), & ! [IN]
+                          jgrd    (    :,:,:), & ! [IN]
+                          hfact   (    :,:,:), & ! [IN]
+                          kgrdl   (:,:,:,:,:), & ! [IN]
+                          vfactl  (:,  :,:,:), & ! [IN]
+                          lz3d_org(:,:,:),     & ! [IN]
+                          lcz_3D  (:,:,:),     & ! [IN]
+                          tg_org  (:,:,:),     & ! [IN]
+                          tg      (:,:,:)      ) ! [OUT]
 
     do j = 1, JA
     do i = 1, IA
@@ -3531,13 +3548,15 @@ contains
                                 ldims(1), ldims(2), ldims(3), & ! [IN]
                                 LKMAX, LKS, LKE,              & ! [IN]
                                 IA, JA,                       & ! [IN]
-                                igrd    (    :,:,:),          & ! [IN]
-                                jgrd    (    :,:,:),          & ! [IN]
-                                hfact   (    :,:,:),          & ! [IN]
-                                kgrdl   (:,:,:,:,:),          & ! [IN]
-                                vfactl  (:,:,:,:,:),          & ! [IN]
-                                smds_org(:,:,:),              & ! [IN]
-                                smds    (:,:,:)               ) ! [OUT]
+                                igrd    (    :,:,:), & ! [IN]
+                                jgrd    (    :,:,:), & ! [IN]
+                                hfact   (    :,:,:), & ! [IN]
+                                kgrdl   (:,:,:,:,:), & ! [IN]
+                                vfactl  (:,  :,:,:), & ! [IN]
+                                lz3d_org(:,:,:),     & ! [IN]
+                                lcz_3D  (:,:,:),     & ! [IN]
+                                smds_org(:,:,:),     & ! [IN]
+                                smds    (:,:,:)      ) ! [OUT]
 
           do k = 1, LKMAX-1
              strg(k,:,:) = convert_WS2VWC( smds(k,:,:), critical=soilwater_DS2VC_flag )
@@ -3566,13 +3585,15 @@ contains
                                 ldims(1), ldims(2), ldims(3), & ! [IN]
                                 LKMAX, LKS, LKE,              & ! [IN]
                                 IA, JA,                       & ! [IN]
-                                igrd    (    :,:,:),          & ! [IN]
-                                jgrd    (    :,:,:),          & ! [IN]
-                                hfact   (    :,:,:),          & ! [IN]
-                                kgrdl   (:,:,:,:,:),          & ! [IN]
-                                vfactl  (:,:,:,:,:),          & ! [IN]
-                                strg_org(:,:,:),              & ! [IN]
-                                strg    (:,:,:)               ) ! [OUT]
+                                igrd    (    :,:,:), & ! [IN]
+                                jgrd    (    :,:,:), & ! [IN]
+                                hfact   (    :,:,:), & ! [IN]
+                                kgrdl   (:,:,:,:,:), & ! [IN]
+                                vfactl  (:,  :,:,:), & ! [IN]
+                                lz3d_org(:,:,:),     & ! [IN]
+                                lcz_3D  (:,:,:),     & ! [IN]
+                                strg_org(:,:,:),     & ! [IN]
+                                strg    (:,:,:)      ) ! [OUT]
        end if
 
        ! replace values over the ocean

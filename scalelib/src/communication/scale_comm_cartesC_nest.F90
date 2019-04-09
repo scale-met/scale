@@ -180,7 +180,6 @@ module scale_comm_cartesC_nest
 
   integer,  parameter :: itp_ng   = 4                       !< # of interpolation kinds of grid point
   integer,  private   :: itp_nh   = 4                       !< # of interpolation kinds of horizontal direction
-  integer,  private   :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
 
   integer,  parameter :: tag_lon   = 1
   integer,  parameter :: tag_lat   = 2
@@ -250,7 +249,7 @@ module scale_comm_cartesC_nest
   integer,  private, allocatable :: jgrd (:,:,:,:)         ! interpolation target grids in y-axis
   real(RP), private, allocatable :: hfact(:,:,:,:)         ! interpolation factor for horizontal direction
   integer,  private, allocatable :: kgrd (:,:,:,:,:,:)     ! interpolation target grids in z-axis
-  real(RP), private, allocatable :: vfact(:,:,:,:,:,:)     ! interpolation factor for vertical direction
+  real(RP), private, allocatable :: vfact(:,  :,:,:,:)     ! interpolation factor for vertical direction
 
   integer(8), private :: nwait_p, nwait_d, nrecv, nsend
 
@@ -495,8 +494,6 @@ contains
        call PRC_abort
     end select
 
-    itp_nv = 2
-
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     if( ONLINE_SPECIFIED_MAXRQ > max_rq ) max_rq = ONLINE_SPECIFIED_MAXRQ
 
@@ -734,8 +731,8 @@ contains
             allocate( igrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
             allocate( jgrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
             allocate( hfact(                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
-            allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),itp_nv,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
-            allocate( vfact(DAUGHTER_KA(HANDLING_NUM),itp_nv,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
+            allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),2,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
+            allocate( vfact(DAUGHTER_KA(HANDLING_NUM),  DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
 
             call COMM_CARTESC_NEST_setup_nestdown( HANDLING_NUM )
 
@@ -771,7 +768,7 @@ contains
                                      jgrd (    :,:,:,I_SCLR),           & ! [OUT]
                                      hfact(    :,:,:,I_SCLR),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_SCLR),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_SCLR)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_SCLR)            ) ! [OUT]
 
                ! for z staggered points
                call INTERP_factor3d( TILEAL_KA(HANDLING_NUM)+1,            & ! [IN]
@@ -793,7 +790,7 @@ contains
                                      jgrd (    :,:,:,I_ZSTG),              & ! [OUT]
                                      hfact(    :,:,:,I_ZSTG),              & ! [OUT]
                                      kgrd (:,:,:,:,:,I_ZSTG),              & ! [OUT]
-                                     vfact(:,:,:,:,:,I_ZSTG)               ) ! [OUT]
+                                     vfact(:,  :,:,:,I_ZSTG)               ) ! [OUT]
 
                ! for x staggered points
                call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
@@ -820,7 +817,7 @@ contains
                                      jgrd (    :,:,:,I_XSTG),           & ! [OUT]
                                      hfact(    :,:,:,I_XSTG),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_XSTG),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_XSTG)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_XSTG)            ) ! [OUT]
 
                ! for y staggered points
                call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
@@ -847,7 +844,7 @@ contains
                                      jgrd (    :,:,:,I_YSTG),           & ! [OUT]
                                      hfact(    :,:,:,I_YSTG),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_YSTG),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_YSTG)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_YSTG)            ) ! [OUT]
 
                deallocate( X_ref, Y_ref )
 
@@ -875,7 +872,7 @@ contains
                                      jgrd (    :,:,:,I_SCLR),            & ! [OUT]
                                      hfact(    :,:,:,I_SCLR),            & ! [OUT]
                                      kgrd (:,:,:,:,:,I_SCLR),            & ! [OUT]
-                                     vfact(:,:,:,:,:,I_SCLR)             ) ! [OUT]
+                                     vfact(:,  :,:,:,I_SCLR)             ) ! [OUT]
 
                ! for z staggered points
                call INTERP_factor3d( itp_nh,                                & ! [IN]
@@ -899,7 +896,7 @@ contains
                                      jgrd (    :,:,:,I_ZSTG),               & ! [OUT]
                                      hfact(    :,:,:,I_ZSTG),               & ! [OUT]
                                      kgrd (:,:,:,:,:,I_ZSTG),               & ! [OUT]
-                                     vfact(:,:,:,:,:,I_ZSTG)                ) ! [OUT]
+                                     vfact(:,  :,:,:,I_ZSTG)                ) ! [OUT]
 
                ! for x staggered points
                call INTERP_factor3d( itp_nh,                                   & ! [IN]
@@ -923,7 +920,7 @@ contains
                                      jgrd (    :,:,:,I_XSTG),                  & ! [OUT]
                                      hfact(    :,:,:,I_XSTG),                  & ! [OUT]
                                      kgrd (:,:,:,:,:,I_XSTG),                  & ! [OUT]
-                                     vfact(:,:,:,:,:,I_XSTG)                   ) ! [OUT]
+                                     vfact(:,  :,:,:,I_XSTG)                   ) ! [OUT]
 
                ! for y staggered points
                call INTERP_factor3d( itp_nh,                                   & ! [IN]
@@ -947,7 +944,7 @@ contains
                                      jgrd (    :,:,:,I_YSTG),                  & ! [OUT]
                                      hfact(    :,:,:,I_YSTG),                  & ! [OUT]
                                      kgrd (:,:,:,:,:,I_YSTG),                  & ! [OUT]
-                                     vfact(:,:,:,:,:,I_YSTG)                   ) ! [OUT]
+                                     vfact(:,  :,:,:,I_YSTG)                   ) ! [OUT]
 
             end select
 
@@ -2470,6 +2467,9 @@ contains
        COMM_datatype
     use scale_interp, only: &
        INTERP_interp3d
+    use scale_atmos_grid_cartesC_real, &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     implicit none
 
     real(RP), intent(in)    :: pvar(:,:,:) !< variable from parent domain (PARENT_KA,PARENT_IA,PARENT_JA / 1,1,1)
@@ -2612,8 +2612,10 @@ contains
                                 jgrd         (    :,:,:,ig), & ! [IN]
                                 hfact        (    :,:,:,ig), & ! [IN]
                                 kgrd         (:,:,:,:,:,ig), & ! [IN]
-                                vfact        (:,:,:,:,:,ig), & ! [IN]
-                                buffer_ref_3D(:,:,:),        & ! [INOUT]
+                                vfact        (:,  :,:,:,ig), & ! [IN]
+                                buffer_ref_CZ(:,:,:),        & ! [IN]
+                                REAL_CZ      (:,:,:),        & ! [IN]
+                                buffer_ref_3D(:,:,:),        & ! [IN]
                                 dvar         (:,:,:),        & ! [OUT]
                                 logwgt = logarithmic         ) ! [IN, optional]
 
@@ -2631,8 +2633,10 @@ contains
                                 jgrd          (    :,:,:,ig), & ! [IN]
                                 hfact         (    :,:,:,ig), & ! [IN]
                                 kgrd          (:,:,:,:,:,ig), & ! [IN]
-                                vfact         (:,:,:,:,:,ig), & ! [IN]
-                                buffer_ref_3DF(:,:,:),        & ! [INOUT]
+                                vfact         (:,  :,:,:,ig), & ! [IN]
+                                buffer_ref_CZ (:,:,:),        & ! [IN]
+                                REAL_FZ       (:,:,:),        & ! [IN]
+                                buffer_ref_3DF(:,:,:),        & ! [IN]
                                 dvar          (:,:,:),        & ! [OUT]
                                 logwgt = logarithmic          ) ! [IN, optional]
        endif

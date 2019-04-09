@@ -17,10 +17,6 @@ module scale_interp
   use scale_precision
   use scale_io
   use scale_prof
-  use scale_debug
-  use scale_atmos_grid_cartesC_index
-  use scale_index
-  use scale_tracer
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -39,6 +35,7 @@ module scale_interp
   public :: INTERP_factor3d_linear_xy
   public :: INTERP_factor3d_weight
 
+  public :: INTERP_interp1d
   public :: INTERP_interp2d
   public :: INTERP_interp3d
 
@@ -603,7 +600,6 @@ contains
     real(RP) :: dlon, dlat
 
     ! for structure grid
-    integer  :: is, ie, js, je
     integer  :: psizex, psizey
     real(RP) :: lon0, lat0
     integer, allocatable :: i0(:), i1(:), j0(:), j1(:)
@@ -630,13 +626,13 @@ contains
 
     if ( ll_struct_ ) then
 
-       if ( ie-is > 10 ) then
-          psizex = int( 2.0_RP*sqrt(real(ie-is+1,RP)) )
+       if ( IA_ref > 10 ) then
+          psizex = int( 2.0_RP*sqrt(real(IA_ref+1,RP)) )
        else
           psizex = 1
        end if
-       if ( je-js > 10 ) then
-          psizey = int( 2.0_RP*sqrt(real(je-js+1,RP)) )
+       if ( JA_ref > 10 ) then
+          psizey = int( 2.0_RP*sqrt(real(JA_ref+1,RP)) )
        else
           psizey = 1
        end if
@@ -649,7 +645,7 @@ contains
 
        do ii = 1, psizex
           lon0 = lon_min + dlon * (ii-1)
-          do i = is, ie
+          do i = 1, IA_ref
              if ( lon_1d(i) >= lon0 ) then
                 i0(ii) = i
                 exit
@@ -659,11 +655,11 @@ contains
        do ii = 1, psizex-1
           i1(ii) = i0(ii+1) - 1
        end do
-       i1(psizex) = ie
+       i1(psizex) = IA_ref
 
        do jj = 1, psizey
           lat0 = lat_min + dlat * (jj-1)
-          do j = js, je
+          do j = 1, JA_ref
              if ( lat_1d(j) >= lat0 ) then
                 j0(jj) = j
                 exit
@@ -673,7 +669,7 @@ contains
        do jj = 1, psizey-1
           j1(jj) = j0(jj+1) - 1
        end do
-       j1(psizey) = je
+       j1(psizey) = JA_ref
 
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = 1, JA
@@ -787,7 +783,7 @@ contains
     integer,  intent(out) :: idx_j(IA,JA,4)                ! j-index in reference     (target)
     real(RP), intent(out) :: hfact(IA,JA,4)                ! horizontal interp factor (target)
     integer,  intent(out) :: idx_k(KA,2,IA,JA,4)           ! k-index in reference     (target)
-    real(RP), intent(out) :: vfact(KA,2,IA,JA,4)           ! vertical interp factor   (target)
+    real(RP), intent(out) :: vfact(KA,  IA,JA,4)           ! vertical interp factor   (target)
 
     logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
 
@@ -814,7 +810,7 @@ contains
                                    hgt_ref(:,ii,jj),         & ! [IN]
                                    hgt    (:,i,j),           & ! [IN]
                                    idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:,:,i,j,n),       & ! [OUT]
+                                   vfact  (:,  i,j,n),       & ! [OUT]
                                    flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
@@ -859,11 +855,11 @@ contains
     real(RP), intent(in)  :: y  (JA)                       ! y point                  (target)
     real(RP), intent(in)  :: hgt(KA,IA,JA)                 ! longitude [m]            (target)
 
-    integer,  intent(out) :: idx_i(IA,JA,4)                ! i-index in reference     (target)
-    integer,  intent(out) :: idx_j(IA,JA,4)                ! j-index in reference     (target)
-    real(RP), intent(out) :: hfact(IA,JA,4)                ! horizontal interp factor (target)
-    integer,  intent(out) :: idx_k(KA,2,IA,JA,4)           ! k-index in reference     (target)
-    real(RP), intent(out) :: vfact(KA,2,IA,JA,4)           ! vertical interp factor   (target)
+    integer,  intent(out) :: idx_i(IA,JA,4)                ! i-index in reference
+    integer,  intent(out) :: idx_j(IA,JA,4)                ! j-index in reference
+    real(RP), intent(out) :: hfact(IA,JA,4)                ! horizontal interp factor
+    integer,  intent(out) :: idx_k(KA,2,IA,JA,4)           ! k-index in reference
+    real(RP), intent(out) :: vfact(KA,  IA,JA,4)           ! vertical interp factor
 
     logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
     logical,  intent(in), optional :: zonal
@@ -893,7 +889,7 @@ contains
                                    hgt_ref(:,ii,jj),         & ! [IN]
                                    hgt    (:,i,j),           & ! [IN]
                                    idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:,:,i,j,n),       & ! [OUT]
+                                   vfact  (:  ,i,j,n),       & ! [OUT]
                                    flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
@@ -940,11 +936,11 @@ contains
     real(RP), intent(in)  :: lat  (IA,JA)                  ! latitude  [rad]          (target)
     real(RP), intent(in)  :: hgt  (KA,IA,JA)               ! longitude [m]            (target)
 
-    integer,  intent(out) :: idx_i(IA,JA,npoints)          ! i-index in reference     (target)
-    integer,  intent(out) :: idx_j(IA,JA,npoints)          ! j-index in reference     (target)
-    real(RP), intent(out) :: hfact(IA,JA,npoints)          ! horizontal interp factor (target)
-    integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! k-index in reference     (target)
-    real(RP), intent(out) :: vfact(KA,2,IA,JA,npoints)     ! vertical interp factor   (target)
+    integer,  intent(out) :: idx_i(IA,JA,npoints)          ! i-index in reference
+    integer,  intent(out) :: idx_j(IA,JA,npoints)          ! j-index in reference
+    real(RP), intent(out) :: hfact(IA,JA,npoints)          ! horizontal interp factor
+    integer,  intent(out) :: idx_k(KA,2,IA,JA,npoints)     ! k-index in reference
+    real(RP), intent(out) :: vfact(KA,  IA,JA,npoints)     ! vertical interp factor
 
     logical,  intent(in), optional :: flag_extrap          ! when true, vertical extrapolation will be executed (just copy)
 
@@ -1001,13 +997,12 @@ contains
           jj = ( idx_ref(n) - 1 ) / IA_ref + 1
           idx_i(i,j,n) = ii
           idx_j(i,j,n) = jj
-
           call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
                                    KA,     KS,     KE,       & ! [IN]
                                    hgt_ref(:,ii,jj),         & ! [IN]
                                    hgt    (:,i,j),           & ! [IN]
                                    idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:,:,i,j,n),       & ! [OUT]
+                                   vfact  (:  ,i,j,n),       & ! [OUT]
                                    flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
@@ -1022,7 +1017,97 @@ contains
   end subroutine INTERP_factor3d_weight
 
   !-----------------------------------------------------------------------------
-  ! interpolation using one-points for 2D data (nearest-neighbor)
+  ! interpolation for 1D data
+!OCL SERIAL
+  subroutine INTERP_interp1d( &
+       KA_ref, &
+       KA, KS, KE, &
+       idx_k,         &
+       vfact,         &
+       hgt_ref,       &
+       hgt,           &
+       val_ref,       &
+       val,           &
+       logwgt         )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+
+    integer,  intent(in)  :: KA_ref      ! number of z-direction (reference)
+    integer,  intent(in)  :: KA, KS, KE  ! number of z-direction (target)
+    integer,  intent(in)  :: idx_k(KA,2) ! k-index in reference
+    real(RP), intent(in)  :: vfact(KA  ) ! vertical interp factor
+    real(RP), intent(in)         :: hgt_ref(KA_ref) ! height (reference)
+    real(RP), intent(in)         :: hgt    (KA)     ! height  (target)
+    real(RP), intent(in), target :: val_ref(KA_ref) ! value  (reference)
+
+    real(RP), intent(out)        :: val    (KA)     ! value  (target)
+
+    logical,  intent(in), optional :: logwgt !> use logarithmic weighted interpolation?
+
+    logical :: logwgt_
+
+    real(RP), pointer :: work(:)
+
+    integer  :: idx  (KA_ref)
+    integer  :: idx_r(KA_ref)
+    real(RP) :: FDZ  (KA_ref)
+    real(RP) :: U    (KA_ref)
+
+    integer :: kmax
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('INTERP_interp',3)
+
+    logwgt_ = .false.
+    if ( present(logwgt) ) then
+       logwgt_ = logwgt
+    endif
+
+    if ( logwgt_ ) then
+       allocate( work(KA_ref) )
+       do k = 1, KA_ref
+          if ( val_ref(k) == UNDEF ) then
+             work(k) = UNDEF
+          else
+             work(k) = log( val_ref(k) )
+          end if
+       enddo
+    else
+       work => val_ref
+    endif
+
+    call spline_coef( KA_ref, &
+                      hgt_ref(:), work(:), & ! (in)
+                      kmax,                & ! (out)
+                      idx(:), idx_r(:),    & ! (out)
+                      U(:), FDZ(:)         ) ! (out)
+
+    call spline_exec( KA_ref, kmax, KA, KS, KE, &
+                      idx_k(:,:), vfact(:), & ! (in)
+                      hgt_ref(:), hgt(:),   & ! (in)
+                      work(:),              & ! (in)
+                      idx(:), idx_r(:),     & ! (in)
+                      U(:), FDZ(:),         & ! (in)
+                      val(:)                ) ! (out)
+
+    if ( logwgt_ ) then
+       deallocate( work )
+       do k = KS, KE
+          if ( val(k) /= UNDEF ) then
+             val(k) = exp( val(k) )
+          endif
+       end do
+    endif
+
+    call PROF_rapend  ('INTERP_interp',3)
+
+    return
+  end subroutine INTERP_interp1d
+
+  !-----------------------------------------------------------------------------
+  ! interpolation for 2D data (nearest-neighbor)
   subroutine INTERP_interp2d( &
        npoints,        &
        IA_ref, JA_ref, &
@@ -1042,9 +1127,9 @@ contains
     integer,  intent(in)  :: JA_ref                 ! number of y-direction    (reference)
     integer,  intent(in)  :: IA                     ! number of x-direction    (target)
     integer,  intent(in)  :: JA                     ! number of y-direction    (target)
-    integer,  intent(in)  :: idx_i  (IA,JA,npoints) ! i-index in reference     (target)
-    integer,  intent(in)  :: idx_j  (IA,JA,npoints) ! j-index in reference     (target)
-    real(RP), intent(in)  :: hfact  (IA,JA,npoints) ! horizontal interp factor (target)
+    integer,  intent(in)  :: idx_i  (IA,JA,npoints) ! i-index in reference
+    integer,  intent(in)  :: idx_j  (IA,JA,npoints) ! j-index in reference
+    real(RP), intent(in)  :: hfact  (IA,JA,npoints) ! horizontal interp factor
     real(RP), intent(in)  :: val_ref(IA_ref,JA_ref) ! value                    (reference)
 
     real(RP), intent(out) :: val    (IA,JA)         ! value                    (target)
@@ -1106,6 +1191,8 @@ contains
        hfact,                  &
        idx_k,                  &
        vfact,                  &
+       hgt_ref,                &
+       hgt,                    &
        val_ref,                &
        val,                    &
        logwgt, threshold_undef )
@@ -1115,18 +1202,19 @@ contains
     implicit none
 
     integer,  intent(in) :: npoints                       ! number of interpolation point for horizontal
-    integer,  intent(in) :: KA_ref                        ! number of x-direction    (reference)
+    integer,  intent(in) :: KA_ref                        ! number of z-direction    (reference)
     integer,  intent(in) :: IA_ref                        ! number of x-direction    (reference)
     integer,  intent(in) :: JA_ref                        ! number of y-direction    (reference)
     integer,  intent(in) :: KA, KS, KE                    ! number of z-direction    (target)
     integer,  intent(in) :: IA                            ! number of x-direction    (target)
     integer,  intent(in) :: JA                            ! number of y-direction    (target)
-    integer,  intent(in) :: idx_i  (IA,JA,npoints)        ! i-index in reference     (target)
-    integer,  intent(in) :: idx_j  (IA,JA,npoints)        ! j-index in reference     (target)
-    real(RP), intent(in) :: hfact  (IA,JA,npoints)        ! horizontal interp factor (target)
-    integer,  intent(in) :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference     (target)
-    real(RP), intent(in) :: vfact  (KA,2,IA,JA,npoints)   ! vertical interp factor   (target)
-
+    integer,  intent(in) :: idx_i  (IA,JA,npoints)        ! i-index in reference
+    integer,  intent(in) :: idx_j  (IA,JA,npoints)        ! j-index in reference
+    real(RP), intent(in) :: hfact  (IA,JA,npoints)        ! horizontal interp factor
+    integer,  intent(in) :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference
+    real(RP), intent(in) :: vfact  (KA,  IA,JA,npoints)   ! vertical interp factor
+    real(RP), intent(in)         :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height (reference)
+    real(RP), intent(in)         :: hgt    (KA,IA,JA)             ! height  (target)
     real(RP), intent(in), target :: val_ref(KA_ref,IA_ref,JA_ref) ! value (reference)
 
     real(RP), intent(out)        :: val    (KA,IA,JA)             ! value (target)
@@ -1134,26 +1222,28 @@ contains
     logical,  intent(in), optional :: logwgt          !> use logarithmic weighted interpolation?
     real(RP), intent(in), optional :: threshold_undef !> return UNDEF if sum of the weight factor is undef the shreshold
 
-
-    logical  :: logwgt_
     real(RP) :: th_undef
+    logical  :: logwgt_
 
     real(RP), pointer :: work(:,:,:)
-    real(RP)          :: valn
-    real(RP)          :: fact
-    real(RP)          :: w1, w2
-    real(RP)          :: f1, f2
-    real(RP)          :: sw
 
+    integer,  allocatable :: kmax(:,:)
+    integer,  allocatable :: idx(:,:,:), idx_r(:,:,:)
+    real(RP), allocatable :: U(:,:,:), FDZ(:,:,:)
+
+    real(RP) :: valn
+    real(RP) :: fact
+    real(RP) :: f
+    real(RP) :: sw
+    real(RP) :: w(KA,npoints)
+
+    integer :: imin, imax
+    integer :: jmin, jmax
+    integer :: ii, jj
     integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_interp',3)
-
-    logwgt_ = .false.
-    if ( present(logwgt) ) then
-       logwgt_ = logwgt
-    endif
 
     th_undef = 0.0_RP
     if ( present(threshold_undef) ) then
@@ -1161,13 +1251,45 @@ contains
     end if
     th_undef = max( th_undef, EPS * 2.0_RP )
 
+
+    logwgt_ = .false.
+    if ( present(logwgt) ) then
+       logwgt_ = logwgt
+    endif
+
+    imin = IA_ref
+    jmin = JA_ref
+    imax = 1
+    jmax = 1
+    !$omp parallel do OMP_SCHEDULE_ collapse(3) &
+    !$omp reduction(min: imin,jmin) &
+    !$omp reduction(max: imax,jmax)
+    do n = 1, npoints
+    do j = 1, JA
+    do i = 1, IA
+       imin = min(imin, idx_i(i,j,n))
+       imax = max(imax, idx_i(i,j,n))
+       jmin = min(jmin, idx_j(i,j,n))
+       jmax = max(jmax, idx_j(i,j,n))
+    end do
+    end do
+    end do
+
+    allocate( kmax(imin:imax,jmin:jmax) )
+    allocate( idx(KA_ref,imin:imax,jmin:jmax), idx_r(KA_ref,imin:imax,jmin:jmax) )
+    allocate( U(KA_ref,imin:imax,jmin:jmax), FDZ(KA_ref,imin:imax,jmin:jmax) )
+
     if ( logwgt_ ) then
-       allocate( work(KA_ref,IA_ref,JA_ref) )
+       allocate( work(KA_ref,imin:imax,jmin:jmax) )
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
-       do j = 1, JA_ref
-       do i = 1, IA_ref
+       do j = jmin, jmax
+       do i = imin, imax
        do k = 1, KA_ref
-          work(k,i,j) = log( val_ref(k,i,j) )
+          if ( val_ref(k,i,j) == UNDEF ) then
+             work(k,i,j) = UNDEF
+          else
+             work(k,i,j) = log( val_ref(k,i,j) )
+          end if
        enddo
        enddo
        enddo
@@ -1175,31 +1297,57 @@ contains
        work => val_ref
     endif
 
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = jmin, jmax
+    do i = imin, imax
+       call spline_coef( KA_ref, &
+                         hgt_ref(:,i,j), work(:,i,j), & ! (in)
+                         kmax(i,j),                   & ! (out)
+                         idx(:,i,j), idx_r(:,i,j),    & ! (out)
+                         U(:,i,j), FDZ(:,i,j)         ) ! (out)
+    end do
+    end do
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(valn,fact,w1,w2,f1,f2,sw)
+    !$omp private(valn,fact,w,f,ii,jj,sw)
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
-       fact = 0.0_RP
-       valn = 0.0_RP
+
        do n = 1, npoints
-          w1 = work(idx_k(k,1,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
-          w2 = work(idx_k(k,2,i,j,n),idx_i(i,j,n),idx_j(i,j,n))
-          f1 = hfact(i,j,n) * vfact(k,1,i,j,n)
-          f2 = hfact(i,j,n) * vfact(k,2,i,j,n)
-          if ( ( f1 + f2 ) > EPS .and. w1 .ne. UNDEF .and. w2 .ne. UNDEF ) then
-             fact = fact + f1 + f2
-             valn = valn + f1 * w1 + f2 * w2
-          else
-             sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
-             valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
-             exit
-          endif
+          if ( hfact(i,j,n) < EPS ) exit
+          ii = idx_i(i,j,n)
+          jj = idx_j(i,j,n)
+          call spline_exec( KA_ref, kmax(ii,jj), KA, KS, KE, &
+                            idx_k(:,:,i,j,n), vfact(:,  i,j,n), & ! (in)
+                            hgt_ref(:,ii,jj), hgt(:,i,j),       & ! (in)
+                            work(:,ii,jj),                      & ! (in)
+                            idx(:,ii,jj), idx_r(:,ii,jj),       & ! (in)
+                            U(:,ii,jj), FDZ(:,ii,jj),           & ! (in)
+                            w(:,n)                              ) ! (out)
+       end do
+
+       do k = KS, KE
+          fact = 0.0_RP
+          valn = 0.0_RP
+          do n = 1, npoints
+             f = hfact(i,j,n)
+             if ( f > EPS .and. w(k,n) .ne. UNDEF ) then
+                fact = fact + f
+                valn = valn + f * w(k,n)
+             else
+                sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
+                valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
+                exit
+             endif
+          enddo
+          val(k,i,j) = valn
        enddo
-       val(k,i,j) = valn
+
     enddo
     enddo
-    enddo
+
+    deallocate( kmax, idx, idx_r )
+    deallocate( U, FDZ )
 
     if ( logwgt_ ) then
        deallocate( work )
@@ -1209,11 +1357,11 @@ contains
        do k = KS, KE
           if ( val(k,i,j) /= UNDEF ) then
              val(k,i,j) = exp( val(k,i,j) )
-          endif
+          end if
        end do
        end do
        end do
-    endif
+    end if
 
     call PROF_rapend  ('INTERP_interp',3)
 
@@ -1551,6 +1699,8 @@ contains
        flag_extrap             )
     use scale_prc, only: &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
 
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
@@ -1559,13 +1709,12 @@ contains
     real(RP), intent(in)  :: hgt    (KA)                   ! height [m]               (target)
 
     integer,  intent(out) :: idx_k  (KA,2)                 ! k-index in reference     (target)
-    real(RP), intent(out) :: vfact  (KA,2)                 ! horizontal interp factor (target)
+    real(RP), intent(out) :: vfact  (KA)                   ! horizontal interp factor (target)
 
     logical,  intent(in), optional :: flag_extrap          ! when true, extrapolation will be executed (just copy)
 
     logical :: flag_extrap_
 
-    real(RP) :: weight
     integer  :: k, kk
     !---------------------------------------------------------------------------
 
@@ -1582,48 +1731,35 @@ contains
        if    ( hgt(k) <  hgt_ref(KS_ref) ) then
           if ( flag_extrap_ ) then
              idx_k(k,1) = KS_ref
-             idx_k(k,2) = KS_ref ! dummy
-             vfact(k,1) = 1.0_RP
-             vfact(k,2) = 0.0_RP
+             idx_k(k,2) = -1
+             vfact(k) = 1.0_RP
           else
-             idx_k(k,1) = KS_ref ! dummy
-             idx_k(k,2) = KS_ref ! dummy
-             vfact(k,1) = 0.0_RP
-             vfact(k,2) = 0.0_RP
+             idx_k(k,1) = -1
+             idx_k(k,2) = -1
+             vfact(k) = UNDEF
           end if
        elseif( hgt(k) >= hgt_ref(KE_ref) ) then
           if ( flag_extrap_ ) then
              idx_k(k,1) = KE_ref
-             idx_k(k,2) = KE_ref ! dummy
-             vfact(k,1) = 1.0_RP
-             vfact(k,2) = 0.0_RP
+             idx_k(k,2) = -1
+             vfact(k) = 1.0_RP
           else
-             idx_k(k,1) = KE_ref ! dummy
-             idx_k(k,2) = KE_ref ! dummy
-             vfact(k,1) = 0.0_RP
-             vfact(k,2) = 0.0_RP
+             idx_k(k,1) = -1
+             idx_k(k,2) = -1
+             vfact(k) = UNDEF
           end if
        else
           do kk = KS_ref, KE_ref-1
              if (       hgt(k) >= hgt_ref(kk  ) &
                   .AND. hgt(k) <  hgt_ref(kk+1) ) then
-
-                weight = ( hgt    (k)    - hgt_ref(kk) ) &
-                       / ( hgt_ref(kk+1) - hgt_ref(kk) )
-
                 idx_k(k,1) = kk
                 idx_k(k,2) = kk + 1
-                vfact(k,1) = 1.0_RP - weight
-                vfact(k,2) =          weight
+                vfact(k) = ( hgt_ref(kk+1) - hgt    (k)  ) &
+                         / ( hgt_ref(kk+1) - hgt_ref(kk) )
+
                 exit
              endif
           enddo
-       endif
-
-       if ( idx_k(k,1) < 0 ) then
-          LOG_ERROR("INTERP_search_vert",*) 'data for interpolation was not found.'
-          LOG_ERROR_CONT(*) 'k=', k, ', hgt(k)=', hgt(k), ', hgt_ref(:)=', hgt_ref(:)
-          call PRC_abort
        endif
 
     enddo ! k-loop
@@ -1713,6 +1849,7 @@ contains
 
     return
   end subroutine INTERP_insert_2d
+
 
   subroutine INTERP_div_block(nsize, psize, nidx_max,  &
                               lon_ref, lat_ref, &
@@ -1942,5 +2079,137 @@ contains
     d = 2.0_RP * asin( min(sqrt(work1),1.0_RP) )
 
   end function haversine
+
+
+!OCL SERIAL
+  subroutine spline_coef( &
+       KA_ref, &
+       hgt_ref, val_ref, &
+       kmax,             &
+       idx, idx_r,       &
+       U, FDZ            )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
+    use scale_matrix, only: &
+       MATRIX_SOLVER_tridiagonal
+    implicit none
+    integer,  intent(in) :: KA_ref
+    real(RP), intent(in) :: hgt_ref(KA_ref)
+    real(RP), intent(in) :: val_ref(KA_ref)
+
+    integer,  intent(out) :: kmax
+    integer,  intent(out) :: idx  (KA_ref)
+    integer,  intent(out) :: idx_r(KA_ref)
+    real(RP), intent(out) :: U  (KA_ref)
+    real(RP), intent(out) :: FDZ(KA_ref)
+
+    real(RP) :: MD(KA_ref)
+    real(RP) :: V (KA_ref)
+    real(RP) :: dz
+    integer  :: k
+
+    do k = 1, KA_ref-1
+       if ( val_ref(k) .ne. UNDEF ) then
+          idx(1) = k
+          idx_r(k) = 1
+          exit
+       end if
+    end do
+    kmax = 1
+    FDZ(1) = 1e10 ! dummy
+    do k = idx(1)+1, KA_ref
+       dz = hgt_ref(k) - hgt_ref(idx(kmax))
+       if ( val_ref(k) .ne. UNDEF .and. dz > EPS ) then
+          do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
+             kmax = kmax - 1 ! marge
+          end do
+          kmax = kmax + 1
+          idx(kmax) = k
+          if ( idx(kmax-1)+1 <= k-1 ) idx_r(idx(kmax-1)+1:k-1) = kmax-1
+          idx_r(k) = kmax
+          FDZ(kmax) = hgt_ref(k) - hgt_ref(idx(kmax-1))
+       end if
+    end do
+
+    if ( kmax > 3 ) then
+
+       do k = 2, kmax-1
+          MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
+          V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
+               - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
+       end do
+
+       call MATRIX_SOLVER_tridiagonal( kmax, 2, kmax-1, &
+                                       FDZ(2:), MD(:), FDZ(:), & ! (in)
+                                       V(:),                   & ! (in)
+                                       U(:)                    ) ! (out)
+       U(1) = 0.0_RP
+       U(kmax) = 0.0_RP
+
+    else
+
+       idx(kmax) = idx(1) ! force linear interpolateion
+
+    end if
+
+    return
+  end subroutine spline_coef
+
+!OCL SERIAL
+  subroutine spline_exec( &
+       KA_ref, kmax, KA, KS, KE, &
+       idx_k, vfact, &
+       hgt_ref, hgt, &
+       val_ref,      &
+       idx, idx_r,   &
+       U, FDZ,       &
+       val           )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    integer,  intent(in) :: KA_ref, kmax
+    integer,  intent(in) :: KA, KS, KE
+    integer,  intent(in) :: idx_k(KA,2)
+    real(RP), intent(in) :: vfact(KA)
+    real(RP), intent(in) :: hgt_ref(KA_ref)
+    real(RP), intent(in) :: hgt    (KA)
+    real(RP), intent(in) :: val_ref(KA_ref)
+    integer,  intent(in) :: idx    (KA_ref)
+    integer,  intent(in) :: idx_r  (KA_ref)
+    real(RP), intent(in) :: U      (KA_ref)
+    real(RP), intent(in) :: FDZ    (KA_ref)
+
+    real(RP), intent(out) :: val(KA)
+
+    real(RP) :: c1, c2, c3, d
+    integer  :: k, kk, kk2
+
+    do k = KS, KE
+       kk = idx_k(k,1)
+       if ( kk == -1 ) then
+          val(k) = UNDEF
+       else if ( idx_k(k,2) == -1 ) then
+          val(k) = val_ref(kk)
+       else if ( kk < idx(1) .or. kk >= idx(kmax) ) then ! linear interpolation
+          if ( val_ref(kk) == UNDEF .or. val_ref(kk+1) == UNDEF ) then
+             val(k) = UNDEF
+          else
+             val(k) = val_ref(kk) * vfact(k) + val_ref(kk+1) * ( 1.0_RP - vfact(k) )
+          end if
+       else
+          kk2 = idx_r(kk)
+          kk = idx(kk2)
+          c3 = ( U(kk2+1) - U(kk2) ) / FDZ(kk2+1)
+          c2 = 3.0_RP * U(kk2)
+          c1 = ( val_ref(idx(kk2+1)) - val_ref(kk) ) / FDZ(kk2+1) - ( 2.0_RP * U(kk2) + U(kk2+1) ) * FDZ(kk2+1)
+          d = hgt(k) - hgt_ref(kk)
+
+          val(k) = ( ( c3 * d + c2 ) * d + c1 ) * d + val_ref(kk)
+       end if
+    end do
+
+    return
+  end subroutine spline_exec
 
 end module scale_interp
