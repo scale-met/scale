@@ -105,7 +105,7 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX    =   700.0_RP ! ~ 0.23 * 3 km
   real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact   = 3.0_RP
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE  = .false.
-  logical,  private            :: ATMOS_PHY_BL_MYNN_prod_surf = .false.
+  logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3", level 3 is under experimental yet.
 
@@ -120,7 +120,7 @@ module scale_atmos_phy_bl_mynn
        ATMOS_PHY_BL_MYNN_LEVEL,    &
        ATMOS_PHY_BL_MYNN_Sq_fact,  &
        ATMOS_PHY_BL_MYNN_init_TKE, &
-       ATMOS_PHY_BL_MYNN_prod_surf
+       ATMOS_PHY_BL_MYNN_similarity
 
 
   !-----------------------------------------------------------------------------
@@ -429,7 +429,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
-    !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_prod_surf, &
+    !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RPROG_t,Nu,Nu_cg,Kh,Kh_cg, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,l_mo, &
     !$omp        mynn_level3,initialize,nit, &
@@ -538,7 +538,7 @@ contains
                                      mynn_level3,               & ! (in)
                                      betat(:), betaq(:)         ) ! (out)
 
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
              us = max(us3, 0.0_RP)**(1.0_RP/3.0_RP)
              !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
@@ -576,7 +576,7 @@ contains
 
           if ( mynn_level3 ) then
 
-             if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+             if ( ATMOS_PHY_BL_MYNN_similarity ) then
                 ! TSQ
                 prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
                 ! QSQ
@@ -587,7 +587,7 @@ contains
 
              do k = KS, KE_PBL
 
-                if ( ATMOS_PHY_BL_MYNN_prod_surf .and. k == KS ) then
+                if ( ATMOS_PHY_BL_MYNN_similarity .and. k == KS ) then
                    tsq25 = prod_t1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                    qsq25 = prod_q1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                    cov25 = prod_c1 * B2 * l(k,i,j) / q(k) * 0.5_RP
@@ -692,7 +692,7 @@ contains
              end if
           end do
 
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              Nu(KS,i,j) = KARMAN * CDZ(KS) * us / phi_m
              Kh(KS,i,j) = KARMAN * CDZ(KS) * us / phi_h
              Nu_cg(KS,i,j) = 0.0_RP
@@ -860,7 +860,7 @@ contains
              prod(k,i,j) = l(k,i,j) * q(k) * ( ( sm25(k) + smp(k) ) * dudz2(k,i,j) &
                                              - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              prod(KS,i,j) = us3 * phi_m / ( KARMAN * z1 )
           end if
 
@@ -946,7 +946,7 @@ contains
                                 - ( flx(k) - flx(k-1) ) / ( CDZ(k) * DENS(k,i,j) ) ), &
                        0.0_RP)
           end do
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              d(KS) = max( tsq(KS) + dt * ( prod_t1 - flx(KS) / CDZ(KS) ), &
                           0.0_RP)
           end if
@@ -995,7 +995,7 @@ contains
                               - ( flx(k) - flx(k-1) ) / ( CDZ(k) * DENS(k,i,j) ) ), &
                         0.0_RP)
           end do
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              d(KS) = max( qsq(KS) + dt * ( prod_q1 - flx(KS) / CDZ(KS) ), &
                           0.0_RP)
           end if
@@ -1035,7 +1035,7 @@ contains
                   + dt * ( - wqw(k) * dtldz(k) - wtl(k) * dqwdz(k) &
                          - ( flx(k) - flx(k-1) ) / ( CDZ(k) * DENS(k,i,j) ) )
           end do
-          if ( ATMOS_PHY_BL_MYNN_prod_surf ) then
+          if ( ATMOS_PHY_BL_MYNN_similarity ) then
              d(KS) = cov(KS) + dt * ( prod_c1 - flx(KS) / CDZ(KS) )
           end if
           ! a, b, c are same as those for tsq
