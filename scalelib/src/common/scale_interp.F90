@@ -26,6 +26,7 @@ module scale_interp
   !
   public :: INTERP_setup
   public :: INTERP_domain_compatibility
+  public :: INTERP_factor1d
   public :: INTERP_factor2d
   public :: INTERP_factor3d
   public :: INTERP_factor2d_linear_latlon
@@ -59,7 +60,6 @@ module scale_interp
   !++ Private procedure
   !
   private :: INTERP_search_horiz
-  private :: INTERP_search_vert
   private :: INTERP_insert
 
   private :: haversine
@@ -227,23 +227,104 @@ contains
   end subroutine INTERP_domain_compatibility
 
   !-----------------------------------------------------------------------------
+  ! vertical search of interpolation points for two-points
+!OCL SERIAL
+  subroutine INTERP_factor1d( &
+       KA_ref, KS_ref, KE_ref, &
+       KA, KS, KE,             &
+       hgt_ref,                &
+       hgt,                    &
+       idx_k,                  &
+       vfact,                  &
+       flag_extrap             )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
+    integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
+
+    real(RP), intent(in)  :: hgt_ref(KA_ref)               ! height [m]               (reference)
+    real(RP), intent(in)  :: hgt    (KA)                   ! height [m]               (target)
+
+    integer,  intent(out) :: idx_k  (KA,2)                 ! k-index in reference     (target)
+    real(RP), intent(out) :: vfact  (KA)                   ! horizontal interp factor (target)
+
+    logical,  intent(in), optional :: flag_extrap          ! when true, extrapolation will be executed (just copy)
+
+    logical :: flag_extrap_
+
+    integer  :: k, kk
+    !---------------------------------------------------------------------------
+
+    if ( present(flag_extrap) ) then
+       flag_extrap_ = flag_extrap
+    else
+       flag_extrap_ = .true.
+    end if
+
+    do k = KS, KE
+       idx_k(k,1) = -1
+       idx_k(k,2) = -1
+
+       if    ( hgt(k) <  hgt_ref(KS_ref) ) then
+          if ( flag_extrap_ ) then
+             idx_k(k,1) = KS_ref
+             idx_k(k,2) = -1
+             vfact(k) = 1.0_RP
+          else
+             idx_k(k,1) = -1
+             idx_k(k,2) = -1
+             vfact(k) = UNDEF
+          end if
+       elseif( hgt(k) >= hgt_ref(KE_ref) ) then
+          if ( flag_extrap_ ) then
+             idx_k(k,1) = KE_ref
+             idx_k(k,2) = -1
+             vfact(k) = 1.0_RP
+          else
+             idx_k(k,1) = -1
+             idx_k(k,2) = -1
+             vfact(k) = UNDEF
+          end if
+       else
+          do kk = KS_ref, KE_ref-1
+             if (       hgt(k) >= hgt_ref(kk  ) &
+                  .AND. hgt(k) <  hgt_ref(kk+1) ) then
+                idx_k(k,1) = kk
+                idx_k(k,2) = kk + 1
+                vfact(k) = ( hgt_ref(kk+1) - hgt    (k)  ) &
+                         / ( hgt_ref(kk+1) - hgt_ref(kk) )
+
+                exit
+             endif
+          enddo
+       endif
+
+    enddo ! k-loop
+
+    return
+  end subroutine INTERP_factor1d
+
+
+  !-----------------------------------------------------------------------------
   ! make interpolation factor using bi-linear method on the latlon coordinate
   ! This can be used only for structured grid
   subroutine INTERP_factor2d_linear_latlon( &
        IA_ref, JA_ref,     &
-       lon_ref, lat_ref,   &
        IA, JA,             &
+       lon_ref, lat_ref,   &
        lon, lat,           &
        idx_i, idx_j, hfact )
     use scale_sort, only: &
        SORT_exec
     implicit none
-    integer,  intent(in)  :: IA_ref
-    integer,  intent(in)  :: JA_ref
+    integer,  intent(in)  :: IA_ref, JA_ref
+    integer,  intent(in)  :: IA, JA
+
     real(RP), intent(in)  :: lon_ref(IA_ref)
     real(RP), intent(in)  :: lat_ref(JA_ref)
-    integer,  intent(in)  :: IA
-    integer,  intent(in)  :: JA
     real(RP), intent(in)  :: lon(IA,JA)
     real(RP), intent(in)  :: lat(IA,JA)
     integer,  intent(out) :: idx_i(IA,JA,4)
@@ -339,8 +420,8 @@ contains
   ! This can be used only for structured grid
   subroutine INTERP_factor2d_linear_xy( &
        IA_ref, JA_ref,     &
-       x_ref, y_ref,       &
        IA, JA,             &
+       x_ref, y_ref,       &
        x, y,               &
        idx_i, idx_j,       &
        hfact,              &
@@ -352,12 +433,11 @@ contains
     use scale_sort, only: &
        SORT_exec
     implicit none
-    integer,  intent(in)  :: IA_ref
-    integer,  intent(in)  :: JA_ref
+    integer,  intent(in)  :: IA_ref, JA_ref
+    integer,  intent(in)  :: IA, JA
+
     real(RP), intent(in)  :: x_ref(IA_ref,JA_ref)
     real(RP), intent(in)  :: y_ref(IA_ref,JA_ref)
-    integer,  intent(in)  :: IA
-    integer,  intent(in)  :: JA
     real(RP), intent(in)  :: x(IA)
     real(RP), intent(in)  :: y(JA)
 
@@ -561,8 +641,8 @@ contains
   subroutine INTERP_factor2d_weight( &
        npoints,             &
        IA_ref, JA_ref,      &
-       lon_ref,lat_ref,     &
        IA, JA,              &
+       lon_ref,lat_ref,     &
        lon, lat,            &
        idx_i, idx_j, hfact, &
        search_limit,        &
@@ -574,14 +654,13 @@ contains
     use scale_prc, only: &
        PRC_abort
     implicit none
-
     integer,  intent(in)  :: npoints                ! number of interpolation point for horizontal
     integer,  intent(in)  :: IA_ref                 ! number of x-direction    (reference)
     integer,  intent(in)  :: JA_ref                 ! number of y-direction    (reference)
-    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref) ! longitude [rad]          (reference)
-    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref) ! latitude  [rad]          (reference)
     integer,  intent(in)  :: IA                     ! number of x-direction    (target)
     integer,  intent(in)  :: JA                     ! number of y-direction    (target)
+    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref) ! longitude [rad]          (reference)
+    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref) ! latitude  [rad]          (reference)
     real(RP), intent(in)  :: lon  (IA,JA)           ! longitude [rad]          (target)
     real(RP), intent(in)  :: lat  (IA,JA)           ! latitude  [rad]          (target)
     integer,  intent(out) :: idx_i(IA,JA,npoints)   ! i-index in reference     (target)
@@ -753,10 +832,10 @@ contains
   subroutine INTERP_factor3d_linear_latlon( &
        KA_ref, KS_ref, KE_ref, &
        IA_ref, JA_ref,         &
-       lon_ref, lat_ref,       &
-       hgt_ref,                &
        KA, KS, KE,             &
        IA, JA,                 &
+       lon_ref, lat_ref,       &
+       hgt_ref,                &
        lon, lat,               &
        hgt,                    &
        idx_i, idx_j,           &
@@ -769,12 +848,12 @@ contains
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
     integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
     integer,  intent(in)  :: JA_ref                        ! number of y-direction    (reference)
-    real(RP), intent(in)  :: lon_ref(IA_ref)               ! longitude                (reference)
-    real(RP), intent(in)  :: lat_ref(JA_ref)               ! latitude                 (reference)
-    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
     integer,  intent(in)  :: IA                            ! number of x-direction    (target)
     integer,  intent(in)  :: JA                            ! number of y-direction    (target)
+    real(RP), intent(in)  :: lon_ref(IA_ref)               ! longitude                (reference)
+    real(RP), intent(in)  :: lat_ref(JA_ref)               ! latitude                 (reference)
+    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     real(RP), intent(in)  :: lon(IA,JA)                    ! longitude                (target)
     real(RP), intent(in)  :: lat(IA,JA)                    ! latitude                 (target)
     real(RP), intent(in)  :: hgt(KA,IA,JA)                 ! longitude [m]            (target)
@@ -791,8 +870,8 @@ contains
 
     call INTERP_factor2d_linear_latlon( &
          IA_ref, JA_ref,                          & ! [IN]
-         lon_ref(:), lat_ref(:),                  & ! [IN]
          IA, JA,                                  & ! [IN]
+         lon_ref(:), lat_ref(:),                  & ! [IN]
          lon(:,:), lat(:,:),                      & ! [IN]
          idx_i(:,:,:), idx_j(:,:,:), hfact(:,:,:) ) ! [OUT]
 
@@ -805,13 +884,13 @@ contains
        do n = 1, 4
           ii = idx_i(i,j,n)
           jj = idx_j(i,j,n)
-          call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
-                                   KA,     KS,     KE,       & ! [IN]
-                                   hgt_ref(:,ii,jj),         & ! [IN]
-                                   hgt    (:,i,j),           & ! [IN]
-                                   idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:,  i,j,n),       & ! [OUT]
-                                   flag_extrap = flag_extrap ) ! [IN, optional]
+          call INTERP_factor1d( KA_ref, KS_ref, KE_ref,   & ! [IN]
+                                KA,     KS,     KE,       & ! [IN]
+                                hgt_ref(:,ii,jj),         & ! [IN]
+                                hgt    (:,i,j),           & ! [IN]
+                                idx_k  (:,:,i,j,n),       & ! [OUT]
+                                vfact  (:,  i,j,n),       & ! [OUT]
+                                flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
     enddo
@@ -828,10 +907,10 @@ contains
   subroutine INTERP_factor3d_linear_xy( &
        KA_ref, KS_ref, KE_ref, &
        IA_ref, JA_ref,         &
-       x_ref, y_ref,           &
-       hgt_ref,                &
        KA, KS, KE,             &
        IA, JA,                 &
+       x_ref, y_ref,           &
+       hgt_ref,                &
        x, y,                   &
        hgt,                    &
        idx_i, idx_j,           &
@@ -841,16 +920,15 @@ contains
        flag_extrap,            &
        zonal, pole             )
     implicit none
-
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
     integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
     integer,  intent(in)  :: JA_ref                        ! number of y-direction    (reference)
-    real(RP), intent(in)  :: x_ref(IA_ref,JA_ref)          ! x point                  (reference)
-    real(RP), intent(in)  :: y_ref(IA_ref,JA_ref)          ! y point                  (reference)
-    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
     integer,  intent(in)  :: IA                            ! number of x-direction    (target)
     integer,  intent(in)  :: JA                            ! number of y-direction    (target)
+    real(RP), intent(in)  :: x_ref(IA_ref,JA_ref)          ! x point                  (reference)
+    real(RP), intent(in)  :: y_ref(IA_ref,JA_ref)          ! y point                  (reference)
+    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     real(RP), intent(in)  :: x  (IA)                       ! x point                  (target)
     real(RP), intent(in)  :: y  (JA)                       ! y point                  (target)
     real(RP), intent(in)  :: hgt(KA,IA,JA)                 ! longitude [m]            (target)
@@ -869,8 +947,8 @@ contains
 
     call INTERP_factor2d_linear_xy( &
          IA_ref, JA_ref,                           & ! [IN]
-         x_ref(:,:), y_ref(:,:),                   & ! [IN]
          IA, JA,                                   & ! [IN]
+         x_ref(:,:), y_ref(:,:),                   & ! [IN]
          x(:), y(:),                               & ! [IN]
          idx_i(:,:,:), idx_j(:,:,:), hfact(:,:,:), & ! [OUT]
          zonal = zonal, pole = pole                ) ! [IN]
@@ -884,13 +962,13 @@ contains
        do n = 1, 4
           ii = idx_i(i,j,n)
           jj = idx_j(i,j,n)
-          call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
-                                   KA,     KS,     KE,       & ! [IN]
-                                   hgt_ref(:,ii,jj),         & ! [IN]
-                                   hgt    (:,i,j),           & ! [IN]
-                                   idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:  ,i,j,n),       & ! [OUT]
-                                   flag_extrap = flag_extrap ) ! [IN, optional]
+          call INTERP_factor1d( KA_ref, KS_ref, KE_ref,   & ! [IN]
+                                KA,     KS,     KE,       & ! [IN]
+                                hgt_ref(:,ii,jj),         & ! [IN]
+                                hgt    (:,i,j),           & ! [IN]
+                                idx_k  (:,:,i,j,n),       & ! [OUT]
+                                vfact  (:  ,i,j,n),       & ! [OUT]
+                                flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
     enddo
@@ -907,10 +985,10 @@ contains
        npoints, &
        KA_ref, KS_ref, KE_ref, &
        IA_ref, JA_ref,         &
-       lon_ref, lat_ref,       &
-       hgt_ref,                &
        KA, KS, KE,             &
        IA, JA,                 &
+       lon_ref, lat_ref,       &
+       hgt_ref,                &
        lon, lat,               &
        hgt,                    &
        idx_i, idx_j,           &
@@ -921,17 +999,17 @@ contains
     use scale_prc, only: &
        PRC_abort
     implicit none
-
     integer,  intent(in)  :: npoints                       ! number of interpolation point for horizontal
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
     integer,  intent(in)  :: IA_ref                        ! number of x-direction    (reference)
     integer,  intent(in)  :: JA_ref                        ! number of y-direction    (reference)
-    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref)        ! longitude [rad]          (reference)
-    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref)        ! latitude  [rad]          (reference)
-    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
     integer,  intent(in)  :: IA                            ! number of x-direction    (target)
     integer,  intent(in)  :: JA                            ! number of y-direction    (target)
+
+    real(RP), intent(in)  :: lon_ref(IA_ref,JA_ref)        ! longitude [rad]          (reference)
+    real(RP), intent(in)  :: lat_ref(IA_ref,JA_ref)        ! latitude  [rad]          (reference)
+    real(RP), intent(in)  :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height    [m]            (reference)
     real(RP), intent(in)  :: lon  (IA,JA)                  ! longitude [rad]          (target)
     real(RP), intent(in)  :: lat  (IA,JA)                  ! latitude  [rad]          (target)
     real(RP), intent(in)  :: hgt  (KA,IA,JA)               ! longitude [m]            (target)
@@ -997,13 +1075,13 @@ contains
           jj = ( idx_ref(n) - 1 ) / IA_ref + 1
           idx_i(i,j,n) = ii
           idx_j(i,j,n) = jj
-          call INTERP_search_vert( KA_ref, KS_ref, KE_ref,   & ! [IN]
-                                   KA,     KS,     KE,       & ! [IN]
-                                   hgt_ref(:,ii,jj),         & ! [IN]
-                                   hgt    (:,i,j),           & ! [IN]
-                                   idx_k  (:,:,i,j,n),       & ! [OUT]
-                                   vfact  (:  ,i,j,n),       & ! [OUT]
-                                   flag_extrap = flag_extrap ) ! [IN, optional]
+          call INTERP_factor1d( KA_ref, KS_ref, KE_ref,   & ! [IN]
+                                KA,     KS,     KE,       & ! [IN]
+                                hgt_ref(:,ii,jj),         & ! [IN]
+                                hgt    (:,i,j),           & ! [IN]
+                                idx_k  (:,:,i,j,n),       & ! [OUT]
+                                vfact  (:  ,i,j,n),       & ! [OUT]
+                                flag_extrap = flag_extrap ) ! [IN, optional]
 
        enddo
     enddo
@@ -1368,6 +1446,10 @@ contains
     return
   end subroutine INTERP_interp3d
 
+
+  ! private
+
+
   !-----------------------------------------------------------------------------
   ! horizontal search of interpolation points
 !OCL SERIAL
@@ -1686,88 +1768,6 @@ contains
     return
   end subroutine INTERP_search_horiz_struct
 
-  !-----------------------------------------------------------------------------
-  ! vertical search of interpolation points for two-points
-!OCL SERIAL
-  subroutine INTERP_search_vert( &
-       KA_ref, KS_ref, KE_ref, &
-       KA, KS, KE,             &
-       hgt_ref,                &
-       hgt,                    &
-       idx_k,                  &
-       vfact,                  &
-       flag_extrap             )
-    use scale_prc, only: &
-       PRC_abort
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    implicit none
-
-    integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
-    integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
-    real(RP), intent(in)  :: hgt_ref(KA_ref)               ! height [m]               (reference)
-    real(RP), intent(in)  :: hgt    (KA)                   ! height [m]               (target)
-
-    integer,  intent(out) :: idx_k  (KA,2)                 ! k-index in reference     (target)
-    real(RP), intent(out) :: vfact  (KA)                   ! horizontal interp factor (target)
-
-    logical,  intent(in), optional :: flag_extrap          ! when true, extrapolation will be executed (just copy)
-
-    logical :: flag_extrap_
-
-    integer  :: k, kk
-    !---------------------------------------------------------------------------
-
-    if ( present(flag_extrap) ) then
-       flag_extrap_ = flag_extrap
-    else
-       flag_extrap_ = .true.
-    end if
-
-    do k = KS, KE
-       idx_k(k,1) = -1
-       idx_k(k,2) = -1
-
-       if    ( hgt(k) <  hgt_ref(KS_ref) ) then
-          if ( flag_extrap_ ) then
-             idx_k(k,1) = KS_ref
-             idx_k(k,2) = -1
-             vfact(k) = 1.0_RP
-          else
-             idx_k(k,1) = -1
-             idx_k(k,2) = -1
-             vfact(k) = UNDEF
-          end if
-       elseif( hgt(k) >= hgt_ref(KE_ref) ) then
-          if ( flag_extrap_ ) then
-             idx_k(k,1) = KE_ref
-             idx_k(k,2) = -1
-             vfact(k) = 1.0_RP
-          else
-             idx_k(k,1) = -1
-             idx_k(k,2) = -1
-             vfact(k) = UNDEF
-          end if
-       else
-          do kk = KS_ref, KE_ref-1
-             if (       hgt(k) >= hgt_ref(kk  ) &
-                  .AND. hgt(k) <  hgt_ref(kk+1) ) then
-                idx_k(k,1) = kk
-                idx_k(k,2) = kk + 1
-                vfact(k) = ( hgt_ref(kk+1) - hgt    (k)  ) &
-                         / ( hgt_ref(kk+1) - hgt_ref(kk) )
-
-                exit
-             endif
-          enddo
-       endif
-
-    enddo ! k-loop
-
-    return
-  end subroutine INTERP_search_vert
-
-  ! private
 
 !OCL SERIAL
   subroutine INTERP_insert( npoints, &
