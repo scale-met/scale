@@ -155,7 +155,7 @@ contains
           FILE_HISTORY_CARTESC_PRES_val(k) = FILE_HISTORY_CARTESC_PRES(k) * 100.0_RP ! [hPa->Pa]
        enddo
 
-       call INTERP_VERT_alloc_pres( FILE_HISTORY_CARTESC_PRES_nlayer, IA, JA ) ! [IN]
+       call INTERP_VERT_alloc_pres( FILE_HISTORY_CARTESC_PRES_nlayer, KA, IA, JA ) ! [IN]
     else
        LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'FILE_HISTORY_CARTESC_PRES_nlayer is not set.'
        LOG_INFO("FILE_HISTORY_CARTESC_setup",*) 'Output with pressure coordinate is disabled'
@@ -720,7 +720,7 @@ contains
 
        call PROF_rapstart('FILE_O_interp', 2)
        call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                              KA,                               & ! [IN]
+                              KA, KS, KE,                       & ! [IN]
                               IA, ISB, IEB,                     & ! [IN]
                               JA, JSB, JEB,                     & ! [IN]
                               src  (:,:,:),                     & ! [IN]
@@ -745,7 +745,7 @@ contains
 
        call PROF_rapstart('FILE_O_interp', 2)
        call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                               KA,                               & ! [IN]
+                               KA, KS, KE,                       & ! [IN]
                                IA, ISB, IEB,                     & ! [IN]
                                JA, JSB, JEB,                     & ! [IN]
                                src  (:,:,:),                     & ! [IN]
