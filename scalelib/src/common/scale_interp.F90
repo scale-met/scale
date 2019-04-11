@@ -1098,7 +1098,7 @@ contains
   ! interpolation for 1D data
 !OCL SERIAL
   subroutine INTERP_interp1d( &
-       KA_ref, &
+       KA_ref, KS_ref, KE_ref, &
        KA, KS, KE, &
        idx_k,         &
        vfact,         &
@@ -1110,11 +1110,11 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     implicit none
+    integer,  intent(in) :: KA_ref, KS_ref, KE_ref ! number of z-direction (reference)
+    integer,  intent(in) :: KA, KS, KE             ! number of z-direction (target)
 
-    integer,  intent(in)  :: KA_ref      ! number of z-direction (reference)
-    integer,  intent(in)  :: KA, KS, KE  ! number of z-direction (target)
-    integer,  intent(in)  :: idx_k(KA,2) ! k-index in reference
-    real(RP), intent(in)  :: vfact(KA  ) ! vertical interp factor
+    integer,  intent(in)         :: idx_k(KA,2) ! k-index in reference
+    real(RP), intent(in)         :: vfact(KA  ) ! vertical interp factor
     real(RP), intent(in)         :: hgt_ref(KA_ref) ! height (reference)
     real(RP), intent(in)         :: hgt    (KA)     ! height  (target)
     real(RP), intent(in), target :: val_ref(KA_ref) ! value  (reference)
@@ -1145,7 +1145,7 @@ contains
 
     if ( logwgt_ ) then
        allocate( work(KA_ref) )
-       do k = 1, KA_ref
+       do k = KS_ref, KE_ref
           if ( val_ref(k) == UNDEF ) then
              work(k) = UNDEF
           else
@@ -1156,7 +1156,7 @@ contains
        work => val_ref
     endif
 
-    call spline_coef( KA_ref, &
+    call spline_coef( KA_ref, KS_ref, KE_ref, &
                       hgt_ref(:), work(:), & ! (in)
                       kmax,                & ! (out)
                       idx(:), idx_r(:),    & ! (out)
@@ -1262,7 +1262,8 @@ contains
   ! interpolation using one-points for 3D data (nearest-neighbor)
   subroutine INTERP_interp3d( &
        npoints,                &
-       KA_ref, IA_ref, JA_ref, &
+       KA_ref, KS_ref, KE_ref, &
+       IA_ref, JA_ref,         &
        KA, KS, KE,             &
        IA, JA,                 &
        idx_i, idx_j,           &
@@ -1278,19 +1279,19 @@ contains
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
     implicit none
+    integer,  intent(in) :: npoints                ! number of interpolation point for horizontal
+    integer,  intent(in) :: KA_ref, KS_ref, KE_ref ! number of z-direction    (reference)
+    integer,  intent(in) :: IA_ref                 ! number of x-direction    (reference)
+    integer,  intent(in) :: JA_ref                 ! number of y-direction    (reference)
+    integer,  intent(in) :: KA, KS, KE             ! number of z-direction    (target)
+    integer,  intent(in) :: IA                     ! number of x-direction    (target)
+    integer,  intent(in) :: JA                     ! number of y-direction    (target)
 
-    integer,  intent(in) :: npoints                       ! number of interpolation point for horizontal
-    integer,  intent(in) :: KA_ref                        ! number of z-direction    (reference)
-    integer,  intent(in) :: IA_ref                        ! number of x-direction    (reference)
-    integer,  intent(in) :: JA_ref                        ! number of y-direction    (reference)
-    integer,  intent(in) :: KA, KS, KE                    ! number of z-direction    (target)
-    integer,  intent(in) :: IA                            ! number of x-direction    (target)
-    integer,  intent(in) :: JA                            ! number of y-direction    (target)
-    integer,  intent(in) :: idx_i  (IA,JA,npoints)        ! i-index in reference
-    integer,  intent(in) :: idx_j  (IA,JA,npoints)        ! j-index in reference
-    real(RP), intent(in) :: hfact  (IA,JA,npoints)        ! horizontal interp factor
-    integer,  intent(in) :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference
-    real(RP), intent(in) :: vfact  (KA,  IA,JA,npoints)   ! vertical interp factor
+    integer,  intent(in)         :: idx_i  (IA,JA,npoints)        ! i-index in reference
+    integer,  intent(in)         :: idx_j  (IA,JA,npoints)        ! j-index in reference
+    real(RP), intent(in)         :: hfact  (IA,JA,npoints)        ! horizontal interp factor
+    integer,  intent(in)         :: idx_k  (KA,2,IA,JA,npoints)   ! k-index in reference
+    real(RP), intent(in)         :: vfact  (KA,  IA,JA,npoints)   ! vertical interp factor
     real(RP), intent(in)         :: hgt_ref(KA_ref,IA_ref,JA_ref) ! height (reference)
     real(RP), intent(in)         :: hgt    (KA,IA,JA)             ! height  (target)
     real(RP), intent(in), target :: val_ref(KA_ref,IA_ref,JA_ref) ! value (reference)
@@ -1362,7 +1363,7 @@ contains
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = jmin, jmax
        do i = imin, imax
-       do k = 1, KA_ref
+       do k = KS_ref, KE_ref
           if ( val_ref(k,i,j) == UNDEF ) then
              work(k,i,j) = UNDEF
           else
@@ -1378,7 +1379,7 @@ contains
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = jmin, jmax
     do i = imin, imax
-       call spline_coef( KA_ref, &
+       call spline_coef( KA_ref, KS_ref, KE_ref, &
                          hgt_ref(:,i,j), work(:,i,j), & ! (in)
                          kmax(i,j),                   & ! (out)
                          idx(:,i,j), idx_r(:,i,j),    & ! (out)
@@ -2083,7 +2084,7 @@ contains
 
 !OCL SERIAL
   subroutine spline_coef( &
-       KA_ref, &
+       KA_ref, KS_ref, KE_ref, &
        hgt_ref, val_ref, &
        kmax,             &
        idx, idx_r,       &
@@ -2094,7 +2095,8 @@ contains
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     implicit none
-    integer,  intent(in) :: KA_ref
+    integer,  intent(in) :: KA_ref, KS_ref, KE_ref
+
     real(RP), intent(in) :: hgt_ref(KA_ref)
     real(RP), intent(in) :: val_ref(KA_ref)
 
@@ -2109,7 +2111,7 @@ contains
     real(RP) :: dz
     integer  :: k
 
-    do k = 1, KA_ref-1
+    do k = KS_ref, KE_ref-1
        if ( val_ref(k) .ne. UNDEF ) then
           idx(1) = k
           idx_r(k) = 1
@@ -2118,7 +2120,7 @@ contains
     end do
     kmax = 1
     FDZ(1) = 1e10 ! dummy
-    do k = idx(1)+1, KA_ref
+    do k = idx(1)+1, KE_ref
        dz = hgt_ref(k) - hgt_ref(idx(kmax))
        if ( val_ref(k) .ne. UNDEF .and. dz > EPS ) then
           do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
@@ -2134,8 +2136,13 @@ contains
 
     if ( kmax > 3 ) then
 
-       do k = 2, kmax-1
+       MD(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
+       do k = 3, kmax-2
           MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
+       end do
+       MD(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
+
+       do k = 2, kmax-1
           V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
                - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
        end do
@@ -2144,8 +2151,10 @@ contains
                                        FDZ(2:), MD(:), FDZ(:), & ! (in)
                                        V(:),                   & ! (in)
                                        U(:)                    ) ! (out)
-       U(1) = 0.0_RP
-       U(kmax) = 0.0_RP
+!       U(1) = 0.0_RP
+!       U(kmax) = 0.0_RP
+       U(1) = U(2)
+       U(kmax) = U(kmax-1)
 
     else
 

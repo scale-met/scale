@@ -203,7 +203,7 @@ contains
     !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, KA, KS, KE, &
+       call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
                              INTERP_xi2z_idx (:,:,i,j), & ! (in)
                              INTERP_xi2z_coef(:,  i,j), & ! (in)
                              Z(:,i,j), Xi(:),           & ! (in)
@@ -244,7 +244,7 @@ contains
     !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, KA, KS, KE, &
+       call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
                              INTERP_z2xi_idx (:,:,i,j), & ! (in)
                              INTERP_z2xi_coef(:,  i,j), & ! (in)
                              Xi(:), Z(:,i,j),           & ! (in)
@@ -285,7 +285,7 @@ contains
     !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, KA, KS-1, KE, &
+       call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
                              INTERP_xih2zh_idx (:,:,i,j), & ! (in)
                              INTERP_xih2zh_coef(:,  i,j), & ! (in)
                              Zh(1:,i,j), Xih(1:),         & ! (in)
@@ -326,7 +326,7 @@ contains
     !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, KA, KS-1, KE, &
+       call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
                              INTERP_zh2xih_idx (:,:,i,j), & ! (in)
                              INTERP_zh2xih_coef(:,  i,j), & ! (in)
                              Xih(1:), Zh(1:,i,j),         & ! (in)
@@ -459,7 +459,7 @@ contains
     !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, Kpres, 1, Kpres, &
+       call INTERP_interp1d( KA, KS, KE, Kpres, 1, Kpres, &
                              INTERP_xi2p_idx (:,:,i,j), & ! (in)
                              INTERP_xi2p_coef(:,  i,j), & ! (in)
                              LnPRES(:,i,j), LnPaxis(:), & ! (in)
@@ -499,7 +499,7 @@ contains
     !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef)
     do j = JS, JE
     do i = IS, IE
-       call INTERP_interp1d( KA, Kpres, 1, Kpres, &
+       call INTERP_interp1d( KA, KS-1, KE, Kpres, 1, Kpres, &
                              INTERP_xih2p_idx (:,:,i,j), & ! (in)
                              INTERP_xih2p_coef(:,  i,j), & ! (in)
                              LnPRESh(:,i,j), LnPaxis(:), & ! (in)

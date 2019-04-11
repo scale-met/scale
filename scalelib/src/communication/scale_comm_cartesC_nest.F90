@@ -2601,6 +2601,8 @@ contains
        if ( no_zstag ) then
           call INTERP_interp3d( itp_nh,                      & ! [IN]
                                 TILEAL_KA  (HANDLE),         & ! [IN]
+                                KHALO+1,                     & ! [IN]
+                                TILEAL_KA  (HANDLE)-KHALO,   & ! [IN]
                                 TILEAL_IA  (HANDLE),         & ! [IN]
                                 TILEAL_JA  (HANDLE),         & ! [IN]
                                 DAUGHTER_KA(HANDLE),         & ! [IN]
@@ -2622,6 +2624,8 @@ contains
        else
           call INTERP_interp3d( itp_nh,                       & ! [IN]
                                 TILEAL_KA  (HANDLE)+1,        & ! [IN]
+                                KHALO+1,                      & ! [IN]
+                                TILEAL_KA  (HANDLE)+1-KHALO,  & ! [IN]
                                 TILEAL_IA  (HANDLE),          & ! [IN]
                                 TILEAL_JA  (HANDLE),          & ! [IN]
                                 DAUGHTER_KA(HANDLE),          & ! [IN]

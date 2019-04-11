@@ -1456,10 +1456,11 @@ contains
 
     endif
 
-    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                          dims(1)+2, dims(2), dims(3), & ! [IN]
-                          KA, KS, KE,                  & ! [IN]
-                          IA, JA,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                &
+                          dims(1)+2, 1, dims(1)+2, &
+                          dims(2), dims(3),        &
+                          KA, KS, KE,              &
+                          IA, JA,                  &
                           igrd  (    :,:,:), & ! [IN]
                           jgrd  (    :,:,:), & ! [IN]
                           hfact (    :,:,:), & ! [IN]
@@ -1477,10 +1478,11 @@ contains
     end if
 
 
-    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                          dims(1)+2, dims(2), dims(3), & ! [IN]
-                          KA, KS, KE,                  & ! [IN]
-                          IA, JA,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                &
+                          dims(1)+2, 1, dims(1)+2, &
+                          dims(2), dims(3),        &
+                          KA, KS, KE,              &
+                          IA, JA,                  &
                           igrd  (    :,:,:), & ! [IN]
                           jgrd  (    :,:,:), & ! [IN]
                           hfact (    :,:,:), & ! [IN]
@@ -1497,10 +1499,11 @@ contains
        call COMM_wait ( U(:,:,:), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                          dims(1)+2, dims(2), dims(3), & ! [IN]
-                          KA, KS, KE,                  & ! [IN]
-                          IA, JA,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                &
+                          dims(1)+2, 1, dims(1)+2, &
+                          dims(2), dims(3),        &
+                          KA, KS, KE,              &
+                          IA, JA,                  &
                           igrd  (    :,:,:), & ! [IN]
                           jgrd  (    :,:,:), & ! [IN]
                           hfact (    :,:,:), & ! [IN]
@@ -1588,10 +1591,11 @@ contains
     call COMM_wait ( VELX(:,:,:), 2, .false. )
     call COMM_wait ( VELY(:,:,:), 3, .false. )
 
-    call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                          dims(1)+2, dims(2), dims(3), & ! [IN]
-                          KA, KS, KE,                  & ! [IN]
-                          IA, JA,                      & ! [IN]
+    call INTERP_interp3d( itp_nh_a,                &
+                          dims(1)+2, 1, dims(1)+2, &
+                          dims(2), dims(3),        &
+                          KA, KS, KE,              &
+                          IA, JA,                  &
                           igrd    (    :,:,:), & ! [IN]
                           jgrd    (    :,:,:), & ! [IN]
                           hfact   (    :,:,:), & ! [IN]
@@ -1616,10 +1620,11 @@ contains
     enddo
 
     do iq = 1, QA
-       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                             dims(1)+2, dims(2), dims(3), & ! [IN]
-                             KA, KS, KE,                  & ! [IN]
-                             IA, JA,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                &
+                             dims(1)+2, 1, dims(1)+2, &
+                             dims(2), dims(3),        &
+                             KA, KS, KE,              &
+                             IA, JA,                  &
                              igrd    (    :,:,:), & ! [IN]
                              jgrd    (    :,:,:), & ! [IN]
                              hfact   (    :,:,:), & ! [IN]
@@ -1647,10 +1652,11 @@ contains
     enddo
 
     if ( use_file_density ) then
-       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                             dims(1)+2, dims(2), dims(3), & ! [IN]
-                             KA, KS, KE,                  & ! [IN]
-                             IA, JA,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                &
+                             dims(1)+2, 1, dims(1)+2, &
+                             dims(2), dims(3),        &
+                             KA, KS, KE,              &
+                             IA, JA,                  &
                              igrd    (    :,:,:), & ! [IN]
                              jgrd    (    :,:,:), & ! [IN]
                              hfact   (    :,:,:), & ! [IN]
@@ -1669,10 +1675,11 @@ contains
           call COMM_wait ( DENS(:,:,:), 1, .false. )
        end if
     else
-       call INTERP_interp3d( itp_nh_a,                    & ! [IN]
-                             dims(1)+2, dims(2), dims(3), & ! [IN]
-                             KA, KS, KE,                  & ! [IN]
-                             IA, JA,                      & ! [IN]
+       call INTERP_interp3d( itp_nh_a,                &
+                             dims(1)+2, 1, dims(1)+2, &
+                             dims(2), dims(3),        &
+                             KA, KS, KE,              &
+                             IA, JA,                  &
                              igrd    (    :,:,:), & ! [IN]
                              jgrd    (    :,:,:), & ! [IN]
                              hfact   (    :,:,:), & ! [IN]
@@ -3446,10 +3453,11 @@ contains
        call COMM_wait ( albg(:,:,I_R_diffuse,I_R_VIS), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh_l,                     & ! [IN]
-                          ldims(1), ldims(2), ldims(3), & ! [IN]
-                          LKMAX, LKS, LKE,              & ! [IN]
-                          IA, JA,                       & ! [IN]
+    call INTERP_interp3d( itp_nh_l,              &
+                          ldims(1), 1, ldims(1), &
+                          ldims(2), ldims(3),    &
+                          LKMAX, LKS, LKE,       &
+                          IA, JA,                &
                           igrd    (    :,:,:), & ! [IN]
                           jgrd    (    :,:,:), & ! [IN]
                           hfact   (    :,:,:), & ! [IN]
@@ -3544,10 +3552,11 @@ contains
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh_l,                     & ! [IN]
-                                ldims(1), ldims(2), ldims(3), & ! [IN]
-                                LKMAX, LKS, LKE,              & ! [IN]
-                                IA, JA,                       & ! [IN]
+          call INTERP_interp3d( itp_nh_l,              &
+                                ldims(1), 1, ldims(1), &
+                                ldims(2), ldims(3),    &
+                                LKMAX, LKS, LKE,       &
+                                IA, JA,                &
                                 igrd    (    :,:,:), & ! [IN]
                                 jgrd    (    :,:,:), & ! [IN]
                                 hfact   (    :,:,:), & ! [IN]
@@ -3581,10 +3590,11 @@ contains
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh_l,                     & ! [IN]
-                                ldims(1), ldims(2), ldims(3), & ! [IN]
-                                LKMAX, LKS, LKE,              & ! [IN]
-                                IA, JA,                       & ! [IN]
+          call INTERP_interp3d( itp_nh_l,              &
+                                ldims(1), 1, ldims(1), &
+                                ldims(2), ldims(3),    &
+                                LKMAX, LKS, LKE,       &
+                                IA, JA,                &
                                 igrd    (    :,:,:), & ! [IN]
                                 jgrd    (    :,:,:), & ! [IN]
                                 hfact   (    :,:,:), & ! [IN]
