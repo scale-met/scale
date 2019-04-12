@@ -106,7 +106,7 @@ module scale_atmos_phy_cp_kf
   real(RP), private            :: TTAB(KFNT,KFNP),QSTAB(KFNT,KFNP)
   real(RP), private            :: THE0K(KFNP)
   real(RP), private            :: ALU(200)
-  real(RP), private            :: RDPR,RDTHK,PLUTOP
+  real(RP), private            :: RDPR,RDTHK,PLUTOP,PBOT
   real(RP), private            :: GdCP                       !< GRAV/CP_dry
   !
   !< ALIQ saturrate watervapor (SVP1*1000; SVP1=0.6112)
@@ -2837,39 +2837,10 @@ contains
     real(RP), intent(inout) :: TU, QU, QLIQ, QICE
     real(RP), intent(out)   :: QNEWLQ, QNEWIC
 
-    real(RP) :: TP,QQ,BTH,TTH,PP,T00,T10,T01,T11,Q00,Q10,Q01,Q11
     real(RP) :: TEMP,QS,QNEW,DQ,QTOT,RLL,CPP
-    integer  :: IPTB,ITHTB
-    ! scaling pressure and tt table index
-    tp=(p-plutop)*rdpr
-    qq=tp-aint(tp)
-    iptb=int(tp)+1
-
-    !  scaling the and tt table index
-    bth=(the0k(iptb+1)-the0k(iptb))*qq+the0k(iptb)
-    tth=(thes-bth)*rdthk
-    pp   =tth-aint(tth)
-    ithtb=int(tth)+1
-    !      IF(IPTB.GE.220 .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
-    IF(IPTB.GE.kfnp .OR. IPTB.LE.1 .OR. ITHTB.GE.250 .OR. ITHTB.LE.1)THEN
-       ! modify
-       LOG_WARN("CP_kf_tpmix2",*)   'OUT OF BOUNDS',IPTB,ITHTB,P,THES
-       !        flush(98)
-    ENDIF
-
-    t00=ttab(ithtb  ,iptb  )
-    t10=ttab(ithtb+1,iptb  )
-    t01=ttab(ithtb  ,iptb+1)
-    t11=ttab(ithtb+1,iptb+1)
-
-    q00=qstab(ithtb  ,iptb  )
-    q10=qstab(ithtb+1,iptb  )
-    q01=qstab(ithtb  ,iptb+1)
-    q11=qstab(ithtb+1,iptb+1)
 
     ! parcel temperature
-    temp=(t00+(t10-t00)*pp+(t01-t00)*qq+(t00-t10-t01+t11)*pp*qq)
-    qs=(q00+(q10-q00)*pp+(q01-q00)*qq+(q00-q10-q01+q11)*pp*qq)
+    call CP_kf_tpmix2dd( p, thes, temp, qs )
 
     DQ=QS-QU
     IF(DQ.LE.0._RP)THEN
@@ -3023,21 +2994,34 @@ contains
   !<
   subroutine CP_kf_tpmix2dd( p, thes, ts, qs )
     implicit none
-    real(RP), intent(in)    :: P, THES
-    real(RP), intent(inout) :: TS, QS
+    real(RP), intent(in)  :: P, THES
+    real(RP), intent(out) :: TS, QS
 
     real(RP) :: TP,QQ,BTH,TTH,PP,T00,T10,T01,T11,Q00,Q10,Q01,Q11
-    integer  :: IPTB,ITHTB
+    integer  :: IPTB, ITHTB
+
     ! scaling pressure and tt table index
-    tp=(p-plutop)*rdpr
-    qq=tp-aint(tp)
-    iptb=int(tp)+1
+    tp = ( p - plutop ) * rdpr
+    qq = tp - aint(tp)
+    iptb  = int(tp)+1
+    if ( iptb < 1 .or. iptb >= KFNP ) then
+       LOG_WARN("CP_kf_tpmix2dd",*) 'OUT OF BOUNDS (p): ', p, plutop, pbot
+       iptb = min( max( iptb, 1 ), KFNP-1 )
+       qq = 0.5_RP + sign(0.5_RP, iptb-2.0_RP) ! qq=0 for iptb==1, qq=1 for iptb==KFNP-1
+    end if
+
 
     !  scaling the and tt table index
-    bth=(the0k(iptb+1)-the0k(iptb))*qq+the0k(iptb)
-    tth=(thes-bth)*rdthk
-    pp   =tth-aint(tth)
-    ithtb=int(tth)+1
+    bth = ( the0k(iptb+1) - the0k(iptb) ) * qq + the0k(iptb)
+    tth = ( thes - bth ) * rdthk
+    pp = tth - aint(tth)
+    ithtb  = int(tth)+1
+    if ( ithtb < 1 .or. ithtb >= KFNT ) then
+       LOG_WARN("CP_kf_tpmix2dd",*) 'OUT OF BOUNDS (thes): ', thes, p, bth, bth + (KFNT-1) / rdthk
+       ithtb = min( max( ithtb, 1 ), KFNT-1 )
+       pp = 0.5_RP + sign(0.5_RP, ithtb-2.0_RP) ! pp=0 for ithtb==1, pp=1 for ithtb==KFNT-1
+    end if
+
 
     t00=ttab(ithtb  ,iptb  )
     t10=ttab(ithtb+1,iptb  )
@@ -3119,7 +3103,7 @@ contains
     real(RP) :: DTH   =    1._RP
     real(RP) :: TMIN  =  150._RP
     real(RP) :: TOLER = 0.001_RP
-    real(RP) :: PBOT, DPR, TEMP, P, ES, QS, PI
+    real(RP) :: DPR, TEMP, P, ES, QS, PI
     real(RP) :: THES, TGUES, THGUES, THTGS
     real(RP) :: DT, T1, T0, F0, F1, ASTRT, AINC, A1
 
