@@ -746,8 +746,6 @@ contains
        umfnewdold           )
     use scale_precision
     use scale_const,only :&
-         CP => CONST_CPdry   ,  &
-         PRE00 => CONST_PRE00,  &
          TEM00 => CONST_TEM00, &
          GRAV  => CONST_GRAV
     use scale_prc, only: &
@@ -1282,9 +1280,7 @@ contains
        flux_qr, flux_qs                      )
     use scale_precision
     use scale_const,only :&
-         CP => CONST_CPdry    , &
-         PRE00 => CONST_PRE00 , &
-         GRAV  => CONST_GRAV  , &
+         GRAV  => CONST_GRAV, &
          R     => CONST_Rdry
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
@@ -1414,7 +1410,6 @@ contains
        kkp1 = kk + 1
        ! temporaly use below layer valuables
        f_frozen1      = 0._RP ! frozen rate initialize this variable 0 (water)to 1(ice)
-       temp_u(kkp1)   = temp(kkp1)   ! up parcel temperature assumed env temperature
        theta_eu(kkp1) = theta_eu(kk) ! up parcel theta_E
        qv_u(kkp1)     = qv_u(kk)     ! up parcel vapor
        qc(kkp1)       = qc(kk)       ! up parcel water
@@ -1423,9 +1418,9 @@ contains
        !! and calc updraft pacel temperature
        !< it is use determinnent of frozn or not
 
-       call CP_kf_tpmix2(pres(kkp1), theta_eu(kkp1),                    & ! [IN]
-                         temp_u(kkp1), qv_u(kkp1), qc(kkp1), qi(kkp1),  & ! [INOUT]
-                         qcnew, qinew                                   ) ! [OUT]
+       call CP_kf_tpmix2(pres(kkp1), theta_eu(kkp1),     & ! [IN]
+                         qv_u(kkp1), qc(kkp1), qi(kkp1), & ! [INOUT]
+                         temp_u(kkp1), qcnew, qinew      ) ! [OUT]
        !> check to see if updraft temperature is avove the temperature at which
        !! glaciation is assumed to initiate. if it is, calculate the
        !! fraction of remainning liquid water to freeze... temp_frzT is the
@@ -1505,7 +1500,6 @@ contains
           f_eq(kkp1) = 0._RP
        else
           k_let = kkp1
-          temptmp   = tempvq_u(kkp1)
           ! determine teh critical mixed fraction of updraft and environmental air ...
           ! if few mix moisture air
           f_mix1    = 0.95_RP
@@ -1515,9 +1509,9 @@ contains
           qctmp = f_mix2*qc(kkp1)
           qitmp = f_mix2*qi(kkp1)
           ! need only temptmp because calc bouyancy
-          call CP_kf_tpmix2( pres(kkp1), theta_tmp,        & ! [IN]
-                             temptmp, qvtmp, qctmp, qitmp, & ! [INOUT]
-                             qcnew, qinew                  ) ! [OUT]
+          call CP_kf_tpmix2( pres(kkp1), theta_tmp, & ! [IN]
+                             qvtmp, qctmp, qitmp,   & ! [INOUT]
+                             temptmp, qcnew, qinew  ) ! [OUT]
           ! qinew and qcnew is damy valuavle(not use )
           temp_u95 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
           ! TU95 in old coad
@@ -1533,9 +1527,9 @@ contains
              qctmp     = f_mix2*qc(kkp1)
              qitmp     = f_mix2*qi(kkp1)
              ! need only temptmp because calc bouyancy
-             call CP_kf_tpmix2( pres(kkp1), theta_tmp,        & ! [IN]
-                                temptmp, qvtmp, qctmp, qitmp, & ! [INOUT]
-                                qcnew, qinew                  ) ! [OUT]
+             call CP_kf_tpmix2( pres(kkp1), theta_tmp, & ! [IN]
+                                qvtmp, qctmp, qitmp,   & ! [INOUT]
+                                temptmp, qcnew, qinew  ) ! [OUT]
              ! qinew and qcnew is damy valuavle(not use )
              temp_u10 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
              if (abs(temp_u10 - tempvq_u(kkp1)) < 1.e-3_RP ) then !if10%
@@ -1800,7 +1794,7 @@ contains
           qv_d(k_lfs)     = qv(k_lfs)
           ! find wet-bulb temperature and qv
           call CP_kf_tpmix2dd( pres(k_lfs), theta_ed(k_lfs), & ! [IN]
-                               temp_d(k_lfs), qvs_tmp        ) ! [INOUT]
+                               temp_d(k_lfs), qvs_tmp        ) ! [OUT]
           call CP_kf_calcexn( pres(k_lfs), qvs_tmp, & ! [IN]
                               exn(k_lfs)            ) ! [OUT]
           !!          exn(kk) = (PRE00/pres(k_lfs))**(0.2854*(1._RP - 0.28_RP*qv_d(k_lfs)))
@@ -2826,16 +2820,11 @@ contains
   !------------------------------------------------------------------------------
   !> CP_kf_TPMIX2
   !! calculate temperature of a lifting parcel
-  !! LOOKUP TABLE VARIABLES
-  !!    parameter(kfnt=250,kfnp=220)
-  !!    COMMON/KFLUT/ ttab(kfnt,kfnp),qstab(kfnt,kfnp),the0k(kfnp),
-  !!                  alu(200),rdpr,rdthk,plutop
-  !<
-  subroutine CP_kf_tpmix2( p,thes,tu,qu,qliq,qice,qnewlq,qnewic )
+  subroutine CP_kf_tpmix2( p,thes,qu,qliq,qice,tu,qnewlq,qnewic )
     implicit none
     real(RP), intent(in)    :: P, THES
-    real(RP), intent(inout) :: TU, QU, QLIQ, QICE
-    real(RP), intent(out)   :: QNEWLQ, QNEWIC
+    real(RP), intent(inout) :: QU, QLIQ, QICE
+    real(RP), intent(out)   :: TU, QNEWLQ, QNEWIC
 
     real(RP) :: TEMP,QS,QNEW,DQ,QTOT,RLL,CPP
 
@@ -2895,7 +2884,8 @@ contains
   !! calculate temperature differential of air including frozen droplets
   !<
   subroutine CP_kf_dtfrznew( P, QFRZ, TU, THTEU, QU, QICE )
-    use scale_precision
+    use scale_const, &
+         PRE00 => CONST_PRE00
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     implicit none
@@ -2934,7 +2924,7 @@ contains
     DQEVAP = min(QS-QU, QICE) ! [add] R.Yoshida (20170519) avoid to be negative QICE
     QICE = QICE-DQEVAP
     QU = QU+DQEVAP
-    PII=(1.E5_RP/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
+    PII=(PRE00/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
     !< Bolton 1980
     !< Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
     THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
@@ -3133,7 +3123,7 @@ contains
        p=p+dpr
        es=aliq*exp((bliq*temp-cliq)/(temp-dliq))
        qs=0.622_RP*es/(p-es)
-       pi=(1.e5_RP/p)**(0.2854_RP*(1.-0.28_RP*qs))
+       pi=(PRE00/p)**(0.2854_RP*(1.0_RP-0.28_RP*qs))
        the0k(kp)=temp*pi*exp((3374.6525_RP/temp-2.5403_RP)*qs*        &
             (1._RP+0.81_RP*qs))
     enddo
@@ -3155,7 +3145,7 @@ contains
           endif
           es=aliq*exp((bliq*tgues-cliq)/(tgues-dliq))
           qs=0.622_RP*es/(p-es)
-          pi=(1.e5_RP/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
+          pi=(PRE00/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
           thgues=tgues*pi*exp((3374.6525_RP/tgues-2.5403_RP)*qs*      &
                (1._RP + 0.81_RP*qs))
           f0=thgues-thes
@@ -3166,7 +3156,7 @@ contains
           do itcnt=1,11
              es=aliq*exp((bliq*t1-cliq)/(t1-dliq))
              qs=0.622_RP*es/(p-es)
-             pi=(1.e5_RP/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
+             pi=(PRE00/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
              thtgs=t1*pi*exp((3374.6525_RP/t1-2.5403_RP)*qs*(1._RP + 0.81_RP*qs))
              f1=thtgs-thes
              if(abs(f1).lt.toler)then
