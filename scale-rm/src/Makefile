@@ -5,20 +5,20 @@
 ################################################################################
 
 TOPDIR     = $(abspath ../..)
-BUILD_DIR  = ./.libs
 SYSDEP_DIR = ../../sysdep
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 
+
 BINNAME  = scale-rm
 INITNAME = scale-rm_init
 PPNAME   = scale-rm_pp
 
-BINS = $(BINDIR)/$(BINNAME)  \
-       $(BINDIR)/$(INITNAME) \
-       $(BINDIR)/$(PPNAME)
-LIBS = $(LIBDIR)/libscale.a
+BINS = $(BINDIR)/$(BINNAME)$(POSTFIX)  \
+       $(BINDIR)/$(INITNAME)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME)$(POSTFIX)
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -109,27 +109,37 @@ OBJS = 	\
 all:
 	$(MAKE) envlog
 	$(MAKE) makedir
-	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
+	$(MAKE) makelib
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	$(MAKE) makebin
 	@echo "Complete making scale-rm."
 
 makedir:
 	mkdir -p $(BINDIR)
-	mkdir -p $(LIBDIR)
 	mkdir -p $(BUILD_DIR)
 
-$(LIBDIR)/libscale.a:
+makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
 
-$(BINDIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
+$(BUILD_DIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BINDIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
+$(BUILD_DIR)/$(INITNAME) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BINDIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
+$(BUILD_DIR)/$(PPNAME)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
+
+$(BINDIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME)
+	install $< $@
+
+$(BINDIR)/$(INITNAME)$(POSTFIX) : $(BUILD_DIR)/$(INITNAME)
+	install $< $@
+
+$(BINDIR)/$(PPNAME)$(POSTFIX)   : $(BUILD_DIR)/$(PPNAME)
+	install $< $@
+
+
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   $(BUILD_DIR)/$(BINNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
@@ -141,17 +151,17 @@ endif
 
 allclean: distclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
+	rmdir -rf $(BINDIR)
+
+distclean: clean
 	rm -f $(BINDIR)/$(BINNAME)
 	rm -f $(BINDIR)/$(INITNAME)
 	rm -f $(BINDIR)/$(PPNAME)
-
-distclean: clean
-	rm -f $(BUILD_DIR)/$(BINNAME)
-	rm -f $(BUILD_DIR)/$(INITNAME)
-	rm -f $(BUILD_DIR)/$(PPNAME)
+	rm -rf ./.libs*
 
 clean:
-	rm -f $(BUILD_DIR)/*.*
+	rm -rf $(BUILD_DIR)
+	rm -f *.o *.mod *.lst *~
 
 dependency:
 	./makedepend .
