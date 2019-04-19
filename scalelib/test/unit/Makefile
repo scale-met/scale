@@ -22,7 +22,7 @@ VPATH = $(BUILD_DIR)
 
 BINNAME = unit
 
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a $(LIBDIR)/libdcutils.a
 
 OBJS = \
 	test_comm.o             \
