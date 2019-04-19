@@ -14,7 +14,7 @@ include $(TOPDIR)/Mkinclude
 
 BINNAME = horizontal_mean
 
-LIBS = $(LIBDIR)/libscale.a
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
 OBJS =
 
