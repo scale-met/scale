@@ -73,6 +73,7 @@ module scale_interp
   integer,  private :: INTERP_weight_order = 2
   real(RP), private :: INTERP_search_limit
   real(RP), private :: INTERP_buffer_size_fact = 2.0_RP
+  logical,  private :: INTERP_use_spline_vert = .true.
 
   !-----------------------------------------------------------------------------
 contains
@@ -89,7 +90,8 @@ contains
     real(RP), intent(in), optional :: search_limit
 
     namelist /PARAM_INTERP/ &
-         INTERP_buffer_size_fact
+         INTERP_buffer_size_fact, &
+         INTERP_use_spline_vert
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -2111,54 +2113,63 @@ contains
     real(RP) :: dz
     integer  :: k
 
-    do k = KS_ref, KE_ref-1
-       if ( val_ref(k) .ne. UNDEF ) then
-          idx(1) = k
-          idx_r(k) = 1
-          exit
-       end if
-    end do
-    kmax = 1
-    FDZ(1) = 1e10 ! dummy
-    do k = idx(1)+1, KE_ref
-       dz = hgt_ref(k) - hgt_ref(idx(kmax))
-       if ( val_ref(k) .ne. UNDEF .and. dz > EPS ) then
-          do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
-             kmax = kmax - 1 ! marge
+    if ( INTERP_use_spline_vert ) then
+
+       do k = KS_ref, KE_ref-1
+          if ( val_ref(k) .ne. UNDEF ) then
+             idx(1) = k
+             idx_r(k) = 1
+             exit
+          end if
+       end do
+       kmax = 1
+       FDZ(1) = 1e10 ! dummy
+       do k = idx(1)+1, KE_ref
+          dz = hgt_ref(k) - hgt_ref(idx(kmax))
+          if ( val_ref(k) .ne. UNDEF .and. dz > EPS ) then
+             do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
+                kmax = kmax - 1 ! marge
+             end do
+             kmax = kmax + 1
+             idx(kmax) = k
+             if ( idx(kmax-1)+1 <= k-1 ) idx_r(idx(kmax-1)+1:k-1) = kmax-1
+             idx_r(k) = kmax
+             FDZ(kmax) = hgt_ref(k) - hgt_ref(idx(kmax-1))
+          end if
+       end do
+
+       if ( kmax > 3 ) then
+
+          MD(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
+          do k = 3, kmax-2
+             MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
           end do
-          kmax = kmax + 1
-          idx(kmax) = k
-          if ( idx(kmax-1)+1 <= k-1 ) idx_r(idx(kmax-1)+1:k-1) = kmax-1
-          idx_r(k) = kmax
-          FDZ(kmax) = hgt_ref(k) - hgt_ref(idx(kmax-1))
+          MD(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
+
+          do k = 2, kmax-1
+             V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
+                  - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
+          end do
+
+          call MATRIX_SOLVER_tridiagonal( kmax, 2, kmax-1, &
+                                          FDZ(2:), MD(:), FDZ(:), & ! (in)
+                                          V(:),                   & ! (in)
+                                          U(:)                    ) ! (out)
+!          U(1) = 0.0_RP
+!          U(kmax) = 0.0_RP
+          U(1) = U(2)
+          U(kmax) = U(kmax-1)
+
+       else
+
+          idx(kmax) = idx(1) ! force linear interpolateion
+
        end if
-    end do
-
-    if ( kmax > 3 ) then
-
-       MD(2) = 2.0_RP * ( FDZ(2) + FDZ(3) ) + FDZ(2)
-       do k = 3, kmax-2
-          MD(k) = 2.0_RP * ( FDZ(k) + FDZ(k+1) )
-       end do
-       MD(kmax-1) = 2.0_RP * ( FDZ(kmax-1) + FDZ(kmax) ) + FDZ(kmax)
-
-       do k = 2, kmax-1
-          V(k) = ( val_ref(idx(k+1)) - val_ref(idx(k  )) ) / FDZ(k+1) &
-               - ( val_ref(idx(k  )) - val_ref(idx(k-1)) ) / FDZ(k  )
-       end do
-
-       call MATRIX_SOLVER_tridiagonal( kmax, 2, kmax-1, &
-                                       FDZ(2:), MD(:), FDZ(:), & ! (in)
-                                       V(:),                   & ! (in)
-                                       U(:)                    ) ! (out)
-!       U(1) = 0.0_RP
-!       U(kmax) = 0.0_RP
-       U(1) = U(2)
-       U(kmax) = U(kmax-1)
 
     else
 
-       idx(kmax) = idx(1) ! force linear interpolateion
+       kmax = 1
+       idx(1) = -999 ! dummy
 
     end if
 
