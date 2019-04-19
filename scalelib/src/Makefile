@@ -4,8 +4,8 @@
 #
 ################################################################################
 
-TOPDIR      = ../..
-SYSDEP_DIR := ../../sysdep
+TOPDIR     = $(abspath ../..)
+SYSDEP_DIR = $(abspath ../../sysdep)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -269,6 +269,14 @@ makedir:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
 
+
+info:
+	@$(MAKE) --no-print-directory envlog
+	@echo
+	@echo "SCALElib"
+	@$(MAKE) --no-print-directory conflog
+
+
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
 
@@ -315,7 +323,6 @@ allcleansdm:
 
 cleansdm:
 	$(MAKE) -C $(SDMDIR)     clean
-
 
 
 allclean: distclean

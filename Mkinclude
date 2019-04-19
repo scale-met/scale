@@ -26,11 +26,11 @@ else
       FFLAGS += $(FFLAGS_QUICKDEBUG) -DQUICKDEBUG
       POSTFIX = _quickdebug
    else
-      BUILD_DIR  = ./.libs_quickdebug
+      BUILD_DIR  = $(abspath ./.libs_quickdebug)
       POSTFIX =
    endif
 endif
-BUILD_DIR = ./.libs$(POSTFIX)
+BUILD_DIR = $(abspath ./.libs$(POSTFIX))
 
 ifeq ($(SCALE_USE_SINGLEFP),T)
    FFLAGS += -DSINGLE

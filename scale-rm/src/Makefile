@@ -5,7 +5,7 @@
 ################################################################################
 
 TOPDIR     = $(abspath ../..)
-SYSDEP_DIR = ../../sysdep
+SYSDEP_DIR = $(abspath ../../sysdep)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -107,7 +107,7 @@ OBJS = 	\
 	$(MAIN_OBJS)
 
 all:
-	$(MAKE) envlog
+	$(MAKE) info
 	$(MAKE) makedir
 	$(MAKE) makelib
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
@@ -122,6 +122,12 @@ makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINS)
+
+info:
+	@$(MAKE) -C $(SCALELIBDIR)/src --no-print-directory info
+	@echo
+	@echo "SCALE-RM"
+	@$(MAKE) --no-print-directory conflog
 
 $(BUILD_DIR)/$(BINNAME)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
