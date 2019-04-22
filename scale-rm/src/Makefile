@@ -157,12 +157,12 @@ endif
 
 allclean: distclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
-	rmdir -rf $(BINDIR)
+	rm -rf $(BINDIR)
 
 distclean: clean
-	rm -f $(BINDIR)/$(BINNAME)
-	rm -f $(BINDIR)/$(INITNAME)
-	rm -f $(BINDIR)/$(PPNAME)
+	rm -f $(BINDIR)/$(BINNAME)$(POSTFIX)
+	rm -f $(BINDIR)/$(INITNAME)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME)$(POSTFIX)
 	rm -rf ./.libs*
 
 clean:
