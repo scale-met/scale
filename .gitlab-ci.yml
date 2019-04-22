@@ -10,26 +10,50 @@ stages:
 
 # BUILD
 
-double:
+normal-rm:
   stage: build
   script:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
     - cd scale-rm/src
     - make -j 4
+    - make -j 4 SCALE_USE_SINGLEFP=T
 
-single:
-  stage: build
-  script:
-    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
-    - cd scale-rm/src
-    - SCALE_USE_SINGLEFP=T make -j 4
-
-openmp:
+openmp-rm:
   stage: build
   script:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
     - cd scale-rm/src
     - make -j 4 SCALE_ENABLE_OPENMP=T
+
+debug-rm:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scale-rm/src
+    - make -j 4 SCALE_QUICKDEBUT=T
+
+normal-gm:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - cd scale-gm/src
+    - make -j 4
+    - make -j 4 SCALE_USE_SINGLEFP=T
+
+openmp-gm:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - cd scale-gm/src
+    - make -j 4 SCALE_ENABLE_OPENMP=T
+
+debug-gm:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - cd scale-gm/src
+    - make -j 4 SCALE_QUICKDEBUT=T
+    - make -j 4 SCALE_DEBUT=T
 
 
 # TEST
@@ -80,15 +104,17 @@ description:
       - doc/descriptions/scale_rm_description.pdf
     expire_in: 1 mos
 
-reference:
-  stage: doc
-  script:
-    - apt-get install -y -qq doxygen graphviz
-    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
-    - cd doc/reference
-    - make
-  artifacts:
-    paths:
-      - doc/reference/latex/refman.pdf
-      - doc/reference/html/
-    expire_in: 1 mos
+
+# disable reference becase it takes long time
+#reference:
+#  stage: doc
+#  script:
+#    - apt-get install -y -qq doxygen graphviz
+#    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
+#    - cd doc/reference
+#    - make
+#  artifacts:
+#    paths:
+#      - doc/reference/latex/refman.pdf
+#      - doc/reference/html/
+#    expire_in: 1 mos
