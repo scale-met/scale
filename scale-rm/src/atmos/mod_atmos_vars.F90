@@ -1045,7 +1045,6 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
-
           ! fill k halos
           do j  = 1, JA
           do i  = 1, IA
@@ -1059,6 +1058,10 @@ contains
              MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
              MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
              RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+             do iq = 1, QA
+                QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+                QTRC(KE+1:KA  ,i,j,iq) = QTRC(KE,i,j,iq)
+             end do
           enddo
           enddo
        else
@@ -1769,7 +1772,7 @@ contains
           call allocate_3D( QLIQ )
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k,iq) &
+          !$omp private(i,j,k) &
           !$omp shared(QLIQ,QC,QR) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
@@ -1788,7 +1791,7 @@ contains
           call allocate_3D( QICE )
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k,iq) &
+          !$omp private(i,j,k) &
           !$omp shared(QICE,QI,QS,QG,QH) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
