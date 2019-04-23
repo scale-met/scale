@@ -2249,8 +2249,10 @@ contains
     fxm(:) = 0._RP ! initialize
 
     ! main loop of compensation
+#ifdef QUICKDEBUG
 ! (ocl for bug of the K compilar)
-!! !OCL NOEVAL
+!OCL NOEVAL
+#endif
     do ncount = 1,10 ! iteration
        dtt = timecp
        do kk = KS,k_top

@@ -171,7 +171,7 @@ contains
     endif
 
     if ( kLFC >= Kstr .AND. kLNB > Kstr ) then
-       do k = kLFC, kLNB
+       do k = kLFC+1, kLNB
           CAPE = CAPE + BUOY_pf(k-1) * ( FZ(k)-FZ(k-1) )
        enddo
     endif

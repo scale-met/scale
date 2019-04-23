@@ -941,7 +941,7 @@ contains
        enddo
        call COMM_vars8( MOMZ_t(:,:,:), I_COMM_MOMZ_t )
 
-       call COMM_wait( DENS_damp(:,:,:), I_COMM_DENS_damp, .false. )
+       call COMM_wait( DENS_damp(:,:,:), I_COMM_DENS_damp )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL

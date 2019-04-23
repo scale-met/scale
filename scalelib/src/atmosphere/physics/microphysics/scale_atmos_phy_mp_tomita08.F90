@@ -830,22 +830,22 @@ contains
 
        ! store to work
        do k = KS, KE
-          qv(k) = QTRC0(k,i,j,I_QV)
+          qv(k) = max( QTRC0(k,i,j,I_QV), 0.0_RP )
        end do
        do k = KS, KE
-          qc(k) = QTRC0(k,i,j,I_QC)
+          qc(k) = max( QTRC0(k,i,j,I_QC), 0.0_RP )
        end do
        do k = KS, KE
-          qr(k) = QTRC0(k,i,j,I_QR)
+          qr(k) = max( QTRC0(k,i,j,I_QR), 0.0_RP )
        end do
        do k = KS, KE
-          qi(k) = QTRC0(k,i,j,I_QI)
+          qi(k) = max( QTRC0(k,i,j,I_QI), 0.0_RP )
        end do
        do k = KS, KE
-          qs(k) = QTRC0(k,i,j,I_QS)
+          qs(k) = max( QTRC0(k,i,j,I_QS), 0.0_RP )
        end do
        do k = KS, KE
-          qg(k) = QTRC0(k,i,j,I_QG)
+          qg(k) = max( QTRC0(k,i,j,I_QG), 0.0_RP )
        end do
 
 
