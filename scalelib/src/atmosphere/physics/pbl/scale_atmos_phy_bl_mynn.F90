@@ -97,7 +97,7 @@ module scale_atmos_phy_bl_mynn
 
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN   =  1.E-20_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX    =  1.E-2_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX    =  1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN    = -1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX    =  1.E4_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN    = -1.E1_RP
@@ -466,7 +466,7 @@ contains
                                      dudz2(:,i,j), dtldz(:), dqwdz(:)            ) ! (out)
 
        do k = KS, KE_PBL
-          n2_new(k) = min( max( N2(k,i,j), - ATMOS_PHY_BL_MYNN_N2_MAX ), - ATMOS_PHY_BL_MYNN_N2_MAX )
+          n2_new(k) = min( max( N2(k,i,j), - ATMOS_PHY_BL_MYNN_N2_MAX ), ATMOS_PHY_BL_MYNN_N2_MAX )
           Ri(k,i,j) = n2_new(k) / max(dudz2(k,i,j), 1E-10_RP)
        end do
 
