@@ -17,6 +17,8 @@ normal-rm:
     - cd scale-rm/src
     - make -j 4
     - make -j 4 SCALE_USE_SINGLEFP=T
+  only:
+    - /^feature.*$/
 
 openmp-rm:
   stage: build
@@ -24,6 +26,8 @@ openmp-rm:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
     - cd scale-rm/src
     - make -j 4 SCALE_ENABLE_OPENMP=T
+  only:
+    - /^feature.*$/
 
 debug-rm:
   stage: build
@@ -31,6 +35,8 @@ debug-rm:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
     - cd scale-rm/src
     - make -j 4 SCALE_QUICKDEBUT=T
+  only:
+    - /^feature.*$/
 
 normal-gm:
   stage: build
@@ -39,6 +45,8 @@ normal-gm:
     - cd scale-gm/src
     - make -j 4
     - make -j 4 SCALE_USE_SINGLEFP=T
+  only:
+    - /^feature.*$/
 
 openmp-gm:
   stage: build
@@ -46,6 +54,8 @@ openmp-gm:
     - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
     - cd scale-gm/src
     - make -j 4 SCALE_ENABLE_OPENMP=T
+  only:
+    - /^feature.*$/
 
 debug-gm:
   stage: build
@@ -54,6 +64,8 @@ debug-gm:
     - cd scale-gm/src
     - make -j 4 SCALE_QUICKDEBUT=T
     - make -j 4 SCALE_DEBUT=T
+  only:
+    - /^feature.*$/
 
 
 # TEST
@@ -67,6 +79,8 @@ lib-unit:
     - make makelib
     - make makebin
     - mpirun --allow-run-as-root -n 4 ./unit run.conf
+  only:
+    - /^feature.*$/
 
 
 # DOC
@@ -81,6 +95,8 @@ ug-en:
     paths:
       - doc/users-guide/en/scale_users_guide_En.pdf
     expire_in: 1 mos
+  only:
+    - /^feature.*$/
 
 ug-jp:
   stage: doc
@@ -92,6 +108,8 @@ ug-jp:
     paths:
       - doc/users-guide/jp/scale_users_guide.pdf
     expire_in: 1 mos
+  only:
+    - /^feature.*$/
 
 description:
   stage: doc
@@ -103,18 +121,20 @@ description:
     paths:
       - doc/descriptions/scale_rm_description.pdf
     expire_in: 1 mos
+  only:
+    - /^feature.*$/
 
 
-# disable reference becase it takes long time
-#reference:
-#  stage: doc
-#  script:
-#    - apt-get install -y -qq doxygen graphviz
-#    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
-#    - cd doc/reference
-#    - make
-#  artifacts:
-#    paths:
-#      - doc/reference/latex/refman.pdf
-#      - doc/reference/html/
-#    expire_in: 1 mos
+reference:
+  stage: doc
+  script:
+    - apt-get install -y -qq doxygen graphviz
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
+    - cd doc/reference
+    - make
+  artifacts:
+    paths:
+      - doc/reference/latex/refman.pdf
+      - doc/reference/html/
+    expire_in: 1 mos
+  when: manual
