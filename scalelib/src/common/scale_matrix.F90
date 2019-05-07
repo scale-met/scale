@@ -71,10 +71,11 @@ contains
     ! foward reduction
     c(KS) = ud(KS) / md(KS)
     d(KS) = iv(KS) / md(KS)
-    do k = KS+1, KE
+    do k = KS+1, KE-1
        c(k) =           ud(k)            / ( md(k) - ld(k) * c(k-1) )
        d(k) = ( iv(k) - ld(k) * d(k-1) ) / ( md(k) - ld(k) * c(k-1) )
     enddo
+    d(KE) = ( iv(KE) - ld(KE) * d(KE-1) ) / ( md(KE) - ld(KE) * c(KE-1) )
 
     ! backward substitution
     ov(KE) = d(KE)
@@ -88,7 +89,7 @@ contains
   !-----------------------------------------------------------------------------
   !> solve tridiagonal matrix with Thomas's algorithm
   subroutine MATRIX_SOLVER_tridiagonal_3D( &
-       KA,         &
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        ud,         &
@@ -98,7 +99,7 @@ contains
        ov          )
     implicit none
 
-    integer,  intent(in)  :: KA           ! array size
+    integer,  intent(in)  :: KA, KS, KE   ! array size
     integer,  intent(in)  :: IA, IS, IE   ! array size
     integer,  intent(in)  :: JA, JS, JE   ! array size
     real(RP), intent(in)  :: ud(KA,IA,JA) ! upper  diagonal
@@ -107,46 +108,18 @@ contains
     real(RP), intent(in)  :: iv(KA,IA,JA) ! input  vector
     real(RP), intent(out) :: ov(KA,IA,JA) ! output vector
 
-    real(RP) :: c(KA,IA,JA)
-    real(RP) :: d(KA,IA,JA)
-
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! foward reduction
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov) &
+    !$omp private(i,j)
     do j = JS, JE
     do i = IS, IE
-       c(1,i,j) = ud(1,i,j) / md(1,i,j)
-       d(1,i,j) = iv(1,i,j) / md(1,i,j)
-    enddo
-    enddo
-
-    !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,KA,ud,md,ld,iv,c,d) &
-    !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = 2,  KA
-       c(k,i,j) =               ud(k,i,j)                &
-                / ( md(k,i,j) - ld(k,i,j) * c(k-1,i,j) )
-       d(k,i,j) = ( iv(k,i,j) - ld(k,i,j) * d(k-1,i,j) ) &
-                / ( md(k,i,j) - ld(k,i,j) * c(k-1,i,j) )
-    enddo
-    enddo
-    enddo
-
-    ! backward substitution
-    do j = JS, JE
-    do i = IS, IE
-       ov(KA,i,j) = d(KA,i,j)
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KA-1, 1, -1
-       ov(k,i,j) = d(k,i,j) - c(k,i,j) * ov(k+1,i,j)
-    enddo
+       call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
+                                          ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
+                                          iv(:,i,j),                       & ! (in)
+                                          ov(:,i,j)                        ) ! (out)
     enddo
     enddo
 

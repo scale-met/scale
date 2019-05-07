@@ -248,9 +248,9 @@ contains
 
        call INTERP_factor2d( ATMOS_SFC_CH_Rn222_nintrp, & ! [IN]
                              nlon, nlat,                & ! [IN]
+                             IA, JA,                    & ! [IN]
                              emission_lon(:,:),         & ! [IN]
                              emission_lat(:,:),         & ! [IN]
-                             IA, JA,                    & ! [IN]
                              real_lon(:,:),             & ! [IN]
                              real_lat(:,:),             & ! [IN]
                              idx_i   (:,:,:),           & ! [OUT]

@@ -180,7 +180,6 @@ module scale_comm_cartesC_nest
 
   integer,  parameter :: itp_ng   = 4                       !< # of interpolation kinds of grid point
   integer,  private   :: itp_nh   = 4                       !< # of interpolation kinds of horizontal direction
-  integer,  private   :: itp_nv   = 2                       !< # of interpolation kinds of vertical direction
 
   integer,  parameter :: tag_lon   = 1
   integer,  parameter :: tag_lat   = 2
@@ -208,7 +207,6 @@ module scale_comm_cartesC_nest
   integer,  private   :: INTERCOMM_ID(2)
 
   integer,  private, parameter   :: max_isu   = 100        ! maximum number of receive/wait issue
-  integer,  private, parameter   :: max_isuf  = 20         ! maximum number of receive/wait issue (z-stag)
   integer,  private              :: max_rq    = 1000       ! maximum number of req: tentative approach
   integer,  private              :: rq_ctl_p               ! for control request id (counting)
   integer,  private              :: rq_ctl_d               ! for control request id (counting)
@@ -220,9 +218,7 @@ module scale_comm_cartesC_nest
 
   real(RP), private, allocatable :: buffer_2D  (:,:)       ! buffer of communicator: 2D (with HALO)
   real(RP), private, allocatable :: buffer_3D  (:,:,:)     ! buffer of communicator: 3D (with HALO)
-  real(RP), private, allocatable :: buffer_3DF (:,:,:)     ! buffer of communicator: 3D-Kface (with HALO)
   real(RP), private, allocatable :: recvbuf_3D (:,:,:,:)   ! buffer of receiver: 3D (with HALO)
-  real(RP), private, allocatable :: recvbuf_3DF(:,:,:,:)   ! buffer of receiver: 3D-Kface (with HALO)
 
   real(RP), private, allocatable :: buffer_ref_LON  (:,:)  ! buffer of communicator: LON
   real(RP), private, allocatable :: buffer_ref_LONUY(:,:)  ! buffer of communicator: LONUY
@@ -235,7 +231,6 @@ module scale_comm_cartesC_nest
 
 
   real(RP), private, allocatable :: buffer_ref_3D (:,:,:)  ! buffer of communicator: 3D data      (with HALO)
-  real(RP), private, allocatable :: buffer_ref_3DF(:,:,:)  ! buffer of communicator: 3D at z-Face (with HALO)
 
   real(RP), private, allocatable :: org_DENS(:,:,:)        ! buffer of communicator: DENS
   real(RP), private, allocatable :: org_MOMZ(:,:,:)        ! buffer of communicator: MOMZ
@@ -250,7 +245,7 @@ module scale_comm_cartesC_nest
   integer,  private, allocatable :: jgrd (:,:,:,:)         ! interpolation target grids in y-axis
   real(RP), private, allocatable :: hfact(:,:,:,:)         ! interpolation factor for horizontal direction
   integer,  private, allocatable :: kgrd (:,:,:,:,:,:)     ! interpolation target grids in z-axis
-  real(RP), private, allocatable :: vfact(:,:,:,:,:,:)     ! interpolation factor for vertical direction
+  real(RP), private, allocatable :: vfact(:,  :,:,:,:)     ! interpolation factor for vertical direction
 
   integer(8), private :: nwait_p, nwait_d, nrecv, nsend
 
@@ -495,8 +490,6 @@ contains
        call PRC_abort
     end select
 
-    itp_nv = 2
-
     DEBUG_DOMAIN_NUM = ONLINE_DOMAIN_NUM
     if( ONLINE_SPECIFIED_MAXRQ > max_rq ) max_rq = ONLINE_SPECIFIED_MAXRQ
 
@@ -711,12 +704,10 @@ contains
             LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
             LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req. :', max_rq
 
-            allocate( buffer_2D  (                            PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
-            allocate( buffer_3D  (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
-            allocate( buffer_3DF ( 0:PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
+            allocate( buffer_2D  (                          PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
+            allocate( buffer_3D  ( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
 
-            allocate( recvbuf_3D (   PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu  ) )
-            allocate( recvbuf_3DF( 0:PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isuf ) )
+            allocate( recvbuf_3D ( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu  ) )
 
             allocate( buffer_ref_LON  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_LONUY(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
@@ -725,17 +716,16 @@ contains
             allocate( buffer_ref_LATUY(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_LATXV(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_CZ(  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_FZ(0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_CZ(TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_FZ(TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
-            allocate( buffer_ref_3D (  TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
-            allocate( buffer_ref_3DF(0:TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
+            allocate( buffer_ref_3D (TILEAL_KA(HANDLING_NUM),TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
 
             allocate( igrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
             allocate( jgrd (                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
             allocate( hfact(                                 DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
-            allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),itp_nv,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
-            allocate( vfact(DAUGHTER_KA(HANDLING_NUM),itp_nv,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
+            allocate( kgrd (DAUGHTER_KA(HANDLING_NUM),2,DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
+            allocate( vfact(DAUGHTER_KA(HANDLING_NUM),  DAUGHTER_IA(HANDLING_NUM),DAUGHTER_JA(HANDLING_NUM),itp_nh,itp_ng) )
 
             call COMM_CARTESC_NEST_setup_nestdown( HANDLING_NUM )
 
@@ -757,13 +747,13 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),           & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
-                                     buffer_ref_CZ (:,:,:),             & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
                                      DATR_KS    (HANDLING_NUM),         & ! [IN]
                                      DATR_KE    (HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ (:,:,:),             & ! [IN]
                                      ATMOS_GRID_CARTESC_CX(:),          & ! [IN]
                                      ATMOS_GRID_CARTESC_CY(:),          & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
@@ -771,7 +761,7 @@ contains
                                      jgrd (    :,:,:,I_SCLR),           & ! [OUT]
                                      hfact(    :,:,:,I_SCLR),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_SCLR),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_SCLR)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_SCLR)            ) ! [OUT]
 
                ! for z staggered points
                call INTERP_factor3d( TILEAL_KA(HANDLING_NUM)+1,            & ! [IN]
@@ -779,13 +769,13 @@ contains
                                      TILEAL_KA(HANDLING_NUM)+1-KHALO,      & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),              & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),              & ! [IN]
-                                     X_ref(:,:), Y_ref(:,:),               & ! [IN]
-                                     buffer_ref_FZ (:,:,:),                & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),            & ! [IN]
                                      DATR_KS    (HANDLING_NUM),            & ! [IN]
                                      DATR_KE    (HANDLING_NUM),            & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),            & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),            & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),               & ! [IN]
+                                     buffer_ref_FZ (:,:,:),                & ! [IN]
                                      ATMOS_GRID_CARTESC_CX(:),             & ! [IN]
                                      ATMOS_GRID_CARTESC_CY(:),             & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_FZ(1:KA,:,:), & ! [IN]
@@ -793,7 +783,7 @@ contains
                                      jgrd (    :,:,:,I_ZSTG),              & ! [OUT]
                                      hfact(    :,:,:,I_ZSTG),              & ! [OUT]
                                      kgrd (:,:,:,:,:,I_ZSTG),              & ! [OUT]
-                                     vfact(:,:,:,:,:,I_ZSTG)               ) ! [OUT]
+                                     vfact(:,  :,:,:,I_ZSTG)               ) ! [OUT]
 
                ! for x staggered points
                call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
@@ -806,13 +796,13 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),           & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
-                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
                                      DATR_KS    (HANDLING_NUM),         & ! [IN]
                                      DATR_KE    (HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
                                      ATMOS_GRID_CARTESC_FX(1:IA),       & ! [IN]
                                      ATMOS_GRID_CARTESC_CY(:),          & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
@@ -820,7 +810,7 @@ contains
                                      jgrd (    :,:,:,I_XSTG),           & ! [OUT]
                                      hfact(    :,:,:,I_XSTG),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_XSTG),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_XSTG)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_XSTG)            ) ! [OUT]
 
                ! for y staggered points
                call MAPPROJECTION_lonlat2xy( TILEAL_IA(HANDLING_NUM), 1, TILEAL_IA(HANDLING_NUM), &
@@ -833,13 +823,13 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,     & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),           & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),           & ! [IN]
-                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
-                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),         & ! [IN]
                                      DATR_KS    (HANDLING_NUM),         & ! [IN]
                                      DATR_KE    (HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),         & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),         & ! [IN]
+                                     X_ref(:,:), Y_ref(:,:),            & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),            & ! [IN]
                                      ATMOS_GRID_CARTESC_CX(:),          & ! [IN]
                                      ATMOS_GRID_CARTESC_FY(1:JA),       & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ(:,:,:), & ! [IN]
@@ -847,7 +837,7 @@ contains
                                      jgrd (    :,:,:,I_YSTG),           & ! [OUT]
                                      hfact(    :,:,:,I_YSTG),           & ! [OUT]
                                      kgrd (:,:,:,:,:,I_YSTG),           & ! [OUT]
-                                     vfact(:,:,:,:,:,I_YSTG)            ) ! [OUT]
+                                     vfact(:,  :,:,:,I_YSTG)            ) ! [OUT]
 
                deallocate( X_ref, Y_ref )
 
@@ -860,14 +850,14 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,      & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),            & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),            & ! [IN]
-                                     buffer_ref_LON(:,:),                & ! [IN]
-                                     buffer_ref_LAT(:,:),                & ! [IN]
-                                     buffer_ref_CZ (:,:,:),              & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),          & ! [IN]
                                      DATR_KS    (HANDLING_NUM),          & ! [IN]
                                      DATR_KE    (HANDLING_NUM),          & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),          & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),          & ! [IN]
+                                     buffer_ref_LON(:,:),                & ! [IN]
+                                     buffer_ref_LAT(:,:),                & ! [IN]
+                                     buffer_ref_CZ (:,:,:),              & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LON(:,:),   & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LAT(:,:),   & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ (:,:,:), & ! [IN]
@@ -875,23 +865,23 @@ contains
                                      jgrd (    :,:,:,I_SCLR),            & ! [OUT]
                                      hfact(    :,:,:,I_SCLR),            & ! [OUT]
                                      kgrd (:,:,:,:,:,I_SCLR),            & ! [OUT]
-                                     vfact(:,:,:,:,:,I_SCLR)             ) ! [OUT]
+                                     vfact(:,  :,:,:,I_SCLR)             ) ! [OUT]
 
                ! for z staggered points
                call INTERP_factor3d( itp_nh,                                & ! [IN]
-                                     TILEAL_KA(HANDLING_NUM)+1,             & ! [IN]
-                                     KHALO+1,                               & ! [IN]
-                                     TILEAL_KA(HANDLING_NUM)+1-KHALO,       & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM),               & ! [IN]
+                                     KHALO,                                 & ! [IN]
+                                     TILEAL_KA(HANDLING_NUM)-KHALO,         & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),               & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),               & ! [IN]
-                                     buffer_ref_LON(:,:),                   & ! [IN]
-                                     buffer_ref_LAT(:,:),                   & ! [IN]
-                                     buffer_ref_FZ (:,:,:),                 & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),             & ! [IN]
                                      DATR_KS    (HANDLING_NUM),             & ! [IN]
                                      DATR_KE    (HANDLING_NUM),             & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),             & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),             & ! [IN]
+                                     buffer_ref_LON(:,:),                   & ! [IN]
+                                     buffer_ref_LAT(:,:),                   & ! [IN]
+                                     buffer_ref_FZ (:,:,:),                 & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LON(:,:),      & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LAT(:,:),      & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_FZ (1:KA,:,:), & ! [IN]
@@ -899,7 +889,7 @@ contains
                                      jgrd (    :,:,:,I_ZSTG),               & ! [OUT]
                                      hfact(    :,:,:,I_ZSTG),               & ! [OUT]
                                      kgrd (:,:,:,:,:,I_ZSTG),               & ! [OUT]
-                                     vfact(:,:,:,:,:,I_ZSTG)                ) ! [OUT]
+                                     vfact(:,  :,:,:,I_ZSTG)                ) ! [OUT]
 
                ! for x staggered points
                call INTERP_factor3d( itp_nh,                                   & ! [IN]
@@ -908,14 +898,14 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),                  & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),                  & ! [IN]
-                                     buffer_ref_LONUY(:,:),                    & ! [IN]
-                                     buffer_ref_LATUY(:,:),                    & ! [IN]
-                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
                                      DATR_KS    (HANDLING_NUM),                & ! [IN]
                                      DATR_KE    (HANDLING_NUM),                & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                     buffer_ref_LONUY(:,:),                    & ! [IN]
+                                     buffer_ref_LATUY(:,:),                    & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
@@ -923,7 +913,7 @@ contains
                                      jgrd (    :,:,:,I_XSTG),                  & ! [OUT]
                                      hfact(    :,:,:,I_XSTG),                  & ! [OUT]
                                      kgrd (:,:,:,:,:,I_XSTG),                  & ! [OUT]
-                                     vfact(:,:,:,:,:,I_XSTG)                   ) ! [OUT]
+                                     vfact(:,  :,:,:,I_XSTG)                   ) ! [OUT]
 
                ! for y staggered points
                call INTERP_factor3d( itp_nh,                                   & ! [IN]
@@ -932,14 +922,14 @@ contains
                                      TILEAL_KA(HANDLING_NUM)-KHALO,            & ! [IN]
                                      TILEAL_IA(HANDLING_NUM),                  & ! [IN]
                                      TILEAL_JA(HANDLING_NUM),                  & ! [IN]
-                                     buffer_ref_LONXV(:,:),                    & ! [IN]
-                                     buffer_ref_LATXV(:,:),                    & ! [IN]
-                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
                                      DAUGHTER_KA(HANDLING_NUM),                & ! [IN]
                                      DATR_KS    (HANDLING_NUM),                & ! [IN]
                                      DATR_KE    (HANDLING_NUM),                & ! [IN]
                                      DAUGHTER_IA(HANDLING_NUM),                & ! [IN]
                                      DAUGHTER_JA(HANDLING_NUM),                & ! [IN]
+                                     buffer_ref_LONXV(:,:),                    & ! [IN]
+                                     buffer_ref_LATXV(:,:),                    & ! [IN]
+                                     buffer_ref_CZ  (:,:,:),                   & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), & ! [IN]
                                      ATMOS_GRID_CARTESC_REAL_CZ(:,:,:),        & ! [IN]
@@ -947,14 +937,13 @@ contains
                                      jgrd (    :,:,:,I_YSTG),                  & ! [OUT]
                                      hfact(    :,:,:,I_YSTG),                  & ! [OUT]
                                      kgrd (:,:,:,:,:,I_YSTG),                  & ! [OUT]
-                                     vfact(:,:,:,:,:,I_YSTG)                   ) ! [OUT]
+                                     vfact(:,  :,:,:,I_YSTG)                   ) ! [OUT]
 
             end select
 
 
             deallocate( buffer_2D  )
             deallocate( buffer_3D  )
-            deallocate( buffer_3DF )
 
          else
             ONLINE_USE_VELZ = .false.
@@ -1688,6 +1677,8 @@ contains
 
     real(RP) :: max_ref, max_loc
 
+    real(RP), allocatable :: send_buf(:,:,:)
+
     integer  :: i, k, rq
     !---------------------------------------------------------------------------
 
@@ -1699,6 +1690,8 @@ contains
     if ( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
 
        !##### parent [send issue] #####
+
+       allocate( send_buf(PARENT_KA(HANDLE), PARENT_IA(HANDLE), PARENT_JA(HANDLE)) )
 
        do i = 1, NUM_YP
           ! send data to multiple daughter processes
@@ -1746,12 +1739,15 @@ contains
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_CZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
+          send_buf(:,:,:)  = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
           rq = rq + 1
-          ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
+          ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_FZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(send_buf, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
           call MPI_WAIT(ireq_p(rq), istatus, ierr)
        enddo
+
+       deallocate( send_buf )
 
     elseif( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
 
@@ -1821,12 +1817,12 @@ contains
           enddo
 
           rq = rq + 1
-          ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
+          ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_IRECV(buffer_3DF,ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
           call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          do k = 0, PARENT_KA(HANDLE)
-             buffer_ref_FZ(k,xs:xe,ys:ye)  = buffer_3DF(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          do k = 1, PARENT_KA(HANDLE)
+             buffer_ref_FZ(k,xs:xe,ys:ye)  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
           enddo
        enddo
 
@@ -1900,7 +1896,7 @@ contains
 
     real(RP) :: dummy(1,1,1)
     integer  :: tagbase, tagcomm
-    integer  :: isu_tag, isu_tagf
+    integer  :: isu_tag
 
     integer  :: ierr
     integer  :: i, j, k, iq
@@ -2001,7 +1997,7 @@ contains
        call COMM_CARTESC_NEST_intercomm_nestdown( org_DENS(:,:,:),         & ! [IN]
                                           dummy   (:,:,:),         & ! [OUT]
                                           tagbase, I_SCLR, HANDLE, & ! [IN]
-                                          isu_tag, isu_tagf,       & ! [INOUT]
+                                          isu_tag,                 & ! [INOUT]
                                           flag_dens = .true.       ) ! [IN]
 
        tagbase = tagcomm + tag_momz*order_tag_var
@@ -2009,7 +2005,7 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( org_MOMZ(:,:,:),         & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_ZSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        endif
 
        tagbase = tagcomm + tag_momx*order_tag_var
@@ -2017,12 +2013,12 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( org_MOMX(:,:,:),         & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_XSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        else
           call COMM_CARTESC_NEST_intercomm_nestdown( org_U_ll(:,:,:),         & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        endif
 
        tagbase = tagcomm + tag_momy*order_tag_var
@@ -2030,26 +2026,26 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( org_MOMY(:,:,:),         & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_YSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        else
           call COMM_CARTESC_NEST_intercomm_nestdown( org_V_ll(:,:,:),         & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        endif
 
        tagbase = tagcomm + tag_rhot*order_tag_var
        call COMM_CARTESC_NEST_intercomm_nestdown( org_RHOT(:,:,:),         & ! [IN]
                                           dummy   (:,:,:),         & ! [OUT]
                                           tagbase, I_SCLR, HANDLE, & ! [IN]
-                                          isu_tag, isu_tagf        ) ! [INOUT]
+                                          isu_tag                  ) ! [INOUT]
 
        do iq = 1, BND_QA
           tagbase = tagcomm + (tag_qx*10+iq)*order_tag_var
           call COMM_CARTESC_NEST_intercomm_nestdown( org_QTRC(:,:,:,iq),      & ! [IN]
                                              dummy   (:,:,:),         & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        enddo
 
        rq_tot_p = rq_ctl_p
@@ -2071,7 +2067,6 @@ contains
        !--- do not change the calling order below;
        !--- it should be consistent with the order in "COMM_CARTESC_NEST_recvwait_issue"
        isu_tag  = 0
-       isu_tagf = 0
 
        call COMM_CARTESC_NEST_waitall( rq_tot_d, ireq_d )
 
@@ -2088,7 +2083,7 @@ contains
        call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                           WORK1_recv(:,:,:),       & ! [OUT]
                                           tagbase, I_SCLR, HANDLE, & ! [IN]
-                                          isu_tag, isu_tagf,       & ! [INOUT]
+                                          isu_tag,                 & ! [INOUT]
                                           flag_dens = .true.       ) ! [IN]
 !OCL XFILL
        do j = 1, DAUGHTER_JA(HANDLE)
@@ -2106,7 +2101,7 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                              WORK2_recv(:,:,:),       & ! [OUT]
                                              tagbase, I_ZSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
 !OCL XFILL
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
@@ -2132,13 +2127,13 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                              WORK1_recv(:,:,:),       & ! [OUT]
                                              tagbase, I_XSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        else
           ! U_ll_recv receives MOMX/DENS
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy    (:,:,:),        & ! [IN]
                                              U_ll_recv(:,:,:),        & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        endif
 
        tagbase = tagcomm + tag_momy*order_tag_var
@@ -2147,13 +2142,13 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                              WORK2_recv(:,:,:),       & ! [OUT]
                                              tagbase, I_YSTG, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        else
           ! V_ll_recv receives MOMY/DENS
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy    (:,:,:),        & ! [IN]
                                              V_ll_recv(:,:,:),        & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
        endif
 
        if ( ONLINE_NO_ROTATE ) then
@@ -2260,7 +2255,7 @@ contains
        call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                           WORK1_recv(:,:,:),       & ! [OUT]
                                           tagbase, I_SCLR, HANDLE, & ! [IN]
-                                          isu_tag, isu_tagf        ) ! [INOUT]
+                                          isu_tag                  ) ! [INOUT]
 !OCL XFILL
        do j = 1, DAUGHTER_JA(HANDLE)
        do i = 1, DAUGHTER_IA(HANDLE)
@@ -2275,7 +2270,7 @@ contains
           call COMM_CARTESC_NEST_intercomm_nestdown( dummy     (:,:,:),       & ! [IN]
                                              WORK1_recv(:,:,:),       & ! [OUT]
                                              tagbase, I_SCLR, HANDLE, & ! [IN]
-                                             isu_tag, isu_tagf        ) ! [INOUT]
+                                             isu_tag                  ) ! [INOUT]
 !OCL XFILL
           do j = 1, DAUGHTER_JA(HANDLE)
           do i = 1, DAUGHTER_IA(HANDLE)
@@ -2309,7 +2304,7 @@ contains
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
     integer, intent(in) :: BND_QA !< num of tracer in online-nesting
 
-    integer :: isu_tag, isu_tagf
+    integer :: isu_tag
     integer :: tagbase, tagcomm
     integer :: ierr
     integer :: iq
@@ -2358,37 +2353,36 @@ contains
        !--- do not change the calling order below;
        !--- it should be consistent with the order in "COMM_CARTESC_NEST_nestdown"
        isu_tag  = 0
-       isu_tagf = 0
        rq_ctl_d = 0
 
        tagbase = tagcomm + tag_dens*order_tag_var
-       call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+       call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag )
 
        tagbase = tagcomm + tag_momz*order_tag_var
        if ( ONLINE_USE_VELZ ) then
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_ZSTG, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_ZSTG, HANDLE, isu_tag )
        endif
 
        tagbase = tagcomm + tag_momx*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_XSTG, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_XSTG, HANDLE, isu_tag )
        else
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag )
        endif
 
        tagbase = tagcomm + tag_momy*order_tag_var
        if ( ONLINE_NO_ROTATE ) then
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_YSTG, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_YSTG, HANDLE, isu_tag )
        else
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag )
        endif
 
        tagbase = tagcomm + tag_rhot*order_tag_var
-       call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+       call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag )
 
        do iq = 1, BND_QA
           tagbase = tagcomm + (tag_qx*10+iq)*order_tag_var
-          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag, isu_tagf )
+          call COMM_CARTESC_NEST_issuer_of_receive( tagbase, I_SCLR, HANDLE, isu_tag )
        enddo
 
        rq_tot_d = rq_ctl_d
@@ -2462,7 +2456,6 @@ contains
        id_stag,  &
        HANDLE,   &
        isu_tag,  &
-       isu_tagf, &
        flag_dens )
     use scale_prc, only: &
        PRC_abort
@@ -2470,6 +2463,9 @@ contains
        COMM_datatype
     use scale_interp, only: &
        INTERP_interp3d
+    use scale_atmos_grid_cartesC_real, &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     implicit none
 
     real(RP), intent(in)    :: pvar(:,:,:) !< variable from parent domain (PARENT_KA,PARENT_IA,PARENT_JA / 1,1,1)
@@ -2478,7 +2474,6 @@ contains
     integer,  intent(in)    :: id_stag     !< id of staggered grid option
     integer,  intent(in)    :: HANDLE      !< id number of nesting relation in this process target
     integer,  intent(inout) :: isu_tag     !< tag for receive buffer
-    integer,  intent(inout) :: isu_tagf    !< tag for receive buffer
 
     logical , intent(in), optional :: flag_dens !< flag of logarithmic interpolation for density
 
@@ -2518,11 +2513,7 @@ contains
        ig       = I_YSTG
     endif
 
-    if ( no_zstag ) then
-       ileng = (PARENT_KA(HANDLE)  ) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-    else
-       ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-    endif
+    ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
 
     if ( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
 
@@ -2571,26 +2562,16 @@ contains
           pys = PRNT_JS(HANDLE)
           pye = PRNT_JE(HANDLE)
 
-          if ( no_zstag ) then
-             isu_tag = isu_tag + 1
+          isu_tag = isu_tag + 1
 
-             zs = 1
-             ze = PARENT_KA(HANDLE)
+          zs = 1
+          ze = PARENT_KA(HANDLE)
 !OCL XFILL
-             buffer_ref_3D(zs:ze,gxs:gxe,gys:gye) = recvbuf_3D(zs:ze,pxs:pxe,pys:pye,isu_tag)
-          else
-             isu_tagf = isu_tagf + 1
+          buffer_ref_3D(zs:ze,gxs:gxe,gys:gye) = recvbuf_3D(zs:ze,pxs:pxe,pys:pye,isu_tag)
 
-             zs = 0
-             ze = PARENT_KA(HANDLE)
-!OCL XFILL
-             buffer_ref_3DF(zs:ze,gxs:gxe,gys:gye) = recvbuf_3DF(zs:ze,pxs:pxe,pys:pye,isu_tagf)
-          endif
-
-          if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
+          if ( isu_tag > max_isu ) then
              LOG_ERROR("COMM_CARTESC_NEST_intercomm_nestdown_3D",*) 'Exceeded maximum issue'
              LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
-             LOG_ERROR_CONT(*) 'isu_tagf = ', isu_tagf
              call PRC_abort
           endif
 
@@ -2601,6 +2582,8 @@ contains
        if ( no_zstag ) then
           call INTERP_interp3d( itp_nh,                      & ! [IN]
                                 TILEAL_KA  (HANDLE),         & ! [IN]
+                                KHALO+1,                     & ! [IN]
+                                TILEAL_KA  (HANDLE)-KHALO,   & ! [IN]
                                 TILEAL_IA  (HANDLE),         & ! [IN]
                                 TILEAL_JA  (HANDLE),         & ! [IN]
                                 DAUGHTER_KA(HANDLE),         & ! [IN]
@@ -2612,29 +2595,35 @@ contains
                                 jgrd         (    :,:,:,ig), & ! [IN]
                                 hfact        (    :,:,:,ig), & ! [IN]
                                 kgrd         (:,:,:,:,:,ig), & ! [IN]
-                                vfact        (:,:,:,:,:,ig), & ! [IN]
-                                buffer_ref_3D(:,:,:),        & ! [INOUT]
+                                vfact        (:,  :,:,:,ig), & ! [IN]
+                                buffer_ref_CZ(:,:,:),        & ! [IN]
+                                REAL_CZ      (:,:,:),        & ! [IN]
+                                buffer_ref_3D(:,:,:),        & ! [IN]
                                 dvar         (:,:,:),        & ! [OUT]
                                 logwgt = logarithmic         ) ! [IN, optional]
 
        else
-          call INTERP_interp3d( itp_nh,                       & ! [IN]
-                                TILEAL_KA  (HANDLE)+1,        & ! [IN]
-                                TILEAL_IA  (HANDLE),          & ! [IN]
-                                TILEAL_JA  (HANDLE),          & ! [IN]
-                                DAUGHTER_KA(HANDLE),          & ! [IN]
-                                DATR_KS    (HANDLE),          & ! [IN]
-                                DATR_KE    (HANDLE),          & ! [IN]
-                                DAUGHTER_IA(HANDLE),          & ! [IN]
-                                DAUGHTER_JA(HANDLE),          & ! [IN]
-                                igrd          (    :,:,:,ig), & ! [IN]
-                                jgrd          (    :,:,:,ig), & ! [IN]
-                                hfact         (    :,:,:,ig), & ! [IN]
-                                kgrd          (:,:,:,:,:,ig), & ! [IN]
-                                vfact         (:,:,:,:,:,ig), & ! [IN]
-                                buffer_ref_3DF(:,:,:),        & ! [INOUT]
-                                dvar          (:,:,:),        & ! [OUT]
-                                logwgt = logarithmic          ) ! [IN, optional]
+          call INTERP_interp3d( itp_nh,                      & ! [IN]
+                                TILEAL_KA  (HANDLE)  ,       & ! [IN]
+                                KHALO,                       & ! [IN]
+                                TILEAL_KA  (HANDLE)-KHALO,   & ! [IN]
+                                TILEAL_IA  (HANDLE),         & ! [IN]
+                                TILEAL_JA  (HANDLE),         & ! [IN]
+                                DAUGHTER_KA(HANDLE),         & ! [IN]
+                                DATR_KS    (HANDLE),         & ! [IN]
+                                DATR_KE    (HANDLE),         & ! [IN]
+                                DAUGHTER_IA(HANDLE),         & ! [IN]
+                                DAUGHTER_JA(HANDLE),         & ! [IN]
+                                igrd         (    :,:,:,ig), & ! [IN]
+                                jgrd         (    :,:,:,ig), & ! [IN]
+                                hfact        (    :,:,:,ig), & ! [IN]
+                                kgrd         (:,:,:,:,:,ig), & ! [IN]
+                                vfact        (:,  :,:,:,ig), & ! [IN]
+                                buffer_ref_FZ(:,:,:),        & ! [IN]
+                                REAL_FZ      (1:,:,:),       & ! [IN]
+                                buffer_ref_3D(:,:,:),        & ! [IN]
+                                dvar         (:,:,:),        & ! [OUT]
+                                logwgt = logarithmic         ) ! [IN, optional]
        endif
 
        do j = 1, DAUGHTER_JA(HANDLE)
@@ -2658,8 +2647,7 @@ contains
        tagbase, &
        id_stag, &
        HANDLE,  &
-       isu_tag, &
-       isu_tagf )
+       isu_tag  )
     use scale_prc, only: &
        PRC_myrank,  &
        PRC_abort
@@ -2671,36 +2659,16 @@ contains
     integer, intent(in)    :: id_stag  !< id of staggered grid option
     integer, intent(in)    :: HANDLE   !< id number of nesting relation in this process target
     integer, intent(inout) :: isu_tag  !< tag for receive buffer
-    integer, intent(inout) :: isu_tagf !< tag for receive buffer
 
     integer :: ierr, ileng
     integer :: tag, target_rank
 
-    integer :: ig, rq, yp
-    logical :: no_zstag    = .true.
+    integer :: rq, yp
     !---------------------------------------------------------------------------
 
     if( .NOT. USE_NESTING ) return
 
-    if    ( id_stag == I_SCLR ) then
-       no_zstag = .true.
-       ig       = I_SCLR
-    elseif( id_stag == I_ZSTG ) then
-       no_zstag = .false.
-       ig       = I_ZSTG
-    elseif( id_stag == I_XSTG ) then
-       no_zstag = .true.
-       ig       = I_XSTG
-    elseif( id_stag == I_YSTG ) then
-       no_zstag = .true.
-       ig       = I_YSTG
-    endif
-
-    if ( no_zstag ) then
-       ileng = (PARENT_KA(HANDLE)  ) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-    else
-       ileng = (PARENT_KA(HANDLE)+1) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
-    endif
+    ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
 
     if ( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) > 0 ) then
 
@@ -2718,40 +2686,24 @@ contains
           target_rank = COMM_CARTESC_NEST_TILE_LIST_d(yp,PRC_myrank+1)
           tag         = tagbase + call_order(yp)
 
-          if ( no_zstag ) then
-             isu_tag = isu_tag + 1
+          isu_tag = isu_tag + 1
 
-             recvbuf_3D(:,:,:,isu_tag) = 0.0_RP
+          recvbuf_3D(:,:,:,isu_tag) = 0.0_RP
 
-             call MPI_IRECV( recvbuf_3D(:,:,:,isu_tag), &
-                             ileng,                     &
-                             COMM_datatype,             &
-                             target_rank,               &
-                             tag,                       &
-                             INTERCOMM_PARENT,          &
-                             ireq_d(rq),                &
-                             ierr                       )
-          else
-             isu_tagf = isu_tagf + 1
-
-             recvbuf_3DF(:,:,:,isu_tagf) = 0.0_RP
-
-             call MPI_IRECV( recvbuf_3DF(:,:,:,isu_tagf), &
-                             ileng,                       &
-                             COMM_datatype,               &
-                             target_rank,                 &
-                             tag,                         &
-                             INTERCOMM_PARENT,            &
-                             ireq_d(rq),                  &
-                             ierr                         )
-          endif
+          call MPI_IRECV( recvbuf_3D(:,:,:,isu_tag), &
+                          ileng,                     &
+                          COMM_datatype,             &
+                          target_rank,               &
+                          tag,                       &
+                          INTERCOMM_PARENT,          &
+                          ireq_d(rq),                &
+                          ierr                       )
 
        enddo
 
-       if ( isu_tag > max_isu .OR. isu_tagf > max_isuf ) then
+       if ( isu_tag > max_isu ) then
           LOG_ERROR("COMM_CARTESC_NEST_issuer_of_receive_3D",*) 'Exceeded maximum issue'
           LOG_ERROR_CONT(*) 'isu_tag  = ', isu_tag
-          LOG_ERROR_CONT(*) 'isu_tagf = ', isu_tagf
           call PRC_abort
        endif
 

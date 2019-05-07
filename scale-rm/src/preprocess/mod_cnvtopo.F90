@@ -452,8 +452,8 @@ contains
                         LONH_1d(:), LATH_1d(:) ) ! [OUT]
 
     call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
-                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
                                         IA, JA,                     & ! [IN]
+                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
                                         LON(:,:), LAT(:,:),         & ! [IN]
                                         idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                                         hfact(:,:,:)                ) ! [OUT]
@@ -621,8 +621,8 @@ contains
                         LONH_1d(:), LATH_1d(:) ) ! [OUT]
 
     call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
-                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
                                         IA, JA,                     & ! [IN]
+                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
                                         LON(:,:), LAT(:,:),         & ! [IN]
                                         idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                                         hfact(:,:,:)                ) ! [OUT]
@@ -852,8 +852,8 @@ contains
     if ( CNVTOPO_linear_interp ) then
 
        call INTERP_factor2d( nLONH, nLATH,               & ! [IN]
-                             LONH_1d(:), LATH_1d(:),     & ! [IN]
                              IA, JA,                     & ! [IN]
+                             LONH_1d(:), LATH_1d(:),     & ! [IN]
                              LON(:,:), LAT(:,:),         & ! [IN]
                              idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                              hfact(:,:,:)                ) ! [OUT]
@@ -865,8 +865,8 @@ contains
        search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
        call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
                              nLONH, nLATH,               & ! [IN]
-                             LONH(:,:), LATH(:,:),       & ! [IN]
                              IA, JA,                     & ! [IN]
+                             LONH(:,:), LATH(:,:),       & ! [IN]
                              LON(:,:), LAT(:,:),         & ! [IN]
                              idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                              hfact(:,:,:),               & ! [OUT]

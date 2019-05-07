@@ -16,7 +16,6 @@ module scale_interp_vert
   use scale_precision
   use scale_io
   use scale_prof
-  use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -51,21 +50,27 @@ module scale_interp_vert
   !
   ! full level
   integer,  private, allocatable :: INTERP_xi2z_idx   (:,:,:,:) !< index set   for vertical interpolation (xi->z)
-  real(RP), private, allocatable :: INTERP_xi2z_coef  (:,:,:,:) !< coefficient for vertical interpolation (xi->z)
+  real(RP), private, allocatable :: INTERP_xi2z_coef  (:,  :,:) !< coefficient for vertical interpolation (xi->z)
   integer,  private, allocatable :: INTERP_z2xi_idx   (:,:,:,:) !< index set   for vertical interpolation (z->xi)
-  real(RP), private, allocatable :: INTERP_z2xi_coef  (:,:,:,:) !< coefficient for vertical interpolation (z->xi)
+  real(RP), private, allocatable :: INTERP_z2xi_coef  (:,  :,:) !< coefficient for vertical interpolation (z->xi)
 
   integer,  private, allocatable :: INTERP_xi2p_idx   (:,:,:,:) !< index set   for vertical interpolation (xi->p)
-  real(RP), private, allocatable :: INTERP_xi2p_coef  (:,:,:,:) !< coefficient for vertical interpolation (xi->p)
+  real(RP), private, allocatable :: INTERP_xi2p_coef  (:,  :,:) !< coefficient for vertical interpolation (xi->p)
 
   ! half level
   integer,  private, allocatable :: INTERP_xih2zh_idx (:,:,:,:) !< index set   for vertical interpolation (xih->zh)
-  real(RP), private, allocatable :: INTERP_xih2zh_coef(:,:,:,:) !< coefficient for vertical interpolation (xih->zh)
+  real(RP), private, allocatable :: INTERP_xih2zh_coef(:,  :,:) !< coefficient for vertical interpolation (xih->zh)
   integer,  private, allocatable :: INTERP_zh2xih_idx (:,:,:,:) !< index set   for vertical interpolation (zh->xih)
-  real(RP), private, allocatable :: INTERP_zh2xih_coef(:,:,:,:) !< coefficient for vertical interpolation (zh->xih)
+  real(RP), private, allocatable :: INTERP_zh2xih_coef(:,  :,:) !< coefficient for vertical interpolation (zh->xih)
 
   integer,  private, allocatable :: INTERP_xih2p_idx  (:,:,:,:) !< index set   for vertical interpolation (xi->p)
-  real(RP), private, allocatable :: INTERP_xih2p_coef (:,:,:,:) !< coefficient for vertical interpolation (xi->p)
+  real(RP), private, allocatable :: INTERP_xih2p_coef (:,  :,:) !< coefficient for vertical interpolation (xi->p)
+
+  ! log pressure
+  real(RP), private, allocatable :: LnPRES (:,:,:)
+  real(RP), private, allocatable :: LnPRESh(:,:,:)
+  real(RP), private, allocatable :: LnPaxis(:)
+
 
   !-----------------------------------------------------------------------------
 contains
@@ -78,8 +83,9 @@ contains
        TOPO_exist, &
        Xi, Xih,    &
        Z,  Zh      )
+    use scale_interp, only: &
+       INTERP_factor1d
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -89,7 +95,7 @@ contains
     real(RP), intent(in)  :: Z  (  KA,IA,JA)
     real(RP), intent(in)  :: Zh (0:KA,IA,JA)
 
-    integer :: k, i, j, kk, kp
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -103,280 +109,67 @@ contains
 
     ! full level
 
-    allocate( INTERP_xi2z_idx (KA,IA,JA,2) )
-    allocate( INTERP_xi2z_coef(KA,IA,JA,3) )
-    allocate( INTERP_z2xi_idx (KA,IA,JA,2) )
-    allocate( INTERP_z2xi_coef(KA,IA,JA,3) )
+    allocate( INTERP_xi2z_idx (KA,2,IA,JA) )
+    allocate( INTERP_xi2z_coef(KA,  IA,JA) )
+    allocate( INTERP_z2xi_idx (KA,2,IA,JA) )
+    allocate( INTERP_z2xi_coef(KA,  IA,JA) )
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k,kk,kp) &
-    !$omp shared(JA,IA,KS,KE,Xi,Zh,Z,INTERP_xi2z_idx,INTERP_xi2z_coef)
+    !$omp shared(JA,IA,KA,KS,KE,Xi,Z,INTERP_xi2z_idx,INTERP_xi2z_coef)
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
-       if ( Xi(k) <= Zh(KS-1,i,j) ) then
-
-          INTERP_xi2z_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xi2z_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( Xi(k) <= Z(KS,i,j) ) then
-
-          INTERP_xi2z_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xi2z_idx (k,i,j,2) = KS
-          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,2) = 1.0_RP
-          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
-
-       elseif( Xi(k) > Zh(KE,i,j) ) then
-
-          INTERP_xi2z_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_xi2z_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( Xi(k) > Z(KE,i,j) ) then
-
-          INTERP_xi2z_idx (k,i,j,1) = KE
-          INTERP_xi2z_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xi2z_coef(k,i,j,1) = 1.0_RP
-          INTERP_xi2z_coef(k,i,j,2) = 0.0_RP
-          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
-
-       else
-
-          do kk = KS+1, KE
-             kp = kk
-             if( Xi(k) <= Z(kk,i,j) ) exit
-          enddo
-
-          INTERP_xi2z_idx (k,i,j,1) = kp - 1
-          INTERP_xi2z_idx (k,i,j,2) = kp
-          INTERP_xi2z_coef(k,i,j,1) = ( Z (kp,i,j) - Xi(k)        ) &
-                                    / ( Z (kp,i,j) - Z (kp-1,i,j) )
-          INTERP_xi2z_coef(k,i,j,2) = ( Xi(k)      - Z (kp-1,i,j) ) &
-                                    / ( Z (kp,i,j) - Z (kp-1,i,j) )
-          INTERP_xi2z_coef(k,i,j,3) = 0.0_RP
-
-       endif
-    enddo
+       call INTERP_factor1d( KA, KS, KE, KA, KS, KE, &
+                             Z(:,i,j), Xi(:),           & ! (in)
+                             INTERP_xi2z_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2z_coef(:,  i,j), & ! (out)
+                             flag_extrap = .false.      ) ! (in)
     enddo
     enddo
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k,kk,kp) &
-    !$omp shared(JA,IA,KS,KE,Z,Xih,Xi,INTERP_z2xi_idx,INTERP_z2xi_coef)
+    !$omp shared(JA,IA,KA,KS,KE,Z,Xi,INTERP_z2xi_idx,INTERP_z2xi_coef)
     do j = 1, JA
     do i = 1, IA
-    do k = KS, KE
-       if ( Z(k,i,j) < Xih(KS-1) ) then
-
-          INTERP_z2xi_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_z2xi_idx (k,i,j,2) = KS
-          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
-
-       elseif( Z(k,i,j) <= Xi(KS) ) then
-
-          INTERP_z2xi_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_z2xi_idx (k,i,j,2) = KS
-          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 1.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
-
-       elseif( Z(k,i,j) > Xih(KE) ) then
-
-          INTERP_z2xi_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_z2xi_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_z2xi_coef(k,i,j,1) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( Z(k,i,j) > Xi(KE) ) then
-
-          INTERP_z2xi_idx (k,i,j,1) = KE
-          INTERP_z2xi_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_z2xi_coef(k,i,j,1) = 1.0_RP
-          INTERP_z2xi_coef(k,i,j,2) = 0.0_RP
-          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
-
-       else
-
-          do kk = KS+1, KE
-             kp = kk
-             if( Z(k,i,j) <= Xi(kk) ) exit
-          enddo
-
-          INTERP_z2xi_idx (k,i,j,1) = kp - 1
-          INTERP_z2xi_idx (k,i,j,2) = kp
-          INTERP_z2xi_coef(k,i,j,1) = ( Xi(kp)    - Z (k,i,j) ) &
-                                    / ( Xi(kp)    - Xi(kp-1)  )
-          INTERP_z2xi_coef(k,i,j,2) = ( Z (k,i,j) - Xi(kp-1)  ) &
-                                    / ( Xi(kp)    - Xi(kp-1)  )
-          INTERP_z2xi_coef(k,i,j,3) = 0.0_RP
-
-       endif
-    enddo
-    enddo
-    enddo
-
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j) &
-    !$omp shared(JA,IA,KS,KE,KA,INTERP_xi2z_idx,INTERP_xi2z_coef,INTERP_z2xi_idx,INTERP_z2xi_coef)
-    do j = 1, JA
-    do i = 1, IA
-       INTERP_xi2z_idx ( 1:KS-1,i,j,1) = KS     ! dummmy
-       INTERP_xi2z_idx ( 1:KS-1,i,j,2) = KS     ! dummmy
-       INTERP_xi2z_coef( 1:KS-1,i,j,1) = 0.0_RP
-       INTERP_xi2z_coef( 1:KS-1,i,j,2) = 0.0_RP
-       INTERP_xi2z_coef( 1:KS-1,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_xi2z_idx (KE+1:KA,i,j,1) = KE     ! dummmy
-       INTERP_xi2z_idx (KE+1:KA,i,j,2) = KE     ! dummmy
-       INTERP_xi2z_coef(KE+1:KA,i,j,1) = 0.0_RP
-       INTERP_xi2z_coef(KE+1:KA,i,j,2) = 0.0_RP
-       INTERP_xi2z_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_z2xi_idx ( 1:KS-1,i,j,1) = KS     ! dummmy
-       INTERP_z2xi_idx ( 1:KS-1,i,j,2) = KS     ! dummmy
-       INTERP_z2xi_coef( 1:KS-1,i,j,1) = 0.0_RP
-       INTERP_z2xi_coef( 1:KS-1,i,j,2) = 0.0_RP
-       INTERP_z2xi_coef( 1:KS-1,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_z2xi_idx (KE+1:KA,i,j,1) = KE     ! dummmy
-       INTERP_z2xi_idx (KE+1:KA,i,j,2) = KE     ! dummmy
-       INTERP_z2xi_coef(KE+1:KA,i,j,1) = 0.0_RP
-       INTERP_z2xi_coef(KE+1:KA,i,j,2) = 0.0_RP
-       INTERP_z2xi_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
+       call INTERP_factor1d( KA, KS, KE, KA, KS, KE, &
+                             Xi(:), Z(:,i,j),           & ! (in)
+                             INTERP_z2xi_idx (:,:,i,j), & ! (in)
+                             INTERP_z2xi_coef(:,  i,j), & ! (out)
+                             flag_extrap = .true.       ) ! (in)
     enddo
     enddo
 
 
     ! half level
 
-    allocate( INTERP_xih2zh_idx (0:KA,IA,JA,2) )
-    allocate( INTERP_xih2zh_coef(0:KA,IA,JA,3) )
-    allocate( INTERP_zh2xih_idx (0:KA,IA,JA,2) )
-    allocate( INTERP_zh2xih_coef(0:KA,IA,JA,3) )
+    allocate( INTERP_xih2zh_idx (KA,2,IA,JA) )
+    allocate( INTERP_xih2zh_coef(KA,  IA,JA) )
+    allocate( INTERP_zh2xih_idx (KA,2,IA,JA) )
+    allocate( INTERP_zh2xih_coef(KA,  IA,JA) )
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k,kk,kp) &
-    !$omp shared(JA,IA,KS,KE,Xih,Zh,INTERP_xih2zh_idx,INTERP_xih2zh_coef)
+    !$omp shared(JA,IA,KA,KS,KE,Xih,Zh,INTERP_xih2zh_idx,INTERP_xih2zh_coef)
     do j = 1, JA
     do i = 1, IA
-    do k = KS-1, KE
-       if ( Xih(k) < Zh(KS-1,i,j) ) then
-
-          INTERP_xih2zh_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xih2zh_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_xih2zh_coef(k,i,j,1) = 0.0_RP
-          INTERP_xih2zh_coef(k,i,j,2) = 0.0_RP
-          INTERP_xih2zh_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( Xih(k) > Zh(KE,i,j) ) then
-
-          INTERP_xih2zh_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_xih2zh_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xih2zh_coef(k,i,j,1) = 0.0_RP
-          INTERP_xih2zh_coef(k,i,j,2) = 0.0_RP
-          INTERP_xih2zh_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       else
-
-          do kk = KS, KE
-             kp = kk
-             if( Xih(k) <= Zh(kk,i,j) ) exit
-          enddo
-
-          INTERP_xih2zh_idx (k,i,j,1) = kp - 1
-          INTERP_xih2zh_idx (k,i,j,2) = kp
-          INTERP_xih2zh_coef(k,i,j,1) = ( Zh (kp,i,j) - Xih(k)        ) &
-                                      / ( Zh (kp,i,j) - Zh (kp-1,i,j) )
-          INTERP_xih2zh_coef(k,i,j,2) = ( Xih(k)      - Zh (kp-1,i,j) ) &
-                                      / ( Zh (kp,i,j) - Zh (kp-1,i,j) )
-          INTERP_xih2zh_coef(k,i,j,3) = 0.0_RP
-
-       endif
-    enddo
+       call INTERP_factor1d( KA, KS-1, KE, KA, KS-1, KE, &
+                             Zh(1:,i,j), Xih(1:),         & ! (in)
+                             INTERP_xih2zh_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2zh_coef(:,  i,j), & ! (out)
+                             flag_extrap = .false.        ) ! (in)
     enddo
     enddo
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k,kk,kp) &
-    !$omp shared(JA,IA,KS,KE,Xih,Zh,INTERP_zh2xih_idx,INTERP_zh2xih_coef)
+    !$omp shared(JA,IA,KA,KS,KE,Xih,Zh,INTERP_zh2xih_idx,INTERP_zh2xih_coef)
     do j = 1, JA
     do i = 1, IA
-    do k = KS-1, KE
-       if ( Zh(k,i,j) <= Xih(KS-1) ) then
-
-          INTERP_zh2xih_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_zh2xih_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_zh2xih_coef(k,i,j,1) = 0.0_RP
-          INTERP_zh2xih_coef(k,i,j,2) = 0.0_RP
-          INTERP_zh2xih_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( Zh(k,i,j) > Xih(KE) ) then
-
-          INTERP_zh2xih_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_zh2xih_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_zh2xih_coef(k,i,j,1) = 0.0_RP
-          INTERP_zh2xih_coef(k,i,j,2) = 0.0_RP
-          INTERP_zh2xih_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       else
-
-          do kk = KS, KE
-             kp = kk
-             if( Zh(k,i,j) <= Xih(kk) ) exit
-          enddo
-
-          INTERP_zh2xih_idx (k,i,j,1) = kp - 1
-          INTERP_zh2xih_idx (k,i,j,2) = kp
-          INTERP_zh2xih_coef(k,i,j,1) = ( Xih(kp)    - Zh (k,i,j) ) &
-                                      / ( Xih(kp)    - Xih(kp-1)  )
-          INTERP_zh2xih_coef(k,i,j,2) = ( Zh (k,i,j) - Xih(kp-1)  ) &
-                                      / ( Xih(kp)    - Xih(kp-1)  )
-          INTERP_zh2xih_coef(k,i,j,3) = 0.0_RP
-
-       endif
-    enddo
+       call INTERP_factor1d( KA, KS-1, KE, KA, KS-1, KE, &
+                             Xih(1:), Zh(1:,i,j),         & ! (in)
+                             INTERP_zh2xih_idx (:,:,i,j), & ! (in)
+                             INTERP_zh2xih_coef(:,  i,j), & ! (out)
+                             flag_extrap = .true.         ) ! (in)
     enddo
     enddo
 
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j) &
-    !$omp shared(JA,IA,KS,KE,KA,INTERP_xih2zh_idx,INTERP_xih2zh_coef,INTERP_zh2xih_idx,INTERP_zh2xih_coef)
-    do j = 1, JA
-    do i = 1, IA
-       INTERP_xih2zh_idx ( 1:KS-2,i,j,1) = KS     ! dummmy
-       INTERP_xih2zh_idx ( 1:KS-2,i,j,2) = KS     ! dummmy
-       INTERP_xih2zh_coef( 1:KS-2,i,j,1) = 0.0_RP
-       INTERP_xih2zh_coef( 1:KS-2,i,j,2) = 0.0_RP
-       INTERP_xih2zh_coef( 1:KS-2,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_xih2zh_idx (KE+1:KA,i,j,1) = KE     ! dummmy
-       INTERP_xih2zh_idx (KE+1:KA,i,j,2) = KE     ! dummmy
-       INTERP_xih2zh_coef(KE+1:KA,i,j,1) = 0.0_RP
-       INTERP_xih2zh_coef(KE+1:KA,i,j,2) = 0.0_RP
-       INTERP_xih2zh_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_zh2xih_idx ( 1:KS-2,i,j,1) = KS     ! dummmy
-       INTERP_zh2xih_idx ( 1:KS-2,i,j,2) = KS     ! dummmy
-       INTERP_zh2xih_coef( 1:KS-2,i,j,1) = 0.0_RP
-       INTERP_zh2xih_coef( 1:KS-2,i,j,2) = 0.0_RP
-       INTERP_zh2xih_coef( 1:KS-2,i,j,3) = 1.0_RP ! set UNDEF
-
-       INTERP_zh2xih_idx (KE+1:KA,i,j,1) = KE     ! dummmy
-       INTERP_zh2xih_idx (KE+1:KA,i,j,2) = KE     ! dummmy
-       INTERP_zh2xih_coef(KE+1:KA,i,j,1) = 0.0_RP
-       INTERP_zh2xih_coef(KE+1:KA,i,j,2) = 0.0_RP
-       INTERP_zh2xih_coef(KE+1:KA,i,j,3) = 1.0_RP ! set UNDEF
-    enddo
-    enddo
 
     return
   end subroutine INTERP_VERT_setcoef
@@ -390,12 +183,9 @@ contains
        Z,          &
        var,        &
        var_Z       )
-    use scale_const, only: &
-       CONST_UNDEF
-    use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -404,87 +194,23 @@ contains
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
-    real(RP) :: FDZ(KA)
-    real(RP) :: MD (KA)
-    real(RP) :: U  (KA)
-    real(RP) :: V  (KA)
-    real(RP) :: c1, c2, c3, d
-    integer  :: kmax
-
-    integer  :: k, i, j, kk
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
-    kmax = KE - KS + 1
-
-    if ( kmax == 2 ) then
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp shared(KA,IS,IE,JS,JE) &
-       !$omp shared(var,var_Z) &
-       !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-       do k = 1, KA
-          var_Z(k,i,j) = INTERP_xi2z_coef(k,i,j,1) * var(INTERP_xi2z_idx(k,i,j,1),i,j) &
-                       + INTERP_xi2z_coef(k,i,j,2) * var(INTERP_xi2z_idx(k,i,j,2),i,j) &
-                       + INTERP_xi2z_coef(k,i,j,3) * CONST_UNDEF
-       enddo
-       enddo
-       enddo
-
-    else ! cubic spline
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp private(FDZ,MD,U,V,kk,c1,c2,c3,d) &
-       !$omp shared(KA,KS,KE,kmax,IS,IE,JS,JE) &
-       !$omp shared(var,var_Z) &
-       !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef,Xi,Z,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-
-          do k = KS, KE-1
-             FDZ(k) = Z(k+1,i,j) - Z(k,i,j)
-          end do
-
-          MD(KS+1) = 2.0 * ( FDZ(KS) + FDZ(KS+1) ) + FDZ(KS)
-          do k = KS+2, KE-2
-             MD(k) = 2.0 * ( FDZ(k-1) + FDZ(k) )
-          end do
-          MD(KE-1) = 2.0 * ( FDZ(KE-2) + FDZ(KE-1) ) + FDZ(KE-1)
-
-          do k = KS+1, KE-1
-             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / FDZ(k  ) &
-                  - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
-          end do
-
-          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
-                                          FDZ(:), & ! [IN]
-                                          MD (:), & ! [IN]
-                                          FDZ(:), & ! [IN]
-                                          V  (:), & ! [IN]
-                                          U  (:)  ) ! [OUT]
-
-          U(KS) = U(KS+1)
-          U(KE) = U(KE-1)
-
-          do k = 1, KA
-             kk = min(INTERP_xi2z_idx(k,i,j,1),KE-1)
-
-             c3 = ( U(kk+1) - U(kk) ) / FDZ(kk)
-             c2 = 3.0_RP * U(kk)
-             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / FDZ(kk) - ( U(kk) * 2.0_RP + U(kk+1) ) * FDZ(kk)
-             d  = Xi(k) - Z(kk,i,j)
-
-             var_Z(k,i,j) = (        INTERP_xi2z_coef(k,i,j,3) ) * CONST_UNDEF &
-                          + ( 1.0_RP-INTERP_xi2z_coef(k,i,j,3) ) * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
-          end do
-
-       end do
-       end do
-
-    end if
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
+    !$omp shared(Xi,Z,var,var_Z) &
+    !$omp shared(INTERP_xi2z_idx,INTERP_xi2z_coef)
+    do j = JS, JE
+    do i = IS, IE
+       call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
+                             INTERP_xi2z_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2z_coef(:,  i,j), & ! (in)
+                             Z(:,i,j), Xi(:),           & ! (in)
+                             var(:,i,j),                & ! (in)
+                             var_Z(:,i,j)               ) ! (out)
+    end do
+    end do
 
     return
   end subroutine INTERP_VERT_xi2z
@@ -498,12 +224,9 @@ contains
        Xi,         &
        var,        &
        var_Xi      )
-    use scale_const, only: &
-       CONST_UNDEF
-    use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -512,87 +235,23 @@ contains
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
-    real(RP) :: FDZ(KA)
-    real(RP) :: MD (KA)
-    real(RP) :: U  (KA)
-    real(RP) :: V  (KA)
-    real(RP) :: c1, c2, c3, d
-    integer  :: kmax
-
-    integer :: k, i, j, kk
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    kmax = KE - KS + 1
-
-    if ( kmax <= 2 ) then
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp shared(KA,IS,IE,JS,JE) &
-       !$omp shared(var,var_Xi) &
-       !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-       do k = 1, KA
-          var_Xi(k,i,j) = INTERP_z2xi_coef(k,i,j,1) * var(INTERP_z2xi_idx(k,i,j,1),i,j) &
-                        + INTERP_z2xi_coef(k,i,j,2) * var(INTERP_z2xi_idx(k,i,j,2),i,j) &
-                        + INTERP_z2xi_coef(k,i,j,3) * CONST_UNDEF
-       enddo
-       enddo
-       enddo
-
-    else ! cubic spline
-
-       do k = KS, KE-1
-          FDZ(k) = Xi(k+1) - Xi(k)
-       end do
-
-       MD(KS+1) = 2.0 * ( FDZ(KS) + FDZ(KS+1) ) + FDZ(KS)
-       do k = KS+2, KE-2
-          MD(k) = 2.0 * ( FDZ(k-1) + FDZ(k) )
-       end do
-       MD(KE-1) = 2.0 * ( FDZ(KE-2) + FDZ(KE-1) ) + FDZ(KE-1)
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp private(U,V,kk,c1,c2,c3,d) &
-       !$omp shared(KA,KS,KE,kmax,IS,IE,JS,JE) &
-       !$omp shared(var,var_Xi,MD,FDZ) &
-       !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef,Xi,Z,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-
-          do k = KS+1, KE-1
-             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / FDZ(k  ) &
-                  - ( var(k  ,i,j) - var(k-1,i,j) ) / FDZ(k-1)
-          end do
-
-          call MATRIX_SOLVER_tridiagonal( KA, KS+1, KE-1, & ! [IN]
-                                          FDZ(:), & ! [IN]
-                                          MD (:), & ! [IN]
-                                          FDZ(:), & ! [IN]
-                                          V  (:), & ! [IN]
-                                          U  (:)  ) ! [OUT]
-
-          U(KS) = U(KS+1)
-          U(KE) = U(KE-1)
-
-          do k = 1, KA
-             kk = min(INTERP_z2xi_idx(k,i,j,1),KE-1)
-
-             c3 = ( U(kk+1) - U(kk) ) / FDZ(kk)
-             c2 = 3.0_RP * U(kk)
-             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / FDZ(kk) - ( U(kk) * 2.0_RP + U(kk+1) ) * FDZ(kk)
-             d  = Z(k,i,j) - Xi(kk)
-
-             var_Xi(k,i,j) = (        INTERP_z2xi_coef(k,i,j,3) ) * CONST_UNDEF &
-                           + ( 1.0_RP-INTERP_z2xi_coef(k,i,j,3) ) * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
-          end do
-
-       end do
-       end do
-
-    end if
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
+    !$omp shared(Z,Xi,var,var_Xi) &
+    !$omp shared(INTERP_z2xi_idx,INTERP_z2xi_coef)
+    do j = JS, JE
+    do i = IS, IE
+       call INTERP_interp1d( KA, KS, KE, KA, KS, KE, &
+                             INTERP_z2xi_idx (:,:,i,j), & ! (in)
+                             INTERP_z2xi_coef(:,  i,j), & ! (in)
+                             Xi(:), Z(:,i,j),           & ! (in)
+                             var(:,i,j),                & ! (in)
+                             var_Xi(:,i,j)              ) ! (out)
+    end do
+    end do
 
     return
   end subroutine INTERP_VERT_z2xi
@@ -606,12 +265,9 @@ contains
        Zh,         &
        var,        &
        var_Z       )
-    use scale_const, only: &
-       CONST_UNDEF
-    use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -620,87 +276,23 @@ contains
     real(RP), intent(in)  :: var  (KA,IA,JA)
     real(RP), intent(out) :: var_Z(KA,IA,JA)
 
-    real(RP) :: CDZ(KA)
-    real(RP) :: MD (KA)
-    real(RP) :: U  (KA)
-    real(RP) :: V  (KA)
-    real(RP) :: c1, c2, c3, d
-    integer  :: kmax
-
-    integer  :: k, i, j, kk
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
-    kmax = KE - KS + 1
-
-    if ( kmax == 2 ) then
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp shared(KA,IS,IE,JS,JE) &
-       !$omp shared(var,var_Z) &
-       !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-       do k = 1, KA
-          var_Z(k,i,j) = INTERP_xih2zh_coef(k,i,j,1) * var(INTERP_xih2zh_idx(k,i,j,1),i,j) &
-                       + INTERP_xih2zh_coef(k,i,j,2) * var(INTERP_xih2zh_idx(k,i,j,2),i,j) &
-                       + INTERP_xih2zh_coef(k,i,j,3) * CONST_UNDEF
-       enddo
-       enddo
-       enddo
-
-    else ! cubic spline
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp private(CDZ,MD,U,V,kk,c1,c2,c3,d) &
-       !$omp shared(KA,KS,KE,kmax,IS,IE,JS,JE) &
-       !$omp shared(var,var_Z) &
-       !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef,Xih,Zh,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-
-          do k = KS, KE
-             CDZ(k) = Zh(k,i,j) - Zh(k-1,i,j)
-          end do
-
-          MD(KS) = 2.0 * ( CDZ(KS) + CDZ(KS+1) ) + CDZ(KS)
-          do k = KS+1, KE-2
-             MD(k) = 2.0 * ( CDZ(k) + CDZ(k+1) )
-          end do
-          MD(KE-1) = 2.0 * ( CDZ(KE-1) + CDZ(KE) ) + CDZ(KE)
-
-          do k = KS, KE-1
-             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / CDZ(k+1) &
-                  - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
-          end do
-
-          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
-                                          CDZ(KS+1:KE  ), & ! [IN]
-                                          MD (KS  :KE-1), & ! [IN]
-                                          CDZ(KS+1:KE  ), & ! [IN]
-                                          V  (KS  :KE-1), & ! [IN]
-                                          U  (KS  :KE-1)  ) ! [OUT]
-
-          U(KS-1) = U(KS)
-          U(KE)   = U(KE-1)
-
-          do k = 1, KA
-             kk = min(INTERP_xih2zh_idx(k,i,j,1),KE-1)
-
-             c3 = ( U(kk+1) - U(kk) ) / CDZ(kk+1)
-             c2 = 3.0_RP * U(kk)
-             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / CDZ(kk+1) - ( U(kk) * 2.0_RP + U(kk+1) ) * CDZ(kk+1)
-             d = Xih(k) - Zh(kk,i,j)
-
-             var_Z(k,i,j) = (        INTERP_xih2zh_coef(k,i,j,3) ) * CONST_UNDEF &
-                          + ( 1.0_RP-INTERP_xih2zh_coef(k,i,j,3) ) * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
-          end do
-
-       end do
-       end do
-
-    end if
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
+    !$omp shared(Xih,Zh,var,var_Z) &
+    !$omp shared(INTERP_xih2zh_idx,INTERP_xih2zh_coef)
+    do j = JS, JE
+    do i = IS, IE
+       call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
+                             INTERP_xih2zh_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2zh_coef(:,  i,j), & ! (in)
+                             Zh(1:,i,j), Xih(1:),         & ! (in)
+                             var(:,i,j),                  & ! (in)
+                             var_Z(:,i,j)                 ) ! (out)
+    enddo
+    enddo
 
     return
   end subroutine INTERP_VERT_xih2zh
@@ -714,12 +306,9 @@ contains
        Xih,        &
        var,        &
        var_Xi      )
-    use scale_const, only: &
-       CONST_UNDEF
-    use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
@@ -728,87 +317,23 @@ contains
     real(RP), intent(in)  :: var   (KA,IA,JA)
     real(RP), intent(out) :: var_Xi(KA,IA,JA)
 
-    real(RP) :: CDZ(KA)
-    real(RP) :: MD (KA)
-    real(RP) :: U  (KA)
-    real(RP) :: V  (KA)
-    real(RP) :: c1, c2, c3, d
-    integer  :: kmax
-
-    integer  :: k, i, j, kk
+    integer  :: i, j
     !---------------------------------------------------------------------------
 
-    kmax = KE - KS + 1
-
-    if ( kmax == 2 ) then
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp shared(KA,IS,IE,JS,JE) &
-       !$omp shared(var,var_Xi) &
-       !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-       do k = 1, KA
-          var_Xi(k,i,j) = INTERP_zh2xih_coef(k,i,j,1) * var(INTERP_zh2xih_idx(k,i,j,1),i,j) &
-                        + INTERP_zh2xih_coef(k,i,j,2) * var(INTERP_zh2xih_idx(k,i,j,2),i,j) &
-                        + INTERP_zh2xih_coef(k,i,j,3) * CONST_UNDEF
-       enddo
-       enddo
-       enddo
-
-    else ! cubic spline
-
-       do k = KS, KE
-          CDZ(k) = Xih(k) - Xih(k-1)
-       end do
-
-       MD(KS) = 2.0 * ( CDZ(KS) + CDZ(KS+1) ) + CDZ(KS)
-       do k = KS+1, KE-2
-          MD(k) = 2.0 * ( CDZ(k) + CDZ(k+1) )
-       end do
-       MD(KE-1) = 2.0 * ( CDZ(KE-1) + CDZ(KE) ) + CDZ(KE)
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp private(U,V,kk,c1,c2,c3,d) &
-       !$omp shared(KA,KS,KE,kmax,IS,IE,JS,JE) &
-       !$omp shared(var,var_Xi,MD,CDZ) &
-       !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef,Xih,Zh,CONST_UNDEF)
-       do j = JS, JE
-       do i = IS, IE
-
-          do k = KS, KE-1
-             V(k) = ( var(k+1,i,j) - var(k  ,i,j) ) / CDZ(k+1) &
-                  - ( var(k  ,i,j) - var(k-1,i,j) ) / CDZ(k  )
-          end do
-
-          call MATRIX_SOLVER_tridiagonal( kmax-1, 1, kmax-1, & ! [IN]
-                                          CDZ(KS+1:KE  ), & ! [IN]
-                                          MD (KS  :KE-1), & ! [IN]
-                                          CDZ(KS+1:KE  ), & ! [IN]
-                                          V  (KS  :KE-1), & ! [IN]
-                                          U  (KS  :KE-1)  ) ! [OUT]
-
-          U(KS-1) = U(KS)
-          U(KE)   = U(KE-1)
-
-          do k = 1, KA
-             kk = min(INTERP_zh2xih_idx(k,i,j,1),KE-1)
-
-             c3 = ( U(kk+1) - U(kk) ) / CDZ(kk+1)
-             c2 = 3.0_RP * U(kk)
-             c1 = ( var(kk+1,i,j) - var(kk,i,j) ) / CDZ(kk+1) - ( U(kk) * 2.0_RP + U(kk+1) ) * CDZ(kk+1)
-             d = Zh(k,i,j) - Xih(kk)
-             var_Xi(k,i,j) = INTERP_zh2xih_coef(k,i,j,3) * CONST_UNDEF &
-                           + ( 1.0_RP - INTERP_zh2xih_coef(k,i,j,3) ) &
-                           * ( ( ( c3 * d + c2 ) * d + c1 ) * d + var(kk,i,j) )
-          end do
-
-       end do
-       end do
-
-    end if
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
+    !$omp shared(Zh,Xih,var,var_Xi) &
+    !$omp shared(INTERP_zh2xih_idx,INTERP_zh2xih_coef)
+    do j = JS, JE
+    do i = IS, IE
+       call INTERP_interp1d( KA, KS-1, KE, KA, KS-1, KE, &
+                             INTERP_zh2xih_idx (:,:,i,j), & ! (in)
+                             INTERP_zh2xih_coef(:,  i,j), & ! (in)
+                             Xih(1:), Zh(1:,i,j),         & ! (in)
+                             var(:,i,j),                  & ! (in)
+                             var_Xi(:,i,j)                ) ! (out)
+    enddo
+    enddo
 
     return
   end subroutine INTERP_VERT_zh2xih
@@ -816,18 +341,22 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine INTERP_VERT_alloc_pres( &
-       Kpres, IA, JA )
+       Kpres, KA, IA, JA )
     implicit none
-
     integer,  intent(in) :: Kpres
+    integer,  intent(in) :: KA
     integer,  intent(in) :: IA
     integer,  intent(in) :: JA
     !---------------------------------------------------------------------------
 
-    allocate( INTERP_xi2p_idx  (Kpres,IA,JA,2) )
-    allocate( INTERP_xi2p_coef (Kpres,IA,JA,3) )
-    allocate( INTERP_xih2p_idx (Kpres,IA,JA,2) )
-    allocate( INTERP_xih2p_coef(Kpres,IA,JA,3) )
+    allocate( INTERP_xi2p_idx  (Kpres,2,IA,JA) )
+    allocate( INTERP_xi2p_coef (Kpres,  IA,JA) )
+    allocate( INTERP_xih2p_idx (Kpres,2,IA,JA) )
+    allocate( INTERP_xih2p_coef(Kpres,  IA,JA) )
+
+    allocate( LnPRES (KA,IA,JA) )
+    allocate( LnPRESh(KA,IA,JA) )
+    allocate( LnPaxis(Kpres)    )
 
     return
   end subroutine INTERP_VERT_alloc_pres
@@ -842,6 +371,8 @@ contains
        PRESh,      &
        SFC_PRES,   &
        Paxis       )
+    use scale_interp, only: &
+       INTERP_factor1d
     implicit none
 
     integer,  intent(in)  :: Kpres
@@ -853,127 +384,50 @@ contains
     real(RP), intent(in)  :: SFC_PRES(     IA,JA) ! surface pressure          [Pa]
     real(RP), intent(in)  :: Paxis   (Kpres)      ! pressure level to output  [Pa]
 
-    real(RP) :: LnPRES    (  KA,IA,JA) ! (log) pressure in Xi coordinate [Pa]
-    real(RP) :: LnPRESh   (0:KA,IA,JA) ! (log) pressure in Xi coordinate [Pa], layer interface
-    real(RP) :: LnSFC_PRES(     IA,JA) ! (log) surface pressure          [Pa]
-    real(RP) :: LnPaxis   (Kpres)      ! (log) pressure level to output  [Pa]
-
-    integer :: k, i, j, kk, kp
+    integer :: k, i, j
     !---------------------------------------------------------------------------
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       LnPRES(k,i,j) = log( PRES(k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS-1, KE
-       LnPRESh(k,i,j) = log( PRESh(k,i,j) )
-    enddo
-    enddo
-    enddo
-
-    do j = JS, JE
-    do i = IS, IE
-       LnSFC_PRES(i,j) = log( SFC_PRES(i,j) )
-    enddo
-    enddo
-
-    LnPaxis(:) = log( Paxis(:) )
 
     ! full level
 
+!OCL SERIAL
+    do k = 1, Kpres
+       LnPaxis(k) = - log( Paxis(k) )
+    end do
+
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
+    !$omp shared(PRES,LnPRES,LnPaxis) &
+    !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef)
     do j = JS, JE
     do i = IS, IE
-    do k = 1, Kpres
-       if ( LnPaxis(k) >= LnSFC_PRES(i,j) ) then
-
-          INTERP_xi2p_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xi2p_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2p_coef(k,i,j,2) = 0.0_RP
-          INTERP_xi2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( LnPaxis(k) >= LnPRES(KS,i,j) ) then
-
-          INTERP_xi2p_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xi2p_idx (k,i,j,2) = KS
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2p_coef(k,i,j,2) = 1.0_RP
-          INTERP_xi2p_coef(k,i,j,3) = 0.0_RP
-
-       elseif( LnPaxis(k) < LnPRES(KE,i,j) ) then
-
-          INTERP_xi2p_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_xi2p_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xi2p_coef(k,i,j,1) = 0.0_RP
-          INTERP_xi2p_coef(k,i,j,2) = 0.0_RP
-          INTERP_xi2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       else
-
-          do kk = KS+1, KE
-             kp = kk
-             if( LnPaxis(k) >= LnPRES(kk,i,j) ) exit
-          enddo
-
-          INTERP_xi2p_idx (k,i,j,1) = kp - 1
-          INTERP_xi2p_idx (k,i,j,2) = kp
-          INTERP_xi2p_coef(k,i,j,1) = ( LnPaxis(k)        - LnPRES (kp,i,j) ) &
-                                    / ( LnPRES (kp-1,i,j) - LnPRES (kp,i,j) )
-          INTERP_xi2p_coef(k,i,j,2) = ( LnPRES (kp-1,i,j) - LnPaxis(k)      ) &
-                                    / ( LnPRES (kp-1,i,j) - LnPRES (kp,i,j) )
-          INTERP_xi2p_coef(k,i,j,3) = 0.0_RP
-
-       endif
-    enddo
+       do k = KS, KE
+          LnPRES(k,i,j) = - log( PRES(k,i,j) )
+       end do
+       call INTERP_factor1d( KA, KS, KE, Kpres, 1, Kpres, &
+                             LnPRES(:,i,j), LnPaxis(:), & ! (in)
+                             INTERP_xi2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2p_coef(:,  i,j), & ! (out)
+                             flag_extrap = .false.      ) ! (in)
     enddo
     enddo
 
-    ! half level
-
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
+    !$omp shared(PRESh,LnPRESh,LnPaxis) &
+    !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef)
     do j = JS, JE
     do i = IS, IE
-    do k = 1, Kpres
-       if ( LnPaxis(k) > LnSFC_PRES(i,j) ) then
-
-          INTERP_xih2p_idx (k,i,j,1) = KS     ! dummmy
-          INTERP_xih2p_idx (k,i,j,2) = KS     ! dummmy
-          INTERP_xih2p_coef(k,i,j,1) = 0.0_RP
-          INTERP_xih2p_coef(k,i,j,2) = 0.0_RP
-          INTERP_xih2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       elseif( LnPaxis(k) < LnPRESh(KE,i,j) ) then
-
-          INTERP_xih2p_idx (k,i,j,1) = KE     ! dummmy
-          INTERP_xih2p_idx (k,i,j,2) = KE     ! dummmy
-          INTERP_xih2p_coef(k,i,j,1) = 0.0_RP
-          INTERP_xih2p_coef(k,i,j,2) = 0.0_RP
-          INTERP_xih2p_coef(k,i,j,3) = 1.0_RP ! set UNDEF
-
-       else
-
-          do kk = KS, KE
-             kp = kk
-             if( LnPaxis(k) >= LnPRESh(kk,i,j) ) exit
-          enddo
-
-          INTERP_xih2p_idx (k,i,j,1) = kp - 1
-          INTERP_xih2p_idx (k,i,j,2) = kp
-          INTERP_xih2p_coef(k,i,j,1) = ( LnPaxis(k)        - LnPRESh(kp,i,j) ) &
-                                     / ( LnPRESh(kp-1,i,j) - LnPRESh(kp,i,j) )
-          INTERP_xih2p_coef(k,i,j,2) = ( LnPRESh(kp-1,i,j) - LnPaxis(k)      ) &
-                                     / ( LnPRESh(kp-1,i,j) - LnPRESh(kp,i,j) )
-          INTERP_xih2p_coef(k,i,j,3) = 0.0_RP
-
-       endif
+       do k = KS-1, KE
+          LnPRESh(k,i,j) = - log( PRESh(k,i,j) )
+       end do
+       call INTERP_factor1d( KA, KS-1, KE, Kpres, 1, Kpres, &
+                             LnPRESh(:,i,j), LnPaxis(:), & ! (in)
+                             INTERP_xih2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2p_coef(:,  i,j), & ! (out)
+                             flag_extrap = .false.       ) ! (in)
     enddo
     enddo
-    enddo
+
 
     return
   end subroutine INTERP_VERT_setcoef_pres
@@ -981,37 +435,36 @@ contains
   !-----------------------------------------------------------------------------
   subroutine INTERP_VERT_xi2p( &
        Kpres,      &
-       KA,         &
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        var,        &
        var_P       )
-    use scale_const, only: &
-       CONST_UNDEF
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
-
     integer,  intent(in)  :: Kpres
-    integer,  intent(in)  :: KA
+    integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(in)  :: var  (KA   ,IA,JA)
     real(RP), intent(out) :: var_P(Kpres,IA,JA)
 
-    integer :: k, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(k,i,j) &
-    !$omp shared(Kpres,IS,IE,JS,JE) &
-    !$omp shared(var,var_P) &
-    !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef,CONST_UNDEF)
+    !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
+    !$omp shared(LnPRES,LnPaxis,var,var_P) &
+    !$omp shared(INTERP_xi2p_idx,INTERP_xi2p_coef)
     do j = JS, JE
     do i = IS, IE
-    do k = 1, Kpres
-       var_P(k,i,j) = INTERP_xi2p_coef(k,i,j,1) * var(INTERP_xi2p_idx(k,i,j,1),i,j) &
-                    + INTERP_xi2p_coef(k,i,j,2) * var(INTERP_xi2p_idx(k,i,j,2),i,j) &
-                    + INTERP_xi2p_coef(k,i,j,3) * CONST_UNDEF
-    enddo
+       call INTERP_interp1d( KA, KS, KE, Kpres, 1, Kpres, &
+                             INTERP_xi2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xi2p_coef(:,  i,j), & ! (in)
+                             LnPRES(:,i,j), LnPaxis(:), & ! (in)
+                             var(:,i,j),                & ! (in)
+                             var_P(:,i,j)               ) ! (out)
     enddo
     enddo
 
@@ -1021,17 +474,17 @@ contains
   !-----------------------------------------------------------------------------
   subroutine INTERP_VERT_xih2p( &
        Kpres,      &
-       KA,         &
+       KA, KS, KE, &
        IA, IS, IE, &
        JA, JS, JE, &
        var,        &
        var_P       )
-    use scale_const, only: &
-       CONST_UNDEF
+    use scale_interp, only: &
+       INTERP_interp1d
     implicit none
 
     integer,  intent(in)  :: Kpres
-    integer,  intent(in)  :: KA
+    integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(in)  :: var  (KA   ,IA,JA)
@@ -1041,17 +494,17 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(k,i,j) &
-    !$omp shared(Kpres,IS,IE,JS,JE) &
-    !$omp shared(var,var_P) &
-    !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef,CONST_UNDEF)
+    !$omp shared(KA,KS,KE,Kpres,IS,IE,JS,JE) &
+    !$omp shared(LnPRESh,LnPaxis,var,var_P) &
+    !$omp shared(INTERP_xih2p_idx,INTERP_xih2p_coef)
     do j = JS, JE
     do i = IS, IE
-    do k = 1, Kpres
-       var_P(k,i,j) = INTERP_xih2p_coef(k,i,j,1) * var(INTERP_xih2p_idx(k,i,j,1),i,j) &
-                    + INTERP_xih2p_coef(k,i,j,2) * var(INTERP_xih2p_idx(k,i,j,2),i,j) &
-                    + INTERP_xih2p_coef(k,i,j,3) * CONST_UNDEF
-    enddo
+       call INTERP_interp1d( KA, KS-1, KE, Kpres, 1, Kpres, &
+                             INTERP_xih2p_idx (:,:,i,j), & ! (in)
+                             INTERP_xih2p_coef(:,  i,j), & ! (in)
+                             LnPRESh(:,i,j), LnPaxis(:), & ! (in)
+                             var(:,i,j),                 & ! (in)
+                             var_P(:,i,j)                ) ! (out)
     enddo
     enddo
 

@@ -513,9 +513,9 @@ contains
 
     call INTERP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
                           IA_org, JA_org,    & ! [IN]
+                          IA, JA,            & ! [IN]
                           LON_org(:,:),      & ! [IN]
                           LAT_org(:,:),      & ! [IN]
-                          IA, JA,            & ! [IN]
                           LON    (:,:),      & ! [IN]
                           LAT    (:,:),      & ! [IN]
                           idx_i  (:,:,:),    & ! [OUT]
