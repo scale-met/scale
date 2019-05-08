@@ -484,6 +484,7 @@ contains
        select case(trim(item))
        case("lon")
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -495,6 +496,7 @@ contains
           endif
        case("lat")
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -515,6 +517,7 @@ contains
                 LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the outer_nz for plev! ',dims(1),lnum
                 call PRC_abort
              endif
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
@@ -525,6 +528,7 @@ contains
           else if ( trim(dtype) == "map" ) then
              pressure_coordinates = .false.
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
@@ -544,6 +548,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -563,6 +568,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velx_org(1:2,i,j) = 0.0_RP
@@ -583,6 +589,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 vely_org(1:2,i,j) = 0.0_RP
@@ -603,6 +610,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 velz_org(1:2,i,j) = 0.0_RP
@@ -623,6 +631,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -645,6 +654,7 @@ contains
                 LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the outer_nz for HGT! ',dims(1),lnum
                 call PRC_abort
              endif
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, dims(1)
@@ -655,6 +665,7 @@ contains
              enddo
           else if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, dims(1)
@@ -671,6 +682,7 @@ contains
        case('QV')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -686,6 +698,7 @@ contains
              if( dims(1)>knum ) then
                 select case( upper_qv_type )
                 case("COPY")
+                   !$omp parallel do
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -704,6 +717,7 @@ contains
        case('QC')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -721,6 +735,7 @@ contains
        case('QR')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -738,6 +753,7 @@ contains
        case('QI')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -755,6 +771,7 @@ contains
        case('QS')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -772,6 +789,7 @@ contains
        case('QG')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -790,6 +808,8 @@ contains
           if (data_available(Ia_qv,1)) cycle  ! use QV
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do &
+             !$omp private(qm)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -811,6 +831,8 @@ contains
              if( dims(1)>knum ) then
                 select case( upper_qv_type )
                 case("COPY")
+                   !$omp parallel do &
+                   !$omp private(qm)
                    do j = 1, dims(3)
                    do i = 1, dims(2)
                    do k = knum+1, dims(1)
@@ -834,6 +856,7 @@ contains
        case('MSLP')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(1,i,j) = real(gdata2D(i,j), kind=RP)
@@ -847,6 +870,7 @@ contains
        case('PSFC')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 pres_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -948,6 +972,7 @@ contains
        case('TOPO')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
@@ -961,6 +986,7 @@ contains
        case('RN222')
           if ( trim(dtype) == 'map' ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 do k = 1, knum
@@ -979,21 +1005,24 @@ contains
 
     lm_layer(:,:) = 3
 
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
-    do k = 3, dims(1)+2
-      ! search the lowermost layer excluding UNDEF
-      if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
-        lm_layer(i,j) = k + 1
-      else
-        exit
-      end if
-    end do
+       do k = 3, dims(1)+2
+          ! search the lowermost layer excluding UNDEF
+          if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
+             lm_layer(i,j) = k + 1
+          else
+             exit
+          end if
+       end do
     end do
     end do
 
     ! density
     if ( .not. data_available(Ia_dens,1) ) then
+       !$omp parallel do &
+       !$omp private (Rtot)
        do j = 1, dims(3)
        do i = 1, dims(2)
        do k = lm_layer(i,j), dims(1)+2
@@ -1058,6 +1087,8 @@ contains
              end do
           end if
        else
+          !$omp parallel do &
+          !$omp private(k)
           do j = 1, dims(3)
           do i = 1, dims(2)
              k = lm_layer(i,j)
@@ -1115,6 +1146,7 @@ contains
        end if
 
     else
+       !$omp parallel do
        do j = 1, dims(3)
        do i = 1, dims(2)
           velz_org(1:2,i,j)   = UNDEF
@@ -1441,6 +1473,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
                    llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -1454,6 +1487,7 @@ contains
        case("lon_sfc")
           if ( .not. data_available(Il_lon_sfc,2) ) cycle
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -1472,6 +1506,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
                    llat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -1485,6 +1520,7 @@ contains
        case("lat_sfc")
           if ( .not. data_available(Il_lat_sfc,2) ) cycle
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -1509,6 +1545,7 @@ contains
              enddo
 !          else if ( trim(dtype) == "map" ) then
 !             call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland)
+!             !$omp parallel do
 !             do j = 1, ldims(3)
 !             do i = 1, ldims(2)
 !             do k = 1, ldims(1)
@@ -1524,6 +1561,7 @@ contains
           endif
           if ( trim(dtype) == "map" ) then
              call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
              do k = 1, ldims(1)
@@ -1544,6 +1582,7 @@ contains
              endif
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
+                !$omp parallel do
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
                 do k = 1, ldims(1)
@@ -1565,6 +1604,7 @@ contains
              endif
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
+                !$omp parallel do
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
                 do k = 1, ldims(1)
@@ -1581,6 +1621,7 @@ contains
        case('SKINT')
           if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 if ( abs(gland2D(i,j)-missval) < EPS ) then
@@ -1596,6 +1637,7 @@ contains
              if ( ldims(2)==outer_nx .or. ldims(3)==outer_ny ) then
                 if ( trim(dtype) == "map" ) then
                    call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
+                   !$omp parallel do
                    do j = 1, ldims(3)
                    do i = 1, ldims(2)
                       if ( abs(gland2D(i,j)-missval) < EPS ) then
@@ -1614,6 +1656,7 @@ contains
           if ( data_available(Il_topo_sfc,2) ) then
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
+                !$omp parallel do
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
                    if ( abs(gland2D(i,j)-missval) < EPS ) then
@@ -1886,6 +1929,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, odims(2)
                 do i = 1, odims(1)
                    olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -1905,6 +1949,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, odims(2)
                 do i = 1, odims(1)
                    olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -1918,6 +1963,7 @@ contains
        case("lon_sst")
           if ( .not. data_available(Io_lon_sst,3) ) cycle
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
@@ -1936,6 +1982,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, odims(2)
                 do i = 1, odims(1)
                    olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -1955,6 +2002,7 @@ contains
                 call PRC_abort
              end if
              if ( trim(dtype) == "linear" ) then
+                !$omp parallel do
                 do j = 1, odims(2)
                 do i = 1, odims(1)
                    olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -1968,6 +2016,7 @@ contains
        case("lat_sst")
           if ( .not. data_available(Io_lat_sst,3) ) cycle
           if ( trim(dtype) == "linear" ) then
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
@@ -1986,6 +2035,7 @@ contains
              end if
              if ( trim(dtype) == "map" ) then
                 call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,nt,item,startrec,totalrec,yrev,gsst2D)
+                !$omp parallel do
                 do j = 1, odims(2)
                 do i = 1, odims(1)
                    if ( abs(gsst2D(i,j)-missval) < EPS ) then
@@ -2001,6 +2051,7 @@ contains
           if ( .not. data_available(Io_sst,3) ) cycle
           if ( trim(dtype) == "map" ) then
              call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,nt,item,startrec,totalrec,yrev,gsst2D)
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 if ( abs(gsst2D(i,j)-missval) < EPS ) then
@@ -2233,6 +2284,7 @@ contains
 
     if( trim(yrev) == "on" )then
        work(:,:)=gdata(:,:)
+       !$omp parallel do
        do j=1,ny
        do i=1,nx
           gdata(i,j)=work(i,ny-j+1)
@@ -2285,6 +2337,7 @@ contains
 
     if( trim(yrev) == "on" )then
        work(:,:,:)=gdata(:,:,:)
+       !$omp parallel do collapse(3)
        do k=1,nz
        do j=1,ny
        do i=1,nx

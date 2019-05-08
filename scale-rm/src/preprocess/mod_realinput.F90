@@ -851,6 +851,7 @@ contains
     !--- input initial data
     ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
@@ -1383,10 +1384,18 @@ contains
        end if
 
        if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
-          QTRC_org(:,:,:,QS_CH) = RN222_org(:,:,:)
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, dims(1)+2
+             QTRC_org(k,i,j,QS_CH) = RN222_org(k,i,j)
+          end do
+          end do
+          end do
        endif
 
        if ( temp2pott ) then
+          !$omp parallel do
           do j = 1, dims(3)
           do i = 1, dims(2)
           do k = 1, dims(1)+2
@@ -1615,12 +1624,13 @@ contains
     end if
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
+       !$omp parallel do &
+       !$omp private(u_on_map,v_on_map)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
           u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
           v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
-
           U(k,i,j) = u_on_map
           V(k,i,j) = v_on_map
        enddo
@@ -1629,6 +1639,7 @@ contains
     endif
 
     ! from scalar point to staggered point
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE-1
@@ -1637,6 +1648,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA-1
     do k = KS, KE
@@ -1646,12 +1658,14 @@ contains
     enddo
 
     i = IA
+    !$omp parallel do
     do j = 1, JA
     do k = KS, KE
        VELX(k,i,j) = U(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
@@ -1661,12 +1675,14 @@ contains
     enddo
 
     j = JA
+    !$omp parallel do
     do i = 1, IA
     do k = KS, KE
        VELY(k,i,j) = V(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        VELZ(   1:KS-1,i,j) = 0.0_RP
@@ -1830,6 +1846,7 @@ contains
        call COMM_wait ( DENS(:,:,:), 1, .false. )
     end if
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        DENS(   1:KS-1,i,j) = 0.0_RP
@@ -1837,6 +1854,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE-1
@@ -1845,6 +1863,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA-1
     do k = KS, KE
@@ -1854,12 +1873,14 @@ contains
     enddo
 
     i = IA
+    !$omp parallel do
     do j = 1, JA
     do k = KS, KE
        MOMX(k,i,j) = VELX(k,i,j) * DENS(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
@@ -1869,12 +1890,14 @@ contains
     enddo
 
     j = JA
+    !$omp parallel do
     do i = 1, IA
     do k = KS, KE
        MOMY(k,i,j) = VELY(k,i,j) * DENS(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1883,6 +1906,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        MOMZ(   1:KS-1,i,j) = 0.0_RP
@@ -3380,6 +3404,7 @@ contains
     end do
     end do
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        lcz_3D(:,i,j) = LCZ(:)
@@ -3578,6 +3603,7 @@ contains
                           tg_org  (:,:,:),     & ! [IN]
                           tg      (:,:,:)      ) ! [OUT]
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        tg(LKMAX,i,j) = tg(LKMAX-1,i,j)
