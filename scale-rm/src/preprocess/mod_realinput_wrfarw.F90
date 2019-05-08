@@ -166,13 +166,15 @@ contains
        lat_org,       &
        cz_org,        &
        basename,      &
+       sfc_diagnoses, &
        dims,          &
-       it             ) ! (in)
+       it             )
     use scale_const, only: &
-       D2R => CONST_D2R, &
-       LAPS => CONST_LAPS, &
-       Rdry => CONST_Rdry, &
-       GRAV => CONST_GRAV
+       UNDEF => CONST_UNDEF, &
+       D2R   => CONST_D2R, &
+       LAPS  => CONST_LAPS, &
+       Rdry  => CONST_Rdry, &
+       GRAV  => CONST_GRAV
     use scale_file, only: &
        FILE_open, &
        FILE_read
@@ -197,6 +199,7 @@ contains
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename
+    logical,          intent(in)  :: sfc_diagnoses
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
@@ -213,6 +216,7 @@ contains
     real(RP) :: velxs_org(dims(5),dims(3),dims(1))
     real(RP) :: velys_org(dims(2),dims(6),dims(1))
 
+    real(RP) :: dz
     real(RP) :: dens
     real(RP) :: qtot
 
@@ -314,14 +318,6 @@ contains
 
     qhyd_org(:,:,:,:) = 0.0_RP
 
-    call FILE_read( fid, "Q2", read_xy(:,:), step=it )
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       qv_org(1,i,j) = read_xy(i,j)
-       qv_org(2,i,j) = read_xy(i,j)
-    end do
-    end do
-
     call FILE_read( fid, "QVAPOR", read_xyz(:,:,:), step=it )
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -330,6 +326,22 @@ contains
     end do
     end do
     end do
+
+    if ( sfc_diagnoses ) then
+       call FILE_read( fid, "Q2", read_xy(:,:), step=it )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          qv_org(1,i,j) = read_xy(i,j)
+          qv_org(2,i,j) = read_xy(i,j)
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          qv_org(1:2,i,j) = UNDEF
+       end do
+       end do
+    end if
 
 
     call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
@@ -382,14 +394,21 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qtot = qv_org(k,i,j)
-       do iq = 1, N_HYD
-          qtot = qtot + qhyd_org(k,i,j,iq)
-       end do
-       qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
-       do iq = 1, N_HYD
-          qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
-       end do
+       if ( k<3 .and. .not. sfc_diagnoses ) then
+          qv_org(k,i,j) = UNDEF
+          do iq = 1, N_HYD
+             qhyd_org(k,i,j,iq) = UNDEF
+          end do
+       else
+          qtot = qv_org(k,i,j)
+          do iq = 1, N_HYD
+             qtot = qtot + qhyd_org(k,i,j,iq)
+          end do
+          qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
+          do iq = 1, N_HYD
+             qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
+          end do
+       end if
     end do
     end do
     end do
@@ -443,8 +462,13 @@ contains
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qhyd_org(k,i,j,iq) = max( qhyd_org(k,i,j,iq), 0.0_RP )
-       qnum_org(k,i,j,iq) = max( qnum_org(k,i,j,iq), 0.0_RP )
+       if ( k<3 .and. .not. sfc_diagnoses ) then
+          qhyd_org(k,i,j,iq) = UNDEF
+          qnum_org(k,i,j,iq) = UNDEF
+       else
+          qhyd_org(k,i,j,iq) = max( qhyd_org(k,i,j,iq), 0.0_RP )
+          qnum_org(k,i,j,iq) = max( qnum_org(k,i,j,iq), 0.0_RP )
+       end if
     end do
     end do
     end do
@@ -459,34 +483,28 @@ contains
     end do
     end do
     end do
-    call FILE_read( fid, "T2", read_xy(:,:), step=it, allow_missing=.true. )
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       temp_org(2,i,j) = read_xy(i,j)
-    end do
-    end do
-
-    call FILE_read( fid, "PSFC", read_xy(:,:), step=it, allow_missing=.true. )
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       pres_org(2,i,j) = read_xy(i,j)
-    end do
-    end do
-
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       do k = 3, dims(1)+2
-          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
-          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
+    if ( sfc_diagnoses ) then
+       call FILE_read( fid, "T2", read_xy(:,:), step=it, allow_missing=.false. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          temp_org(2,i,j) = read_xy(i,j)
        end do
-       pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
-       temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
-       pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
-                       / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
-                       * Rdry * temp_org(1,i,j)
-    end do
-    end do
+       end do
+
+       call FILE_read( fid, "PSFC", read_xy(:,:), step=it, allow_missing=.false. )
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          pres_org(2,i,j) = read_xy(i,j)
+       end do
+       end do
+    else
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          temp_org(2,i,j) = UNDEF
+          pres_org(2,i,j) = UNDEF
+       end do
+       end do
+    end if
 
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -500,6 +518,27 @@ contains
        end do
        cz_org(2,i,j) = topo_org(i,j)
        cz_org(1,i,j) = 0.0_RP
+    end do
+    end do
+
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       do k = 3, dims(1)+2
+          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
+          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
+       end do
+       if (  sfc_diagnoses ) then
+          pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
+          temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
+          dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+          pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
+                          / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
+                          * Rdry * temp_org(1,i,j)
+       else
+          pott_org(2,i,j) = UNDEF
+          temp_org(1,i,j) = UNDEF
+          pres_org(1,i,j) = UNDEF
+       end if
     end do
     end do
 
