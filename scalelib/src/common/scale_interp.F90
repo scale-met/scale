@@ -242,6 +242,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS,  &
        UNDEF => CONST_UNDEF
     implicit none
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
@@ -270,7 +271,7 @@ contains
        idx_k(k,1) = -1
        idx_k(k,2) = -1
 
-       if    ( hgt(k) <  hgt_ref(KS_ref) ) then
+       if    ( hgt(k) <  hgt_ref(KS_ref) - EPS ) then
           if ( flag_extrap_ ) then
              idx_k(k,1) = KS_ref
              idx_k(k,2) = -1
@@ -280,7 +281,11 @@ contains
              idx_k(k,2) = -1
              vfact(k) = UNDEF
           end if
-       elseif( hgt(k) >= hgt_ref(KE_ref) ) then
+       elseif( hgt(k) < hgt_ref(KS_ref) ) then
+          idx_k(k,1) = KS_ref
+          idx_k(k,2) = -1
+          vfact(k) = 1.0_RP
+       elseif( hgt(k) > hgt_ref(KE_ref) + EPS ) then
           if ( flag_extrap_ ) then
              idx_k(k,1) = KE_ref
              idx_k(k,2) = -1
@@ -290,6 +295,10 @@ contains
              idx_k(k,2) = -1
              vfact(k) = UNDEF
           end if
+       elseif( hgt(k) >= hgt_ref(KE_ref) ) then
+          idx_k(k,1) = KE_ref
+          idx_k(k,2) = -1
+          vfact(k) = 1.0_RP
        else
           do kk = KS_ref, KE_ref-1
              if (       hgt(k) >= hgt_ref(kk  ) &
