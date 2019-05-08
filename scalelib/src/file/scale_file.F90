@@ -159,8 +159,11 @@ module scale_file
   interface FILE_set_attribute
      module procedure FILE_set_attribute_text
      module procedure FILE_set_attribute_logical
+     module procedure FILE_set_attribute_int_ary
      module procedure FILE_set_attribute_int
+     module procedure FILE_set_attribute_float_ary
      module procedure FILE_set_attribute_float
+     module procedure FILE_set_attribute_double_ary
      module procedure FILE_set_attribute_double
   end interface FILE_set_attribute
 
@@ -2049,7 +2052,7 @@ contains
   end subroutine FILE_set_attribute_logical
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_int( &
+  subroutine FILE_set_attribute_int_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2076,10 +2079,27 @@ contains
     end if
 
     return
+  end subroutine FILE_set_attribute_int_ary
+
+  subroutine FILE_set_attribute_int( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val
+
+    integer :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_int_ary( fid, vname, &
+                                     key, ary(:) )
+
+    return
   end subroutine FILE_set_attribute_int
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_float( &
+  subroutine FILE_set_attribute_float_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2106,9 +2126,26 @@ contains
     end if
 
     return
+  end subroutine FILE_set_attribute_float_ary
+
+  subroutine FILE_set_attribute_float( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(SP),    intent(in) :: val
+
+    real(SP) :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_float_ary( fid, vname, &
+                                           key, ary(:) )
+
+    return
   end subroutine FILE_set_attribute_float
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_double( &
+  subroutine FILE_set_attribute_double_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2133,6 +2170,23 @@ contains
        LOG_ERROR("FILE_set_attribute_double",*) 'failed to set double attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    return
+  end subroutine FILE_set_attribute_double_ary
+
+  subroutine FILE_set_attribute_double( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(DP),    intent(in) :: val
+
+    real(DP) :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_double_ary( fid, vname, &
+                                           key, ary(:) )
 
     return
   end subroutine FILE_set_attribute_double

@@ -286,7 +286,7 @@ contains
     use scale_file_history, only: &
        FILE_HIStoRY_set_dim
     use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
+       MAPPROJECTION_mappinginfo
     implicit none
 
     character(len=H_SHORT) :: mapping
@@ -312,7 +312,7 @@ contains
     end if
 
     ! get mapping name
-    call MAPPROJECTION_get_attributes( mapping )
+    mapping = MAPPROJECTION_mappinginfo%mapping_name
 
 
     !  Vertical 1D
@@ -1645,17 +1645,15 @@ contains
     use scale_file, only: &
        FILE_get_CFtunits
     use scale_file_cartesC, only: &
-       axisattinfo,        &
-       mappinginfo
+       axisattinfo
     use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
+       minfo => MAPPROJECTION_mappinginfo
     implicit none
 
     character(len=34) :: tunits
     character(len=H_SHORT) :: calendar
 
     type(axisattinfo) :: ainfo(4) ! x, xh, y, yh
-    type(mappinginfo) :: minfo
     !---------------------------------------------------------------------------
 
     call FILE_HISTORY_Set_Attribute( "global", "Conventions", "CF-1.6" ) ! [IN]
@@ -1812,14 +1810,6 @@ contains
     call FILE_HISTORY_Set_Attribute( "yh", "periodic"    , ainfo(4)%periodic        )
 
     ! map projection info
-    call MAPPROJECTION_get_attributes( minfo%mapping_name,                             & ! [OUT]
-                                       minfo%false_easting                        (1), & ! [OUT]
-                                       minfo%false_northing                       (1), & ! [OUT]
-                                       minfo%longitude_of_central_meridian        (1), & ! [OUT]
-                                       minfo%longitude_of_projection_origin       (1), & ! [OUT]
-                                       minfo%latitude_of_projection_origin        (1), & ! [OUT]
-                                       minfo%straight_vertical_longitude_from_pole(1), & ! [OUT]
-                                       minfo%standard_parallel                    (:)  ) ! [OUT]
 
     if ( minfo%mapping_name /= "" ) then
        call FILE_HISTORY_Set_Attribute( "x" , "standard_name", "projection_x_coordinate" )
@@ -1829,53 +1819,60 @@ contains
 
        call FILE_HISTORY_Set_Attribute( minfo%mapping_name, "grid_mapping_name", minfo%mapping_name, add_variable=.true. )
 
-       if ( minfo%false_easting(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,    & ! [IN]
-                                           "false_easting",       & ! [IN]
-                                           minfo%false_easting(:) ) ! [IN]
+       if ( minfo%false_easting /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name, & ! [IN]
+                                           "false_easting",    & ! [IN]
+                                           minfo%false_easting ) ! [IN]
        endif
 
-       if ( minfo%false_northing(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,     & ! [IN]
-                                           "false_northing",       & ! [IN]
-                                           minfo%false_northing(:) ) ! [IN]
+       if ( minfo%false_northing /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,  & ! [IN]
+                                           "false_northing",    & ! [IN]
+                                           minfo%false_northing ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
-                                           "longitude_of_central_meridian",       & ! [IN]
-                                           minfo%longitude_of_central_meridian(:) ) ! [IN]
+       if ( minfo%longitude_of_central_meridian /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                 & ! [IN]
+                                           "longitude_of_central_meridian",    & ! [IN]
+                                           minfo%longitude_of_central_meridian ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                     & ! [IN]
-                                           "longitude_of_projection_origin",       & ! [IN]
-                                           minfo%longitude_of_projection_origin(:) ) ! [IN]
+       if ( minfo%longitude_of_projection_origin /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                  & ! [IN]
+                                           "longitude_of_projection_origin",    & ! [IN]
+                                           minfo%longitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                    & ! [IN]
-                                           "latitude_of_projection_origin",       & ! [IN]
-                                           minfo%latitude_of_projection_origin(:) ) ! [IN]
+       if ( minfo%latitude_of_projection_origin /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                 & ! [IN]
+                                           "latitude_of_projection_origin",    & ! [IN]
+                                           minfo%latitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                            & ! [IN]
-                                           "straight_vertical_longitude_from_pole",       & ! [IN]
-                                           minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       if ( minfo%straight_vertical_longitude_from_pole /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name,                         & ! [IN]
+                                           "straight_vertical_longitude_from_pole",    & ! [IN]
+                                           minfo%straight_vertical_longitude_from_pole ) ! [IN]
        endif
 
        if ( minfo%standard_parallel(1) /= UNDEF ) then
           if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
-                                              "standard_parallel",         & ! [IN]
-                                              minfo%standard_parallel(1:2) ) ! [IN]
+             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,        & ! [IN]
+                                              "standard_parallel",       & ! [IN]
+                                              minfo%standard_parallel(:) ) ! [IN]
           else
-             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,          & ! [IN]
-                                              "standard_parallel",         & ! [IN]
-                                              minfo%standard_parallel(1:1) ) ! [IN]
+             call FILE_HISTORY_Set_Attribute( minfo%mapping_name,        & ! [IN]
+                                              "standard_parallel",       & ! [IN]
+                                              minfo%standard_parallel(1) ) ! [IN]
           endif
        endif
+
+       if ( minfo%rotation /= UNDEF ) then
+          call FILE_HISTORY_Set_Attribute( minfo%mapping_name, & ! [IN]
+                                           "rotation",         & ! [IN]
+                                           minfo%rotation      ) ! [IN]
+       endif
+
     endif
 
     ! area and volume

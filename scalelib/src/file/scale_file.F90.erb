@@ -146,8 +146,11 @@ module scale_file
   interface FILE_set_attribute
      module procedure FILE_set_attribute_text
      module procedure FILE_set_attribute_logical
+     module procedure FILE_set_attribute_int_ary
      module procedure FILE_set_attribute_int
+     module procedure FILE_set_attribute_float_ary
      module procedure FILE_set_attribute_float
+     module procedure FILE_set_attribute_double_ary
      module procedure FILE_set_attribute_double
   end interface FILE_set_attribute
 
@@ -1348,7 +1351,7 @@ contains
   end subroutine FILE_set_attribute_logical
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_int( &
+  subroutine FILE_set_attribute_int_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -1375,11 +1378,28 @@ contains
     end if
 
     return
+  end subroutine FILE_set_attribute_int_ary
+
+  subroutine FILE_set_attribute_int( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val
+
+    integer :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_int_ary( fid, vname, &
+                                     key, ary(:) )
+
+    return
   end subroutine FILE_set_attribute_int
 
 % [["SP","float"], ["DP","double"]].each do |rp,name|
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_<%=name%>( &
+  subroutine FILE_set_attribute_<%=name%>_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -1404,6 +1424,23 @@ contains
        LOG_ERROR("FILE_set_attribute_<%=name%>",*) 'failed to set <%=name%> attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    return
+  end subroutine FILE_set_attribute_<%=name%>_ary
+
+  subroutine FILE_set_attribute_<%=name%>( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(<%=rp%>),    intent(in) :: val
+
+    real(<%=rp%>) :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_<%=name%>_ary( fid, vname, &
+                                           key, ary(:) )
 
     return
   end subroutine FILE_set_attribute_<%=name%>

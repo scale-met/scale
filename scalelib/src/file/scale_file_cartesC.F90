@@ -101,17 +101,6 @@ module scale_file_cartesC
     logical :: periodic
   end type axisattinfo
 
-  type, public :: mappinginfo
-    character(len=H_SHORT) :: mapping_name
-    real(DP)               :: false_easting                        (1)
-    real(DP)               :: false_northing                       (1)
-    real(DP)               :: longitude_of_central_meridian        (1)
-    real(DP)               :: longitude_of_projection_origin       (1)
-    real(DP)               :: latitude_of_projection_origin        (1)
-    real(DP)               :: straight_vertical_longitude_from_pole(1)
-    real(DP)               :: standard_parallel                    (2)
-  end type mappinginfo
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -144,7 +133,6 @@ module scale_file_cartesC
   type(dims) :: FILE_CARTESC_dims(FILE_CARTESC_ndims)
 
   type(axisattinfo) :: FILE_CARTESC_AXIS_info(4) ! x, xh, y, yh
-  type(mappinginfo) :: FILE_CARTESC_MAPPING_info
 
 
   real(RP), private, allocatable :: AXIS_HGT   (:,:,:)
@@ -2198,8 +2186,10 @@ contains
        FILE_Set_Attribute,            &
        FILE_Def_AssociatedCoordinate, &
        FILE_Add_AssociatedVariable
-    use scale_const, &
+    use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_mapprojection, only: &
+       MAPPROJECTION_mappinginfo
     implicit none
 
     integer, intent(in) :: fid
@@ -2490,70 +2480,78 @@ contains
 
     ! map projection info
 
-    if ( FILE_CARTESC_mapping_info%mapping_name /= "" ) then
+    if ( MAPPROJECTION_mappinginfo%mapping_name /= "" ) then
        call FILE_Set_Attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
        call FILE_Set_Attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
        call FILE_Set_Attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
        call FILE_Set_Attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FILE_Add_AssociatedVariable( fid, FILE_CARTESC_mapping_info%mapping_name )
-       call FILE_Set_Attribute( fid, FILE_CARTESC_mapping_info%mapping_name, "grid_mapping_name",  FILE_CARTESC_mapping_info%mapping_name )
+       call FILE_Add_AssociatedVariable( fid, MAPPROJECTION_mappinginfo%mapping_name )
+       call FILE_Set_Attribute( fid, MAPPROJECTION_mappinginfo%mapping_name, "grid_mapping_name",  MAPPROJECTION_mappinginfo%mapping_name )
 
-       if ( FILE_CARTESC_mapping_info%false_easting(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,    & ! [IN]
-                                   "false_easting",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%false_easting(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%false_easting /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name, & ! [IN]
+                                   "false_easting",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%false_easting ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%false_northing(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                        & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,     & ! [IN]
-                                   "false_northing",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%false_northing(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%false_northing /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                     & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,  & ! [IN]
+                                   "false_northing",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%false_northing ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                    & ! [IN]
-                                   "longitude_of_central_meridian",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%longitude_of_central_meridian(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%longitude_of_central_meridian /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                 & ! [IN]
+                                   "longitude_of_central_meridian",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%longitude_of_central_meridian ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                        & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                     & ! [IN]
-                                   "longitude_of_projection_origin",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%longitude_of_projection_origin(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%longitude_of_projection_origin /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                     & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                  & ! [IN]
+                                   "longitude_of_projection_origin",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%longitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                    & ! [IN]
-                                   "latitude_of_projection_origin",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%latitude_of_projection_origin(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%latitude_of_projection_origin /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                 & ! [IN]
+                                   "latitude_of_projection_origin",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%latitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                               & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                            & ! [IN]
-                                   "straight_vertical_longitude_from_pole",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                            & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                         & ! [IN]
+                                   "straight_vertical_longitude_from_pole",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%standard_parallel(1) /= UNDEF ) then
-          if ( FILE_CARTESC_mapping_info%standard_parallel(2) /= UNDEF ) then
-             call FILE_Set_Attribute( fid,                                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%mapping_name,          & ! [IN]
-                                      "standard_parallel",                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%standard_parallel(1:2) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%standard_parallel(1) /= UNDEF ) then
+          if ( MAPPROJECTION_mappinginfo%standard_parallel(2) /= UNDEF ) then
+             call FILE_Set_Attribute( fid,                                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%mapping_name,        & ! [IN]
+                                      "standard_parallel",                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%standard_parallel(:) ) ! [IN]
           else
-             call FILE_Set_Attribute( fid,                                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%mapping_name,          & ! [IN]
-                                      "standard_parallel",                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%standard_parallel(1:1) ) ! [IN]
+             call FILE_Set_Attribute( fid,                                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%mapping_name,        & ! [IN]
+                                      "standard_parallel",                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%standard_parallel(1) ) ! [IN]
           endif
        endif
+
+       if ( MAPPROJECTION_mappinginfo%rotation /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name, & ! [IN]
+                                   "rotation",                             & ! [IN]
+                                   MAPPROJECTION_mappinginfo%rotation      ) ! [IN]
+       endif
+
     endif
 
     ! cell measures
@@ -3141,7 +3139,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
+       MAPPROJECTION_mappinginfo
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
@@ -3277,8 +3275,8 @@ contains
     end select
 
     ! mapping
-    if ( FILE_CARTESC_dims(dimid)%mapping .and. FILE_CARTESC_mapping_info%mapping_name /= "" ) then
-       call FILE_Set_Attribute( fid, varname, "grid_mapping", FILE_CARTESC_mapping_info%mapping_name )
+    if ( FILE_CARTESC_dims(dimid)%mapping .and. MAPPROJECTION_mappinginfo%mapping_name /= "" ) then
+       call FILE_Set_Attribute( fid, varname, "grid_mapping", MAPPROJECTION_mappinginfo%mapping_name )
     end if
 
     ! SGRID
@@ -4272,8 +4270,6 @@ contains
        PRC_HAS_E,      &
        PRC_HAS_S,      &
        PRC_HAS_N
-    use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
     implicit none
     !---------------------------------------------------------------------------
 
@@ -4390,19 +4386,6 @@ contains
     endif
     ! for yh
     FILE_CARTESC_AXIS_info(4) = FILE_CARTESC_AXIS_info(3)
-
-
-    ! Mapping information
-
-
-    call MAPPROJECTION_get_attributes( FILE_CARTESC_mapping_info%mapping_name,                             & ! [OUT]
-                                       FILE_CARTESC_mapping_info%false_easting                        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%false_northing                       (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%longitude_of_central_meridian        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%longitude_of_projection_origin       (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%latitude_of_projection_origin        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%standard_parallel                    (:)  ) ! [OUT]
 
 
     return
