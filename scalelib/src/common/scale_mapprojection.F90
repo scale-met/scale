@@ -25,11 +25,13 @@ module scale_mapprojection
   !++ Public procedure
   !
   public :: MAPPROJECTION_setup
-  public :: MAPPROJECTION_setup_None
-  public :: MAPPROJECTION_setup_LambertConformal
-  public :: MAPPROJECTION_setup_PolarStereographic
-  public :: MAPPROJECTION_setup_Mercator
-  public :: MAPPROJECTION_setup_EquidistantCylindrical
+
+  public :: MAPPROJECTION_get_param
+  public :: MAPPROJECTION_get_param_None
+  public :: MAPPROJECTION_get_param_LambertConformal
+  public :: MAPPROJECTION_get_param_PolarStereographic
+  public :: MAPPROJECTION_get_param_Mercator
+  public :: MAPPROJECTION_get_param_EquidistantCylindrical
 
   public :: MAPPROJECTION_xy2lonlat
   public :: MAPPROJECTION_xy2lonlat_None
@@ -75,7 +77,7 @@ module scale_mapprojection
   real(RP), public :: MAPPROJECTION_basepoint_lon = 135.221_RP ! position of base point (domain center) in real world [deg]
   real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point (domain center) in real world [deg]
 
-  type mappinginfo
+  type, public :: mappinginfo
      character(len=H_SHORT) :: mapping_name
      real(DP)               :: false_easting
      real(DP)               :: false_northing
@@ -234,35 +236,31 @@ contains
     LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(y)    [m] : ', MAPPROJECTION_basepoint_y
     LOG_INFO_CONT(*)              'Map projection type : ', trim(MAPPROJECTION_type)
 
-    MAPPROJECTION_mappinginfo%mapping_name = ""
-    MAPPROJECTION_mappinginfo%false_easting = UNDEF
-    MAPPROJECTION_mappinginfo%false_northing = UNDEF
-    MAPPROJECTION_mappinginfo%longitude_of_central_meridian = UNDEF
-    MAPPROJECTION_mappinginfo%longitude_of_projection_origin = UNDEF
-    MAPPROJECTION_mappinginfo%latitude_of_projection_origin = UNDEF
+    MAPPROJECTION_mappinginfo%longitude_of_central_meridian         = UNDEF
     MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole = UNDEF
-    MAPPROJECTION_mappinginfo%standard_parallel(:) = UNDEF
-    MAPPROJECTION_mappinginfo%rotation = UNDEF
+    MAPPROJECTION_mappinginfo%standard_parallel(:)                  = UNDEF
+
+    MAPPROJECTION_mappinginfo%longitude_of_projection_origin = MAPPROJECTION_basepoint_lon
+    MAPPROJECTION_mappinginfo%latitude_of_projection_origin  = MAPPROJECTION_basepoint_lat
+    MAPPROJECTION_mappinginfo%false_easting                  = MAPPROJECTION_basepoint_x
+    MAPPROJECTION_mappinginfo%false_northing                 = MAPPROJECTION_basepoint_y
+    MAPPROJECTION_mappinginfo%rotation                       = MAPPROJECTION_rotation
+
 
     select case(trim(MAPPROJECTION_type))
     case('NONE')
        LOG_INFO_CONT(*) '=> NO map projection'
-       call MAPPROJECTION_setup_None
+       MAPPROJECTION_mappinginfo%mapping_name = ""
+
        xy2lonlat => MAPPROJECTION_xy2lonlat_None
        lonlat2xy => MAPPROJECTION_lonlat2xy_None
        mapfactor => MAPPROJECTION_mapfactor_None
        rotcoef   => MAPPROJECTION_rotcoef_None
     case('LC')
        LOG_INFO_CONT(*) '=> Lambert Conformal projection'
-       call MAPPROJECTION_setup_LambertConformal( &
-            MAPPROJECTION_LC_lat1, MAPPROJECTION_LC_lat2,         & ! (in)
-            MAPPROJECTION_basepoint_lat,                          & ! (in)
-            MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y, & ! (in)
-            MAPPROJECTION_mappingparam                            ) ! (out)
        MAPPROJECTION_mappinginfo%mapping_name = "lambert_conformal_conic"
        MAPPROJECTION_mappinginfo%standard_parallel(:) = (/ MAPPROJECTION_LC_lat1, MAPPROJECTION_LC_lat2 /)
        MAPPROJECTION_mappinginfo%longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
-       MAPPROJECTION_mappinginfo%latitude_of_projection_origin = MAPPROJECTION_basepoint_lat
 
        xy2lonlat => MAPPROJECTION_xy2lonlat_LambertConformal
        lonlat2xy => MAPPROJECTION_lonlat2xy_LambertConformal
@@ -271,15 +269,8 @@ contains
     case('PS')
        LOG_INFO_CONT(*) '=> Polar Stereographic projection'
        if( MAPPROJECTION_PS_lat == UNDEF ) MAPPROJECTION_PS_lat = MAPPROJECTION_basepoint_lat
-       call MAPPROJECTION_setup_PolarStereographic( &
-            MAPPROJECTION_PS_lat,                                 & ! (in)
-            MAPPROJECTION_basepoint_lat,                          & ! (in)
-            MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y, & ! (in)
-            MAPPROJECTION_mappingparam                            ) ! (out)
-
        MAPPROJECTION_mappinginfo%mapping_name = "polar_stereographic"
        MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole = MAPPROJECTION_basepoint_lon
-       MAPPROJECTION_mappinginfo%latitude_of_projection_origin = MAPPROJECTION_basepoint_lat
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_PS_lat
 
        xy2lonlat => MAPPROJECTION_xy2lonlat_PolarStereographic
@@ -288,14 +279,7 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_PolarStereographic
     case('MER')
        LOG_INFO_CONT(*) '=> Mercator projection'
-       call MAPPROJECTION_setup_Mercator( &
-            MAPPROJECTION_M_lat,                                  & ! (in)
-            MAPPROJECTION_basepoint_lat,                          & ! (in)
-            MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y, & ! (in)
-            MAPPROJECTION_mappingparam                            ) ! (out)
-
        MAPPROJECTION_mappinginfo%mapping_name = "mercator"
-       MAPPROJECTION_mappinginfo%longitude_of_projection_origin = MAPPROJECTION_basepoint_lon
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_M_lat
 
        xy2lonlat => MAPPROJECTION_xy2lonlat_Mercator
@@ -304,12 +288,6 @@ contains
        rotcoef   => MAPPROJECTION_rotcoef_Mercator
     case('EC')
        LOG_INFO_CONT(*) '=> Equidistant Cylindrical projection'
-       call MAPPROJECTION_setup_EquidistantCylindrical( &
-            MAPPROJECTION_EC_lat,                                 & ! (in)
-            MAPPROJECTION_basepoint_lat,                          & ! (in)
-            MAPPROJECTION_basepoint_x, MAPPROJECTION_basepoint_y, & ! (in)
-            MAPPROJECTION_mappingparam                            ) ! (out)
-
        MAPPROJECTION_mappinginfo%mapping_name = "equirectangular"
        MAPPROJECTION_mappinginfo%standard_parallel(1) = MAPPROJECTION_EC_lat
        MAPPROJECTION_mappinginfo%longitude_of_central_meridian = MAPPROJECTION_basepoint_lon
@@ -323,25 +301,56 @@ contains
        call PRC_abort
     endselect
 
-    MAPPROJECTION_mappinginfo%false_easting  = MAPPROJECTION_basepoint_x
-    MAPPROJECTION_mappinginfo%false_northing = MAPPROJECTION_basepoint_y
-    MAPPROJECTION_mappinginfo%rotation       = MAPPROJECTION_rotation
-
-
-    ! mapping parameters
-    MAPPROJECTION_mappingparam%basepoint_x = MAPPROJECTION_basepoint_x
-    MAPPROJECTION_mappingparam%basepoint_y = MAPPROJECTION_basepoint_x
-
-    ! degree to radiun
-    MAPPROJECTION_mappingparam%basepoint_lon = MAPPROJECTION_basepoint_lon * D2R
-    MAPPROJECTION_mappingparam%basepoint_lat = MAPPROJECTION_basepoint_lat * D2R
-
-    MAPPROJECTION_mappingparam%rotation     = MAPPROJECTION_rotation * D2R
-    MAPPROJECTION_mappingparam%rot_fact_sin = sin(MAPPROJECTION_mappingparam%rotation)
-    MAPPROJECTION_mappingparam%rot_fact_cos = cos(MAPPROJECTION_mappingparam%rotation)
+    call MAPPROJECTION_get_param( MAPPROJECTION_mappinginfo, & ! (in)
+                                  MAPPROJECTION_mappingparam ) ! (out)
 
     return
   end subroutine MAPPROJECTION_setup
+
+  subroutine MAPPROJECTION_get_param( &
+       info, &
+       param )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    type(mappinginfo),  intent(in)  :: info
+    type(mappingparam), intent(out) :: param
+
+    select case( info%mapping_name )
+    case( "" )
+       call MAPPROJECTION_get_param_None
+    case( "lambert_conformal_conic" )
+       call MAPPROJECTION_get_param_LambertConformal( info, & ! (in)
+                                                      param ) ! (out)
+       param%basepoint_lon = info%longitude_of_central_meridian * D2R
+    case( "polar_stereographic" )
+       call MAPPROJECTION_get_param_PolarStereographic( info, & ! (in)
+                                                        param ) ! (out)
+       param%basepoint_lon = info%straight_vertical_longitude_from_pole * D2R
+    case( "mercator" )
+       call MAPPROJECTION_get_param_Mercator( info, & ! (in)
+                                              param ) ! (out)
+       param%basepoint_lon = info%longitude_of_projection_origin * D2R
+    case( "equirectangular" )
+       call MAPPROJECTION_get_param_EquidistantCylindrical( info, & ! (in)
+                                                            param ) ! (out)
+       param%basepoint_lon = info%longitude_of_central_meridian * D2R
+    case default
+       LOG_ERROR("MAPPROJECTION_set_param",*) 'Unsupported mapping type. STOP'
+       call PRC_abort
+    endselect
+
+    param%basepoint_x = info%false_easting
+    param%basepoint_y = info%false_northing
+
+    param%basepoint_lat = info%latitude_of_projection_origin * D2R
+
+    param%rotation     = info%rotation * D2R
+    param%rot_fact_sin = sin(MAPPROJECTION_mappingparam%rotation)
+    param%rot_fact_cos = cos(MAPPROJECTION_mappingparam%rotation)
+
+    return
+  end subroutine MAPPROJECTION_get_param
 
   !-----------------------------------------------------------------------------
   !> (x,y) -> (lon,lat)
@@ -406,8 +415,6 @@ contains
     real(RP), intent(in)  :: lon, lat ! [rad]
     real(RP), intent(out) :: x, y
 
-    real(RP) :: xx, yy
-    real(DP) :: xxd, yyd
     !---------------------------------------------------------------------------
 
     if ( lon == UNDEF .or. lat == UNDEF ) then
@@ -419,7 +426,7 @@ contains
 
     call lonlat2xy( lon, lat,                   & ! (in)
                     MAPPROJECTION_mappingparam, & ! (in)
-                    xx, yy                      ) ! (out)
+                    x, y                       ) ! (out)
 
     return
   end subroutine MAPPROJECTION_lonlat2xy_0D
@@ -513,12 +520,12 @@ contains
 
   !-----------------------------------------------------------------------------
   !> No projection
-  subroutine MAPPROJECTION_setup_None
+  subroutine MAPPROJECTION_get_param_None
     implicit none
     !---------------------------------------------------------------------------
 
     return
-  end subroutine MAPPROJECTION_setup_None
+  end subroutine MAPPROJECTION_get_param_None
 
   !-----------------------------------------------------------------------------
   !> No projection, lon,lat are determined by gnomonic projection: (x,y) -> (lon,lat)
@@ -650,25 +657,32 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection
-  subroutine MAPPROJECTION_setup_LambertConformal( &
-       LC_lat1, LC_lat2,         &
-       basepoint_lat,            &
-       basepoint_x, basepoint_y, &
-       param                     )
+  subroutine MAPPROJECTION_get_param_LambertConformal( &
+       info, &
+       param )
     use scale_prc, only: &
        PRC_abort
     implicit none
-    real(RP), intent(in)  :: LC_lat1, LC_lat2
-    real(RP), intent(in)  :: basepoint_lat
-    real(RP), intent(in)  :: basepoint_x, basepoint_y
+    type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
+
+    real(DP) :: LC_lat1, LC_lat2
+    real(DP) :: basepoint_lat
+    real(DP) :: basepoint_x, basepoint_y
 
     real(DP) :: lat1rot, lat2rot
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
+    LC_lat1 = info%standard_parallel(1)
+    LC_lat2 = info%standard_parallel(2)
+
+    basepoint_lat = info%latitude_of_projection_origin
+    basepoint_x   = info%false_easting
+    basepoint_y   = info%false_northing
+
     if ( LC_lat1 >= LC_lat2 ) then
-       LOG_ERROR("MAPPROJECTION_LambertConformal_setup",*) 'Please set LC_lat1 < LC_lat2 in degree. STOP'
+       LOG_ERROR("MAPPROJECTION_get_param_LambertConformal",*) 'Please set LC_lat1 < LC_lat2 in degree. STOP'
        call PRC_abort
     endif
 
@@ -696,7 +710,7 @@ contains
     param%y = basepoint_y + param%hemisphere * dist * cos(param%c*dlon)
 
     LOG_NEWLINE
-    LOG_INFO("MAPPROJECTION_LambertConformal_setup",*) 'Input parameters'
+    LOG_INFO("MAPPROJECTION_get_param_LambertConformal",*) 'Input parameters'
     LOG_INFO_CONT(*) 'LC_lat1    = ', LC_lat1
     LOG_INFO_CONT(*) 'LC_lat2    = ', LC_lat2
     LOG_INFO_CONT(*) 'hemisphere = ', param%hemisphere
@@ -706,7 +720,7 @@ contains
     LOG_INFO_CONT(*) 'pole_y     = ', param%y
 
     return
-  end subroutine MAPPROJECTION_setup_LambertConformal
+  end subroutine MAPPROJECTION_get_param_LambertConformal
 
   !-----------------------------------------------------------------------------
   !> Lambert Conformal projection: (x,y) -> (lon,lat)
@@ -753,7 +767,7 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    dlon = lon - param%basepoint_lon * D2R
+    dlon = lon - param%basepoint_lon
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
     if ( dlon < -PI ) dlon = dlon + PI*2.0_DP
 
@@ -822,20 +836,26 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection
-  subroutine MAPPROJECTION_setup_PolarStereographic( &
-       PS_lat,                   &
-       basepoint_lat,            &
-       basepoint_x, basepoint_y, &
-       param                     )
+  subroutine MAPPROJECTION_get_param_PolarStereographic( &
+       info, &
+       param )
     implicit none
-    real(RP),           intent(in)  :: PS_lat
-    real(RP),           intent(in)  :: basepoint_lat
-    real(RP),           intent(in)  :: basepoint_x, basepoint_y
+    type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
+
+    real(DP) :: PS_lat
+    real(DP) :: basepoint_lat
+    real(DP) :: basepoint_x, basepoint_y
 
     real(DP) :: lat0
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
+
+    PS_lat = info%standard_parallel(1)
+
+    basepoint_lat = info%latitude_of_projection_origin
+    basepoint_x   = info%false_easting
+    basepoint_y   = info%false_northing
 
     ! check hemisphere: 1=north, -1=south
     param%hemisphere = sign(1.0_DP,PS_lat)
@@ -856,14 +876,14 @@ contains
     param%y = basepoint_y + param%hemisphere * dist * cos(dlon)
 
     LOG_NEWLINE
-    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'PS_lat1    = ', PS_lat
-    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'hemisphere = ', param%hemisphere
-    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'PS_fact    = ', param%fact
-    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'pole_x     = ', param%x
-    LOG_INFO("MAPPROJECTION_PolarStereographic_setup",*) 'pole_y     = ', param%y
+    LOG_INFO("MAPPROJECTION_get_param_PolarStereographic",*) 'PS_lat1    = ', PS_lat
+    LOG_INFO("MAPPROJECTION_get_param_PolarStereographic",*) 'hemisphere = ', param%hemisphere
+    LOG_INFO("MAPPROJECTION_get_param_PolarStereographic",*) 'PS_fact    = ', param%fact
+    LOG_INFO("MAPPROJECTION_get_param_PolarStereographic",*) 'pole_x     = ', param%x
+    LOG_INFO("MAPPROJECTION_get_param_PolarStereographic",*) 'pole_y     = ', param%y
 
     return
-  end subroutine MAPPROJECTION_setup_PolarStereographic
+  end subroutine MAPPROJECTION_get_param_PolarStereographic
 
   !-----------------------------------------------------------------------------
   !> Polar Stereographic projection: (x,y) -> (lon,lat)
@@ -972,22 +992,28 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Mercator projection
-  subroutine MAPPROJECTION_setup_Mercator( &
-       M_lat,                    &
-       basepoint_lat,            &
-       basepoint_x, basepoint_y, &
-       param                     )
+  subroutine MAPPROJECTION_get_param_Mercator( &
+       info, &
+       param )
     use scale_prc, only: &
        PRC_abort
     implicit none
-    real(RP),           intent(in)  :: M_lat
-    real(RP),           intent(in)  :: basepoint_lat
-    real(RP),           intent(in)  :: basepoint_x, basepoint_y
+    type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
+
+    real(DP) :: M_lat
+    real(DP) :: basepoint_lat
+    real(DP) :: basepoint_x, basepoint_y
 
     real(DP) :: lat0
     real(DP) :: latrot, dist
     !---------------------------------------------------------------------------
+
+    M_lat = info%standard_parallel(1)
+
+    basepoint_lat = info%latitude_of_projection_origin
+    basepoint_x   = info%false_easting
+    basepoint_y   = info%false_northing
 
     lat0 = M_lat * D2R
 
@@ -995,7 +1021,7 @@ contains
     param%fact = cos(lat0)
 
     if ( param%fact == 0.0_DP ) then
-       LOG_ERROR("MAPPROJECTION_Mercator_setup",*) 'M_lat cannot be set to pole point! value=', M_lat
+       LOG_ERROR("MAPPROJECTION_get_param_Mercator",*) 'M_lat cannot be set to pole point! value=', M_lat
        call PRC_abort
     endif
 
@@ -1008,13 +1034,13 @@ contains
     param%y = basepoint_y - RADIUS * param%fact * log(dist)
 
     LOG_NEWLINE
-    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'M_lat  = ', M_lat
-    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'M_fact = ', param%fact
-    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'eq_x   = ', param%x
-    LOG_INFO("MAPPROJECTION_Mercator_setup",*) 'eq_y   = ', param%y
+    LOG_INFO("MAPPROJECTION_get_param_Mercator",*) 'M_lat  = ', M_lat
+    LOG_INFO("MAPPROJECTION_get_param_Mercator",*) 'M_fact = ', param%fact
+    LOG_INFO("MAPPROJECTION_get_param_Mercator",*) 'eq_x   = ', param%x
+    LOG_INFO("MAPPROJECTION_get_param_Mercator",*) 'eq_y   = ', param%y
 
     return
-  end subroutine MAPPROJECTION_setup_Mercator
+  end subroutine MAPPROJECTION_get_param_Mercator
 
   !-----------------------------------------------------------------------------
   !> Mercator projection: (x,y) -> (lon,lat)
@@ -1058,7 +1084,7 @@ contains
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
 
-    dlon = lon - param%basepoint_lon * D2R
+    dlon = lon - param%basepoint_lon
 
     latrot = 0.5_DP*PI - lat
 
@@ -1107,21 +1133,27 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection
-  subroutine MAPPROJECTION_setup_EquidistantCylindrical( &
-       EC_lat,                   &
-       basepoint_lat,            &
-       basepoint_x, basepoint_y, &
-       param                     )
+  subroutine MAPPROJECTION_get_param_EquidistantCylindrical( &
+       info, &
+       param )
     use scale_prc, only: &
        PRC_abort
     implicit none
-    real(DP),           intent(in)  :: EC_lat
-    real(DP),           intent(in)  :: basepoint_lat
-    real(DP),           intent(in)  :: basepoint_x, basepoint_y
+    type(mappinginfo),  intent(in)  :: info
     type(mappingparam), intent(out) :: param
+
+    real(DP) :: EC_lat
+    real(DP) :: basepoint_lat
+    real(DP) :: basepoint_x, basepoint_y
 
     real(DP) :: lat0
     !---------------------------------------------------------------------------
+
+    EC_lat = info%standard_parallel(1)
+
+    basepoint_lat = info%latitude_of_projection_origin
+    basepoint_x   = info%false_easting
+    basepoint_y   = info%false_northing
 
     lat0 = EC_lat * D2R
 
@@ -1129,7 +1161,7 @@ contains
     param%fact = cos(lat0)
 
     if ( param%fact == 0.0_DP ) then
-       LOG_ERROR("MAPPROJECTION_EquidistantCylindrical_setup",*) 'EC_lat cannot be set to pole point! value=', EC_lat
+       LOG_ERROR("MAPPROJECTION_get_param_EquidistantCylindrical",*) 'EC_lat cannot be set to pole point! value=', EC_lat
        call PRC_abort
     endif
 
@@ -1137,13 +1169,13 @@ contains
     param%y = basepoint_y - RADIUS * basepoint_lat * D2R
 
     LOG_NEWLINE
-    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'EC_lat  = ', EC_lat
-    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'EC_fact = ', param%fact
-    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'eq_x    = ', param%x
-    LOG_INFO("MAPPROJECTION_EquidistantCylindrical_setup",*) 'eq_y    = ', param%y
+    LOG_INFO("MAPPROJECTION_get_param_EquidistantCylindrical",*) 'EC_lat  = ', EC_lat
+    LOG_INFO("MAPPROJECTION_get_param_EquidistantCylindrical",*) 'EC_fact = ', param%fact
+    LOG_INFO("MAPPROJECTION_get_param_EquidistantCylindrical",*) 'eq_x    = ', param%x
+    LOG_INFO("MAPPROJECTION_get_param_EquidistantCylindrical",*) 'eq_y    = ', param%y
 
     return
-  end subroutine MAPPROJECTION_setup_EquidistantCylindrical
+  end subroutine MAPPROJECTION_get_param_EquidistantCylindrical
 
   !-----------------------------------------------------------------------------
   !> Equidistant Cylindrical projection: (x,y) -> (lon,lat)

@@ -147,13 +147,19 @@ module scale_file
   interface FILE_get_attribute
      module procedure FILE_get_attribute_text_fname
      module procedure FILE_get_attribute_logical_fname
+     module procedure FILE_get_attribute_int_fname_ary
      module procedure FILE_get_attribute_int_fname
+     module procedure FILE_get_attribute_float_fname_ary
      module procedure FILE_get_attribute_float_fname
+     module procedure FILE_get_attribute_double_fname_ary
      module procedure FILE_get_attribute_double_fname
      module procedure FILE_get_attribute_text_fid
      module procedure FILE_get_attribute_logical_fid
+     module procedure FILE_get_attribute_int_fid_ary
      module procedure FILE_get_attribute_int_fid
+     module procedure FILE_get_attribute_float_fid_ary
      module procedure FILE_get_attribute_float_fid
+     module procedure FILE_get_attribute_double_fid_ary
      module procedure FILE_get_attribute_double_fid
   end interface FILE_get_attribute
   interface FILE_set_attribute
@@ -1761,7 +1767,7 @@ contains
   end subroutine FILE_get_attribute_logical_fname
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_attribute_int_fid( &
+  subroutine FILE_get_attribute_int_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1803,8 +1809,27 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_int_fid_ary
+  subroutine FILE_get_attribute_int_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    integer,          intent(out) :: val
+    logical, intent(out), optional :: existed
+    integer :: ary(1)
+
+    call FILE_get_attribute_int_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_int_fid
-  subroutine FILE_get_attribute_int_fname( &
+  subroutine FILE_get_attribute_int_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1831,16 +1856,41 @@ contains
          aggregate=aggregate, &
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_int_fid( &
+    call FILE_get_attribute_int_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
 
     return
+  end subroutine FILE_get_attribute_int_fname_ary
+  subroutine FILE_get_attribute_int_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer, intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    integer :: ary(1)
+
+    call FILE_get_attribute_int_fname_ary( &
+         basename, vname, key,      &
+         ary(:),                    &
+         single, aggregate, rankid, &
+         existed                    )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_int_fname
   !-----------------------------------------------------------------------------
 
-  subroutine FILE_get_attribute_float_fid( &
+  subroutine FILE_get_attribute_float_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1882,8 +1932,27 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_float_fid_ary
+  subroutine FILE_get_attribute_float_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(SP),    intent(out) :: val
+    logical, intent(out), optional :: existed
+    real(SP) :: ary(1)
+
+    call FILE_get_attribute_float_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_float_fid
-  subroutine FILE_get_attribute_float_fname( &
+  subroutine FILE_get_attribute_float_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1910,14 +1979,39 @@ contains
          aggregate=aggregate, & ! (in)
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_float_fid( &
+    call FILE_get_attribute_float_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
 
     return
+  end subroutine FILE_get_attribute_float_fname_ary
+  subroutine FILE_get_attribute_float_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(SP), intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    real(SP) :: ary(1)
+
+    call FILE_get_attribute_float_fname_ary( &
+      basename, vname, key,      &
+      ary(:),                    &
+      single, aggregate, rankid, &
+      existed                    )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_float_fname
-  subroutine FILE_get_attribute_double_fid( &
+  subroutine FILE_get_attribute_double_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1959,8 +2053,27 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_double_fid_ary
+  subroutine FILE_get_attribute_double_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(DP),    intent(out) :: val
+    logical, intent(out), optional :: existed
+    real(DP) :: ary(1)
+
+    call FILE_get_attribute_double_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_double_fid
-  subroutine FILE_get_attribute_double_fname( &
+  subroutine FILE_get_attribute_double_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1987,10 +2100,35 @@ contains
          aggregate=aggregate, & ! (in)
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_double_fid( &
+    call FILE_get_attribute_double_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_double_fname_ary
+  subroutine FILE_get_attribute_double_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(DP), intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    real(DP) :: ary(1)
+
+    call FILE_get_attribute_double_fname_ary( &
+      basename, vname, key,      &
+      ary(:),                    &
+      single, aggregate, rankid, &
+      existed                    )
+    val = ary(1)
 
     return
   end subroutine FILE_get_attribute_double_fname

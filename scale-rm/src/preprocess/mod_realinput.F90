@@ -134,7 +134,6 @@ module mod_realinput
   logical,  private              :: do_read_ocean
 
   logical,  private              :: temp2pott
-  logical,  private              :: apply_rotate_uv
   logical,  private              :: update_coord
   logical,  private              :: use_waterratio
 
@@ -1035,7 +1034,6 @@ contains
        use_file_density = use_file_density_in
        temp2pott        = .false.
        update_coord     = .false.
-       apply_rotate_uv  = .false.
 
     case('GrADS')
 
@@ -1048,7 +1046,6 @@ contains
        use_file_density = use_file_density_in
        temp2pott        = .true.
        update_coord     = .true.
-       apply_rotate_uv  = .true.
 
     case('WRF-ARW')
 
@@ -1061,7 +1058,6 @@ contains
        use_file_density = .false.
        temp2pott        = .true.
        update_coord     = .true.
-       apply_rotate_uv  = .true.
 
 !!$    case('NICAM-NETCDF')
 !!$
@@ -1074,7 +1070,6 @@ contains
 !!$       use_file_density = .false.
 !!$       temp2pott        = .true.
 !!$       update_coord     = .false.
-!!$       apply_rotate_uv  = .true.
 !!$
     case default
 
@@ -1623,20 +1618,20 @@ contains
        call COMM_wait ( V(:,:,:), 1, .false. )
     end if
 
-    if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
-       !$omp parallel do &
-       !$omp private(u_on_map,v_on_map)
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
-          v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
-          U(k,i,j) = u_on_map
-          V(k,i,j) = v_on_map
-       enddo
-       enddo
-       enddo
-    endif
+    ! rotation from latlon field to map-projected field
+    !$omp parallel do &
+    !$omp private(u_on_map,v_on_map)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
+       v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
+
+       U(k,i,j) = u_on_map
+       V(k,i,j) = v_on_map
+    enddo
+    enddo
+    enddo
 
     ! from scalar point to staggered point
     !$omp parallel do
