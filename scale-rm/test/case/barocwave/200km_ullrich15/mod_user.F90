@@ -2,7 +2,7 @@
 !> module User
 !!
 !! @par Description
-!!          Set coriolis parameter and boundary conditions for baroclinic wave in a channel.
+!!          Set boundary conditions for baroclinic wave in a channel based on Ullrich et al. (2015).
 !!
 !! @author Team SCALE
 !!
@@ -19,20 +19,6 @@ module mod_user
   use scale_prof
   use scale_atmos_grid_cartesC_index
   use scale_tracer
-
-  use scale_const, only: &
-       PI  => CONST_PI,    &
-       OHM => CONST_OHM,   &
-       RPlanet => CONST_RADIUS, &
-       Rdry => CONST_Rdry
-
-  use scale_atmos_refstate, only: &
-       ATMOS_REFSTATE_pres, &
-       ATMOS_REFSTATE_temp, &
-       ATMOS_REFSTATE_dens, &
-       ATMOS_REFSTATE_pott, &
-       ATMOS_REFSTATE_qv,   &
-       ATMOS_REFSTATE_write
 
   use mod_atmos_vars, only: &
        DENS, &
@@ -71,9 +57,6 @@ module mod_user
   !
   logical,  private, save :: USER_do = .false. !< do user step?
 
-  real(RP), private, allocatable :: RHOT_bc(:,:,:)
-  real(RP), private, allocatable :: DENS_bc(:,:,:)
-
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -99,7 +82,7 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("USER_setup",*) 'Setup'
-    LOG_INFO("USER_setup",*) 'User procedure in test/case/barocwave/Ullrich12'
+    LOG_INFO("USER_setup",*) 'User procedure in test/case/barocwave/Ullrich15'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,19 +95,6 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_USER)
-
-    !
-    allocate( RHOT_bc(KA,IA,2) )
-    allocate( DENS_bc(KA,IA,2) )
-
-
-    ! Save some information of inital fields to set boundary conditions.
-    !
-    RHOT_bc(:,:,1) = RHOT(:,:,JS) - 0.5_RP*(RHOT(:,:,JS+1) - RHOT(:,:,JS))
-    RHOT_bc(:,:,2) = RHOT(:,:,JE-1) + 1.5_RP*(RHOT(:,:,JE) - RHOT(:,:,JE-1))
-
-    DENS_bc(:,:,1) = DENS(:,:,JS) - 0.5_RP*(DENS(:,:,JS+1) - DENS(:,:,JS))
-    DENS_bc(:,:,2) = DENS(:,:,JE-1) + 1.5_RP*(DENS(:,:,JE) - DENS(:,:,JE-1))
 
 
     return
@@ -151,16 +121,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Step
   subroutine USER_update
-    use scale_const, only: &
-       GRAV  => CONST_GRAV
     use scale_prc_cartesC, only: &
        PRC_HAS_N, &
        PRC_HAS_S
-    use scale_atmos_grid_cartesC, only : &
-       CX => ATMOS_GRID_CARTESC_CX, &
-       CZ => ATMOS_GRID_CARTESC_CZ
-    use scale_file_history, only: &
-       FILE_HISTORY_in
     implicit none
 
 
@@ -175,11 +138,11 @@ contains
     if ( .NOT. PRC_HAS_N ) then
        MOMY(:,:,JE)   = 0.0_RP
        do j = 1, JHALO
-          MOMY(:,:,JE+j  ) = - MOMY(:,:,JE-j  )
-          DENS(:,:,JE+j) =  2.0_RP*DENS_bc(:,:,2) - DENS(:,:,JE-j+1)
-          MOMX(:,:,JE+j) = - MOMX(:,:,JE-j+1)
-          MOMZ(:,:,JE+j) = - MOMZ(:,:,JE-j+1)
-          RHOT(:,:,JE+j) = 2.0_RP*RHOT_bc(:,:,2) - RHOT(:,:,JE-j+1)
+          MOMY(:,:,JE+j) = - MOMY(:,:,JE-j  )
+          DENS(:,:,JE+j) = + DENS(:,:,JE-j+1)
+          MOMX(:,:,JE+j) = + MOMX(:,:,JE-j+1)
+          MOMZ(:,:,JE+j) = + MOMZ(:,:,JE-j+1)
+          RHOT(:,:,JE+j) = + RHOT(:,:,JE-j+1)
        enddo
     end if
 
@@ -187,10 +150,10 @@ contains
        MOMY(:,:,JS-1) = 0.0_RP
        do j = 1, JHALO
           if ( j < JHALO ) MOMY(:,:,JS-j-1) = - MOMY(:,:,JS+j-1)
-          DENS(:,:,JS-j) = 2.0_RP*DENS_bc(:,:,1) - DENS(:,:,JS+j-1)
-          MOMX(:,:,JS-j) = - MOMX(:,:,JS+j-1)
-          MOMZ(:,:,JS-j) = - MOMZ(:,:,JS+j-1)
-          RHOT(:,:,JS-j) = 2.0_RP*RHOT_bc(:,:,1) - RHOT(:,:,JS+j-1)
+          DENS(:,:,JS-j) = + DENS(:,:,JS+j-1)
+          MOMX(:,:,JS-j) = + MOMX(:,:,JS+j-1)
+          MOMZ(:,:,JS-j) = + MOMZ(:,:,JS+j-1)
+          RHOT(:,:,JS-j) = + RHOT(:,:,JS+j-1)
        enddo
     end if
 
