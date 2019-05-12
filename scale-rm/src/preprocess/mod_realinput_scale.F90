@@ -159,20 +159,22 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosInputSCALE( &
-       velz_org,     &
-       velx_org,     &
-       vely_org,     &
-       pres_org,     &
-       dens_org,     &
-       pott_org,     &
-       qv_org,       &
-       qtrc_org,     &
-       cz_org,       &
-       basename_org, &
-       same_mptype,  &
-       dims,         &
-       it            )
+       velz_org,      &
+       velx_org,      &
+       vely_org,      &
+       pres_org,      &
+       dens_org,      &
+       pott_org,      &
+       qv_org,        &
+       qtrc_org,      &
+       cz_org,        &
+       basename_org,  &
+       sfc_diagnoses, &
+       same_mptype,   &
+       dims,          &
+       it             )
     use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
        P00   => CONST_PRE00, &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry,  &
@@ -217,6 +219,7 @@ contains
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(in)  :: cz_org  (:,:,:)
     character(len=*), intent(in)  :: basename_org
+    logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: same_mptype
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
@@ -265,16 +268,18 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
-       if ( existed_t2 ) then
+       if ( sfc_diagnoses ) then
+          call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
+          if ( existed_t2 ) then
 !OCL XFILL
-          tsfc_org(xs:xe,ys:ye) = read2D(:,:)
-       end if
+             tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+          end if
 
-       call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
-       if ( existed_mslp ) then
+          call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
+          if ( existed_mslp ) then
 !OCL XFILL
-          pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+             pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+          end if
        end if
 
        call FILE_CARTESC_read( fid, "DENS", read3D(:,:,:), step=it )
@@ -400,8 +405,13 @@ contains
        velx_org(k,1,j) = momx_org(k,1,j) / dens_org(k,1,j)
     end do
     end do
+    if ( sfc_diagnoses ) then
 !OCL XFILL
-    velx_org(1:2,:,:) = 0.0_RP
+       velx_org(1:2,:,:) = 0.0_RP
+    else
+!OCL XFILL
+       velx_org(1:2,:,:) = UNDEF
+    end if
 
     ! convert from momentum to velocity
 !OCL XFILL
@@ -418,8 +428,13 @@ contains
        vely_org(k,i,1) = momy_org(k,i,1) / dens_org(k,i,1)
     end do
     end do
+    if ( sfc_diagnoses ) then
 !OCL XFILL
-    vely_org(1:2,:,:) = 0.0_RP
+       vely_org(1:2,:,:) = 0.0_RP
+    else
+!OCL XFILL
+       vely_org(1:2,:,:) = UNDEF
+    end if
 
 
     !!! must be rotate !!!
@@ -440,9 +455,9 @@ contains
 
     !$omp parallel do default(none) &
     !$omp private(dz,temp_org,qdry,rtot,cvtot,cptot) &
-    !$omp shared(dims,QA,LAPS,P00,Rdry,CPdry,GRAV,TRACER_MASS,TRACER_R,TRACER_CV,TRACER_CP, &
+    !$omp shared(dims,QA,UNDEF,LAPS,P00,Rdry,CPdry,GRAV,TRACER_MASS,TRACER_R,TRACER_CV,TRACER_CP, &
     !$omp        dens_org,rhot_org,qtrc_org,pres_org,pott_org,tsfc_org,cz_org, &
-    !$omp        existed_t2,existed_mslp)
+    !$omp        existed_t2,existed_mslp,sfc_diagnoses)
     do j = 1, dims(3)
     do i = 1, dims(2)
 
@@ -462,27 +477,33 @@ contains
           pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
        end do
 
-       ! at the surface
-       dz = cz_org(3,i,j) - cz_org(2,i,j)
+       if ( sfc_diagnoses ) then
+          ! at the surface
+          dz = cz_org(3,i,j) - cz_org(2,i,j)
 
-       if ( .not. existed_t2 ) then
-          tsfc_org(i,j) = temp_org(3) + LAPS * dz
-       end if
-       dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
-                       / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
-       pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
-       pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
+          if ( .not. existed_t2 ) then
+             tsfc_org(i,j) = temp_org(3) + LAPS * dz
+          end if
+          dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
+                          / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
+          pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
+          pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
 
-       ! at the sea-level
-       temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
-       if ( existed_mslp ) then
-          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
-          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+          ! at the sea-level
+          temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
+          if ( existed_mslp ) then
+             pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+             dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+          else
+             dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
+                             / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
+             pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
+             pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          end if
        else
-          dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
-                          / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
-          pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
-          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          dens_org(1:2,i,j) = UNDEF
+          pres_org(1:2,i,j) = UNDEF
+          pott_org(1:2,i,j) = UNDEF
        end if
 
     end do
@@ -680,11 +701,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanOpenSCALE( &
-       olon_org,       &
-       olat_org,       &
-       omask_org,      &
-       basename_ocean, &
-       odims           )
+       olon_org,      &
+       olat_org,      &
+       omask_org,     &
+       basename_ocean )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm_cartesC_nest, only: &
@@ -702,7 +722,6 @@ contains
     real(RP),         intent(out) :: olat_org (:,:)
     real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
-    integer,          intent(in)  :: odims(2)
 
     integer :: rank
     integer :: xloc, yloc
@@ -750,7 +769,6 @@ contains
        z0w_org,        &
        omask_org,      &
        basename_ocean, &
-       odims,          &
        it              )
     use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,                                     &
@@ -770,7 +788,6 @@ contains
     real(RP),         intent(out) :: z0w_org  (:,:)
     real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
-    integer,          intent(in)  :: odims(2)
     integer,          intent(in)  :: it
 
     integer :: rank

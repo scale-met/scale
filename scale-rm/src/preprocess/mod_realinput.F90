@@ -200,6 +200,9 @@ contains
        ATMOS_PHY_MP_TYPE
     implicit none
 
+    logical :: USE_SFC_DIAGNOSES = .false.
+
+
     namelist / PARAM_MKINIT_REAL_ATMOS / &
        NUMBER_OF_FILES,            &
        NUMBER_OF_TSTEPS,           &
@@ -216,6 +219,7 @@ contains
        FILTER_ORDER,               &
        FILTER_NITER,               &
        USE_FILE_DENSITY,           &
+       USE_SFC_DIAGNOSES,          &
        SAME_MP_TYPE,               &
        INTRP_TYPE
 
@@ -342,21 +346,22 @@ contains
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
-             call ParentAtmosInput( FILETYPE_ORG,     & ! [IN]
-                                    basename_mod,     & ! [IN]
-                                    dims(:),          & ! [IN]
-                                    istep,            & ! [IN]
-                                    SAME_MP_TYPE,     & ! [IN]
-                                    DENS_in(:,:,:),   & ! [OUT]
-                                    MOMZ_in(:,:,:),   & ! [OUT]
-                                    MOMX_in(:,:,:),   & ! [OUT]
-                                    MOMY_in(:,:,:),   & ! [OUT]
-                                    RHOT_in(:,:,:),   & ! [OUT]
-                                    QTRC_in(:,:,:,:), & ! [OUT]
-                                    VELZ_in(:,:,:),   & ! [OUT]
-                                    VELX_in(:,:,:),   & ! [OUT]
-                                    VELY_in(:,:,:),   & ! [OUT]
-                                    POTT_in(:,:,:)    ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
+                                    basename_mod,      & ! [IN]
+                                    dims(:),           & ! [IN]
+                                    istep,             & ! [IN]
+                                    USE_SFC_DIAGNOSES, & ! [IN]
+                                    SAME_MP_TYPE,      & ! [IN]
+                                    DENS_in(:,:,:),    & ! [OUT]
+                                    MOMZ_in(:,:,:),    & ! [OUT]
+                                    MOMX_in(:,:,:),    & ! [OUT]
+                                    MOMY_in(:,:,:),    & ! [OUT]
+                                    RHOT_in(:,:,:),    & ! [OUT]
+                                    QTRC_in(:,:,:,:),  & ! [OUT]
+                                    VELZ_in(:,:,:),    & ! [OUT]
+                                    VELX_in(:,:,:),    & ! [OUT]
+                                    VELY_in(:,:,:),    & ! [OUT]
+                                    POTT_in(:,:,:)     ) ! [OUT]
           else
              LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -846,6 +851,7 @@ contains
     !--- input initial data
     ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        OCEAN_SFC_TEMP(i,j) = OCEAN_SFC_TEMP_ORG(i,j,ns)
@@ -1165,6 +1171,7 @@ contains
        basename,      &
        dims,          &
        istep,         &
+       sfc_diagnoses, &
        same_mptype,   &
        DENS,          &
        MOMZ,          &
@@ -1177,7 +1184,8 @@ contains
        VELY,          &
        POTT           )
     use scale_const, only: &
-       PI => CONST_PI
+       UNDEF => CONST_UNDEF, &
+       PI    => CONST_PI
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -1226,12 +1234,15 @@ contains
        CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
+    use scale_topography, only: &
+       topo => TOPOGRAPHY_Zsfc
     implicit none
 
     character(len=*), intent(in)  :: inputtype
     character(len=*), intent(in)  :: basename
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: istep
+    logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: same_mptype   ! Is microphysics type same between outer and inner model
     real(RP),         intent(out) :: DENS(KA,IA,JA)
     real(RP),         intent(out) :: MOMZ(KA,IA,JA)
@@ -1251,6 +1262,7 @@ contains
     real(RP) :: V    (KA,IA,JA)
     real(RP) :: QV   (KA,IA,JA)
     real(RP) :: QC   (KA,IA,JA)
+    real(RP) :: DENS2(KA,IA,JA)
     real(RP) :: u_on_map, v_on_map
 
     real(RP) :: qdry, Rtot, CPtot
@@ -1263,6 +1275,7 @@ contains
 
     real(RP) :: one(KA,IA,JA)
 
+    integer :: kref
     integer :: k, i, j, iq
     !---------------------------------------------------------------------------
 
@@ -1281,6 +1294,7 @@ contains
                                        QTRC_org(:,:,:,:), & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [IN]
                                        basename,          & ! [IN]
+                                       sfc_diagnoses,     & ! [IN]
                                        same_mptype,       & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
@@ -1299,6 +1313,7 @@ contains
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
+                                       sfc_diagnoses,     & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
           same_mptype_ = .false.
@@ -1316,6 +1331,7 @@ contains
                                        LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
+                                       sfc_diagnoses,     & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
           same_mptype_ = .false.
@@ -1334,27 +1350,64 @@ contains
        end select
 
        if ( .not. same_mptype_ ) then
-          QTRC_org(:,:,:,:QS_MP-1) = 0.0_RP
-          QTRC_org(:,:,:,QE_MP+1:) = 0.0_RP
-          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
-                                              QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
-                                              QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
-                                              QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
-       end if
-
-       if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
-          QTRC_org(:,:,:,QS_CH) = RN222_org(:,:,:)
-       endif
-
-       if ( temp2pott ) then
+          !$omp parallel do
           do j = 1, dims(3)
           do i = 1, dims(2)
           do k = 1, dims(1)+2
-             call THERMODYN_qdry( QA, QTRC_org(k,i,j,:), TRACER_MASS(:), qdry )
-             call THERMODYN_r   ( QA, QTRC_org(k,i,j,:), TRACER_R(:), qdry, Rtot )
-             call THERMODYN_cp  ( QA, QTRC_org(k,i,j,:), TRACER_CP(:), qdry, CPtot )
-             call THERMODYN_temp_pres2pott( TEMP_org(k,i,j), PRES_org(k,i,j), CPtot, Rtot, & ! [IN]
-                                            POTT_org(k,i,j)                                ) ! [OUT]
+             QTRC_org(k,i,j,:QS_MP-1) = 0.0_RP
+             QTRC_org(k,i,j,QE_MP+1:) = 0.0_RP
+          end do
+          end do
+          end do
+          if ( .not. sfc_diagnoses ) then
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 3, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                                 QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                 QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                                 QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+             !$omp parallel do
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = 1, 2
+                   QTRC_org(k,i,j,QS_MP:QE_MP) = UNDEF
+                end do
+                do k = 3, dims(1)+2
+                   if ( QV_org(k,i,j) == UNDEF ) QTRC_org(k,i,j,QS_MP:QE_MP) = UNDEF
+                end do
+             end do
+             end do
+          else
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                                 QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                 QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                                 QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+          end if
+       end if
+
+       if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, dims(1)+2
+             QTRC_org(k,i,j,QS_CH) = RN222_org(k,i,j)
+          end do
+          end do
+          end do
+       endif
+
+       if ( temp2pott ) then
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, dims(1)+2
+             if ( TEMP_org(k,i,j) == UNDEF ) then
+                POTT_org(k,i,j) = UNDEF
+             else
+                call THERMODYN_qdry( QA, QTRC_org(k,i,j,:), TRACER_MASS(:), qdry )
+                call THERMODYN_r   ( QA, QTRC_org(k,i,j,:), TRACER_R(:), qdry, Rtot )
+                call THERMODYN_cp  ( QA, QTRC_org(k,i,j,:), TRACER_CP(:), qdry, CPtot )
+                call THERMODYN_temp_pres2pott( TEMP_org(k,i,j), PRES_org(k,i,j), CPtot, Rtot, & ! [IN]
+                                               POTT_org(k,i,j)                                ) ! [OUT]
+             end if
           enddo
           enddo
           enddo
@@ -1386,13 +1439,16 @@ contains
     call PROF_rapend  ('___AtmosBcast',3)
 
     do iq = 1, QA
-    do j  = 1, dims(3)
-    do i  = 1, dims(2)
-    do k  = 1, dims(1)+2
-       QTRC_org(k,i,j,iq) = max( QTRC_org(k,i,j,iq), 0.0_RP )
-    enddo
-    enddo
-    enddo
+       !$omp parallel do
+       do j  = 1, dims(3)
+       do i  = 1, dims(2)
+       do k  = 1, dims(1)+2
+          if ( QTRC_org(k,i,j,iq) .ne. UNDEF ) then
+             QTRC_org(k,i,j,iq) = max( QTRC_org(k,i,j,iq), 0.0_RP )
+          end if
+       enddo
+       enddo
+       enddo
     enddo
 
     ! interpolation
@@ -1513,6 +1569,53 @@ contains
                           CZ    (:,:,:),     & ! [IN]
                           V_org (:,:,:),     & ! [IN]
                           V     (:,:,:)      ) ! [OUT]
+
+    !$omp parallel do &
+    !$omp private(kref)
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KA
+          if ( U(k,i,j) .ne. UNDEF ) then
+             kref = k
+             exit
+          end if
+       end do
+       do k = KS, kref-1
+          U(k,i,j) = U(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+       end do
+    end do
+    end do
+    !$omp parallel do &
+    !$omp private(kref)
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KA
+          if ( V(k,i,j) .ne. UNDEF ) then
+             kref = k
+             exit
+          end if
+       end do
+       do k = KS, kref-1
+          V(k,i,j) = V(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+       end do
+    end do
+    end do
+    !$omp parallel do &
+    !$omp private(kref)
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KA
+          if ( W(k,i,j) .ne. UNDEF ) then
+             kref = k
+             exit
+          end if
+       end do
+       do k = KS, kref-1
+          W(k,i,j) = W(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+       end do
+    end do
+    end do
+
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               V(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1521,12 +1624,13 @@ contains
     end if
 
     if ( apply_rotate_uv ) then ! rotation from latlon field to map-projected field
+       !$omp parallel do &
+       !$omp private(u_on_map,v_on_map)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
           u_on_map =  U(k,i,j) * ROTC(i,j,1) + V(k,i,j) * ROTC(i,j,2)
           v_on_map = -U(k,i,j) * ROTC(i,j,2) + V(k,i,j) * ROTC(i,j,1)
-
           U(k,i,j) = u_on_map
           V(k,i,j) = v_on_map
        enddo
@@ -1535,6 +1639,7 @@ contains
     endif
 
     ! from scalar point to staggered point
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE-1
@@ -1543,6 +1648,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA-1
     do k = KS, KE
@@ -1552,12 +1658,14 @@ contains
     enddo
 
     i = IA
+    !$omp parallel do
     do j = 1, JA
     do k = KS, KE
        VELX(k,i,j) = U(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
@@ -1567,12 +1675,14 @@ contains
     enddo
 
     j = JA
+    !$omp parallel do
     do i = 1, IA
     do k = KS, KE
        VELY(k,i,j) = V(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        VELZ(   1:KS-1,i,j) = 0.0_RP
@@ -1605,19 +1715,24 @@ contains
                           CZ      (:,:,:),     & ! [IN]
                           POTT_org(:,:,:),     & ! [IN]
                           POTT    (:,:,:)      ) ! [OUT]
+
+    !$omp parallel do
+    do j = 1, JA
+    do i = 1, IA
+       do k = KE-1, KS, -1
+          if ( POTT(k,i,j) == UNDEF ) POTT(k,i,j) = POTT(k+1,i,j)
+       end do
+       POTT(   1:KS-1,i,j) = UNDEF
+       POTT(KE+1:KA  ,i,j) = UNDEF
+    enddo
+    enddo
+
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               POTT(:,:,:), FILTER_ORDER, FILTER_NITER )
        call COMM_vars8( POTT(:,:,:), 1 )
        call COMM_wait ( POTT(:,:,:), 1, .false. )
     end if
-
-    do j = 1, JA
-    do i = 1, IA
-       POTT(   1:KS-1,i,j) = 0.0_RP
-       POTT(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
 
     do iq = 1, QA
        call INTERP_interp3d( itp_nh_a,                &
@@ -1634,6 +1749,21 @@ contains
                              CZ      (:,:,:),     & ! [IN]
                              QTRC_org(:,:,:,iq),  & ! [IN]
                              QTRC    (:,:,:,iq)   ) ! [OUT]
+
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+          do k = KE-1, KS, -1
+             if ( QTRC(k,i,j,iq) == UNDEF ) QTRC(k,i,j,iq) = QTRC(k+1,i,j,iq)
+          end do
+          do k = KS, KE
+             QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
+          end do
+          QTRC(   1:KS-1,i,j,iq) = 0.0_RP
+          QTRC(KE+1:KA  ,i,j,iq) = 0.0_RP
+       enddo
+       enddo
+
        if ( FILTER_NITER > 0 ) then
           one(:,:,:) = 1.0_RP
           call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -1642,14 +1772,33 @@ contains
           call COMM_vars8( QTRC(:,:,:,iq), 1 )
           call COMM_wait ( QTRC(:,:,:,iq), 1, .false. )
        end if
-
-       do j = 1, JA
-       do i = 1, IA
-          QTRC(   1:KS-1,i,j,iq) = 0.0_RP
-          QTRC(KE+1:KA  ,i,j,iq) = 0.0_RP
-       enddo
-       enddo
     enddo
+
+    call INTERP_interp3d( itp_nh_a,                &
+                          dims(1)+2, 1, dims(1)+2, &
+                          dims(2), dims(3),        &
+                          KA, KS, KE,              &
+                          IA, JA,                  &
+                          igrd    (    :,:,:), & ! [IN]
+                          jgrd    (    :,:,:), & ! [IN]
+                          hfact   (    :,:,:), & ! [IN]
+                          kgrd    (:,:,:,:,:), & ! [IN]
+                          vfact   (:,  :,:,:), & ! [IN]
+                          CZ_org  (:,:,:),     & ! [IN]
+                          CZ      (:,:,:),     & ! [IN]
+                          PRES_org(:,:,:),     & ! [IN]
+                          PRES    (:,:,:),     & ! [OUT]
+                          logwgt = .true.      ) ! [IN, optional]
+
+    QC(:,:,:) = 0.0_RP
+    if ( ATMOS_HYDROMETEOR_dry ) then
+       QV(:,:,:) = 0.0_RP
+    else
+       QV(:,:,:) = QTRC(:,:,:,I_QV)
+       do iq = QLS, QLE
+          QC(:,:,:) = QC(:,:,:) + QTRC(:,:,:,iq)
+       enddo
+    end if
 
     if ( use_file_density ) then
        call INTERP_interp3d( itp_nh_a,                &
@@ -1667,58 +1816,37 @@ contains
                              DENS_org(:,:,:),     & ! [IN]
                              DENS    (:,:,:),     & ! [OUT]
                              logwgt = .true.      ) ! [IN, optional]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                                 DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:,:) )
-          call COMM_vars8( DENS(:,:,:), 1 )
-          call COMM_wait ( DENS(:,:,:), 1, .false. )
-       end if
+       call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+                                       POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
+                                       CZ(:,:,:),                         & ! [IN]
+                                       PRES(:,:,:),                       & ! [INOUT]
+                                       DENS2(:,:,:), TEMP(:,:,:)          ) ! [OUT]
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          if ( DENS(k,i,j) == UNDEF ) DENS(k,i,j) = DENS2(k,i,j)
+       end do
+       end do
+       end do
     else
-       call INTERP_interp3d( itp_nh_a,                &
-                             dims(1)+2, 1, dims(1)+2, &
-                             dims(2), dims(3),        &
-                             KA, KS, KE,              &
-                             IA, JA,                  &
-                             igrd    (    :,:,:), & ! [IN]
-                             jgrd    (    :,:,:), & ! [IN]
-                             hfact   (    :,:,:), & ! [IN]
-                             kgrd    (:,:,:,:,:), & ! [IN]
-                             vfact   (:,  :,:,:), & ! [IN]
-                             CZ_org  (:,:,:),     & ! [IN]
-                             CZ      (:,:,:),     & ! [IN]
-                             PRES_org(:,:,:),     & ! [IN]
-                             PRES    (:,:,:),     & ! [OUT]
-                             logwgt = .true.      ) ! [IN, optional]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                                 PRES(:,:,:), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:,:) )
-          call COMM_vars8( PRES(:,:,:), 1 )
-          call COMM_wait ( PRES(:,:,:), 1, .false. )
-       end if
-
-       QC(:,:,:) = 0.0_RP
-       if ( ATMOS_HYDROMETEOR_dry ) then
-          QV(:,:,:) = 0.0_RP
-       else
-          QV(:,:,:) = QTRC(:,:,:,I_QV)
-          do iq = QLS, QLE
-             QC(:,:,:) = QC(:,:,:) + QTRC(:,:,:,iq)
-          enddo
-       end if
-
        ! make density & pressure profile in moist condition
        call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                        POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
                                        CZ(:,:,:),                         & ! [IN]
                                        PRES(:,:,:),                       & ! [INOUT]
                                        DENS(:,:,:), TEMP(:,:,:)           ) ! [OUT]
-
-       call COMM_vars8( DENS(:,:,:), 1 )
-       call COMM_wait ( DENS(:,:,:), 1 )
     endif
 
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+                              DENS(:,:,:), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:,:) )
+       call COMM_vars8( DENS(:,:,:), 1 )
+       call COMM_wait ( DENS(:,:,:), 1, .false. )
+    end if
+
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        DENS(   1:KS-1,i,j) = 0.0_RP
@@ -1726,6 +1854,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = KS, KE-1
@@ -1734,6 +1863,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA-1
     do k = KS, KE
@@ -1743,12 +1873,14 @@ contains
     enddo
 
     i = IA
+    !$omp parallel do
     do j = 1, JA
     do k = KS, KE
        MOMX(k,i,j) = VELX(k,i,j) * DENS(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA-1
     do i = 1, IA
     do k = KS, KE
@@ -1758,12 +1890,14 @@ contains
     enddo
 
     j = JA
+    !$omp parallel do
     do i = 1, IA
     do k = KS, KE
        MOMY(k,i,j) = VELY(k,i,j) * DENS(k,i,j)
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -1772,6 +1906,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        MOMZ(   1:KS-1,i,j) = 0.0_RP
@@ -2416,8 +2551,7 @@ contains
 
           call ParentOceanOpenSCALE( olon_org, olat_org, & ! (out)
                                      omask_org,          & ! (out)
-                                     basename_ocean,     & ! (in)
-                                     odims               ) ! (in)
+                                     basename_ocean      ) ! (in)
 
        case( iWRFARW ) ! TYPE: WRF-ARW
 
@@ -2531,11 +2665,11 @@ contains
           case( iSCALE ) ! TYPE: SCALE-RM
 
              call ParentOceanInputSCALE( &
-                  tw_org, sst_org,       & ! (out)
-                  albw_org, z0w_org,     & ! (out)
-                  omask_org,             & ! (out)
-                  basename_ocean, odims, & ! (in)
-                  n                      ) ! (in)
+                  tw_org, sst_org,   & ! (out)
+                  albw_org, z0w_org, & ! (out)
+                  omask_org,         & ! (out)
+                  basename_ocean,    & ! (in)
+                  n                  ) ! (in)
 
           case( iWRFARW ) ! TYPE: WRF-ARW
 
@@ -3270,6 +3404,7 @@ contains
     end do
     end do
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        lcz_3D(:,i,j) = LCZ(:)
@@ -3468,6 +3603,7 @@ contains
                           tg_org  (:,:,:),     & ! [IN]
                           tg      (:,:,:)      ) ! [OUT]
 
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        tg(LKMAX,i,j) = tg(LKMAX-1,i,j)

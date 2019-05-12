@@ -378,6 +378,8 @@ contains
        CV_WATER, &
        CP_VAPOR, &
        CP_WATER
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -403,7 +405,7 @@ contains
     real(RP) :: CVtot
     real(RP) :: CPtot
 
-    integer  :: kref
+    integer  :: kref(IA,JA)
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
@@ -427,22 +429,34 @@ contains
     enddo
     enddo
 
-    kref = HYDROSTATIC_buildrho_real_kref + KS - 1
+    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+       kref(i,j) = HYDROSTATIC_buildrho_real_kref + KS - 1
+       do k = kref(i,j), KE
+          if ( pres(k,i,j) .ne. UNDEF ) then
+             kref(i,j) = k
+             exit
+          end if
+       end do
+    end do
+    end do
 
     ! calc density at reference level
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(Rtot,CVtot,CPtot)
+    !$omp private(Rtot,CVtot,CPtot,k)
     do j = JS, JE
     do i = IS, IE
-       Rtot = Rdry  * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
-            + Rvap  * qv(kref,i,j)
-       CVtot = CVdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
-             + CV_VAPOR * qv(kref,i,j)                          &
-             + CV_WATER * qc(kref,i,j)
-       CPtot = CPdry * ( 1.0_RP - qv(kref,i,j) - qc(kref,i,j) ) &
-             + CP_VAPOR * qv(kref,i,j)                          &
-             + CP_WATER * qc(kref,i,j)
-       dens(kref,i,j) = P00 / ( Rtot * pott(kref,i,j) ) * ( pres(kref,i,j)/P00 )**(CVtot/CPtot)
+       k = kref(i,j)
+       Rtot = Rdry  * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+            + Rvap  * qv(k,i,j)
+       CVtot = CVdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+             + CV_VAPOR * qv(k,i,j)                          &
+             + CV_WATER * qc(k,i,j)
+       CPtot = CPdry * ( 1.0_RP - qv(k,i,j) - qc(k,i,j) ) &
+             + CP_VAPOR * qv(k,i,j)                          &
+             + CP_WATER * qc(k,i,j)
+       dens(k,i,j) = P00 / ( Rtot * pott(k,i,j) ) * ( pres(k,i,j)/P00 )**(CVtot/CPtot)
     enddo
     enddo
 
@@ -583,8 +597,7 @@ contains
        pott, qv, qc, &
        dz,           &
        dens,         &
-       temp, pres,   &
-       kref          )
+       temp, pres    )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
@@ -607,8 +620,6 @@ contains
     real(RP), intent(out)   :: temp(KA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
 
-    integer, intent(in), optional :: kref
-
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
     real(RP) :: CVtot
@@ -618,22 +629,10 @@ contains
     integer  :: ite
     logical  :: converged
 
-    integer :: kref_
     integer :: k
     !---------------------------------------------------------------------------
 
-    if ( present(kref) ) then
-       kref_ = kref
-    else
-       do k = KS, KE
-          if ( dens(k) .ne. UNDEF ) then
-             kref_ = k
-             exit
-          end if
-       end do
-    end if
-
-    do k = kref_, KE
+    do k = KS, KE
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
        CVtot     = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
@@ -645,9 +644,9 @@ contains
        CPovCV(k) = CPtot / CVtot
     enddo
 
-    pres(kref_) = P00 * ( dens(kref_) * Rtot(kref_) * pott(kref_) / P00 )**CPovCV(kref_)
+    pres(KS) = P00 * ( dens(KS) * Rtot(KS) * pott(KS) / P00 )**CPovCV(KS)
 
-    do k = kref_+1, KE
+    do k = KS+1, KE
 
        dens_s  = 0.0_RP
        dens(k) = dens(k-1) ! first guess
@@ -683,7 +682,7 @@ contains
 
     enddo
 
-    do k = kref_, KE
+    do k = KS, KE
        temp(k) = pres(k) / ( dens(k) * Rtot(k) )
     enddo
 
@@ -702,8 +701,7 @@ contains
        pott, qv, qc, &
        dz,           &
        dens,         &
-       temp, pres,   &
-       kref          )
+       temp, pres    )
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_prc, only: &
@@ -726,8 +724,6 @@ contains
     real(RP), intent(out)   :: temp(KA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA) !< pressure              [Pa]
 
-    integer, intent(in), optional :: kref
-
     real(RP) :: Rtot  (KA)
     real(RP) :: CPovCV(KA)
     real(RP) :: CVtot
@@ -737,22 +733,10 @@ contains
     integer  :: ite
     logical  :: converged
 
-    integer :: kref_
     integer :: k
     !---------------------------------------------------------------------------
 
-    if ( present(kref) ) then
-       kref_ = kref
-    else
-       do k = KE, KS, -1
-          if ( dens(k) .ne. UNDEF ) then
-             kref_ = k
-             exit
-          end if
-       end do
-    end if
-
-    do k = KS, kref_
+    do k = KS, KE
        Rtot  (k) = Rdry  * ( 1.0_RP - qv(k) - qc(k) ) &
                  + Rvap  * qv(k)
        CVtot     = CVdry * ( 1.0_RP - qv(k) - qc(k) ) &
@@ -764,9 +748,9 @@ contains
        CPovCV(k) = CPtot / CVtot
     enddo
 
-    pres(kref_) = P00 * ( dens(kref_) * Rtot(kref_) * pott(kref_) / P00 )**CPovCV(kref_)
+    pres(KE) = P00 * ( dens(KE) * Rtot(KE) * pott(KE) / P00 )**CPovCV(KE)
 
-    do k = kref_-1, KS, -1
+    do k = KE-1, KS, -1
 
        dens_s  = 0.0_RP
        dens(k) = dens(k+1) ! first guess
@@ -802,7 +786,7 @@ contains
 
     enddo
 
-    do k = KS, kref_
+    do k = KS, KE
        temp(k) = pres(k) / ( dens(k) * Rtot(k) )
     enddo
 
@@ -923,22 +907,40 @@ contains
     real(RP), intent(out)   :: temp(KA,IA,JA) !< temperature           [K]
     real(RP), intent(out)   :: pres(KA,IA,JA) !< pressure              [Pa]
 
-    integer, intent(in), optional :: kref
+    integer, intent(in), optional, target :: kref(IA,JA)
+
+    integer, pointer :: kref_(:,:)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    if ( present(kref) ) then
+       kref_ => kref
+    else
+       allocate( kref_(IA,JA) )
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          kref_(i,j) = KS
+       end do
+       end do
+    end if
+
+
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
-       call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, KS, KE, &
+       call ATMOS_HYDROSTATIC_buildrho_atmos_1D( KA, kref_(i,j), KE, &
                                                  pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                  dz(:,i,j),                         & ! [IN]
                                                  dens(:,i,j),                       & ! [INOUT]
-                                                 temp(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                 kref=kref                          ) ! [IN]
+                                                 temp(:,i,j), pres(:,i,j)           ) ! [OUT]
     enddo
     enddo
+
+    if ( .not. present(kref) ) then
+       deallocate( kref_ )
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_3D
@@ -964,22 +966,38 @@ contains
     real(RP), intent(in)    :: qv  (KA,IA,JA) !< water vapor           [kg/kg]
     real(RP), intent(in)    :: qc  (KA,IA,JA) !< liquid water          [kg/kg]
     real(RP), intent(in)    :: dz  (KA,IA,JA) !< distance between the layer (center) [m]
-    integer,  intent(in), optional :: kref
+    integer,  intent(in), optional, target :: kref(IA,JA)
 
+    integer, pointer :: kref_(:,:)
     integer  :: i, j
     !---------------------------------------------------------------------------
+
+    if ( present(kref) ) then
+       kref_ => kref
+    else
+       allocate( kref_(IA,JA) )
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          kref_(i,j) = KE
+       end do
+       end do
+    end if
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
-       call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE, &
+       call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
                                                      pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
                                                      dz(:,i,j),                         & ! [IN]
                                                      dens(:,i,j),                       & ! [INOUT]
-                                                     temp(:,i,j), pres(:,i,j),          & ! [OUT]
-                                                     kref=kref                          ) ! [IN]
+                                                     temp(:,i,j), pres(:,i,j)           ) ! [OUT]
     enddo
     enddo
+
+    if ( .not. present(kref) ) then
+       deallocate(kref_)
+    end if
 
     return
   end subroutine ATMOS_HYDROSTATIC_buildrho_atmos_rev_3D
