@@ -8,21 +8,20 @@ ifeq ($(origin SYSDEP_DIR), undefined)
    SYSDEP_DIR = $(TOPDIR)/sysdep
 endif
 
+
+include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
+include $(TOPDIR)/Mkinclude
+
+
+
 msg1 = "\n"
 
 ifeq ($(SCALE_DEBUG),T)
    msg1       += "SCALE_DEBUG is set.\n"
-   USELOCALBIN = T
 endif
 
 ifeq ($(SCALE_USE_SINGLEFP),T)
    msg1       += "SCALE_USE_SINGLEFP is set.\n"
-   USELOCALBIN = T
-endif
-
-ifeq ($(SCALE_USE_FIXEDINDEX),T)
-   msg1       += "SCALE_USE_FIXEDINDEX is set.\n"
-   USELOCALBIN = T
 endif
 
 ifneq ($(ORG_SRCS),)
@@ -74,9 +73,6 @@ endif
 
 UTILDIR    = ${TOPDIR}/scale-rm/util/netcdf2grads_h
 
-include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
-include $(TOPDIR)/Mkinclude
-
 
 all: build
 
@@ -88,8 +84,7 @@ $(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	@echo -e "$(msg1)"
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
-                                BUILD_DIR=$(BUILD_DIR)   \
+	BUILD_DIR=$(BUILD_DIR) $(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BINDIR=$(BINDIR)
 
 util:

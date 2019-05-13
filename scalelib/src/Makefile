@@ -7,6 +7,7 @@
 TOPDIR     = $(abspath ../..)
 SYSDEP_DIR = $(abspath ../../sysdep)
 
+BUILD_DIR = "undefined"
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 

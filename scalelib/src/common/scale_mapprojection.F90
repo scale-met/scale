@@ -1049,7 +1049,7 @@ contains
        param,   &
        lon, lat )
     implicit none
-    real(DP),           intent(in)  :: x, y
+    real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
     real(RP),           intent(out) :: lon, lat ! [rad]
 
@@ -1079,7 +1079,7 @@ contains
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
-    real(DP),           intent(out) :: x, y
+    real(RP),           intent(out) :: x, y
 
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
