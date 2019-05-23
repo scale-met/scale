@@ -26,18 +26,17 @@ else
       FFLAGS += $(FFLAGS_QUICKDEBUG) -DQUICKDEBUG
       POSTFIX = _quickdebug
    else
-      BUILD_DIR  = $(abspath ./.libs_quickdebug)
       POSTFIX =
    endif
 endif
-BUILD_DIR = $(abspath ./.libs$(POSTFIX))
+
+ifeq ($(findstring undefined, $(origin BUILD_DIR) $(BUILD_DIR)), undefined)
+   BUILD_DIR = $(abspath ./.libs$(POSTFIX))
+endif
 
 ifeq ($(SCALE_USE_SINGLEFP),T)
    FFLAGS += -DSINGLE
-endif
-
-ifeq ($(SCALE_USE_MASSCHECK),T)
-   FFLAGS += -DCHECK_MASS
+   POSTFIX := $(POSTFIX)_single
 endif
 
 ifeq ($(SCALE_ENABLE_OPENMP),T)

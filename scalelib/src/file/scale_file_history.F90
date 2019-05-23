@@ -124,8 +124,11 @@ module scale_file_history
      module procedure FILE_HISTORY_Set_Attribute_Text
      module procedure FILE_HISTORY_Set_Attribute_Logical
      module procedure FILE_HISTORY_Set_Attribute_Int
+     module procedure FILE_HISTORY_Set_Attribute_Int_Ary
      module procedure FILE_HISTORY_Set_Attribute_Float
+     module procedure FILE_HISTORY_Set_Attribute_Float_Ary
      module procedure FILE_HISTORY_Set_Attribute_Double
+     module procedure FILE_HISTORY_Set_Attribute_Double_Ary
   end interface FILE_HISTORY_Set_Attribute
 
 
@@ -2471,7 +2474,7 @@ contains
   end subroutine FILE_HISTORY_Set_Attribute_Logical
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_HISTORY_Set_Attribute_Int( &
+  subroutine FILE_HISTORY_Set_Attribute_Int_Ary( &
        varname,     &
        key, val,    &
        add_variable )
@@ -2512,10 +2515,32 @@ contains
     end if
 
     return
+  end subroutine FILE_HISTORY_Set_Attribute_Int_Ary
+
+  !-----------------------------------------------------------------------------
+  subroutine FILE_HISTORY_Set_Attribute_Int( &
+       varname,     &
+       key, val,    &
+       add_variable )
+    implicit none
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val
+    logical,          intent(in), optional :: add_variable
+
+    integer :: ary(1)
+    !---------------------------------------------------------------------------
+
+    ary(1) = val
+    call FILE_HISTORY_Set_Attribute_Int_Ary( varname,                  & ! (in)
+                                             key, ary(:),              & ! (in)
+                                             add_variable=add_variable ) ! (in)
+
+    return
   end subroutine FILE_HISTORY_Set_Attribute_Int
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_HISTORY_Set_Attribute_Float( &
+  subroutine FILE_HISTORY_Set_Attribute_Float_Ary( &
        varname,     &
        key, val,    &
        add_variable )
@@ -2556,10 +2581,29 @@ contains
     end if
 
     return
-  end subroutine FILE_HISTORY_Set_Attribute_Float
+  end subroutine FILE_HISTORY_Set_Attribute_Float_Ary
 
+  subroutine FILE_HISTORY_Set_Attribute_Float( &
+       varname,     &
+       key, val,    &
+       add_variable )
+    implicit none
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    real(SP),         intent(in) :: val
+    logical,          intent(in), optional :: add_variable
+
+    real(SP) :: ary(1)
+
+    ary(1) = val
+    call FILE_HISTORY_Set_Attribute_Float_Ary( varname,     & ! (in)
+                                                   key, ary(:), & ! (in)
+                                                   add_variable ) ! (in)
+
+    return
+  end subroutine FILE_HISTORY_Set_Attribute_Float
   !-----------------------------------------------------------------------------
-  subroutine FILE_HISTORY_Set_Attribute_Double( &
+  subroutine FILE_HISTORY_Set_Attribute_Double_Ary( &
        varname,     &
        key, val,    &
        add_variable )
@@ -2600,8 +2644,27 @@ contains
     end if
 
     return
-  end subroutine FILE_HISTORY_Set_Attribute_Double
+  end subroutine FILE_HISTORY_Set_Attribute_Double_Ary
 
+  subroutine FILE_HISTORY_Set_Attribute_Double( &
+       varname,     &
+       key, val,    &
+       add_variable )
+    implicit none
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: key
+    real(DP),         intent(in) :: val
+    logical,          intent(in), optional :: add_variable
+
+    real(DP) :: ary(1)
+
+    ary(1) = val
+    call FILE_HISTORY_Set_Attribute_Double_Ary( varname,     & ! (in)
+                                                   key, ary(:), & ! (in)
+                                                   add_variable ) ! (in)
+
+    return
+  end subroutine FILE_HISTORY_Set_Attribute_Double
 
   !-----------------------------------------------------------------------------
   ! interface FILE_HOSTORY_Query

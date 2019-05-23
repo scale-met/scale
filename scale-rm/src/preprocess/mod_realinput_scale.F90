@@ -52,6 +52,9 @@ module mod_realinput_scale
   real(RP), private, allocatable :: read3DL(:,:,:)
   real(RP), private, allocatable :: read3DO(:,:,:)
 
+  ! mapping info
+  real(RP), private, allocatable :: rotc_cos(:,:), rotc_sin(:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -83,6 +86,8 @@ contains
     allocate( read2D(        PARENT_IMAX(handle),PARENT_JMAX(handle)) )
     allocate( read3D(dims(1),PARENT_IMAX(handle),PARENT_JMAX(handle)) )
 
+    allocate( rotc_cos(dims(2),dims(3)), rotc_sin(dims(2),dims(3)) )
+
     return
   end subroutine ParentAtmosSetupSCALE
 
@@ -95,15 +100,23 @@ contains
        dims          )
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,                                     &
        PARENT_JMAX,                                     &
        NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
        NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
-       FILE_open
+       FILE_open, &
+       FILE_get_attribute
     use scale_file_CARTESC, only: &
        FILE_CARTESC_read
+    use scale_mapprojection, only: &
+       mappinginfo, &
+       mappingparam, &
+       MAPPROJECTION_get_param, &
+       MAPPROJECTION_rotcoef_lambertconformal
     implicit none
 
     real(RP),         intent(out) :: lon_org(:,:)
@@ -112,6 +125,11 @@ contains
     character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(6)
 
+    ! mapping information
+    character(len=H_SHORT) :: vname
+    type(mappinginfo)  :: mapping_info
+    type(mappingparam) :: mapping_param
+
     integer :: rank
     integer :: xloc, yloc
     integer :: xs, xe, ys, ye
@@ -119,7 +137,7 @@ contains
     logical :: existed
 
     integer :: fid
-    integer :: i
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -150,9 +168,59 @@ contains
        call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
        cz_org(2,xs:xe,ys:ye) = read2D(:,:)
 
+       if ( i == 1 ) then
+          call FILE_get_attribute( fid, "DENS", "grid_mapping", vname, existed=existed )
+          if ( existed ) then
+             call FILE_get_attribute( fid, vname, "grid_mapping_name", mapping_info%mapping_name )
+             call FILE_get_attribute( fid, vname, "false_easting", mapping_info%false_easting, existed=existed )
+             call FILE_get_attribute( fid, vname, "false_northing", mapping_info%false_northing, existed=existed )
+             call FILE_get_attribute( fid, vname, "longitude_of_central_meridian", mapping_info%longitude_of_central_meridian, existed=existed )
+             call FILE_get_attribute( fid, vname, "longitude_of_projection_origin", mapping_info%longitude_of_projection_origin, existed=existed )
+             call FILE_get_attribute( fid, vname, "latitude_of_projection_origin", mapping_info%latitude_of_projection_origin, existed=existed )
+             call FILE_get_attribute( fid, vname, "straight_vertical_longitude_from_pole", mapping_info%straight_vertical_longitude_from_pole, existed=existed )
+             call FILE_get_attribute( fid, vname, "standard_parallel", mapping_info%standard_parallel(:), existed=existed )
+             if ( .not. existed ) then
+                call FILE_get_attribute( fid, vname, "standard_parallel", mapping_info%standard_parallel(1), existed=existed )
+             end if
+             call FILE_get_attribute( fid, vname, "rotation", mapping_info%rotation, existed=existed )
+             if ( .not. existed ) mapping_info%rotation = 0.0_DP
+          else
+             mapping_info%mapping_name = ""
+          end if
+       end if
+
     end do
 
     cz_org(1,:,:) = 0.0_RP
+
+    if ( mapping_info%mapping_name .ne. "" ) then
+       call MAPPROJECTION_get_param( mapping_info, & ! (in)
+                                     mapping_param ) ! (out)
+       select case ( mapping_info%mapping_name )
+       case ( "lambert_conformal_conic" )
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             call MAPPROJECTION_rotcoef_LambertConformal( &
+                  lon_org(i,j), lat_org(i,j),  & ! (in)
+                  mapping_param,               & ! (in)
+                  rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+          end do
+          end do
+       case default
+          LOG_ERROR("ParentAtmosOpenSCALE",*) 'Unsupported map projection type. STOP'
+          call PRC_abort
+       end select
+    else
+!OCL XFILL
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          rotc_cos(i,j) = 1.0_RP
+          rotc_sin(i,j) = 0.0_RP
+       end do
+       end do
+    end if
 
     return
   end subroutine ParentAtmosOpenSCALE
@@ -237,6 +305,8 @@ contains
     real(RP) :: CPtot   (dims(1)+2)
     real(RP) :: temp_org(dims(1)+2)
     real(RP) :: dz
+
+    real(RP) :: u, v
 
     integer  :: xs, xe
     integer  :: ys, ye
@@ -437,7 +507,24 @@ contains
     end if
 
 
-    !!! must be rotate !!!
+    ! rotation
+    !$omp parallel do &
+    !$omp private(u,v)
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)+2
+       u = velx_org(k,i,j)
+       v = vely_org(k,i,j)
+       if ( u .ne. UNDEF .and. v .ne.UNDEF ) then
+          velx_org(k,i,j) = u * rotc_cos(i,j) - v * rotc_sin(i,j)
+          vely_org(k,i,j) = u * rotc_sin(i,j) + v * rotc_cos(i,j)
+       else
+          velx_org(k,i,j) = UNDEF
+          vely_org(k,i,j) = UNDEF
+       end if
+    end do
+    end do
+    end do
 
 
     do iq = 1, size(qtrc_org,4)
