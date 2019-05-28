@@ -1222,6 +1222,8 @@ contains
        QE_CH
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_qhyd2qtrc
+    use mod_atmos_phy_sf_vars, only: &
+       Z0M => ATMOS_PHY_SF_SFC_Z0M
     use scale_atmos_grid_cartesC, only: &
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
@@ -1576,7 +1578,7 @@ contains
           end if
        end do
        do k = KS, kref-1
-          U(k,i,j) = U(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+          U(k,i,j) = U(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
        end do
     end do
     end do
@@ -1591,7 +1593,7 @@ contains
           end if
        end do
        do k = KS, kref-1
-          V(k,i,j) = V(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+          V(k,i,j) = V(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
        end do
     end do
     end do
@@ -1606,7 +1608,7 @@ contains
           end if
        end do
        do k = KS, kref-1
-          W(k,i,j) = W(kref,i,j) * ( CZ(k,i,j) - topo(i,j) ) / ( CZ(kref,i,j) - topo(i,j) )
+          W(k,i,j) = W(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
        end do
     end do
     end do
