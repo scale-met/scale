@@ -284,6 +284,7 @@ contains
        ATMOS_BOUNDARY_alpha_POTT, &
        ATMOS_BOUNDARY_alpha_QTRC, &
        BND_QA, &
+       BND_IQ, &
        ATMOS_BOUNDARY_SMOOTHER_FACT
     use scale_atmos_dyn, only: &
        ATMOS_DYN
@@ -387,7 +388,7 @@ contains
                        ATMOS_DYN_NUMERICAL_DIFF_order,                       & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
-                       BND_QA, ATMOS_BOUNDARY_SMOOTHER_FACT,                 & ! [IN]
+                       BND_QA, BND_IQ, ATMOS_BOUNDARY_SMOOTHER_FACT,         & ! [IN]
                        ATMOS_BOUNDARY_DENS,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELZ,                                  & ! [IN]
                        ATMOS_BOUNDARY_VELX,                                  & ! [IN]

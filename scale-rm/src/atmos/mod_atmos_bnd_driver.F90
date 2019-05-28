@@ -38,7 +38,8 @@ module mod_atmos_bnd_driver
   !
   !++ Public parameters & variables
   !
-  integer,  public              :: BND_QA !> # of tracer at boundary
+  integer,  public              :: BND_QA    !> # of tracer at boundary
+  integer,  public, allocatable :: BND_IQ(:) !> index of tracer
 
   real(RP), public, allocatable :: ATMOS_BOUNDARY_DENS(:,:,:)   !> reference DENS (with HALO)
   real(RP), public, allocatable :: ATMOS_BOUNDARY_VELZ(:,:,:)   !> reference VELZ (with HALO)
@@ -210,10 +211,15 @@ contains
        ONLINE_IAM_PARENT,   &
        ONLINE_IAM_DAUGHTER, &
        NESTQA => COMM_CARTESC_NEST_BND_QA
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
+       I_QV
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP
+       QS_MP, &
+       QE_MP
     use mod_atmos_phy_ch_vars, only: &
-       QA_CH
+       QS_CH, &
+       QE_CH
     implicit none
 
     namelist / PARAM_ATMOS_BOUNDARY / &
@@ -256,6 +262,7 @@ contains
        ATMOS_BOUNDARY_EXP_H,          &
        ATMOS_BOUNDARY_interp_TYPE
 
+    integer :: iq
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -304,16 +311,25 @@ contains
        endif
     endif
 
-    if( ATMOS_BOUNDARY_USE_QHYD ) then
-       BND_QA = QA_MP
-       if( ATMOS_BOUNDARY_USE_CHEM ) then
-         BND_QA = BND_QA + QA_CH
-       endif
-    else if ( QA_MP > 0 ) then
-       BND_QA = 1
-    else
-       BND_QA = 0
+    allocate( BND_IQ(QA) )
+    BND_IQ(:) = -1
+    BND_QA = 0
+    if ( .not. ATMOS_HYDROMETEOR_dry ) then
+       BND_QA = BND_QA + 1
+       BND_IQ(I_QV) = BND_QA
+       if( ATMOS_BOUNDARY_USE_QHYD ) then
+          do iq = QS_MP+1, QE_MP
+             BND_QA = BND_QA + 1
+             BND_IQ(iq) = BND_QA
+          end do
+       end if
     end if
+    if( ATMOS_BOUNDARY_USE_CHEM ) then
+       do iq = QS_CH, QE_CH
+          BND_QA = BND_QA + 1
+          BND_IQ(iq) = BND_QA
+       end do
+    endif
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
@@ -757,18 +773,20 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
-    !$omp parallel do default(none) &
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
     !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
     !$omp shared(ATMOS_BOUNDARY_EXP_H,CBFY,ATMOS_BOUNDARY_FRACY,FBFY,coef_y,l_bnd)     &
-    !$omp shared(do_daughter_process,ONLINE_USE_VELZ,ATMOS_BOUNDARY_USE_VELZ,ATMOS_BOUNDARY_alpha_VELZ)  &
-    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_VELZ,ATMOS_BOUNDARY_USE_DENS,ATMOS_BOUNDARY_alpha_DENS)        &
-    !$omp shared(ATMOS_BOUNDARY_ALPHAFACT_DENS,ATMOS_BOUNDARY_USE_VELX,ATMOS_BOUNDARY_alpha_VELX)        &
+    !$omp shared(do_daughter_process) &
+    !$omp shared(ONLINE_USE_VELZ,ATMOS_BOUNDARY_USE_VELZ,ATMOS_BOUNDARY_alpha_VELZ,ATMOS_BOUNDARY_ALPHAFACT_VELZ) &
+    !$omp shared(ATMOS_BOUNDARY_USE_DENS,ATMOS_BOUNDARY_alpha_DENS,ATMOS_BOUNDARY_ALPHAFACT_DENS)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_VELX,ATMOS_BOUNDARY_alpha_VELX,ATMOS_BOUNDARY_ALPHAFACT_VELX)        &
     !$omp shared(ATMOS_BOUNDARY_USE_VELY,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_ALPHAFACT_VELY)        &
     !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_POTT)        &
     !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
-    !$omp shared(ATMOS_BOUNDARY_USE_QHYD,BND_QA,ATMOS_BOUNDARY_ALPHAFACT_VELX) &
-    !$omp private(i,j,k,ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2,iq) OMP_SCHEDULE_ collapse(2)
+    !$omp shared(BND_QA) &
+    !$omp private(i,j,k,iq) &
+    !$omp private(ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2)
     do j = 1, JA
     do i = 1, IA
     do k = 1, KA
@@ -860,11 +878,9 @@ contains
           ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
           ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
           ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
-          if ( BND_QA > 0 ) then
-             do iq = 1, BND_QA
-                ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-             end do
-          end if
+          do iq = 1, BND_QA
+             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
+          end do
        else
           if ( ATMOS_BOUNDARY_USE_DENS ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_DENS
@@ -893,9 +909,9 @@ contains
           end if
           if ( BND_QA > 0 .and. ATMOS_BOUNDARY_USE_QV ) then
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-          else if ( BND_QA > 0 ) then
+          else
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = 0.0_RP
-          end if
+          endif
           do iq = 2, BND_QA
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           end do
@@ -923,7 +939,7 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QTRC(KA,IA,JA,BND_QA)
 
-    integer :: i, j, k, iq
+    integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
     do j = 1, JA
@@ -932,8 +948,9 @@ contains
        ATMOS_BOUNDARY_DENS(k,i,j) = DENS(k,i,j)
        ATMOS_BOUNDARY_VELZ(k,i,j) = MOMZ(k,i,j) / ( DENS(k,i,j)+DENS(k+1,i,  j  ) ) * 2.0_RP
        ATMOS_BOUNDARY_POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = QTRC(k,i,j,iq)
+       do iq = 1, QA
+          iqb = BND_IQ(iq)
+          if ( iqb > 0 ) ATMOS_BOUNDARY_QTRC(k,i,j,iqb) = QTRC(k,i,j,iq)
        end do
     enddo
     enddo
@@ -983,7 +1000,7 @@ contains
     implicit none
 
     integer :: fid
-    integer :: iq
+    integer :: iq, iqb
     !---------------------------------------------------------------------------
 
     call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, fid )
@@ -1024,17 +1041,13 @@ contains
        call FILE_CARTESC_read( fid, 'ALPHA_POTT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV   ) then
-       call FILE_CARTESC_read( fid, 'QV', 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,1) )
-       call FILE_CARTESC_read( fid, 'ALPHA_QV', 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1) )
-    endif
-
-    if ( ATMOS_BOUNDARY_USE_QHYD ) then
-       do iq = 2, BND_QA
-          call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,iq) )
-          call FILE_CARTESC_read( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq) )
-       end do
-    endif
+    do iq = 1, QA
+       iqb = BND_IQ(iq)
+       if ( iqb > 0 ) then
+          call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_QTRC(:,:,:,iqb) )
+          call FILE_CARTESC_read( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'ZXY', ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb) )
+       endif
+    end do
 
     call FILE_CARTESC_close( fid )
 
@@ -1054,7 +1067,7 @@ contains
        ONLINE_USE_VELZ
     implicit none
 
-    integer :: iq
+    integer :: iq, iqb
     !---------------------------------------------------------------------------
 
     if (      ATMOS_BOUNDARY_USE_DENS &
@@ -1119,31 +1132,21 @@ contains
                           ATMOS_BOUNDARY_OUT_DTYPE                               )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_QV   .OR. l_bnd ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,1),                          &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'QV', 'Reference QV', 'kg/kg', 'ZXY',                  &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,1),                    &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_QV', 'Alpha for QV', '1', 'ZXY',                &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
-
-    if ( ATMOS_BOUNDARY_USE_QHYD ) then
-       do iq = 2, BND_QA
-          call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,iq),                                    &
+    do iq = 1, QA
+       iqb = BND_IQ(iq)
+       if ( iqb > 0 ) then
+          call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,iqb),                                    &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,            &
                              TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), &
                              TRACER_UNIT(iq), 'ZXY', &
                              ATMOS_BOUNDARY_OUT_DTYPE                                          )
-          call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iq),                                      &
+          call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb),                                      &
                              ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,                    &
                              'ALPHA_'//trim(TRACER_NAME(iq)), 'Alpha for '//trim(TRACER_NAME(iq)), &
                              '1', 'ZXY', &
                              ATMOS_BOUNDARY_OUT_DTYPE                                                  )
-       end do
-    endif
+       end if
+    end do
 
     return
   end subroutine ATMOS_BOUNDARY_write
@@ -1500,8 +1503,6 @@ contains
   !> First send boundary value
   subroutine ATMOS_BOUNDARY_firstsend( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, QV, Qe )
-    use scale_comm_cartesC_nest, only: &
-       NESTQA => COMM_CARTESC_NEST_BND_QA
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_mp_vars, only: &
@@ -1596,7 +1597,7 @@ contains
     real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
 
     integer :: handle
-    integer :: i, j, k, iq, iqa
+    integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
@@ -1658,10 +1659,12 @@ contains
 
        ! fill HALO in western region
        if ( .NOT. PRC_HAS_W ) then
-          !$omp parallel do default(none)                                               &
-          !$omp shared(JS,IS,KA,DENS,ATMOS_BOUNDARY_DENS,MOMX,ATMOS_BOUNDARY_VELX,RHOT) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA,JA)    &
-          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JA,JS,IS,KA,QA,DENS,MOMX,RHOT,QTRC) &
+          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+          !$omp shared(BND_QA,BND_IQ) &
+          !$omp private(i,j,k,iq,iqb)
           do j = 1, JA
           do i = 1, IS-1
           do k = 1, KA
@@ -1669,14 +1672,12 @@ contains
              MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, BND_QA
-                iqa = iq + QS_MP - 1
-                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
-             end do
              do iq = 1, QA
-                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
-                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq) &
-                               * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IS-1,j)) )
+                iqb = BND_IQ(iq)
+                if ( iqb > 0 ) then
+                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+                else
+                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq)
                 end if
              end do
           end do
@@ -1718,23 +1719,24 @@ contains
 
        ! fill HALO in eastern region
        if ( .NOT. PRC_HAS_E ) then
-          !$omp parallel do default(none)                                             &
-          !$omp shared(JA,IE,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX,RHOT) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
-          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JA,IE,IA,KA,QA) &
+          !$omp shared(DENS,RHOT,QTRC) &
+          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+          !$omp shared(BND_QA,BND_IQ) &
+          !$omp private(i,j,k,iq,iqb)
           do j = 1, JA
           do i = IE+1, IA
           do k = 1, KA
              DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, BND_QA
-                iqa = iq + QS_MP - 1
-                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
-             end do
              do iq = 1, QA
-                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
-                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq) &
-                               * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELX(k,IE,j)) )
+                iqb = BND_IQ(iq)
+                if ( iqb > 0 ) then
+                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+                else
+                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq)
                 end if
              end do
           end do
@@ -1789,10 +1791,13 @@ contains
 
        ! fill HALO in southern region
        if ( .NOT. PRC_HAS_S ) then
-          !$omp parallel do default(none)                                               &
-          !$omp shared(JS,IA,KA,DENS,ATMOS_BOUNDARY_DENS,MOMY,ATMOS_BOUNDARY_VELY,RHOT) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)    &
-          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,IA,KA,QA) &
+          !$omp shared(DENS,MOMY,RHOT,QTRC) &
+          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+          !$omp shared(BND_QA,BND_IQ) &
+          !$omp private(i,j,k,iq,iqb)
           do j = 1, JS-1
           do i = 1, IA
           do k = 1, KA
@@ -1800,14 +1805,12 @@ contains
              MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
                   * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, BND_QA
-                iqa = iq + QS_MP - 1
-                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
-             end do
              do iq = 1, QA
-                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
-                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq) &
-                               * ( 0.5_RP - sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JS-1)) )
+                iqb = BND_IQ(iq)
+                if ( iqb > 0 ) then
+                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+                else
+                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq)
                 end if
              end do
           end do
@@ -1849,23 +1852,24 @@ contains
 
        ! fill HALO in northern region
        if ( .NOT. PRC_HAS_N ) then
-          !$omp parallel do default(none)                                             &
-          !$omp shared(JE,JA,IA,KA,DENS,ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY,RHOT) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC,BND_QA,QS_MP,QTRC,QA)  &
-          !$omp private(i,j,k,iq,iqa) OMP_SCHEDULE_ collapse(2)
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JE,JA,IA,KA,QA) &
+          !$omp shared(DENS,RHOT,QTRC) &
+          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY) &
+          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+          !$omp shared(BND_QA,BND_IQ) &
+          !$omp private(i,j,k,iq,iqb)
           do j = JE+1, JA
           do i = 1, IA
           do k = 1, KA
              DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
              RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, BND_QA
-                iqa = iq + QS_MP - 1
-                QTRC(k,i,j,iqa) = ATMOS_BOUNDARY_QTRC(k,i,j,iq)
-             end do
-             do iq = BND_QA+1, QA
-                if ( iq < QS_MP .or. iq >= BND_QA + QS_MP ) then
-                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq) &
-                               * ( 0.5_RP + sign(0.5_RP, ATMOS_BOUNDARY_VELY(k,i,JE)) )
+             do iq = 1, QA
+                iqb = BND_IQ(iq)
+                if ( iqb > 0 ) then
+                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+                else
+                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq)
                 end if
              end do
           end do
@@ -1957,7 +1961,7 @@ contains
 
     integer, intent(in) :: ref
 
-    integer :: fid, iq
+    integer :: fid, iq, iqb
     !---------------------------------------------------------------------------
 
     LOG_INFO("ATMOS_BOUNDARY_update_file",*) "Atmos Boundary: read from boundary file(timestep=", boundary_timestep, ")"
@@ -1968,8 +1972,11 @@ contains
     call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), step=boundary_timestep )
     call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), step=boundary_timestep )
     call FILE_CARTESC_read( fid, 'POTT', 'ZXY',  ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), step=boundary_timestep )
-    do iq = 1, BND_QA
-       call FILE_CARTESC_read( fid, TRACER_NAME(QS_MP+iq-1), 'ZXY', ATMOS_BOUNDARY_ref_QTRC(:,:,:,iq,ref), step=boundary_timestep )
+    do iq = 1, QA
+       iqb = BND_IQ(iq)
+       if ( iqb > 0 ) then
+          call FILE_CARTESC_read( fid, TRACER_NAME(iq), 'ZXY', ATMOS_BOUNDARY_ref_QTRC(:,:,:,iqb,ref), step=boundary_timestep )
+       end if
     end do
 
     call FILE_CARTESC_flush( fid )
@@ -2175,8 +2182,6 @@ contains
        call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                            Q(:,:,:,1), Q(:,:,:,2:),                 & ! (in)
                                            ATMOS_BOUNDARY_ref_QTRC(:,:,:,:,ref_idx) ) ! (out)
-    else if ( NESTQA > 0 ) then
-       ATMOS_BOUNDARY_ref_QTRC(:,:,:,1,ref_idx) = Q(:,:,:,1)
     end if
 
     return
@@ -2527,17 +2532,19 @@ contains
     real(RP), intent(in) :: ATMOS_BOUNDARY_POTT(KA,IA,JA)
     real(RP), intent(in) :: ATMOS_BOUNDARY_QTRC(KA,IA,JA,BND_QA)
 
-    integer :: iq, iqa
+    integer :: iq, iqb
 
     call FILE_HISTORY_in( ATMOS_BOUNDARY_DENS(:,:,:), 'DENS_BND', 'Boundary Density',               'kg/m3'             )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  dim_type='ZHXY' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  dim_type='ZXHY' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  dim_type='ZXYH' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
-    do iq = 1, BND_QA
-       iqa = QS_MP + iq - 1
-       call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iq), trim(TRACER_NAME(iqa))//'_BND', &
-                     trim(TRACER_NAME(iqa))//' in boundary', 'kg/kg' )
+    do iq = 1, QA
+       iqb = BND_IQ(iq)
+       if ( iqb > 0 ) then
+          call FILE_HISTORY_in( ATMOS_BOUNDARY_QTRC(:,:,:,iqb), trim(TRACER_NAME(iq))//'_BND', &
+                                trim(TRACER_NAME(iq))//' in boundary', 'kg/kg' )
+       end if
     enddo
 
     return
