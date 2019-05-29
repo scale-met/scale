@@ -46,7 +46,7 @@ module mod_copytopo
   !
   integer, private, parameter :: handle = 1
 
-  character(len=H_SHORT), private :: COPYTOPO_IN_FILETYPE   = ''       !< 'SCALE' or 'GrADS'
+  character(len=H_SHORT), private :: COPYTOPO_IN_FILETYPE   = ''       !< 'SCALE', 'GrADS', or 'WRF-ARW'
   character(len=H_LONG),  private :: COPYTOPO_IN_BASENAME   = ''
   character(len=H_LONG),  private :: COPYTOPO_IN_POSTFIX    = ''
   character(len=H_SHORT), private :: COPYTOPO_IN_VARNAME    = 'topo'
@@ -479,6 +479,8 @@ contains
        call COPYTOPO_get_size_scale( IA_org, JA_org ) ! (out)
     case ( 'GrADS' )
        call COPYTOPO_get_size_grads( IA_org, JA_org ) ! (out)
+    case ( 'WRF-ARW' )
+       call COPYTOPO_get_size_wrfarw( IA_org, JA_org ) ! (out)
     case default
        LOG_ERROR("COPYTOPO_input_data",*) 'COPYTOPO_IN_FILETYPE must be "SCALE" or "GrADS"'
        call PRC_abort
@@ -495,6 +497,9 @@ contains
     case ( 'GrADS' )
        call COPYTOPO_get_data_grads( IA_org, JA_org,                           & ! (in)
                                      LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
+    case ( 'WRF-ARW' )
+       call COPYTOPO_get_data_wrfarw( IA_org, JA_org,                           & ! (in)
+                                      LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
     end select
 
 
@@ -794,7 +799,77 @@ contains
                           TOPO_org(:,:),                & ! (out)
                           postfix = COPYTOPO_IN_POSTFIX ) ! (in)
 
+    ! close
+    call FILE_GrADS_close( file_id )
+
     return
   end subroutine COPYTOPO_get_data_grads
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_size_wrfarw( &
+       IA_org, JA_org )
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_get_shape
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_dimLength
+    implicit none
+    integer, intent(out) :: IA_org, JA_org
+
+    integer :: fid
+
+    call FILE_open( COPYTOPO_IN_BASENAME,          & ! (in)
+                    fid,                           & ! (out)
+                    postfix = COPYTOPO_IN_POSTFIX, & ! (in)
+                    single = .true.                ) ! (in)
+
+    call FILE_get_dimLength( fid, "west_east",   IA_org )
+    call FILE_get_dimLength( fid, "south_north", JA_org )
+
+    return
+  end subroutine COPYTOPO_get_size_wrfarw
+
+  subroutine COPYTOPO_get_data_wrfarw( &
+       IA_org, JA_org,   &
+       LON_org, LAT_org, &
+       TOPO_org          )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read, &
+       FILE_close
+    implicit none
+    integer,  intent(in)  :: IA_org, JA_org
+    real(RP), intent(out) :: LON_org (IA_org,JA_org)
+    real(RP), intent(out) :: LAT_org (IA_org,JA_org)
+    real(RP), intent(out) :: TOPO_org(IA_org,JA_org)
+
+    integer :: fid
+    integer :: i, j
+
+    call FILE_open( COPYTOPO_IN_BASENAME,          & ! (in)
+                    fid,                           & ! (out)
+                    postfix = COPYTOPO_IN_POSTFIX, & ! (in)
+                    single = .true.                ) ! (in)
+
+    call FILE_read( fid, "XLAT", lat_org(:,:) )
+
+    call FILE_read( fid, "XLONG", lon_org(:,:) )
+
+    !$omp parallel do collapse(2)
+    do j = 1, JA_org
+    do i = 1, IA_org
+       lat_org(i,j) = lat_org(i,j) * D2R
+       lon_org(i,j) = lon_org(i,j) * D2R
+    end do
+    end do
+
+    call FILE_read( fid, "HGT", topo_org(:,:) )
+
+    call FILE_close( fid )
+
+  end subroutine COPYTOPO_get_data_wrfarw
 
 end module mod_copytopo
