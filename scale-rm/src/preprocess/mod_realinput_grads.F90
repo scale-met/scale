@@ -47,12 +47,9 @@ module mod_realinput_grads
   !
   !++ Private parameters & variables
   !
-  integer,  parameter    :: grads_vars_limit = 1000 !> limit of number of values
-  integer,  parameter    :: num_item_list = 25
   integer,  parameter    :: num_item_list_atom  = 25
   integer,  parameter    :: num_item_list_land  = 12
   integer,  parameter    :: num_item_list_ocean = 10
-  logical                :: data_available(num_item_list_atom,3) ! 1:atom, 2:land, 3:ocean
   character(len=H_SHORT) :: item_list_atom (num_item_list_atom)
   character(len=H_SHORT) :: item_list_land (num_item_list_land)
   character(len=H_SHORT) :: item_list_ocean(num_item_list_ocean)
@@ -61,6 +58,9 @@ module mod_realinput_grads
   data item_list_land  /'lsmask','lon','lat','lon_sfc','lat_sfc','llev', &
                         'STEMP','SMOISVC','SMOISDS','SKINT','TOPO','TOPO_sfc' /
   data item_list_ocean /'lsmask','lsmask_sst','lon','lat','lon_sfc','lat_sfc','lon_sst','lat_sst','SKINT','SST'/
+
+  integer,  parameter    :: num_item_list = 25 ! max of num_item_list_(atom|land|ocean)
+  integer                :: var_id(num_item_list,3) ! 1:atom, 2:land, 3:ocean
 
   integer,  parameter   :: Ia_lon    = 1
   integer,  parameter   :: Ia_lat    = 2
@@ -112,37 +112,9 @@ module mod_realinput_grads
   integer,  parameter   :: Io_skint      = 9
   integer,  parameter   :: Io_sst        = 10
 
-
-  integer,  parameter   :: lvars_limit = 1000 ! limit of values for levels data
-  real(RP), parameter   :: large_number_one = 9.999E+15_RP
-
-
   character(len=H_SHORT) :: upper_qv_type = "ZERO" !< how qv is given at higher level than outer model
                                                    !< "ZERO": 0
                                                    !< "COPY": copy values from the highest level of outer model
-
-  character(len=H_SHORT) :: grads_item    (num_item_list,3)
-  character(len=H_LONG)  :: grads_dtype   (num_item_list,3)
-  character(len=H_LONG)  :: grads_fname   (num_item_list,3)
-  character(len=H_SHORT) :: grads_fendian (num_item_list,3)
-  character(len=H_SHORT) :: grads_yrev    (num_item_list,3)
-  real(RP)               :: grads_swpoint (num_item_list,3)
-  real(RP)               :: grads_dd      (num_item_list,3)
-  integer                :: grads_lnum    (num_item_list,3)
-  real(RP)               :: grads_lvars   (lvars_limit,num_item_list,3)
-  integer                :: grads_startrec(num_item_list,3)
-  integer                :: grads_totalrec(num_item_list,3)
-  integer                :: grads_knum    (num_item_list,3)
-  real(SP)               :: grads_missval (num_item_list,3)
-
-  real(SP), allocatable :: gdata2D(:,:)
-  real(SP), allocatable :: gdata3D(:,:,:)
-  real(SP), allocatable :: gland2D(:,:)
-  real(SP), allocatable :: gland3D(:,:,:)
-  real(SP), allocatable :: gsst2D (:,:)
-
-  integer :: io_fid_grads_nml  = -1
-  integer :: io_fid_grads_data = -1
 
 
   ! atmos data
@@ -157,30 +129,7 @@ module mod_realinput_grads
   integer :: outer_nx_sst = -1
   integer :: outer_ny_sst = -1
 
-  namelist / nml_grads_grid / &
-       outer_nx,     &
-       outer_ny,     &
-       outer_nz,     &
-       outer_nl,     &
-       outer_nx_sfc, &
-       outer_ny_sfc, &
-       outer_nx_sst, &
-       outer_ny_sst
-
-  character(len=H_SHORT) :: item                                      ! up to 16 characters
-  integer                :: knum                                      ! optional: vertical level
-  character(len=H_SHORT) :: dtype                                     ! 'linear','levels','map'
-  character(len=H_LONG)  :: fname                                     ! head of file name
-  real(RP)               :: swpoint                                   ! start point (south-west point) for "linear"
-  real(RP)               :: dd                                        ! dlon,dlat for "linear"
-  integer                :: lnum                                      ! number of data
-  real(RP)               :: lvars(lvars_limit) = large_number_one     ! values for "levels"
-  integer                :: startrec                                  ! record position
-  integer                :: totalrec                                  ! total record number per one time
-  real(SP)               :: missval                                   ! missing value
-  character(len=H_SHORT) :: fendian='big'                             ! option for "map"
-  character(len=H_SHORT) :: yrev='off'                                ! option for "map", if yrev=on, order of data is NW to SE.
-
+  integer :: file_id
 
   !-----------------------------------------------------------------------------
 contains
@@ -189,6 +138,10 @@ contains
   subroutine ParentAtmosSetupGrADS( &
       dims,    &
       basename )
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_varid
     implicit none
     integer,          intent(out) :: dims(6)
     character(len=*), intent(in)  :: basename
@@ -196,7 +149,9 @@ contains
     namelist / PARAM_MKINIT_REAL_GrADS / &
         upper_qv_type
 
-    integer :: ielem
+    integer                :: shape(3)
+    integer                :: ielem
+    character(len=H_SHORT) :: item
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -215,115 +170,78 @@ contains
     LOG_NML(PARAM_MKINIT_REAL_GrADS)
 
 
-    if ( len_trim(basename) == 0 ) then
+    if ( basename == "" ) then
        LOG_ERROR("ParentAtmosSetupGrADS",*) '"BASENAME_ORG" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATMOS"!', trim(basename)
        call PRC_abort
     endif
 
-    !--- read namelist
-    io_fid_grads_nml = IO_get_available_fid()
-    open( io_fid_grads_nml,       &
-         file   = trim(basename), &
-         form   = 'formatted',    &
-         status = 'old',          &
-         action = 'read',         &
-         iostat = ierr            )
-    if ( ierr /= 0 ) then
-       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Input file is not found! ', trim(basename)
-       call PRC_abort
-    endif
+    call FILE_GrADS_open( basename, & ! (in)
+                          file_id   ) ! (out)
 
-    read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
-    if( ierr /= 0 ) then !--- missing or fatal error
-       LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(nml_grads_grid)
+    call FILE_GrADS_get_shape( file_id, "U", & ! (in)
+                               shape(:)      ) ! (out)
 
     ! full level
-    dims(1) = outer_nz ! bottom_top
-    dims(2) = outer_nx ! west_east
-    dims(3) = outer_ny ! south_north
+    dims(1) = shape(1) ! bottom_top
+    dims(2) = shape(2) ! west_east
+    dims(3) = shape(3) ! south_north
     ! half level
-    dims(4) = outer_nz ! bottom_top_stag
-    dims(5) = outer_nx ! west_east for 2dim data
-    dims(6) = outer_ny ! south_north for 2dim data
+    dims(4) = shape(1) ! bottom_top_stag
+    dims(5) = shape(2) ! west_east for 2dim data
+    dims(6) = shape(3) ! south_north for 2dim data
 
-    allocate( gdata2D( dims(2), dims(3)          ) )
-    allocate( gdata3D( dims(2), dims(3), dims(1) ) )
 
-    call read_namelist( &
-         grads_item(:,1),     & ! (out)
-         grads_fname(:,1),    & ! (out)
-         grads_dtype(:,1),    & ! (out)
-         grads_swpoint(:,1),  & ! (out)
-         grads_dd(:,1),       & ! (out)
-         grads_lnum(:,1),     & ! (out)
-         grads_lvars(:,:,1),  & ! (out)
-         grads_startrec(:,1), & ! (out)
-         grads_totalrec(:,1), & ! (out)
-         grads_knum(:,1),     & ! (out)
-         grads_yrev(:,1),     & ! (out)
-         grads_fendian(:,1),  & ! (out)
-         grads_missval(:,1),  & ! (out)
-         data_available(:,1), & ! (out)
-         item_list_atom,      & ! (in)
-         num_item_list_atom,  & ! (in)
-         basename,            & ! (in)
-         io_fid_grads_nml     ) ! (in)
+    ! check existence
+    ! var_id > 0 : exist
+    ! var_id < 0 : not exist
+    do ielem = 1, num_item_list_atom
+       item  = item_list_atom(ielem)
+       call FILE_GrADS_varid( file_id, item,  & ! (in)
+                              var_id(ielem,1) ) ! (out)
+    end do
 
-    close( io_fid_grads_nml )
-
+    ! check necessary data
     do ielem = 1, num_item_list_atom
        item  = item_list_atom(ielem)
        !--- check data
-       select case(trim(item))
-       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','Q2','TOPO','RN222')
-          if (.not. data_available(ielem,1)) then
+       select case(item)
+       case('DENS','W','QC','QR','QI','QS','QG','MSLP','PSFC','U10','V10','T2','TOPO','RN222')
+          if ( var_id(ielem,1) < 0 ) then
              LOG_WARN("ParentAtmosSetupGrADS",*) trim(item),' is not found & will be estimated.'
-             cycle
           endif
-       case('QV')
-          if (.not. data_available(Ia_qv,1)) then
-             if (.not.data_available(Ia_rh,1)) then
-                LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not found in grads namelist! : QV and RH'
-                call PRC_abort
-             else ! will read RH
-                cycle
-             endif
-          endif
-       case('RH')
-          if (.not. data_available(Ia_qv,1))then
-             if(data_available(Ia_rh,1)) then
-                if ((.not. data_available(Ia_t,1)).or.(.not. data_available(Ia_p,1))) then
+          cycle
+       case('QV', 'RH')
+          if ( var_id(Ia_qv,1) < 0 ) then
+             if( var_id(Ia_rh,1) > 0 ) then
+                if ( var_id(Ia_t,1) < 0 .or. var_id(Ia_p,1) < 0 ) then
                    LOG_ERROR("ParentAtmosSetupGrADS",*) 'Temperature and pressure are required to convert from RH to QV ! '
                    call PRC_abort
-                else
-                   cycle ! read RH and estimate QV
                 endif
              else
                 LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not found in grads namelist! : QV and RH'
                 call PRC_abort
              endif
-          endif
-       case('RH2')
-          if ( data_available(Ia_q2,1) ) then
-             cycle
           else
-             if ( data_available(Ia_rh2,1) ) then
-                if ((.not. data_available(Ia_t2,1)).or.(.not. data_available(Ia_ps,1))) then
+             var_id(Ia_rh,1) = -1
+          endif
+          cycle
+       case('Q2', 'RH2')
+          if ( var_id(Ia_q2,1) < 0 ) then
+             if ( var_id(Ia_rh2,1) > 0 ) then
+                if ( var_id(Ia_t2,1) < 0 .or.  var_id(Ia_ps,1) < 0 ) then
                    LOG_WARN("ParentAtmosSetupGrADS",*) 'T2 and PSFC are required to convert from RH2 to Q2 !'
                    LOG_INFO_CONT(*)                    'Q2 will be copied from data at above level.'
-                   data_available(Ia_rh2,1) = .false.
-                   cycle
+                   var_id(Ia_rh2,1) = -1
                 endif
              else
                 LOG_WARN("ParentAtmosSetupGrADS",*) 'Q2 and RH2 are not found, Q2 will be estimated.'
-                cycle
              endif
-          endif
+          else
+             var_id(Ia_rh2,1) = -1
+          end if
+          cycle
        case default ! lon, lat, plev, U, V, T, HGT
-          if ( .not. data_available(ielem,1) ) then
+          if ( var_id(ielem,1) < 0 ) then
              LOG_ERROR("ParentAtmosSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_atom(ielem))
              call PRC_abort
           endif
@@ -379,6 +297,10 @@ contains
        I_HG
     use scale_atmos_saturation, only: &
        psat => ATMOS_SATURATION_psat_liq
+    use scale_file_grads, only: &
+       FILE_GrADS_isOneD,    &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_read
     implicit none
 
 
@@ -399,607 +321,542 @@ contains
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: nt
 
-    real(RP) :: rhprs_org(dims(1)+2,dims(2),dims(3))
-    real(RP) :: Rtot
+    character(len=H_SHORT) :: item
+
     integer  :: lm_layer(dims(2),dims(3))
 
-    character(len=H_LONG) :: gfile
+    real(RP) :: lev1D(dims(1)), lon1D(dims(2)), lat1D(dims(3))
 
-    real(RP) :: p_sat, qm, rhsfc, dz
     logical  :: pressure_coordinates
+    real(RP) :: p_sat, qm, dz
+    real(RP) :: rh(dims(2),dims(3))
+    real(RP) :: Rtot
 
+    integer  :: shape(3)
     integer  :: i, j, k, iq, ielem
     !---------------------------------------------------------------------------
 
-    dens_org(:,:,:)   = UNDEF ! read data or set data by build-rho-3D
-    pres_org(:,:,:)   = UNDEF
-    velz_org(:,:,:)   = 0.0_RP
-    qv_org  (:,:,:)   = 0.0_RP
-    qhyd_org(:,:,:,:) = 0.0_RP
-    RN222_org(:,:,:)  = 0.0_RP
+    !$omp parallel do collapse(3)
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)+2
+       dens_org (k,i,j)   = UNDEF
+       pres_org (k,i,j)   = UNDEF
+       velz_org (k,i,j)   = 0.0_RP
+       qv_org   (k,i,j)   = 0.0_RP
+       qhyd_org (k,i,j,:) = 0.0_RP
+       RN222_org(k,i,j )  = 0.0_RP
+    end do
+    end do
+    end do
 
     !--- read grads data
     loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
 
-       if ( .not. data_available(ielem,1) ) cycle
+       if ( var_id(ielem,1) < 0 ) cycle
 
-       item     = grads_item    (ielem,1)
-       dtype    = grads_dtype   (ielem,1)
-       fname    = grads_fname   (ielem,1)
-       lnum     = grads_lnum    (ielem,1)
-       missval  = grads_missval (ielem,1)
-
-       if ( dims(1) < grads_knum(ielem,1) ) then
-          LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be less than or equal to outer_nz. knum:',knum,'> outer_nz:',dims(1),trim(item)
-          call PRC_abort
-       else if ( grads_knum(ielem,1) > 0 )then
-          knum = grads_knum(ielem,1)  ! not missing
-       else
-          knum = dims(1)
-       endif
-
-       select case(trim(dtype))
-       case("linear")
-          swpoint = grads_swpoint (ielem,1)
-          dd      = grads_dd      (ielem,1)
-          if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"swpoint" is required in grads namelist! ',swpoint
-             LOG_ERROR_CONT(*) '"dd"      is required in grads namelist! ',dd
-             call PRC_abort
-          endif
-       case("levels")
-          if ( lnum < 0 )then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"lnum" is required in grads namelist for levels data! '
-             call PRC_abort
-          endif
-          do k=1, lnum
-             lvars(k)=grads_lvars(k,ielem,1)
-          enddo
-          if(abs(lvars(1)-large_number_one)<EPS)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"lvars" must be specified in grads namelist for levels data! '
-             call PRC_abort
-          endif
-       case("map")
-          startrec = grads_startrec(ielem,1)
-          totalrec = grads_totalrec(ielem,1)
-          fendian  = grads_fendian (ielem,1)
-          yrev     = grads_yrev (ielem,1)
-          if( (startrec<0).or.(totalrec<0) )then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"startrec" is required in grads namelist! ',startrec
-             LOG_ERROR_CONT(*) '"totalrec" is required in grads namelist! ',totalrec
-             call PRC_abort
-          endif
-          ! get file_id
-          if(io_fid_grads_data < 0)then
-             io_fid_grads_data = IO_get_available_fid()
-          endif
-          gfile=trim(fname)//trim(basename_num)//'.grd'
-          if( len_trim(fname)==0 )then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_abort
-          endif
-       end select
+       item  = item_list_atom(ielem)
 
        ! read data
-       select case(trim(item))
+       select case(item)
        case("lon")
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
+
+          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lon1d(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                lon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
+                lon_org(i,j) = lon1d(i) * D2R
              enddo
              enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,yrev,gdata2D)
-             lon_org(:,:) = real(gdata2D(:,:), kind=RP) * D2R
-          endif
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lon_org(:,:),             & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                lon_org(i,j) = lon_org(i,j) * D2R
+             enddo
+             enddo
+          end if
+
        case("lat")
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
+
+          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lat1d(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                lat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
+                lat_org(i,j) = lat1d(j) * D2R
              enddo
              enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,1,item,startrec,totalrec,yrev,gdata2D)
-             lat_org(:,:) = real(gdata2D(:,:), kind=RP) * D2R
-          endif
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lat_org(:,:),             & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                lat_org(i,j) = lat_org(i,j) * D2R
+             enddo
+             enddo
+          end if
+
        case("plev")
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item), shape(1), dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "levels" ) then
+
+          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
              pressure_coordinates = .true. ! use pressure coordinate in the input data
-             if(dims(1)/=lnum)then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the outer_nz for plev! ',dims(1),lnum
+             call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                        shape(:)                  ) ! (out)
+             if ( dims(1) .ne. shape(1) ) then
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for plev! ',shape(1), dims(1)
                 call PRC_abort
              endif
-             !$omp parallel do
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lev1D(:)                  ) ! (out)
+             !$omp parallel do collapse(3)
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
-                pres_org(k+2,i,j) = real(lvars(k), kind=RP)
+                pres_org(k+2,i,j) = lev1D(k)
              enddo
              enddo
              enddo
-          else if ( trim(dtype) == "map" ) then
+          else
              pressure_coordinates = .false.
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-             do k = 1, dims(1)
-                pres_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                ! replace missval with UNDEF
-                if( abs( pres_org(k+2,i,j) - missval ) < EPS ) then
-                   pres_org(k+2,i,j) = UNDEF
-                end if
-             enddo
-             enddo
-             enddo
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   pres_org(3:,:,:),         & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
           endif
        case('DENS')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                do k = 1, knum
-                   dens_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( dens_org(k+2,i,j) - missval ) < EPS ) then
-                      dens_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                dens_org(3:,:,:),         & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+
        case('U')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                velx_org(1:2,i,j) = 0.0_RP
-                do k = 1, knum
-                   velx_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( velx_org(k+2,i,j) - missval ) < EPS ) then
-                      velx_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                velx_org(3:,:,:),         & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             velx_org(1:2,i,j) = 0.0_RP
+          enddo
+          enddo
+
        case('V')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                vely_org(1:2,i,j) = 0.0_RP
-                do k = 1, knum
-                   vely_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( vely_org(k+2,i,j) - missval ) < EPS ) then
-                      vely_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                vely_org(3:,:,:),         & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             vely_org(1:2,i,j) = 0.0_RP
+          enddo
+          enddo
+
        case('W')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                velz_org(1:2,i,j) = 0.0_RP
-                do k = 1, knum
-                   velz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( velz_org(k+2,i,j) - missval ) < EPS ) then
-                      velz_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                velz_org(3:,:,:),         & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             velz_org(1:2,i,j) = 0.0_RP
+          enddo
+          enddo
+
        case('T')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                do k = 1, knum
-                   temp_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( temp_org(k+2,i,j) - missval ) < EPS ) then
-                      temp_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                temp_org(3:,:,:),         & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
        case('HGT')
-          if(dims(1)/=knum)then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"knum" must be equal to outer_nz for ',trim(item),'. knum:',knum,'> outer_nz:',dims(1)
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( dims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
              call PRC_abort
           endif
-          if ( trim(dtype) == "levels" ) then
-             if(dims(1)/=lnum)then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the outer_nz for HGT! ',dims(1),lnum
+
+          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
+             call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                        shape(:)                  ) ! (out)
+             if ( dims(1) .ne. shape(1) ) then
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for HGT! ',dims(1), shape(1)
                 call PRC_abort
              endif
-             !$omp parallel do
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   lev1D(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, dims(1)
-                   cz_org(k+2,i,j) = real(lvars(k), kind=RP)
-                enddo
                 cz_org(1,i,j) = 0.0_RP
+                do k = 1, dims(1)
+                   cz_org(k+2,i,j) = lev1D(k)
+                enddo
              enddo
              enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),dims(1),nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+          else
+             pressure_coordinates = .false.
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   cz_org(3:,:,:),           & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, dims(1)
-                   cz_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( cz_org(k+2,i,j) - missval ) < EPS ) then
-                      cz_org(k+2,i,j) = UNDEF
-                   end if
-                enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
              enddo
           endif
+
        case('QV')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                qv_org(3:shape(1)+2,:,:), & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qv_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qv_org(k+2,i,j) - missval ) < EPS ) then
-                      qv_org(k+2,i,j) = UNDEF
-                   end if
+                qv_org(1:2,i,j) = qv_org(3,i,j)
+             enddo
+             enddo
+          end if
+
+          if( dims(1) > shape(1) ) then
+             select case( upper_qv_type )
+             case("COPY")
+                !$omp parallel do collapse(2)
+                do j = 1, dims(3)
+                do i = 1, dims(2)
+                do k = shape(1)+1, dims(1)
+                   qv_org(k+2,i,j) = qv_org(shape(1)+2,i,j)
                 enddo
-                if ( sfc_diagnoses ) qv_org(1:2,i,j) = qv_org(3,i,j)
-             enddo
-             enddo
-             if( dims(1)>knum ) then
-                select case( upper_qv_type )
-                case("COPY")
-                   !$omp parallel do
-                   do j = 1, dims(3)
-                   do i = 1, dims(2)
-                   do k = knum+1, dims(1)
-                      qv_org(k+2,i,j) = qv_org(knum+2,i,j)
-                   enddo
-                   enddo
-                   enddo
-                case("ZERO")
-                   ! do nothing
-                case default
-                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
-                   call PRC_abort
-                end select
-             endif
+                enddo
+                enddo
+             case("ZERO")
+                ! do nothing
+             case default
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
+                call PRC_abort
+             end select
           endif
+
        case('QC')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
+                                qhyd_org(3:shape(1)+2,:,:,I_HC), & ! (out)
+                                it = nt,                         & ! (in)
+                                postfix = basename_num           ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qhyd_org(k+2,i,j,I_HC) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qhyd_org(k+2,i,j,I_HC) - missval ) < EPS ) then
-                      qhyd_org(k+2,i,j,I_HC) = UNDEF
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qhyd_org(1:2,i,j,I_HC) = qhyd_org(3,i,j,I_HC)
-                ! if dims(1)>knum, QC is assumed to be zero.
+                qhyd_org(1:2,i,j,I_HC) = qhyd_org(3,i,j,I_HC)
              enddo
              enddo
-          endif
+          end if
+
+          ! if shape(1)>knum, QC is assumed to be zero.
+
        case('QR')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
+                                qhyd_org(3:shape(1)+2,:,:,I_HR), & ! (out)
+                                it = nt,                         & ! (in)
+                                postfix = basename_num           ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qhyd_org(k+2,i,j,I_HR) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qhyd_org(k+2,i,j,I_HR) - missval ) < EPS ) then
-                      qhyd_org(k+2,i,j,I_HR) = UNDEF
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qhyd_org(1:2,i,j,I_HR) = qhyd_org(3,i,j,I_HR)
-                ! if dims(1)>knum, QR is assumed to be zero.
+                qhyd_org(1:2,i,j,I_HR) = qhyd_org(3,i,j,I_HR)
              enddo
              enddo
-          endif
+          end if
+
+          ! if shape(1)>knum, QR is assumed to be zero.
+
        case('QI')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
+                                qhyd_org(3:shape(1)+2,:,:,I_HI), & ! (out)
+                                it = nt,                         & ! (in)
+                                postfix = basename_num           ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qhyd_org(k+2,i,j,I_HI) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qhyd_org(k+2,i,j,I_HI) - missval ) < EPS ) then
-                      qhyd_org(k+2,i,j,I_HI) = UNDEF
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qhyd_org(1:2,i,j,I_HI) = qhyd_org(3,i,j,I_HI)
-                ! if dims(1)>knum, QI is assumed to be zero.
+                qhyd_org(1:2,i,j,I_HI) = qhyd_org(3,i,j,I_HI)
              enddo
              enddo
-          endif
+          end if
+
+          ! if shape(1)>knum, QI is assumed to be zero.
+
        case('QS')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
+                                qhyd_org(3:shape(1)+2,:,:,I_HS), & ! (out)
+                                it = nt,                         & ! (in)
+                                postfix = basename_num           ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qhyd_org(k+2,i,j,I_HS) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qhyd_org(k+2,i,j,I_HS) - missval ) < EPS ) then
-                      qhyd_org(k+2,i,j,I_HS) = UNDEF
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qhyd_org(1:2,i,j,I_HS) = qhyd_org(3,i,j,I_HS)
-                ! if dims(1)>knum, QS is assumed to be zero.
+                qhyd_org(1:2,i,j,I_HS) = qhyd_org(3,i,j,I_HS)
              enddo
              enddo
-          endif
+          end if
+
+          ! if shape(1)>knum, QS is assumed to be zero.
+
        case('QG')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
+                                qhyd_org(3:shape(1)+2,:,:,I_HG), & ! (out)
+                                it = nt,                         & ! (in)
+                                postfix = basename_num           ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   qhyd_org(k+2,i,j,I_HG) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qhyd_org(k+2,i,j,I_HG) - missval ) < EPS ) then
-                      qhyd_org(k+2,i,j,I_HG) = UNDEF
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qhyd_org(1:2,i,j,I_HG) = qhyd_org(3,i,j,I_HG)
-                ! if dims(1)>knum, QG is assumed to be zero.
+                qhyd_org(1:2,i,j,I_HG) = qhyd_org(3,i,j,I_HG)
              enddo
              enddo
-          endif
+          end if
+
+          ! if shape(1)>knum, QG is assumed to be zero.
+
        case('RH')
-          if (data_available(Ia_qv,1)) cycle  ! use QV
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do &
-             !$omp private(qm)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                do k = 1, knum
-                   qv_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qv_org(k+2,i,j) - missval ) < EPS ) then
-                      qv_org(k+2,i,j) = UNDEF
-                   else
-                      rhprs_org(k+2,i,j) = qv_org(k+2,i,j) / 100.0_RP   ! relative humidity
-                      call psat( temp_org(k+2,i,j), p_sat )             ! satulation pressure
-                      qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                         / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
-                      qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )                 ! specific humidity
-                   end if
-                enddo
-                if ( sfc_diagnoses ) qv_org(1:2,i,j) = qv_org(3,i,j)
-             enddo
-             enddo
-             if( dims(1)>knum ) then
-                select case( upper_qv_type )
-                case("COPY")
-                   !$omp parallel do &
-                   !$omp private(qm)
-                   do j = 1, dims(3)
-                   do i = 1, dims(2)
-                   do k = knum+1, dims(1)
-                      rhprs_org(k+2,i,j) = rhprs_org(knum+2,i,j)              ! relative humidity
-                      call psat( temp_org(k+2,i,j), p_sat )                   ! satulated specific humidity
-                      qm = EPSvap * rhprs_org(k+2,i,j) * p_sat &
-                         / ( pres_org(k+2,i,j) - rhprs_org(k+2,i,j) * p_sat ) ! mixing ratio
-                      qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )                  ! specific humidity
-                      qv_org(k+2,i,j) = min(qv_org(k+2,i,j),qv_org(k+1,i,j))
-                   enddo
-                   enddo
-                   enddo
-                case("ZERO")
-                   ! do nothing
-                case default
-                   LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
-                   call PRC_abort
-                end select
-             endif
-          endif
-       case('MSLP')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                pres_org(1,i,j) = real(gdata2D(i,j), kind=RP)
-                ! replace missval with UNDEF
-                if( abs( pres_org(1,i,j) - missval ) < EPS ) then
-                   pres_org(1,i,j) = UNDEF
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                qv_org(3:shape(1)+2,:,:), & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+          !$omp parallel do collapse(2) &
+          !$omp private(qm,p_sat)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             do k = 1, shape(1)
+                if( qv_org(k+1,i,j) .ne. UNDEF ) then
+                   rh(i,j) = qv_org(k+2,i,j) / 100.0_RP         ! relative humidity
+                   call psat( temp_org(k+2,i,j), p_sat )   ! satulation pressure
+                   qm = EPSvap * rh(i,j) * p_sat &
+                      / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
+                   qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
                 end if
              enddo
-             enddo
-          endif
-       case('PSFC')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                pres_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                ! replace missval with UNDEF
-                if( abs( pres_org(2,i,j) - missval ) < EPS ) then
-                   pres_org(2,i,j) = UNDEF
-                end if
-             enddo
-             enddo
-          endif
-       case('U10')
-          if ( sfc_diagnoses ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-                !$omp parallel do
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                   velx_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( velx_org(2,i,j) - missval ) < EPS ) then
-                      velx_org(2,i,j) = UNDEF
-                   end if
-                enddo
-                enddo
-             endif
-          endif
-       case('V10')
-          if ( sfc_diagnoses ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-                !$omp parallel do
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                   vely_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( vely_org(2,i,j) - missval ) < EPS ) then
-                      vely_org(2,i,j) = UNDEF
-                   end if
-                enddo
-                enddo
-             endif
-          endif
-       case('T2')
-          if ( sfc_diagnoses ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-                !$omp parallel do
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                   temp_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( temp_org(2,i,j) - missval ) < EPS ) then
-                      temp_org(2,i,j) = UNDEF
-                   end if
-                enddo
-                enddo
-             end if
-          endif
-       case('Q2')
-          if ( sfc_diagnoses ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-                !$omp parallel do
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                   qv_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qv_org(2,i,j) - missval ) < EPS ) then
-                      qv_org(2,i,j) = UNDEF
-                   end if
-                enddo
-                enddo
-             end if
-          endif
-       case('RH2')
-          if (data_available(Ia_q2,1)) cycle  ! use QV
-          if ( sfc_diagnoses ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
+             if ( sfc_diagnoses ) qv_org(1:2,i,j) = qv_org(3,i,j)
+          enddo
+          enddo
+          if( shape(1) > dims(1) ) then
+             select case( upper_qv_type )
+             case("COPY")
                 !$omp parallel do &
-                !$omp private (rhsfc,qm)
+                !$omp private(qm,p_sat)
                 do j = 1, dims(3)
                 do i = 1, dims(2)
-                   qv_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( qv_org(2,i,j) - missval ) < EPS ) then
-                      qv_org(2,i,j) = UNDEF
-                   else
-                      rhsfc = qv_org(2,i,j) / 100.0_RP
-                      call psat( temp_org(2,i,j), p_sat )         ! satulation pressure
-                      qm = EPSvap * rhsfc * p_sat &
-                         / ( pres_org(2,i,j) - rhsfc * p_sat )    ! mixing ratio
-                      qv_org(2,i,j) = qm / ( 1.0_RP + qm ) ! specific humidity
-                   end if
+                do k = shape(1)+1, dims(1)
+                   call psat( temp_org(k+2,i,j), p_sat )   ! satulated specific humidity
+                   qm = EPSvap * rh(i,j) * p_sat &
+                      / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
+                   qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
+                   qv_org(k+2,i,j) = min(qv_org(k+2,i,j),qv_org(k+1,i,j))
                 enddo
                 enddo
-             end if
+                enddo
+             case("ZERO")
+                ! do nothing
+             case default
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'upper_qv_type in PARAM_MKINIT_REAL_GrADS is invalid! ', upper_qv_type
+                call PRC_abort
+             end select
           endif
+
+       case('MSLP')
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                pres_org(1,:,:),          & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('PSFC')
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                pres_org(2,:,:),          & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('U10')
+
+          if ( sfc_diagnoses ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   velx_org(2,:,:),          & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+          end if
+
+       case('V10')
+
+          if ( sfc_diagnoses ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   vely_org(2,:,:),          & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+          end if
+
+       case('T2')
+
+          if ( sfc_diagnoses ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   temp_org(2,:,:),          & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+          end if
+
+       case('Q2')
+
+          if ( sfc_diagnoses ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   qv_org(2,:,:),            & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+          end if
+
+       case('RH2')
+
+          if ( sfc_diagnoses ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                   qv_org(2,:,:),            & ! (out)
+                                   it = nt,                  & ! (in)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2) &
+             !$omp private (qm,p_sat)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                rh(i,j) = qv_org(2,i,j) / 100.0_RP
+                call psat( temp_org(2,i,j), p_sat )   ! satulation pressure
+                qm = EPSvap * rh(i,j) * p_sat &
+                   / ( pres_org(2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
+                qv_org(2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
+             enddo
+             enddo
+          end if
+
        case('TOPO')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,dims(2),dims(3),1,nt,item,startrec,totalrec,yrev,gdata2D)
-             !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                cz_org(2,i,j) = real(gdata2D(i,j), kind=RP)
-                ! replace missval with UNDEF
-                if( abs( cz_org(2,i,j) - missval ) < EPS ) then
-                   cz_org(2,i,j) = UNDEF
-                end if
-             enddo
-             enddo
-          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                cz_org(2,:,:),            & ! (out)
+                                postfix = basename_num    ) ! (in)
+
        case('RN222')
-          if ( trim(dtype) == 'map' ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,dims(2),dims(3),knum,nt,item,startrec,totalrec,yrev,gdata3D)
-             !$omp parallel do
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
+                                     shape(:)                  ) ! (out)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,1),    & ! (in)
+                                RN222_org(3:shape(1)+2,:,:), & ! (out)
+                                it = nt,                     & ! (in)
+                                postfix = basename_num       ) ! (in)
+
+          if ( sfc_diagnoses ) then
+             !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
-                do k = 1, knum
-                   RN222_org(k+2,i,j) = real(gdata3D(i,j,k), kind=RP)
-                   ! replace missval with UNDEF
-                   if( abs( RN222_org(k+2,i,j) - missval ) < EPS ) then
-                      RN222_org(k+2,i,j) = UNDEF
-                   endif
-                enddo
-                if ( sfc_diagnoses ) RN222_org(1:2,i,j) = RN222_org(3,i,j)
+                RN222_org(1:2,i,j) = RN222_org(3,i,j)
              enddo
              enddo
           endif
+
        end select
     enddo loop_InputAtmosGrADS
 
@@ -1020,7 +877,7 @@ contains
     end do
 
     ! density
-    if ( .not. data_available(Ia_dens,1) ) then
+    if ( var_id(Ia_dens,1) < 0 ) then
        !$omp parallel do &
        !$omp private (Rtot)
        do j = 1, dims(3)
@@ -1035,8 +892,8 @@ contains
 
     if ( sfc_diagnoses ) then
        ! surface
-       if ( data_available(Ia_topo,1) ) then
-          if ( data_available(Ia_t2,1) .and. data_available(Ia_ps,1) ) then
+       if ( var_id(Ia_topo,1) > 0 ) then
+          if ( var_id(Ia_t2,1) > 0 .and. var_id(Ia_ps,1) > 0 ) then
              !$omp parallel do &
              !$omp private (Rtot)
              do j = 1, dims(3)
@@ -1045,7 +902,7 @@ contains
                 dens_org(2,i,j) = pres_org(2,i,j) / ( Rtot * temp_org(2,i,j) )
              end do
              end do
-          else if ( data_available(Ia_ps,1) ) then
+          else if ( var_id(Ia_ps,1) > 0 ) then
              !$omp parallel do &
              !$omp private (k,dz,Rtot)
              do j = 1, dims(3)
@@ -1058,7 +915,7 @@ contains
                 temp_org(2,i,j) = pres_org(2,i,j) / ( Rtot * dens_org(2,i,j) )
              end do
              end do
-          else if ( data_available(Ia_t2,1) ) then
+          else if ( var_id(Ia_t2,1) > 0 ) then
              !$omp parallel do &
              !$omp private (k,dz,Rtot)
              do j = 1, dims(3)
@@ -1127,7 +984,7 @@ contains
           temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
        end do
        end do
-       if ( data_available(Ia_slp,1) ) then
+       if ( var_id(Ia_slp,1) > 0 ) then
           !$omp parallel do
           do j = 1, dims(3)
           do i = 1, dims(2)
@@ -1164,7 +1021,7 @@ contains
     end if
 
     ! check verticaly extrapolated data in outer model
-    if( pressure_coordinates .and. data_available(Ia_ps,1) ) then
+    if( pressure_coordinates .and. var_id(Ia_ps,1) > 0 ) then
        !$omp parallel do
        do j = 1, dims(3)
        do i = 1, dims(2)
@@ -1197,7 +1054,7 @@ contains
        enddo
        enddo
        enddo
-    else if ( data_available(Ia_topo,1) ) then
+    else if ( var_id(Ia_topo,1) > 0 ) then
        !$omp parallel do
        do j = 1, dims(3)
        do i = 1, dims(2)
@@ -1242,15 +1099,18 @@ contains
        use_waterratio,              & ! (out)
        use_file_landwater,          & ! (in)
        basename                     )
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_varid
     implicit none
-
     integer,          intent(out) :: ldims(3)
     logical,          intent(out) :: use_waterratio
     logical,          intent(in)  :: use_file_landwater ! use landwater data from files
     character(len=*), intent(in)  :: basename
 
-    integer :: ielem
-    integer :: ierr
+    character(len=H_SHORT) :: item
+    integer                :: ielem
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentLandSetupGrADS",*) 'Real Case/Land Input File Type: GrADS format'
@@ -1258,94 +1118,79 @@ contains
     !--- initialization
     use_waterratio = .false.
 
-    if ( len_trim(basename) == 0 ) then
+    if ( basename == "" ) then
        LOG_ERROR("ParentLandSetupGrADS",*) '"BASEMAAME" is not specified in "PARAM_MKINIT_ATMOS_GRID_CARTESC_REAL_ATOMS"!', trim(basename)
        call PRC_abort
     endif
 
-    !--- read namelist
-    io_fid_grads_nml = IO_get_available_fid()
-    open( io_fid_grads_nml,       &
-         file   = trim(basename), &
-         form   = 'formatted',    &
-         status = 'old',          &
-         action = 'read',         &
-         iostat = ierr            )
-    if ( ierr /= 0 ) then
-       LOG_ERROR("ParentLandSetupGrADS",*) 'Input file is not found! ', trim(basename)
-       call PRC_abort
-    endif
+    call FILE_GrADS_open( basename, & ! (in)
+                          file_id   ) ! (out)
 
-    read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
-    if( ierr /= 0 ) then !--- missing or fatal error
-       LOG_ERROR("ParentLandSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(basename),'. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(nml_grads_grid)
+    call FILE_GrADS_get_shape( file_id, "STEMP", & ! (in)
+                               ldims(:)          ) ! (out)
 
-    ! land
-    ldims(1) = outer_nl ! soil_layers_stag
-    if(outer_nx_sfc > 0)then
-       ldims(2) = outer_nx_sfc
-    else
-       ldims(2) = outer_nx
-       outer_nx_sfc = outer_nx
-    endif
-    if(outer_ny_sfc > 0)then
-       ldims(3) = outer_ny_sfc
-    else
-       ldims(3) = outer_ny
-       outer_ny_sfc = outer_ny
-    endif
 
-    allocate( gland2D( ldims(2), ldims(3)           ) )
-    allocate( gland3D( ldims(2), ldims(3), ldims(1) ) )
-
-    call read_namelist( &
-         grads_item(:,2),     & ! (out)
-         grads_fname(:,2),    & ! (out)
-         grads_dtype(:,2),    & ! (out)
-         grads_swpoint(:,2),  & ! (out)
-         grads_dd(:,2),       & ! (out)
-         grads_lnum(:,2),     & ! (out)
-         grads_lvars(:,:,2),  & ! (out)
-         grads_startrec(:,2), & ! (out)
-         grads_totalrec(:,2), & ! (out)
-         grads_knum(:,2),     & ! (out)
-         grads_yrev(:,2),     & ! (out)
-         grads_fendian(:,2),  & ! (out)
-         grads_missval(:,2),  & ! (out)
-         data_available(:,2), & ! (out)
-         item_list_land,      & ! (in)
-         num_item_list_land,  & ! (in)
-         basename,            & ! (in)
-         io_fid_grads_nml     ) ! (in)
-
-    close( io_fid_grads_nml )
-
+    ! check existence
     do ielem = 1, num_item_list_land
        item  = item_list_land(ielem)
-       !--- check data
-       select case(trim(item))
-       case('TOPO','TOPO_sfc', 'lsmask')
-          if ( .not. data_available(ielem,2) ) then
+       call FILE_GrADS_varid( file_id, item,  & ! (in)
+                              var_id(ielem,2) ) ! (out)
+    end do
+
+    ! check necessary data
+    do ielem = 1, num_item_list_land
+       item  = item_list_land(ielem)
+
+       select case(item)
+       case('lsmask')
+          if ( var_id(ielem,2) < 0 ) then
              LOG_WARN("ParentLandSetupGrADS",*) trim(item),' is not found & not used.'
-             cycle
           endif
+          cycle
+       case('TOPO','TOPO_sfc')
+          if ( var_id(Il_topo_sfc,2) < 0 ) then
+             if ( var_id(Il_topo,2) < 0 ) then
+                LOG_WARN("ParentLandSetupGrADS",*) '"TOPO" and "TOPO_sfc" are not found & not used.'
+             end if
+          else
+             var_id(Il_topo,2) = -1
+          end if
+          cycle
        case('lon', 'lat', 'lon_sfc', 'lat_sfc')
+          if ( var_id(Il_lon_sfc,2) < 0 ) then
+             if ( var_id(Il_lon,2) < 0 ) then
+                LOG_ERROR("ParentLandSetupGrADS",*) 'either lon or lon_sfc is required'
+                call PRC_abort
+             end if
+          else
+             var_id(Il_lon,2) = -1
+          end if
+          if ( var_id(Il_lat_sfc,2) < 0 ) then
+             if ( var_id(Il_lat,2) < 0 ) then
+                LOG_ERROR("ParentLandSetupGrADS",*) 'either lat or lat_sfc is required'
+                call PRC_abort
+             end if
+          else
+             var_id(Il_lat,2) = -1
+          end if
           cycle
        case('SMOISVC', 'SMOISDS')
           if ( use_file_landwater ) then
-             if (.not. data_available(Il_smoisvc,2) .and. .not. data_available(Il_smoisds,2)) then
+             if ( var_id(Il_smoisvc,2) < 0 .and. var_id(Il_smoisds,2) < 0 ) then
                 LOG_ERROR("ParentLandSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_land(ielem))
                 call PRC_abort
              end if
-             use_waterratio =  data_available(Il_smoisds,2)
+             if ( var_id(Il_smoisds,2) > 0 ) then
+                use_waterratio = .true.
+                var_id(Il_smoisvc,2) = -1
+             end if
           else
-             cycle
+             var_id(Il_smoisvc,2) = -1
+             var_id(Il_smoisds,2) = -1
           end if
+          cycle
        case default ! llev, SKINT, STEMP
-          if ( .not. data_available(ielem,2) ) then
+          if ( var_id(ielem,2) < 0 ) then
              LOG_ERROR("ParentLandSetupGrADS",*) 'Not found in grads namelist! : ',trim(item_list_land(ielem))
              call PRC_abort
           endif
@@ -1370,11 +1215,17 @@ contains
       ldims,              & ! (in)
       use_file_landwater, & ! (in)
       nt                  ) ! (in)
+    use scale_prc, only: &
+       PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
+    use scale_file_grads, only: &
+       FILE_GrADS_isOneD,    &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_read
     implicit none
 
     real(RP),         intent(out) :: tg_org   (:,:,:)
@@ -1391,299 +1242,202 @@ contains
     logical,          intent(in)  :: use_file_landwater ! use land water data from files
     integer,          intent(in)  :: nt
 
-    character(len=H_LONG) :: gfile
+    real(RP) :: lon1D(ldims(2)), lat1D(ldims(3))
+    integer  :: shape(3)
 
-    integer :: i, j, k, ielem
+    character(len=H_SHORT) :: item
+    integer                :: ielem
+
+    integer :: i, j, k
     !---------------------------------------------------------------------------
+
+    !$omp parallel do collapse(2)
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       lmask_org(i,j) = UNDEF
+    end do
+    end do
 
     loop_InputLandGrADS : do ielem = 1, num_item_list_land
 
        item  = item_list_land(ielem)
 
-       dtype    = grads_dtype   (ielem,2)
-       fname    = grads_fname   (ielem,2)
-       lnum     = grads_lnum    (ielem,2)
-       missval  = grads_missval (ielem,2)
-
-       if ( grads_knum(ielem,2) > 0 )then
-          knum = grads_knum(ielem,2)
-       else
-          knum = ldims(1)
-       endif
-
-       select case(trim(dtype))
-       case("linear")
-          swpoint = grads_swpoint (ielem,2)
-          dd      = grads_dd      (ielem,2)
-          if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
-             LOG_ERROR("ParentLandInputGrADS",*) '"swpoint" is required in grads namelist! ',swpoint
-             LOG_ERROR_CONT(*) '"dd"      is required in grads namelist! ',dd
-             call PRC_abort
-          endif
-       case("levels")
-          if ( lnum < 0 )then
-             LOG_ERROR("ParentLandInputGrADS",*) '"lnum" in grads namelist is required for levels data! '
-             call PRC_abort
-          endif
-          do k=1, lnum
-             lvars(k)=grads_lvars(k,ielem,2)
-          enddo
-          if(abs(lvars(1)-large_number_one)<EPS)then
-             LOG_ERROR("ParentLandInputGrADS",*) '"lvars" must be specified in grads namelist for levels data!',(lvars(k),k=1,lnum)
-             call PRC_abort
-          endif
-       case("map")
-          startrec = grads_startrec(ielem,2)
-          totalrec = grads_totalrec(ielem,2)
-          fendian  = grads_fendian (ielem,2)
-          yrev     = grads_yrev (ielem,2)
-          if( (startrec<0).or.(totalrec<0) )then
-             LOG_ERROR("ParentLandInputGrADS",*) '"startrec" is required in grads namelist! ',startrec
-             LOG_ERROR_CONT(*) '"totalrec" is required in grads namelist! ',totalrec
-             call PRC_abort
-          endif
-          ! get file_io
-          if(io_fid_grads_data < 0)then
-             io_fid_grads_data = IO_get_available_fid()
-          endif
-          gfile=trim(fname)//trim(basename_num)//'.grd'
-          if( len_trim(fname)==0 )then
-             LOG_ERROR("ParentLandInputGrADS",*) '"fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_abort
-          endif
-       end select
+       if ( var_id(ielem,2) < 0 ) cycle
 
        ! read data
-       select case(trim(item))
+       select case(item)
        case("lsmask")
-          if ( data_available(Il_lsmask,2) ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
-                lmask_org(:,:) = real(gland2D(:,:), kind=RP)
-             endif
-          else
-             lmask_org = UNDEF
-          end if
-       case("lon")
-          if ( .not. data_available(Il_lon_sfc,2) ) then
-             if ( ldims(2).ne.outer_nx .or. ldims(3).ne.outer_ny ) then
-                LOG_ERROR("ParentLandInputGrADS",*) 'namelist of "lon_sfc" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
-                LOG_ERROR_CONT(*) '                          : outer_ny and outer_ny_sfc! ', outer_ny, ldims(3)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                   llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
-                llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lon_sfc")
-          if ( .not. data_available(Il_lon_sfc,2) ) cycle
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-             enddo
-             enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
-             llon_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-          endif
-       case("lat")
-          if ( .not. data_available(Il_lat_sfc,2) ) then
-             if ( ldims(2).ne.outer_nx .or. ldims(3).ne.outer_ny ) then
-                LOG_ERROR("ParentLandInputGrADS",*) 'namelist of "lat_sfc" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx and outer_nx_sfc! ', outer_nx, ldims(2)
-                LOG_ERROR_CONT(*) '                          : outer_ny and outer_ny_sfc! ', outer_nx, ldims(3)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                   llat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
-                llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lat_sfc")
-          if ( .not. data_available(Il_lat_sfc,2) ) cycle
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                llat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-             enddo
-             enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,1,item,startrec,totalrec,yrev,gland2D)
-             llat_org(:,:) = real(gland2D(:,:), kind=RP) * D2R
-          endif
-       case("llev")
-          if(ldims(1)/=knum)then
-             LOG_ERROR("ParentLandInputGrADS",*) '"knum" must be equal to outer_nl for llev. knum:',knum,'> outer_nl:',ldims(1)
-             call PRC_abort
-          endif
-          if ( trim(dtype) == "levels" ) then
-             if(ldims(1)/=lnum)then
-                LOG_ERROR("ParentLandInputGrADS",*) 'lnum must be same as the outer_nl for llev! ',ldims(1),lnum
-                call PRC_abort
-             endif
-             do k = 1, ldims(1)
-                lz_org(k) = real(lvars(k), kind=RP)
-             enddo
-!          else if ( trim(dtype) == "map" ) then
-!             call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland)
-!             !$omp parallel do
-!             do j = 1, ldims(3)
-!             do i = 1, ldims(2)
-!             do k = 1, ldims(1)
-!                lz_org(k,i,j) = real(gland(i,j,k), kind=RP)
-!             enddo
-!             enddo
-!             enddo
-          endif
-       case('STEMP')
-          if(ldims(1)/=knum)then
-             LOG_ERROR("ParentLandInputGrADS",*) 'The number of levels for STEMP must be same as llevs! ',ldims(1),knum
-             call PRC_abort
-          endif
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
-             !$omp parallel do
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-             do k = 1, ldims(1)
-                if ( abs(gland3D(i,j,k)-missval) < EPS ) then
-                   tg_org(k,i,j) = UNDEF
-                else
-                   tg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
-                end if
-             enddo
-             enddo
-             enddo
-          endif
-       case('SMOISVC')
-          if ( use_file_landwater ) then
-             if(ldims(1)/=knum)then
-                LOG_ERROR("ParentLandInputGrADS",*) 'The number of levels for SMOISVC must be same as llevs! ',ldims(1),knum
-                call PRC_abort
-             endif
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
-                !$omp parallel do
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                do k = 1, ldims(1)
-                   if ( abs(gland3D(i,j,k)-missval) < EPS ) then
-                      strg_org(k,i,j) = UNDEF
-                   else
-                      strg_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
-                   end if
-                enddo
-                enddo
-                enddo
-             endif
-          endif
-       case('SMOISDS')
-          if ( use_file_landwater ) then
-             if(ldims(1)/=knum)then
-                LOG_ERROR("ParentLandInputGrADS",*) 'The number of levels for SMOISDS must be same as llevs! ',ldims(1),knum
-                call PRC_abort
-             endif
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_3d(io_fid_grads_data,gfile,ldims(2),ldims(3),ldims(1),nt,item,startrec,totalrec,yrev,gland3D)
-                !$omp parallel do
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                do k = 1, ldims(1)
-                   if ( abs(gland3D(i,j,k)-missval) < EPS ) then
-                      smds_org(k,i,j) = UNDEF
-                   else
-                      smds_org(k,i,j) = real(gland3D(i,j,k), kind=RP)
-                   end if
-                enddo
-                enddo
-                enddo
-             endif
-          endif
-       case('SKINT')
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
-             !$omp parallel do
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
-                if ( abs(gland2D(i,j)-missval) < EPS ) then
-                   lst_org(i,j) = UNDEF
-                else
-                   lst_org(i,j) = real(gland2D(i,j), kind=RP)
-                end if
-             enddo
-             enddo
-          endif
-       case('TOPO')
-          if ( .not. data_available(Il_topo_sfc,2) ) then
-             if ( ldims(2)==outer_nx .or. ldims(3)==outer_ny ) then
-                if ( trim(dtype) == "map" ) then
-                   call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
-                   !$omp parallel do
-                   do j = 1, ldims(3)
-                   do i = 1, ldims(2)
-                      if ( abs(gland2D(i,j)-missval) < EPS ) then
-                         topo_org(i,j) = UNDEF
-                      else
-                         topo_org(i,j) = real(gland2D(i,j), kind=RP)
-                      end if
-                   enddo
-                   enddo
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                lmask_org(:,:),           & ! (out)
+                                postfix = basename_num    ) ! (in)
+
+       case("lon", "lon_sfc")
+
+          if ( item == "lon" ) then
+             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                           shape(1:1)                ) ! (out)
+                if ( ldims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
+                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1)
+                   call PRC_abort
                 end if
              else
-                topo_org = UNDEF
-             endif
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                           shape(1:2)                ) ! (out)
+                if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+                   call PRC_abort
+                end if
+             end if
           end if
-       case('TOPO_sfc')
-          if ( data_available(Il_topo_sfc,2) ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,ldims(2),ldims(3),1,nt,item,startrec,totalrec,yrev,gland2D)
-                !$omp parallel do
+
+          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                   lon1D(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                llon_org(i,j) = lon1D(i) * D2R
+             enddo
+             enddo
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                   llon_org(:,:),            & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                llon_org(i,j) = llon_org(i,j) * D2R
+             enddo
+             enddo
+          end if
+
+       case("lat", "lat_sfc")
+
+          if ( item == "lat" ) then
+             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                           shape(1:1)                ) ! (out)
+                if ( ldims(3).ne.shape(1) .and. shape(1).ne.-1 ) then
+                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(3), shape(1)
+                   call PRC_abort
+                end if
+             else
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                           shape(1:2)                ) ! (out)
+                if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+                   LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+                   call PRC_abort
+                end if
+             end if
+          end if
+
+          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                   lat1D(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                llat_org(i,j) = lat1D(j) * D2R
+             enddo
+             enddo
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                   llat_org(:,:),            & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                llat_org(i,j) = llat_org(i,j) * D2R
+             enddo
+             enddo
+          end if
+
+       case("llev")
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if( ldims(1) .ne. shape(1) )then
+             LOG_ERROR("ParentLandInputGrADS",*) '"nz" must be equal to nz of "STEMP" for llev. :', shape(1), ldims(1)
+             call PRC_abort
+          endif
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                lz_org(:)                 ) ! (out)
+
+       case('STEMP')
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( ldims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
+             call PRC_abort
+          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                tg_org(:,:,:),            & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('SMOISVC')
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( ldims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
+             call PRC_abort
+          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                strg_org(:,:,:),          & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('SMOISDS')
+
+          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                     shape(:)                  ) ! (out)
+          if ( ldims(1) .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
+             call PRC_abort
+          endif
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                smds_org(:,:,:),          & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('SKINT')
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                lst_org(:,:),             & ! (out)
+                                it = nt,                  & ! (in)
+                                postfix = basename_num    ) ! (in)
+
+       case('TOPO', 'TOPO_sfc')
+
+          if ( item == "TOPO" ) then
+             call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
+                                        shape(1:2)                ) ! (out)
+             if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
+                LOG_WARN("ParentLandInputGrADS",*) 'namelist of "TOPO_sfc" is not found in grads namelist!'
+                LOG_WARN_CONT(*) 'dimension of "TOPO" is different! ', ldims(2), shape(1), ldims(3), shape(2)
+                !$omp parallel do collapse(2)
                 do j = 1, ldims(3)
                 do i = 1, ldims(2)
-                   if ( abs(gland2D(i,j)-missval) < EPS ) then
-                      topo_org(i,j) = UNDEF
-                   else
-                      topo_org(i,j) = real(gland2D(i,j), kind=RP)
-                   end if
-                enddo
-                enddo
-             endif
-          else if ( .not. data_available(Il_topo,2) ) then
-             topo_org = UNDEF
-          endif
+                   topo_org(i,j) = UNDEF
+                end do
+                end do
+                cycle
+             end if
+          end if
+
+          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
+                                topo_org(:,:),            & ! (out)
+                                postfix = basename_num    ) ! (in)
+
        end select
     enddo loop_InputLandGrADS
-
-    !do it = 1, nt
-    !   i=int(ldims(2)/2) ; j=int(ldims(3)/2)
-    !   LOG_INFO("ParentLandInputGrADS",*) "read 2D grads data",ldims(2),ldims(3),i,j,it
-    !   LOG_INFO("ParentLandInputGrADS",*) "lon_org    ",lon_org  (i,j)
-    !   LOG_INFO("ParentLandInputGrADS",*) "lat_org    ",lat_org  (i,j)
-    !   LOG_INFO("ParentLandInputGrADS",*) "lst_org  ",lst_org(i,j)
-    !   do k=1,dims(7)
-    !      LOG_INFO("ParentLandInputGrADS",*) "tg_org    ",tg_org   (k,i,j)," k= ",k
-    !      LOG_INFO("ParentLandInputGrADS",*) "strg_org  ",strg_org (k,i,j)," k= ",k
-    !   enddo
-    !enddo
 
     return
   end subroutine ParentLandInputGrADS
@@ -1694,119 +1448,107 @@ contains
        odims,   & ! (out)
        timelen, & ! (out)
        basename ) ! (in)
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_varid, &
+       FILE_GrADS_get_shape
     implicit none
 
     integer,          intent(out) :: odims(2)
     integer,          intent(out) :: timelen
     character(len=*), intent(in)  :: basename
 
-    character(len=H_LONG) :: grads_ctl
-
-    integer :: ielem
-    integer :: ierr
+    character(len=H_SHORT) :: item
+    integer                :: ielem
+    integer                :: vid
     !---------------------------------------------------------------------------
 
     LOG_INFO("ParentOceanSetupGrADS",*) 'Real Case/Ocean Input File Type: GrADS format'
 
     !--- read namelist
 
-    if ( len_trim(basename) == 0 ) then
-       grads_ctl = "namelist.grads_boundary"
-    else
-       grads_ctl = basename
-    endif
+    call FILE_GrADS_open( basename, & ! (in)
+                          file_id   ) ! (out)
 
-    !--- read namelist
-    io_fid_grads_nml = IO_get_available_fid()
-    open( io_fid_grads_nml,                    &
-         file   = trim(grads_ctl), &
-         form   = 'formatted',                   &
-         status = 'old',                         &
-         action = 'read',                        &
-         iostat = ierr                           )
-    if ( ierr /= 0 ) then
-       LOG_ERROR("ParentOceanSetupGrADS",*) 'Input file is not found! ', trim(grads_ctl)
-       call PRC_abort
-    endif
+    call FILE_GrADS_varid( file_id, "SST", & ! (in)
+                           vid             ) ! (out)
+    if ( vid < 0 ) then
+       call FILE_GrADS_varid( file_id, "SKINT", & ! (in)
+                              vid               ) ! (out)
+    end if
 
-    read(io_fid_grads_nml,nml=nml_grads_grid,iostat=ierr)
-    if( ierr /= 0 ) then !--- missing or fatal error
-       LOG_ERROR("ParentOceanSetupGrADS",*) 'Not appropriate names in nml_grads_grid in ', trim(grads_ctl),'. Check!'
+    if ( vid < 0 ) then
+       LOG_ERROR("ParentOceanSetupGrADS",*) 'SST and SKINT are found in grads namelist!'
        call PRC_abort
-    endif
-    LOG_NML(nml_grads_grid)
+    end if
+
+    call FILE_GrADS_get_shape( file_id, vid, & ! (in)
+                               odims(:)      ) ! (out)
+
 
     timelen = 0        ! will be replaced later
 
-    ! sst
-    if(outer_nx_sst > 0)then
-       odims(1) = outer_nx_sst
-    else if (outer_nx_sfc > 0) then
-       odims(1) = outer_nx_sfc
-       outer_nx_sst = outer_nx_sfc
-    else
-       odims(1) = outer_nx
-       outer_nx_sst = outer_nx
-    endif
-    if(outer_ny_sst > 0)then
-       odims(2) = outer_ny_sst
-    else if(outer_ny_sfc > 0)then
-       odims(2) = outer_ny_sfc
-       outer_ny_sst = outer_ny_sfc
-    else
-       odims(2) = outer_ny
-       outer_ny_sst = outer_ny
-    endif
 
-    allocate( gsst2D ( odims(1), odims(2)        ) )
-
-
-    call read_namelist( &
-         grads_item(:,3),     & ! (out)
-         grads_fname(:,3),    & ! (out)
-         grads_dtype(:,3),    & ! (out)
-         grads_swpoint(:,3),  & ! (out)
-         grads_dd(:,3),       & ! (out)
-         grads_lnum(:,3),     & ! (out)
-         grads_lvars(:,:,3),  & ! (out)
-         grads_startrec(:,3), & ! (out)
-         grads_totalrec(:,3), & ! (out)
-         grads_knum(:,3),     & ! (out)
-         grads_yrev(:,3),     & ! (out)
-         grads_fendian(:,3),  & ! (out)
-         grads_missval(:,3),  & ! (out)
-         data_available(:,3), & ! (out)
-         item_list_ocean,     & ! (in)
-         num_item_list_ocean, & ! (in)
-         grads_ctl,           & ! (in)
-         io_fid_grads_nml     ) ! (in)
-
-    close( io_fid_grads_nml )
-
+    ! check existance
     do ielem = 1, num_item_list_ocean
        item  = item_list_ocean(ielem)
-       !--- check data
-       select case(trim(item))
+       call FILE_GrADS_varid( file_id, item,  & ! (in)
+                              var_id(ielem,3) ) ! (out)
+    end do
+
+    ! check necessary datea
+    do ielem = 1, num_item_list_ocean
+       item  = item_list_ocean(ielem)
+
+       select case(item)
        case('lsmask','lsmask_sst')
-          if ( .not. data_available(Io_lsmask,3) .and. .not. data_available(Io_lsmask_sst,3) ) then
-             LOG_WARN("ParentOceanSetupGrADS",*) trim(item),' is not found & not used.'
-             cycle
+          if ( var_id(Io_lsmask_sst,3) < 3 ) then
+             if ( var_id(Io_lsmask,3) < 3 ) then
+                LOG_WARN("ParentOceanSetupGrADS",*) trim(item),' is not found & not used.'
+             end if
+          else
+             var_id(Io_lsmask,3) = -1
           endif
        case('lon', 'lat', 'lon_sfc', 'lat_sfc', 'lon_sst', 'lat_sst')
-          cycle
-       case('SST')
-          if (.not. data_available(Io_sst,3) .and. .not. data_available(Io_skint,3) ) then
-             LOG_ERROR("ParentOceanSetupGrADS",*) 'SST and SKINT are found in grads namelist!'
-             call PRC_abort
-          endif
-          if (.not. data_available(Io_sst,3)) then
-             LOG_WARN("ParentOceanSetupGrADS",*) 'SST is found in grads namelist. SKINT is used in place of SST.'
-             cycle
-          endif
-       case('SKINT')
-          cycle
+          if ( var_id(Io_lon_sst,3) < 0 ) then
+             if ( var_id(Io_lon_sfc,3) < 0 ) then
+                if ( var_id(Io_lon,3) < 0 ) then
+                   LOG_ERROR("ParentOceanSetupGrADS",*) 'either lon_sst, lon_sfc, or lon is necessary!'
+                   call PRC_abort
+                end if
+             else
+                var_id(Io_lon,3) = -1
+             end if
+          else
+             var_id(Io_lon_sfc,3) = -1
+             var_id(Io_lon,    3) = -1
+          end if
+          if ( var_id(Io_lat_sst,3) < 0 ) then
+             if ( var_id(Io_lat_sfc,3) < 0 ) then
+                if ( var_id(Io_lat,3) < 0 ) then
+                   LOG_ERROR("ParentOceanSetupGrADS",*) 'either lat_sst, lat_sfc, or lat is necessary!'
+                   call PRC_abort
+                end if
+             else
+                var_id(Io_lat,3) = -1
+             end if
+          else
+             var_id(Io_lat_sfc,3) = -1
+             var_id(Io_lat,    3) = -1
+          end if
+       case('SST','SKINT')
+          if ( var_id(Io_sst,3) < 0 ) then
+             if ( var_id(Io_skint,3) < 0 ) then
+                LOG_ERROR("ParentOceanSetupGrADS",*) 'SST and SKINT are found in grads namelist!'
+                call PRC_abort
+             else
+                LOG_WARN("ParentOceanSetupGrADS",*) 'SST is found in grads namelist. SKINT is used in place of SST.'
+             end if
+          else
+             var_id(Io_skint,3) = -1
+          end if
        case default !
-          if ( .not. data_available(ielem,3) ) then
+          if ( var_id(ielem,3) < 0 ) then
              LOG_ERROR("ParentOceanSetupGrADS",*) 'Not found in grads namelist! : ', &
                         trim(item_list_ocean(ielem))
              call PRC_abort
@@ -1840,6 +1582,10 @@ contains
        D2R   => CONST_D2R,   &
        TEM00 => CONST_TEM00, &
        EPS   => CONST_EPS
+    use scale_file_grads, only: &
+       FILE_GrADS_isOneD,    &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_read
     implicit none
 
     real(RP),         intent(out) :: tw_org   (:,:)
@@ -1851,522 +1597,149 @@ contains
     integer,          intent(in)  :: odims(2)
     integer,          intent(in)  :: nt
 
-    character(len=H_LONG) :: gfile
+    character(len=H_SHORT) :: item
+    integer                :: ielem
 
-    integer :: i, j, ielem
+    real(RP) :: lon1D(odims(1)), lat1D(odims(2))
+
+    integer :: shape(2)
+    integer :: i, j
     !---------------------------------------------------------------------------
+
+    !$omp parallel do collapse(2)
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       omask_org(i,j) = UNDEF
+    end do
+    end do
 
     loop_InputOceanGrADS : do ielem = 1, num_item_list_ocean
 
+       if ( var_id(ielem,3) < 0 ) cycle
+
        item  = item_list_ocean(ielem)
 
-       dtype    = grads_dtype   (ielem,3)
-       fname    = grads_fname   (ielem,3)
-       lnum     = grads_lnum    (ielem,3)
-       missval  = grads_missval (ielem,3)
-
-       select case(trim(dtype))
-       case("linear")
-          swpoint = grads_swpoint (ielem,3)
-          dd      = grads_dd      (ielem,3)
-          if( (abs(swpoint-large_number_one)<EPS).or.(abs(dd-large_number_one)<EPS) )then
-             LOG_ERROR("ParentOceanInputGrADS",*) '"swpoint" is required in grads namelist! ',swpoint
-             LOG_ERROR_CONT(*) '"dd"      is required in grads namelist! ',dd
-             call PRC_abort
-          endif
-       case("levels")
-          LOG_ERROR("ParentOceanInputGrADS",*) '"lnum" in grads namelist is invalid for ocean data'
-          call PRC_abort
-       case("map")
-          startrec = grads_startrec(ielem,3)
-          totalrec = grads_totalrec(ielem,3)
-          fendian  = grads_fendian (ielem,3)
-          yrev     = grads_yrev (ielem,3)
-          if( (startrec<0).or.(totalrec<0) )then
-             LOG_ERROR("ParentOceanInputGrADS",*) '"startrec" is required in grads namelist! ',startrec
-             LOG_ERROR_CONT(*) '"totalrec" is required in grads namelist! ',totalrec
-             call PRC_abort
-          endif
-          ! get file_io
-          if(io_fid_grads_data < 0)then
-             io_fid_grads_data = IO_get_available_fid()
-          endif
-          gfile=trim(fname)//trim(basename_num)//'.grd'
-          if( len_trim(fname)==0 )then
-             LOG_ERROR("ParentOceanInputGrADS",*) '"fname" is required in grads namelist for map data! ',trim(fname)
-             call PRC_abort
-          endif
-       end select
-
        ! read data
-       select case(trim(item))
-       case("lsmask")
-          if ( .not. data_available(Io_lsmask_sst,3) .and. data_available(Io_lsmask,3) ) then
-             if ( odims(1)==outer_nx_sfc .and. odims(2)==outer_ny_sfc ) then
-                if ( trim(dtype) == "map" ) then
-                   call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                   omask_org(:,:) = real(gsst2D(:,:), kind=RP)
-                endif
-             else
-                omask_org = UNDEF
+       select case(item)
+       case("lsmask","lsmask_sst")
+
+          if ( item == "lsmask" ) then
+             call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                        shape(:)                  ) ! (out)
+             if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
+                LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
+                cycle
              end if
           end if
-       case("lsmask_sst")
-          if ( data_available(Io_lsmask_sst,3) ) then
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                omask_org(:,:) = real(gsst2D(:,:), kind=RP)
-             endif
-          else if ( .not. data_available(Io_lsmask,3) ) then
-             omask_org = UNDEF
-          end if
-       case("lon")
-          if ( .not. data_available(Io_lon_sst,3) .and. .not. data_available(Io_lon_sfc,3) ) then
-             if ( odims(1).ne.outer_nx .or. odims(2).ne.outer_ny ) then
-                LOG_ERROR("ParentOceanInputGrADS",*) 'namelist of "lon_sst" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx and outer_nx_sst! ', outer_nx, odims(1)
-                LOG_ERROR_CONT(*) '                          : outer_ny and outer_ny_sst! ', outer_ny, odims(2)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, odims(2)
-                do i = 1, odims(1)
-                   olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                olon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lon_sfc")
-          if ( .not. data_available(Io_lon_sst,3) .and. data_available(Io_lon_sfc,3) ) then
-             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
-                LOG_ERROR("ParentOceanInputGrADS",*) 'namelist of "lon_sst" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
-                LOG_ERROR_CONT(*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, odims(2)
-                do i = 1, odims(1)
-                   olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                olon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lon_sst")
-          if ( .not. data_available(Io_lon_sst,3) ) cycle
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olon_org(i,j) = real(swpoint+real(i-1)*dd, kind=RP) * D2R
-             enddo
-             enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-             olon_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-          endif
-       case("lat")
-          if ( .not. data_available(Io_lat_sfc,3) .and. .not. data_available(Io_lat_sst,3) ) then
-             if ( odims(1).ne.outer_nx .or. odims(2).ne.outer_ny ) then
-                LOG_ERROR("ParentOceanInputGrADS",*) 'namelist of "lat_sst" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx and outer_nx_sst! ', outer_nx, odims(1)
-                LOG_ERROR_CONT(*) '                          : outer_ny and outer_ny_sst! ', outer_ny, odims(2)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, odims(2)
-                do i = 1, odims(1)
-                   olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                olat_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lat_sfc")
-          if ( .not. data_available(Io_lat_sst,3) .and. data_available(Io_lat_sfc,3) ) then
-             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
-                LOG_ERROR("ParentOceanInputGrADS",*) 'namelist of "lat_sst" is not found in grads namelist!'
-                LOG_ERROR_CONT(*) 'dimension is different: outer_nx_sfc and outer_nx_sst! ', outer_nx_sfc, odims(1)
-                LOG_ERROR_CONT(*) '                          : outer_ny_sfc and outer_ny_sst! ', outer_ny_sfc, odims(2)
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "linear" ) then
-                !$omp parallel do
-                do j = 1, odims(2)
-                do i = 1, odims(1)
-                   olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-                enddo
-                enddo
-             else if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-                olat_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-             endif
-          end if
-       case("lat_sst")
-          if ( .not. data_available(Io_lat_sst,3) ) cycle
-          if ( trim(dtype) == "linear" ) then
-             !$omp parallel do
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                olat_org(i,j) = real(swpoint+real(j-1)*dd, kind=RP) * D2R
-             enddo
-             enddo
-          else if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,1,item,startrec,totalrec,yrev,gsst2D)
-             olat_org(:,:) = real(gsst2D(:,:), kind=RP) * D2R
-          endif
-       case('SKINT')
-          if ( .not. data_available(Io_sst,3) ) then
-             if ( odims(1).ne.outer_nx_sfc .or. odims(2).ne.outer_ny_sfc ) then
-                LOG_ERROR("ParentOceanInputGrADS",*) 'dimsntion is different: outer_nx_sst/outer_nx_sfc and outer_nx_sst! ', odims(1), outer_nx_sfc
-                LOG_ERROR_CONT(*) '                          : outer_ny_sst/outer_ny_sfc and outer_ny_sst! ', odims(2), outer_ny_sfc
-                call PRC_abort
-             end if
-             if ( trim(dtype) == "map" ) then
-                call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,nt,item,startrec,totalrec,yrev,gsst2D)
-                !$omp parallel do
-                do j = 1, odims(2)
-                do i = 1, odims(1)
-                   if ( abs(gsst2D(i,j)-missval) < EPS ) then
-                      sst_org(i,j) = UNDEF
-                   else
-                      sst_org(i,j) = real(gsst2D(i,j), kind=RP)
-                   end if
-                enddo
-                enddo
-             end if
-          endif
-       case('SST')
-          if ( .not. data_available(Io_sst,3) ) cycle
-          if ( trim(dtype) == "map" ) then
-             call read_grads_file_2d(io_fid_grads_data,gfile,odims(1),odims(2),1,nt,item,startrec,totalrec,yrev,gsst2D)
-             !$omp parallel do
-             do j = 1, odims(2)
-             do i = 1, odims(1)
-                if ( abs(gsst2D(i,j)-missval) < EPS ) then
-                   sst_org(i,j) = UNDEF
-                else
-                   sst_org(i,j) = real(gsst2D(i,j), kind=RP)
+
+          call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                omask_org(:,:),           & ! (out)
+                                postfix = basename_num    ) ! (in)
+
+       case("lon","lon_sfc","lon_sst")
+
+          if ( item .ne. "lon_sst" ) then
+             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                           shape(1:1)                ) ! (out)
+                if ( odims(1).ne.shape(1) .and. shape(1).ne.-1 ) then
+                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(1), shape(1)
+                   call PRC_abort
                 end if
+             else
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                           shape(:)                  ) ! (out)
+                if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
+                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
+                   call PRC_abort
+                end if
+             end if
+          end if
+
+          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                   lon1D(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                olon_org(i,j) = lon1D(i) * D2R
+             enddo
+             enddo
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                   olon_org(:,:),            & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                olon_org(i,j) = olon_org(i,j) * D2R
              enddo
              enddo
           end if
+
+       case("lat","lat_sfc","lat_sst")
+
+          if ( item .ne. "lat_sst" ) then
+             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                           shape(1:1)                ) ! (out)
+                if ( odims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
+                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(2), shape(1)
+                   call PRC_abort
+                end if
+             else
+                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                           shape(:)                  ) ! (out)
+                if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
+                   LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
+                   call PRC_abort
+                end if
+             end if
+          end if
+
+          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
+             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                   lat1D(:)                  ) ! (out)
+             !$omp parallel do collapse(2)
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                olat_org(i,j) = lat1D(j) * D2R
+             enddo
+             enddo
+          else
+             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                   olat_org(:,:),            & ! (out)
+                                   postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(2)
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                olat_org(i,j) = olat_org(i,j) * D2R
+             enddo
+             enddo
+          end if
+
+       case("SKINT","SST")
+
+          if ( item == "SKINT" ) then
+             call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
+                                        shape(:)                  ) ! (out)
+             if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
+                LOG_ERROR("ParentLandOceanGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
+                call PRC_abort
+             end if
+          end if
+
+          call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
+                                sst_org(:,:),             & ! (out)
+                                postfix = basename_num    ) ! (in)
+
        end select
     enddo loop_InputOceanGrADS
 
     tw_org = sst_org
 
-    !do it = 1, nt
-    !   i=int(dims(8)/2) ; j=int(dims(9)/2)
-    !   LOG_INFO("ParentOceanInputGrADS",*) "read 2D grads data",dims(8),dims(9),i,j,it
-    !   LOG_INFO("ParentOceanInputGrADS",*) "lon_org    ",lon_org  (i,j)
-    !   LOG_INFO("ParentOceanInputGrADS",*) "lat_org    ",lat_org  (i,j)
-    !   LOG_INFO("ParentOceanInputGrADS",*) "sst_org    ",sst_org  (i,j)
-    !   LOG_INFO("ParentOceanInputGrADS",*) "lst_org  ",lst_org(i,j)
-    !   do k=1,dims(7)
-    !      LOG_INFO("ParentOceanInputGrADS",*) "tg_org    ",tg_org   (k,i,j)," k= ",k
-    !      LOG_INFO("ParentOceanInputGrADS",*) "strg_org  ",strg_org (k,i,j)," k= ",k
-    !   enddo
-    !enddo
-
     return
   end subroutine ParentOceanInputGrADS
 
-  subroutine read_namelist( &
-       grads_item,      &
-       grads_fname,     &
-       grads_dtype,     &
-       grads_swpoint,   &
-       grads_dd,        &
-       grads_lnum,      &
-       grads_lvars,     &
-       grads_startrec,  &
-       grads_totalrec,  &
-       grads_knum,      &
-       grads_yrev,      &
-       grads_fendian,   &
-       grads_missval,   &
-       data_available,  &
-       item_list,       &
-       num_item_list,   &
-       basename,        &
-       io_fid_grads_nml )
-    implicit none
-
-    character(len=H_SHORT), intent(out) :: grads_item    (:)
-    character(len=H_LONG),  intent(out) :: grads_fname   (:)
-    character(len=H_LONG),  intent(out) :: grads_dtype   (:)
-    real(RP),               intent(out) :: grads_swpoint (:)
-    real(RP),               intent(out) :: grads_dd      (:)
-    integer,                intent(out) :: grads_lnum    (:)
-    real(RP),               intent(out) :: grads_lvars   (:,:)
-    integer,                intent(out) :: grads_startrec(:)
-    integer,                intent(out) :: grads_totalrec(:)
-    integer,                intent(out) :: grads_knum    (:)
-    character(len=H_SHORT), intent(out) :: grads_yrev    (:)
-    character(len=H_SHORT), intent(out) :: grads_fendian (:)
-    real(SP),               intent(out) :: grads_missval (:)
-    logical,                intent(out) :: data_available(:)
-    character(len=*),       intent(in)  :: item_list     (:)
-    integer,                intent(in)  :: num_item_list
-    character(len=*),       intent(in)  :: basename
-    integer,                intent(in)  :: io_fid_grads_nml
-
-    integer :: grads_vars_nmax
-    integer :: k, n, ielem, ierr
-
-    namelist / grdvar / &
-       item,     & ! necessary
-       dtype,    & ! necessary
-       fname,    & ! necessary except for linear data
-       swpoint,  & ! for linear data
-       dd,       & ! for linear data
-       lnum,     & ! for levels data
-       lvars,    & ! for levels data
-       startrec, & ! for map data
-       totalrec, & ! for map data
-       missval,  & ! option
-       knum,     & ! option
-       yrev,     & ! option
-       fendian     ! option
-
-    ! listup variables
-    if ( io_fid_grads_nml > 0 ) then
-       rewind( io_fid_grads_nml )
-       grads_vars_nmax = 0
-       do n = 1, grads_vars_limit
-          read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
-          if( ierr > 0 )then
-             LOG_ERROR("REALINPUT_GRADS_read_namelist",*) 'Not appropriate names in grdvar in ', trim(basename),'. Check!'
-             call PRC_abort
-          else if( ierr < 0 )then
-             exit
-          endif
-          grads_vars_nmax = grads_vars_nmax + 1
-       enddo
-    else
-       LOG_ERROR("REALINPUT_GRADS_read_namelist",*) 'namelist file is not open! ', trim(basename)
-       call PRC_abort
-    endif
-
-    if ( grads_vars_nmax > grads_vars_limit ) then
-       LOG_ERROR("REALINPUT_GRADS_read_namelist",*) 'The number of grads vars exceeds grads_vars_limit! ', &
-                  grads_vars_nmax, ' > ', grads_vars_limit
-       call PRC_abort
-    endif
-
-    ! check data availability
-    data_available(:) = .false.
-    do ielem = 1, num_item_list
-       if ( io_fid_grads_nml > 0 ) rewind( io_fid_grads_nml )
-       do n = 1, grads_vars_nmax
-
-          ! set default
-          item     = ''
-          dtype    = ''
-          fname    = ''
-          swpoint  = large_number_one
-          dd       = large_number_one
-          lnum     = -99
-          lvars    = large_number_one
-          startrec = -99
-          totalrec = -99
-          knum     = -99
-          yrev     = 'off'
-          fendian  = 'big'
-          missval  = large_number_one
-
-          ! read namelist
-          if ( io_fid_grads_nml > 0 ) then
-             read(io_fid_grads_nml, nml=grdvar, iostat=ierr)
-             if( ierr /= 0 ) exit
-          endif
-
-          if(item == item_list(ielem))then
-             grads_item    (ielem) = item
-             grads_fname   (ielem) = fname
-             grads_dtype   (ielem) = dtype
-             grads_swpoint (ielem) = swpoint
-             grads_dd      (ielem) = dd
-             grads_lnum    (ielem) = lnum
-             do k = 1, lvars_limit
-                grads_lvars(k,ielem) = lvars(k)
-             enddo
-             grads_startrec(ielem) = startrec
-             grads_totalrec(ielem) = totalrec
-             grads_knum    (ielem) = knum
-             grads_yrev    (ielem) = yrev
-             grads_fendian (ielem) = fendian
-             grads_missval (ielem) = missval
-             data_available(ielem) = .true.
-
-             exit
-          endif
-       enddo ! n
-       LOG_INFO("REALINPUT_GRADS_read_namelist",*) 'GrADS data availability ',trim(item_list(ielem)),data_available(ielem)
-    enddo ! ielem
-
-  end subroutine read_namelist
-
-  !-----------------------------------------------------------------------------
-  subroutine open_grads_file(io_fid,filename,irecl)
-    implicit none
-
-    integer,          intent(in) :: io_fid
-    character(len=*), intent(in) :: filename
-    integer,          intent(in) :: irecl
-
-    integer  :: ierr
-
-    open(io_fid,                   &
-         file   = trim(filename),  &
-         form   = 'unformatted',   &
-         access = 'direct',        &
-         recl   = irecl,           &
-         status = 'old',           &
-         iostat = ierr             )
-    if ( ierr /= 0 ) then
-       LOG_ERROR("REALINPUT_GRADS_open_grads_file",*) 'grads file does not found! ', trim(filename)
-       call PRC_abort
-    endif
-
-    return
-  end subroutine open_grads_file
-
-  !-----------------------------------------------------------------------------
-  subroutine read_grads_file_2d(  &
-       io_fid,      &
-       gfile,       &
-       nx,ny,nz,it, &
-       item,        &
-       startrec,    &
-       totalrec,    &
-       yrev,        &
-       gdata        )
-    implicit none
-
-    integer,          intent(in)  :: io_fid
-    character(len=*), intent(in)  :: gfile
-    integer,          intent(in)  :: nx,ny,nz,it
-    character(len=*), intent(in)  :: item
-    integer,          intent(in)  :: startrec
-    integer,          intent(in)  :: totalrec
-    character(len=*), intent(in)  :: yrev
-    real(SP),         intent(out) :: gdata(nx,ny)
-
-    real(SP) :: work(nx,ny)
-
-    integer  :: ierr
-    integer  :: irec, irecl
-    integer  :: i,j
-    !---------------------------------------------------------------------------
-
-    irecl=nx*ny*4
-    call open_grads_file(io_fid, gfile, irecl)
-    irec = totalrec * (it-1) + startrec
-    read(io_fid, rec=irec, iostat=ierr) gdata(:,:)
-    if ( ierr /= 0 ) then
-       LOG_ERROR("REALINPUT_GRADS_read_grads_file_2d",*) 'grads data is not found! ',trim(item),it
-       LOG_ERROR_CONT(*) 'namelist or grads data might be wrong.'
-       call PRC_abort
-    endif
-
-    if( trim(yrev) == "on" )then
-       work(:,:)=gdata(:,:)
-       !$omp parallel do
-       do j=1,ny
-       do i=1,nx
-          gdata(i,j)=work(i,ny-j+1)
-       enddo
-       enddo
-    endif
-
-    call close_grads_file(io_fid,gfile)
-
-    return
-  end subroutine read_grads_file_2d
-
-  !-----------------------------------------------------------------------------
-  subroutine read_grads_file_3d(  &
-       io_fid,      &
-       gfile,       &
-       nx,ny,nz,it, &
-       item,        &
-       startrec,    &
-       totalrec,    &
-       yrev,        &
-       gdata        )
-    implicit none
-
-    integer,          intent(in)  :: io_fid
-    character(len=*), intent(in)  :: gfile
-    integer,          intent(in)  :: nx,ny,nz,it
-    character(len=*), intent(in)  :: item
-    integer,          intent(in)  :: startrec
-    integer,          intent(in)  :: totalrec
-    character(len=*), intent(in)  :: yrev
-    real(SP),         intent(out) :: gdata(nx,ny,nz)
-
-    real(SP) :: work(nx,ny,nz)
-
-    integer  :: ierr
-    integer  :: irec,irecl
-    integer  :: i,j,k
-
-    irecl=nx*ny*4
-    call open_grads_file(io_fid, gfile, irecl)
-    do k = 1, nz
-       irec = totalrec * (it-1) + startrec + (k-1)
-       read(io_fid, rec=irec, iostat=ierr) gdata(:,:,k)
-       if ( ierr /= 0 ) then
-          LOG_ERROR("REALINPUT_GRADS_read_grads_file_3d",*) 'grads data does not found! ',trim(item),', k=',k,', it=',it,' in ', trim(gfile)
-          call PRC_abort
-       endif
-    enddo
-
-    if( trim(yrev) == "on" )then
-       work(:,:,:)=gdata(:,:,:)
-       !$omp parallel do collapse(3)
-       do k=1,nz
-       do j=1,ny
-       do i=1,nx
-          gdata(i,j,k)=work(i,ny-j+1,k)
-       enddo
-       enddo
-       enddo
-    endif
-
-    call close_grads_file(io_fid,gfile)
-
-    return
-  end subroutine read_grads_file_3d
-
-  !-----------------------------------------------------------------------------
-  subroutine close_grads_file(io_fid,filename)
-    implicit none
-
-    integer,          intent(in) :: io_fid
-    character(len=*), intent(in) :: filename
-    integer                      :: ierr
-
-    close(io_fid, iostat=ierr)
-    if ( ierr /= 0 ) then
-       LOG_ERROR("REALINPUT_GRADS_close_grads_file",*) 'grads file was not closed peacefully! ',trim(filename)
-       call PRC_abort
-    endif
-
-    return
-  end subroutine close_grads_file
 
 end module mod_realinput_grads
