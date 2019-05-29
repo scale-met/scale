@@ -424,7 +424,8 @@ contains
   subroutine COPYTOPO_input_data( &
        TOPO_parent )
     use scale_prc, only: &
-       PRC_abort
+       PRC_abort, &
+       PRC_isMaster
     use scale_const, only: &
        EPS => CONST_EPS, &
        PI  => CONST_PI
@@ -433,6 +434,7 @@ contains
        INTERP_factor2d,             &
        INTERP_interp2d
     use scale_comm_cartesC, only: &
+       COMM_bcast, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_real, only: &
@@ -459,6 +461,8 @@ contains
     real(RP), allocatable :: X_org   (:,:), Y_org  (:,:)
     real(RP), allocatable :: TOPO_org(:,:)
 
+    logical :: single
+
     ! for interpolation
     real(RP) :: dummy(1,1)
     integer  :: idx_i(IA,JA,NEST_INTERP_LEVEL)
@@ -468,7 +472,6 @@ contains
     logical  :: zonal, pole
 
     real(RP) :: TOPO_sign(IA,JA)
-
     real(RP) :: ocean_flag
 
     integer :: i, j
@@ -477,14 +480,22 @@ contains
     select case ( COPYTOPO_IN_FILETYPE )
     case ( 'SCALE' )
        call COPYTOPO_get_size_scale( IA_org, JA_org ) ! (out)
+       single = .false.
     case ( 'GrADS' )
-       call COPYTOPO_get_size_grads( IA_org, JA_org ) ! (out)
+       if ( PRC_isMaster ) call COPYTOPO_get_size_grads( IA_org, JA_org ) ! (out)
+       single = .true.
     case ( 'WRF-ARW' )
-       call COPYTOPO_get_size_wrfarw( IA_org, JA_org ) ! (out)
+       if ( PRC_isMaster ) call COPYTOPO_get_size_wrfarw( IA_org, JA_org ) ! (out)
+       single = .true.
     case default
        LOG_ERROR("COPYTOPO_input_data",*) 'COPYTOPO_IN_FILETYPE must be "SCALE" or "GrADS"'
        call PRC_abort
     end select
+
+    if ( single ) then
+       call COMM_bcast( IA_org )
+       call COMM_bcast( JA_org )
+    end if
 
     allocate( LON_org (IA_org,JA_org) )
     allocate( LAT_org (IA_org,JA_org) )
@@ -495,13 +506,20 @@ contains
        call COPYTOPO_get_data_scale( IA_org, JA_org,                           & ! (in)
                                      LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
     case ( 'GrADS' )
+       if ( PRC_isMaster ) &
        call COPYTOPO_get_data_grads( IA_org, JA_org,                           & ! (in)
                                      LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
     case ( 'WRF-ARW' )
+       if ( PRC_isMaster ) &
        call COPYTOPO_get_data_wrfarw( IA_org, JA_org,                           & ! (in)
                                       LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
     end select
 
+    if ( single ) then
+       call COMM_bcast( LON_org (:,:), IA_org, JA_org )
+       call COMM_bcast( LAT_org (:,:), IA_org, JA_org )
+       call COMM_bcast( TOPO_org(:,:), IA_org, JA_org )
+    end if
 
     call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:),             &
                                       LON(:,:),     LAT(:,:),     dummy(:,:), dummy(:,:), &
