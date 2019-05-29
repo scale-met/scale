@@ -37,6 +37,8 @@ ifeq ($(USELOCALBIN),T)
    BUILD_DIR := $(PWD)/.libs$(POSTFIX)
    BINDIR     = $(PWD)
    msg1      += "The location of executable files is changed to $(BINDIR)\n"
+else
+   BUILD_DIR = "undefined"
 endif
 
 ifeq ($(origin PPNAME), undefined)
@@ -83,7 +85,6 @@ $(BUILD_DIR)/%.F90: $(CODE_DIR)/%.F90
 
 build: $(patsubst %,$(BUILD_DIR)/%,$(ORG_SRCS))
 	@echo -e "$(msg1)"
-	mkdir -p $(BUILD_DIR)
 	BUILD_DIR=$(BUILD_DIR) $(MAKE) -C $(SCALERMDIR)/src SYSDEP_DIR=$(SYSDEP_DIR) \
                                 BINDIR=$(BINDIR)
 

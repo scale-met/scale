@@ -741,7 +741,8 @@ contains
        FBFY => ATMOS_GRID_CARTESC_FBFY
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ
-
+    use scale_atmos_hydrometeor, only: &
+       I_QV
     real(RP) :: coef_z, alpha_z1, alpha_z2
     real(RP) :: coef_x, alpha_x1, alpha_x2
     real(RP) :: coef_y, alpha_y1, alpha_y2
@@ -784,7 +785,7 @@ contains
     !$omp shared(ATMOS_BOUNDARY_USE_VELY,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_ALPHAFACT_VELY)        &
     !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_POTT)        &
     !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
-    !$omp shared(BND_QA) &
+    !$omp shared(BND_QA,BND_IQ,I_QV) &
     !$omp private(i,j,k,iq) &
     !$omp private(ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2)
     do j = 1, JA
@@ -907,12 +908,14 @@ contains
           else
              ATMOS_BOUNDARY_alpha_POTT(k,i,j) = 0.0_RP
           end if
-          if ( BND_QA > 0 .and. ATMOS_BOUNDARY_USE_QV ) then
-             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
-          else
-             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = 0.0_RP
-          endif
-          do iq = 2, BND_QA
+          do iq = 1, BND_QA
+             if ( I_QV > 0 .and. iq == BND_IQ(I_QV) ) then
+                if ( ATMOS_BOUNDARY_USE_QV ) then
+                   ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
+                else
+                   ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = 0.0_RP
+                endif
+             end if
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           end do
        end if

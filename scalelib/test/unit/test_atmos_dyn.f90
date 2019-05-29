@@ -94,7 +94,7 @@ module test_atmos_dyn
   real(RP), allocatable :: AQ_MASS(:)
 
   integer  :: BND_QA
-  integer  :: BND_IQ(1)
+  integer, allocatable  :: BND_IQ(:)
   real(RP) :: BND_SMOOTHER_FACT
 
   integer  :: nd_order
@@ -216,8 +216,9 @@ contains
 
   allocate( PROG(KA,IA,JA,1) )
 
+  allocate( BND_IQ(QA) )
   BND_QA            = 0
-  BND_IQ(1)         = -1 ! dummy
+  BND_IQ(:)         = -1 ! dummy
   BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
