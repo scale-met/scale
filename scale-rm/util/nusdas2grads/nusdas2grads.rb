@@ -350,7 +350,7 @@ vars_air = [
     ["V10", 1, "10 m above ground V-Component of Wind [m/s]"],
     ["T2", 1, "2 m above ground Temperature [K]"],
     ["Q2", 1, "2 m above ground Specific Humidity [kg/kg]"],
-    ["TOPO", 1, "topographic elevation [m]"],
+    ["topo", 1, "topographic elevation [m]"],
     ["HGT", nlev, "Altitude [m]"],
     ["U", nlev, "U-Component of Wind [m/s]"],
     ["V", nlev, "V-Component of Wind [m/s]"],

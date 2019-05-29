@@ -21,7 +21,7 @@
 &GrADS_ITEM  name='MSLP',    dtype='map',     fname='SFC', startrec=1, totalrec=9 /
 &GrADS_ITEM  name='PSFC',    dtype='map',     fname='SFC', startrec=2, totalrec=9 /
 &GrADS_ITEM  name='SKINT',   dtype='map',     fname='SFC', startrec=3, totalrec=9 /
-&GrADS_ITEM  name='TOPO',    dtype='map',     fname='SFC', startrec=4, totalrec=9 /
+&GrADS_ITEM  name='topo',    dtype='map',     fname='SFC', startrec=4, totalrec=9 /
 &GrADS_ITEM  name='lsmask',  dtype='map',     fname='SFC', startrec=5, totalrec=9 /
 &GrADS_ITEM  name='U10',     dtype='map',     fname='SFC', startrec=6, totalrec=9 /
 &GrADS_ITEM  name='V10',     dtype='map',     fname='SFC', startrec=7, totalrec=9 /
