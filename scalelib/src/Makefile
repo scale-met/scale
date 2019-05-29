@@ -59,6 +59,7 @@ OBJS = \
 	\
 	$(BUILD_DIR)/scale_sys_sigvars.o	\
 	$(BUILD_DIR)/scale_file_netcdf.o	\
+	$(BUILD_DIR)/scale_file_grads.o	\
 	$(BUILD_DIR)/scale_file_f.o	\
 	\
 	$(BUILD_DIR)/scale_calendar.o	\
