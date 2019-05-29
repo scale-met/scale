@@ -61,8 +61,9 @@ module mod_copytopo
   logical,                private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
   logical,                private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
   real(RP),               private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
+  character(len=H_SHORT), private :: COPYTOPO_INTRP_TYPE    = "LINEAR" !< "LINEAR" or "DIST-WEIGHT"
   integer,                private :: COPYTOPO_FILTER_ORDER  = 2
-  integer,                private :: COPYTOPO_FILTER_NITER  = 20
+  integer,                private :: COPYTOPO_FILTER_NITER  = -1
 
   !-----------------------------------------------------------------------------
 contains
@@ -425,7 +426,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       EPS => CONST_EPS
+       EPS => CONST_EPS, &
+       PI  => CONST_PI
     use scale_interp, only: &
        INTERP_domain_compatibility, &
        INTERP_factor2d,             &
@@ -436,6 +438,11 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON => ATMOS_GRID_CARTESC_REAL_LON
+    use scale_atmos_grid_cartesC, only: &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
     use scale_filter, only: &
        FILTER_hyperdiff
     use scale_landuse, only: &
@@ -448,8 +455,8 @@ contains
 
     integer :: IA_org, JA_org
 
-    real(RP), allocatable :: LON_org (:,:)
-    real(RP), allocatable :: LAT_org (:,:)
+    real(RP), allocatable :: LON_org (:,:), LAT_org(:,:)
+    real(RP), allocatable :: X_org   (:,:), Y_org  (:,:)
     real(RP), allocatable :: TOPO_org(:,:)
 
     ! for interpolation
@@ -457,6 +464,8 @@ contains
     integer  :: idx_i(IA,JA,NEST_INTERP_LEVEL)
     integer  :: idx_j(IA,JA,NEST_INTERP_LEVEL)
     real(RP) :: hfact(IA,JA,NEST_INTERP_LEVEL)
+    integer  :: interp_level
+    logical  :: zonal, pole
 
     real(RP) :: TOPO_sign(IA,JA)
 
@@ -493,18 +502,43 @@ contains
                                       LON(:,:),     LAT(:,:),     dummy(:,:), dummy(:,:), &
                                       skip_z=.true.                                       )
 
-    call INTERP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
-                          IA_org, JA_org,    & ! [IN]
-                          IA, JA,            & ! [IN]
-                          LON_org(:,:),      & ! [IN]
-                          LAT_org(:,:),      & ! [IN]
-                          LON    (:,:),      & ! [IN]
-                          LAT    (:,:),      & ! [IN]
-                          idx_i  (:,:,:),    & ! [OUT]
-                          idx_j  (:,:,:),    & ! [OUT]
-                          hfact  (:,:,:)     ) ! [OUT]
+    select case ( COPYTOPO_INTRP_TYPE )
+    case ( "LINEAR" )
 
-    call INTERP_interp2d( NEST_INTERP_LEVEL,  & ! [IN]
+       allocate( X_org(IA_org,JA_org) )
+       allocate( Y_org(IA_org,JA_org) )
+       call MAPPROJECTION_lonlat2xy( IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                     LON_org(:,:), LAT_org(:,:),           & ! [IN]
+                                     X_org(:,:), Y_org(:,:)                ) ! [OUT]
+
+       zonal = ( maxval(LON_org) - minval(LON_org) ) > 2.0_RP * PI * 0.9_RP
+       pole =  ( maxval(LAT_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(LAT_org) < - PI * 0.5_RP * 0.9_RP )
+       call INTERP_factor2d( IA_org, JA_org, IA, JA,     & ! [IN]
+                             X_org(:,:), Y_org(:,:),     & ! [IN]
+                             CX(:), CY(:),               & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:),               & ! [OUT]
+                             zonal = zonal, pole = pole  ) ! [IN]
+       deallocate( X_org, Y_org )
+       interp_level = 4
+
+    case ( "DIST-WEIGHT" )
+
+       call INTERP_factor2d( NEST_INTERP_LEVEL,          & ! [IN]
+                             IA_org, JA_org, IA, JA,     & ! [IN]
+                             LON_org(:,:), LAT_org(:,:), & ! [IN]
+                             LON(:,:), LAT(:,:),         & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:)                ) ! [OUT]
+       interp_level = NEST_INTERP_LEVEL
+
+       case default
+          LOG_ERROR("COPYTOPO_input_data",*) "Unsupported type of COPYTOPO_INTRP_TYPE : ", trim(COPYTOPO_INTRP_TYPE)
+          LOG_ERROR_CONT(*)                  'It must be "LINEAR" or "DIST-WEIGHT"'
+          call PRC_abort
+    end select
+
+    call INTERP_interp2d( interp_level,       & ! [IN]
                           IA_org, JA_org,     & ! [IN]
                           IA, JA,             & ! [IN]
                           idx_i      (:,:,:), & ! [IN]
@@ -512,6 +546,8 @@ contains
                           hfact      (:,:,:), & ! [IN]
                           TOPO_org   (:,:),   & ! [IN]
                           TOPO_parent(:,:)    ) ! [OUT]
+
+    deallocate( TOPO_org, LON_org, LAT_org )
 
     if ( COPYTOPO_FILTER_NITER > 1 ) then
        !$omp parallel do &
