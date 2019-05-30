@@ -176,6 +176,8 @@ contains
        call PRC_abort
     endif
 
+    call check_oldnamelist( fid )
+
     !--- read namelist dims
     read(fid,nml=GrADS_DIMS,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
@@ -808,5 +810,36 @@ contains
 
     return
   end subroutine FILE_GrADS_read_data
+
+  subroutine check_oldnamelist( fid )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: fid
+
+    integer :: ierr
+    logical :: dummy
+
+    namelist /nml_grads_grid/ dummy
+    namelist /grdvar/         dummy
+
+    read(fid, nml=nml_grads_grid, iostat=ierr)
+    if( ierr > 0 )then
+       LOG_ERROR("check_oldnamelist",*) 'The old namelist "nml_grads_grid" is found.'
+       LOG_ERROR_CONT(*) 'Use "GrADS_DIMS" instead.'
+       call PRC_abort
+    endif
+    rewind(fid)
+
+    read(fid, nml=grdvar, iostat=ierr)
+    if( ierr > 0 )then
+       LOG_ERROR("check_oldnamelist",*) 'The old namelist "grdvar" is found.'
+       LOG_ERROR_CONT(*) 'Use "GrADS_ITEM" instead.'
+       call PRC_abort
+    endif
+    rewind(fid)
+
+    return
+  end subroutine check_oldnamelist
 
 end module scale_file_grads
