@@ -62,8 +62,8 @@ module mod_copytopo
   logical,                private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
   real(RP),               private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
   character(len=H_SHORT), private :: COPYTOPO_INTRP_TYPE    = "LINEAR" !< "LINEAR" or "DIST-WEIGHT"
-  integer,                private :: COPYTOPO_FILTER_ORDER  = 2
-  integer,                private :: COPYTOPO_FILTER_NITER  = -1
+  integer,                private :: COPYTOPO_hypdiff_ORDER  = 4
+  integer,                private :: COPYTOPO_hypdiff_NITER  = 20
 
   !-----------------------------------------------------------------------------
 contains
@@ -98,8 +98,8 @@ contains
        COPYTOPO_ENTIRE_REGION,  &
        COPYTOPO_LINEAR_H,       &
        COPYTOPO_EXP_H,          &
-       COPYTOPO_FILTER_ORDER,   &
-       COPYTOPO_FILTER_NITER
+       COPYTOPO_hypdiff_ORDER,   &
+       COPYTOPO_hypdiff_NITER
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -572,7 +572,7 @@ contains
 
     deallocate( TOPO_org, LON_org, LAT_org )
 
-    if ( COPYTOPO_FILTER_NITER > 1 ) then
+    if ( COPYTOPO_hypdiff_NITER > 1 ) then
        !$omp parallel do &
        !$omp private(ocean_flag)
        do j = 1, JA
@@ -584,7 +584,7 @@ contains
        end do
 
        call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              TOPO_parent(:,:), COPYTOPO_FILTER_ORDER, COPYTOPO_FILTER_NITER, &
+                              TOPO_parent(:,:), COPYTOPO_hypdiff_ORDER, COPYTOPO_hypdiff_NITER, &
                               limiter_sign = TOPO_sign(:,:) )
     end if
 
