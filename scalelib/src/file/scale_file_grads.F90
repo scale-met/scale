@@ -141,8 +141,8 @@ contains
        nx,       & ! option
        ny,       & ! option
        nz,       & ! option
-       yrev,     & ! option
-       fendian     ! option
+       yrev        ! option
+!       fendian     ! option
 
     integer :: fid
     integer :: nvars
