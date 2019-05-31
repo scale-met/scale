@@ -146,7 +146,7 @@ contains
     if ( ATMOS_sw_phy_ae ) then
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
-          call ATMOS_PHY_AE_kajino13_negative_fixer( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, QA_AE, &
+          call ATMOS_PHY_AE_kajino13_negative_fixer( KA, KS, KE, IA, IS, IE, JA, JS, JE, QA_AE, &
                                                      QTRC(:,:,:,QS_AE:QE_AE) ) ! [INOUT]
 
        end select
