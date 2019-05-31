@@ -64,7 +64,6 @@ module scale_atmos_dyn_tstep_large_fvm_heve
 
   ! flux
   real(RP), private, allocatable, target :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
-  real(RP), private, allocatable         :: tflx(:,:,:,:) ! rho * theta * vel(x,y,z) * GSQRT / mapf
 
   ! for communication
   integer :: I_COMM_DENS = 1
@@ -161,7 +160,6 @@ contains
     allocate( DENS_damp(KA,IA,JA) )
 
     allocate( mflx(KA,IA,JA,3) )
-    allocate( tflx(KA,IA,JA,3) )
 
     allocate( I_COMM_PROG    (max(VA,1)) )
     allocate( I_COMM_QTRC(QA) )
@@ -201,7 +199,6 @@ contains
     ZERO(:,:,:) = 0.0_RP
 
     mflx(:,:,:,:) = UNDEF
-    tflx(:,:,:,:) = UNDEF
 
 
     ! history
@@ -544,8 +541,10 @@ contains
     real(RP) :: damp_t_RHOT(KA,IA,JA)
     real(RP) :: damp_t_QTRC(KA,IA,JA)
 
+    real(RP) :: tflx(KA,IA,JA,3)
+
     ! For tracer advection
-    real(RP) :: mflx_av  (KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
+    real(RP) :: mflx_av(KA,IA,JA,3)  ! rho * vel(x,y,z) @ (u,v,w)-face average
 
     real(RP) :: dtl
     real(RP) :: dts
@@ -1117,7 +1116,7 @@ contains
        call PROF_rapstart("DYN_Short_Tinteg", 2)
 
        call ATMOS_DYN_tinteg_short( DENS, MOMZ, MOMX, MOMY, RHOT, PROG,      & ! (inout)
-                                    mflx, tflx,                              & ! (inout)
+                                    mflx, tflx,                              & ! (inout, out)
                                     DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,  & ! (in)
                                     DPRES0, RT2P, CORIOLI,                   & ! (in)
                                     num_diff, wdamp_coef, divdmp_coef, DDIV, & ! (in)
