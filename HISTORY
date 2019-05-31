@@ -1,5 +1,15 @@
 = Release History
 
+== 2019-02-06 (5.3.3)
+* Bug fix:
+  * Fix the breakup of the rain in the SN14 scheme
+
+== 2018-12-18 (5.3.2)
+* Bug fixes:
+  * Fix wrong layer depth in the KF scheme
+  * Fix some bugs related to the map factor
+  * Fix some problems in the real init with a certain condition
+
 == 2018-10-15 (5.3.1)
 * Bug fixes:
   * Fix the vapor flux at the surface
