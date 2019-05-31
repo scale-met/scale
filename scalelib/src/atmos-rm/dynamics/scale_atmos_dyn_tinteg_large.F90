@@ -49,8 +49,8 @@ module scale_atmos_dyn_tinteg_large
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
           DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
           DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
-          wdamp_coef,                                           &
-          divdmp_coef,                                          &
+          MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       &
+          wdamp_coef, divdmp_coef,                              &
           FLAG_TRACER_SPLIT_TEND,                               &
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
@@ -145,9 +145,12 @@ module scale_atmos_dyn_tinteg_large
        real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+       real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
+       real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
        real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
+
        logical,  intent(in)    :: FLAG_TRACER_SPLIT_TEND
        logical,  intent(in)    :: FLAG_FCT_MOMENTUM
        logical,  intent(in)    :: FLAG_FCT_T

@@ -283,6 +283,8 @@ contains
        ATMOS_BOUNDARY_alpha_VELY, &
        ATMOS_BOUNDARY_alpha_POTT, &
        ATMOS_BOUNDARY_alpha_QTRC, &
+       ATMOS_BOUNDARY_MFLUX_OFFSET_X, &
+       ATMOS_BOUNDARY_MFLUX_OFFSET_Y, &
        BND_QA, &
        BND_IQ, &
        ATMOS_BOUNDARY_SMOOTHER_FACT
@@ -401,6 +403,8 @@ contains
                        ATMOS_BOUNDARY_alpha_VELY,                            & ! [IN]
                        ATMOS_BOUNDARY_alpha_POTT,                            & ! [IN]
                        ATMOS_BOUNDARY_alpha_QTRC,                            & ! [IN]
+                       ATMOS_BOUNDARY_MFLUX_OFFSET_X,                        & ! [IN]
+                       ATMOS_BOUNDARY_MFLUX_OFFSET_Y,                        & ! [IN]
                        ATMOS_DYN_divdmp_coef,                                & ! [IN]
                        ATMOS_DYN_FLAG_TRACER_SPLIT_TEND,                     & ! [IN]
                        ATMOS_DYN_FLAG_FCT_momentum,                          & ! [IN]

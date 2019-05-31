@@ -365,8 +365,8 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
-       wdamp_coef,                                           &
-       divdmp_coef,                                          &
+       MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       &
+       wdamp_coef, divdmp_coef,                              &
        FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
@@ -494,6 +494,8 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+    real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
+    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
     real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
@@ -768,7 +770,8 @@ contains
        !$omp parallel do private(j,k) OMP_SCHEDULE_
        do j = JS, JE
        do k = KS, KE
-          mflx(k,IS-1,j,XDIR) = GSQRT(k,IS-1,j,I_UYZ) * MOMX(k,IS-1,j) / MAPF(IS-1,j,2,I_UY)
+          mflx(k,IS-1,j,XDIR) = ( MOMX(k,IS-1,j) + MFLUX_OFFSET_X(k,j,1) ) &
+                              * GSQRT(k,IS-1,j,I_UYZ)  / MAPF(IS-1,j,2,I_UY)
        enddo
        enddo
     end if
@@ -776,7 +779,8 @@ contains
        !$omp parallel do private(j,k) OMP_SCHEDULE_
        do j = JS, JE
        do k = KS, KE
-          mflx(k,IE,j,XDIR) = GSQRT(k,IE,j,I_UYZ) * MOMX(k,IE,j) / MAPF(IE,j,2,I_UY)
+          mflx(k,IE,j,XDIR) = ( MOMX(k,IE,j) + MFLUX_OFFSET_X(k,j,2) ) &
+                            * GSQRT(k,IE,j,I_UYZ) / MAPF(IE,j,2,I_UY)
        enddo
        enddo
     end if
@@ -784,7 +788,8 @@ contains
        !$omp parallel do private(i,k) OMP_SCHEDULE_
        do i = IS, IE
        do k = KS, KE
-          mflx(k,i,JS-1,YDIR) = GSQRT(k,i,JS-1,I_XVZ) * MOMY(k,i,JS-1) / MAPF(i,JS-1,1,I_XV)
+          mflx(k,i,JS-1,YDIR) = ( MOMY(k,i,JS-1) + MFLUX_OFFSET_Y(k,i,1) ) &
+                              * GSQRT(k,i,JS-1,I_XVZ) / MAPF(i,JS-1,1,I_XV)
        enddo
        enddo
     end if
@@ -792,7 +797,8 @@ contains
        !$omp parallel do private(i,k) OMP_SCHEDULE_
        do i = IS, IE
        do k = KS, KE
-          mflx(k,i,JE,YDIR) = GSQRT(k,i,JE,I_XVZ) * MOMY(k,i,JE) / MAPF(i,JE,1,I_XV)
+          mflx(k,i,JE,YDIR) = ( MOMY(k,i,JE) + MFLUX_OFFSET_Y(k,i,2) ) &
+                            * GSQRT(k,i,JE,I_XVZ) / MAPF(i,JE,1,I_XV)
        enddo
        enddo
     end if
