@@ -775,7 +775,7 @@ contains
     endif
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JA,IA,KA,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
+    !$omp shared(JA,IA,KS,KE,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
     !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
     !$omp shared(ATMOS_BOUNDARY_EXP_H,CBFY,ATMOS_BOUNDARY_FRACY,FBFY,coef_y,l_bnd)     &
     !$omp shared(do_daughter_process) &
@@ -790,7 +790,7 @@ contains
     !$omp private(ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        ee1 = CBFZ(k)
        if ( ee1 <= 1.0_RP - ATMOS_BOUNDARY_FRACZ ) then
           ee1 = 0.0_RP
@@ -1164,9 +1164,10 @@ contains
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_REFSTATE_DENS(k,i,j)
        ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VALUE_VELZ
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VALUE_VELX
@@ -1308,11 +1309,11 @@ contains
 
     ! copy now to old
     !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JA,IA,KA,ATMOS_BOUNDARY_ref_DENS,ref_old,ref_now,ATMOS_BOUNDARY_ref_VELX) &
+    !$omp shared(JA,IA,KS,KE,ATMOS_BOUNDARY_ref_DENS,ref_old,ref_now,ATMOS_BOUNDARY_ref_VELX) &
     !$omp shared(ATMOS_BOUNDARY_ref_VELY,ATMOS_BOUNDARY_ref_POTT,BND_QA,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now)
        ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now)
        ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now)
@@ -1324,26 +1325,12 @@ contains
     end do
     end do
 
-    ! set boundary data
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now)
-       ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now)
-       ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now)
-       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now)
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now)
-       end do
-    end do
-    end do
-    end do
-
     if ( ATMOS_BOUNDARY_USE_VELZ ) then
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
-       do k = 1, KA
-          ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VALUE_VELZ
+       do k = KS, KE
+          ATMOS_BOUNDARY_ref_VELZ(k,i,j,:) = ATMOS_BOUNDARY_VALUE_VELZ
        end do
        end do
        end do
@@ -1351,30 +1338,8 @@ contains
 
     now_step = fillgaps_steps
 
-    ! get time boundary
-    call get_boundary( bnd_DENS(:,:,:),   & ! [OUT]
-                       bnd_VELZ(:,:,:),   & ! [OUT]
-                       bnd_VELX(:,:,:),   & ! [OUT]
-                       bnd_VELY(:,:,:),   & ! [OUT]
-                       bnd_POTT(:,:,:),   & ! [OUT]
-                       bnd_QTRC(:,:,:,:), & ! [OUT]
-                       now_step,          & ! [IN]
-                       UPDATE_NSTEP       ) ! [IN]
-
-    ! fill in gaps of the offset
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ATMOS_BOUNDARY_DENS(k,i,j) = bnd_DENS(k,i,j)
-       ATMOS_BOUNDARY_VELX(k,i,j) = bnd_VELX(k,i,j)
-       ATMOS_BOUNDARY_VELY(k,i,j) = bnd_VELY(k,i,j)
-       ATMOS_BOUNDARY_POTT(k,i,j) = bnd_POTT(k,i,j)
-       do iq = 1, BND_QA
-         ATMOS_BOUNDARY_QTRC(k,i,j,iq) = bnd_QTRC(k,i,j,iq)
-       end do
-    end do
-    end do
-    end do
+    ! set boundary data
+    call set_boundary( ATMOS_BOUNDARY_USE_VELZ )
 
     return
   end subroutine ATMOS_BOUNDARY_set_file
@@ -1440,9 +1405,10 @@ contains
     call ATMOS_BOUNDARY_update_online_daughter( ref_new )
 
     ! copy now to old
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now)
        ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now)
        ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_old) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now)
@@ -1453,39 +1419,6 @@ contains
     end do
     end do
     end do
-
-    ! set boundary data
-    do j = 1, JA
-    do i = 1, IA
-    do k = 1, KA
-       ATMOS_BOUNDARY_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now)
-       ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_now)
-       ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_ref_VELY(k,i,j,ref_now)
-       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_ref_POTT(k,i,j,ref_now)
-       do iq = 1, BND_QA
-          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_ref_QTRC(k,i,j,iq,ref_now)
-       end do
-    end do
-    end do
-    end do
-
-    if ( ONLINE_USE_VELZ ) then
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now)
-       end do
-       end do
-       end do
-    else if ( ATMOS_BOUNDARY_USE_VELZ ) then
-       do j = 1, JA
-       do i = 1, IA
-       do k = 1, KA
-          ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VALUE_VELZ
-       end do
-       end do
-       end do
-    end if
 
     UPDATE_NSTEP = nint( ATMOS_BOUNDARY_UPDATE_DT / TIME_DTSEC )
     if ( UPDATE_NSTEP * TIME_DTSEC /= ATMOS_BOUNDARY_UPDATE_DT ) then
@@ -1498,6 +1431,9 @@ contains
     end if
 
     now_step = 0 ! should be set as zero in initialize process
+
+    ! set boundary data
+    call set_boundary( ONLINE_USE_VELZ )
 
     return
   end subroutine ATMOS_BOUNDARY_set_online
@@ -1571,11 +1507,6 @@ contains
        last_step )
     use scale_prc, only: &
        PRC_abort
-    use scale_prc_cartesC, only: &
-       PRC_HAS_W,   &
-       PRC_HAS_E,   &
-       PRC_HAS_S,   &
-       PRC_HAS_N
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ,       &
        COMM_CARTESC_NEST_test
@@ -1595,15 +1526,7 @@ contains
 
     logical, intent(in) :: last_step
 
-    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
-    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
-    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
-    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
-    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
-    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
-
     integer :: handle
-    integer :: i, j, k, iq, iqb
     !---------------------------------------------------------------------------
 
     if ( do_parent_process ) then !online [parent]
@@ -1632,304 +1555,7 @@ contains
           end if
        end if
 
-       ! get boundaryal coefficients
-       call get_boundary( bnd_DENS(:,:,:),   & ! [OUT]
-                          bnd_VELZ(:,:,:),   & ! [OUT]
-                          bnd_VELX(:,:,:),   & ! [OUT]
-                          bnd_VELY(:,:,:),   & ! [OUT]
-                          bnd_POTT(:,:,:),   & ! [OUT]
-                          bnd_QTRC(:,:,:,:), & ! [OUT]
-                          now_step,          & ! [IN]
-                          UPDATE_NSTEP       ) ! [IN]
-
-       ! update boundary vars
-       do j  = 1, JA
-       do i  = 1, IA
-       do k  = 1, KA
-          ATMOS_BOUNDARY_DENS(k,i,j) = bnd_DENS(k,i,j)
-          ATMOS_BOUNDARY_VELX(k,i,j) = bnd_VELX(k,i,j)
-          ATMOS_BOUNDARY_VELY(k,i,j) = bnd_VELY(k,i,j)
-          ATMOS_BOUNDARY_POTT(k,i,j) = bnd_POTT(k,i,j)
-          do iq = 1, BND_QA
-             ATMOS_BOUNDARY_QTRC(k,i,j,iq) = bnd_QTRC(k,i,j,iq)
-          end do
-       end do
-       end do
-       end do
-       if ( ONLINE_USE_VELZ ) then
-          do j  = 1, JA
-          do i  = 1, IA
-          do k  = 1, KA
-             ATMOS_BOUNDARY_VELZ(k,i,j) = bnd_VELZ(k,i,j)
-          end do
-          end do
-          end do
-       end if
-
-       ! fill HALO in western region
-       if ( .NOT. PRC_HAS_W ) then
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JA,JS,IS,KA,QA,DENS,MOMX,RHOT,QTRC) &
-          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
-          !$omp shared(BND_QA,BND_IQ) &
-          !$omp private(i,j,k,iq,iqb)
-          do j = 1, JA
-          do i = 1, IS-1
-          do k = 1, KA
-             DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
-             MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
-             RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, QA
-                iqb = BND_IQ(iq)
-                if ( iqb > 0 ) then
-                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
-                else
-                   QTRC(k,i,j,iq) = QTRC(k,IS,j,iq)
-                end if
-             end do
-          end do
-          end do
-          end do
-          do j = 1, JA-1
-          do i = 1, IS-1
-          do k = 1, KA
-             MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do i = 1, IS-1
-          do k = 1, KA
-             MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
-                  * ATMOS_BOUNDARY_DENS(k,i,JA)
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
-             do j = 1, JA
-             do i = 1, IS-1
-             do k = KS, KE-1
-                MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
-                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
-             end do
-             end do
-             end do
-          else
-             do j = 1, JA
-             do i = 1, IS-1
-             do k = KS, KE-1
-                MOMZ(k,i,j) = MOMZ(k,IS,j)
-             end do
-             end do
-             end do
-          end if
-       end if
-
-       ! fill HALO in eastern region
-       if ( .NOT. PRC_HAS_E ) then
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JA,IE,IA,KA,QA) &
-          !$omp shared(DENS,RHOT,QTRC) &
-          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
-          !$omp shared(BND_QA,BND_IQ) &
-          !$omp private(i,j,k,iq,iqb)
-          do j = 1, JA
-          do i = IE+1, IA
-          do k = 1, KA
-             DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
-             RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, QA
-                iqb = BND_IQ(iq)
-                if ( iqb > 0 ) then
-                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
-                else
-                   QTRC(k,i,j,iq) = QTRC(k,IE,j,iq)
-                end if
-             end do
-          end do
-          end do
-          end do
-          do j = 1, JA
-          do i = IE, IA-1
-          do k = 1, KA
-             MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do j = 1, JA
-          do k = 1, KA
-             MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) * ATMOS_BOUNDARY_DENS(k,IA,j)
-          end do
-          end do
-          do j = 1, JA-1
-          do i = IE+1, IA
-          do k = 1, KA
-             MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do i = IE+1, IA
-          do k = 1, KA
-             MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
-                  * ATMOS_BOUNDARY_DENS(k,i,JA)
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
-             do j = 1, JA
-             do i = IE+1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
-                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
-             end do
-             end do
-             end do
-          else
-             do j = 1, JA
-             do i = IE+1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = MOMZ(k,IE,j)
-             end do
-             end do
-             end do
-          end if
-       end if
-
-       ! fill HALO in southern region
-       if ( .NOT. PRC_HAS_S ) then
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JS,IA,KA,QA) &
-          !$omp shared(DENS,MOMY,RHOT,QTRC) &
-          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
-          !$omp shared(BND_QA,BND_IQ) &
-          !$omp private(i,j,k,iq,iqb)
-          do j = 1, JS-1
-          do i = 1, IA
-          do k = 1, KA
-             DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
-             MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
-             RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, QA
-                iqb = BND_IQ(iq)
-                if ( iqb > 0 ) then
-                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
-                else
-                   QTRC(k,i,j,iq) = QTRC(k,i,JS,iq)
-                end if
-             end do
-          end do
-          end do
-          end do
-          do j = 1, JS-1
-          do i = 1, IA-1
-          do k = 1, KA
-             MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do j = 1, JS-1
-          do k = 1, KA
-             MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
-                  * ATMOS_BOUNDARY_DENS(k,IA,j)
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
-             do j = 1, JS-1
-             do i = 1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
-                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
-             end do
-             end do
-             end do
-          else
-             do j = 1, JS-1
-             do i = 1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = MOMZ(k,i,JS)
-             end do
-             end do
-             end do
-          end if
-       end if
-
-       ! fill HALO in northern region
-       if ( .NOT. PRC_HAS_N ) then
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JE,JA,IA,KA,QA) &
-          !$omp shared(DENS,RHOT,QTRC) &
-          !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELY) &
-          !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
-          !$omp shared(BND_QA,BND_IQ) &
-          !$omp private(i,j,k,iq,iqb)
-          do j = JE+1, JA
-          do i = 1, IA
-          do k = 1, KA
-             DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
-             RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
-             do iq = 1, QA
-                iqb = BND_IQ(iq)
-                if ( iqb > 0 ) then
-                   QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
-                else
-                   QTRC(k,i,j,iq) = QTRC(k,i,JE,iq)
-                end if
-             end do
-          end do
-          end do
-          end do
-          do j = JE, JA-1
-          do i = 1, IA
-          do k = 1, KA
-             MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do i = 1, IA
-          do k = 1, KA
-             MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) * ATMOS_BOUNDARY_DENS(k,i,JA)
-          end do
-          end do
-          do j = JE+1, JA
-          do i = 1, IA-1
-          do k = 1, KA
-             MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
-                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
-          end do
-          end do
-          end do
-          do j = JE+1, JA
-          do k = 1, KA
-             MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
-                  * ATMOS_BOUNDARY_DENS(k,IA,j)
-          end do
-          end do
-          if ( ONLINE_USE_VELZ ) then
-             do j = JE+1, JA
-             do i = 1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
-                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
-             end do
-             end do
-             end do
-          else
-             do j = JE+1, JA
-             do i = 1, IA
-             do k = KS, KE-1
-                MOMZ(k,i,j) = MOMZ(k,i,JE)
-             end do
-             end do
-             end do
-          end if
-       end if
+       call set_boundary( ONLINE_USE_VELZ )
 
     elseif ( do_parent_process ) then
        ! do nothing
@@ -2197,6 +1823,330 @@ contains
   end subroutine ATMOS_BOUNDARY_recv
 
   !-----------------------------------------------------------------------------
+  subroutine set_boundary( use_velz )
+    use scale_prc_cartesC, only: &
+       PRC_HAS_W,   &
+       PRC_HAS_E,   &
+       PRC_HAS_S,   &
+       PRC_HAS_N
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC
+    implicit none
+    logical, intent(in) :: use_velz
+
+    real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
+    real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
+    real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
+    real(RP) :: bnd_VELY(KA,IA,JA)        ! damping coefficient for VELY (0-1)
+    real(RP) :: bnd_POTT(KA,IA,JA)        ! damping coefficient for POTT (0-1)
+    real(RP) :: bnd_QTRC(KA,IA,JA,BND_QA) ! damping coefficient for QTRC (0-1)
+
+    integer :: i, j, k, iq, iqb
+
+
+    ! get boundaryal coefficients
+    call get_boundary( bnd_DENS(:,:,:),   & ! [OUT]
+                       bnd_VELZ(:,:,:),   & ! [OUT]
+                       bnd_VELX(:,:,:),   & ! [OUT]
+                       bnd_VELY(:,:,:),   & ! [OUT]
+                       bnd_POTT(:,:,:),   & ! [OUT]
+                       bnd_QTRC(:,:,:,:), & ! [OUT]
+                       now_step,          & ! [IN]
+                       UPDATE_NSTEP       ) ! [IN]
+
+    ! update boundary vars
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       ATMOS_BOUNDARY_DENS(k,i,j) = bnd_DENS(k,i,j)
+       ATMOS_BOUNDARY_VELX(k,i,j) = bnd_VELX(k,i,j)
+       ATMOS_BOUNDARY_VELY(k,i,j) = bnd_VELY(k,i,j)
+       ATMOS_BOUNDARY_POTT(k,i,j) = bnd_POTT(k,i,j)
+       do iq = 1, BND_QA
+          ATMOS_BOUNDARY_QTRC(k,i,j,iq) = bnd_QTRC(k,i,j,iq)
+       end do
+    end do
+    end do
+    end do
+    if ( USE_VELZ ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          ATMOS_BOUNDARY_VELZ(k,i,j) = bnd_VELZ(k,i,j)
+       end do
+       end do
+       end do
+    end if
+
+    ! fill HALO in western region
+    if ( .NOT. PRC_HAS_W ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,JS,IS,KS,KE,QA,DENS,MOMX,RHOT,QTRC) &
+       !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
+       !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+       !$omp shared(BND_QA,BND_IQ) &
+       !$omp private(i,j,k,iq,iqb)
+       do j = 1, JA
+       do i = 1, IS-1
+       do k = KS, KE
+          DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
+          MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
+          RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          do iq = 1, QA
+             iqb = BND_IQ(iq)
+             if ( iqb > 0 ) then
+                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+             else
+                QTRC(k,i,j,iq) = QTRC(k,IS,j,iq)
+             end if
+          end do
+       end do
+       end do
+       end do
+       !$omp parallel do
+       do j = 1, JA-1
+       do i = 1, IS-1
+       do k = KS, KE
+          MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IS-1
+       do k = KS, KE
+          MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
+                  * ATMOS_BOUNDARY_DENS(k,i,JA)
+       end do
+       end do
+       if ( USE_VELZ ) then
+          !$omp parallel do
+          do j = 1, JA
+          do i = 1, IS-1
+          do k = KS, KE-1
+             MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
+                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+       else
+          !$omp parallel do
+          do j = 1, JA
+          do i = 1, IS-1
+          do k = KS, KE-1
+             MOMZ(k,i,j) = MOMZ(k,IS,j)
+          end do
+          end do
+          end do
+       end if
+    end if
+
+    ! fill HALO in eastern region
+    if ( .NOT. PRC_HAS_E ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JA,IE,IA,KS,KE,QA) &
+       !$omp shared(DENS,RHOT,QTRC) &
+       !$omp shared(ATMOS_BOUNDARY_DENS,ATMOS_BOUNDARY_VELX) &
+       !$omp shared(ATMOS_BOUNDARY_POTT,ATMOS_BOUNDARY_QTRC) &
+       !$omp shared(BND_QA,BND_IQ) &
+       !$omp private(i,j,k,iq,iqb)
+       do j = 1, JA
+       do i = IE+1, IA
+       do k = KS, KE
+          DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
+          RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          do iq = 1, QA
+             iqb = BND_IQ(iq)
+             if ( iqb > 0 ) then
+                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+             else
+                QTRC(k,i,j,iq) = QTRC(k,IE,j,iq)
+             end if
+          end do
+       end do
+       end do
+       end do
+       !$omp parallel do
+       do j = 1, JA
+       do i = IE, IA-1
+       do k = KS, KE
+          MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
+       end do
+       end do
+       end do
+       !$omp parallel do
+       do j = 1, JA
+       do k = KS, KE
+          MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) * ATMOS_BOUNDARY_DENS(k,IA,j)
+       end do
+       end do
+       !$omp parallel do
+       do j = 1, JA-1
+       do i = IE+1, IA
+       do k = KS, KE
+          MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = IE+1, IA
+       do k = KS, KE
+          MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) &
+                  * ATMOS_BOUNDARY_DENS(k,i,JA)
+       end do
+       end do
+       if ( USE_VELZ ) then
+          !$omp parallel do
+          do j = 1, JA
+          do i = IE+1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
+                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+       else
+          !$omp parallel do
+          do j = 1, JA
+          do i = IE+1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = MOMZ(k,IE,j)
+          end do
+          end do
+          end do
+       end if
+    end if
+
+    ! fill HALO in southern region
+    if ( .NOT. PRC_HAS_S ) then
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
+          MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
+          RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          do iq = 1, QA
+             iqb = BND_IQ(iq)
+             if ( iqb > 0 ) then
+                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+             else
+                QTRC(k,i,j,iq) = QTRC(k,i,JS,iq)
+             end if
+          end do
+       end do
+       end do
+       end do
+       do j = 1, JS-1
+       do i = 1, IA-1
+       do k = KS, KE
+          MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = 1, JS-1
+       do k = KS, KE
+          MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
+                  * ATMOS_BOUNDARY_DENS(k,IA,j)
+       end do
+       end do
+       if ( USE_VELZ ) then
+          do j = 1, JS-1
+          do i = 1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
+                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+       else
+          do j = 1, JS-1
+          do i = 1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = MOMZ(k,i,JS)
+          end do
+          end do
+          end do
+       end if
+    end if
+
+    ! fill HALO in northern region
+    if ( .NOT. PRC_HAS_N ) then
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = KS, KE
+          DENS(k,i,j) = ATMOS_BOUNDARY_DENS(k,i,j)
+          RHOT(k,i,j) = ATMOS_BOUNDARY_POTT(k,i,j) * ATMOS_BOUNDARY_DENS(k,i,j)
+          do iq = 1, QA
+             iqb = BND_IQ(iq)
+             if ( iqb > 0 ) then
+                QTRC(k,i,j,iq) = ATMOS_BOUNDARY_QTRC(k,i,j,iqb)
+             else
+                QTRC(k,i,j,iq) = QTRC(k,i,JE,iq)
+             end if
+          end do
+       end do
+       end do
+       end do
+       do j = JE, JA-1
+       do i = 1, IA
+       do k = KS, KE
+          MOMY(k,i,j) = ATMOS_BOUNDARY_VELY(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i,j+1) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do i = 1, IA
+       do k = KS, KE
+          MOMY(k,i,JA) = ATMOS_BOUNDARY_VELY(k,i,JA) * ATMOS_BOUNDARY_DENS(k,i,JA)
+       end do
+       end do
+       do j = JE+1, JA
+       do i = 1, IA-1
+       do k = KS, KE
+          MOMX(k,i,j) = ATMOS_BOUNDARY_VELX(k,i,j) &
+                  * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k,i+1,j) ) * 0.5_RP
+       end do
+       end do
+       end do
+       do j = JE+1, JA
+       do k = KS, KE
+          MOMX(k,IA,j) = ATMOS_BOUNDARY_VELX(k,IA,j) &
+                  * ATMOS_BOUNDARY_DENS(k,IA,j)
+       end do
+       end do
+       if ( USE_VELZ ) then
+          do j = JE+1, JA
+          do i = 1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = ATMOS_BOUNDARY_VELZ(k,i,j) &
+                     * ( ATMOS_BOUNDARY_DENS(k,i,j) + ATMOS_BOUNDARY_DENS(k+1,i,j) ) * 0.5_RP
+          end do
+          end do
+          end do
+       else
+          do j = JE+1, JA
+          do i = 1, IA
+          do k = KS, KE-1
+             MOMZ(k,i,j) = MOMZ(k,i,JE)
+          end do
+          end do
+          end do
+       end if
+    end if
+
+    return
+  end subroutine set_boundary
+  !-----------------------------------------------------------------------------
   !> Get boundaryal coefficient with same parent data
   subroutine get_boundary_same_parent( &
        bnd_DENS, &
@@ -2230,9 +2180,10 @@ contains
        ref = ref_now
     end if
 
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref)
        bnd_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref)
        bnd_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref)
@@ -2299,9 +2250,10 @@ contains
 
     end if
 
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_idx)
        bnd_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_idx)
        bnd_VELX(k,i,j) = ATMOS_BOUNDARY_ref_VELX(k,i,j,ref_idx)
@@ -2349,12 +2301,12 @@ contains
     fact = ( now_step + 0.5_RP ) / update_step
 
     !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JA,IA,KA,bnd_DENS,ATMOS_BOUNDARY_ref_DENS,ref_now,fact,ref_new,bnd_VELZ) &
+    !$omp shared(JA,IA,KS,KE,bnd_DENS,ATMOS_BOUNDARY_ref_DENS,ref_now,fact,ref_new,bnd_VELZ) &
     !$omp shared(ATMOS_BOUNDARY_ref_VELZ,bnd_VELX,ATMOS_BOUNDARY_ref_VELX,bnd_VELY) &
     !$omp shared(ATMOS_BOUNDARY_ref_VELY,bnd_POTT,ATMOS_BOUNDARY_ref_POTT,BND_QA,bnd_QTRC,ATMOS_BOUNDARY_ref_QTRC)
     do j = 1, JA
     do i = 1, IA
-    do k = 1, KA
+    do k = KS, KE
        bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * ( 1.0_RP-fact ) &
                        + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) * fact
        bnd_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) * ( 1.0_RP-fact ) &
@@ -2420,9 +2372,10 @@ contains
 
        t1 = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT * ( real_nstep + half_nstep - 0.5_RP )
 
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
-       do k = 1, KA
+       do k = KS, KE
           bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * t1              &
                           - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) * ( t1 - 1.0_RP )
           bnd_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_now) * t1              &
@@ -2446,9 +2399,10 @@ contains
 
        t1 = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT * ( real_nstep - half_nstep - 0.5_RP )
 
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
-       do k = 1, KA
+       do k = KS, KE
           bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) * t1              &
                           - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * ( t1 - 1.0_RP )
           bnd_VELZ(k,i,j) = ATMOS_BOUNDARY_ref_VELZ(k,i,j,ref_new) * t1              &
@@ -2473,9 +2427,10 @@ contains
        t1 = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT * ( real_nstep + half_nstep - 1.0_RP )
        t2 = TIME_DTSEC / ATMOS_BOUNDARY_UPDATE_DT * ( real_nstep - half_nstep )
 
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
-       do k = 1, KA
+       do k = KS, KE
           bnd_DENS(k,i,j) = ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_new) * t2 * 0.25_RP                   &
                           + ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_now) * ( t1 - t2 + 3.0_RP ) * 0.25_RP &
                           - ATMOS_BOUNDARY_ref_DENS(k,i,j,ref_old) * ( t1 - 1.0_RP ) * 0.25_RP
