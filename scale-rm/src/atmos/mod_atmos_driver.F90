@@ -336,7 +336,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
-  subroutine ATMOS_driver_update
+  subroutine ATMOS_driver_update( &
+       last_step )
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
@@ -377,6 +378,8 @@ contains
     use scale_time, only: &
        TIME_NOWDAYSEC
     implicit none
+
+    logical, intent(in) :: last_step
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
@@ -389,7 +392,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Boundary', 2)
-       call ATMOS_BOUNDARY_driver_update
+       call ATMOS_BOUNDARY_driver_update( last_step )
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
