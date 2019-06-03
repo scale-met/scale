@@ -1012,8 +1012,7 @@ contains
        ATMOS_GRID_CARTESC_NAME
     use scale_file_cartesC, only: &
        FILE_CARTESC_put_globalAttributes, &
-       axisattinfo, &
-       mappinginfo
+       axisattinfo
     use mod_sno_h, only: &
        commoninfo, &
        iteminfo
@@ -1030,7 +1029,6 @@ contains
     logical,          intent(in)  :: debug
 
     type(axisattinfo) :: ainfo(4)
-    type(mappinginfo) :: minfo
 
     integer :: rankidx(2) ! my rank in 2D process topology (x:y)
     integer :: IMAX, JMAX
@@ -1108,15 +1106,6 @@ contains
 !        endif
     endif
 
-    minfo%mapping_name                             = hinfo%minfo_mapping_name
-    minfo%false_easting                        (:) = hinfo%minfo_false_easting                        (:)
-    minfo%false_northing                       (:) = hinfo%minfo_false_northing                       (:)
-    minfo%longitude_of_central_meridian        (:) = hinfo%minfo_longitude_of_central_meridian        (:)
-    minfo%longitude_of_projection_origin       (:) = hinfo%minfo_longitude_of_projection_origin       (:)
-    minfo%latitude_of_projection_origin        (:) = hinfo%minfo_latitude_of_projection_origin        (:)
-    minfo%straight_vertical_longitude_from_pole(:) = hinfo%minfo_straight_vertical_longitude_from_pole(:)
-    minfo%standard_parallel                    (:) = hinfo%minfo_standard_parallel                    (:)
-
     call FILE_set_attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
     call FILE_set_attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
     call FILE_set_attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
@@ -1141,68 +1130,68 @@ contains
     call FILE_set_attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
     call FILE_set_attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
 
-    if ( minfo%mapping_name /= "" ) then
+    if ( hinfo%minfo_mapping_name /= "" ) then
        call FILE_set_attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
        call FILE_set_attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
        call FILE_set_attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
        call FILE_set_attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FILE_add_associatedVariable( fid, minfo%mapping_name )
-       call FILE_set_attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+       call FILE_add_associatedVariable( fid, hinfo%minfo_mapping_name )
+       call FILE_set_attribute( fid, hinfo%minfo_mapping_name, "grid_mapping_name",  hinfo%minfo_mapping_name )
 
-       if ( minfo%false_easting(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                   & ! [IN]
-                                   minfo%mapping_name,    & ! [IN]
-                                   "false_easting",       & ! [IN]
-                                   minfo%false_easting(:) ) ! [IN]
+       if ( hinfo%minfo_false_easting(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                         & ! [IN]
+                                   hinfo%minfo_mapping_name,    & ! [IN]
+                                   "false_easting",             & ! [IN]
+                                   hinfo%minfo_false_easting(:) ) ! [IN]
        endif
 
-       if ( minfo%false_northing(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                    & ! [IN]
-                                   minfo%mapping_name,     & ! [IN]
-                                   "false_northing",       & ! [IN]
-                                   minfo%false_northing(:) ) ! [IN]
+       if ( hinfo%minfo_false_northing(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                          & ! [IN]
+                                   hinfo%minfo_mapping_name,     & ! [IN]
+                                   "false_northing",             & ! [IN]
+                                   hinfo%minfo_false_northing(:) ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                   & ! [IN]
-                                   minfo%mapping_name,                    & ! [IN]
-                                   "longitude_of_central_meridian",       & ! [IN]
-                                   minfo%longitude_of_central_meridian(:) ) ! [IN]
+       if ( hinfo%minfo_longitude_of_central_meridian(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                         & ! [IN]
+                                   hinfo%minfo_mapping_name,                    & ! [IN]
+                                   "longitude_of_central_meridian",             & ! [IN]
+                                   hinfo%minfo_longitude_of_central_meridian(:) ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                    & ! [IN]
-                                   minfo%mapping_name,                     & ! [IN]
-                                   "longitude_of_projection_origin",       & ! [IN]
-                                   minfo%longitude_of_projection_origin(:) ) ! [IN]
+       if ( hinfo%minfo_longitude_of_projection_origin(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                          & ! [IN]
+                                   hinfo%minfo_mapping_name,                     & ! [IN]
+                                   "longitude_of_projection_origin",             & ! [IN]
+                                   hinfo%minfo_longitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                   & ! [IN]
-                                   minfo%mapping_name,                    & ! [IN]
-                                   "latitude_of_projection_origin",       & ! [IN]
-                                   minfo%latitude_of_projection_origin(:) ) ! [IN]
+       if ( hinfo%minfo_latitude_of_projection_origin(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                         & ! [IN]
+                                   hinfo%minfo_mapping_name,                    & ! [IN]
+                                   "latitude_of_projection_origin",             & ! [IN]
+                                   hinfo%minfo_latitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                           & ! [IN]
-                                   minfo%mapping_name,                            & ! [IN]
-                                   "straight_vertical_longitude_from_pole",       & ! [IN]
-                                   minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       if ( hinfo%minfo_straight_vertical_longitude_from_pole(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                                 & ! [IN]
+                                   hinfo%minfo_mapping_name,                            & ! [IN]
+                                   "straight_vertical_longitude_from_pole",             & ! [IN]
+                                   hinfo%minfo_straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
-       if ( minfo%standard_parallel(1) /= UNDEF ) then
-          if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FILE_set_attribute( fid,                         & ! [IN]
-                                      minfo%mapping_name,          & ! [IN]
-                                      "standard_parallel",         & ! [IN]
-                                      minfo%standard_parallel(1:2) ) ! [IN]
+       if ( hinfo%minfo_standard_parallel(1) /= UNDEF ) then
+          if ( hinfo%minfo_standard_parallel(2) /= UNDEF ) then
+             call FILE_set_attribute( fid,                               & ! [IN]
+                                      hinfo%minfo_mapping_name,          & ! [IN]
+                                      "standard_parallel",               & ! [IN]
+                                      hinfo%minfo_standard_parallel(1:2) ) ! [IN]
           else
-             call FILE_set_attribute( fid,                         & ! [IN]
-                                      minfo%mapping_name,          & ! [IN]
-                                      "standard_parallel",         & ! [IN]
-                                      minfo%standard_parallel(1:1) ) ! [IN]
+             call FILE_set_attribute( fid,                               & ! [IN]
+                                      hinfo%minfo_mapping_name,          & ! [IN]
+                                      "standard_parallel",               & ! [IN]
+                                      hinfo%minfo_standard_parallel(1:1) ) ! [IN]
           endif
        endif
     endif

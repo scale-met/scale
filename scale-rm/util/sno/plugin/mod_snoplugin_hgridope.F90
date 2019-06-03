@@ -330,16 +330,13 @@ contains
     enddo
     enddo
 
-    call INTERP_factor2d( SNOPLGIN_hgridope_nintrp, & ! [IN]
-                          imax_ref, jmax_ref,       & ! [IN]
-                          lon_ref(:,:),             & ! [IN]
-                          lat_ref(:,:),             & ! [IN]
-                          imax_new, jmax_new,       & ! [IN]
-                          lon_new(:,:),             & ! [IN]
-                          lat_new(:,:),             & ! [IN]
-                          idx_i  (:,:,:),           & ! [OUT]
-                          idx_j  (:,:,:),           & ! [OUT]
-                          hfact  (:,:,:)            ) ! [OUT]
+    call INTERP_factor2d( SNOPLGIN_hgridope_nintrp,   & ! [IN]
+                          imax_ref, jmax_ref,         & ! [IN]
+                          imax_new, jmax_new,         & ! [IN]
+                          lon_ref(:,:), lat_ref(:,:), & ! [IN]
+                          lon_new(:,:), lat_new(:,:), & ! [IN]
+                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                          hfact(:,:,:)                ) ! [OUT]
 
     deallocate( lon_ref )
     deallocate( lat_ref )
