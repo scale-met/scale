@@ -67,6 +67,16 @@ debug-gm:
   only:
     - /^feature.*$/
 
+sno:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scale-rm/util/sno
+    - make -j 4
+    - make -j 4 SCALE_USE_SINGLEFP=T
+  only:
+    - /^feature.*$/
+
 
 # TEST
 
