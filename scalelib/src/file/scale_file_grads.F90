@@ -120,7 +120,7 @@ contains
     integer                :: ny               ! optional
     integer                :: nz               ! optional
     character(len=H_SHORT) :: fendian          ! option for "map"
-    character(len=H_SHORT) :: yrev             ! option for "map", if yrev=on, order of data is NW to SE.
+    logical                :: yrev             ! option for "map", if yrev=.true., order of data is NW to SE.
 
     namelist /GrADS_DIMS/ &
        nx, &
@@ -237,7 +237,7 @@ contains
        nx       = nmls(file_id)%nx
        ny       = nmls(file_id)%ny
        nz       = nmls(file_id)%nz
-       yrev     = 'off'
+       yrev     = .false.
        fendian  = 'big'
        missval  = UNDEF
 
@@ -261,7 +261,7 @@ contains
        nmls(file_id)%vars(n)%nx       = nx
        nmls(file_id)%vars(n)%ny       = ny
        nmls(file_id)%vars(n)%nz       = nz
-       nmls(file_id)%vars(n)%yrev     = yrev == "on"
+       nmls(file_id)%vars(n)%yrev     = yrev
        if ( fendian == "big" ) then
           nmls(file_id)%vars(n)%endian = 1
        else
