@@ -147,8 +147,8 @@ contains
                                         OCEAN_DYN_SLAB_nudging_step_fixed,            & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_offset,                & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_defval,                & ! [IN]
-                                        OCEAN_DYN_SLAB_nudging_check_coordinates,     & ! [IN]
-                                        OCEAN_DYN_SLAB_nudging_step_limit             ) ! [IN]
+                                        check_coordinates = OCEAN_DYN_SLAB_nudging_check_coordinates, & ! [IN]
+                                        step_limit = OCEAN_DYN_SLAB_nudging_step_limit                ) ! [IN]
     endif
 
     return

@@ -136,8 +136,8 @@ contains
                                         LAND_DYN_BUCKET_nudging_step_fixed,            & ! [IN]
                                         LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_check_coordinates,     & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_step_limit             ) ! [IN]
+                                        check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
+                                        step_limit = LAND_DYN_BUCKET_nudging_step_limit                ) ! [IN]
 
        call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename(:),           & ! [IN]
                                         'LAND_WATER',                                & ! [IN]
@@ -148,8 +148,8 @@ contains
                                         LAND_DYN_BUCKET_nudging_step_fixed,            & ! [IN]
                                         LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_check_coordinates,     & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_step_limit             ) ! [IN]
+                                        check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
+                                        step_limit = LAND_DYN_BUCKET_nudging_step_limit                ) ! [IN]
 
        LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for Land physics: ON'
     else

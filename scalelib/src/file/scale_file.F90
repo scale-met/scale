@@ -3326,7 +3326,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_1D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_1D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3435,7 +3435,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_1D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_1D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3544,7 +3544,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_2D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_2D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3653,7 +3653,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_2D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_2D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3762,7 +3762,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_3D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_3D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3871,7 +3871,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_3D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_3D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3980,7 +3980,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_4D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_4D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -4089,7 +4089,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_4D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_4D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do

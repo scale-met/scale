@@ -132,8 +132,8 @@ contains
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
                                         ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                                        ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
+                                        check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
+                                        step_limit = ATMOS_PHY_RD_offline_step_limit                ) ! [IN]
     end do
 
     do n = 1, num_vars_2d
@@ -146,8 +146,8 @@ contains
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
                                         ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                                        ATMOS_PHY_RD_offline_step_limit             ) ! [IN]
+                                        check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
+                                        step_limit = ATMOS_PHY_RD_offline_step_limit                ) ! [IN]
     end do
 
     do n = 1, num_vars_2d_op
@@ -160,9 +160,9 @@ contains
                                         ATMOS_PHY_RD_offline_step_fixed,            & ! [IN]
                                         ATMOS_PHY_RD_offline_offset,                & ! [IN]
                                         ATMOS_PHY_RD_offline_defval,                & ! [IN]
-                                        ATMOS_PHY_RD_offline_check_coordinates,     & ! [IN]
-                                        ATMOS_PHY_RD_offline_step_limit,            & ! [IN]
-                                        exist = vars_2d_exist(n)                    ) ! [OUT]
+                                        check_coordinates = ATMOS_PHY_RD_offline_check_coordinates, & ! [IN]
+                                        step_limit = ATMOS_PHY_RD_offline_step_limit,               & ! [IN]
+                                        exist = vars_2d_exist(n)                                    ) ! [OUT]
        if ( vars_2d_exist(n) ) then
           LOG_INFO("ATMOS_PHY_RD_offline_setup",*) '', trim(vars_2d_op(n)), ' found.'
        else
