@@ -621,6 +621,8 @@ contains
     character(len=H_LONG) :: BOUNDARY_TITLE_OCEAN             = 'SCALE-RM BOUNDARY CONDITION for REAL CASE'
     real(DP)              :: BOUNDARY_UPDATE_DT_LAND          = 0.0_DP  ! inteval time of boudary data update [s]
     real(DP)              :: BOUNDARY_UPDATE_DT_OCEAN         = 0.0_DP  ! inteval time of boudary data update [s]
+    logical               :: BASENAME_ADD_NUM_LAND
+    logical               :: BASENAME_ADD_NUM_OCEAN
 
     integer :: mdlid_land, mdlid_ocean
     integer :: ldims(3), odims(2)
@@ -633,10 +635,14 @@ contains
     character(len=H_LONG) :: basename_out_mod
     character(len=19)     :: timelabel
 
-    logical :: boundary_flag = .false.
     logical :: land_flag
+    logical :: multi_land
+    logical :: multi_ocean
 
-    integer :: k, i, j, n, ns, ne, idir, irgn
+    integer :: ns, ne, nsl, nel
+    integer :: idir, irgn
+
+    integer :: k, i, j, n
     !---------------------------------------------------------------------------
 
     if ( LAND_do .or. URBAN_do ) then
@@ -670,13 +676,14 @@ contains
     NUMBER_OF_TSTEPS_LAND           = NUMBER_OF_TSTEPS
     NUMBER_OF_SKIP_TSTEPS_LAND      = NUMBER_OF_SKIP_TSTEPS
     FILETYPE_LAND                   = FILETYPE_ORG
+    BASENAME_ADD_NUM_LAND           = BASENAME_ADD_NUM
     BASENAME_BOUNDARY_LAND          = BASENAME_BOUNDARY
     BOUNDARY_POSTFIX_TIMELABEL_LAND = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_LAND             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_LAND         = BOUNDARY_UPDATE_DT
     elevation_collection_land       = elevation_collection
 
-    if ( FILETYPE_LAND .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
+    if ( FILETYPE_LAND .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM_LAND ) ) then
        BASENAME_LAND = trim(BASENAME_ORG)//"_00000"
     else
        BASENAME_LAND = trim(BASENAME_ORG)
@@ -727,13 +734,14 @@ contains
     NUMBER_OF_TSTEPS_OCEAN           = NUMBER_OF_TSTEPS
     NUMBER_OF_SKIP_TSTEPS_OCEAN      = NUMBER_OF_SKIP_TSTEPS
     FILETYPE_OCEAN                   = FILETYPE_ORG
+    BASENAME_ADD_NUM_OCEAN           = BASENAME_ADD_NUM
     BASENAME_BOUNDARY_OCEAN          = BASENAME_BOUNDARY
     BOUNDARY_POSTFIX_TIMELABEL_OCEAN = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_OCEAN             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_OCEAN         = BOUNDARY_UPDATE_DT
     elevation_collection_ocean       = elevation_collection
 
-    if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) ) then
+    if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM_OCEAN ) ) then
        BASENAME_OCEAN = trim(BASENAME_ORG)//"_00000"
     else
        BASENAME_OCEAN = trim(BASENAME_ORG)
@@ -757,14 +765,17 @@ contains
     end select
 
 
-    ! check land/ocean parameters
-    if( NUMBER_OF_FILES_LAND            .NE.   NUMBER_OF_FILES_OCEAN            .OR. &
-        NUMBER_OF_TSTEPS_LAND           .NE.   NUMBER_OF_TSTEPS_OCEAN           .OR. &
-        NUMBER_OF_SKIP_TSTEPS_LAND      .NE.   NUMBER_OF_SKIP_TSTEPS_OCEAN      .OR. &
-        BASENAME_BOUNDARY_LAND          .NE.   BASENAME_BOUNDARY_OCEAN          .OR. &
-        BOUNDARY_POSTFIX_TIMELABEL_LAND .NEQV. BOUNDARY_POSTFIX_TIMELABEL_OCEAN .OR. &
-        BOUNDARY_TITLE_LAND             .NE.   BOUNDARY_TITLE_OCEAN             .OR. &
-        BOUNDARY_UPDATE_DT_LAND         .NE.   BOUNDARY_UPDATE_DT_OCEAN              ) then
+    multi_land  = ( NUMBER_OF_FILES_LAND * NUMBER_OF_TSTEPS_LAND - NUMBER_OF_SKIP_TSTEPS_LAND ) > 1
+    multi_ocean = BASENAME_BOUNDARY_OCEAN .ne. ''
+
+    if ( ( multi_land .and. multi_ocean ) .AND. &
+       ( ( NUMBER_OF_FILES_LAND            .NE.   NUMBER_OF_FILES_OCEAN            ) .OR. &
+         ( NUMBER_OF_TSTEPS_LAND           .NE.   NUMBER_OF_TSTEPS_OCEAN           ) .OR. &
+         ( NUMBER_OF_SKIP_TSTEPS_LAND      .NE.   NUMBER_OF_SKIP_TSTEPS_OCEAN      ) .OR. &
+         ( BASENAME_BOUNDARY_LAND          .NE.   BASENAME_BOUNDARY_OCEAN          ) .OR. &
+         ( BOUNDARY_POSTFIX_TIMELABEL_LAND .NEQV. BOUNDARY_POSTFIX_TIMELABEL_OCEAN ) .OR. &
+         ( BOUNDARY_TITLE_LAND             .NE.   BOUNDARY_TITLE_OCEAN             ) .OR. &
+         ( BOUNDARY_UPDATE_DT_LAND         .NE.   BOUNDARY_UPDATE_DT_OCEAN         ) ) ) then
        LOG_ERROR("REALINPUT_surface",*) 'The following LAND/OCEAN parameters must be consistent due to technical problem:'
        LOG_ERROR_CONT(*) '           NUMBER_OF_FILES, NUMBER_OF_TSTEPS, NUMBER_OF_SKIP_TSTEPS,'
        LOG_ERROR_CONT(*) '           BASENAME_BOUNDARY, BOUNDARY_POSTFIX_TIMELABEL, BOUNDARY_TITLE, BOUNDARY_UPDATE_DT.'
@@ -787,38 +798,45 @@ contains
                              intrp_ocean_sfc_TEMP    ) ![IN]
 
     if ( timelen > 0 ) then
-       NUMBER_OF_TSTEPS = timelen ! read from file
+       NUMBER_OF_TSTEPS_OCEAN = timelen ! read from file
     endif
 
-    totaltimesteps = NUMBER_OF_FILES * NUMBER_OF_TSTEPS
+    totaltimesteps = NUMBER_OF_FILES_OCEAN * NUMBER_OF_TSTEPS_OCEAN
 
-    allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    if ( multi_land ) then
+       allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+    else
+       allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1) )
+       allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1) )
+       allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1) )
+       allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1) )
+    end if
 
-    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
-    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS:totaltimesteps) )
+    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
 
     if ( mdlid_ocean == iGrADS ) then
        BASENAME_ORG = ""
     endif
 
-    if ( BASENAME_BOUNDARY /= '' ) then
-       boundary_flag = .true.
-    endif
-
     !--- read external file
-    do n = 1, NUMBER_OF_FILES
+    do n = 1, NUMBER_OF_FILES_OCEAN
 
-       if ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM ) then
+       if ( NUMBER_OF_FILES_LAND > 1 .OR. BASENAME_ADD_NUM_LAND ) then
           write(NUM,'(I5.5)') n-1
           BASENAME_LAND  = trim(BASENAME_ORG)//"_"//NUM
-          BASENAME_OCEAN = trim(BASENAME_ORG)//"_"//NUM
        else
           BASENAME_LAND  = trim(BASENAME_ORG)
+       endif
+       if ( NUMBER_OF_FILES_OCEAN > 1 .OR. BASENAME_ADD_NUM_OCEAN ) then
+          write(NUM,'(I5.5)') n-1
+          BASENAME_OCEAN = trim(BASENAME_ORG)//"_"//NUM
+       else
           BASENAME_OCEAN = trim(BASENAME_ORG)
        endif
 
@@ -827,56 +845,68 @@ contains
        LOG_INFO("REALINPUT_surface",*) 'Target File Name (Ocean): ', trim(BASENAME_OCEAN)
        LOG_INFO("REALINPUT_surface",*) 'Time Steps in One File  : ', NUMBER_OF_TSTEPS
 
-       ns = NUMBER_OF_TSTEPS * (n - 1) + 1
-       ne = ns + (NUMBER_OF_TSTEPS - 1)
+       ns = NUMBER_OF_TSTEPS_OCEAN * (n - 1) + 1
+       ne = ns + (NUMBER_OF_TSTEPS_OCEAN - 1)
 
-       if ( ne <= NUMBER_OF_SKIP_TSTEPS ) then
+       if ( ne <= NUMBER_OF_SKIP_TSTEPS_OCEAN ) then
           LOG_INFO("REALINPUT_surface",*) '    SKIP'
           cycle
        endif
 
-       skip_steps = max(NUMBER_OF_SKIP_TSTEPS - ns + 1, 0)
-       ns = max(ns, NUMBER_OF_SKIP_TSTEPS+1)
+       skip_steps = max(NUMBER_OF_SKIP_TSTEPS_OCEAN - ns + 1, 0)
+       ns = max(ns, NUMBER_OF_SKIP_TSTEPS_OCEAN+1)
+
+       if ( multi_land ) then
+          nsl = ns
+          nel = ne
+       else
+          nsl = 1
+          nel = 1
+       end if
 
        ! read all prepared data
-       call ParentSurfaceInput( LAND_TEMP_org       (:,:,:,  ns:ne), &
-                                LAND_WATER_org      (:,:,:,  ns:ne), &
-                                LAND_SFC_TEMP_org   (:,:,    ns:ne), &
-                                LAND_SFC_albedo_org (:,:,:,:,ns:ne), &
-                                URBAN_TC_org,         &
-                                URBAN_QC_org,         &
-                                URBAN_UC_org,         &
-                                URBAN_SFC_TEMP_org,   &
-                                URBAN_SFC_albedo_org, &
+       call ParentSurfaceInput( LAND_TEMP_org       (:,:,:,  nsl:nel),   &
+                                LAND_WATER_org      (:,:,:,  nsl:nel),   &
+                                LAND_SFC_TEMP_org   (:,:,    nsl:nel),   &
+                                LAND_SFC_albedo_org (:,:,:,:,nsl:nel),   &
+                                URBAN_TC_org(:,:),                       &
+                                URBAN_QC_org(:,:),                       &
+                                URBAN_UC_org(:,:),                       &
+                                URBAN_SFC_TEMP_org(:,:),                 &
+                                URBAN_SFC_albedo_org(:,:,:,:),           &
                                 OCEAN_TEMP_org      (OKS,:,:,    ns:ne), &
                                 OCEAN_SFC_TEMP_org  (    :,:,    ns:ne), &
                                 OCEAN_SFC_albedo_org(    :,:,:,:,ns:ne), &
                                 OCEAN_SFC_Z0_org    (    :,:,    ns:ne), &
-                                BASENAME_LAND,                &
-                                BASENAME_OCEAN,               &
-                                mdlid_land, mdlid_ocean,      &
-                                ldims, odims,                 &
-                                USE_FILE_LANDWATER,           &
-                                INIT_LANDWATER_RATIO,         &
-                                INIT_OCEAN_ALB_LW,            &
-                                INIT_OCEAN_ALB_SW,            &
-                                INIT_OCEAN_Z0W,               &
-                                INTRP_ITER_MAX,               &
-                                SOILWATER_DS2VC_flag,         &
-                                elevation_collection_land,    &
-                                elevation_collection_ocean,   &
-                                boundary_flag,                &
-                                NUMBER_OF_TSTEPS, skip_steps, &
-                                URBAN_do                      )
+                                BASENAME_LAND, BASENAME_OCEAN,           &
+                                mdlid_land, mdlid_ocean,                 &
+                                ldims, odims,                            &
+                                USE_FILE_LANDWATER,                      &
+                                INIT_LANDWATER_RATIO,                    &
+                                INIT_OCEAN_ALB_LW, INIT_OCEAN_ALB_SW,    &
+                                INIT_OCEAN_Z0W,                          &
+                                INTRP_ITER_MAX,                          &
+                                SOILWATER_DS2VC_flag,                    &
+                                elevation_collection_land,               &
+                                elevation_collection_ocean,              &
+                                multi_land, multi_ocean,                 &
+                                NUMBER_OF_TSTEPS_OCEAN, skip_steps,      &
+                                NUMBER_OF_SKIP_TSTEPS_LAND,              &
+                                URBAN_do                                 )
 
        ! required one-step data only
-       if( BASENAME_BOUNDARY == '' ) exit
+       if( .not. ( multi_land .or. multi_ocean ) ) exit
 
     enddo
 
 
     !--- input initial data
-    ns = NUMBER_OF_SKIP_TSTEPS + 1  ! skip first several data
+    ns = NUMBER_OF_SKIP_TSTEPS_OCEAN + 1  ! skip first several data
+    if ( multi_land ) then
+       nsl = ns
+    else
+       nsl = 1
+    end if
 
     !$omp parallel do
     do j = 1, JA
@@ -900,15 +930,15 @@ contains
        OCEAN_ICE_TEMP(i,j) = min( OCEAN_SFC_TEMP_ORG(i,j,ns), OCEAN_PHY_ICE_freezetemp )
        OCEAN_ICE_MASS(i,j) = 0.0_RP
 
-       LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     ns)
+       LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     nsl)
        do irgn = I_R_IR, I_R_VIS
        do idir = I_R_direct, I_R_diffuse
-          LAND_SFC_albedo(i,j,idir,irgn) = LAND_SFC_albedo_org(i,j,idir,irgn,ns)
+          LAND_SFC_albedo(i,j,idir,irgn) = LAND_SFC_albedo_org(i,j,idir,irgn,nsl)
        enddo
        enddo
        do k = 1, LKMAX
-          LAND_TEMP (k,i,j) = LAND_TEMP_org (k,i,j,ns)
-          LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,ns)
+          LAND_TEMP (k,i,j) = LAND_TEMP_org (k,i,j,nsl)
+          LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,nsl)
        enddo
 
        if ( URBAN_do ) then
@@ -965,31 +995,40 @@ contains
 
 
     !--- output boundary data
-    if( BASENAME_BOUNDARY /= '' ) then
-       totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS ! skip first several data
+    if( BASENAME_BOUNDARY_OCEAN /= '' ) then
+       totaltimesteps = totaltimesteps - NUMBER_OF_SKIP_TSTEPS_OCEAN ! skip first several data
        if ( totaltimesteps > 1 ) then
-          if ( BOUNDARY_UPDATE_DT <= 0.0_DP ) then
+          if ( BOUNDARY_UPDATE_DT_OCEAN <= 0.0_DP ) then
              LOG_ERROR("REALINPUT_surface",*) 'BOUNDARY_UPDATE_DT is necessary in real case preprocess'
              call PRC_abort
           endif
 
-          if ( BOUNDARY_POSTFIX_TIMELABEL ) then
+          if ( BOUNDARY_POSTFIX_TIMELABEL_OCEAN ) then
              call TIME_gettimelabel( timelabel )
-             basename_out_mod = trim(BASENAME_BOUNDARY)//'_'//trim(timelabel)
+             basename_out_mod = trim(BASENAME_BOUNDARY_OCEAN)//'_'//trim(timelabel)
           else
-             basename_out_mod = trim(BASENAME_BOUNDARY)
+             basename_out_mod = trim(BASENAME_BOUNDARY_OCEAN)
           endif
 
-          call ParentSurfaceBoundary( LAND_TEMP_org     (:,:,:,ns:ne), &
-                                      LAND_WATER_org    (:,:,:,ns:ne), &
-                                      LAND_SFC_TEMP_org (  :,:,ns:ne), &
-                                      OCEAN_TEMP_org    (:,:,:,ns:ne), &
-                                      OCEAN_SFC_TEMP_org(  :,:,ns:ne), &
-                                      OCEAN_SFC_Z0_org  (  :,:,ns:ne), &
-                                      totaltimesteps,                  &
-                                      BOUNDARY_UPDATE_DT,              &
-                                      basename_out_mod,                &
-                                      BOUNDARY_TITLE                   )
+          if ( multi_land ) then
+             nsl = ns
+             nel = ne
+          else
+             nsl = 1
+             nel = 1
+          end if
+
+          call ParentSurfaceBoundary( LAND_TEMP_org     (:,:,:,nsl:nel), &
+                                      LAND_WATER_org    (:,:,:,nsl:nel), &
+                                      LAND_SFC_TEMP_org (  :,:,nsl:nel), &
+                                      OCEAN_TEMP_org    (:,:,:,ns:ne),   &
+                                      OCEAN_SFC_TEMP_org(  :,:,ns:ne),   &
+                                      OCEAN_SFC_Z0_org  (  :,:,ns:ne),   &
+                                      totaltimesteps,                    &
+                                      BOUNDARY_UPDATE_DT_OCEAN,          &
+                                      basename_out_mod,                  &
+                                      BOUNDARY_TITLE_OCEAN,              &
+                                      multi_land                         )
 
        endif
     endif
@@ -2412,8 +2451,8 @@ contains
        soilwater_ds2vc_flag,              &
        elevation_collection_land,         &
        elevation_collection_ocean,        &
-       boundary_flag,                     &
-       timelen, skiplen,                  &
+       multi_land, multi_ocean,           &
+       timelen, skiplen, skiplen_land,    &
        URBAN_do                           )
     use scale_comm_cartesC, only: &
          COMM_bcast, &
@@ -2501,9 +2540,11 @@ contains
     logical,          intent(in)  :: soilwater_ds2vc_flag
     logical,          intent(in)  :: elevation_collection_land
     logical,          intent(in)  :: elevation_collection_ocean
-    logical,          intent(in)  :: boundary_flag    ! switch for making boundary file
+    logical,          intent(in)  :: multi_land
+    logical,          intent(in)  :: multi_ocean
     integer,          intent(in)  :: timelen          ! time steps in one file
-    integer,          intent(in)  :: skiplen          ! skip steps
+    integer,          intent(in)  :: skiplen          ! skip steps (ocean)
+    integer,          intent(in)  :: skiplen_land     ! skip steps (land)
     logical,          intent(in)  :: URBAN_do
 
    ! land
@@ -2538,7 +2579,7 @@ contains
     real(RP) :: one(IA,JA)
 
     integer :: i, j
-    integer :: n, nn
+    integer :: n, nn, nl, nnl
     !---------------------------------------------------------------------------
 
     if ( first_surface ) then ! read data only once
@@ -2625,7 +2666,13 @@ contains
 
        call PROF_rapstart('___SurfaceInput',3)
 
-       if ( do_read_land ) then
+       if ( do_read_land .and. ( first_surface .or. multi_land ) ) then
+
+          if ( multi_land ) then
+             nl = n
+          else
+             nl = skiplen_land + 1
+          end if
 
           select case( mdlid_land )
           case( iSCALE ) ! TYPE: SCALE-RM
@@ -2636,7 +2683,7 @@ contains
                   topo_org, lmask_org,        & ! (out)
                   llon_org, llat_org, lz_org, & ! (out)
                   basename_land, ldims,       & ! (in)
-                  use_file_landwater, n       ) ! (in)
+                  use_file_landwater, nl      ) ! (in)
 
           case( iWRFARW ) ! TYPE: WRF-ARW
 
@@ -2646,7 +2693,7 @@ contains
                   topo_org, lmask_org,        & ! (out)
                   llon_org, llat_org, lz_org, & ! (out)
                   basename_land, ldims,       & ! (in)
-                  use_file_landwater, n       ) ! (in)
+                  use_file_landwater, nl      ) ! (in)
 
 !!$          case( iNICAM ) ! TYPE: NICAM-NETCDF
 !!$
@@ -2656,7 +2703,7 @@ contains
 !!$                  llon_org, llat_org, lz_org, & ! (out)
 !!$                  topo_org, lmask_org,        & ! (out)
 !!$                  basename_land, ldims,       & ! (in)
-!!$                  use_file_landwater, n       ) ! (in)
+!!$                  use_file_landwater, nl      ) ! (in)
 !!$             ust_org = UNDEF
 !!$             albg_org = UNDEF
 !!$
@@ -2668,7 +2715,7 @@ contains
                   llon_org, llat_org, lz_org, & ! (out)
                   topo_org, lmask_org,        & ! (out)
                   basename_land, ldims,       & ! (in)
-                  use_file_landwater, n       ) ! (in)
+                  use_file_landwater, nl      ) ! (in)
              ust_org = UNDEF
              albg_org = UNDEF
 
@@ -2680,7 +2727,7 @@ contains
 
        call PROF_rapstart('___SurfaceBcast',3)
 
-       if ( serial_land ) then
+       if ( serial_land .and. ( first_surface .or. multi_land ) ) then
           call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
           if ( use_waterratio ) then
              call COMM_bcast( smds_org, ldims(1), ldims(2), ldims(3) )
@@ -2816,7 +2863,13 @@ contains
        if ( i_INTRP_OCEAN_TEMP .ne. i_intrp_off ) then
           select case( i_INTRP_OCEAN_TEMP )
           case( i_intrp_mask )
-             omask = omask_org
+             call make_mask( omask, tw_org, odims(1), odims(2), landdata=.false.)
+             !$omp parallel do
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                if ( omask_org(i,j) .ne. UNDEF ) omask(i,j) = omask_org(i,j)
+             end do
+             end do
           case( i_intrp_fill )
              call make_mask( omask, tw_org, odims(1), odims(2), landdata=.false.)
           end select
@@ -2827,63 +2880,79 @@ contains
        if ( i_INTRP_OCEAN_SFC_TEMP .ne. i_intrp_off ) then
           select case( i_INTRP_OCEAN_SFC_TEMP )
           case( i_intrp_mask )
-             omask = omask_org
+             call make_mask( omask, sst_org, odims(1), odims(2), landdata=.false.)
+             !$omp parallel do
+             do j = 1, odims(2)
+             do i = 1, odims(1)
+                if ( omask_org(i,j) .ne. UNDEF ) omask(i,j) = omask_org(i,j)
+             end do
+             end do
           case( i_intrp_fill )
              call make_mask( omask, sst_org, odims(1), odims(2), landdata=.false.)
           end select
           call interp_OceanLand_data(sst_org, omask, odims(1), odims(2), .false., intrp_iter_max)
        end if
 
-       call land_interporation( &
-            tg(:,:,:,nn), strg(:,:,:,nn),  & ! (out)
-            lst(:,:,nn), albg(:,:,:,:,nn), & ! (out)
-            ust, albu,                     & ! (out)
-            tg_org, strg_org, smds_org,    & ! (inout)
-            lst_org, albg_org,             & ! (inout)
-            ust_org,                       & ! (inout)
-            sst_org,                       & ! (in)
-            lmask_org,                     & ! (in)
-            lsmask_nest,                   & ! (in)
-            topo_org,                      & ! (in)
-            lz_org, llon_org, llat_org,    & ! (in)
-            LCZ, CX, CY, LON, LAT,         & ! (in)
-            ldims, odims,                  & ! (in)
-            maskval_tg, maskval_strg,      & ! (in)
-            init_landwater_ratio,          & ! (in)
-            use_file_landwater,            & ! (in)
-            use_waterratio,                & ! (in)
-            soilwater_ds2vc_flag,          & ! (in)
-            elevation_collection_land,     & ! (in)
-            intrp_iter_max,                & ! (in)
-            ol_interp,                     & ! (in)
-            URBAN_do                       ) ! (in)
+       if ( first_surface .or. multi_land ) then
 
-       do j = 1, ldims(3)
-       do i = 1, ldims(2)
-          if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
-             work(i,j) = lst_org(i,j) + topo_org(i,j) * LAPS
+          if ( multi_land ) then
+             nnl = nn
           else
-             work(i,j) = lst_org(i,j)
+             nnl = 1
           end if
-       end do
-       end do
 
-       if ( ol_interp ) then
-          ! land surface temperature at ocean grid
-          call INTERP_interp2d( itp_nh_ol,          & ! [IN]
-                                ldims(2), ldims(3), & ! [IN]
-                                odims(1), odims(2), & ! [IN]
-                                igrd_ol  (:,:,:),   & ! [IN]
-                                jgrd_ol  (:,:,:),   & ! [IN]
-                                hfact_ol (:,:,:),   & ! [IN]
-                                work     (:,:),     & ! [IN]
-                                lst_ocean(:,:)      ) ! [OUT]
-       else
-          lst_ocean(:,:) = work(:,:)
+          call land_interporation( &
+               tg(:,:,:,nnl), strg(:,:,:,nnl),  & ! (out)
+               lst(:,:,nnl), albg(:,:,:,:,nnl), & ! (out)
+               ust, albu,                       & ! (out)
+               tg_org, strg_org, smds_org,      & ! (inout)
+               lst_org, albg_org,               & ! (inout)
+               ust_org,                         & ! (inout)
+               sst_org,                         & ! (in)
+               lmask_org,                       & ! (in)
+               lsmask_nest,                     & ! (in)
+               topo_org,                        & ! (in)
+               lz_org, llon_org, llat_org,      & ! (in)
+               LCZ, CX, CY, LON, LAT,           & ! (in)
+               ldims, odims,                    & ! (in)
+               maskval_tg, maskval_strg,        & ! (in)
+               init_landwater_ratio,            & ! (in)
+               use_file_landwater,              & ! (in)
+               use_waterratio,                  & ! (in)
+               soilwater_ds2vc_flag,            & ! (in)
+               elevation_collection_land,       & ! (in)
+               intrp_iter_max,                  & ! (in)
+               ol_interp,                       & ! (in)
+               URBAN_do                         ) ! (in)
+
+          do j = 1, ldims(3)
+          do i = 1, ldims(2)
+             if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
+                work(i,j) = lst_org(i,j) + topo_org(i,j) * LAPS
+             else
+                work(i,j) = lst_org(i,j)
+             end if
+          end do
+          end do
+
+          if ( ol_interp ) then
+             ! land surface temperature at ocean grid
+             call INTERP_interp2d( itp_nh_ol,          & ! [IN]
+                                   ldims(2), ldims(3), & ! [IN]
+                                   odims(1), odims(2), & ! [IN]
+                                   igrd_ol  (:,:,:),   & ! [IN]
+                                   jgrd_ol  (:,:,:),   & ! [IN]
+                                   hfact_ol (:,:,:),   & ! [IN]
+                                   work     (:,:),     & ! [IN]
+                                   lst_ocean(:,:)      ) ! [OUT]
+          else
+             lst_ocean(:,:) = work(:,:)
+          end if
+
+          call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST" )
+          call replace_misval_map( tw_org,  lst_ocean, odims(1), odims(2), "OCEAN_TEMP" )
+
        end if
-
-       call replace_misval_map( sst_org, lst_ocean, odims(1), odims(2), "SST" )
-       call replace_misval_map( tw_org,  lst_ocean, odims(1), odims(2), "OCEAN_TEMP" )
 
        do j = 1, odims(2)
        do i = 1, odims(1)
@@ -3094,22 +3163,32 @@ contains
           call COMM_wait ( z0w(:,:,nn), 1, .false. )
        end if
 
-       ! replace values over the ocean ####
-       do j = 1, JA
-       do i = 1, IA
-          if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-             lst(i,j,nn) = sst(i,j,nn)
-          endif
-       enddo
-       enddo
-       if ( URBAN_do .and. first_surface ) then
+       if ( first_surface .or. multi_land ) then
+
+          if ( multi_land ) then
+             nnl = nn
+          else
+             nnl = 1
+          end if
+
+          ! replace values over the ocean ####
           do j = 1, JA
           do i = 1, IA
              if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                ust(i,j) = sst(i,j,nn)
+                lst(i,j,nnl) = sst(i,j,nn)
              endif
           enddo
           enddo
+          if ( URBAN_do .and. first_surface ) then
+             do j = 1, JA
+             do i = 1, IA
+                if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
+                   ust(i,j) = sst(i,j,nn)
+                endif
+             enddo
+             enddo
+          end if
+
        end if
 
        first_surface = .false.
@@ -3117,7 +3196,7 @@ contains
        call PROF_rapend  ('___SurfaceInterp',3)
 
        ! required one-step data only
-       if( .NOT. boundary_flag ) exit
+       if( .NOT. multi_ocean ) exit
 
     end do ! time loop
 
@@ -3135,7 +3214,8 @@ contains
        numsteps,  &
        update_dt, &
        basename,  &
-       title      )
+       title,     &
+       multi_land )
     use scale_const, only: &
          I_SW => CONST_I_SW, &
          I_LW => CONST_I_LW
@@ -3158,6 +3238,7 @@ contains
     character(len=*), intent(in)   :: basename
     character(len=*), intent(in)   :: title
     integer,          intent(in)   :: numsteps ! total time steps
+    logical,          intent(in)   :: multi_land
 
     character(len=H_SHORT) :: boundary_out_dtype = 'DEFAULT'  !< REAL4 or REAL8
     integer :: nowdate(6)
@@ -3175,21 +3256,24 @@ contains
 
     call FILE_CARTESC_create( basename, title, boundary_out_dtype, fid, date=nowdate )
 
-    call FILE_CARTESC_def_var( fid,                      & ! [IN]
-         'LAND_TEMP', 'Reference Land Temperature', 'K', & ! [IN]
-         'LXYT', boundary_out_dtype,                     & ! [IN]
-         vid(1),                                         & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps             ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                        & ! [IN]
-         'LAND_WATER', 'Reference Land Moisture', 'm3/m3', & ! [IN]
-         'LXYT', boundary_out_dtype,                       & ! [IN]
-         vid(2),                                           & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps               ) ! [IN]
-    call FILE_CARTESC_def_var( fid,                                  & ! [IN]
-         'LAND_SFC_TEMP', 'Reference Land Surface Temperature', 'K', & ! [IN]
-          'XYT', boundary_out_dtype,                                 & ! [IN]
-         vid(3),                                                     & ! [OUT]
-         timeintv=update_dt, nsteps=numsteps                         ) ! [IN]
+    if ( multi_land ) then
+       call FILE_CARTESC_def_var( fid,                      & ! [IN]
+            'LAND_TEMP', 'Reference Land Temperature', 'K', & ! [IN]
+            'LXYT', boundary_out_dtype,                     & ! [IN]
+            vid(1),                                         & ! [OUT]
+            timeintv=update_dt, nsteps=numsteps             ) ! [IN]
+       call FILE_CARTESC_def_var( fid,                        & ! [IN]
+            'LAND_WATER', 'Reference Land Moisture', 'm3/m3', & ! [IN]
+            'LXYT', boundary_out_dtype,                       & ! [IN]
+            vid(2),                                           & ! [OUT]
+            timeintv=update_dt, nsteps=numsteps               ) ! [IN]
+       call FILE_CARTESC_def_var( fid,                                  & ! [IN]
+            'LAND_SFC_TEMP', 'Reference Land Surface Temperature', 'K', & ! [IN]
+            'XYT', boundary_out_dtype,                                 & ! [IN]
+            vid(3),                                                     & ! [OUT]
+            timeintv=update_dt, nsteps=numsteps                         ) ! [IN]
+    end if
+
     call FILE_CARTESC_def_var( fid,                        & ! [IN]
          'OCEAN_TEMP', 'Reference Ocean Temperature', 'K', & ! [IN]
           'OXYT', boundary_out_dtype,                      & ! [IN]
@@ -3208,9 +3292,12 @@ contains
 
     call FILE_CARTESC_enddef( fid )
 
-    call FILE_CARTESC_write_var( fid, vid(1),  tg  (:,:,:,ts:te), 'LAND_TEMP',      'LXYT', update_dt )
-    call FILE_CARTESC_write_var( fid, vid(2),  strg(:,:,:,ts:te), 'LAND_WATER',     'LXYT', update_dt )
-    call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
+    if ( multi_land ) then
+       call FILE_CARTESC_write_var( fid, vid(1),  tg  (:,:,:,ts:te), 'LAND_TEMP',      'LXYT', update_dt )
+       call FILE_CARTESC_write_var( fid, vid(2),  strg(:,:,:,ts:te), 'LAND_WATER',     'LXYT', update_dt )
+       call FILE_CARTESC_write_var( fid, vid(3),  lst (  :,:,ts:te), 'LAND_SFC_TEMP',  'XYT',  update_dt )
+    end if
+
     call FILE_CARTESC_write_var( fid, vid(6),  tw  (:,:,:,ts:te), 'OCEAN_TEMP',     'OXYT', update_dt )
     call FILE_CARTESC_write_var( fid, vid(7),  sst (  :,:,ts:te), 'OCEAN_SFC_TEMP', 'XYT',  update_dt )
     call FILE_CARTESC_write_var( fid, vid(10), z0  (  :,:,ts:te), 'OCEAN_SFC_Z0',   'XYT',  update_dt )
@@ -3344,9 +3431,14 @@ contains
     if ( i_INTRP_LAND_SFC_TEMP .ne. i_intrp_off ) then
        select case( i_INTRP_LAND_SFC_TEMP )
        case( i_intrp_mask )
-          lmask = lmask_org
-       case( i_intrp_fill )
           call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
+          !$omp parallel do
+          do j = 1, ldims(3)
+          do i = 1, ldims(2)
+             if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+          end do
+          end do
+       case( i_intrp_fill )
        case default
           LOG_ERROR("land_interporation",*) 'INTRP_LAND_SFC_TEMP is invalid.'
           call PRC_abort
@@ -3358,7 +3450,13 @@ contains
     ! if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
     !   select case( i_INTRP_URB_SFC_TEMP )
     !   case( i_intrp_mask )
-    !      lmask = lmask_org
+    !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
+    !      !$omp parallel do
+    !      do j = 1, ldims(3)
+    !      do i = 1, ldims(2)
+    !         if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+    !      end do
+    !      end do
     !   case( i_intrp_fill )
     !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
     !   case default
@@ -3432,7 +3530,12 @@ contains
           work(:,:) = tg_org(k,:,:)
           select case( i_INTRP_LAND_TEMP )
           case( i_intrp_mask )
-             lmask = lmask_org
+             !$omp parallel do
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+                if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+             end do
+             end do
           case( i_intrp_fill )
              call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
           end select
@@ -3723,7 +3826,13 @@ contains
                 work(:,:) = smds_org(k,:,:)
                 select case( i_INTRP_LAND_WATER )
                 case( i_intrp_mask )
-                   lmask = lmask_org
+                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   !$omp parallel do
+                   do j = 1, ldims(3)
+                   do i = 1, ldims(2)
+                      if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+                   end do
+                   end do
                 case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select
@@ -3761,7 +3870,13 @@ contains
                 work(:,:) = strg_org(k,:,:)
                 select case( i_INTRP_LAND_WATER )
                 case( i_intrp_mask )
-                   lmask = lmask_org
+                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   !$omp parallel do
+                   do j = 1, ldims(3)
+                   do i = 1, ldims(2)
+                      if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+                   end do
+                   end do
                 case( i_intrp_fill )
                    call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
                 end select

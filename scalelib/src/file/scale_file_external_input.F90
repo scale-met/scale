@@ -193,6 +193,7 @@ module scale_file_external_input
      character(len=H_SHORT)             :: axistype                  !< axis type
      logical                            :: transpose                 !< true: xyz, false: zxy
      logical                            :: aggregate                 !< file_aggregate
+     logical                            :: allow_missing             !< error raised if false
   end type itemcontainer
 
   integer,             private :: FILE_EXTERNAL_INPUT_item_count = 0                       !< number of item to output
@@ -225,6 +226,7 @@ contains
     real(RP)               :: defval
     logical                :: check_coordinates
     logical                :: file_aggregate
+    logical                :: allow_missing
 
     namelist / EXTERNAL_ITEM / &
        basename,              &
@@ -240,7 +242,8 @@ contains
        offset,                &
        defval,                &
        check_coordinates,     &
-       file_aggregate
+       file_aggregate,        &
+       allow_missing
 
     integer  :: count
     integer  :: ierr
@@ -267,6 +270,7 @@ contains
        defval                = UNDEF
        check_coordinates     = .false.
        file_aggregate        = FILE_AGGREGATE_default
+       allow_missing         = .false.
 
        ! read namelist
        read(IO_FID_CONF,nml=EXTERNAL_ITEM,iostat=ierr)
@@ -278,20 +282,21 @@ contains
        endif
        LOG_NML(EXTERNAL_ITEM)
 
-       call FILE_EXTERNAL_INPUT_regist( basename,              & ! [IN]
-                                        basename_add_num,      & ! [IN]
-                                        number_of_files,       & ! [IN]
-                                        varname,               & ! [IN]
-                                        axistype,              & ! [IN]
-                                        enable_periodic_year,  & ! [IN]
-                                        enable_periodic_month, & ! [IN]
-                                        enable_periodic_day,   & ! [IN]
-                                        step_fixed,            & ! [IN]
-                                        offset,                & ! [IN]
-                                        defval,                & ! [IN]
-                                        check_coordinates,     & ! [IN]
-                                        file_aggregate,        & ! [IN]
-                                        step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( basename,                              & ! [IN]
+                                        basename_add_num,                      & ! [IN]
+                                        number_of_files,                       & ! [IN]
+                                        varname,                               & ! [IN]
+                                        axistype,                              & ! [IN]
+                                        enable_periodic_year,                  & ! [IN]
+                                        enable_periodic_month,                 & ! [IN]
+                                        enable_periodic_day,                   & ! [IN]
+                                        step_fixed,                            & ! [IN]
+                                        offset,                                & ! [IN]
+                                        defval,                                & ! [IN]
+                                        check_coordinates = check_coordinates, & ! [IN]
+                                        aggregate         = file_aggregate,    & ! [IN]
+                                        allow_missing     = allow_missing,     & ! [IN]
+                                        step_limit        = step_limit         ) ! [IN]
     enddo
 
     return
@@ -313,6 +318,7 @@ contains
        defval,                &
        check_coordinates,     &
        aggregate,             &
+       allow_missing,         &
        step_limit,            &
        exist                  )
     use scale_file_h, only: &
@@ -356,6 +362,7 @@ contains
 
     logical,          intent(in),  optional :: check_coordinates
     logical,          intent(in),  optional :: aggregate
+    logical,          intent(in),  optional :: allow_missing
     integer,          intent(in),  optional :: step_limit            ! limit number for reading data
     logical,          intent(out), optional :: exist
 
@@ -389,6 +396,7 @@ contains
 
     integer  :: step_limit_
     logical  :: aggregate_
+    logical  :: allow_missing_
 
     character(len=H_LONG) :: filename
 
@@ -410,6 +418,12 @@ contains
        aggregate_ = aggregate
     else
        aggregate_ = FILE_AGGREGATE
+    end if
+
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
     end if
 
     do nid = 1, FILE_EXTERNAL_INPUT_item_count
@@ -483,13 +497,15 @@ contains
     end if
 
     ! setup item
-    FILE_EXTERNAL_INPUT_item(nid)%fid         = fid
-    FILE_EXTERNAL_INPUT_item(nid)%varname     = varname
-    FILE_EXTERNAL_INPUT_item(nid)%step_num    = step_nmax
-    FILE_EXTERNAL_INPUT_item(nid)%step_limit  = step_limit_
-    FILE_EXTERNAL_INPUT_item(nid)%ndim        = dim_rank
-    FILE_EXTERNAL_INPUT_item(nid)%aggregate   = aggregate_
-    FILE_EXTERNAL_INPUT_item(nid)%axistype    = axistype
+    FILE_EXTERNAL_INPUT_item(nid)%fid           = fid
+    FILE_EXTERNAL_INPUT_item(nid)%varname       = varname
+    FILE_EXTERNAL_INPUT_item(nid)%axistype      = axistype
+    FILE_EXTERNAL_INPUT_item(nid)%ndim          = dim_rank
+    FILE_EXTERNAL_INPUT_item(nid)%step_num      = step_nmax
+    FILE_EXTERNAL_INPUT_item(nid)%step_limit    = step_limit_
+    FILE_EXTERNAL_INPUT_item(nid)%allow_missing = allow_missing_
+    FILE_EXTERNAL_INPUT_item(nid)%aggregate     = aggregate_
+
 
     select case ( dim_rank )
     case ( 1 )
@@ -839,10 +855,10 @@ contains
        time_current, &
        var,          &
        error         )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
-    use scale_prc, only: &
-       PRC_abort
     implicit none
     character(len=*), intent(in)  :: varname      ! item name
     real(DP),         intent(in)  :: time_current ! current time
@@ -859,8 +875,6 @@ contains
     integer  :: nn1
     !---------------------------------------------------------------------------
 
-    error = .true.
-
     ! searching the data ID
     nid = -1
     do n = 1, FILE_EXTERNAL_INPUT_item_count
@@ -869,12 +883,14 @@ contains
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
        return
     endif
 
     if ( FILE_EXTERNAL_INPUT_item(nid)%ndim /= 1 ) then
-       LOG_ERROR("FILE_EXTERNAL_INPUT_update_1D",*) 'Data is not 1D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
-       call PRC_abort
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'Data is not 1D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+       error = .true.
+       return
     endif
 
     call FILE_EXTERNAL_INPUT_time_advance( nid,          & ! [IN]
@@ -907,15 +923,27 @@ contains
        end if
     endif
 
+    error = .false.
+
     ! store data with weight
     do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
        nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-       var(nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
-                + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
+       if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+            .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+          var(nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
+                   + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
+       else
+          if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+             var(nn1) = UNDEF
+          else
+             LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'missing value is found in ', &
+                  trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,')'
+             error = .true.
+             exit
+          end if
+       end if
     enddo
-
-    error = .false.
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_1D
@@ -927,6 +955,8 @@ contains
        time_current, &
        var,          &
        error         )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
     implicit none
@@ -945,8 +975,6 @@ contains
     integer  :: nn1, nn2
     !---------------------------------------------------------------------------
 
-    error = .true.
-
     ! searching the data ID
     nid = -1
     do n = 1, FILE_EXTERNAL_INPUT_item_count
@@ -955,6 +983,13 @@ contains
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    if ( FILE_EXTERNAL_INPUT_item(nid)%ndim /= 2 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'Data is not 2D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+       error = .true.
        return
     endif
 
@@ -989,16 +1024,30 @@ contains
        end if
     endif
 
+    error = .false.
+
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! store data with weight (x,z)->(z,x)
        do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
           nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
           do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
-          nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+             nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
 
-             var(nn2,nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
-                          + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+                var(nn2,nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
+                             + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+             else
+                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                   var(nn2,nn1) = UNDEF
+                else
+                   LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
+                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,')'
+                   error = .true.
+                   exit
+                end if
+             end if
           enddo
        enddo
     else
@@ -1009,13 +1058,23 @@ contains
           do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
              nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-             var(nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
-                          + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+                var(nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
+                             + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+             else
+                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                   var(nn1,nn2) = UNDEF
+                else
+                   LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
+                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,')'
+                   error = .true.
+                   exit
+                end if
+             end if
           enddo
        enddo
     endif
-
-    error = .false.
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_2D
@@ -1027,6 +1086,8 @@ contains
        time_current, &
        var,          &
        error         )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_file, only: &
        FILE_Read
     implicit none
@@ -1045,8 +1106,6 @@ contains
     integer  :: nn1, nn2, nn3
     !---------------------------------------------------------------------------
 
-    error = .true.
-
     ! searching the data ID
     nid = -1
     do n = 1, FILE_EXTERNAL_INPUT_item_count
@@ -1055,6 +1114,13 @@ contains
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    if ( FILE_EXTERNAL_INPUT_item(nid)%ndim /= 3 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Data is not 3D var: ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+       error = .true.
        return
     endif
 
@@ -1089,6 +1155,8 @@ contains
        end if
     endif
 
+    error = .false.
+
     if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
        ! store data with weight (x,y,z)->(z,x,y)
        do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
@@ -1100,8 +1168,20 @@ contains
              do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(3)
                 nn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
 
-                var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
-                                 + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+                if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+                     .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+                   var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
+                                    + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+                else
+                   if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                      var(nn3,nn1,nn2) = UNDEF
+                   else
+                      LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
+                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,',',n3,')'
+                      error = .true.
+                      exit
+                   end if
+                end if
              enddo
           enddo
        enddo
@@ -1116,14 +1196,24 @@ contains
              do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
                 nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-                var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
-                                 + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+                if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+                     .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+                   var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
+                                    + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+                else
+                   if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                      var(nn1,nn2,nn3) = UNDEF
+                   else
+                      LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
+                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,',',n3,')'
+                      error = .true.
+                      exit
+                   end if
+                end if
              enddo
           enddo
        enddo
     endif
-
-    error = .false.
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_3D
