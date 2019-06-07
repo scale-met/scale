@@ -102,7 +102,7 @@ module mod_realinput
   integer,  private              :: itp_nh_a  = 4 ! for atmos
   integer,  private              :: itp_nh_l  = 4 ! for land
   integer,  private              :: itp_nh_o  = 4 ! for ocean
-  integer,  private              :: itp_nh_ol = 4 ! for ocean-land
+  integer,  private              :: itp_nh_ol = 5 ! for ocean-land
 
   integer,  private, parameter   :: I_intrp_linear = 0
   integer,  private, parameter   :: I_intrp_dstwgt = 1
@@ -754,11 +754,9 @@ contains
     select case( INTRP_TYPE )
     case ( "LINEAR" )
        itp_nh_o  = 4
-       itp_nh_ol = 4
        itp_type_o = I_intrp_linear
     case ( "DIST-WEIGHT" )
        itp_nh_o  = COMM_CARTESC_NEST_INTERP_LEVEL
-       itp_nh_ol = COMM_CARTESC_NEST_INTERP_LEVEL
        itp_type_o = I_intrp_dstwgt
     case default
        LOG_ERROR("REALINPUT_surface",*) 'Unsupported type of INTRP_TYPE : ', trim(INTRP_TYPE)
@@ -766,6 +764,7 @@ contains
        call PRC_abort
     end select
 
+    itp_nh_ol = COMM_CARTESC_NEST_INTERP_LEVEL
 
     multi_land  = ( NUMBER_OF_FILES_LAND * NUMBER_OF_TSTEPS_LAND - NUMBER_OF_SKIP_TSTEPS_LAND ) > 1
     multi_ocean = BASENAME_BOUNDARY_OCEAN .ne. ''
@@ -2509,27 +2508,17 @@ contains
     use scale_const, only: &
          EPS   => CONST_EPS,   &
          UNDEF => CONST_UNDEF, &
-         PI    => CONST_PI,    &
          LAPS  => CONST_LAPS
     use scale_topography, only: &
          TOPOGRAPHY_Zsfc
     use scale_interp, only: &
          INTERP_factor2d, &
          INTERP_interp2d
-    use scale_filter, only: &
-         FILTER_hyperdiff
     use scale_atmos_grid_cartesC, only: &
          CX  => ATMOS_GRID_CARTESC_CX, &
          CY  => ATMOS_GRID_CARTESC_CY
     use scale_land_grid_cartesC, only: &
          LCZ => LAND_GRID_CARTESC_CZ
-    use scale_mapprojection, only: &
-         MAPPROJECTION_lonlat2xy
-    use scale_atmos_thermodyn, only: &
-         THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
-         THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
-    use scale_atmos_hydrometeor, only: &
-         I_QV
     use scale_landuse, only: &
          lsmask_nest => LANDUSE_frac_land
     use mod_realinput_scale, only: &
@@ -2548,26 +2537,17 @@ contains
          ParentOceanOpenGrADS, &
          ParentOceanInputGrADS, &
          ParentLandInputGrADS
-    use mod_atmos_vars, only: &
-         DENS, &
-         MOMZ, &
-         MOMX, &
-         MOMY, &
-         RHOT, &
-         QTRC
-    use scale_mapprojection, only: &
-         MAPPROJECTION_lonlat2xy
     implicit none
 
     real(RP),         intent(out) :: tg  (:,:,:,:)
     real(RP),         intent(out) :: strg(:,:,:,:)
     real(RP),         intent(out) :: lst (:,:,:)
     real(RP),         intent(out) :: albg(:,:,:,:,:)
-    real(RP),         intent(inout) :: tc_urb(IA,JA)
-    real(RP),         intent(inout) :: qc_urb(IA,JA)
-    real(RP),         intent(inout) :: uc_urb(IA,JA)
-    real(RP),         intent(inout) :: ust   (IA,JA)
-    real(RP),         intent(inout) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
+    real(RP),         intent(out) :: tc_urb(IA,JA)
+    real(RP),         intent(out) :: qc_urb(IA,JA)
+    real(RP),         intent(out) :: uc_urb(IA,JA)
+    real(RP),         intent(out) :: ust   (IA,JA)
+    real(RP),         intent(out) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
     real(RP),         intent(out) :: tw  (:,:,:)
     real(RP),         intent(out) :: sst (:,:,:)
     real(RP),         intent(out) :: albw(:,:,:,:,:)
@@ -2613,77 +2593,13 @@ contains
     real(RP) :: z0w_org  (         odims(1),odims(2))
     real(RP) :: omask    (         odims(1),odims(2))
     real(RP) :: lst_ocean(         odims(1),odims(2))
-    real(RP) :: oX_org   (         odims(1),odims(2))
-    real(RP) :: oY_org   (         odims(1),odims(2))
-    logical  :: zonal, pole
-
-    real(RP) :: Qdry, Rtot, CVtot, CPtot
-    real(RP) :: temp, pres
 
     ! elevation collection
     real(RP) :: work(ldims(2),ldims(3))
-    real(RP) :: tdiff
-
-    real(RP) :: one(IA,JA)
 
     integer :: i, j
     integer :: n, nn, nl, nnl
     !---------------------------------------------------------------------------
-
-    if ( first_surface ) then ! read data only once
-
-       ! urban data
-
-       if ( URBAN_do ) then
-          !$omp parallel do collapse(2) &
-          !$omp private(Qdry,Rtot,CVtot,CPtot)
-          do j = 1, JA
-          do i = 1, IA
-             call THERMODYN_specific_heat( QA, &
-                                           qtrc(KS,i,j,:), &
-                                           TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                           Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
-             call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, &
-                                            temp, pres                                      )
-
-             tc_urb(i,j) = temp
-#ifdef DRY
-             qc_urb(i,j) = 0.0_RP
-#else
-             qc_urb(i,j) = qtrc(KS,i,j,I_QV)
-#endif
-          enddo
-          enddo
-
-          !$omp parallel do
-          do j = 1, JA-1
-          do i = 1, IA-1
-             uc_urb(i,j) = max(sqrt( ( momx(KS,i,j) / (dens(KS,i+1,  j)+dens(KS,i,j)) * 2.0_RP )**2.0_RP &
-                                   + ( momy(KS,i,j) / (dens(KS,  i,j+1)+dens(KS,i,j)) * 2.0_RP )**2.0_RP ), &
-                               0.01_RP)
-          enddo
-          enddo
-          !$omp parallel do
-          do j = 1, JA-1
-             uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j) /  dens(KS,IA,j  ) )**2.0_RP &
-                                    + ( momy(KS,IA,j) / (dens(KS,IA,j+1)+dens(KS,IA,j)) * 2.0_RP )**2.0_RP ), &
-                                0.01_RP)
-          enddo
-          !$omp parallel do
-          do i = 1, IA-1
-             uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA) / (dens(KS,i+1,JA)+dens(KS,i,JA)) * 2.0_RP )**2.0_RP &
-                                    + ( momy(KS,i,JA) /  dens(KS,i  ,JA) )**2.0_RP ), 0.01_RP)
-          enddo
-          uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP &
-                                  + ( momy(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP ), 0.01_RP)
-
-          call COMM_vars8( uc_urb, 1 )
-          call COMM_wait ( uc_urb, 1, .false. )
-
-       end if
-
-    end if ! first_surface
-
 
     if ( do_read_ocean ) then
 
@@ -2885,7 +2801,7 @@ contains
              ol_interp = .true.
           else
              ol_interp = .false.
-             outer: do j = 1, ldims(3)
+      outer: do j = 1, ldims(3)
              do i = 1, ldims(2)
                 if (    llon_org(i,j) .ne. olon_org(i,j) &
                    .or. llat_org(i,j) .ne. olat_org(i,j) ) then
@@ -2897,7 +2813,6 @@ contains
           end if
 
           if ( ol_interp ) then
-
              ! interpolation factor between outer ocean grid and land grid
              call INTERP_factor2d( itp_nh_ol,          & ! [IN]
                                    ldims(2), ldims(3), & ! [IN]
@@ -2955,19 +2870,18 @@ contains
           end if
 
           call land_interporation( &
+               ldims(1), ldims(2), ldims(3),    & ! (in)
+               odims(1), odims(2),              & ! (in)
                tg(:,:,:,nnl), strg(:,:,:,nnl),  & ! (out)
                lst(:,:,nnl), albg(:,:,:,:,nnl), & ! (out)
-               ust, albu,                       & ! (out)
                tg_org, strg_org, smds_org,      & ! (inout)
                lst_org, albg_org,               & ! (inout)
-               ust_org,                         & ! (inout)
                sst_org,                         & ! (in)
                lmask_org,                       & ! (in)
                lsmask_nest,                     & ! (in)
                topo_org,                        & ! (in)
                lz_org, llon_org, llat_org,      & ! (in)
                LCZ, CX, CY, LON, LAT,           & ! (in)
-               ldims, odims,                    & ! (in)
                maskval_tg, maskval_strg,        & ! (in)
                init_landwater_ratio,            & ! (in)
                use_file_landwater,              & ! (in)
@@ -2975,8 +2889,7 @@ contains
                soilwater_ds2vc_flag,            & ! (in)
                elevation_collection_land,       & ! (in)
                intrp_iter_max,                  & ! (in)
-               ol_interp,                       & ! (in)
-               URBAN_do                         ) ! (in)
+               ol_interp                        ) ! (in)
 
           !$omp parallel do collapse(2)
           do j = 1, ldims(3)
@@ -3001,8 +2914,8 @@ contains
                                    lst_ocean(:,:)      ) ! [OUT]
           else
              !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
+             do j = 1, odims(2)
+             do i = 1, odims(1)
                 lst_ocean(i,j) = work(i,j)
              end do
              end do
@@ -3013,231 +2926,24 @@ contains
 
        end if
 
-       !$omp parallel do collapse(2)
-       do j = 1, odims(2)
-       do i = 1, odims(1)
-          if ( albw_org(i,j,I_R_direct ,I_R_IR ) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_IR ) = init_ocean_alb_lw
-          if ( albw_org(i,j,I_R_diffuse,I_R_IR ) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_IR ) = init_ocean_alb_lw
-          if ( albw_org(i,j,I_R_direct ,I_R_NIR) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_NIR) = init_ocean_alb_sw
-          if ( albw_org(i,j,I_R_diffuse,I_R_NIR) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_NIR) = init_ocean_alb_sw
-          if ( albw_org(i,j,I_R_direct ,I_R_VIS) == UNDEF ) albw_org(i,j,I_R_direct ,I_R_VIS) = init_ocean_alb_sw
-          if ( albw_org(i,j,I_R_diffuse,I_R_VIS) == UNDEF ) albw_org(i,j,I_R_diffuse,I_R_VIS) = init_ocean_alb_sw
-          if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = init_ocean_z0w
-       end do
-       end do
+       call ocean_interporation( odims(1), odims(2),                   & ! (in)
+                                 sst_org(:,:), tw_org(:,:),            & ! (in)
+                                 albw_org(:,:,:,:), z0w_org(:,:),      & ! (inout)
+                                 CX(:), CY(:),                         & ! (in)
+                                 elevation_collection_ocean,           & ! (in)
+                                 init_ocean_alb_lw, init_ocean_alb_sw, & ! (in)
+                                 init_ocean_z0w,                       & ! (in)
+                                 first_surface, update_coord,          & ! (in)
+                                 sst(:,:,nn), tw(:,:,nn),              & ! (out)
+                                 albw(:,:,:,:,nn), z0w(:,:,nn)         ) ! (out)
 
-
-       if ( first_surface .or. update_coord ) then
-
-          ! interporation for ocean variables
-
-          select case( itp_type_a )
-          case ( i_intrp_linear )
-
-             call MAPPROJECTION_lonlat2xy( odims(1), 1, odims(1), odims(2), 1, odims(2), &
-                                           olon_org(:,:), olat_org(:,:), & ! [IN]
-                                           oX_org(:,:), oY_org(:,:)      ) ! [OUT]
-
-             zonal = ( maxval(olon_org) - minval(olon_org) ) > 2.0_RP * PI * 0.9_RP
-             pole = ( maxval(olat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(olat_org) < - PI * 0.5_RP * 0.9_RP )
-             call INTERP_factor2d( odims(1), odims(2), & ! [IN]
-                                   IA, JA,             & ! [IN]
-                                   oX_org(:,:),        & ! [IN]
-                                   oY_org(:,:),        & ! [IN]
-                                   CX(:), CY(:),       & ! [IN]
-                                   oigrd (:,:,:),      & ! [OUT]
-                                   ojgrd (:,:,:),      & ! [OUT]
-                                   ohfact(:,:,:),      & ! [OUT]
-                                   zonal = zonal,      & ! [IN]
-                                   pole  = pole        ) ! [IN]
-
-          case ( I_intrp_dstwgt )
-
-             call INTERP_factor2d( itp_nh_o,           & ! [IN]
-                                   odims(1), odims(2), & ! [IN]
-                                   IA, JA,             & ! [IN]
-                                   olon_org(:,:),      & ! [IN]
-                                   olat_org(:,:),      & ! [IN]
-                                   LON(:,:), LAT(:,:), & ! [IN]
-                                   oigrd (:,:,:),      & ! [OUT]
-                                   ojgrd (:,:,:),      & ! [OUT]
-                                   ohfact(:,:,:)       ) ! [OUT]
-
-          end select
-
-       end if
-
-       call INTERP_interp2d( itp_nh_o,           & ! [IN]
-                             odims(1), odims(2), & ! [IN]
-                             IA, JA,             & ! [IN]
-                             oigrd (:,:,:),      & ! [IN]
-                             ojgrd (:,:,:),      & ! [IN]
-                             ohfact(:,:,:),      & ! [IN]
-                             tw_org(:,:),        & ! [IN]
-                             tw    (:,:,nn)      ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 tw(:,:,nn), FILTER_ORDER, FILTER_NITER )
-          call COMM_vars8( tw(:,:,nn), 1 )
-          call COMM_wait ( tw(:,:,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,            & ! [IN]
-                             odims(1), odims(2),  & ! [IN]
-                             IA, JA,              & ! [IN]
-                             oigrd  (:,:,:),      & ! [IN]
-                             ojgrd  (:,:,:),      & ! [IN]
-                             ohfact (:,:,:),      & ! [IN]
-                             sst_org(:,:),        & ! [IN]
-                             sst    (:,:,nn)      ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 sst(:,:,nn), FILTER_ORDER, FILTER_NITER )
-          call COMM_vars8( sst(:,:,nn), 1 )
-          call COMM_wait ( sst(:,:,nn), 1, .false. )
-       end if
-
-       ! elevation collection
-       if ( elevation_collection_ocean ) then
-
-          !$omp parallel do collapse(2) &
-          !$omp private(tdiff)
-          do j = 1, JA
-          do i = 1, IA
-             tdiff = TOPOGRAPHY_Zsfc(i,j) * LAPS
-             sst(i,j,nn) = sst(i,j,nn) - tdiff
-             tw (i,j,nn) = tw (i,j,nn) - tdiff
-          end do
-          end do
-
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_direct ,I_R_IR ),   & ! [IN]
-                             albw    (:,:,I_R_direct ,I_R_IR ,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          !$omp parallel do collapse(2)
-          do j = 1, JA
-          do i = 1, IA
-             one(i,j) = 1.0_RP
-          end do
-          end do
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_direct,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_direct,I_R_IR,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_direct,I_R_IR,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_diffuse,I_R_IR ),   & ! [IN]
-                             albw    (:,:,I_R_diffuse,I_R_IR ,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_diffuse,I_R_IR,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_IR,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_IR,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_direct ,I_R_NIR),   & ! [IN]
-                             albw    (:,:,I_R_direct ,I_R_NIR,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_direct,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_direct,I_R_NIR,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_direct,I_R_NIR,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_diffuse,I_R_NIR),   & ! [IN]
-                             albw    (:,:,I_R_diffuse,I_R_NIR,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_diffuse,I_R_NIR,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_NIR,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_NIR,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_direct ,I_R_VIS),   & ! [IN]
-                             albw    (:,:,I_R_direct ,I_R_VIS,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_direct,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_direct,I_R_VIS,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_direct,I_R_VIS,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,                            & ! [IN]
-                             odims(1), odims(2),                  & ! [IN]
-                             IA, JA,                              & ! [IN]
-                             oigrd   (:,:,:),                     & ! [IN]
-                             ojgrd   (:,:,:),                     & ! [IN]
-                             ohfact  (:,:,:),                     & ! [IN]
-                             albw_org(:,:,I_R_diffuse,I_R_VIS),   & ! [IN]
-                             albw    (:,:,I_R_diffuse,I_R_VIS,nn) ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 albw(:,:,I_R_diffuse,I_R_VIS,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( albw(:,:,I_R_diffuse,I_R_VIS,nn), 1 )
-          call COMM_wait ( albw(:,:,I_R_diffuse,I_R_VIS,nn), 1, .false. )
-       end if
-
-       call INTERP_interp2d( itp_nh_o,             & ! [IN]
-                             odims(1), odims(2),   & ! [IN]
-                             IA, JA,               & ! [IN]
-                             oigrd   (:,:,:),      & ! [IN]
-                             ojgrd   (:,:,:),      & ! [IN]
-                             ohfact  (:,:,:),      & ! [IN]
-                             z0w_org (:,:),        & ! [IN]
-                             z0w     (:,:,nn)      ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 z0w(:,:,nn), FILTER_ORDER, FILTER_NITER, &
-                                 limiter_sign = one(:,:) )
-          call COMM_vars8( z0w(:,:,nn), 1 )
-          call COMM_wait ( z0w(:,:,nn), 1, .false. )
-       end if
 
        if ( first_surface .or. multi_land ) then
-
           if ( multi_land ) then
              nnl = nn
           else
              nnl = 1
           end if
-
           ! replace values over the ocean ####
           !$omp parallel do collapse(2)
           do j = 1, JA
@@ -3247,18 +2953,15 @@ contains
              endif
           enddo
           enddo
-          if ( URBAN_do .and. first_surface ) then
-             !$omp parallel do collapse(2)
-             do j = 1, JA
-             do i = 1, IA
-                if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
-                   ust(i,j) = sst(i,j,nn)
-                endif
-             enddo
-             enddo
-          end if
-
        end if
+
+
+       if ( URBAN_do .and. first_surface ) then
+          call urban_input( lst(:,:,nnl), albg(:,:,:,:,nnl),       & ! [IN]
+                            tc_urb(:,:), qc_urb(:,:), uc_urb(:,:), & ! [OUT]
+                            ust(:,:), albu(:,:,:,:)                ) ! [OUT]
+       end if
+
 
        first_surface = .false.
 
@@ -3379,18 +3082,16 @@ contains
 
   !-------------------------------
   subroutine land_interporation( &
+       kmax, imax, jmax, oimax,ojmax, &
        tg, strg, lst, albg,        &
-       ust, albu,                  &
        tg_org, strg_org, smds_org, &
        lst_org, albg_org,          &
-       ust_org,                    &
        sst_org,                    &
        lmask_org, lsmask_nest,     &
        topo_org,                   &
        lz_org, llon_org, llat_org, &
        LCZ, CX, CY,                &
        LON, LAT,                   &
-       ldims, odims,               &
        maskval_tg, maskval_strg,   &
        init_landwater_ratio,       &
        use_file_landwater,         &
@@ -3398,8 +3099,7 @@ contains
        soilwater_ds2vc_flag,       &
        elevation_collection,       &
        intrp_iter_max,             &
-       ol_interp,                  &
-       URBAN_do                    )
+       ol_interp                   )
     use scale_prc, only: &
          PRC_abort
     use scale_const, only: &
@@ -3426,32 +3126,29 @@ contains
     use mod_land_vars, only: &
          convert_WS2VWC
     implicit none
+    integer,  intent(in)    :: kmax, imax, jmax
+    integer,  intent(in)    :: oimax, ojmax
     real(RP), intent(out)   :: tg(LKMAX,IA,JA)
     real(RP), intent(out)   :: strg(LKMAX,IA,JA)
     real(RP), intent(out)   :: lst(IA,JA)
     real(RP), intent(out)   :: albg(IA,JA,N_RAD_DIR,N_RAD_RGN)
-    real(RP), intent(out)   :: ust(IA,JA)
-    real(RP), intent(out)   :: albu(IA,JA,N_RAD_DIR,N_RAD_RGN)
-    real(RP), intent(inout) :: tg_org(:,:,:)
-    real(RP), intent(inout) :: strg_org(:,:,:)
-    real(RP), intent(inout) :: smds_org(:,:,:)
-    real(RP), intent(inout) :: lst_org(:,:)
-    real(RP), intent(inout) :: albg_org(:,:,:,:)
-    real(RP), intent(inout) :: ust_org(:,:)
-    real(RP), intent(inout) :: sst_org(:,:)
-    real(RP), intent(in)    :: lmask_org(:,:)
-    real(RP), intent(in)    :: lsmask_nest(:,:)
-    real(RP), intent(in)    :: topo_org(:,:)
-    real(RP), intent(in)    :: lz_org(:)
-    real(RP), intent(in)    :: llon_org(:,:)
-    real(RP), intent(in)    :: llat_org(:,:)
+    real(RP), intent(inout) :: tg_org(kmax,imax,jmax)
+    real(RP), intent(inout) :: strg_org(kmax,imax,jmax)
+    real(RP), intent(inout) :: smds_org(kmax,imax,jmax)
+    real(RP), intent(inout) :: lst_org(imax,jmax)
+    real(RP), intent(inout) :: albg_org(imax,jmax,N_RAD_DIR,N_RAD_RGN)
+    real(RP), intent(inout) :: sst_org(oimax,ojmax)
+    real(RP), intent(in)    :: lmask_org(imax,jmax)
+    real(RP), intent(in)    :: lsmask_nest(IA,JA)
+    real(RP), intent(in)    :: topo_org(imax,jmax)
+    real(RP), intent(in)    :: lz_org(kmax)
+    real(RP), intent(in)    :: llon_org(imax,jmax)
+    real(RP), intent(in)    :: llat_org(imax,jmax)
     real(RP), intent(in)    :: LCZ(LKMAX)
     real(RP), intent(in)    :: CX(IA)
     real(RP), intent(in)    :: CY(JA)
     real(RP), intent(in)    :: LON(IA,JA)
     real(RP), intent(in)    :: LAT(IA,JA)
-    integer,  intent(in)    :: ldims(3)
-    integer,  intent(in)    :: odims(2)
     real(RP), intent(in)    :: maskval_tg
     real(RP), intent(in)    :: maskval_strg
     real(RP), intent(in)    :: init_landwater_ratio
@@ -3461,17 +3158,16 @@ contains
     logical,  intent(in)    :: elevation_collection
     integer,  intent(in)    :: intrp_iter_max
     logical,  intent(in)    :: ol_interp
-    logical,  intent(in)    :: URBAN_do
 
-    real(RP) :: lmask(ldims(2), ldims(3))
+    real(RP) :: lmask(imax,jmax)
     real(RP) :: smds(LKMAX,IA,JA)
 
     ! data for interporation
-    real(RP) :: hfact_l(ldims(2), ldims(3), itp_nh_ol)
-    integer  :: igrd_l (ldims(2), ldims(3), itp_nh_ol)
-    integer  :: jgrd_l (ldims(2), ldims(3), itp_nh_ol)
-    real(RP) :: lX_org (ldims(2), ldims(3))
-    real(RP) :: lY_org (ldims(2), ldims(3))
+    real(RP) :: hfact_l(imax,jmax,itp_nh_ol)
+    integer  :: igrd_l (imax,jmax,itp_nh_ol)
+    integer  :: jgrd_l (imax,jmax,itp_nh_ol)
+    real(RP) :: lX_org (imax,jmax)
+    real(RP) :: lY_org (imax,jmax)
     logical  :: zonal, pole
     integer  :: igrd (         IA,JA,itp_nh_l)
     integer  :: jgrd (         IA,JA,itp_nh_l)
@@ -3480,11 +3176,11 @@ contains
     real(RP) :: vfactl(LKMAX,  IA,JA,itp_nh_l)
 
 
-    real(RP) :: sst_land(ldims(2), ldims(3))
-    real(RP) :: work (ldims(2), ldims(3))
-    real(RP) :: work2(ldims(2), ldims(3))
+    real(RP) :: sst_land(imax,jmax)
+    real(RP) :: work (imax,jmax)
+    real(RP) :: work2(imax,jmax)
 
-    real(RP) :: lz3d_org(ldims(1),ldims(2),ldims(3))
+    real(RP) :: lz3d_org(kmax,imax,jmax)
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
     ! elevation collection
@@ -3494,17 +3190,17 @@ contains
     real(RP) :: one2d(IA,JA)
     real(RP) :: one3d(KA,IA,JA)
 
-    integer :: k, i, j
+    integer :: k, i, j, m, n
 
 
     ! Surface skin temp: interpolate over the ocean
     if ( i_INTRP_LAND_SFC_TEMP .ne. i_intrp_off ) then
        select case( i_INTRP_LAND_SFC_TEMP )
        case( i_intrp_mask )
-          call make_mask( lmask, lst_org, ldims(2), ldims(3), landdata=.true.)
+          call make_mask( lmask, lst_org, imax, jmax, landdata=.true.)
           !$omp parallel do collapse(2)
-          do j = 1, ldims(3)
-          do i = 1, ldims(2)
+          do j = 1, jmax
+          do i = 1, imax
              if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
           end do
           end do
@@ -3513,121 +3209,92 @@ contains
           LOG_ERROR("land_interporation",*) 'INTRP_LAND_SFC_TEMP is invalid.'
           call PRC_abort
        end select
-       call interp_OceanLand_data(lst_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
+       call interp_OceanLand_data(lst_org, lmask, imax, jmax, .true., intrp_iter_max)
     end if
-
-    ! Urban surface temp: interpolate over the ocean
-    ! if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
-    !   select case( i_INTRP_URB_SFC_TEMP )
-    !   case( i_intrp_mask )
-    !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
-    !      !$omp parallel do collapse(2)
-    !      do j = 1, ldims(3)
-    !      do i = 1, ldims(2)
-    !         if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
-    !      end do
-    !      end do
-    !   case( i_intrp_fill )
-    !      call make_mask( lmask, ust_org, ldims(2), ldims(3), landdata=.true.)
-    !   case default
-    !      LOG_ERROR("land_interporation",*) 'INTRP_URB_SFC_TEMP is invalid.'
-    !      call PRC_abort
-    !   end select
-    !   call interp_OceanLand_data(ust_org, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
-    !end if
 
     if ( ol_interp ) then
        ! interpolation facter between outer land grid and ocean grid
-       call INTERP_factor2d( itp_nh_ol,          & ! [IN]
-                             odims(1), odims(2), & ! [IN]
-                             ldims(2), ldims(3), & ! [IN]
-                             olon_org(:,:),      & ! [IN]
-                             olat_org(:,:),      & ! [IN]
-                             llon_org(:,:),      & ! [IN]
-                             llat_org(:,:),      & ! [IN]
-                             igrd_l  (:,:,:),    & ! [OUT]
-                             jgrd_l  (:,:,:),    & ! [OUT]
-                             hfact_l (:,:,:)     ) ! [OUT]
+       call INTERP_factor2d( itp_nh_ol,       & ! [IN]
+                             oimax, ojmax,    & ! [IN]
+                             imax, jmax,      & ! [IN]
+                             olon_org(:,:),   & ! [IN]
+                             olat_org(:,:),   & ! [IN]
+                             llon_org(:,:),   & ! [IN]
+                             llat_org(:,:),   & ! [IN]
+                             igrd_l  (:,:,:), & ! [OUT]
+                             jgrd_l  (:,:,:), & ! [OUT]
+                             hfact_l (:,:,:)  ) ! [OUT]
 
        ! sst on land grid
-       call INTERP_interp2d( itp_nh_ol,          & ! [IN]
-                             odims(1), odims(2), & ! [IN]
-                             ldims(2), ldims(3), & ! [IN]
-                             igrd_l   (:,:,:),   & ! [IN]
-                             jgrd_l   (:,:,:),   & ! [IN]
-                             hfact_l  (:,:,:),   & ! [IN]
-                             sst_org  (:,:),     & ! [IN]
-                             sst_land (:,:)      ) ! [OUT]
+       call INTERP_interp2d( itp_nh_ol,        & ! [IN]
+                             oimax, ojmax,     & ! [IN]
+                             imax, jmax,       & ! [IN]
+                             igrd_l   (:,:,:), & ! [IN]
+                             jgrd_l   (:,:,:), & ! [IN]
+                             hfact_l  (:,:,:), & ! [IN]
+                             sst_org  (:,:),   & ! [IN]
+                             sst_land (:,:)    ) ! [OUT]
     else
        !$omp parallel do collapse(2)
-       do j = 1, ldims(3)
-       do i = 1, ldims(2)
+       do j = 1, jmax
+       do i = 1, imax
           sst_land(i,j) = sst_org(i,j)
        end do
        end do
     end if
 
     !$omp parallel do collapse(2)
-    do j = 1, ldims(3)
-    do i = 1, ldims(2)
+    do j = 1, jmax
+    do i = 1, imax
        if ( topo_org(i,j) > UNDEF + EPS ) then ! ignore UNDEF value
           sst_land(i,j) = sst_land(i,j) - topo_org(i,j) * LAPS
        end if
     end do
     end do
 
-    call replace_misval_map( lst_org, sst_land, ldims(2), ldims(3), "SKINT" )
+    call replace_misval_map( lst_org, sst_land, imax, jmax, "SKINT" )
 
     ! replace missing value
     !$omp parallel do collapse(2)
-    do j = 1, ldims(3)
-    do i = 1, ldims(2)
+    do j = 1, jmax
+    do i = 1, imax
 !       if ( skinw_org(i,j) == UNDEF ) skinw_org(i,j) = 0.0_RP
 !       if ( snowq_org(i,j) == UNDEF ) snowq_org(i,j) = 0.0_RP
 !       if ( snowt_org(i,j) == UNDEF ) snowt_org(i,j) = TEM00
-       if( albg_org(i,j,I_R_direct ,I_R_IR ) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_IR ) = 0.03_RP
-       if( albg_org(i,j,I_R_diffuse,I_R_IR ) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_IR ) = 0.03_RP  ! emissivity of general ground surface : 0.95-0.98
-       if( albg_org(i,j,I_R_direct ,I_R_NIR) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_NIR) = 0.22_RP
-       if( albg_org(i,j,I_R_diffuse,I_R_NIR) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_NIR) = 0.22_RP
-       if( albg_org(i,j,I_R_direct ,I_R_VIS) == UNDEF ) albg_org(i,j,I_R_direct ,I_R_VIS) = 0.22_RP
-       if( albg_org(i,j,I_R_diffuse,I_R_VIS) == UNDEF ) albg_org(i,j,I_R_diffuse,I_R_VIS) = 0.22_RP
+       do m = 1, N_RAD_DIR
+          if( albg_org(i,j,m,I_R_IR ) == UNDEF ) albg_org(i,j,m,I_R_IR ) = 0.03_RP ! emissivity of general ground surface : 0.95-0.98
+          if( albg_org(i,j,m,I_R_NIR) == UNDEF ) albg_org(i,j,m,I_R_NIR) = 0.22_RP
+          if( albg_org(i,j,m,I_R_VIS) == UNDEF ) albg_org(i,j,m,I_R_VIS) = 0.22_RP
+       end do
     end do
     end do
-    if ( URBAN_do ) then
-       !$omp parallel do collapse(2)
-       do j = 1, ldims(3)
-       do i = 1, ldims(2)
-          if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
-       end do
-       end do
-    end if
 
     ! Land temp: interpolate over the ocean
     if ( i_INTRP_LAND_TEMP .ne. i_intrp_off ) then
-       do k = 1, ldims(1)
+       do k = 1, kmax
           !$omp parallel do collapse(2)
-          do j = 1, ldims(3)
-          do i = 1, ldims(2)
+          do j = 1, jmax
+          do i = 1, imax
              work(i,j) = tg_org(k,i,j)
           end do
           end do
           select case( i_INTRP_LAND_TEMP )
           case( i_intrp_mask )
              !$omp parallel do collapse(2)
-             do j = 1, ldims(3)
-             do i = 1, ldims(2)
+             do j = 1, jmax
+             do i = 1, imax
                 if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
              end do
              end do
           case( i_intrp_fill )
-             call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+             call make_mask( lmask, work, imax, jmax, landdata=.true.)
           end select
-          call interp_OceanLand_data( work, lmask, ldims(2), ldims(3), .true., intrp_iter_max )
+          call interp_OceanLand_data( work, lmask, imax, jmax, .true., intrp_iter_max )
           !replace land temp using skin temp
-          call replace_misval_map( work, lst_org, ldims(2),  ldims(3),  "STEMP")
+          call replace_misval_map( work, lst_org, imax,  jmax,  "STEMP")
           !$omp parallel do collapse(2)
-          do j = 1, ldims(3)
-          do i = 1, ldims(2)
+          do j = 1, jmax
+          do i = 1, imax
              tg_org(k,i,j) = work(i,j)
           end do
           end do
@@ -3637,8 +3304,8 @@ contains
 
     ! fill grid data
     !$omp parallel do collapse(2)
-    do j = 1, ldims(3)
-    do i = 1, ldims(2)
+    do j = 1, jmax
+    do i = 1, imax
        lz3d_org(:,i,j) = lz_org(:)
     end do
     end do
@@ -3653,59 +3320,59 @@ contains
     select case( itp_type_l )
     case ( i_intrp_linear )
 
-       call MAPPROJECTION_lonlat2xy( ldims(2), 1, ldims(2), ldims(3), 1, ldims(3), &
+       call MAPPROJECTION_lonlat2xy( imax, 1, imax, jmax, 1, jmax, &
                                      llon_org(:,:), llat_org(:,:), & ! [IN]
                                      lX_org(:,:), lY_org(:,:)      ) ! [OUT]
 
        zonal = ( maxval(llon_org) - minval(llon_org) ) > 2.0_RP * PI * 0.9_RP
        pole = ( maxval(llat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(llat_org) < - PI * 0.5_RP * 0.9_RP )
-       call INTERP_factor3d( ldims(1), 1, ldims(1), & ! [IN]
-                             ldims(2), ldims(3),    & ! [IN]
-                             LKMAX, LKS, LKE,       & ! [IN]
-                             IA, JA,                & ! [IN]
-                             lX_org(:,:),           & ! [IN]
-                             lY_org(:,:),           & ! [IN]
-                             lz3d_org(:,:,:),       & ! [IN]
-                             CX(:), CY(:),          & ! [IN]
-                             lcz_3D  (:,:,:),       & ! [IN]
-                             igrd    (    :,:,:),   & ! [OUT]
-                             jgrd    (    :,:,:),   & ! [OUT]
-                             hfact   (    :,:,:),   & ! [OUT]
-                             kgrdl   (:,:,:,:,:),   & ! [OUT]
-                             vfactl  (:,  :,:,:),   & ! [OUT]
-                             flag_extrap = .true.,  & ! [IN, optional]
-                             zonal = zonal,         & ! [IN, optional]
-                             pole  = pole           ) ! [IN, optional]
+       call INTERP_factor3d( kmax, 1, kmax,        & ! [IN]
+                             imax, jmax,           & ! [IN]
+                             LKMAX, LKS, LKE,      & ! [IN]
+                             IA, JA,               & ! [IN]
+                             lX_org(:,:),          & ! [IN]
+                             lY_org(:,:),          & ! [IN]
+                             lz3d_org(:,:,:),      & ! [IN]
+                             CX(:), CY(:),         & ! [IN]
+                             lcz_3D  (:,:,:),      & ! [IN]
+                             igrd    (    :,:,:),  & ! [OUT]
+                             jgrd    (    :,:,:),  & ! [OUT]
+                             hfact   (    :,:,:),  & ! [OUT]
+                             kgrdl   (:,:,:,:,:),  & ! [OUT]
+                             vfactl  (:,  :,:,:),  & ! [OUT]
+                             flag_extrap = .true., & ! [IN, optional]
+                             zonal = zonal,        & ! [IN, optional]
+                             pole  = pole          ) ! [IN, optional]
 
     case ( I_intrp_dstwgt )
 
-       call INTERP_factor3d( itp_nh_l,              & ! [IN]
-                             ldims(1), 1, ldims(1), & ! [IN]
-                             ldims(2), ldims(3),    & ! [IN]
-                             LKMAX, LKS, LKE,       & ! [IN]
-                             IA, JA,                & ! [IN]
-                             llon_org(:,:),         & ! [IN]
-                             llat_org(:,:),         & ! [IN]
-                             lz3d_org(:,:,:),       & ! [IN]
-                             LON(:,:), LAT(:,:),    & ! [IN]
-                             lcz_3D  (:,:,:),       & ! [IN]
-                             igrd    (    :,:,:),   & ! [OUT]
-                             jgrd    (    :,:,:),   & ! [OUT]
-                             hfact   (    :,:,:),   & ! [OUT]
-                             kgrdl   (:,:,:,:,:),   & ! [OUT]
-                             vfactl  (:,  :,:,:),   & ! [OUT]
-                             flag_extrap = .true.   ) ! [IN, optional]
+       call INTERP_factor3d( itp_nh_l,            & ! [IN]
+                             kmax, 1, kmax,       & ! [IN]
+                             imax, jmax,          & ! [IN]
+                             LKMAX, LKS, LKE,     & ! [IN]
+                             IA, JA,              & ! [IN]
+                             llon_org(:,:),       & ! [IN]
+                             llat_org(:,:),       & ! [IN]
+                             lz3d_org(:,:,:),     & ! [IN]
+                             LON(:,:), LAT(:,:),  & ! [IN]
+                             lcz_3D  (:,:,:),     & ! [IN]
+                             igrd    (    :,:,:), & ! [OUT]
+                             jgrd    (    :,:,:), & ! [OUT]
+                             hfact   (    :,:,:), & ! [OUT]
+                             kgrdl   (:,:,:,:,:), & ! [OUT]
+                             vfactl  (:,  :,:,:), & ! [OUT]
+                             flag_extrap = .true. ) ! [IN, optional]
 
     end select
 
-    call INTERP_interp2d( itp_nh_l,           & ! [IN]
-                          ldims(2), ldims(3), & ! [IN]
-                          IA, JA,             & ! [IN]
-                          igrd    (:,:,:),    & ! [IN]
-                          jgrd    (:,:,:),    & ! [IN]
-                          hfact   (:,:,:),    & ! [IN]
-                          lst_org (:,:),      & ! [IN]
-                          lst     (:,:)       ) ! [OUT]
+    call INTERP_interp2d( itp_nh_l,        & ! [IN]
+                          imax, jmax,      & ! [IN]
+                          IA, JA,          & ! [IN]
+                          igrd    (:,:,:), & ! [IN]
+                          jgrd    (:,:,:), & ! [IN]
+                          hfact   (:,:,:), & ! [IN]
+                          lst_org (:,:),   & ! [IN]
+                          lst     (:,:)    ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
                               lst(:,:), FILTER_ORDER, FILTER_NITER )
@@ -3713,31 +3380,7 @@ contains
        call COMM_wait ( lst(:,:), 1, .false. )
     end if
 
-    if ( URBAN_do ) then
-       call INTERP_interp2d( itp_nh_l,           & ! [IN]
-                             ldims(2), ldims(3), & ! [IN]
-                             IA, JA,             & ! [IN]
-                             igrd    (:,:,:),    & ! [IN]
-                             jgrd    (:,:,:),    & ! [IN]
-                             hfact   (:,:,:),    & ! [IN]
-                             ust_org (:,:),      & ! [IN]
-                             ust     (:,:)       ) ! [OUT]
-       if ( FILTER_NITER > 0 ) then
-          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                                 ust(:,:), FILTER_ORDER, FILTER_NITER )
-       call COMM_vars8( ust(:,:), 1 )
-       call COMM_wait ( ust(:,:), 1, .false. )
-       end if
-    end if
 
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_direct ,I_R_IR ), & ! [IN]
-                          albg    (:,:,I_R_direct ,I_R_IR )  ) ! [OUT]
     if ( FILTER_NITER > 0 ) then
        !$omp parallel do collapse(2)
        do j = 1, JA
@@ -3745,98 +3388,34 @@ contains
           one2d(i,j) = 1.0_RP
        end do
        end do
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_direct,I_R_IR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_direct,I_R_IR), 1 )
-       call COMM_wait ( albg(:,:,I_R_direct,I_R_IR), 1, .false. )
     end if
 
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
-                          albg    (:,:,I_R_diffuse,I_R_IR )  ) ! [OUT]
-    if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_diffuse,I_R_IR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_IR), 1 )
-       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_IR), 1, .false. )
-    end if
+    do n = 1, N_RAD_RGN
+    do m = 1, N_RAD_DIR
 
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_direct ,I_R_NIR), & ! [IN]
-                          albg    (:,:,I_R_direct ,I_R_NIR)  ) ! [OUT]
-    if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_direct,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_direct,I_R_NIR), 1 )
-       call COMM_wait ( albg(:,:,I_R_direct,I_R_NIR), 1, .false. )
-    end if
+       call INTERP_interp2d( itp_nh_l,          & ! [IN]
+                             imax, jmax,        & ! [IN]
+                             IA, JA,            & ! [IN]
+                             igrd    (:,:,:),   & ! [IN]
+                             jgrd    (:,:,:),   & ! [IN]
+                             hfact   (:,:,:),   & ! [IN]
+                             albg_org(:,:,m,n), & ! [IN]
+                             albg    (:,:,m,n)  ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+                                 albg(:,:,m,n), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one2d(:,:) )
+          call COMM_vars8( albg(:,:,m,n), 1 )
+          call COMM_wait ( albg(:,:,m,n), 1, .false. )
+       end if
+    end do
+    end do
 
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
-                          albg    (:,:,I_R_diffuse,I_R_NIR)  ) ! [OUT]
-    if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_diffuse,I_R_NIR), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_NIR), 1 )
-       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_NIR), 1, .false. )
-    end if
-
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_direct ,I_R_VIS), & ! [IN]
-                          albg    (:,:,I_R_direct ,I_R_VIS)  ) ! [OUT]
-    if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_direct,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_direct,I_R_VIS), 1 )
-       call COMM_wait ( albg(:,:,I_R_direct,I_R_VIS), 1, .false. )
-    end if
-
-    call INTERP_interp2d( itp_nh_l,                          & ! [IN]
-                          ldims(2), ldims(3),                & ! [IN]
-                          IA, JA,                            & ! [IN]
-                          igrd    (:,:,:),                   & ! [IN]
-                          jgrd    (:,:,:),                   & ! [IN]
-                          hfact   (:,:,:),                   & ! [IN]
-                          albg_org(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
-                          albg    (:,:,I_R_diffuse,I_R_VIS)  ) ! [OUT]
-    if ( FILTER_NITER > 0 ) then
-       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              albg(:,:,I_R_diffuse,I_R_VIS), FILTER_ORDER, FILTER_NITER, &
-                              limiter_sign = one2d(:,:) )
-       call COMM_vars8( albg(:,:,I_R_diffuse,I_R_VIS), 1 )
-       call COMM_wait ( albg(:,:,I_R_diffuse,I_R_VIS), 1, .false. )
-    end if
-
-    call INTERP_interp3d( itp_nh_l,              &
-                          ldims(1), 1, ldims(1), &
-                          ldims(2), ldims(3),    &
-                          LKMAX, LKS, LKE,       &
-                          IA, JA,                &
+    call INTERP_interp3d( itp_nh_l,            &
+                          kmax, 1, kmax,       &
+                          imax, jmax,          &
+                          LKMAX, LKS, LKE,     &
+                          IA, JA,              &
                           igrd    (    :,:,:), & ! [IN]
                           jgrd    (    :,:,:), & ! [IN]
                           hfact   (    :,:,:), & ! [IN]
@@ -3868,14 +3447,14 @@ contains
 
     ! elevation collection
     if ( elevation_collection ) then
-       call INTERP_interp2d( itp_nh_l,           & ! [IN]
-                             ldims(2), ldims(3), & ! [IN]
-                             IA, JA,             & ! [IN]
-                             igrd    (:,:,:),    & ! [IN]
-                             jgrd    (:,:,:),    & ! [IN]
-                             hfact   (:,:,:),    & ! [IN]
-                             topo_org(:,:),      & ! [IN]
-                             topo    (:,:)       ) ! [OUT]
+       call INTERP_interp2d( itp_nh_l,        & ! [IN]
+                             imax, jmax,      & ! [IN]
+                             IA, JA,          & ! [IN]
+                             igrd    (:,:,:), & ! [IN]
+                             jgrd    (:,:,:), & ! [IN]
+                             hfact   (:,:,:), & ! [IN]
+                             topo_org(:,:),   & ! [IN]
+                             topo    (:,:)    ) ! [OUT]
        if ( FILTER_NITER > 0 ) then
           call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
                                  topo(:,:), FILTER_ORDER, FILTER_NITER )
@@ -3897,19 +3476,6 @@ contains
        end do
        end do
 
-       if ( URBAN_do ) then
-          !$omp parallel do collapse(2) &
-          !$omp private(tdiff)
-          do j = 1, JA
-          do i = 1, IA
-             if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
-                tdiff = ( TOPOGRAPHY_Zsfc(i,j) - topo(i,j) ) * LAPS
-                ust(i,j) = ust(i,j) - tdiff
-             end if
-          end do
-          end do
-       end if
-
     end if
 
 
@@ -3920,48 +3486,48 @@ contains
        if ( use_waterratio ) then
 
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
-             do k = 1, ldims(1)
+             do k = 1, kmax
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    work(i,j) = smds_org(k,i,j)
                 end do
                 end do
                 select case( i_INTRP_LAND_WATER )
                 case( i_intrp_mask )
-                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   call make_mask( lmask, work, imax, jmax, landdata=.true.)
                    !$omp parallel do collapse(2)
-                   do j = 1, ldims(3)
-                   do i = 1, ldims(2)
+                   do j = 1, jmax
+                   do i = 1, imax
                       if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
                    end do
                    end do
                 case( i_intrp_fill )
-                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   call make_mask( lmask, work, imax, jmax, landdata=.true.)
                 end select
-                call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
+                call interp_OceanLand_data(work, lmask, imax, jmax, .true., intrp_iter_max)
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    work2(i,j) = init_landwater_ratio
                 end do
                 end do
                 !replace missing value to init_landwater_ratio
-                call replace_misval_map( work, work2, ldims(2), ldims(3),  "SMOISDS")
+                call replace_misval_map( work, work2, imax, jmax, "SMOISDS")
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    smds_org(k,i,j) = work(i,j)
                 end do
                 end do
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh_l,              &
-                                ldims(1), 1, ldims(1), &
-                                ldims(2), ldims(3),    &
-                                LKMAX, LKS, LKE,       &
-                                IA, JA,                &
+          call INTERP_interp3d( itp_nh_l,            &
+                                kmax, 1, kmax,       &
+                                imax, jmax,          &
+                                LKMAX, LKS, LKE,     &
+                                IA, JA,              &
                                 igrd    (    :,:,:), & ! [IN]
                                 jgrd    (    :,:,:), & ! [IN]
                                 hfact   (    :,:,:), & ! [IN]
@@ -3979,48 +3545,48 @@ contains
        else
 
           if ( i_INTRP_LAND_WATER .ne. i_intrp_off ) then
-             do k = 1, ldims(1)
+             do k = 1, kmax
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    work(i,j) = strg_org(k,i,j)
                 end do
                 end do
                 select case( i_INTRP_LAND_WATER )
                 case( i_intrp_mask )
-                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   call make_mask( lmask, work, imax, jmax, landdata=.true.)
                    !$omp parallel do collapse(2)
-                   do j = 1, ldims(3)
-                   do i = 1, ldims(2)
+                   do j = 1, jmax
+                   do i = 1, imax
                       if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
                    end do
                    end do
                 case( i_intrp_fill )
-                   call make_mask( lmask, work, ldims(2), ldims(3), landdata=.true.)
+                   call make_mask( lmask, work, imax, jmax, landdata=.true.)
                 end select
-                call interp_OceanLand_data(work, lmask, ldims(2), ldims(3), .true., intrp_iter_max)
+                call interp_OceanLand_data(work, lmask, imax, jmax, .true., intrp_iter_max)
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    lmask(i,j) = maskval_strg
                 end do
                 end do
                 !replace missing value to init_landwater_ratio
-                call replace_misval_map( work, lmask, ldims(2), ldims(3),  "SMOIS")
+                call replace_misval_map( work, lmask, imax, jmax, "SMOIS")
                 !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
+                do j = 1, jmax
+                do i = 1, imax
                    strg_org(k,i,j) = work(i,j)
                 end do
                 end do
              enddo
           end if
 
-          call INTERP_interp3d( itp_nh_l,              &
-                                ldims(1), 1, ldims(1), &
-                                ldims(2), ldims(3),    &
-                                LKMAX, LKS, LKE,       &
-                                IA, JA,                &
+          call INTERP_interp3d( itp_nh_l,            &
+                                kmax, 1, kmax,       &
+                                imax, jmax,          &
+                                LKMAX, LKS, LKE,     &
+                                IA, JA,              &
                                 igrd    (    :,:,:), & ! [IN]
                                 jgrd    (    :,:,:), & ! [IN]
                                 hfact   (    :,:,:), & ! [IN]
@@ -4076,19 +3642,379 @@ contains
     endif ! use_file_waterratio
 
 
-    if ( URBAN_do ) then
-       ! copy albedo of land to urban
+    return
+  end subroutine land_interporation
+
+  subroutine ocean_interporation( &
+       imax, jmax, &
+       sst_org, tw_org, albw_org, z0w_org,   &
+       CX, CY,                               &
+       elevation_collection_ocean,           &
+       init_ocean_alb_lw, init_ocean_alb_sw, &
+       init_ocean_z0w,                       &
+       first_surface, update_coord,          &
+       sst, tw, albw, z0w                    )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
+       PI    => CONST_PI,    &
+       LAPS  => CONST_LAPS
+    use scale_topography, only: &
+       TOPOGRAPHY_Zsfc
+    use scale_interp, only: &
+       INTERP_factor2d, &
+       INTERP_interp2d
+    use scale_filter, only: &
+       FILTER_hyperdiff
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
+    use scale_comm_cartesC, only: &
+       COMM_vars8, &
+       COMM_wait
+    implicit none
+    integer,  intent(in)    :: imax, jmax
+    real(RP), intent(in)    :: sst_org (imax,jmax)
+    real(RP), intent(in)    :: tw_org  (imax,jmax)
+    real(RP), intent(inout) :: albw_org(imax,jmax,N_RAD_DIR,N_RAD_RGN)
+    real(RP), intent(inout) :: z0w_org (imax,jmax)
+    real(RP), intent(in)    :: CX(IA)
+    real(RP), intent(in)    :: CY(JA)
+    logical,  intent(in)    :: elevation_collection_ocean
+    real(RP), intent(in)    :: init_ocean_alb_lw
+    real(RP), intent(in)    :: init_ocean_alb_sw
+    real(RP), intent(in)    :: init_ocean_z0w
+    logical,  intent(in)    :: first_surface
+    logical,  intent(in)    :: update_coord
+
+    real(RP), intent(out) :: sst (IA,JA)
+    real(RP), intent(out) :: tw  (IA,JA)
+    real(RP), intent(out) :: albw(IA,JA,N_RAD_DIR,N_RAD_RGN)
+    real(RP), intent(out) :: z0w (IA,JA)
+
+    ! for interpolation
+    real(RP) :: oX_org(imax,jmax)
+    real(RP) :: oY_org(imax,jmax)
+    logical  :: zonal, pole
+
+    real(RP) :: one(IA,JA)
+    real(RP) :: tdiff
+
+    integer :: i, j, m, n
+
+    !$omp parallel do collapse(2)
+    do j = 1, jmax
+    do i = 1, imax
+       do m = 1, N_RAD_DIR
+          if ( albw_org(i,j,m,I_R_IR ) == UNDEF ) albw_org(i,j,m,I_R_IR ) = init_ocean_alb_lw
+          if ( albw_org(i,j,m,I_R_NIR) == UNDEF ) albw_org(i,j,m,I_R_NIR) = init_ocean_alb_sw
+          if ( albw_org(i,j,m,I_R_VIS) == UNDEF ) albw_org(i,j,m,I_R_VIS) = init_ocean_alb_sw
+          if ( albw_org(i,j,m,I_R_VIS) == UNDEF ) albw_org(i,j,m,I_R_VIS) = init_ocean_alb_sw
+       end do
+       if ( z0w_org(i,j) == UNDEF ) z0w_org(i,j) = init_ocean_z0w
+    end do
+    end do
+
+    if ( first_surface .or. update_coord ) then
+
+       ! interporation for ocean variables
+
+       select case( itp_type_a )
+       case ( i_intrp_linear )
+
+          call MAPPROJECTION_lonlat2xy( imax, 1, imax, jmax, 1, jmax, &
+                                        olon_org(:,:), olat_org(:,:), & ! [IN]
+                                        oX_org(:,:), oY_org(:,:)      ) ! [OUT]
+
+          zonal = ( maxval(olon_org) - minval(olon_org) ) > 2.0_RP * PI * 0.9_RP
+          pole = ( maxval(olat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(olat_org) < - PI * 0.5_RP * 0.9_RP )
+          call INTERP_factor2d( imax, jmax,    & ! [IN]
+                                IA, JA,        & ! [IN]
+                                oX_org(:,:),   & ! [IN]
+                                oY_org(:,:),   & ! [IN]
+                                CX(:), CY(:),  & ! [IN]
+                                oigrd (:,:,:), & ! [OUT]
+                                ojgrd (:,:,:), & ! [OUT]
+                                ohfact(:,:,:), & ! [OUT]
+                                zonal = zonal, & ! [IN]
+                                pole  = pole   ) ! [IN]
+
+       case ( I_intrp_dstwgt )
+
+          call INTERP_factor2d( itp_nh_o,           & ! [IN]
+                                imax, jmax,         & ! [IN]
+                                IA, JA,             & ! [IN]
+                                olon_org(:,:),      & ! [IN]
+                                olat_org(:,:),      & ! [IN]
+                                LON(:,:), LAT(:,:), & ! [IN]
+                                oigrd (:,:,:),      & ! [OUT]
+                                ojgrd (:,:,:),      & ! [OUT]
+                                ohfact(:,:,:)       ) ! [OUT]
+
+       end select
+
+    end if
+
+    call INTERP_interp2d( itp_nh_o,      & ! [IN]
+                          imax, jmax,    & ! [IN]
+                          IA, JA,        & ! [IN]
+                          oigrd (:,:,:), & ! [IN]
+                          ojgrd (:,:,:), & ! [IN]
+                          ohfact(:,:,:), & ! [IN]
+                          tw_org(:,:),   & ! [IN]
+                          tw    (:,:)    ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+                              tw(:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( tw(:,:), 1 )
+       call COMM_wait ( tw(:,:), 1, .false. )
+    end if
+
+    call INTERP_interp2d( itp_nh_o,       & ! [IN]
+                          imax, jmax,     & ! [IN]
+                          IA, JA,         & ! [IN]
+                          oigrd  (:,:,:), & ! [IN]
+                          ojgrd  (:,:,:), & ! [IN]
+                          ohfact (:,:,:), & ! [IN]
+                          sst_org(:,:),   & ! [IN]
+                          sst    (:,:)    ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+                              sst(:,:), FILTER_ORDER, FILTER_NITER )
+       call COMM_vars8( sst(:,:), 1 )
+       call COMM_wait ( sst(:,:), 1, .false. )
+    end if
+
+    ! elevation collection
+    if ( elevation_collection_ocean ) then
+
+       !$omp parallel do collapse(2) &
+       !$omp private(tdiff)
+       do j = 1, JA
+       do i = 1, IA
+          tdiff = TOPOGRAPHY_Zsfc(i,j) * LAPS
+          sst(i,j) = sst(i,j) - tdiff
+          tw (i,j) = tw (i,j) - tdiff
+       end do
+       end do
+
+    end if
+
+
+    if ( FILTER_NITER > 0 ) then
        !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
-          albu(i,j,:,:) = albg(i,j,:,:)
-       enddo
-       enddo
+          one(i,j) = 1.0_RP
+       end do
+       end do
+    end if
+
+    do n = 1, N_RAD_RGN
+    do m = 1, N_RAD_DIR
+
+       call INTERP_interp2d( itp_nh_o,          & ! [IN]
+                             imax, jmax,        & ! [IN]
+                             IA, JA,            & ! [IN]
+                             oigrd   (:,:,:),   & ! [IN]
+                             ojgrd   (:,:,:),   & ! [IN]
+                             ohfact  (:,:,:),   & ! [IN]
+                             albw_org(:,:,m,n), & ! [IN]
+                             albw    (:,:,m,n)  ) ! [OUT]
+       if ( FILTER_NITER > 0 ) then
+          call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+                                 albw(:,:,m,n), FILTER_ORDER, FILTER_NITER, &
+                                 limiter_sign = one(:,:) )
+          call COMM_vars8( albw(:,:,m,n), 1 )
+          call COMM_wait ( albw(:,:,m,n), 1, .false. )
+       end if
+
+    end do
+    end do
+
+    call INTERP_interp2d( itp_nh_o,        & ! [IN]
+                          imax, jmax,      & ! [IN]
+                          IA, JA,          & ! [IN]
+                          oigrd   (:,:,:), & ! [IN]
+                          ojgrd   (:,:,:), & ! [IN]
+                          ohfact  (:,:,:), & ! [IN]
+                          z0w_org (:,:),   & ! [IN]
+                          z0w     (:,:)    ) ! [OUT]
+    if ( FILTER_NITER > 0 ) then
+       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+                              z0w(:,:), FILTER_ORDER, FILTER_NITER, &
+                              limiter_sign = one(:,:) )
+       call COMM_vars8( z0w(:,:), 1 )
+       call COMM_wait ( z0w(:,:), 1, .false. )
     end if
 
 
     return
-  end subroutine land_interporation
+  end subroutine ocean_interporation
+
+  !-------------------------------
+  subroutine urban_input( &
+       lst, albg,              &
+       tc_urb, qc_urb, uc_urb, &
+       ust, albu               )
+    use mod_atmos_vars, only: &
+         DENS, &
+         MOMX, &
+         MOMY, &
+         RHOT, &
+         QTRC
+    use scale_atmos_hydrometeor, only: &
+         I_QV
+    use scale_atmos_thermodyn, only: &
+         THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
+         THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
+    use scale_comm_cartesC, only: &
+         COMM_vars8, &
+         COMM_wait
+    implicit none
+    real(RP), intent(in)  :: lst   (IA,JA)
+    real(RP), intent(in)  :: albg  (IA,JA,N_RAD_DIR,N_RAD_RGN)
+    real(RP), intent(out) :: tc_urb(IA,JA)
+    real(RP), intent(out) :: qc_urb(IA,JA)
+    real(RP), intent(out) :: uc_urb(IA,JA)
+    real(RP), intent(out) :: ust   (IA,JA)
+    real(RP), intent(out) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
+
+    real(RP) :: temp, pres
+    real(RP) :: Qdry
+    real(RP) :: Rtot
+    real(RP) :: CVtot
+    real(RP) :: CPtot
+
+    integer :: i, j
+
+    ! urban data
+
+    !$omp parallel do collapse(2) &
+    !$omp private(Qdry,Rtot,CVtot,CPtot,temp,pres)
+    do j = 1, JA
+    do i = 1, IA
+       call THERMODYN_specific_heat( QA, &
+                                     qtrc(KS,i,j,:), &
+                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                     Qdry, Rtot, CVtot, CPtot                                 ) ! [OUT]
+       call THERMODYN_rhot2temp_pres( dens(KS,i,j), rhot(KS,i,j), Rtot, CVtot, CPtot, & ! [IN]
+                                      temp, pres                                      ) ! [OUT]
+
+       tc_urb(i,j) = temp
+       if ( I_QV > 0 ) then
+          qc_urb(i,j) = qtrc(KS,i,j,I_QV)
+       else
+          qc_urb(i,j) = 0.0_RP
+       end if
+    enddo
+    enddo
+
+    !$omp parallel do
+    do j = 1, JA-1
+    do i = 1, IA-1
+       uc_urb(i,j) = max(sqrt( ( momx(KS,i,j) / (dens(KS,i+1,  j)+dens(KS,i,j)) * 2.0_RP )**2.0_RP &
+                             + ( momy(KS,i,j) / (dens(KS,  i,j+1)+dens(KS,i,j)) * 2.0_RP )**2.0_RP ), &
+                             0.01_RP)
+    enddo
+    enddo
+    !$omp parallel do
+    do j = 1, JA-1
+       uc_urb(IA,j) = max(sqrt( ( momx(KS,IA,j) /  dens(KS,IA,j  ) )**2.0_RP &
+                              + ( momy(KS,IA,j) / (dens(KS,IA,j+1)+dens(KS,IA,j)) * 2.0_RP )**2.0_RP ), &
+                              0.01_RP)
+    enddo
+    !$omp parallel do
+    do i = 1, IA-1
+       uc_urb(i,JA) = max(sqrt( ( momx(KS,i,JA) / (dens(KS,i+1,JA)+dens(KS,i,JA)) * 2.0_RP )**2.0_RP &
+                              + ( momy(KS,i,JA) /  dens(KS,i  ,JA) )**2.0_RP ), 0.01_RP)
+    enddo
+    uc_urb(IA,JA) = max(sqrt( ( momx(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP &
+                            + ( momy(KS,IA,JA) / dens(KS,IA,JA) )**2.0_RP ), 0.01_RP)
+
+    call COMM_vars8( uc_urb, 1 )
+    call COMM_wait ( uc_urb, 1, .false. )
+
+
+!!$    ! Urban surface temp: interpolate over the ocean
+!!$    if ( i_INTRP_URB_SFC_TEMP .ne. i_intrp_off ) then
+!!$       select case( i_INTRP_URB_SFC_TEMP )
+!!$       case( i_intrp_mask )
+!!$          call make_mask( lmask, ust_org, imax, jmax, landdata=.true.)
+!!$          !$omp parallel do collapse(2)
+!!$          do j = 1, jmax
+!!$          do i = 1, imax
+!!$             if ( lmask_org(i,j) .ne. UNDEF ) lmask(i,j) = lmask_org(i,j)
+!!$          end do
+!!$          end do
+!!$       case( i_intrp_fill )
+!!$          call make_mask( lmask, ust_org, imax, jmax, landdata=.true.)
+!!$       case default
+!!$          LOG_ERROR("urban_input",*) 'INTRP_URB_SFC_TEMP is invalid.'
+!!$          call PRC_abort
+!!$       end select
+!!$       call interp_OceanLand_data(ust_org, lmask, imax, jmax, .true., intrp_iter_max)
+!!$    end if
+!!$
+!!$    !$omp parallel do collapse(2)
+!!$    do j = 1, jmax
+!!$    do i = 1, imax
+!!$       if ( ust_org(i,j) == UNDEF ) ust_org(i,j) = lst_org(i,j)
+!!$    end do
+!!$    end do
+!!$
+!!$    call INTERP_interp2d( itp_nh_l,           & ! [IN]
+!!$                          imax, jmax, & ! [IN]
+!!$                          IA, JA,             & ! [IN]
+!!$                          igrd    (:,:,:),    & ! [IN]
+!!$                          jgrd    (:,:,:),    & ! [IN]
+!!$                          hfact   (:,:,:),    & ! [IN]
+!!$                          ust_org (:,:),      & ! [IN]
+!!$                          ust     (:,:)       ) ! [OUT]
+!!$    if ( FILTER_NITER > 0 ) then
+!!$       call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
+!!$                              ust(:,:), FILTER_ORDER, FILTER_NITER )
+!!$       call COMM_vars8( ust(:,:), 1 )
+!!$       call COMM_wait ( ust(:,:), 1, .false. )
+!!$    end if
+!!$
+!!$    !$omp parallel do collapse(2)
+!!$    do j = 1, JA
+!!$    do i = 1, IA
+!!$       if( abs(lsmask_nest(i,j)-0.0_RP) < EPS ) then ! ocean grid
+!!$          ust(i,j) = sst(i,j,nn)
+!!$       endif
+!!$    enddo
+!!$    enddo
+!!$
+!!$    !$omp parallel do collapse(2) &
+!!$    !$omp private(tdiff)
+!!$    do j = 1, JA
+!!$    do i = 1, IA
+!!$       if ( topo(i,j) > 0.0_RP ) then ! ignore UNDEF value
+!!$          tdiff = ( TOPOGRAPHY_Zsfc(i,j) - topo(i,j) ) * LAPS
+!!$          ust(i,j) = ust(i,j) - tdiff
+!!$       end if
+!!$    end do
+!!$    end do
+
+
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+       ust(i,j) = lst(i,j)
+    end do
+    end do
+
+
+    ! copy albedo of land to urban
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+       albu(i,j,:,:) = albg(i,j,:,:)
+    enddo
+    enddo
+
+    return
+  end subroutine urban_input
 
   !-------------------------------
   subroutine make_mask( &
@@ -4296,22 +4222,31 @@ contains
     character(len=*), intent(in)    :: elem
 
     integer :: i, j
+    logical :: error
 
-    !$omp parallel do collapse(2)
+    error = .false.
+    !$omp parallel do
     do j = 1, ny
-    do i = 1, nx
-       if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
-          if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
-             LOG_ERROR("replace_misval_map",*) "data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
-             LOG_ERROR_CONT(*) "Please check input data of SKINTEMP or SST. "
-             call PRC_abort
-          else
-             data(i,j) = maskval(i,j)
+       if ( error ) cycle
+       do i = 1, nx
+          if( abs(data(i,j) - UNDEF) < sqrt(EPS) )then
+             if( abs(maskval(i,j) - UNDEF) < sqrt(EPS) )then
+                LOG_ERROR("replace_misval_map",*) "data for mask of "//trim(elem)//"(",i,",",j,") includes missing value."
+                error = .true.
+                exit
+             else
+                data(i,j) = maskval(i,j)
+             endif
           endif
-       endif
-    enddo
+       enddo
     enddo
 
+    if ( error ) then
+       LOG_ERROR_CONT(*) "Please check input data of SKINTEMP or SST. "
+       call PRC_abort
+    end if
+
+    return
   end subroutine replace_misval_map
 
 end module mod_realinput
