@@ -58,7 +58,6 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_file_external_input, only: &
-       FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -72,19 +71,23 @@ contains
     data vars_2d    / 'SFLX_LW_up', 'SFLX_LW_dn', 'SFLX_SW_up', 'SFLX_SW_dn' /
     data vars_2d_op / 'SFLX_NIR_dn_dir', 'SFLX_NIR_dn_dif', 'SFLX_VIS_dn_dir', 'SFLX_VIS_dn_dif' /
 
-    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype                                 = 'XYZ'
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year                     = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month                    = .false.
-    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day                      = .false.
-    integer                :: ATMOS_PHY_RD_offline_step_fixed                               = 0
-    real(RP)               :: ATMOS_PHY_RD_offline_offset                                   = 0.0_RP
-    real(RP)               :: ATMOS_PHY_RD_offline_defval                                 ! = UNDEF
-    logical                :: ATMOS_PHY_RD_offline_check_coordinates                        = .true.
-    integer                :: ATMOS_PHY_RD_offline_step_limit                               = 0
+    character(len=H_LONG)  :: ATMOS_PHY_RD_offline_basename              = ''
+    logical                :: ATMOS_PHY_RD_offline_basename_add_num      = .false.
+    integer                :: ATMOS_PHY_RD_offline_number_of_files       = 1
+    character(len=H_SHORT) :: ATMOS_PHY_RD_offline_axistype              = 'XYZ'
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_year  = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_month = .false.
+    logical                :: ATMOS_PHY_RD_offline_enable_periodic_day   = .false.
+    integer                :: ATMOS_PHY_RD_offline_step_fixed            = 0
+    real(RP)               :: ATMOS_PHY_RD_offline_offset                = 0.0_RP
+    real(RP)               :: ATMOS_PHY_RD_offline_defval               ! = UNDEF
+    logical                :: ATMOS_PHY_RD_offline_check_coordinates     = .true.
+    integer                :: ATMOS_PHY_RD_offline_step_limit            = 0
 
     namelist / PARAM_ATMOS_PHY_RD_OFFLINE / &
        ATMOS_PHY_RD_offline_basename,              &
+       ATMOS_PHY_RD_offline_basename_add_num,      &
+       ATMOS_PHY_RD_offline_number_of_files,       &
        ATMOS_PHY_RD_offline_axistype,              &
        ATMOS_PHY_RD_offline_enable_periodic_year,  &
        ATMOS_PHY_RD_offline_enable_periodic_month, &
@@ -117,13 +120,15 @@ contains
     endif
     LOG_NML(PARAM_ATMOS_PHY_RD_OFFLINE)
 
-    if ( ATMOS_PHY_RD_offline_basename(1) == '' ) then
+    if ( ATMOS_PHY_RD_offline_basename == '' ) then
        LOG_ERROR("ATMOS_PHY_RD_offline_setup",*) 'ATMOS_PHY_RD_offline_basename is necessary'
        call PRC_abort
     end if
 
     do n = 1, num_vars_3d
-       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+                                        ATMOS_PHY_RD_offline_basename_add_num,      & ! [IN]
+                                        ATMOS_PHY_RD_offline_number_of_files,       & ! [IN]
                                         vars_3d(n),                                 & ! [IN]
                                         ATMOS_PHY_RD_offline_axistype,              & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
@@ -137,7 +142,9 @@ contains
     end do
 
     do n = 1, num_vars_2d
-       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+                                        ATMOS_PHY_RD_offline_basename_add_num,      & ! [IN]
+                                        ATMOS_PHY_RD_offline_number_of_files,       & ! [IN]
                                         vars_2d(n),                                 & ! [IN]
                                         'XY',                                       & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]
@@ -151,7 +158,9 @@ contains
     end do
 
     do n = 1, num_vars_2d_op
-       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( ATMOS_PHY_RD_offline_basename,              & ! [IN]
+                                        ATMOS_PHY_RD_offline_basename_add_num,      & ! [IN]
+                                        ATMOS_PHY_RD_offline_number_of_files,       & ! [IN]
                                         vars_2d_op(n),                              & ! [IN]
                                         'XY',                                       & ! [IN]
                                         ATMOS_PHY_RD_offline_enable_periodic_year,  & ! [IN]

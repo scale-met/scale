@@ -50,22 +50,25 @@ contains
     use scale_const, only: &
        UNDEF => CONST_UNDEF
     use scale_file_external_input, only: &
-       FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     implicit none
 
-    character(len=H_LONG)  :: OCEAN_DYN_OFFLINE_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_year                     = .false.
-    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_month                    = .false.
-    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_day                      = .false.
-    integer                :: OCEAN_DYN_OFFLINE_step_fixed                               = 0
-    real(RP)               :: OCEAN_DYN_OFFLINE_offset                                   = 0.0_RP
-    real(RP)               :: OCEAN_DYN_OFFLINE_defval                                  != UNDEF
-    logical                :: OCEAN_DYN_OFFLINE_check_coordinates                        = .true.
-    integer                :: OCEAN_DYN_OFFLINE_step_limit                               = 0
+    character(len=H_LONG)  :: OCEAN_DYN_OFFLINE_basename              = ''
+    logical                :: OCEAN_DYN_OFFLINE_basename_add_num      = .false.
+    integer                :: OCEAN_DYN_OFFLINE_number_of_files       = 1
+    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_year  = .false.
+    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_month = .false.
+    logical                :: OCEAN_DYN_OFFLINE_enable_periodic_day   = .false.
+    integer                :: OCEAN_DYN_OFFLINE_step_fixed            = 0
+    real(RP)               :: OCEAN_DYN_OFFLINE_offset                = 0.0_RP
+    real(RP)               :: OCEAN_DYN_OFFLINE_defval               != UNDEF
+    logical                :: OCEAN_DYN_OFFLINE_check_coordinates     = .true.
+    integer                :: OCEAN_DYN_OFFLINE_step_limit            = 0
 
     namelist / PARAM_OCEAN_DYN_OFFLINE / &
        OCEAN_DYN_OFFLINE_basename,              &
+       OCEAN_DYN_OFFLINE_basename_add_num,      &
+       OCEAN_DYN_OFFLINE_number_of_files,       &
        OCEAN_DYN_OFFLINE_enable_periodic_year,  &
        OCEAN_DYN_OFFLINE_enable_periodic_month, &
        OCEAN_DYN_OFFLINE_enable_periodic_day,   &
@@ -96,12 +99,14 @@ contains
 
     LOG_INFO("OCEAN_DYN_OFFLINE_setup",*) 'Use offline ocean'
 
-    if ( OCEAN_DYN_OFFLINE_basename(1) == '' ) then
+    if ( OCEAN_DYN_OFFLINE_basename == '' ) then
        LOG_ERROR("OCEAN_DYN_OFFLINE_setup",*) 'OCEAN_DYN_OFFLINE_basename is necessary !!'
        call PRC_abort
     endif
 
-    call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_OFFLINE_basename(:),           & ! [IN]
+    call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_OFFLINE_basename,              & ! [IN]
+                                     OCEAN_DYN_OFFLINE_basename_add_num,      & ! [IN]
+                                     OCEAN_DYN_OFFLINE_number_of_files,       & ! [IN]
                                      'OCEAN_TEMP',                            & ! [IN]
                                      'OXY',                                   & ! [IN]
                                      OCEAN_DYN_OFFLINE_enable_periodic_year,  & ! [IN]

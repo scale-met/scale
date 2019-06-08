@@ -17,8 +17,6 @@ module scale_land_dyn_bucket
   use scale_io
   use scale_prof
   use scale_debug
-  use scale_file_external_input, only: &
-     FILE_EXTERNAL_INPUT_file_limit
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -47,15 +45,17 @@ module scale_land_dyn_bucket
   logical,                private :: LAND_DYN_BUCKET_nudging                                          = .false. ! Is nudging for land physics used?
   real(DP),               private :: LAND_DYN_BUCKET_nudging_tau                                      = 0.0_DP  ! time constant for nudging [sec]
   character(len=H_SHORT), private :: LAND_DYN_BUCKET_nudging_tau_unit                                 = "SEC"
-  character(len=H_LONG),  private :: LAND_DYN_BUCKET_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_year                     = .false.
-  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_month                    = .false.
-  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_day                      = .false.
-  integer,                private :: LAND_DYN_BUCKET_nudging_step_fixed                               = 0
-  real(RP),               private :: LAND_DYN_BUCKET_nudging_offset                                   = 0.0_RP
-  real(RP),               private :: LAND_DYN_BUCKET_nudging_defval                                 ! = UNDEF
-  logical,                private :: LAND_DYN_BUCKET_nudging_check_coordinates                        = .true.
-  integer,                private :: LAND_DYN_BUCKET_nudging_step_limit                               = 0
+  character(len=H_LONG),  private :: LAND_DYN_BUCKET_nudging_basename              = ''
+  logical,                private :: LAND_DYN_BUCKET_nudging_basename_add_num      = .false.
+  integer,                private :: LAND_DYN_BUCKET_nudging_number_of_files       = 1
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_year  = .false.
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_month = .false.
+  logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false.
+  integer,                private :: LAND_DYN_BUCKET_nudging_step_fixed            = 0
+  real(RP),               private :: LAND_DYN_BUCKET_nudging_offset                = 0.0_RP
+  real(RP),               private :: LAND_DYN_BUCKET_nudging_defval                ! = UNDEF
+  logical,                private :: LAND_DYN_BUCKET_nudging_check_coordinates     = .true.
+  integer,                private :: LAND_DYN_BUCKET_nudging_step_limit            = 0
 
   real(RP),               private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
   real(DP),               private :: LAND_DYN_BUCKET_nudging_tausec  !< Relaxation time [sec]
@@ -82,6 +82,8 @@ contains
        LAND_DYN_BUCKET_nudging_tau,                   &
        LAND_DYN_BUCKET_nudging_tau_unit,              &
        LAND_DYN_BUCKET_nudging_basename,              &
+       LAND_DYN_BUCKET_nudging_basename_add_num,      &
+       LAND_DYN_BUCKET_nudging_number_of_files,       &
        LAND_DYN_BUCKET_nudging_enable_periodic_year,  &
        LAND_DYN_BUCKET_nudging_enable_periodic_month, &
        LAND_DYN_BUCKET_nudging_enable_periodic_day,   &
@@ -122,14 +124,16 @@ contains
           LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Tau=0 means that LST is completely replaced by the external data.'
        endif
 
-       if ( LAND_DYN_BUCKET_nudging_basename(1) == '' ) then
+       if ( LAND_DYN_BUCKET_nudging_basename == '' ) then
           LOG_ERROR("LAND_DYN_BUCKET_setup",*) 'LAND_DYN_BUCKET_nudging_basename is necessary !!'
           call PRC_abort
        end if
 
-       call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename(:),           & ! [IN]
-                                        'LAND_TEMP',                                 & ! [IN]
-                                        'LXY',                                       & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename,              & ! [IN]
+                                        LAND_DYN_BUCKET_nudging_basename_add_num,      & ! [IN]
+                                        LAND_DYN_BUCKET_nudging_number_of_files,       & ! [IN]
+                                        'LAND_TEMP',                                   & ! [IN]
+                                        'LXY',                                         & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_year,  & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_month, & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_day,   & ! [IN]
@@ -139,9 +143,11 @@ contains
                                         check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
                                         step_limit = LAND_DYN_BUCKET_nudging_step_limit                ) ! [IN]
 
-       call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename(:),           & ! [IN]
-                                        'LAND_WATER',                                & ! [IN]
-                                        'LXY',                                       & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename,              & ! [IN]
+                                        LAND_DYN_BUCKET_nudging_basename_add_num,      & ! [IN]
+                                        LAND_DYN_BUCKET_nudging_number_of_files,       & ! [IN]
+                                        'LAND_WATER',                                  & ! [IN]
+                                        'LXY',                                         & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_year,  & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_month, & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_day,   & ! [IN]

@@ -148,8 +148,6 @@ module scale_file_external_input
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: FILE_EXTERNAL_INPUT_file_limit = 100 !< limit of file (for one item)
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
@@ -213,7 +211,9 @@ contains
        FILE_AGGREGATE_DEFAULT => FILE_AGGREGATE
     implicit none
 
-    character(len=H_LONG)  :: basename(FILE_EXTERNAL_INPUT_file_limit)
+    character(len=H_LONG)  :: basename
+    logical                :: basename_add_num
+    integer                :: number_of_files
     character(len=H_SHORT) :: varname
     character(len=H_SHORT) :: axistype
     integer                :: step_limit            ! limit number for reading data
@@ -228,6 +228,8 @@ contains
 
     namelist / EXTERNAL_ITEM / &
        basename,              &
+       basename_add_num,      &
+       number_of_files,       &
        varname,               &
        axistype,              &
        step_limit,            &
@@ -252,7 +254,9 @@ contains
     do count = 1, FILE_EXTERNAL_INPUT_item_limit
        ! set default
        step_limit            = FILE_EXTERNAL_INPUT_step_limit
-       basename(:)           = ''
+       basename              = ''
+       basename_add_num      = .false.
+       number_of_files       = 1
        varname               = ''
        axistype              = ''
        step_fixed            = -1
@@ -274,18 +278,20 @@ contains
        endif
        LOG_NML(EXTERNAL_ITEM)
 
-       call FILE_EXTERNAL_INPUT_regist( basename(:),           & ! [IN]
-                          varname,               & ! [IN]
-                          axistype,              & ! [IN]
-                          enable_periodic_year,  & ! [IN]
-                          enable_periodic_month, & ! [IN]
-                          enable_periodic_day,   & ! [IN]
-                          step_fixed,            & ! [IN]
-                          offset,                & ! [IN]
-                          defval,                & ! [IN]
-                          check_coordinates,     & ! [IN]
-                          file_aggregate,        & ! [IN]
-                          step_limit             ) ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( basename,              & ! [IN]
+                                        basename_add_num,      & ! [IN]
+                                        number_of_files,       & ! [IN]
+                                        varname,               & ! [IN]
+                                        axistype,              & ! [IN]
+                                        enable_periodic_year,  & ! [IN]
+                                        enable_periodic_month, & ! [IN]
+                                        enable_periodic_day,   & ! [IN]
+                                        step_fixed,            & ! [IN]
+                                        offset,                & ! [IN]
+                                        defval,                & ! [IN]
+                                        check_coordinates,     & ! [IN]
+                                        file_aggregate,        & ! [IN]
+                                        step_limit             ) ! [IN]
     enddo
 
     return
@@ -295,6 +301,8 @@ contains
   !> Regist data
   subroutine FILE_EXTERNAL_INPUT_regist( &
        basename,              &
+       basename_add_num,      &
+       number_of_files,       &
        varname,               &
        axistype,              &
        enable_periodic_year,  &
@@ -334,7 +342,9 @@ contains
        FILE_CARTESC_check_coordinates
     implicit none
 
-    character(len=*), intent(in)  :: basename(FILE_EXTERNAL_INPUT_file_limit)
+    character(len=*), intent(in)  :: basename
+    logical,          intent(in)  :: basename_add_num
+    integer,          intent(in)  :: number_of_files
     character(len=*), intent(in)  :: varname
     character(len=*), intent(in)  :: axistype
     integer,          intent(in)  :: step_fixed            ! fixed step position to read
@@ -380,6 +390,8 @@ contains
     integer  :: step_limit_
     logical  :: aggregate_
 
+    character(len=H_LONG) :: filename
+
     integer  :: fid
     integer  :: nid, n
     !---------------------------------------------------------------------------
@@ -402,7 +414,7 @@ contains
 
     do nid = 1, FILE_EXTERNAL_INPUT_item_count
        if ( FILE_EXTERNAL_INPUT_item(nid)%varname  == varname ) then
-          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data is already registered! basename,varname = ', trim(basename(1)), ', ', trim(varname)
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data is already registered! basename,varname = ', trim(basename), ', ', trim(varname)
           call PRC_abort
        endif
     enddo
@@ -414,7 +426,13 @@ contains
        call PRC_abort
     endif
 
-    call FILE_Open( basename(1),          & ! [IN]
+    if ( number_of_files > 1 .or. basename_add_num ) then
+       filename = trim(basename) // '_00000'
+    else
+       filename = basename
+    end if
+
+    call FILE_Open( filename,             & ! [IN]
                     fid,                  & ! [OUT]
                     aggregate=aggregate_, & ! [IN]
                     rankid=PRC_myrank     ) ! [IN]
@@ -438,7 +456,7 @@ contains
           exist = .false.
           return
        else
-          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data not found! basename,varname = ', trim(basename(1)), ', ', trim(varname)
+          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data not found! filename,varname = ', trim(filename), ', ', trim(varname)
           call PRC_abort
        endif
     endif
@@ -450,15 +468,19 @@ contains
 
     nid = FILE_EXTERNAL_INPUT_item_count
 
-    do n = 1, FILE_EXTERNAL_INPUT_file_limit
-       if( basename(n) == '' ) exit
-    enddo
-    FILE_EXTERNAL_INPUT_item(nid)%nfile            = n - 1
+    FILE_EXTERNAL_INPUT_item(nid)%nfile            = number_of_files
     FILE_EXTERNAL_INPUT_item(nid)%file_current     = 1
     FILE_EXTERNAL_INPUT_item(nid)%data_step_offset = 0
 
-    allocate( FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%nfile) )
-    FILE_EXTERNAL_INPUT_item(nid)%basename(1:FILE_EXTERNAL_INPUT_item(nid)%nfile) = basename(1:FILE_EXTERNAL_INPUT_item(nid)%nfile)
+    allocate( FILE_EXTERNAL_INPUT_item(nid)%basename(number_of_files) )
+    if ( number_of_files > 1 .or. basename_add_num ) then
+       do n = 1, number_of_files
+          write(filename,'(A,A,I5.5)') trim(basename), '_', n - 1
+          FILE_EXTERNAL_INPUT_item(nid)%basename(n) = filename
+       enddo
+    else
+       FILE_EXTERNAL_INPUT_item(nid)%basename(1) = basename
+    end if
 
     ! setup item
     FILE_EXTERNAL_INPUT_item(nid)%fid         = fid

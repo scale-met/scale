@@ -62,21 +62,22 @@ contains
     use scale_calendar, only: &
        CALENDAR_unit2sec
     use scale_file_external_input, only: &
-       FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     implicit none
 
-    real(DP)               :: OCEAN_DYN_SLAB_nudging_tau                                      = 0.0_DP  ! Relaxation time
-    character(len=H_SHORT) :: OCEAN_DYN_SLAB_nudging_tau_unit                                 = "SEC"
-    character(len=H_LONG)  :: OCEAN_DYN_SLAB_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_year                     = .false.
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_month                    = .false.
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_day                      = .false.
-    integer                :: OCEAN_DYN_SLAB_nudging_step_fixed                               = 0
-    real(RP)               :: OCEAN_DYN_SLAB_nudging_offset                                   = 0.0_RP
-    real(RP)               :: OCEAN_DYN_SLAB_nudging_defval                                  != UNDEF
-    logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates                        = .true.
-    integer                :: OCEAN_DYN_SLAB_nudging_step_limit                               = 0
+    real(DP)               :: OCEAN_DYN_SLAB_nudging_tau                   = 0.0_DP  ! Relaxation time
+    character(len=H_SHORT) :: OCEAN_DYN_SLAB_nudging_tau_unit              = "SEC"
+    character(len=H_LONG)  :: OCEAN_DYN_SLAB_nudging_basename              = ''
+    logical                :: OCEAN_DYN_SLAB_nudging_basename_add_num      = .false.
+    integer                :: OCEAN_DYN_SLAB_nudging_number_of_files       = 1
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_year  = .false.
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false.
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false.
+    integer                :: OCEAN_DYN_SLAB_nudging_step_fixed            = 0
+    real(RP)               :: OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP
+    real(RP)               :: OCEAN_DYN_SLAB_nudging_defval                ! = UNDEF
+    logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.
+    integer                :: OCEAN_DYN_SLAB_nudging_step_limit            = 0
 
     namelist / PARAM_OCEAN_DYN_SLAB / &
        OCEAN_DYN_SLAB_DEPTH,                         &
@@ -84,6 +85,8 @@ contains
        OCEAN_DYN_SLAB_nudging_tau,                   &
        OCEAN_DYN_SLAB_nudging_tau_unit,              &
        OCEAN_DYN_SLAB_nudging_basename,              &
+       OCEAN_DYN_SLAB_nudging_basename_add_num,      &
+       OCEAN_DYN_SLAB_nudging_number_of_files,       &
        OCEAN_DYN_SLAB_nudging_enable_periodic_year,  &
        OCEAN_DYN_SLAB_nudging_enable_periodic_month, &
        OCEAN_DYN_SLAB_nudging_enable_periodic_day,   &
@@ -129,7 +132,7 @@ contains
           LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Tau=0 means that SST is completely replaced by the external data.'
        endif
 
-       if ( OCEAN_DYN_SLAB_nudging_basename(1) == '' ) then
+       if ( OCEAN_DYN_SLAB_nudging_basename == '' ) then
           LOG_ERROR("OCEAN_DYN_SLAB_setup",*) 'OCEAN_DYN_SLAB_nudging_basename is necessary !!'
           call PRC_abort
        endif
@@ -138,7 +141,9 @@ contains
     endif
 
     if ( OCEAN_DYN_SLAB_nudging ) then
-       call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_SLAB_nudging_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_SLAB_nudging_basename,              & ! [IN]
+                                        OCEAN_DYN_SLAB_nudging_basename_add_num,      & ! [IN]
+                                        OCEAN_DYN_SLAB_nudging_number_of_files,       & ! [IN]
                                         'OCEAN_TEMP',                                 & ! [IN]
                                         'OXY',                                        & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_enable_periodic_year,  & ! [IN]
