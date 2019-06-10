@@ -78,7 +78,7 @@ contains
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
           warmrain = ( .not. ATMOS_HYDROMETEOR_ice_phase )
-          call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+          call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                       ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_AREA, &
                                       TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP,                      &
                                       warmrain                                                  )
@@ -176,7 +176,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! temporal running mean of vertical velocity
-    call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
+    call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                     W(:,:,:),                            & ! [IN]
                                     TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
                                     w0mean(:,:,:)                        ) ! [INOUT]
@@ -185,7 +185,7 @@ contains
     if ( update_flag ) then ! update
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
-          call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+          call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          DENS(:,:,:),                              & ! [IN]
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
                                          RHOT(:,:,:), TEMP(:,:,:), PRES(:,:,:),    & ! [IN]
@@ -242,14 +242,14 @@ contains
     enddo
     enddo
 
-    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+    call ATMOS_PHY_MP_driver_qhyd2qtrc( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                         RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:), & ! [IN]
                                         RHOQ_t_CP(:,:,:,QS_MP:QE_MP)             ) ! [OUT]
 
     do iq = QS_MP, QE_MP
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
-    do j  = JSB, JEB
-    do i  = ISB, IEB
+    do j  = JS, JE
+    do i  = IS, IE
     do k  = KS, KE
        RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) + RHOQ_t_CP(k,i,j,iq)
     enddo

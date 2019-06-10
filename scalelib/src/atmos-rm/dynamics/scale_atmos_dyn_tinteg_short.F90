@@ -32,7 +32,7 @@ module scale_atmos_dyn_tinteg_short
   abstract interface
      subroutine short( &
           DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-          mflx_hi, tflx_hi,                         & ! (inout)
+          mflx_hi, tflx_hi,                         & ! (inout, out)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
           DPRES0, CVtot, CORIOLI,                   & ! (in)
           num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
@@ -55,7 +55,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
        real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
        real(RP), intent(in)    :: DENS_t(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)

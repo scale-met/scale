@@ -318,10 +318,10 @@ contains
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
        !$omp private(k,i,j) &
-       !$omp shared (KA,KS,KE,ISB,IEB,JSB,JEB, &
+       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
        !$omp         RHOT_tp,RHOH_p,CPtot,EXNER)
-       do j = JSB, JEB
-       do i = ISB, IEB
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           RHOT_tp(k,i,j) = RHOT_tp(k,i,j) &
                          + RHOH_p (k,i,j) / ( CPtot(k,i,j) * EXNER(k,i,j) )

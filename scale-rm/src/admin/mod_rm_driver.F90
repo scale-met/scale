@@ -426,7 +426,7 @@ contains
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update( TIME_DOend )
                                              call USER_update
       ! restart & monitor output
       if ( ATMOS_do ) call ATMOS_vars_monitor

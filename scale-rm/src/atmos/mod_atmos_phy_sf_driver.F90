@@ -213,7 +213,7 @@ contains
     if ( update_flag ) then
 
        ! update surface density, surface pressure
-       call BOTTOM_estimate( KA, KS,  KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call BOTTOM_estimate( KA, KS,  KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
                              Z1(:,:),                             & ! [IN]
@@ -222,8 +222,8 @@ contains
        if ( .NOT. CPL_sw ) then
 
           !$omp parallel do
-          do j = JSB, JEB
-          do i = ISB, IEB
+          do j = JS, JE
+          do i = IS, IE
              ATM_U   (i,j) = U   (KS,i,j)
              ATM_V   (i,j) = V   (KS,i,j)
              ATM_W   (i,j) = ATM_U(i,j) * TanSL_X(i,j) + ATM_V(i,j) * TanSL_Y(i,j)
@@ -237,7 +237,7 @@ contains
           select case ( ATMOS_PHY_SF_TYPE )
           case ( 'BULK' )
 
-             call ATMOS_PHY_SF_bulk_flux( IA, ISB, IEB, JA, JSB, JEB,                  & ! [IN]
+             call ATMOS_PHY_SF_bulk_flux( IA, IS, IE, JA, JS, JE,                      & ! [IN]
                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:),          & ! [IN]
                                           ATM_TEMP(:,:), ATM_PRES(:,:), ATM_QV(:,:),   & ! [IN]
                                           SFC_DENS(:,:), SFC_TEMP(:,:), SFC_PRES(:,:), & ! [IN]

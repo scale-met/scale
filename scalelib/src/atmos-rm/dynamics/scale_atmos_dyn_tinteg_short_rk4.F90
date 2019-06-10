@@ -227,7 +227,7 @@ contains
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(in)    :: DENS_t(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
@@ -379,7 +379,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [OUT]
                           PROG_RK1,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -432,7 +432,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [OUT]
                           PROG_RK2,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,2), tflx_hi_RK(:,:,:,:,2),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,2), tflx_hi_RK(:,:,:,:,2),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -485,7 +485,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3, & ! [OUT]
                           PROG_RK3,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,3), tflx_hi_RK(:,:,:,:,3),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,3), tflx_hi_RK(:,:,:,:,3),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -538,7 +538,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [OUT]
                           PROG,                                             & ! [OUT]
-                          mflx_hi,  tflx_hi,                                & ! [INOUT]
+                          mflx_hi,  tflx_hi,                                & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]

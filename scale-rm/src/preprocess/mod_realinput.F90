@@ -186,6 +186,8 @@ module mod_realinput
 contains
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_atmos
+    use scale_const, only: &
+       P00 => CONST_PRE00
     use scale_time, only: &
        TIME_gettimelabel
     use mod_atmos_vars, only: &
@@ -197,9 +199,12 @@ contains
        QTRC
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE
+    use scale_atmos_thermodyn, only: &
+       ATMOS_THERMODYN_specific_heat
     implicit none
 
-    logical :: USE_SFC_DIAGNOSES = .false.
+    logical :: USE_SFC_DIAGNOSES          = .false. !> use surface diagnoses
+    logical :: USE_NONHYDRO_DENS_BOUNDARY = .false. !> use non-hydrostatic density for boundary data
 
 
     namelist / PARAM_MKINIT_REAL_ATMOS / &
@@ -218,6 +223,7 @@ contains
        FILTER_ORDER,               &
        FILTER_NITER,               &
        USE_FILE_DENSITY,           &
+       USE_NONHYDRO_DENS_BOUNDARY, &
        USE_SFC_DIAGNOSES,          &
        SAME_MP_TYPE,               &
        INTRP_TYPE
@@ -243,6 +249,12 @@ contains
     real(RP) :: VELX_in(KA,IA,JA) ! staggered point
     real(RP) :: VELY_in(KA,IA,JA) ! staggered point
     real(RP) :: POTT_in(KA,IA,JA)
+    real(RP) :: PRES_in(KA,IA,JA)
+
+    real(RP) :: Qdry (KA,IA,JA)
+    real(RP) :: Rtot (KA,IA,JA)
+    real(RP) :: CPtot(KA,IA,JA)
+    real(RP) :: CVtot(KA,IA,JA)
 
     integer  :: ifile, istep, t, tall
     integer  :: k, i, j, iq
@@ -360,7 +372,8 @@ contains
                                     VELZ_in(:,:,:),    & ! [OUT]
                                     VELX_in(:,:,:),    & ! [OUT]
                                     VELY_in(:,:,:),    & ! [OUT]
-                                    POTT_in(:,:,:)     ) ! [OUT]
+                                    POTT_in(:,:,:),    & ! [OUT]
+                                    PRES_in(:,:,:)     ) ! [OUT]
           else
              LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -413,6 +426,21 @@ contains
                                          fid_atmos,          & ! [OUT]
                                          vid_atmos(:)        ) ! [OUT]
              endif
+
+             if ( use_nonhydro_dens_boundary ) then
+                call ATMOS_THERMODYN_specific_heat( KA, KS, KE, IA, 1, IA, JA, 1, JA, QA, &
+                                                    QTRC_in(:,:,:,:),                                        & ! [IN]
+                                                    TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                                    Qdry(:,:,:), Rtot(:,:,:), CVtot(:,:,:), CPtot(:,:,:)     ) ! [OUT]
+                !$omp parallel do collapse(2)
+                do j = 1, JA
+                do i = 1, IA
+                do k = KS, KE
+                   DENS_in(k,i,j) = ( PRES_in(k,i,j) / P00 )**( CVtot(k,i,j) / CPtot(k,i,j) ) * P00 / ( Rtot(k,i,j) * POTT_in(k,i,j) )
+                end do
+                end do
+                end do
+             end if
 
              call BoundaryAtmosOutput( DENS_in(:,:,:),     & ! [IN]
                                        VELZ_in(:,:,:),     & ! [IN]
@@ -1177,7 +1205,8 @@ contains
        VELZ,          &
        VELX,          &
        VELY,          &
-       POTT           )
+       POTT,          &
+       PRES           )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        PI    => CONST_PI
@@ -1251,8 +1280,9 @@ contains
     real(RP),         intent(out) :: VELX(KA,IA,JA)
     real(RP),         intent(out) :: VELY(KA,IA,JA)
     real(RP),         intent(out) :: POTT(KA,IA,JA)
+    real(RP),         intent(out) :: PRES(KA,IA,JA)
 
-    real(RP) :: PRES (KA,IA,JA)
+    real(RP) :: PRES2(KA,IA,JA)
     real(RP) :: TEMP (KA,IA,JA)
     real(RP) :: W    (KA,IA,JA)
     real(RP) :: U    (KA,IA,JA)
@@ -1797,6 +1827,16 @@ contains
        enddo
     end if
 
+
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       PRES2(k,i,j) = PRES(k,i,j)
+    end do
+    end do
+    end do
+
     if ( use_file_density ) then
        call INTERP_interp3d( itp_nh_a,                &
                              dims(1)+2, 1, dims(1)+2, &
@@ -1816,9 +1856,9 @@ contains
        call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                        POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
                                        CZ(:,:,:),                         & ! [IN]
-                                       PRES(:,:,:),                       & ! [INOUT]
+                                       PRES2(:,:,:),                      & ! [INOUT]
                                        DENS2(:,:,:), TEMP(:,:,:)          ) ! [OUT]
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -1831,7 +1871,7 @@ contains
        call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                        POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
                                        CZ(:,:,:),                         & ! [IN]
-                                       PRES(:,:,:),                       & ! [INOUT]
+                                       PRES2(:,:,:),                      & ! [INOUT]
                                        DENS(:,:,:), TEMP(:,:,:)           ) ! [OUT]
     endif
 
@@ -1842,6 +1882,16 @@ contains
        call COMM_vars8( DENS(:,:,:), 1 )
        call COMM_wait ( DENS(:,:,:), 1, .false. )
     end if
+
+    !$omp parallel do collapse(2)
+    do j = 1, JA
+    do i = 1, IA
+    do k = KS, KE
+       if ( PRES(k,i,j) == UNDEF ) PRES(k,i,j) = PRES2(k,i,j)
+    end do
+    end do
+    end do
+
 
     !$omp parallel do
     do j = 1, JA

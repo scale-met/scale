@@ -1567,7 +1567,8 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Update boundary value with a constant time boundary
-  subroutine ATMOS_BOUNDARY_driver_update
+  subroutine ATMOS_BOUNDARY_driver_update( &
+       last_step )
     use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
@@ -1592,6 +1593,8 @@ contains
        QE_MP
     implicit none
 
+    logical, intent(in) :: last_step
+
     real(RP) :: bnd_DENS(KA,IA,JA)        ! damping coefficient for DENS (0-1)
     real(RP) :: bnd_VELZ(KA,IA,JA)        ! damping coefficient for VELZ (0-1)
     real(RP) :: bnd_VELX(KA,IA,JA)        ! damping coefficient for VELX (0-1)
@@ -1609,8 +1612,14 @@ contains
     endif
 
     if ( l_bnd ) then
+
+       ! step boundary
+       now_step = now_step + 1
+
        ! update referce vars
-       if ( now_step >= UPDATE_NSTEP ) then
+       if ( last_step ) then
+          now_step = min( now_step, UPDATE_NSTEP-1 )
+       else if ( now_step >= UPDATE_NSTEP ) then
           now_step          = 0
           boundary_timestep = boundary_timestep + 1
 
@@ -1622,9 +1631,6 @@ contains
              call ATMOS_BOUNDARY_update_file( ref_new )
           end if
        end if
-
-       ! step boundary
-       now_step = now_step + 1
 
        ! get boundaryal coefficients
        call get_boundary( bnd_DENS(:,:,:),   & ! [OUT]
@@ -2340,7 +2346,7 @@ contains
     real(RP) :: fact
     !---------------------------------------------------------------------------
 
-    fact = REAL(now_step, kind=RP) / update_step
+    fact = ( now_step + 0.5_RP ) / update_step
 
     !$omp parallel do default(none) private(i,j,k,iq) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KA,bnd_DENS,ATMOS_BOUNDARY_ref_DENS,ref_now,fact,ref_new,bnd_VELZ) &
