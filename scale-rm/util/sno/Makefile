@@ -25,7 +25,8 @@ OBJS = mod_sno_h.o     \
        mod_sno_vars.o  \
        \
        mod_snoplugin_timeave.o \
-       mod_snoplugin_hgridope.o
+       mod_snoplugin_hgridope.o \
+       mod_snoplugin_vgridope.o
 
 all:
 	$(MAKE) envlog
@@ -53,6 +54,7 @@ $(BUILD_DIR)/mod_sno_vars.o  : mod_sno_vars.F90  $(BUILD_DIR)/mod_sno_h.o $(BUIL
 
 $(BUILD_DIR)/mod_snoplugin_timeave.o  : mod_snoplugin_timeave.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
 $(BUILD_DIR)/mod_snoplugin_hgridope.o : mod_snoplugin_hgridope.F90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
+$(BUILD_DIR)/mod_snoplugin_vgridope.o : mod_snoplugin_vgridope.F90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
 
 
 
