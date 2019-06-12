@@ -7,6 +7,7 @@
 !! @author NICAM developers, Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_mkgrd
   !-----------------------------------------------------------------------------
   !
@@ -164,9 +165,10 @@ contains
   !> Make standard grid system
   subroutine MKGRD_standard
     use scale_prc_icoA, only: &
-       PRC_RGN_level, &
-       PRC_RGN_l2r,   &
-       I_NPL,         &
+       PRC_RGN_level,    &
+       PRC_RGN_ndiamond, &
+       PRC_RGN_l2r,      &
+       I_NPL,            &
        I_SPL
     use scale_const, only: &
        PI => CONST_PI
@@ -179,7 +181,7 @@ contains
     real(RP), allocatable :: g0(:,:,:)
     real(RP), allocatable :: g1(:,:,:)
 
-    real(RP) :: alpha2, phi
+    real(RP) :: alpha, beta, phi
 
     integer  :: rgnid, dmd
     real(RP) :: rdmd
@@ -195,8 +197,9 @@ contains
 
     k = ADM_KNONE
 
-    alpha2 = 2.0_RP * PI / 5.0_RP
-    phi    = asin( cos(alpha2) / (1.0_RP-cos(alpha2) ) )
+    alpha = 2.0_RP * PI / real(PRC_RGN_ndiamond/2,kind=RP)
+    beta  = 2.0_RP * PI / 5.0_RP
+    phi   = asin( min( cos(beta) / (1.0_RP-cos(beta)), 1.0_RP ) )
 
     rgn_all_1d = 2**PRC_RGN_level
     rgn_all    = rgn_all_1d * rgn_all_1d
@@ -210,41 +213,41 @@ contains
 
        dmd = (rgnid-1) / rgn_all + 1
 
-       if ( dmd <= 5 ) then ! northern hemisphere
+       if ( dmd <= PRC_RGN_ndiamond/2 ) then ! northern hemisphere
           rdmd = real(dmd-1,kind=RP)
 
-          r0(1,1,GRD_XDIR) = cos( phi) * cos(alpha2*rdmd)
-          r0(1,1,GRD_YDIR) = cos( phi) * sin(alpha2*rdmd)
+          r0(1,1,GRD_XDIR) = cos( phi) * cos(alpha*rdmd)
+          r0(1,1,GRD_YDIR) = cos( phi) * sin(alpha*rdmd)
           r0(1,1,GRD_ZDIR) = sin( phi)
 
-          r0(2,1,GRD_XDIR) = cos(-phi) * cos(alpha2*(rdmd+0.5_RP))
-          r0(2,1,GRD_YDIR) = cos(-phi) * sin(alpha2*(rdmd+0.5_RP))
+          r0(2,1,GRD_XDIR) = cos(-phi) * cos(alpha*(rdmd+0.5_RP))
+          r0(2,1,GRD_YDIR) = cos(-phi) * sin(alpha*(rdmd+0.5_RP))
           r0(2,1,GRD_ZDIR) = sin(-phi)
 
           r0(1,2,GRD_XDIR) =  0.0_RP
           r0(1,2,GRD_YDIR) =  0.0_RP
           r0(1,2,GRD_ZDIR) =  1.0_RP
 
-          r0(2,2,GRD_XDIR) = cos( phi) * cos(alpha2*(rdmd+1.0_RP))
-          r0(2,2,GRD_YDIR) = cos( phi) * sin(alpha2*(rdmd+1.0_RP))
+          r0(2,2,GRD_XDIR) = cos( phi) * cos(alpha*(rdmd+1.0_RP))
+          r0(2,2,GRD_YDIR) = cos( phi) * sin(alpha*(rdmd+1.0_RP))
           r0(2,2,GRD_ZDIR) = sin( phi)
        else ! southern hemisphere
-          rdmd = real(dmd-6,kind=RP)
+          rdmd = real(dmd-1-(PRC_RGN_ndiamond/2),kind=RP)
 
-          r0(1,1,GRD_XDIR) = cos(-phi) * cos(-alpha2*(rdmd+0.5_RP))
-          r0(1,1,GRD_YDIR) = cos(-phi) * sin(-alpha2*(rdmd+0.5_RP))
+          r0(1,1,GRD_XDIR) = cos(-phi) * cos(-alpha*(rdmd+0.5_RP))
+          r0(1,1,GRD_YDIR) = cos(-phi) * sin(-alpha*(rdmd+0.5_RP))
           r0(1,1,GRD_ZDIR) = sin(-phi)
 
           r0(2,1,GRD_XDIR) =  0.0_RP
           r0(2,1,GRD_YDIR) =  0.0_RP
           r0(2,1,GRD_ZDIR) = -1.0_RP
 
-          r0(1,2,GRD_XDIR) = cos( phi) * cos(-alpha2*rdmd)
-          r0(1,2,GRD_YDIR) = cos( phi) * sin(-alpha2*rdmd)
+          r0(1,2,GRD_XDIR) = cos( phi) * cos(-alpha*rdmd)
+          r0(1,2,GRD_YDIR) = cos( phi) * sin(-alpha*rdmd)
           r0(1,2,GRD_ZDIR) = sin( phi)
 
-          r0(2,2,GRD_XDIR) = cos(-phi) * cos(-alpha2*(rdmd-0.5_RP))
-          r0(2,2,GRD_YDIR) = cos(-phi) * sin(-alpha2*(rdmd-0.5_RP))
+          r0(2,2,GRD_XDIR) = cos(-phi) * cos(-alpha*(rdmd-0.5_RP))
+          r0(2,2,GRD_YDIR) = cos(-phi) * sin(-alpha*(rdmd-0.5_RP))
           r0(2,2,GRD_ZDIR) = sin(-phi)
        endif
 
@@ -329,6 +332,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply spring dynamics
   subroutine MKGRD_spring
+    use scale_prc_icoA, only: &
+       PRC_RGN_ndiamond, &
+       PRC_RGN_have_sgp
     use scale_const, only: &
        PI => CONST_PI
     use scale_vector, only: &
@@ -338,8 +344,6 @@ contains
        VECTR_angle
     use scale_comm_icoA, only: &
        COMM_data_transfer
-    use scale_prc_icoA, only: &
-       PRC_RGN_have_sgp
     use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
@@ -385,7 +389,7 @@ contains
 
     k0 = ADM_KNONE
 
-    lambda = 2.0_RP*PI / ( 10.0_RP*2.0_RP**(ADM_glevel-1) )
+    lambda = 2.0_RP*PI / ( real(PRC_RGN_ndiamond,kind=RP)*2.0_RP**(ADM_glevel-1) )
     dbar   = MKGRD_spring_beta * lambda
 
     if( IO_L ) write(IO_FID_LOG,*) '*** Apply grid modification with spring dynamics'
@@ -536,6 +540,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Apply rotation before stretching, for 1-diamond grid system
   subroutine MKGRD_prerotate
+    use scale_prc_icoA, only: &
+       PRC_RGN_ndiamond, &
+       PRC_have_pl
     use scale_const, only: &
        PI => CONST_PI
     use scale_vector, only: &
@@ -544,13 +551,11 @@ contains
        I_Zaxis
     use scale_comm_icoA, only: &
        COMM_data_transfer
-    use scale_prc_icoA, only: &
-       PRC_have_pl
     implicit none
 
     real(RP) :: g(3)
     real(RP) :: angle_y, angle_z, angle_tilt
-    real(RP) :: alpha2
+    real(RP) :: alpha
 
     real(RP) :: d2r
     integer  :: ij, k, l
@@ -561,8 +566,8 @@ contains
     k = ADM_KNONE
 
     d2r        = PI / 180.0_RP
-    alpha2     = 2.0_RP * PI / 5.0_RP
-    angle_z    = alpha2 / 2.0_RP
+    alpha      = 2.0_RP * PI / real(PRC_RGN_ndiamond/2,kind=RP)
+    angle_z    = alpha / 2.0_RP
     angle_y    = 0.25_RP*PI * ( 3.0_RP - sqrt(3.0_RP) )
     angle_tilt = MKGRD_prerotation_tilt * d2r
 
@@ -937,8 +942,8 @@ contains
        ij = suf(i,j)
 
        if (       PRC_RGN_have_sgp(l) &
-            .AND. i == ADM_gmin   &
-            .AND. j == ADM_gmin   ) then ! Pentagon
+            .AND. i == ADM_gmin       &
+            .AND. j == ADM_gmin       ) then ! Pentagon
 
           p(:,0) = GRD_xt(suf(i,  j-1),k,l,ADM_TJ,:)
           p(:,1) = GRD_xt(suf(i,  j  ),k,l,ADM_TI,:)
@@ -1254,7 +1259,11 @@ contains
 
           call VECTR_abs( gc_len, gc(:) )
 
-          GRD_xt(ij,k0,l,t,:) = gc(:) / gc_len
+          gc(:) = gc(:) / gc_len
+
+          call VECTR_dot( r_lenC, o(:), wk(:,1,ij,t), o(:), gc(:) )
+
+          GRD_xt(ij,k0,l,t,:) = gc(:) * sign(1.0_RP,r_lenC)
        enddo
        enddo
        enddo
@@ -1264,7 +1273,7 @@ contains
     if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
-       do l = 1,ADM_lall_pl
+       do l = 1, ADM_lall_pl
        do v = ADM_gmin_pl, ADM_gmax_pl
           ij   = v
           ijp1 = v + 1
@@ -1290,7 +1299,11 @@ contains
 
           call VECTR_abs( gc_len, gc(:) )
 
-          GRD_xt_pl(v,k0,l,:) = -gc(:) / gc_len
+          gc(:) = gc(:) / gc_len
+
+          call VECTR_dot( r_lenC, o(:), wk_pl(:,1), o(:), gc(:) )
+
+          GRD_xt_pl(v,k0,l,:) = gc(:) * sign(1.0_RP,r_lenC)
        enddo
        enddo
     endif
@@ -1371,7 +1384,11 @@ contains
 
           call VECTR_abs( gc_len, gc(:) )
 
-          GRD_x(ij,k0,l,:) = gc(:) / gc_len
+          gc(:) = gc(:) / gc_len
+
+          call VECTR_dot( r_lenC, o(:), wk(:,1,ij), o(:), gc(:) )
+
+          GRD_x(ij,k0,l,:) = gc(:) * sign(1.0_RP,r_lenC)
        enddo
        enddo
     enddo
@@ -1379,7 +1396,7 @@ contains
     if ( PRC_have_pl ) then
        n = ADM_gslf_pl
 
-       do l = 1,ADM_lall_pl
+       do l = 1, ADM_lall_pl
           do d = 1, ADM_nxyz
              do v = 1, ADM_vlink ! (ICO=5)
                 wk_pl(d,v) = GRD_xt_pl(v+1,k0,l,d)
@@ -1400,7 +1417,11 @@ contains
 
           call VECTR_abs( gc_len, gc(:) )
 
-          GRD_x_pl(n,k0,l,:) = -gc(:) / gc_len
+          gc(:) = gc(:) / gc_len
+
+          call VECTR_dot( r_lenC, o(:), wk_pl(:,1), o(:), gc(:) )
+
+          GRD_x_pl(n,k0,l,:) = gc(:) * sign(1.0_RP,r_lenC)
        enddo
     endif
 
