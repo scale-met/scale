@@ -69,6 +69,13 @@ program sno
      SNOPLGIN_hgridope_alloc,   &
      SNOPLGIN_hgridope_dealloc, &
      SNOPLGIN_hgridope_llinterp
+  use mod_snoplugin_vgridope, only: &
+     SNOPLGIN_vgridope_setup,   &
+     SNOPLGIN_vgridope_setcoef, &
+     SNOPLGIN_vgridope_alloc,   &
+     SNOPLGIN_vgridope_dealloc, &
+     SNOPLGIN_vgridope_vinterp
+
   !-----------------------------------------------------------------------------
   implicit none
   !-----------------------------------------------------------------------------
@@ -116,8 +123,10 @@ program sno
   ! process & grid information from input file [SNO_file_getinfo]
   integer                 :: nprocs_x_in                 ! x length of 2D processor topology (input)
   integer                 :: nprocs_y_in                 ! y length of 2D processor topology (input)
+  integer                 :: ngrids_z                    ! size of z-axis grids              (global,sometimes including halo)
   integer                 :: ngrids_x                    ! size of x-axis grids              (global,sometimes including halo)
   integer                 :: ngrids_y                    ! size of y-axis grids              (global,sometimes including halo)
+  integer                 :: nhalos_z                    ! size of z-axis halo grids         (global,sometimes have a size)
   integer                 :: nhalos_x                    ! size of x-axis halo grids         (global,sometimes have a size)
   integer                 :: nhalos_y                    ! size of y-axis halo grids         (global,sometimes have a size)
 
@@ -147,6 +156,7 @@ program sno
   ! Plugins
   logical                 :: plugin_timeave
   logical                 :: plugin_hgridope
+  logical                 :: plugin_vgridope
 
   logical :: do_output, finalize, add_rm_attr
   integer :: px, py, p
@@ -210,6 +220,12 @@ program sno
   call SNOPLGIN_timeave_setup ( plugin_timeave,  & ! [OUT]
                                 do_output        ) ! [INOUT]
 
+  call SNOPLGIN_vgridope_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                output_grads,               & ! [IN] from namelist
+                                output_gradsctl,            & ! [IN] from namelist
+                                plugin_vgridope,            & ! [OUT]
+                                do_output                   ) ! [INOUT]
+
   call SNOPLGIN_hgridope_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                 output_grads,               & ! [IN] from namelist
                                 output_gradsctl,            & ! [IN] from namelist
@@ -226,19 +242,19 @@ program sno
   !#############################################################################
 
   ! get common information from input file
-  call SNO_file_getinfo( ismaster,                   & ! [IN] from MPI
-                         basename_in,                & ! [IN] from namelist
-                         vars(:),                    & ! [IN] from namelist
-                         nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
-                         nprocs_x_in,  nprocs_y_in,  & ! [OUT]
-                         ngrids_x,     ngrids_y,     & ! [OUT]
-                         nhalos_x,     nhalos_y,     & ! [OUT]
-                         hinfo,                      & ! [OUT]
-                         naxis,                      & ! [OUT]
-                         axisname(:),                & ! [OUT]
-                         nvars,                      & ! [OUT]
-                         varname(:),                 & ! [OUT]
-                         debug                       ) ! [IN]
+  call SNO_file_getinfo( ismaster,                     & ! [IN] from MPI
+                         basename_in,                  & ! [IN] from namelist
+                         vars(:),                      & ! [IN] from namelist
+                         nprocs_x_out, nprocs_y_out,   & ! [IN] from namelist
+                         nprocs_x_in,  nprocs_y_in,    & ! [OUT]
+                         ngrids_z, ngrids_x, ngrids_y, & ! [OUT]
+                         nhalos_z, nhalos_x, nhalos_y, & ! [OUT]
+                         hinfo,                        & ! [OUT]
+                         naxis,                        & ! [OUT]
+                         axisname(:),                  & ! [OUT]
+                         nvars,                        & ! [OUT]
+                         varname(:),                   & ! [OUT]
+                         debug                         ) ! [IN]
 
   ! in->out mapping table (global)
   allocate( globalmap(ngrids_x,ngrids_y,3) )
@@ -336,6 +352,11 @@ program sno
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
 
+           if( plugin_vgridope ) call SNOPLGIN_vgridope_setcoef( ngrids_z, ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
+                                                                 naxis, nvars,                         & ! [IN] from SNO_file_getinfo
+                                                                 ainfo(:), dinfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                 debug                                 ) ! [IN]
+
            if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
                                                                  naxis,                      & ! [IN] from SNO_file_getinfo
                                                                  ainfo(:),                   & ! [IN] from SNO_axis_getinfo
@@ -357,6 +378,9 @@ program sno
                                    debug                         ) ! [IN]
 
               if( plugin_timeave  ) call SNOPLGIN_timeave_alloc ( dinfo(v), & ! [IN] from SNO_vars_getinfo
+                                                                  debug     ) ! [IN]
+
+              if( plugin_vgridope ) call SNOPLGIN_vgridope_alloc( dinfo(v), & ! [IN] from SNO_vars_getinfo
                                                                   debug     ) ! [IN]
 
               if( plugin_hgridope ) call SNOPLGIN_hgridope_alloc( dinfo(v), & ! [IN] from SNO_vars_getinfo
@@ -395,6 +419,17 @@ program sno
                                                                    dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                    debug                       ) ! [IN]
 
+                 if( plugin_vgridope ) call SNOPLGIN_vgridope_vinterp( dirpath_out,                & ! [IN] from namelist
+                                                                       basename_out,               & ! [IN] from namelist
+                                                                       output_grads,               & ! [IN] from namelist
+                                                                       p,                          & ! [IN]
+                                                                       t,                          & ! [IN]
+                                                                       nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                                                       nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                                                       hinfo,                      & ! [IN] from SNO_file_getinfo
+                                                                       dinfo(v),                   & ! [IN] from SNO_vars_getinfo
+                                                                       debug                       ) ! [IN]
+
                  if( plugin_hgridope ) call SNOPLGIN_hgridope_llinterp( dirpath_out,                & ! [IN] from namelist
                                                                         basename_out,               & ! [IN] from namelist
                                                                         output_grads,               & ! [IN] from namelist
@@ -403,8 +438,8 @@ program sno
                                                                         nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                                                         nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
                                                                         hinfo,                      & ! [IN] from SNO_file_getinfo
-                                                                   dinfo(v),                   & ! [IN] from SNO_vars_getinfo
-                                                                   debug                       ) ! [IN]
+                                                                        dinfo(v),                   & ! [IN] from SNO_vars_getinfo
+                                                                        debug                       ) ! [IN]
 
                  if ( do_output ) then
                     finalize    = ( t == dinfo(v)%step_nmax )
@@ -433,6 +468,8 @@ program sno
                                      debug     ) ! [IN]
 
               if( plugin_timeave  ) call SNOPLGIN_timeave_dealloc ( debug ) ! [IN]
+
+              if( plugin_vgridope ) call SNOPLGIN_vgridope_dealloc( debug ) ! [IN]
 
               if( plugin_hgridope ) call SNOPLGIN_hgridope_dealloc( debug ) ! [IN]
 

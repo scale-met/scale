@@ -60,8 +60,6 @@ module mod_snoplugin_hgridope
   integer,                private              :: SNOPLGIN_hgridope_nintrp      = 5       ! number of interpolation point
   integer,                private              :: SNOPLGIN_hgridope_weight      = 2       ! weighting factor for interpolation
 
-  logical,                private              :: SNOPLGIN_hgridope_outorigdata = .false. ! output original (non-averaged) data ?
-
   integer,                private              :: naxis_ll
   type(axisinfo),         private              :: ainfo_ll(8)
   type(iteminfo),         private              :: dinfo_ll
@@ -104,8 +102,7 @@ contains
        SNOPLGIN_hgridope_lon_end,   &
        SNOPLGIN_hgridope_dlon,      &
        SNOPLGIN_hgridope_nintrp,    &
-       SNOPLGIN_hgridope_weight,    &
-       SNOPLGIN_hgridope_outorigdata
+       SNOPLGIN_hgridope_weight
 
     integer  :: ierr
     !---------------------------------------------------------------------------
@@ -188,8 +185,8 @@ contains
           endif
        endif
 
-       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'output original (non-averaged) data? : ', SNOPLGIN_hgridope_outorigdata
-       do_output = SNOPLGIN_hgridope_outorigdata
+       ! do not output original data
+       do_output = .false.
     endif
 
     return
