@@ -26,7 +26,8 @@ program sno
      PRC_MPIstart,       &
      PRC_abort,        &
      PRC_MPIfinish,      &
-     PRC_SINGLECOM_setup
+     PRC_SINGLECOM_setup, &
+     PRC_ERRHANDLER_setup
   use scale_const, only: &
      CONST_setup
   use scale_calendar, only: &
@@ -161,6 +162,9 @@ program sno
                             nprocs,  & ! [OUT]
                             myrank,  & ! [OUT]
                             ismaster ) ! [OUT]
+
+  call PRC_ERRHANDLER_setup( use_fpm = .false., & ! [IN]
+                             master  = .false.  ) ! [IN]
 
   ! setup standard I/O
   call IO_setup( TOOLNAME )
