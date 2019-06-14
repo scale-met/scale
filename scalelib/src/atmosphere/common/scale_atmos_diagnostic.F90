@@ -155,6 +155,7 @@ contains
        PHYD,       &
        PHYDH       )
     use scale_const, only: &
+       EPS  => CONST_EPS, &
        GRAV => CONST_GRAV
     implicit none
 
@@ -168,20 +169,35 @@ contains
     real(RP), intent(out) :: PHYD (  KA,IA,JA)
     real(RP), intent(out) :: PHYDH(0:KA,IA,JA)
 
+    real(RP) :: diff
+
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp private(i,j,k) &
-    !$omp shared(PHYD,PHYDH,DENS,PRES,CZ,FZ,GRAV) &
+    !$omp private(diff) &
+    !$omp shared(PHYD,PHYDH,DENS,PRES,CZ,FZ,GRAV,EPS) &
     !$omp shared(KS,KE,IS,IE,JS,JE)
     do j = JS, JE
     do i = IS, IE
        PHYDH(KE,i,j) = PRES(KE,i,j) - DENS(KE,i,j) * GRAV * ( FZ(KE,i,j) - CZ(KE,i,j) )
-       do k = KE, KS, -1
-          PHYDH(k-1,i,j) = PHYDH(k,i,j) + DENS(k,i,j) * GRAV * ( FZ(k,i,j) - FZ(k-1,i,j) )
-!          PHYD (k  ,i,j) = 0.5_RP * ( PHYDH(k,i,j) + PHYDH(k-1,i,j) )
-          PHYD (k  ,i,j) = sqrt(PHYDH(k,i,j)) * sqrt(PHYDH(k-1,i,j))
+       do k = KE-1, KS-1, -1
+          PHYDH(k,i,j) = PHYDH(k+1,i,j) + DENS(k+1,i,j) * GRAV * ( FZ(k+1,i,j) - FZ(k,i,j) )
+       end do
+       PHYD(KE,i,j) = PRES(KE,i,j)
+       diff = 0.0_RP
+       do k = KE-1, KS, -1
+          PHYD(k,i,j) = PHYD(k+1,i,j) + ( DENS(k+1,i,j) + DENS(k,i,j) ) * GRAV * ( CZ(k+1,i,j) - CZ(k,i,j) ) * 0.5_RP
+          diff = diff + ( PRES(k,i,j) - PHYD(k,i,j) ) * ( FZ(k,i,j) - FZ(k-1,i,j) )
+       end do
+       diff = diff / ( FZ(KE,i,j) - FZ(KS-1,i,j) )
+       diff = max( diff, EPS - PHYDH(KE,i,j) )
+       do k = KS-1, KE
+          PHYDH(k,i,j) = PHYDH(k,i,j) + diff
+       end do
+       do k = KS, KE
+          PHYD(k,i,j) = PHYD(k,i,j) + diff
        end do
     enddo
     enddo
