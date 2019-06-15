@@ -265,7 +265,9 @@ contains
 
        gout1 = dinfo%dim_size(1)
 
-       LOG_INFO("SNO_vars_alloc",'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
+       if ( debug ) then
+          LOG_INFO("SNO_vars_alloc",'(1x,3A,I6)') '+ [',trim(dinfo%dim_name(1)),'] = ', gout1
+       endif
 
        allocate( dinfo%VAR_1d(gout1) )
        dinfo%VAR_1d(:) = 0.0_RP
@@ -288,8 +290,10 @@ contains
           gout2 = dinfo%dim_size(2)
        endif
 
-       LOG_INFO("SNO_vars_alloc",'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
-                                                        trim(dinfo%dim_name(2)),'] = ', gout1, gout2
+       if ( debug ) then
+          LOG_INFO("SNO_vars_alloc",'(1x,5A,2I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                         trim(dinfo%dim_name(2)),'] = ', gout1, gout2
+       endif
 
        allocate( dinfo%VAR_2d(gout1,gout2) )
        dinfo%VAR_2d(:,:) = 0.0_RP
@@ -315,9 +319,11 @@ contains
              gout3 = dinfo%dim_size(2)
           endif
 
-          LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
-                                                           trim(dinfo%dim_name(1)),',',&
-                                                           trim(dinfo%dim_name(2)),'] = ', gout1, gout2, gout3
+          if ( debug ) then
+             LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(3)),',',&
+                                                            trim(dinfo%dim_name(1)),',',&
+                                                            trim(dinfo%dim_name(2)),'] = ', gout1, gout2, gout3
+          endif
        else
           gout1 = dinfo%dim_size(1)
 
@@ -337,9 +343,11 @@ contains
              gout3 = dinfo%dim_size(3)
           endif
 
-          LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
-                                                           trim(dinfo%dim_name(2)),',',&
-                                                           trim(dinfo%dim_name(3)),'] = ', gout1, gout2, gout3
+          if ( debug ) then
+             LOG_INFO("SNO_vars_alloc",'(1x,7A,3I6)') '+ [',trim(dinfo%dim_name(1)),',',&
+                                                            trim(dinfo%dim_name(2)),',',&
+                                                            trim(dinfo%dim_name(3)),'] = ', gout1, gout2, gout3
+          endif
        endif
 
        allocate( dinfo%VAR_3d(gout1,gout2,gout3) )
