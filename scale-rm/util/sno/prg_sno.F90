@@ -70,10 +70,11 @@ program sno
      SNOPLGIN_hgridope_dealloc, &
      SNOPLGIN_hgridope_llinterp
   use mod_snoplugin_vgridope, only: &
-     SNOPLGIN_vgridope_setup,   &
-     SNOPLGIN_vgridope_setcoef, &
-     SNOPLGIN_vgridope_alloc,   &
-     SNOPLGIN_vgridope_dealloc, &
+     SNOPLGIN_vgridope_setup,      &
+     SNOPLGIN_vgridope_setcoef,    &
+     SNOPLGIN_vgridope_alloc,      &
+     SNOPLGIN_vgridope_dealloc,    &
+     SNOPLGIN_vgridope_updatecoef, &
      SNOPLGIN_vgridope_vinterp
 
   !-----------------------------------------------------------------------------
@@ -353,8 +354,8 @@ program sno
                                debug                         ) ! [IN]
 
            if( plugin_vgridope ) call SNOPLGIN_vgridope_setcoef( ngrids_z, ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
-                                                                 naxis, nvars,                         & ! [IN] from SNO_file_getinfo
-                                                                 ainfo(:), dinfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                 naxis,                                & ! [IN] from SNO_file_getinfo
+                                                                 ainfo(:),                             & ! [IN] from SNO_axis_getinfo
                                                                  debug                                 ) ! [IN]
 
            if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
@@ -418,6 +419,21 @@ program sno
                                                                    ainfo(:),                   & ! [IN] from SNO_axis_getinfo
                                                                    dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                    debug                       ) ! [IN]
+
+                 if( plugin_vgridope ) call SNOPLGIN_vgridope_updatecoef( basename_in,                  & ! [IN]    from namelist
+                                                                          v,                            & ! [IN]
+                                                                          t,                            & ! [IN]
+                                                                          nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
+                                                                          ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
+                                                                          nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                                                                          hinfo,                        & ! [IN]    from SNO_file_getinfo
+                                                                          ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
+                                                                          ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                                                          nvars,                        & ! [IN] from SNO_file_getinfo
+                                                                          dinfo(:),                     & ! [IN]
+                                                                          localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
+                                                                          readflag(:,:),                & ! [IN]    from SNO_map_settable_local
+                                                                          debug                         ) ! [IN]
 
                  if( plugin_vgridope ) call SNOPLGIN_vgridope_vinterp( dirpath_out,                & ! [IN] from namelist
                                                                        basename_out,               & ! [IN] from namelist

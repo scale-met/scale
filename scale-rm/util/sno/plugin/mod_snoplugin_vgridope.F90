@@ -34,6 +34,7 @@ module mod_snoplugin_vgridope
   public :: SNOPLGIN_vgridope_setcoef
   public :: SNOPLGIN_vgridope_alloc
   public :: SNOPLGIN_vgridope_dealloc
+  public :: SNOPLGIN_vgridope_updatecoef
   public :: SNOPLGIN_vgridope_vinterp
 
   !-----------------------------------------------------------------------------
@@ -63,13 +64,27 @@ module mod_snoplugin_vgridope
   integer,                private              :: imax_ref
   integer,                private              :: jmax_ref
   integer,                private              :: kmax_new
-  integer,                private, allocatable :: idx_k (:,:)
-  integer,                private, allocatable :: idx_kh(:,:)
-  real(RP),               private, allocatable :: vfact (:)
-  real(RP),               private, allocatable :: vhfact(:)
+
+  integer,                private, allocatable :: idx_Z (:,:)
+  integer,                private, allocatable :: idx_Zh(:,:)
+  real(RP),               private, allocatable :: Zfact (:)
+  real(RP),               private, allocatable :: Zhfact(:)
 
   real(RP),               private, allocatable :: Z_ref (:)
   real(RP),               private, allocatable :: Zh_ref(:)
+
+  integer,                private, allocatable :: idx_P (:,:,:,:)
+  integer,                private, allocatable :: idx_Ph(:,:,:,:)
+  real(RP),               private, allocatable :: Pfact (:,:,:)
+  real(RP),               private, allocatable :: Phfact(:,:,:)
+
+  real(RP),               private, allocatable :: PRES_ref  (:,:,:)
+  real(RP),               private, allocatable :: PRESh_ref (:,:,:)
+  real(RP),               private, allocatable :: height_ref(:,:,:)
+
+  real(RP),               private, allocatable :: SFC_PRES_ref(:,:)
+
+  real(RP),               private, allocatable :: LnPaxis(:)
 
   !-----------------------------------------------------------------------------
 contains
@@ -177,20 +192,13 @@ contains
        ngrids_x_out, &
        ngrids_y_out, &
        naxis,        &
-       nvars,        &
        ainfo,        &
-       dinfo,        &
        debug         )
     use scale_file_h, only: &
        FILE_REAL8
-    use scale_prc, only: &
-       PRC_abort
     use scale_interp, only: &
        INTERP_setup,    &
        INTERP_factor1d
-    use scale_interp_vert, only: &
-       INTERP_VERT_alloc_pres,   &
-       INTERP_VERT_setcoef_pres
     use mod_sno_h, only: &
        axisinfo
     implicit none
@@ -199,16 +207,10 @@ contains
     integer,        intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
     integer,        intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
     integer,        intent(in)  :: naxis                                 ! number of axis variables           (input)
-    integer,        intent(in)  :: nvars                                 ! number of item variables           (input)
     type(axisinfo), intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
-    type(iteminfo), intent(in)  :: dinfo   (nvars)                       ! item information                   (input)
     logical,        intent(in)  :: debug
 
-    real(RP), allocatable :: PRES_ref    (:,:,:)
-    real(RP), allocatable :: PRESh_ref   (:,:,:)
-    real(RP), allocatable :: SFC_PRES_ref(:,:)
-
-    integer  :: i, j, k, n
+    integer  :: k, n
     !---------------------------------------------------------------------------
 
     ! set region size
@@ -218,11 +220,7 @@ contains
 
     kmax_new = SNOPLGIN_vgridope_lev_num
 
-    ! set basic axis
-    allocate( ainfo_v( naxis ) )
-    ainfo_v(:) = ainfo(:)
-
-    select case(SNOPLGIN_vgridope_type)
+    select case( trim(SNOPLGIN_vgridope_type ) )
     case('ZLEV')
 
        LOG_NEWLINE
@@ -231,27 +229,33 @@ contains
        allocate( Z_ref (  kmax_ref) )
        allocate( Zh_ref(0:kmax_ref) )
 
-       allocate( idx_k (kmax_new,2) )
-       allocate( idx_kh(kmax_new,2) )
-       allocate( vfact (kmax_new  ) )
-       allocate( vhfact(kmax_new  ) )
+       allocate( idx_Z (kmax_new,2) )
+       allocate( idx_Zh(kmax_new,2) )
+       allocate( Zfact (kmax_new  ) )
+       allocate( Zhfact(kmax_new  ) )
+
+       ! set basic axis
+       allocate( ainfo_v( naxis ) )
+       ainfo_v(:) = ainfo(:)
 
        do n = 1, naxis
-          if    ( ainfo(n)%varname == 'z'  ) then
+          select case( trim(ainfo(n)%varname) )
+          case('z')
              Z_ref (:) = ainfo(n)%AXIS_1d(:)
 
              znum = n
+
              ! rewrite axis
-             deallocate( ainfo_v(znum)%AXIS_1d )
+             if( allocated( ainfo_v(znum)%AXIS_1d ) ) deallocate( ainfo_v(znum)%AXIS_1d )
              ainfo_v(znum)%dim_size(1) = kmax_new
              allocate( ainfo_v(znum)%AXIS_1d(kmax_new) )
 
-             do i = 1, kmax_new
-                ainfo_v(znum)%AXIS_1d(i) = SNOPLGIN_vgridope_lev_data(i)
+             do k = 1, kmax_new
+                ainfo_v(znum)%AXIS_1d(k) = SNOPLGIN_vgridope_lev_data(k)
              enddo
-          elseif( ainfo(n)%varname == 'zh' ) then
+          case('zh')
              Zh_ref(:) = ainfo(n)%AXIS_1d(:)
-          endif
+          endselect
        enddo
 
        ! set remapping coefficient
@@ -261,16 +265,16 @@ contains
                              kmax_new, 1, kmax_new,    & ! [IN]
                              Z_ref(:),                 & ! [IN]
                              ainfo_v(znum)%AXIS_1d(:), & ! [IN]
-                             idx_k(:,:),               & ! [OUT]
-                             vfact(:),                 & ! [OUT]
+                             idx_Z(:,:),               & ! [OUT]
+                             Zfact(:),                 & ! [OUT]
                              flag_extrap = .false.     ) ! [IN]
 
        call INTERP_factor1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
                              kmax_new,   1, kmax_new,   & ! [IN]
                              Zh_ref(:),                 & ! [IN]
                              ainfo_v(znum)%AXIS_1d(:),  & ! [IN]
-                             idx_kh(:,:),               & ! [IN]
-                             vhfact(:),                 & ! [IN]
+                             idx_Zh(:,:),               & ! [OUT]
+                             Zhfact(:),                 & ! [OUT]
                              flag_extrap = .false.      ) ! [IN]
 
     case('PLEV')
@@ -278,60 +282,62 @@ contains
        LOG_NEWLINE
        LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (pressure)'
 
-       ! set new axis set
-       ainfo_v(1)%varname     = 'p'
-       ainfo_v(1)%description = 'pressure'
-       ainfo_v(1)%units       = 'Pa'
-       ainfo_v(1)%datatype    = FILE_REAL8
-       ainfo_v(1)%dim_rank    = 1
-       ainfo_v(1)%dim_name(1) = 'pressure'
-       ainfo_v(1)%transpose   = .false.
-       ainfo_v(1)%regrid      = .false.
+       allocate( PRES_ref  (  kmax_ref,imax_ref,jmax_ref) )
+       allocate( PRESh_ref (0:kmax_ref,imax_ref,jmax_ref) )
+       allocate( height_ref(  kmax_ref,imax_ref,jmax_ref) )
 
-       ainfo_v(1)%dim_size(1) = kmax_new
-       allocate( ainfo_v(1)%AXIS_1d(kmax_new) )
-
-       do i = 1, kmax_new
-          ainfo_v(1)%AXIS_1d(i) = SNOPLGIN_vgridope_lev_data(i)
-       enddo
-
-       allocate( PRES_ref (  kmax_ref,imax_ref,jmax_ref) )
-       allocate( PRESh_ref(0:kmax_ref,imax_ref,jmax_ref) )
+       PRES_ref  (:,:,:) = -1.0_RP
+       PRESh_ref (:,:,:) = -1.0_RP
+       height_ref(:,:,:) = -1.0_RP
 
        allocate( SFC_PRES_ref(imax_ref,jmax_ref) )
 
-       do n = 1, nvars
-          if    ( dinfo(n)%varname == 'PRES' ) then
-             PRES_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
-          elseif( dinfo(n)%varname == 'SFC_PRES' ) then
-             SFC_PRES_ref(:,:) = ainfo(n)%AXIS_2d(:,:)
-          else
-             LOG_ERROR("SNOPLGIN_vgridope_setcoef",*) 'Not found pressure data at vertical level and the surface. Check "PRES" and "SFC_PRES"!'
-             call PRC_abort
-          endif
+       SFC_PRES_ref(:,:) = -1.0_RP
+
+       allocate( idx_P (kmax_new,2,imax_ref,jmax_ref) )
+       allocate( idx_Ph(kmax_new,2,imax_ref,jmax_ref) )
+       allocate( Pfact (kmax_new,  imax_ref,jmax_ref) )
+       allocate( Phfact(kmax_new,  imax_ref,jmax_ref) )
+
+       ! set basic axis
+       allocate( ainfo_v( naxis+1 ) )
+       ainfo_v(2:naxis+1) = ainfo(:)
+
+       znum = 1
+
+       ! add pressure axis
+       ainfo_v(znum)%varname     = 'p'
+       ainfo_v(znum)%description = 'pressure'
+       ainfo_v(znum)%units       = 'Pa'
+       ainfo_v(znum)%datatype    = FILE_REAL8
+       ainfo_v(znum)%dim_rank    = 1
+       ainfo_v(znum)%dim_name(1) = 'p'
+       ainfo_v(znum)%transpose   = .false.
+       ainfo_v(znum)%regrid      = .false.
+
+       if( allocated( ainfo_v(znum)%AXIS_1d ) ) deallocate( ainfo_v(znum)%AXIS_1d )
+       ainfo_v(znum)%dim_size(1) = kmax_new
+       allocate( ainfo_v(znum)%AXIS_1d(kmax_new) )
+
+       do k = 1, kmax_new
+          ainfo_v(znum)%AXIS_1d(k) = SNOPLGIN_vgridope_lev_data(k)
        enddo
 
-       ! set pressure at half-level
-       PRESh_ref(0,:,:) = SFC_PRES_ref(:,:)
-       do k = 1, kmax_ref-1
-          PRESh_ref(k,:,:) = PRESh_ref(k-1,:,:) + ( PRES_ref(k,:,:) - PRES_ref(k+1,:,:) )
-       end do
-       PRESh_ref(kmax_ref,:,:) = PRESh_ref(kmax_ref-1,:,:) + ( PRES_ref(kmax_ref-1,:,:) - PRES_ref(kmax_ref,:,:) )
+       allocate( LnPaxis(kmax_new) )
+
+       ! logarithmic
+       LnPaxis(:) = - log( ainfo_v(znum)%AXIS_1d(:) )
+
+       ! geopotential height
+       do n = 1, naxis
+          select case( trim(ainfo(n)%varname) )
+          case('height')
+             height_ref(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
+          endselect
+       enddo
 
        ! set remapping coefficient
-       call INTERP_VERT_alloc_pres( kmax_new, & ! [IN]
-                                    kmax_ref, & ! [IN]
-                                    imax_ref, & ! [IN]
-                                    jmax_ref  ) ! [IN]
-
-       call INTERP_VERT_setcoef_pres( kmax_new,              & ! [IN]
-                                      kmax_ref, 1, kmax_ref, & ! [IN]
-                                      imax_ref, 1, imax_ref, & ! [IN]
-                                      jmax_ref, 1, jmax_ref, & ! [IN]
-                                      PRES_ref (:,:,:),      & ! [IN]
-                                      PRESh_ref(:,:,:),      & ! [IN]
-                                      SFC_PRES_ref(:,:),     & ! [IN]
-                                      ainfo_v(1)%AXIS_1d(:)  ) ! [IN]
+       call INTERP_setup( 2 ) ! [IN] not used
 
     end select
 
@@ -377,14 +383,14 @@ contains
           zaxis_orgsize = dinfo%dim_size(1)
        endif
 
-       select case(trim(zaxis_orgname))
+       select case( trim(zaxis_orgname) )
        case('z')
           allocate( dinfo_v%VAR_3d(kmax_new,     imax_ref,jmax_ref) )
        case('zh')
           allocate( dinfo_v%VAR_3d(kmax_new,     imax_ref,jmax_ref) )
        case default
           allocate( dinfo_v%VAR_3d(zaxis_orgsize,imax_ref,jmax_ref) )
-       end select
+       endselect
 
        dinfo_v%VAR_3d(:,:,:) = 0.0_RP
 
@@ -413,6 +419,188 @@ contains
 
     return
   end subroutine SNOPLGIN_vgridope_dealloc
+
+  !-----------------------------------------------------------------------------
+  subroutine SNOPLGIN_vgridope_updatecoef( &
+       basename_in,   &
+       nowvar,        &
+       nowstep,       &
+       nprocs_x_in,   &
+       nprocs_y_in,   &
+       ngrids_x,      &
+       ngrids_y,      &
+       nhalos_x,      &
+       nhalos_y,      &
+       hinfo,         &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
+       nvars,         &
+       dinfo,         &
+       localmap,      &
+       readflag,      &
+       debug          )
+    use scale_prc, only: &
+       PRC_abort
+    use scale_interp, only: &
+       INTERP_factor1d
+    use mod_sno_h, only: &
+       commoninfo, &
+       iteminfo
+    use mod_sno_vars, only: &
+       SNO_vars_alloc,   &
+       SNO_vars_dealloc, &
+       SNO_vars_read
+    implicit none
+
+    character(len=H_LONG), intent(in) :: basename_in   ! Basename of the input  file
+
+    integer,    intent(in) :: nowvar        ! target variable number
+    integer,    intent(in) :: nowstep       ! current step
+    integer,    intent(in) :: nprocs_x_in   ! x length of 2D processor topology (input)
+    integer,    intent(in) :: nprocs_y_in   ! y length of 2D processor topology (input)
+    integer,    intent(in) :: ngrids_x      ! size of x-axis grids              (global,sometimes including halo)
+    integer,    intent(in) :: ngrids_y      ! size of y-axis grids              (global,sometimes including halo)
+    integer,    intent(in) :: nhalos_x      ! size of x-axis halo grids         (global,sometimes have a size)
+    integer,    intent(in) :: nhalos_y      ! size of y-axis halo grids         (global,sometimes have a size)
+
+    type(commoninfo), intent(in) :: hinfo
+
+    integer,    intent(in) :: ngrids_x_out  ! size of x-axis grids              (output,sometimes including halo)
+    integer,    intent(in) :: ngrids_y_out  ! size of y-axis grids              (output,sometimes including halo)
+    integer,    intent(in) :: ngrids_xh_out ! size of x-axis grids, staggard    (output,sometimes including halo)
+    integer,    intent(in) :: ngrids_yh_out ! size of y-axis grids, staggard    (output,sometimes including halo)
+
+    integer,        intent(in)  :: nvars          ! number of item variables
+    type(iteminfo), intent(in)  :: dinfo(nvars)   ! item information
+
+    integer(2), intent(in) :: localmap (ngrids_x_out,ngrids_y_out,3)  ! mapping table
+    logical,    intent(in) :: readflag (nprocs_x_in,nprocs_y_in)      ! flag to read each input file
+    logical,    intent(in) :: debug
+
+    type(iteminfo) :: pinfo
+
+    integer :: i, j, k, v
+    !---------------------------------------------------------------------------
+
+    select case( trim(SNOPLGIN_vgridope_type) )
+    case('PLEV')
+
+       ! update PRES and SFC_PRES
+       do v = 1, nvars
+
+          select case( trim(dinfo(v)%varname) )
+          case('PRES')
+
+             if( v == nowvar ) then
+                PRES_ref(:,:,:) = dinfo(v)%VAR_3d(:,:,:)
+             else
+                pinfo = dinfo(v)
+
+                call SNO_vars_alloc( ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
+                                     ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                     pinfo,                        & ! [INOUT] from SNO_vars_getinfo
+                                     debug                         ) ! [IN]
+
+                call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
+                                    nowstep,                      & ! [IN]
+                                    nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
+                                    ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
+                                    nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                                    hinfo,                        & ! [IN]    from SNO_file_getinfo
+                                    ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
+                                    ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                    pinfo,                        & ! [INOUT] from SNO_vars_getinfo
+                                    localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
+                                    readflag(:,:),                & ! [IN]    from SNO_map_settable_local
+                                    debug                         ) ! [IN]
+
+                PRES_ref(:,:,:) = pinfo%VAR_3d(:,:,:)
+
+                call SNO_vars_dealloc( pinfo, & ! [INOUT] from SNO_vars_getinfo
+                                       debug  ) ! [IN]
+             endif
+
+          case('SFC_PRES')
+
+             if( v == nowvar ) then
+                SFC_PRES_ref(:,:) = dinfo(v)%VAR_2d(:,:)
+             else
+                pinfo = dinfo(v)
+
+                call SNO_vars_alloc( ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
+                                     ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                     pinfo,                        & ! [INOUT] from SNO_vars_getinfo
+                                     debug                         ) ! [IN]
+
+                call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
+                                    nowstep,                      & ! [IN]
+                                    nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
+                                    ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
+                                    nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
+                                    hinfo,                        & ! [IN]    from SNO_file_getinfo
+                                    ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
+                                    ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                    pinfo,                        & ! [INOUT] from SNO_vars_getinfo
+                                    localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
+                                    readflag(:,:),                & ! [IN]    from SNO_map_settable_local
+                                    debug                         ) ! [IN]
+
+                SFC_PRES_ref(:,:) = pinfo%VAR_2d(:,:)
+
+                call SNO_vars_dealloc( pinfo, & ! [INOUT] from SNO_vars_getinfo
+                                       debug  ) ! [IN]
+             endif
+
+          endselect
+
+       enddo
+
+       ! check PRES and SFC_PRES
+       if( all( PRES_ref(:,:,:) < 0.0_RP ) .or. all( SFC_PRES_ref(:,:) < 0.0_RP ) ) then
+          LOG_ERROR("SNOPLGIN_vgridope_setcoef",*) 'Not found required pressure data. Check "PRES" and "SFC_PRES"!'
+          call PRC_abort
+       endif
+
+       ! update pressure at half-level
+       PRESh_ref(0,:,:) = SFC_PRES_ref(:,:)
+       do k = 1, kmax_ref-1
+          PRESh_ref(k,:,:) = PRESh_ref(k-1,:,:) + ( PRES_ref(k,:,:) - PRES_ref(k+1,:,:) )
+       enddo
+       PRESh_ref(kmax_ref,:,:) = PRESh_ref(kmax_ref-1,:,:) + ( PRES_ref(kmax_ref-1,:,:) - PRES_ref(kmax_ref,:,:) )
+
+       ! logarithmic
+       PRES_ref (:,:,:) = - log( PRES_ref (:,:,:) )
+       PRESh_ref(:,:,:) = - log( PRESh_ref(:,:,:) )
+
+       SFC_PRES_ref(:,:) = - log( SFC_PRES_ref(:,:) )
+
+       ! update remapping coefficient
+       do j = 1, jmax_ref
+       do i = 1, imax_ref
+          call INTERP_factor1d( kmax_ref, 1, kmax_ref, & ! [IN]
+                                kmax_new, 1, kmax_new, & ! [IN]
+                                PRES_ref(:,i,j),       & ! [IN]
+                                LnPaxis(:),            & ! [IN]
+                                idx_P(:,:,i,j),        & ! [OUT]
+                                Pfact(:,i,j),          & ! [OUT]
+                                flag_extrap = .false.  ) ! [IN]
+
+          call INTERP_factor1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
+                                kmax_new,   1, kmax_new,   & ! [IN]
+                                PRESh_ref(:,i,j),          & ! [IN]
+                                LnPaxis(:),                & ! [IN]
+                                idx_Ph(:,:,i,j),           & ! [OUT]
+                                Phfact(:,i,j),             & ! [OUT]
+                                flag_extrap = .false.      ) ! [IN]
+       enddo
+       enddo
+
+    endselect
+
+    return
+  end subroutine SNOPLGIN_vgridope_updatecoef
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_vgridope_vinterp( &
@@ -506,49 +694,149 @@ contains
        dinfo_v%dim_size(1) = imax_ref
        dinfo_v%dim_size(2) = jmax_ref
 
-       select case(trim(zaxis_orgname))
-       case('z')
-          dinfo_v%dim_name(3) = "z"
-          dinfo_v%dim_size(3) = kmax_new
+       select case( trim(SNOPLGIN_vgridope_type) )
 
-          do j = 1, jmax_ref
-          do i = 1, imax_ref
-             call INTERP_interp1d( kmax_ref, 1, kmax_ref,    & ! [IN]
-                                   kmax_new, 1, kmax_new,    & ! [IN]
-                                   idx_k(:,:),               & ! [IN]
-                                   vfact(:),                 & ! [IN]
-                                   Z_ref(:),                 & ! [IN]
-                                   ainfo_v(znum)%AXIS_1d(:), & ! [IN]
-                                   dinfo%VAR_3d  (:,i,j),    & ! [IN]
-                                   dinfo_v%VAR_3d(:,i,j),    & ! [OUT]
-                                   logwgt = .false.          ) ! [OUT]
-          end do
-          end do
-       case('zh')
-          dinfo_v%dim_name(3) = "z"
-          dinfo_v%dim_size(3) = kmax_new
+       case('ZLEV')
 
-          do j = 1, jmax_ref
-          do i = 1, imax_ref
-             call INTERP_interp1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
-                                   kmax_new,   1, kmax_new,   & ! [IN]
-                                   idx_kh(:,:),               & ! [IN]
-                                   vhfact(:),                 & ! [IN]
-                                   Zh_ref(:),                 & ! [IN]
-                                   ainfo_v(znum)%AXIS_1d(:),  & ! [IN]
-                                   dinfo%VAR_3d  (:,i,j),     & ! [IN]
-                                   dinfo_v%VAR_3d(:,i,j),     & ! [OUT]
-                                   logwgt = .false.           ) ! [OUT]
-          end do
-          end do
-       case default
-          dinfo_v%dim_name(3) = zaxis_orgname
-          dinfo_v%dim_size(3) = zaxis_orgsize
+          select case( trim(zaxis_orgname) )
+          case('z')
 
-          dinfo_v%VAR_3d(:,:,:) = dinfo%VAR_3d(:,:,:)
-       end select
+             dinfo_v%dim_name(3) = 'z'
+             dinfo_v%dim_size(3) = kmax_new
+
+             do j = 1, jmax_ref
+             do i = 1, imax_ref
+                call INTERP_interp1d( kmax_ref, 1, kmax_ref,    & ! [IN]
+                                      kmax_new, 1, kmax_new,    & ! [IN]
+                                      idx_Z(:,:),               & ! [IN]
+                                      Zfact(:),                 & ! [IN]
+                                      Z_ref(:),                 & ! [IN]
+                                      ainfo_v(znum)%AXIS_1d(:), & ! [IN]
+                                      dinfo%VAR_3d  (:,i,j),    & ! [IN]
+                                      dinfo_v%VAR_3d(:,i,j),    & ! [OUT]
+                                      logwgt = .false.          ) ! [IN]
+             end do
+             end do
+
+          case('zh')
+
+             dinfo_v%dim_name(3) = 'z'
+             dinfo_v%dim_size(3) = kmax_new
+
+             do j = 1, jmax_ref
+             do i = 1, imax_ref
+                call INTERP_interp1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
+                                      kmax_new,   1, kmax_new,   & ! [IN]
+                                      idx_Zh(:,:),               & ! [IN]
+                                      Zhfact(:),                 & ! [IN]
+                                      Zh_ref(:),                 & ! [IN]
+                                      ainfo_v(znum)%AXIS_1d(:),  & ! [IN]
+                                      dinfo%VAR_3d  (:,i,j),     & ! [IN]
+                                      dinfo_v%VAR_3d(:,i,j),     & ! [OUT]
+                                      logwgt = .false.           ) ! [IN]
+             end do
+             end do
+
+          case default
+
+             dinfo_v%dim_name(3) = zaxis_orgname
+             dinfo_v%dim_size(3) = zaxis_orgsize
+
+             dinfo_v%VAR_3d(:,:,:) = dinfo%VAR_3d(:,:,:)
+
+          end select
+
+       case('PLEV')
+
+          select case( trim(zaxis_orgname) )
+          case('z')
+
+             ! make geopotential height insted of PRES
+             if( trim(dinfo_v%varname) == 'PRES' ) then
+
+                dinfo_v%varname     = 'GPH'
+                dinfo_v%description = 'geopotential height'
+                dinfo_v%units       = 'm'
+                dinfo_v%datatype    = dinfo%datatype
+                dinfo_v%dim_rank    = dinfo%dim_rank
+                dinfo_v%transpose   = .true.
+                dinfo_v%step_nmax   = dinfo%step_nmax
+                do t = 1, dinfo%step_nmax
+                   dinfo_v%time_start(t) = dinfo%time_start(t)
+                   dinfo_v%time_end  (t) = dinfo%time_end  (t)
+                enddo
+                dinfo_v%dt          = dinfo%dt
+                dinfo_v%time_units  = dinfo%time_units
+                dinfo_v%dim_name(3) = 'p'
+                dinfo_v%dim_size(3) = kmax_new
+
+                do j = 1, jmax_ref
+                do i = 1, imax_ref
+                   call INTERP_interp1d( kmax_ref, 1, kmax_ref, & ! [IN]
+                                         kmax_new, 1, kmax_new, & ! [IN]
+                                         idx_P(:,:,i,j),        & ! [IN]
+                                         Pfact(:,i,j),          & ! [IN]
+                                         PRES_ref(:,i,j),       & ! [IN]
+                                         LnPaxis(:),            & ! [IN]
+                                         height_ref(:,i,j),     & ! [IN]
+                                         dinfo_v%VAR_3d(:,i,j), & ! [OUT]
+                                         logwgt = .false.       ) ! [IN]
+                end do
+                end do
+
+             else
+
+                dinfo_v%dim_name(3) = 'p'
+                dinfo_v%dim_size(3) = kmax_new
+
+                do j = 1, jmax_ref
+                do i = 1, imax_ref
+                   call INTERP_interp1d( kmax_ref, 1, kmax_ref, & ! [IN]
+                                         kmax_new, 1, kmax_new, & ! [IN]
+                                         idx_P(:,:,i,j),        & ! [IN]
+                                         Pfact(:,i,j),          & ! [IN]
+                                         PRES_ref(:,i,j),       & ! [IN]
+                                         LnPaxis(:),            & ! [IN]
+                                         dinfo%VAR_3d  (:,i,j), & ! [IN]
+                                         dinfo_v%VAR_3d(:,i,j), & ! [OUT]
+                                         logwgt = .false.       ) ! [IN]
+                end do
+                end do
+
+             endif
+
+          case('zh')
+
+             dinfo_v%dim_name(3) = 'p'
+             dinfo_v%dim_size(3) = kmax_new
+
+             do j = 1, jmax_ref
+             do i = 1, imax_ref
+                call INTERP_interp1d( kmax_ref+1, 1, kmax_ref+1, & ! [IN]
+                                      kmax_new,   1, kmax_new,   & ! [IN]
+                                      idx_Ph(:,:,i,j),           & ! [IN]
+                                      Phfact(:,i,j),             & ! [IN]
+                                      PRESh_ref(:,i,j),          & ! [IN]
+                                      LnPaxis(:),                & ! [IN]
+                                      dinfo%VAR_3d  (:,i,j),     & ! [IN]
+                                      dinfo_v%VAR_3d(:,i,j),     & ! [OUT]
+                                      logwgt = .false.           ) ! [IN]
+             end do
+             end do
+
+          case default
+
+             dinfo_v%dim_name(3) = zaxis_orgname
+             dinfo_v%dim_size(3) = zaxis_orgsize
+
+             dinfo_v%VAR_3d(:,:,:) = dinfo%VAR_3d(:,:,:)
+
+          end select
+
+       endselect
 
        do_output = .true.
+
     endif
 
     ! output
