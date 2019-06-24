@@ -365,7 +365,7 @@ contains
        endif
 
        select case(varname_file(n))
-       case('z','zh','oz','ozh','lz','lzh','uz','uzh','p',                                                                   &
+       case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                                            &
             'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',                               &
             'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ',                    &
             'x','xh','y','yh',                                                                                               &

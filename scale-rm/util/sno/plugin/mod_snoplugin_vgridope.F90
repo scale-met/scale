@@ -306,12 +306,12 @@ contains
        znum = 1
 
        ! add pressure axis
-       ainfo_v(znum)%varname     = 'p'
-       ainfo_v(znum)%description = 'pressure'
+       ainfo_v(znum)%varname     = 'pressure'
+       ainfo_v(znum)%description = 'Pressure Level'
        ainfo_v(znum)%units       = 'Pa'
        ainfo_v(znum)%datatype    = FILE_REAL8
        ainfo_v(znum)%dim_rank    = 1
-       ainfo_v(znum)%dim_name(1) = 'p'
+       ainfo_v(znum)%dim_name(1) = 'pressure'
        ainfo_v(znum)%transpose   = .false.
        ainfo_v(znum)%regrid      = .false.
 
@@ -767,7 +767,7 @@ contains
                 enddo
                 dinfo_v%dt          = dinfo%dt
                 dinfo_v%time_units  = dinfo%time_units
-                dinfo_v%dim_name(3) = 'p'
+                dinfo_v%dim_name(3) = 'pressure'
                 dinfo_v%dim_size(3) = kmax_new
 
                 do j = 1, jmax_ref
@@ -786,7 +786,7 @@ contains
 
              else
 
-                dinfo_v%dim_name(3) = 'p'
+                dinfo_v%dim_name(3) = 'pressure'
                 dinfo_v%dim_size(3) = kmax_new
 
                 do j = 1, jmax_ref
@@ -807,7 +807,7 @@ contains
 
           case('zh')
 
-             dinfo_v%dim_name(3) = 'p'
+             dinfo_v%dim_name(3) = 'pressure'
              dinfo_v%dim_size(3) = kmax_new
 
              do j = 1, jmax_ref
