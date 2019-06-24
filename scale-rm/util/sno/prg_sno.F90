@@ -38,7 +38,7 @@ program sno
   use mod_sno, only: &
      SNO_proc_alloc,   &
      SNO_file_getinfo, &
-     SNO_calc_localsize
+     SNO_calc_domainsize
   use mod_sno_map, only: &
      SNO_map_settable_global, &
      SNO_map_settable_local
@@ -96,6 +96,7 @@ program sno
   integer                 :: nprocs_x_out     = 1        ! x length of 2D processor topology (output)
   integer                 :: nprocs_y_out     = 1        ! y length of 2D processor topology (output)
   character(len=H_SHORT)  :: vars(item_limit) = ''       ! name of variables
+  logical                 :: output_single    = .false.  ! output single file when using MPI?
   logical                 :: output_grads     = .false.  ! output grads fortmat file?
   logical                 :: output_gradsctl  = .false.  ! output grads control file for reading single NetCDF file?
   logical                 :: debug            = .false.
@@ -107,6 +108,7 @@ program sno
        nprocs_x_out,    &
        nprocs_y_out,    &
        vars,            &
+       output_single,   &
        output_grads,    &
        output_gradsctl, &
        debug
@@ -143,7 +145,7 @@ program sno
   ! variable information from input file [SNO_vars_getinfo]
   type(iteminfo), allocatable :: dinfo(:)
 
-  ! mapping table [SNO_calc_localsize,SNO_map_settable_global,SNO_map_settable_local]
+  ! mapping table [SNO_calc_domainsize,SNO_map_settable_global,SNO_map_settable_local]
   integer                 :: ngrids_x_out                ! size of x-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_y_out                ! size of y-axis grids              (output,sometimes including halo)
   integer                 :: ngrids_xh_out               ! size of x-axis grids, staggard    (output,sometimes including halo)
@@ -273,7 +275,7 @@ program sno
                          basename_in,       & ! [IN] from namelist
                          naxis,             & ! [IN] from SNO_file_getinfo
                          axisname(1:naxis), & ! [IN] from SNO_file_getinfo
-                         ainfo   (:),       & ! [OUT]
+                         ainfo(:),          & ! [OUT]
                          debug              ) ! [IN]
 
   ! get information of variables from input file
@@ -300,13 +302,13 @@ program sno
 
         p = (py-1) * nprocs_x_out + px - 1
 
-        call SNO_calc_localsize( nprocs_x_out,  nprocs_y_out, & ! [IN] from namelist
-                                 px,            py,           & ! [IN]
-                                 ngrids_x,      ngrids_y,     & ! [IN] from SNO_file_getinfo
-                                 nhalos_x,      nhalos_y,     & ! [IN] from SNO_file_getinfo
-                                 hinfo,                       & ! [IN]    from SNO_file_getinfo
-                                 ngrids_x_out,  ngrids_y_out, & ! [OUT]
-                                 ngrids_xh_out, ngrids_yh_out ) ! [OUT]
+        call SNO_calc_domainsize( nprocs_x_out,  nprocs_y_out, & ! [IN] from namelist
+                                  px,            py,           & ! [IN]
+                                  ngrids_x,      ngrids_y,     & ! [IN] from SNO_file_getinfo
+                                  nhalos_x,      nhalos_y,     & ! [IN] from SNO_file_getinfo
+                                  hinfo,                       & ! [IN]    from SNO_file_getinfo
+                                  ngrids_x_out,  ngrids_y_out, & ! [OUT]
+                                  ngrids_xh_out, ngrids_yh_out ) ! [OUT]
 
         if ( p >= pstr .AND. p <= pend ) then
            LOG_NEWLINE
@@ -324,7 +326,7 @@ program sno
                                         readflag (:,:),             & ! [OUT]
                                         debug                       ) ! [IN]
 
-           ! read axis and rearrange
+           ! read axis and rearrange (local)
            call SNO_axis_alloc( nprocs_x_out,  nprocs_y_out,  & ! [IN]    from namelist
                                 ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                 ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
@@ -348,7 +350,7 @@ program sno
                                ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
                                ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
                                naxis,                        & ! [IN]    from SNO_file_getinfo
-                               ainfo   (:),                  & ! [INOUT] from SNO_axis_getinfo
+                               ainfo(:),                     & ! [INOUT] from SNO_axis_getinfo
                                localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
@@ -407,8 +409,10 @@ program sno
                                      readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                      debug                         ) ! [IN]
 
-                 if( plugin_timeave ) call SNOPLGIN_timeave_store( dirpath_out,                & ! [IN] from namelist
+                 if( plugin_timeave ) call SNOPLGIN_timeave_store( ismaster,                   & ! [IN] from MPI
+                                                                   dirpath_out,                & ! [IN] from namelist
                                                                    basename_out,               & ! [IN] from namelist
+                                                                   output_single,              & ! [IN] from namelist
                                                                    output_grads,               & ! [IN] from namelist
                                                                    p,                          & ! [IN]
                                                                    t,                          & ! [IN]
@@ -435,8 +439,10 @@ program sno
                                                                           readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                                                           debug                         ) ! [IN]
 
-                 if( plugin_vgridope ) call SNOPLGIN_vgridope_vinterp( dirpath_out,                & ! [IN] from namelist
+                 if( plugin_vgridope ) call SNOPLGIN_vgridope_vinterp( ismaster,                   & ! [IN] from MPI
+                                                                       dirpath_out,                & ! [IN] from namelist
                                                                        basename_out,               & ! [IN] from namelist
+                                                                       output_single,              & ! [IN] from namelist
                                                                        output_grads,               & ! [IN] from namelist
                                                                        p,                          & ! [IN]
                                                                        t,                          & ! [IN]
@@ -446,8 +452,10 @@ program sno
                                                                        dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                        debug                       ) ! [IN]
 
-                 if( plugin_hgridope ) call SNOPLGIN_hgridope_llinterp( dirpath_out,                & ! [IN] from namelist
+                 if( plugin_hgridope ) call SNOPLGIN_hgridope_llinterp( ismaster,                   & ! [IN] from MPI
+                                                                        dirpath_out,                & ! [IN] from namelist
                                                                         basename_out,               & ! [IN] from namelist
+                                                                        output_single,              & ! [IN] from namelist
                                                                         output_grads,               & ! [IN] from namelist
                                                                         p,                          & ! [IN]
                                                                         t,                          & ! [IN]
@@ -461,8 +469,10 @@ program sno
                     finalize    = ( t == dinfo(v)%step_nmax )
                     add_rm_attr = .true.
 
-                    call SNO_vars_write( dirpath_out,                & ! [IN] from namelist
+                    call SNO_vars_write( ismaster,                   & ! [IN] from MPI
+                                         dirpath_out,                & ! [IN] from namelist
                                          basename_out,               & ! [IN] from namelist
+                                         output_single,              & ! [IN] from namelist
                                          output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
@@ -493,20 +503,20 @@ program sno
 
            if ( do_output ) then
               if ( output_gradsctl ) then
-                 call SNO_grads_netcdfctl( dirpath_out,  & ! [IN] from namelist
-                                           basename_out, & ! [IN] from namelist
-                                           hinfo,        & ! [IN] from SNO_file_getinfo
-                                           naxis,        & ! [IN] from SNO_file_getinfo
-                                           ainfo(:),     & ! [IN] from SNO_axis_getinfo
-                                           nvars,        & ! [IN] from SNO_file_getinfo
-                                           dinfo(:),     & ! [IN] from SNO_vars_getinfo
-                                           debug         ) ! [IN]
+                 call SNO_grads_netcdfctl( dirpath_out,    & ! [IN] from namelist
+                                           basename_out,   & ! [IN] from namelist
+                                           hinfo,          & ! [IN] from SNO_file_getinfo
+                                           naxis,          & ! [IN] from SNO_file_getinfo
+                                           ainfo(:),       & ! [IN] from SNO_axis_getinfo
+                                           nvars,          & ! [IN] from SNO_file_getinfo
+                                           dinfo(:),       & ! [IN] from SNO_vars_getinfo
+                                           debug           ) ! [IN]
               endif
            endif
 
-           call SNO_axis_dealloc( naxis,    & ! [IN]    from SNO_file_getinfo
-                                  ainfo(:), & ! [INOUT] from SNO_axis_getinfo
-                                  debug     ) ! [IN]
+           call SNO_axis_dealloc( naxis,          & ! [IN]    from SNO_file_getinfo
+                                  ainfo(:),       & ! [INOUT] from SNO_axis_getinfo
+                                  debug           ) ! [IN]
 
            deallocate( localmap )
 

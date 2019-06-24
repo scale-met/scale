@@ -18,6 +18,10 @@ module mod_sno_vars
   use scale_precision
   use scale_io
   use scale_prof
+
+  use mod_sno_h, only: &
+     axisinfo,  &
+     iteminfo
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -407,9 +411,9 @@ contains
        commoninfo, &
        iteminfo
     use mod_sno, only: &
-       SNO_calc_localsize, &
-       SNO_read_map_1d,    &
-       SNO_read_map_2d,    &
+       SNO_calc_domainsize, &
+       SNO_read_map_1d,     &
+       SNO_read_map_2d,     &
        SNO_read_map_3d
     implicit none
 
@@ -457,13 +461,13 @@ contains
        do px = 1, nprocs_x_in
           p = (py-1) * nprocs_x_in + px - 1
 
-          call SNO_calc_localsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
-                                   px,           py,          & ! [IN]
-                                   ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
-                                   nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
-                                   hinfo,                     & ! [IN] from SNO_file_getinfo
-                                   ngrids_x_in,  ngrids_y_in, & ! [OUT]
-                                   ngrids_xh_in, ngrids_yh_in ) ! [OUT]
+          call SNO_calc_domainsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
+                                    px,           py,          & ! [IN]
+                                    ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
+                                    nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
+                                    hinfo,                     & ! [IN] from SNO_file_getinfo
+                                    ngrids_x_in,  ngrids_y_in, & ! [OUT]
+                                    ngrids_xh_in, ngrids_yh_in ) ! [OUT]
 
           staggered_x_in  = 0
           staggered_y_in  = 0
@@ -870,8 +874,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write( &
+       ismaster,      &
        dirpath,       &
        basename,      &
+       output_single, &
        output_grads,  &
        nowrank,       &
        nowstep,       &
@@ -894,8 +900,10 @@ contains
        SNO_grads_write
     implicit none
 
+    logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
     character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
@@ -922,8 +930,10 @@ contains
                              dinfo,    & ! [IN]
                              debug     ) ! [IN]
     else
-       call SNO_vars_write_netcdf( dirpath,                    & ! [IN]
+       call SNO_vars_write_netcdf( ismaster,                   & ! [IN]
+                                   dirpath,                    & ! [IN]
                                    basename,                   & ! [IN]
+                                   output_single,              & ! [IN]
                                    nowrank,                    & ! [IN]
                                    nowstep,                    & ! [IN]
                                    add_rm_attr,                & ! [IN]
@@ -941,8 +951,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write_netcdf( &
+       ismaster,      &
        dirpath,       &
        basename,      &
+       output_single, &
        nowrank,       &
        nowstep,       &
        add_rm_attr,   &
@@ -956,6 +968,7 @@ contains
        dinfo,         &
        debug          )
     use scale_prc, only: &
+       PRC_masterrank, &
        PRC_abort
     use scale_file_h, only: &
        FILE_TEXT,     &
@@ -978,10 +991,15 @@ contains
     use mod_sno_axis, only: &
        SNO_axis_define, &
        SNO_axis_write
+    use mod_sno_comm, only: &
+       SNO_comm_globalaxis, &
+       SNO_comm_globalvars
     implicit none
 
+    logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
     character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
@@ -996,11 +1014,15 @@ contains
     logical,          intent(in)    :: debug
 
     character(len=H_LONG) :: basename_mod
+    integer               :: writerank
     integer               :: fid
     logical               :: fileexisted, varexisted
     integer               :: vid
     real(SP), allocatable :: VAR_1d_SP(:), VAR_2d_SP(:,:), VAR_3d_SP(:,:,:)
     real(DP), allocatable :: VAR_1d_DP(:), VAR_2d_DP(:,:), VAR_3d_DP(:,:,:)
+
+    type(axisinfo), allocatable :: ainfo_all(:)
+    type(iteminfo)              :: dinfo_all
 
     integer  :: gout1, gout2, gout3
     integer  :: k, i, j
@@ -1017,22 +1039,37 @@ contains
        basename_mod = trim(dirpath)//'/'//trim(basename)
     endif
 
+    if ( output_single ) then
+      writerank = PRC_masterrank
+    else
+      writerank = nowrank
+    endif
+
     call FILE_create( basename_mod,                  & ! [IN]
                       hinfo%title,                   & ! [IN]
                       hinfo%source,                  & ! [IN]
                       hinfo%institute,               & ! [IN]
                       fid,                           & ! [OUT]
                       fileexisted,                   & ! [OUT]
-                      rankid     = nowrank,          & ! [IN]
+                      rankid     = writerank,        & ! [IN]
                       time_units = dinfo%time_units, & ! [IN]
                       calendar   = dinfo%calendar    ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
-       call SNO_axis_define( fid,      & ! [IN]
-                             naxis,    & ! [IN]
-                             ainfo(:), & ! [IN]
-                             debug     ) ! [IN]
+       allocate( ainfo_all(naxis) )
+
+       call SNO_comm_globalaxis( output_single, & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 naxis,         & ! [IN]
+                                 ainfo    (:),  & ! [IN]
+                                 ainfo_all(:)   ) ! [OUT]
+
+       call SNO_axis_define( fid,          & ! [IN]
+                             naxis,        & ! [IN]
+                             ainfo_all(:), & ! [IN]
+                             debug         ) ! [IN]
 
        if ( add_rm_attr ) then
           call SNO_attributes_write( fid,          & ! [IN]
@@ -1077,13 +1114,25 @@ contains
     do i = 1, dinfo%natts
        select case( dinfo%att_type(i) )
        case ( FILE_TEXT )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%text )
+          call FILE_set_attribute( fid,               &
+                                   dinfo%varname,     &
+                                   dinfo%att_name(i), &
+                                   dinfo%atts(i)%text )
        case ( FILE_INTEGER4 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%int(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                  &
+                                   dinfo%varname,                        &
+                                   dinfo%att_name(i),                    &
+                                   dinfo%atts(i)%int(1:dinfo%att_len(i)) )
        case ( FILE_REAL4 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%float(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                    &
+                                   dinfo%varname,                          &
+                                   dinfo%att_name(i),                      &
+                                   dinfo%atts(i)%float(1:dinfo%att_len(i)) )
        case ( FILE_REAL8 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%double(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                     &
+                                   dinfo%varname,                           &
+                                   dinfo%att_name(i),                       &
+                                   dinfo%atts(i)%double(1:dinfo%att_len(i)) )
        end select
     end do
 
@@ -1093,144 +1142,154 @@ contains
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
 
-       call SNO_axis_write( fid,      & ! [IN]
-                            naxis,    & ! [IN]
-                            ainfo(:), & ! [IN]
-                            debug     ) ! [IN]
+       call SNO_axis_write( fid,          & ! [IN]
+                            naxis,        & ! [IN]
+                            ainfo_all(:), & ! [IN]
+                            debug         ) ! [IN]
 
     endif
 
-    if ( dinfo%dim_rank == 1 ) then
+    call SNO_comm_globalvars( output_single, & ! [IN]
+                              nprocs_x_out,  & ! [IN]
+                              nprocs_y_out,  & ! [IN]
+                              dinfo,         & ! [IN]
+                              dinfo_all      ) ! [OUT]
 
-       gout1 = size(dinfo%VAR_1d(:),1)
+    if ( ( .NOT. output_single ) .OR. ismaster ) then
 
-       if ( dinfo%datatype == FILE_REAL4 ) then
+       if ( dinfo_all%dim_rank == 1 ) then
 
-          allocate( VAR_1d_SP(gout1) )
-          VAR_1d_SP(:) = real(dinfo%VAR_1d(:),kind=SP)
+          gout1 = size(dinfo_all%VAR_1d(:),1)
 
-          call FILE_write( vid,                       & ! [IN]
-                           VAR_1d_SP(:),              & ! [IN]
-                           dinfo%time_start(nowstep), & ! [IN]
-                           dinfo%time_end  (nowstep)  ) ! [IN]
-
-          deallocate( VAR_1d_SP )
-
-       elseif( dinfo%datatype == FILE_REAL8 ) then
-
-          allocate( VAR_1d_DP(gout1) )
-          VAR_1d_DP(:) = real(dinfo%VAR_1d(:),kind=DP)
-
-          call FILE_write( vid,                       & ! [IN]
-                           VAR_1d_DP(:),              & ! [IN]
-                           dinfo%time_start(nowstep), & ! [IN]
-                           dinfo%time_end  (nowstep)  ) ! [IN]
-
-          deallocate( VAR_1d_DP )
-
-       endif
-
-    elseif( dinfo%dim_rank == 2 ) then
-
-       gout1 = size(dinfo%VAR_2d(:,:),1)
-       gout2 = size(dinfo%VAR_2d(:,:),2)
-
-       if ( dinfo%datatype == FILE_REAL4 ) then
-
-          allocate( VAR_2d_SP(gout1,gout2) )
-          VAR_2d_SP(:,:) = real(dinfo%VAR_2d(:,:),kind=SP)
-
-          call FILE_write( vid,                       & ! [IN]
-                           VAR_2d_SP(:,:),            & ! [IN]
-                           dinfo%time_start(nowstep), & ! [IN]
-                           dinfo%time_end  (nowstep)  ) ! [IN]
-
-          deallocate( VAR_2d_SP )
-
-       elseif( dinfo%datatype == FILE_REAL8 ) then
-
-          allocate( VAR_2d_DP(gout1,gout2) )
-          VAR_2d_DP(:,:) = real(dinfo%VAR_2d(:,:),kind=DP)
-
-          call FILE_write( vid,                       & ! [IN]
-                           VAR_2d_DP(:,:),            & ! [IN]
-                           dinfo%time_start(nowstep), & ! [IN]
-                           dinfo%time_end  (nowstep)  ) ! [IN]
-
-          deallocate( VAR_2d_DP )
-
-       endif
-
-    elseif( dinfo%dim_rank == 3 ) then
-
-       gout1 = size(dinfo%VAR_3d(:,:,:),1)
-       gout2 = size(dinfo%VAR_3d(:,:,:),2)
-       gout3 = size(dinfo%VAR_3d(:,:,:),3)
-
-       if ( dinfo%transpose ) then
           if ( dinfo%datatype == FILE_REAL4 ) then
 
-             allocate( VAR_3d_SP(gout2,gout3,gout1) )
-             do k = 1, gout1
-             do j = 1, gout3
-             do i = 1, gout2
-                VAR_3d_SP(i,j,k) = real(dinfo%VAR_3d(k,i,j),kind=SP)
-             enddo
-             enddo
-             enddo
+             allocate( VAR_1d_SP(gout1) )
+             VAR_1d_SP(:) = real(dinfo_all%VAR_1d(:),kind=SP)
 
-             call FILE_write( vid,                       & ! [IN]
-                              VAR_3d_SP(:,:,:),          & ! [IN]
-                              dinfo%time_start(nowstep), & ! [IN]
-                              dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_write( vid,                           & ! [IN]
+                              VAR_1d_SP(:),                  & ! [IN]
+                              dinfo_all%time_start(nowstep), & ! [IN]
+                              dinfo_all%time_end  (nowstep)  ) ! [IN]
 
-             deallocate( VAR_3d_SP )
+             deallocate( VAR_1d_SP )
 
-          elseif( dinfo%datatype == FILE_REAL8 ) then
+          elseif( dinfo_all%datatype == FILE_REAL8 ) then
 
-             allocate( VAR_3d_DP(gout2,gout3,gout1) )
-             do k = 1, gout1
-             do j = 1, gout3
-             do i = 1, gout2
-                VAR_3d_DP(i,j,k) = real(dinfo%VAR_3d(k,i,j),kind=DP)
-             enddo
-             enddo
-             enddo
+             allocate( VAR_1d_DP(gout1) )
+             VAR_1d_DP(:) = real(dinfo_all%VAR_1d(:),kind=DP)
 
-             call FILE_write( vid,                       & ! [IN]
-                              VAR_3d_DP(:,:,:),          & ! [IN]
-                              dinfo%time_start(nowstep), & ! [IN]
-                              dinfo%time_end  (nowstep)  ) ! [IN]
+             call FILE_write( vid,                           & ! [IN]
+                              VAR_1d_DP(:),                  & ! [IN]
+                              dinfo_all%time_start(nowstep), & ! [IN]
+                              dinfo_all%time_end  (nowstep)  ) ! [IN]
 
-             deallocate( VAR_3d_DP )
+             deallocate( VAR_1d_DP )
 
           endif
-       else
-          if ( dinfo%datatype == FILE_REAL4 ) then
 
-             allocate( VAR_3d_SP(gout1,gout2,gout3) )
-             VAR_3d_SP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=SP)
+       elseif( dinfo_all%dim_rank == 2 ) then
 
-             call FILE_write( vid,                       & ! [IN]
-                              VAR_3d_SP(:,:,:),          & ! [IN]
-                              dinfo%time_start(nowstep), & ! [IN]
-                              dinfo%time_end  (nowstep)  ) ! [IN]
+          gout1 = size(dinfo_all%VAR_2d(:,:),1)
+          gout2 = size(dinfo_all%VAR_2d(:,:),2)
 
-             deallocate( VAR_3d_SP )
+          if ( dinfo_all%datatype == FILE_REAL4 ) then
 
-          elseif( dinfo%datatype == FILE_REAL8 ) then
+             allocate( VAR_2d_SP(gout1,gout2) )
+             VAR_2d_SP(:,:) = real(dinfo_all%VAR_2d(:,:),kind=SP)
 
-             allocate( VAR_3d_DP(gout1,gout2,gout3) )
-             VAR_3d_DP(:,:,:) = real(dinfo%VAR_3d(:,:,:),kind=DP)
+             call FILE_write( vid,                           & ! [IN]
+                              VAR_2d_SP(:,:),                & ! [IN]
+                              dinfo_all%time_start(nowstep), & ! [IN]
+                              dinfo_all%time_end  (nowstep)  ) ! [IN]
 
-             call FILE_write( vid,                       & ! [IN]
-                              VAR_3d_DP(:,:,:),          & ! [IN]
-                              dinfo%time_start(nowstep), & ! [IN]
-                              dinfo%time_end  (nowstep)  ) ! [IN]
+             deallocate( VAR_2d_SP )
 
-             deallocate( VAR_3d_DP )
+          elseif( dinfo_all%datatype == FILE_REAL8 ) then
+
+             allocate( VAR_2d_DP(gout1,gout2) )
+             VAR_2d_DP(:,:) = real(dinfo_all%VAR_2d(:,:),kind=DP)
+
+             call FILE_write( vid,                           & ! [IN]
+                              VAR_2d_DP(:,:),                & ! [IN]
+                              dinfo_all%time_start(nowstep), & ! [IN]
+                              dinfo_all%time_end  (nowstep)  ) ! [IN]
+
+             deallocate( VAR_2d_DP )
 
           endif
+
+       elseif( dinfo_all%dim_rank == 3 ) then
+
+          gout1 = size(dinfo_all%VAR_3d(:,:,:),1)
+          gout2 = size(dinfo_all%VAR_3d(:,:,:),2)
+          gout3 = size(dinfo_all%VAR_3d(:,:,:),3)
+
+          if ( dinfo_all%transpose ) then
+             if ( dinfo_all%datatype == FILE_REAL4 ) then
+
+                allocate( VAR_3d_SP(gout2,gout3,gout1) )
+                do k = 1, gout1
+                do j = 1, gout3
+                do i = 1, gout2
+                   VAR_3d_SP(i,j,k) = real(dinfo_all%VAR_3d(k,i,j),kind=SP)
+                enddo
+                enddo
+                enddo
+
+                call FILE_write( vid,                           & ! [IN]
+                                 VAR_3d_SP(:,:,:),              & ! [IN]
+                                 dinfo_all%time_start(nowstep), & ! [IN]
+                                 dinfo_all%time_end  (nowstep)  ) ! [IN]
+
+                deallocate( VAR_3d_SP )
+
+             elseif( dinfo_all%datatype == FILE_REAL8 ) then
+
+                allocate( VAR_3d_DP(gout2,gout3,gout1) )
+                do k = 1, gout1
+                do j = 1, gout3
+                do i = 1, gout2
+                   VAR_3d_DP(i,j,k) = real(dinfo_all%VAR_3d(k,i,j),kind=DP)
+                enddo
+                enddo
+                enddo
+
+                call FILE_write( vid,                           & ! [IN]
+                                 VAR_3d_DP(:,:,:),              & ! [IN]
+                                 dinfo_all%time_start(nowstep), & ! [IN]
+                                 dinfo_all%time_end  (nowstep)  ) ! [IN]
+
+                deallocate( VAR_3d_DP )
+
+             endif
+          else
+             if ( dinfo_all%datatype == FILE_REAL4 ) then
+
+                allocate( VAR_3d_SP(gout1,gout2,gout3) )
+                VAR_3d_SP(:,:,:) = real(dinfo_all%VAR_3d(:,:,:),kind=SP)
+
+                call FILE_write( vid,                           & ! [IN]
+                                 VAR_3d_SP(:,:,:),              & ! [IN]
+                                 dinfo_all%time_start(nowstep), & ! [IN]
+                                 dinfo_all%time_end  (nowstep)  ) ! [IN]
+
+                deallocate( VAR_3d_SP )
+
+             elseif( dinfo_all%datatype == FILE_REAL8 ) then
+
+                allocate( VAR_3d_DP(gout1,gout2,gout3) )
+                VAR_3d_DP(:,:,:) = real(dinfo_all%VAR_3d(:,:,:),kind=DP)
+
+                call FILE_write( vid,                           & ! [IN]
+                                 VAR_3d_DP(:,:,:),              & ! [IN]
+                                 dinfo_all%time_start(nowstep), & ! [IN]
+                                 dinfo_all%time_end  (nowstep)  ) ! [IN]
+
+                deallocate( VAR_3d_DP )
+
+             endif
+          endif
+
        endif
 
     endif
