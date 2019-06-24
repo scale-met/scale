@@ -604,8 +604,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_vgridope_vinterp( &
+       ismaster,      &
        dirpath,       &
        basename,      &
+       output_single, &
        output_grads,  &
        nowrank,       &
        nowstep,       &
@@ -625,8 +627,10 @@ contains
        SNO_vars_write
     implicit none
 
+    logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
     character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
@@ -845,8 +849,10 @@ contains
        finalize    = ( nowstep == dinfo_v%step_nmax )
        add_rm_attr = .true.
 
-       call SNO_vars_write( dirpath,                    & ! [IN] from namelist
+       call SNO_vars_write( ismaster,                   & ! [IN] from MPI
+                            dirpath,                    & ! [IN] from namelist
                             basename,                   & ! [IN] from namelist
+                            output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
                             nowrank,                    & ! [IN]
                             nowstep,                    & ! [IN]
