@@ -271,7 +271,7 @@ contains
 
     do n = 1, naxis
        select case(ainfo(n)%varname)
-       case('z','zh','p','oz','lz','uz')
+       case('z','zh','pressure','oz','lz','uz')
           naxis_ll = naxis_ll + 1
 
           ainfo_ll(naxis_ll)%varname     = ainfo(n)%varname
