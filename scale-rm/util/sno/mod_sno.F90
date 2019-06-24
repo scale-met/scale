@@ -559,6 +559,11 @@ contains
        varsize,   &
        var        )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -601,7 +606,11 @@ contains
 
           call FILE_read( basename, varname, tmp_SP(:), rankid=nowrank )
 
-          var(:) = real(tmp_SP(:),kind=RP)
+          where( abs( tmp_SP(:) - UNDEF4 ) > EPS )
+             var(:) = real(tmp_SP(:),kind=RP)
+          elsewhere
+             var(:) = UNDEF
+          endwhere
 
           deallocate( tmp_SP )
        endif
@@ -613,7 +622,11 @@ contains
 
           call FILE_read( basename, varname, tmp_DP(:), rankid=nowrank )
 
-          var(:) = real(tmp_DP(:),kind=RP)
+          where( abs( tmp_DP(:) - UNDEF8 ) > EPS )
+             var(:) = real(tmp_DP(:),kind=RP)
+          elsewhere
+             var(:) = UNDEF
+          endwhere
 
           deallocate( tmp_DP )
        endif
@@ -639,6 +652,11 @@ contains
        gout1,    &
        localmap, &
        var       )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -676,7 +694,11 @@ contains
           if ( localmap(i,I_map_p) == nowrank ) then
              ii = int(localmap(i,I_map_i))
 
-             var(i) = real(tmp_SP(ii),kind=RP)
+             if ( abs( tmp_SP(ii) - UNDEF4 ) > EPS ) then
+                var(i) = real(tmp_SP(ii),kind=RP)
+             else
+                var(i) = UNDEF
+             endif
           endif
        enddo
 
@@ -688,7 +710,11 @@ contains
           if ( localmap(i,I_map_p) == nowrank ) then
              ii = int(localmap(i,I_map_i))
 
-             var(i) = real(tmp_DP(ii),kind=RP)
+             if ( abs( tmp_DP(ii) - UNDEF8 ) > EPS ) then
+                var(i) = real(tmp_DP(ii),kind=RP)
+             else
+                var(i) = UNDEF
+             endif
           endif
        enddo
 
@@ -710,6 +736,11 @@ contains
        varsize2,  &
        var        )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -753,9 +784,14 @@ contains
 
           call FILE_read( basename, varname, tmp_SP(:,:), rankid=nowrank )
 
-          var(:,:) = real(tmp_SP(:,:),kind=RP)
+          where( abs( tmp_SP(:,:) - UNDEF4 ) > EPS )
+             var(:,:) = real(tmp_SP(:,:),kind=RP)
+          elsewhere
+             var(:,:) = UNDEF
+          endwhere
 
           deallocate( tmp_SP )
+
        endif
 
     elseif( datatype == FILE_REAL8 ) then
@@ -765,9 +801,14 @@ contains
 
           call FILE_read( basename, varname, tmp_DP(:,:), rankid=nowrank )
 
-          var(:,:) = real(tmp_DP(:,:),kind=RP)
+          where( abs( tmp_DP(:,:) - UNDEF8 ) > EPS )
+             var(:,:) = real(tmp_DP(:,:),kind=RP)
+          elsewhere
+             var(:,:) = UNDEF
+          endwhere
 
           deallocate( tmp_DP )
+
        endif
 
     else
@@ -793,6 +834,11 @@ contains
        gout2,    &
        localmap, &
        var       )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -835,7 +881,11 @@ contains
              ii = int(localmap(i,j,I_map_i))
              jj = int(localmap(i,j,I_map_j))
 
-             var(i,j) = real(tmp_SP(ii,jj),kind=RP)
+             if ( abs( tmp_SP(ii,jj) - UNDEF4 ) > EPS ) then
+                var(i,j) = real(tmp_SP(ii,jj),kind=RP)
+             else
+                var(i,j) = UNDEF
+             endif
           endif
        enddo
        enddo
@@ -850,7 +900,11 @@ contains
              ii = int(localmap(i,j,I_map_i))
              jj = int(localmap(i,j,I_map_j))
 
-             var(i,j) = real(tmp_DP(ii,jj),kind=RP)
+             if ( abs( tmp_DP(ii,jj) - UNDEF8 ) > EPS ) then
+                var(i,j) = real(tmp_DP(ii,jj),kind=RP)
+             else
+                var(i,j) = UNDEF
+             endif
           endif
        enddo
        enddo
@@ -879,6 +933,11 @@ contains
        gout3,     &
        localmap,  &
        var        )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -932,7 +991,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_SP(ii,jj,k),kind=RP)
+                   if ( abs( tmp_SP(ii,jj,k) - UNDEF4 ) > EPS ) then
+                      var(k,i,j) = real(tmp_SP(ii,jj,k),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -945,7 +1008,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_SP(k,ii,jj),kind=RP)
+                   if ( abs( tmp_SP(k,ii,jj) - UNDEF4 ) > EPS ) then
+                      var(k,i,j) = real(tmp_SP(k,ii,jj),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -972,7 +1039,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_DP(ii,jj,k),kind=RP)
+                   if ( abs( tmp_DP(ii,jj,k) - UNDEF8 ) > EPS ) then
+                      var(k,i,j) = real(tmp_DP(ii,jj,k),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -985,7 +1056,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_DP(k,ii,jj),kind=RP)
+                   if ( abs( tmp_DP(k,ii,jj) - UNDEF8 ) > EPS ) then
+                      var(k,i,j) = real(tmp_DP(k,ii,jj),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -1011,7 +1086,6 @@ contains
        nhalos_x,     &
        nhalos_y,     &
        hinfo,        &
-       dinfo,        &
        debug         )
     use scale_prc, only: &
        PRC_abort
@@ -1037,7 +1111,6 @@ contains
     integer,          intent(in)  :: nhalos_x                              ! number of x-axis halo grids        (global domain)
     integer,          intent(in)  :: nhalos_y                              ! number of y-axis halo grids        (global domain)
     type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
-    type(iteminfo),   intent(in)  :: dinfo                                 ! variable information               (input)
     logical,          intent(in)  :: debug
 
     type(axisattinfo) :: ainfo(4)
