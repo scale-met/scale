@@ -688,9 +688,9 @@ contains
        commoninfo, &
        axisinfo
     use mod_sno, only: &
-       SNO_calc_localsize, &
-       SNO_read_map_1d,    &
-       SNO_read_map_2d,    &
+       SNO_calc_domainsize, &
+       SNO_read_map_1d,     &
+       SNO_read_map_2d,     &
        SNO_read_map_3d
     implicit none
 
@@ -743,13 +743,13 @@ contains
        do px = 1, nprocs_x_in
           p = (py-1) * nprocs_x_in + px - 1
 
-          call SNO_calc_localsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
-                                   px,           py,          & ! [IN]
-                                   ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
-                                   nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
-                                   hinfo,                     & ! [IN] from SNO_file_getinfo
-                                   ngrids_x_in,  ngrids_y_in, & ! [OUT]
-                                   ngrids_xh_in, ngrids_yh_in ) ! [OUT]
+          call SNO_calc_domainsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
+                                    px,           py,          & ! [IN]
+                                    ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
+                                    nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
+                                    hinfo,                     & ! [IN] from SNO_file_getinfo
+                                    ngrids_x_in,  ngrids_y_in, & ! [OUT]
+                                    ngrids_xh_in, ngrids_yh_in ) ! [OUT]
 
           staggered_x_in  = 0
           staggered_y_in  = 0
