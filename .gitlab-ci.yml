@@ -17,7 +17,7 @@ normal-rm:
     - cd scale-rm/src
     - make -j 4
     - make -j 4 SCALE_USE_SINGLEFP=T
-    - make -j 4 SCALE_QUICKDEBUT=T
+#    - make -j 4 SCALE_QUICKDEBUT=T
     - cd ../util/sno
     - make -j 4
   only:
@@ -51,15 +51,15 @@ openmp-gm:
   only:
     - /^feature.*$/
 
-debug-gm:
-  stage: build
-  script:
-    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
-    - cd scale-gm/src
-    - make -j 4 SCALE_QUICKDEBUT=T
-    - make -j 4 SCALE_DEBUT=T
-  only:
-    - /^feature.*$/
+#debug-gm:
+#  stage: build
+#  script:
+#    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+#    - cd scale-gm/src
+#    - make -j 4 SCALE_QUICKDEBUT=T
+#    - make -j 4 SCALE_DEBUT=T
+#  only:
+#    - /^feature.*$/
 
 
 # TEST
