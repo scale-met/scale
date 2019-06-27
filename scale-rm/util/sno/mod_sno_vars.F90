@@ -1028,6 +1028,24 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
+    allocate( ainfo_all(naxis) )
+
+    call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                              output_single, & ! [IN]
+                              nprocs_x_out,  & ! [IN]
+                              nprocs_y_out,  & ! [IN]
+                              hinfo,         & ! [IN]
+                              naxis,         & ! [IN]
+                              ainfo    (:),  & ! [IN]
+                              ainfo_all(:)   ) ! [OUT]
+
+    call SNO_comm_globalvars( ismaster,      & ! [IN]
+                              output_single, & ! [IN]
+                              nprocs_x_out,  & ! [IN]
+                              nprocs_y_out,  & ! [IN]
+                              dinfo,         & ! [IN]
+                              dinfo_all      ) ! [OUT]
+
     if ( basename == '' ) then
        LOG_ERROR("SNO_vars_write_netcdf",*) 'Namelist parameter basename_out in PARAM_SNO is empty. Check!'
        call PRC_abort
@@ -1056,15 +1074,6 @@ contains
                       calendar   = dinfo%calendar    ) ! [IN]
 
     if ( .NOT. fileexisted ) then ! do below only once when file is created
-
-       allocate( ainfo_all(naxis) )
-
-       call SNO_comm_globalaxis( output_single, & ! [IN]
-                                 nprocs_x_out,  & ! [IN]
-                                 nprocs_y_out,  & ! [IN]
-                                 naxis,         & ! [IN]
-                                 ainfo    (:),  & ! [IN]
-                                 ainfo_all(:)   ) ! [OUT]
 
        call SNO_axis_define( fid,          & ! [IN]
                              naxis,        & ! [IN]
@@ -1148,12 +1157,6 @@ contains
                             debug         ) ! [IN]
 
     endif
-
-    call SNO_comm_globalvars( output_single, & ! [IN]
-                              nprocs_x_out,  & ! [IN]
-                              nprocs_y_out,  & ! [IN]
-                              dinfo,         & ! [IN]
-                              dinfo_all      ) ! [OUT]
 
     if ( ( .NOT. output_single ) .OR. ismaster ) then
 
