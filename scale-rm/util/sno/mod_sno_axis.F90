@@ -1559,8 +1559,11 @@ contains
     type(axisinfo),   intent(in)    :: ainfo(naxis)             ! axis information                   (input)
     logical,          intent(in)    :: debug
 
+    real(RP), allocatable :: AXIS_3d(:,:,:)
+
     integer, parameter :: start(3) = 1
-    integer  :: n
+    integer  :: i, j, k, n
+    integer  :: gout1, gout2, gout3
     !---------------------------------------------------------------------------
 
     if ( debug ) then
@@ -1583,10 +1586,37 @@ contains
 
        elseif( ainfo(n)%dim_rank == 3 ) then
 
-          call FILE_write_associatedCoordinate( fid,                     & ! [IN]
-                                                ainfo(n)%varname,        & ! [IN]
-                                                ainfo(n)%AXIS_3d(:,:,:), & ! [IN]
-                                                start(1:3)               ) ! [IN]
+          gout1 = size(ainfo(n)%AXIS_3d(:,:,:),1)
+          gout2 = size(ainfo(n)%AXIS_3d(:,:,:),2)
+          gout3 = size(ainfo(n)%AXIS_3d(:,:,:),3)
+
+          if ( ainfo(n)%transpose ) then
+             allocate( AXIS_3d(gout2,gout3,gout1) )
+             do k = 1, gout1
+             do j = 1, gout3
+             do i = 1, gout2
+                AXIS_3d(i,j,k) = ainfo(n)%AXIS_3d(k,i,j)
+             enddo
+             enddo
+             enddo
+
+             call FILE_write_associatedCoordinate( fid,              & ! [IN]
+                                                   ainfo(n)%varname, & ! [IN]
+                                                   AXIS_3d(:,:,:),   & ! [IN]
+                                                   start(1:3)        ) ! [IN]
+
+             deallocate( AXIS_3d )
+          else
+             allocate( AXIS_3d(gout1,gout2,gout3) )
+             AXIS_3d(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
+
+             call FILE_write_associatedCoordinate( fid,              & ! [IN]
+                                                   ainfo(n)%varname, & ! [IN]
+                                                   AXIS_3d(:,:,:),   & ! [IN]
+                                                   start(1:3)        ) ! [IN]
+
+             deallocate( AXIS_3d )
+          endif
 
        endif
     enddo

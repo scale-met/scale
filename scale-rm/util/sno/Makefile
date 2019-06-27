@@ -13,7 +13,7 @@ include $(TOPDIR)/Mkinclude
 
 BINNAME = sno
 
-LIBS = $(LIBDIR)/libscale.a
+LIBS = $(LIBDIR)/libscale*.a
 
 VPATH = plugin:
 
