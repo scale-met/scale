@@ -291,6 +291,7 @@ contains
        output_single, &
        output_grads,  &
        nowrank,       &
+       nowvars,       &
        nowstep,       &
        nprocs_x_out,  &
        nprocs_y_out,  &
@@ -324,6 +325,7 @@ contains
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
+    integer,          intent(in)    :: nowvars                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
@@ -612,6 +614,7 @@ contains
                             output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
                             nowrank,                    & ! [IN]
+                            nowvars,                    & ! [IN]
                             avgdinfo%step_nmax,         & ! [IN]
                             finalize,                   & ! [IN]
                             add_rm_attr,                & ! [IN]

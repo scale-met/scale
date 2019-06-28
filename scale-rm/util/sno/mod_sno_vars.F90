@@ -880,6 +880,7 @@ contains
        output_single, &
        output_grads,  &
        nowrank,       &
+       nowvars,       &
        nowstep,       &
        finalize,      &
        add_rm_attr,   &
@@ -906,6 +907,7 @@ contains
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
+    integer,          intent(in)    :: nowvars                               ! current vars                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: finalize                              ! finalize in this step?
     logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
@@ -935,6 +937,7 @@ contains
                                    basename,                   & ! [IN]
                                    output_single,              & ! [IN]
                                    nowrank,                    & ! [IN]
+                                   nowvars,                    & ! [IN]
                                    nowstep,                    & ! [IN]
                                    add_rm_attr,                & ! [IN]
                                    nprocs_x_out, nprocs_y_out, & ! [IN]
@@ -956,6 +959,7 @@ contains
        basename,      &
        output_single, &
        nowrank,       &
+       nowvars,       &
        nowstep,       &
        add_rm_attr,   &
        nprocs_x_out,  &
@@ -1001,6 +1005,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
+    integer,          intent(in)    :: nowvars                               ! current vars                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
@@ -1032,6 +1037,8 @@ contains
 
     call SNO_comm_globalaxis( ismaster,      & ! [IN]
                               output_single, & ! [IN]
+                              nowvars,       & ! [IN]
+                              nowstep,       & ! [IN]
                               nprocs_x_out,  & ! [IN]
                               nprocs_y_out,  & ! [IN]
                               hinfo,         & ! [IN]
@@ -1046,125 +1053,125 @@ contains
                               dinfo,         & ! [IN]
                               dinfo_all      ) ! [OUT]
 
-    if ( basename == '' ) then
-       LOG_ERROR("SNO_vars_write_netcdf",*) 'Namelist parameter basename_out in PARAM_SNO is empty. Check!'
-       call PRC_abort
-    endif
-
-    if ( dirpath == '' ) then
-       basename_mod = trim(basename)
-    else
-       basename_mod = trim(dirpath)//'/'//trim(basename)
-    endif
-
-    if ( output_single ) then
-      writerank = PRC_masterrank
-    else
-      writerank = nowrank
-    endif
-
-    call FILE_create( basename_mod,                  & ! [IN]
-                      hinfo%title,                   & ! [IN]
-                      hinfo%source,                  & ! [IN]
-                      hinfo%institute,               & ! [IN]
-                      fid,                           & ! [OUT]
-                      fileexisted,                   & ! [OUT]
-                      rankid     = writerank,        & ! [IN]
-                      time_units = dinfo%time_units, & ! [IN]
-                      calendar   = dinfo%calendar    ) ! [IN]
-
-    if ( .NOT. fileexisted ) then ! do below only once when file is created
-
-       call SNO_axis_define( fid,          & ! [IN]
-                             naxis,        & ! [IN]
-                             ainfo_all(:), & ! [IN]
-                             debug         ) ! [IN]
-
-       if ( add_rm_attr ) then
-          call SNO_attributes_write( fid,          & ! [IN]
-                                     nowrank,      & ! [IN]
-                                     nprocs_x_out, & ! [IN]
-                                     nprocs_y_out, & ! [IN]
-                                     nhalos_x,     & ! [IN]
-                                     nhalos_y,     & ! [IN]
-                                     hinfo,        & ! [IN]
-                                     debug         ) ! [IN]
-       endif
-    endif
-
-    if ( dinfo%dim_rank == 0 ) then
-       call FILE_add_associatedVariable( fid, dinfo%varname,  & ! [IN]
-                                         existed = varexisted ) ! [OUT]
-    else if ( dinfo%dt > 0.0_DP ) then
-       call FILE_def_variable( fid,                 & ! [IN]
-                               dinfo%varname,       & ! [IN]
-                               dinfo%description,   & ! [IN]
-                               dinfo%units,         & ! [IN]
-                               dinfo%standard_name, & ! [IN]
-                               dinfo%dim_rank,      & ! [IN]
-                               dinfo%dim_name,      & ! [IN]
-                               dinfo%datatype,      & ! [IN]
-                               vid,                 & ! [OUT]
-                               time_int = dinfo%dt, & ! [IN]
-                               existed = varexisted ) ! [OUT]
-    else
-       call FILE_def_variable( fid,                 & ! [IN]
-                               dinfo%varname,       & ! [IN]
-                               dinfo%description,   & ! [IN]
-                               dinfo%units,         & ! [IN]
-                               dinfo%standard_name, & ! [IN]
-                               dinfo%dim_rank,      & ! [IN]
-                               dinfo%dim_name,      & ! [IN]
-                               dinfo%datatype,      & ! [IN]
-                               vid,                 & ! [OUT]
-                               existed = varexisted ) ! [OUT]
-    endif
-
-    do i = 1, dinfo%natts
-       select case( dinfo%att_type(i) )
-       case ( FILE_TEXT )
-          call FILE_set_attribute( fid,               &
-                                   dinfo%varname,     &
-                                   dinfo%att_name(i), &
-                                   dinfo%atts(i)%text )
-       case ( FILE_INTEGER4 )
-          call FILE_set_attribute( fid,                                  &
-                                   dinfo%varname,                        &
-                                   dinfo%att_name(i),                    &
-                                   dinfo%atts(i)%int(1:dinfo%att_len(i)) )
-       case ( FILE_REAL4 )
-          call FILE_set_attribute( fid,                                    &
-                                   dinfo%varname,                          &
-                                   dinfo%att_name(i),                      &
-                                   dinfo%atts(i)%float(1:dinfo%att_len(i)) )
-       case ( FILE_REAL8 )
-          call FILE_set_attribute( fid,                                     &
-                                   dinfo%varname,                           &
-                                   dinfo%att_name(i),                       &
-                                   dinfo%atts(i)%double(1:dinfo%att_len(i)) )
-       end select
-    end do
-
-    if ( .NOT. varexisted ) then ! do below only once when file is created
-       call FILE_enddef( fid )
-    endif
-
-    if ( .NOT. fileexisted ) then ! do below only once when file is created
-
-       call SNO_axis_write( fid,          & ! [IN]
-                            naxis,        & ! [IN]
-                            ainfo_all(:), & ! [IN]
-                            debug         ) ! [IN]
-
-    endif
-
     if ( ( .NOT. output_single ) .OR. ismaster ) then
+
+       if ( basename == '' ) then
+          LOG_ERROR("SNO_vars_write_netcdf",*) 'Namelist parameter basename_out in PARAM_SNO is empty. Check!'
+          call PRC_abort
+       endif
+
+       if ( dirpath == '' ) then
+          basename_mod = trim(basename)
+       else
+          basename_mod = trim(dirpath)//'/'//trim(basename)
+       endif
+
+       if ( output_single ) then
+         writerank = PRC_masterrank
+       else
+         writerank = nowrank
+       endif
+
+       call FILE_create( basename_mod,                      & ! [IN]
+                         hinfo%title,                       & ! [IN]
+                         hinfo%source,                      & ! [IN]
+                         hinfo%institute,                   & ! [IN]
+                         fid,                               & ! [OUT]
+                         fileexisted,                       & ! [OUT]
+                         rankid     = writerank,            & ! [IN]
+                         time_units = dinfo_all%time_units, & ! [IN]
+                         calendar   = dinfo_all%calendar    ) ! [IN]
+
+       if ( .NOT. fileexisted ) then ! do below only once when file is created
+
+          call SNO_axis_define( fid,          & ! [IN]
+                                naxis,        & ! [IN]
+                                ainfo_all(:), & ! [IN]
+                                debug         ) ! [IN]
+
+          if ( add_rm_attr ) then
+             call SNO_attributes_write( fid,          & ! [IN]
+                                        nowrank,      & ! [IN]
+                                        nprocs_x_out, & ! [IN]
+                                        nprocs_y_out, & ! [IN]
+                                        nhalos_x,     & ! [IN]
+                                        nhalos_y,     & ! [IN]
+                                        hinfo,        & ! [IN]
+                                        debug         ) ! [IN]
+          endif
+       endif
+
+       if ( dinfo_all%dim_rank == 0 ) then
+          call FILE_add_associatedVariable( fid, dinfo_all%varname,  & ! [IN]
+                                            existed = varexisted     ) ! [OUT]
+       else if ( dinfo_all%dt > 0.0_DP ) then
+          call FILE_def_variable( fid,                     & ! [IN]
+                                  dinfo_all%varname,       & ! [IN]
+                                  dinfo_all%description,   & ! [IN]
+                                  dinfo_all%units,         & ! [IN]
+                                  dinfo_all%standard_name, & ! [IN]
+                                  dinfo_all%dim_rank,      & ! [IN]
+                                  dinfo_all%dim_name,      & ! [IN]
+                                  dinfo_all%datatype,      & ! [IN]
+                                  vid,                     & ! [OUT]
+                                  time_int = dinfo_all%dt, & ! [IN]
+                                  existed = varexisted     ) ! [OUT]
+       else
+          call FILE_def_variable( fid,                     & ! [IN]
+                                  dinfo_all%varname,       & ! [IN]
+                                  dinfo_all%description,   & ! [IN]
+                                  dinfo_all%units,         & ! [IN]
+                                  dinfo_all%standard_name, & ! [IN]
+                                  dinfo_all%dim_rank,      & ! [IN]
+                                  dinfo_all%dim_name,      & ! [IN]
+                                  dinfo_all%datatype,      & ! [IN]
+                                  vid,                     & ! [OUT]
+                                  existed = varexisted     ) ! [OUT]
+       endif
+
+       do i = 1, dinfo_all%natts
+          select case( dinfo_all%att_type(i) )
+          case ( FILE_TEXT )
+             call FILE_set_attribute( fid,                   &
+                                      dinfo_all%varname,     &
+                                      dinfo_all%att_name(i), &
+                                      dinfo_all%atts(i)%text )
+          case ( FILE_INTEGER4 )
+             call FILE_set_attribute( fid,                                          &
+                                      dinfo_all%varname,                            &
+                                      dinfo_all%att_name(i),                        &
+                                      dinfo_all%atts(i)%int(1:dinfo_all%att_len(i)) )
+          case ( FILE_REAL4 )
+             call FILE_set_attribute( fid,                                            &
+                                      dinfo_all%varname,                              &
+                                      dinfo_all%att_name(i),                          &
+                                      dinfo_all%atts(i)%float(1:dinfo_all%att_len(i)) )
+          case ( FILE_REAL8 )
+             call FILE_set_attribute( fid,                                             &
+                                      dinfo_all%varname,                               &
+                                      dinfo_all%att_name(i),                           &
+                                      dinfo_all%atts(i)%double(1:dinfo_all%att_len(i)) )
+          end select
+       end do
+
+       if ( .NOT. varexisted ) then ! do below only once when file is created
+          call FILE_enddef( fid )
+       endif
+
+       if ( .NOT. fileexisted ) then ! do below only once when file is created
+
+          call SNO_axis_write( fid,          & ! [IN]
+                               naxis,        & ! [IN]
+                               ainfo_all(:), & ! [IN]
+                               debug         ) ! [IN]
+
+       endif
 
        if ( dinfo_all%dim_rank == 1 ) then
 
           gout1 = size(dinfo_all%VAR_1d(:),1)
 
-          if ( dinfo%datatype == FILE_REAL4 ) then
+          if ( dinfo_all%datatype == FILE_REAL4 ) then
 
              allocate( VAR_1d_SP(gout1) )
              VAR_1d_SP(:) = real(dinfo_all%VAR_1d(:),kind=SP)

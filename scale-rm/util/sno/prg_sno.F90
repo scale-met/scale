@@ -415,6 +415,7 @@ program sno
                                                                    output_single,              & ! [IN] from namelist
                                                                    output_grads,               & ! [IN] from namelist
                                                                    p,                          & ! [IN]
+                                                                   v,                          & ! [IN]
                                                                    t,                          & ! [IN]
                                                                    nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                                                    nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
@@ -445,6 +446,7 @@ program sno
                                                                        output_single,              & ! [IN] from namelist
                                                                        output_grads,               & ! [IN] from namelist
                                                                        p,                          & ! [IN]
+                                                                       v,                          & ! [IN]
                                                                        t,                          & ! [IN]
                                                                        nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                                                        nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
@@ -458,6 +460,7 @@ program sno
                                                                         output_single,              & ! [IN] from namelist
                                                                         output_grads,               & ! [IN] from namelist
                                                                         p,                          & ! [IN]
+                                                                        v,                          & ! [IN]
                                                                         t,                          & ! [IN]
                                                                         nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                                                         nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
@@ -475,6 +478,7 @@ program sno
                                          output_single,              & ! [IN] from namelist
                                          output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
+                                         v,                          & ! [IN]
                                          t,                          & ! [IN]
                                          finalize,                   & ! [IN]
                                          add_rm_attr,                & ! [IN]
