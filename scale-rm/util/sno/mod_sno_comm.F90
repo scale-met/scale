@@ -1221,15 +1221,14 @@ contains
     real(SP) :: send_SP(D1)
     real(DP) :: send_DP(D1)
 
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
     integer  :: iloc
 
-    integer  :: i
-    integer  :: p, px, py
+    integer  :: i, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -1243,11 +1242,18 @@ contains
        endif
 
        recvpcnt(p) = recvicnt(px)
-       recvploc(p) = D1 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -1256,7 +1262,7 @@ contains
        call MPI_GATHERV( send_SP(:),           &
                          D1,                   &
                          MPI_REAL,             &
-                         recv(:,:),            &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -1269,7 +1275,7 @@ contains
        call MPI_GATHERV( send_DP(:),           &
                          D1,                   &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:),            &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -1290,8 +1296,10 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do i = 1, recvicnt(px)
-             dout( i + iloc ) = recv(i,p)
+             dout( i + iloc ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           p = p + 1
        enddo
@@ -1408,15 +1416,14 @@ contains
     real(SP) :: send_SP(D1)
     real(DP) :: send_DP(D1)
 
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: jloc
 
-    integer  :: j
-    integer  :: p, px, py
+    integer  :: j, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -1430,11 +1437,18 @@ contains
        endif
 
        recvpcnt(p) = recvjcnt(py)
-       recvploc(p) = D1 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -1443,7 +1457,7 @@ contains
        call MPI_GATHERV( send_SP(:),           &
                          D1,                   &
                          MPI_REAL,             &
-                         recv(:,:),            &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -1456,7 +1470,7 @@ contains
        call MPI_GATHERV( send_DP(:),           &
                          D1,                   &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:),            &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -1477,8 +1491,10 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
-             dout( j + jloc ) = recv(j,p)
+             dout( j + jloc ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           p = p + 1
        enddo
@@ -1924,15 +1940,14 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
     integer  :: iloc
 
-    integer  :: i, j
-    integer  :: p, px, py
+    integer  :: i, j, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -1946,11 +1961,18 @@ contains
        endif
 
        recvpcnt(p) = recvicnt(px) * D2
-       recvploc(p) = D1 * D2 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -1959,7 +1981,7 @@ contains
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -1972,7 +1994,7 @@ contains
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -1993,10 +2015,12 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, D2
           do i = 1, recvicnt(px)
              dout( i + iloc,        &
-                   j + (py-1) * D2  ) = recv(i,j,p)
+                   j + (py-1) * D2  ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           p = p + 1
@@ -2036,15 +2060,14 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: jloc
 
-    integer  :: i, j
-    integer  :: p, px, py
+    integer  :: i, j, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2058,11 +2081,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvjcnt(py)
-       recvploc(p) = D1 * D2 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2071,7 +2101,7 @@ contains
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2084,7 +2114,7 @@ contains
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2105,10 +2135,12 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
           do i = 1, D1
              dout( i + (px-1) * D1, &
-                   j + jloc         ) = recv(i,j,p)
+                   j + jloc         ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           p = p + 1
@@ -2148,7 +2180,7 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -2156,8 +2188,7 @@ contains
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: iloc, jloc
 
-    integer  :: i, j
-    integer  :: p, px, py
+    integer  :: i, j, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2176,11 +2207,18 @@ contains
        endif
 
        recvpcnt(p) = recvicnt(px) * recvjcnt(py)
-       recvploc(p) = D1 * D2 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2189,7 +2227,7 @@ contains
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2202,7 +2240,7 @@ contains
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2228,10 +2266,12 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
           do i = 1, recvicnt(px)
              dout( i + iloc, &
-                   j + jloc  ) = recv(i,j,p)
+                   j + jloc  ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           p = p + 1
@@ -2354,15 +2394,14 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
     integer  :: iloc
 
-    integer  :: v, i
-    integer  :: p, px, py
+    integer  :: v, i, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2376,11 +2415,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvicnt(px)
-       recvploc(p) = D1 * D2 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2389,7 +2435,7 @@ contains
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2402,7 +2448,7 @@ contains
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2423,10 +2469,12 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do i = 1, recvicnt(px)
           do v = 1, D1
              dout( v,       &
-                   i + iloc ) = recv(v,i,p)
+                   i + iloc ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           p = p + 1
@@ -2549,15 +2597,14 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: jloc
 
-    integer  :: v, j
-    integer  :: p, px, py
+    integer  :: v, j, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2571,11 +2618,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvjcnt(py)
-       recvploc(p) = D1 * D2 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2584,7 +2638,7 @@ contains
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2597,7 +2651,7 @@ contains
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:),          &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2618,10 +2672,12 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
           do v = 1, D1
              dout( v,       &
-                   j + jloc ) = recv(v,j,p)
+                   j + jloc ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           p = p + 1
@@ -2749,15 +2805,14 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
     integer  :: iloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2771,11 +2826,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvicnt(px) * D3
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2784,7 +2846,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2797,7 +2859,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2818,12 +2880,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, D3
           do i = 1, recvicnt(px)
           do k = 1, D1
              dout( k,               &
                    i + iloc,        &
-                   j + (py-1) * D3  ) = recv(k,i,j,p)
+                   j + (py-1) * D3  ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
@@ -2865,15 +2929,14 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: jloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -2887,11 +2950,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * D2 * recvjcnt(py)
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -2900,7 +2970,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2913,7 +2983,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2934,12 +3004,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
           do i = 1, D2
           do k = 1, D1
              dout( k,               &
                    i + (px-1) * D2, &
-                   j + jloc         ) = recv(k,i,j,p)
+                   j + jloc         ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
@@ -2981,7 +3053,7 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -2989,8 +3061,7 @@ contains
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: iloc, jloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -3009,11 +3080,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvicnt(px) * recvjcnt(py)
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -3022,7 +3100,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3035,7 +3113,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3061,12 +3139,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do j = 1, recvjcnt(py)
           do i = 1, recvicnt(px)
           do k = 1, D1
              dout( k,        &
                    i + iloc, &
-                   j + jloc  ) = recv(k,i,j,p)
+                   j + jloc  ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
@@ -3195,15 +3275,14 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
     integer  :: iloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -3217,11 +3296,18 @@ contains
        endif
 
        recvpcnt(p) = recvicnt(px) * D2 * D3
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -3230,7 +3316,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3243,7 +3329,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3264,13 +3350,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do k = 1, D3
           do j = 1, D2
           do i = 1, recvicnt(px)
              dout( i + iloc,        &
                    j + (py-1) * D2, &
-                   k                ) = recv(i,j,k,p)
-
+                   k                ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
@@ -3312,15 +3399,14 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: jloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -3334,11 +3420,18 @@ contains
        endif
 
        recvpcnt(p) = D1 * recvjcnt(py) * D3
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -3347,7 +3440,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3360,7 +3453,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3381,12 +3474,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do k = 1, D3
           do j = 1, recvjcnt(py)
           do i = 1, D1
              dout( i + (px-1) * D1, &
                    j + jloc,        &
-                   k                ) = recv(i,j,k,p)
+                   k                ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
@@ -3428,7 +3523,7 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
+    real(RP), allocatable :: recvpdat(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -3436,8 +3531,7 @@ contains
     integer  :: recvjcnt(nprocs_y_out)
     integer  :: iloc, jloc
 
-    integer  :: i, j, k
-    integer  :: p, px, py
+    integer  :: i, j, k, m, p, px, py
     integer  :: ierr
     !---------------------------------------------------------------------------
 
@@ -3456,11 +3550,18 @@ contains
        endif
 
        recvpcnt(p) = recvicnt(px) * recvjcnt(py) * D3
-       recvploc(p) = D1 * D2 * D3 * (p-1)
+
+       if ( p == 1 ) then
+          recvploc(p) = 0
+       else
+          recvploc(p) = sum( recvpcnt(1:p-1) )
+       endif
 
        p = p + 1
     enddo
     enddo
+
+    allocate( recvpdat( sum( recvpcnt(:) ) ) )
 
     select case( MPI_RP )
     case( SP )
@@ -3469,7 +3570,7 @@ contains
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3482,7 +3583,7 @@ contains
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recv(:,:,:,:),        &
+                         recvpdat(:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3508,12 +3609,14 @@ contains
           endif
 
           ! rearrangement of data array
+          m = 1
           do k = 1, D3
           do j = 1, recvjcnt(py)
           do i = 1, recvicnt(px)
              dout( i + iloc, &
                    j + jloc, &
-                   k         ) = recv(i,j,k,p)
+                   k         ) = recvpdat( m + recvploc(p) )
+             m = m + 1
           enddo
           enddo
           enddo
