@@ -38,36 +38,14 @@ module mod_sno_comm
   !
   ! 1D
   private :: gather_x
-  private :: gather_u
   private :: gather_y
-  private :: gather_v
-
-  private :: gather_x_halo
-  private :: gather_u_halo
-  private :: gather_y_halo
-  private :: gather_v_halo
-
   ! 2D
   private :: gather_xy
-  private :: gather_uy
-  private :: gather_xv
-  private :: gather_uv
-
   private :: gather_nx
-  private :: gather_nu
   private :: gather_ny
-  private :: gather_nv
-
   ! 3D
   private :: gather_zxy
-  private :: gather_zuy
-  private :: gather_zxv
-  private :: gather_zuv
-
   private :: gather_xyz
-  private :: gather_uyz
-  private :: gather_xvz
-  private :: gather_uvz
 
   !-----------------------------------------------------------------------------
   !
@@ -155,7 +133,7 @@ contains
                                   SP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 0, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
@@ -163,7 +141,7 @@ contains
                                   DP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 0, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
@@ -177,19 +155,19 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_u( ismaster,               &
+                   call gather_x( ismaster,               &
                                   SP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 1, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_u( ismaster,               &
+                   call gather_x( ismaster,               &
                                   DP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 1, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
@@ -207,7 +185,7 @@ contains
                                   SP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 0, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
@@ -215,7 +193,7 @@ contains
                                   DP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 0, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
@@ -229,19 +207,19 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_v( ismaster,               &
+                   call gather_y( ismaster,               &
                                   SP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 1, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_v( ismaster,               &
+                   call gather_y( ismaster,               &
                                   DP,                     &
                                   nprocs_x_out,           &
                                   nprocs_y_out,           &
-                                  D1,                     &
+                                  D1, 1, 0, 0,            &
                                   ainfo(n)%AXIS_1d(:),    &
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
@@ -255,23 +233,21 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_x_halo( ismaster,               &
-                                       SP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       xhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_x( ismaster,               &
+                                  SP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, xhalo, 0,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_x_halo( ismaster,               &
-                                       DP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       xhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_x( ismaster,               &
+                                  DP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, xhalo, 0,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
              case('FX','FDX','FBFX')
@@ -283,23 +259,21 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_u_halo( ismaster,               &
-                                       SP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       xhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_x( ismaster,               &
+                                  SP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, xhalo, 1,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_u_halo( ismaster,               &
-                                       DP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       xhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_x( ismaster,               &
+                                  DP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, xhalo, 1,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
              case('CY','CDY','CBFY')
@@ -311,23 +285,21 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_y_halo( ismaster,               &
-                                       SP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       yhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_y( ismaster,               &
+                                  SP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, yhalo, 0,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_y_halo( ismaster,               &
-                                       DP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       yhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_y( ismaster,               &
+                                  DP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, yhalo, 0,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
              case('FY','FDY','FBFY')
@@ -339,23 +311,21 @@ contains
 
                 select case( ainfo_all(n)%datatype )
                 case( FILE_REAL4 )
-                   call gather_v_halo( ismaster,               &
-                                       SP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       yhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_y( ismaster,               &
+                                  SP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, yhalo, 1,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 case( FILE_REAL8 )
-                   call gather_v_halo( ismaster,               &
-                                       DP,                     &
-                                       nprocs_x_out,           &
-                                       nprocs_y_out,           &
-                                       yhalo,                  &
-                                       D1,                     &
-                                       ainfo(n)%AXIS_1d(:),    &
-                                       ainfo_all(n)%AXIS_1d(:) )
+                   call gather_y( ismaster,               &
+                                  DP,                     &
+                                  nprocs_x_out,           &
+                                  nprocs_y_out,           &
+                                  D1, 0, yhalo, 1,        &
+                                  ainfo(n)%AXIS_1d(:),    &
+                                  ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
              case default
@@ -386,19 +356,21 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_uy( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 1, 0, 0,              &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
-                      call gather_uy( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 1, 0, 0,              &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -414,19 +386,21 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xv( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 0, 0, 0,              &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
-                      call gather_xv( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 0, 0, 0,              &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -442,19 +416,21 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_uv( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 1, 0, 0,              &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
-                      call gather_uv( ismaster,                 &
+                      call gather_xy( ismaster,                 &
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 1, 0, 0,              &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -474,7 +450,8 @@ contains
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 0, 0, 0,              &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
@@ -482,7 +459,8 @@ contains
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1, 0, 0, 0,              &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -507,7 +485,8 @@ contains
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
@@ -515,7 +494,8 @@ contains
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -531,19 +511,21 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_nu( ismaster,                 &
+                      call gather_nx( ismaster,                 &
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
-                      call gather_nu( ismaster,                 &
+                      call gather_nx( ismaster,                 &
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -563,7 +545,8 @@ contains
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
@@ -571,7 +554,8 @@ contains
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 0, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -587,19 +571,21 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_nv( ismaster,                 &
+                      call gather_ny( ismaster,                 &
                                       SP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    case( FILE_REAL8 )
-                      call gather_nv( ismaster,                 &
+                      call gather_ny( ismaster,                 &
                                       DP,                       &
                                       nprocs_x_out,             &
                                       nprocs_y_out,             &
-                                      D1, D2,                   &
+                                      D1,                       &
+                                      D2, 1, 0, 0,              &
                                       ainfo(n)%AXIS_2d(:,:),    &
                                       ainfo_all(n)%AXIS_2d(:,:) )
                    endselect
@@ -638,19 +624,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zuy( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 1, 0, 0,                &
+                                       D3, 0, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zuy( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 1, 0, 0,                &
+                                       D3, 0, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -668,19 +658,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zxv( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 0, 0, 0,                &
+                                       D3, 1, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zxv( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 0, 0, 0,                &
+                                       D3, 1, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -698,19 +692,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zuv( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 1, 0, 0,                &
+                                       D3, 1, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zuv( ismaster,                   &
+                      call gather_zxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 1, 0, 0,                &
+                                       D3, 1, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -732,7 +730,9 @@ contains
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 0, 0, 0,                &
+                                       D3, 0, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
@@ -740,7 +740,9 @@ contains
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1,                         &
+                                       D2, 0, 0, 0,                &
+                                       D3, 0, 0, 0,                &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -763,19 +765,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_uyz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 1, 0, 0,                &
+                                       D2, 0, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_uyz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 1, 0, 0,                &
+                                       D2, 0, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -793,19 +799,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xvz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 0, 0, 0,                &
+                                       D2, 1, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_xvz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 0, 0, 0,                &
+                                       D2, 1, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -823,19 +833,23 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_uvz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 1, 0, 0,                &
+                                       D2, 1, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_uvz( ismaster,                   &
+                      call gather_xyz( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 1, 0, 0,                &
+                                       D2, 1, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -857,7 +871,9 @@ contains
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 0, 0, 0,                &
+                                       D2, 0, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
@@ -865,7 +881,9 @@ contains
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
-                                       D1, D2, D3,                 &
+                                       D1, 0, 0, 0,                &
+                                       D2, 0, 0, 0,                &
+                                       D3,                         &
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    endselect
@@ -957,7 +975,7 @@ contains
                                SP,                 &
                                nprocs_x_out,       &
                                nprocs_y_out,       &
-                               D1,                 &
+                               D1, 0, 0, 0,        &
                                dinfo%VAR_1d(:),    &
                                dinfo_all%VAR_1d(:) )
              case( FILE_REAL8 )
@@ -965,7 +983,7 @@ contains
                                DP,                 &
                                nprocs_x_out,       &
                                nprocs_y_out,       &
-                               D1,                 &
+                               D1, 0, 0, 0,        &
                                dinfo%VAR_1d(:),    &
                                dinfo_all%VAR_1d(:) )
              endselect
@@ -983,7 +1001,7 @@ contains
                                SP,                 &
                                nprocs_x_out,       &
                                nprocs_y_out,       &
-                               D1,                 &
+                               D1, 0, 0, 0,        &
                                dinfo%VAR_1d(:),    &
                                dinfo_all%VAR_1d(:) )
              case( FILE_REAL8 )
@@ -991,7 +1009,7 @@ contains
                                DP,                 &
                                nprocs_x_out,       &
                                nprocs_y_out,       &
-                               D1,                 &
+                               D1, 0, 0, 0,        &
                                dinfo%VAR_1d(:),    &
                                dinfo_all%VAR_1d(:) )
              endselect
@@ -1023,7 +1041,8 @@ contains
                              SP,                   &
                              nprocs_x_out,         &
                              nprocs_y_out,         &
-                             D1, D2,               &
+                             D1, 0, 0, 0,          &
+                             D2, 0, 0, 0,          &
                              dinfo%VAR_2d(:,:),    &
                              dinfo_all%VAR_2d(:,:) )
           case( FILE_REAL8 )
@@ -1031,7 +1050,8 @@ contains
                              DP,                   &
                              nprocs_x_out,         &
                              nprocs_y_out,         &
-                             D1, D2,               &
+                             D1, 0, 0, 0,          &
+                             D2, 0, 0, 0,          &
                              dinfo%VAR_2d(:,:),    &
                              dinfo_all%VAR_2d(:,:) )
           endselect
@@ -1059,7 +1079,9 @@ contains
                                  SP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
-                                 D1, D2, D3,             &
+                                 D1,                     &
+                                 D2, 0, 0, 0,            &
+                                 D3, 0, 0, 0,            &
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              case( FILE_REAL8 )
@@ -1067,7 +1089,9 @@ contains
                                  DP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
-                                 D1, D2, D3,             &
+                                 D1,                     &
+                                 D2, 0, 0, 0,            &
+                                 D3, 0, 0, 0,            &
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              endselect
@@ -1089,7 +1113,9 @@ contains
                                  SP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
-                                 D1, D2, D3,             &
+                                 D1, 0, 0, 0,            &
+                                 D2, 0, 0, 0,            &
+                                 D3,                     &
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              case( FILE_REAL8 )
@@ -1097,7 +1123,9 @@ contains
                                  DP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
-                                 D1, D2, D3,             &
+                                 D1, 0, 0, 0,            &
+                                 D2, 0, 0, 0,            &
+                                 D3,                     &
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              endselect
@@ -1117,13 +1145,13 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine gather_x( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1,           &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1, H1, L1, M1, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -1134,7 +1162,10 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: H1              ! subtraction of receive array count at D1 for half-level var. [0-1]
+    integer,  intent(in)  :: L1              ! subtraction of output array count at D1 for var. with halo [halo size]
+    integer,  intent(in)  :: M1              ! subtraction of outout array count at D1 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:)
     real(RP), intent(out) :: dout(:)
@@ -1142,86 +1173,8 @@ contains
     real(SP) :: send_SP(D1)
     real(DP) :: send_DP(D1)
 
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do i = 1, D1
-             dout( i + (px-1) * D1 ) = recv(i,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_x
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_u( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -1238,7 +1191,7 @@ contains
        if ( px == 1 ) then
           recvicnt(px) = D1
        else
-          recvicnt(px) = D1 - 1
+          recvicnt(px) = D1 - H1
        endif
 
        recvpcnt(p) = recvicnt(px)
@@ -1253,16 +1206,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:) = real( din(:), kind=SP )
 
        call MPI_GATHERV( send_SP(:),           &
                          D1,                   &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -1270,12 +1223,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:) = real( din(:), kind=DP )
 
        call MPI_GATHERV( send_DP(:),           &
                          D1,                   &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -1292,15 +1247,26 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) )
+             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do i = 1, recvicnt(px)
-             dout( i + iloc ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do i = 1, recvicnt(px)
+                dout( i + iloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do i = 1, recvicnt(px)
+                dout( i + iloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -1308,17 +1274,17 @@ contains
     endif
 
     return
-  end subroutine gather_u
+  end subroutine gather_x
 
   !-----------------------------------------------------------------------------
   subroutine gather_y( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1,           &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1, H1, L1, M1, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -1329,7 +1295,10 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: H1              ! subtraction of receive array count at D1 for half-level var. [0-1]
+    integer,  intent(in)  :: L1              ! subtraction of output array count at D1 for var. with halo [halo size]
+    integer,  intent(in)  :: M1              ! subtraction of outout array count at D1 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:)
     real(RP), intent(out) :: dout(:)
@@ -1337,86 +1306,8 @@ contains
     real(SP) :: send_SP(D1)
     real(DP) :: send_DP(D1)
 
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: j
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D1
-             dout( j + (py-1) * D1 ) = recv(j,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_y
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_v( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -1433,7 +1324,7 @@ contains
        if ( py == 1 ) then
           recvjcnt(py) = D1
        else
-          recvjcnt(py) = D1 - 1
+          recvjcnt(py) = D1 - H1
        endif
 
        recvpcnt(p) = recvjcnt(py)
@@ -1448,16 +1339,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:) = real( din(:), kind=SP )
 
        call MPI_GATHERV( send_SP(:),           &
                          D1,                   &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -1465,12 +1356,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:) = real( din(:), kind=DP )
 
        call MPI_GATHERV( send_DP(:),           &
                          D1,                   &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -1487,15 +1380,26 @@ contains
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) )
+             jloc = sum( recvjcnt(1:py-1) ) - 2 * L1 - M1
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-             dout( j + jloc ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+                dout( j + jloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+                dout( j + jloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -1503,341 +1407,18 @@ contains
     endif
 
     return
-  end subroutine gather_v
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_x_halo( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       xhalo,        &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: xhalo
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do i = 1, D1
-             dout( i + (px-1) * (D1-2*xhalo) ) = recv(i,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_x_halo
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_u_halo( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       xhalo,        &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: xhalo
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do i = 1, D1
-             dout( i + (px-1) * (D1-2*xhalo-1) ) = recv(i,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_u_halo
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_y_halo( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       yhalo,        &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: yhalo
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: j
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D1
-             dout( j + (py-1) * (D1-2*yhalo) ) = recv(j,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_y_halo
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_v_halo( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       yhalo,        &
-       D1,           &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: yhalo
-    integer,  intent(in)  :: D1
-
-    real(RP), intent(in)  :: din (:)
-    real(RP), intent(out) :: dout(:)
-
-    real(SP) :: send_SP(D1)
-    real(DP) :: send_DP(D1)
-
-    real(RP) :: recv(D1,nprocs_x_out*nprocs_y_out)
-
-    integer  :: j
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:) = real( din(:), kind=SP )
-
-       call MPI_GATHER( send_SP(:),           &
-                        D1,                   &
-                        MPI_REAL,             &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:) = real( din(:), kind=DP )
-
-       call MPI_GATHER( send_DP(:),           &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:),            &
-                        D1,                   &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D1
-             dout( j + (py-1) * (D1-2*yhalo-1) ) = recv(j,p)
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_v_halo
+  end subroutine gather_y
 
   !-----------------------------------------------------------------------------
   subroutine gather_xy( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1, H1, L1, M1, &
+       D2, H2, L2, M2, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -1848,8 +1429,14 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: H1              ! subtraction of receive array count at D1 for half-level var. [0-1]
+    integer,  intent(in)  :: L1              ! subtraction of output array count at D1 for var. with halo [halo size]
+    integer,  intent(in)  :: M1              ! subtraction of outout array count at D1 for half-level var. with halo [0-1]
+    integer,  intent(in)  :: D2              ! local size of 2nd dimension
+    integer,  intent(in)  :: H2              ! subtraction of receive array count at D2 for half-level var. [0-1]
+    integer,  intent(in)  :: L2              ! subtraction of output array count at D2 for var. with halo [halo size]
+    integer,  intent(in)  :: M2              ! subtraction of outout array count at D2 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:,:)
     real(RP), intent(out) :: dout(:,:)
@@ -1857,330 +1444,8 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i, j
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:) = real( din(:,:), kind=SP )
-
-       call MPI_GATHER( send_SP(:,:),         &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:,:) = real( din(:,:), kind=DP )
-
-       call MPI_GATHER( send_DP(:,:),         &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D2
-          do i = 1, D1
-             dout( i + (px-1) * D1, &
-                   j + (py-1) * D2  ) = recv(i,j,p)
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_xy
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_uy( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-
-    real(RP), intent(in)  :: din (:,:)
-    real(RP), intent(out) :: dout(:,:)
-
-    real(SP) :: send_SP(D1,D2)
-    real(DP) :: send_DP(D1,D2)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvicnt(nprocs_x_out)
-    integer  :: iloc
-
-    integer  :: i, j, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( px == 1 ) then
-          recvicnt(px) = D1
-       else
-          recvicnt(px) = D1 - 1
-       endif
-
-       recvpcnt(p) = recvicnt(px) * D2
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:) = real( din(:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:),         &
-                         D1 * D2,              &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:) = real( din(:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:),         &
-                         D1 * D2,              &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( px == 1 ) then
-             iloc = 0
-          else
-             iloc = sum( recvicnt(1:px-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do j = 1, D2
-          do i = 1, recvicnt(px)
-             dout( i + iloc,        &
-                   j + (py-1) * D2  ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_uy
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_xv( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-
-    real(RP), intent(in)  :: din (:,:)
-    real(RP), intent(out) :: dout(:,:)
-
-    real(SP) :: send_SP(D1,D2)
-    real(DP) :: send_DP(D1,D2)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvjcnt(nprocs_y_out)
-    integer  :: jloc
-
-    integer  :: i, j, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( py == 1 ) then
-          recvjcnt(py) = D2
-       else
-          recvjcnt(py) = D2 - 1
-       endif
-
-       recvpcnt(p) = D1 * recvjcnt(py)
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:) = real( din(:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:),         &
-                         D1 * D2,              &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:) = real( din(:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:),         &
-                         D1 * D2,              &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( py == 1 ) then
-             jloc = 0
-          else
-             jloc = sum( recvjcnt(1:py-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-          do i = 1, D1
-             dout( i + (px-1) * D1, &
-                   j + jloc         ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_xv
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_uv( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-
-    real(RP), intent(in)  :: din (:,:)
-    real(RP), intent(out) :: dout(:,:)
-
-    real(SP) :: send_SP(D1,D2)
-    real(DP) :: send_DP(D1,D2)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -2198,12 +1463,12 @@ contains
        if ( px == 1 ) then
           recvicnt(px) = D1
        else
-          recvicnt(px) = D1 - 1
+          recvicnt(px) = D1 - H1
        endif
        if ( py == 1 ) then
           recvjcnt(py) = D2
        else
-          recvjcnt(py) = D2 - 1
+          recvjcnt(py) = D2 - H2
        endif
 
        recvpcnt(p) = recvicnt(px) * recvjcnt(py)
@@ -2218,16 +1483,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2235,12 +1500,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2257,23 +1524,37 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) )
+             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) )
+             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-          do i = 1, recvicnt(px)
-             dout( i + iloc, &
-                   j + jloc  ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+                dout( i + iloc, &
+                      j + jloc  ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+                dout( i + iloc, &
+                      j + jloc  ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -2281,17 +1562,18 @@ contains
     endif
 
     return
-  end subroutine gather_uv
+  end subroutine gather_xy
 
   !-----------------------------------------------------------------------------
   subroutine gather_nx( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1,             &
+       D2, H2, L2, M2, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -2302,8 +1584,11 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: D2              ! local size of 2nd dimension
+    integer,  intent(in)  :: H2              ! subtraction of receive array count at D2 for half-level var. [0-1]
+    integer,  intent(in)  :: L2              ! subtraction of output array count at D2 for var. with halo [halo size]
+    integer,  intent(in)  :: M2              ! subtraction of outout array count at D2 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:,:)
     real(RP), intent(out) :: dout(:,:)
@@ -2311,90 +1596,8 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
-
-    integer  :: v, i
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:) = real( din(:,:), kind=SP )
-
-       call MPI_GATHER( send_SP(:,:),         &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:,:) = real( din(:,:), kind=DP )
-
-       call MPI_GATHER( send_DP(:,:),         &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do i = 1, D2
-          do v = 1, D1
-             dout( v,              &
-                   i + (px-1) * D2 ) = recv(v,i,p)
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_nx
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_nu( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-
-    real(RP), intent(in)  :: din (:,:)
-    real(RP), intent(out) :: dout(:,:)
-
-    real(SP) :: send_SP(D1,D2)
-    real(DP) :: send_DP(D1,D2)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -2411,7 +1614,7 @@ contains
        if ( px == 1 ) then
           recvicnt(px) = D2
        else
-          recvicnt(px) = D2 - 1
+          recvicnt(px) = D2 - H2
        endif
 
        recvpcnt(p) = D1 * recvicnt(px)
@@ -2426,16 +1629,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2443,12 +1646,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2465,18 +1670,32 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) )
+             iloc = sum( recvicnt(1:px-1) ) - 2 * L2 - M2
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do i = 1, recvicnt(px)
-          do v = 1, D1
-             dout( v,       &
-                   i + iloc ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do i = 1, recvicnt(px)
+             do v = 1, D1
+                dout( v,       &
+                      i + iloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do i = 1, recvicnt(px)
+             do v = 1, D1
+                dout( v,       &
+                      i + iloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -2484,17 +1703,18 @@ contains
     endif
 
     return
-  end subroutine gather_nu
+  end subroutine gather_nx
 
   !-----------------------------------------------------------------------------
   subroutine gather_ny( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1,             &
+       D2, H2, L2, M2, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -2505,8 +1725,11 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: D2              ! local size of 2nd dimension
+    integer,  intent(in)  :: H2              ! subtraction of receive array count at D2 for half-level var. [0-1]
+    integer,  intent(in)  :: L2              ! subtraction of output array count at D2 for var. with halo [halo size]
+    integer,  intent(in)  :: M2              ! subtraction of outout array count at D2 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:,:)
     real(RP), intent(out) :: dout(:,:)
@@ -2514,90 +1737,8 @@ contains
     real(SP) :: send_SP(D1,D2)
     real(DP) :: send_DP(D1,D2)
 
-    real(RP) :: recv(D1,D2,nprocs_x_out*nprocs_y_out)
-
-    integer  :: v, j
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:) = real( din(:,:), kind=SP )
-
-       call MPI_GATHER( send_SP(:,:),         &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:,:) = real( din(:,:), kind=DP )
-
-       call MPI_GATHER( send_DP(:,:),         &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:,:),          &
-                        D1 * D2,              &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D2
-          do v = 1, D1
-             dout( v,              &
-                   j + (py-1) * D2 ) = recv(v,j,p)
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_ny
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_nv( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2,       &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-
-    real(RP), intent(in)  :: din (:,:)
-    real(RP), intent(out) :: dout(:,:)
-
-    real(SP) :: send_SP(D1,D2)
-    real(DP) :: send_DP(D1,D2)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -2614,7 +1755,7 @@ contains
        if ( py == 1 ) then
           recvjcnt(py) = D2
        else
-          recvjcnt(py) = D2 - 1
+          recvjcnt(py) = D2 - H2
        endif
 
        recvpcnt(p) = D1 * recvjcnt(py)
@@ -2629,16 +1770,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
                          D1 * D2,              &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -2646,12 +1787,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
                          D1 * D2,              &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -2668,18 +1811,32 @@ contains
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) )
+             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-          do v = 1, D1
-             dout( v,       &
-                   j + jloc ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do v = 1, D1
+                dout( v,       &
+                      j + jloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do v = 1, D1
+                dout( v,       &
+                      j + jloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -2687,17 +1844,19 @@ contains
     endif
 
     return
-  end subroutine gather_nv
+  end subroutine gather_ny
 
   !-----------------------------------------------------------------------------
   subroutine gather_zxy( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1,             &
+       D2, H2, L2, M2, &
+       D3, H3, L3, M3, &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -2708,9 +1867,15 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: D2              ! local size of 2nd dimension
+    integer,  intent(in)  :: H2              ! subtraction of receive array count at D2 for half-level var. [0-1]
+    integer,  intent(in)  :: L2              ! subtraction of output array count at D2 for var. with halo [halo size]
+    integer,  intent(in)  :: M2              ! subtraction of outout array count at D2 for half-level var. with halo [0-1]
+    integer,  intent(in)  :: D3              ! local size of 3rd dimension
+    integer,  intent(in)  :: H3              ! subtraction of receive array count at D3 for half-level var. [0-1]
+    integer,  intent(in)  :: L3              ! subtraction of output array count at D3 for var. with halo [halo size]
+    integer,  intent(in)  :: M3              ! subtraction of outout array count at D3 for half-level var. with halo [0-1]
 
     real(RP), intent(in)  :: din (:,:,:)
     real(RP), intent(out) :: dout(:,:,:)
@@ -2718,342 +1883,8 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i, j, k
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHER( send_SP(:,:,:),       &
-                        D1 * D2 * D3,         &
-                        MPI_REAL,             &
-                        recv(:,:,:,:),        &
-                        D1 * D2 * D3,         &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHER( send_DP(:,:,:),       &
-                        D1 * D2 * D3,         &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:,:,:),        &
-                        D1 * D2 * D3,         &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do j = 1, D3
-          do i = 1, D2
-          do k = 1, D1
-             dout( k,               &
-                   i + (px-1) * D2, &
-                   j + (py-1) * D3  ) = recv(k,i,j,p)
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_zxy
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_zuy( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvicnt(nprocs_x_out)
-    integer  :: iloc
-
-    integer  :: i, j, k, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( px == 1 ) then
-          recvicnt(px) = D2
-       else
-          recvicnt(px) = D2 - 1
-       endif
-
-       recvpcnt(p) = D1 * recvicnt(px) * D3
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( px == 1 ) then
-             iloc = 0
-          else
-             iloc = sum( recvicnt(1:px-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do j = 1, D3
-          do i = 1, recvicnt(px)
-          do k = 1, D1
-             dout( k,               &
-                   i + iloc,        &
-                   j + (py-1) * D3  ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_zuy
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_zxv( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvjcnt(nprocs_y_out)
-    integer  :: jloc
-
-    integer  :: i, j, k, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( py == 1 ) then
-          recvjcnt(py) = D3
-       else
-          recvjcnt(py) = D3 - 1
-       endif
-
-       recvpcnt(p) = D1 * D2 * recvjcnt(py)
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( py == 1 ) then
-             jloc = 0
-          else
-             jloc = sum( recvjcnt(1:py-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-          do i = 1, D2
-          do k = 1, D1
-             dout( k,               &
-                   i + (px-1) * D2, &
-                   j + jloc         ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_zxv
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_zuv( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -3071,12 +1902,12 @@ contains
        if ( px == 1 ) then
           recvicnt(px) = D2
        else
-          recvicnt(px) = D2 - 1
+          recvicnt(px) = D2 - H2
        endif
        if ( py == 1 ) then
           recvjcnt(py) = D3
        else
-          recvjcnt(py) = D3 - 1
+          recvjcnt(py) = D3 - H3
        endif
 
        recvpcnt(p) = D1 * recvicnt(px) * recvjcnt(py)
@@ -3091,16 +1922,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3108,12 +1939,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3130,26 +1963,43 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) )
+             iloc = sum( recvicnt(1:px-1) ) - 2 * L2 - M2
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) )
+             jloc = sum( recvjcnt(1:py-1) ) - 2 * L3 - M3
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do j = 1, recvjcnt(py)
-          do i = 1, recvicnt(px)
-          do k = 1, D1
-             dout( k,        &
-                   i + iloc, &
-                   j + jloc  ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+             do k = 1, D1
+                dout( k,        &
+                      i + iloc, &
+                      j + jloc  ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+             do k = 1, D1
+                dout( k,        &
+                      i + iloc, &
+                      j + jloc  ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -3157,17 +2007,19 @@ contains
     endif
 
     return
-  end subroutine gather_zuv
+  end subroutine gather_zxy
 
   !-----------------------------------------------------------------------------
   subroutine gather_xyz( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
+       ismaster,       &
+       MPI_RP,         &
+       nprocs_x_out,   &
+       nprocs_y_out,   &
+       D1, H1, L1, M1, &
+       D2, H2, L2, M2, &
+       D3,             &
+       din,            &
+       dout            )
     use mpi
     use scale_prc, only: &
        PRC_masterrank,       &
@@ -3178,9 +2030,15 @@ contains
     integer,  intent(in)  :: MPI_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
+    integer,  intent(in)  :: D1              ! local size of 1st dimension
+    integer,  intent(in)  :: H1              ! subtraction of receive array count at D1 for half-level var. [0-1]
+    integer,  intent(in)  :: L1              ! subtraction of output array count at D1 for var. with halo [halo size]
+    integer,  intent(in)  :: M1              ! subtraction of outout array count at D1 for half-level var. with halo [0-1]
+    integer,  intent(in)  :: D2              ! local size of 2nd dimension
+    integer,  intent(in)  :: H2              ! subtraction of receive array count at D2 for half-level var. [0-1]
+    integer,  intent(in)  :: L2              ! subtraction of output array count at D2 for var. with halo [halo size]
+    integer,  intent(in)  :: M2              ! subtraction of outout array count at D2 for half-level var. with halo [0-1]
+    integer,  intent(in)  :: D3              ! local size of 3rd dimension
 
     real(RP), intent(in)  :: din (:,:,:)
     real(RP), intent(out) :: dout(:,:,:)
@@ -3188,342 +2046,8 @@ contains
     real(SP) :: send_SP(D1,D2,D3)
     real(DP) :: send_DP(D1,D2,D3)
 
-    real(RP) :: recv(D1,D2,D3,nprocs_x_out*nprocs_y_out)
-
-    integer  :: i, j, k
-    integer  :: p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHER( send_SP(:,:,:),       &
-                        D1 * D2 * D3,         &
-                        MPI_REAL,             &
-                        recv(:,:,:,:),        &
-                        D1 * D2 * D3,         &
-                        MPI_REAL,             &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHER( send_DP(:,:,:),       &
-                        D1 * D2 * D3,         &
-                        MPI_DOUBLE_PRECISION, &
-                        recv(:,:,:,:),        &
-                        D1 * D2 * D3,         &
-                        MPI_DOUBLE_PRECISION, &
-                        PRC_masterrank,       &
-                        PRC_LOCAL_COMM_WORLD, &
-                        ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          ! rearrangement of data array
-          do k = 1, D3
-          do j = 1, D2
-          do i = 1, D1
-             dout( i + (px-1) * D1, &
-                   j + (py-1) * D2, &
-                   k                ) = recv(i,j,k,p)
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_xyz
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_uyz( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvicnt(nprocs_x_out)
-    integer  :: iloc
-
-    integer  :: i, j, k, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( px == 1 ) then
-          recvicnt(px) = D1
-       else
-          recvicnt(px) = D1 - 1
-       endif
-
-       recvpcnt(p) = recvicnt(px) * D2 * D3
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( px == 1 ) then
-             iloc = 0
-          else
-             iloc = sum( recvicnt(1:px-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do k = 1, D3
-          do j = 1, D2
-          do i = 1, recvicnt(px)
-             dout( i + iloc,        &
-                   j + (py-1) * D2, &
-                   k                ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_uyz
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_xvz( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
-
-    integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
-    integer  :: recvploc(nprocs_x_out*nprocs_y_out)
-    integer  :: recvjcnt(nprocs_y_out)
-    integer  :: jloc
-
-    integer  :: i, j, k, m, p, px, py
-    integer  :: ierr
-    !---------------------------------------------------------------------------
-
-    p = 1
-    do py = 1, nprocs_y_out
-    do px = 1, nprocs_x_out
-       if ( py == 1 ) then
-          recvjcnt(py) = D2
-       else
-          recvjcnt(py) = D2 - 1
-       endif
-
-       recvpcnt(p) = D1 * recvjcnt(py) * D3
-
-       if ( p == 1 ) then
-          recvploc(p) = 0
-       else
-          recvploc(p) = sum( recvpcnt(1:p-1) )
-       endif
-
-       p = p + 1
-    enddo
-    enddo
-
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
-    select case( MPI_RP )
-    case( SP )
-       send_SP(:,:,:) = real( din(:,:,:), kind=SP )
-
-       call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_REAL,             &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_REAL,             &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    case( DP )
-       send_DP(:,:,:) = real( din(:,:,:), kind=DP )
-
-       call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
-                         MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
-                         recvpcnt(:),          &
-                         recvploc(:),          &
-                         MPI_DOUBLE_PRECISION, &
-                         PRC_masterrank,       &
-                         PRC_LOCAL_COMM_WORLD, &
-                         ierr                  )
-    endselect
-
-    if ( ismaster ) then
-
-       p = 1
-       do py = 1, nprocs_y_out
-       do px = 1, nprocs_x_out
-          if ( py == 1 ) then
-             jloc = 0
-          else
-             jloc = sum( recvjcnt(1:py-1) )
-          endif
-
-          ! rearrangement of data array
-          m = 1
-          do k = 1, D3
-          do j = 1, recvjcnt(py)
-          do i = 1, D1
-             dout( i + (px-1) * D1, &
-                   j + jloc,        &
-                   k                ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
-          p = p + 1
-       enddo
-       enddo
-
-    endif
-
-    return
-  end subroutine gather_xvz
-
-  !-----------------------------------------------------------------------------
-  subroutine gather_uvz( &
-       ismaster,     &
-       MPI_RP,       &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       D1, D2, D3,   &
-       din,          &
-       dout          )
-    use mpi
-    use scale_prc, only: &
-       PRC_masterrank,       &
-       PRC_LOCAL_COMM_WORLD
-    implicit none
-
-    logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
-    integer,  intent(in)  :: nprocs_x_out
-    integer,  intent(in)  :: nprocs_y_out
-    integer,  intent(in)  :: D1
-    integer,  intent(in)  :: D2
-    integer,  intent(in)  :: D3
-
-    real(RP), intent(in)  :: din (:,:,:)
-    real(RP), intent(out) :: dout(:,:,:)
-
-    real(SP) :: send_SP(D1,D2,D3)
-    real(DP) :: send_DP(D1,D2,D3)
-
-    real(RP), allocatable :: recvpdat(:)
+    real(SP), allocatable :: recv_SP(:)
+    real(DP), allocatable :: recv_DP(:)
 
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
@@ -3541,12 +2065,12 @@ contains
        if ( px == 1 ) then
           recvicnt(px) = D1
        else
-          recvicnt(px) = D1 - 1
+          recvicnt(px) = D1 - H1
        endif
        if ( py == 1 ) then
           recvjcnt(py) = D2
        else
-          recvjcnt(py) = D2 - 1
+          recvjcnt(py) = D2 - H2
        endif
 
        recvpcnt(p) = recvicnt(px) * recvjcnt(py) * D3
@@ -3561,16 +2085,16 @@ contains
     enddo
     enddo
 
-    allocate( recvpdat( sum( recvpcnt(:) ) ) )
-
     select case( MPI_RP )
     case( SP )
+       allocate( recv_SP( sum( recvpcnt(:) ) ) )
+
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_REAL,             &
-                         recvpdat(:),          &
+                         recv_SP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_REAL,             &
@@ -3578,12 +2102,14 @@ contains
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
     case( DP )
+       allocate( recv_DP( sum( recvpcnt(:) ) ) )
+
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:,:),       &
                          D1 * D2 * D3,         &
                          MPI_DOUBLE_PRECISION, &
-                         recvpdat(:),          &
+                         recv_DP (:),          &
                          recvpcnt(:),          &
                          recvploc(:),          &
                          MPI_DOUBLE_PRECISION, &
@@ -3600,26 +2126,43 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) )
+             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) )
+             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
           endif
 
-          ! rearrangement of data array
-          m = 1
-          do k = 1, D3
-          do j = 1, recvjcnt(py)
-          do i = 1, recvicnt(px)
-             dout( i + iloc, &
-                   j + jloc, &
-                   k         ) = recvpdat( m + recvploc(p) )
-             m = m + 1
-          enddo
-          enddo
-          enddo
+          select case( MPI_RP )
+          case( SP )
+             ! rearrangement of data array
+             m = 1
+             do k = 1, D3
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+                dout( i + iloc, &
+                      j + jloc, &
+                      k         ) = real( recv_SP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+             enddo
+          case( DP )
+             ! rearrangement of data array
+             m = 1
+             do k = 1, D3
+             do j = 1, recvjcnt(py)
+             do i = 1, recvicnt(px)
+                dout( i + iloc, &
+                      j + jloc, &
+                      k         ) = real( recv_DP( m + recvploc(p) ), kind=RP )
+                m = m + 1
+             enddo
+             enddo
+             enddo
+          endselect
+
           p = p + 1
        enddo
        enddo
@@ -3627,6 +2170,6 @@ contains
     endif
 
     return
-  end subroutine gather_uvz
+  end subroutine gather_xyz
 
 end module mod_sno_comm
