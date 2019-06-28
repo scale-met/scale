@@ -79,6 +79,8 @@ contains
   subroutine SNO_comm_globalaxis( &
        ismaster,      &
        output_single, &
+       nowvars,       &
+       nowstep,       &
        nprocs_x_out,  &
        nprocs_y_out,  &
        hinfo,         &
@@ -99,6 +101,8 @@ contains
 
     logical,          intent(in)    :: ismaster                              ! master rank process?
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
+    integer,          intent(in)    :: nowvars                               ! current vars
+    integer,          intent(in)    :: nowstep                               ! current step
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology
     type(commoninfo), intent(in)    :: hinfo                                 ! common information
@@ -111,6 +115,8 @@ contains
     integer  :: xhalo, yhalo
     integer  :: n
     !---------------------------------------------------------------------------
+
+    if ( nowvars > 1 .OR. nowstep > 1 ) return ! do below only once when first time 
 
     if ( output_single ) then
 
