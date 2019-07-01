@@ -56,6 +56,7 @@ module mod_snoplugin_vgridope
   integer,                private              :: SNOPLGIN_vgridope_lev_num             = -1
   real(RP),               private              :: SNOPLGIN_vgridope_lev_data(lev_limit) = -1.0_RP
 
+  integer,                private              :: naxis_v
   type(axisinfo),         private, allocatable :: ainfo_v(:)
   type(iteminfo),         private              :: dinfo_v
 
@@ -300,8 +301,8 @@ contains
        allocate( Phfact(kmax_new,  imax_ref,jmax_ref) )
 
        ! set basic axis
-       allocate( ainfo_v( naxis+1 ) )
-       ainfo_v(2:naxis+1) = ainfo(:)
+       naxis_v = naxis + 1
+       allocate( ainfo_v( naxis_v ) )
 
        znum = 1
 
@@ -314,14 +315,18 @@ contains
        ainfo_v(znum)%dim_name(1) = 'pressure'
        ainfo_v(znum)%transpose   = .false.
        ainfo_v(znum)%regrid      = .false.
+       ainfo_v(znum)%has_bounds  = .false.
+       ainfo_v(znum)%is_bounds   = .false.
 
-       if( allocated( ainfo_v(znum)%AXIS_1d ) ) deallocate( ainfo_v(znum)%AXIS_1d )
        ainfo_v(znum)%dim_size(1) = kmax_new
        allocate( ainfo_v(znum)%AXIS_1d(kmax_new) )
 
        do k = 1, kmax_new
           ainfo_v(znum)%AXIS_1d(k) = SNOPLGIN_vgridope_lev_data(k)
        enddo
+
+       ! copy original axis information
+       ainfo_v(2:naxis_v) = ainfo(:)
 
        allocate( LnPaxis(kmax_new) )
 
@@ -484,6 +489,10 @@ contains
     integer :: i, j, k, v
     !---------------------------------------------------------------------------
 
+    if ( debug ) then
+       LOG_INFO("SNOPLGIN_vgridope_alloc",*) 'Update vertical grid coefficient'
+    endif
+
     select case( trim(SNOPLGIN_vgridope_type) )
     case('PLEV')
 
@@ -644,6 +653,10 @@ contains
     integer  :: zaxis_orgsize
     integer  :: i, j, t
     !---------------------------------------------------------------------------
+
+    if ( debug ) then
+       LOG_INFO("SNOPLGIN_vgridope_alloc",*) 'Vertically interpolate a variable'
+    endif
 
     do_output = .false.
 
@@ -855,8 +868,8 @@ contains
                             nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                             nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
                             hinfo,                      & ! [IN] from SNO_file_getinfo
-                            size(ainfo_v(:)),           & ! [IN] from SNO_file_getinfo
-                            ainfo_v(:),                 & ! [IN] from SNO_axis_getinfo
+                            naxis_v,                    & ! [IN] from SNO_file_getinfo
+                            ainfo_v(1:naxis_v),         & ! [IN] from SNO_axis_getinfo
                             dinfo_v,                    & ! [IN] from SNO_vars_getinfo
                             debug                       ) ! [IN]
     endif
