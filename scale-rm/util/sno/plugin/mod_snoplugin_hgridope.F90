@@ -241,6 +241,8 @@ contains
     ainfo_ll(1)%dim_name(1) = 'lon'
     ainfo_ll(1)%transpose   = .false.
     ainfo_ll(1)%regrid      = .false.
+    ainfo_ll(1)%has_bounds  = .false.
+    ainfo_ll(1)%is_bounds   = .false.
 
     ainfo_ll(1)%dim_size(1) = int( ( SNOPLGIN_hgridope_lon_end - SNOPLGIN_hgridope_lon_start ) / SNOPLGIN_hgridope_dlon )
     allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
@@ -258,6 +260,8 @@ contains
     ainfo_ll(2)%dim_name(1) = 'lat'
     ainfo_ll(2)%transpose   = .false.
     ainfo_ll(2)%regrid      = .false.
+    ainfo_ll(2)%has_bounds  = .false.
+    ainfo_ll(2)%is_bounds   = .false.
 
     ainfo_ll(2)%dim_size(1) = int( ( SNOPLGIN_hgridope_lat_end - SNOPLGIN_hgridope_lat_start ) / SNOPLGIN_hgridope_dlat )
     allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
