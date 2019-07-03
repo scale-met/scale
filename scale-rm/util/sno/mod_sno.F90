@@ -372,7 +372,7 @@ contains
             'height','height_wxy','height_xyw','height_uyz','height_xvz','height_uvz','height_uyw','height_xvw','height_uvw' )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
-       case('time','time_bnds','grid','grid_ocean','grid_land','grid_urban','grid_pressure','grid_z','grid_model','grid_model_global')
+       case('grid','grid_ocean','grid_land','grid_urban','grid_pressure','grid_z','grid_model','grid_model_global')
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
@@ -427,23 +427,28 @@ contains
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case default
-          if ( nvars_req == 0 ) then
-             nvars           = nvars + 1
-             varname (nvars) = varname_file(n)
+          if( index( varname_file(n), 'time' ) > 0 ) then
+             ! do nothing
           else
-             do nn = 1, nvars_req
-                if ( varname_file(n) == vars(nn) ) then
-                   if ( exist(nn) ) then
-                      LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), &
-                                                     ' is requested two times. check namelist!'
-                      call PRC_abort
-                   endif
+             ! do nothing
+             if ( nvars_req == 0 ) then
+                nvars           = nvars + 1
+                varname (nvars) = varname_file(n)
+             else
+                do nn = 1, nvars_req
+                   if ( varname_file(n) == vars(nn) ) then
+                      if ( exist(nn) ) then
+                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), &
+                                                        ' is requested two times. check namelist!'
+                         call PRC_abort
+                      endif
 
-                   nvars          = nvars + 1
-                   varname(nvars) = varname_file(n)
-                   exist(nn)      = .true.
-                endif
-             enddo
+                      nvars          = nvars + 1
+                      varname(nvars) = varname_file(n)
+                      exist(nn)      = .true.
+                   endif
+                enddo
+             endif
           endif
        end select
 
