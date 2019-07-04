@@ -44,8 +44,8 @@ module mod_sno_comm
   private :: gather_nx
   private :: gather_ny
   ! 3D
-  private :: gather_zxy
-  private :: gather_xyz
+  private :: gather_nxy
+  private :: gather_xyn
 
   !-----------------------------------------------------------------------------
   !
@@ -618,7 +618,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -628,7 +628,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -652,7 +652,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -662,7 +662,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -686,7 +686,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -696,7 +696,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -720,7 +720,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -730,7 +730,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_zxy( ismaster,                   &
+                      call gather_nxy( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -759,7 +759,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -769,7 +769,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -793,7 +793,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -803,7 +803,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -827,7 +827,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -837,7 +837,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -861,7 +861,7 @@ contains
 
                    select case( ainfo_all(n)%datatype )
                    case( FILE_REAL4 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        SP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -871,7 +871,7 @@ contains
                                        ainfo(n)%AXIS_3d(:,:,:),    &
                                        ainfo_all(n)%AXIS_3d(:,:,:) )
                    case( FILE_REAL8 )
-                      call gather_xyz( ismaster,                   &
+                      call gather_xyn( ismaster,                   &
                                        DP,                         &
                                        nprocs_x_out,               &
                                        nprocs_y_out,               &
@@ -1069,7 +1069,7 @@ contains
 
              select case( dinfo_all%datatype )
              case( FILE_REAL4 )
-                call gather_zxy( ismaster,               &
+                call gather_nxy( ismaster,               &
                                  SP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
@@ -1079,7 +1079,7 @@ contains
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              case( FILE_REAL8 )
-                call gather_zxy( ismaster,               &
+                call gather_nxy( ismaster,               &
                                  DP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
@@ -1103,7 +1103,7 @@ contains
 
              select case( dinfo_all%datatype )
              case( FILE_REAL4 )
-                call gather_xyz( ismaster,               &
+                call gather_xyn( ismaster,               &
                                  SP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
@@ -1113,7 +1113,7 @@ contains
                                  dinfo%VAR_3d(:,:,:),    &
                                  dinfo_all%VAR_3d(:,:,:) )
              case( FILE_REAL8 )
-                call gather_xyz( ismaster,               &
+                call gather_xyn( ismaster,               &
                                  DP,                     &
                                  nprocs_x_out,           &
                                  nprocs_y_out,           &
@@ -1170,6 +1170,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
@@ -1200,6 +1201,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1207,7 +1210,7 @@ contains
        send_SP(:) = real( din(:), kind=SP )
 
        call MPI_GATHERV( send_SP(:),           &
-                         D1,                   &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1222,7 +1225,7 @@ contains
        send_DP(:) = real( din(:), kind=DP )
 
        call MPI_GATHERV( send_DP(:),           &
-                         D1,                   &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1241,7 +1244,7 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
+             iloc = sum( recvicnt(1:px-1) ) - ( 2 * L1 + M1 ) * ( px - 1 )
           endif
 
           select case( MPI_RP )
@@ -1303,6 +1306,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
@@ -1333,6 +1337,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1340,7 +1346,7 @@ contains
        send_SP(:) = real( din(:), kind=SP )
 
        call MPI_GATHERV( send_SP(:),           &
-                         D1,                   &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1355,7 +1361,7 @@ contains
        send_DP(:) = real( din(:), kind=DP )
 
        call MPI_GATHERV( send_DP(:),           &
-                         D1,                   &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1374,7 +1380,7 @@ contains
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) ) - 2 * L1 - M1
+             jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L1 + M1 ) * ( py - 1 )
           endif
 
           select case( MPI_RP )
@@ -1441,6 +1447,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
@@ -1477,6 +1484,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1 * D2
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1484,7 +1493,7 @@ contains
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1499,7 +1508,7 @@ contains
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1518,12 +1527,12 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
+             iloc = sum( recvicnt(1:px-1) ) - ( 2 * L1 + M1 ) * ( px - 1 )
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
+             jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
           select case( MPI_RP )
@@ -1593,6 +1602,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
@@ -1623,6 +1633,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1 * D2
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1630,7 +1642,7 @@ contains
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1645,7 +1657,7 @@ contains
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1664,7 +1676,7 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) ) - 2 * L2 - M2
+             iloc = sum( recvicnt(1:px-1) ) - ( 2 * L2 + M2 ) * ( px - 1 )
           endif
 
           select case( MPI_RP )
@@ -1734,6 +1746,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvjcnt(nprocs_y_out)
@@ -1764,6 +1777,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1 * D2
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1771,7 +1786,7 @@ contains
        send_SP(:,:) = real( din(:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1786,7 +1801,7 @@ contains
        send_DP(:,:) = real( din(:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:),         &
-                         D1 * D2,              &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1805,7 +1820,7 @@ contains
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
+             jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
           select case( MPI_RP )
@@ -1841,7 +1856,7 @@ contains
   end subroutine gather_ny
 
   !-----------------------------------------------------------------------------
-  subroutine gather_zxy( &
+  subroutine gather_nxy( &
        ismaster,       &
        MPI_RP,         &
        nprocs_x_out,   &
@@ -1880,6 +1895,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
@@ -1916,6 +1932,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1 * D2 * D3
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -1923,7 +1941,7 @@ contains
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -1938,7 +1956,7 @@ contains
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -1957,12 +1975,12 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) ) - 2 * L2 - M2
+             iloc = sum( recvicnt(1:px-1) ) - ( 2 * L2 + M2 ) * ( px - 1 )
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) ) - 2 * L3 - M3
+             jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L3 + M3 ) * ( py - 1 )
           endif
 
           select case( MPI_RP )
@@ -2001,10 +2019,10 @@ contains
     endif
 
     return
-  end subroutine gather_zxy
+  end subroutine gather_nxy
 
   !-----------------------------------------------------------------------------
-  subroutine gather_xyz( &
+  subroutine gather_xyn( &
        ismaster,       &
        MPI_RP,         &
        nprocs_x_out,   &
@@ -2043,6 +2061,7 @@ contains
     real(SP), allocatable :: recv_SP(:)
     real(DP), allocatable :: recv_DP(:)
 
+    integer  :: sendpcnt
     integer  :: recvpcnt(nprocs_x_out*nprocs_y_out)
     integer  :: recvploc(nprocs_x_out*nprocs_y_out)
     integer  :: recvicnt(nprocs_x_out)
@@ -2079,6 +2098,8 @@ contains
     enddo
     enddo
 
+    sendpcnt = D1 * D2 * D3
+
     select case( MPI_RP )
     case( SP )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
@@ -2086,7 +2107,7 @@ contains
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
 
        call MPI_GATHERV( send_SP(:,:,:),       &
-                         D1 * D2 * D3,         &
+                         sendpcnt,             &
                          MPI_REAL,             &
                          recv_SP (:),          &
                          recvpcnt(:),          &
@@ -2101,7 +2122,7 @@ contains
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
 
        call MPI_GATHERV( send_DP(:,:,:),       &
-                         D1 * D2 * D3,         &
+                         sendpcnt,             &
                          MPI_DOUBLE_PRECISION, &
                          recv_DP (:),          &
                          recvpcnt(:),          &
@@ -2120,12 +2141,12 @@ contains
           if ( px == 1 ) then
              iloc = 0
           else
-             iloc = sum( recvicnt(1:px-1) ) - 2 * L1 - M1
+             iloc = sum( recvicnt(1:px-1) ) - ( 2 * L1 + M1 ) * ( px - 1 )
           endif
           if ( py == 1 ) then
              jloc = 0
           else
-             jloc = sum( recvjcnt(1:py-1) ) - 2 * L2 - M2
+             jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
           select case( MPI_RP )
@@ -2164,6 +2185,6 @@ contains
     endif
 
     return
-  end subroutine gather_xyz
+  end subroutine gather_xyn
 
 end module mod_sno_comm
