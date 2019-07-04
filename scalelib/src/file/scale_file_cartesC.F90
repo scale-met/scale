@@ -177,13 +177,13 @@ module scale_file_cartesC
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
   ! global star and count
-  integer,  private :: startXY   (3), countXY   (3)
-  integer,  private :: startZX   (2), countZX   (2)
-  integer,  private :: startZXY  (4), countZXY  (4)
-  integer,  private :: startZHXY (4), countZHXY (4)
-  integer,  private :: startOCEAN(3), countOCEAN(3)
-  integer,  private :: startLAND (3), countLAND (3)
-  integer,  private :: startURBAN(3), countURBAN(3)
+  integer,  private, target :: startXY   (3), countXY   (3)
+  integer,  private, target :: startZX   (2), countZX   (2)
+  integer,  private, target :: startZXY  (4), countZXY  (4)
+  integer,  private, target :: startZHXY (4), countZHXY (4)
+  integer,  private, target :: startOCEAN(4), countOCEAN(4)
+  integer,  private, target :: startLAND (4), countLAND (4)
+  integer,  private, target :: startURBAN(4), countURBAN(4)
   ! local start and end
   integer,  private :: ISB2, IEB2, JSB2, JEB2 !> for FILE_AGGREGATE
 
@@ -1156,17 +1156,17 @@ contains
   !> Read 4D data from file
   subroutine FILE_CARTESC_read_4D( &
        basename, varname, &
-       dim_type,          &
+       dim_type, step,    &
        var,               &
-       step, aggregate    )
+       aggregate          )
     implicit none
     character(len=*), intent(in)  :: basename     !< basename of the file
     character(len=*), intent(in)  :: varname      !< name of the variable
     character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
-    integer,          intent(in), optional :: step         !< step number
     logical,          intent(in), optional :: aggregate
 
     integer :: fid
@@ -1176,9 +1176,8 @@ contains
                             fid,      & ! [OUT]
                             aggregate )
 
-    call FILE_CARTESC_read_var_4D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:,:,:),           & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_4D( fid, varname, dim_type, step, & ! [IN]
+                                   var(:,:,:,:)                  ) ! [OUT]
 
     call FILE_CARTESC_close( fid )
 
@@ -1211,6 +1210,7 @@ contains
 
     integer,          intent(in), optional :: step     !< step number
 
+    integer :: vsize
     integer :: dim1_S, dim1_E
     integer :: start(1)   ! start offset of globale variable
     integer :: count(1)   ! request length to the global variable
@@ -1225,75 +1225,91 @@ contains
     if ( FILE_get_aggregate(fid) ) then
        ! read data and halos into the local buffer
        if    ( dim_type == 'Z' ) then
+          vsize = KA
+          dim1_S = KS
+          dim1_E = KE
           start(1) = 1
-          count(1) = KMAX
-          call FILE_Read( fid, varname,                                      & ! (in)
-               var(KS:KE),                                                   & ! (out)
-               step=step, ntypes=KMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'OZ' ) then
+          vsize = OKA
+          dim1_S = OKS
+          dim1_E = OKE
           start(1) = 1
-          count(1) = OKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(OKS:OKE),                                                  & ! (out)
-               step=step, ntypes=OKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'LZ' ) then
+          vsize = LKA
+          dim1_S = LKS
+          dim1_E = LKE
           start(1) = 1
-          count(1) = LKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(LKS:LKE),                                                  & ! (out)
-               step=step, ntypes=LKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'UZ' ) then
+          vsize = UKA
+          dim1_S = UKS
+          dim1_E = UKE
           start(1) = 1
-          count(1) = UKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(UKS:UKE),                                                  & ! (out)
-               step=step, ntypes=UKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'X' .OR. dim_type == 'CX' ) then
+          vsize = IA
+          dim1_S = 1
+          dim1_E = IA
           start(1) = IS_inG - IHALO
-          count(1) = IA
-          call FILE_Read( fid, varname,                                    & ! (in)
-               var(:),                                                     & ! (out)
-               step=step, ntypes=IA, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'Y' .OR. dim_type == 'CY' ) then
+          vsize = JA
+          dim1_S = 1
+          dim1_E = JA
           start(1) = JS_inG - JHALO
-          count(1) = JA
-          call FILE_Read( fid, varname,                                    & ! (in)
-               var(:),                                                     & ! (out)
-               step=step, ntypes=JA, dtype=etype, start=start, count=count ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'Z' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-       elseif( dim_type == 'OZ' ) then
-          dim1_S   = 1
-          dim1_E   = OKMAX
-       elseif( dim_type == 'LZ' ) then
-          dim1_S   = 1
-          dim1_E   = LKMAX
-       elseif( dim_type == 'UZ' ) then
-          dim1_S   = 1
-          dim1_E   = UKMAX
-       elseif( dim_type == 'X' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-       elseif( dim_type == 'CX' ) then
-          dim1_S   = 1
-          dim1_E   = IA
-       elseif( dim_type == 'Y' ) then
-          dim1_S   = JSB
-          dim1_E   = JEB
-       elseif( dim_type == 'CY' ) then
-          dim1_S   = 1
-          dim1_E   = JA
        else
           LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       count(1) = dim1_E - dim1_S + 1
+       call FILE_Read( fid, varname,                                          & ! (in)
+            var(dim1_S:dim1_E),                                               & ! (out)
+            step=step, ntypes=count(1), dtype=etype, start=start, count=count ) ! (in)
+
+    else
+       if    ( dim_type == 'Z' ) then
+          vsize = KA
+          dim1_S = KS
+          dim1_E = KE
+       elseif( dim_type == 'OZ' ) then
+          vsize = OKA
+          dim1_S = OKS
+          dim1_E = OKE
+       elseif( dim_type == 'LZ' ) then
+          vsize = LKA
+          dim1_S = LKS
+          dim1_E = LKE
+       elseif( dim_type == 'UZ' ) then
+          vsize = UKA
+          dim1_S = UKS
+          dim1_E = UKE
+       elseif( dim_type == 'X' ) then
+          vsize = IA
+          dim1_S = ISB
+          dim1_E = IEB
+       elseif( dim_type == 'CX' ) then
+          vsize = IA
+          dim1_S = 1
+          dim1_E = IA
+       elseif( dim_type == 'Y' ) then
+          vsize = JA
+          dim1_S = JSB
+          dim1_E = JEB
+       elseif( dim_type == 'CY' ) then
+          vsize = JA
+          dim1_S = 1
+          dim1_E = JA
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E), step=step )
     endif
 
@@ -1324,6 +1340,9 @@ contains
 
     integer,          intent(in), optional :: step     !< step number
 
+    integer :: vsize
+    integer :: ntypes, dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     !---------------------------------------------------------------------------
@@ -1335,37 +1354,58 @@ contains
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
+
        ! read data and halos into the local buffer
        if    ( dim_type == 'XY' ) then
-          call FILE_Read( fid, varname,                                           & ! (in)
-               var(:,:),                                                          & ! (out)
-               step=step, ntypes=IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+          vsize = IA * JA
+          ntypes = IA * JA
+          dtype = etype
+          start => startXY
+          count => countXY
        elseif( dim_type == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FILE_Read( fid, varname,                                              & ! (in)
-               var(:,:),                                                             & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'XY' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-       elseif( dim_type == 'ZX' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
+          vsize = KA * IA
+          ntypes = 1
+          dtype = centerTypeZX
+          start => startZX
+          count => countZX
        else
           LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       call FILE_Read( fid, varname,                                        & ! (in)
+            var(:,:),                                                       & ! (out)
+            step=step, ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+
+       if    ( dim_type == 'XY' ) then
+          vsize = IA * JA
+          dim1_S = ISB
+          dim1_E = IEB
+          dim2_S = JSB
+          dim2_E = JEB
+       elseif( dim_type == 'ZX' ) then
+          vsize = KA * IA
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
     endif
 
@@ -1399,6 +1439,9 @@ contains
 
     integer,          intent(in), optional :: step       !< step number
 
+    integer :: vsize
+    integer :: ntypes, dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
@@ -1411,91 +1454,131 @@ contains
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
+
        ! read data and halos into the local buffer
        ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
        if(      dim_type == 'ZXY'  &
            .or. dim_type == 'ZXHY' &
            .or. dim_type == 'ZXYH' ) then
-          call FILE_Read( fid, varname,                                                 & ! (in)
-               var(:,:,:),                                                              & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+          vsize = KA * IA * JA
+          ntypes = 1
+          dtype = centerTypeZXY
+          start => startZXY
+          count => countZXY
        elseif( dim_type == 'ZHXY' ) then
-          call FILE_Read( fid, varname,                                                    & ! (in)
-               var(:,:,:),                                                                 & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
+          vsize = KA * IA * JA
+          ntypes = 1
+          dtype = centerTypeZHXY
+          start => startZHXY
+          count => countZHXY
        elseif( dim_type == 'XYT' ) then
+          if ( .not. present(step) ) then
+             LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'step is necessary for "XYT"'
+             call PRC_abort
+          end if
+          vsize = IA * JA * step
+          ntypes = IA * JA * step
+          dtype = etype
           startXY(3) = 1
           countXY(3) = step
-          call FILE_Read( fid, varname,                                                & ! (in)
-               var(:,:,:),                                                             & ! (out)
-               step=step, ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+          start => startXY
+          count => countXY
        elseif( dim_type == 'OXY' ) then
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:),                                                                    & ! (out)
-               step=step, ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN ) ! (in)
+          vsize = OKA * OIA * OJA
+          ntypes = 1
+          dtype = centerTypeOCEAN
+          start => startOCEAN
+          count => countOCEAN
        elseif( dim_type == 'LXY' ) then
-          call FILE_Read( fid, varname,                                                      & ! (in)
-               var(:,:,:),                                                                   & ! (out)
-               step=step, ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND ) ! (in)
+          vsize = LKA * LIA * LJA
+          ntypes = 1
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
        elseif( dim_type == 'UXY' ) then
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:),                                                                    & ! (out)
-               step=step, ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if(      dim_type == 'ZXY'  &
-           .or. dim_type == 'ZXHY' &
-           .or. dim_type == 'ZXYH' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'ZHXY' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'XYT' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-          dim3_S   = 1
-          dim3_E   = step
-       elseif( dim_type == 'OXY' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'LXY' ) then
-          dim1_S   = LKS
-          dim1_E   = LKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'UXY' ) then
-          dim1_S   = UKS
-          dim1_E   = UKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
+          vsize = UKA * UIA * UJA
+          ntypes = 1
+          dtype = centerTypeURBAN
+          start => startURBAN
+          count => countURBAN
        else
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       call FILE_Read( fid, varname,                                        & ! (in)
+            var(:,:,:),                                                     & ! (out)
+            step=step, ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+       if(      dim_type == 'ZXY'  &
+           .or. dim_type == 'ZXHY' &
+           .or. dim_type == 'ZXYH' ) then
+          vsize = KA * IA * JA
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'ZHXY' ) then
+          vsize = KA * IA * JA
+          dim1_S = KS-1
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'XYT' ) then
+          if ( .not. present(step) ) then
+             LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'step is necessary for "XYT"'
+             call PRC_abort
+          end if
+          vsize = IA * JA * step
+          dim1_S = ISB
+          dim1_E = IEB
+          dim2_S = JSB
+          dim2_E = JEB
+          dim3_S = 1
+          dim3_E = step
+       elseif( dim_type == 'OXY' ) then
+          vsize = OKA * OIA * OJA
+          dim1_S = OKS
+          dim1_E = OKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'LXY' ) then
+          vsize = LKA * LIA * LJA
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'UXY' ) then
+          vsize = UKA * UIA * UJA
+          dim1_S = UKS
+          dim1_E = UKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), step=step )
 
     endif
@@ -1510,8 +1593,8 @@ contains
   subroutine FILE_CARTESC_read_var_4D( &
        fid, varname, &
        dim_type,     &
-       var,          &
-       step          )
+       step,         &
+       var           )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1525,11 +1608,14 @@ contains
     integer,          intent(in)  :: fid          !< file ID
     character(len=*), intent(in)  :: varname      !< name of the variable
     character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
-    integer,          intent(in), optional :: step         !< step number
 
+    integer :: vsize
+    integer :: dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
@@ -1547,59 +1633,106 @@ contains
        if (      dim_type == 'ZXYT'  &
             .or. dim_type == 'ZXHYT' &
             .or. dim_type == 'ZXYHT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( fid, varname,                                                    & ! (in)
-               var(:,:,:,:),                                                               & ! (out)
-               step=step, ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+          vsize = KA * IA * JA * step
+          dtype = centerTypeZXY
+          start => startZXY
+          count => countZXY
        elseif ( dim_type == 'ZHXYT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:,:),                                                                  & ! (out)
-               step=step, ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if (      dim_type == 'ZXYT'  &
-            .or. dim_type == 'ZXHYT' &
-            .or. dim_type == 'ZXYHT' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
-       elseif ( dim_type == 'ZHXYT' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
+          vsize = KA * IA * JA * step
+          dtype = centerTypeZHXY
+          start => startZHXY
+          count => countZHXY
        elseif ( dim_type == 'OXYT' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
+          vsize = OKA * OIA * OJA * step
+          dtype = centerTypeOCEAN
+          start => startOCEAN
+          count => countOCEAN
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
+       elseif ( dim_type == 'UXYT' ) then
+          vsize = UKA * UIA * UJA * step
+          dtype = centerTypeURBAN
+          start => startURBAN
+          count => countURBAN
        else
           LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
-       call FILE_Read( fid, varname,                                      & ! (in)
-            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), & ! (out)
-            step=step                                                     ) ! (in)
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       start(4) = 1
+       count(4) = step
+       call FILE_Read( fid, varname,                           & ! (in)
+            var(:,:,:,:),                                      & ! (out)
+            ntypes=step, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+       if (      dim_type == 'ZXYT'  &
+            .or. dim_type == 'ZXHYT' &
+            .or. dim_type == 'ZXYHT' ) then
+          vsize = KA * IA * JA * step
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'ZHXYT' ) then
+          vsize = KA * IA * JA * step
+          dim1_S = KS-1
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'OXYT' ) then
+          vsize = OKA * OIA * OJA * step
+          dim1_S = OKS
+          dim1_E = OKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'OXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       dim4_S   = 1
+       dim4_E   = step
+       call FILE_Read( fid, varname,                                     & ! (in)
+            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
     endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -4584,7 +4717,7 @@ contains
     ! for dim_type == 'ZX'
     startZX(1)  = KHALO+1
     startZX(2)  = IS_inG - IHALO
-    countZX(1)  = KHALO
+    countZX(1)  = KMAX
     countZX(2)  = IA
     ! construct MPI subarray data type
     sizes(1)    = KA

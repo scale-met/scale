@@ -2293,7 +2293,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, <%=d%>
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do

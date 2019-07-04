@@ -64,21 +64,22 @@ contains
     use scale_calendar, only: &
        CALENDAR_unit2sec
     use scale_file_external_input, only: &
-       FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     implicit none
 
-    real(DP)               :: OCEAN_PHY_ICE_nudging_tau                                      = 0.0_DP  ! Relaxation time
-    character(len=H_SHORT) :: OCEAN_PHY_ICE_nudging_tau_unit                                 = "SEC"
-    character(len=H_LONG)  :: OCEAN_PHY_ICE_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_year                     = .false.
-    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_month                    = .false.
-    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_day                      = .false.
-    integer                :: OCEAN_PHY_ICE_nudging_step_fixed                               = 0
-    real(RP)               :: OCEAN_PHY_ICE_nudging_offset                                   = 0.0_RP
-    real(RP)               :: OCEAN_PHY_ICE_nudging_defval                                  != UNDEF
-    logical                :: OCEAN_PHY_ICE_nudging_check_coordinates                        = .true.
-    integer                :: OCEAN_PHY_ICE_nudging_step_limit                               = 0
+    real(DP)               :: OCEAN_PHY_ICE_nudging_tau                   = 0.0_DP  ! Relaxation time
+    character(len=H_SHORT) :: OCEAN_PHY_ICE_nudging_tau_unit              = "SEC"
+    character(len=H_LONG)  :: OCEAN_PHY_ICE_nudging_basename              = ''
+    logical                :: OCEAN_PHY_ICE_nudging_basename_add_num      = .false.
+    integer                :: OCEAN_PHY_ICE_nudging_number_of_files       = 1
+    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_year  = .false.
+    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_month = .false.
+    logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_day   = .false.
+    integer                :: OCEAN_PHY_ICE_nudging_step_fixed            = 0
+    real(RP)               :: OCEAN_PHY_ICE_nudging_offset                = 0.0_RP
+    real(RP)               :: OCEAN_PHY_ICE_nudging_defval                != UNDEF
+    logical                :: OCEAN_PHY_ICE_nudging_check_coordinates     = .true.
+    integer                :: OCEAN_PHY_ICE_nudging_step_limit            = 0
 
     namelist / PARAM_OCEAN_PHY_ICE / &
        OCEAN_PHY_ICE_density,                       &
@@ -90,6 +91,8 @@ contains
 !        OCEAN_PHY_ICE_nudging_tau,                   &
 !        OCEAN_PHY_ICE_nudging_tau_unit,              &
 !        OCEAN_PHY_ICE_nudging_basename,              &
+!        OCEAN_PHY_ICE_nudging_basename_add_num,      &
+!        OCEAN_PHY_ICE_nudging_number_of_files,       &
 !        OCEAN_PHY_ICE_nudging_enable_periodic_year,  &
 !        OCEAN_PHY_ICE_nudging_enable_periodic_month, &
 !        OCEAN_PHY_ICE_nudging_enable_periodic_day,   &
@@ -131,7 +134,7 @@ contains
           LOG_INFO("OCEAN_PHY_ICE_setup",*) 'Tau=0 means that sea ice is completely replaced by the external data.'
        endif
 
-       if ( OCEAN_PHY_ICE_nudging_basename(1) == '' ) then
+       if ( OCEAN_PHY_ICE_nudging_basename == '' ) then
           LOG_ERROR("OCEAN_PHY_ICE_setup",*) 'OCEAN_PHY_ICE_nudging_basename is necessary. STOP'
           call PRC_abort
        endif
@@ -140,7 +143,9 @@ contains
     endif
 
     if ( OCEAN_PHY_ICE_nudging ) then
-       call FILE_EXTERNAL_INPUT_regist( OCEAN_PHY_ICE_nudging_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( OCEAN_PHY_ICE_nudging_basename,              & ! [IN]
+                                        OCEAN_PHY_ICE_nudging_basename_add_num,      & ! [IN]
+                                        OCEAN_PHY_ICE_nudging_number_of_files,       & ! [IN]
                                         'OCEAN_ICE_FRAC',                            & ! [IN]
                                         'XY',                                        & ! [IN]
                                         OCEAN_PHY_ICE_nudging_enable_periodic_year,  & ! [IN]
@@ -149,8 +154,8 @@ contains
                                         OCEAN_PHY_ICE_nudging_step_fixed,            & ! [IN]
                                         OCEAN_PHY_ICE_nudging_offset,                & ! [IN]
                                         OCEAN_PHY_ICE_nudging_defval,                & ! [IN]
-                                        OCEAN_PHY_ICE_nudging_check_coordinates,     & ! [IN]
-                                        OCEAN_PHY_ICE_nudging_step_limit             ) ! [IN]
+                                        check_coordinates = OCEAN_PHY_ICE_nudging_check_coordinates, & ! [IN]
+                                        step_limit = OCEAN_PHY_ICE_nudging_step_limit                ) ! [IN]
     endif
 
     return
