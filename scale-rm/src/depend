@@ -26,7 +26,8 @@ $(BUILD_DIR)/mod_atmos_vars.o: atmos/mod_atmos_vars.F90 $(DEPENDLIB) $(BUILD_DIR
 $(BUILD_DIR)/mod_cnv2d.o: preprocess/mod_cnv2d.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cnvlanduse.o: preprocess/mod_cnvlanduse.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cnvtopo.o: preprocess/mod_cnvtopo.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_copytopo.o
-$(BUILD_DIR)/mod_convert.o: preprocess/mod_convert.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnv2d.o $(BUILD_DIR)/mod_cnvlanduse.o $(BUILD_DIR)/mod_cnvtopo.o
+$(BUILD_DIR)/mod_cnvuser.o: preprocess/mod_cnvuser.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnv2d.o
+$(BUILD_DIR)/mod_convert.o: preprocess/mod_convert.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnvlanduse.o $(BUILD_DIR)/mod_cnvtopo.o $(BUILD_DIR)/mod_cnvuser.o
 $(BUILD_DIR)/mod_copytopo.o: preprocess/mod_copytopo.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cpl_admin.o: coupler/mod_cpl_admin.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_land_admin.o $(BUILD_DIR)/mod_ocean_admin.o $(BUILD_DIR)/mod_urban_admin.o
 $(BUILD_DIR)/mod_cpl_driver.o: coupler/mod_cpl_driver.F90 $(DEPENDLIB)
@@ -81,6 +82,7 @@ MODS =	\
 	mod_cnv2d.mod	\
 	mod_cnvlanduse.mod	\
 	mod_cnvtopo.mod	\
+	mod_cnvuser.mod	\
 	mod_convert.mod	\
 	mod_copytopo.mod	\
 	mod_cpl_admin.mod	\

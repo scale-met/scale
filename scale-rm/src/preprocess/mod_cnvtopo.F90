@@ -339,7 +339,8 @@ contains
        LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON   => ATMOS_GRID_CARTESC_REAL_LON
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_interp, only: &
        INTERP_factor2d_linear_latlon, &
@@ -373,8 +374,6 @@ contains
     real(RP)              :: TILE_DLAT, TILE_DLON
 
     real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
     real(RP), allocatable :: LATH_1d(:)
     real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
@@ -423,9 +422,20 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
                                  nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,           & ! [IN]
+                                   GLOBAL_IA,              & ! [IN]
+                                   TILE_nmax,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,   & ! [IN]
+                                   TILE_hit(:),            & ! [IN]
+                                   TILE_JS(:), TILE_JE(:), & ! [IN]
+                                   TILE_IS(:), TILE_IE(:), & ! [IN]
+                                   jsh, jeh, ish, ieh,     & ! [IN]
+                                   LATH_1d(:), LONH_1d(:)  ) ! [OUT]
+
     allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  GTOPO30_IN_DIR,                                 & ! [IN]
@@ -436,20 +446,13 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "INT2",                                         & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
+                                 HEIGHT(:,:),                                    & ! [OUT]
                                  min_value = -9000.0_RP, yrevers = .true.        ) ! [IN]
 
     ! interporation
     allocate( idx_i(IA,JA,4) )
     allocate( idx_j(IA,JA,4) )
     allocate( hfact(IA,JA,4) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-                        LONH(:,:), LATH(:,:),  & ! [IN]
-                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
 
     call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
                                         IA, JA,                     & ! [IN]
@@ -467,7 +470,7 @@ contains
                           Zsfc(:,:)                   ) ! [OUT]
 
 
-    deallocate( HEIGHT, LATH, LONH )
+    deallocate( HEIGHT )
     deallocate( LATH_1d, LONH_1d )
     deallocate( idx_j, idx_i, hfact )
 
@@ -507,7 +510,8 @@ contains
        LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON   => ATMOS_GRID_CARTESC_REAL_LON
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_interp, only: &
        INTERP_factor2d_linear_latlon, &
@@ -540,8 +544,6 @@ contains
     real(RP)              :: TILE_DLAT, TILE_DLON
 
     real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
     real(RP), allocatable :: LATH_1d(:)
     real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
@@ -592,9 +594,20 @@ contains
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
 
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,           & ! [IN]
+                                   GLOBAL_IA,              & ! [IN]
+                                   TILE_nmax,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,   & ! [IN]
+                                   TILE_hit(:),            & ! [IN]
+                                   TILE_JS(:), TILE_JE(:), & ! [IN]
+                                   TILE_IS(:), TILE_IE(:), & ! [IN]
+                                   jsh, jeh, ish, ieh,     & ! [IN]
+                                   LATH_1d(:), LONH_1d(:)  ) ! [OUT]
+
     allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  DEM50M_IN_DIR,                                  & ! [IN]
@@ -605,20 +618,13 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "REAL4",                                        & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
+                                 HEIGHT(:,:),                                    & ! [OUT]
                                  min_value = -900.0_RP                           ) ! [IN]
 
     ! interporation
     allocate( idx_i(IA,JA,4) )
     allocate( idx_j(IA,JA,4) )
     allocate( hfact(IA,JA,4) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-                        LONH(:,:), LATH(:,:),  & ! [IN]
-                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
 
     call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
                                         IA, JA,                     & ! [IN]
@@ -636,7 +642,7 @@ contains
                           Zsfc(:,:)                   ) ! [OUT]
 
 
-    deallocate( HEIGHT, LATH, LONH )
+    deallocate( HEIGHT )
     deallocate( LATH_1d, LONH_1d )
     deallocate( idx_j, idx_i, hfact )
 
@@ -666,7 +672,8 @@ contains
        LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON   => ATMOS_GRID_CARTESC_REAL_LON
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_interp, only: &
        INTERP_factor2d, &
@@ -714,11 +721,10 @@ contains
     real(RP)              :: TILE_DLAT, TILE_DLON
 
     real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
     real(RP), allocatable :: LATH_1d(:)
     real(RP), allocatable :: LONH_1d(:)
     integer               :: nLONH, nLATH
+    real(RP)              :: dummy(1,1)
 
     integer  :: GLOBAL_IA
 
@@ -816,9 +822,20 @@ contains
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
 
+    allocate( LATH_1d(nLATH) )
+    allocate( LONH_1d(nLONH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,           & ! [IN]
+                                   GLOBAL_IA,              & ! [IN]
+                                   TILE_nmax,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,   & ! [IN]
+                                   TILE_hit(:),            & ! [IN]
+                                   TILE_JS(:), TILE_JE(:), & ! [IN]
+                                   TILE_IS(:), TILE_IE(:), & ! [IN]
+                                   jsh, jeh, ish, ieh,     & ! [IN]
+                                   LATH_1d(:), LONH_1d(:)  ) ! [OUT]
+
     allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  USERFILE_IN_DIR,                                & ! [IN]
@@ -829,7 +846,7 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  USERFILE_IN_DATATYPE,                           & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
+                                 HEIGHT(:,:),                                    & ! [OUT]
                                  min_value = 0.0_RP, yrevers = yrevers           ) ! [IN]
 
     if ( CNVTOPO_linear_interp ) then
@@ -841,13 +858,6 @@ contains
     allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
     allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
     allocate( hfact(IA,JA,CNVTOPO_interp_level) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-         LONH(:,:), LATH(:,:),  & ! [IN]
-         LONH_1d(:), LATH_1d(:) ) ! [OUT]
 
     if ( CNVTOPO_linear_interp ) then
 
@@ -866,7 +876,7 @@ contains
        call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
                              nLONH, nLATH,               & ! [IN]
                              IA, JA,                     & ! [IN]
-                             LONH(:,:), LATH(:,:),       & ! [IN]
+                             dummy(:,:), dummy(:,:),     & ! [IN]
                              LON(:,:), LAT(:,:),         & ! [IN]
                              idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
                              hfact(:,:,:),               & ! [OUT]
@@ -885,7 +895,7 @@ contains
                           HEIGHT(:,:),                & ! [IN]
                           Zsfc(:,:)                   ) ! [OUT]
 
-    deallocate( HEIGHT, LATH, LONH )
+    deallocate( HEIGHT )
     deallocate( idx_j, idx_i, hfact )
 
     !$omp parallel do
@@ -1178,82 +1188,6 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
-
-  subroutine get_latlon_1d( &
-       IA, JA, &
-       LON, LAT, &
-       LON_1d, LAT_1d )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    implicit none
-    integer,  intent(in) :: IA, JA
-    real(RP), intent(in) :: LON(IA,JA)
-    real(RP), intent(in) :: LAT(IA,JA)
-
-    real(RP), intent(out) :: LON_1d(IA)
-    real(RP), intent(out) :: LAT_1d(JA)
-
-    real(RP) :: lon_min, lon_max
-    real(RP) :: lat_min, lat_max
-    real(RP) :: dlon, dlat
-    integer :: is, ie, js, je
-    integer :: i, j
-
-    LON_1d(:) = UNDEF
-    lon_min   = UNDEF
-
-    do i = 1, IA
-       do j = 1, JA
-          if ( LON(i,j) .ne. UNDEF ) then
-             LON_1d(i) = LON(i,j)
-             exit
-          end if
-       end do
-       if ( lon_min == UNDEF .and. LON_1d(i) .ne. UNDEF ) then
-          lon_min = LON_1d(i)
-          is = i
-       endif
-       if ( lon_min .ne. UNDEF ) then
-          if ( LON_1d(i) .ne. UNDEF ) then
-             lon_max = LON_1d(i)
-             ie = i
-          end if
-       end if
-    end do
-
-    LAT_1d(:) = UNDEF
-    lat_min   = UNDEF
-    do j = 1, JA
-       do i = 1, IA
-          if ( LAT(i,j) .ne. UNDEF ) then
-             LAT_1d(j) = LAT(i,j)
-             exit
-          end if
-       end do
-       if ( lat_min == UNDEF .and. LAT_1d(j) .ne. UNDEF ) then
-          lat_min = LAT_1d(j)
-          js = j
-       endif
-       if ( lat_min .ne. UNDEF ) then
-          if ( LAT_1d(j) .ne. UNDEF ) then
-             lat_max = LAT_1d(j)
-             je = j
-          end if
-       end if
-    end do
-
-    ! fill undef
-    dlon = ( lon_max - lon_min ) / ( ie - is )
-    do i = 1, IA
-       if ( LON_1d(i) == UNDEF ) LON_1d(i) = lon_min + dlon * ( i - is )
-    end do
-    dlat = ( lat_max - lat_min ) / ( je - js )
-    do j = 1, JA
-       if ( LAT_1d(j) == UNDEF ) LAT_1d(j) = lat_min + dlat * ( j - js )
-    end do
-
-    return
-  end subroutine get_latlon_1d
 
 
 end module mod_cnvtopo

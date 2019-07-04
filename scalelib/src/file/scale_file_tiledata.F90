@@ -24,6 +24,7 @@ module scale_file_tiledata
   !++ Public procedure
   !
   public FILE_TILEDATA_get_info
+  public FILE_TILEDATA_get_latlon
   public FILE_TILEDATA_get_data
 
   interface FILE_TILEDATA_get_data
@@ -166,8 +167,66 @@ contains
 
   !-----------------------------------------------------------------------------
   !> get tile data
+  subroutine FILE_TILEDATA_get_latlon( &
+       nLAT, nLON,           &
+       GLOBAL_IA,            &
+       TILE_nmax,            &
+       TILE_DLAT, TILE_DLON, &
+       TILE_hit,             &
+       TILE_JS, TILE_JE,     &
+       TILE_IS, TILE_IE,     &
+       jsh, jeh, ish, ieh,   &
+       LAT, LON              )
+    implicit none
+    integer,  intent(in)  :: nLAT, nLON
+    integer,  intent(in)  :: GLOBAL_IA
+    integer,  intent(in)  :: TILE_nmax
+    real(RP), intent(in)  :: TILE_DLAT, TILE_DLON
+    logical,  intent(in)  :: TILE_hit(:)
+    integer,  intent(in)  :: TILE_JS(:)
+    integer,  intent(in)  :: TILE_JE(:)
+    integer,  intent(in)  :: TILE_IS(:)
+    integer,  intent(in)  :: TILE_IE(:)
+    integer,  intent(in)  :: jsh, jeh
+    integer,  intent(in)  :: ish, ieh
+    real(RP), intent(out) :: LAT(nLAT)
+    real(RP), intent(out) :: LON(nLON)
+
+    real(RP) :: lat_min, lon_min
+    integer :: i, j, t
+
+
+    lat_min = 1E10_RP
+    lon_min = 1E10_RP
+    do t = 1, TILE_nmax
+       if ( .not. TILE_hit(t) ) cycle
+
+       j = max( jsh, TILE_JS(t) )
+       lat_min = min( lat_min, TILE_DLAT * ( j + 0.5_RP ) )
+
+       if ( TILE_IS(t) > ieh ) then
+          i = max( ish, TILE_IS(t) - GLOBAL_IA )
+       else
+          i = max( ish, TILE_IS(t) )
+       end if
+       lon_min = min( lon_min, TILE_DLON * ( i + 0.5_RP ) )
+
+    enddo ! tile loop
+
+    do j = 1, nLAT
+       LAT(j) = lat_min + TILE_DLAT * ( j - 1 )
+    end do
+    do i = 1, nLON
+       LON(i) = lon_min + TILE_DLON * ( i - 1 )
+    end do
+
+    return
+  end subroutine FILE_TILEDATA_get_latlon
+
+  !-----------------------------------------------------------------------------
+  !> get tile data
   subroutine FILE_TILEDATA_get_data_real( &
-       nLATH, nLONH,         &
+       nLAT, nLON,           &
        dirname,              &
        GLOBAL_IA,            &
        TILE_nmax,            &
@@ -177,22 +236,21 @@ contains
        TILE_IS, TILE_IE,     &
        jsh, jeh, ish, ieh,   &
        data_type,            &
-       DATA, LATH, LONH,     &
+       DATA,                 &
        min_value,            &
-       yrevers               )
+       yrevers,              &
+       step                  )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        PI    => CONST_PI, &
        D2R   => CONST_D2R
     use scale_prc, only: &
        PRC_abort
-    integer,          intent(in)  :: nLATH
-    integer,          intent(in)  :: nLONH
+    integer,          intent(in)  :: nLAT, nLON
     character(len=*), intent(in)  :: dirname
     integer,          intent(in)  :: GLOBAL_IA
     integer,          intent(in)  :: TILE_nmax
-    real(RP),         intent(in)  :: TILE_DLAT
-    real(RP),         intent(in)  :: TILE_DLON
+    real(RP),         intent(in)  :: TILE_DLAT, TILE_DLON
     character(len=*), intent(in)  :: TILE_fname(:)
     logical,          intent(in)  :: TILE_hit(:)
     integer,          intent(in)  :: TILE_JS(:)
@@ -204,24 +262,25 @@ contains
     integer,          intent(in)  :: ish
     integer,          intent(in)  :: ieh
     character(len=*), intent(in)  :: data_type
-    real(RP),         intent(out) :: DATA(nLONH,nLATH)
-    real(RP),         intent(out) :: LATH(nLONH,nLATH)
-    real(RP),         intent(out) :: LONH(nLONH,nLATH)
+    real(RP),         intent(out) :: DATA(nLON,nLAT)
     real(RP),         intent(in), optional :: min_value
     logical,          intent(in), optional :: yrevers
+    integer,          intent(in), optional :: step
 
     abstract interface
        subroutine rd( &
             jsize, isize, &
             fname,        &
             TILE_DATA,    &
-            yrevers       )
+            yrevers,      &
+            step          )
          use scale_precision
          integer,          intent(in)  :: jsize
          integer,          intent(in)  :: isize
          character(len=*), intent(in)  :: fname
          real(RP),         intent(out) :: TILE_DATA(isize,jsize)
-         logical, intent(in), optional :: yrevers
+         logical,          intent(in), optional :: yrevers
+         integer,          intent(in), optional  :: step
        end subroutine rd
     end interface
 
@@ -256,11 +315,9 @@ contains
 
     !$omp parallel do
 !OCL XFILL
-    do j = 1, nLATH
-    do i = 1, nLONH
+    do j = 1, nLAT
+    do i = 1, nLON
        DATA(i,j) = UNDEF
-       LATH(i,j) = UNDEF
-       LONH(i,j) = UNDEF
     end do
     end do
 
@@ -279,10 +336,11 @@ contains
 
        allocate( TILE_DATA(isize,jsize) )
 
-       call read_data( jsize, isize,     & ! [IN]
-                       fname,            & ! [IN]
-                       TILE_DATA(:,:),   & ! [OUT]
-                       yrevers = yrevers ) ! [IN]
+       call read_data( jsize, isize,      & ! [IN]
+                       fname,             & ! [IN]
+                       TILE_DATA(:,:),    & ! [OUT]
+                       yrevers = yrevers, & ! [IN]
+                       step = step        ) ! [IN]
 
        !$omp parallel do &
        !$omp private(i,j)
@@ -297,8 +355,6 @@ contains
                    else
                       DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                    end if
-                   LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                   LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
                 end if
                 i = i - GLOBAL_IA
                 if ( ish <= i .and. i <= ieh ) then
@@ -307,8 +363,6 @@ contains
                    else
                       DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                    end if
-                   LATH(i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                   LONH(i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
                 end if
              end do
           end if
@@ -322,7 +376,7 @@ contains
   end subroutine FILE_TILEDATA_get_data_real
 
   subroutine FILE_TILEDATA_get_data_int1( &
-       nLATH, nLONH,         &
+       nLAT, nLON,           &
        dirname,              &
        GLOBAL_IA,            &
        TILE_nmax,            &
@@ -332,9 +386,10 @@ contains
        TILE_IS, TILE_IE,     &
        jsh, jeh, ish, ieh,   &
        data_type,            &
-       DATA, LATH, LONH,     &
+       DATA,                 &
        min_value,            &
-       yrevers               )
+       yrevers,              &
+       step                  )
     use scale_const, only: &
        UNDEF  => CONST_UNDEF, &
        UNDEF2 => CONST_UNDEF2, &
@@ -342,13 +397,11 @@ contains
        D2R   => CONST_D2R
     use scale_prc, only: &
        PRC_abort
-    integer,          intent(in)  :: nLATH
-    integer,          intent(in)  :: nLONH
+    integer,          intent(in)  :: nLAT, nLON
     character(len=*), intent(in)  :: dirname
     integer,          intent(in)  :: GLOBAL_IA
     integer,          intent(in)  :: TILE_nmax
-    real(RP),         intent(in)  :: TILE_DLAT
-    real(RP),         intent(in)  :: TILE_DLON
+    real(RP),         intent(in)  :: TILE_DLAT, TILE_DLON
     character(len=*), intent(in)  :: TILE_fname(:)
     logical,          intent(in)  :: TILE_hit(:)
     integer,          intent(in)  :: TILE_JS(:)
@@ -360,25 +413,26 @@ contains
     integer,          intent(in)  :: ish
     integer,          intent(in)  :: ieh
     character(len=*), intent(in)  :: data_type
-    integer,          intent(out) :: DATA(nLONH,nLATH)
-    real(RP),         intent(out) :: LATH(nLONH,nLATH)
-    real(RP),         intent(out) :: LONH(nLONH,nLATH)
+    integer,          intent(out) :: DATA(nLON,nLAT)
 
     integer,          intent(in), optional :: min_value
     logical,          intent(in), optional :: yrevers
+    integer,          intent(in), optional :: step
 
     abstract interface
        subroutine rd( &
             jsize, isize, &
-            fname, &
-            TILE_DATA, &
-            yrevers      )
+            fname,        &
+            TILE_DATA,    &
+            yrevers,      &
+            step          )
          use scale_precision
          integer,          intent(in)  :: jsize
          integer,          intent(in)  :: isize
          character(len=*), intent(in)  :: fname
          integer,          intent(out) :: TILE_DATA(isize,jsize)
-         logical, intent(in), optional :: yrevers
+         logical,          intent(in), optional :: yrevers
+         integer,          intent(in), optional :: step
        end subroutine rd
     end interface
 
@@ -413,11 +467,9 @@ contains
 
     !$omp parallel do
 !OCL XFILL
-    do j = 1, nLATH
-    do i = 1, nLONH
+    do j = 1, nLAT
+    do i = 1, nLON
        DATA(i,j) = - 1
-       LATH(i,j) = UNDEF
-       LONH(i,j) = UNDEF
     end do
     end do
 
@@ -436,10 +488,11 @@ contains
 
        allocate( TILE_DATA(isize,jsize) )
 
-       call read_data( jsize, isize,     & ! [IN]
-                       fname,            & ! [IN]
-                       TILE_DATA(:,:), & ! [OUT]
-                       yrevers = yrevers ) ! [IN]
+       call read_data( jsize, isize,      & ! [IN]
+                       fname,             & ! [IN]
+                       TILE_DATA(:,:),    & ! [OUT]
+                       yrevers = yrevers, & ! [IN]
+                       step = step        ) ! [IN]
 
        !$omp parallel do &
        !$omp private(i,j)
@@ -454,8 +507,6 @@ contains
                    else
                       DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                    end if
-                   LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                   LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP )
                 end if
                 i = i - GLOBAL_IA
                 if ( ish <= i .and. i <= ieh ) then
@@ -464,8 +515,6 @@ contains
                    else
                       DATA(i-ish+1,j-jsh+1) = TILE_DATA(ii,jj)
                    end if
-                   LATH  (i-ish+1,j-jsh+1) = TILE_DLAT * ( TILE_JS(t) + jj - 1 + 0.5_RP )
-                   LONH  (i-ish+1,j-jsh+1) = TILE_DLON * ( TILE_IS(t) + ii - 1 + 0.5_RP ) - 2.0 * PI
                 end if
              end do
           end if
@@ -590,7 +639,7 @@ contains
        TILE_JS, TILE_JE,     &
        TILE_IS, TILE_IE,     &
        jsh, jeh, ish, ieh,   &
-       nLATH, nLONH          )
+       nLAT, nLON            )
     use scale_const, only: &
        PI => CONST_PI
     integer,  intent(in)  :: TILE_nmax
@@ -602,7 +651,7 @@ contains
     logical,  intent(out) :: TILE_hit(:)
     integer,  intent(out) :: TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:)
     integer,  intent(out) :: jsh, jeh, ish, ieh
-    integer,  intent(out) :: nLATH, nLONH
+    integer,  intent(out) :: nLAT, nLON
 
     logical :: hit_lat, hit_lon
     integer :: nhalo
@@ -626,11 +675,11 @@ contains
        TILE_IS(t) = nint( TILE_LONS(t) / TILE_DLON )
        TILE_IE(t) = nint( TILE_LONE(t) / TILE_DLON ) - 1
 
-       do while ( TILE_IE(t) < DOMAIN_IS )
+       do while ( TILE_IE(t) < ish )
           TILE_IS(t) = TILE_IS(t) + GLOBAL_IA
           TILE_IE(t) = TILE_IE(t) + GLOBAL_IA
        end do
-       do while ( TILE_IS(t) - DOMAIN_IS >= GLOBAL_IA )
+       do while ( TILE_IS(t) - ish >= GLOBAL_IA )
           TILE_IS(t) = TILE_IS(t) - GLOBAL_IA
           TILE_IE(t) = TILE_IE(t) - GLOBAL_IA
        end do
@@ -659,22 +708,22 @@ contains
     if ( zonal ) then
        ish = minval(TILE_IS(1:TILE_nmax))
        ieh = maxval(TILE_IE(1:TILE_nmax))
-       jsh = min( jsh, minval(TILE_JS(1:TILE_nmax)) )
-       jeh = max( jeh, maxval(TILE_JE(1:TILE_nmax)) )
+       jsh = max( jsh, minval(TILE_JS(1:TILE_nmax)) )
+       jeh = min( jeh, maxval(TILE_JE(1:TILE_nmax)) )
     end if
 
-    nLONH = ieh - ish + 1
-    nLATH = jeh - jsh + 1
-
+    nLON = ieh - ish + 1
+    nLAT = jeh - jsh + 1
 
     return
   end subroutine FILE_TILEDATA_get_tile_info
 
   subroutine FILE_TILEDATA_read_data_int2_real( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -683,11 +732,14 @@ contains
     real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     integer(2) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -696,22 +748,33 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*2, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int2_real",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*2, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_int2_real",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -736,9 +799,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_int4_real( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -747,11 +811,14 @@ contains
     real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     integer(4) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -760,22 +827,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*4, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int4_real",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*4, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_int4_real",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       end if
     endif
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -800,9 +877,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_real4_real( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -811,11 +889,14 @@ contains
     real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     real(4) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -824,22 +905,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*4, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real4_real",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*4, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_real4_real",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -864,9 +955,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_real8_real( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -875,11 +967,14 @@ contains
     real(RP),         intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     real(8) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -888,22 +983,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*8, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real8_real",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*8, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_real8_real",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -928,9 +1033,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_int1_int( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -939,11 +1045,14 @@ contains
     integer,          intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     integer(1) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -952,22 +1061,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*1, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int1_int",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*1, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_int1_int",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -992,9 +1111,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_int2_int( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -1003,11 +1123,14 @@ contains
     integer,          intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     integer(2) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -1016,22 +1139,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*2, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int2_int",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*2, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_int2_int",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -1056,9 +1189,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_int4_int( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -1067,11 +1201,14 @@ contains
     integer,          intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     integer(4) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -1080,22 +1217,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*4, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_int4_int",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*4, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_int4_int",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do
@@ -1120,9 +1267,10 @@ contains
 
   subroutine FILE_TILEDATA_read_data_real4_int( &
        jsize, isize, &
-       fname, &
-       TILE_DATA, &
-       yrevers      )
+       fname,        &
+       TILE_DATA,    &
+       yrevers,      &
+       step          )
     use scale_prc, only: &
        PRC_abort
     integer,          intent(in)  :: jsize
@@ -1131,11 +1279,14 @@ contains
     integer,          intent(out) :: TILE_DATA(isize,jsize)
 
     logical, intent(in), optional :: yrevers
+    integer, intent(in), optional :: step
 
     real(4) :: buf(isize,jsize)
 
     integer :: fid, ierr
     logical :: yrevers_
+    logical :: lstep
+    integer :: step_
     integer :: i, j
 
     if ( present(yrevers) ) then
@@ -1144,22 +1295,32 @@ contains
        yrevers_ = .false.
     end if
 
-    fid = IO_get_available_fid()
-    open( fid,                    &
-          file   = fname,         &
-          form   = 'unformatted', &
-          access = 'direct',      &
-          status = 'old',         &
-          recl   = isize*jsize*4, &
-          iostat = ierr            )
+    lstep = present(step)
+    if ( lstep ) then
+       step_ = step
+       inquire( file = fname, number = fid )
+    else
+       step_ = 1
+       fid = -1
+    end if
 
-    if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_data_real4_int",*) 'data file not found!: ', trim(fname)
-       call PRC_abort
-    endif
+    if ( fid < 0 ) then
+       fid = IO_get_available_fid()
+       open( fid,                    &
+             file   = fname,         &
+             form   = 'unformatted', &
+             access = 'direct',      &
+             status = 'old',         &
+             recl   = isize*jsize*4, &
+             iostat = ierr            )
+       if ( ierr /= 0 ) then
+          LOG_ERROR("FILE_TILEDATA_read_data_real4_int",*) 'data file not found!: ', trim(fname)
+          call PRC_abort
+       endif
+    end if
 
-    read(fid,rec=1) buf(:,:)
-    close(fid)
+    read(fid,rec=step_) buf(:,:)
+    if ( .not. lstep ) close(fid)
 
     if ( yrevers_ ) then
        !$omp parallel do

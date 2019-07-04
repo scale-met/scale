@@ -436,7 +436,7 @@ contains
              pressure_coordinates = .false.
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    pres_org(3:,:,:),         & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
           endif
        case('DENS')
@@ -450,7 +450,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 dens_org(3:,:,:),         & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
 
@@ -465,7 +465,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 velx_org(3:,:,:),         & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do
           do j = 1, dims(3)
@@ -485,7 +485,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 vely_org(3:,:,:),         & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do
           do j = 1, dims(3)
@@ -505,7 +505,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 velz_org(3:,:,:),         & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do
           do j = 1, dims(3)
@@ -525,7 +525,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 temp_org(3:,:,:),         & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('HGT')
@@ -559,7 +559,7 @@ contains
              pressure_coordinates = .false.
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    cz_org(3:,:,:),           & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
@@ -576,7 +576,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 qv_org(3:shape(1)+2,:,:), & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -614,7 +614,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
                                 qhyd_org(3:shape(1)+2,:,:,I_HC), & ! (out)
-                                it = nt,                         & ! (in)
+                                step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -635,7 +635,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
                                 qhyd_org(3:shape(1)+2,:,:,I_HR), & ! (out)
-                                it = nt,                         & ! (in)
+                                step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -656,7 +656,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
                                 qhyd_org(3:shape(1)+2,:,:,I_HI), & ! (out)
-                                it = nt,                         & ! (in)
+                                step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -677,7 +677,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
                                 qhyd_org(3:shape(1)+2,:,:,I_HS), & ! (out)
-                                it = nt,                         & ! (in)
+                                step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -698,7 +698,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
                                 qhyd_org(3:shape(1)+2,:,:,I_HG), & ! (out)
-                                it = nt,                         & ! (in)
+                                step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -719,7 +719,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 qv_org(3:shape(1)+2,:,:), & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
           !$omp parallel do collapse(2) &
@@ -766,14 +766,14 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 pres_org(1,:,:),          & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('PSFC')
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 pres_org(2,:,:),          & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('U10')
@@ -781,7 +781,7 @@ contains
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    velx_org(2,:,:),          & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
           end if
 
@@ -790,7 +790,7 @@ contains
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    vely_org(2,:,:),          & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
           end if
 
@@ -799,7 +799,7 @@ contains
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    temp_org(2,:,:),          & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
           end if
 
@@ -808,7 +808,7 @@ contains
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    qv_org(2,:,:),            & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
           end if
 
@@ -817,7 +817,7 @@ contains
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    qv_org(2,:,:),            & ! (out)
-                                   it = nt,                  & ! (in)
+                                   step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(2) &
              !$omp private (qm,p_sat)
@@ -845,7 +845,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),    & ! (in)
                                 RN222_org(3:shape(1)+2,:,:), & ! (out)
-                                it = nt,                     & ! (in)
+                                step = nt,                   & ! (in)
                                 postfix = basename_num       ) ! (in)
 
           if ( sfc_diagnoses ) then
@@ -1376,7 +1376,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
                                 tg_org(:,:,:),            & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('SMOISVC')
@@ -1390,7 +1390,7 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
                                 strg_org(:,:,:),          & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('SMOISDS')
@@ -1404,14 +1404,14 @@ contains
 
           call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
                                 smds_org(:,:,:),          & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('SKINT')
 
           call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
                                 lst_org(:,:),             & ! (out)
-                                it = nt,                  & ! (in)
+                                step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
        case('topo', 'topo_sfc')

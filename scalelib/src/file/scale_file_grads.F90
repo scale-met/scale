@@ -396,6 +396,7 @@ contains
        file_id,  &
        var_name, &
        var,      &
+       step,     &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -403,6 +404,7 @@ contains
     integer,          intent(in)  :: file_id
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:)
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -419,6 +421,7 @@ contains
 
     call FILE_GrADS_read_1D_id( file_id, var_id,   & ! (in)
                                 var(:),            & ! (out)
+                                step = step,       & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -428,11 +431,13 @@ contains
        file_id, &
        var_id,  &
        var,     &
+       step,    &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:)
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     logical :: exist
@@ -451,6 +456,7 @@ contains
     call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
                                1, size(var),               & ! (in)
                                var(:),                     & ! (out)
+                               step = step,                & ! (int)
                                postfix = postfix           ) ! (in)
 
     return
@@ -461,7 +467,7 @@ contains
        file_id,  &
        var_name, &
        var,      &
-       it,       &
+       step,     &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -469,7 +475,7 @@ contains
     integer,          intent(in)  :: file_id
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:,:)
-    integer,          intent(in), optional :: it
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -485,7 +491,7 @@ contains
 
     call FILE_GrADS_read_2D_id( file_id, var_id,   & ! (in)
                                 var(:,:),          & ! (out)
-                                it = it,           & ! (in)
+                                step = step,       & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -495,13 +501,13 @@ contains
        file_id, &
        var_id,  &
        var,     &
-       it,      &
+       step,    &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:,:)
-    integer,          intent(in), optional :: it
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer :: vid
@@ -518,7 +524,8 @@ contains
     call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
                                2, size(var),               & ! (in)
                                var(:,:),                   & ! (out)
-                               it = it, postfix = postfix  ) ! (in)
+                               step = step,                & ! (in)
+                               postfix = postfix           ) ! (in)
 
     return
   end subroutine FILE_GrADS_read_2D_id
@@ -528,7 +535,7 @@ contains
        file_id,  &
        var_name, &
        var,      &
-       it,       &
+       step,     &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -536,7 +543,7 @@ contains
     integer,          intent(in)  :: file_id
     character(len=*), intent(in)  :: var_name
     real(RP),         intent(out) :: var(:,:,:)
-    integer,          intent(in), optional :: it
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer :: var_id
@@ -552,7 +559,7 @@ contains
 
     call FILE_GrADS_read_3D_id( file_id, var_id,   & ! (in)
                                 var(:,:,:),        & ! (out)
-                                it = it,           & ! (in)
+                                step = step,       & ! (in)
                                 postfix = postfix  ) ! (in)
 
     return
@@ -562,13 +569,13 @@ contains
        file_id, &
        var_id,  &
        var,     &
-       it,      &
+       step,    &
        postfix  )
     implicit none
     integer,          intent(in)  :: file_id
     integer,          intent(in)  :: var_id
     real(RP),         intent(out) :: var(:,:,:)
-    integer,          intent(in), optional :: it
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer :: vid
@@ -582,10 +589,10 @@ contains
        LOG_ERROR("FILE_GrADS_read_3D_vid",*) 'var_id is invalid: ', var_id
     end if
 
-    call FILE_GrADS_read_data( nmls(file_id)%vars(var_id), & ! (in)
-                               3, size(var),               & ! (in)
-                               var(:,:,:),                 & ! (out)
-                               it = it, postfix = postfix  ) ! (in)
+    call FILE_GrADS_read_data( nmls(file_id)%vars(var_id),     & ! (in)
+                               3, size(var),                   & ! (in)
+                               var(:,:,:),                     & ! (out)
+                               step = step, postfix = postfix  ) ! (in)
 
     return
   end subroutine FILE_GrADS_read_3D_id
@@ -629,7 +636,7 @@ contains
        var_info, &
        ndims, n, &
        var,      &
-       it,       &
+       step,     &
        postfix   )
     use scale_prc, only: &
        PRC_abort
@@ -641,14 +648,14 @@ contains
     integer,     intent(in)  :: ndims
     integer,     intent(in)  :: n
     real(RP),    intent(out) :: var(n)
-    integer,          intent(in), optional :: it
+    integer,          intent(in), optional :: step
     character(len=*), intent(in), optional :: postfix
 
     integer               :: fid
     character(len=H_LONG) :: gfile
     real(SP)              :: buf(var_info%nx,var_info%ny)
 
-    integer                :: it_
+    integer                :: step_
     character(len=H_SHORT) :: postfix_
 
     integer :: nxy, nz
@@ -701,10 +708,10 @@ contains
        else
           postfix_ = ""
        end if
-       if ( present(it) ) then
-          it_ = it
+       if ( present(step) ) then
+          step_ = step
        else
-          it_ = 1
+          step_ = 1
        end if
 
        if ( ndims == 1 ) then
@@ -772,10 +779,10 @@ contains
        end if
 
        do k = 1, nz
-          irecl = var_info%totalrec * (it_-1) + var_info%startrec + k - 1
+          irecl = var_info%totalrec * (step_-1) + var_info%startrec + k - 1
           read(fid, rec=irecl, iostat=ierr) buf(:,:)
           if ( ierr /= 0 ) then
-             LOG_ERROR("FILE_GrADS_read_data",*) 'Failed to read data! ', trim(var_info%name), ', k=',k,', it=',it_, ' in ', trim(gfile)
+             LOG_ERROR("FILE_GrADS_read_data",*) 'Failed to read data! ', trim(var_info%name), ', k=',k,', step=',step_, ' in ', trim(gfile)
              LOG_ERROR_CONT(*) 'irec=', irecl
              call PRC_abort
           end if
