@@ -24,7 +24,7 @@ normal:
     - make -j 4
     - make -j 4 SCALE_USE_SINGLEFP=T
   only:
-    - /^feature.*$/
+    - merge_requests
 
 openmp:
   stage: build
@@ -35,7 +35,7 @@ openmp:
     - cd ../../scale-gm/src
     - make -j 4 SCALE_ENABLE_OPENMP=T
   only:
-    - /^feature.*$/
+    - merge_requests
 
 
 #debug-gm:
@@ -46,7 +46,7 @@ openmp:
 #    - make -j 4 SCALE_QUICKDEBUT=T
 #    - make -j 4 SCALE_DEBUT=T
 #  only:
-#    - /^feature.*$/
+#    - merge_requests
 
 
 # TEST
@@ -61,7 +61,7 @@ lib-unit:
     - make makebin
     - mpirun --allow-run-as-root -n 4 ./unit run.conf
   only:
-    - /^feature.*$/
+    - merge_requests
 
 
 # DOC
@@ -77,7 +77,7 @@ ug-en:
       - doc/users-guide/en/scale_users_guide_En.pdf
     expire_in: 1 mos
   only:
-    - /^feature.*$/
+    - merge_requests
 
 ug-jp:
   stage: doc
@@ -90,7 +90,7 @@ ug-jp:
       - doc/users-guide/jp/scale_users_guide.pdf
     expire_in: 1 mos
   only:
-    - /^feature.*$/
+    - merge_requests
 
 description:
   stage: doc
@@ -103,7 +103,7 @@ description:
       - doc/descriptions/scale_rm_description.pdf
     expire_in: 1 mos
   only:
-    - /^feature.*$/
+    - merge_requests
 
 
 reference:
