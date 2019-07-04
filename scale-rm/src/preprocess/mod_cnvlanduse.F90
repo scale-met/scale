@@ -425,15 +425,10 @@ contains
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
 
-    call FILE_TILEDATA_get_latlon( nLATH, nLONH,           & ! [IN]
-                                   GLOBAL_IA,              & ! [IN]
-                                   TILE_nmax,              & ! [IN]
-                                   TILE_DLAT, TILE_DLON,   & ! [IN]
-                                   TILE_hit(:),            & ! [IN]
-                                   TILE_JS(:), TILE_JE(:), & ! [IN]
-                                   TILE_IS(:), TILE_IE(:), & ! [IN]
-                                   jsh, jeh, ish, ieh,     & ! [IN]
-                                   LATH_1d(:), LONH_1d(:)  ) ! [OUT]
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  GLCCv2_IN_DIR,                                  & ! [IN]
@@ -636,15 +631,10 @@ contains
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
 
-    call FILE_TILEDATA_get_latlon( nLATH, nLONH,           & ! [IN]
-                                   GLOBAL_IA,              & ! [IN]
-                                   TILE_nmax,              & ! [IN]
-                                   TILE_DLAT, TILE_DLON,   & ! [IN]
-                                   TILE_hit(:),            & ! [IN]
-                                   TILE_JS(:), TILE_JE(:), & ! [IN]
-                                   TILE_IS(:), TILE_IE(:), & ! [IN]
-                                   jsh, jeh, ish, ieh,     & ! [IN]
-                                   LATH_1d(:), LONH_1d(:)  ) ! [OUT]
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  LU100M_IN_DIR,                                  & ! [IN]

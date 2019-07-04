@@ -48,8 +48,6 @@ module mod_cnv2d
   integer, parameter :: I_GrADS = 2
   integer :: CNV2D_ftype
 
-  real(RP) :: DOMAIN_LATS, DOMAIN_LATE
-  real(RP) :: DOMAIN_LONS, DOMAIN_LONE
   integer  :: GLOBAL_IA
 
   integer               :: nLON, nLAT
@@ -71,16 +69,17 @@ module mod_cnv2d
   ! TILE data
   character(len=H_SHORT) :: CNV2D_tile_dtype
   character(len=H_LONG)  :: CNV2D_tile_dir
-  integer, parameter     :: TILE_nlim = 100
-  integer                :: TILE_nmax
-  character(len=H_LONG)  :: TILE_fname(TILE_nlim)
-  logical                :: TILE_hit  (TILE_nlim)
-  integer                :: TILE_JS   (TILE_nlim)
-  integer                :: TILE_JE   (TILE_nlim)
-  integer                :: TILE_IS   (TILE_nlim)
-  integer                :: TILE_IE   (TILE_nlim)
   real(RP)               :: TILE_DLAT, TILE_DLON
-  integer                :: dom_is, dom_ie, dom_js, dom_je
+  integer                :: TILE_nlim
+  integer                :: TILE_nmax
+  character(len=H_LONG), allocatable :: TILE_fname(:)
+  logical,               allocatable :: TILE_hit  (:)
+  integer,               allocatable :: TILE_JS   (:)
+  integer,               allocatable :: TILE_JE   (:)
+  integer,               allocatable :: TILE_IS   (:)
+  integer,               allocatable :: TILE_IE   (:)
+
+  integer :: dom_is, dom_ie, dom_js, dom_je
 
 
   ! GrADS data
@@ -94,15 +93,7 @@ contains
   subroutine CNV2D_setup
     use scale_prc, only: &
        PRC_abort
-    use scale_const, only: &
-       D2R => CONST_D2R
-    use scale_atmos_grid_cartesC_real, only: &
-       LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
-       LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
-
-    integer                :: CNV2D_NSTEPS      = 1
-    character(len=H_SHORT) :: CNV2D_INTERP_TYPE = 'LINEAR'
 
     !---------------------------------------------------------------------------
 
@@ -121,26 +112,17 @@ contains
 !!$    LOG_NML(PARAM_CNV2D)
 
 
-    DOMAIN_LATS = minval( LATXV(:,:) )
-    DOMAIN_LATE = maxval( LATXV(:,:) )
-    DOMAIN_LONS = minval( LONUY(:,:) )
-    DOMAIN_LONE = maxval( LONUY(:,:) )
-
-    LOG_INFO("CNV2D_setup",*) 'Domain Information'
-    LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-    LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-
-
     return
   end subroutine CNV2D_setup
 
   subroutine CNV2D_tile_init( &
-       dtype, &
-       dlat, dlon, &
-       dir, &
-       catalogue, &
-       interp_type, &
-       interp_level  )
+       dtype,        &
+       dlat, dlon,   &
+       dir,          &
+       catalogue,    &
+       interp_type,  &
+       interp_level, &
+       nmax          )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -150,6 +132,9 @@ contains
        FILE_TILEDATA_get_info,   &
        FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
+    use scale_atmos_grid_cartesC_real, only: &
+       LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
+       LONUY => ATMOS_GRID_CARTESC_REAL_LONUY
     implicit none
     character(len=*), intent(in) :: dtype
     real(RP),         intent(in) :: dlat, dlon
@@ -158,9 +143,10 @@ contains
     character(len=*), intent(in) :: interp_type
 
     integer, intent(in), optional :: interp_level
+    integer, intent(in), optional :: nmax
 
-    real(RP) :: CNV3D_TILE_DLAT ! degree
-    real(RP) :: CNV3D_TILE_DLON ! degree
+    real(RP) :: DOMAIN_LATS, DOMAIN_LATE
+    real(RP) :: DOMAIN_LONS, DOMAIN_LONE
 
     character(len=H_LONG) :: fname
 
@@ -168,9 +154,32 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !--- read namelist
-    TILE_DLAT = dlon * D2R
-    TILE_DLON = dlat * D2R
+    if ( present(nmax) ) then
+       TILE_nlim = nmax
+    else
+       TILE_nlim = 1000
+    end if
+
+    DOMAIN_LATS = minval( LATXV(:,:) )
+    DOMAIN_LATE = maxval( LATXV(:,:) )
+    DOMAIN_LONS = minval( LONUY(:,:) )
+    DOMAIN_LONE = maxval( LONUY(:,:) )
+
+    LOG_INFO("CNV2D_setup",*) 'Domain Information'
+    LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
+    LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
+
+    TILE_DLAT = dlat * D2R
+    TILE_DLON = dlon * D2R
+
+    if ( .not. first ) then
+       deallocate( TILE_fname, TILE_hit )
+       deallocate( TILE_JS, TILE_JE, TILE_IS, TILE_IE )
+       deallocate( LAT_1d, LON_1d )
+    end if
+
+    allocate( TILE_fname(TILE_nlim), TILE_hit(TILE_nlim) )
+    allocate( TILE_JS(TILE_nlim), TILE_JE(TILE_nlim), TILE_IS(TILE_nlim), TILE_IE(TILE_nlim) )
 
     ! catalogue file
     fname = trim(DIR)//'/'//trim(CATALOGUE)
@@ -189,15 +198,10 @@ contains
     allocate( LAT_1d(nLAT) )
     allocate( LON_1d(nLON) )
 
-    call FILE_TILEDATA_get_latlon( nLAT, nLON,                     & ! [IN]
-                                   GLOBAL_IA,                      & ! [IN]
-                                   TILE_nmax,                      & ! [IN]
-                                   TILE_DLAT, TILE_DLON,           & ! [IN]
-                                   TILE_hit(:),                    & ! [IN]
-                                   TILE_JS(:), TILE_JE(:),         & ! [IN]
-                                   TILE_IS(:), TILE_IE(:),         & ! [IN]
-                                   dom_js, dom_je, dom_is, dom_ie, & ! [IN]
-                                   LAT_1d(:), LON_1d(:)            ) ! [OUT]
+    call FILE_TILEDATA_get_latlon( nLAT, nLON,           & ! [IN]
+                                   dom_js, dom_is,       & ! [IN]
+                                   TILE_DLAT, TILE_DLON, & ! [IN]
+                                   LAT_1d(:), LON_1d(:)  ) ! [OUT]
 
     CNV2D_ftype = I_TILE
     CNV2D_tile_dtype = DTYPE
@@ -212,23 +216,36 @@ contains
 
 
   subroutine CNV2D_grads_init( &
-       FILE_NAME,   &
-       VAR_NAME,    &
-       interp_type, &
-       interp_level )
+       FILE_NAME,    &
+       VAR_NAME,     &
+       LAT_NAME,     &
+       LON_NAME,     &
+       interp_type,  &
+       interp_level, &
+       search_limit, &
+       POSTFIX       )
     use scale_file_grads, only: &
-       FILE_GrADS_open, &
+       FILE_GrADS_open,      &
        FILE_GrADS_get_shape, &
-       FILE_GrADS_varid
+       FILE_GrADS_varid,     &
+       FILE_GrADS_isOneD,    &
+       FILE_GrADS_read
+    use scale_const, only: &
+       D2R => CONST_D2R
     implicit none
     character(len=*), intent(in) :: FILE_NAME
     character(len=*), intent(in) :: VAR_NAME
+    character(len=*), intent(in) :: LAT_NAME
+    character(len=*), intent(in) :: LON_NAME
     character(len=*), intent(in) :: INTERP_TYPE
-
-    integer, intent(in), optional :: interp_level
+    integer,          intent(in), optional :: interp_level
+    real(RP),         intent(in), optional :: search_limit
+    character(len=*), intent(in), optional :: POSTFIX
 
     integer :: file_id, var_id
     integer :: shape(2)
+
+    integer :: i, j
 
     call FILE_GrADS_open( FILE_NAME, & ! [IN]
                           file_id    ) ! [OUT]
@@ -237,6 +254,58 @@ contains
                                shape(:)           )
     nLON = shape(1)
     nLAT = shape(2)
+
+    if ( .not. first ) deallocate( LAT_org, LON_org, LAT_1d, LON_1d )
+    allocate( LAT_org(nLON,nLAT), LON_org(nLON,nLAT) )
+    allocate( LAT_1d(nLAT), LON_1d(nLON) )
+
+    ! lat
+    call FILE_GrADS_varid( file_id, LAT_NAME, & ! (in)
+                           var_id             ) ! (out)
+    if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       call FILE_GrADS_read( file_id, var_id, & ! (in)
+                             lat_1d(:)        ) ! (out)
+       !$omp parallel do collapse(2)
+       do j = 1, nLAT
+       do i = 1, nLON
+          LAT_org(i,j) = lat_1d(j) * D2R
+       end do
+       end do
+    else
+       call FILE_GrADS_read( file_id, var_id,  & ! (in)
+                             LAT_org(:,:),     & ! (out)
+                             postfix = POSTFIX ) ! (in)
+       !$omp parallel do collapse(2)
+       do j = 1, nLAT
+       do i = 1, nLON
+          LAT_org(i,j) = LAT_org(i,j) * D2R
+       end do
+       end do
+    end if
+
+    ! lon
+    call FILE_GrADS_varid( file_id, LON_NAME, & ! (in)
+                           var_id             ) ! (out)
+    if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       call FILE_GrADS_read( file_id, var_id, & ! (in)
+                             lon_1d(:)         ) ! (out)
+       !$omp parallel do collapse(2)
+       do j = 1, nLAT
+       do i = 1, nLON
+          LON_org(i,j) = lon_1d(i) * D2R
+       end do
+       end do
+    else
+       call FILE_GrADS_read( file_id, var_id,  & ! (in)
+                             LON_org(:,:),     & ! (out)
+                             postfix = POSTFIX ) ! (in)
+       !$omp parallel do collapse(2)
+       do j = 1, nLAT
+       do i = 1, nLON
+          LON_org(i,j) = LON_org(i,j) * D2R
+       end do
+       end do
+    end if
 
     call FILE_GrADS_varid( file_id, VAR_NAME, & ! [IN]
                            var_id             ) ! [OUT]
@@ -247,14 +316,17 @@ contains
 
     call CNV2D_init( interp_type, &
                      interp_level = interp_level, &
+                     search_limit = search_limit, &
                      ll_struct = .false.          )
 
     return
   end subroutine CNV2D_grads_init
 
   subroutine CNV2D_exec( &
-       var, &
-       step )
+       var,       &
+       step,      &
+       min_value, &
+       yrevers    )
     use scale_file_tiledata, only: &
        FILE_TILEDATA_get_data
     use scale_file_grads, only: &
@@ -264,6 +336,8 @@ contains
     implicit none
     real(RP), intent(out) :: var(IA,JA)
     integer,  intent(in), optional :: step
+    real(RP), intent(in), optional :: min_value
+    logical,  intent(in), optional :: yrevers
 
     select case ( CNV2D_ftype )
     case ( I_TILE )
@@ -277,13 +351,14 @@ contains
                                     dom_js, dom_je, dom_is, dom_ie,                 & ! [IN]
                                     CNV2D_TILE_DTYPE,                               & ! [IN]
                                     data_org(:,:),                                  & ! [OUT]
-                                    min_value = -9000.0_RP, yrevers = .true.,       & ! [IN]
-                                    step = step                                     ) ! [IN]
+                                    step = step,                                    & ! [IN]
+                                    min_value = min_value, yrevers = yrevers        ) ! [IN]
     case ( I_GrADS )
        call FILE_GrADS_read( CNV2D_grads_fid, CNV2D_grads_vid, & ! [IN]
                              data_org(:,:),                    & ! [OUT]
                              step = step                       ) ! [IN]
     end select
+
 
     call INTERP_interp2d( itp_lev,                    & ! [IN]
                           nLON,nLAT,                  & ! [IN]

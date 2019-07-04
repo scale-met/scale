@@ -85,6 +85,8 @@ contains
 
     character(len=H_LONG)  :: CNVUSER_GrADS_FILENAME = ''
     character(len=H_SHORT) :: CNVUSER_GrADS_VARNAME  = ''
+    character(len=H_SHORT) :: CNVUSER_GrADS_LATNAME  = 'lat'
+    character(len=H_SHORT) :: CNVUSER_GrADS_LONNAME  = 'lon'
 
     namelist / PARAM_CNVUSER / &
        CNVUSER_FILE_TYPE,      &
@@ -98,6 +100,8 @@ contains
        CNVUSER_TILE_CATALOGUE, &
        CNVUSER_GrADS_FILENAME, &
        CNVUSER_GrADS_VARNAME,  &
+       CNVUSER_GrADS_LATNAME,  &
+       CNVUSER_GrADS_LONNAME,  &
        CNVUSER_OUT_BASENAME,   &
        CNVUSER_OUT_TITLE,      &
        CNVUSER_OUT_VARNAME,    &
@@ -138,6 +142,8 @@ contains
     case ( 'GrADS' )
        call CNV2D_grads_init( CNVUSER_GrADS_FILENAME,             &
                               CNVUSER_GrADS_VARNAME,              &
+                              CNVUSER_GrADS_LATNAME,              &
+                              CNVUSER_GrADS_LONNAME,              &
                               CNVUSER_INTERP_TYPE,                &
                               interp_level = CNVUSER_INTERP_LEVEL )
     case default
@@ -195,7 +201,7 @@ contains
 
        LOG_PROGRESS(*) 'step = ', step
 
-       call CNV2D_exec( var(:,:) )
+       call CNV2D_exec( var(:,:), step = step )
 
        call CNVUSER_write( fid, vid, var(:,:), CNVUSER_OUT_DT, step )
 

@@ -74,6 +74,7 @@ module scale_file_grads
      integer                :: nz
      logical                :: yrev
      integer                :: endian ! 0: little, 1: big
+     character(len=H_SHORT) :: bintype
   end type t_var
   type t_nml
      character(len=H_LONG)    :: fname
@@ -121,6 +122,7 @@ contains
     integer                :: nz               ! optional
     character(len=H_SHORT) :: fendian          ! option for "map"
     logical                :: yrev             ! option for "map", if yrev=.true., order of data is NW to SE.
+    character(len=H_SHORT) :: bintype          ! binary type: 'int?' or 'real?' ?=2,4, or 8
 
     namelist /GrADS_DIMS/ &
        nx, &
@@ -141,8 +143,11 @@ contains
        nx,       & ! option
        ny,       & ! option
        nz,       & ! option
-       yrev        ! option
+       yrev,     & ! option
+       bintype     ! option
 !       fendian     ! option
+
+    character(len=H_LONG) :: dirname
 
     integer :: fid
     integer :: nvars
@@ -220,6 +225,13 @@ contains
     nmls(file_id)%nvars = nvars
     allocate( nmls(file_id)%vars(nvars) )
 
+    n = index( file_name, '/', back=.true. )
+    if ( n > 0 ) then
+       dirname = file_name(1:n)
+    else
+       dirname = ""
+    end if
+
     !--- read information of the variables
     rewind(fid)
     do n = 1, nvars
@@ -240,13 +252,14 @@ contains
        yrev     = .false.
        fendian  = 'big'
        missval  = UNDEF
+       bintype  = 'real4'
 
        ! read namelist
        read(fid, nml=GrADS_ITEM, iostat=ierr)
        if( ierr /= 0 ) exit
 
        nmls(file_id)%vars(n)%name    = name
-       nmls(file_id)%vars(n)%fname   = fname
+       nmls(file_id)%vars(n)%fname   = trim(dirname) // fname
        nmls(file_id)%vars(n)%dtype   = dtype
        nmls(file_id)%vars(n)%swpoint = swpoint
        nmls(file_id)%vars(n)%dd      = dd
@@ -267,6 +280,7 @@ contains
        else
           nmls(file_id)%vars(n)%endian = 0
        end if
+       nmls(file_id)%vars(n)%bintype  = bintype
 
     end do
 
@@ -659,8 +673,20 @@ contains
     character(len=H_SHORT) :: postfix_
 
     integer :: nxy, nz
-    integer :: irecl, ierr
+    integer :: irecl, isize, ierr
     integer :: i, j, k
+
+    abstract interface
+       subroutine rd( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+         use scale_precision
+         integer, intent(in) :: fid, irecl
+         integer, intent(in) :: nx, ny, nz, k
+         logical, intent(in) :: yrev
+         real(RP), intent(out) :: var(:)
+         integer,  intent(out) :: ierr
+       end subroutine rd
+    end interface
+    procedure(rd), pointer :: read_data
 
     select case( var_info%dtype )
     case("linear")
@@ -752,7 +778,19 @@ contains
           files(fid)%fid = IO_get_available_fid()
           files(fid)%postfix = postfix_
           fid = files(fid)%fid
-          irecl = var_info%nx * var_info%ny * 4
+          select case ( var_info%bintype )
+          case ( 'int1' )
+             isize = 1
+          case ( 'int2' )
+             isize = 2
+          case ( 'real4', 'int4' )
+             isize = 4
+          case ( 'real8', 'int8' )
+             isize = 8
+          case default
+             LOG_ERROR("FILE_GrADS_read_data",*) 'bintype is invalid for ', trim(var_info%name)
+          end select
+          irecl = var_info%nx * var_info%ny * isize
           open( fid, &
                 file   = gfile, &
                 form   = 'unformatted', &
@@ -778,33 +816,30 @@ contains
           call PRC_abort
        end if
 
+       select case ( var_info%bintype )
+       case ( 'int1' )
+          read_data => read_data_int1
+       case ( 'int2' )
+          read_data => read_data_int2
+       case ( 'int4' )
+          read_data => read_data_int4
+       case ( 'real4' )
+          read_data => read_data_real4
+       case ( 'int8' )
+          read_data => read_data_int8
+       case ( 'real8' )
+          read_data => read_data_real8
+       end select
+
        do k = 1, nz
           irecl = var_info%totalrec * (step_-1) + var_info%startrec + k - 1
-          read(fid, rec=irecl, iostat=ierr) buf(:,:)
+          call read_data( fid, irecl, var_info%nx, var_info%ny, nz, k, var_info%yrev, var(:), ierr )
           if ( ierr /= 0 ) then
              LOG_ERROR("FILE_GrADS_read_data",*) 'Failed to read data! ', trim(var_info%name), ', k=',k,', step=',step_, ' in ', trim(gfile)
              LOG_ERROR_CONT(*) 'irec=', irecl
              call PRC_abort
           end if
-
-          if ( var_info%yrev ) then
-             !$omp parallel do collapse(2)
-             do j = 1, var_info%ny
-             do i = 1, var_info%nx
-                var(k+(i-1)*nz+(j-1)*var_info%nx*nz) = buf(i,var_info%ny-j+1)
-             end do
-             end do
-          else
-             !$omp parallel do collapse(2)
-             do j = 1, var_info%ny
-             do i = 1, var_info%nx
-                var(k+(i-1)*nz+(j-1)*var_info%nx*nz) = buf(i,j)
-             end do
-             end do
-          end if
-
        end do
-
        if ( var_info%missval .ne. UNDEF ) then
           !$omp parallel do
           do i = 1, nz * nxy
@@ -812,11 +847,208 @@ contains
           end do
        end if
 
-
     end select
 
     return
   end subroutine FILE_GrADS_read_data
+
+  subroutine read_data_int1( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    integer(1) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_int1
+
+  subroutine read_data_int2( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    integer(2) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_int2
+
+  subroutine read_data_int4( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    integer(4) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_int4
+
+  subroutine read_data_real4( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    real(4) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_real4
+
+  subroutine read_data_int8( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    integer(8) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_int8
+
+  subroutine read_data_real8( fid, irecl, nx, ny, nz, k, yrev, var, ierr )
+    integer, intent(in) :: fid, irecl
+    integer, intent(in) :: nx, ny, nz, k
+    logical, intent(in) :: yrev
+
+    real(RP), intent(out) :: var(:)
+    integer,  intent(out) :: ierr
+
+    real(8) :: buf(nx,ny)
+    integer :: i, j
+
+    read(fid, rec=irecl, iostat=ierr) buf(:,:)
+    if ( ierr /= 0 ) return
+
+    if ( yrev ) then
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,ny-j+1)
+          end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, ny
+          do i = 1, nx
+             var(k+(i-1)*nz+(j-1)*nx*nz) = buf(i,j)
+          end do
+       end do
+    end if
+
+    return
+  end subroutine read_data_real8
 
   subroutine check_oldnamelist( fid )
     use scale_prc, only: &

@@ -278,16 +278,16 @@ contains
        dims, &
        nt )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF, &
-       D2R => CONST_D2R,   &
-       EPS => CONST_EPS,   &
-       EPSvap => CONST_EPSvap, &
+       UNDEF   => CONST_UNDEF, &
+       D2R     => CONST_D2R,   &
+       EPS     => CONST_EPS,   &
+       EPSvap  => CONST_EPSvap, &
        EPSTvap => CONST_EPSTvap, &
-       GRAV => CONST_GRAV, &
-       LAPS => CONST_LAPS, &
-       P00 => CONST_PRE00, &
-       Rdry => CONST_Rdry, &
-       CPdry => CONST_CPdry
+       GRAV    => CONST_GRAV, &
+       LAPS    => CONST_LAPS, &
+       P00     => CONST_PRE00, &
+       Rdry    => CONST_Rdry, &
+       CPdry   => CONST_CPdry
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC, &

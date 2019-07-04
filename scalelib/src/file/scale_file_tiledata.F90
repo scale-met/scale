@@ -169,55 +169,23 @@ contains
   !> get tile data
   subroutine FILE_TILEDATA_get_latlon( &
        nLAT, nLON,           &
-       GLOBAL_IA,            &
-       TILE_nmax,            &
+       jsh, ish,             &
        TILE_DLAT, TILE_DLON, &
-       TILE_hit,             &
-       TILE_JS, TILE_JE,     &
-       TILE_IS, TILE_IE,     &
-       jsh, jeh, ish, ieh,   &
        LAT, LON              )
     implicit none
     integer,  intent(in)  :: nLAT, nLON
-    integer,  intent(in)  :: GLOBAL_IA
-    integer,  intent(in)  :: TILE_nmax
+    integer,  intent(in)  :: jsh, ish
     real(RP), intent(in)  :: TILE_DLAT, TILE_DLON
-    logical,  intent(in)  :: TILE_hit(:)
-    integer,  intent(in)  :: TILE_JS(:)
-    integer,  intent(in)  :: TILE_JE(:)
-    integer,  intent(in)  :: TILE_IS(:)
-    integer,  intent(in)  :: TILE_IE(:)
-    integer,  intent(in)  :: jsh, jeh
-    integer,  intent(in)  :: ish, ieh
     real(RP), intent(out) :: LAT(nLAT)
     real(RP), intent(out) :: LON(nLON)
 
-    real(RP) :: lat_min, lon_min
-    integer :: i, j, t
-
-
-    lat_min = 1E10_RP
-    lon_min = 1E10_RP
-    do t = 1, TILE_nmax
-       if ( .not. TILE_hit(t) ) cycle
-
-       j = max( jsh, TILE_JS(t) )
-       lat_min = min( lat_min, TILE_DLAT * ( j + 0.5_RP ) )
-
-       if ( TILE_IS(t) > ieh ) then
-          i = max( ish, TILE_IS(t) - GLOBAL_IA )
-       else
-          i = max( ish, TILE_IS(t) )
-       end if
-       lon_min = min( lon_min, TILE_DLON * ( i + 0.5_RP ) )
-
-    enddo ! tile loop
+    integer :: i, j
 
     do j = 1, nLAT
-       LAT(j) = lat_min + TILE_DLAT * ( j - 1 )
+       LAT(j) = TILE_DLAT * ( jsh + j - 0.5_RP )
     end do
     do i = 1, nLON
-       LON(i) = lon_min + TILE_DLON * ( i - 1 )
+       LON(i) = TILE_DLON * ( ish + i - 0.5_RP )
     end do
 
     return
@@ -280,7 +248,7 @@ contains
          character(len=*), intent(in)  :: fname
          real(RP),         intent(out) :: TILE_DATA(isize,jsize)
          logical,          intent(in), optional :: yrevers
-         integer,          intent(in), optional  :: step
+         integer,          intent(in), optional :: step
        end subroutine rd
     end interface
 
@@ -575,12 +543,24 @@ contains
        call PRC_abort
     endif
 
-    do t = 1, TILE_nlim
+    ierr = 0
+    TILE_nmax = - 1
+    do while ( ierr == 0 )
+       read(fid,*,iostat=ierr) index, TILE_LATS(1), TILE_LATE(1), TILE_LONS(1), TILE_LONE(1), & ! WEST->EAST
+                                      TILE_fname(1)
+       TILE_nmax = TILE_nmax + 1
+    end do
+
+    if ( TILE_nmax > TILE_nlim ) then
+       LOG_ERROR('FILE_TILEDATA_read_catalog_file',*) 'TILE_nmax must be >= ', TILE_nmax
+       call PRC_abort
+    end if
+
+    rewind(fid)
+    do t = 1, TILE_nmax
        read(fid,*,iostat=ierr) index, TILE_LATS(t), TILE_LATE(t), & ! South->North
                                       TILE_LONS(t), TILE_LONE(t), & ! WEST->EAST
                                       TILE_fname(t)
-
-       if ( ierr /= 0 ) exit
 
        TILE_LATS(t) = TILE_LATS(t) * D2R
        TILE_LATE(t) = TILE_LATE(t) * D2R
@@ -589,8 +569,6 @@ contains
        TILE_LONS(t) = TILE_LONS(t) * D2R
        TILE_LONE(t) = TILE_LONE(t) * D2R
     end do
-
-    TILE_nmax = t - 1
 
     close(fid)
 
@@ -695,14 +673,15 @@ contains
 
        if ( zonal ) then
           hit_lon = .true.
-       else if ( ( TILE_IS(t) <= ieh             ) &
-            .OR. ( ish <= TILE_IE(t) - GLOBAL_IA ) ) then
+       else if ( ( TILE_IS(t)             <= ieh ) &
+            .OR. ( TILE_IE(t) - GLOBAL_IA >= ish ) ) then
           hit_lon = .true.
        else
           hit_lon = .false.
        endif
 
        TILE_hit(t) = ( hit_lat .AND. hit_lon )
+
     end do
 
     if ( zonal ) then
