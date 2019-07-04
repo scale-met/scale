@@ -378,13 +378,10 @@ File.open(grads_namelist, "w") do |file|
 #
 # Dimension
 #
-&nml_grads_grid
- outer_nx     = #{nlon},
- outer_ny     = #{nlat},
- outer_nz     = #{nlev},
- outer_nl     = #{nl},
- outer_nx_sfc = #{nlon_land},
- outer_ny_sfc = #{nlat_land},
+&GrADS_DIMS
+ nx = #{nlon},
+ ny = #{nlat},
+ nz = #{nlev},
 /
 
 #
@@ -399,13 +396,13 @@ File.open(grads_namelist, "w") do |file|
   i = 1
   vars_air.each do |v,n,desc|
     file.print <<-EOL
-&grdvar item='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}', startrec=#{"%3d"%i}, totalrec=#{trec} /
+&GrADS_ITEM name='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}', startrec=#{"%3d"%i}, totalrec=#{trec} /
     EOL
     i = i + n
   end
 
   file.print <<-EOL
-&grdvar item='llev',    dtype='levels', lnum=3, lvars=#{llev.join(", ")}, /
+&GrADS_ITEM name='llev',    dtype='levels', lnum=3, lvars=#{llev.join(", ")}, /
   EOL
 
   trec = 0
@@ -415,7 +412,7 @@ File.open(grads_namelist, "w") do |file|
   i = 1
   vars_land.each do |v,n,desc|
     file.print <<-EOL
-&grdvar item='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}land', startrec=#{"%1d"%i}, totalrec=#{trec} /
+&GrADS_ITEM name='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}land', nx=#{nlon_land}, ny=#{nlat_land}#{n>1 ? ", nz="+n.to_s : ""}, startrec=#{"%1d"%i}, totalrec=#{trec} /
     EOL
     i = i + n
   end
