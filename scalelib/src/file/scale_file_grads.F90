@@ -86,7 +86,7 @@ module scale_file_grads
      character(len=H_SHORT) :: postfix
      integer                :: fid
   end type t_file
-  type(t_nml)  :: nmls(nmls_max)
+  type(t_nml), save  :: nmls(nmls_max)
   integer      :: nnmls = 0
   type(t_file) :: files(vars_max)
   integer      :: nfiles = 0
