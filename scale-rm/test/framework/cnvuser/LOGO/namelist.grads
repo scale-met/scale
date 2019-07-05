@@ -1,0 +1,15 @@
+#
+# Dimension
+#
+&GrADS_DIMS
+ nx = 604,
+ ny = 441,
+ nz = 1,
+/
+
+#
+# Variables
+#
+&GrADS_ITEM  name='lon',     dtype='linear',  swpoint=126.0d0, dd=0.03d0 /
+&GrADS_ITEM  name='lat',     dtype='linear',  swpoint=27.5d0, dd=0.031d0 /
+&GrADS_ITEM  name='logo',    dtype='map',     fname='logo', startrec=1, totalrec=1, bintype='int1', yrev=.true. /
