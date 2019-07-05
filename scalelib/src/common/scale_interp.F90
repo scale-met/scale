@@ -242,8 +242,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       EPS   => CONST_EPS,  &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
     integer,  intent(in)  :: KA_ref, KS_ref, KE_ref        ! number of z-direction    (reference)
     integer,  intent(in)  :: KA, KS, KE                    ! number of z-direction    (target)
@@ -440,7 +440,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     use scale_sort, only: &
        SORT_exec
     implicit none
@@ -529,7 +530,10 @@ contains
              i4 = i3 + 1
              if ( i4 > IA_ref ) i4 = i4 - IA_ref
           end if
-          if ( x_ref(i1,j1)==UNDEF .or. x_ref(i2,j2)==UNDEF .or. x_ref(i3,j3)==UNDEF .or. x_ref(i4,j4)==UNDEF ) then
+          if ( abs( x_ref(i1,j1) - UNDEF ) < EPS .or. &
+               abs( x_ref(i2,j2) - UNDEF ) < EPS .or. &
+               abs( x_ref(i3,j3) - UNDEF ) < EPS .or. &
+               abs( x_ref(i4,j4) - UNDEF ) < EPS      ) then
              if ( ii == IA_ref-1 ) then
                 ii = 1
                 if ( jj == JA_ref-1 ) then
@@ -660,8 +664,6 @@ contains
        latlon_structure,    &
        lon_1d, lat_1d,      &
        weight_order         )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -1119,7 +1121,8 @@ contains
        val,           &
        logwgt         )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
     integer,  intent(in) :: KA_ref, KS_ref, KE_ref ! number of z-direction (reference)
     integer,  intent(in) :: KA, KS, KE             ! number of z-direction (target)
@@ -1157,7 +1160,7 @@ contains
     if ( logwgt_ ) then
        allocate( work(KA_ref) )
        do k = KS_ref, KE_ref
-          if ( val_ref(k) == UNDEF ) then
+          if ( abs( val_ref(k) - UNDEF ) < EPS ) then
              work(k) = UNDEF
           else
              work(k) = log( val_ref(k) )
@@ -1184,7 +1187,7 @@ contains
     if ( logwgt_ ) then
        deallocate( work )
        do k = KS, KE
-          if ( val(k) /= UNDEF ) then
+          if ( abs( val(k) - UNDEF ) > EPS ) then
              val(k) = exp( val(k) )
           endif
        end do
@@ -1251,7 +1254,7 @@ contains
        do n = 1, npoints
           f = hfact(i,j,n)
           w = val_ref(idx_i(i,j,n),idx_j(i,j,n))
-          if ( f > EPS .and. w .ne. UNDEF ) then
+          if ( f > EPS .and. abs( w - UNDEF ) > EPS ) then
              fact = fact + f
              valn = valn + f * w
           else
@@ -1375,7 +1378,7 @@ contains
        do j = jmin, jmax
        do i = imin, imax
        do k = KS_ref, KE_ref
-          if ( val_ref(k,i,j) == UNDEF ) then
+          if ( abs( val_ref(k,i,j) - UNDEF ) < EPS ) then
              work(k,i,j) = UNDEF
           else
              work(k,i,j) = log( val_ref(k,i,j) )
@@ -1421,7 +1424,7 @@ contains
           valn = 0.0_RP
           do n = 1, npoints
              f = hfact(i,j,n)
-             if ( f > EPS .and. w(k,n) .ne. UNDEF ) then
+             if ( f > EPS .and. abs( w(k,n) - UNDEF ) > EPS ) then
                 fact = fact + f
                 valn = valn + f * w(k,n)
              else
@@ -1445,7 +1448,7 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          if ( val(k,i,j) /= UNDEF ) then
+          if ( abs( val(k,i,j) - UNDEF ) > EPS ) then
              val(k,i,j) = exp( val(k,i,j) )
           end if
        end do
@@ -1788,7 +1791,8 @@ contains
                             i,                &
                             drad, idx_i       )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     use scale_sort, only: &
        SORT_exec
 
@@ -1802,7 +1806,7 @@ contains
 
     real(RP) :: dradian
 
-    if ( lon_ref == UNDEF ) return
+    if ( abs( lon_ref - UNDEF  ) < EPS ) return
 
     dradian = haversine( lon, lat, lon_ref, lat_ref )
 
@@ -1827,7 +1831,8 @@ contains
                                i, j,              &
                                drad, idx_i, idx_j )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     use scale_sort, only: &
        SORT_exec
 
@@ -1842,7 +1847,7 @@ contains
 
     real(RP) :: dradian
 
-    if ( lon_ref == UNDEF ) return
+    if ( abs( lon_ref - UNDEF ) < EPS ) return
 
     dradian = haversine( lon, lat, lon_ref, lat_ref )
 
@@ -1870,7 +1875,8 @@ contains
                               lat_min, lat_max, &
                               dlon, dlat        )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     use scale_prc, only: &
        PRC_abort
     integer,  intent(in) :: nsize
@@ -1887,17 +1893,17 @@ contains
 
     integer :: i, ii, jj, n
 
-    lon_min = minval(lon_ref(:), mask=lon_ref.ne.UNDEF)
-    lon_max = maxval(lon_ref(:), mask=lon_ref.ne.UNDEF)
-    lat_min = minval(lat_ref(:), mask=lat_ref.ne.UNDEF)
-    lat_max = maxval(lat_ref(:), mask=lat_ref.ne.UNDEF)
+    lon_min = minval(lon_ref(:), mask=abs(lon_ref-UNDEF)>EPS)
+    lon_max = maxval(lon_ref(:), mask=abs(lon_ref-UNDEF)>EPS)
+    lat_min = minval(lat_ref(:), mask=abs(lat_ref-UNDEF)>EPS)
+    lat_max = maxval(lat_ref(:), mask=abs(lat_ref-UNDEF)>EPS)
 
     dlon = ( lon_max - lon_min ) / psize
     dlat = ( lat_max - lat_min ) / psize
 
     nidx(:,:) = 0
     do i = 1, nsize
-       if ( lon_ref(i) == UNDEF ) cycle
+       if ( abs( lon_ref(i) - UNDEF ) < EPS ) cycle
        ii = min(int((lon_ref(i) - lon_min) / dlon) + 1, psize)
        jj = min(int((lat_ref(i) - lat_min) / dlat) + 1, psize)
        n = nidx(ii,jj) + 1
@@ -2125,7 +2131,7 @@ contains
     if ( INTERP_use_spline_vert ) then
 
        do k = KS_ref, KE_ref-1
-          if ( val_ref(k) .ne. UNDEF ) then
+          if ( abs( val_ref(k) - UNDEF ) > EPS ) then
              idx(1) = k
              idx_r(k) = 1
              exit
@@ -2135,7 +2141,7 @@ contains
        FDZ(1) = 1e10 ! dummy
        do k = idx(1)+1, KE_ref
           dz = hgt_ref(k) - hgt_ref(idx(kmax))
-          if ( val_ref(k) .ne. UNDEF .and. dz > EPS ) then
+          if ( abs( val_ref(k) - UNDEF ) > EPS .and. dz > EPS ) then
              do while ( kmax > 1 .and. FDZ(kmax) < dz * 0.1_RP )
                 kmax = kmax - 1 ! marge
              end do
@@ -2195,7 +2201,8 @@ contains
        U, FDZ,       &
        val           )
     use scale_const, only: &
-       UNDEF => CONST_UNDEF
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
     integer,  intent(in) :: KA_ref, kmax
     integer,  intent(in) :: KA, KS, KE
@@ -2221,7 +2228,7 @@ contains
        else if ( idx_k(k,2) == -1 ) then
           val(k) = val_ref(kk)
        else if ( kk < idx(1) .or. kk >= idx(kmax) ) then ! linear interpolation
-          if ( val_ref(kk) == UNDEF .or. val_ref(kk+1) == UNDEF ) then
+          if ( abs( val_ref(kk) - UNDEF ) < EPS .or. abs( val_ref(kk+1) - UNDEF ) < EPS ) then
              val(k) = UNDEF
           else
              val(k) = val_ref(kk) * vfact(k) + val_ref(kk+1) * ( 1.0_RP - vfact(k) )

@@ -1034,7 +1034,6 @@ contains
                                      nhalos_x,     & ! [IN]
                                      nhalos_y,     & ! [IN]
                                      hinfo,        & ! [IN]
-                                     dinfo,        & ! [IN]
                                      debug         ) ! [IN]
        endif
     endif
