@@ -114,7 +114,7 @@ contains
              D1 = size( ainfo(n)%AXIS_1d(:), 1 )
 
              select case( ainfo_all(n)%varname )
-             case('x','lon')
+             case('x')
 
                 GD1 = D1 * nprocs_x_out
 
@@ -140,7 +140,7 @@ contains
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
-             case('xh')
+             case('xh','lon')
 
                 GD1 = ( D1 - 1 ) * nprocs_x_out + 1
 
@@ -166,7 +166,7 @@ contains
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
-             case('y','lat')
+             case('y')
 
                 GD1 = D1 * nprocs_y_out
 
@@ -192,7 +192,7 @@ contains
                                   ainfo_all(n)%AXIS_1d(:) )
                 endselect
 
-             case('yh')
+             case('yh','lat')
 
                 GD1 = ( D1 - 1 ) * nprocs_y_out + 1
 
@@ -956,7 +956,7 @@ contains
           D1 = size( dinfo%VAR_1d(:), 1 )
 
           select case( dinfo_all%dim_name(1) )
-          case('x','lon')
+          case('x')
 
              GD1 = D1 * nprocs_x_out
 
@@ -982,7 +982,7 @@ contains
                                dinfo_all%VAR_1d(:) )
              endselect
 
-          case('y','lat')
+          case('y')
 
              GD1 = D1 * nprocs_y_out
 
@@ -1022,33 +1022,68 @@ contains
           D1 = size( dinfo%VAR_2d(:,:), 1 )
           D2 = size( dinfo%VAR_2d(:,:), 2 )
 
-          GD1 = D1 * nprocs_x_out
-          GD2 = D2 * nprocs_y_out
+          if ( dinfo_all%dim_name(1) == 'lon' .AND. &
+               dinfo_all%dim_name(2) == 'lat'       ) then
 
-          allocate( dinfo_all%VAR_2d( GD1, GD2) )
-          dinfo_all%dim_size(1) = GD1
-          dinfo_all%dim_size(2) = GD2
+             GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+             GD2 = ( D2 - 1 ) * nprocs_y_out + 1
 
-          select case( dinfo_all%datatype )
-          case( FILE_REAL4 )
-             call gather_xy( ismaster,             &
-                             SP,                   &
-                             nprocs_x_out,         &
-                             nprocs_y_out,         &
-                             D1, 0, 0, 0,          &
-                             D2, 0, 0, 0,          &
-                             dinfo%VAR_2d(:,:),    &
-                             dinfo_all%VAR_2d(:,:) )
-          case( FILE_REAL8 )
-             call gather_xy( ismaster,             &
-                             DP,                   &
-                             nprocs_x_out,         &
-                             nprocs_y_out,         &
-                             D1, 0, 0, 0,          &
-                             D2, 0, 0, 0,          &
-                             dinfo%VAR_2d(:,:),    &
-                             dinfo_all%VAR_2d(:,:) )
-          endselect
+             allocate( dinfo_all%VAR_2d( GD1, GD2) )
+             dinfo_all%dim_size(1) = GD1
+             dinfo_all%dim_size(2) = GD2
+
+             select case( dinfo_all%datatype )
+             case( FILE_REAL4 )
+                call gather_xy( ismaster,             &
+                                SP,                   &
+                                nprocs_x_out,         &
+                                nprocs_y_out,         &
+                                D1, 1, 0, 0,          &
+                                D2, 1, 0, 0,          &
+                                dinfo%VAR_2d(:,:),    &
+                                dinfo_all%VAR_2d(:,:) )
+             case( FILE_REAL8 )
+                call gather_xy( ismaster,             &
+                                DP,                   &
+                                nprocs_x_out,         &
+                                nprocs_y_out,         &
+                                D1, 1, 0, 0,          &
+                                D2, 1, 0, 0,          &
+                                dinfo%VAR_2d(:,:),    &
+                                dinfo_all%VAR_2d(:,:) )
+             endselect
+
+          else
+
+             GD1 = D1 * nprocs_x_out
+             GD2 = D2 * nprocs_y_out
+
+             allocate( dinfo_all%VAR_2d( GD1, GD2) )
+             dinfo_all%dim_size(1) = GD1
+             dinfo_all%dim_size(2) = GD2
+
+             select case( dinfo_all%datatype )
+             case( FILE_REAL4 )
+                call gather_xy( ismaster,             &
+                                SP,                   &
+                                nprocs_x_out,         &
+                                nprocs_y_out,         &
+                                D1, 0, 0, 0,          &
+                                D2, 0, 0, 0,          &
+                                dinfo%VAR_2d(:,:),    &
+                                dinfo_all%VAR_2d(:,:) )
+             case( FILE_REAL8 )
+                call gather_xy( ismaster,             &
+                                DP,                   &
+                                nprocs_x_out,         &
+                                nprocs_y_out,         &
+                                D1, 0, 0, 0,          &
+                                D2, 0, 0, 0,          &
+                                dinfo%VAR_2d(:,:),    &
+                                dinfo_all%VAR_2d(:,:) )
+             endselect
+
+          endif
 
        case( 3 )
 
@@ -1058,71 +1093,149 @@ contains
 
           if ( dinfo_all%transpose ) then
 
-             GD1 = D1
-             GD2 = D2 * nprocs_x_out
-             GD3 = D3 * nprocs_y_out
+             if ( dinfo_all%dim_name(1) == 'lon' .AND. &
+                  dinfo_all%dim_name(2) == 'lat'       ) then
 
-             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-             dinfo_all%dim_size(1) = GD1
-             dinfo_all%dim_size(2) = GD2
-             dinfo_all%dim_size(3) = GD3
+                GD1 = D1
+                GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                GD3 = ( D3 - 1 ) * nprocs_y_out + 1
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_nxy( ismaster,               &
-                                 SP,                     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1,                     &
-                                 D2, 0, 0, 0,            &
-                                 D3, 0, 0, 0,            &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-             case( FILE_REAL8 )
-                call gather_nxy( ismaster,               &
-                                 DP,                     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1,                     &
-                                 D2, 0, 0, 0,            &
-                                 D3, 0, 0, 0,            &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-             endselect
+                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
+                dinfo_all%dim_size(1) = GD1
+                dinfo_all%dim_size(2) = GD2
+                dinfo_all%dim_size(3) = GD3
+
+                select case( dinfo_all%datatype )
+                case( FILE_REAL4 )
+                   call gather_nxy( ismaster,               &
+                                    SP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1,                     &
+                                    D2, 1, 0, 0,            &
+                                    D3, 1, 0, 0,            &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                case( FILE_REAL8 )
+                   call gather_nxy( ismaster,               &
+                                    DP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1,                     &
+                                    D2, 1, 0, 0,            &
+                                    D3, 1, 0, 0,            &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                endselect
+
+             else
+
+                GD1 = D1
+                GD2 = D2 * nprocs_x_out
+                GD3 = D3 * nprocs_y_out
+
+                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
+                dinfo_all%dim_size(1) = GD1
+                dinfo_all%dim_size(2) = GD2
+                dinfo_all%dim_size(3) = GD3
+
+                select case( dinfo_all%datatype )
+                case( FILE_REAL4 )
+                   call gather_nxy( ismaster,               &
+                                    SP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1,                     &
+                                    D2, 0, 0, 0,            &
+                                    D3, 0, 0, 0,            &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                case( FILE_REAL8 )
+                   call gather_nxy( ismaster,               &
+                                    DP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1,                     &
+                                    D2, 0, 0, 0,            &
+                                    D3, 0, 0, 0,            &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                endselect
+
+             endif
 
           else
 
-             GD1 = D1 * nprocs_x_out
-             GD2 = D2 * nprocs_y_out
-             GD3 = D3
+             if ( dinfo_all%dim_name(1) == 'lon' .AND. &
+                  dinfo_all%dim_name(2) == 'lat'       ) then
 
-             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-             dinfo_all%dim_size(1) = GD1
-             dinfo_all%dim_size(2) = GD2
-             dinfo_all%dim_size(3) = GD3
+                GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                GD3 = D3
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_xyn( ismaster,               &
-                                 SP,                     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1, 0, 0, 0,            &
-                                 D2, 0, 0, 0,            &
-                                 D3,                     &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-             case( FILE_REAL8 )
-                call gather_xyn( ismaster,               &
-                                 DP,                     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1, 0, 0, 0,            &
-                                 D2, 0, 0, 0,            &
-                                 D3,                     &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-             endselect
+                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
+                dinfo_all%dim_size(1) = GD1
+                dinfo_all%dim_size(2) = GD2
+                dinfo_all%dim_size(3) = GD3
+
+                select case( dinfo_all%datatype )
+                case( FILE_REAL4 )
+                   call gather_xyn( ismaster,               &
+                                    SP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1, 1, 0, 0,            &
+                                    D2, 1, 0, 0,            &
+                                    D3,                     &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                case( FILE_REAL8 )
+                   call gather_xyn( ismaster,               &
+                                    DP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1, 1, 0, 0,            &
+                                    D2, 1, 0, 0,            &
+                                    D3,                     &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                endselect
+
+             else
+
+                GD1 = D1 * nprocs_x_out
+                GD2 = D2 * nprocs_y_out
+                GD3 = D3
+
+                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
+                dinfo_all%dim_size(1) = GD1
+                dinfo_all%dim_size(2) = GD2
+                dinfo_all%dim_size(3) = GD3
+
+                select case( dinfo_all%datatype )
+                case( FILE_REAL4 )
+                   call gather_xyn( ismaster,               &
+                                    SP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1, 0, 0, 0,            &
+                                    D2, 0, 0, 0,            &
+                                    D3,                     &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                case( FILE_REAL8 )
+                   call gather_xyn( ismaster,               &
+                                    DP,                     &
+                                    nprocs_x_out,           &
+                                    nprocs_y_out,           &
+                                    D1, 0, 0, 0,            &
+                                    D2, 0, 0, 0,            &
+                                    D3,                     &
+                                    dinfo%VAR_3d(:,:,:),    &
+                                    dinfo_all%VAR_3d(:,:,:) )
+                endselect
+
+             endif
 
           endif
 

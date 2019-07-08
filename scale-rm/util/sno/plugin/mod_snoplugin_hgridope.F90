@@ -64,6 +64,11 @@ module mod_snoplugin_hgridope
   type(axisinfo),         private              :: ainfo_ll(8)
   type(iteminfo),         private              :: dinfo_ll
 
+  real(RP),               private              :: lon_rng
+  real(RP),               private              :: lat_rng
+  integer,                private              :: lon_num
+  integer,                private              :: lat_num
+
   integer,                private              :: imax_ref
   integer,                private              :: jmax_ref
   integer,                private              :: imax_new
@@ -78,6 +83,7 @@ contains
   subroutine SNOPLGIN_hgridope_setup( &
        nprocs_x_out,    &
        nprocs_y_out,    &
+       output_single,   &
        output_grads,    &
        output_gradsctl, &
        enable_plugin,   &
@@ -88,6 +94,7 @@ contains
 
     integer, intent(in)    :: nprocs_x_out             ! x length of 2D processor topology (output)
     integer, intent(in)    :: nprocs_y_out             ! y length of 2D processor topology (output)
+    logical, intent(in)    :: output_single            ! output single file when using MPI?
     logical, intent(in)    :: output_grads
     logical, intent(in)    :: output_gradsctl
     logical, intent(out)   :: enable_plugin
@@ -165,6 +172,24 @@ contains
           call PRC_abort
        endif
 
+       lon_rng = SNOPLGIN_hgridope_lon_end - SNOPLGIN_hgridope_lon_start
+       lon_num = int( lon_rng / SNOPLGIN_hgridope_dlon / nprocs_x_out )
+
+       if ( mod( int( lon_rng / SNOPLGIN_hgridope_dlon ), nprocs_x_out ) /= 0 ) then
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the number of x-process should be able to divide longitudinal size.', &
+                                                 nprocs_x_out, int( lon_rng / SNOPLGIN_hgridope_dlon )
+          call PRC_abort
+       endif
+
+       lat_rng = SNOPLGIN_hgridope_lat_end - SNOPLGIN_hgridope_lat_start 
+       lat_num = int( lat_rng / SNOPLGIN_hgridope_dlat / nprocs_y_out )
+
+       if ( mod( int( lat_rng / SNOPLGIN_hgridope_dlat ), nprocs_y_out ) /= 0 ) then
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the number of y-process should be able to divide latitudinal size.', &
+                                                 nprocs_y_out, int( lat_rng / SNOPLGIN_hgridope_dlat )
+          call PRC_abort
+       endif
+
     case default
        LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the name of SNOPLGIN_hgridope_type is not appropriate : ', trim(SNOPLGIN_hgridope_type)
        LOG_ERROR_CONT(*) 'you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
@@ -179,7 +204,7 @@ contains
           LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'This plugin ignores control file. please turn off output_gradsctl.'
           call PRC_abort
        else
-          if ( nprocs_x_out * nprocs_y_out /= 1 ) then
+          if ( .NOT. output_single .AND. nprocs_x_out * nprocs_y_out /= 1 ) then
              LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'To use this plugin, the number of output file must be 1.'
              call PRC_abort
           endif
@@ -194,11 +219,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_hgridope_setcoef( &
-       ngrids_x_out, &
-       ngrids_y_out, &
-       naxis,        &
-       ainfo,        &
-       debug         )
+       nprocs_x_out,  &
+       nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       nowrank_x,     &
+       nowrank_y,     &
+       naxis,         &
+       ainfo,         &
+       debug          )
     use scale_file_h, only: &
        FILE_REAL8
     use scale_const, only: &
@@ -211,11 +240,15 @@ contains
        axisinfo
     implicit none
 
-    integer,        intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
-    integer,        intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
-    integer,        intent(in)  :: naxis                                 ! number of axis variables           (input)
-    type(axisinfo), intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
-    logical,        intent(in)  :: debug
+    integer,          intent(in)  :: nprocs_x_out                          ! x length of 2D processor topology (output)
+    integer,          intent(in)  :: nprocs_y_out                          ! y length of 2D processor topology (output)
+    integer,          intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: nowrank_x                             ! current process number at x-axis
+    integer,          intent(in)  :: nowrank_y                             ! current process number at y-axis
+    integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
+    type(axisinfo),   intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
+    logical,          intent(in)  :: debug
 
     real(RP), allocatable :: lon_ref(:,:) ! [rad]
     real(RP), allocatable :: lat_ref(:,:) ! [rad]
@@ -244,10 +277,17 @@ contains
     ainfo_ll(1)%has_bounds  = .false.
     ainfo_ll(1)%is_bounds   = .false.
 
-    ainfo_ll(1)%dim_size(1) = int( ( SNOPLGIN_hgridope_lon_end - SNOPLGIN_hgridope_lon_start ) / SNOPLGIN_hgridope_dlon )
-    allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
-
-    ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start
+    if ( nowrank_x == 1 ) then
+       ainfo_ll(1)%dim_size(1) = lon_num + 1
+       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
+       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start &
+                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+    else
+       ainfo_ll(1)%dim_size(1) = lon_num
+       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
+       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start + SNOPLGIN_hgridope_dlon &
+                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+    endif
     do i = 2, ainfo_ll(1)%dim_size(1)
        ainfo_ll(1)%AXIS_1d(i) = ainfo_ll(1)%AXIS_1d(i-1) + SNOPLGIN_hgridope_dlon
     enddo
@@ -263,10 +303,17 @@ contains
     ainfo_ll(2)%has_bounds  = .false.
     ainfo_ll(2)%is_bounds   = .false.
 
-    ainfo_ll(2)%dim_size(1) = int( ( SNOPLGIN_hgridope_lat_end - SNOPLGIN_hgridope_lat_start ) / SNOPLGIN_hgridope_dlat )
-    allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
-
-    ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start
+    if ( nowrank_y == 1 ) then
+       ainfo_ll(2)%dim_size(1) = lat_num + 1
+       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
+       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start &
+                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+    else
+       ainfo_ll(2)%dim_size(1) = lat_num
+       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
+       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start + SNOPLGIN_hgridope_dlat &
+                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+    endif
     do j = 2, ainfo_ll(2)%dim_size(1)
        ainfo_ll(2)%AXIS_1d(j) = ainfo_ll(2)%AXIS_1d(j-1) + SNOPLGIN_hgridope_dlat
     enddo
@@ -358,7 +405,7 @@ contains
     type(iteminfo), intent(in)  :: dinfo ! variable information               (input)
     logical,        intent(in)  :: debug
 
-    integer  :: gout1
+    integer  :: kmax
     !---------------------------------------------------------------------------
 
     if ( debug ) then
@@ -376,9 +423,13 @@ contains
 
     elseif( dinfo%dim_rank == 3 ) then
 
-       gout1 = size(dinfo%VAR_3d(:,:,:),1)
+       if ( dinfo%transpose ) then
+          kmax = dinfo%dim_size(3)
+       else
+          kmax = dinfo%dim_size(1)
+       endif
+       allocate( dinfo_ll%VAR_3d(kmax,imax_new,jmax_new) )
 
-       allocate( dinfo_ll%VAR_3d(gout1,imax_new,jmax_new) )
        dinfo_ll%VAR_3d(:,:,:) = 0.0_RP
 
     endif
@@ -449,8 +500,6 @@ contains
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
 
-    integer  :: gout1
-
     logical  :: do_output, finalize, add_rm_attr
     integer  :: k, t
     !---------------------------------------------------------------------------
@@ -496,20 +545,20 @@ contains
 
     elseif( dinfo%dim_rank == 3 ) then
 
-       gout1 = size(dinfo%VAR_3d(:,:,:),1)
-
        dinfo_ll%dim_name(1) = "lon"
+       dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_name(2) = "lat"
+       dinfo_ll%dim_size(2) = jmax_new
+
        if ( dinfo%transpose ) then
           dinfo_ll%dim_name(3) = dinfo%dim_name(3)
+          dinfo_ll%dim_size(3) = dinfo%dim_size(3)
        else
           dinfo_ll%dim_name(3) = dinfo%dim_name(1)
+          dinfo_ll%dim_size(3) = dinfo%dim_size(1)
        endif
-       dinfo_ll%dim_size(1) = imax_new
-       dinfo_ll%dim_size(2) = jmax_new
-       dinfo_ll%dim_size(3) = gout1
 
-       do k = 1, gout1
+       do k = 1, dinfo_ll%dim_size(3)
           call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                                 imax_ref, jmax_ref,        & ! [IN]
                                 imax_new, jmax_new,        & ! [IN]

@@ -944,7 +944,7 @@ contains
     else
        call PROF_rapstart('FILE_O_NetCDF', 2)
 
-       if ( nowvars == 1 .OR. nowstep == 1 ) then ! do below only once when first time 
+       if ( nowvars == 1 .AND. nowstep == 1 ) then ! do below only once when first time 
           allocate( ainfo_all(naxis) )
 
           call SNO_comm_globalaxis( ismaster,      & ! [IN]
