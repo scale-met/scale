@@ -230,6 +230,7 @@ program sno
                                 do_output                   ) ! [INOUT]
 
   call SNOPLGIN_hgridope_setup( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                output_single,              & ! [IN] from namelist
                                 output_grads,               & ! [IN] from namelist
                                 output_gradsctl,            & ! [IN] from namelist
                                 plugin_hgridope,            & ! [OUT]
@@ -355,12 +356,15 @@ program sno
                                readflag(:,:),                & ! [IN]    from SNO_map_settable_local
                                debug                         ) ! [IN]
 
-           if( plugin_vgridope ) call SNOPLGIN_vgridope_setcoef( ngrids_z, ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
-                                                                 naxis,                                & ! [IN] from SNO_file_getinfo
-                                                                 ainfo(:),                             & ! [IN] from SNO_axis_getinfo
-                                                                 debug                                 ) ! [IN]
+           if( plugin_vgridope ) call SNOPLGIN_vgridope_setcoef( ngrids_z,                   & ! [IN] from SNO_map_getsize_local
+                                                                 ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
+                                                                 naxis,                      & ! [IN] from SNO_file_getinfo
+                                                                 ainfo(:),                   & ! [IN] from SNO_axis_getinfo
+                                                                 debug                       ) ! [IN]
 
-           if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
+           if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+                                                                 ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
+                                                                 px,           py,           & ! [IN]
                                                                  naxis,                      & ! [IN] from SNO_file_getinfo
                                                                  ainfo(:),                   & ! [IN] from SNO_axis_getinfo
                                                                  debug                       ) ! [IN]
