@@ -598,7 +598,8 @@ contains
                                  nprocs_x_out,  & ! [IN]
                                  nprocs_y_out,  & ! [IN]
                                  dinfo,         & ! [IN]
-                                 dinfo_all      ) ! [OUT]
+                                 dinfo_all,     & ! [OUT]
+                                 bcast = .true. ) ! [IN]
 
        do k = 1, dinfo_ll%dim_size(3)
           call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
