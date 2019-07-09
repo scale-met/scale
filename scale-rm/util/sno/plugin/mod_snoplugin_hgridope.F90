@@ -344,7 +344,7 @@ contains
 
     dx  = SNOPLGIN_hgridope_dlon * CONST_D2R * CONST_RADIUS * cos(clat)
     dy  = SNOPLGIN_hgridope_dlat * CONST_D2R * CONST_RADIUS * cos(clat)
-    dxy = sqrt( dx*dx + dy*dy )
+    dxy = sqrt( dx*dx + dy*dy ) * 10.0_RP
 
     call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
                        search_limit = dxy        ) ! [IN]
