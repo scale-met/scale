@@ -62,11 +62,9 @@ contains
        hinfo,         &
        naxis,         &
        ainfo,         &
-       ainfo_all      )
+       ainfo_all,     &
+       bcast          )
     use mpi
-    use scale_file_h, only: &
-       FILE_REAL4, &
-       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
@@ -84,16 +82,27 @@ contains
     type(axisinfo),   intent(in)    :: ainfo(:)                              ! axis information (input)
     type(axisinfo),   intent(out)   :: ainfo_all(:)                          ! axis information (output)
 
+    logical,          intent(in), optional :: bcast                          ! use broadcast?
+
     integer  :: D1, D2, D3
     integer  :: GD1, GD2, GD3
     integer  :: xhalo, yhalo
     integer  :: n
+    integer  :: ierr
+
+    logical  :: bcast_
     !---------------------------------------------------------------------------
 
     if ( output_single ) then
 
        xhalo = hinfo%halosize(2)
        yhalo = hinfo%halosize(3)
+
+       if ( present( bcast ) ) then
+          bcast_ = .true.
+       else
+          bcast_ = .false.
+       endif
 
        do n = 1, naxis
           ! set axis information
@@ -116,211 +125,155 @@ contains
              select case( ainfo_all(n)%varname )
              case('x')
 
-                GD1 = D1 * nprocs_x_out
+                if ( ismaster ) then
+                   GD1 = D1 * nprocs_x_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_x( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_x( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_x( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, 0, 0,            &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('xh','lon')
 
-                GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                if ( ismaster ) then
+                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_x( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 1, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_x( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 1, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_x( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 1, 0, 0,            &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('y')
 
-                GD1 = D1 * nprocs_y_out
+                if ( ismaster ) then
+                   GD1 = D1 * nprocs_y_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_y( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_y( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_y( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, 0, 0,            &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('yh','lat')
 
-                GD1 = ( D1 - 1 ) * nprocs_y_out + 1
+                if ( ismaster ) then
+                   GD1 = ( D1 - 1 ) * nprocs_y_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_y( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 1, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_y( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 1, 0, 0,            &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_y( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 1, 0, 0,            &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('CX','CDX','CBFX')
 
-                GD1 = ( D1 - 2*xhalo ) * nprocs_x_out + 2*xhalo
+                if ( ismaster ) then
+                   GD1 = ( D1 - 2*xhalo ) * nprocs_x_out + 2*xhalo
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_x( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, xhalo, 0,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_x( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, xhalo, 0,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_x( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, xhalo, 0,        &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('FX','FDX','FBFX')
 
-                GD1 = ( D1 - 2*xhalo - 1 ) * nprocs_x_out + 2*xhalo + 1
+                if ( ismaster ) then
+                   GD1 = ( D1 - 2*xhalo - 1 ) * nprocs_x_out + 2*xhalo + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_x( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, xhalo, 1,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_x( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, xhalo, 1,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_x( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, xhalo, 1,        &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('CY','CDY','CBFY')
 
-                GD1 = ( D1 - 2*yhalo ) * nprocs_y_out + 2*yhalo
+                if ( ismaster ) then
+                   GD1 = ( D1 - 2*yhalo ) * nprocs_y_out + 2*yhalo
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_y( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, yhalo, 0,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_y( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, yhalo, 0,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_y( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, yhalo, 0,        &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case('FY','FDY','FBFY')
 
-                GD1 = ( D1 - 2*yhalo - 1 ) * nprocs_y_out + 2*yhalo + 1
+                if ( ismaster ) then
+                   GD1 = ( D1 - 2*yhalo - 1 ) * nprocs_y_out + 2*yhalo + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                 allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
                 ainfo_all(n)%dim_size(1) = GD1
 
-                select case( ainfo_all(n)%datatype )
-                case( FILE_REAL4 )
-                   call gather_y( ismaster,               &
-                                  SP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, yhalo, 1,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                case( FILE_REAL8 )
-                   call gather_y( ismaster,               &
-                                  DP,                     &
-                                  nprocs_x_out,           &
-                                  nprocs_y_out,           &
-                                  D1, 0, yhalo, 1,        &
-                                  ainfo(n)%AXIS_1d(:),    &
-                                  ainfo_all(n)%AXIS_1d(:) )
-                endselect
+                call gather_y( ismaster,               &
+                               bcast_,                 &
+                               ainfo_all(n)%datatype,  &
+                               nprocs_x_out,           &
+                               nprocs_y_out,           &
+                               D1, 0, yhalo, 1,        &
+                               ainfo(n)%AXIS_1d(:),    &
+                               ainfo_all(n)%AXIS_1d(:) )
 
              case default
 
@@ -341,123 +294,95 @@ contains
                 select case( ainfo_all(n)%varname )
                 case('lon_uy','lat_uy','cell_area_uy')
 
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = D2 * nprocs_y_out
+                   if ( ismaster ) then
+                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                      GD2 = D2 * nprocs_y_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xy( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 1, 0, 0,              &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xy( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 1, 0, 0,              &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_xy( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1, 1, 0, 0,              &
+                                   D2, 0, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case('lon_xv','lat_xv','cell_area_xv')
 
-                   GD1 = D1 * nprocs_x_out
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   if ( ismaster ) then
+                      GD1 = D1 * nprocs_x_out
+                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xy( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 0, 0, 0,              &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xy( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 0, 0, 0,              &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_xy( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1, 0, 0, 0,              &
+                                   D2, 1, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case('lon_uv','lat_uv')
 
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   if ( ismaster ) then
+                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xy( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 1, 0, 0,              &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xy( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 1, 0, 0,              &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_xy( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1, 1, 0, 0,              &
+                                   D2, 1, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case default
 
-                   GD1 = D1 * nprocs_x_out
-                   GD2 = D2 * nprocs_y_out
+                   if ( ismaster ) then
+                      GD1 = D1 * nprocs_x_out
+                      GD2 = D2 * nprocs_y_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xy( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 0, 0, 0,              &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xy( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1, 0, 0, 0,              &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_xy( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1, 0, 0, 0,              &
+                                   D2, 0, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 endselect
 
@@ -466,123 +391,95 @@ contains
                 select case( ainfo_all(n)%varname )
                 case('x_bnds')
 
-                   GD1 = D1
-                   GD2 = D2 * nprocs_x_out
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = D2 * nprocs_x_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nx( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nx( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_nx( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1,                       &
+                                   D2, 0, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case('xh_bnds')
 
-                   GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nx( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nx( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_nx( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1,                       &
+                                   D2, 1, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case('y_bnds')
 
-                   GD1 = D1
-                   GD2 = D2 * nprocs_y_out
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = D2 * nprocs_y_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_ny( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_ny( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 0, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_ny( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1,                       &
+                                   D2, 0, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case('yh_bnds')
 
-                   GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_ny( ismaster,                 &
-                                      SP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   case( FILE_REAL8 )
-                      call gather_ny( ismaster,                 &
-                                      DP,                       &
-                                      nprocs_x_out,             &
-                                      nprocs_y_out,             &
-                                      D1,                       &
-                                      D2, 1, 0, 0,              &
-                                      ainfo(n)%AXIS_2d(:,:),    &
-                                      ainfo_all(n)%AXIS_2d(:,:) )
-                   endselect
+                   call gather_ny( ismaster,                 &
+                                   bcast_,                   &
+                                   ainfo_all(n)%datatype,    &
+                                   nprocs_x_out,             &
+                                   nprocs_y_out,             &
+                                   D1,                       &
+                                   D2, 1, 0, 0,              &
+                                   ainfo(n)%AXIS_2d(:,:),    &
+                                   ainfo_all(n)%AXIS_2d(:,:) )
 
                 case default
 
@@ -607,139 +504,111 @@ contains
                 select case( ainfo_all(n)%varname )
                 case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
 
-                   GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                   GD3 = D3 * nprocs_y_out
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                      GD3 = D3 * nprocs_y_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nxy( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 1, 0, 0,                &
-                                       D3, 0, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nxy( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 1, 0, 0,                &
-                                       D3, 0, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_nxy( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1,                         &
+                                    D2, 1, 0, 0,                &
+                                    D3, 0, 0, 0,                &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
 
-                   GD1 = D1
-                   GD2 = D2 * nprocs_x_out
-                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = D2 * nprocs_x_out
+                      GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nxy( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 0, 0, 0,                &
-                                       D3, 1, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nxy( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 0, 0, 0,                &
-                                       D3, 1, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_nxy( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1,                         &
+                                    D2, 0, 0, 0,                &
+                                    D3, 1, 0, 0,                &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
 
-                   GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                      GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nxy( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 1, 0, 0,                &
-                                       D3, 1, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nxy( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 1, 0, 0,                &
-                                       D3, 1, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_nxy( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1,                         &
+                                    D2, 1, 0, 0,                &
+                                    D3, 1, 0, 0,                &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case default
 
-                   GD1 = D1
-                   GD2 = D2 * nprocs_x_out
-                   GD3 = D3 * nprocs_y_out
+                   if ( ismaster ) then
+                      GD1 = D1
+                      GD2 = D2 * nprocs_x_out
+                      GD3 = D3 * nprocs_y_out
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_nxy( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 0, 0, 0,                &
-                                       D3, 0, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_nxy( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1,                         &
-                                       D2, 0, 0, 0,                &
-                                       D3, 0, 0, 0,                &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_nxy( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1,                         &
+                                    D2, 0, 0, 0,                &
+                                    D3, 0, 0, 0,                &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 endselect
 
@@ -748,139 +617,111 @@ contains
                 select case( ainfo_all(n)%varname )
                 case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
 
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = D2 * nprocs_y_out
-                   GD3 = D3
+                   if ( ismaster ) then
+                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                      GD2 = D2 * nprocs_y_out
+                      GD3 = D3
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xyn( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 1, 0, 0,                &
-                                       D2, 0, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xyn( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 1, 0, 0,                &
-                                       D2, 0, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_xyn( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1, 1, 0, 0,                &
+                                    D2, 0, 0, 0,                &
+                                    D3,                         &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
 
-                   GD1 = D1 * nprocs_x_out
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                   GD3 = D3
+                   if ( ismaster ) then
+                      GD1 = D1 * nprocs_x_out
+                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                      GD3 = D3
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xyn( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 0, 0, 0,                &
-                                       D2, 1, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xyn( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 0, 0, 0,                &
-                                       D2, 1, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_xyn( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1, 0, 0, 0,                &
+                                    D2, 1, 0, 0,                &
+                                    D3,                         &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
 
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                   GD3 = D3
+                   if ( ismaster ) then
+                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                      GD3 = D3
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xyn( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 1, 0, 0,                &
-                                       D2, 1, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xyn( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 1, 0, 0,                &
-                                       D2, 1, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_xyn( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1, 1, 0, 0,                &
+                                    D2, 1, 0, 0,                &
+                                    D3,                         &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 case default
 
-                   GD1 = D1 * nprocs_x_out
-                   GD2 = D2 * nprocs_y_out
-                   GD3 = D3
+                   if ( ismaster ) then
+                      GD1 = D1 * nprocs_x_out
+                      GD2 = D2 * nprocs_y_out
+                      GD3 = D3
+                   endif
+                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
                    allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
                    ainfo_all(n)%dim_size(1) = GD1
                    ainfo_all(n)%dim_size(2) = GD2
                    ainfo_all(n)%dim_size(3) = GD3
 
-                   select case( ainfo_all(n)%datatype )
-                   case( FILE_REAL4 )
-                      call gather_xyn( ismaster,                   &
-                                       SP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 0, 0, 0,                &
-                                       D2, 0, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   case( FILE_REAL8 )
-                      call gather_xyn( ismaster,                   &
-                                       DP,                         &
-                                       nprocs_x_out,               &
-                                       nprocs_y_out,               &
-                                       D1, 0, 0, 0,                &
-                                       D2, 0, 0, 0,                &
-                                       D3,                         &
-                                       ainfo(n)%AXIS_3d(:,:,:),    &
-                                       ainfo_all(n)%AXIS_3d(:,:,:) )
-                   endselect
+                   call gather_xyn( ismaster,                   &
+                                    bcast_,                     &
+                                    ainfo_all(n)%datatype,      &
+                                    nprocs_x_out,               &
+                                    nprocs_y_out,               &
+                                    D1, 0, 0, 0,                &
+                                    D2, 0, 0, 0,                &
+                                    D3,                         &
+                                    ainfo(n)%AXIS_3d(:,:,:),    &
+                                    ainfo_all(n)%AXIS_3d(:,:,:) )
 
                 endselect
 
@@ -905,10 +746,8 @@ contains
        nprocs_x_out,  &
        nprocs_y_out,  &
        dinfo,         &
-       dinfo_all      )
-    use scale_file_h, only: &
-       FILE_REAL4, &
-       FILE_REAL8
+       dinfo_all,     &
+       bcast          )
     use mod_sno_h, only: &
        iteminfo
     implicit none
@@ -920,12 +759,22 @@ contains
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     type(iteminfo),   intent(out)   :: dinfo_all                             ! variable information               (output)
 
+    logical,          intent(in), optional :: bcast                          ! use broadcast?
+
     integer  :: D1, D2, D3
     integer  :: GD1, GD2, GD3
     integer  :: t
+
+    logical  :: bcast_
     !---------------------------------------------------------------------------
 
     if ( output_single ) then
+
+       if ( present( bcast ) ) then
+          bcast_ = .true.
+       else
+          bcast_ = .false.
+       endif
 
        ! set variable information
        dinfo_all%varname       = dinfo%varname
@@ -963,24 +812,14 @@ contains
              allocate( dinfo_all%VAR_1d( GD1 ) )
              dinfo_all%dim_size(1) = GD1
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_x( ismaster,           &
-                               SP,                 &
-                               nprocs_x_out,       &
-                               nprocs_y_out,       &
-                               D1, 0, 0, 0,        &
-                               dinfo%VAR_1d(:),    &
-                               dinfo_all%VAR_1d(:) )
-             case( FILE_REAL8 )
-                call gather_x( ismaster,           &
-                               DP,                 &
-                               nprocs_x_out,       &
-                               nprocs_y_out,       &
-                               D1, 0, 0, 0,        &
-                               dinfo%VAR_1d(:),    &
-                               dinfo_all%VAR_1d(:) )
-             endselect
+             call gather_x( ismaster,           &
+                            bcast_,             &
+                            dinfo_all%datatype, &
+                            nprocs_x_out,       &
+                            nprocs_y_out,       &
+                            D1, 0, 0, 0,        &
+                            dinfo%VAR_1d(:),    &
+                            dinfo_all%VAR_1d(:) )
 
           case('y')
 
@@ -989,24 +828,14 @@ contains
              allocate( dinfo_all%VAR_1d( GD1 ) )
              dinfo_all%dim_size(1) = GD1
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_y( ismaster,           &
-                               SP,                 &
-                               nprocs_x_out,       &
-                               nprocs_y_out,       &
-                               D1, 0, 0, 0,        &
-                               dinfo%VAR_1d(:),    &
-                               dinfo_all%VAR_1d(:) )
-             case( FILE_REAL8 )
-                call gather_y( ismaster,           &
-                               DP,                 &
-                               nprocs_x_out,       &
-                               nprocs_y_out,       &
-                               D1, 0, 0, 0,        &
-                               dinfo%VAR_1d(:),    &
-                               dinfo_all%VAR_1d(:) )
-             endselect
+             call gather_y( ismaster,           &
+                            bcast_,             &
+                            dinfo_all%datatype, &
+                            nprocs_x_out,       &
+                            nprocs_y_out,       &
+                            D1, 0, 0, 0,        &
+                            dinfo%VAR_1d(:),    &
+                            dinfo_all%VAR_1d(:) )
 
           case default
 
@@ -1032,26 +861,15 @@ contains
              dinfo_all%dim_size(1) = GD1
              dinfo_all%dim_size(2) = GD2
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_xy( ismaster,             &
-                                SP,                   &
-                                nprocs_x_out,         &
-                                nprocs_y_out,         &
-                                D1, 1, 0, 0,          &
-                                D2, 1, 0, 0,          &
-                                dinfo%VAR_2d(:,:),    &
-                                dinfo_all%VAR_2d(:,:) )
-             case( FILE_REAL8 )
-                call gather_xy( ismaster,             &
-                                DP,                   &
-                                nprocs_x_out,         &
-                                nprocs_y_out,         &
-                                D1, 1, 0, 0,          &
-                                D2, 1, 0, 0,          &
-                                dinfo%VAR_2d(:,:),    &
-                                dinfo_all%VAR_2d(:,:) )
-             endselect
+             call gather_xy( ismaster,             &
+                             bcast_,               &
+                             dinfo_all%datatype,   &
+                             nprocs_x_out,         &
+                             nprocs_y_out,         &
+                             D1, 1, 0, 0,          &
+                             D2, 1, 0, 0,          &
+                             dinfo%VAR_2d(:,:),    &
+                             dinfo_all%VAR_2d(:,:) )
 
           else
 
@@ -1062,26 +880,15 @@ contains
              dinfo_all%dim_size(1) = GD1
              dinfo_all%dim_size(2) = GD2
 
-             select case( dinfo_all%datatype )
-             case( FILE_REAL4 )
-                call gather_xy( ismaster,             &
-                                SP,                   &
-                                nprocs_x_out,         &
-                                nprocs_y_out,         &
-                                D1, 0, 0, 0,          &
-                                D2, 0, 0, 0,          &
-                                dinfo%VAR_2d(:,:),    &
-                                dinfo_all%VAR_2d(:,:) )
-             case( FILE_REAL8 )
-                call gather_xy( ismaster,             &
-                                DP,                   &
-                                nprocs_x_out,         &
-                                nprocs_y_out,         &
-                                D1, 0, 0, 0,          &
-                                D2, 0, 0, 0,          &
-                                dinfo%VAR_2d(:,:),    &
-                                dinfo_all%VAR_2d(:,:) )
-             endselect
+             call gather_xy( ismaster,             &
+                             bcast_,               &
+                             dinfo_all%datatype,   &
+                             nprocs_x_out,         &
+                             nprocs_y_out,         &
+                             D1, 0, 0, 0,          &
+                             D2, 0, 0, 0,          &
+                             dinfo%VAR_2d(:,:),    &
+                             dinfo_all%VAR_2d(:,:) )
 
           endif
 
@@ -1105,28 +912,16 @@ contains
                 dinfo_all%dim_size(2) = GD2
                 dinfo_all%dim_size(3) = GD3
 
-                select case( dinfo_all%datatype )
-                case( FILE_REAL4 )
-                   call gather_nxy( ismaster,               &
-                                    SP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1,                     &
-                                    D2, 1, 0, 0,            &
-                                    D3, 1, 0, 0,            &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                case( FILE_REAL8 )
-                   call gather_nxy( ismaster,               &
-                                    DP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1,                     &
-                                    D2, 1, 0, 0,            &
-                                    D3, 1, 0, 0,            &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                endselect
+                call gather_nxy( ismaster,               &
+                                 bcast_,                 &
+                                 dinfo_all%datatype,     &
+                                 nprocs_x_out,           &
+                                 nprocs_y_out,           &
+                                 D1,                     &
+                                 D2, 1, 0, 0,            &
+                                 D3, 1, 0, 0,            &
+                                 dinfo%VAR_3d(:,:,:),    &
+                                 dinfo_all%VAR_3d(:,:,:) )
 
              else
 
@@ -1139,28 +934,16 @@ contains
                 dinfo_all%dim_size(2) = GD2
                 dinfo_all%dim_size(3) = GD3
 
-                select case( dinfo_all%datatype )
-                case( FILE_REAL4 )
-                   call gather_nxy( ismaster,               &
-                                    SP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1,                     &
-                                    D2, 0, 0, 0,            &
-                                    D3, 0, 0, 0,            &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                case( FILE_REAL8 )
-                   call gather_nxy( ismaster,               &
-                                    DP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1,                     &
-                                    D2, 0, 0, 0,            &
-                                    D3, 0, 0, 0,            &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                endselect
+                call gather_nxy( ismaster,               &
+                                 bcast_,                 &
+                                 dinfo_all%datatype,     &
+                                 nprocs_x_out,           &
+                                 nprocs_y_out,           &
+                                 D1,                     &
+                                 D2, 0, 0, 0,            &
+                                 D3, 0, 0, 0,            &
+                                 dinfo%VAR_3d(:,:,:),    &
+                                 dinfo_all%VAR_3d(:,:,:) )
 
              endif
 
@@ -1178,28 +961,16 @@ contains
                 dinfo_all%dim_size(2) = GD2
                 dinfo_all%dim_size(3) = GD3
 
-                select case( dinfo_all%datatype )
-                case( FILE_REAL4 )
-                   call gather_xyn( ismaster,               &
-                                    SP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1, 1, 0, 0,            &
-                                    D2, 1, 0, 0,            &
-                                    D3,                     &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                case( FILE_REAL8 )
-                   call gather_xyn( ismaster,               &
-                                    DP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1, 1, 0, 0,            &
-                                    D2, 1, 0, 0,            &
-                                    D3,                     &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                endselect
+                call gather_xyn( ismaster,               &
+                                 bcast_,                 &
+                                 dinfo_all%datatype,     &
+                                 nprocs_x_out,           &
+                                 nprocs_y_out,           &
+                                 D1, 1, 0, 0,            &
+                                 D2, 1, 0, 0,            &
+                                 D3,                     &
+                                 dinfo%VAR_3d(:,:,:),    &
+                                 dinfo_all%VAR_3d(:,:,:) )
 
              else
 
@@ -1212,28 +983,16 @@ contains
                 dinfo_all%dim_size(2) = GD2
                 dinfo_all%dim_size(3) = GD3
 
-                select case( dinfo_all%datatype )
-                case( FILE_REAL4 )
-                   call gather_xyn( ismaster,               &
-                                    SP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1, 0, 0, 0,            &
-                                    D2, 0, 0, 0,            &
-                                    D3,                     &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                case( FILE_REAL8 )
-                   call gather_xyn( ismaster,               &
-                                    DP,                     &
-                                    nprocs_x_out,           &
-                                    nprocs_y_out,           &
-                                    D1, 0, 0, 0,            &
-                                    D2, 0, 0, 0,            &
-                                    D3,                     &
-                                    dinfo%VAR_3d(:,:,:),    &
-                                    dinfo_all%VAR_3d(:,:,:) )
-                endselect
+                call gather_xyn( ismaster,               &
+                                 bcast_,                 &
+                                 dinfo_all%datatype,     &
+                                 nprocs_x_out,           &
+                                 nprocs_y_out,           &
+                                 D1, 0, 0, 0,            &
+                                 D2, 0, 0, 0,            &
+                                 D3,                     &
+                                 dinfo%VAR_3d(:,:,:),    &
+                                 dinfo_all%VAR_3d(:,:,:) )
 
              endif
 
@@ -1253,20 +1012,25 @@ contains
   !-----------------------------------------------------------------------------
   subroutine gather_x( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1, H1, L1, M1, &
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -1316,8 +1080,8 @@ contains
 
     sendpcnt = D1
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:) = real( din(:), kind=SP )
@@ -1332,7 +1096,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:) = real( din(:), kind=DP )
@@ -1360,15 +1124,15 @@ contains
              iloc = sum( recvicnt(1:px-1) ) - ( 2 * L1 + M1 ) * ( px - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do i = 1, recvicnt(px)
                 dout( i + iloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do i = 1, recvicnt(px)
@@ -1383,26 +1147,54 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:),              &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:),              &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_x
 
   !-----------------------------------------------------------------------------
   subroutine gather_y( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1, H1, L1, M1, &
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -1452,8 +1244,8 @@ contains
 
     sendpcnt = D1
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:) = real( din(:), kind=SP )
@@ -1468,7 +1260,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:) = real( din(:), kind=DP )
@@ -1496,15 +1288,15 @@ contains
              jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L1 + M1 ) * ( py - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
                 dout( j + jloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -1519,13 +1311,37 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:),              &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:),              &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_y
 
   !-----------------------------------------------------------------------------
   subroutine gather_xy( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1, H1, L1, M1, &
@@ -1533,13 +1349,17 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -1599,8 +1419,8 @@ contains
 
     sendpcnt = D1 * D2
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:,:) = real( din(:,:), kind=SP )
@@ -1615,7 +1435,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:,:) = real( din(:,:), kind=DP )
@@ -1648,8 +1468,8 @@ contains
              jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -1659,7 +1479,7 @@ contains
                 m = m + 1
              enddo
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -1677,13 +1497,37 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:,:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_xy
 
   !-----------------------------------------------------------------------------
   subroutine gather_nx( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1,             &
@@ -1691,13 +1535,17 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -1748,8 +1596,8 @@ contains
 
     sendpcnt = D1 * D2
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:,:) = real( din(:,:), kind=SP )
@@ -1764,7 +1612,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:,:) = real( din(:,:), kind=DP )
@@ -1792,8 +1640,8 @@ contains
              iloc = sum( recvicnt(1:px-1) ) - ( 2 * L2 + M2 ) * ( px - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do i = 1, recvicnt(px)
@@ -1803,7 +1651,7 @@ contains
                 m = m + 1
              enddo
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do i = 1, recvicnt(px)
@@ -1821,13 +1669,37 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:,:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_nx
 
   !-----------------------------------------------------------------------------
   subroutine gather_ny( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1,             &
@@ -1835,13 +1707,17 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -1892,8 +1768,8 @@ contains
 
     sendpcnt = D1 * D2
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:,:) = real( din(:,:), kind=SP )
@@ -1908,7 +1784,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:,:) = real( din(:,:), kind=DP )
@@ -1936,8 +1812,8 @@ contains
              jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -1947,7 +1823,7 @@ contains
                 m = m + 1
              enddo
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -1965,13 +1841,37 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:,:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:,:),            &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_ny
 
   !-----------------------------------------------------------------------------
   subroutine gather_nxy( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1,             &
@@ -1980,13 +1880,17 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -2047,8 +1951,8 @@ contains
 
     sendpcnt = D1 * D2 * D3
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
@@ -2063,7 +1967,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
@@ -2096,8 +2000,8 @@ contains
              jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L3 + M3 ) * ( py - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -2110,7 +2014,7 @@ contains
              enddo
              enddo
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do j = 1, recvjcnt(py)
@@ -2131,13 +2035,37 @@ contains
 
     endif
 
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:,:,:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:,:,:),          &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:,:,:),          &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
+
+    endif
+
     return
   end subroutine gather_nxy
 
   !-----------------------------------------------------------------------------
   subroutine gather_xyn( &
        ismaster,       &
-       MPI_RP,         &
+       bcast,          &
+       FILE_RP,        &
        nprocs_x_out,   &
        nprocs_y_out,   &
        D1, H1, L1, M1, &
@@ -2146,13 +2074,17 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_file_h, only: &
+       FILE_REAL4, &
+       FILE_REAL8
     use scale_prc, only: &
        PRC_masterrank,       &
        PRC_LOCAL_COMM_WORLD
     implicit none
 
     logical,  intent(in)  :: ismaster
-    integer,  intent(in)  :: MPI_RP
+    logical,  intent(in)  :: bcast
+    integer,  intent(in)  :: FILE_RP
     integer,  intent(in)  :: nprocs_x_out
     integer,  intent(in)  :: nprocs_y_out
     integer,  intent(in)  :: D1              ! local size of 1st dimension
@@ -2213,8 +2145,8 @@ contains
 
     sendpcnt = D1 * D2 * D3
 
-    select case( MPI_RP )
-    case( SP )
+    select case( FILE_RP )
+    case( FILE_REAL4 )
        allocate( recv_SP( sum( recvpcnt(:) ) ) )
 
        send_SP(:,:,:) = real( din(:,:,:), kind=SP )
@@ -2229,7 +2161,7 @@ contains
                          PRC_masterrank,       &
                          PRC_LOCAL_COMM_WORLD, &
                          ierr                  )
-    case( DP )
+    case( FILE_REAL8 )
        allocate( recv_DP( sum( recvpcnt(:) ) ) )
 
        send_DP(:,:,:) = real( din(:,:,:), kind=DP )
@@ -2262,8 +2194,8 @@ contains
              jloc = sum( recvjcnt(1:py-1) ) - ( 2 * L2 + M2 ) * ( py - 1 )
           endif
 
-          select case( MPI_RP )
-          case( SP )
+          select case( FILE_RP )
+          case( FILE_REAL4 )
              ! rearrangement of data array
              m = 1
              do k = 1, D3
@@ -2276,7 +2208,7 @@ contains
              enddo
              enddo
              enddo
-          case( DP )
+          case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
              do k = 1, D3
@@ -2294,6 +2226,29 @@ contains
           p = p + 1
        enddo
        enddo
+
+    endif
+
+    if ( bcast ) then
+
+       sendpcnt = size( dout(:,:,:) )
+
+       select case( RP )
+       case( SP )
+          call MPI_BCAST( dout(:,:,:),          &
+                          sendpcnt,             &
+                          MPI_REAL,             &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       case( DP )
+          call MPI_BCAST( dout(:,:,:),          &
+                          sendpcnt,             &
+                          MPI_DOUBLE_PRECISION, &
+                          PRC_masterrank,       &
+                          PRC_LOCAL_COMM_WORLD, &
+                          ierr                  )
+       endselect
 
     endif
 

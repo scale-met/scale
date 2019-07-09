@@ -362,9 +362,12 @@ program sno
                                                                  ainfo(:),                   & ! [IN] from SNO_axis_getinfo
                                                                  debug                       ) ! [IN]
 
-           if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
+           if( plugin_hgridope ) call SNOPLGIN_hgridope_setcoef( ismaster,                   & ! [IN] from MPI
+                                                                 output_single,              & ! [IN] from namelist
+                                                                 nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
                                                                  ngrids_x_out, ngrids_y_out, & ! [IN] from SNO_map_getsize_local
                                                                  px,           py,           & ! [IN]
+                                                                 hinfo,                      & ! [IN] from SNO_file_getinfo
                                                                  naxis,                      & ! [IN] from SNO_file_getinfo
                                                                  ainfo(:),                   & ! [IN] from SNO_axis_getinfo
                                                                  debug                       ) ! [IN]

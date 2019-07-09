@@ -219,12 +219,15 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_hgridope_setcoef( &
+       ismaster,      &
+       output_single, &
        nprocs_x_out,  &
        nprocs_y_out,  &
        ngrids_x_out,  &
        ngrids_y_out,  &
        nowrank_x,     &
        nowrank_y,     &
+       hinfo,         &
        naxis,         &
        ainfo,         &
        debug          )
@@ -237,15 +240,21 @@ contains
        INTERP_setup,   &
        INTERP_factor2d
     use mod_sno_h, only: &
+       commoninfo, &
        axisinfo
+    use mod_sno_comm, only: &
+       SNO_comm_globalaxis
     implicit none
 
+    logical,          intent(in)  :: ismaster                              ! master process?                    (execution)
+    logical,          intent(in)  :: output_single                         ! output single file when using MPI?
     integer,          intent(in)  :: nprocs_x_out                          ! x length of 2D processor topology (output)
     integer,          intent(in)  :: nprocs_y_out                          ! y length of 2D processor topology (output)
     integer,          intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
     integer,          intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
     integer,          intent(in)  :: nowrank_x                             ! current process number at x-axis
     integer,          intent(in)  :: nowrank_y                             ! current process number at y-axis
+    type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
     integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
     type(axisinfo),   intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
     logical,          intent(in)  :: debug
@@ -257,6 +266,8 @@ contains
 
     real(RP) :: dxy, dx, dy ! [m]
     real(RP) :: clat        ! [rad]
+
+    type(axisinfo), allocatable :: ainfo_all(:)
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
@@ -349,8 +360,8 @@ contains
     call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
                        search_limit = dxy        ) ! [IN]
 
-    imax_ref = ngrids_x_out
-    jmax_ref = ngrids_y_out
+    imax_ref = ngrids_x_out * nprocs_x_out
+    jmax_ref = ngrids_y_out * nprocs_y_out
     imax_new = ainfo_ll(1)%dim_size(1)
     jmax_new = ainfo_ll(2)%dim_size(1)
 
@@ -363,11 +374,23 @@ contains
     allocate( idx_j(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
     allocate( hfact(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
 
+    allocate( ainfo_all(naxis) )
+
+    call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                              output_single, & ! [IN]
+                              nprocs_x_out,  & ! [IN]
+                              nprocs_y_out,  & ! [IN]
+                              hinfo,         & ! [IN]
+                              naxis,         & ! [IN]
+                              ainfo    (:),  & ! [IN]
+                              ainfo_all(:),  & ! [OUT]
+                              bcast = .true. ) ! [IN]
+
     do n = 1, naxis
-       if    ( ainfo(n)%varname == 'lon' ) then
-          lon_ref(:,:) = ainfo(n)%AXIS_2d(:,:) * CONST_D2R
-       elseif( ainfo(n)%varname == 'lat' ) then
-          lat_ref(:,:) = ainfo(n)%AXIS_2d(:,:) * CONST_D2R
+       if    ( ainfo_all(n)%varname == 'lon' ) then
+          lon_ref(:,:) = ainfo_all(n)%AXIS_2d(:,:) * CONST_D2R
+       elseif( ainfo_all(n)%varname == 'lat' ) then
+          lat_ref(:,:) = ainfo_all(n)%AXIS_2d(:,:) * CONST_D2R
        endif
     enddo
 
@@ -482,6 +505,8 @@ contains
        iteminfo
     use mod_sno_vars, only: &
        SNO_vars_write
+    use mod_sno_comm, only: &
+       SNO_comm_globalvars
     implicit none
 
     logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
@@ -499,6 +524,8 @@ contains
     type(commoninfo), intent(in)    :: hinfo                                 ! common information                 (input)
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
+
+    type(iteminfo) :: dinfo_all
 
     logical  :: do_output, finalize, add_rm_attr
     integer  :: k, t
@@ -532,14 +559,22 @@ contains
        dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_size(2) = jmax_new
 
+       call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                 output_single, & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 dinfo,         & ! [IN]
+                                 dinfo_all,     & ! [OUT]
+                                 bcast = .true. ) ! [IN]
+
        call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                              imax_ref, jmax_ref,        & ! [IN]
                              imax_new, jmax_new,        & ! [IN]
-                             idx_i          (:,:,:),    & ! [IN]
-                             idx_j          (:,:,:),    & ! [IN]
-                             hfact          (:,:,:),    & ! [IN]
-                             dinfo%VAR_2d   (:,:),      & ! [IN]
-                             dinfo_ll%VAR_2d(:,:)       ) ! [OUT]
+                             idx_i           (:,:,:),   & ! [IN]
+                             idx_j           (:,:,:),   & ! [IN]
+                             hfact           (:,:,:),   & ! [IN]
+                             dinfo_all%VAR_2d(:,:),     & ! [IN]
+                             dinfo_ll%VAR_2d (:,:)      ) ! [OUT]
 
        do_output = .true.
 
@@ -558,15 +593,22 @@ contains
           dinfo_ll%dim_size(3) = dinfo%dim_size(1)
        endif
 
+       call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                 output_single, & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 dinfo,         & ! [IN]
+                                 dinfo_all      ) ! [OUT]
+
        do k = 1, dinfo_ll%dim_size(3)
           call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                                 imax_ref, jmax_ref,        & ! [IN]
                                 imax_new, jmax_new,        & ! [IN]
-                                idx_i          (:,:,:),    & ! [IN]
-                                idx_j          (:,:,:),    & ! [IN]
-                                hfact          (:,:,:),    & ! [IN]
-                                dinfo%VAR_3d   (k,:,:),    & ! [IN]
-                                dinfo_ll%VAR_3d(k,:,:)     ) ! [OUT]
+                                idx_i           (:,:,:),   & ! [IN]
+                                idx_j           (:,:,:),   & ! [IN]
+                                hfact           (:,:,:),   & ! [IN]
+                                dinfo_all%VAR_3d(k,:,:),   & ! [IN]
+                                dinfo_ll%VAR_3d (k,:,:)    ) ! [OUT]
        enddo
 
        do_output = .true.
