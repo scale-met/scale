@@ -1020,6 +1020,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -1132,6 +1137,9 @@ contains
                 dout( i + iloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
+             where( abs( real( dout(:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -1139,6 +1147,9 @@ contains
                 dout( i + iloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
+             where( abs( real( dout(:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -1184,6 +1195,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -1296,6 +1312,9 @@ contains
                 dout( j + jloc ) = real( recv_SP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
+             where( abs( real( dout(:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -1303,6 +1322,9 @@ contains
                 dout( j + jloc ) = real( recv_DP( m + recvploc(p) ), kind=RP )
                 m = m + 1
              enddo
+             where( abs( real( dout(:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -1349,6 +1371,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -1479,6 +1506,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -1489,6 +1519,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -1535,6 +1568,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -1651,6 +1689,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -1661,6 +1702,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -1707,6 +1751,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -1823,6 +1872,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -1833,6 +1885,9 @@ contains
                 m = m + 1
              enddo
              enddo
+             where( abs( real( dout(:,:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:,:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -1880,6 +1935,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -2014,6 +2074,9 @@ contains
              enddo
              enddo
              enddo
+             where( abs( real( dout(:,:,:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:,:,:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -2027,6 +2090,9 @@ contains
              enddo
              enddo
              enddo
+             where( abs( real( dout(:,:,:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:,:,:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
@@ -2074,6 +2140,11 @@ contains
        din,            &
        dout            )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8
@@ -2208,6 +2279,9 @@ contains
              enddo
              enddo
              enddo
+             where( abs( real( dout(:,:,:), kind=SP ) - UNDEF4 ) < EPS )
+                dout(:,:,:) = UNDEF
+             endwhere
           case( FILE_REAL8 )
              ! rearrangement of data array
              m = 1
@@ -2221,6 +2295,9 @@ contains
              enddo
              enddo
              enddo
+             where( abs( real( dout(:,:,:), kind=DP ) - UNDEF8 ) < EPS )
+                dout(:,:,:) = UNDEF
+             endwhere
           endselect
 
           p = p + 1
