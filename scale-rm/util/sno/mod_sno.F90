@@ -106,8 +106,10 @@ contains
        nprocs_y_out, &
        nprocs_x_in,  &
        nprocs_y_in,  &
+       ngrids_z,     &
        ngrids_x,     &
        ngrids_y,     &
+       nhalos_z,     &
        nhalos_x,     &
        nhalos_y,     &
        hinfo,        &
@@ -145,8 +147,10 @@ contains
     integer,                intent(in)  :: nprocs_y_out             ! y length of 2D processor topology (output)
     integer,                intent(out) :: nprocs_x_in              ! x length of 2D processor topology (input)
     integer,                intent(out) :: nprocs_y_in              ! y length of 2D processor topology (input)
+    integer,                intent(out) :: ngrids_z                 ! size of z-axis grids              (global,sometimes including halo)
     integer,                intent(out) :: ngrids_x                 ! size of x-axis grids              (global,sometimes including halo)
     integer,                intent(out) :: ngrids_y                 ! size of y-axis grids              (global,sometimes including halo)
+    integer,                intent(out) :: nhalos_z                 ! size of z-axis halo grids         (global,sometimes have a size)
     integer,                intent(out) :: nhalos_x                 ! size of x-axis halo grids         (global,sometimes have a size)
     integer,                intent(out) :: nhalos_y                 ! size of y-axis halo grids         (global,sometimes have a size)
     type(commoninfo),       intent(out) :: hinfo                    ! common information                (input)
@@ -165,6 +169,7 @@ contains
 
     integer :: nprocs_in       ! number of peXXXXXX files           (input)
 
+    integer :: ngrids_z_nohalo ! number of z-axis grids             (global,without halo)
     integer :: ngrids_x_nohalo ! number of x-axis grids             (global,without halo)
     integer :: ngrids_y_nohalo ! number of y-axis grids             (global,without halo)
     integer :: ngrids          ! number of        grids             (global)
@@ -281,13 +286,16 @@ contains
     LOG_INFO("SNO_file_getinfo",*) 'Process info '
     LOG_INFO_CONT(*)               '# of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
 
-    !--- horizontal grid management
+    !--- grid management
 
+    ngrids_z        = hinfo%gridsize(1)
     ngrids_x        = hinfo%xatt_size_global(1)
     ngrids_y        = hinfo%yatt_size_global(1)
+    nhalos_z        = hinfo%halosize(1)         ! assume both side have same number
     nhalos_x        = hinfo%xatt_halo_global(1) ! assume both side have same number
     nhalos_y        = hinfo%yatt_halo_global(1) ! assume both side have same number
 
+    ngrids_z_nohalo = ngrids_z - 2*nhalos_z
     ngrids_x_nohalo = ngrids_x - 2*nhalos_x
     ngrids_y_nohalo = ngrids_y - 2*nhalos_y
 
@@ -308,6 +316,10 @@ contains
     LOG_INFO_CONT(*)               '# of grids per output file without halo : ', ngrids_out, '(', ngrids_x_out   , 'x', ngrids_y_out   , ')'
     LOG_INFO_CONT(*)               '# of halo grids (x-axis,one side)       : ', nhalos_x
     LOG_INFO_CONT(*)               '# of halo grids (y-axis,one side)       : ', nhalos_y
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Grid info (vertical) '
+    LOG_INFO_CONT(*)               '# of vertical grids        without halo : ', ngrids_z_nohalo
+    LOG_INFO_CONT(*)               '# of halo grids (z-axis,one side)       : ', nhalos_z
 
     if ( mod(ngrids_x_nohalo,nprocs_x_out) /= 0 ) then
        LOG_ERROR("SNO_file_getinfo",*) 'The allowable case is that # of the total x-grids is divisible with # of the x-PEs for the output. Stop'
@@ -354,7 +366,7 @@ contains
 
        select case(varname_file(n))
        case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                                            &
-            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',                               &
+            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds','pressure_bnds',               &
             'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ',                    &
             'x','xh','y','yh',                                                                                               &
             'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                                           &

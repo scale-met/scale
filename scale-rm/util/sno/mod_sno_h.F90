@@ -30,6 +30,7 @@ module mod_sno_h
   !
   character(len=H_MID), public, parameter :: TOOLNAME = "SCALE NetCDF Operator"
 
+  integer, public, parameter :: lev_limit  = 1000  !< limit of vertical levels
   integer, public, parameter :: item_limit = 1000  !< limit of item
   integer, public, parameter :: step_limit = 10000 !< limit of steps          for each item
   integer, public, parameter :: dim_limit  = 3     !< limit of dimension rank for each item
