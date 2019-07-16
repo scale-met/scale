@@ -59,7 +59,7 @@ lib-unit:
     - make makedir
     - make makelib
     - make makebin
-    - mpirun --allow-run-as-root -n 4 ./unit run.conf
+    - mpirun --allow-run-as-root --oversubscribe -n 4 ./unit run.conf
   only:
     - merge_requests
 
