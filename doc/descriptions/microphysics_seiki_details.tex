@@ -602,7 +602,7 @@ This study employed two simple ice nucleation schemes, which do not require the 
 N_{IN}=10^{3}exp(-0.639+12.96S_{sol})\nonumber
 \end{eqnarray}
 
-where $N_{IN}$ is nucleated ice nuclei and $S_{sol}$ is supersaturation for solid water. While this scheme is widely used in CRMs (e.g., Walko et al. 1995; Khain et al., 2000; Seifert and Beheng, 2006), it is not acceptable for temperature conditions < -20 ˚C or supersaturation > 0.25, where observational data were not available in their study. For simulating cirrus clouds around the tropopause, application of this scheme to CRMs may cause significant error. Phillips et al. (2007) proposed an alternative scheme to modify Meyers’s scheme by fitting observational data at temperatures between -30 ˚C and -80 ˚C obtained by Demott et al. (2003):
+where $N_{IN}$ is nucleated ice nuclei and $S_{sol}$ is supersaturation for solid water. While this scheme is widely used in CRMs (e.g., Walko et al. 1995; Khain et al., 2000; Seifert and Beheng, 2006), it is not acceptable for temperature conditions < -20 $^\circ$C or supersaturation > 0.25, where observational data were not available in their study. For simulating cirrus clouds around the tropopause, application of this scheme to CRMs may cause significant error. Phillips et al. (2007) proposed an alternative scheme to modify Meyers’s scheme by fitting observational data at temperatures between -30 $^\circ$C and -80 $^\circ$C obtained by Demott et al. (2003):
 
 \begin{eqnarray}
 N_{IN}=10^{3}exp[0.3\times12.96(S_{i}-0.1)]\label{sn117}
@@ -674,7 +674,7 @@ where $A_{het}=0.2kg^{-1}s^{-1}$ and $B_{het}=0.65K^{-1}$ are empirically determ
 \end{eqnarray}
 
 Although heterogeneous freezing should also be formulated as a function of aerosol concentration, here we apply a simple formulation because our model is not yet coupled with an aerosol transport model.\\
-These parameterizations thus do not include aerosol information and are considered to assume background aerosols. The validity of parameterization was demonstrated by Khain et al. (2001). Nevertheless their model also applied the same simple freezing parameterizations, representing observational features of supercooled liquid water as per Rosenfeld and Woodley (2000). Both freezing rates are shown in Fig. \ref{figsn2-22}. Heterogeneous freezing is dominant at temperatures > -35 ˚C. At these temperatures, supercooled liquid water is mixed with ice particles. In contrast, the homogeneous freezing rate suddenly increases < -35 ˚C. Liquid water droplets have hardly been observed < -40 ˚C (Rosenfeld and Woodley, 2000). This can be represented by using the parameterization.
+These parameterizations thus do not include aerosol information and are considered to assume background aerosols. The validity of parameterization was demonstrated by Khain et al. (2001). Nevertheless their model also applied the same simple freezing parameterizations, representing observational features of supercooled liquid water as per Rosenfeld and Woodley (2000). Both freezing rates are shown in Fig. \ref{figsn2-22}. Heterogeneous freezing is dominant at temperatures > -35 $^\circ$C. At these temperatures, supercooled liquid water is mixed with ice particles. In contrast, the homogeneous freezing rate suddenly increases < -35 $^\circ$C. Liquid water droplets have hardly been observed < -40 $^\circ$C (Rosenfeld and Woodley, 2000). This can be represented by using the parameterization.
 
 \subsubsection{Melting}
 The melting process is the same as that of Seifert and Beheng (2006a), based on Pruppacher and Klett (1997). Theoretical treatment of this process is similar to that of the condensation process. The differences are:\\
@@ -1093,7 +1093,7 @@ The conversion coefficient of riming particle $\bar{x}/\bar{x}_{crit,pconv}$ is 
 
 \subsubsection{Ice multiplication}
 It has been observed that the number concentration of ice particles can be up to several orders of magnitude larger than ice nuclei in atmospheric clouds (Pruppacher and Klett, 1997). Among the possible mechanisms to explain this, the Hallet-Mossop mechanism has been widely discussed and applied in cloud microphysics schemes. The Hallet-Mossop mechanism is based on the fact that ice splintering occurs when many liquid droplets are collected by graupel. Cotton et al. (1986) applied the formulations based on observations by Hallet and Mossop (1974) and Mossop (1976).
-Hallet and Mossop (1974) reported that approximately 350 ice splinters were produced for every $10^{-3} g$ of rime accreted by graupel at -5 ˚C. The parameterization is formulated with the temperature correction f1 in units of mks, as follows:
+Hallet and Mossop (1974) reported that approximately 350 ice splinters were produced for every $10^{-3} g$ of rime accreted by graupel at -5 $^\circ$C. The parameterization is formulated with the temperature correction f1 in units of mks, as follows:
 
 \begin{eqnarray}
 \frac{\partial N_{i}}{\partial t}\Bigr|_{spl1,js}&=&350\times 10^{6}\times f_{1}(T)\times\frac{\partial L_{js}}{\partial t}\Bigr|_{rime,js},\;\;(js=i,s,g)\label{sn212}\\
@@ -1115,7 +1115,7 @@ The splintering mass concentration is assumed as follows:
 \frac{\partial L_{i}}{\partial t}\Bigr|_{spl1}=\bar{x}_{i}\frac{\partial N_{i}}{\partial t}\Bigr|_{spl1}\label{sn214}
 \end{eqnarray}
 
-On the other hand, Mossop (1976) reported that approximately one ice crystal was produced per 250 drops > 12 $\mu m$ radius accreted onto a graupel at -5 ˚C. Since it is difficult to calculate the number concentration of riming cloud droplets > 12 $\mu m$ ($N_{rime,c}$), here we assume a simple relationship following Cotton et al. (1986), as follows:
+On the other hand, Mossop (1976) reported that approximately one ice crystal was produced per 250 drops > 12 $\mu m$ radius accreted onto a graupel at -5 $^\circ$C. Since it is difficult to calculate the number concentration of riming cloud droplets > 12 $\mu m$ ($N_{rime,c}$), here we assume a simple relationship following Cotton et al. (1986), as follows:
 
 \begin{eqnarray}
 \frac{N_{rime,c}}{N_{rime,c}}\approx\frac{N_{c}}{N_{c}}=Q\bigl(\frac{\nu_{c}+1}{\mu_{c}},x_{12}\bigr)\label{sn215}
