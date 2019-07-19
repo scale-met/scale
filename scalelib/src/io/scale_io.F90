@@ -73,8 +73,8 @@ module scale_io
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: IO_MINFID    = 10 !< minimum available fid
-  integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
+  integer, private, parameter :: IO_MINFID    =  10 !< minimum available fid
+  integer, private, parameter :: IO_MAXFID    = 256 !< maximum available fid
 
   !-----------------------------------------------------------------------------
 contains
@@ -320,6 +320,11 @@ contains
        inquire(fid,OPENED=i_opened)
        if ( .NOT. i_opened ) return
     enddo
+
+    if ( fid >= IO_MAXFID ) then ! reach limit
+       LOG_ERROR("IO_get_available_fid",*) 'Used I/O unit number reached to the limit! STOP'
+       stop 1
+    endif
 
   end function IO_get_available_fid
 
