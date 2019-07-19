@@ -2009,6 +2009,8 @@ contains
        x, y,                           &
        inc_i, inc_j,                   &
        error                           )
+    use scale_const, only: &
+       EPS => CONST_EPS
     implicit none
     real(RP), intent(in) :: x_ref0, x_ref1, x_ref2, x_ref3
     real(RP), intent(in) :: y_ref0, y_ref1, y_ref2, y_ref3
@@ -2019,6 +2021,7 @@ contains
 
     real(RP) :: sig
     real(RP) :: c1, c2, c3, c4
+    real(RP) :: th
     logical :: fx, fy
 
     error = .false.
@@ -2030,16 +2033,18 @@ contains
     c3 = sig * cross(x_ref3-x_ref2, y_ref3-y_ref2, x-x_ref2, y-y_ref2)
     c4 = sig * cross(x_ref0-x_ref3, y_ref0-y_ref3, x-x_ref3, y-y_ref3)
 
+    th = - max( abs(c1), abs(c2), abs(c3), abs(c4) ) * EPS * 1.e4_RP
+
     ! if all the c1 - c4 are positive, the point is inside the quadrilateral
     inc_i = 0
     inc_j = 0
-    if ( c1 < 0.0_RP ) inc_j = -1
-    if ( c2 < 0.0_RP ) inc_i =  1
-    if ( c3 < 0.0_RP ) inc_j =  1
-    if ( c4 < 0.0_RP ) inc_i = -1
+    if ( c1 < th ) inc_j = -1
+    if ( c2 < th ) inc_i =  1
+    if ( c3 < th ) inc_j =  1
+    if ( c4 < th ) inc_i = -1
 
-    fx = c2 < 0.0_RP .and. c4 < 0.0_RP
-    fy = c1 < 0.0_RP .and. c3 < 0.0_RP
+    fx = c2 < th .and. c4 < th
+    fy = c1 < th .and. c3 < th
     if ( fx .and. fy ) then
        LOG_ERROR("INTERP_check_inside",*) 'Unexpected error occured', c1, c2, c3, c4
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
