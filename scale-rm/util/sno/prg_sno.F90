@@ -485,7 +485,6 @@ program sno
                                          output_single,              & ! [IN] from namelist
                                          output_grads,               & ! [IN] from namelist
                                          p,                          & ! [IN]
-                                         v,                          & ! [IN]
                                          t,                          & ! [IN]
                                          finalize,                   & ! [IN]
                                          add_rm_attr,                & ! [IN]

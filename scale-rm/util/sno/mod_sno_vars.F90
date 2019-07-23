@@ -880,7 +880,6 @@ contains
        output_single, &
        output_grads,  &
        nowrank,       &
-       nowvars,       &
        nowstep,       &
        finalize,      &
        add_rm_attr,   &
@@ -912,7 +911,6 @@ contains
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
-    integer,          intent(in)    :: nowvars                               ! current vars                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: finalize                              ! finalize in this step?
     logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
@@ -944,18 +942,16 @@ contains
     else
        call PROF_rapstart('FILE_O_NetCDF', 2)
 
-       if ( nowvars == 1 .AND. nowstep == 1 ) then ! do below only once when first time 
-          allocate( ainfo_all(naxis) )
+       allocate( ainfo_all(naxis) )
 
-          call SNO_comm_globalaxis( ismaster,      & ! [IN]
-                                    output_single, & ! [IN]
-                                    nprocs_x_out,  & ! [IN]
-                                    nprocs_y_out,  & ! [IN]
-                                    hinfo,         & ! [IN]
-                                    naxis,         & ! [IN]
-                                    ainfo    (:),  & ! [IN]
-                                    ainfo_all(:)   ) ! [OUT]
-       endif
+       call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                                 output_single, & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 hinfo,         & ! [IN]
+                                 naxis,         & ! [IN]
+                                 ainfo    (:),  & ! [IN]
+                                 ainfo_all(:)   ) ! [OUT]
 
        if ( output_single ) then
          writerank = PRC_masterrank
