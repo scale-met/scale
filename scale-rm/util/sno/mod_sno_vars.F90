@@ -115,8 +115,6 @@ contains
 
     LOG_INFO("SNO_vars_getinfo",*) 'Read information of variables'
 
-    allocate( ainfo_out(naxis) )
-
     if ( ismaster ) then
        nowrank = 0 ! first file
 
@@ -388,8 +386,6 @@ contains
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )
     if( allocated(dinfo%VAR_2d) ) deallocate( dinfo%VAR_2d )
     if( allocated(dinfo%VAR_3d) ) deallocate( dinfo%VAR_3d )
-
-    if( allocated(ainfo_out) ) deallocate( ainfo_out )
 
     return
   end subroutine SNO_vars_dealloc
@@ -880,7 +876,6 @@ contains
     return
   end subroutine SNO_vars_read
 
-
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write( &
        ismaster,      &
@@ -954,6 +949,9 @@ contains
           writerank = PRC_masterrank
 
           if ( update_axis ) then
+             if( allocated( ainfo_out ) ) deallocate( ainfo_out )
+             allocate( ainfo_out(naxis) )
+
              call SNO_comm_globalaxis( ismaster,     & ! [IN]
                                        nprocs_x_out, & ! [IN]
                                        nprocs_y_out, & ! [IN]
