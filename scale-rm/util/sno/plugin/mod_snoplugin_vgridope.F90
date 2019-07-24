@@ -618,6 +618,7 @@ contains
        basename,      &
        output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        nprocs_x_out,  &
@@ -641,6 +642,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
@@ -653,7 +655,7 @@ contains
 
     character(len=H_SHORT) :: zaxis_orgname
 
-    logical  :: do_output, finalize, add_rm_attr
+    logical  :: do_output, finalize, add_rm_attr, update_axis_
     integer  :: zaxis_orgsize
     integer  :: i, j, t
     !---------------------------------------------------------------------------
@@ -663,6 +665,7 @@ contains
     endif
 
     do_output = .false.
+    update_axis_ = update_axis
 
     ! set variable information
     dinfo_v%varname     = dinfo%varname
@@ -850,6 +853,8 @@ contains
 
           end select
 
+          update_axis_ = .true.
+
        endselect
 
        do_output = .true.
@@ -867,6 +872,7 @@ contains
                             basename,                   & ! [IN] from namelist
                             output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
+                            update_axis_,               & ! [IN]
                             nowrank,                    & ! [IN]
                             nowstep,                    & ! [IN]
                             finalize,                   & ! [IN]

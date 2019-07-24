@@ -161,7 +161,7 @@ program sno
   logical                 :: plugin_hgridope
   logical                 :: plugin_vgridope
 
-  logical :: do_output, finalize, add_rm_attr
+  logical :: do_output, finalize, add_rm_attr, update_axis
   integer :: px, py, p
   integer :: t, v
   integer :: ierr
@@ -284,6 +284,7 @@ program sno
 
   call SNO_vars_getinfo( ismaster,         & ! [IN] from MPI
                          basename_in,      & ! [IN] from namelist
+                         naxis,            & ! [IN] from SNO_file_getinfo
                          nvars,            & ! [IN] from SNO_file_getinfo
                          varname(1:nvars), & ! [IN] from SNO_file_getinfo
                          dinfo  (:),       & ! [OUT]
@@ -403,6 +404,12 @@ program sno
               do t = 1, dinfo(v)%step_nmax
                  LOG_INFO_CONT('(A,I6)') '++ t = ', t
 
+                 if( v == 1 .AND. t == 1 ) then
+                    update_axis = .true.
+                 else
+                    update_axis = .false.
+                 endif
+
                  call SNO_vars_read( basename_in,                  & ! [IN]    from namelist
                                      t,                            & ! [IN]
                                      nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
@@ -421,6 +428,7 @@ program sno
                                                                    basename_out,               & ! [IN] from namelist
                                                                    output_single,              & ! [IN] from namelist
                                                                    output_grads,               & ! [IN] from namelist
+                                                                   update_axis,                & ! [IN]
                                                                    p,                          & ! [IN]
                                                                    t,                          & ! [IN]
                                                                    nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
@@ -431,19 +439,19 @@ program sno
                                                                    dinfo(v),                   & ! [IN] from SNO_vars_getinfo
                                                                    debug                       ) ! [IN]
 
-                 if( plugin_vgridope ) call SNOPLGIN_vgridope_updatecoef( basename_in,                  & ! [IN]    from namelist
+                 if( plugin_vgridope ) call SNOPLGIN_vgridope_updatecoef( basename_in,                  & ! [IN] from namelist
                                                                           v,                            & ! [IN]
                                                                           t,                            & ! [IN]
-                                                                          nprocs_x_in,   nprocs_y_in,   & ! [IN]    from SNO_file_getinfo
-                                                                          ngrids_x,      ngrids_y,      & ! [IN]    from SNO_file_getinfo
-                                                                          nhalos_x,      nhalos_y,      & ! [IN]    from SNO_file_getinfo
-                                                                          hinfo,                        & ! [IN]    from SNO_file_getinfo
-                                                                          ngrids_x_out,  ngrids_y_out,  & ! [IN]    from SNO_map_getsize_local
-                                                                          ngrids_xh_out, ngrids_yh_out, & ! [IN]    from SNO_map_getsize_local
+                                                                          nprocs_x_in,   nprocs_y_in,   & ! [IN] from SNO_file_getinfo
+                                                                          ngrids_x,      ngrids_y,      & ! [IN] from SNO_file_getinfo
+                                                                          nhalos_x,      nhalos_y,      & ! [IN] from SNO_file_getinfo
+                                                                          hinfo,                        & ! [IN] from SNO_file_getinfo
+                                                                          ngrids_x_out,  ngrids_y_out,  & ! [IN] from SNO_map_getsize_local
+                                                                          ngrids_xh_out, ngrids_yh_out, & ! [IN] from SNO_map_getsize_local
                                                                           nvars,                        & ! [IN] from SNO_file_getinfo
                                                                           dinfo(:),                     & ! [IN]
-                                                                          localmap(:,:,:),              & ! [IN]    from SNO_map_settable_local
-                                                                          readflag(:,:),                & ! [IN]    from SNO_map_settable_local
+                                                                          localmap(:,:,:),              & ! [IN] from SNO_map_settable_local
+                                                                          readflag(:,:),                & ! [IN] from SNO_map_settable_local
                                                                           debug                         ) ! [IN]
 
                  if( plugin_vgridope ) call SNOPLGIN_vgridope_vinterp( ismaster,                   & ! [IN] from MPI
@@ -451,6 +459,7 @@ program sno
                                                                        basename_out,               & ! [IN] from namelist
                                                                        output_single,              & ! [IN] from namelist
                                                                        output_grads,               & ! [IN] from namelist
+                                                                       update_axis,                & ! [IN]
                                                                        p,                          & ! [IN]
                                                                        t,                          & ! [IN]
                                                                        nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
@@ -464,6 +473,7 @@ program sno
                                                                         basename_out,               & ! [IN] from namelist
                                                                         output_single,              & ! [IN] from namelist
                                                                         output_grads,               & ! [IN] from namelist
+                                                                        update_axis,                & ! [IN]
                                                                         p,                          & ! [IN]
                                                                         t,                          & ! [IN]
                                                                         nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
@@ -481,6 +491,7 @@ program sno
                                          basename_out,               & ! [IN] from namelist
                                          output_single,              & ! [IN] from namelist
                                          output_grads,               & ! [IN] from namelist
+                                         update_axis,                & ! [IN]
                                          p,                          & ! [IN]
                                          t,                          & ! [IN]
                                          finalize,                   & ! [IN]

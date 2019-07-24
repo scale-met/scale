@@ -56,7 +56,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine SNO_comm_globalaxis( &
        ismaster,      &
-       output_single, &
        nprocs_x_out,  &
        nprocs_y_out,  &
        hinfo,         &
@@ -74,7 +73,6 @@ contains
     implicit none
 
     logical,          intent(in)    :: ismaster                              ! master rank process?
-    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology
     type(commoninfo), intent(in)    :: hinfo                                 ! common information
@@ -93,648 +91,640 @@ contains
     logical  :: bcast_
     !---------------------------------------------------------------------------
 
-    if ( output_single ) then
+    xhalo = hinfo%halosize(2)
+    yhalo = hinfo%halosize(3)
 
-       xhalo = hinfo%halosize(2)
-       yhalo = hinfo%halosize(3)
+    if ( present( bcast ) ) then
+       bcast_ = .true.
+    else
+       bcast_ = .false.
+    endif
 
-       if ( present( bcast ) ) then
-          bcast_ = .true.
-       else
-          bcast_ = .false.
-       endif
+    do n = 1, naxis
+       ! set axis information
+       ainfo_all(n)%varname     = ainfo(n)%varname
+       ainfo_all(n)%description = ainfo(n)%description
+       ainfo_all(n)%units       = ainfo(n)%units
+       ainfo_all(n)%datatype    = ainfo(n)%datatype
+       ainfo_all(n)%dim_rank    = ainfo(n)%dim_rank
+       ainfo_all(n)%dim_name(:) = ainfo(n)%dim_name(:)
+       ainfo_all(n)%transpose   = ainfo(n)%transpose
+       ainfo_all(n)%regrid      = ainfo(n)%regrid
+       ainfo_all(n)%has_bounds  = ainfo(n)%has_bounds
+       ainfo_all(n)%is_bounds   = ainfo(n)%is_bounds
 
-       do n = 1, naxis
-          ! set axis information
-          ainfo_all(n)%varname     = ainfo(n)%varname
-          ainfo_all(n)%description = ainfo(n)%description
-          ainfo_all(n)%units       = ainfo(n)%units
-          ainfo_all(n)%datatype    = ainfo(n)%datatype
-          ainfo_all(n)%dim_rank    = ainfo(n)%dim_rank
-          ainfo_all(n)%dim_name(:) = ainfo(n)%dim_name(:)
-          ainfo_all(n)%transpose   = ainfo(n)%transpose
-          ainfo_all(n)%regrid      = ainfo(n)%regrid
-          ainfo_all(n)%has_bounds  = ainfo(n)%has_bounds
-          ainfo_all(n)%is_bounds   = ainfo(n)%is_bounds
+       select case( ainfo_all(n)%dim_rank )
+       case( 1 )
 
-          select case( ainfo_all(n)%dim_rank )
-          case( 1 )
+          D1 = size( ainfo(n)%AXIS_1d(:), 1 )
 
-             D1 = size( ainfo(n)%AXIS_1d(:), 1 )
+          select case( ainfo_all(n)%varname )
+          case('x')
+
+             if ( ismaster ) then
+                GD1 = D1 * nprocs_x_out
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_x( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, 0, 0,            &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('xh','lon')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_x( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 1, 0, 0,            &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('y')
+
+             if ( ismaster ) then
+                GD1 = D1 * nprocs_y_out
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_y( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, 0, 0,            &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('yh','lat')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 1 ) * nprocs_y_out + 1
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_y( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 1, 0, 0,            &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('CX','CDX','CBFX')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 2*xhalo ) * nprocs_x_out + 2*xhalo
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_x( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, xhalo, 0,        &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('FX','FDX','FBFX')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 2*xhalo - 1 ) * nprocs_x_out + 2*xhalo + 1
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_x( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, xhalo, 1,        &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('CY','CDY','CBFY')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 2*yhalo ) * nprocs_y_out + 2*yhalo
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_y( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, yhalo, 0,        &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case('FY','FDY','FBFY')
+
+             if ( ismaster ) then
+                GD1 = ( D1 - 2*yhalo - 1 ) * nprocs_y_out + 2*yhalo + 1
+             endif
+             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+             ainfo_all(n)%dim_size(1) = GD1
+
+             call gather_y( ismaster,               &
+                            bcast_,                 &
+                            ainfo_all(n)%datatype,  &
+                            nprocs_x_out,           &
+                            nprocs_y_out,           &
+                            D1, 0, yhalo, 1,        &
+                            ainfo(n)%AXIS_1d(:),    &
+                            ainfo_all(n)%AXIS_1d(:) )
+
+          case default
+
+             allocate( ainfo_all(n)%AXIS_1d( D1 ) )
+
+             ainfo_all(n)%dim_size(1) = D1
+             ainfo_all(n)%AXIS_1d(:) = ainfo(n)%AXIS_1d(:)
+
+          endselect
+
+       case( 2 )
+
+          D1 = size( ainfo(n)%AXIS_2d(:,:), 1 )
+          D2 = size( ainfo(n)%AXIS_2d(:,:), 2 )
+
+          if ( index( ainfo_all(n)%varname, '_bnds' ) == 0 ) then
 
              select case( ainfo_all(n)%varname )
-             case('x')
-
-                if ( ismaster ) then
-                   GD1 = D1 * nprocs_x_out
-                endif
-                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-                ainfo_all(n)%dim_size(1) = GD1
-
-                call gather_x( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, 0, 0,            &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
-
-             case('xh','lon')
+             case('lon_uy','lat_uy','cell_area_uy')
 
                 if ( ismaster ) then
                    GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD2 = D2 * nprocs_y_out
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                 ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
 
-                call gather_x( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 1, 0, 0,            &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
+                call gather_xy( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1, 1, 0, 0,              &
+                                D2, 0, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
 
-             case('y')
+             case('lon_xv','lat_xv','cell_area_xv')
 
                 if ( ismaster ) then
-                   GD1 = D1 * nprocs_y_out
+                   GD1 = D1 * nprocs_x_out
+                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                 ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
 
-                call gather_y( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, 0, 0,            &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
+                call gather_xy( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1, 0, 0, 0,              &
+                                D2, 1, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
 
-             case('yh','lat')
+             case('lon_uv','lat_uv')
 
                 if ( ismaster ) then
-                   GD1 = ( D1 - 1 ) * nprocs_y_out + 1
+                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
                 ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
 
-                call gather_y( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 1, 0, 0,            &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
-
-             case('CX','CDX','CBFX')
-
-                if ( ismaster ) then
-                   GD1 = ( D1 - 2*xhalo ) * nprocs_x_out + 2*xhalo
-                endif
-                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-                ainfo_all(n)%dim_size(1) = GD1
-
-                call gather_x( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, xhalo, 0,        &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
-
-             case('FX','FDX','FBFX')
-
-                if ( ismaster ) then
-                   GD1 = ( D1 - 2*xhalo - 1 ) * nprocs_x_out + 2*xhalo + 1
-                endif
-                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-                ainfo_all(n)%dim_size(1) = GD1
-
-                call gather_x( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, xhalo, 1,        &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
-
-             case('CY','CDY','CBFY')
-
-                if ( ismaster ) then
-                   GD1 = ( D1 - 2*yhalo ) * nprocs_y_out + 2*yhalo
-                endif
-                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-                ainfo_all(n)%dim_size(1) = GD1
-
-                call gather_y( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, yhalo, 0,        &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
-
-             case('FY','FDY','FBFY')
-
-                if ( ismaster ) then
-                   GD1 = ( D1 - 2*yhalo - 1 ) * nprocs_y_out + 2*yhalo + 1
-                endif
-                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-                ainfo_all(n)%dim_size(1) = GD1
-
-                call gather_y( ismaster,               &
-                               bcast_,                 &
-                               ainfo_all(n)%datatype,  &
-                               nprocs_x_out,           &
-                               nprocs_y_out,           &
-                               D1, 0, yhalo, 1,        &
-                               ainfo(n)%AXIS_1d(:),    &
-                               ainfo_all(n)%AXIS_1d(:) )
+                call gather_xy( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1, 1, 0, 0,              &
+                                D2, 1, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
 
              case default
 
-                allocate( ainfo_all(n)%AXIS_1d( D1 ) )
+                if ( ismaster ) then
+                   GD1 = D1 * nprocs_x_out
+                   GD2 = D2 * nprocs_y_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
-                ainfo_all(n)%dim_size(1) = D1
-                ainfo_all(n)%AXIS_1d(:) = ainfo(n)%AXIS_1d(:)
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+
+                call gather_xy( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1, 0, 0, 0,              &
+                                D2, 0, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
 
              endselect
 
-          case( 2 )
-
-             D1 = size( ainfo(n)%AXIS_2d(:,:), 1 )
-             D2 = size( ainfo(n)%AXIS_2d(:,:), 2 )
-
-             if ( index( ainfo_all(n)%varname, '_bnds' ) == 0 ) then
-
-                select case( ainfo_all(n)%varname )
-                case('lon_uy','lat_uy','cell_area_uy')
-
-                   if ( ismaster ) then
-                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                      GD2 = D2 * nprocs_y_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_xy( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1, 1, 0, 0,              &
-                                   D2, 0, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case('lon_xv','lat_xv','cell_area_xv')
-
-                   if ( ismaster ) then
-                      GD1 = D1 * nprocs_x_out
-                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_xy( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1, 0, 0, 0,              &
-                                   D2, 1, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case('lon_uv','lat_uv')
-
-                   if ( ismaster ) then
-                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_xy( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1, 1, 0, 0,              &
-                                   D2, 1, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case default
-
-                   if ( ismaster ) then
-                      GD1 = D1 * nprocs_x_out
-                      GD2 = D2 * nprocs_y_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_xy( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1, 0, 0, 0,              &
-                                   D2, 0, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                endselect
-
-             else
-
-                select case( ainfo_all(n)%varname )
-                case('x_bnds')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = D2 * nprocs_x_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_nx( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1,                       &
-                                   D2, 0, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case('xh_bnds')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_nx( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1,                       &
-                                   D2, 1, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case('y_bnds')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = D2 * nprocs_y_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_ny( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1,                       &
-                                   D2, 0, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case('yh_bnds')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-
-                   call gather_ny( ismaster,                 &
-                                   bcast_,                   &
-                                   ainfo_all(n)%datatype,    &
-                                   nprocs_x_out,             &
-                                   nprocs_y_out,             &
-                                   D1,                       &
-                                   D2, 1, 0, 0,              &
-                                   ainfo(n)%AXIS_2d(:,:),    &
-                                   ainfo_all(n)%AXIS_2d(:,:) )
-
-                case default
-
-                   allocate( ainfo_all(n)%AXIS_2d( D1, D2 ) )
-
-                   ainfo_all(n)%dim_size(1) = D1
-                   ainfo_all(n)%dim_size(2) = D2
-                   ainfo_all(n)%AXIS_2d(:,:) = ainfo(n)%AXIS_2d(:,:)
-
-                endselect
-
-             endif
-
-          case( 3 )
-
-             D1 = size( ainfo(n)%AXIS_3d(:,:,:), 1 )
-             D2 = size( ainfo(n)%AXIS_3d(:,:,:), 2 )
-             D3 = size( ainfo(n)%AXIS_3d(:,:,:), 3 )
-
-             if ( ainfo_all(n)%transpose ) then
-
-                select case( ainfo_all(n)%varname )
-                case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                      GD3 = D3 * nprocs_y_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_nxy( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1,                         &
-                                    D2, 1, 0, 0,                &
-                                    D3, 0, 0, 0,                &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = D2 * nprocs_x_out
-                      GD3 = ( D3 - 1 ) * nprocs_y_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_nxy( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1,                         &
-                                    D2, 0, 0, 0,                &
-                                    D3, 1, 0, 0,                &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                      GD3 = ( D3 - 1 ) * nprocs_y_out + 1
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_nxy( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1,                         &
-                                    D2, 1, 0, 0,                &
-                                    D3, 1, 0, 0,                &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case default
-
-                   if ( ismaster ) then
-                      GD1 = D1
-                      GD2 = D2 * nprocs_x_out
-                      GD3 = D3 * nprocs_y_out
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_nxy( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1,                         &
-                                    D2, 0, 0, 0,                &
-                                    D3, 0, 0, 0,                &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                endselect
-
-             else
-
-                select case( ainfo_all(n)%varname )
-                case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
-
-                   if ( ismaster ) then
-                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                      GD2 = D2 * nprocs_y_out
-                      GD3 = D3
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_xyn( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1, 1, 0, 0,                &
-                                    D2, 0, 0, 0,                &
-                                    D3,                         &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
-
-                   if ( ismaster ) then
-                      GD1 = D1 * nprocs_x_out
-                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                      GD3 = D3
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_xyn( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1, 0, 0, 0,                &
-                                    D2, 1, 0, 0,                &
-                                    D3,                         &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
-
-                   if ( ismaster ) then
-                      GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                      GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                      GD3 = D3
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_xyn( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1, 1, 0, 0,                &
-                                    D2, 1, 0, 0,                &
-                                    D3,                         &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                case default
-
-                   if ( ismaster ) then
-                      GD1 = D1 * nprocs_x_out
-                      GD2 = D2 * nprocs_y_out
-                      GD3 = D3
-                   endif
-                   call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-                   call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-                   allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
-                   ainfo_all(n)%dim_size(1) = GD1
-                   ainfo_all(n)%dim_size(2) = GD2
-                   ainfo_all(n)%dim_size(3) = GD3
-
-                   call gather_xyn( ismaster,                   &
-                                    bcast_,                     &
-                                    ainfo_all(n)%datatype,      &
-                                    nprocs_x_out,               &
-                                    nprocs_y_out,               &
-                                    D1, 0, 0, 0,                &
-                                    D2, 0, 0, 0,                &
-                                    D3,                         &
-                                    ainfo(n)%AXIS_3d(:,:,:),    &
-                                    ainfo_all(n)%AXIS_3d(:,:,:) )
-
-                endselect
-
-             endif
-
-          endselect
-       enddo
-
-    else
-       ! copy axis information
-       ainfo_all(:) = ainfo(:)
-
-    endif
+          else
+
+             select case( ainfo_all(n)%varname )
+             case('x_bnds')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = D2 * nprocs_x_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+
+                call gather_nx( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1,                       &
+                                D2, 0, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
+
+             case('xh_bnds')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+
+                call gather_nx( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1,                       &
+                                D2, 1, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
+
+             case('y_bnds')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = D2 * nprocs_y_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+
+                call gather_ny( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1,                       &
+                                D2, 0, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
+
+             case('yh_bnds')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_2d( GD1, GD2 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+
+                call gather_ny( ismaster,                 &
+                                bcast_,                   &
+                                ainfo_all(n)%datatype,    &
+                                nprocs_x_out,             &
+                                nprocs_y_out,             &
+                                D1,                       &
+                                D2, 1, 0, 0,              &
+                                ainfo(n)%AXIS_2d(:,:),    &
+                                ainfo_all(n)%AXIS_2d(:,:) )
+
+             case default
+
+                allocate( ainfo_all(n)%AXIS_2d( D1, D2 ) )
+
+                ainfo_all(n)%dim_size(1) = D1
+                ainfo_all(n)%dim_size(2) = D2
+                ainfo_all(n)%AXIS_2d(:,:) = ainfo(n)%AXIS_2d(:,:)
+
+             endselect
+
+          endif
+
+       case( 3 )
+
+          D1 = size( ainfo(n)%AXIS_3d(:,:,:), 1 )
+          D2 = size( ainfo(n)%AXIS_3d(:,:,:), 2 )
+          D3 = size( ainfo(n)%AXIS_3d(:,:,:), 3 )
+
+          if ( ainfo_all(n)%transpose ) then
+
+             select case( ainfo_all(n)%varname )
+             case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   GD3 = D3 * nprocs_y_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_nxy( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1,                         &
+                                 D2, 1, 0, 0,                &
+                                 D3, 0, 0, 0,                &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = D2 * nprocs_x_out
+                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_nxy( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1,                         &
+                                 D2, 0, 0, 0,                &
+                                 D3, 1, 0, 0,                &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_nxy( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1,                         &
+                                 D2, 1, 0, 0,                &
+                                 D3, 1, 0, 0,                &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case default
+
+                if ( ismaster ) then
+                   GD1 = D1
+                   GD2 = D2 * nprocs_x_out
+                   GD3 = D3 * nprocs_y_out
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, GD3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_nxy( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1,                         &
+                                 D2, 0, 0, 0,                &
+                                 D3, 0, 0, 0,                &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             endselect
+
+          else
+
+             select case( ainfo_all(n)%varname )
+             case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
+
+                if ( ismaster ) then
+                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD2 = D2 * nprocs_y_out
+                   GD3 = D3
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_xyn( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1, 1, 0, 0,                &
+                                 D2, 0, 0, 0,                &
+                                 D3,                         &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
+
+                if ( ismaster ) then
+                   GD1 = D1 * nprocs_x_out
+                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD3 = D3
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_xyn( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1, 0, 0, 0,                &
+                                 D2, 1, 0, 0,                &
+                                 D3,                         &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
+
+                if ( ismaster ) then
+                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD3 = D3
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_xyn( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1, 1, 0, 0,                &
+                                 D2, 1, 0, 0,                &
+                                 D3,                         &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             case default
+
+                if ( ismaster ) then
+                   GD1 = D1 * nprocs_x_out
+                   GD2 = D2 * nprocs_y_out
+                   GD3 = D3
+                endif
+                call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+                call MPI_BCAST( GD3, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+
+                allocate( ainfo_all(n)%AXIS_3d( GD1, GD2, D3 ) )
+                ainfo_all(n)%dim_size(1) = GD1
+                ainfo_all(n)%dim_size(2) = GD2
+                ainfo_all(n)%dim_size(3) = GD3
+
+                call gather_xyn( ismaster,                   &
+                                 bcast_,                     &
+                                 ainfo_all(n)%datatype,      &
+                                 nprocs_x_out,               &
+                                 nprocs_y_out,               &
+                                 D1, 0, 0, 0,                &
+                                 D2, 0, 0, 0,                &
+                                 D3,                         &
+                                 ainfo(n)%AXIS_3d(:,:,:),    &
+                                 ainfo_all(n)%AXIS_3d(:,:,:) )
+
+             endselect
+
+          endif
+
+       endselect
+    enddo
 
     return
   end subroutine SNO_comm_globalaxis
@@ -742,7 +732,6 @@ contains
   !-----------------------------------------------------------------------------
   subroutine SNO_comm_globalvars( &
        ismaster,      &
-       output_single, &
        nprocs_x_out,  &
        nprocs_y_out,  &
        dinfo,         &
@@ -753,7 +742,6 @@ contains
     implicit none
 
     logical,          intent(in)    :: ismaster                              ! master rank process?
-    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (input)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (input)
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
@@ -768,243 +756,235 @@ contains
     logical  :: bcast_
     !---------------------------------------------------------------------------
 
-    if ( output_single ) then
+    if ( present( bcast ) ) then
+       bcast_ = .true.
+    else
+       bcast_ = .false.
+    endif
 
-       if ( present( bcast ) ) then
-          bcast_ = .true.
+    ! set variable information
+    dinfo_all%varname       = dinfo%varname
+    dinfo_all%description   = dinfo%description
+    dinfo_all%units         = dinfo%units
+    dinfo_all%standard_name = dinfo%standard_name
+    dinfo_all%datatype      = dinfo%datatype
+    dinfo_all%dim_rank      = dinfo%dim_rank
+    dinfo_all%transpose     = dinfo%transpose
+    dinfo_all%dim_name(:)   = dinfo%dim_name(:)
+    dinfo_all%natts         = dinfo%natts
+    dinfo_all%att_name(:)   = dinfo%att_name(:)
+    dinfo_all%att_type(:)   = dinfo%att_type(:)
+    dinfo_all%att_len (:)   = dinfo%att_len (:)
+    dinfo_all%atts    (:)   = dinfo%atts    (:)
+    dinfo_all%step_nmax     = dinfo%step_nmax
+    do t = 1, dinfo%step_nmax
+       dinfo_all%time_start(t) = dinfo%time_start(t)
+       dinfo_all%time_end  (t) = dinfo%time_end  (t)
+    enddo
+    dinfo_all%dt            = dinfo%dt
+    dinfo_all%time_units    = dinfo%time_units
+    dinfo_all%calendar      = dinfo%calendar
+
+    select case( dinfo_all%dim_rank )
+    case( 1 )
+
+       D1 = size( dinfo%VAR_1d(:), 1 )
+
+       select case( dinfo_all%dim_name(1) )
+       case('x')
+
+          GD1 = D1 * nprocs_x_out
+
+          allocate( dinfo_all%VAR_1d( GD1 ) )
+          dinfo_all%dim_size(1) = GD1
+
+          call gather_x( ismaster,           &
+                         bcast_,             &
+                         dinfo_all%datatype, &
+                         nprocs_x_out,       &
+                         nprocs_y_out,       &
+                         D1, 0, 0, 0,        &
+                         dinfo%VAR_1d(:),    &
+                         dinfo_all%VAR_1d(:) )
+
+       case('y')
+
+          GD1 = D1 * nprocs_y_out
+
+          allocate( dinfo_all%VAR_1d( GD1 ) )
+          dinfo_all%dim_size(1) = GD1
+
+          call gather_y( ismaster,           &
+                         bcast_,             &
+                         dinfo_all%datatype, &
+                         nprocs_x_out,       &
+                         nprocs_y_out,       &
+                         D1, 0, 0, 0,        &
+                         dinfo%VAR_1d(:),    &
+                         dinfo_all%VAR_1d(:) )
+
+       case default
+
+          allocate( dinfo_all%VAR_1d( D1 ) )
+
+          dinfo_all%dim_size(1) = D1
+          dinfo_all%VAR_1d(:) = dinfo%VAR_1d(:)
+
+       endselect
+
+    case( 2 )
+
+       D1 = size( dinfo%VAR_2d(:,:), 1 )
+       D2 = size( dinfo%VAR_2d(:,:), 2 )
+
+       if ( dinfo_all%dim_name(1) == 'lon' .AND. &
+            dinfo_all%dim_name(2) == 'lat'       ) then
+
+          GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+          GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+
+          allocate( dinfo_all%VAR_2d( GD1, GD2) )
+          dinfo_all%dim_size(1) = GD1
+          dinfo_all%dim_size(2) = GD2
+
+          call gather_xy( ismaster,             &
+                          bcast_,               &
+                          dinfo_all%datatype,   &
+                          nprocs_x_out,         &
+                          nprocs_y_out,         &
+                          D1, 1, 0, 0,          &
+                          D2, 1, 0, 0,          &
+                          dinfo%VAR_2d(:,:),    &
+                          dinfo_all%VAR_2d(:,:) )
+
        else
-          bcast_ = .false.
+
+          GD1 = D1 * nprocs_x_out
+          GD2 = D2 * nprocs_y_out
+
+          allocate( dinfo_all%VAR_2d( GD1, GD2) )
+          dinfo_all%dim_size(1) = GD1
+          dinfo_all%dim_size(2) = GD2
+
+          call gather_xy( ismaster,             &
+                          bcast_,               &
+                          dinfo_all%datatype,   &
+                          nprocs_x_out,         &
+                          nprocs_y_out,         &
+                          D1, 0, 0, 0,          &
+                          D2, 0, 0, 0,          &
+                          dinfo%VAR_2d(:,:),    &
+                          dinfo_all%VAR_2d(:,:) )
+
        endif
 
-       ! set variable information
-       dinfo_all%varname       = dinfo%varname
-       dinfo_all%description   = dinfo%description
-       dinfo_all%units         = dinfo%units
-       dinfo_all%standard_name = dinfo%standard_name
-       dinfo_all%datatype      = dinfo%datatype
-       dinfo_all%dim_rank      = dinfo%dim_rank
-       dinfo_all%transpose     = dinfo%transpose
-       dinfo_all%dim_name(:)   = dinfo%dim_name(:)
-       dinfo_all%natts         = dinfo%natts
-       dinfo_all%att_name(:)   = dinfo%att_name(:)
-       dinfo_all%att_type(:)   = dinfo%att_type(:)
-       dinfo_all%att_len (:)   = dinfo%att_len (:)
-       dinfo_all%atts    (:)   = dinfo%atts    (:)
-       dinfo_all%step_nmax     = dinfo%step_nmax
-       do t = 1, dinfo%step_nmax
-          dinfo_all%time_start(t) = dinfo%time_start(t)
-          dinfo_all%time_end  (t) = dinfo%time_end  (t)
-       enddo
-       dinfo_all%dt            = dinfo%dt
-       dinfo_all%time_units    = dinfo%time_units
-       dinfo_all%calendar      = dinfo%calendar
+    case( 3 )
 
-       select case( dinfo_all%dim_rank )
-       case( 1 )
+       D1 = size( dinfo%VAR_3d(:,:,:), 1 )
+       D2 = size( dinfo%VAR_3d(:,:,:), 2 )
+       D3 = size( dinfo%VAR_3d(:,:,:), 3 )
 
-          D1 = size( dinfo%VAR_1d(:), 1 )
+       if ( dinfo_all%transpose ) then
 
-          select case( dinfo_all%dim_name(1) )
-          case('x')
+          if ( dinfo_all%dim_name(1) == 'lon' .AND. &
+               dinfo_all%dim_name(2) == 'lat'       ) then
 
-             GD1 = D1 * nprocs_x_out
+             GD1 = D1
+             GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+             GD3 = ( D3 - 1 ) * nprocs_y_out + 1
 
-             allocate( dinfo_all%VAR_1d( GD1 ) )
+             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
              dinfo_all%dim_size(1) = GD1
+             dinfo_all%dim_size(2) = GD2
+             dinfo_all%dim_size(3) = GD3
 
-             call gather_x( ismaster,           &
-                            bcast_,             &
-                            dinfo_all%datatype, &
-                            nprocs_x_out,       &
-                            nprocs_y_out,       &
-                            D1, 0, 0, 0,        &
-                            dinfo%VAR_1d(:),    &
-                            dinfo_all%VAR_1d(:) )
+             call gather_nxy( ismaster,               &
+                              bcast_,                 &
+                              dinfo_all%datatype,     &
+                              nprocs_x_out,           &
+                              nprocs_y_out,           &
+                              D1,                     &
+                              D2, 1, 0, 0,            &
+                              D3, 1, 0, 0,            &
+                              dinfo%VAR_3d(:,:,:),    &
+                              dinfo_all%VAR_3d(:,:,:) )
 
-          case('y')
+          else
 
-             GD1 = D1 * nprocs_y_out
+             GD1 = D1
+             GD2 = D2 * nprocs_x_out
+             GD3 = D3 * nprocs_y_out
 
-             allocate( dinfo_all%VAR_1d( GD1 ) )
+             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
              dinfo_all%dim_size(1) = GD1
+             dinfo_all%dim_size(2) = GD2
+             dinfo_all%dim_size(3) = GD3
 
-             call gather_y( ismaster,           &
-                            bcast_,             &
-                            dinfo_all%datatype, &
-                            nprocs_x_out,       &
-                            nprocs_y_out,       &
-                            D1, 0, 0, 0,        &
-                            dinfo%VAR_1d(:),    &
-                            dinfo_all%VAR_1d(:) )
+             call gather_nxy( ismaster,               &
+                              bcast_,                 &
+                              dinfo_all%datatype,     &
+                              nprocs_x_out,           &
+                              nprocs_y_out,           &
+                              D1,                     &
+                              D2, 0, 0, 0,            &
+                              D3, 0, 0, 0,            &
+                              dinfo%VAR_3d(:,:,:),    &
+                              dinfo_all%VAR_3d(:,:,:) )
 
-          case default
+          endif
 
-             allocate( dinfo_all%VAR_1d( D1 ) )
-
-             dinfo_all%dim_size(1) = D1
-             dinfo_all%VAR_1d(:) = dinfo%VAR_1d(:)
-
-          endselect
-
-       case( 2 )
-
-          D1 = size( dinfo%VAR_2d(:,:), 1 )
-          D2 = size( dinfo%VAR_2d(:,:), 2 )
+       else
 
           if ( dinfo_all%dim_name(1) == 'lon' .AND. &
                dinfo_all%dim_name(2) == 'lat'       ) then
 
              GD1 = ( D1 - 1 ) * nprocs_x_out + 1
              GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+             GD3 = D3
 
-             allocate( dinfo_all%VAR_2d( GD1, GD2) )
+             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
              dinfo_all%dim_size(1) = GD1
              dinfo_all%dim_size(2) = GD2
+             dinfo_all%dim_size(3) = GD3
 
-             call gather_xy( ismaster,             &
-                             bcast_,               &
-                             dinfo_all%datatype,   &
-                             nprocs_x_out,         &
-                             nprocs_y_out,         &
-                             D1, 1, 0, 0,          &
-                             D2, 1, 0, 0,          &
-                             dinfo%VAR_2d(:,:),    &
-                             dinfo_all%VAR_2d(:,:) )
+             call gather_xyn( ismaster,               &
+                              bcast_,                 &
+                              dinfo_all%datatype,     &
+                              nprocs_x_out,           &
+                              nprocs_y_out,           &
+                              D1, 1, 0, 0,            &
+                              D2, 1, 0, 0,            &
+                              D3,                     &
+                              dinfo%VAR_3d(:,:,:),    &
+                              dinfo_all%VAR_3d(:,:,:) )
 
           else
 
              GD1 = D1 * nprocs_x_out
              GD2 = D2 * nprocs_y_out
+             GD3 = D3
 
-             allocate( dinfo_all%VAR_2d( GD1, GD2) )
+             allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
              dinfo_all%dim_size(1) = GD1
              dinfo_all%dim_size(2) = GD2
+             dinfo_all%dim_size(3) = GD3
 
-             call gather_xy( ismaster,             &
-                             bcast_,               &
-                             dinfo_all%datatype,   &
-                             nprocs_x_out,         &
-                             nprocs_y_out,         &
-                             D1, 0, 0, 0,          &
-                             D2, 0, 0, 0,          &
-                             dinfo%VAR_2d(:,:),    &
-                             dinfo_all%VAR_2d(:,:) )
-
-          endif
-
-       case( 3 )
-
-          D1 = size( dinfo%VAR_3d(:,:,:), 1 )
-          D2 = size( dinfo%VAR_3d(:,:,:), 2 )
-          D3 = size( dinfo%VAR_3d(:,:,:), 3 )
-
-          if ( dinfo_all%transpose ) then
-
-             if ( dinfo_all%dim_name(1) == 'lon' .AND. &
-                  dinfo_all%dim_name(2) == 'lat'       ) then
-
-                GD1 = D1
-                GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                GD3 = ( D3 - 1 ) * nprocs_y_out + 1
-
-                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-                dinfo_all%dim_size(1) = GD1
-                dinfo_all%dim_size(2) = GD2
-                dinfo_all%dim_size(3) = GD3
-
-                call gather_nxy( ismaster,               &
-                                 bcast_,                 &
-                                 dinfo_all%datatype,     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1,                     &
-                                 D2, 1, 0, 0,            &
-                                 D3, 1, 0, 0,            &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-
-             else
-
-                GD1 = D1
-                GD2 = D2 * nprocs_x_out
-                GD3 = D3 * nprocs_y_out
-
-                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-                dinfo_all%dim_size(1) = GD1
-                dinfo_all%dim_size(2) = GD2
-                dinfo_all%dim_size(3) = GD3
-
-                call gather_nxy( ismaster,               &
-                                 bcast_,                 &
-                                 dinfo_all%datatype,     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1,                     &
-                                 D2, 0, 0, 0,            &
-                                 D3, 0, 0, 0,            &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-
-             endif
-
-          else
-
-             if ( dinfo_all%dim_name(1) == 'lon' .AND. &
-                  dinfo_all%dim_name(2) == 'lat'       ) then
-
-                GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                GD2 = ( D2 - 1 ) * nprocs_y_out + 1
-                GD3 = D3
-
-                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-                dinfo_all%dim_size(1) = GD1
-                dinfo_all%dim_size(2) = GD2
-                dinfo_all%dim_size(3) = GD3
-
-                call gather_xyn( ismaster,               &
-                                 bcast_,                 &
-                                 dinfo_all%datatype,     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1, 1, 0, 0,            &
-                                 D2, 1, 0, 0,            &
-                                 D3,                     &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-
-             else
-
-                GD1 = D1 * nprocs_x_out
-                GD2 = D2 * nprocs_y_out
-                GD3 = D3
-
-                allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
-                dinfo_all%dim_size(1) = GD1
-                dinfo_all%dim_size(2) = GD2
-                dinfo_all%dim_size(3) = GD3
-
-                call gather_xyn( ismaster,               &
-                                 bcast_,                 &
-                                 dinfo_all%datatype,     &
-                                 nprocs_x_out,           &
-                                 nprocs_y_out,           &
-                                 D1, 0, 0, 0,            &
-                                 D2, 0, 0, 0,            &
-                                 D3,                     &
-                                 dinfo%VAR_3d(:,:,:),    &
-                                 dinfo_all%VAR_3d(:,:,:) )
-
-             endif
+             call gather_xyn( ismaster,               &
+                              bcast_,                 &
+                              dinfo_all%datatype,     &
+                              nprocs_x_out,           &
+                              nprocs_y_out,           &
+                              D1, 0, 0, 0,            &
+                              D2, 0, 0, 0,            &
+                              D3,                     &
+                              dinfo%VAR_3d(:,:,:),    &
+                              dinfo_all%VAR_3d(:,:,:) )
 
           endif
 
-       endselect
+       endif
 
-    else
-       ! copy variable information
-       dinfo_all = dinfo
-
-    endif
+    endselect
 
     return
   end subroutine SNO_comm_globalvars

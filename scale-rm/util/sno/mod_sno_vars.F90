@@ -48,12 +48,16 @@ module mod_sno_vars
   !
   !++ Private parameters & variables
   !
+  type(axisinfo), private, allocatable :: ainfo_out(:)
+  type(iteminfo), private              :: dinfo_out
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_getinfo( &
        ismaster, &
        basename, &
+       naxis,    &
        nvars,    &
        varname,  &
        dinfo,    &
@@ -88,6 +92,7 @@ contains
 
     logical,          intent(in)  :: ismaster                 ! master process?                    (execution)
     character(len=*), intent(in)  :: basename                 ! basename of file                   (input)
+    integer,          intent(in)  :: naxis                    ! number of axis variables           (input)
     integer,          intent(in)  :: nvars                    ! number of variables
     character(len=*), intent(in)  :: varname(nvars)           ! name of variables                  (input)
     type(iteminfo),   intent(out) :: dinfo  (nvars)           ! variable information               (input)
@@ -109,6 +114,8 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_INFO("SNO_vars_getinfo",*) 'Read information of variables'
+
+    allocate( ainfo_out(naxis) )
 
     if ( ismaster ) then
        nowrank = 0 ! first file
@@ -381,6 +388,8 @@ contains
     if( allocated(dinfo%VAR_1d) ) deallocate( dinfo%VAR_1d )
     if( allocated(dinfo%VAR_2d) ) deallocate( dinfo%VAR_2d )
     if( allocated(dinfo%VAR_3d) ) deallocate( dinfo%VAR_3d )
+
+    if( allocated(ainfo_out) ) deallocate( ainfo_out )
 
     return
   end subroutine SNO_vars_dealloc
@@ -879,6 +888,7 @@ contains
        basename,      &
        output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        finalize,      &
@@ -910,6 +920,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: finalize                              ! finalize in this step?
@@ -923,9 +934,6 @@ contains
     type(axisinfo),   intent(in)    :: ainfo(naxis)                          ! axis information                   (input)
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
-
-    type(axisinfo), allocatable :: ainfo_all(:)
-    type(iteminfo)              :: dinfo_all
 
     integer  :: writerank
     !---------------------------------------------------------------------------
@@ -942,29 +950,30 @@ contains
     else
        call PROF_rapstart('FILE_O_NetCDF', 2)
 
-       allocate( ainfo_all(naxis) )
-
-       call SNO_comm_globalaxis( ismaster,      & ! [IN]
-                                 output_single, & ! [IN]
-                                 nprocs_x_out,  & ! [IN]
-                                 nprocs_y_out,  & ! [IN]
-                                 hinfo,         & ! [IN]
-                                 naxis,         & ! [IN]
-                                 ainfo    (:),  & ! [IN]
-                                 ainfo_all(:)   ) ! [OUT]
-
        if ( output_single ) then
-         writerank = PRC_masterrank
-       else
-         writerank = nowrank
-       endif
+          writerank = PRC_masterrank
 
-       call SNO_comm_globalvars( ismaster,      & ! [IN]
-                                 output_single, & ! [IN]
-                                 nprocs_x_out,  & ! [IN]
-                                 nprocs_y_out,  & ! [IN]
-                                 dinfo,         & ! [IN]
-                                 dinfo_all      ) ! [OUT]
+          if ( update_axis ) then
+             call SNO_comm_globalaxis( ismaster,     & ! [IN]
+                                       nprocs_x_out, & ! [IN]
+                                       nprocs_y_out, & ! [IN]
+                                       hinfo,        & ! [IN]
+                                       naxis,        & ! [IN]
+                                       ainfo    (:), & ! [IN]
+                                       ainfo_out(:)  ) ! [OUT]
+          endif
+
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out      ) ! [OUT]
+       else
+          ! local process output
+          writerank    = nowrank
+          ainfo_out(:) = ainfo(:)
+          dinfo_out    = dinfo
+       endif
 
        if ( ( .NOT. output_single ) .OR. ismaster ) then
           call SNO_vars_write_netcdf( dirpath,                    & ! [IN]
@@ -976,8 +985,8 @@ contains
                                       nhalos_x,     nhalos_y,     & ! [IN]
                                       hinfo,                      & ! [IN]
                                       naxis,                      & ! [IN]
-                                      ainfo_all(:),               & ! [IN]
-                                      dinfo_all,                  & ! [IN]
+                                      ainfo_out(:),               & ! [IN]
+                                      dinfo_out,                  & ! [IN]
                                       debug                       ) ! [IN]
 
        endif

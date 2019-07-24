@@ -267,7 +267,7 @@ contains
     real(RP) :: dxy, dx, dy ! [m]
     real(RP) :: clat        ! [rad]
 
-    type(axisinfo), allocatable :: ainfo_all(:)
+    type(axisinfo), allocatable :: ainfo_out(:)
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
@@ -374,23 +374,26 @@ contains
     allocate( idx_j(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
     allocate( hfact(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
 
-    allocate( ainfo_all(naxis) )
+    allocate( ainfo_out(naxis) )
 
-    call SNO_comm_globalaxis( ismaster,      & ! [IN]
-                              output_single, & ! [IN]
-                              nprocs_x_out,  & ! [IN]
-                              nprocs_y_out,  & ! [IN]
-                              hinfo,         & ! [IN]
-                              naxis,         & ! [IN]
-                              ainfo    (:),  & ! [IN]
-                              ainfo_all(:),  & ! [OUT]
-                              bcast = .true. ) ! [IN]
+    if ( output_single ) then
+       call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 hinfo,         & ! [IN]
+                                 naxis,         & ! [IN]
+                                 ainfo    (:),  & ! [IN]
+                                 ainfo_out(:),  & ! [OUT]
+                                 bcast = .true. ) ! [IN]
+    else
+       ainfo_out(:) = ainfo(:)
+    endif
 
     do n = 1, naxis
-       if    ( ainfo_all(n)%varname == 'lon' ) then
-          lon_ref(:,:) = ainfo_all(n)%AXIS_2d(:,:) * CONST_D2R
-       elseif( ainfo_all(n)%varname == 'lat' ) then
-          lat_ref(:,:) = ainfo_all(n)%AXIS_2d(:,:) * CONST_D2R
+       if    ( ainfo_out(n)%varname == 'lon' ) then
+          lon_ref(:,:) = ainfo_out(n)%AXIS_2d(:,:) * CONST_D2R
+       elseif( ainfo_out(n)%varname == 'lat' ) then
+          lat_ref(:,:) = ainfo_out(n)%AXIS_2d(:,:) * CONST_D2R
        endif
     enddo
 
@@ -488,6 +491,7 @@ contains
        basename,      &
        output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        nprocs_x_out,  &
@@ -513,6 +517,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
@@ -523,7 +528,7 @@ contains
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
 
-    type(iteminfo) :: dinfo_all
+    type(iteminfo) :: dinfo_out
 
     logical  :: do_output, finalize, add_rm_attr
     integer  :: k, t
@@ -557,13 +562,16 @@ contains
        dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_size(2) = jmax_new
 
-       call SNO_comm_globalvars( ismaster,      & ! [IN]
-                                 output_single, & ! [IN]
-                                 nprocs_x_out,  & ! [IN]
-                                 nprocs_y_out,  & ! [IN]
-                                 dinfo,         & ! [IN]
-                                 dinfo_all,     & ! [OUT]
-                                 bcast = .true. ) ! [IN]
+       if ( output_single ) then
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out,     & ! [OUT]
+                                    bcast = .true. ) ! [IN]
+       else
+          dinfo_out = dinfo
+       endif
 
        call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                              imax_ref, jmax_ref,        & ! [IN]
@@ -571,7 +579,7 @@ contains
                              idx_i           (:,:,:),   & ! [IN]
                              idx_j           (:,:,:),   & ! [IN]
                              hfact           (:,:,:),   & ! [IN]
-                             dinfo_all%VAR_2d(:,:),     & ! [IN]
+                             dinfo_out%VAR_2d(:,:),     & ! [IN]
                              dinfo_ll%VAR_2d (:,:)      ) ! [OUT]
 
        do_output = .true.
@@ -591,13 +599,16 @@ contains
           dinfo_ll%dim_size(3) = dinfo%dim_size(1)
        endif
 
-       call SNO_comm_globalvars( ismaster,      & ! [IN]
-                                 output_single, & ! [IN]
-                                 nprocs_x_out,  & ! [IN]
-                                 nprocs_y_out,  & ! [IN]
-                                 dinfo,         & ! [IN]
-                                 dinfo_all,     & ! [OUT]
-                                 bcast = .true. ) ! [IN]
+       if ( output_single ) then
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out,     & ! [OUT]
+                                    bcast = .true. ) ! [IN]
+       else
+          dinfo_out = dinfo
+       endif
 
        do k = 1, dinfo_ll%dim_size(3)
           call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
@@ -606,7 +617,7 @@ contains
                                 idx_i           (:,:,:),   & ! [IN]
                                 idx_j           (:,:,:),   & ! [IN]
                                 hfact           (:,:,:),   & ! [IN]
-                                dinfo_all%VAR_3d(k,:,:),   & ! [IN]
+                                dinfo_out%VAR_3d(k,:,:),   & ! [IN]
                                 dinfo_ll%VAR_3d (k,:,:)    ) ! [OUT]
        enddo
 
@@ -624,6 +635,7 @@ contains
                             basename,                   & ! [IN] from namelist
                             output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
+                            update_axis,                & ! [IN]
                             nowrank,                    & ! [IN]
                             nowstep,                    & ! [IN]
                             finalize,                   & ! [IN]

@@ -290,6 +290,7 @@ contains
        basename,      &
        output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        nprocs_x_out,  &
@@ -323,6 +324,7 @@ contains
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
     logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
@@ -611,6 +613,7 @@ contains
                             basename,                   & ! [IN] from namelist
                             output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
+                            update_axis,                & ! [IN]
                             nowrank,                    & ! [IN]
                             avgdinfo%step_nmax,         & ! [IN]
                             finalize,                   & ! [IN]
