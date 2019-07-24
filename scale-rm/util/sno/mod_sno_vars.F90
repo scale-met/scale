@@ -947,7 +947,7 @@ contains
 
        if ( update_axis ) then
           if( allocated( ainfo_out ) ) deallocate( ainfo_out )
-          allocate( ainfo_out(naxis) )
+          allocate( ainfo_out( naxis ) )
        endif
 
        if ( output_single ) then

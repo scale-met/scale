@@ -236,7 +236,8 @@ contains
        allocate( Zhfact(kmax_new  ) )
 
        ! set basic axis
-       allocate( ainfo_v( naxis ) )
+       naxis_v = naxis
+       allocate( ainfo_v( naxis_v ) )
        ainfo_v(:) = ainfo(:)
 
        do n = 1, naxis
