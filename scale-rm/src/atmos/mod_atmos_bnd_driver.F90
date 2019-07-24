@@ -492,7 +492,7 @@ contains
 
 
     if ( ATMOS_BOUNDARY_DENS_ADJUST_tau <= 0.0_RP ) then
-       ATMOS_BOUNDARY_DENS_ADJUST_tau = max( ATMOS_BOUNDARY_UPDATE_DT / 6.0_RP,       &
+       ATMOS_BOUNDARY_DENS_ADJUST_tau = max( real(ATMOS_BOUNDARY_UPDATE_DT,kind=RP) / 6.0_RP, &
                                              ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy )
     end if
 
