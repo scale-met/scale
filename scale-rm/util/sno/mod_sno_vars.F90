@@ -945,13 +945,15 @@ contains
     else
        call PROF_rapstart('FILE_O_NetCDF', 2)
 
+       if ( update_axis ) then
+          if( allocated( ainfo_out ) ) deallocate( ainfo_out )
+          allocate( ainfo_out(naxis) )
+       endif
+
        if ( output_single ) then
           writerank = PRC_masterrank
 
           if ( update_axis ) then
-             if( allocated( ainfo_out ) ) deallocate( ainfo_out )
-             allocate( ainfo_out(naxis) )
-
              call SNO_comm_globalaxis( ismaster,     & ! [IN]
                                        nprocs_x_out, & ! [IN]
                                        nprocs_y_out, & ! [IN]
@@ -967,7 +969,6 @@ contains
                                     dinfo,         & ! [IN]
                                     dinfo_out      ) ! [OUT]
        else
-          ! local process output
           writerank    = nowrank
           ainfo_out(:) = ainfo(:)
           dinfo_out    = dinfo
