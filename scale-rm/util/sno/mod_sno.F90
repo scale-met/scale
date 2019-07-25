@@ -27,7 +27,7 @@ module mod_sno
   !
   public :: SNO_proc_alloc
   public :: SNO_file_getinfo
-  public :: SNO_calc_localsize
+  public :: SNO_calc_domainsize
   public :: SNO_read_bcast_1d
   public :: SNO_read_bcast_2d
   public :: SNO_read_map_1d
@@ -501,7 +501,7 @@ contains
   end subroutine SNO_file_getinfo
 
   !-----------------------------------------------------------------------------
-  subroutine SNO_calc_localsize( &
+  subroutine SNO_calc_domainsize( &
        nprocs_x,       &
        nprocs_y,       &
        px,             &
@@ -553,7 +553,7 @@ contains
     endif
 
     return
-  end subroutine SNO_calc_localsize
+  end subroutine SNO_calc_domainsize
 
   !-----------------------------------------------------------------------------
   subroutine SNO_read_bcast_1d( &

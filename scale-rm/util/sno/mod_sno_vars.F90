@@ -18,6 +18,10 @@ module mod_sno_vars
   use scale_precision
   use scale_io
   use scale_prof
+
+  use mod_sno_h, only: &
+     axisinfo,  &
+     iteminfo
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -44,12 +48,16 @@ module mod_sno_vars
   !
   !++ Private parameters & variables
   !
+  type(axisinfo), private, allocatable :: ainfo_out(:)
+  type(iteminfo), private              :: dinfo_out
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_getinfo( &
        ismaster, &
        basename, &
+       naxis,    &
        nvars,    &
        varname,  &
        dinfo,    &
@@ -84,6 +92,7 @@ contains
 
     logical,          intent(in)  :: ismaster                 ! master process?                    (execution)
     character(len=*), intent(in)  :: basename                 ! basename of file                   (input)
+    integer,          intent(in)  :: naxis                    ! number of axis variables           (input)
     integer,          intent(in)  :: nvars                    ! number of variables
     character(len=*), intent(in)  :: varname(nvars)           ! name of variables                  (input)
     type(iteminfo),   intent(out) :: dinfo  (nvars)           ! variable information               (input)
@@ -407,9 +416,9 @@ contains
        commoninfo, &
        iteminfo
     use mod_sno, only: &
-       SNO_calc_localsize, &
-       SNO_read_map_1d,    &
-       SNO_read_map_2d,    &
+       SNO_calc_domainsize, &
+       SNO_read_map_1d,     &
+       SNO_read_map_2d,     &
        SNO_read_map_3d
     implicit none
 
@@ -457,13 +466,13 @@ contains
        do px = 1, nprocs_x_in
           p = (py-1) * nprocs_x_in + px - 1
 
-          call SNO_calc_localsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
-                                   px,           py,          & ! [IN]
-                                   ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
-                                   nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
-                                   hinfo,                     & ! [IN] from SNO_file_getinfo
-                                   ngrids_x_in,  ngrids_y_in, & ! [OUT]
-                                   ngrids_xh_in, ngrids_yh_in ) ! [OUT]
+          call SNO_calc_domainsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
+                                    px,           py,          & ! [IN]
+                                    ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
+                                    nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
+                                    hinfo,                     & ! [IN] from SNO_file_getinfo
+                                    ngrids_x_in,  ngrids_y_in, & ! [OUT]
+                                    ngrids_xh_in, ngrids_yh_in ) ! [OUT]
 
           staggered_x_in  = 0
           staggered_y_in  = 0
@@ -867,12 +876,14 @@ contains
     return
   end subroutine SNO_vars_read
 
-
   !-----------------------------------------------------------------------------
   subroutine SNO_vars_write( &
+       ismaster,      &
        dirpath,       &
        basename,      &
+       output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        finalize,      &
@@ -886,17 +897,25 @@ contains
        ainfo,         &
        dinfo,         &
        debug          )
+    use scale_prc, only: &
+       PRC_masterrank
     use mod_sno_h, only: &
        commoninfo, &
        axisinfo,   &
        iteminfo
     use mod_sno_grads, only: &
        SNO_grads_write
+    use mod_sno_comm, only: &
+       SNO_comm_globalaxis, &
+       SNO_comm_globalvars
     implicit none
 
+    logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
     character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     logical,          intent(in)    :: finalize                              ! finalize in this step?
@@ -910,6 +929,8 @@ contains
     type(axisinfo),   intent(in)    :: ainfo(naxis)                          ! axis information                   (input)
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
+
+    integer  :: writerank
     !---------------------------------------------------------------------------
 
     if ( output_grads ) then
@@ -922,18 +943,54 @@ contains
                              dinfo,    & ! [IN]
                              debug     ) ! [IN]
     else
-       call SNO_vars_write_netcdf( dirpath,                    & ! [IN]
-                                   basename,                   & ! [IN]
-                                   nowrank,                    & ! [IN]
-                                   nowstep,                    & ! [IN]
-                                   add_rm_attr,                & ! [IN]
-                                   nprocs_x_out, nprocs_y_out, & ! [IN]
-                                   nhalos_x,     nhalos_y,     & ! [IN]
-                                   hinfo,                      & ! [IN]
-                                   naxis,                      & ! [IN]
-                                   ainfo(:),                   & ! [IN]
-                                   dinfo,                      & ! [IN]
-                                   debug                       ) ! [IN]
+       call PROF_rapstart('FILE_O_NetCDF', 2)
+
+       if ( update_axis ) then
+          if( allocated( ainfo_out ) ) deallocate( ainfo_out )
+          allocate( ainfo_out( naxis ) )
+       endif
+
+       if ( output_single ) then
+          writerank = PRC_masterrank
+
+          if ( update_axis ) then
+             call SNO_comm_globalaxis( ismaster,     & ! [IN]
+                                       nprocs_x_out, & ! [IN]
+                                       nprocs_y_out, & ! [IN]
+                                       hinfo,        & ! [IN]
+                                       naxis,        & ! [IN]
+                                       ainfo    (:), & ! [IN]
+                                       ainfo_out(:)  ) ! [OUT]
+          endif
+
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out      ) ! [OUT]
+       else
+          writerank    = nowrank
+          ainfo_out(:) = ainfo(:)
+          dinfo_out    = dinfo
+       endif
+
+       if ( ( .NOT. output_single ) .OR. ismaster ) then
+          call SNO_vars_write_netcdf( dirpath,                    & ! [IN]
+                                      basename,                   & ! [IN]
+                                      writerank,                  & ! [IN]
+                                      nowstep,                    & ! [IN]
+                                      add_rm_attr,                & ! [IN]
+                                      nprocs_x_out, nprocs_y_out, & ! [IN]
+                                      nhalos_x,     nhalos_y,     & ! [IN]
+                                      hinfo,                      & ! [IN]
+                                      naxis,                      & ! [IN]
+                                      ainfo_out(:),               & ! [IN]
+                                      dinfo_out,                  & ! [IN]
+                                      debug                       ) ! [IN]
+
+       endif
+
+       call PROF_rapend('FILE_O_NetCDF', 2)
     endif
 
     return
@@ -1060,7 +1117,7 @@ contains
                                dinfo%datatype,      & ! [IN]
                                vid,                 & ! [OUT]
                                time_int = dinfo%dt, & ! [IN]
-                               existed = varexisted ) ! [OUT]
+                               existed = varexisted     ) ! [OUT]
     else
        call FILE_def_variable( fid,                 & ! [IN]
                                dinfo%varname,       & ! [IN]
@@ -1077,13 +1134,25 @@ contains
     do i = 1, dinfo%natts
        select case( dinfo%att_type(i) )
        case ( FILE_TEXT )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%text )
+          call FILE_set_attribute( fid,               &
+                                   dinfo%varname,     &
+                                   dinfo%att_name(i), &
+                                   dinfo%atts(i)%text )
        case ( FILE_INTEGER4 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%int(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                  &
+                                   dinfo%varname,                        &
+                                   dinfo%att_name(i),                    &
+                                   dinfo%atts(i)%int(1:dinfo%att_len(i)) )
        case ( FILE_REAL4 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%float(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                    &
+                                   dinfo%varname,                          &
+                                   dinfo%att_name(i),                      &
+                                   dinfo%atts(i)%float(1:dinfo%att_len(i)) )
        case ( FILE_REAL8 )
-          call FILE_set_attribute( fid, dinfo%varname, dinfo%att_name(i), dinfo%atts(i)%double(1:dinfo%att_len(i)) )
+          call FILE_set_attribute( fid,                                     &
+                                   dinfo%varname,                           &
+                                   dinfo%att_name(i),                       &
+                                   dinfo%atts(i)%double(1:dinfo%att_len(i)) )
        end select
     end do
 

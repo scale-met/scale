@@ -22,6 +22,7 @@ OBJS = mod_sno_h.o     \
        mod_sno_map.o   \
        mod_sno_axis.o  \
        mod_sno_grads.o \
+       mod_sno_comm.o  \
        mod_sno_vars.o  \
        \
        mod_snoplugin_timeave.o \
@@ -50,7 +51,8 @@ $(BUILD_DIR)/mod_sno.o       : mod_sno.F90       $(BUILD_DIR)/mod_sno_h.o
 $(BUILD_DIR)/mod_sno_map.o   : mod_sno_map.F90   $(BUILD_DIR)/mod_sno_h.o
 $(BUILD_DIR)/mod_sno_axis.o  : mod_sno_axis.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o
 $(BUILD_DIR)/mod_sno_grads.o : mod_sno_grads.F90 $(BUILD_DIR)/mod_sno_h.o
-$(BUILD_DIR)/mod_sno_vars.o  : mod_sno_vars.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o $(BUILD_DIR)/mod_sno_grads.o
+$(BUILD_DIR)/mod_sno_comm.o  : mod_sno_comm.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o
+$(BUILD_DIR)/mod_sno_vars.o  : mod_sno_vars.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno.o $(BUILD_DIR)/mod_sno_axis.o $(BUILD_DIR)/mod_sno_grads.o $(BUILD_DIR)/mod_sno_comm.o
 
 $(BUILD_DIR)/mod_snoplugin_timeave.o  : mod_snoplugin_timeave.F90  $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
 $(BUILD_DIR)/mod_snoplugin_hgridope.o : mod_snoplugin_hgridope.F90 $(BUILD_DIR)/mod_sno_h.o $(BUILD_DIR)/mod_sno_vars.o
