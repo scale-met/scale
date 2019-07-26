@@ -105,10 +105,11 @@ contains
              * 0.25_RP / GSQRT(KS,i,j,I_XYW)
        ! at KS
        ! momws at the surface is assumed to be zero
-       W(KS,i,j) = momws * 0.5_RP &
-                 - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) ) &
-                 + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) ) &
-                 * 0.5_RP / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
+       W(KS,i,j) = ( momws * 0.5_RP                                               &
+                    - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) )    &
+                      + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) )  &
+                      * 0.5_RP / GSQRT(KS,i,j,I_XYZ)                              &
+                   ) / DENS(KS,i,j)
     enddo
     enddo
 !OCL XFILL
