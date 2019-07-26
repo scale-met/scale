@@ -105,10 +105,11 @@ contains
              * 0.25_RP / GSQRT(KS,i,j,I_XYW)
        ! at KS
        ! momws at the surface is assumed to be zero
-       W(KS,i,j) = ( momws * 0.5_RP                                                                &
-                    - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) )                     &
-                      + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) )                   &
-                      * 0.5_RP / GSQRT(KS,i,j,I_XYZ)                              ) / DENS(KS,i,j)
+       W(KS,i,j) = ( momws * 0.5_RP                                               &
+                    - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) )    &
+                      + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) )  &
+                      * 0.5_RP / GSQRT(KS,i,j,I_XYZ)                              &
+                   ) / DENS(KS,i,j)
     enddo
     enddo
 !OCL XFILL
@@ -118,7 +119,7 @@ contains
        W(KE,i,j) = 0.5_RP * ( MOMZ(KE-1,i,j) ) / DENS(KE,i,j)
     enddo
     enddo
- 
+
 !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
