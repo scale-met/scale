@@ -378,9 +378,8 @@ contains
 
        call history_out
 
-       if (n == TIME_LSTEP_MAX) then
-          call restart_output( restart_output_basename )
-       endif
+       call restart_output( restart_output_basename, n )
+
        call PROF_rapend  ('_History',1)
 
       if( IO_L ) call flush(IO_FID_LOG)
