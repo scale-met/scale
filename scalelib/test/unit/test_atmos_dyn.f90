@@ -80,6 +80,8 @@ module test_atmos_dyn
 
   real(RP), allocatable :: DAMP_var(:,:,:,:)
   real(RP), allocatable :: DAMP_alpha(:,:,:,:)
+  real(RP), allocatable :: MFLUX_OFFSET_X(:,:,:)
+  real(RP), allocatable :: MFLUX_OFFSET_Y(:,:,:)
 
   real(RP), allocatable :: PHI(:,:,:)
   real(RP), allocatable :: GSQRT(:,:,:,:)
@@ -199,6 +201,8 @@ contains
 
   allocate( DAMP_var(KA,IA,JA,5+QA) )
   allocate( DAMP_alpha(KA,IA,JA,5+QA) )
+  allocate( MFLUX_OFFSET_X(KA,JA,2) )
+  allocate( MFLUX_OFFSET_Y(KA,IA,2) )
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
@@ -348,6 +352,9 @@ subroutine test_undef
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   do i = 1, 2
      call ATMOS_DYN( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
@@ -365,6 +372,7 @@ subroutine test_undef
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+          MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_tracer_split_tend,                      & ! (in)
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -407,6 +415,9 @@ subroutine test_const
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
        PROG,                                        & ! (inout)
@@ -423,6 +434,7 @@ subroutine test_const
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -491,6 +503,9 @@ subroutine test_conserve
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -527,6 +542,7 @@ subroutine test_conserve
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+         MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_tracer_split_tend,                      & ! (in)
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -625,6 +641,9 @@ subroutine test_cwc
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -659,6 +678,7 @@ subroutine test_cwc
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -718,6 +738,9 @@ subroutine test_fctminmax
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -752,6 +775,7 @@ subroutine test_fctminmax
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)

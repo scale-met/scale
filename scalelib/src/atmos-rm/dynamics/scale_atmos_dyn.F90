@@ -238,6 +238,7 @@ contains
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
+       MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       &
        divdmp_coef,                                          &
        FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
@@ -328,6 +329,8 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+    real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
+    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,JA,2)
 
     real(RP), intent(in)    :: divdmp_coef
 
@@ -468,8 +471,8 @@ contains
                                  DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! [IN]
                                  DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! [IN]
                                  DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! [IN]
-                                 wdamp_coef,                                           & ! [IN]
-                                 divdmp_coef,                                          & ! [IN]
+                                 MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       & ! [IN] 
+                                 wdamp_coef, divdmp_coef,                              & ! [IN]
                                  FLAG_TRACER_SPLIT_TEND,                               & ! [IN]
                                  FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! [IN]
                                  FLAG_FCT_ALONG_STREAM,                                & ! [IN]

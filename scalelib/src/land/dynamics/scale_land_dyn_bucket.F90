@@ -286,8 +286,15 @@ contains
       ! nudging is NOT used
       solve_matrix = .true.
 
-      NDG_TEMP (:,:,:) = 0.0_RP
-      NDG_WATER(:,:,:) = 0.0_RP
+      !$omp parallel do
+      do j = LJS,LJE
+      do i = LIS,LIE
+      do k = LKS,LKE
+         NDG_TEMP (k,i,j) = 0.0_RP
+         NDG_WATER(k,i,j) = 0.0_RP
+      end do
+      end do
+      end do
 
     end if
 
