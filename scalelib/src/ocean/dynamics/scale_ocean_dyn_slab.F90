@@ -153,7 +153,8 @@ contains
                                         OCEAN_DYN_SLAB_nudging_offset,                & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_defval,                & ! [IN]
                                         check_coordinates = OCEAN_DYN_SLAB_nudging_check_coordinates, & ! [IN]
-                                        step_limit = OCEAN_DYN_SLAB_nudging_step_limit                ) ! [IN]
+                                        step_limit        = OCEAN_DYN_SLAB_nudging_step_limit,        & ! [IN]
+                                        allow_missing     = ( .not. OCEAN_DYN_SLAB_offline_mode )     ) ! [IN]
     endif
 
     return
@@ -175,6 +176,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
        EMELT => CONST_EMELT
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
@@ -206,21 +208,30 @@ contains
 
        call FILE_EXTERNAL_INPUT_update( 'OCEAN_TEMP', NOWDAYSEC, OCEAN_TEMP_ref(:,:,:), error )
 
+
        if ( error ) then
           LOG_ERROR("OCEAN_DYN_SLAB",*) 'Requested data is not found!'
           call PRC_abort
        endif
 
-       ! if OCEAN_DYN_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary
-       rtau = 1.0_RP / max(OCEAN_DYN_SLAB_nudging_tausec,dt)
+       if ( .not. OCEAN_DYN_SLAB_offline_mode ) then
 
-       do j = OJS, OJE
-       do i = OIS, OIE
-       do k = OKS, OKE
-          OCEAN_TEMP_t_ndg(k,i,j) = ( OCEAN_TEMP_ref(k,i,j) - OCEAN_TEMP(k,i,j) ) * rtau
-       enddo
-       enddo
-       enddo
+          ! if OCEAN_DYN_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary
+          rtau = 1.0_RP / max(OCEAN_DYN_SLAB_nudging_tausec,dt)
+
+          do j = OJS, OJE
+          do i = OIS, OIE
+          do k = OKS, OKE
+             if ( OCEAN_TEMP_ref(k,i,j) == UNDEF ) then
+                OCEAN_TEMP_t_ndg(k,i,j) = 0.0_RP
+             else
+                OCEAN_TEMP_t_ndg(k,i,j) = ( OCEAN_TEMP_ref(k,i,j) - OCEAN_TEMP(k,i,j) ) * rtau
+             end if
+          enddo
+          enddo
+          enddo
+
+       end if
 
     else
        OCEAN_TEMP_t_ndg(:,:,:) = 0.0_RP

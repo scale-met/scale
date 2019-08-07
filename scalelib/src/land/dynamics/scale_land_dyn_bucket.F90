@@ -59,6 +59,8 @@ module scale_land_dyn_bucket
 
   real(RP),               private :: WATER_DENSCS !< Heat Capacity (rho*CS) for soil moisture [J/K/m3]
   real(DP),               private :: LAND_DYN_BUCKET_nudging_tausec  !< Relaxation time [sec]
+
+  logical,                private :: solve_matrix = .true.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -120,8 +122,9 @@ contains
        LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for LAND physics  : ON'
        LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Relaxation time Tau [sec]     : ', LAND_DYN_BUCKET_nudging_tausec
 
-       if ( LAND_DYN_BUCKET_nudging_tausec == 0.0_RP ) then
-          LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Tau=0 means that LST is completely replaced by the external data.'
+       if ( LAND_DYN_BUCKET_nudging_tausec <= 0.0_RP ) then
+          LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Tau<=0 means that LST is completely replaced by the external data.'
+          solve_matrix = .false.
        endif
 
        if ( LAND_DYN_BUCKET_nudging_basename == '' ) then
@@ -141,7 +144,8 @@ contains
                                         LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
                                         check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
-                                        step_limit = LAND_DYN_BUCKET_nudging_step_limit                ) ! [IN]
+                                        step_limit        = LAND_DYN_BUCKET_nudging_step_limit,        & ! [IN]
+                                        allow_missing     = solve_matrix                               ) ! [IN]
 
        call FILE_EXTERNAL_INPUT_regist( LAND_DYN_BUCKET_nudging_basename,              & ! [IN]
                                         LAND_DYN_BUCKET_nudging_basename_add_num,      & ! [IN]
@@ -155,7 +159,8 @@ contains
                                         LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
                                         check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
-                                        step_limit = LAND_DYN_BUCKET_nudging_step_limit                ) ! [IN]
+                                        step_limit        = LAND_DYN_BUCKET_nudging_step_limit,        & ! [IN]
+                                        allow_missing     = solve_matrix                               ) ! [IN]
 
        LOG_INFO("LAND_DYN_BUCKET_setup",*) 'Use nudging for Land physics: ON'
     else
@@ -186,6 +191,7 @@ contains
        TEMP, WATER,                   &
        RUNOFF                         )
     use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
        DWATR => CONST_DWATR, &
        EMELT => CONST_EMELT
     use scale_prc, only: &
@@ -218,7 +224,6 @@ contains
 
     real(RP), intent(out) :: RUNOFF(LIA,LJA)
 
-    logical :: solve_matrix
     logical :: error
 
     real(RP) :: TEMP1 (LKMAX,LIA,LJA)
@@ -240,65 +245,75 @@ contains
 
     LOG_PROGRESS(*) 'land / dynamics / bucket'
 
-    if( LAND_DYN_BUCKET_nudging ) then
+    if ( LAND_DYN_BUCKET_nudging ) then
 
-      call FILE_EXTERNAL_INPUT_update( &
+       call FILE_EXTERNAL_INPUT_update( &
                           'LAND_TEMP', & ! (in)
                           NOWDAYSEC,   & ! (in)
                           TEMP1,       & ! (out)
                           error        ) ! (out)
-      if ( error ) then
-         LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
-         call PRC_abort
-      end if
+       if ( error ) then
+          LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
+          call PRC_abort
+       end if
 
-      call FILE_EXTERNAL_INPUT_update( &
+       call FILE_EXTERNAL_INPUT_update( &
                          'LAND_WATER', & ! (in)
                          NOWDAYSEC,    & ! (in)
                          WATER1,       & ! (out)
                          error         ) ! (out)
-      if ( error ) then
-         LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
-         call PRC_abort
-      end if
+       if ( error ) then
+          LOG_ERROR("LAND_DYN_BUCKET",*) 'Requested data is not found!'
+          call PRC_abort
+       end if
 
-      if( LAND_DYN_BUCKET_nudging_tau > 0.0_RP ) then
-        ! nudging is used
-        solve_matrix = .true.
+       if ( solve_matrix ) then
+          ! nudging is used
 
-        !$omp parallel do
-        do j = LJS,LJE
-        do i = LIS,LIE
-        do k = LKS,LKE
-           NDG_TEMP (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
-           NDG_WATER(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
-        end do
-        end do
-        end do
+          !$omp parallel do
+          do j = LJS,LJE
+          do i = LIS,LIE
+          do k = LKS,LKE
+             if ( TEMP1(k,i,j) == UNDEF ) then
+                NDG_TEMP (k,i,j) = 0.0_RP
+             else
+                NDG_TEMP (k,i,j) = ( TEMP1 (k,i,j) - TEMP (k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+             end if
+          end do
+          end do
+          end do
 
-      else
-        ! replace data to reference
-        solve_matrix = .false.
+          !$omp parallel do
+          do j = LJS,LJE
+          do i = LIS,LIE
+          do k = LKS,LKE
+             if ( WATER1(k,i,j) == UNDEF ) then
+                NDG_WATER(k,i,j) = 0.0_RP
+             else
+                NDG_WATER(k,i,j) = ( WATER1(k,i,j) - WATER(k,i,j) ) / LAND_DYN_BUCKET_nudging_tausec * dt
+             end if
+          end do
+          end do
+          end do
 
-      end if
+       end if
 
     else
-      ! nudging is NOT used
-      solve_matrix = .true.
+       ! nudging is NOT used
 
-      !$omp parallel do
-      do j = LJS,LJE
-      do i = LIS,LIE
-      do k = LKS,LKE
-         NDG_TEMP (k,i,j) = 0.0_RP
-         NDG_WATER(k,i,j) = 0.0_RP
-      end do
-      end do
-      end do
+       !$omp parallel do
+       do j = LJS,LJE
+       do i = LIS,LIE
+       do k = LKS,LKE
+          NDG_TEMP (k,i,j) = 0.0_RP
+          NDG_WATER(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
 
     end if
 
-    if( solve_matrix ) then
+    if ( solve_matrix ) then
 
       ! Solve diffusion of soil moisture (tridiagonal matrix)
       do j = LJS, LJE

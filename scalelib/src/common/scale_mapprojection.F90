@@ -346,8 +346,8 @@ contains
     param%basepoint_lat = info%latitude_of_projection_origin * D2R
 
     param%rotation     = info%rotation * D2R
-    param%rot_fact_sin = sin(MAPPROJECTION_mappingparam%rotation)
-    param%rot_fact_cos = cos(MAPPROJECTION_mappingparam%rotation)
+    param%rot_fact_sin = sin(param%rotation)
+    param%rot_fact_cos = cos(param%rotation)
 
     return
   end subroutine MAPPROJECTION_get_param
