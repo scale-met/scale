@@ -122,9 +122,11 @@ module mod_atmos_bnd_driver
   character(len=H_SHORT), private :: ATMOS_BOUNDARY_TYPE         = 'NONE'
   character(len=H_LONG),  private :: ATMOS_BOUNDARY_IN_BASENAME  = ''
   logical,                private :: ATMOS_BOUNDARY_IN_CHECK_COORDINATES = .true.
+  logical,                private :: ATMOS_BOUNDARY_IN_AGGREGATE
   character(len=H_LONG),  private :: ATMOS_BOUNDARY_OUT_BASENAME = ''
   character(len=H_MID),   private :: ATMOS_BOUNDARY_OUT_TITLE    = 'SCALE-RM BOUNDARY CONDITION'  !< title of the output file
   character(len=H_SHORT), private :: ATMOS_BOUNDARY_OUT_DTYPE    = 'DEFAULT'                      !< REAL4 or REAL8
+  logical,                private :: ATMOS_BOUNDARY_OUT_AGGREGATE
 
   logical,               private :: ATMOS_BOUNDARY_USE_DENS     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_VELZ     = .false. ! read from file?
@@ -218,6 +220,8 @@ contains
        UNDEF => CONST_UNDEF
     use scale_time, only: &
        DT => TIME_DTSEC
+    use scale_file, only: &
+       FILE_AGGREGATE
     use scale_comm_cartesC_nest, only: &
        ONLINE_BOUNDARY_DIAGQHYD, &
        ONLINE_BOUNDARY_USE_QHYD, &
@@ -243,9 +247,11 @@ contains
        ATMOS_BOUNDARY_TYPE,           &
        ATMOS_BOUNDARY_IN_BASENAME,    &
        ATMOS_BOUNDARY_IN_CHECK_COORDINATES, &
+       ATMOS_BOUNDARY_IN_AGGREGATE,   &
        ATMOS_BOUNDARY_OUT_BASENAME,   &
        ATMOS_BOUNDARY_OUT_TITLE,      &
        ATMOS_BOUNDARY_OUT_DTYPE,      &
+       ATMOS_BOUNDARY_OUT_AGGREGATE,  &
        ATMOS_BOUNDARY_USE_VELZ,       &
        ATMOS_BOUNDARY_USE_VELX,       &
        ATMOS_BOUNDARY_USE_VELY,       &
@@ -292,6 +298,9 @@ contains
     ATMOS_BOUNDARY_tauz = DT * 10.0_RP
     ATMOS_BOUNDARY_taux = DT * 10.0_RP
     ATMOS_BOUNDARY_tauy = DT * 10.0_RP
+
+    ATMOS_BOUNDARY_IN_AGGREGATE  = FILE_AGGREGATE
+    ATMOS_BOUNDARY_OUT_AGGREGATE = FILE_AGGREGATE
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1093,7 +1102,7 @@ contains
     integer :: iq, iqb
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, fid )
+    call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, fid, aggregate=ATMOS_BOUNDARY_IN_AGGREGATE )
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
        call FILE_CARTESC_check_coordinates( fid, atmos=.true. )
@@ -1152,91 +1161,125 @@ contains
   !> Write boundary data
   subroutine ATMOS_BOUNDARY_write
     use scale_file_cartesC, only: &
-       FILE_CARTESC_write
+       FILE_CARTESC_create,    &
+       FILE_CARTESC_def_var,   &
+       FILE_CARTESC_enddef,    &
+       FILE_CARTESC_write_var, &
+       FILE_CARTESC_close
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ
     implicit none
 
+    integer :: fid
+    integer :: vid_dens, vid_a_dens
+    integer :: vid_velz, vid_a_velz
+    integer :: vid_velx, vid_a_velx
+    integer :: vid_vely, vid_a_vely
+    integer :: vid_pott, vid_a_pott
+    integer :: vid_qtrc(BND_QA), vid_a_qtrc(BND_QA)
     integer :: iq, iqb
     !---------------------------------------------------------------------------
+
+    call FILE_CARTESC_create( ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, & ! [IN]
+                              ATMOS_BOUNDARY_OUT_DTYPE,                              & ! [IN]
+                              fid,                                                   & ! [OUT]
+                              aggregate = ATMOS_BOUNDARY_OUT_AGGREGATE               ) ! [IN]
 
     if (      ATMOS_BOUNDARY_USE_DENS &
          .OR. ATMOS_BOUNDARY_USE_VELZ &
          .OR. ATMOS_BOUNDARY_USE_VELX &
          .OR. ATMOS_BOUNDARY_USE_VELY &
          .OR. ATMOS_BOUNDARY_USE_POTT &
-         ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_DENS(:,:,:),                            &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'DENS', 'Reference Density', 'kg/m3', 'ZXY',           &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
+         .OR. l_bnd                   ) then
+       call FILE_CARTESC_def_var( fid, 'DENS', 'Reference Density', 'kg/m3', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_dens )
+    else
+       vid_dens = -1
     end if
+
     if ( ATMOS_BOUNDARY_USE_DENS .OR. l_bnd ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_DENS(:,:,:),                      &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_DENS', 'Alpha for DENS', '1', 'ZXY',            &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
+       call FILE_CARTESC_def_var( fid, 'ALPHA_DENS', 'Alpha for DENS', '1', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_dens )
+    else
+       vid_a_dens = -1
+    end if
 
     if ( ATMOS_BOUNDARY_USE_VELZ .OR. (l_bnd .AND. ONLINE_USE_VELZ) ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELZ(:,:,:),                            &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELZ', 'Reference Velocity w', 'm/s', 'ZHXY',          &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELZ(:,:,:),                      &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELZ', 'Alpha for VELZ', '1', 'ZHXY',            &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
+       call FILE_CARTESC_def_var( fid, 'VELZ', 'Reference Velocity w', 'm/s', 'ZHXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_velz )
+       call FILE_CARTESC_def_var( fid, 'ALPHA_VELZ', 'Alpha for VELZ', '1', 'ZHXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_velz )
+    else
+       vid_velz = -1
+    end if
 
     if ( ATMOS_BOUNDARY_USE_VELX .OR. l_bnd ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELX(:,:,:),                            &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELX', 'Reference Velocity u', 'm/s', 'ZXHY',         &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELX(:,:,:),                      &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELX', 'Alpha for VELX', '1', 'ZXHY',           &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
+       call FILE_CARTESC_def_var( fid, 'VELX', 'Reference Velocity u', 'm/s', 'ZXHY', ATMOS_BOUNDARY_OUT_DTYPE, vid_velx )
+       call FILE_CARTESC_def_var( fid, 'ALPHA_VELX', 'Alpha for VELX', '1', 'ZXHY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_velx )
+    else
+       vid_velx = -1
+    end if
 
     if ( ATMOS_BOUNDARY_USE_VELY .OR. l_bnd ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_VELY(:,:,:),                            &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'VELY', 'Reference Velocity y', 'm/s', 'ZXYH',         &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_VELY(:,:,:),                      &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_VELY', 'Alpha for VELY', '1', 'ZXYH',           &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
+       call FILE_CARTESC_def_var( fid, 'VELY', 'Reference Velocity y', 'm/s', 'ZXYH', ATMOS_BOUNDARY_OUT_DTYPE, vid_vely )
+       call FILE_CARTESC_def_var( fid, 'ALPHA_VELY', 'Alpha for VELY', '1', 'ZXYH', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_vely )
+    else
+       vid_vely = -1
+    end if
 
     if ( ATMOS_BOUNDARY_USE_POTT .OR. l_bnd ) then
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_POTT(:,:,:),                            &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'POTT', 'Reference POTT', 'K', 'ZXY',                  &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-       call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_POTT(:,:,:),                      &
-                          ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE, &
-                          'ALPHA_POTT', 'Alpha for POTT', '1', 'ZXY',            &
-                          ATMOS_BOUNDARY_OUT_DTYPE                               )
-    endif
+       call FILE_CARTESC_def_var( fid, 'POTT', 'Reference POTT', 'K', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_pott )
+       call FILE_CARTESC_def_var( fid, 'ALPHA_POTT', 'Alpha for POTT', '1', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_pott )
+    else
+       vid_pott = -1
+    end if
 
     do iq = 1, QA
        iqb = BND_IQ(iq)
        if ( iqb > 0 ) then
-          call FILE_CARTESC_write( ATMOS_BOUNDARY_QTRC(:,:,:,iqb),                                    &
-                             ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,            &
-                             TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), &
-                             TRACER_UNIT(iq), 'ZXY', &
-                             ATMOS_BOUNDARY_OUT_DTYPE                                          )
-          call FILE_CARTESC_write( ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb),                                      &
-                             ATMOS_BOUNDARY_OUT_BASENAME, ATMOS_BOUNDARY_OUT_TITLE,                    &
-                             'ALPHA_'//trim(TRACER_NAME(iq)), 'Alpha for '//trim(TRACER_NAME(iq)), &
-                             '1', 'ZXY', &
-                             ATMOS_BOUNDARY_OUT_DTYPE                                                  )
+          call FILE_CARTESC_def_var( fid, TRACER_NAME(iq), 'Reference '//trim(TRACER_NAME(iq)), TRACER_UNIT(iq), 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_qtrc(iqb) )
+          call FILE_CARTESC_def_var( fid, 'ALPHA_'//trim(TRACER_NAME(iq)), 'Alpha for '//trim(TRACER_NAME(iq)), '1', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_qtrc(iqb) )
        end if
     end do
+
+
+    call FILE_CARTESC_enddef( fid )
+
+
+    if ( vid_dens > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_dens, ATMOS_BOUNDARY_DENS(:,:,:), 'DENS', 'ZXY' )
+    end if
+
+    if ( vid_a_dens > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_a_dens, ATMOS_BOUNDARY_alpha_DENS(:,:,:), 'ALPHA_DENS', 'ZXY' )
+    end if
+
+    if ( vid_velz > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_velz, ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ', 'ZHXY' )
+       call FILE_CARTESC_write_var( fid, vid_a_velz, ATMOS_BOUNDARY_alpha_VELZ(:,:,:), 'ALPHA_VELZ', 'ZHXY' )
+    end if
+
+    if ( vid_velx > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_velx, ATMOS_BOUNDARY_VELX(:,:,:), 'VELX', 'ZXHY' )
+       call FILE_CARTESC_write_var( fid, vid_a_velx, ATMOS_BOUNDARY_alpha_VELX(:,:,:), 'ALPHA_VELX', 'ZXHY' )
+    endif
+
+    if ( vid_vely > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_vely, ATMOS_BOUNDARY_VELY(:,:,:), 'VELY', 'ZXYH' )
+       call FILE_CARTESC_write_var( fid, vid_a_vely, ATMOS_BOUNDARY_alpha_VELY(:,:,:), 'ALPHA_VELY', 'ZXYH' )
+    end if
+
+    if ( vid_pott > 0 ) then
+       call FILE_CARTESC_write_var( fid, vid_pott, ATMOS_BOUNDARY_POTT(:,:,:), 'POTT', 'ZXY' )
+       call FILE_CARTESC_write_var( fid, vid_a_pott, ATMOS_BOUNDARY_alpha_POTT(:,:,:), 'ALPHA_POTT', 'ZXY' )
+    end if
+
+    do iqb = 1, BND_QA
+       if ( vid_qtrc(iqb) > 0 ) then
+          call FILE_CARTESC_write_var( fid, vid_qtrc(iqb), ATMOS_BOUNDARY_QTRC(:,:,:,iqb), TRACER_NAME(iqb), 'ZXY' )
+          call FILE_CARTESC_write_var( fid, vid_a_qtrc(iqb), ATMOS_BOUNDARY_alpha_QTRC(:,:,:,iqb), 'ALPHA_'//trim(TRACER_NAME(iqb)), 'ZXY' )
+       end if
+    end do
+
+
+    call FILE_CARTESC_close( fid )
+
 
     return
   end subroutine ATMOS_BOUNDARY_write
@@ -2737,11 +2780,10 @@ contains
        !$omp parallel do
        do j = JS, JE
        do k = KS, KE
-          ptr(k,j) = DENS_ref(k,IS,j)
+          work_x(k,j) = DENS_ref(k,IS,j)
        end do
        end do
     end if
-
     call STATISTICS_total( KA, KS, KE, JA, JS, JE, &
                            ptr(:,:), "DENS_ref_w",                 & ! (in)
                            AREAZUY_W(:,:), TOTAREAZUY_X(IS-1),     & ! (in)
@@ -2770,7 +2812,7 @@ contains
        !$omp parallel do
        do j = JS, JE
        do k = KS, KE
-          ptr(k,j) = DENS_ref(k,IE,j)
+          work_x(k,j) = DENS_ref(k,IE,j)
        end do
        end do
     end if
@@ -2895,27 +2937,6 @@ contains
        end do
        end do
     end if
-
-    call STATISTICS_total( KA, KS, KE, JA, JS, JE, &
-                           mflux_offset_x(:,:,1,1), "MFLUX_bnd_w",             & ! (in)
-                           AREAZUY_W(:,:), TOTAREAZUY_X(IS-1),     & ! (in)
-                           log_suppress = .true., global = .true., & ! (in)
-                           sum = flx_w                             ) ! (out)
-    call STATISTICS_total( KA, KS, KE, JA, JS, JE, &
-                           mflux_offset_x(:,:,2,1), "MFLUX_bnd_e",             & ! (in)
-                           AREAZUY_E(:,:), TOTAREAZUY_X(IE),     & ! (in)
-                           log_suppress = .true., global = .true., & ! (in)
-                           sum = flx_e                             ) ! (out)
-    call STATISTICS_total( KA, KS, KE, IA, IS, IE, &
-                           mflux_offset_y(:,:,1,1), "MFLX_bnd_s",              & ! (in)
-                           AREAZXV_Y(:,:,JS-1), TOTAREAZXV_Y(JS-1),    & ! (in)
-                           log_suppress = .true., global = .true., & ! (in)
-                           sum = flx_s                             ) ! (out)
-    call STATISTICS_total( KA, KS, KE, IA, IS, IE, &
-                           mflux_offset_y(:,:,2,1), "MFLX_bnd_n",              & ! (in)
-                           AREAZXV_Y(:,:,JE), TOTAREAZXV_Y(JE),    & ! (in)
-                           log_suppress = .true., global = .true., & ! (in)
-                           sum = flx_n                             ) ! (out)
 
     MASSTOT_now = masstot
     MASSFLX_now = massflx
