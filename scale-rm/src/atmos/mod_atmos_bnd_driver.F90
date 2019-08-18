@@ -350,6 +350,13 @@ contains
        end do
     endif
 
+    if ( ATMOS_BOUNDARY_DENS_ADJUST_tau <= 0.0_RP ) then
+       ATMOS_BOUNDARY_DENS_ADJUST_tau = max( real(ATMOS_BOUNDARY_UPDATE_DT,kind=RP) / 6.0_RP, &
+                                             ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy )
+    end if
+
+
+
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELX(KA,IA,JA) )
@@ -489,12 +496,6 @@ contains
     endif
 
     if ( USE_NESTING ) ATMOS_BOUNDARY_UPDATE_FLAG = .true.
-
-
-    if ( ATMOS_BOUNDARY_DENS_ADJUST_tau <= 0.0_RP ) then
-       ATMOS_BOUNDARY_DENS_ADJUST_tau = max( real(ATMOS_BOUNDARY_UPDATE_DT,kind=RP) / 6.0_RP, &
-                                             ATMOS_BOUNDARY_taux, ATMOS_BOUNDARY_tauy )
-    end if
 
 
     !----- report data -----
