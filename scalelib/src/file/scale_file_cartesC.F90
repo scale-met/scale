@@ -1815,6 +1815,7 @@ contains
     count(:) = (/nx,ny/)
 
     call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
+    call FILE_CARTESC_flush( fid )
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1903,6 +1904,7 @@ contains
        end if
        count(:) = (/nz,nx,ny/)
        call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
+       call FILE_CARTESC_flush( fid )
     else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
        allocate( buf(nx,ny,nz) )
        if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
@@ -1923,6 +1925,8 @@ contains
        end if
        count(:) = (/nx,ny,nz/)
        call FILE_read( fid, varname, buf(:,:,:), step=step, start=start(:), count=count(:) )
+       call FILE_CARTESC_flush( fid )
+
        !$omp parallel do
        do j = 1, ny
        do i = 1, nx

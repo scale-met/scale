@@ -1825,6 +1825,9 @@ contains
        fid, vname, key, &
        ary(:),          &
        existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
     val = ary(1)
 
     return
@@ -1948,6 +1951,9 @@ contains
        fid, vname, key, &
        ary(:),          &
        existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
     val = ary(1)
 
     return
@@ -2069,6 +2075,9 @@ contains
        fid, vname, key, &
        ary(:),          &
        existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
     val = ary(1)
 
     return

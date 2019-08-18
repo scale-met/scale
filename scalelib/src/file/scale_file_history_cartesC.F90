@@ -69,6 +69,8 @@ module scale_file_history_cartesC
 
   logical  :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
 
+  logical  :: pres_set = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -272,6 +274,7 @@ contains
                                       PRESH        (:,:,:),             & ! [IN]
                                       SFC_PRES     (:,:)  ,             & ! [IN]
                                       FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
+       pres_set = .true.
     endif
 
     return
@@ -610,6 +613,8 @@ contains
        dst )
     use scale_file_h, only: &
        RMISS => FILE_RMISS
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ, &
        ATMOS_GRID_CARTESC_FZ
@@ -730,23 +735,38 @@ contains
           call PRC_abort
        end if
 
-       call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                              KA, KS, KE,                       & ! [IN]
-                              IA, ISB, IEB,                     & ! [IN]
-                              JA, JSB, JEB,                     & ! [IN]
-                              src  (:,:,:),                     & ! [IN]
-                              src_P(:,:,:)                      ) ! [OUT]
-       call PROF_rapend  ('FILE_O_interp', 2)
+       if ( pres_set ) then
 
-       !$omp parallel do
-       do k = 1, ksize
-       do j = 1, jsize
-       do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
-       enddo
-       enddo
-       enddo
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                 KA, KS, KE,                       & ! [IN]
+                                 IA, ISB, IEB,                     & ! [IN]
+                                 JA, JSB, JEB,                     & ! [IN]
+                                 src  (:,:,:),                     & ! [IN]
+                                 src_P(:,:,:)                      ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
+       else
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = UNDEF
+          enddo
+          enddo
+          enddo
+
+       end if
 
     elseif( zcoord == "pressure" .and. ksize == FILE_HISTORY_CARTESC_MODEL_nlayer+1 .and. atmos ) then ! z*->p interpolation (half level)
        ksize = FILE_HISTORY_CARTESC_PRES_nlayer
@@ -755,22 +775,38 @@ contains
           call PRC_abort
        end if
 
-       call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                               KA, KS, KE,                       & ! [IN]
-                               IA, ISB, IEB,                     & ! [IN]
-                               JA, JSB, JEB,                     & ! [IN]
-                               src  (:,:,:),                     & ! [IN]
-                               src_P(:,:,:)                      ) ! [OUT]
-       call PROF_rapend  ('FILE_O_interp', 2)
+       if ( pres_set ) then
 
-       do k = 1, ksize
-       do j = 1, jsize
-       do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
-       enddo
-       enddo
-       enddo
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                  KA, KS, KE,                       & ! [IN]
+                                  IA, ISB, IEB,                     & ! [IN]
+                                  JA, JSB, JEB,                     & ! [IN]
+                                  src  (:,:,:),                     & ! [IN]
+                                  src_P(:,:,:)                      ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
+       else
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = UNDEF
+          enddo
+          enddo
+          enddo
+
+       end if
 
     else ! no interpolation
 
