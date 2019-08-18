@@ -169,7 +169,7 @@ module mod_atmos_bnd_driver
   real(RP),              private, allocatable, target :: Q_WORK(:,:,:,:) ! QV + Qe
 
 
-  character(len=H_LONG), private :: ATMOS_BOUNDARY_interp_TYPE = 'lerp_initpoint' ! type of boundary interporation
+  character(len=H_SHORT), private :: ATMOS_BOUNDARY_interp_TYPE = 'lerp_initpoint' ! type of boundary interporation
 
   integer,               private :: ATMOS_BOUNDARY_START_DATE(6) = (/ -9999, 0, 0, 0, 0, 0 /) ! boundary initial date
 
@@ -537,8 +537,13 @@ contains
 
     LOG_INFO_CONT(*) 'Does lateral boundary exist in this domain?    : ', l_bnd
     if ( l_bnd ) then
-       LOG_INFO_CONT(*) 'Lateral boundary interporation type                : ', ATMOS_BOUNDARY_interp_TYPE
+       LOG_INFO_CONT(*) 'Lateral boundary interporation type            : ', trim(ATMOS_BOUNDARY_interp_TYPE)
     endif
+
+    LOG_INFO_CONT(*) 'Density adjustment                             : ', ATMOS_BOUNDARY_DENS_ADJUST
+    if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
+       LOG_INFO_CONT(*) 'Density relaxation time                        : ', ATMOS_BOUNDARY_DENS_ADJUST_tau
+    end if
 
     if ( ONLINE_BOUNDARY_DIAGQHYD ) then
        allocate( Q_WORK(KA,IA,JA,NESTQA) )
@@ -2845,10 +2850,13 @@ contains
                 - ( massflx + MASSFLX_now ) * 0.5_DP
 !    offset_bias = ( MASSTOT_now - masstot_current ) / ATMOS_BOUNDARY_UPDATE_DT
 
+    LOG_INFO("ATMOS_BOUNDARY_calc_mass",*) "Offset_band is: ", offset_band, "(", masstot, masstot_now, massflx, massflx_now, ")"
 
     ref_tot = ref_w + ref_e + ref_s + ref_n
     offset_band = offset_band / ref_tot
 !    offset_bias = offset_bias / ref_tot
+
+    LOG_INFO_CONT(*) "          per dens  ", offset_band
 
     ! density of the reference state is used as weight
     if ( .not. PRC_HAS_W ) then
