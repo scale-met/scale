@@ -304,7 +304,8 @@ contains
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
@@ -368,6 +369,7 @@ contains
 
     integer,  allocatable :: LANDUSE(:,:)
     real(RP), allocatable :: LATH(:,:), LONH(:,:)
+    real(RP), allocatable :: LATH_1d(:), LONH_1d(:)
     real(RP), allocatable :: XH(:,:), YH(:,:)
     integer               :: nLONH, nLATH
 
@@ -418,8 +420,15 @@ contains
     allocate( LANDUSE(nLONH,nLATH) )
     allocate( LATH   (nLONH,nLATH) )
     allocate( LONH   (nLONH,nLATH) )
+    allocate( LATH_1d(nLATH)       )
+    allocate( LONH_1d(nLONH)       )
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  GLCCv2_IN_DIR,                                  & ! [IN]
@@ -430,7 +439,15 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "INT1",                                         & ! [IN]
-                                 LANDUSE(:,:), LATH(:,:), LONH(:,:)              ) ! [OUT]
+                                 LANDUSE(:,:)                                    ) ! [OUT]
+
+    !$omp parallel do collapse(2)
+    do j = 1, nLATH
+    do i = 1, nLONH
+       LATH(i,j) = LATH_1d(j)
+       LONH(i,j) = LONH_1d(i)
+    end do
+    end do
 
     call MAPPROJECTION_lonlat2xy( nLONH, 1, nLONH, nLATH, 1, nLATH, &
                                   LONH(:,:), LATH(:,:), & ! [IN]
@@ -497,7 +514,8 @@ contains
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
@@ -554,6 +572,8 @@ contains
     integer,  allocatable :: LANDUSE(:,:)
     real(RP), allocatable :: LATH   (:,:)
     real(RP), allocatable :: LONH   (:,:)
+    real(RP), allocatable :: LATH_1d(:)
+    real(RP), allocatable :: LONH_1d(:)
     real(RP), allocatable :: XH(:,:), YH(:,:)
     integer               :: nLONH, nLATH
 
@@ -606,8 +626,15 @@ contains
     allocate( LANDUSE(nLONH,nLATH) )
     allocate( LATH   (nLONH,nLATH) )
     allocate( LONH   (nLONH,nLATH) )
+    allocate( LATH_1d(nLATH)       )
+    allocate( LONH_1d(nLONH)       )
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  LU100M_IN_DIR,                                  & ! [IN]
@@ -618,8 +645,16 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "REAL4",                                        & ! [IN]
-                                 LANDUSE(:,:), LATH(:,:), LONH(:,:),             & ! [OUT]
+                                 LANDUSE(:,:),                                   & ! [OUT]
                                  min_value = -999                                ) ! [IN]
+
+    !$omp parallel do collapse(2)
+    do j = 1, nLATH
+    do i = 1, nLONH
+       LATH(i,j) = LATH_1d(j)
+       LONH(i,j) = LONH_1d(i)
+    end do
+    end do
 
     call MAPPROJECTION_lonlat2xy( nLONH, 1, nLONH, nLATH, 1, nLATH, &
                                   LONH(:,:), LATH(:,:), & ! [IN]

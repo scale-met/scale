@@ -46,19 +46,24 @@ module mod_copytopo
   !
   integer, private, parameter :: handle = 1
 
-  character(len=H_LONG), private :: COPYTOPO_IN_BASENAME   = ''
-  character(len=H_LONG), private :: COPYTOPO_IN_VARNAME    = 'topo'
-  real(RP),              private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
-  real(RP),              private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
-  real(RP),              private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
-  real(RP),              private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
-  real(RP),              private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
-  real(RP),              private :: COPYTOPO_tauy          =  1.0_RP  !< maximum value for mixing tau (y) [s]
-  logical,               private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
-  logical,               private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
-  real(RP),              private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
-  integer,               private :: COPYTOPO_FILTER_ORDER  = 2
-  integer,               private :: COPYTOPO_FILTER_NITER  = 20
+  character(len=H_SHORT), private :: COPYTOPO_IN_FILETYPE   = ''       !< 'SCALE', 'GrADS', or 'WRF-ARW'
+  character(len=H_LONG),  private :: COPYTOPO_IN_BASENAME   = ''
+  character(len=H_LONG),  private :: COPYTOPO_IN_POSTFIX    = ''
+  character(len=H_SHORT), private :: COPYTOPO_IN_VARNAME    = 'topo'
+  character(len=H_SHORT), private :: COPYTOPO_IN_LONNAME    = 'lon'
+  character(len=H_SHORT), private :: COPYTOPO_IN_LATNAME    = 'lat'
+  real(RP),               private :: COPYTOPO_TRANSITION_DX = -1.0_RP  !< thickness of transition region [m]: x
+  real(RP),               private :: COPYTOPO_TRANSITION_DY = -1.0_RP  !< thickness of transition region [m]: y
+  real(RP),               private :: COPYTOPO_FRACX         =  1.0_RP  !< fraction of transition region (x) (0-1)
+  real(RP),               private :: COPYTOPO_FRACY         =  1.0_RP  !< fraction of transition region (y) (0-1)
+  real(RP),               private :: COPYTOPO_taux          =  1.0_RP  !< maximum value for mixing tau (x) [s]
+  real(RP),               private :: COPYTOPO_tauy          =  1.0_RP  !< maximum value for mixing tau (y) [s]
+  logical,                private :: COPYTOPO_ENTIRE_REGION = .false.  !< copy parent topo over an entire region
+  logical,                private :: COPYTOPO_LINEAR_H      = .true.   !< linear or non-linear profile of relax region
+  real(RP),               private :: COPYTOPO_EXP_H         =  2.0_RP  !< factor of non-linear profile of relax region
+  character(len=H_SHORT), private :: COPYTOPO_INTRP_TYPE    = "LINEAR" !< "LINEAR" or "DIST-WEIGHT"
+  integer,                private :: COPYTOPO_hypdiff_ORDER  = 4
+  integer,                private :: COPYTOPO_hypdiff_NITER  = 20
 
   !-----------------------------------------------------------------------------
 contains
@@ -78,8 +83,12 @@ contains
     real(RP) :: TOPO_parent(IA,JA) !< topography of parent domain
 
     namelist / PARAM_COPYTOPO / &
+       COPYTOPO_IN_FILETYPE,    &
        COPYTOPO_IN_BASENAME,    &
+       COPYTOPO_IN_POSTFIX,     &
        COPYTOPO_IN_VARNAME,     &
+       COPYTOPO_IN_LONNAME,     &
+       COPYTOPO_IN_LATNAME,     &
        COPYTOPO_TRANSITION_DX,  &
        COPYTOPO_TRANSITION_DY,  &
        COPYTOPO_FRACX,          &
@@ -89,8 +98,8 @@ contains
        COPYTOPO_ENTIRE_REGION,  &
        COPYTOPO_LINEAR_H,       &
        COPYTOPO_EXP_H,          &
-       COPYTOPO_FILTER_ORDER,   &
-       COPYTOPO_FILTER_NITER
+       COPYTOPO_hypdiff_ORDER,   &
+       COPYTOPO_hypdiff_NITER
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -414,115 +423,145 @@ contains
   !> Calc dumping coefficient alpha
   subroutine COPYTOPO_input_data( &
        TOPO_parent )
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_isMaster
     use scale_const, only: &
        EPS => CONST_EPS, &
-       D2R => CONST_D2R
-    use scale_file, only: &
-       FILE_open, &
-       FILE_read, &
-       FILE_close
+       PI  => CONST_PI
     use scale_interp, only: &
        INTERP_domain_compatibility, &
        INTERP_factor2d,             &
        INTERP_interp2d
     use scale_comm_cartesC, only: &
+       COMM_bcast, &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_grid_cartesC_real, only: &
        LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
        LON => ATMOS_GRID_CARTESC_REAL_LON
-    use scale_comm_cartesC_nest, only: &
-       NEST_INTERP_LEVEL => COMM_CARTESC_NEST_INTERP_LEVEL, &
-       NEST_domain_shape => COMM_CARTESC_NEST_domain_shape, &
-       NEST_TILE_NUM_X   => COMM_CARTESC_NEST_TILE_NUM_X,   &
-       NEST_TILE_NUM_Y   => COMM_CARTESC_NEST_TILE_NUM_Y,   &
-       NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID,      &
-       PARENT_IMAX,       &
-       PARENT_JMAX
+    use scale_atmos_grid_cartesC, only: &
+       CX => ATMOS_GRID_CARTESC_CX, &
+       CY => ATMOS_GRID_CARTESC_CY
+    use scale_mapprojection, only: &
+       MAPPROJECTION_lonlat2xy
     use scale_filter, only: &
        FILTER_hyperdiff
     use scale_landuse, only: &
        LANDUSE_fact_ocean
+    use scale_comm_cartesC_nest, only: &
+       NEST_INTERP_LEVEL => COMM_CARTESC_NEST_INTERP_LEVEL
     implicit none
 
     real(RP), intent(out) :: TOPO_parent(:,:)
 
-    real(RP), allocatable :: LON_org (:,:)
-    real(RP), allocatable :: LAT_org (:,:)
-    real(RP), allocatable :: TOPO_org(:,:)
-    real(RP), allocatable :: read2D  (:,:)
+    integer :: IA_org, JA_org
 
+    real(RP), allocatable :: LON_org (:,:), LAT_org(:,:)
+    real(RP), allocatable :: X_org   (:,:), Y_org  (:,:)
+    real(RP), allocatable :: TOPO_org(:,:)
+
+    logical :: single
+
+    ! for interpolation
     real(RP) :: dummy(1,1)
     integer  :: idx_i(IA,JA,NEST_INTERP_LEVEL)
     integer  :: idx_j(IA,JA,NEST_INTERP_LEVEL)
     real(RP) :: hfact(IA,JA,NEST_INTERP_LEVEL)
+    integer  :: interp_level
+    logical  :: zonal, pole
 
     real(RP) :: TOPO_sign(IA,JA)
-
-    integer :: IA_org, JA_org     ! number of grids for whole domain
-    integer :: tilei, tilej
-    integer :: cxs, cxe, cys, cye ! for child domain
-    integer :: pxs, pxe, pys, pye ! for parent domain
-    integer :: rank
-
     real(RP) :: ocean_flag
 
-    integer :: fid
-    integer :: n, i, j
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    IA_org = PARENT_IMAX(handle) * NEST_TILE_NUM_X
-    JA_org = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
+    select case ( COPYTOPO_IN_FILETYPE )
+    case ( 'SCALE' )
+       call COPYTOPO_get_size_scale( IA_org, JA_org ) ! (out)
+       single = .false.
+    case ( 'GrADS' )
+       if ( PRC_isMaster ) call COPYTOPO_get_size_grads( IA_org, JA_org ) ! (out)
+       single = .true.
+    case ( 'WRF-ARW' )
+       if ( PRC_isMaster ) call COPYTOPO_get_size_wrfarw( IA_org, JA_org ) ! (out)
+       single = .true.
+    case default
+       LOG_ERROR("COPYTOPO_input_data",*) 'COPYTOPO_IN_FILETYPE must be "SCALE" or "GrADS"'
+       call PRC_abort
+    end select
+
+    if ( single ) then
+       call COMM_bcast( IA_org )
+       call COMM_bcast( JA_org )
+    end if
 
     allocate( LON_org (IA_org,JA_org) )
     allocate( LAT_org (IA_org,JA_org) )
     allocate( TOPO_org(IA_org,JA_org) )
 
-    do n = 1, size( NEST_TILE_ID(:) )
-       ! read data from split files
-       rank = NEST_TILE_ID(n)
+    select case ( COPYTOPO_IN_FILETYPE )
+    case ( 'SCALE' )
+       call COPYTOPO_get_data_scale( IA_org, JA_org,                           & ! (in)
+                                     LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
+    case ( 'GrADS' )
+       if ( PRC_isMaster ) &
+       call COPYTOPO_get_data_grads( IA_org, JA_org,                           & ! (in)
+                                     LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
+    case ( 'WRF-ARW' )
+       if ( PRC_isMaster ) &
+       call COPYTOPO_get_data_wrfarw( IA_org, JA_org,                           & ! (in)
+                                      LON_org(:,:), LAT_org(:,:), TOPO_org(:,:) ) ! (out)
+    end select
 
-       call NEST_domain_shape( tilei, tilej, & ! [OUT]
-                               cxs,   cxe,   & ! [OUT]
-                               cys,   cye,   & ! [OUT]
-                               pxs,   pxe,   & ! [OUT]
-                               pys,   pye,   & ! [OUT]
-                               n             ) ! [IN]
-
-       allocate( read2D(tilei,tilej) )
-
-       call FILE_open( COPYTOPO_IN_BASENAME,          & ! [IN]
-                       fid,                           & ! [OUT]
-                       aggregate=.false., rankid=rank ) ! [IN]
-
-       call FILE_read( fid, "lon",  read2D(:,:) )
-       LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_read( fid, "lat",  read2D(:,:) )
-       LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
-       call FILE_read( fid, COPYTOPO_IN_VARNAME, read2D(:,:) )
-       TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
-       deallocate( read2D )
-
-       call FILE_close( fid )
-
-    enddo
+    if ( single ) then
+       call COMM_bcast( LON_org (:,:), IA_org, JA_org )
+       call COMM_bcast( LAT_org (:,:), IA_org, JA_org )
+       call COMM_bcast( TOPO_org(:,:), IA_org, JA_org )
+    end if
 
     call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:),             &
                                       LON(:,:),     LAT(:,:),     dummy(:,:), dummy(:,:), &
                                       skip_z=.true.                                       )
 
-    call INTERP_factor2d( NEST_INTERP_LEVEL, & ! [IN]
-                          IA_org, JA_org,    & ! [IN]
-                          IA, JA,            & ! [IN]
-                          LON_org(:,:),      & ! [IN]
-                          LAT_org(:,:),      & ! [IN]
-                          LON    (:,:),      & ! [IN]
-                          LAT    (:,:),      & ! [IN]
-                          idx_i  (:,:,:),    & ! [OUT]
-                          idx_j  (:,:,:),    & ! [OUT]
-                          hfact  (:,:,:)     ) ! [OUT]
+    select case ( COPYTOPO_INTRP_TYPE )
+    case ( "LINEAR" )
 
-    call INTERP_interp2d( NEST_INTERP_LEVEL,  & ! [IN]
+       allocate( X_org(IA_org,JA_org) )
+       allocate( Y_org(IA_org,JA_org) )
+       call MAPPROJECTION_lonlat2xy( IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                     LON_org(:,:), LAT_org(:,:),           & ! [IN]
+                                     X_org(:,:), Y_org(:,:)                ) ! [OUT]
+
+       zonal = ( maxval(LON_org) - minval(LON_org) ) > 2.0_RP * PI * 0.9_RP
+       pole =  ( maxval(LAT_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(LAT_org) < - PI * 0.5_RP * 0.9_RP )
+       call INTERP_factor2d( IA_org, JA_org, IA, JA,     & ! [IN]
+                             X_org(:,:), Y_org(:,:),     & ! [IN]
+                             CX(:), CY(:),               & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:),               & ! [OUT]
+                             zonal = zonal, pole = pole  ) ! [IN]
+       deallocate( X_org, Y_org )
+       interp_level = 4
+
+    case ( "DIST-WEIGHT" )
+
+       call INTERP_factor2d( NEST_INTERP_LEVEL,          & ! [IN]
+                             IA_org, JA_org, IA, JA,     & ! [IN]
+                             LON_org(:,:), LAT_org(:,:), & ! [IN]
+                             LON(:,:), LAT(:,:),         & ! [IN]
+                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                             hfact(:,:,:)                ) ! [OUT]
+       interp_level = NEST_INTERP_LEVEL
+
+       case default
+          LOG_ERROR("COPYTOPO_input_data",*) "Unsupported type of COPYTOPO_INTRP_TYPE : ", trim(COPYTOPO_INTRP_TYPE)
+          LOG_ERROR_CONT(*)                  'It must be "LINEAR" or "DIST-WEIGHT"'
+          call PRC_abort
+    end select
+
+    call INTERP_interp2d( interp_level,       & ! [IN]
                           IA_org, JA_org,     & ! [IN]
                           IA, JA,             & ! [IN]
                           idx_i      (:,:,:), & ! [IN]
@@ -531,7 +570,9 @@ contains
                           TOPO_org   (:,:),   & ! [IN]
                           TOPO_parent(:,:)    ) ! [OUT]
 
-    if ( COPYTOPO_FILTER_NITER > 1 ) then
+    deallocate( TOPO_org, LON_org, LAT_org )
+
+    if ( COPYTOPO_hypdiff_NITER > 1 ) then
        !$omp parallel do &
        !$omp private(ocean_flag)
        do j = 1, JA
@@ -543,7 +584,7 @@ contains
        end do
 
        call FILTER_hyperdiff( IA, ISB, IEB, JA, JSB, JEB, &
-                              TOPO_parent(:,:), COPYTOPO_FILTER_ORDER, COPYTOPO_FILTER_NITER, &
+                              TOPO_parent(:,:), COPYTOPO_hypdiff_ORDER, COPYTOPO_hypdiff_NITER, &
                               limiter_sign = TOPO_sign(:,:) )
     end if
 
@@ -589,5 +630,264 @@ contains
 
     return
   end subroutine COPYTOPO_mix_data
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_size_scale( &
+       IA_org, JA_org )
+    use scale_comm_cartesC_nest, only: &
+       NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
+       NEST_TILE_NUM_Y => COMM_CARTESC_NEST_TILE_NUM_Y, &
+       PARENT_IMAX,       &
+       PARENT_JMAX
+    implicit none
+    integer, intent(out) :: IA_org
+    integer, intent(out) :: JA_org
+
+    IA_org = PARENT_IMAX(handle) * NEST_TILE_NUM_X
+    JA_org = PARENT_JMAX(handle) * NEST_TILE_NUM_Y
+
+    return
+  end subroutine COPYTOPO_get_size_scale
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_data_scale( &
+       IA_org, JA_org,   &
+       LON_org, LAT_org, &
+       TOPO_org          )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_comm_cartesC_nest, only: &
+       NEST_domain_shape => COMM_CARTESC_NEST_domain_shape, &
+       NEST_TILE_ID      => COMM_CARTESC_NEST_TILE_ID
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read, &
+       FILE_close
+    implicit none
+    integer,  intent(in)  :: IA_org, JA_org
+    real(RP), intent(out) :: LON_org (IA_org,JA_org)
+    real(RP), intent(out) :: LAT_org (IA_org,JA_org)
+    real(RP), intent(out) :: TOPO_org(IA_org,JA_org)
+
+    real(RP), allocatable :: read2D(:,:)
+
+    integer :: tilei, tilej
+    integer :: cxs, cxe, cys, cye ! for child domain
+    integer :: pxs, pxe, pys, pye ! for parent domain
+    integer :: fid
+
+    integer :: rank
+    integer :: n
+
+    do n = 1, size( NEST_TILE_ID(:) )
+       ! read data from split files
+       rank = NEST_TILE_ID(n)
+
+       call NEST_domain_shape( tilei, tilej, & ! [OUT]
+                               cxs,   cxe,   & ! [OUT]
+                               cys,   cye,   & ! [OUT]
+                               pxs,   pxe,   & ! [OUT]
+                               pys,   pye,   & ! [OUT]
+                               n             ) ! [IN]
+
+       allocate( read2D(tilei,tilej) )
+
+       call FILE_open( COPYTOPO_IN_BASENAME,          & ! [IN]
+                       fid,                           & ! [OUT]
+                       aggregate=.false., rankid=rank ) ! [IN]
+
+       call FILE_read( fid, "lon",  read2D(:,:) )
+       LON_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       call FILE_read( fid, "lat",  read2D(:,:) )
+       LAT_org (cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye) * D2R
+       call FILE_read( fid, COPYTOPO_IN_VARNAME, read2D(:,:) )
+       TOPO_org(cxs:cxe,cys:cye) = read2D(pxs:pxe,pys:pye)
+       deallocate( read2D )
+
+       call FILE_close( fid )
+
+    enddo
+
+    return
+  end subroutine COPYTOPO_get_data_scale
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_size_grads( &
+       IA_org, JA_org )
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_get_shape
+    implicit none
+    integer, intent(out) :: IA_org, JA_org
+
+    integer :: file_id
+    integer :: shape(2)
+
+    call FILE_GrADS_open( COPYTOPO_IN_BASENAME, & ! (in)
+                          file_id               ) ! (out)
+
+    call FILE_GrADS_get_shape( file_id, COPYTOPO_IN_VARNAME, & ! (in)
+                               shape(:)                      ) ! (out)
+
+    IA_org = shape(1)
+    JA_org = shape(2)
+
+    return
+  end subroutine COPYTOPO_get_size_grads
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_data_grads( &
+       IA_org, JA_org,   &
+       LON_org, LAT_org, &
+       TOPO_org          )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_file_grads, only: &
+       FILE_GrADS_open,   &
+       FILE_GrADS_varid,  &
+       FILE_GrADS_isOneD, &
+       FILE_GrADS_read,   &
+       FILE_GrADS_close
+    implicit none
+    integer,  intent(in)  :: IA_org, JA_org
+    real(RP), intent(out) :: LON_org (IA_org,JA_org)
+    real(RP), intent(out) :: LAT_org (IA_org,JA_org)
+    real(RP), intent(out) :: TOPO_org(IA_org,JA_org)
+
+    integer :: file_id, var_id
+    real(RP) :: lon1D(IA_org), lat1D(JA_org)
+
+    integer :: i, j
+
+    call FILE_GrADS_open( COPYTOPO_IN_BASENAME, & ! (in)
+                          file_id               ) ! (out)
+
+    ! lon
+    call FILE_GrADS_varid( file_id, COPYTOPO_IN_LONNAME, & ! (in)
+                           var_id                        ) ! (out)
+    if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       call FILE_GrADS_read( file_id, var_id, & ! (in)
+                             lon1D(:)         ) ! (out)
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LON_org(i,j) = lon1D(i) * D2R
+       end do
+       end do
+    else
+       call FILE_GrADS_read( file_id, var_id,              & ! (in)
+                             LON_org(:,:),                 & ! (out)
+                             postfix = COPYTOPO_IN_POSTFIX ) ! (in)
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LON_org(i,j) = LON_org(i,j) * D2R
+       end do
+       end do
+    end if
+
+    ! lat
+    call FILE_GrADS_varid( file_id, COPYTOPO_IN_LATNAME, & ! (in)
+                           var_id                        ) ! (out)
+    if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       call FILE_GrADS_read( file_id, var_id, & ! (in)
+                             lat1D(:)         ) ! (out)
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LAT_org(i,j) = lat1D(j) * D2R
+       end do
+       end do
+    else
+       call FILE_GrADS_read( file_id, var_id,              & ! (in)
+                             LAT_org(:,:),                 & ! (out)
+                             postfix = COPYTOPO_IN_POSTFIX ) ! (in)
+       !$omp parallel do collapse(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LAT_org(i,j) = LAT_org(i,j) * D2R
+       end do
+       end do
+    end if
+
+    ! topo
+    call FILE_GrADS_varid( file_id, COPYTOPO_IN_VARNAME, & ! (in)
+                           var_id                        ) ! (out)
+    call FILE_GrADS_read( file_id, var_id,              & ! (in)
+                          TOPO_org(:,:),                & ! (out)
+                          postfix = COPYTOPO_IN_POSTFIX ) ! (in)
+
+    ! close
+    call FILE_GrADS_close( file_id )
+
+    return
+  end subroutine COPYTOPO_get_data_grads
+
+  !-----------------------------------------------------------------------------
+  subroutine COPYTOPO_get_size_wrfarw( &
+       IA_org, JA_org )
+    use scale_file_grads, only: &
+       FILE_GrADS_open, &
+       FILE_GrADS_get_shape
+    use scale_file, only: &
+       FILE_open, &
+       FILE_get_dimLength
+    implicit none
+    integer, intent(out) :: IA_org, JA_org
+
+    integer :: fid
+
+    call FILE_open( COPYTOPO_IN_BASENAME,          & ! (in)
+                    fid,                           & ! (out)
+                    postfix = COPYTOPO_IN_POSTFIX, & ! (in)
+                    single = .true.                ) ! (in)
+
+    call FILE_get_dimLength( fid, "west_east",   IA_org )
+    call FILE_get_dimLength( fid, "south_north", JA_org )
+
+    return
+  end subroutine COPYTOPO_get_size_wrfarw
+
+  subroutine COPYTOPO_get_data_wrfarw( &
+       IA_org, JA_org,   &
+       LON_org, LAT_org, &
+       TOPO_org          )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    use scale_file, only: &
+       FILE_open, &
+       FILE_read, &
+       FILE_close
+    implicit none
+    integer,  intent(in)  :: IA_org, JA_org
+    real(RP), intent(out) :: LON_org (IA_org,JA_org)
+    real(RP), intent(out) :: LAT_org (IA_org,JA_org)
+    real(RP), intent(out) :: TOPO_org(IA_org,JA_org)
+
+    integer :: fid
+    integer :: i, j
+
+    call FILE_open( COPYTOPO_IN_BASENAME,          & ! (in)
+                    fid,                           & ! (out)
+                    postfix = COPYTOPO_IN_POSTFIX, & ! (in)
+                    single = .true.                ) ! (in)
+
+    call FILE_read( fid, "XLAT", lat_org(:,:) )
+
+    call FILE_read( fid, "XLONG", lon_org(:,:) )
+
+    !$omp parallel do collapse(2)
+    do j = 1, JA_org
+    do i = 1, IA_org
+       lat_org(i,j) = lat_org(i,j) * D2R
+       lon_org(i,j) = lon_org(i,j) * D2R
+    end do
+    end do
+
+    call FILE_read( fid, "HGT", topo_org(:,:) )
+
+    call FILE_close( fid )
+
+  end subroutine COPYTOPO_get_data_wrfarw
 
 end module mod_copytopo

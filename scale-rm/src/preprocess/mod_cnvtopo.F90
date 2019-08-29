@@ -67,12 +67,6 @@ module mod_cnvtopo
 
   logical,  private :: CNVTOPO_copy_parent           = .false.
 
-  ! for USERFILE
-  logical,  private :: CNVTOPO_linear_interp         = .false.
-  integer,  private :: CNVTOPO_interp_level          = 5
-
-  real(RP), private :: DOMAIN_LATS, DOMAIN_LATE
-  real(RP), private :: DOMAIN_LONS, DOMAIN_LONE
 
   !-----------------------------------------------------------------------------
 contains
@@ -108,8 +102,7 @@ contains
        CNVTOPO_smooth_local,          &
        CNVTOPO_smooth_itelim,         &
        CNVTOPO_smooth_type,           &
-       CNVTOPO_copy_parent,           &
-       CNVTOPO_interp_level
+       CNVTOPO_copy_parent
 
     real(RP) :: minslope(IA,JA)
     real(RP) :: DXL(IA-1)
@@ -282,15 +275,6 @@ contains
        LOG_NEWLINE
        LOG_PROGRESS(*) 'start convert topography data'
 
-       DOMAIN_LATS = minval( LATXV(:,:) )
-       DOMAIN_LATE = maxval( LATXV(:,:) )
-       DOMAIN_LONS = minval( LONUY(:,:) )
-       DOMAIN_LONE = maxval( LONUY(:,:) )
-
-       LOG_INFO("CNVTOPO",*) 'Domain Information'
-       LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
-       LOG_INFO_CONT(*) '       (LON)    :', DOMAIN_LONS/D2R, DOMAIN_LONE/D2R
-
        !$omp parallel do
 !OCL XFILL
        do j = 1, JA
@@ -333,17 +317,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
-       D2R    => CONST_D2R
-    use scale_atmos_grid_cartesC_real, only: &
-       LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON   => ATMOS_GRID_CARTESC_REAL_LON
-    use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
-       FILE_TILEDATA_get_data
-    use scale_interp, only: &
-       INTERP_factor2d_linear_latlon, &
-       INTERP_interp2d
+       UNDEF => CONST_UNDEF
+    use mod_cnv2d, only: &
+       CNV2D_tile_init, &
+       CNV2D_exec
     implicit none
     real(RP), intent(inout) :: TOPO_Zsfc(IA,JA)
 
@@ -361,36 +338,6 @@ contains
     ! topo
     real(RP) :: Zsfc(IA,JA)
 
-    ! data catalogue list
-    integer, parameter    :: TILE_nlim = 100
-    integer               :: TILE_nmax
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
-    logical               :: TILE_hit  (TILE_nlim)
-    integer               :: TILE_JS   (TILE_nlim)
-    integer               :: TILE_JE   (TILE_nlim)
-    integer               :: TILE_IS   (TILE_nlim)
-    integer               :: TILE_IE   (TILE_nlim)
-    real(RP)              :: TILE_DLAT, TILE_DLON
-
-    real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
-    real(RP), allocatable :: LATH_1d(:)
-    real(RP), allocatable :: LONH_1d(:)
-    integer               :: nLONH, nLATH
-
-    integer  :: GLOBAL_IA
-
-    ! interpolation
-    integer,  allocatable :: idx_i(:,:,:)
-    integer,  allocatable :: idx_j(:,:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-
-    character(len=H_LONG) :: fname
-
-    logical :: zonal, pole
-
-    integer :: ish, ieh, jsh, jeh
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -407,71 +354,14 @@ contains
     LOG_NML(PARAM_CNVTOPO_GTOPO30)
 
 
-    TILE_DLAT = GTOPO30_DLAT * D2R
-    TILE_DLON = GTOPO30_DLON * D2R
+    call CNV2D_tile_init( 'INT2',                               & ! [IN]
+                          GTOPO30_DLAT, GTOPO30_DLON,           & ! [IN]
+                          GTOPO30_IN_DIR, GTOPO30_IN_CATALOGUE, & ! [IN]
+                          'LINEAR'                              ) ! [IN]
 
-    ! catalogue file
-    fname = trim(GTOPO30_IN_DIR)//'/'//trim(GTOPO30_IN_CATALOGUE)
+    call CNV2D_exec( Zsfc(:,:), min_value = -9000.0_RP, yrevers = .true. ) ! [OUT]
 
-    call FILE_TILEDATA_get_info( TILE_nlim,                                          & ! [IN]
-                                 TILE_DLAT, TILE_DLON,                               & ! [IN]
-                                 DOMAIN_LATS, DOMAIN_LATE, DOMAIN_LONS, DOMAIN_LONE, & ! [IN]
-                                 fname,                                              & ! [IN]
-                                 GLOBAL_IA,                                          & ! [OUT]
-                                 TILE_nmax,                                          & ! [OUT]
-                                 TILE_fname(:), TILE_hit(:),                         & ! [OUT]
-                                 TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
-
-    allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
-
-    call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
-                                 GTOPO30_IN_DIR,                                 & ! [IN]
-                                 GLOBAL_IA,                                      & ! [IN]
-                                 TILE_nmax,                                      & ! [IN]
-                                 TILE_DLAT, TILE_DLON,                           & ! [IN]
-                                 TILE_fname(:), TILE_hit(:),                     & ! [IN]
-                                 TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
-                                 jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "INT2",                                         & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
-                                 min_value = -9000.0_RP, yrevers = .true.        ) ! [IN]
-
-    ! interporation
-    allocate( idx_i(IA,JA,4) )
-    allocate( idx_j(IA,JA,4) )
-    allocate( hfact(IA,JA,4) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-                        LONH(:,:), LATH(:,:),  & ! [IN]
-                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
-
-    call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
-                                        IA, JA,                     & ! [IN]
-                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
-                                        LON(:,:), LAT(:,:),         & ! [IN]
-                                        idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                                        hfact(:,:,:)                ) ! [OUT]
-
-    call INTERP_interp2d( 4,                          & ! [IN]
-                          nLONH,nLATH,                & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
-                          hfact(:,:,:),               & ! [IN]
-                          HEIGHT(:,:),                & ! [IN]
-                          Zsfc(:,:)                   ) ! [OUT]
-
-
-    deallocate( HEIGHT, LATH, LONH )
-    deallocate( LATH_1d, LONH_1d )
-    deallocate( idx_j, idx_i, hfact )
-
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -497,21 +387,10 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
-       RADIUS => CONST_RADIUS, &
-       D2R    => CONST_D2R
-    use scale_atmos_grid_cartesC, only: &
-       DX, &
-       DY
-    use scale_atmos_grid_cartesC_real, only: &
-       LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON   => ATMOS_GRID_CARTESC_REAL_LON
-    use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
-       FILE_TILEDATA_get_data
-    use scale_interp, only: &
-       INTERP_factor2d_linear_latlon, &
-       INTERP_interp2d
+       UNDEF  => CONST_UNDEF
+    use mod_cnv2d, only: &
+       CNV2D_tile_init, &
+       CNV2D_exec
     implicit none
     real(RP), intent(inout) :: TOPO_Zsfc(IA,JA)
 
@@ -528,41 +407,10 @@ contains
     ! topo
     real(RP) :: Zsfc(IA,JA)
 
-    ! data catalogue list
-    integer, parameter    :: TILE_nlim = 1000
-    integer               :: TILE_nmax
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
-    logical               :: TILE_hit  (TILE_nlim)
-    integer               :: TILE_JS   (TILE_nlim)
-    integer               :: TILE_JE   (TILE_nlim)
-    integer               :: TILE_IS   (TILE_nlim)
-    integer               :: TILE_IE   (TILE_nlim)
-    real(RP)              :: TILE_DLAT, TILE_DLON
-
-    real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
-    real(RP), allocatable :: LATH_1d(:)
-    real(RP), allocatable :: LONH_1d(:)
-    integer               :: nLONH, nLATH
-
-    integer  :: GLOBAL_IA
-
-    ! interpolation
-    integer,  allocatable :: idx_i(:,:,:)
-    integer,  allocatable :: idx_j(:,:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-    real(RP) :: search_limit
-
-    character(len=H_LONG) :: fname
-
-    integer :: ish, ieh, jsh, jeh
-    logical :: zonal, pole
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !--- read namelist
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CNVTOPO_DEM50M,iostat=ierr)
@@ -574,73 +422,14 @@ contains
     endif
     LOG_NML(PARAM_CNVTOPO_DEM50M)
 
-    TILE_DLAT = DEM50M_DLAT * D2R
-    TILE_DLON = DEM50M_DLON * D2R
+    call CNV2D_tile_init( 'REAL4',                            & ! [IN]
+                          DEM50M_DLAT, DEM50M_DLON,           & ! [IN]
+                          DEM50M_IN_DIR, DEM50M_IN_CATALOGUE, & ! [IN]
+                          'LINEAR'                            ) ! [IN]
 
-    ! catalogue file
-    fname = trim(DEM50M_IN_DIR)//'/'//trim(DEM50M_IN_CATALOGUE)
+    call CNV2D_exec( Zsfc(:,:), min_value = -900.0_RP ) ! [OUT]
 
-    call FILE_TILEDATA_get_info( TILE_nlim,                                          & ! [IN]
-                                 TILE_DLAT, TILE_DLON,                               & ! [IN]
-                                 DOMAIN_LATS, DOMAIN_LATE, DOMAIN_LONS, DOMAIN_LONE, & ! [IN]
-                                 fname,                                              & ! [IN]
-                                 GLOBAL_IA,                                          & ! [OUT]
-                                 TILE_nmax,                                          & ! [OUT]
-                                 TILE_fname(:), TILE_hit(:),                         & ! [OUT]
-                                 TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
-
-    if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
-
-    allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
-
-    call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
-                                 DEM50M_IN_DIR,                                  & ! [IN]
-                                 GLOBAL_IA,                                      & ! [IN]
-                                 TILE_nmax,                                      & ! [IN]
-                                 TILE_DLAT, TILE_DLON,                           & ! [IN]
-                                 TILE_fname(:), TILE_hit(:),                     & ! [IN]
-                                 TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
-                                 jsh, jeh, ish, ieh,                             & ! [IN]
-                                 "REAL4",                                        & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
-                                 min_value = -900.0_RP                           ) ! [IN]
-
-    ! interporation
-    allocate( idx_i(IA,JA,4) )
-    allocate( idx_j(IA,JA,4) )
-    allocate( hfact(IA,JA,4) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-                        LONH(:,:), LATH(:,:),  & ! [IN]
-                        LONH_1d(:), LATH_1d(:) ) ! [OUT]
-
-    call INTERP_factor2d_linear_latlon( nLONH, nLATH,               & ! [IN]
-                                        IA, JA,                     & ! [IN]
-                                        LONH_1d(:), LATH_1d(:),     & ! [IN]
-                                        LON(:,:), LAT(:,:),         & ! [IN]
-                                        idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                                        hfact(:,:,:)                ) ! [OUT]
-
-    call INTERP_interp2d( 4,                          & ! [IN]
-                          nLONH, nLATH,               & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
-                          hfact(:,:,:),               & ! [IN]
-                          HEIGHT(:,:),                & ! [IN]
-                          Zsfc(:,:)                   ) ! [OUT]
-
-
-    deallocate( HEIGHT, LATH, LONH )
-    deallocate( LATH_1d, LONH_1d )
-    deallocate( idx_j, idx_i, hfact )
-
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -656,86 +445,55 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       UNDEF  => CONST_UNDEF, &
-       RADIUS => CONST_RADIUS, &
-       D2R    => CONST_D2R
-    use scale_atmos_grid_cartesC, only: &
-       DX, &
-       DY
-    use scale_atmos_grid_cartesC_real, only: &
-       LAT   => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON   => ATMOS_GRID_CARTESC_REAL_LON
-    use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
-       FILE_TILEDATA_get_data
-    use scale_interp, only: &
-       INTERP_factor2d, &
-       INTERP_interp2d
+       UNDEF  => CONST_UNDEF
+    use mod_cnv2d, only: &
+       CNV2D_tile_init, &
+       CNV2D_grads_init, &
+       CNV2D_exec
     implicit none
     real(RP), intent(inout) :: TOPO_Zsfc(IA,JA)
 
-    real(RP)              :: USERFILE_DLAT         = -1.0_RP  ! width  of latitude  tile [deg.]
-    real(RP)              :: USERFILE_DLON         = -1.0_RP  ! width  of longitude tile [deg.]
-    character(len=H_LONG) :: USERFILE_IN_DIR       = '.'      ! directory contains data files (GrADS format)
-    character(len=H_LONG) :: USERFILE_IN_CATALOGUE = ''       ! catalogue file
-    character(len=H_LONG) :: USERFILE_IN_FILENAME  = ''       ! single data file (GrADS format)
-    character(len=H_LONG) :: USERFILE_IN_DATATYPE  = 'REAL4'  ! datatype (REAL4,REAL8,INT2)
-    logical               :: USERFILE_LATORDER_N2S = .false.  ! data of the latitude direction is stored in ordar of North->South?
-    real(RP)              :: USERFILE_LAT_START    = -90.0_RP ! (for single file) start latitude  of domain in input data
-    real(RP)              :: USERFILE_LAT_END      =  90.0_RP ! (for single file) end   latitude  of domain in input data
-    real(RP)              :: USERFILE_LON_START    =   0.0_RP ! (for single file) start longitude of domain in input data
-    real(RP)              :: USERFILE_LON_END      = 360.0_RP ! (for single file) end   longitude of domain in input data
+    character(len=H_SHORT) :: USERFILE_TYPE = '' ! "TILE" or "GrADS"
+
+    ! TILE data
+    character(len=H_SHORT) :: USERFILE_DTYPE     = 'REAL4'  ! datatype (REAL4,REAL8,INT2)
+    real(RP)               :: USERFILE_DLAT      = -1.0_RP  ! width  of latitude  tile [deg.]
+    real(RP)               :: USERFILE_DLON      = -1.0_RP  ! width  of longitude tile [deg.]
+    character(len=H_LONG)  :: USERFILE_DIR       = '.'      ! directory contains data files (GrADS format)
+    character(len=H_LONG)  :: USERFILE_CATALOGUE = ''       ! catalogue file
+    logical                :: USERFILE_yrevers   = .false.  ! data of the latitude direction is stored in ordar of North->South?
+    real(RP)               :: USERFILE_MINVAL    = 0.0_RP
+
+    ! GrADS data
+    character(len=H_LONG)  :: USERFILE_GrADS_FILENAME  = ''       ! single data file (GrADS format)
+    character(len=H_SHORT) :: USERFILE_GrADS_VARNAME   = 'topo'
+    character(len=H_SHORT) :: USERFILE_GrADS_LATNAME   = 'lat'
+    character(len=H_SHORT) :: USERFILE_GrADS_LONNAME   = 'lon'
+    character(len=H_SHORT) :: USERFILE_INTERP_TYPE     = 'LINEAR'
+    integer                :: USERFILE_INTERP_level    = 5
+
 
     namelist / PARAM_CNVTOPO_USERFILE / &
-       USERFILE_DLAT,         &
-       USERFILE_DLON,         &
-       USERFILE_IN_CATALOGUE, &
-       USERFILE_IN_DIR,       &
-       USERFILE_IN_FILENAME,  &
-       USERFILE_IN_DATATYPE,  &
-       USERFILE_LATORDER_N2S, &
-       USERFILE_LAT_START,    &
-       USERFILE_LAT_END,      &
-       USERFILE_LON_START,    &
-       USERFILE_LON_END
+       USERFILE_TYPE,           &
+       USERFILE_DTYPE,          &
+       USERFILE_DLAT,           &
+       USERFILE_DLON,           &
+       USERFILE_CATALOGUE,      &
+       USERFILE_DIR,            &
+       USERFILE_yrevers,        &
+       USERFILE_MINVAL,         &
+       USERFILE_GrADS_FILENAME, &
+       USERFILE_GrADS_VARNAME,  &
+       USERFILE_GrADS_LATNAME,  &
+       USERFILE_GrADS_LONNAME,  &
+       USERFILE_INTERP_TYPE,    &
+       USERFILE_INTERP_LEVEL
 
     ! topo
     real(RP) :: Zsfc(IA,JA)
 
-    ! data catalogue list
-    integer, parameter    :: TILE_nlim = 1000
-    integer               :: TILE_nmax
-    character(len=H_LONG) :: TILE_fname(TILE_nlim)
-    logical               :: TILE_hit  (TILE_nlim)
-    integer               :: TILE_JS   (TILE_nlim)
-    integer               :: TILE_JE   (TILE_nlim)
-    integer               :: TILE_IS   (TILE_nlim)
-    integer               :: TILE_IE   (TILE_nlim)
-    real(RP)              :: TILE_DLAT, TILE_DLON
-
-    real(RP), allocatable :: HEIGHT (:,:)
-    real(RP), allocatable :: LATH   (:,:)
-    real(RP), allocatable :: LONH   (:,:)
-    real(RP), allocatable :: LATH_1d(:)
-    real(RP), allocatable :: LONH_1d(:)
-    integer               :: nLONH, nLATH
-
-    integer  :: GLOBAL_IA
-
-    ! interpolation
-    integer,  allocatable :: idx_i(:,:,:)
-    integer,  allocatable :: idx_j(:,:,:)
-    real(RP), allocatable :: hfact(:,:,:)
-    real(RP) :: search_limit
-
     character(len=H_LONG) :: fname
 
-    real(RP) :: LATS, LATE, LONS, LONE
-    logical  :: yrevers
-
-    logical :: zonal, pole
-
-    integer :: ish, ieh, jsh, jeh
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -753,142 +511,52 @@ contains
     endif
     LOG_NML(PARAM_CNVTOPO_USERFILE)
 
-    if ( USERFILE_DLAT <= 0.0_RP ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check! ', USERFILE_DLAT
+
+    select case ( USERFILE_TYPE )
+    case ( 'TILE' )
+
+       if ( USERFILE_DLAT <= 0.0_RP ) then
+          LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLAT (width (deg.) of latitude tile) should be positive. Check! ', USERFILE_DLAT
+          call PRC_abort
+       endif
+       if ( USERFILE_DLON <= 0.0_RP ) then
+          LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check! ', USERFILE_DLON
+          call PRC_abort
+       endif
+       if ( USERFILE_CATALOGUE == '' ) then
+          LOG_ERROR("CNVTOPO_USERFILE",*) 'Catalogue file does not specified. Check!'
+          call PRC_abort
+       endif
+
+       call CNV2D_tile_init( USERFILE_DTYPE,                   & ! [IN]
+                             USERFILE_DLAT, USERFILE_DLON,     & ! [IN]
+                             USERFILE_DIR, USERFILE_CATALOGUE, & ! [IN]
+                             'LINEAR'                          ) ! [IN]
+
+    case ( 'GrADS' )
+
+       if ( USERFILE_GrADS_FILENAME == '' ) then
+          LOG_ERROR("CNVTOPO_USERFILE",*) 'GrADS file name does not specified. Check!'
+          call PRC_abort
+       endif
+
+       call CNV2D_grads_init( USERFILE_GrADS_FILENAME,             &
+                              USERFILE_GrADS_VARNAME,              &
+                              USERFILE_GrADS_LATNAME,              &
+                              USERFILE_GrADS_LONNAME,              &
+                              USERFILE_INTERP_TYPE,                &
+                              interp_level = USERFILE_INTERP_LEVEL )
+
+    case default
+       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_TYPE is invalid: ',trim(USERFILE_TYPE)
+       LOG_ERROR_CONT(*) 'It must be "TILE" or "GrADS"'
        call PRC_abort
-    endif
+    end select
 
-    if ( USERFILE_DLON <= 0.0_RP ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_DLON (width (deg.) of longitude tile) should be positive. Check! ', USERFILE_DLON
-       call PRC_abort
-    endif
+    call CNV2D_exec( Zsfc(:,:),                                              & ! [OUT]
+                     min_value = USERFILE_MINVAL, yrevers = USERFILE_yrevers ) ! [IN]
 
-    if (       USERFILE_IN_CATALOGUE == '' &
-         .AND. USERFILE_IN_FILENAME  == '' ) then
-       LOG_ERROR("CNVTOPO_USERFILE",*) 'Neither catalogue file nor single file specified. Check!'
-       call PRC_abort
-    endif
-
-    if    ( USERFILE_LATORDER_N2S ) then
-       LOG_INFO("CNVTOPO_USERFILE",*) 'data ordar of the latitude direction : North -> South'
-       yrevers = .true.
-    else
-       LOG_INFO("CNVTOPO_USERFILE",*) 'data ordar of the latitude direction : South -> North'
-       yrevers = .false.
-    endif
-
-
-
-    TILE_DLAT = USERFILE_DLAT * D2R
-    TILE_DLON = USERFILE_DLON * D2R
-
-    if ( USERFILE_IN_CATALOGUE /= "" ) then
-       ! catalogue file
-       fname = trim(USERFILE_IN_DIR)//'/'//trim(USERFILE_IN_CATALOGUE)
-
-       call FILE_TILEDATA_get_info( TILE_nlim,                                          & ! [IN]
-                                    TILE_DLAT, TILE_DLON,                               & ! [IN]
-                                    DOMAIN_LATS, DOMAIN_LATE, DOMAIN_LONS, DOMAIN_LONE, & ! [IN]
-                                    fname,                                              & ! [IN]
-                                    GLOBAL_IA,                                          & ! [OUT]
-                                    TILE_nmax,                                          & ! [OUT]
-                                    TILE_fname(:), TILE_hit(:),                         & ! [OUT]
-                                    TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                    nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
-    else
-       LATS = USERFILE_LAT_START * D2R
-       LATE = USERFILE_LAT_END   * D2R
-       LONS = USERFILE_LON_START * D2R
-       LONE = USERFILE_LON_END   * D2R
-       call FILE_TILEDATA_get_info( TILE_nlim,                                          & ! [IN]
-                                    TILE_DLAT, TILE_DLON,                               & ! [IN]
-                                    DOMAIN_LATS, DOMAIN_LATE, DOMAIN_LONS, DOMAIN_LONE, & ! [IN]
-                                    '',                                                 & ! [IN]
-                                    GLOBAL_IA,                                          & ! [OUT]
-                                    TILE_nmax,                                          & ! [OUT]
-                                    TILE_fname(:), TILE_hit(:),                         & ! [OUT]
-                                    TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                    nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole,      & ! [OUT]
-                                    single_fname = USERFILE_IN_FILENAME,                & ! [IN]
-                                    LATS = LATS, LATE = LATE, LONS = LONS, LONE = LONE  ) ! [IN]
-       CNVTOPO_linear_interp = .true.
-    end if
-
-    if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
-
-    allocate( HEIGHT(nLONH,nLATH) )
-    allocate( LATH  (nLONH,nLATH) )
-    allocate( LONH  (nLONH,nLATH) )
-
-    call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
-                                 USERFILE_IN_DIR,                                & ! [IN]
-                                 GLOBAL_IA,                                      & ! [IN]
-                                 TILE_nmax,                                      & ! [IN]
-                                 TILE_DLAT, TILE_DLON,                           & ! [IN]
-                                 TILE_fname(:), TILE_hit(:),                     & ! [IN]
-                                 TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
-                                 jsh, jeh, ish, ieh,                             & ! [IN]
-                                 USERFILE_IN_DATATYPE,                           & ! [IN]
-                                 HEIGHT(:,:), LATH(:,:), LONH(:,:),              & ! [OUT]
-                                 min_value = 0.0_RP, yrevers = yrevers           ) ! [IN]
-
-    if ( CNVTOPO_linear_interp ) then
-       CNVTOPO_interp_level = 4
-    end if
-
-
-    ! interporation
-    allocate( idx_i(IA,JA,CNVTOPO_interp_level) )
-    allocate( idx_j(IA,JA,CNVTOPO_interp_level) )
-    allocate( hfact(IA,JA,CNVTOPO_interp_level) )
-
-    allocate( LATH_1d(nLATH) )
-    allocate( LONH_1d(nLONH) )
-
-    call get_latlon_1d( nLONH, nLATH, &
-         LONH(:,:), LATH(:,:),  & ! [IN]
-         LONH_1d(:), LATH_1d(:) ) ! [OUT]
-
-    if ( CNVTOPO_linear_interp ) then
-
-       call INTERP_factor2d( nLONH, nLATH,               & ! [IN]
-                             IA, JA,                     & ! [IN]
-                             LONH_1d(:), LATH_1d(:),     & ! [IN]
-                             LON(:,:), LAT(:,:),         & ! [IN]
-                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                             hfact(:,:,:)                ) ! [OUT]
-
-       deallocate( LONH_1d, LATH_1d )
-
-    else
-
-       search_limit = max( sqrt(TILE_DLON**2 + TILE_DLAT**2) * RADIUS * 1.5_RP, sqrt(DX**2 + DY**2) )
-       call INTERP_factor2d( CNVTOPO_interp_level,       & ! [IN]
-                             nLONH, nLATH,               & ! [IN]
-                             IA, JA,                     & ! [IN]
-                             LONH(:,:), LATH(:,:),       & ! [IN]
-                             LON(:,:), LAT(:,:),         & ! [IN]
-                             idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
-                             hfact(:,:,:),               & ! [OUT]
-                             latlon_structure = .true.,  & ! [IN]
-                             lon_1d = LONH_1d(:),        & ! [IN]
-                             lat_1d = LATH_1d(:),        & ! [IN]
-                             search_limit = search_limit ) ! [IN]
-
-    end if
-
-    call INTERP_interp2d( CNVTOPO_interp_level,       & ! [IN]
-                          nLONH,nLATH,                & ! [IN]
-                          IA, JA,                     & ! [IN]
-                          idx_i(:,:,:), idx_j(:,:,:), & ! [IN]
-                          hfact(:,:,:),               & ! [IN]
-                          HEIGHT(:,:),                & ! [IN]
-                          Zsfc(:,:)                   ) ! [OUT]
-
-    deallocate( HEIGHT, LATH, LONH )
-    deallocate( idx_j, idx_i, hfact )
-
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        if ( Zsfc(i,j) /= UNDEF ) TOPO_Zsfc(i,j) = Zsfc(i,j) ! replace data
@@ -1125,7 +793,6 @@ contains
        LOG_ERROR_CONT(*) '- Maximum ratio of slope dZ/dX, dZ/dY      (CNVTOPO_smooth_maxslope_ratio) = ', CNVTOPO_smooth_maxslope_ratio
        LOG_ERROR_CONT(*) '  Or, Maximum of slope with degree         (CNVTOPO_smooth_maxslope)       = ', CNVTOPO_smooth_maxslope
        LOG_ERROR_CONT(*) '- Smoothing type LAPLACIAN/GAUSSIAN/OFF    (CNVTOPO_smooth_type)           = ', trim(CNVTOPO_smooth_type)
-       LOG_ERROR_CONT(*) '- Number of using points for interpolation (CNVTOPO_interp_level)          = ', CNVTOPO_interp_level
        call PRC_abort
     else
        LOG_NEWLINE
@@ -1178,82 +845,5 @@ contains
 
     return
   end subroutine CNVTOPO_smooth
-
-  subroutine get_latlon_1d( &
-       IA, JA, &
-       LON, LAT, &
-       LON_1d, LAT_1d )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
-    implicit none
-    integer,  intent(in) :: IA, JA
-    real(RP), intent(in) :: LON(IA,JA)
-    real(RP), intent(in) :: LAT(IA,JA)
-
-    real(RP), intent(out) :: LON_1d(IA)
-    real(RP), intent(out) :: LAT_1d(JA)
-
-    real(RP) :: lon_min, lon_max
-    real(RP) :: lat_min, lat_max
-    real(RP) :: dlon, dlat
-    integer :: is, ie, js, je
-    integer :: i, j
-
-    LON_1d(:) = UNDEF
-    lon_min   = UNDEF
-
-    do i = 1, IA
-       do j = 1, JA
-          if ( LON(i,j) .ne. UNDEF ) then
-             LON_1d(i) = LON(i,j)
-             exit
-          end if
-       end do
-       if ( lon_min == UNDEF .and. LON_1d(i) .ne. UNDEF ) then
-          lon_min = LON_1d(i)
-          is = i
-       endif
-       if ( lon_min .ne. UNDEF ) then
-          if ( LON_1d(i) .ne. UNDEF ) then
-             lon_max = LON_1d(i)
-             ie = i
-          end if
-       end if
-    end do
-
-    LAT_1d(:) = UNDEF
-    lat_min   = UNDEF
-    do j = 1, JA
-       do i = 1, IA
-          if ( LAT(i,j) .ne. UNDEF ) then
-             LAT_1d(j) = LAT(i,j)
-             exit
-          end if
-       end do
-       if ( lat_min == UNDEF .and. LAT_1d(j) .ne. UNDEF ) then
-          lat_min = LAT_1d(j)
-          js = j
-       endif
-       if ( lat_min .ne. UNDEF ) then
-          if ( LAT_1d(j) .ne. UNDEF ) then
-             lat_max = LAT_1d(j)
-             je = j
-          end if
-       end if
-    end do
-
-    ! fill undef
-    dlon = ( lon_max - lon_min ) / ( ie - is )
-    do i = 1, IA
-       if ( LON_1d(i) == UNDEF ) LON_1d(i) = lon_min + dlon * ( i - is )
-    end do
-    dlat = ( lat_max - lat_min ) / ( je - js )
-    do j = 1, JA
-       if ( LAT_1d(j) == UNDEF ) LAT_1d(j) = lat_min + dlat * ( j - js )
-    end do
-
-    return
-  end subroutine get_latlon_1d
-
 
 end module mod_cnvtopo
