@@ -12,7 +12,7 @@
 #
 &GrADS_ITEM  name='lon',     dtype='map',     fname='MRI',     startrec=4,   totalrec=5  /
 &GrADS_ITEM  name='lat',     dtype='map',     fname='MRI',     startrec=5,   totalrec=5  /
-&GrADS_ITEM  name='TOPO',    dtype='map',     fname='MRI',     startrec=1,   totalrec=5  /
+&GrADS_ITEM  name='topo',    dtype='map',     fname='MRI',     startrec=1,   totalrec=5  /
 &GrADS_ITEM  name='lsmask',  dtype='map',     fname='MRI',     startrec=2,   totalrec=5  /
 &GrADS_ITEM  name='plev',    dtype='map',     fname='MRIpres', startrec=1,   totalrec=94 /
 &GrADS_ITEM  name='HGT',     dtype='map',     fname='MRIpres', startrec=48,  totalrec=94 /
