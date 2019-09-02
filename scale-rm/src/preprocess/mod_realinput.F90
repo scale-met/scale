@@ -1553,6 +1553,13 @@ contains
        select case( itp_type_a )
        case ( i_intrp_linear )
 
+          !$omp parallel do collapse(2)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             LAT_org(i,j) = sign( min( abs(LAT_org(i,j)), PI * 0.499999_RP ), LAT_org(i,j) )
+          end do
+          end do
+
           call MAPPROJECTION_lonlat2xy( dims(2), 1, dims(2), dims(3), 1, dims(3), &
                                         LON_org(:,:), LAT_org(:,:), & ! [IN]
                                         X_org(:,:), Y_org(:,:)      ) ! [OUT]
@@ -3320,9 +3327,16 @@ contains
     select case( itp_type_l )
     case ( i_intrp_linear )
 
+       !$omp parallel do collapse(2)
+       do j = 1, jmax
+       do i = 1, imax
+          work(i,j) = sign( min( abs(llat_org(i,j)), PI * 0.499999_RP ), llat_org(i,j) )
+       end do
+       end do
+
        call MAPPROJECTION_lonlat2xy( imax, 1, imax, jmax, 1, jmax, &
-                                     llon_org(:,:), llat_org(:,:), & ! [IN]
-                                     lX_org(:,:), lY_org(:,:)      ) ! [OUT]
+                                     llon_org(:,:), work(:,:), & ! [IN]
+                                     lX_org(:,:), lY_org(:,:)  ) ! [OUT]
 
        zonal = ( maxval(llon_org) - minval(llon_org) ) > 2.0_RP * PI * 0.9_RP
        pole = ( maxval(llat_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(llat_org) < - PI * 0.5_RP * 0.9_RP )
@@ -3719,6 +3733,13 @@ contains
 
        select case( itp_type_a )
        case ( i_intrp_linear )
+
+          !$omp parallel do collapse(2)
+          do j = 1, jmax
+          do i = 1, imax
+             olat_org(i,j) = sign( min( abs(olat_org(i,j)), PI * 0.499999_RP ), olat_org(i,j) )
+          end do
+          end do
 
           call MAPPROJECTION_lonlat2xy( imax, 1, imax, jmax, 1, jmax, &
                                         olon_org(:,:), olat_org(:,:), & ! [IN]
