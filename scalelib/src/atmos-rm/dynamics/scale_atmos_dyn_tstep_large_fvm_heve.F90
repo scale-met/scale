@@ -349,7 +349,7 @@ contains
     ! setup for spectral nudging
     call SPNUDGE_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE)
     call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,max(SPNUDGE_uv_lm, SPNUDGE_pt_lm),max(SPNUDGE_uv_mm,SPNUDGE_pt_mm))
-    
+
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
 
@@ -1131,7 +1131,6 @@ contains
                 call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_uv_lm,SPNUDGE_uv_mm,diff2)
 
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
                 do j = JS, JE
                 do i = IS, IE
                 do k = KS, KE
@@ -1231,6 +1230,7 @@ contains
                 enddo
                 enddo
                 enddo
+
              else
                 !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
@@ -1343,7 +1343,7 @@ contains
              enddo
              enddo
              enddo
-           
+
           else
 
              !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)

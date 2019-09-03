@@ -36,14 +36,14 @@ module scale_spnudge
   real(RP), public :: SPNUDGE_P1
   real(RP), public :: SPNUDGE_P2
 
-  
+
   public :: SPNUDGE_setup
-  
+
   contains
-  
+
   subroutine SPNUDGE_setup(KA, KS, KE, IA, IS, IE, JA, JS, JE)
     implicit none
-    
+
     namelist /PARAM_SPNUDGE/ &
       SPNUDGE_uv, &
       SPNUDGE_uv_divfree, &
@@ -60,11 +60,11 @@ module scale_spnudge
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    
+
     real(RP) :: uv_alpha, pt_alpha
     integer :: k, i, j
     integer :: ierr
-    
+
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -84,7 +84,7 @@ module scale_spnudge
     allocate( SPNUDGE_u_alpha(KA,IA,JA) )
     allocate( SPNUDGE_v_alpha(KA,IA,JA) )
     allocate( SPNUDGE_pt_alpha(KA,IA,JA) )
-    
+
     if( SPNUDGE_uv_tau <= 0.0_RP ) then
         uv_alpha = 0
     else
@@ -107,7 +107,6 @@ module scale_spnudge
              else
                 SPNUDGE_u_alpha(k,i,j) = uv_alpha
              endif
-             
           enddo
        enddo
      enddo
@@ -122,10 +121,9 @@ module scale_spnudge
              else
                 SPNUDGE_v_alpha(k,i,j) = uv_alpha
              endif
-             
           enddo
        enddo
-    enddo     
+    enddo
 
     do j = JS, JE
        do i = IS, IE
@@ -137,11 +135,10 @@ module scale_spnudge
              else
                 SPNUDGE_pt_alpha(k,i,j) = pt_alpha
              endif
-             
           enddo
        enddo
     enddo
-    
+
   end subroutine SPNUDGE_setup
-  
+
 end module scale_spnudge

@@ -19,7 +19,7 @@ module scale_dft
   public :: DFT_setup
   public :: DFT_g2g
   public :: DFT_g2g_divfree
-  
+
   integer, private :: IMAX, JMAX ! number of total grids for spectral transform
   integer, private :: IGS, JGS ! global index
   integer, private :: LMM, MMM ! maximum truncation wavenumber
@@ -59,7 +59,7 @@ contains
     enddo
 
     do l = 1, LM
-      do i = IS, IE              
+      do i = IS, IE
         x = 2*PI/IMAX*(i-IS+IGS)
         table_x(i,2*l-1) =  cos(l*x)
         table_x(i,2*l)   = -sin(l*x)
@@ -73,7 +73,7 @@ contains
 
     do m = 1, MM
       do j = JS, JE
-        y = 2*PI/JMAX*(j-JS+JGS)        
+        y = 2*PI/JMAX*(j-JS+JGS)
         table_y(j,2*m-1) =  cos(m*y)
         table_y(j,2*m)   = -sin(m*y)
       enddo
@@ -104,9 +104,9 @@ contains
     real(RP) :: c, tb
     integer :: i, j, k, l, m
     integer :: ierr
-    
+
     c = 1.0_RP/IMAX
-    do j = JS, JE  
+    do j = JS, JE
       do l = 0, 2*LM
         do k = KS, KE
           work(k,l,j) = 0
@@ -121,7 +121,7 @@ contains
     enddo
 
     do m = 0, 2*MM
-      do l = 0, 2*LM  
+      do l = 0, 2*LM
         do k = KS, KE
           work_s(k,l,m) = 0
         enddo
@@ -132,7 +132,7 @@ contains
     do m = 0, 2*MM
       do j = JS, JE
         tb = table_y(j,m)*c
-        do l = 0, 2*LM 
+        do l = 0, 2*LM
           do k = KS, KE
             work_s(k,l,m) = work_s(k,l,m) + work(k,l,j)*tb
           enddo
@@ -163,7 +163,7 @@ contains
     enddo
 
     do j = JS, JE
-      do l = 0, 2*LM      
+      do l = 0, 2*LM
         do k = KS, KE
           work(k,l,j) = 0
         enddo
@@ -177,8 +177,8 @@ contains
         c = 2
       endif
       do j = JS, JE
-        tb = table_y(j,m)*c      
-        do l = 0, 2*LM      
+        tb = table_y(j,m)*c
+        do l = 0, 2*LM
           do k = KS, KE
             work(k,l,j) = work(k,l,j) + s(k,l,m)*tb
           enddo
@@ -196,7 +196,7 @@ contains
         if( l == 0 ) then
           c = 1
         else
-          c = 2 
+          c = 2
         endif
         do i = IS, IE
           tb = table_x(i,l)*c
@@ -305,7 +305,7 @@ contains
       enddo
     enddo
 
-    do m = 1, mm      
+    do m = 1, mm
       fac = 1.0_RP/ (m*m)
       do k = KS, KE
         s3(k,0,2*m-1) = s3(k,0,2*m-1)*fac
@@ -313,7 +313,7 @@ contains
       enddo
     enddo
 
-    do m = 1, mm      
+    do m = 1, mm
       do l = 1, lm
         fac = 1.0_RP/ (l*l+m*m)
         do k = KS, KE
@@ -388,4 +388,3 @@ contains
   end subroutine DFT_g2g_divfree
 
 end module scale_dft
-
