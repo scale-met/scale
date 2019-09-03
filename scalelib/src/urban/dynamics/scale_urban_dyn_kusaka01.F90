@@ -66,9 +66,9 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
   real(RP), private :: AH_TBL     =   17.5_RP ! Sensible Anthropogenic heat from urban subgrid [W/m^2]
   real(RP), private :: AHL_TBL    =    0.0_RP ! Latent Anthropogenic heat from urban subgrid [W/m^2]
-  real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof     [-]
-  real(RP), private :: BETB       =    0.0_RP !                        of building [-]
-  real(RP), private :: BETG       =    0.0_RP !                        of ground   [-]
+  real(RP), private :: BETR_CONST =   -1.0_RP ! Evaporation efficiency of roof     [-]
+  real(RP), private :: BETB_CONST =   -1.0_RP !                        of building [-]
+  real(RP), private :: BETG_CONST =   -1.0_RP !                        of ground   [-]
   real(RP), private :: STRGR      =    0.0_RP ! rain strage on roof     [-]
   real(RP), private :: STRGB      =    0.0_RP !             on wall     [-]
   real(RP), private :: STRGG      =    0.0_RP !             on ground   [-]
@@ -852,6 +852,10 @@ contains
 !    real(RP), parameter     :: CAP_water = 4.185E6_RP ! Heat capacity of water (15 deg) [J m-3 K]
 !    real(RP), parameter     :: AKS_water = 0.59_RP    ! Thermal conductivity of water   [W m-1 K]
 
+    real(RP), parameter     :: rain_rate_R = 1.0_RP
+    real(RP), parameter     :: rain_rate_B = 0.1_RP
+    real(RP), parameter     :: rain_rate_G = 0.9_RP
+
     !-- Local variables
 !    logical  :: SHADOW = .false.
            !  true  = consider svf and shadow effects,
@@ -900,9 +904,9 @@ contains
     real(RP) :: SR, SB, SG, RR, RB, RG
     real(RP) :: SR1, SB1, SB2, SG1, SG2
     real(RP) :: RB1, RB2, RG1, RG2
-    real(RP) :: HR, ELER, G0R
-    real(RP) :: HB, ELEB, G0B
-    real(RP) :: HG, ELEG, G0G
+    real(RP) :: HR, EVPR, ELER, G0R, BETR
+    real(RP) :: HB, EVPB, ELEB, G0B, BETB
+    real(RP) :: HG, EVPG, ELEG, G0G, BETG
 
     real(RP) :: Z
     real(RP) :: QS0R, QS0B, QS0G
@@ -951,9 +955,6 @@ contains
     TBLP = TBL
     TGLP = TGL
     !
-    RAINRP = RAINR
-    RAINBP = RAINB
-    RAINGP = RAING
 
 
     !--- limiter for surface temp change
@@ -984,20 +985,19 @@ contains
     call canopy_wind(ZA, UA, Z0C, ZDC, UC)
 
     !-----------------------------------------------------------
-    ! Set evaporation efficiency on roof/wall/road
+    ! calculate water content (temporally)
     !-----------------------------------------------------------
 
-    !!--- calculate evaporation efficiency
-    RAINT = 1.0_RP * ( RAIN * dt )            ! [kg/m2/s -> kg/m2]
-    call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
+    RAINT = RAIN * dt ! [kg/m2/s -> kg/m2]
 
-    RAINT = 0.1_RP * ( RAIN * dt )
-    call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
+    RAINR = RAINR + RAINT * rain_rate_R
+    RAINB = RAINB + RAINT * rain_rate_B
+    RAING = RAING + RAINT * rain_rate_G
 
-    RAINT = 0.9_RP * ( RAIN * dt )
-    call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
-
-    ROFF = ( R * ROFFR  + RW * ( ROFFB + ROFFG ) ) / dt
+    ! save the initial value
+    RAINRP = RAINR
+    RAINBP = RAINB
+    RAINGP = RAING
 
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
@@ -1060,11 +1060,16 @@ contains
 !      call qsat( TR, PRSS, qdry, & ! [IN]
 !                 QS0R            ) ! [OUT]
 
+      call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
+
       RR    = EPSR * ( rflux_LW - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
       HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-      ELER  = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) ) * LHV
+      EVPR  = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) )
+      ELER  = EVPR * LHV
+
       G0R   = SR + RR - HR - ELER
+      RAINR = max( RAINRP - EVPR * dt, 0.0_RP )
 
     !--- calculate temperature in roof
     !  if ( STRGR /= 0.0_RP ) then
@@ -1149,11 +1154,16 @@ contains
 !     call qsat( TR, PRSS, qdry, & ! [IN]
 !                QS0R            ) ! [OUT]
 
+     call cal_beta(BETR, BETR_CONST, RAINR, STRGR)
+
      RR      = EPSR * ( rflux_LW - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-     ELER    = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) ) * LHV
+     EVPR    = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) )
+     ELER    = EVPR * LHV
+
 !     G0R     = SR + RR - HR - ELER + EFLX
      G0R     = SR + RR - HR - ELER
+     RAINR   = max( RAINRP - EVPR * dt, 0.0_RP )
 
      TRL   = TRLP
      call multi_layer(UKE,BOUND,G0R,CAPR,AKSR,TRL,DZR,dt,TRLEND)
@@ -1207,6 +1217,10 @@ contains
 !      call qsat( TB, PRSS, qdry, QS0B )
 !      call qsat( TG, PRSS, qdry, QS0G )
 
+      call cal_beta(BETG, BETG_CONST, RAING, STRGG)
+      call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
+
+
       TC1   = RW*ALPHAC    + RW*ALPHAG    + W*ALPHAB
       !TC2   = RW*ALPHAC*TA + RW*ALPHAG*TG + W*ALPHAB*TB
       TC2   = RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
@@ -1238,14 +1252,20 @@ contains
       RB    = RB1 + RB2
 
       HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-      ELEB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
+      EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) )
+      ELEB  = EVPB * LHV
+
 !      G0B   = SB + RB - HB - ELEB + EFLX
       G0B   = SB + RB - HB - ELEB
+      RAINB = max( RAINBP - EVPB * dt, 0.0_RP )
 
       HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-      ELEG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
+      EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) )
+      ELEG  = EVPG * LHV
+
 !      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
+      RAING = max( RAINGP - EVPG * dt, 0.0_RP )
 
       TBL = TBLP
       call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
@@ -1294,12 +1314,7 @@ contains
       resi1p = resi1
       resi2p = resi2
 
-      ! this is for TC, QC
-      call qsat( TB, RHOS, QS0B )
-      call qsat( TG, RHOS, QS0G )
-!      call qsat( TB, PRSS, qdry, QS0B )
-!      call qsat( TG, PRSS, qdry, QS0G )
-
+      ! this is for TC
       THS1   = TB / EXN
       THS2   = TG / EXN
 
@@ -1308,10 +1323,6 @@ contains
       TC2    =  RW*ALPHAC*THA + W*ALPHAB*THS1 + RW*ALPHAG*THS2
       THC    =  TC2 / TC1
       TC = THC * EXN
-
-      QC1    =  RW*(CHC*UA)    + RW*(CHG*BETG*UC)      + W*(CHB*BETB*UC)
-      QC2    =  RW*(CHC*UA)*QA + RW*(CHG*BETG*UC)*QS0G + W*(CHB*BETB*UC)*QS0B
-      QC     =  max( QC2 / ( QC1 + EPS ), 0.0_RP )
 
     enddo
 
@@ -1369,8 +1380,18 @@ contains
        LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
+     !--- update only fluxes ----
 
-    !--- update only fluxes ----
+     ! this is for TC, QC
+     call qsat( TB, RHOS, QS0B )
+     call qsat( TG, RHOS, QS0G )
+!     call qsat( TB, PRSS, qdry, QS0B )
+!     call qsat( TG, PRSS, qdry, QS0G )
+
+     call cal_beta(BETB, BETB_CONST, RAINB, STRGB)
+     call cal_beta(BETG, BETG_CONST, RAING, STRGG)
+
+
      RG1      = EPSG * ( rflux_LW * VFGS                  &
                        + EPSB * VFGW * STB * TB**4  &
                        - STB * TG**4                )
@@ -1395,15 +1416,19 @@ contains
      THS2   = TG / EXN
      THC    = TC / EXN
 
-     HB   = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-     ELEB = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
-!     G0B  = SB + RB - HB - ELEB + EFLX
-     G0B  = SB + RB - HB - ELEB
+     HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
+     EVPB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) )
+     ELEB  = EVPB * LHV
+!     G0B   = SB + RB - HB - ELEB + EFLX
+     G0B   = SB + RB - HB - ELEB
+     RAINB = max( RAINBP - EVPB * dt, 0.0_RP )
 
-     HG   = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-     ELEG = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
-!     G0G  = SG + RG - HG - ELEG + EFLX
-     G0G  = SG + RG - HG - ELEG
+     HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
+     EVPG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) )
+     ELEG  = EVPG * LHV
+!     G0G   = SG + RG - HG - ELEG + EFLX
+     G0G   = SG + RG - HG - ELEG
+     RAING = max( RAINGP - EVPG * dt, 0.0_RP )
 
      TBL   = TBLP
      call multi_layer(UKE,BOUND,G0B,CAPB,AKSB,TBL,DZB,dt,TBLEND)
@@ -1493,10 +1518,18 @@ contains
     RNB = SB + RB        ! Net radiation on building [W/m/m]
     RNG = SG + RG        ! Net radiation on ground [W/m/m]
 
-    ! calculate rain amount remaining on the surface
-    RAINR = max(0.0_RP, RAINR-(LHR/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
-    RAINB = max(0.0_RP, RAINB-(LHB/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
-    RAING = max(0.0_RP, RAING-(LHG/LHV)*real(dt,kind=RP)) ! [kg/m/m = mm]
+    !-----------------------------------------------------------
+    !  calculate the ranoff
+    !-----------------------------------------------------------
+    ROFFR = max( RAINR - STRGR, 0.0_RP )
+    ROFFB = max( RAINB - STRGB, 0.0_RP )
+    ROFFG = max( RAING - STRGG, 0.0_RP )
+
+    ROFF = ROFF + R * ROFFR + RW * ( ROFFB + ROFFG )
+
+    RAINR = max( RAINR - ROFFR, 0.0_RP )
+    RAINB = max( RAINB - ROFFB, 0.0_RP )
+    RAING = max( RAING - ROFFG, 0.0_RP )
 
     !-----------------------------------------------------------
     !  diagnostic GRID AVERAGED TS from upward logwave
@@ -1571,23 +1604,20 @@ contains
   end subroutine canopy_wind
 
   !-----------------------------------------------------------------------------
-  subroutine cal_beta(BET, RAIN, WATER, STRG, ROFF)
+  subroutine cal_beta(BET, BET_CONST, WATER, STRG)
     implicit none
 
-    real(RP), intent(out)   :: BET    ! evapolation efficiency [-]
-    real(RP), intent(in)    :: RAIN   ! precipitation [mm*dt]
-    real(RP), intent(inout) :: WATER  ! rain amount in strage [kg/m2]
-    real(RP), intent(inout) :: STRG   ! rain strage [kg/m2]
-    real(RP), intent(inout) :: ROFF   ! runoff [kg/m2]
+    real(RP), intent(out) :: BET       ! evapolation efficiency [-]
+    real(RP), intent(in)  :: BET_CONST ! prescribed value
+    real(RP), intent(in)  :: WATER     ! rain amount in strage [kg/m2]
+    real(RP), intent(in)  :: STRG      ! rain strage [kg/m2]
 
-    if ( STRG == 0.0_RP ) then ! not consider evapolation from urban
-       BET   = 0.0_RP
-       ROFF  = RAIN
+    if ( BET_CONST > 0.0_RP ) then
+       BET = BET_CONST
+    else if ( STRG == 0.0_RP ) then ! not consider evapolation from urban
+       BET = 0.0_RP
     else
-       WATER = WATER + RAIN
-       ROFF  = max(0.0_RP, WATER-STRG)
-       WATER = WATER - max(0.0_RP, WATER-STRG)
-       BET   = min ( WATER / STRG, 1.0_RP)
+       BET = min ( WATER / STRG, 1.0_RP )
     endif
 
     return
@@ -1924,6 +1954,8 @@ contains
 
     character(*), intent(in) :: INFILENAME
 
+    real(RP) :: BETR, BETB, BETG
+
     namelist / PARAM_URBAN_DATA / &
        ZR,         &
        roof_width, &
@@ -1960,39 +1992,48 @@ contains
     integer :: fid
     integer :: ierr
     !---------------------------------------------------------------------------
-      fid = IO_get_available_fid()
-      call IO_get_fname(fname, INFILENAME)
-      open( fid,                  &
-            file   = fname,       &
-            form   = 'formatted', &
-            status = 'old',       &
-            iostat = ierr         )
 
-      if ( ierr /= 0 ) then
-        LOG_NEWLINE
-        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Failed to open a parameter file : ', trim(fname)
-        call PRC_abort
-      else
-        LOG_NEWLINE
-        LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Read urban parameters from file'
-        !--- read namelist
-        rewind(fid)
-        read  (fid,nml=PARAM_URBAN_DATA,iostat=ierr)
-        if ( ierr < 0 ) then !--- no data
-           LOG_INFO("read_urban_param_table",*)  'Not found namelist of PARAM_URBAN_DATA. Default used.'
-        elseif( ierr > 0 ) then !--- fatal error
-           LOG_ERROR("read_urban_param_table",*) 'Not appropriate names in PARAM_URBAN_DATA of ', trim(INFILENAME)
-           call PRC_abort
-        endif
-        LOG_NML(PARAM_URBAN_DATA)
-      end if
+    fid = IO_get_available_fid()
+    call IO_get_fname(fname, INFILENAME)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
+    if ( ierr /= 0 ) then
+       LOG_NEWLINE
+       LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Failed to open a parameter file : ', trim(fname)
+       call PRC_abort
+    end if
 
-      if ( ZR <= 0.0_RP ) then
-         LOG_ERROR("read_urban_param_table",*) 'ZR is not appropriate value; ZR must be larger than 0. ZR=', ZR
-         call PRC_abort
-      endif
+    LOG_NEWLINE
+    LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Read urban parameters from file'
 
-      close( fid )
+    BETR = -1.0_RP
+    BETB = -1.0_RP
+    BETG = -1.0_RP
+
+    !--- read namelist
+    rewind(fid)
+    read  (fid,nml=PARAM_URBAN_DATA,iostat=ierr)
+    if ( ierr < 0 ) then !--- no data
+       LOG_INFO("read_urban_param_table",*)  'Not found namelist of PARAM_URBAN_DATA. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("read_urban_param_table",*) 'Not appropriate names in PARAM_URBAN_DATA of ', trim(INFILENAME)
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_URBAN_DATA)
+
+    close( fid )
+
+    if ( ZR <= 0.0_RP ) then
+       LOG_ERROR("read_urban_param_table",*) 'ZR is not appropriate value; ZR must be larger than 0. ZR=', ZR
+       call PRC_abort
+    endif
+
+    BETR_CONST = BETR
+    BETB_CONST = BETB
+    BETG_CONST = BETG
 
     return
   end subroutine read_urban_param_table
