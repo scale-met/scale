@@ -54,6 +54,7 @@ module scale_file_history_cartesC
                                               "z       ", &
                                               "pressure"  /)
 
+  integer               :: FILE_HISTORY_CARTESC_MODEL_nlayer = -1
   integer               :: FILE_HISTORY_CARTESC_PRES_nlayer = 0
   real(RP), allocatable :: FILE_HISTORY_CARTESC_PRES_val(:)
 
@@ -67,6 +68,8 @@ module scale_file_history_cartesC
   real(DP) :: FILE_HISTORY_CARTESC_STARTMS      !< subsecond part of start time [millisec]
 
   logical  :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
+
+  logical  :: pres_set = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -105,8 +108,9 @@ contains
     real(RP)           :: FILE_HISTORY_CARTESC_PRES(nlayer_max) !> pressure level to output [hPa]
 
     namelist / PARAM_FILE_HISTORY_CARTESC / &
-       FILE_HISTORY_CARTESC_PRES_nlayer, &
-       FILE_HISTORY_CARTESC_PRES,        &
+       FILE_HISTORY_CARTESC_MODEL_nlayer, &
+       FILE_HISTORY_CARTESC_PRES_nlayer,  &
+       FILE_HISTORY_CARTESC_PRES,         &
        FILE_HISTORY_CARTESC_BOUNDARY
 
     character(len=H_MID) :: FILE_HISTORY_CARTESC_H_TITLE = 'SCALE-RM FILE_HISTORY_CARTESC OUTPUT' !< title of the output file
@@ -133,6 +137,10 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_FILE_HISTORY_CARTESC)
+
+    if ( FILE_HISTORY_CARTESC_MODEL_nlayer < 0 ) then
+       FILE_HISTORY_CARTESC_MODEL_nlayer = KMAX
+    end if
 
 
     ! check pressure coordinate
@@ -266,6 +274,7 @@ contains
                                       PRESH        (:,:,:),             & ! [IN]
                                       SFC_PRES     (:,:)  ,             & ! [IN]
                                       FILE_HISTORY_CARTESC_PRES_val(:)  ) ! [IN]
+       pres_set = .true.
     endif
 
     return
@@ -318,10 +327,10 @@ contains
     !  Vertical 1D
     start(1,1) = 1
     dims (1,1) = "z"
-    count(1,1) = KMAX
+    count(1,1) = FILE_HISTORY_CARTESC_MODEL_nlayer
     call FILE_HISTORY_Set_Dim( "Z",   1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
     dims (1,1) = "zh"
-    count(1,1) = KMAX + 1
+    count(1,1) = FILE_HISTORY_CARTESC_MODEL_nlayer + 1
     call FILE_HISTORY_Set_Dim( "ZH",  1, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
 
     dims (1,1) = "oz"
@@ -356,11 +365,11 @@ contains
 
     start(3,:) = 1
     dims (3,:) = (/ "height    ", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer,   FILE_HISTORY_CARTESC_MODEL_nlayer,   FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZXY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, & ! [IN]
                                area="cell_area", area_x="cell_area_xyz_x", area_y="cell_area_xyz_y", volume="cell_volume", location="face" ) ! [IN]
     dims (3,:) = (/ "height_xyw", "zh        ", "pressure  " /)
-    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area", volume="cell_volume_xyw", location="face" )
 
     if ( OKMAX > 0 ) then
@@ -403,10 +412,10 @@ contains
     call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_uy", location="edge1" ) ! [IN]
 
     dims (3,:) = (/ "height_uyz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZXHY",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_uy", volume="cell_volume_uyz", location="edge1" ) ! [IN]
     dims (3,:) = (/ "height_uyw", "zh        ", "pressure  " /)
-    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXHY", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_uy", location="edge1" ) ! [IN]
 
     ! X, YH
@@ -424,10 +433,10 @@ contains
     call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_xv", location="edge2" ) ! [IN]
 
     dims (3,:) = (/ "height_xvz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZXYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_xv", volume="cell_volume_xvz", location="edge2" ) ! [IN]
     dims (3,:) = (/ "height_xvw", "zh        ", "pressure  " /)
-    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_xv", location="edge2" ) ! [IN]
 
     ! XH, YH
@@ -443,11 +452,11 @@ contains
     call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, location="face" ) ! [IN]
 
     dims (3,:) = (/ "height_uvz", "z         ", "pressure  " /)
-    count(3,:) = (/ KMAX,   KMAX,   FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_MODEL_nlayer, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZXHYH",  3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, & ![IN]
                                area="cell_area_uv", area_x="cell_area_uvz_x", area_y="cell_area_uvz_y", location="node" ) ! [IN]
     dims (3,:) = (/ "height_uvw", "zh        ", "pressure  " /)
-    count(3,:) = (/ KMAX+1, KMAX+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
+    count(3,:) = (/ FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_MODEL_nlayer+1, FILE_HISTORY_CARTESC_PRES_nlayer /)
     call FILE_HISTORY_Set_Dim( "ZHXHYH", 3, nzs, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, location="node" ) ! [IN]
 
     return
@@ -476,10 +485,10 @@ contains
     ! select dimension
     select case ( dim_type )
     case ('Z')
-        ksize  = KMAX
+        ksize  = FILE_HISTORY_CARTESC_MODEL_nlayer
         kstart = KS
     case ('ZH')
-       ksize  = KMAX+1
+       ksize  = FILE_HISTORY_CARTESC_MODEL_nlayer+1
        kstart = KS-1
     case ('OZ')
        ksize  = OKMAX
@@ -604,6 +613,8 @@ contains
        dst )
     use scale_file_h, only: &
        RMISS => FILE_RMISS
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CZ, &
        ATMOS_GRID_CARTESC_FZ
@@ -626,6 +637,8 @@ contains
 
     real(RP) :: src_Z(KA,IA,JA)
     real(RP) :: src_P(FILE_HISTORY_CARTESC_PRES_nlayer,IA,JA)
+
+    logical :: atmos
 
     integer  :: isize,  jsize,  ksize
     integer  :: istart, jstart, kstart
@@ -651,17 +664,21 @@ contains
 
     select case( dim_type(1:1) )
     case ( 'Z' )
-       ksize  = KMAX
+       ksize  = FILE_HISTORY_CARTESC_MODEL_nlayer
        kstart = KS
+       atmos = .true.
     case('O')
        ksize  = OKMAX
        kstart = OKS
+       atmos = .false.
     case('L')
        ksize  = LKMAX
        kstart = LKS
+       atmos = .false.
     case('U')
        ksize  = UKMAX
        kstart = UKS
+       atmos = .false.
     case default
        LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'dim_type is invalid: ', trim(dim_type)
        call PRC_abort
@@ -672,7 +689,7 @@ contains
     end if
 
 
-    if ( ksize == KMAX .and. zcoord == "z" .and. INTERP_available ) then ! z*->z interpolation (full level)
+    if ( ksize == FILE_HISTORY_CARTESC_MODEL_nlayer .and. zcoord == "z" .and. INTERP_available .and. atmos ) then ! z*->z interpolation (full level)
 
        call PROF_rapstart('FILE_O_interp', 2)
        call INTERP_VERT_xi2z( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -691,7 +708,7 @@ contains
        enddo
        enddo
 
-    else if( ksize == KMAX+1 .and. zcoord == "z" .and. INTERP_available ) then ! z*->z interpolation (half level)
+    else if( ksize == FILE_HISTORY_CARTESC_MODEL_nlayer+1 .and. zcoord == "z" .and. INTERP_available .and. atmos ) then ! z*->z interpolation (half level)
 
 
        call PROF_rapstart('FILE_O_interp', 2)
@@ -711,54 +728,85 @@ contains
        enddo
        enddo
 
-    elseif( ksize == KMAX .and. zcoord == "pressure" ) then ! z*->p interpolation (full level)
+    elseif( zcoord == "pressure" .and. ksize == FILE_HISTORY_CARTESC_MODEL_nlayer .and. atmos ) then ! z*->p interpolation (full level)
        ksize = FILE_HISTORY_CARTESC_PRES_nlayer
        if ( ksize == 0 ) then
           LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
           call PRC_abort
        end if
 
-       call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                              KA, KS, KE,                       & ! [IN]
-                              IA, ISB, IEB,                     & ! [IN]
-                              JA, JSB, JEB,                     & ! [IN]
-                              src  (:,:,:),                     & ! [IN]
-                              src_P(:,:,:)                      ) ! [OUT]
-       call PROF_rapend  ('FILE_O_interp', 2)
+       if ( pres_set ) then
 
-       !$omp parallel do
-       do k = 1, ksize
-       do j = 1, jsize
-       do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
-       enddo
-       enddo
-       enddo
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_VERT_xi2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                 KA, KS, KE,                       & ! [IN]
+                                 IA, ISB, IEB,                     & ! [IN]
+                                 JA, JSB, JEB,                     & ! [IN]
+                                 src  (:,:,:),                     & ! [IN]
+                                 src_P(:,:,:)                      ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
 
-    elseif( ksize == KMAX+1 .and. zcoord == "pressure" ) then ! z*->p interpolation (half level)
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
+       else
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = UNDEF
+          enddo
+          enddo
+          enddo
+
+       end if
+
+    elseif( zcoord == "pressure" .and. ksize == FILE_HISTORY_CARTESC_MODEL_nlayer+1 .and. atmos ) then ! z*->p interpolation (half level)
        ksize = FILE_HISTORY_CARTESC_PRES_nlayer
        if ( ksize == 0 ) then
           LOG_ERROR("FILE_HISTORY_CARTESC_truncate_3D",*) 'FILE_HISTORY_CARTESC_PRES_nlayer must be set to output variable with the pressure coordinate'
           call PRC_abort
        end if
 
-       call PROF_rapstart('FILE_O_interp', 2)
-       call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
-                               KA, KS, KE,                       & ! [IN]
-                               IA, ISB, IEB,                     & ! [IN]
-                               JA, JSB, JEB,                     & ! [IN]
-                               src  (:,:,:),                     & ! [IN]
-                               src_P(:,:,:)                      ) ! [OUT]
-       call PROF_rapend  ('FILE_O_interp', 2)
+       if ( pres_set ) then
 
-       do k = 1, ksize
-       do j = 1, jsize
-       do i = 1, isize
-          dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
-       enddo
-       enddo
-       enddo
+          call PROF_rapstart('FILE_O_interp', 2)
+          call INTERP_VERT_xih2p( FILE_HISTORY_CARTESC_PRES_nlayer, & ! [IN]
+                                  KA, KS, KE,                       & ! [IN]
+                                  IA, ISB, IEB,                     & ! [IN]
+                                  JA, JSB, JEB,                     & ! [IN]
+                                  src  (:,:,:),                     & ! [IN]
+                                  src_P(:,:,:)                      ) ! [OUT]
+          call PROF_rapend  ('FILE_O_interp', 2)
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = src_P(k,istart+i-1,jstart+j-1)
+          enddo
+          enddo
+          enddo
+
+       else
+
+          !$omp parallel do
+          do k = 1, ksize
+          do j = 1, jsize
+          do i = 1, isize
+             dst((k-1)*jsize*isize+(j-1)*isize+i) = UNDEF
+          enddo
+          enddo
+          enddo
+
+       end if
 
     else ! no interpolation
 
@@ -913,7 +961,7 @@ contains
        LANDUSE_frac_land
     implicit none
 
-    real(RP)         :: AXIS (imh,jmh,0:KMAX)
+    real(RP)         :: AXIS (imh,jmh,0:FILE_HISTORY_CARTESC_MODEL_nlayer)
     real(RP)         :: AXISO(im, jm, OKMAX)
     real(RP)         :: AXISL(im, jm, LKMAX)
     real(RP)         :: AXISU(im, jm, UKMAX)
@@ -1117,10 +1165,10 @@ contains
     ! for the shared-file I/O method, the axes are global (gsize)
     ! for one-file-per-process I/O method, the axes size is equal to the local buffer size
 
-    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   ATMOS_GRID_CARTESC_CZ (KS  :KE), &
-                                bounds=z_bnds (:,KS  :KE), gsize=KMAX   , start=startZ                 )
-    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  ATMOS_GRID_CARTESC_FZ (KS-1:KE), &
-                                bounds=zh_bnds(:,KS-1:KE), gsize=KMAX+1 , start=startZ                 )
+    call FILE_HISTORY_Set_Axis( 'z',   'Z',               'm', 'z',   ATMOS_GRID_CARTESC_CZ(KS  :KS+FILE_HISTORY_CARTESC_MODEL_nlayer-1), &
+                                bounds=z_bnds (:,KS  :KS+FILE_HISTORY_CARTESC_MODEL_nlayer-1), gsize=FILE_HISTORY_CARTESC_MODEL_nlayer,   start=startZ )
+    call FILE_HISTORY_Set_Axis( 'zh',  'Z (half level)',  'm', 'zh',  ATMOS_GRID_CARTESC_FZ(KS-1:KS+FILE_HISTORY_CARTESC_MODEL_nlayer-1), &
+                                bounds=zh_bnds(:,KS-1:KS+FILE_HISTORY_CARTESC_MODEL_nlayer-1), gsize=FILE_HISTORY_CARTESC_MODEL_nlayer+1, start=startZ )
 
     if ( FILE_HISTORY_CARTESC_PRES_nlayer > 0 ) then
        call FILE_HISTORY_Set_Axis( 'pressure', 'Pressure', 'hPa', 'pressure', FILE_HISTORY_CARTESC_PRES_val(:)/100.0_RP, &
@@ -1249,21 +1297,21 @@ contains
        start(:,:) = 1
     endif
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above ground level',                        &
-                                                'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height', 'height above ground level',                    &
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jm,1:), start=start(:,1) )
 
-    do k = 0, KMAX
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        AXIS(1:im,1:jm,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims:ime,jms:jme)
     enddo
     AXIS_name(1:3) = (/'x ', 'y ', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)',    &
-                                                'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)', &
+                                                'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:), start=start(:,1)  )
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, min(imh,IA-imsh)
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
@@ -1271,17 +1319,17 @@ contains
     enddo
     enddo
     if ( imh == IA-imsh+1 ) then
-       do k = 1, KMAX
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        do j = 1, jm
           AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)',    &
-                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)', &
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:), start=start(:,2)  )
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
@@ -1289,17 +1337,17 @@ contains
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
-       do k = 1, KMAX
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        do i = 1, im
           AXIS(i,jmh,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvz', 'height above ground level (half level xvz)',    &
-                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvz', 'height above ground level (half level xvz)', &
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,1:), start=start(:,3)  )
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, min(imh,IA-imsh)
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i  ,jmsh+j-1) &
@@ -1308,29 +1356,29 @@ contains
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
-       do k = 1, KMAX
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        do i = 1, min(imh,IA-imsh)
           AXIS(i,jmh,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 ) then
-       do k = 1, KMAX
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        do j = 1, min(jmh,JA-jmsh)
           AXIS(imh,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 .AND. jmh == JA-jmsh+1 ) then
-       do k = 1, KMAX
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
           AXIS(imh,jmh,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'z '/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvz', 'height above ground level (half level uvz)',     &
-                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvz', 'height above ground level (half level uvz)', &
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jmh,1:), start=start(:,4) )
 
-    do k = 0, KMAX
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, min(imh,IA-imsh)
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
@@ -1338,17 +1386,17 @@ contains
     enddo
     enddo
     if ( imh == IA-imsh+1 ) then
-       do k = 0, KMAX
+       do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        do j = 1, jm
           AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jms+j-1)
        enddo
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'y ', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyw', 'height above ground level (half level uyw)',    &
-                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:KMAX), start=start(:,2) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyw', 'height above ground level (half level uyw)', &
+                                                'm', AXIS_name(1:3), AXIS(1:imh,1:jm,0:), start=start(:,2)  )
 
-    do k = 0, KMAX
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, im
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+j) ) * 0.5_RP
@@ -1356,17 +1404,17 @@ contains
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
-       do k = 0, KMAX
+       do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        do i = 1, im
           AXIS(i,jmh,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,ims+i-1,jmsh+jmh-1)
        enddo
        enddo
     endif
     AXIS_name(1:3) = (/'x ', 'yh', 'zh'/)
-    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvw', 'height above ground level (half level xvw)',    &
-                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3) )
+    call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xvw', 'height above ground level (half level xvw)', &
+                                                'm', AXIS_name(1:3), AXIS(1:im,1:jmh,0:), start=start(:,3)  )
 
-    do k = 0, KMAX
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, min(jmh,JA-jmsh)
     do i = 1, min(imh,IA-imsh)
        AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i  ,jmsh+j-1) &
@@ -1375,27 +1423,27 @@ contains
     enddo
     enddo
     if ( jmh == JA-jmsh+1 ) then
-       do k = 0, KMAX
+       do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        do i = 1, min(imh,IA-imsh)
           AXIS(i,jmh,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i-1,jmsh+jmh-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+i,jmsh+jmh-1) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 ) then
-       do k = 0, KMAX
+       do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
        do j = 1, min(jmh,JA-jmsh)
           AXIS(imh,j,k) = ( ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j-1) + ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+j) ) * 0.5_RP
        enddo
        enddo
     endif
     if ( imh == IA-imsh+1 .AND. jm == JA-jmsh+1 ) then
-       do k = 0, KMAX
+       do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
           AXIS(imh,jmh,k) = ATMOS_GRID_CARTESC_REAL_FZ(k+KS-1,imsh+imh-1,jmsh+jmh-1)
        enddo
     endif
     AXIS_name(1:3) = (/'xh', 'yh', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uvw', 'height above ground level (half level uvw)', 'm', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,4)       )
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:), start=start(:,4)           )
 
     AXIS(1:im,1:jm,1) = ATMOS_GRID_CARTESC_REAL_LON (ims:ime,jms:jme) / D2R
     AXIS_name(1:2) = (/'x ', 'y '/)
@@ -1455,7 +1503,7 @@ contains
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xv', 'area of grid cell (half level xv)',  'm2', AXIS_name(1:2), &
                                                 AREAXV(ims:ime,jmsh:jme), start=start(:,3)                                  )
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, imh
        AXIS(i,j,k) = AREAZUY_X(KS+k-1,imsh+i-1,jms+j-1)
@@ -1464,8 +1512,8 @@ contains
     end do
     AXIS_name = (/'xh', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyz_x', 'area of grid cell face (half level uyz, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2)                     )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:), start=start(:,2)                         )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, im
        AXIS(i,j,k) = AREAZXV_Y(KS+k-1,ims+i-1,jmsh+j-1)
@@ -1474,8 +1522,8 @@ contains
     end do
     AXIS_name = (/'x ', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xvz_y', 'area of grid cell face (half level xvz, normal y)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3)                     )
-    do k = 0, KMAX
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:), start=start(:,3)                         )
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, imh
        AXIS(i,j,k) = AREAWUY_X(KS+k-1,imsh+i-1,jmsh+j-1)
@@ -1484,8 +1532,8 @@ contains
     end do
     AXIS_name = (/'xh', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uyw_x', 'area of grid cell face (half level uyw, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:KMAX), start=start(:,2)                    )
-    do k = 0, KMAX
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,0:), start=start(:,2)                        )
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, im
        AXIS(i,j,k) = AREAWXV_Y(KS+k-1,ims+i-1,jmsh+j-1)
@@ -1494,8 +1542,8 @@ contains
     end do
     AXIS_name = (/'x ', 'yh', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xvw_y', 'area of grid cell face (half level xvw, normal y)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jmh,0:KMAX), start=start(:,3)                     )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,0:), start=start(:,3)                         )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, im
        AXIS(i,j,k) = AREAZXY_X(KS+k-1,ims+i-1,jms+j-1)
@@ -1504,8 +1552,8 @@ contains
     end do
     AXIS_name = (/'x ', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xyz_x', 'area of grid cell face (half level xyz, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)                      )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:), start=start(:,1)                          )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, imh
        AXIS(i,j,k) = AREAZUV_Y(KS+k-1,imsh+i-1,jmsh+j-1)
@@ -1514,8 +1562,8 @@ contains
     end do
     AXIS_name = (/'xh', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uvz_y', 'area of grid cell face (half level uvz, normal y)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4)                    )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:), start=start(:,4)                        )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, imh
        AXIS(i,j,k) = AREAZUV_X(KS+k-1,imsh+i-1,jmsh+j-1)
@@ -1524,8 +1572,8 @@ contains
     end do
     AXIS_name = (/'xh', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_uvz_x', 'area of grid cell face (half level uvz, normal x)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:KMAX), start=start(:,4)                    )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:imh,1:jmh,1:), start=start(:,4)                        )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, im
        AXIS(i,j,k) = AREAZXY_Y(KS+k-1,ims+i-1,jms+j-1)
@@ -1534,9 +1582,9 @@ contains
     end do
     AXIS_name = (/'x ', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_area_xyz_y', 'area of grid cell face (half level xyz, normal y)', 'm2', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)                      )
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:), start=start(:,1)                          )
 
-    do k = 1, KMAX
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, im
        AXIS(i,j,k) = VOL(KS+k-1,ims+i-1,jms+j-1)
@@ -1545,8 +1593,8 @@ contains
     end do
     AXIS_name = (/ 'x ', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume',     'volume of grid cell',                  'm3', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:KMAX), start=start(:,1)         )
-    do k = 0, KMAX
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,1:), start=start(:,1)             )
+    do k = 0, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, im
        AXIS(i,j,k) = VOLWXY(KS+k-1,ims+i-1,jms+j-1)
@@ -1555,8 +1603,8 @@ contains
     end do
     AXIS_name = (/'x ', 'y ', 'zh'/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xyw', 'volume of grid cell (half level xyw)', 'm3', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jm,0:KMAX), start=start(:,1)         )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:im,1:jm,0:), start=start(:,1)             )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jm
     do i = 1, imh
        AXIS(i,j,k) = VOLZUY(KS+k-1,imsh+i-1,jms+j-1)
@@ -1565,8 +1613,8 @@ contains
     end do
     AXIS_name = (/'xh', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_uyz', 'volume of grid cell (half level uyz)',  'm3', &
-                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:KMAX), start=start(:,2)         )
-    do k = 1, KMAX
+                                                AXIS_name(1:3), AXIS(1:imh,1:jm,1:), start=start(:,2)             )
+    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
     do j = 1, jmh
     do i = 1, im
        AXIS(i,j,k) = VOLZXV(KS+k-1,ims+i-1,jmsh+j-1)
@@ -1575,7 +1623,7 @@ contains
     end do
     AXIS_name = (/'x ', 'yh', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'cell_volume_xvz', 'volume of grid cell (half level xvz)',  'm3', &
-                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:KMAX), start=start(:,3)         )
+                                                AXIS_name(1:3), AXIS(1:im,1:jmh,1:), start=start(:,3)             )
 
     if ( OKMAX > 0 ) then
        do k = 1, OKMAX
