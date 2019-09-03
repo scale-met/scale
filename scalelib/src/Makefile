@@ -207,7 +207,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_landuse.o	\
 	$(BUILD_DIR)/scale_cpl_sfc_index.o	\
 	$(BUILD_DIR)/scale_cpl_phy_sfc_fixed_temp.o	\
-	$(BUILD_DIR)/scale_cpl_phy_sfc_skin.o
+	$(BUILD_DIR)/scale_cpl_phy_sfc_skin.o   \
 	$(BUILD_DIR)/scale_spnudge.o	\
 	$(BUILD_DIR)/scale_dft.o
 
