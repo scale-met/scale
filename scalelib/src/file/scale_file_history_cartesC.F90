@@ -289,9 +289,11 @@ contains
     use scale_prc, only: &
        PRC_myrank
     use scale_prc_cartesC, only: &
-       PRC_2Drank, &
-       PRC_HAS_W, &
-       PRC_HAS_S
+       PRC_2Drank,     &
+       PRC_HAS_W,      &
+       PRC_HAS_S,      &
+       PRC_PERIODIC_X, &
+       PRC_PERIODIC_Y
     use scale_file_history, only: &
        FILE_HIStoRY_set_dim
     use scale_mapprojection, only: &
@@ -304,6 +306,7 @@ contains
 
     integer :: start(3,3), count(3,3)
     integer :: xs, xc, ys, yc
+    integer :: xoff, yoff
     !---------------------------------------------------------------------------
 
     ! get start and count for x and y
@@ -312,12 +315,24 @@ contains
        ys = JSGB
        xc = IMAXB
        yc = JMAXB
+       xoff = 0
+       yoff = 0
     else
        ! for the case the shared-file contains no halos
        xs = PRC_2Drank(PRC_myrank,1) * IMAX + 1 ! no IHALO
        xc = IMAX
        ys = PRC_2Drank(PRC_myrank,2) * JMAX + 1 ! no JHALO
        yc = JMAX
+       if ( PRC_PERIODIC_X ) then
+          xoff = 0
+       else
+          xoff = 1
+       end if
+       if ( PRC_PERIODIC_Y ) then
+          yoff = 0
+       else
+          yoff = 1
+       end if
     end if
 
     ! get mapping name
@@ -403,11 +418,11 @@ contains
     dims(1,:) = 'lon_uy'
     dims(2,:) = 'lat_uy'
     if ( PRC_HAS_W ) then
-       start(1,:) = xs+1
+       start(1,:) = xs+xoff
        count(1,:) = xc
     else
        start(1,:) = xs
-       count(1,:) = xc+1
+       count(1,:) = xc+xoff
     endif
     call FILE_HISTORY_Set_Dim( "XHY", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_uy", location="edge1" ) ! [IN]
 
@@ -424,11 +439,11 @@ contains
     start(1,:) = xs
     count(1,:) = xc
     if ( PRC_HAS_S ) then
-       start(2,:) = ys+1
+       start(2,:) = ys+yoff
        count(2,:) = yc
     else
        start(2,:) = ys
-       count(2,:) = yc+1
+       count(2,:) = yc+yoff
     endif
     call FILE_HISTORY_Set_Dim( "XYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, area="cell_area_xv", location="edge2" ) ! [IN]
 
@@ -443,11 +458,11 @@ contains
     dims(1,:) = 'lon_uv'
     dims(2,:) = 'lat_uv'
     if ( PRC_HAS_W ) then
-       start(1,:) = xs+1
+       start(1,:) = xs+xoff
        count(1,:) = xc
     else
        start(1,:) = xs
-       count(1,:) = xc+1
+       count(1,:) = xc+xoff
     endif
     call FILE_HISTORY_Set_Dim( "XHYH", 2, 1, dims(:,:), zs(:), start(:,:), count(:,:), mapping=mapping, location="face" ) ! [IN]
 
