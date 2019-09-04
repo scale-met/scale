@@ -1255,6 +1255,7 @@ contains
     do j = 1, ldims(3)
     do i = 1, ldims(2)
        lmask_org(i,j) = UNDEF
+       topo_org(i,j)  = UNDEF
     end do
     end do
 
@@ -1422,12 +1423,6 @@ contains
              if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
                 LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
                 LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
-                !$omp parallel do collapse(2)
-                do j = 1, ldims(3)
-                do i = 1, ldims(2)
-                   topo_org(i,j) = UNDEF
-                end do
-                end do
                 cycle
              end if
           end if
