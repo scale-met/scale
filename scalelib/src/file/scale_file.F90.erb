@@ -2347,7 +2347,7 @@ contains
     integer :: start_(<%=d%>)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -2396,12 +2396,7 @@ contains
     end if
 % end
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_real<%=rp%>_<%=d%>D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_real<%=rp%>_<%=d%>D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
