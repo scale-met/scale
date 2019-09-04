@@ -75,6 +75,8 @@ module scale_interp
   real(RP), private :: INTERP_buffer_size_fact = 2.0_RP
   logical,  private :: INTERP_use_spline_vert = .true.
 
+  real(RP), private :: EPS_bilinear
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -117,6 +119,12 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_INTERP)
+
+    if ( RP == 8 ) then
+       EPS_bilinear = 1E-6_RP
+    else
+       EPS_bilinear = 1E-2_RP
+    end if
 
     return
   end subroutine INTERP_setup
@@ -1935,8 +1943,6 @@ contains
     real(RP), intent(out) :: u, v
     logical,  intent(out) :: error
 
-    real(RP), parameter :: EPS = 1E-6_RP
-
     real(RP) :: e_x, e_y
     real(RP) :: f_x, f_y
     real(RP) :: g_x, g_y
@@ -1968,7 +1974,7 @@ contains
        return
     end if
 
-    if ( abs(k1) < EPS ) then
+    if ( abs(k1) < EPS_bilinear ) then
        LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', k1
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
        LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
@@ -1976,7 +1982,7 @@ contains
        error = .true.
        return
     end if
-    if ( abs(k2) < EPS * sqrt( (x_ref2-x_ref0)**2+(y_ref2-y_ref0)**2 ) ) then
+    if ( abs(k2) < EPS_bilinear * sqrt( (x_ref2-x_ref0)**2+(y_ref2-y_ref0)**2 ) ) then
        v = - k0 / k1
     else
        sig = sign( 1.0_RP, cross(x_ref1-x_ref0, y_ref1-y_ref0, x_ref3-x_ref0, y_ref3-y_ref0) )
@@ -1984,7 +1990,7 @@ contains
     end if
     u = ( h_x - f_x * v ) / ( e_x + g_x * v )
 
-    if ( u < -EPS .or. u > 1.0_RP+EPS .or. v < -EPS .or. v > 1.0_RP+EPS ) then
+    if ( u < -EPS_bilinear .or. u > 1.0_RP+EPS_bilinear .or. v < -EPS_bilinear .or. v > 1.0_RP+EPS_bilinear ) then
        LOG_ERROR("INTERP_bilinear_inv",*) 'Unexpected error occured', u, v
        LOG_ERROR_CONT(*) x_ref0, x_ref1, x_ref2, x_ref3
        LOG_ERROR_CONT(*) y_ref0, y_ref1, y_ref2, y_ref3
