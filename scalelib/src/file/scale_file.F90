@@ -4137,7 +4137,7 @@ contains
     integer :: start_(1)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4182,12 +4182,7 @@ contains
             error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4213,7 +4208,7 @@ contains
     integer :: start_(1)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4258,12 +4253,7 @@ contains
             error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4285,7 +4275,7 @@ contains
     integer :: start_(2)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4311,12 +4301,7 @@ contains
             2, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4338,7 +4323,7 @@ contains
     integer :: start_(2)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4364,12 +4349,7 @@ contains
             2, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4391,7 +4371,7 @@ contains
     integer :: start_(3)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4417,12 +4397,7 @@ contains
             3, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4444,7 +4419,7 @@ contains
     integer :: start_(3)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4470,12 +4445,7 @@ contains
             3, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4497,7 +4467,7 @@ contains
     integer :: start_(4)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4523,12 +4493,7 @@ contains
             4, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4550,7 +4515,7 @@ contains
     integer :: start_(4)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4576,12 +4541,7 @@ contains
             4, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
