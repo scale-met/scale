@@ -3293,6 +3293,7 @@ contains
           end do
           select case( i_INTRP_LAND_TEMP )
           case( i_intrp_mask )
+             call make_mask( lmask, work, imax, jmax, landdata=.true.)
              !$omp parallel do collapse(2)
              do j = 1, jmax
              do i = 1, imax
@@ -4113,7 +4114,8 @@ contains
       landdata, &
       iter_max  )
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in)    :: nx
@@ -4222,6 +4224,13 @@ contains
     enddo ! itelation
 
     LOG_PROGRESS('(1x,A,I3.3,A,2I8)') 'ite=', ite, ', (land,ocean) = ', num_land, num_ocean
+
+    !$omp parallel do collapse(2)
+    do j = 1, ny
+    do i = 1, nx
+       if ( abs(mask(i,j)-mask_target) > EPS ) data(i,j) = UNDEF
+    end do
+    end do
 
 
     return
