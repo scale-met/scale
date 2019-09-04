@@ -258,7 +258,7 @@ contains
        read(fid, nml=GrADS_ITEM, iostat=ierr)
        if( ierr /= 0 ) exit
 
-       nmls(file_id)%vars(n)%name    = name
+       nmls(file_id)%vars(n)%name    = upcase(name)
        nmls(file_id)%vars(n)%fname   = trim(dirname) // fname
        nmls(file_id)%vars(n)%dtype   = dtype
        nmls(file_id)%vars(n)%swpoint = swpoint
@@ -300,6 +300,7 @@ contains
     character(len=*), intent(in)  :: var_name
     integer,          intent(out) :: var_id
 
+    character(len=len(var_name)) :: vname
     integer :: n
 
     if ( file_id < 0 ) then
@@ -307,9 +308,11 @@ contains
        call PRC_abort
     end if
 
+    vname = upcase(var_name)
+
     var_id = -1
     do n = 1, nmls(file_id)%nvars
-       if ( nmls(file_id)%vars(n)%name == var_name ) then
+       if ( nmls(file_id)%vars(n)%name == vname ) then
           var_id = n
           return
        end if
@@ -1080,5 +1083,22 @@ contains
 
     return
   end subroutine check_oldnamelist
+
+  ! convert string to upcase
+  function upcase( str )
+    character(len=*), intent(in) :: str
+    character(len=len(str)) :: upcase
+    integer :: i
+    do i = 1, len_trim(str)
+       if ( str(i:i) >= 'a' .and. str(i:i) <= 'z' ) then
+          upcase(i:i) = char( ichar(str(i:i)) - 32 )
+       else
+          upcase(i:i) = str(i:i)
+       end if
+    end do
+    do i = len_trim(str)+1, len(str)
+       upcase(i:i) = ' '
+    end do
+  end function upcase
 
 end module scale_file_grads

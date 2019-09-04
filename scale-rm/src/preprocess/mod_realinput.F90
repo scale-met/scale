@@ -1553,6 +1553,12 @@ contains
        select case( itp_type_a )
        case ( i_intrp_linear )
 
+          if ( dims(2) == 1 .or. dims(3) == 1 ) then
+             LOG_ERROR("ParentAtmosInput",*) 'LINER interpolation requires nx, ny > 1'
+             LOG_ERROR_CONT(*)               'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_ATMOS'
+             call PRC_abort
+          end if
+
           !$omp parallel do collapse(2)
           do j = 1, dims(3)
           do i = 1, dims(2)
@@ -3287,6 +3293,7 @@ contains
           end do
           select case( i_INTRP_LAND_TEMP )
           case( i_intrp_mask )
+             call make_mask( lmask, work, imax, jmax, landdata=.true.)
              !$omp parallel do collapse(2)
              do j = 1, jmax
              do i = 1, imax
@@ -3326,6 +3333,12 @@ contains
 
     select case( itp_type_l )
     case ( i_intrp_linear )
+
+       if ( imax == 1 .or. jmax == 1 ) then
+          LOG_ERROR("land_interporation",*) 'LINER interpolation requires nx, ny > 1'
+          LOG_ERROR_CONT(*)                 'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_LAND'
+          call PRC_abort
+       end if
 
        !$omp parallel do collapse(2)
        do j = 1, jmax
@@ -3734,6 +3747,12 @@ contains
        select case( itp_type_a )
        case ( i_intrp_linear )
 
+          if ( imax == 1 .or. jmax == 1 ) then
+             LOG_ERROR("ocean_interporation",*) 'LINER interpolation requires nx, ny > 1'
+             LOG_ERROR_CONT(*)                  'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_OCEAN'
+             call PRC_abort
+          end if
+
           !$omp parallel do collapse(2)
           do j = 1, jmax
           do i = 1, imax
@@ -4095,7 +4114,8 @@ contains
       landdata, &
       iter_max  )
     use scale_const, only: &
-       EPS => CONST_EPS
+       UNDEF => CONST_UNDEF, &
+       EPS   => CONST_EPS
     implicit none
 
     integer,  intent(in)    :: nx
@@ -4204,6 +4224,13 @@ contains
     enddo ! itelation
 
     LOG_PROGRESS('(1x,A,I3.3,A,2I8)') 'ite=', ite, ', (land,ocean) = ', num_land, num_ocean
+
+    !$omp parallel do collapse(2)
+    do j = 1, ny
+    do i = 1, nx
+       if ( abs(mask(i,j)-mask_target) > EPS ) data(i,j) = UNDEF
+    end do
+    end do
 
 
     return
