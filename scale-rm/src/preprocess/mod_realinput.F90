@@ -1553,6 +1553,12 @@ contains
        select case( itp_type_a )
        case ( i_intrp_linear )
 
+          if ( dims(2) == 1 .or. dims(3) == 1 ) then
+             LOG_ERROR("ParentAtmosInput",*) 'LINER interpolation requires nx, ny > 1'
+             LOG_ERROR_CONT(*)               'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_ATMOS'
+             call PRC_abort
+          end if
+
           !$omp parallel do collapse(2)
           do j = 1, dims(3)
           do i = 1, dims(2)
@@ -3327,6 +3333,12 @@ contains
     select case( itp_type_l )
     case ( i_intrp_linear )
 
+       if ( imax == 1 .or. jmax == 1 ) then
+          LOG_ERROR("land_interporation",*) 'LINER interpolation requires nx, ny > 1'
+          LOG_ERROR_CONT(*)                 'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_LAND'
+          call PRC_abort
+       end if
+
        !$omp parallel do collapse(2)
        do j = 1, jmax
        do i = 1, imax
@@ -3733,6 +3745,12 @@ contains
 
        select case( itp_type_a )
        case ( i_intrp_linear )
+
+          if ( imax == 1 .or. jmax == 1 ) then
+             LOG_ERROR("ocean_interporation",*) 'LINER interpolation requires nx, ny > 1'
+             LOG_ERROR_CONT(*)                  'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_OCEAN'
+             call PRC_abort
+          end if
 
           !$omp parallel do collapse(2)
           do j = 1, jmax
