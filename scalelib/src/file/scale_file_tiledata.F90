@@ -437,7 +437,7 @@ contains
 !OCL XFILL
     do j = 1, nLAT
     do i = 1, nLON
-       DATA(i,j) = - 1
+       DATA(i,j) = UNDEF2
     end do
     end do
 

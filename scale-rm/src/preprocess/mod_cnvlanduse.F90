@@ -537,9 +537,8 @@ contains
     real(RP), parameter :: LU100M_DLAT = 5.0_RP / 60.0_RP / 100.0_RP
     real(RP), parameter :: LU100M_DLON = 7.5_RP / 60.0_RP / 100.0_RP
 
-    integer  :: lookuptable(0:16)
-    data lookuptable / -1, & ! -999 missing      -> -1 Sea Surface
-                       10, & !  1 paddy          -> 10 Paddy
+    integer  :: lookuptable(1:16)
+    data lookuptable / 10, & !  1 paddy          -> 10 Paddy
                         9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
                         1, & !  3 UNDEF          ->  1 Dessert
                         1, & !  4 UNDEF          ->  1 Dessert
@@ -646,7 +645,7 @@ contains
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "REAL4",                                        & ! [IN]
                                  LANDUSE(:,:),                                   & ! [OUT]
-                                 min_value = -999                                ) ! [IN]
+                                 min_value = 1                                   ) ! [IN]
 
     !$omp parallel do collapse(2)
     do j = 1, nLATH
@@ -677,7 +676,8 @@ contains
                 no_hit_x = .false.
                 lu = LANDUSE(ii,jj)
                 if ( lu /= UNDEF2 ) then
-                   p = lookuptable( max(0,lu) ) ! -999 to 0
+                   if ( .not. hit ) PFT_weight(:,i,j) = 0.0_RP
+                   p = lookuptable(lu)
                    PFT_weight(p,i,j) = PFT_weight(p,i,j) + 1.0_RP
                    hit = .true.
                    cycle
@@ -685,7 +685,7 @@ contains
              end if
              d = ( XH(ii,jj)-CX(i) )**2 + ( YH(ii,jj)-CY(j) )**2
              lu = LANDUSE(ii,jj)
-             if ( d < dmin .and. lu /= UNDEF2 ) then
+             if ( d < dmin ) then
                 dmin = d
                 min_i = ii
                 min_j = jj
@@ -696,7 +696,8 @@ contains
        if ( ( .not. hit ) .and. dmin < limit ) then
           lu = LANDUSE(min_i,min_j)
           if ( lu /= UNDEF2 ) then
-             p = lookuptable( max(0,lu) ) ! -999 to 0
+             PFT_weight(:,i,j) = 0.0_RP
+             p = lookuptable(lu)
              PFT_weight(p,i,j) = 1.0_RP
           end if
        end if
