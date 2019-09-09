@@ -80,7 +80,8 @@ module scale_atmos_phy_mp_sn14
      LHF00  => CONST_LHF00,  &
      PSAT0  => CONST_PSAT0,  &
      EMELT  => CONST_EMELT,  &
-     DWATR  => CONST_DWATR
+     DWATR  => CONST_DWATR,  &
+     SMALL  => CONST_EPS
 
   use scale_atmos_hydrometeor, only: &
      N_HYD
@@ -280,7 +281,12 @@ module scale_atmos_phy_mp_sn14
 
   integer, parameter :: Pac_MAX       = 24
 
-
+  ! for charge density
+  integer, parameter :: I_CGNGacNS2NG = 25
+  integer, parameter :: I_CGNGacNI2NG = 26
+  integer, parameter :: I_NGspl = 49
+  integer, parameter :: I_NSspl = 50
+  integer, parameter :: Pcrg_MAX = 26
 
   character(len=H_SHORT), save :: WLABEL(HYDRO_MAX)
 
@@ -655,7 +661,15 @@ contains
        RHOE_t, &
        CPtot_t, &
        CVtot_t, &
-       EVAPORATE )
+       EVAPORATE, &
+       QA_LT, &
+       d0_crg, v0_crg, &
+       flg_lt, &
+       dqcrg, &
+       beta_crg, &
+       QTRC_crg, &
+       QSPLT_in, Sarea, &
+       RHOQ_t_mp      )
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -681,6 +695,16 @@ contains
     real(RP), intent(out) :: CVtot_t(KA,IA,JA)
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
+    ! Optional for Lightning
+    integer,  intent(in) :: QA_LT  ! -- If Lightning component is not used, QA_LT = 0
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    real(RP), intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
+    real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: RHOQ_t_mp(KA,IA,JA,QA_LT)
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SN14'
@@ -696,7 +720,11 @@ contains
        Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:),            & ! (in)
        real(dt,RP), cz(:,:,:), fz(:,:,:),                              & ! (in)
        RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), & ! (out)
-       EVAPORATE(:,:,:)                                                ) ! (out)
+       EVAPORATE(:,:,:),                                               & ! (out)
+       QA_LT,                                                          & ! (in)
+       d0_crg, v0_crg, flg_lt, dqcrg(:,:,:), beta_crg(:,:,:),          & ! (optional in)
+       QTRC_crg(:,:,:,:),                                              & ! (optional in)
+       QSPLT_in(:,:,:,:), Sarea(:,:,:,:), RHOQ_t_mp(:,:,:,:)           ) ! (optional out)
 
 #ifdef PROFILE_FIPP
     call fipp_stop()
@@ -2039,7 +2067,17 @@ contains
        RHOE_t, &
        CPtot_t, &
        CVtot_t, &
-       EVAPORATE )
+       EVAPORATE, &
+       QA_LT, &
+       d0_crg, &
+       v0_crg, &
+       flg_lt, &
+       dqcrg, &
+       beta_crg, &
+       QTRC_crg, &
+       QSPLT_in, &
+       Sarea, &
+       RHOQcrg_t_mp )
 
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -2076,6 +2114,17 @@ contains
     real(RP),intent(out) :: CVtot_t(KA,IA,JA)
 
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
+
+    !--- for lightning
+    integer,  intent(in) :: QA_LT   ! If Lightning component is not used, QA_LT = 0
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    real(RP), intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
+    real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: RHOQcrg_t_mp(KA,IA,JA,QA_LT)
 
     real(RP) :: pres (KA)
     real(RP) :: temp (KA)
@@ -2184,7 +2233,95 @@ contains
     real(RP) :: dqv, dql, dqi
     real(RP) :: dcv, dcp
 
+    !---- for Lightning component
+!    logical, private, save :: MP_doice_graupel_collection = .false.
+!    real(RP), private :: flg_igcol = 0.0_RP
+    !--- for Charge split
+    real(RP) :: v0_crg_l=0.0_RP, d0_crg_l=0.0_RP
+    real(RP) :: facq(I_QC:I_QG), f_crg
+    integer :: grid(2), pp, qq
+    real(RP) :: drhoqcrg_c, drhoqcrg_r
+    real(RP) :: drhoqcrg_i, drhoqcrg_s, drhoqcrg_g
+
+    ! production rate of charge density
+    real(RP) :: Pcrg1(PQ_MAX,KA)
+    real(RP) :: Pcrg2(Pcrg_MAX,KA)
+    real(RP) :: rhoq_crg(I_QC:I_QG,KA)
+    real(RP) :: rhoq2_crg(I_QC:I_QG,KA)
+    real(RP) :: QTRC0(KA,IA,JA,QA_MP)
+    real(RP) :: Crs(KA,IA,JA,QA_MP-1)
+    real(RP),allocatable :: RHOQcrg0_t(:,:,:,:)
+
+    real(RP) :: crg_split_s
+    real(RP) :: crg_split_g
+    real(RP) :: crg_split_i
+    real(RP) :: wrm_dnc_crg
+    real(RP) :: wrm_dnr_crg
+    real(RP) :: gc_dnc_crg
+    real(RP) :: sc_dnc_crg
+    real(RP) :: ic_dnc_crg
+    real(RP) :: rg_dng_crg
+    real(RP) :: rg_dnr_crg
+    real(RP) :: rs_dnr_crg
+    real(RP) :: rs_dns_crg
+    real(RP) :: ri_dnr_crg
+    real(RP) :: ri_dni_crg
+    real(RP) :: ii_dni_crg
+    real(RP) :: is_dni_crg
+    real(RP) :: ss_dns_crg
+    real(RP) :: gs_dns_crg
+    real(RP) :: gi_dni_crg
+    real(RP) :: gg_dng_crg
+    ! mixed-phase collection process total plus(clp_), total minus(clm_)
+    real(RP) :: clp_dnc_crg, clm_dnc_crg
+    real(RP) :: clp_dnr_crg, clm_dnr_crg
+    real(RP) :: clp_dni_crg, clm_dni_crg
+    real(RP) :: clp_dns_crg, clm_dns_crg
+    real(RP) :: clp_dng_crg, clm_dng_crg
+    ! production rate of partial conversion(ice, snow => graupel)
+    real(RP) :: pco_dni_crg
+    real(RP) :: pco_dns_crg
+    real(RP) :: pco_dng_crg
+    ! production rate of enhanced melting due to
+    real(RP) :: eml_dnc_crg
+    real(RP) :: eml_dnr_crg
+    real(RP) :: eml_dni_crg
+    real(RP) :: eml_dns_crg
+    real(RP) :: eml_dng_crg
+    ! production rate of ice multiplication by splintering
+    real(RP) :: spl_dni_crg
+    real(RP) :: spl_dns_crg
+    real(RP) :: spl_dng_crg
+    real(RP) :: rate1
+    real(RP) :: flg_lt_l
+
+    real(RP) :: sw1, sw2
+    integer :: ip
     !---------------------------------------------------------------------------
+
+    !---------------------------------------------------------------------------
+
+!    flg_igcol = 0.0_RP
+    flg_lt_l = 0.0_RP
+    crg_split_i = 0.0_RP
+    crg_split_s = 0.0_RP
+    crg_split_g = 0.0_RP
+    !--- Lightning component is on
+    if( QA_LT /= 0 ) then
+      flg_lt_l = flg_lt
+      d0_crg_l = d0_crg
+      v0_crg_l = v0_crg
+      Qsplt_in(:,:,:,:) = 0.0_RP
+      allocate(RHOQcrg0_t(KA,IA,JA,QA_LT))
+      RHOQcrg_t_mp(:,:,:,:) = 0.0_RP
+!      if( MP_doice_graupel_collection ) then
+!        flg_igcol = 1.0_RP
+!      else
+!        write(*,*) 'xxx MP_doice_graupel_collection should be true for TK78 Stop!'
+!        call PRC_MPIstop
+!        flg_igcol = 0.0_RP
+!      endif
+    endif
 
     !$omp parallel do &
     !$omp private (pres,temp,rrho,rhoe,rhoq,rhoq2,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
@@ -2413,6 +2550,17 @@ contains
           vt_xa(k,I_mp_QG,2) = alpha_v(I_mp_QG,2)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,2))*rho_fac_q(k,I_mp_QG)
        end do
 
+       rhoq_crg(:,:) = 0.0_RP
+       rhoq2_crg(:,:) = 0.0_RP
+       do ip = 1, int(flg_lt_l)
+          do k = KS, KE
+             do iq = I_QC, I_QG
+                rhoq_crg(iq,k) = DENS(k,i,j) * QTRC_crg(k,i,j,iq-1)
+                rhoq2_crg(iq,k) = rhoq_crg(iq,k)
+             enddo
+          enddo
+       enddo
+
        call moist_psat_liq( KA, KS, KE, &
                             wtemp(:), esw(:) ) ! [IN], [OUT]
        call moist_psat_ice( KA, KS, KE, &
@@ -2433,21 +2581,45 @@ contains
        !
        ! update subroutine
        !
-       call update_by_phase_change( &
-            KA, KS, KE, &
-            ntmax_phase_change, dt,          & ! (in)
-            cz(:,i,j), fz(:,i,j),            & ! (in)
-            w(:,i,j),                        & ! (in)
-            dTdt_equiv_d(:),                 & ! (in)
-            DENS(:,i,j), qdry(:,i,j),        & ! (in)
-            esw(:), esi(:),                  & ! (in)
-            rhoq2(:,:), pres(:), temp(:),    & ! (in)
-            cpa(:), cva(:),                  & ! (in)
-            PQ(:,:),                         & ! (inout)
-            sl_PLCdep, sl_PLRdep, sl_PNRdep, & ! (inout)
-            RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
-            CPtot0_t(:), CVtot0_t(:),        & ! (out)
-            EVAPORATE(:,i,j)                 ) ! (out)
+       if( QA_LT /= 0 ) then
+          call update_by_phase_change( &
+               KA, KS, KE, &
+               ntmax_phase_change, dt,          & ! (in)
+               cz(:,i,j), fz(:,i,j),            & ! (in)
+               w(:,i,j),                        & ! (in)
+               dTdt_equiv_d(:),                 & ! (in)
+               DENS(:,i,j), qdry(:,i,j),        & ! (in)
+               esw(:), esi(:),                  & ! (in)
+               rhoq2(:,:), pres(:), temp(:),    & ! (in)
+               cpa(:), cva(:),                  & ! (in)
+               flg_lt_l,                        & ! in
+               PQ(:,:),                         & ! (inout)
+               sl_PLCdep, sl_PLRdep, sl_PNRdep, & ! (inout)
+               RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
+               CPtot0_t(:), CVtot0_t(:),        & ! (out)
+               EVAPORATE(:,i,j),                & ! (out)
+               QA_LT,                           & ! (in)
+               rhoq2_crg(I_QC:I_QG,:),          & ! (in:optional)
+               RHOQcrg0_t(:,i,j,:)              ) ! (inout:optional)
+       else
+          call update_by_phase_change( &
+               KA, KS, KE, &
+               ntmax_phase_change, dt,          & ! (in)
+               cz(:,i,j), fz(:,i,j),            & ! (in)
+               w(:,i,j),                        & ! (in)
+               dTdt_equiv_d(:),                 & ! (in)
+               DENS(:,i,j), qdry(:,i,j),        & ! (in)
+               esw(:), esi(:),                  & ! (in)
+               rhoq2(:,:), pres(:), temp(:),    & ! (in)
+               cpa(:), cva(:),                  & ! (in)
+               flg_lt_l,                        & ! in
+               PQ(:,:),                         & ! (inout)
+               sl_PLCdep, sl_PLRdep, sl_PNRdep, & ! (inout)
+               RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
+               CPtot0_t(:), CVtot0_t(:),        & ! (out)
+               EVAPORATE(:,i,j),                & ! (out)
+               QA_LT                            ) ! (in)
+       endif
 
        ! total tendency
        do k = KS, KE
@@ -2471,6 +2643,13 @@ contains
           pres(k) = DENS(k,i,j) * ( cpa(k) - cva(k) ) * temp(k)
        enddo
 
+       do ip = 1, int(flg_lt_l)
+          do k = KS, KE
+             do iq = I_QC, I_QG
+                rhoq_crg(iq,k) = rhoq_crg(iq,k) + RHOQcrg0_t(k,i,j,iq-1)*dt  ! need limiter?
+             enddo
+          enddo
+       enddo
 
 #ifdef DEBUG
        call debug_tem( KA, KS, KE, &
@@ -2523,14 +2702,27 @@ contains
           vt_xa(k,I_mp_QG,2) = alpha_v(I_mp_QG,2)*(xq(k,I_mp_QG)**beta_v(I_mp_QG,2))*rho_fac_q(k,I_mp_QG)
        enddo
 
+       Pcrg1(:,:) = 0.0_RP
+       Pcrg2(:,:) = 0.0_RP
+       do ip = 1, int(flg_lt_l)
+          do k = KS, KE
+             do iq = I_QC, I_QG
+                rhoq2_crg(iq,k) = rhoq_crg(iq,k)
+             enddo
+          enddo
+       enddo
+
        ! Auto-conversion, Accretion, Self-collection, Break-up
        if ( MP_doautoconversion ) then
-          call aut_acc_slc_brk(  &
-               KA, KS, KE, &
-               rhoq2(:,:),          & ! (in)
-               xq(:,:), dq_xa(:,:), & ! (in)
-               DENS(:,i,j),         & ! (in)
-               PQ(:,:)              ) ! (inout)
+          call aut_acc_slc_brk(        &
+               KA, KS, KE,             &
+               flg_lt_l,               & ! (in)
+               rhoq2(:,:),             & ! (in)
+               rhoq2_crg(I_QC:I_QG,:), & ! (in)
+               xq(:,:), dq_xa(:,:),    & ! (in)
+               DENS(:,i,j),            & ! (in)
+               PQ(:,:),                & ! (in)
+               Pcrg1(:,:)              ) ! (inout)
 
        else
 !OCL XFILL
@@ -2542,23 +2734,41 @@ contains
              PQ(k,I_NCacc) = 0.0_RP
              PQ(k,I_NRslc) = 0.0_RP
              PQ(k,I_NRbrk) = 0.0_RP
+             !--- for lightning
+             Pcrg1(I_LCaut,k) = 0.0_RP
+             Pcrg1(I_NCaut,k) = 0.0_RP
+             Pcrg1(I_NRaut,k) = 0.0_RP
+             Pcrg1(I_LCacc,k) = 0.0_RP
+             Pcrg1(I_NCacc,k) = 0.0_RP
+             Pcrg1(I_NRslc,k) = 0.0_RP
+             Pcrg1(I_NRbrk,k) = 0.0_RP
           end do
        endif
 
-       call mixed_phase_collection( &
+       call mixed_phase_collection(            &
       ! collection process
-            KA, KS, KE, &
+            KA, KS, KE,                        & ! (in)
+            flg_lt_l,                          & ! (in)
+            d0_crg_l, v0_crg_l,                & ! (in)
+            beta_crg(:,i,j),                   & ! (in)
+            dqcrg(:,i,j),                      & ! (in)
             temp(:), rhoq2(:,:),               & ! (in)
+            rhoq2_crg(I_QC:I_QG,:),            & ! (in)
             xq(:,:), dq_xa(:,:), vt_xa(:,:,:), & ! (in)
             PQ(:,:),                           & ! (inout)
+            Pcrg1(:,:),                        & ! (inout)
+            Pcrg2(:,:),                        & ! (inout)
             Pac(:,:)                           ) ! (out)
 
-       call ice_multiplication( &
-            KA, KS, KE, &
-            Pac(:,:),            & ! (in)
-            temp(:), rhoq2(:,:), & ! (in)
-            xq(:,:),             & ! (in)
-            PQ(:,:)              ) ! (inout)
+       call ice_multiplication(     &
+            KA, KS, KE,             & ! (in)
+            flg_lt_l,               & ! (in)
+            Pac(:,:),               & ! (in)
+            temp(:), rhoq2(:,:),    & ! (in)
+            rhoq2_crg(I_QC:I_QG,:), & ! (in)
+            xq(:,:),                & ! (in)
+            PQ(:,:),                & ! (inout)
+            Pcrg1(:,:)              ) ! (inout)
 
        !
        ! update
@@ -2569,6 +2779,14 @@ contains
           wrm_dnc = max( dt*( PQ(k,I_NCaut)+PQ(k,I_NCacc)               ), -rhoq2(k,I_NC) )
           wrm_dnr = max( dt*( PQ(k,I_NRaut)+PQ(k,I_NRslc)+PQ(k,I_NRbrk) ), -rhoq2(k,I_NR) )
           wrm_dqr = -wrm_dqc
+          ! for charge density
+          do ip = 1, int(flg_lt_l)
+            wrm_dnc_crg = dt*( Pcrg1(I_NCaut,k)+Pcrg1(I_NCacc,k) )   ! C + C -> R
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QC,k)),abs(wrm_dnc_crg) )
+            wrm_dnc_crg = sign( sw1,wrm_dnc_crg )
+            wrm_dnr_crg = - wrm_dnc_crg
+          enddo
           ! mixed phase collection
           ! Pxxacyy2zz xx and yy decrease and zz increase .
           !
@@ -2583,6 +2801,19 @@ contains
           gc_dnc  = max( dt*Pac(k,I_NGacNC2NG), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc               )) ! => dnc:minus
           sc_dnc  = max( dt*Pac(k,I_NSacNC2NS), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc-gc_dnc        )) ! => dnc:minus
           ic_dnc  = max( dt*Pac(k,I_NIacNC2NI), min(0.0_RP, -rhoq2(k,I_NC)-wrm_dnc-gc_dnc-sc_dnc )) ! => dnc:minus
+          ! Decrease of absolute value of cloud charge density
+          do ip = 1, int(flg_lt_l)
+            gc_dnc_crg  = dt*Pcrg2(I_NGacNC2NG,k)  ! C + G -> G  ( move from c to g )
+            sc_dnc_crg  = dt*Pcrg2(I_NSacNC2NS,k)  ! C + S -> S  ( move from c to s )
+            ic_dnc_crg  = dt*Pcrg2(I_NIacNC2NI,k)  ! C + I -> I  ( move from c to i )
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QC,k)+wrm_dnc_crg                      ),abs(gc_dnc_crg) )
+            gc_dnc_crg = sign( sw1,gc_dnc_crg )
+            sw1 = min( abs(rhoq2_crg(I_QC,k)+wrm_dnc_crg+gc_dnc_crg           ),abs(sc_dnc_crg) )
+            sc_dnc_crg = sign( sw1,sc_dnc_crg )
+            sw1 = min( abs(rhoq2_crg(I_QC,k)+wrm_dnc_crg+gc_dnc_crg+sc_dnc_crg),abs(ic_dnc_crg) )
+            ic_dnc_crg = sign( sw1,ic_dnc_crg )
+          enddo
 
           ! rain mass decrease ( tem < 273.15K)
           sw = sign(0.5_RP, T00-temp(k)) + 0.5_RP ! if( temp(k,i,j) <= T00 )then sw=1, else sw=0
@@ -2595,17 +2826,54 @@ contains
           rg_dng  = max( dt*Pac(k,I_NRacNG2NG  ), min(0.0_RP, -rhoq2(k,I_NG)                       )) * ( 1.0_RP - sw )
           rs_dnr  = max( dt*Pac(k,I_NRacNS2NG_R), min(0.0_RP, -rhoq2(k,I_NR)-wrm_dnr-rg_dnr        )) * sw
           ri_dnr  = max( dt*Pac(k,I_NRacNI2NG_R), min(0.0_RP, -rhoq2(k,I_NR)-wrm_dnr-rg_dnr-rs_dnr )) * sw
-
+          ! Decrease of absolute value of rain charge density
+          do iq = 1, int(flg_lt_l)
+            rg_dnr_crg  = dt*Pcrg2(I_NRacNG2NG,  k)* sw                 ! R + G -> G
+            rg_dng_crg  = dt*Pcrg2(I_NRacNG2NG,  k)* ( 1.0_RP - sw )    ! R + G -> R
+            rs_dnr_crg  = dt*Pcrg2(I_NRacNS2NG_R,k)* sw                 ! R + S -> G
+            ri_dnr_crg  = dt*Pcrg2(I_NRacNI2NG_R,k)* sw                 ! R + I -> G
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QR,k)+wrm_dnr_crg),abs(rg_dnr_crg) )
+            rg_dnr_crg = sign( sw1,rg_dnr_crg )
+            sw1 = min( abs(rhoq2_crg(I_QG,k)            ),abs(rg_dng_crg) )
+            rg_dng_crg = sign( sw1,rg_dng_crg )
+            sw1 = min( abs(rhoq2_crg(I_QR,k)+wrm_dnr_crg),abs(rs_dnr_crg) )
+            rs_dnr_crg = sign( sw1,rs_dnr_crg )
+            sw1 = min( abs(rhoq2_crg(I_QR,k)+wrm_dnr_crg),abs(ri_dnr_crg) )
+            ri_dnr_crg = sign( sw1,ri_dnr_crg )
+          enddo
           ! ice mass decrease
           fac1    = (ri_dqr-eps)/ (dt*Pac(k,I_LRacLI2LG_R)-eps) ! suppress factor by filter of rain
           ri_dqi  = max( dt*Pac(k,I_LRacLI2LG_I)*fac1, min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc               )) ! => dqg
           ii_dqi  = max( dt*Pac(k,I_LIacLI2LS  )     , min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc-ri_dqi        )) ! => dqs
           is_dqi  = max( dt*Pac(k,I_LIacLS2LS  )     , min(0.0_RP, -rhoq2(k,I_QI)+ic_dqc-ri_dqi-ii_dqi )) ! => dqs
+!!         !-- Y.Sato added(2018/8/31)
+!!         gi_dqi  = max( dt*Pac(I_LGacLI2LG,k)       , min(0.0_RP, -rhoq2(I_QI,k)+ic_dqc-ri_dqi-ii_dqi-is_dqi )) ! => dqg
           ! ice num. decrease
           fac4    = (ri_dnr-eps)/ (dt*Pac(k,I_NRacNI2NG_R)-eps) ! suppress factor by filter of rain
           ri_dni  = max( dt*Pac(k,I_NRacNI2NG_I)*fac4, min(0.0_RP, -rhoq2(k,I_NI)               )) ! => dni:minus
           ii_dni  = max( dt*Pac(k,I_NIacNI2NS  )     , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni        )) ! => dni:minus,dns:plus(*0.5)
           is_dni  = max( dt*Pac(k,I_NIacNS2NS  )     , min(0.0_RP, -rhoq2(k,I_NI)-ri_dni-ii_dni )) ! => dni:minus,dns:plus
+!!         !-- Y.Sato added(2018/8/31)
+!!         gi_dni  = max( dt*Pac(I_NGacNI2NG,k)       , min(0.0_RP, -rhoq2(I_NI,k)-ri_dni-ii_dni-is_dni )) ! => dns:minus
+          ! Decrease of absolute value of ice charge density
+          do ip = 1, int(flg_lt_l)
+            ri_dni_crg  = dt*Pcrg2(I_NRacNI2NG_I,k)*fac4   !  I + R -> G
+            ii_dni_crg  = dt*Pcrg2(I_NIacNI2NS,k)          !  I + I -> S
+            is_dni_crg  = dt*Pcrg2(I_NIacNS2NS,k)          !  I + S -> S
+!!            !-- Y.Sato added(2018/8/31)
+!!            gi_dni_crg  = dt*Pcrg2(I_NGacNI2NG,k)          ! G + S -> G
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QI,k)-ic_dnc_crg)                      ,abs(ri_dni_crg) )
+            ri_dni_crg = sign( sw1,ri_dni_crg )
+            sw1 = min( abs(rhoq2_crg(I_QI,k)-ic_dnc_crg+ri_dni_crg)           ,abs(ii_dni_crg) )
+            ii_dni_crg = sign( sw1,ii_dni_crg )
+            sw1 = min( abs(rhoq2_crg(I_QI,k)-ic_dnc_crg+ri_dni_crg+ii_dni_crg),abs(is_dni_crg) )
+            is_dni_crg = sign( sw1,is_dni_crg )
+!!            !-- Y.Sato added(2018/8/31)
+!!            sw1 = min( abs(rhoq2_crg(I_QI,k)-ic_dnc_crg+ri_dni_crg+ii_dni_crg+is_dni_crg),abs(gi_dni_crg) )
+!!            gi_dni_crg = sign( sw1,gi_dni_crg )
+          enddo
           ! snow mass decrease
           fac3    = (rs_dqr-eps)/(dt*Pac(k,I_LRacLS2LG_R)-eps) ! suppress factor by filter of rain
           rs_dqs  = max( dt*Pac(k,I_LRacLS2LG_S)*fac3, min(0.0_RP, -rhoq2(k,I_QS)+sc_dqc+ii_dqi+is_dqi        )) ! => dqg
@@ -2618,6 +2886,30 @@ contains
           ss_dns  = max( dt*Pac(k,I_NSacNS2NS  )     , min(0.0_RP, -rhoq2(k,I_NS)+0.50_RP*ii_dni+is_dni-rs_dns-gs_dns ))
           !
           gg_dng  = max( dt*Pac(k,I_NGacNG2NG)       , min(0.0_RP, -rhoq2(k,I_NG) ))
+          ! Decrease of absolute value of snow charge density
+          do ip = 1, int(flg_lt_l)
+            rs_dns_crg  = dt*Pcrg2(I_NRacNS2NG_S,k)*fac6  ! R + S -> G
+            gs_dns_crg  = dt*Pcrg2(I_NGacNS2NG,k)         ! G + S -> G
+            ss_dns_crg  = 0.0_RP                              ! S + S -> S (No charge transfer)
+            gg_dng_crg  = 0.0_RP                              ! G + G -> G (No charge transfer)
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QS,k)-sc_dnc_crg-ii_dni-is_dni_crg),           abs(rs_dns_crg) )
+            rs_dns_crg = sign( sw1,rs_dns_crg )
+            sw1 = min( abs(rhoq2_crg(I_QS,k)-sc_dnc_crg-ii_dni-is_dni_crg+rs_dns_crg),abs(gs_dns_crg) )
+            gs_dns_crg = sign( sw1,gs_dns_crg )
+          enddo
+          !--- Charge split
+          do ip = 1, int(flg_lt_l)
+            sw1 = sign(0.5_RP, abs( Pcrg2(I_CGNGacNS2NG,k) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
+            sw2 = sign(0.5_RP, abs( Pcrg2(I_CGNGacNI2NG,k) )-EPS ) + 0.5_RP ! if abs Pcrg2 is smaller than EPS, sw=1, else sw=0
+            crg_split_g =  dt*Pcrg2(I_CGNGacNS2NG,k)*sw1 &
+                        +  dt*Pcrg2(I_CGNGacNI2NG,k)*sw2
+            crg_split_s = -dt*Pcrg2(I_CGNGacNS2NG,k)*sw1
+!!            crg_split_i = -dt*Pcrg2(I_CGNGacNI2NG,k,i,j)*sw2  !Y.Sato (2018/8/31)
+            QSPLT_in(k,i,j,1) = crg_split_g / dt    ! fC/s
+            QSPLT_in(k,i,j,3) = crg_split_s / dt    ! fC/s
+            QSPLT_in(k,i,j,2) = crg_split_i / dt    ! fC/s
+          enddo
           !
           ! total plus in mixed phase collection(clp_)
           ! mass
@@ -2633,6 +2925,20 @@ contains
           clp_dni = 0.0_RP
           clp_dns = -ii_dni*0.5_RP
           clp_dng = (-rs_dnr-ri_dnr) * sw
+          ! Decrease of absolute value of graupel charge density
+          do ip = 1, int(flg_lt_l)
+            clp_dnc_crg = 0.0_RP
+            clp_dnr_crg = -rg_dng_crg*(1.0_RP-sw)
+            clp_dni_crg = -ic_dnc_crg !&
+!!                          +crg_split_i ! Y.Sato added (2018/8/31)
+            clp_dns_crg = -sc_dnc_crg-ii_dni_crg-is_dni_crg-ss_dns_crg &
+                          +crg_split_s
+            clp_dng_crg = -gc_dnc_crg+(-rg_dnr_crg-rs_dnr_crg-ri_dnr_crg)*sw &
+                          -ri_dni_crg-rs_dns_crg-gs_dns_crg-gg_dng_crg &
+!!                          -gi_dni_crg & !--- Y.Sato (2018/8/31)
+                          +crg_split_g
+          enddo
+
           ! total minus in mixed phase collection(clm_)
           ! mass
           clm_dqc = gc_dqc+sc_dqc+ic_dqc
@@ -2646,6 +2952,15 @@ contains
           clm_dni = ri_dni+ii_dni+is_dni
           clm_dns = rs_dns+ss_dns+gs_dns
           clm_dng = gg_dng + rg_dng * (1.0_RP-sw)
+          ! charge density
+          do ip = 1, int(flg_lt_l)
+            clm_dnc_crg = gc_dnc_crg+sc_dnc_crg+ic_dnc_crg
+            clm_dnr_crg = (rg_dnr_crg+rs_dnr_crg+ri_dnr_crg) * sw
+            clm_dni_crg = ri_dni_crg+ii_dni_crg+is_dni_crg  !!&
+!!                        + gi_dni_crg  !Y.Sato (2018/8/31)
+            clm_dns_crg = rs_dns_crg+gs_dns_crg+ss_dns_crg
+            clm_dng_crg = gg_dng_crg+rg_dng_crg*(1.0_RP-sw)
+          enddo
 
           ! partial conversion
           ! 08/05/08 [Mod] T.Mitsui
@@ -2656,6 +2971,17 @@ contains
           pco_dni = max( dt*PQ(k,I_NIcon), -clp_dni )
           pco_dns = max( dt*PQ(k,I_NScon), -clp_dns )
           pco_dng = -pco_dni-pco_dns
+          !-- for charge density
+          do ip = 1, int(flg_lt_l)
+            pco_dni_crg = dt*Pcrg1(I_NIcon,k)
+            pco_dns_crg = dt*Pcrg1(I_NScon,k)
+!            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QI,k)+clp_dni_crg  ),abs(pco_dni_crg) )
+            pco_dni_crg = sign( sw1,pco_dni_crg )
+            sw1 = min( abs(rhoq2_crg(I_QS,k)+clp_dns_crg  ),abs(pco_dns_crg) )
+            pco_dns_crg = sign( sw1,pco_dns_crg )
+            pco_dng_crg = -pco_dni_crg-pco_dns_crg
+          enddo
           ! enhanced melting ( always negative value )
           ! ice-cloud melting produces cloud, others produce rain
           eml_dqi =  max( dt*PQ(k,I_LIacm), min(0.0_RP, -rhoq2(k,I_QI)-(clp_dqi+clm_dqi)-pco_dqi ))
@@ -2671,6 +2997,22 @@ contains
                      min(0.0_RP, -rhoq2(k,I_NG)-(clp_dng+clm_dng)-pco_dng ))
           eml_dnc = -eml_dni
           eml_dnr = -eml_dns-eml_dng
+          !-- for charge density
+          do ip = 1, int(flg_lt_l)
+            eml_dni_crg =  dt*Pcrg1(I_NIacm,k)   ! I+C->C
+            eml_dns_crg =  dt*Pcrg1(I_NSacm,k)   ! S+C->R
+            eml_dng_crg =  dt*(Pcrg1(I_NGacm,k)+Pcrg1(I_NGarm,k)+Pcrg1(I_NSarm,k)+Pcrg1(I_NIarm,k)) ! G+R->R, G+C->R
+!            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QI,k)+clp_dni_crg+clm_dni_crg+pco_dni_crg  ),abs(eml_dni_crg) )
+            eml_dni_crg = sign( sw1,eml_dni_crg )
+            sw1 = min( abs(rhoq2_crg(I_QS,k)+clp_dns_crg+clm_dns_crg+pco_dns_crg  ),abs(eml_dns_crg) )
+            eml_dns_crg = sign( sw1,eml_dns_crg )
+            sw1 = min( abs(rhoq2_crg(I_QG,k)+clp_dng_crg+clm_dng_crg+pco_dng_crg  ),abs(eml_dng_crg) )
+            eml_dng_crg = sign( sw1,eml_dng_crg )
+
+            eml_dnc_crg = -eml_dni_crg
+            eml_dnr_crg = -eml_dns_crg-eml_dng_crg
+          enddo
           !
           ! ice multiplication
           spl_dqg = max( dt*PQ(k,I_LGspl), min(0.0_RP, -rhoq2(k,I_QG)-(clp_dqg+clm_dqg)-pco_dqg-eml_dqg ))
@@ -2679,6 +3021,17 @@ contains
           fac9    = (spl_dqg-eps)/(dt*PQ(k,I_LGspl)-eps)
           fac10   = (spl_dqs-eps)/(dt*PQ(k,I_LSspl)-eps)
           spl_dni = dt*PQ(k,I_NIspl)*fac9*fac10
+          !-- for charge density
+          do ip = 1, int(flg_lt_l)
+            spl_dns_crg = dt*Pcrg1(I_NSspl,k)*fac9*fac10
+            spl_dng_crg = dt*Pcrg1(I_NGspl,k)*fac9*fac10
+            !--- limiter
+            sw1 = min( abs(rhoq2_crg(I_QS,k)+clp_dns_crg+pco_dns_crg+eml_dns_crg  ),abs(spl_dns_crg) )
+            spl_dns_crg = sign( sw1,spl_dns_crg )
+            sw1 = min( abs(rhoq2_crg(I_QG,k)+clp_dng_crg+pco_dng_crg+eml_dng_crg  ),abs(spl_dng_crg) )
+            spl_dng_crg = sign( sw1,spl_dng_crg )
+            spl_dni_crg = -spl_dns_crg-spl_dng_crg
+          enddo
 
 
           !
@@ -2707,6 +3060,14 @@ contains
           ! total graupel change
           drhoqg =           ( clp_dqg + clm_dqg + eml_dqg ) * fact + pco_dqg + spl_dqg
           drhong =           ( clp_dng + clm_dng + eml_dng ) * fact + pco_dng
+          !-- for charge density
+          do ip = 1, int(flg_lt_l)
+            drhoqcrg_c = wrm_dnc_crg + ( clp_dnc_crg + clm_dnc_crg + eml_dnc_crg ) * fact
+            drhoqcrg_r = wrm_dnr_crg + ( clp_dnr_crg + clm_dnr_crg + eml_dnr_crg ) * fact
+            drhoqcrg_i = ( clp_dni_crg + clm_dni_crg + eml_dni_crg ) * fact + pco_dni_crg + spl_dni_crg
+            drhoqcrg_s = ( clp_dns_crg + clm_dns_crg + eml_dns_crg ) * fact + pco_dns_crg + spl_dns_crg
+            drhoqcrg_g = ( clp_dng_crg + clm_dng_crg + eml_dng_crg ) * fact + pco_dng_crg + spl_dng_crg
+          enddo
           !
 
           ! tendency
@@ -2720,6 +3081,14 @@ contains
           RHOQ0_t(k,I_NS) = drhons / dt
           RHOQ0_t(k,I_QG) = drhoqg / dt
           RHOQ0_t(k,I_NG) = drhong / dt
+
+          do ip = 1, int(flg_lt_l)
+            RHOQcrg0_t(k,i,j,I_QC-1) = drhoqcrg_c / dt
+            RHOQcrg0_t(k,i,j,I_QR-1) = drhoqcrg_r / dt
+            RHOQcrg0_t(k,i,j,I_QI-1) = drhoqcrg_i / dt
+            RHOQcrg0_t(k,i,j,I_QS-1) = drhoqcrg_s / dt
+            RHOQcrg0_t(k,i,j,I_QG-1) = drhoqcrg_g / dt
+          enddo
 
           RHOE0_t(k) = LHF * ( drhoqi + drhoqs + drhoqg ) / dt
 
@@ -2748,11 +3117,44 @@ contains
        enddo
        enddo
 
+       !--- for lithgning component
+       do ip = 1, int(flg_lt_l)
+          do k = KS, KE
+             do iq = I_QC, I_QG
+                 rhoq_crg(iq,k) = rhoq_crg(iq,k) + RHOQcrg0_t(k,i,j,iq-1)*dt  !-- need limiter?
+             enddo
+             do iq = I_QC, I_NG
+                 QTRC0(k,i,j,iq) = rhoq(k,iq) / DENS(k,i,j)
+             enddo
+          enddo
+
+          call Cross_Section( Crs(:,i,j,:),   & ! [OUT]
+                              KA, KS, KE,     & ! [IN]
+                              QA_MP,          & ! [IN]
+                              QTRC0(:,i,j,:), & ! [IN]
+                              DENS(:,i,j)     ) ! [IN]
+          do k = KS, KE
+             Sarea(k,i,j,I_mp_QC) = Crs(k,i,j,I_mp_QC)
+             Sarea(k,i,j,I_mp_QR) = Crs(k,i,j,I_mp_QR)
+             Sarea(k,i,j,I_mp_QI) = Crs(k,i,j,I_mp_QI)
+             Sarea(k,i,j,I_mp_QS) = Crs(k,i,j,I_mp_QS)
+             Sarea(k,i,j,I_mp_QG) = Crs(k,i,j,I_mp_QG)
+          enddo
+       enddo
+
        ! total tendency
        do iq = I_QV, I_NG
        do k = KS, KE
           RHOQ_t(k,i,j,iq) = ( rhoq(k,iq) - DENS(k,i,j)*QTRC(k,i,j,iq) )/dt
        enddo
+       enddo
+
+       do ip = 1, int(flg_lt_l)
+          do k = KS, KE
+          do iq = I_QC, I_QG
+             RHOQcrg_t_mp(k,i,j,iq-1) = ( rhoq_crg(iq,k) - DENS(k,i,j)*QTRC_crg(k,i,j,iq-1) )/dt
+          enddo
+          enddo
        enddo
 
 #ifdef DEBUG
@@ -3118,10 +3520,12 @@ contains
   !----------------------------
 !OCL SERIAL
   subroutine ice_multiplication( &
-    KA, KS, KE, &
+    KA, KS, KE,    & ! in
+    flg_lt,        & ! in
     Pac,           & ! in
-    tem, rhoq, xq, & ! in
-    PQ             ) ! inout
+    tem, rhoq,     & ! in
+    rhoq_crg, xq,  & ! in
+    PQ, Pcrg1      ) ! inout
 
     ! ice multiplication by splintering
     ! we consider Hallet-Mossop process
@@ -3137,6 +3541,10 @@ contains
     real(RP), intent(in) :: xq(KA,HYDRO_MAX)
     !
     real(RP), intent(inout):: PQ(KA,PQ_MAX)
+    ! for lightning
+    real(RP), intent(in) :: flg_lt
+    real(RP), intent(in) :: rhoq_crg(I_QC:I_QG,KA)
+    real(RP), intent(inout):: Pcrg1(PQ_MAX,KA)
     !
     ! production of (350.d3 ice particles)/(cloud riming [g]) => 350*d6 [/kg]
     real(RP), parameter :: pice = 350.0E+6_RP
@@ -3157,7 +3565,8 @@ contains
     real(RP) :: n12
     !
     real(RP) :: wn, wni, wns, wng
-    integer :: k
+    integer :: k, iq
+    real(RP) :: sw1
     !
     !
     do k = KS, KE
@@ -3232,6 +3641,15 @@ contains
        !
        PQ(k,I_LSspl) = - wns*xq(k,I_mp_QI) ! snow    => ice
        PQ(k,I_LGspl) = - wng*xq(k,I_mp_QI) ! graupel => ice
+       do iq = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NC is small,ignore charge transfer
+         Pcrg1(I_NSspl,k) = - wns*(1.0_RP-sw1) &
+                                / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) !--- if NC is small,ignore charge transfer
+         Pcrg1(I_NGspl,k) = - wng*(1.0_RP-sw1) &
+                                / (rhoq(k,I_NG)+sw1)*rhoq_crg(I_QG,k)
+         Pcrg1(I_NIspl,k) = - ( Pcrg1(I_NSspl,k) + Pcrg1(I_NGspl,k) )
+       enddo
        !
     end do
     !
@@ -3241,11 +3659,15 @@ contains
 !OCL SERIAL
   subroutine mixed_phase_collection( &
     ! collection process
-       KA, KS, KE, &
-       wtem, rhoq,            & ! in
+       KA, KS, KE,            & ! in
+       flg_lt,                & ! in
+       d0_crg, v0_crg,        & ! in
+       beta_crg, dqcrg,       & ! in
+       wtem, rhoq, rhoq_crg,  & ! in
        xq, dq_xave,  vt_xave, & ! in
     !       rho                            ! [Add] 11/08/30
        PQ,                    & ! inout
+       Pcrg1, Pcrg2,          & ! inout
        Pac                    ) ! out
     use scale_atmos_saturation, only: &
        moist_psat_ice => ATMOS_SATURATION_psat_ice
@@ -3271,6 +3693,14 @@ contains
     real(RP), intent(inout):: PQ(KA,PQ_MAX)
     !
     real(RP), intent(out):: Pac(KA,Pac_MAX)
+    !--- for lightning component
+    real(RP), intent(in) :: flg_lt
+    real(RP), intent(in) :: beta_crg(KA)
+    real(RP), intent(in) :: dqcrg(KA)
+    real(RP), intent(in) :: d0_crg, v0_crg
+    real(RP), intent(in) :: rhoq_crg(I_QC:I_QG,KA)
+    real(RP), intent(inout):: Pcrg1(PQ_MAX,KA)
+    real(RP), intent(inout):: Pcrg2(Pcrg_MAX,KA)
 
     real(RP), parameter :: a_dec = 0.883_RP
     real(RP), parameter :: b_dec = 0.093_RP
@@ -3333,9 +3763,9 @@ contains
     real(RP) :: coef_emelt
     real(RP) :: w1
 
-    real(RP) :: sw
+    real(RP) :: sw, sw1, sw2
     !
-    integer :: k
+    integer :: k, iqw
     !
     !
     do k = KS, KE
@@ -3440,6 +3870,12 @@ contains
             +  sigma_i + sigma_c )**0.5_RP
        Pac(k,I_LIacLC2LI)= -0.25_RP*pi*E_ic*rhoq(k,I_NI)*rhoq(k,I_QC)*coef_acc_LCI
        Pac(k,I_NIacNC2NI)= -0.25_RP*pi*E_ic*rhoq(k,I_NI)*rhoq(k,I_NC)*coef_acc_NCI
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- C + I -> I (decrease from cloud chgarge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+         Pcrg2(I_NIacNC2NI,k) = Pac(k,I_NIacNC2NI)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NC)+sw1)*rhoq_crg(I_QC,k)
+       enddo
        ! cloud-snow => snow
        ! reduction term of cloud
        coef_acc_LCS = &
@@ -3452,6 +3888,12 @@ contains
             +  sigma_s + sigma_c )**0.5_RP
        Pac(k,I_LSacLC2LS)= -0.25_RP*pi*E_sc*rhoq(k,I_NS)*rhoq(k,I_QC)*coef_acc_LCS
        Pac(k,I_NSacNC2NS)= -0.25_RP*pi*E_sc*rhoq(k,I_NS)*rhoq(k,I_NC)*coef_acc_NCS
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- C + S -> S (decrease from cloud charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+         Pcrg2(I_NSacNC2NS,k) = Pac(k,I_NSacNC2NS)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NC)+sw1)*rhoq_crg(I_QC,k)
+       enddo
        ! cloud-graupel => graupel
        ! reduction term of cloud
        coef_acc_LCG = &
@@ -3464,6 +3906,12 @@ contains
             +  sigma_g + sigma_c )**0.5_RP
        Pac(k,I_LGacLC2LG)= -0.25_RP*pi*E_gc*rhoq(k,I_NG)*rhoq(k,I_QC)*coef_acc_LCG
        Pac(k,I_NGacNC2NG)= -0.25_RP*pi*E_gc*rhoq(k,I_NG)*rhoq(k,I_NC)*coef_acc_NCG
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- C + G -> G (decrease from cloud charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+         Pcrg2(I_NGacNC2NG,k) = Pac(k,I_NGacNC2NG)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NC)+sw1)*rhoq_crg(I_QC,k)
+       enddo
        ! snow-graupel => graupel
        coef_acc_LSG = &
               ( delta_b1(I_mp_QS)*dsds + delta_ab1(I_mp_QG,I_mp_QS)*dsdg + delta_b0(I_mp_QG)*dgdg ) &
@@ -3476,6 +3924,48 @@ contains
             +  sigma_g + sigma_s )**0.5_RP
        Pac(k,I_LGacLS2LG)= -0.25_RP*pi*E_stick(k)*E_gs*rhoq(k,I_NG)*rhoq(k,I_QS)*coef_acc_LSG
        Pac(k,I_NGacNS2NG)= -0.25_RP*pi*E_stick(k)*E_gs*rhoq(k,I_NG)*rhoq(k,I_NS)*coef_acc_NSG
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- S + G -> G (decrease from snow charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
+         Pcrg2(I_NGacNS2NG,k) = Pac(k,I_NGacNS2NG)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+       !--- Charge split by Snow-Graupel rebound--------------------------------
+         alpha = 5.0_RP * ( dq_xave(k,I_mp_QS) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
+         alpha = min( alpha, 10.0_RP )
+         Pcrg2(I_CGNGacNS2NG,k)= 0.25_RP*pi*( 1.0_RP - E_stick(k) )*E_gs &
+                                  * rhoq(k,I_NG)*rhoq(k,I_NS)*coef_acc_NSG &
+                                  * ( dqcrg(k)*alpha ) &
+                                  * beta_crg(k)
+       enddo
+!!       !-----------------
+!!       !  (start) Y.Sato added on 2018/8/31
+!!       !--- ice-graupel => graupel
+!!       coef_acc_LIG = &
+!!              ( delta_b1(I_QI)*didi + delta_ab1(I_QG,I_QI)*didg + delta_b0(I_QG)*dgdg ) &
+!!            * ( theta_b1(I_QI)*vivi - theta_ab1(I_QG,I_QI)*vivg + theta_b0(I_QG)*vgvg   &
+!!            +  sigma_g + sigma_i )**0.5_RP
+!!       coef_acc_NIG = &
+!!              ( delta_b0(I_QI)*didi + delta_ab0(I_QG,I_QI)*didg + delta_b0(I_QG)*dgdg ) &
+!!            ! [fix] T.Mitsui 08/05/08
+!!            * ( theta_b0(I_QI)*vivi - theta_ab0(I_QG,I_QI)*vivg + theta_b0(I_QG)*vgvg   &
+!!            +  sigma_g + sigma_i )**0.5_RP
+!!       Pac(k,I_LGacLI2LG)= -0.25_RP*pi*E_stick(k)*E_gi*rhoq(k,I_NG)*rhoq(k,I_QI)*coef_acc_LIG*flg_igcol
+!!       Pac(k,I_NGacNI2NG)= -0.25_RP*pi*E_stick(k)*E_gi*rhoq(k,I_NG)*rhoq(k,I_NI)*coef_acc_NIG*flg_igcol
+!!       !---- for charge density
+!!       do iqw = 1, int(flg_lt)  !--- I + G -> G (decrease from snow charge)
+!!         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NS is small,  ignore charge transfer
+!!         Pcrg2(I_NGacNI2NG,k) = Pac(k,I_NGacNI2NG)*(1.0_RP-sw1) &
+!!                                  / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)*flg_lt*flg_igcol
+!!       !--- Charge split by Ice-Graupel rebound--------------------------------
+!!         alpha = 5.0_RP * ( dq_xave(k,I_mp_QI) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
+!!         alpha = min( alpha, 10.0_RP )
+!!         Pcrg2(I_CGNGacNI2NG,k)= 0.25_RP*pi*( 1.0_RP - E_stick(k) )*E_gi &
+!!                                  * rhoq(k,I_NG)*rhoq(k,I_NI)*coef_acc_NIG &
+!!                                  * ( dqcrg(k)*alpha ) &
+!!                                  * beta_crg(k) * flg_lt * flg_igcol
+!!       enddo
+!!       !  (end) Y.Sato added on 2018/8/31
+!!       !------------------
        !------------------------------------------------------------------------
        ! ice-snow => snow
        ! reduction term of ice
@@ -3490,6 +3980,12 @@ contains
        Pac(k,I_LIacLS2LS)= -0.25_RP*pi*E_stick(k)*E_si*rhoq(k,I_NS)*rhoq(k,I_QI)*coef_acc_LIS
        Pac(k,I_NIacNS2NS)= -0.25_RP*pi*E_stick(k)*E_si*rhoq(k,I_NS)*rhoq(k,I_NI)*coef_acc_NIS
        !
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- I + S -> S (decrease from ice charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+         Pcrg2(I_NIacNS2NS,k) = Pac(k,I_NIacNS2NS)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)
+       enddo
        sw = sign(0.5_RP, T00-tem(k)) + 0.5_RP
        ! if ( tem(k) <= T00 )then
           ! rain-graupel => graupel
@@ -3513,6 +4009,15 @@ contains
             * ( theta_b0(I_mp_QR)*vrvr - theta_ab0(I_mp_QG,I_mp_QR)*vrvg + theta_b0(I_mp_QG)*vgvg   &
             +  sigma_r + sigma_g )**0.5_RP
        Pac(k,I_NRacNG2NG) = -0.25_RP*pi*E_gr*rhoq(k,I_NG)*rhoq(k,I_NR)*coef_acc_NRG
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- R+G->R (T>T00 sw=0, decrease from graupel charge), ->G(T<=T00 sw=1, dcrerase from rain charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+         sw2 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg2(I_NRacNG2NG,k) = Pac(k,I_NRacNG2NG)*(1.0_RP-sw1)/(rhoq(k,I_NR)+sw1) &
+                                                      *rhoq_crg(I_QR,k) * sw &
+                              + Pac(k,I_NRacNG2NG)*(1.0_RP-sw2)/(rhoq(k,I_NG)+sw2) &
+                                                      *rhoq_crg(I_QG,k) * (1.0_RP-sw)
+       enddo
        !
        !------------------------------------------------------------------------
        !
@@ -3531,6 +4036,12 @@ contains
             +  sigma_r + sigma_i )**0.5_RP
        Pac(k,I_LRacLI2LG_I)= -0.25_RP*pi*E_ir*rhoq(k,I_NR)*rhoq(k,I_QI)*coef_acc_LRI_I
        Pac(k,I_NRacNI2NG_I)= -0.25_RP*pi*E_ir*rhoq(k,I_NR)*rhoq(k,I_NI)*coef_acc_NRI_I
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- R + I -> G (decrease from both ice and rain charge, but only ice charge at this part)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg2(I_NRacNI2NG_I,k) = Pac(k,I_NRacNI2NG_I)*(1.0_RP-sw1) &
+                                    / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)
+       enddo
        ! reduction term of rain
        coef_acc_LRI_R = &
               ( delta_b1(I_mp_QR)*drdr + delta_ab1(I_mp_QI,I_mp_QR)*drdi + delta_b0(I_mp_QI)*didi ) &
@@ -3542,6 +4053,12 @@ contains
             +  sigma_r + sigma_i )**0.5_RP
        Pac(k,I_LRacLI2LG_R)= -0.25_RP*pi*E_ir*rhoq(k,I_NI)*rhoq(k,I_QR)*coef_acc_LRI_R
        Pac(k,I_NRacNI2NG_R)= -0.25_RP*pi*E_ir*rhoq(k,I_NI)*rhoq(k,I_NR)*coef_acc_NRI_R
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- R + I -> G (decrease from both ice and rain charge, but only rain charge at this part)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg2(I_NRacNI2NG_R,k) = Pac(k,I_NRacNI2NG_R)*(1.0_RP-sw1)&
+                                    / (rhoq(k,I_NR)+sw1)*rhoq_crg(I_QR,k)
+       enddo
        ! rain-snow => graupel
        ! reduction term of snow
        coef_acc_LRS_S = &
@@ -3554,6 +4071,12 @@ contains
             +  sigma_r + sigma_s )**0.5_RP
        Pac(k,I_LRacLS2LG_S)= -0.25_RP*pi*E_sr*rhoq(k,I_NR)*rhoq(k,I_QS)*coef_acc_LRS_S
        Pac(k,I_NRacNS2NG_S)= -0.25_RP*pi*E_sr*rhoq(k,I_NR)*rhoq(k,I_NS)*coef_acc_NRS_S
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- R + S -> G (decrease from both snow and rain charge, but only snow charge at this part)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
+         Pcrg2(I_NRacNS2NG_S,k) = Pac(k,I_NRacNS2NG_S)*(1.0_RP-sw1)&
+                                    / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+       enddo
        ! reduction term of rain
        coef_acc_LRS_R = &
               ( delta_b1(I_mp_QR)*drdr + delta_ab1(I_mp_QS,I_mp_QR)*drds + delta_b0(I_mp_QS)*dsds ) &
@@ -3565,6 +4088,12 @@ contains
             +  sigma_r + sigma_s )**0.5_RP
        Pac(k,I_LRacLS2LG_R)= -0.25_RP*pi*E_sr*rhoq(k,I_NS)*rhoq(k,I_QR)*coef_acc_LRS_R
        Pac(k,I_NRacNS2NG_R)= -0.25_RP*pi*E_sr*rhoq(k,I_NS)*rhoq(k,I_NR)*coef_acc_NRS_R
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- R + S -> G (decrease from both snow and rain charge, but only rain charge at this part)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+         Pcrg2(I_NRacNS2NG_R,k) = Pac(k,I_NRacNS2NG_R)*(1.0_RP-sw1) &
+                                    / (rhoq(k,I_NR)+sw1)*rhoq_crg(I_QR,k)
+       enddo
        !------------------------------------------------------------------------
        !
        !+++ pattern 3: a + a => b  (i-i)
@@ -3581,6 +4110,12 @@ contains
             +  sigma_i + sigma_i )**0.5_RP
        Pac(k,I_LIacLI2LS)= -0.25_RP*pi*E_stick(k)*E_ii*rhoq(k,I_NI)*rhoq(k,I_QI)*coef_acc_LII
        Pac(k,I_NIacNI2NS)= -0.25_RP*pi*E_stick(k)*E_ii*rhoq(k,I_NI)*rhoq(k,I_NI)*coef_acc_NII
+       !---- for charge density
+       do iqw = 1, int(flg_lt)  !--- I + I -> S (decrease from ice charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+         Pcrg2(I_NIacNI2NS,k) = Pac(k,I_NIacNI2NS)*(1.0_RP-sw1) &
+                                  / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)
+       enddo
        !
 !          ci_aut(k)   =  0.25_RP*pi*E_ii*rhoq(k,I_NI)*coef_acc_LII
 !          taui_aut(k) = 1._RP/max(E_stick(k)*ci_aut(k),1.E-10_RP)
@@ -3613,11 +4148,21 @@ contains
        wx_cri = cfill_i*DWATR/rho_g*( pi/6.0_RP*rho_g*ave_di*ave_di*ave_di/xq(k,I_mp_QI) - 1.0_RP ) * sw
        PQ(k,I_LIcon) = i_iconv2g * Pac(k,I_LIacLC2LI)/max(1.0_RP, wx_cri) * sw
        PQ(k,I_NIcon) = i_iconv2g * PQ(k,I_LIcon)/xq(k,I_mp_QI) * sw
+       do iqw = 1, int(flg_lt)  !--- I + C -> G (decrease from ice charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+         Pcrg1(I_NIcon,k) = i_iconv2g * PQ(k,I_NIcon)*(1.0_RP-sw) &
+                             / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)
+       enddo
 
        ! snow-cloud => graupel
        wx_crs = cfill_s*DWATR/rho_g*( pi/6.0_RP*rho_g*ave_ds*ave_ds*ave_ds/xq(k,I_mp_QS) - 1.0_RP )
        PQ(k,I_LScon) = i_sconv2g * (Pac(k,I_LSacLC2LS))/max(1.0_RP, wx_crs)
        PQ(k,I_NScon) = i_sconv2g * PQ(k,I_LScon)/xq(k,I_mp_QS)
+       do iqw = 1, int(flg_lt)  !--- S + C -> G (decrease from snow charge)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
+         Pcrg1(I_NScon,k) = i_sconv2g * PQ(k,I_NScon)*(1.0_RP-sw) &
+                              / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+       enddo
        !------------------------------------------------------------------------
        !--- enhanced melting( due to collection-freezing of water droplets )
        !    originally from Rutledge and Hobbs(1984). eq.(A.21)
@@ -3630,21 +4175,51 @@ contains
        ! cloud-graupel
        PQ(k,I_LGacm) =  coef_emelt*Pac(k,I_LGacLC2LG)
        PQ(k,I_NGacm) =  PQ(k,I_LGacm)/xq(k,I_mp_QG)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NGacm,k) = PQ(k,I_NGacm)*(1.0_RP-sw1) &
+                              / (rhoq(k,I_NG)+sw1)*rhoq_crg(I_QG,k)
+       enddo
        ! rain-graupel
        PQ(k,I_LGarm) =  coef_emelt*Pac(k,I_LRacLG2LG)
        PQ(k,I_NGarm) =  PQ(k,I_LGarm)/xq(k,I_mp_QG)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NGarm,k) = PQ(k,I_NGarm)*(1.0_RP-sw1) &
+                              / (rhoq(k,I_NG)+sw1)*rhoq_crg(I_QG,k)
+       enddo
        ! cloud-snow
        PQ(k,I_LSacm) =  coef_emelt*(Pac(k,I_LSacLC2LS))
        PQ(k,I_NSacm) =  PQ(k,I_LSacm)/xq(k,I_mp_QS)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NSacm,k) = PQ(k,I_NSacm)*(1.0_RP-sw1) &
+                              / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+       enddo
        ! rain-snow
        PQ(k,I_LSarm) =  coef_emelt*(Pac(k,I_LRacLS2LG_R)+Pac(k,I_LRacLS2LG_S))
        PQ(k,I_NSarm) =  PQ(k,I_LSarm)/xq(k,I_mp_QG)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NS)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NSarm,k) = PQ(k,I_NSarm)*(1.0_RP-sw1) &
+                            / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
+       enddo
        ! cloud-ice
        PQ(k,I_LIacm) =  coef_emelt*Pac(k,I_LIacLC2LI)
        PQ(k,I_NIacm) =  PQ(k,I_LIacm)/xq(k,I_mp_QI)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NI)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NIacm,k) = PQ(k,I_NIacm)*(1.0_RP-sw1) &
+                              / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)
+       enddo
        ! rain-ice
        PQ(k,I_LIarm) =  coef_emelt*(Pac(k,I_LRacLI2LG_R)+Pac(k,I_LRacLI2LG_I))
        PQ(k,I_NIarm) =  PQ(k,I_LIarm)/xq(k,I_mp_QG)
+       do iqw = 1, int(flg_lt)
+         sw1 = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NR)-SMALL ) !--- if NG is small,  ignore charge transfer
+         Pcrg1(I_NIarm,k) = PQ(k,I_NIarm)*(1.0_RP-sw1) &
+                              / (rhoq(k,I_NR)+sw1)*rhoq_crg(I_QI,k)
+       enddo
     end do
     !
     return
@@ -3653,20 +4228,25 @@ contains
   ! Auto-conversion, Accretion, Self-collection, Break-up
 !OCL SERIAL
   subroutine aut_acc_slc_brk(  &
-       KA, KS, KE, &
-       rhoq, xq, dq_xave,      &
+       KA, KS, KE,             &
+       flg_lt,                 &
+       rhoq, rhoq_crg,         &
+       xq, dq_xave,            &
        rho,                    &
-       PQ                      )
+       PQ, Pcrg                )
     implicit none
 
     integer, intent(in) :: KA, KS, KE
     !
     real(RP), intent(in)  :: rhoq(KA,I_QV:I_NG)
+    real(RP), intent(in)  :: rhoq_crg(I_QC:I_QG,KA)
+    real(RP), intent(in)  :: flg_lt
     real(RP), intent(in)  :: xq(KA,HYDRO_MAX)
     real(RP), intent(in)  :: dq_xave(KA,HYDRO_MAX)
     real(RP), intent(in)  :: rho(KA)
     !
     real(RP), intent(inout) :: PQ(KA,PQ_MAX)
+    real(RP), intent(inout) :: Pcrg(PQ_MAX,KA)
     !
     ! parameter for autoconversion
     real(RP), parameter :: kcc     = 4.44E+9_RP  ! collision efficiency [m3/kg2/sec]
@@ -3697,7 +4277,8 @@ contains
     real(RP) :: psi_brk   ! Universal function of Breakup
     real(RP) :: ddr       ! diameter difference from equilibrium
     !
-    integer :: k
+    integer :: k, iqw
+    real(RP) :: sw
     !
     coef_nuc0 = (nu(I_mp_QC)+2.0_RP)/(nu(I_mp_QC)+1.0_RP)
     coef_nuc1 = (nu(I_mp_QC)+2.0_RP)*(nu(I_mp_QC)+4.0_RP)/(nu(I_mp_QC)+1.0_RP)/(nu(I_mp_QC)+1.0_RP)
@@ -3720,11 +4301,22 @@ contains
        PQ(k,I_LCaut)  = coef_aut1*lwc*lwc*xq(k,I_mp_QC)*xq(k,I_mp_QC) &          ! (4) SB06
             *((1.0_RP-tau)*(1.0_RP-tau) + psi_aut)*rho_fac*rho_fac        !
        PQ(k,I_NRaut)  = -rx_sep*PQ(k,I_LCaut)                           ! (A7) SB01
+       !--- for Charge density
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
+         Pcrg(I_NCaut,k) = PQ(k,I_NCaut)*(1.0_RP-sw)/(rhoq(k,I_NC)+sw)*rhoq_crg(I_QC,k)
+         Pcrg(I_NRaut,k) = -Pcrg(I_NCaut,k)*flg_lt
+       enddo
        !
        ! Accretion ( cloud-rain => rain )
        psi_acc       =(tau/(tau+thr_acc))**4                          ! (8) SB06
        PQ(k,I_LCacc)  = -kcr*rhoq(k,I_QC)*rhoq(k,I_QR)*rho_fac*psi_acc         ! (7) SB06
        PQ(k,I_NCacc)  = -kcr*rhoq(k,I_NC)*rhoq(k,I_QR)*rho_fac*psi_acc         ! (A6) SB01
+       !--- for Charge density
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
+         Pcrg(I_NCacc,k)  = PQ(k,I_NCacc)*(1.0_RP-sw)/(rhoq(k,I_NC)+sw)*rhoq(k,I_QC)
+       enddo
        !
        ! Self-collection ( rain-rain => rain )
        PQ(k,I_NRslc)  = -krr*rhoq(k,I_NR)*rhoq(k,I_QR)*rho_fac                 ! (A.8) SB01
@@ -4090,6 +4682,7 @@ contains
        esw, esi, rhoq2,      & ! in
        pre, tem,             & ! in
        cpa,cva,              & ! in
+       flg_lt,               & ! in
        PQ,                   & ! inout
        sl_PLCdep,            & ! inout
        sl_PLRdep, sl_PNRdep, & ! inout
@@ -4097,7 +4690,10 @@ contains
        RHOE_t,               & ! out
        CPtot_t,              & ! out
        CVtot_t,              & ! out
-       qc_evaporate          ) ! out
+       qc_evaporate,         & ! out
+       QA_LT,                & ! in
+       rhoq2_crg,            & ! in:optional
+       RHOQcrg_t             ) ! out:optional
 
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -4148,6 +4744,12 @@ contains
 
     !+++ tendency[kg/m3/s]
     real(RP), intent(out)   :: qc_evaporate(KA)
+
+    !--- for lightning component
+    real(RP), intent(in)   :: flg_lt       ! 0 -> without lightning, 1-> with lightning
+    integer, intent(in)   :: QA_LT  ! If Lightning component is not used, QA_LT = 0
+    real(RP), intent(in), optional  :: rhoq2_crg(I_QC:I_QG,KA)
+    real(RP), intent(inout), optional :: RHOQcrg_t(KA,QA_LT)
 
     real(RP) :: xi               ! mean mass of ice particles
     real(RP) :: rrho             ! 1/rho
@@ -4212,6 +4814,19 @@ contains
     real(RP) :: drhoqv
     real(RP) :: drhoqc, drhoqr, drhoqi, drhoqs, drhoqg
     real(RP) :: drhonc, drhonr, drhoni, drhons, drhong
+    !-- for Charge densicty
+    real(RP) :: drhoqcrg_c, drhoqcrg_r
+    real(RP) :: drhoqcrg_i, drhoqcrg_s, drhoqcrg_g
+    real(RP) :: frz_dnc_crg
+    real(RP) :: frz_dnr_crg
+    real(RP) :: mlt_dni_crg
+    real(RP) :: mlt_dns_crg
+    real(RP) :: mlt_dng_crg
+    real(RP) :: dep_dni_crg
+    real(RP) :: dep_dns_crg
+    real(RP) :: dep_dng_crg
+    real(RP) :: dep_dnr_crg
+    real(RP) :: dep_dnc_crg
     !
     real(RP) :: fac1, fac2, fac3, fac4, fac5, fac6
     real(RP) :: r_rvaptem        ! 1/(Rvap*tem)
@@ -4248,6 +4863,8 @@ contains
     real(RP) :: sw
     real(RP) :: dqv, dql, dqi
     real(RP) :: dcv, dcp
+    real(RP) :: dqc_crg, dqr_crg, dqi_crg, dqs_crg, dqg_crg
+
     !
     real(RP) :: fact
 
@@ -4467,6 +5084,19 @@ contains
 
        qc_evaporate(k) = - dep_dnc ! [Add] Y.Sato 15/09/08
 
+       !--- reduce charge density of cloud and rain by evaporation
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
+         dep_dnc_crg = dep_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw )*rhoq2_crg(I_QC,k)*flg_lt
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+         dep_dnr_crg = dep_dnr*( 1.0_RP-sw )/( rhoq2(k,I_NR)+sw )*rhoq2_crg(I_QR,k)*flg_lt
+         !--- limiter
+         sw = min( abs(rhoq2_crg(I_QC,k)),abs(dep_dnc_crg) )
+         dep_dnc_crg = sign( sw,dep_dnc_crg )
+         sw = min( abs(rhoq2_crg(I_QR,k)),abs(dep_dnr_crg) )
+         dep_dnr_crg = sign( sw,dep_dnr_crg )
+       enddo
+
        !--- deposition/sublimation
        lvsi    = esi(k)*r_rvaptem
        ddep    = dt*(PQ(k,I_LIdep)+PQ(k,I_LSdep)+PQ(k,I_LGdep))
@@ -4512,6 +5142,22 @@ contains
        dep_dni = max( dt*PQ(k,I_NIdep)*fac2, -rhoq2(k,I_NI) ) ! ss>0 dep=0, ss<0 dep<0
        dep_dns = max( dt*PQ(k,I_NSdep)*fac2, -rhoq2(k,I_NS) ) ! ss>0 dep=0, ss<0 dep<0
        dep_dng = max( dt*PQ(k,I_NGdep)*fac2, -rhoq2(k,I_NG) ) ! ss>0 dep=0, ss<0 dep<0
+       !--- for Charge density
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer
+         dep_dni_crg = dep_dni*( 1.0_RP-sw )/( rhoq2(k,I_NI)+sw ) * rhoq2_crg(I_QI,k) * flg_lt
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer
+         dep_dns_crg = dep_dns*( 1.0_RP-sw )/( rhoq2(k,I_NS)+sw ) * rhoq2_crg(I_QS,k) * flg_lt
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer
+         dep_dng_crg = dep_dng*( 1.0_RP-sw )/( rhoq2(k,I_NG)+sw ) * rhoq2_crg(I_QG,k) * flg_lt
+         !--- limiter
+         sw = min( abs(rhoq2_crg(I_QI,k)),abs(dep_dni_crg) )
+         dep_dni_crg = sign( sw,dep_dni_crg )
+         sw = min( abs(rhoq2_crg(I_QS,k)),abs(dep_dns_crg) )
+         dep_dns_crg = sign( sw,dep_dns_crg )
+         sw = min( abs(rhoq2_crg(I_QG,k)),abs(dep_dng_crg) )
+         dep_dng_crg = sign( sw,dep_dng_crg )
+       enddo
 
        !--- freezing of cloud drop
        frz_dqc = max( dt*(PQ(k,I_LChom)+PQ(k,I_LChet)), -rhoq2(k,I_QC)-dep_dqc ) ! negative value
@@ -4522,6 +5168,13 @@ contains
        PQ(k,I_LChet) = fac3*PQ(k,I_LChet)
        PQ(k,I_NChom) = fac4*PQ(k,I_NChom)
        PQ(k,I_NChet) = fac4*PQ(k,I_NChet)
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NI is small,  ignore charge transfer
+         frz_dnc_crg = frz_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw ) * rhoq2_crg(I_QC,k) * flg_lt
+         !--- limiter
+         sw = min( abs(rhoq2_crg(I_QC,k)+dep_dnc_crg),abs(frz_dnc_crg) )
+         frz_dnc_crg = sign( sw,frz_dnc_crg )
+       enddo
 
        !--- melting
        ! ice change
@@ -4533,10 +5186,35 @@ contains
        ! graupel change
        mlt_dqg = max( dt*PQ(k,I_LGmlt), -rhoq2(k,I_QG)-dep_dqg )  ! negative value
        mlt_dng = max( dt*PQ(k,I_NGmlt), -rhoq2(k,I_NG)-dep_dng )  ! negative value
+       !--- for charge density
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NI)-SMALL ) !--- if NI is small,  ignore charge transfer   ! I -> C
+         mlt_dni_crg = mlt_dni*( 1.0_RP-sw ) / ( rhoq2(k,I_NI)+sw ) * rhoq2_crg(I_QI,k) * flg_lt
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NS)-SMALL ) !--- if NS is small,  ignore charge transfer   ! S -> C
+         mlt_dns_crg = mlt_dns*( 1.0_RP-sw ) / ( rhoq2(k,I_NS)+sw ) * rhoq2_crg(I_QS,k) * flg_lt
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer   ! G -> C
+         mlt_dng_crg = mlt_dng*( 1.0_RP-sw ) / ( rhoq2(k,I_NG)+sw ) * rhoq2_crg(I_QG,k) * flg_lt
+         !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
+         !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
+         sw = min( abs(rhoq2_crg(I_QI,k)+dep_dni_crg-frz_dnc_crg),abs(mlt_dni_crg) )
+         mlt_dni_crg = sign( sw, mlt_dni_crg )
+         sw = min( abs(rhoq2_crg(I_QS,k)+dep_dns_crg            ),abs(mlt_dns_crg) )
+         mlt_dns_crg = sign( sw, mlt_dns_crg )
+         sw = min( abs(rhoq2_crg(I_QG,k)+dep_dng_crg            ),abs(mlt_dng_crg) )
+         mlt_dng_crg = sign( sw, mlt_dng_crg )
+       enddo
 
        !--- freezing of larger droplets
        frz_dqr = max( dt*(PQ(k,I_LRhet)), min(0.0_RP, -rhoq2(k,I_QR)-dep_dqr) ) ! negative value
        frz_dnr = max( dt*(PQ(k,I_NRhet)), min(0.0_RP, -rhoq2(k,I_NR)-dep_dnr) ) ! negative value
+       !--- for charge density
+       do iqw = 1, int(flg_lt)
+         sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
+         frz_dnr_crg = frz_dnr*( 1.0_RP-sw ) /( rhoq2(k,I_NR)+sw ) * rhoq2_crg(I_QR,k) * flg_lt
+         !--- limiter
+         sw = min( abs(rhoq2_crg(I_QR,k)+dep_dnr_crg            ),abs(frz_dnr_crg) )
+         frz_dnr_crg = sign( sw,frz_dnr_crg )
+       enddo
 
        fac5         = ( frz_dqr-eps )/( dt*PQ(k,I_LRhet)-eps )
        PQ(k,I_LRhet) = fac5*PQ(k,I_LRhet)
@@ -4589,6 +5267,14 @@ contains
        drhoqg = (-frz_dqr + mlt_dqg             + dep_dqg )
        drhong = (-frz_dnr + mlt_dng             + dep_dng )
 
+       !--- reduce charge density by freezing, melting, deposition
+       do iqw = 1, int(flg_lt)
+         drhoqcrg_c = (  frz_dnc_crg - mlt_dni_crg*(1.0_RP-sw)                    + dep_dnc_crg )
+         drhoqcrg_r = (  frz_dnr_crg - mlt_dni_crg*sw - mlt_dng_crg - mlt_dns_crg + dep_dnr_crg )
+         drhoqcrg_i = ( -frz_dnc_crg + mlt_dni_crg                                + dep_dni_crg )
+         drhoqcrg_s = (                mlt_dns_crg                                + dep_dns_crg )
+         drhoqcrg_g = ( -frz_dnr_crg + mlt_dng_crg                                + dep_dng_crg )
+       enddo
 
        ! tendency
        RHOQ_t(k,I_QV) = drhoqv / dt
@@ -4604,6 +5290,15 @@ contains
        RHOQ_t(k,I_NG) = drhong / dt
 
        RHOE_t(k) = ( - LHV * drhoqv + LHF * ( drhoqi + drhoqs + drhoqg ) ) / dt
+
+       ! tendency of charge density
+       do iqw = 1, int(flg_lt)
+         RHOQcrg_t(k,I_QC-1) = drhoqcrg_c / dt
+         RHOQcrg_t(k,I_QR-1) = drhoqcrg_r / dt
+         RHOQcrg_t(k,I_QI-1) = drhoqcrg_i / dt
+         RHOQcrg_t(k,I_QS-1) = drhoqcrg_s / dt
+         RHOQcrg_t(k,I_QG-1) = drhoqcrg_g / dt
+       enddo
 
        rrho = 1.0_RP/rho(k)
        dqv = rrho * drhoqv
@@ -4624,5 +5319,73 @@ contains
 
     return
   end subroutine update_by_phase_change
+  !-----------------------------------------------------------------------------
+  !> Calculate Cross Section
+  subroutine Cross_Section( &
+       Crs,        &
+       KA, KS, KE, &
+       QA_MP,      &
+       QTRC0,      &
+       DENS0       )
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: QA_MP
+    real(RP), intent(out) :: Crs  (KA,QA_MP-1)! Cross section             [cm]
+    real(RP), intent(in)  :: QTRC0(KA,QA_MP)  ! tracer mass concentration [kg/kg]
+    real(RP), intent(in)  :: DENS0(KA)        ! density                   [kg/m3]
+
+    ! mass concentration[kg/m3] and mean particle mass[kg]
+    real(RP) :: xc(KA)
+    real(RP) :: xr(KA)
+    real(RP) :: xi(KA)
+    real(RP) :: xs(KA)
+    real(RP) :: xg(KA)
+    ! diameter of average mass[kg/m3]
+    real(RP) :: dc_ave(KA)
+    real(RP) :: dr_ave(KA)
+    ! radius of average mass
+    real(RP) :: rc, rr
+
+    real(RP) :: coef_Fuetal1998
+    ! r2m_min is minimum value(moment of 1 particle with 1 micron)
+    real(RP), parameter :: r2m_min=1.E-12_RP
+    real(RP), parameter :: um2cm = 100.0_RP
+
+    real(RP) :: limitsw, zerosw
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    ! mean particle mass[kg]
+    do k  = KS, KE
+       xc(k) = min( xc_max, max( xc_min, DENS0(k)*QTRC0(k,I_QC)/(QTRC0(k,I_NC)+nc_min) ) )
+       xr(k) = min( xr_max, max( xr_min, DENS0(k)*QTRC0(k,I_QR)/(QTRC0(k,I_NR)+nr_min) ) )
+       xi(k) = min( xi_max, max( xi_min, DENS0(k)*QTRC0(k,I_QI)/(QTRC0(k,I_NI)+ni_min) ) )
+       xs(k) = min( xs_max, max( xs_min, DENS0(k)*QTRC0(k,I_QS)/(QTRC0(k,I_NS)+ns_min) ) )
+       xg(k) = min( xg_max, max( xg_min, DENS0(k)*QTRC0(k,I_QG)/(QTRC0(k,I_NG)+ng_min) ) )
+    enddo
+
+    ! diameter of average mass : SB06 eq.(32)
+    do k = KS, KE
+       dc_ave(k) = a_m(I_QC) * xc(k)**b_m(I_QC)
+       dr_ave(k) = a_m(I_QR) * xr(k)**b_m(I_QR)
+    enddo
+
+    do k = KS, KE
+       Crs(k,I_mp_QC) = PI * coef_r2(I_mp_QC) * QTRC0(k,I_NC) * a_rea2(I_mp_QC) * xc(k)**b_rea2(I_mp_QC)
+    enddo
+
+    do k = KS, KE
+       Crs(k,I_mp_QR) = PI * coef_r2(I_mp_QR) * QTRC0(k,I_NR) * a_rea2(I_mp_QR) * xr(k)**b_rea2(I_mp_QR)
+    enddo
+
+    do k = KS, KE
+       Crs(k,I_mp_QI) = PI * coef_rea2(I_mp_QI) * QTRC0(k,I_NI) * a_rea2(I_mp_QI) * xi(k)**b_rea2(I_mp_QI)
+       Crs(k,I_mp_QS) = PI * coef_rea2(I_mp_QS) * QTRC0(k,I_NS) * a_rea2(I_mp_QS) * xs(k)**b_rea2(I_mp_QS)
+       Crs(k,I_mp_QG) = PI * coef_rea2(I_mp_QG) * QTRC0(k,I_NG) * a_rea2(I_mp_QG) * xg(k)**b_rea2(I_mp_QG)
+    enddo
+
+    return
+  end subroutine Cross_Section
 
 end module scale_atmos_phy_mp_sn14

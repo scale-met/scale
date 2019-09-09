@@ -76,7 +76,6 @@ module mod_atmos_phy_mp_driver
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
   integer, private, allocatable :: hist_vterm_id(:)
-  integer, private              :: monit_id
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -120,7 +119,7 @@ contains
        ATMOS_PHY_MP_suzuki10_tracer_units
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
-       ATMOS_sw_phy_mp, &
+       ATMOS_sw_phy_mp,   &
        ATMOS_sw_phy_lt
     use mod_atmos_phy_mp_vars, only: &
        QA_MP, &
@@ -233,9 +232,6 @@ contains
        ATMOS_PHY_MP_suzuki10_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
-    use scale_monitor, only: &
-       MONITOR_reg, &
-       MONITOR_put
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
@@ -258,8 +254,6 @@ contains
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
        MP_cldfrac_thleshold
-
-    real(RP) :: ZERO(KA,IA,JA)
 
     integer :: nstep_max
 
@@ -328,23 +322,6 @@ contains
           endif
        end select
 
-       ! history putput
-       if ( MP_do_precipitation ) then
-          allocate( hist_vterm_id(QS_MP+1:QE_MP) )
-          do iq = QS_MP+1, QE_MP
-             call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
-          end do
-       end if
-
-       ! monitor
-       if ( MP_do_negative_fixer ) then
-          call MONITOR_reg( "QTOTTND_NF", "water mass tendency by the negative fixer", "kg/s", & ! [IN]
-                            monit_id,                                                          & ! [OUT]
-                            is_tendency=.true.                                                    ) ! [IN]
-          ZERO(:,:,:) = 0.0_RP
-          call MONITOR_put( MONIT_id, ZERO(:,:,:) )
-       end if
-
     else
 
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'this component is never called.'
@@ -353,6 +330,15 @@ contains
        SFLX_snow(:,:) = 0.0_RP
 
     endif
+
+
+    ! history putput
+    if ( MP_do_precipitation ) then
+       allocate( hist_vterm_id(QS_MP+1:QE_MP) )
+       do iq = QS_MP+1, QE_MP
+          call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
+       end do
+    end if
 
 
     return
@@ -375,13 +361,8 @@ contains
        QTRC
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
-    use scale_time, only: &
-       dt => TIME_DTSEC
-    use scale_monitor, only: &
-       MONITOR_put
 
     real(RP) :: DENS0(KA,IA,JA)
-    real(RP) :: TEND (KA,IA,JA)
 
     integer :: k, i, j, iq
 
@@ -414,17 +395,6 @@ contains
        end do
        end do
        end do
-
-       if ( monit_id > 0 ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             TEND(k,i,j) = ( DENS(k,i,j) - DENS0(k,i,j) ) / dt
-          end do
-          end do
-          end do
-          call MONITOR_put( MONIT_id, TEND(:,:,:) )
-       end if
 
     end if
 
@@ -536,8 +506,8 @@ contains
        d0_crg, &
        v0_crg, &
        flg_lt, &
-       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t, &
-       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t, &
+       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t,    &
+       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t,    &
        Epot_old => ATMOS_PHY_LT_Epot_old
     implicit none
 
@@ -591,6 +561,8 @@ contains
     real(RP), allocatable :: Sarea(:,:,:,:)
     !---------------------------------------------------------------------------
 
+    LOG_INFO("ATMOS_PHY_MP_driver_calc_tendency",*) 'Skip this modlue'
+    return
     if ( update_flag ) then
 
        if( QA_LT /= 0 ) then
@@ -775,7 +747,7 @@ contains
                   DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
                   Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, REAL_CZ(:,:,:), REAL_FZ(:,:,:),   & ! [IN]
                   RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:),& ! [OUT]
-                  QA_LT,                                                                                        & ! [IN]
+                  QA_LT,                                                                                        & ! [IN:optional]
                   d0_crg, v0_crg, flg_lt, dqcrg(:,:,:), beta_crg(:,:,:),                                        & ! [IN:optional]
                   QTRC(:,:,:,QS_LT:QE_LT),                                                                      & ! [IN:optional]
                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),                                                            & ! [OUT:optional]
@@ -826,7 +798,7 @@ contains
                                                   dqcrg(:,:,:), beta_crg(:,:,:),          & ! [IN:optional]
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
                                                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),      & ! [OUT:optional]
-                                                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]
+                                                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]  
 
              call ATMOS_PHY_LT_sato2019_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, ATMOS_PHY_MP_TYPE, & ! [IN]
