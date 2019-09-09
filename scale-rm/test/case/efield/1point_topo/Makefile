@@ -17,6 +17,9 @@ ORG_SRCS    = mod_user.F90 mod_mkinit.F90  mod_atmos_phy_mp_driver.F90
 INITCONF    = init.conf
 RUNCONF     = run.conf
 TPROC       = 6
+
+# required data (look-up table for charge split)
+DATPARAM    = " [${TESTDIR}/data/lightning/LUT_TK1978_v.txt LUT_TK1978_v.txt] "
 DATDISTS    =
 
 
