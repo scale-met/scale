@@ -26,6 +26,7 @@ module scale_random
   !++ Public procedure
   !
   public :: RANDOM_setup
+  public :: RANDOM_uniform1D
   public :: RANDOM_uniform
   public :: RANDOM_normal
 
@@ -135,7 +136,20 @@ contains
   end subroutine RANDOM_reset
 
   !-----------------------------------------------------------------------------
-  !> Get uniform random number
+  !> Get uniform random number ( 1D )
+  subroutine RANDOM_uniform1D( var )
+    implicit none
+
+    real(RP), intent(out) :: var(:)
+    !---------------------------------------------------------------------------
+
+    call random_number(var)
+
+    return
+  end subroutine RANDOM_uniform1D
+
+  !-----------------------------------------------------------------------------
+  !> Get uniform random number ( 3D )
   subroutine RANDOM_uniform( var )
     implicit none
 

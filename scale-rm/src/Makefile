@@ -54,6 +54,7 @@ SUB_OBJS =	\
 	\
 	mod_atmos_dyn_vars.o      \
 	mod_atmos_phy_cp_vars.o   \
+	mod_atmos_phy_lt_vars.o   \
 	mod_atmos_phy_mp_vars.o   \
 	mod_atmos_phy_rd_vars.o   \
 	mod_atmos_phy_sf_vars.o   \
@@ -69,6 +70,7 @@ SUB_OBJS =	\
 	\
 	mod_admin_restart.o       \
 	mod_atmos_dyn_driver.o    \
+	mod_atmos_phy_lt_driver.o \
 	mod_atmos_phy_mp_driver.o \
 	mod_atmos_phy_ae_driver.o \
 	mod_atmos_phy_ch_driver.o \

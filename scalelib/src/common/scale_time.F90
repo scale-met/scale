@@ -42,6 +42,7 @@ module scale_time
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_BL    !< time interval of physics(pbl         ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_CH    !< time interval of physics(chemistry   ) [sec]
   real(DP), public :: TIME_DTSEC_ATMOS_PHY_AE    !< time interval of physics(aerosol     ) [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_PHY_LT    !< time interval of physics(lightning   ) [sec]
   real(DP), public :: TIME_DTSEC_OCEAN           !< time interval of ocean step            [sec]
   real(DP), public :: TIME_DTSEC_LAND            !< time interval of land step             [sec]
   real(DP), public :: TIME_DTSEC_URBAN           !< time interval of urban step            [sec]
@@ -56,6 +57,7 @@ module scale_time
   integer,  public :: TIME_DSTEP_ATMOS_PHY_BL    !< step interval of physics(pbl         )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_CH    !< step interval of physics(chemistry   )
   integer,  public :: TIME_DSTEP_ATMOS_PHY_AE    !< step interval of physics(aerosol     )
+  integer,  public :: TIME_DSTEP_ATMOS_PHY_LT    !< step interval of physics(lightning   )
   integer,  public :: TIME_DSTEP_OCEAN           !< step interval of ocean step
   integer,  public :: TIME_DSTEP_LAND            !< step interval of land step
   integer,  public :: TIME_DSTEP_URBAN           !< step interval of urban step

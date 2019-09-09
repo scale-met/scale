@@ -90,6 +90,9 @@ module scale_const
   real(RP), public, parameter :: CONST_TEM00   = 273.15_RP           !< temperature reference (0C) [K]
   real(RP), public, parameter :: CONST_PPM     = 1.E-6_RP            !< parts par million
 
+  real(RP), public, parameter :: CONST_EPSvac  = 8.854187817E-12_RP            !< parts par million
+  real(RP), public            :: CONST_EPSair  = 1.00059_RP            !< parts par million
+
   integer,  public            :: CONST_I_LW    = 1                   !< long-wave radiation index
   integer,  public            :: CONST_I_SW    = 2                   !< short-wave radiation index
 

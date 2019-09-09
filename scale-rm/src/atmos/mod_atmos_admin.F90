@@ -41,6 +41,7 @@ module mod_atmos_admin
   character(len=H_SHORT), public :: ATMOS_PHY_TB_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_BL_TYPE = 'NONE'
   character(len=H_SHORT), public :: ATMOS_PHY_CP_TYPE = 'NONE'
+  character(len=H_SHORT), public :: ATMOS_PHY_LT_TYPE = 'NONE'
 
   character(len=H_SHORT), public :: ATMOS_PHY_PRECIP_TYPE = 'Upwind-Euler'
 
@@ -56,6 +57,7 @@ module mod_atmos_admin
   logical,                public :: ATMOS_sw_phy_tb
   logical,                public :: ATMOS_sw_phy_bl
   logical,                public :: ATMOS_sw_phy_cp
+  logical,                public :: ATMOS_sw_phy_lt
 
   !-----------------------------------------------------------------------------
   !
@@ -87,6 +89,7 @@ contains
        ATMOS_PHY_CP_TYPE, &
        ATMOS_PHY_PRECIP_TYPE, &
        ATMOS_USE_QV,      &
+       ATMOS_PHY_LT_TYPE, &
        ATMOS_USE_AVERAGE
 
     integer :: ierr
@@ -201,6 +204,14 @@ contains
        ATMOS_sw_phy_cp = .false.
     endif
 
+    if ( ATMOS_PHY_LT_TYPE /= 'OFF' .AND. ATMOS_PHY_LT_TYPE /= 'NONE' ) then
+       LOG_INFO_CONT(*) '+ Lightning            : ON, ', trim(ATMOS_PHY_LT_TYPE)
+       ATMOS_sw_phy_lt = .true.
+    else
+       LOG_INFO_CONT(*) '+ Lightning            : OFF'
+       ATMOS_sw_phy_lt = .false.
+    endif
+
     if ( ATMOS_USE_AVERAGE ) then
        LOG_INFO_CONT(*) '+ Use time-averaging value for physics? : YES'
     else
@@ -242,6 +253,8 @@ contains
        scheme_name = ATMOS_PHY_BL_TYPE
     case("PHY_CP")
        scheme_name = ATMOS_PHY_CP_TYPE
+    case("PHY_LT")
+       scheme_name = ATMOS_PHY_LT_TYPE
     case default
        LOG_ERROR("ATMOS_ADMIN_getscheme",*) 'Unsupported component_name. Check!', trim(component_name)
        call PRC_abort

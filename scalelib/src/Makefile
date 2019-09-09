@@ -24,6 +24,7 @@ VPATH = common:                          \
         atmosphere/physics/aerosol:      \
         atmosphere/physics/chemistry:    \
         atmosphere/physics/cumulus:      \
+        atmosphere/physics/lightning:    \
         atmosphere/physics/microphysics: \
         atmosphere/physics/pbl:          \
         atmosphere/physics/radiation:    \
@@ -155,6 +156,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_kf.o	\
+	$(BUILD_DIR)/scale_atmos_phy_lt_sato2019.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_kessler.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_sn14.o	\

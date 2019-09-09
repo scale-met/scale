@@ -31,7 +31,6 @@ module mod_atmos_phy_mp_driver
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
   public :: ATMOS_PHY_MP_driver_qhyd2qtrc
-  public :: ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
 
   interface abstract
      subroutine qhyd2qtrc( &
@@ -68,7 +67,7 @@ module mod_atmos_phy_mp_driver
   !
   logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
   logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
-  real(RP), private :: MP_limit_negative     = 0.1_RP  !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  real(RP), private :: MP_limit_negative    = 1.0_RP   !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
   integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
   real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
   real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
@@ -77,11 +76,6 @@ module mod_atmos_phy_mp_driver
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
   integer, private, allocatable :: hist_vterm_id(:)
-  integer, private              :: hist_nf_rhoh_id
-  integer, private              :: hist_nf_dens_id
-  integer, private              :: hist_nf_engi_id
-  integer, private              :: monit_nf_mass_id
-  integer, private              :: monit_nf_engi_id
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -125,7 +119,7 @@ contains
        ATMOS_PHY_MP_suzuki10_tracer_units
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
-       ATMOS_sw_phy_mp, &
+       ATMOS_sw_phy_mp,   &
        ATMOS_sw_phy_lt
     use mod_atmos_phy_mp_vars, only: &
        QA_MP, &
@@ -238,17 +232,13 @@ contains
        ATMOS_PHY_MP_suzuki10_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
-    use scale_monitor, only: &
-       MONITOR_reg, &
-       MONITOR_put
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
        ATMOS_sw_phy_mp
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_cldfrac_thleshold, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
-       SFLX_ENGI => ATMOS_PHY_MP_SFLX_ENGI
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
@@ -264,8 +254,6 @@ contains
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
        MP_cldfrac_thleshold
-
-    real(RP) :: ZERO(KA,IA,JA)
 
     integer :: nstep_max
 
@@ -334,50 +322,24 @@ contains
           endif
        end select
 
-       ! history putput
-       if ( MP_do_precipitation ) then
-
-          allocate( hist_vterm_id(QS_MP+1:QE_MP) )
-          do iq = QS_MP+1, QE_MP
-             call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
-          end do
-
-       else
-
-          SFLX_rain(:,:) = 0.0_RP
-          SFLX_snow(:,:) = 0.0_RP
-          SFLX_ENGI(:,:) = 0.0_RP
-
-       end if
-
-       ! monitor
-       if ( MP_do_negative_fixer ) then
-          call FILE_HISTORY_reg( "RHOH_MP_NF",   "sensible heat by the negative fixer",          "J/m3/s", & ! [IN]
-                                 hist_nf_rhoh_id                                                            ) ! [OUT]
-          call FILE_HISTORY_reg( "DENS_t_MP_NF", "vapor supply by the negative fixer",           "kg/m3/s", & ! [IN]
-                                 hist_nf_dens_id                                                            ) ! [OUT]
-          call FILE_HISTORY_reg( "ENGI_t_MP_NF", "internal energy supply by the negative fixer", "J/m3/s",  & ! [IN]
-                                 hist_nf_engi_id                                                            ) ! [OUT]
-          call MONITOR_reg( "QTOTTND_NF", "vapor supply by the negative fixer", "kg",           & ! [IN]
-                            monit_nf_mass_id,                                                   & ! [OUT]
-                            is_tendency=.true.                                                  ) ! [IN]
-          call MONITOR_reg( "ENGITND_NF", "internal energy supply by the negative fixer", "J",  & ! [IN]
-                            monit_nf_engi_id,                                                   & ! [OUT]
-                            is_tendency=.true.                                                  ) ! [IN]
-          ZERO(:,:,:) = 0.0_RP
-          call MONITOR_put( MONIT_nf_mass_id, ZERO(:,:,:) )
-          call MONITOR_put( MONIT_nf_engi_id, ZERO(:,:,:) )
-       end if
-
     else
 
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'SFLX_rain and SFLX_snow is set to zero.'
        SFLX_rain(:,:) = 0.0_RP
        SFLX_snow(:,:) = 0.0_RP
-       SFLX_ENGI(:,:) = 0.0_RP
 
     endif
+
+
+    ! history putput
+    if ( MP_do_precipitation ) then
+       allocate( hist_vterm_id(QS_MP+1:QE_MP) )
+       do iq = QS_MP+1, QE_MP
+          call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
+       end do
+    end if
+
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup
@@ -385,86 +347,38 @@ contains
   !-----------------------------------------------------------------------------
   !> adjustment
   subroutine ATMOS_PHY_MP_driver_adjustment
-    use scale_const, only: &
-       PRE00 => CONST_PRE00
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV, &
-       QLA, &
-       QIA, &
+       QHA, &
        QHS, &
        QHE
     use scale_atmos_phy_mp_common, only: &
        ATMOS_PHY_MP_negative_fixer
     use mod_atmos_vars, only: &
-       TEMP,  &
-       CVtot, &
-       CPtot, &
-       DENS,  &
-       RHOT,  &
+       DENS, &
+       RHOT, &
        QTRC
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
-    use scale_time, only: &
-       dt => TIME_DTSEC
-    use scale_file_history, only: &
-       FILE_HISTORY_query, &
-       FILE_HISTORY_put
-    use scale_monitor, only: &
-       MONITOR_put
 
-    real(RP) :: RHOH  (KA,IA,JA)
-    real(RP) :: DENS_d(KA,IA,JA)
-    real(RP) :: ENGI_d(KA,IA,JA)
-    real(RP) :: Rtot
-
-    logical :: do_put_rhoh
-    logical :: do_put_dens
-    logical :: do_put_engi
+    real(RP) :: DENS0(KA,IA,JA)
 
     integer :: k, i, j, iq
 
     if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
 
-       call FILE_HISTORY_query( hist_nf_rhoh_id, do_put_rhoh )
-       call FILE_HISTORY_query( hist_nf_dens_id, do_put_dens )
-       call FILE_HISTORY_query( hist_nf_engi_id, do_put_engi )
+!OCL XFILL
+       DENS0(:,:,:) = DENS(:,:,:)
 
-       if ( monit_nf_mass_id > 0 .or. monit_nf_engi_id > 0 .or. &
-            do_put_rhoh .or. do_put_dens .or. do_put_engi ) then
-          call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
-               MP_limit_negative,                     & ! [IN]
-               DENS(:,:,:), TEMP(:,:,:),              & ! [INOUT]
-               CVtot(:,:,:), CPtot(:,:,:),            & ! [INOUT]
-               QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE), & ! [INOUT]
-               RHOH = RHOH,                           & ! [OUT, optional]
-               DENS_diff = DENS_d, ENGI_diff = ENGI_d ) ! [OUT, optional]
-       else
-          call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
-               MP_limit_negative,                    & ! [IN]
-               DENS(:,:,:), TEMP(:,:,:),             & ! [INOUT]
-               CVtot(:,:,:), CPtot(:,:,:),           & ! [INOUT]
-               QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
-       end if
-
-       !$omp parallel private(Rtot)
-
-       !$omp do
-       do j = 1, JA
-       do i = 1, IA
-       do k = KS, KE
-          Rtot = CPtot(k,i,j) - CVtot(k,i,j)
-          RHOT(k,i,j) = PRE00 / Rtot * ( DENS(k,i,j) * TEMP(k,i,j) * Rtot / PRE00 )**( CVtot(k,i,j) / CPtot(k,i,j) )
-       end do
-       end do
-       end do
-       !$omp end do nowait
+       call ATMOS_PHY_MP_negative_fixer( &
+            KA, KS, KE, IA, 1, IA, JA, 1, JA, QHA, &
+            MP_limit_negative,                    & ! [IN]
+            DENS(:,:,:),                          & ! [INOUT]
+            QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
 
        ! for non-mass tracers, such as number density
        do iq = QHE+1, QA_MP
-       !$omp do
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
@@ -474,43 +388,13 @@ contains
        end do
        end do
 
-       !$omp end parallel
-
-       if ( do_put_rhoh ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             RHOH(k,i,j) = RHOH(k,i,j) / dt
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( hist_nf_rhoh_id, RHOH(:,:,:) )
-       end if
-       if ( monit_nf_mass_id > 0 .or. do_put_dens ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             DENS_d(k,i,j) = DENS_d(k,i,j) / dt
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( hist_nf_dens_id, DENS_d(:,:,:) )
-          call MONITOR_put( monit_nf_mass_id, DENS_d(:,:,:) )
-       end if
-       if ( monit_nf_engi_id > 0 .or. do_put_engi ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             ENGI_d(k,i,j) = ENGI_d(k,i,j) / dt
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( hist_nf_engi_id, ENGI_d(:,:,:) )
-          call MONITOR_put( monit_nf_engi_id, ENGI_d(:,:,:) )
-       end if
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          RHOT(k,i,j) = RHOT(k,i,j) * DENS(k,i,j) / DENS0(k,i,j)
+       end do
+       end do
+       end do
 
     end if
 
@@ -542,7 +426,6 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
-       LHF,   &
        I_QV,  &
        N_HYD, &
        QHA,   &
@@ -613,8 +496,7 @@ contains
        RHOH_MP   => ATMOS_PHY_MP_RHOH,      &
        EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
-       SFLX_ENGI => ATMOS_PHY_MP_SFLX_ENGI
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_ae_vars, only: &
        CCN_t => ATMOS_PHY_AE_CCN_t
     use mod_atmos_phy_lt_vars, only: &
@@ -624,8 +506,8 @@ contains
        d0_crg, &
        v0_crg, &
        flg_lt, &
-       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t, &
-       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t, &
+       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t,    &
+       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t,    &
        Epot_old => ATMOS_PHY_LT_Epot_old
     implicit none
 
@@ -647,11 +529,9 @@ contains
     real(RP) :: CVtot2   (KA)
     real(RP) :: RHOE     (KA)
     real(RP) :: RHOE2    (KA)
-    real(RP) :: RHOQ     (KA,QS_MP+1:QE_MP)
     real(RP) :: RHOQ2    (KA,QS_MP+1:QE_MP)
     real(RP) :: mflux    (KA)
     real(RP) :: sflux    (2)  !> 1: rain, 2: snow
-    real(RP) :: eflux
 
     real(RP) :: FZ  (KA)
     real(RP) :: FDZ (KA)
@@ -681,11 +561,13 @@ contains
     real(RP), allocatable :: Sarea(:,:,:,:)
     !---------------------------------------------------------------------------
 
+    LOG_INFO("ATMOS_PHY_MP_driver_calc_tendency",*) 'Skip this modlue'
+    return
     if ( update_flag ) then
 
        if( QA_LT /= 0 ) then
           RHOQ_t_LT(:,:,:,:) = 0.0_RP
-          RHOQ_t_LT_mp(:,:,:,:) = 0.0_RP
+          RHOQ_t_LT_mp(:,:,:,:) = 0.0_RP 
        endif
 
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
@@ -825,7 +707,7 @@ contains
           end do
 
           if( ATMOS_sw_phy_lt ) then
-
+ 
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
@@ -865,7 +747,7 @@ contains
                   DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
                   Qdry(:,:,:), CPtot(:,:,:), CVtot(:,:,:), CCN(:,:,:), dt_MP, REAL_CZ(:,:,:), REAL_FZ(:,:,:),   & ! [IN]
                   RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), EVAPORATE(:,:,:),& ! [OUT]
-                  QA_LT,                                                                                        & ! [IN]
+                  QA_LT,                                                                                        & ! [IN:optional]
                   d0_crg, v0_crg, flg_lt, dqcrg(:,:,:), beta_crg(:,:,:),                                        & ! [IN:optional]
                   QTRC(:,:,:,QS_LT:QE_LT),                                                                      & ! [IN:optional]
                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),                                                            & ! [OUT:optional]
@@ -977,19 +859,19 @@ contains
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
-          !$omp         PRE00,LHF, &
+          !$omp         PRE00, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
-          !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
+          !$omp         SFLX_rain,SFLX_snow, &
           !$omp         REFSTATE_dens, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
-          !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
-          !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
+          !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
+          !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
 
@@ -1014,8 +896,7 @@ contains
              end do
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
-                RHOQ (k,iq) = DENS2(k) * QTRC(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq) * dt_MP
-                RHOQ2(k,iq) = RHOQ(k,iq)
+                RHOQ2(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
              end do
              end do
 
@@ -1029,7 +910,6 @@ contains
 
              SFLX_rain(i,j) = 0.0_RP
              SFLX_snow(i,j) = 0.0_RP
-             SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
              do step = 1, MP_NSTEP_SEDIMENTATION
 
@@ -1094,8 +974,7 @@ contains
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
                         RHOE2(:),               & ! [INOUT]
-                        mflux(:), sflux(:),     & ! [OUT]
-                        eflux                   ) ! [OUT]
+                        mflux(:), sflux(:)      ) ! [OUT]
                 case ( 'Semilag' )
                    call ATMOS_PHY_MP_precipitation_semilag( &
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
@@ -1106,12 +985,10 @@ contains
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
                         RHOE2(:),               & ! [INOUT]
-                        mflux(:), sflux(:),     & ! [OUT]
-                        eflux                   ) ! [OUT]
+                        mflux(:), sflux(:)      ) ! [OUT]
                 case default
                    mflux(:) = 0.0_RP
                    sflux(:) = 0.0_RP
-                   eflux    = 0.0_RP
                 end select
 
                 if( ATMOS_sw_phy_lt ) then
@@ -1156,10 +1033,8 @@ contains
 
                 SFLX_rain(i,j) = SFLX_rain(i,j) - sflux(1) * MP_RNSTEP_SEDIMENTATION
                 SFLX_snow(i,j) = SFLX_snow(i,j) - sflux(2) * MP_RNSTEP_SEDIMENTATION
-                SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - eflux    * MP_RNSTEP_SEDIMENTATION
 
              enddo
-             SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - SFLX_snow(i,j) * LHF ! moist internal energy
 
 !OCL XFILL
              do k = KS, KE
@@ -1183,7 +1058,7 @@ contains
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
-                     + ( RHOQ2(k,iq) - RHOQ(k,iq) ) / dt_MP
+                     + ( RHOQ2(k,iq) - DENS(k,i,j) * QTRC(k,i,j,iq) ) / dt_MP
              enddo
              enddo
 
@@ -1413,37 +1288,4 @@ contains
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
 
-  subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QV, QHYD, &
-       QTRC,     &
-       QNUM      )
-    use scale_atmos_hydrometeor, only: &
-       N_HYD
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in) :: QV  (KA,IA,JA)
-    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
-
-    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
-
-    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
-
-    integer :: k, i, j
-
-    !$omp parallel do
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QTRC(k,i,j,1) = QV(k,i,j)
-    end do
-    end do
-    end do
-
-    return
-  end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
 end module mod_atmos_phy_mp_driver
