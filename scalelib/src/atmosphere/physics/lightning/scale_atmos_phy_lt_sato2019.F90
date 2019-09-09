@@ -511,8 +511,8 @@ contains
     real(RP), intent(in) :: RHOT(KA,IA,JA)
     real(RP), intent(in) :: QSPLT_in(KA,IA,JA,3)
     real(RP), intent(in) :: Sarea(KA,IA,JA,QA_LT)       !--- Surface area and that of each catergory [m2]
-    real(RP), intent(in) :: dt_MP
-    real(RP), intent(in) :: dt_LT
+    real(DP), intent(in) :: dt_MP
+    real(DP), intent(in) :: dt_LT
     real(RP), intent(in) :: QTRC(KA,IA,JA,QA_MP)
     real(RP), intent(in) :: QTRC_crg(KA,IA,JA,QA_LT)
     real(RP), intent(in) :: RHOQ_t_MP(KA,IA,JA,QA_MP)

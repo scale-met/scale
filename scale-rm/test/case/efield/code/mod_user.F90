@@ -410,8 +410,8 @@ contains
             KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, MP_TYPE,           & ! [IN]
             QA_MP, QA_LT, DENS(:,:,:),                                                 & ! [IN]
             RHOT(:,:,:), QTRC_local(:,:,:,QS_MP:QE_MP),                                & ! [IN]
-            QCRG_local(:,:,:,QS_LT:QE_LT), 1.0_RP,                                     & ! [IN]
-            1.0_RP, dummy_splt(:,:,:,:), dummy_sarea(:,:,:,:),                         & ! [IN]
+            QCRG_local(:,:,:,QS_LT:QE_LT), 1.0_DP,                                     & ! [IN]
+            1.0_DP, dummy_splt(:,:,:,:), dummy_sarea(:,:,:,:),                         & ! [IN]
             dummy_mp(:,:,:,QS_MP:QE_MP), dummy_lt(:,:,:,QS_LT:QE_LT),                  & ! [IN]
             E_old(:,:,:), dummy_lt2(:,:,:,QS_LT:QE_LT)                                 ) ! [INOUT]
 
