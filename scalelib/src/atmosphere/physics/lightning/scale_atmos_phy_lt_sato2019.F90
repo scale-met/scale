@@ -71,7 +71,7 @@ module scale_atmos_phy_lt_sato2019
   integer, save                     :: fid_lut_lt
   real(RP), private                 :: R_neut = 2000.0_RP  ! [m]
   real(RP), private                 :: rho0 = 1.225_RP       ! [kg/m3]
-  real(RP), save                    :: flg_eint_hgt 
+  real(RP), save                    :: flg_eint_hgt
   logical,  private                 :: LT_DO_Lightning = .true.
 
   real(RP), allocatable, private    :: d_QCRG_TOT(:,:,:)
@@ -201,7 +201,7 @@ module scale_atmos_phy_lt_sato2019
   integer, parameter :: I_Eabs = 13
   integer, parameter :: I_Epot = 14
   integer, parameter :: I_Qneut = 15
-  integer, parameter :: I_LTpath = 16 
+  integer, parameter :: I_LTpath = 16
   integer, parameter :: I_PosFLASH = 17
   integer, parameter :: I_NegFLASH = 18
   integer, parameter :: I_FlashPoint = 19
@@ -275,7 +275,7 @@ contains
       if ( QA_LT == nwaters ) then
         LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
         call PRC_abort
-      endif 
+      endif
 
       allocate(ATMOS_PHY_LT_sato2019_tracer_names(QA_LT))
       allocate(ATMOS_PHY_LT_sato2019_tracer_descriptions(QA_LT))
@@ -350,7 +350,7 @@ contains
     real(RP), intent(in)  :: CDY(JA)
 
     integer :: n, myu, ip
-    integer :: ierr   
+    integer :: ierr
 
     namelist / PARAM_ATMOS_PHY_LT_SATO2019 / &
          NUTR_TYPE, &
@@ -369,7 +369,7 @@ contains
          zcg, &
          R_neut, &
          Hgt_dependency_Eint, &
-         LT_DO_Lightning 
+         LT_DO_Lightning
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -387,7 +387,7 @@ contains
         R_neut = 2.d0 * min( minval( CDX,1 ), minval( CDY,1 ) )
     endif
 
-    if ( PRC_IsMaster ) then 
+    if ( PRC_IsMaster ) then
         fname_lut_lt = ATMOS_PHY_LT_LUT_FILENAME
         fid_lut_lt = IO_get_available_fid()
         !--- open parameter of cloud microphysics
@@ -555,7 +555,7 @@ contains
     do k = KS, KE
        QTRC0(k,i,j,1:QA_MP) = QTRC(k,i,j,1:QA_MP) + RHOQ_t_MP(k,i,j,1:QA_MP)/DENS(k,i,j) * dt_MP
        QTRC0_crg(k,i,j,1:QA_LT) = QTRC_crg(k,i,j,1:QA_LT) + RHOQ_t_LT_mp(k,i,j,1:QA_LT)/DENS(k,i,j) * dt_MP
-       QTRC1_crg(k,i,j,1:QA_LT) = QTRC0_crg(k,i,j,1:QA_LT)  
+       QTRC1_crg(k,i,j,1:QA_LT) = QTRC0_crg(k,i,j,1:QA_LT)
     enddo
     enddo
     enddo
@@ -565,19 +565,19 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       do n = I_crg_QC_s, I_crg_QC_e  
+       do n = I_crg_QC_s, I_crg_QC_e
          QCRG(k,i,j,I_lt_QC) = QCRG(k,i,j,I_lt_QC) &
                              + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
-       do n = I_crg_QR_s, I_crg_QR_e  
+       do n = I_crg_QR_s, I_crg_QR_e
          QCRG(k,i,j,I_lt_QR) = QCRG(k,i,j,I_lt_QR) &
                              + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
-       do n = I_crg_QI_s, I_crg_QI_e  
+       do n = I_crg_QI_s, I_crg_QI_e
          QCRG(k,i,j,I_lt_QI) = QCRG(k,i,j,I_lt_QI) &
                              + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
-       do n = I_crg_QS_s, I_crg_QS_e 
+       do n = I_crg_QS_s, I_crg_QS_e
          QCRG(k,i,j,I_lt_QS) = QCRG(k,i,j,I_lt_QS) &
                              + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
@@ -782,9 +782,9 @@ contains
                   d_pos_crg = frac * pos_crg
                   d_neg_crg = frac * neg_crg
 
-                  do n = I_lt_QC, I_lt_QG 
+                  do n = I_lt_QC, I_lt_QG
                      Total_Sarea(1) = Total_Sarea(1) &  !--- Sarea of positively charged hydrometeor
-                                    + Sarea(k,i,j,n) * ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,n) ) ) * flg_chrged(n) 
+                                    + Sarea(k,i,j,n) * ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,n) ) ) * flg_chrged(n)
                      Total_Sarea(2) = Total_Sarea(2) &  !--- Sarea of negatively charged hydrometeor
                                     + Sarea(k,i,j,n) * ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,n) ) ) * flg_chrged(n)
                   enddo
@@ -1042,7 +1042,7 @@ contains
        RCDY => ATMOS_GRID_CARTESC_RCDY, &
        RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
        RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY 
+       RFDY => ATMOS_GRID_CARTESC_RFDY
     use scale_atmos_grid_cartesC_metric, only: &
        MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF, &
        GSQRT => ATMOS_GRID_CARTESC_METRIC_GSQRT, &
@@ -1082,10 +1082,10 @@ contains
     real(RP), intent(in)  :: E_pot_old(KA,IA,JA)      !-- Electric potential in previous step[V]
     real(RP), intent(out) :: E_pot    (KA,IA,JA)      !-- Electric potential [V]
     real(RP), intent(out) :: Efield   (KA,IA,JA,3)    !-- Electric field [V/m]
- 
+
     real(RP) :: eps_air(KA,IA,JA)
     !--- A x E_pott = - QCRG/epsiron
-    real(RP) :: A(15,KA,IA,JA)            !--- A : Laplasian 
+    real(RP) :: A(15,KA,IA,JA)            !--- A : Laplasian
     real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
     real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
 
@@ -1096,7 +1096,7 @@ contains
 
     iprod = 0.0_RP
     do k = KS, KE
-    do i = IS, IE 
+    do i = IS, IE
     do j = JS, JE
         iprod = iprod + abs( QCRG(k,i,j) )
     enddo
@@ -1111,10 +1111,10 @@ contains
       Efield(:,:,:,1:3) = 0.0_RP
       return
     endif
-     
+
     eps_air(:,:,:) = EPSvac * EPSair
     do k = KS, KE
-    do i = IS, IE 
+    do i = IS, IE
     do j = JS, JE
        eps_air(k,i,j) = EPSvac * EPSair   !--- temporary, dependency of epsiron on P and T will be implemented
        B(k,i,j) = - QCRG(k,i,j)/eps_air(k,i,j) * 1.0E-9_RP ! [nC/m3] -> [C/m3 * m/F] = [V/m2]
@@ -1129,31 +1129,31 @@ contains
     call COMM_wait ( B,      2 )
 
     !---- input vector A
-    do i = IS, IE 
+    do i = IS, IE
     do j = JS, JE
      do k = KS, KE
        ! (k,i,j)
-       A(1,k,i,j) = & 
+       A(1,k,i,j) = &
                   - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i  )*RFDX(i) &
                   - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i-1)*RFDX(i) &
                   + MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   + MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*J13G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) & 
-                  - J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) & 
+                  - J13G(k,i,j,I_XYZ)*J13G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
                   - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j  )*RFDY(j) &
                   - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j-1)*RFDY(j) &
                   + MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   + MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*J23G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) & 
-                  - J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) & 
+                  - J23G(k,i,j,I_XYZ)*J23G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
                   - J33G*J33G*RFDZ(k)*RCDZ(k) &
-                  - J33G*J33G*RFDZ(k)*RCDZ(k-1) 
+                  - J33G*J33G*RFDZ(k)*RCDZ(k-1)
 
-       ! (k-1,i,j) 
+       ! (k-1,i,j)
        A(2,k,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
@@ -1163,7 +1163,7 @@ contains
                   + J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
                   + J33G*J33G*RFDZ(k)*RCDZ(k-1)
 
-       ! (k+1,i,j) 
+       ! (k+1,i,j)
        A(3,k,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
@@ -1173,78 +1173,78 @@ contains
                   + J23G(k,i,j,I_XYZ)*J23G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
                   + J33G*J33G*RFDZ(k)*RCDZ(k)
 
-       ! (k,i-1,j) 
+       ! (k,i-1,j)
        A(4,k,i,j) = &
                     MAPF(i,j,1,I_XY)*MAPF(i-1,j,1,I_XY)*RFDX(i)*RCDX(i-1) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) 
+                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
 
-       ! (k,i+1,j) 
+       ! (k,i+1,j)
        A(5,k,i,j) = &
                     MAPF(i,j,1,I_XY)*MAPF(i+1,j,1,I_XY)*RFDX(i)*RCDX(i) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) 
+                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
 
-       ! (k,i,j-1) 
+       ! (k,i,j-1)
        A(6,k,i,j) = &
                     MAPF(i,j,2,I_XY)*MAPF(i,j-1,2,I_XY)*RFDY(j)*RCDY(j-1) &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
                   + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k) 
+                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k)
 
-       ! (k,i,j+1) 
+       ! (k,i,j+1)
        A(7,k,i,j) = &
                     MAPF(i,j,2,I_XY)*MAPF(i,j+1,2,I_XY)*RFDY(j)*RCDY(j) &
                   + MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k) 
+                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k)
 
-       ! (k-1,i-1,j) 
+       ! (k-1,i-1,j)
        A(8,k,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
-  
-       ! (k-1,i+1,j) 
+
+       ! (k-1,i+1,j)
        A(9,k,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
 
-       ! (k-1,i,j-1) 
+       ! (k-1,i,j-1)
        A(10,k,i,j) = &
                     MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k)
 
-       ! (k-1,i,j+1) 
+       ! (k-1,i,j+1)
        A(11,k,i,j) = &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k)
-  
-       ! (k+1,i-1,j) 
+
+       ! (k+1,i-1,j)
        A(12,k,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
-  
-       ! (k+1,i+1,j) 
+
+       ! (k+1,i+1,j)
        A(13,k,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
-  
-       ! (k+1,i,j-1) 
+
+       ! (k+1,i,j-1)
        A(14,k,i,j) = &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k)
-  
-       ! (k+1,i,j+1) 
+
+       ! (k+1,i,j+1)
        A(15,k,i,j) = &
                     MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k)
-  
+
      enddo
     enddo
     enddo
@@ -1299,35 +1299,35 @@ contains
 
     !--- boundary condition
     if( .not. PRC_HAS_W ) then
-      do k = 1, KA 
-      do j = 1, JA 
+      do k = 1, KA
+      do j = 1, JA
         E_pot(k,1:IS-1,j) = E_pot(k,IS,j)
       enddo
       enddo
     endif
     if( .not. PRC_HAS_E ) then
-      do k = 1, KA 
-      do j = 1, JA 
+      do k = 1, KA
+      do j = 1, JA
         E_pot(k,IE+1:IA,j) = E_pot(k,IE,j)
       enddo
       enddo
     endif
     if( .not. PRC_HAS_S ) then
-      do k = 1, KA 
-      do i = 1, IA 
+      do k = 1, KA
+      do i = 1, IA
         E_pot(k,i,1:JS-1) = E_pot(k,i,JS)
       enddo
       enddo
     endif
     if( .not. PRC_HAS_N ) then
-      do k = 1, KA 
-      do i = 1, IA 
+      do k = 1, KA
+      do i = 1, IA
         E_pot(k,i,JE+1:JA) = E_pot(k,i,JE)
       enddo
       enddo
     endif
-    do i = 1, IA 
-    do j = 1, JA 
+    do i = 1, IA
+    do j = 1, JA
       E_pot(1:KS-1,i,j) = 0.0_RP
       E_pot(KE+1:KA,i,j) = 0.0_RP
     enddo
@@ -1335,7 +1335,7 @@ contains
 
     !---- Calculate Electrical Field
     Efield(:,:,:,:) = 0.d0
-    do i = IS, IE 
+    do i = IS, IE
     do j = JS, JE
      do k = KS, KE
        Efield(k,i,j,I_lt_x) = - MAPF(i,j,1,I_XYZ)/GSQRT(k,i,j,I_XYZ) * &
@@ -1344,7 +1344,7 @@ contains
                             * RCDX(i) * 0.5_RP &
                             + ( J13G(k+1,i,j,I_UYW)*GSQRT(k+1,i,j,I_UYW)*E_pot(k+1,i,j) &
                               - J13G(k-1,i,j,I_UYW)*GSQRT(k-1,i,j,I_UYW)*E_pot(k-1,i,j) &
-                              ) & 
+                              ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
        Efield(k,i,j,I_lt_y) = - MAPF(i,j,2,I_XYZ)/GSQRT(k,i,j,I_XYZ) * &
@@ -1353,7 +1353,7 @@ contains
                             * RCDY(j) * 0.5_RP &
                             + ( J23G(k+1,i,j,I_UYW)*GSQRT(k+1,i,j,I_UYW)*E_pot(k+1,i,j) &
                               - J23G(k-1,i,j,I_UYW)*GSQRT(k-1,i,j,I_UYW)*E_pot(k-1,i,j) &
-                              ) & 
+                              ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
        Efield(k,i,j,I_lt_z) = - 1.0_RP/GSQRT(k,i,j,I_XYZ) * &
@@ -1634,7 +1634,7 @@ contains
                 + M(12,k,i,j)* C(k+1,i-1,j  ) &
                 + M(13,k,i,j)* C(k+1,i+1,j  ) &
                 + M(14,k,i,j)* C(k+1,i  ,j-1) &
-                + M(15,k,i,j)* C(k+1,i  ,j+1) 
+                + M(15,k,i,j)* C(k+1,i  ,j+1)
     enddo
     enddo
     enddo
@@ -1649,7 +1649,7 @@ contains
                  + M(12,KS,i,j)* C(KS+1,i-1,j  ) &
                  + M(13,KS,i,j)* C(KS+1,i+1,j  ) &
                  + M(14,KS,i,j)* C(KS+1,i  ,j-1) &
-                 + M(15,KS,i,j)* C(KS+1,i  ,j+1) 
+                 + M(15,KS,i,j)* C(KS+1,i  ,j+1)
        V(KE,i,j) = M(1,KE,i,j) * C(KE  ,i  ,j  ) &
                  + M(2,KE,i,j) * C(KE-1,i  ,j  ) &
                  + M(4,KE,i,j) * C(KE  ,i-1,j  ) &
@@ -1659,7 +1659,7 @@ contains
                  + M(8,KE,i,j) * C(KE-1,i-1,j  ) &
                  + M(9,KE,i,j) * C(KE-1,i+1,j  ) &
                  + M(10,KE,i,j)* C(KE-1,i  ,j-1) &
-                 + M(11,KE,i,j)* C(KE-1,i  ,j+1) 
+                 + M(11,KE,i,j)* C(KE-1,i  ,j+1)
     enddo
     enddo
 
@@ -1679,9 +1679,9 @@ contains
 
     real(RP) :: f2h
     integer, intent(in) :: k, i, j, p
- 
+
     f2h = (CDZ(k+p-1)*GSQRT(k+p-1,i,j,I_XYZ) &
-        / (CDZ(k)*GSQRT(k,i,j,I_XYZ)+CDZ(k+1)*GSQRT(k+1,i,j,I_XYZ))) 
+        / (CDZ(k)*GSQRT(k,i,j,I_XYZ)+CDZ(k+1)*GSQRT(k+1,i,j,I_XYZ)))
 
   end function
   !-----------------------------------------------------------------------------
@@ -1759,7 +1759,7 @@ contains
     real(RP), intent(in)    :: E_pot    (KA,IA,JA)      !-- Electric potential [V]
     real(RP), intent(in)    :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
     real(RP), intent(in)    :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
-    real(RP), intent(in)    :: QHYD     (KA,IA,JA)      !-- Total hydrometeor mixing ratio 
+    real(RP), intent(in)    :: QHYD     (KA,IA,JA)      !-- Total hydrometeor mixing ratio
     real(RP), intent(inout) :: NUM_end  (KA,IA,JA,3)    !-- Number of Lightning stop grid
     real(RP), intent(inout) :: LT_path  (KA,IA,JA)      !-- Number of path
     real(RP), intent(out)   :: fls_int_p(KA,IA,JA)      !-- Flash initiation point (0->no flash, 1->flash start at the point)
@@ -1797,7 +1797,7 @@ contains
     1000 continue
 
     Eovid(:,:) = 0
-    !--- search grid whose Efield is over threshold of flash inititation  
+    !--- search grid whose Efield is over threshold of flash inititation
     own_prc_total = 0
     do k = KS, KE
     do j = JS, JE
@@ -1840,7 +1840,7 @@ contains
     call MPI_AllGatherv( proc_num, own_prc_total, MPI_integer, &
                          proc_numg, count1, countindx, MPI_integer, &
                          COMM_world, ierr )
-     
+
     !---- select initial point of flash by random select
     !**** rank_initpoint -> rank number including initpoint
     !**** grid_initpoint -> grid number of init point in rank (rank_initpoint)
@@ -1856,9 +1856,9 @@ contains
       do i = init_point(1), 0, -1
         grid_initpoint = grid_initpoint + 1
         if( i == 0 ) then
-          grid_initpoint = grid_initpoint - 1 
+          grid_initpoint = grid_initpoint - 1
         elseif( i /= 0 .and. proc_numg(i) /= rank_initpoint ) then
-          grid_initpoint = grid_initpoint - 1 
+          grid_initpoint = grid_initpoint - 1
           exit
         endif
       enddo
@@ -1873,7 +1873,7 @@ contains
 
     L_path(:,:,:) = 0.0_RP   !--- +-1 -> path already passed, +-2 -> path calculate current step
 
-    !--- Propagate lightning 
+    !--- Propagate lightning
     flg_num_end(:,:,:,:) = 0
     wild_flag = 0
     end_grid(:) = 0
@@ -1881,12 +1881,12 @@ contains
     do iq = 1, 2       !--- loop for direction (1-> parallel, 2-> anti-parallel)
       if( iq == 1 ) then
        pm = 1
-      elseif( iq == 2 ) then 
+      elseif( iq == 2 ) then
        pm = -1
       endif
       stop_flag = 0
       current_prc = rank_initpoint
- 
+
       !---- determine initiation point
       if( rank_initpoint == PRC_myrank ) then
         i = Eovid(1,grid_initpoint)
@@ -1905,8 +1905,8 @@ contains
          comm_flag = 0
          !---- calculate path of lightning
          if( current_prc == PRC_myrank ) then
-          
-           !--- determine direction of path 
+
+           !--- determine direction of path
            E_x = abs( Efield(k,i,j,I_lt_x) )/CDX(i)
            E_y = abs( Efield(k,i,j,I_lt_y) )/CDY(j)
            E_z = abs( Efield(k,i,j,I_lt_z) )/CDZ(k)
@@ -1952,7 +1952,7 @@ contains
            endif
 
            !--- check whether lightning path reach top or bottom layer
-           if( k1 == KE ) then   
+           if( k1 == KE ) then
              !--- reach at top
              NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
              flg_num_end(k,i,j,sign_flash) = 1
@@ -1967,8 +1967,8 @@ contains
              else
                corr_flag(iq) = 1
              endif
-           elseif( CZ(k1) < zcg ) then   
-             !--- reach at groud 
+           elseif( CZ(k1) < zcg ) then
+             !--- reach at groud
              NUM_end(k,i,j,2) = NUM_end(k,i,j,2) + 1.0_RP
              flg_num_end(k,i,j,2) = 1
              L_path(k,i,j) = 1.0_RP * pm
@@ -2194,7 +2194,7 @@ contains
 
 !    call COMM_vars8( L_path,1 )
 !    call COMM_wait ( L_path,1 )
-        
+
     !---- Neutralization
     Npls = 0
     Nmns = 0
@@ -2211,15 +2211,15 @@ contains
           if( abs( QCRG(k,i,j) ) > qrho_chan ) then
              pm = sign( 1.0_RP,QCRG(k,i,j) )   !--- plus or minus
              if( pm == 1 ) then
-                Npls = Npls + 1 
+                Npls = Npls + 1
                 dqrho_pls(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
                 sumdqrho_pls = sumdqrho_pls &
                                  + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
              elseif( pm == -1 ) then
-                Nmns = Nmns + 1 
-                dqrho_mns(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut ) 
+                Nmns = Nmns + 1
+                dqrho_mns(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
                 sumdqrho_mns = sumdqrho_mns &
-                                 + fp * ( abs( QCRG(k,i,j) )-qrho_neut ) 
+                                 + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
              endif
           endif
        endif
@@ -2244,7 +2244,7 @@ contains
       L_path(:,:,:) = 0.0_RP
       return
     endif
-       
+
     if( Ntot == 0 ) then
      count_path = count_path + 1
      goto 1000
@@ -2264,7 +2264,7 @@ contains
     d_QCRG(:,:,:) = 0.0_RP
     rprod1 = 0.0_RP
     rprod2 = 0.0_RP
-    !--- pseud-2D experiment for x-direction 
+    !--- pseud-2D experiment for x-direction
     if( PRC_NUM_X == 1 .and. IMAX == 2 ) then
 
       do k = KS, KE
@@ -2297,11 +2297,11 @@ contains
                NUM_end(k,IS,j,pm) = NUM_end(k,IS,j,pm) + 1.0_RP
            endif
          enddo
-           
+
       enddo
       enddo
-  
-    !--- pseud-2D experiment for y-direction 
+
+    !--- pseud-2D experiment for y-direction
     elseif( PRC_NUM_Y == 1 .and. JMAX == 2 ) then
 
       do k = KS, KE
@@ -2334,10 +2334,10 @@ contains
                NUM_end(k,i,JS,pm) = NUM_end(k,i,JS,pm) + 1.0_RP
            endif
          enddo
-           
+
       enddo
       enddo
-  
+
     else
 
       do k = KS, KE
@@ -2353,7 +2353,7 @@ contains
       enddo
 
     endif
-  
+
     do k = KS, KE
     do i = IS, IE
     do j = JS, JE
@@ -2440,7 +2440,7 @@ contains
     real(RP), intent(in)    :: E_pot    (KA,IA,JA)      !-- Electric potential [V]
     real(RP), intent(in)    :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
     real(RP), intent(in)    :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
-    real(RP), intent(in)    :: QHYD     (KA,IA,JA)      !-- Total hydrometeor mixing ratio 
+    real(RP), intent(in)    :: QHYD     (KA,IA,JA)      !-- Total hydrometeor mixing ratio
     real(RP), intent(inout) :: NUM_end  (KA,IA,JA,3)    !-- Number of Lightning stop grid
     real(RP), intent(inout) :: LT_path   (KA,IA,JA)     !-- Number of path
     real(RP), intent(out)   :: fls_int_p(KA,IA,JA)      !-- Flash initiation point (0->no flash, 1->flash start at the point)
@@ -2463,7 +2463,7 @@ contains
     integer  :: count1(PRC_nprocs)
     integer  :: countindx(PRC_nprocs+1)
     integer  :: num_own                               !--- number of column whose |E| > Eint-dEint for each process
-    integer  :: num_total                             !--- total number of column whose |E| > Eint-dEint 
+    integer  :: num_total                             !--- total number of column whose |E| > Eint-dEint
     integer  :: k, i, j, ipp, iq, ierr
 
     call PROF_rapstart('LT_neut_F2013', 1)
@@ -2472,7 +2472,7 @@ contains
     fls_int_p(:,:,:) = 0.0_RP
     B(:,:) = 0
     C(:,:) = 0
-    !--- search grid whose Efield is over threshold of flash inititation  
+    !--- search grid whose Efield is over threshold of flash inititation
     num_own = 0
     do j = JS, JE
     do i = IS, IE
@@ -2487,7 +2487,7 @@ contains
          do k = KS, KE
            if( Edif(k) > 0.0_RP ) then
              fls_int_p(k,i,j) = 1.0_RP
-           endif  
+           endif
          enddo
        endif
     enddo
@@ -2498,7 +2498,7 @@ contains
     allocate(E_exce_x(num_own))
     allocate(E_exce_y(num_own))
 
-!    proc_num(:) = PRC_myrank 
+!    proc_num(:) = PRC_myrank
     E_exce_x(1:num_own) = exce_grid(1,1:num_own)
     E_exce_y(1:num_own) = exce_grid(2,1:num_own)
 
@@ -2542,7 +2542,7 @@ contains
 
     do i = IS, IE
     do j = JS, JE
-      C(i,j) = min( C(i,j),1 ) 
+      C(i,j) = min( C(i,j),1 )
     enddo
     enddo
 
@@ -2634,7 +2634,7 @@ contains
     integer,  intent(in)    :: IA, IS, IE
     integer,  intent(in)    :: JA, JS, JE
     real(RP), intent(in)    :: DENS     (KA,IA,JA)    !-- Total density [kg/m3]
-    real(RP), intent(in)    :: Efield   (KA,IA,JA)    !-- Absolute value of Electric field [V/m] 
+    real(RP), intent(in)    :: Efield   (KA,IA,JA)    !-- Absolute value of Electric field [V/m]
     real(RP), intent(out)   :: Emax                   !-- Maximum value of Electric field [V/m]
     integer,  intent(out)   :: flg_lt_neut            !-- flg 1-> neutralization, 0->no neutralization
 
@@ -2643,7 +2643,7 @@ contains
     integer  :: own_prc_total, iprod1, buf
     integer  :: k, i, j, ierr
 
-    !--- search grid whose Efield is over threshold of flash inititation  
+    !--- search grid whose Efield is over threshold of flash inititation
     own_prc_total = 0
     if( flg_eint_hgt == 1.0_RP ) then
       do k = KS, KE
@@ -2679,14 +2679,14 @@ contains
     call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
     rprod1 = maxval(Efield(:,:,:))
     call MPI_AllReduce(rprod1, rbuf, 1, COMM_datatype, MPI_MAX, COMM_world, ierr)
-    !--- exit when no grid point with |E| over threshold of flash initiation exist 
+    !--- exit when no grid point with |E| over threshold of flash initiation exist
     Emax = rbuf
     if( buf == 0 ) then
       flg_lt_neut = 0
     else
       flg_lt_neut = 1
       if( Emax < Eint .and. Emax >= Eint-delEint .and. flg_eint_hgt == 0.0_RP ) then
-        flg_lt_neut = 2 
+        flg_lt_neut = 2
       endif
     endif
 
@@ -2703,7 +2703,7 @@ contains
        DENS,       & ! [IN]
        QTRC,       & ! [IN]
        dqcrg,      & ! [OUT]
-       beta_crg    ) ! [OUT]  
+       beta_crg    ) ! [OUT]
     use scale_const, only: &
        T00 => CONST_TEM00
     implicit none

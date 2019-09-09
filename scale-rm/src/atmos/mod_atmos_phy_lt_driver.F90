@@ -83,7 +83,7 @@ contains
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'TOMITA08', 'SN14' )
              call ATMOS_PHY_LT_sato2019_tracer_setup( QA_LT,                          & ! [OUT]
-                                                      ATMOS_PHY_MP_TYPE               ) ! [IN] 
+                                                      ATMOS_PHY_MP_TYPE               ) ! [IN]
              call TRACER_regist( QS_LT,                           & ! [OUT]
                                  QA_LT,                           & ! [IN]
                                  ATMOS_PHY_LT_sato2019_NAME(:),   & ! [IN]
@@ -92,9 +92,9 @@ contains
           case ( 'SUZUKI10' )
              call ATMOS_PHY_LT_sato2019_tracer_setup( QA_LT,                          & ! [OUT]
                                                       ATMOS_PHY_MP_TYPE,              & ! [IN]
-                                                      ATMOS_PHY_MP_suzuki10_nwaters,  & ! [IN:Optional] 
-                                                      ATMOS_PHY_MP_suzuki10_nices,    & ! [IN:Optional] 
-                                                      ATMOS_PHY_MP_suzuki10_nccn      ) ! [IN:Optional] 
+                                                      ATMOS_PHY_MP_suzuki10_nwaters,  & ! [IN:Optional]
+                                                      ATMOS_PHY_MP_suzuki10_nices,    & ! [IN:Optional]
+                                                      ATMOS_PHY_MP_suzuki10_nccn      ) ! [IN:Optional]
              call TRACER_regist( QS_LT,                           & ! [OUT]
                                  QA_LT,                           & ! [IN]
                                  ATMOS_PHY_LT_sato2019_NAME(:),   & ! [IN]
@@ -109,7 +109,7 @@ contains
           call PRC_abort
        end select
 
-       QE_LT = QS_LT -1 + QA_LT 
+       QE_LT = QS_LT -1 + QA_LT
 
     else
        QA_LT = 0
@@ -224,7 +224,7 @@ contains
        do k  = KS, KE
           RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) &
                            + RHOQ_t_LT(k,i,j,iq) &
-                           + RHOQ_t_LT_mp(k,i,j,iq) 
+                           + RHOQ_t_LT_mp(k,i,j,iq)
        enddo
        enddo
        enddo

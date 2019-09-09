@@ -567,7 +567,7 @@ contains
 
        if( QA_LT /= 0 ) then
           RHOQ_t_LT(:,:,:,:) = 0.0_RP
-          RHOQ_t_LT_mp(:,:,:,:) = 0.0_RP 
+          RHOQ_t_LT_mp(:,:,:,:) = 0.0_RP
        endif
 
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
@@ -707,7 +707,7 @@ contains
           end do
 
           if( ATMOS_sw_phy_lt ) then
- 
+
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE

@@ -2760,7 +2760,7 @@ contains
             Pcrg2(:,:),                        & ! (inout)
             Pac(:,:)                           ) ! (out)
 
-       call ice_multiplication(     & 
+       call ice_multiplication(     &
             KA, KS, KE,             & ! (in)
             flg_lt_l,               & ! (in)
             Pac(:,:),               & ! (in)
@@ -3937,8 +3937,8 @@ contains
                                   * ( dqcrg(k)*alpha ) &
                                   * beta_crg(k)
        enddo
-!!       !----------------- 
-!!       !  (start) Y.Sato added on 2018/8/31 
+!!       !-----------------
+!!       !  (start) Y.Sato added on 2018/8/31
 !!       !--- ice-graupel => graupel
 !!       coef_acc_LIG = &
 !!              ( delta_b1(I_QI)*didi + delta_ab1(I_QG,I_QI)*didg + delta_b0(I_QG)*dgdg ) &
@@ -3964,7 +3964,7 @@ contains
 !!                                  * ( dqcrg(k)*alpha ) &
 !!                                  * beta_crg(k) * flg_lt * flg_igcol
 !!       enddo
-!!       !  (end) Y.Sato added on 2018/8/31 
+!!       !  (end) Y.Sato added on 2018/8/31
 !!       !------------------
        !------------------------------------------------------------------------
        ! ice-snow => snow
@@ -5171,7 +5171,7 @@ contains
        do iqw = 1, int(flg_lt)
          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NI is small,  ignore charge transfer
          frz_dnc_crg = frz_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw ) * rhoq2_crg(I_QC,k) * flg_lt
-         !--- limiter 
+         !--- limiter
          sw = min( abs(rhoq2_crg(I_QC,k)+dep_dnc_crg),abs(frz_dnc_crg) )
          frz_dnc_crg = sign( sw,frz_dnc_crg )
        enddo
@@ -5195,7 +5195,7 @@ contains
          sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NG)-SMALL ) !--- if NG is small,  ignore charge transfer   ! G -> C
          mlt_dng_crg = mlt_dng*( 1.0_RP-sw ) / ( rhoq2(k,I_NG)+sw ) * rhoq2_crg(I_QG,k) * flg_lt
          !--- limiter (|rhoq2(NC)| is already reduced by deposition (dep_dni_crg and -frz_dnc_crg) )
-         !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice 
+         !-- Charge abs(frz_dnc_crg) is already moved from cloud to ice
          sw = min( abs(rhoq2_crg(I_QI,k)+dep_dni_crg-frz_dnc_crg),abs(mlt_dni_crg) )
          mlt_dni_crg = sign( sw, mlt_dni_crg )
          sw = min( abs(rhoq2_crg(I_QS,k)+dep_dns_crg            ),abs(mlt_dns_crg) )
