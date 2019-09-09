@@ -859,6 +859,7 @@ contains
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
+          !$omp         QA_LT,QS_LT,QE_LT, &
           !$omp         PRE00, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
@@ -867,10 +868,12 @@ contains
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow, &
           !$omp         REFSTATE_dens, &
+          !$omp         ATMOS_sw_phy_lt,RHOQ_t_LT_mp, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
+          !$omp         RHOQ2_crg,vterm_crg,mflux_crg,sflux_crg, &
           !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE

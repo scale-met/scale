@@ -906,6 +906,9 @@ contains
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
     !$omp        gamma_sacr,gamma_gacs,gamma_saut,gamma_gaut,beta_saut,beta_gaut,qicrt_saut,qscrt_gaut,mi, &
     !$omp        GAM,GAM_2,GAM_3,GAM_1br,GAM_1bs,GAM_1bsds,GAM_1bg,GAM_1bgdg,GAM_1brdr,GAM_2br,GAM_2bs,GAM_3br,GAM_3bs,GAM_3dr,GAM_3ds,GAM_3dg,GAM_5dr_h,GAM_5ds_h,GAM_5dg_h,GAM_6dr, &
+    !$omp        QTRC_crg0,QSPLT_in,Sarea,Re,beta_crg,dqcrg, &
+    !$omp        re_qc,re_qi,d0_crg,v0_crg,rdens_i,Ecoal_Gi,Ecoal_GS, &
+    !$omp        flg_lt_l,flg_ecoali,flg_ecoals, &
     !$omp        w3d,HIST_sw,hist_flag) &
     !$omp private(dens,temp,cptot,cvtot,qv,qc,qr,qi,qs,qg,qv_t,qc_t,qr_t,qi_t,qs_t,qg_t,e_t,cp_t,cv_t, &
     !$omp         QSATL,QSATI,Sliq,Sice,Rdens,rho_fact,temc,N0r,N0s,N0g, &
@@ -918,6 +921,8 @@ contains
     !$omp         Vti,Vtr,Vts,Vtg,Esi_mod,Egs_mod,rhoqc,Nc, &
     !$omp         Pracw_orig,Pracw_kk,Praut_berry,Praut_kk,Dc,betai,betas,Da,Kd,Nu, &
     !$omp         Glv,Giv,Gil,ventr,vents,ventg,net,fac,fac_sw,zerosw,tmp, &
+    !$omp         qc_crg_t,qr_crg_t,qi_crg_t,qs_crg_t,qg_crg_t,qcrg_c,qcrg_r,qcrg_i,qcrg_s,qcrg_g, &
+    !$omp         w_q,w_qcrg,re_qs,dcrg,beta1_crg,alpha,facq,rlambda, &
     !$omp         sw_bergeron,a1,a2,ma2,dt1,Ni50, &
     !$omp         sw,rhoqi,XNi,XMi,Di,Nig,Qig,w)
 !OCL TEMP_PRIVATE(coef_bt,coef_at,w)
