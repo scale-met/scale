@@ -916,7 +916,7 @@ contains
                                                   dqcrg(:,:,:), beta_crg(:,:,:),          & ! [IN:optional]
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
                                                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),      & ! [OUT:optional]
-                                                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]  
+                                                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]
 
              call ATMOS_PHY_LT_sato2019_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, ATMOS_PHY_MP_TYPE, & ! [IN]

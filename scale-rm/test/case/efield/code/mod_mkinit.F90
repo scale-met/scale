@@ -3959,7 +3959,7 @@ contains
     MOMX(:,:,:) = 0.0_RP
     MOMY(:,:,:) = 0.0_RP
     MOMZ(:,:,:) = 0.0_RP
-    pott(:,:,:) = 300.0_RP 
+    pott(:,:,:) = 300.0_RP
     RHOT(:,:,:) = DENS(:,:,:) * pott(:,:,:)
 
     return

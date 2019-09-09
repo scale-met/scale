@@ -11,7 +11,7 @@ TESTDIR     = ../../..
 
 # user-defined source files
 CODE_DIR    = .
-ORG_SRCS    = 
+ORG_SRCS    =
 
 # parameters for run
 INITCONF    = init.conf
