@@ -130,11 +130,10 @@ contains
        CX    => ATMOS_GRID_CARTESC_CX, &
        CY    => ATMOS_GRID_CARTESC_CY, &
        CZ    => ATMOS_GRID_CARTESC_CZ
-    use scale_atmos_phy_lt_sato2019, only: &
-       ATMOS_PHY_LT_sato2019_setup
     use scale_file_history, only: &
        FILE_HISTORY_reg
     use mod_atmos_admin, only: &
+       ATMOS_sw_phy_mp, &
        MP_TYPE => ATMOS_PHY_MP_TYPE
     implicit none
 
@@ -187,14 +186,33 @@ contains
                               HIST_id(ip)                             ) ! [OUT]
     end do
 
+    ATMOS_sw_phy_mp = .false.
+
     return
   end subroutine USER_setup
 
   !-----------------------------------------------------------------------------
   !> Make initial state
   subroutine USER_mkinit
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC, &
+       POTT
     implicit none
     !---------------------------------------------------------------------------
+
+    QTRC(:,:,:,:) = 0.0_RP
+    DENS(:,:,:) = 1.0_RP
+    MOMX(:,:,:) = 0.0_RP
+    MOMY(:,:,:) = 0.0_RP
+    MOMZ(:,:,:) = 0.0_RP
+    pott(:,:,:) = 300.0_RP
+    RHOT(:,:,:) = DENS(:,:,:) * pott(:,:,:)
+
     return
   end subroutine USER_mkinit
 

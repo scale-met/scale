@@ -11,7 +11,7 @@ TESTDIR     = ../../..
 
 # user-defined source files
 CODE_DIR    = ../code
-ORG_SRCS    = mod_user.F90 mod_mkinit.F90  mod_atmos_phy_mp_driver.F90
+ORG_SRCS    = mod_user.F90
 
 # parameters for run
 INITCONF    = init.conf
