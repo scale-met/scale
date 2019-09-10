@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-03-28 (H.Yashiro)  [new]
-!!
 !<
 #include "scalelib.h"
 module scale_random
@@ -26,9 +23,20 @@ module scale_random
   !++ Public procedure
   !
   public :: RANDOM_setup
-  public :: RANDOM_uniform1D
   public :: RANDOM_uniform
   public :: RANDOM_normal
+
+  interface RANDOM_uniform
+     module procedure RANDOM_uniform_1D
+     module procedure RANDOM_uniform_2D
+     module procedure RANDOM_uniform_3D
+  end interface
+
+  interface RANDOM_normal
+     module procedure RANDOM_normal_1D
+     module procedure RANDOM_normal_2D
+     module procedure RANDOM_normal_3D
+  end interface RANDOM_normal
 
   !-----------------------------------------------------------------------------
   !
@@ -137,33 +145,67 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Get uniform random number ( 1D )
-  subroutine RANDOM_uniform1D( var )
+  subroutine RANDOM_uniform_1D( var )
     implicit none
-
     real(RP), intent(out) :: var(:)
     !---------------------------------------------------------------------------
 
     call random_number(var)
 
     return
-  end subroutine RANDOM_uniform1D
+  end subroutine RANDOM_uniform_1D
+
+  !-----------------------------------------------------------------------------
+  !> Get uniform random number ( 2D )
+  subroutine RANDOM_uniform_2D( var )
+    implicit none
+    real(RP), intent(out) :: var(:,:)
+    !---------------------------------------------------------------------------
+
+    call random_number(var)
+
+    return
+  end subroutine RANDOM_uniform_2D
 
   !-----------------------------------------------------------------------------
   !> Get uniform random number ( 3D )
-  subroutine RANDOM_uniform( var )
+  subroutine RANDOM_uniform_3D( var )
     implicit none
-
     real(RP), intent(out) :: var(:,:,:)
     !---------------------------------------------------------------------------
 
     call random_number(var)
 
     return
-  end subroutine RANDOM_uniform
+  end subroutine RANDOM_uniform_3D
 
   !-----------------------------------------------------------------------------
-  !> Get normal random number
-  subroutine RANDOM_normal( var )
+  !> Get normal random number (1D)
+  subroutine RANDOM_normal_1D( var )
+    implicit none
+    real(RP), intent(out) :: var(:)
+    integer :: n
+
+    n = size(var)
+    call get_normal( n, var(:) )
+
+    return
+  end subroutine RANDOM_normal_1D
+
+  !> Get normal random number (2D)
+  subroutine RANDOM_normal_2D( var )
+    implicit none
+    real(RP), intent(out) :: var(:,:)
+    integer :: n
+
+    n = size(var)
+    call get_normal( n, var(:,:) )
+
+    return
+  end subroutine RANDOM_normal_2D
+
+  !> Get normal random number (3D)
+  subroutine RANDOM_normal_3D( var )
     implicit none
     real(RP), intent(out) :: var(:,:,:)
     integer :: n
@@ -172,7 +214,7 @@ contains
     call get_normal( n, var(:,:,:) )
 
     return
-  end subroutine RANDOM_normal
+  end subroutine RANDOM_normal_3D
 
   ! private
 

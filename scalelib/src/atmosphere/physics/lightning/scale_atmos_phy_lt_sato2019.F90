@@ -1748,7 +1748,7 @@ contains
        COMM_wait, &
        COMM_bcast
     use scale_random, only: &
-       RANDOM_uniform1D
+       RANDOM_uniform
     implicit none
 
     integer,  intent(in)    :: KA, KS, KE
@@ -1846,7 +1846,7 @@ contains
     !**** grid_initpoint -> grid number of init point in rank (rank_initpoint)
     if( PRC_IsMaster ) then
 !      call RANDOM_reset
-      call RANDOM_uniform1D(randnum)
+      call RANDOM_uniform(randnum)
 !      call random_number(randnum)
       init_point(1) = minloc( randnum,1 )
       randnum(:) = 0.0_RP
