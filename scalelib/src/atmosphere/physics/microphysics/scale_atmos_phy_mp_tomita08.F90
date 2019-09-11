@@ -958,14 +958,6 @@ contains
           qg(k) = max( QTRC0(k,i,j,I_QG), 0.0_RP )
        end do
 
-       qcrg_c(:) = 0.0_RP
-       qcrg_r(:) = 0.0_RP
-       qcrg_i(:) = 0.0_RP
-       qcrg_s(:) = 0.0_RP
-       qcrg_g(:) = 0.0_RP
-       re_qs(:)  = 0.0_RP
-       dcrg(:)   = 0.0_RP
-       beta1_crg(:) = 0.0_RP
        if ( flg_lt_l ) then
           ! store to work
           do k = KS, KE
@@ -1994,7 +1986,6 @@ contains
           end do
 
           do k = KS, KE
-             Sarea(k,i,j,:) = 0.0_RP
              rlambda(I_QR) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QR),0.0_RP ) / ( Ar * N0r(k) * GAM_1br ) ))
              rlambda(I_QS) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QS),0.0_RP ) / ( As * N0s(k) * GAM_1bs ) ))
              rlambda(I_QG) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QG),0.0_RP ) / ( Ag * N0g(k) * GAM_1bg ) ))
@@ -2005,7 +1996,8 @@ contains
              Sarea(k,i,j,I_QR-1) = PI * N0r(k) * GAM_3 * rlambda(I_QR)**3
              Sarea(k,i,j,I_QS-1) = PI * N0s(k) * GAM_3 * rlambda(I_QS)**3
              Sarea(k,i,j,I_QG-1) = PI * N0g(k) * GAM_3 * rlambda(I_QG)**3
-
+          enddo
+          do k = KS, KE
              QSPLT_in(k,i,j,:) = QSPLT_in(k,i,j,:) * DENS0(k,i,j)
           enddo
        end if
