@@ -25,7 +25,6 @@ module scale_atmos_phy_lt_sato2019
   !
   !++ Public procedure
   !
-  public :: ATMOS_PHY_LT_sato2019_tracer_setup
   public :: ATMOS_PHY_LT_sato2019_setup
   public :: ATMOS_PHY_LT_sato2019_tendency
   public :: ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
@@ -34,11 +33,6 @@ module scale_atmos_phy_lt_sato2019
 !  public :: ATMOS_PHY_LT_neutralization_MG2001
 !  public :: ATMOS_PHY_LT_neutralization_F2013
 !  public :: ATMOS_PHY_LT_judge_absE
-
-  integer, public :: ATMOS_PHY_LT_sato2019_ntracers
-  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_LT_sato2019_tracer_names(:)
-  character(len=H_MID)  , public, allocatable :: ATMOS_PHY_LT_sato2019_tracer_descriptions(:)
-  character(len=H_SHORT), public, allocatable :: ATMOS_PHY_LT_sato2019_tracer_units(:)
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -74,9 +68,12 @@ module scale_atmos_phy_lt_sato2019
   real(RP), save                    :: flg_eint_hgt
   logical,  private                 :: LT_DO_Lightning = .true.
 
+  !--- for history output
   real(RP), allocatable, private    :: d_QCRG_TOT(:,:,:)
   real(RP), allocatable, private    :: LT_PATH_TOT(:,:,:,:)
   real(RP), allocatable, private    :: fls_int_p_tot(:,:,:)
+
+  !---
   integer,  parameter, private :: nxlut_lt = 200, nylut_lt = 200
   real(RP), private :: dq_chrg( nxlut_lt,nylut_lt )    !--- charge separation [fC]
   real(RP), private :: grid_lut_t( nxlut_lt )
@@ -84,59 +81,36 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private :: tcrglimit
   logical, private                  :: Hgt_dependency_Eint = .false.
 
-  character(len=29) :: lnamspc(7) =  (/ 'Charge density of cloud   bin', &
-                                        'Charge density of colum   bin', &
-                                        'Charge density of plate   bin', &
-                                        'Charge density of dendrit bin', &
-                                        'Charge density of snow    bin', &
-                                        'Charge density of graupel bin', &
-                                        'Charge density of hail    bin'  /)
-
-  character(len=7)  :: namspc (7) = (/ 'QCRG_cl', &
-                                       'QCRG_ic', &
-                                       'QCRG_ip', &
-                                       'QCRG_id', &
-                                       'QCRG_is', &
-                                       'QCRG_ig', &
-                                       'QCRG_ih'  /)
-
   !--- Index for local variable
   integer, private, parameter :: I_lt_x = 1
   integer, private, parameter :: I_lt_y = 2
   integer, private, parameter :: I_lt_z = 3
   integer, private, parameter :: I_lt_abs = 4
-  integer, private, parameter :: I_lt_QC = 1
-  integer, private, parameter :: I_lt_QR = 2
-  integer, private, parameter :: I_lt_QI = 3
-  integer, private, parameter :: I_lt_QS = 4
-  integer, private, parameter :: I_lt_QG = 5
-  integer, private, parameter :: I_lt_TOT = 6
-  integer, private, parameter :: I_lt_splt_G = 1
-  integer, private, parameter :: I_lt_splt_I = 2
-  integer, private, parameter :: I_lt_splt_S = 3
-  integer, private :: I_crg_QC_s, I_crg_QC_e
-  integer, private :: I_crg_QR_s, I_crg_QR_e
-  integer, private :: I_crg_QI_s, I_crg_QI_e
-  integer, private :: I_crg_QS_s, I_crg_QS_e
-  integer, private :: I_crg_QG_s, I_crg_QG_e
-  integer, private :: I_trc_LIQ_s, I_trc_LIQ_e
+  integer, private :: I_crg_LIQ_s, I_crg_LIQ_e
+  integer, private :: I_crg_ICE_s, I_crg_ICE_e
 
   !--- For history output
-  integer, private, parameter :: w_nmax = 19
-  real(RP), private, allocatable :: w3d(:,:,:,:)
+  integer, private, parameter :: w_nmax = 13
+  integer, private, parameter :: I_QCRG_LIQ = 1
+  integer, private, parameter :: I_QCRG_ICE = 2
+  integer, private, parameter :: I_QCRG_TOT = 3
+  integer, private, parameter :: I_Ex = 4
+  integer, private, parameter :: I_Ey = 5
+  integer, private, parameter :: I_Ez = 6
+  integer, private, parameter :: I_Eabs = 7
+  integer, private, parameter :: I_Epot = 8
+  integer, private, parameter :: I_Qneut = 9
+  integer, private, parameter :: I_LTpath = 10
+  integer, private, parameter :: I_PosFLASH = 11
+  integer, private, parameter :: I_NegFLASH = 12
+  integer, private, parameter :: I_FlashPoint = 13
   integer,  private              :: HIST_id(w_nmax)
   character(len=H_SHORT), private :: w_name(w_nmax)
   character(len=H_MID),   private :: w_longname(w_nmax)
   character(len=H_SHORT), private :: w_unit(w_nmax)
-  data w_name / 'CRGD_C', &
-                'CRGD_R', &
-                'CRGD_I', &
-                'CRGD_S', &
-                'CRGD_G', &
+  data w_name / 'CRGD_LIQ', &
+                'CRGD_ICE', &
                 'CRGD_TOT',&
-                'QSPLT_I', &
-                'QSPLT_S', &
-                'QSPLT_G', &
                 'Ex', &
                 'Ey', &
                 'Ez', &
@@ -148,15 +122,9 @@ module scale_atmos_phy_lt_sato2019
                 'NegFLASH', &
                 'FlashPoint' /
   data w_longname / &
-                'Charge density of QC', &
-                'Charge density of QR', &
-                'Charge density of QI', &
-                'Charge density of QS', &
-                'Charge density of QG', &
+                'Charge density of liquid water', &
+                'Charge density of ice water', &
                 'Charge density of QHYD', &
-                'Charge split of QG by Non-inductive process', &
-                'Charge split of QI by Non-inductive process', &
-                'Charge split of QS by Non-inductive process', &
                 'X component of Electrical Field', &
                 'Y component of Electrical Field', &
                 'Z component of Electrical Field', &
@@ -170,12 +138,6 @@ module scale_atmos_phy_lt_sato2019
   data w_unit / 'nC/m3', &
                 'nC/m3', &
                 'nC/m3', &
-                'nC/m3', &
-                'nC/m3', &
-                'nC/m3', &
-                'fC/m3/s', &
-                'fC/m3/s', &
-                'fC/m3/s', &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
@@ -186,137 +148,8 @@ module scale_atmos_phy_lt_sato2019
                 'num', &
                 'num', &
                 'num' /
-  integer, parameter :: I_QCRG_C = 1
-  integer, parameter :: I_QCRG_R = 2
-  integer, parameter :: I_QCRG_I = 3
-  integer, parameter :: I_QCRG_S = 4
-  integer, parameter :: I_QCRG_G = 5
-  integer, parameter :: I_QCRG_TOT = 6
-  integer, parameter :: I_QSPLT_I = 7
-  integer, parameter :: I_QSPLT_S = 8
-  integer, parameter :: I_QSPLT_G = 9
-  integer, parameter :: I_Ex = 10
-  integer, parameter :: I_Ey = 11
-  integer, parameter :: I_Ez = 12
-  integer, parameter :: I_Eabs = 13
-  integer, parameter :: I_Epot = 14
-  integer, parameter :: I_Qneut = 15
-  integer, parameter :: I_LTpath = 16
-  integer, parameter :: I_PosFLASH = 17
-  integer, parameter :: I_NegFLASH = 18
-  integer, parameter :: I_FlashPoint = 19
   !-----------------------------------------------------------------------------
 contains
-  !-----------------------------------------------------------------------------
-  !> Tracer setup
-  subroutine ATMOS_PHY_LT_sato2019_tracer_setup( &
-       QA_LT,       &
-       MP_TYPE,     &
-       nwaters,     &
-       nices,       &
-       nccn         )
-    use scale_prc, only: &
-       PRC_abort
-
-    integer, intent(out) :: QA_LT
-    character(len=H_SHORT), intent(in)  :: MP_TYPE
-    integer, intent(in), optional :: nwaters
-    integer, intent(in), optional :: nices
-    integer, intent(in), optional :: nccn
-
-    integer :: m, n, nbin, nspc
-
-    select case ( MP_TYPE )
-    case ( 'TOMITA08','SN14' )
-      QA_LT = 5
-      I_trc_LIQ_s = 2
-      I_trc_LIQ_e = 3
-      I_crg_QC_s = 1
-      I_crg_QC_e = 1
-      I_crg_QR_s = 2
-      I_crg_QR_e = 2
-      I_crg_QI_s = 3
-      I_crg_QI_e = 3
-      I_crg_QS_s = 4
-      I_crg_QS_e = 4
-      I_crg_QG_s = 5
-      I_crg_QG_e = 5
-      ATMOS_PHY_LT_sato2019_ntracers = QA_LT
-      allocate(ATMOS_PHY_LT_sato2019_tracer_names(QA_LT))
-      allocate(ATMOS_PHY_LT_sato2019_tracer_descriptions(QA_LT))
-      allocate(ATMOS_PHY_LT_sato2019_tracer_units(QA_LT))
-
-      write(ATMOS_PHY_LT_sato2019_tracer_names(I_lt_QC),'(A)') 'QCRG_C'
-      write(ATMOS_PHY_LT_sato2019_tracer_names(I_lt_QR),'(A)') 'QCRG_R'
-      write(ATMOS_PHY_LT_sato2019_tracer_names(I_lt_QI),'(A)') 'QCRG_I'
-      write(ATMOS_PHY_LT_sato2019_tracer_names(I_lt_QS),'(A)') 'QCRG_S'
-      write(ATMOS_PHY_LT_sato2019_tracer_names(I_lt_QG),'(A)') 'QCRG_G'
-
-      write(ATMOS_PHY_LT_sato2019_tracer_descriptions(I_lt_QC),'(A)') 'Ratio of charge density of cloud water'
-      write(ATMOS_PHY_LT_sato2019_tracer_descriptions(I_lt_QR),'(A)') 'Ratio of charge density of rain water'
-      write(ATMOS_PHY_LT_sato2019_tracer_descriptions(I_lt_QI),'(A)') 'Ratio of charge density of ice water'
-      write(ATMOS_PHY_LT_sato2019_tracer_descriptions(I_lt_QS),'(A)') 'Ratio of charge density of snow water'
-      write(ATMOS_PHY_LT_sato2019_tracer_descriptions(I_lt_QG),'(A)') 'Ratio of charge density of graupel water'
-
-      write(ATMOS_PHY_LT_sato2019_tracer_units(I_lt_QC),'(A)') 'fC/kg'
-      write(ATMOS_PHY_LT_sato2019_tracer_units(I_lt_QR),'(A)') 'fC/kg'
-      write(ATMOS_PHY_LT_sato2019_tracer_units(I_lt_QI),'(A)') 'fC/kg'
-      write(ATMOS_PHY_LT_sato2019_tracer_units(I_lt_QS),'(A)') 'fC/kg'
-      write(ATMOS_PHY_LT_sato2019_tracer_units(I_lt_QG),'(A)') 'fC/kg'
-    case ( 'SUZUKI10' )
-      nspc = 1+nices/nwaters
-      nbin = nwaters
-      QA_LT = 1 + nwaters + nices   !--- vapor, water, and ice
-      ATMOS_PHY_LT_sato2019_ntracers = QA_LT
-      if( nccn /= 0 ) then
-        LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', nccn, '). CHECK!'
-        call PRC_abort
-      endif
-      if ( QA_LT == nwaters ) then
-        LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
-        call PRC_abort
-      endif
-
-      allocate(ATMOS_PHY_LT_sato2019_tracer_names(QA_LT))
-      allocate(ATMOS_PHY_LT_sato2019_tracer_descriptions(QA_LT))
-      allocate(ATMOS_PHY_LT_sato2019_tracer_units(QA_LT))
-      do m = 1, nspc
-      do n = 1, nbin
-        write(ATMOS_PHY_LT_sato2019_tracer_names(nbin*(m-1)+n),'(a,i0)') trim(namspc (m)), n
-        write(ATMOS_PHY_LT_sato2019_tracer_descriptions(nbin*(m-1)+n),'(a,i0)') trim(lnamspc(m)), n
-        write(ATMOS_PHY_LT_sato2019_tracer_units(nbin*(m-1)+n),'(a)') 'fC/kg'
-      enddo
-      enddo
-      I_crg_QC_s = 1
-      I_crg_QC_e = nbin/3
-      I_crg_QR_s = nbin/3+1
-      I_crg_QR_e = nbin
-      I_trc_LIQ_s = 2
-      I_trc_LIQ_e = nbin+1
-      if( nspc == 1 ) then
-         LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'ICEFLG should be .true. for lithtning component with SUZUKI10. CHECK!'
-         call PRC_abort
-      else
-         I_crg_QI_s = nbin+1
-         I_crg_QI_e = nbin+3*nbin
-         I_crg_QS_s = 4*nbin+1
-         I_crg_QS_e = 4*nbin+nbin
-         I_crg_QG_s = 5*nbin+1
-         I_crg_QG_e = 5*nbin+2*nbin
-      endif
-    case default
-        LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'ATMOS_MP_TYPE should be TOMITA08, SN14, or SUZUKI10 for lithtning component. CHECK!'
-        call PRC_abort
-    end select
-
-    if( QA_LT /= I_crg_QG_e  ) then
-        LOG_ERROR("ATMOS_PHY_LT_sato2019_tracer_setup",*) 'QA_LT is not equal to I_crg_QG_e, CHECK!'
-        call PRC_abort
-    endif
-
-    return
-  end subroutine ATMOS_PHY_LT_sato2019_tracer_setup
-
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_LT_sato2019_setup( KA, KS, KE, &
@@ -325,7 +158,8 @@ contains
                                           IMAXG,      &
                                           JMAXG,      &
                                           KMAX,       &
-                                          nbnd_rain,  &
+                                          MP_TYPE,    &
+                                          nliq, nice, &
                                           CDX, CDY    )
     use scale_prc, only: &
        PRC_abort, &
@@ -338,16 +172,18 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
-
     integer,  intent(in)  :: KA, KS, KE
-    integer,  intent(in)  :: IA, IS, IE
-    integer,  intent(in)  :: JA, JS, JE
-    integer,  intent(in)  :: IMAXG
-    integer,  intent(in)  :: JMAXG
-    integer,  intent(in)  :: KMAX
-    integer,  intent(in)  :: nbnd_rain
-    real(RP), intent(in)  :: CDX(IA)
-    real(RP), intent(in)  :: CDY(JA)
+    integer, intent(in)  :: IA, IS, IE
+    integer, intent(in)  :: JA, JS, JE
+    integer, intent(in)  :: IMAXG
+    integer, intent(in)  :: JMAXG
+    integer, intent(in)  :: KMAX
+
+    character(len=*), intent(in) :: MP_TYPE
+    integer,          intent(in)  :: nice
+    integer,          intent(in)  :: nliq
+    real(RP),         intent(in)  :: CDX(IA)
+    real(RP),         intent(in)  :: CDY(JA)
 
     integer :: n, myu, ip
     integer :: ierr
@@ -391,7 +227,7 @@ contains
         fname_lut_lt = ATMOS_PHY_LT_LUT_FILENAME
         fid_lut_lt = IO_get_available_fid()
         !--- open parameter of cloud microphysics
-        open ( fid_lut_lt, file = trim(fname_lut_lt), form = 'formatted', status = 'old', iostat=ierr )
+        open ( fid_lut_lt, file = fname_lut_lt, form = 'formatted', status = 'old', iostat=ierr )
 
         if ( ierr == 0 ) then
           LOG_INFO("ATMOS_PHY_LT_sato2019_setup",'(2A)') 'Read LUT of TK78 table from ', trim(fname_lut_lt)
@@ -407,7 +243,7 @@ contains
            call PRC_abort
         endif
 
-        if( trim(NUTR_TYPE) /= 'MG2001' .and. trim(NUTR_TYPE) /= 'F2013' ) then
+        if( NUTR_TYPE /= 'MG2001' .and. NUTR_TYPE /= 'F2013' ) then
            LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx NUTR_TYPE should be MG2001 or F2013 stop!'
            call PRC_abort
         endif
@@ -420,8 +256,9 @@ contains
 !    KIJMAXG = (IEG-ISG+1)*(JEG-JSG+1)*(KE-KS+1)
     KIJMAXG = IMAXG*JMAXG*KMAX
 
+    ! for history output
     allocate( d_QCRG_TOT(KA,IA,JA) )
-    allocate( LT_PATH_TOT(3,KA,IA,JA) )
+    allocate( LT_PATH_TOT(KA,IA,JA,3) )
     allocate( fls_int_p_tot(KA,IA,JA) )
     d_QCRG_TOT(:,:,:) = 0.0_RP
     LT_PATH_TOT(:,:,:,:) = 0.0_RP
@@ -429,28 +266,29 @@ contains
 
     tcrglimit = -60.0_RP+T00
 
-    if( trim(NUTR_TYPE) == 'F2013' ) then
+    if( NUTR_TYPE == 'F2013' ) then
       LOG_INFO("ATMOS_PHY_LT_sato2019_setup",'(A,F15.7,A)') 'Radius of neutralization is ', R_neut, "[m]"
     endif
 
     flg_eint_hgt = 0.0_RP
-    if( Hgt_dependency_Eint .and. trim(NUTR_TYPE) == 'MG2001') then
+    if( Hgt_dependency_Eint .and. NUTR_TYPE == 'MG2001') then
       flg_eint_hgt = 1.0_RP
     endif
 
-    if( nbnd_rain /= 0 ) then
-      I_crg_QC_e = nbnd_rain
-      I_crg_QR_s = nbnd_rain+1
-    endif
-
-    if( trim(NUTR_qhyd) /= 'TOTAL' .and. trim(NUTR_qhyd) /= 'Each_POLARITY' ) then
+    if( NUTR_qhyd /= 'TOTAL' .and. NUTR_qhyd /= 'Each_POLARITY' ) then
       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx NUTR_qhyd should be TOTAL or Each_POLARITY, stop!'
       call PRC_abort
     endif
 
-    !-- for history output
-    allocate( w3d(KA,IA,JA,w_nmax) )
-    w3d(:,:,:,:) = 0.0_RP
+    if( NUTR_qhyd == 'Each_POLARITY' .and. MP_TYPE == 'SUZUKI10' ) then
+       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'NUTR_qhyd = Each_POLARITY is not supported for MP_TYPE SUZUKI10'
+       call PRC_abort
+    endif
+
+    I_crg_LIQ_s = 1
+    I_crg_LIQ_e = nliq
+    I_crg_ICE_s = I_crg_LIQ_e + 1
+    I_crg_ICE_e = I_crg_ICE_s + nice - 1
 
     do ip = 1, w_nmax
        call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
@@ -469,7 +307,6 @@ contains
        KIJMAX,       &
        IMAX,         &
        JMAX,         &
-       MP_TYPE,      &
        QA_MP,        &
        QA_LT,        &
        DENS,         &
@@ -478,11 +315,10 @@ contains
        QTRC_crg,     &
        dt_MP,        &
        dt_LT,        &
-       QSPLT_in,     &
        Sarea,        &
        RHOQ_T_MP,    &
        RHOQ_t_LT_mp, &
-       Epot_old,     &
+       Epot,         &
        RHOQ_t_LT     )
     use scale_const, only: &
        SMALL => CONST_EPS
@@ -504,12 +340,10 @@ contains
     integer,  intent(in) :: IMAX
     integer,  intent(in) :: JMAX
 !    character(len=H_SHORT)
-    character(len=*), intent(in) :: MP_TYPE
     integer,  intent(in) :: QA_MP
     integer,  intent(in) :: QA_LT
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
-    real(RP), intent(in) :: QSPLT_in(KA,IA,JA,3)
     real(RP), intent(in) :: Sarea(KA,IA,JA,QA_LT)       !--- Surface area and that of each catergory [m2]
     real(DP), intent(in) :: dt_MP
     real(DP), intent(in) :: dt_LT
@@ -517,15 +351,15 @@ contains
     real(RP), intent(in) :: QTRC_crg(KA,IA,JA,QA_LT)
     real(RP), intent(in) :: RHOQ_t_MP(KA,IA,JA,QA_MP)
     real(RP), intent(in) :: RHOQ_t_LT_mp(KA,IA,JA,QA_LT)
-    real(RP), intent(inout) :: Epot_old(KA,IA,JA) !--- Electrical potential at previous time step [V]
+    real(RP), intent(inout) :: Epot(KA,IA,JA) !--- Electrical potential at previous time step [V]
     real(RP), intent(inout) :: RHOQ_t_LT(KA,IA,JA,QA_LT)
 
     real(RP) :: QHYD_mass(KA,IA,JA)         !--- Mass of total hydrometeor [kg/m3]
     real(RP) :: QTRC0(KA,IA,JA,QA_MP)       !--- Tracer after lightning component
     real(RP) :: QTRC0_crg(KA,IA,JA,QA_LT)   !--- Tracer after lightning component
     real(RP) :: QTRC1_crg(KA,IA,JA,QA_LT)   !--- Tracer after lightning component
-    real(RP) :: QCRG(KA,IA,JA,I_lt_TOT)     !--- Charge density of each category [nC/m3]
-    real(RP) :: E_pot(KA,IA,JA)             !--- Electrical potential [V]
+    real(RP) :: QCRG(KA,IA,JA)              !--- Total charge density [nC/m3]
+    real(RP) :: Epot_new(KA,IA,JA)          !--- Electrical potential [V]
     real(RP) :: Efield(KA,IA,JA,I_lt_abs)   !--- Electrical field (1-3 ->x,y,z, 4->abs. )
     real(RP) :: NUM_end(KA,IA,JA,3)         !--- Number of each flash type (1->negative, 2->ground, 3->positive)
     real(RP) :: d_QCRG(KA,IA,JA)            !--- Change of charge by charge neutralization [fC/m3]
@@ -533,21 +367,17 @@ contains
     real(RP) :: fls_int_p(KA,IA,JA)
     real(RP) :: Total_Sarea(2)              !--- Sum of surface area and that of each catergory [m2]
     real(RP) :: neg_crg, pos_crg, d_pos_crg, d_neg_crg
-    real(RP) :: frac, rcrg_tot, flg_chrged(5), r_totalSarea(2)
+    real(RP) :: frac, flg_chrged(5), r_totalSarea(2)
     real(RP) :: Emax, Emax_old
     logical  :: output_step
     integer  :: flg_lt_neut
     integer  :: i, j, k, m, n, countbin, ip
+    real(RP) :: zerosw, positive, negative
 
-    logical :: HIST_sw(w_nmax), hist_flag
+    logical  :: HIST_sw(w_nmax)
+    real(RP) :: w3d(KA,IA,JA)
 
     NUM_end(:,:,:,:) = 0.0_RP
-
-    hist_flag = .false.
-    do ip = 1, w_nmax
-       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
-       hist_flag = hist_flag .or. HIST_sw(ip)
-    end do
 
     ! Add tendency of charge density by microphysics
     do j = JS, JE
@@ -560,57 +390,18 @@ contains
     enddo
     enddo
 
-    ! Store original value for calculating tendency
-    QCRG(:,:,:,:) = 0.0_RP
+    ! calc total charge density
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       do n = I_crg_QC_s, I_crg_QC_e
-         QCRG(k,i,j,I_lt_QC) = QCRG(k,i,j,I_lt_QC) &
-                             + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-       do n = I_crg_QR_s, I_crg_QR_e
-         QCRG(k,i,j,I_lt_QR) = QCRG(k,i,j,I_lt_QR) &
-                             + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-       do n = I_crg_QI_s, I_crg_QI_e
-         QCRG(k,i,j,I_lt_QI) = QCRG(k,i,j,I_lt_QI) &
-                             + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-       do n = I_crg_QS_s, I_crg_QS_e
-         QCRG(k,i,j,I_lt_QS) = QCRG(k,i,j,I_lt_QS) &
-                             + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-       do n = I_crg_QG_s, I_crg_QG_e
-         QCRG(k,i,j,I_lt_QG) = QCRG(k,i,j,I_lt_QG) &
-                             + QTRC0_crg(k,i,j,n)*DENS(k,i,j)*1.E-6_RP ![fC/kg] -> [nc/m3]
-       enddo
-       QCRG(k,i,j,I_lt_TOT) = QCRG(k,i,j,I_lt_QC) &
-                            + QCRG(k,i,j,I_lt_QR) &
-                            + QCRG(k,i,j,I_lt_QI) &
-                            + QCRG(k,i,j,I_lt_QS) &
-                            + QCRG(k,i,j,I_lt_QG)
+       QCRG(k,i,j) = 0.0_RP
+       do n = 1, QA_LT
+          QCRG(k,i,j) = QCRG(k,i,j) + QTRC0_crg(k,i,j,n)
+       end do
+       QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
     enddo
     enddo
     enddo
-
-    if ( hist_flag ) then
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          if ( HIST_sw(I_QCRG_C  ) ) w3d(k,i,j,I_QCRG_C  ) = QCRG(k,i,j,I_lt_QC )
-          if ( HIST_sw(I_QCRG_R  ) ) w3d(k,i,j,I_QCRG_R  ) = QCRG(k,i,j,I_lt_QR )
-          if ( HIST_sw(I_QCRG_I  ) ) w3d(k,i,j,I_QCRG_I  ) = QCRG(k,i,j,I_lt_QI )
-          if ( HIST_sw(I_QCRG_S  ) ) w3d(k,i,j,I_QCRG_S  ) = QCRG(k,i,j,I_lt_QS )
-          if ( HIST_sw(I_QCRG_G  ) ) w3d(k,i,j,I_QCRG_G  ) = QCRG(k,i,j,I_lt_QG )
-          if ( HIST_sw(I_QCRG_TOT) ) w3d(k,i,j,I_QCRG_TOT) = QCRG(k,i,j,I_lt_TOT)
-          if ( HIST_sw(I_QSPLT_G) ) w3d(k,i,j,I_QSPLT_G) = QSPLT_in(k,i,j,I_lt_splt_G)
-          if ( HIST_sw(I_QSPLT_I) ) w3d(k,i,j,I_QSPLT_I) = QSPLT_in(k,i,j,I_lt_splt_I)
-          if ( HIST_sw(I_QSPLT_S) ) w3d(k,i,j,I_QSPLT_S) = QSPLT_in(k,i,j,I_lt_splt_S)
-       enddo
-       enddo
-       enddo
-    end if
 
     do j = JS, JE
     do i = IS, IE
@@ -625,15 +416,15 @@ contains
 
     !--- Calculate E field
     Efield(:,:,:,:) = 0.0_RP
-    call ATMOS_PHY_LT_electric_field( KA, KS, KE,                    &   ! [IN]
-                                      IA, IS, IE,                    &   ! [IN]
-                                      JA, JS, JE,                    &   ! [IN]
-                                      QCRG     (:,:,:,I_lt_TOT),     &   ! [IN]
-                                      DENS     (:,:,:),              &   ! [IN]
-                                      RHOT     (:,:,:),              &   ! [IN]
-                                      Epot_old (:,:,:),              &   ! [IN]
-                                      E_pot    (:,:,:),              &   ! [OUT]
-                                      Efield   (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
+    call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
+                                      IA, IS, IE,                   &   ! [IN]
+                                      JA, JS, JE,                   &   ! [IN]
+                                      QCRG    (:,:,:),              &   ! [IN]
+                                      DENS    (:,:,:),              &   ! [IN]
+                                      RHOT    (:,:,:),              &   ! [IN]
+                                      Epot    (:,:,:),              &   ! [IN]
+                                      Epot_new(:,:,:),              &   ! [OUT]
+                                      Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
 
     do j = JS, JE
     do i = IS, IE
@@ -641,7 +432,7 @@ contains
        Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
                                     + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
                                     + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-       Epot_old(k,i,j) = E_pot(k,i,j)
+       Epot(k,i,j) = Epot_new(k,i,j)
     enddo
     enddo
     enddo
@@ -669,52 +460,52 @@ contains
 
          Emax_old = Emax
 
-         call COMM_vars8( Efield   (:,:,:,I_lt_x),1 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_y),2 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_z),3 )
-         call COMM_vars8( Efield   (:,:,:,I_lt_abs),4 )
-         call COMM_vars8( QHYD_mass(:,:,:),  5 )
-         call COMM_vars8( QCRG     (:,:,:,I_lt_TOT),6 )
-         call COMM_vars8( E_pot    (:,:,:),  7 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_x),1 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_y),2 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_z),3 )
-         call COMM_wait ( Efield   (:,:,:,I_lt_abs),4 )
-         call COMM_wait ( QHYD_mass(:,:,:),  5 )
-         call COMM_wait ( QCRG     (:,:,:,I_lt_TOT),6 )
-         call COMM_wait ( E_pot    (:,:,:),  7 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_x),   1 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_y),   2 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_z),   3 )
+         call COMM_vars8( Efield   (:,:,:,I_lt_abs), 4 )
+         call COMM_vars8( QHYD_mass(:,:,:),          5 )
+         call COMM_vars8( QCRG     (:,:,:),          6 )
+         call COMM_vars8( Epot     (:,:,:),          7 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_x),   1 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_y),   2 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_z),   3 )
+         call COMM_wait ( Efield   (:,:,:,I_lt_abs), 4 )
+         call COMM_wait ( QHYD_mass(:,:,:),          5 )
+         call COMM_wait ( QCRG     (:,:,:),          6 )
+         call COMM_wait ( Epot     (:,:,:),          7 )
 
          !--- Calculate lightning path and charge neutralization
          if( NUTR_TYPE == 'MG2001' ) then
-           call ATMOS_PHY_LT_neutralization_MG2001(                     &
-                                             KA, KS, KE,                &   !  [IN]
-                                             IA, IS, IE,                &   !  [IN]
-                                             JA, JS, JE,                &   !  [IN]
-                                             KIJMAX, IMAX, JMAX,        &   !  [IN]
-                                             Efield   (:,:,:,:),        &   !  [IN]
-                                             E_pot    (:,:,:),          &   !  [IN]
-                                             DENS     (:,:,:),          &   !  [IN]
-                                             QCRG     (:,:,:,I_lt_TOT), &   !  [IN]
-                                             QHYD_mass(:,:,:),          &   !  [IN]
-                                             NUM_end  (:,:,:,:),        &   !  [INOUT]
-                                             LT_PATH  (:,:,:),          &   !  [INOUT]
-                                             fls_int_p(:,:,:),          &   !  [INOUT]
-                                             d_QCRG   (:,:,:)           )   !  [OUT]
+           call ATMOS_PHY_LT_neutralization_MG2001(              &
+                                             KA, KS, KE,         & !  [IN]
+                                             IA, IS, IE,         & !  [IN]
+                                             JA, JS, JE,         & !  [IN]
+                                             KIJMAX, IMAX, JMAX, & !  [IN]
+                                             Efield   (:,:,:,:), & !  [IN]
+                                             Epot     (:,:,:),   & !  [IN]
+                                             DENS     (:,:,:),   & !  [IN]
+                                             QCRG     (:,:,:),   & !  [IN]
+                                             QHYD_mass(:,:,:),   & !  [IN]
+                                             NUM_end  (:,:,:,:), & !  [INOUT]
+                                             LT_PATH  (:,:,:),   & !  [INOUT]
+                                             fls_int_p(:,:,:),   & !  [INOUT]
+                                             d_QCRG   (:,:,:)    ) !  [OUT]
          elseif( NUTR_TYPE == 'F2013' ) then
-           call ATMOS_PHY_LT_neutralization_F2013(                      &
-                                             KA, KS, KE,                &   !  [IN]
-                                             IA, IS, IE,                &   !  [IN]
-                                             JA, JS, JE,                &   !  [IN]
-                                             KIJMAX,                    &   !  [IN]
-                                             Efield   (:,:,:,:),        &   !  [IN]
-                                             E_pot    (:,:,:),          &   !  [IN]
-                                             DENS     (:,:,:),          &   !  [IN]
-                                             QCRG     (:,:,:,I_lt_TOT), &   !  [IN]
-                                             QHYD_mass(:,:,:),          &   !  [IN]
-                                             NUM_end  (:,:,:,:),        &   !  [INOUT]
-                                             LT_PATH  (:,:,:),          &   !  [INOUT]
-                                             fls_int_p(:,:,:),          &   !  [INOUT]
-                                             d_QCRG   (:,:,:)           )   !  [OUT]
+           call ATMOS_PHY_LT_neutralization_F2013(               &
+                                             KA, KS, KE,         & !  [IN]
+                                             IA, IS, IE,         & !  [IN]
+                                             JA, JS, JE,         & !  [IN]
+                                             KIJMAX,             & !  [IN]
+                                             Efield   (:,:,:,:), & !  [IN]
+                                             Epot     (:,:,:),   & !  [IN]
+                                             DENS     (:,:,:),   & !  [IN]
+                                             QCRG     (:,:,:),   & !  [IN]
+                                             QHYD_mass(:,:,:),   & !  [IN]
+                                             NUM_end  (:,:,:,:), & !  [INOUT]
+                                             LT_PATH  (:,:,:),   & !  [INOUT]
+                                             fls_int_p(:,:,:),   & !  [INOUT]
+                                             d_QCRG   (:,:,:)    ) !  [OUT]
          endif
 
          call COMM_vars8( LT_path(:,:,:),1 )
@@ -723,146 +514,121 @@ contains
          call COMM_wait ( d_QCRG(:,:,:),2 )
 
          !-- Calculate neutralization of each hydrometeor or each category
-         select case ( MP_TYPE )
-         case ( 'TOMITA08', 'SN14' )
+         select case( NUTR_qhyd )
+         case ( 'TOTAL' )
 
-           if( trim(NUTR_qhyd) == 'TOTAL' ) then
-
-             do j = JS, JE
-             do i = IS, IE
-             do k = KS, KE
-                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
-                  Total_Sarea(:) = 0.0_RP
-                  do n = I_lt_QC, I_lt_QG
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
+                  Total_Sarea(1) = 0.0_RP
+                  do n = 1, QA_LT
                      Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n)
                   enddo
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + ( 0.5_RP-0.5_RP*sign(1.0_RP,Total_Sarea(1)-SMALL) ) ) &
-                                  * ( 0.5_RP+0.5_RP*sign(1.0_RP,Total_Sarea(1)-SMALL ) )
-
-                  do n = I_lt_QC, I_lt_QG
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1)-SMALL )
+                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
+                  do n = 1, QA_LT
                      QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)  &
                                         + ( d_QCRG(k,i,j)*1.0E+6_RP )  &
                                         * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
                   enddo
-                endif
-             enddo
-             enddo
-             enddo
+               endif
+            enddo
+            enddo
+            enddo
 
-           elseif( trim(NUTR_qhyd) == 'Each_POLARITY' ) then
+         case ( 'Each_POLARITY' )
 
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
-                rcrg_tot = 1.0_RP / ( QCRG(k,i,j,I_lt_TOT) + ( 0.5_RP-0.5_RP * sign( 1.0_RP,abs(QCRG(k,i,j,I_lt_TOT))-SMALL ) ) ) &
-                         * ( 0.5_RP+0.5_RP * sign( 1.0_RP,abs(QCRG(k,i,j,I_lt_TOT))-SMALL ) )
-
                 if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
                   Total_Sarea(:) = 0.0_RP
                   flg_chrged(:) = 0.0_RP
 
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
-                  do n = I_lt_QC, I_lt_QG
-                     flg_chrged(n) = 0.5_RP + 0.5_RP * sign( 1.0_RP, abs(QCRG(k,i,j,n))-SMALL )
+                  do n = 1, QA_LT
+                     flg_chrged(n) = 0.5_RP + sign( 0.5_RP, abs(QTRC0_crg(k,i,j,n))-SMALL )
                   enddo
 
-                  frac = d_QCRG(k,i,j)*rcrg_tot
-                  !--- total of positive charge
-                  pos_crg =  ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,I_lt_QC) ) ) * QCRG(k,i,j,I_lt_QC) * flg_chrged(I_lt_QC) &
-                          +  ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,I_lt_QR) ) ) * QCRG(k,i,j,I_lt_QR) * flg_chrged(I_lt_QR) &
-                          +  ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,I_lt_QI) ) ) * QCRG(k,i,j,I_lt_QI) * flg_chrged(I_lt_QI) &
-                          +  ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,I_lt_QS) ) ) * QCRG(k,i,j,I_lt_QS) * flg_chrged(I_lt_QS) &
-                          +  ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,I_lt_QG) ) ) * QCRG(k,i,j,I_lt_QG) * flg_chrged(I_lt_QG)
-                  !--- total of negative charge
-                  neg_crg =  ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,I_lt_QC) ) ) * QCRG(k,i,j,I_lt_QC) * flg_chrged(I_lt_QC) &
-                          +  ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,I_lt_QR) ) ) * QCRG(k,i,j,I_lt_QR) * flg_chrged(I_lt_QR) &
-                          +  ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,I_lt_QI) ) ) * QCRG(k,i,j,I_lt_QI) * flg_chrged(I_lt_QI) &
-                          +  ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,I_lt_QS) ) ) * QCRG(k,i,j,I_lt_QS) * flg_chrged(I_lt_QS) &
-                          +  ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,I_lt_QG) ) ) * QCRG(k,i,j,I_lt_QG) * flg_chrged(I_lt_QG)
+                  pos_crg = 0.0_RP
+                  neg_crg = 0.0_RP
+                  do n = 1, QA_LT
+                     positive = 0.5_RP + sign( 0.5_RP, QTRC0_crg(k,i,j,n) )
+                     negative = 1.0_RP - positive
+                     !--- total of positive charge
+                     pos_crg = pos_crg + QTRC0_crg(k,i,j,n) * positive * flg_chrged(n)
+                     !--- total of negative charge
+                     neg_crg = neg_crg - QTRC0_crg(k,i,j,n) * negative * flg_chrged(n)
+                     !--- Sarea of positively charged hydrometeor
+                     Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive * flg_chrged(n)
+                     !--- Sarea of negatively charged hydrometeor
+                     Total_Sarea(2) = Total_Sarea(2) + Sarea(k,i,j,n) * negative * flg_chrged(n)
+                  end do
+
+                  zerosw = 0.5_RP - sign( 0.5_RP, abs( QCRG(k,i,j) ) - SMALL )
+                  frac = d_QCRG(k,i,j) / ( QCRG(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
+                  frac = frac * DENS(k,i,j) * 1.E-6_RP ! [fC/kg] -> [nc/m3]
                   d_pos_crg = frac * pos_crg
                   d_neg_crg = frac * neg_crg
 
-                  do n = I_lt_QC, I_lt_QG
-                     Total_Sarea(1) = Total_Sarea(1) &  !--- Sarea of positively charged hydrometeor
-                                    + Sarea(k,i,j,n) * ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,n) ) ) * flg_chrged(n)
-                     Total_Sarea(2) = Total_Sarea(2) &  !--- Sarea of negatively charged hydrometeor
-                                    + Sarea(k,i,j,n) * ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,n) ) ) * flg_chrged(n)
-                  enddo
-
                   !--- remove 0 surface area ( no crg for each porality )
-                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + ( 0.5_RP-0.5_RP*sign(1.0_RP,Total_Sarea(1)-SMALL) ) ) &
-                                  * ( 0.5_RP+0.5_RP*sign(1.0_RP,Total_Sarea(1)-SMALL ) )
-                  r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + ( 0.5_RP-0.5_RP*sign(1.0_RP,Total_Sarea(2)-SMALL) ) ) &
-                                  * ( 0.5_RP+0.5_RP*sign(1.0_RP,Total_Sarea(2)-SMALL ) )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1) - SMALL )
+                  r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
+                  zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(2) - SMALL )
+                  r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + zerosw ) * ( 1.0_RP - zerosw )
 
-                  do n = I_lt_QC, I_lt_QG
+                  do n = 1, QA_LT
                      QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)  &
                                         + ( d_pos_crg*1.0E+6_RP ) / DENS(k,i,j)  &
                                         * Sarea(k,i,j,n) * r_totalSarea(1) &
-                                        * ( 0.5_RP + sign( 0.5_RP, QCRG(k,i,j,n) ) ) &
+                                        * ( 0.5_RP + sign( 0.5_RP, QTRC0_crg(k,i,j,n) ) ) &
                                         * flg_chrged(n) &
                                         + ( d_neg_crg*1.0E+6_RP ) / DENS(k,i,j) &
                                         * Sarea(k,i,j,n) * r_totalSarea(2)  &
-                                        * ( 0.5_RP - sign( 0.5_RP, QCRG(k,i,j,n) ) ) &
+                                        * ( 0.5_RP - sign( 0.5_RP, QTRC0_crg(k,i,j,n) ) ) &
                                         * flg_chrged(n)
                   enddo
-                endif
+               endif
 
-             enddo
-             enddo
-             enddo
+            enddo
+            enddo
+            enddo
 
-           endif
-
-         case ( 'SUZUKI10' )
-
-           if( trim(NUTR_qhyd) == 'Each_POLARITY' ) then
-              LOG_ERROR("ATMOS_PHY_LT_sato2019_tendency",*) 'NUTR_qhyd = Each_POLARITY is not supported for MP_TYPE SUZUKI10'
-              call PRC_abort
-           endif
-
-           do j = JS, JE
-           do i = IS, IE
-           do k = KS, KE
-             if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
-                do n = I_crg_QC_s, I_crg_QG_e
-                    Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n)
-                    QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)  &
-                                       + ( d_QCRG(k,i,j)*1.0E+6_RP )  &
-                                       * Sarea(k,i,j,n)/Total_Sarea(1) / DENS(k,i,j)
-                enddo
-             endif
-           enddo
-           enddo
-           enddo
-
-         case default
-           LOG_ERROR("ATMOS_PHY_LT_sato2019_tendency",*) 'ATMOS_PHY_MP_TYPE is invalud for Lightning: ', trim(MP_TYPE)
-           call PRC_abort
          end select
+
 
          !--- Calculate E field
          Efield(:,:,:,:) = 0.0_RP
-         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                    &   ! [IN]
-                                           IA, IS, IE,                    &   ! [IN]
-                                           JA, JS, JE,                    &   ! [IN]
-                                           QCRG     (:,:,:,I_lt_TOT),     &   ! [IN]
-                                           DENS     (:,:,:),              &   ! [IN]
-                                           RHOT     (:,:,:),              &   ! [IN]
-                                           Epot_old(:,:,:),               &   ! [IN]
-                                           E_pot    (:,:,:),              &   ! [OUT]
-                                           Efield   (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
+         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
+                                           IA, IS, IE,                   &   ! [IN]
+                                           JA, JS, JE,                   &   ! [IN]
+                                           QCRG    (:,:,:),              &   ! [IN]
+                                           DENS    (:,:,:),              &   ! [IN]
+                                           RHOT    (:,:,:),              &   ! [IN]
+                                           Epot    (:,:,:),              &   ! [IN]
+                                           Epot_new(:,:,:),              &   ! [OUT]
+                                           Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
 
          !--- Add Total number of charge neutralization and flash point
-!         QCRG(:,:,:,:) = 0.0_RP
-         do j = JS, JE
-         do i = IS, IE
-         do k = KS, KE
-            d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + d_QCRG(k,i,j)
-            fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
-         enddo
-         enddo
-         enddo
+         if ( HIST_id(I_Qneut) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + d_QCRG(k,i,j)
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_FlashPoint) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
+            end do
+            end do
+            end do
+         end if
 
          !--- Add Total number of path
          do j = JS, JE
@@ -871,15 +637,40 @@ contains
             Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
                                          + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
                                          + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-            Epot_old(k,i,j) = E_pot(k,i,j)
-            LT_PATH_TOT(1,k,i,j) = LT_PATH_TOT(1,k,i,j) &
-                                 + 0.5_RP + 0.5_RP * sign( 1.0_RP,-d_QCRG(k,i,j)-SMALL )
-            LT_PATH_TOT(2,k,i,j) = LT_PATH_TOT(2,k,i,j) &
-                                 + 0.5_RP + 0.5_RP * sign( 1.0_RP, d_QCRG(k,i,j)-SMALL )
-            LT_PATH_TOT(3,k,i,j) = LT_PATH_TOT(3,k,i,j) + LT_PATH(k,i,j)
-         enddo
-         enddo
-         enddo
+            Epot(k,i,j) = Epot_new(k,i,j)
+         end do
+         end do
+         end do
+
+         if ( HIST_id(I_PosFLASH) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
+                                    + 0.5_RP + sign( 0.5_RP,-d_QCRG(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_NegFLASH) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
+                                    + 0.5_RP + sign( 0.5_RP, d_QCRG(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_LTpath) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
+            end do
+            end do
+            end do
+         end if
 
          call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                        IA, IS, IE,             &   ! [IN]
@@ -899,117 +690,115 @@ contains
     endif
 
     !--- For history output
-    if ( hist_flag ) then
-       if ( HIST_sw(I_Ex  ) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Ex  ) = Efield(k,i,j,I_lt_x  )*1.0E-3_RP ![kV/m]
+    do ip = 1, w_nmax
+       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
+    end do
+
+    if ( HIST_sw(I_QCRG_LIQ) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = 0.0_RP
+          do n = I_crg_LIQ_s, I_crg_LIQ_e
+             w3d(k,i,j) = w3d(k,i,j) + QTRC1_crg(k,i,j,n)
           enddo
+          w3d(k,i,j) = w3d(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+       end do
+       end do
+       end do
+       call FILE_HISTORY_put( HIST_id(I_QCRG_LIQ), w3d(:,:,:) )
+    end if
+    if ( HIST_sw(I_QCRG_ICE) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = 0.0_RP
+          do n = I_crg_ICE_s, I_crg_ICE_e
+             w3d(k,i,j) = w3d(k,i,j) + QTRC1_crg(k,i,j,n)
           enddo
-          enddo
-       endif
-       if ( HIST_sw(I_Ey  ) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Ey  ) = Efield(k,i,j,I_lt_y  )*1.0E-3_RP ![kV/m]
-          enddo
-          enddo
-          enddo
-       endif
-       if ( HIST_sw(I_Ez  ) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Ez  ) = Efield(k,i,j,I_lt_z  )*1.0E-3_RP ![kV/m]
-          enddo
-          enddo
-          enddo
-       endif
-       if ( HIST_sw(I_Eabs) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Eabs) = Efield(k,i,j,I_lt_abs)*1.0E-3_RP ![kV/m]
-          enddo
-          enddo
-          enddo
-       endif
-       if ( HIST_sw(I_Epot) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Epot) = Epot_old(k,i,j)
-          enddo
-          enddo
-          enddo
-       endif
-       if ( HIST_sw(I_Qneut) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_Qneut) = d_QCRG_TOT(k,i,j)
-          enddo
-          enddo
-          enddo
-          d_QCRG_TOT(:,:,:) = 0.0_RP
-       endif
-       if ( HIST_sw(I_LTpath)  ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_LTpath) = LT_PATH_TOT(3,k,i,j)
-          enddo
-          enddo
-          enddo
-          LT_PATH_TOT(3,:,:,:) = 0.0_RP
-       endif
-       if ( HIST_sw(I_PosFLASH) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_PosFLASH) = LT_PATH_TOT(1,k,i,j)
-          enddo
-          enddo
-          enddo
-          LT_PATH_TOT(1,:,:,:) = 0.0_RP
-       endif
-       if ( HIST_sw(I_NegFLASH) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_NegFLASH) = LT_PATH_TOT(2,k,i,j)
-          enddo
-          enddo
-          enddo
-          LT_PATH_TOT(2,:,:,:) = 0.0_RP
-       endif
-       if ( HIST_sw(I_FlashPoint) ) then
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             w3d(k,i,j,I_FlashPoint) = fls_int_p_tot(k,i,j)
-          enddo
-          enddo
-          enddo
-          fls_int_p_tot(:,:,:) = 0.0_RP
-       endif
+          w3d(k,i,j) = w3d(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+       end do
+       end do
+       end do
+       call FILE_HISTORY_put( HIST_id(I_QCRG_ICE), w3d(:,:,:) )
+    end if
+    if ( HIST_sw(I_QCRG_TOT) ) then
+       call FILE_HISTORY_put( HIST_id(I_QCRG_TOT), QCRG(:,:,:) )
+    end if
+    if ( HIST_sw(I_Ex  ) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_x  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Ex  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Ey  ) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_y  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Ey  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Ez  ) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_z  )*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Ez  ), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Eabs) ) then
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = Efield(k,i,j,I_lt_abs)*1.0E-3_RP ![kV/m]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Eabs), w3d(:,:,:) )
+    endif
+    if ( HIST_sw(I_Epot) ) then
+       call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
+    end if
+    if ( HIST_sw(I_Qneut) ) then
+       call FILE_HISTORY_put( HIST_id(I_Qneut), d_QCRG_TOT(:,:,:) )
+       d_QCRG_tot(:,:,:) = 0.0_RP
+    endif
+    if ( HIST_sw(I_LTpath)  ) then
+       call FILE_HISTORY_put( HIST_id(I_LTpath), LT_PATH_TOT(:,:,:,3) )
+       LT_PATH_TOT(:,:,:,3) = 0.0_RP
+    endif
+    if ( HIST_sw(I_PosFLASH) ) then
+       call FILE_HISTORY_put( HIST_id(I_PosFLASH), LT_PATH_TOT(:,:,:,1) )
+       LT_PATH_TOT(:,:,:,1) = 0.0_RP
+    endif
+    if ( HIST_sw(I_NegFLASH) ) then
+       call FILE_HISTORY_put( HIST_id(I_NegFLASH), LT_PATH_TOT(:,:,:,2) )
+       LT_PATH_TOT(:,:,:,2) = 0.0_RP
+    endif
+    if ( HIST_sw(I_FlashPoint) ) then
+       call FILE_HISTORY_put( HIST_id(I_FlashPoint), fls_int_p_tot(:,:,:) )
+       fls_int_p_tot(:,:,:) = 0.0_RP
     end if
 
-    do ip = 1, w_nmax
-       if ( HIST_sw(ip) ) call FILE_HISTORY_put( HIST_id(ip), w3d(:,:,:,ip) )
-    enddo
 
     !--- Calculation of tendency
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       do n = 1, QA_LT
+    do n = 1, QA_LT
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
           RHOQ_t_LT(k,i,j,n) = ( QTRC1_crg(k,i,j,n)-QTRC0_crg(k,i,j,n) )*DENS(k,i,j)/dt_LT
        enddo
-    enddo
-    enddo
+       enddo
+       enddo
     enddo
 
     return
@@ -1783,7 +1572,8 @@ contains
     integer  :: current_prc    !--- 1->lightning flash path is include, 0-> nopath in the node
     integer  :: comm_flag, comm_target, stop_flag, corr_flag(2)
     integer  :: end_grid(4), wild_grid(6)
-    integer  :: k, i, j, ipp, iq, pm, direction, ierr
+    real(RP) :: pm
+    integer  :: k, i, j, ipp, iq, direction, ierr
     integer  :: k1, i1, j1, k2, i2, j2, sign_flash
     integer  :: wild_flag, count_path
     integer  :: flg_num_end(KA,IA,JA,3)
@@ -1793,461 +1583,456 @@ contains
 
     fls_int_p(:,:,:) = 0.0_RP
 
-    count_path = 0
-    1000 continue
+    do count_path = 1, NUTR_ITMAX
 
-    Eovid(:,:) = 0
-    !--- search grid whose Efield is over threshold of flash inititation
-    own_prc_total = 0
-    do k = KS, KE
-    do j = JS, JE
-    do i = IS, IE
-       Eint_hgt(k,i,j) = min( Eint*DENS(k,i,j)/rho0,Eint )*flg_eint_hgt &
-                       + ( Eint-delEint )*( 1.0_RP-flg_eint_hgt )
-       if( flg_eint_hgt == 1.0_RP .and. Eint_hgt(k,i,j) < Estop ) then
-          Eint_hgt(k,i,j) = LARGE_NUM !--- ignore when Eint < Estop
+
+       Eovid(:,:) = 0
+       !--- search grid whose Efield is over threshold of flash inititation
+       own_prc_total = 0
+       do k = KS, KE
+       do j = JS, JE
+       do i = IS, IE
+          Eint_hgt(k,i,j) = min( Eint*DENS(k,i,j)/rho0,Eint )*flg_eint_hgt &
+                          + ( Eint-delEint )*( 1.0_RP-flg_eint_hgt )
+          if( flg_eint_hgt == 1.0_RP .and. Eint_hgt(k,i,j) < Estop ) then
+             Eint_hgt(k,i,j) = LARGE_NUM !--- ignore when Eint < Estop
+          endif
+          E_det = Efield(k,i,j,I_lt_abs) - Eint_hgt(k,i,j)
+          if( E_det > 0.0_RP ) then
+             own_prc_total = own_prc_total + 1
+             Eovid(1,own_prc_total) = i
+             Eovid(2,own_prc_total) = j
+             Eovid(3,own_prc_total) = k
+             Eovid(4,own_prc_total) = PRC_myrank
+          endif
+       enddo
+       enddo
+       enddo
+
+       !**** proc_num(0~) -> process number of each grid with |E|> E_threthold (local)
+       allocate(proc_num(own_prc_total))
+       proc_num(:) = PRC_myrank
+       call MPI_AllGather( own_prc_total, 1, MPI_integer, &
+                           count1, 1, MPI_integer, &
+                           COMM_world, ierr )
+       countindx(1) = 0
+
+       do ipp = 1, PRC_nprocs
+          countindx(ipp+1) = countindx(ipp) + count1(ipp)
+       enddo
+
+       !---- Create global version of proc_num(proc_numg)
+       !**** countindx(PROC_nprocs) -> total number of grid with |E|>E_threthold
+       !**** proc_numg(0~) -> process number of each grid with |E|> E_threthold (global)
+       allocate(randnum(countindx(PRC_nprocs+1)))
+       allocate(proc_numg(countindx(PRC_nprocs+1)))
+
+       call MPI_AllGatherv( proc_num, own_prc_total, MPI_integer, &
+                            proc_numg, count1, countindx, MPI_integer, &
+                            COMM_world, ierr )
+
+       !---- select initial point of flash by random select
+       !**** rank_initpoint -> rank number including initpoint
+       !**** grid_initpoint -> grid number of init point in rank (rank_initpoint)
+       if( PRC_IsMaster ) then
+          call RANDOM_uniform(randnum)
+          init_point(1) = minloc( randnum,1 )
+          randnum(:) = 0.0_RP
+          randnum(init_point(1)) = 1.0_RP
+          rank_initpoint = proc_numg(init_point(1))
+          grid_initpoint = 0
+          do i = init_point(1), 0, -1
+             grid_initpoint = grid_initpoint + 1
+             if( i == 0 ) then
+                grid_initpoint = grid_initpoint - 1
+             elseif( i /= 0 .and. proc_numg(i) /= rank_initpoint ) then
+                grid_initpoint = grid_initpoint - 1
+                exit
+             endif
+          enddo
        endif
-       E_det = Efield(k,i,j,I_lt_abs) - Eint_hgt(k,i,j)
-       if( E_det > 0.0_RP ) then
-         own_prc_total = own_prc_total + 1
-         Eovid(1,own_prc_total) = i
-         Eovid(2,own_prc_total) = j
-         Eovid(3,own_prc_total) = k
-         Eovid(4,own_prc_total) = PRC_myrank
-       endif
-    enddo
-    enddo
-    enddo
 
-    !**** proc_num(0~) -> process number of each grid with |E|> E_threthold (local)
-    allocate(proc_num(own_prc_total))
-    proc_num(:) = PRC_myrank
-    call MPI_AllGather( own_prc_total, 1, MPI_integer, &
-                        count1, 1, MPI_integer, &
-                        COMM_world, ierr )
-    countindx(1) = 0
+       call COMM_bcast( rank_initpoint )
+       call COMM_bcast( grid_initpoint )
 
-    do ipp = 1, PRC_nprocs
-      countindx(ipp+1) = countindx(ipp) + count1(ipp)
-    enddo
+       deallocate(randnum)
+       deallocate(proc_num)
+       deallocate(proc_numg)
 
-    !---- Create global version of proc_num(proc_numg)
-    !**** countindx(PROC_nprocs) -> total number of grid with |E|>E_threthold
-    !**** proc_numg(0~) -> process number of each grid with |E|> E_threthold (global)
-    allocate(randnum(countindx(PRC_nprocs+1)))
-    allocate(proc_numg(countindx(PRC_nprocs+1)))
+       L_path(:,:,:) = 0.0_RP   !--- +-1 -> path already passed, +-2 -> path calculate current step
 
-    call MPI_AllGatherv( proc_num, own_prc_total, MPI_integer, &
-                         proc_numg, count1, countindx, MPI_integer, &
-                         COMM_world, ierr )
+       !--- Propagate lightning
+       flg_num_end(:,:,:,:) = 0
+       wild_flag = 0
+       end_grid(:) = 0
+       comm_target = -999
+       do iq = 1, 2       !--- loop for direction (1-> parallel, 2-> anti-parallel)
+          if( iq == 1 ) then
+             pm = 1.0_RP
+          elseif( iq == 2 ) then
+             pm = - 1.0_RP
+          endif
+          stop_flag = 0
+          current_prc = rank_initpoint
 
-    !---- select initial point of flash by random select
-    !**** rank_initpoint -> rank number including initpoint
-    !**** grid_initpoint -> grid number of init point in rank (rank_initpoint)
-    if( PRC_IsMaster ) then
-!      call RANDOM_reset
-      call RANDOM_uniform(randnum)
-!      call random_number(randnum)
-      init_point(1) = minloc( randnum,1 )
-      randnum(:) = 0.0_RP
-      randnum(init_point(1)) = 1.0_RP
-      rank_initpoint = proc_numg(init_point(1))
-      grid_initpoint = 0
-      do i = init_point(1), 0, -1
-        grid_initpoint = grid_initpoint + 1
-        if( i == 0 ) then
-          grid_initpoint = grid_initpoint - 1
-        elseif( i /= 0 .and. proc_numg(i) /= rank_initpoint ) then
-          grid_initpoint = grid_initpoint - 1
-          exit
-        endif
-      enddo
-    endif
+          !---- determine initiation point
+          if( rank_initpoint == PRC_myrank ) then
+             i = Eovid(1,grid_initpoint)
+             j = Eovid(2,grid_initpoint)
+             k = Eovid(3,grid_initpoint)
+             L_path(k,i,j) = pm
+             fls_int_p(k,i,j) = fls_int_p(k,i,j) + 1.0_RP
+             sign_flash = 2 + int( sign( 1.0_RP, QCRG(k,i,j) ) )
+          else
+             i = 0
+             j = 0
+             k = 0
+          endif
 
-    call COMM_bcast( rank_initpoint )
-    call COMM_bcast( grid_initpoint )
+          loop_path : do ipp = 1, KIJMAXG  !--- loop for path
+             comm_flag = 0
+             !---- calculate path of lightning
+             if( current_prc == PRC_myrank ) then
 
-    deallocate(randnum)
-    deallocate(proc_num)
-    deallocate(proc_numg)
+                !--- determine direction of path
+                E_x = abs( Efield(k,i,j,I_lt_x) )/CDX(i)
+                E_y = abs( Efield(k,i,j,I_lt_y) )/CDY(j)
+                E_z = abs( Efield(k,i,j,I_lt_z) )/CDZ(k)
+                E_det = max( E_x,E_y,E_z )
 
-    L_path(:,:,:) = 0.0_RP   !--- +-1 -> path already passed, +-2 -> path calculate current step
-
-    !--- Propagate lightning
-    flg_num_end(:,:,:,:) = 0
-    wild_flag = 0
-    end_grid(:) = 0
-    comm_target = -999
-    do iq = 1, 2       !--- loop for direction (1-> parallel, 2-> anti-parallel)
-      if( iq == 1 ) then
-       pm = 1
-      elseif( iq == 2 ) then
-       pm = -1
-      endif
-      stop_flag = 0
-      current_prc = rank_initpoint
-
-      !---- determine initiation point
-      if( rank_initpoint == PRC_myrank ) then
-        i = Eovid(1,grid_initpoint)
-        j = Eovid(2,grid_initpoint)
-        k = Eovid(3,grid_initpoint)
-        L_path(k,i,j) = 1.0_RP * pm
-        fls_int_p(k,i,j) = fls_int_p(k,i,j) + 1.0_RP
-        sign_flash = 2 + int( sign( 1.0_RP, QCRG(k,i,j) ) )
-      else
-        i = 0
-        j = 0
-        k = 0
-      endif
-
-      loop_path : do ipp = 1, KIJMAXG  !--- loop for path
-         comm_flag = 0
-         !---- calculate path of lightning
-         if( current_prc == PRC_myrank ) then
-
-           !--- determine direction of path
-           E_x = abs( Efield(k,i,j,I_lt_x) )/CDX(i)
-           E_y = abs( Efield(k,i,j,I_lt_y) )/CDY(j)
-           E_z = abs( Efield(k,i,j,I_lt_z) )/CDZ(k)
-           E_det = max( E_x,E_y,E_z )
+                i1 = i
+                j1 = j
+                k1 = k
+                if( E_det == E_x ) then
+                   direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_x) ) * pm )
+                   i1 = i+direction
+                elseif( E_det == E_y ) then
+                   direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_y) ) * pm )
+                   j1 = j+direction
+                elseif( E_det == E_z ) then
+                   direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_z) ) * pm )
+                   k1 = k+direction
+                endif
 
 
-           i1 = i
-           j1 = j
-           k1 = k
-           if( E_det == E_x ) then
-            direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_x) ) )*pm
-            i1 = i+direction
-           elseif( E_det == E_y ) then
-            direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_y) ) )*pm
-            j1 = j+direction
-           elseif( E_det == E_z ) then
-            direction = int( sign( 1.0_RP,Efield(k,i,j,I_lt_z) ) )*pm
-            k1 = k+direction
-           endif
+                if( Efield(k1,i1,j1,I_lt_abs) <= Estop ) then
+                   !--- stop if |E| < Estop
+                   phi_end(iq) = QCRG(k,i,j)
+                   wild_flag = 1
+                   NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                   flg_num_end(k,i,j,sign_flash) = 1
+                   L_path(k,i,j) = pm
+                   stop_flag = 1
+                   end_grid(1) = i
+                   end_grid(2) = j
+                   end_grid(3) = k
+                   end_grid(4) = PRC_myrank
+                   if( QHYD(k,i,j) < EPS ) then
+                      corr_flag(iq) = 0
+                   else
+                      corr_flag(iq) = 1
+                   endif
+                elseif( Efield(k1,i1,j1,I_lt_abs) > Estop ) then
+                   !--- propagate lightning path
+                   L_path(k, i ,j ) = pm
+                   L_path(k1,i1,j1) = pm
+                endif
 
+                !--- check whether lightning path reach top or bottom layer
+                if( k1 == KE ) then
+                   !--- reach at top
+                   NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                   flg_num_end(k,i,j,sign_flash) = 1
+                   L_path(k,i,j) = pm
+                   stop_flag = 1
+                   end_grid(1) = i
+                   end_grid(2) = j
+                   end_grid(3) = k
+                   end_grid(4) = PRC_myrank
+                   if( QHYD(k,i,j) < EPS ) then
+                      corr_flag(iq) = 0
+                   else
+                      corr_flag(iq) = 1
+                   endif
+                elseif( CZ(k1) < zcg ) then
+                   !--- reach at groud
+                   NUM_end(k,i,j,2) = NUM_end(k,i,j,2) + 1.0_RP
+                   flg_num_end(k,i,j,2) = 1
+                   L_path(k,i,j) = pm
+                   stop_flag = 1
+                   end_grid(1) = i
+                   end_grid(2) = j
+                   end_grid(3) = k
+                   end_grid(4) = PRC_myrank
+                   if( QHYD(k,i,j) < EPS ) then
+                      corr_flag(iq) = 0
+                   else
+                      corr_flag(iq) = 1
+                   endif
+                endif
 
-           if( Efield(k1,i1,j1,I_lt_abs) <= Estop ) then
-             !--- stop if |E| < Estop
-             phi_end(iq) = QCRG(k,i,j)
-             wild_flag = 1
-             NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-             flg_num_end(k,i,j,sign_flash) = 1
-             L_path(k,i,j) = 1.0_RP * pm
-             stop_flag = 1
-             end_grid(1) = i
-             end_grid(2) = j
-             end_grid(3) = k
-             end_grid(4) = PRC_myrank
-             if( QHYD(k,i,j) < EPS ) then
-               corr_flag(iq) = 0
-             else
-               corr_flag(iq) = 1
-             endif
-           elseif( Efield(k1,i1,j1,I_lt_abs) > Estop ) then
-             !--- propagate lightning path
-             L_path(k, i ,j ) = 1.0_RP * pm
-             L_path(k1,i1,j1) = 1.0_RP * pm
-           endif
+                if( stop_flag /= 1 ) then
+                   !--- check whether lightning path reachs boundary in i-direction
+                   if( i1 == IS-1 .and. .not. PRC_HAS_W ) then
+                      !--- reach west boundary of global domain(stop)
+                      NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                      flg_num_end(k,i,j,sign_flash) = 1
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      stop_flag = 1
+                      end_grid(1) = i
+                      end_grid(2) = j
+                      end_grid(3) = k
+                      end_grid(4) = PRC_myrank
+                   elseif( i1 == IS-1 .and. PRC_HAS_W ) then
+                      !--- reach west boundary of local domain(propagate)
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      comm_flag = 1
+                      comm_target = PRC_next(PRC_W)
+                      i1 = IE
+                   elseif( i1 == IE+1 .and. .not. PRC_HAS_E ) then
+                      !--- reach east boundary of global domain(stop)
+                      NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                      flg_num_end(k,i,j,sign_flash) = 1
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      stop_flag = 1
+                      end_grid(1) = i
+                      end_grid(2) = j
+                      end_grid(3) = k
+                      end_grid(4) = PRC_myrank
+                   elseif( i1 == IE+1 .and. PRC_HAS_E ) then
+                      !--- reach east boundary of local domain(propagate)
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      comm_flag = 1
+                      comm_target = PRC_next(PRC_E)
+                      i1 = IS
+                   endif
 
-           !--- check whether lightning path reach top or bottom layer
-           if( k1 == KE ) then
-             !--- reach at top
-             NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-             flg_num_end(k,i,j,sign_flash) = 1
-             L_path(k,i,j) = 1.0_RP * pm
-             stop_flag = 1
-             end_grid(1) = i
-             end_grid(2) = j
-             end_grid(3) = k
-             end_grid(4) = PRC_myrank
-             if( QHYD(k,i,j) < EPS ) then
-               corr_flag(iq) = 0
-             else
-               corr_flag(iq) = 1
-             endif
-           elseif( CZ(k1) < zcg ) then
-             !--- reach at groud
-             NUM_end(k,i,j,2) = NUM_end(k,i,j,2) + 1.0_RP
-             flg_num_end(k,i,j,2) = 1
-             L_path(k,i,j) = 1.0_RP * pm
-             stop_flag = 1
-             end_grid(1) = i
-             end_grid(2) = j
-             end_grid(3) = k
-             end_grid(4) = PRC_myrank
-             if( QHYD(k,i,j) < EPS ) then
-               corr_flag(iq) = 0
-             else
-               corr_flag(iq) = 1
-             endif
-           endif
+                   !--- check whether lightning path reachs boundary in i-direction
+                   if( j1 == JS-1 .and. .not. PRC_HAS_S ) then
+                      !--- reach south boundary of global domain(stop)
+                      NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                      flg_num_end(k,i,j,sign_flash) = 1
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      stop_flag = 1
+                      end_grid(1) = i
+                      end_grid(2) = j
+                      end_grid(3) = k
+                      end_grid(4) = PRC_myrank
+                      if( QHYD(k,i,j) < EPS ) then
+                         corr_flag(iq) = 0
+                      else
+                         corr_flag(iq) = 1
+                      endif
+                   elseif( j1 == JS-1 .and. PRC_HAS_S ) then
+                      !--- reach south boundary of local domain(propagate)
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      comm_flag = 1
+                      comm_target = PRC_next(PRC_S)
+                      j1 = JE
+                   elseif( j1 == JE+1 .and. .not. PRC_HAS_N ) then
+                      !--- reach north boundary of global domain(stop)
+                      NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
+                      flg_num_end(k,i,j,sign_flash) = 1
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      comm_flag = 1
+                      stop_flag = 1
+                      end_grid(1) = i
+                      end_grid(2) = j
+                      end_grid(3) = k
+                      end_grid(4) = PRC_myrank
+                      if( QHYD(k,i,j) < EPS ) then
+                         corr_flag(iq) = 0
+                      else
+                         corr_flag(iq) = 1
+                      endif
+                   elseif( j1 == JE+1 .and. PRC_HAS_N ) then
+                      !--- reach north boundary of local domain(propagate)
+                      L_path(k,i,j) = pm
+                      L_path(k1,i1,j1) = pm
+                      comm_flag = 1
+                      comm_target = PRC_next(PRC_N)
+                      j1 = JS
+                   endif
+                endif
 
-           if( stop_flag /= 1 ) then
-             !--- check whether lightning path reachs boundary in i-direction
-             if( i1 == IS-1 .and. .not. PRC_HAS_W ) then
-               !--- reach west boundary of global domain(stop)
-               NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-               flg_num_end(k,i,j,sign_flash) = 1
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               stop_flag = 1
-               end_grid(1) = i
-               end_grid(2) = j
-               end_grid(3) = k
-               end_grid(4) = PRC_myrank
-             elseif( i1 == IS-1 .and. PRC_HAS_W ) then
-               !--- reach west boundary of local domain(propagate)
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               comm_flag = 1
-               comm_target = PRC_next(PRC_W)
-               i1 = IE
-             elseif( i1 == IE+1 .and. .not. PRC_HAS_E ) then
-               !--- reach east boundary of global domain(stop)
-               NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-               flg_num_end(k,i,j,sign_flash) = 1
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               stop_flag = 1
-               end_grid(1) = i
-               end_grid(2) = j
-               end_grid(3) = k
-               end_grid(4) = PRC_myrank
-             elseif( i1 == IE+1 .and. PRC_HAS_E ) then
-               !--- reach east boundary of local domain(propagate)
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               comm_flag = 1
-               comm_target = PRC_next(PRC_E)
-               i1 = IS
              endif
 
-             !--- check whether lightning path reachs boundary in i-direction
-             if( j1 == JS-1 .and. .not. PRC_HAS_S ) then
-               !--- reach south boundary of global domain(stop)
-               NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-               flg_num_end(k,i,j,sign_flash) = 1
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               stop_flag = 1
-               end_grid(1) = i
-               end_grid(2) = j
-               end_grid(3) = k
-               end_grid(4) = PRC_myrank
-               if( QHYD(k,i,j) < EPS ) then
-                 corr_flag(iq) = 0
-               else
-                 corr_flag(iq) = 1
-               endif
-             elseif( j1 == JS-1 .and. PRC_HAS_S ) then
-               !--- reach south boundary of local domain(propagate)
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               comm_flag = 1
-               comm_target = PRC_next(PRC_S)
-               j1 = JE
-             elseif( j1 == JE+1 .and. .not. PRC_HAS_N ) then
-               !--- reach north boundary of global domain(stop)
-               NUM_end(k,i,j,sign_flash) = NUM_end(k,i,j,sign_flash) + 1.0_RP
-               flg_num_end(k,i,j,sign_flash) = 1
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               comm_flag = 1
-               stop_flag = 1
-               end_grid(1) = i
-               end_grid(2) = j
-               end_grid(3) = k
-               end_grid(4) = PRC_myrank
-               if( QHYD(k,i,j) < EPS ) then
-                 corr_flag(iq) = 0
-               else
-                 corr_flag(iq) = 1
-               endif
-             elseif( j1 == JE+1 .and. PRC_HAS_N ) then
-               !--- reach north boundary of local domain(propagate)
-               L_path(k,i,j) = 1.0_RP * pm
-               L_path(k1,i1,j1) = 1.0_RP * pm
-               comm_flag = 1
-               comm_target = PRC_next(PRC_N)
-               j1 = JS
+             !---- determine stop or not
+             iprod1 = stop_flag
+             call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
+             stop_flag = iprod2
+
+             if( stop_flag == 1 ) then
+                !---- send flag wildfire
+                iprod1 = wild_flag
+                call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
+                wild_flag = iprod2
+
+                call MPI_bcast(end_grid, 4, MPI_integer, current_prc, COMM_world, ierr)
+                call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
+
+                stop_flag = 0
+                !---- If lightning path reaches end_grid stop
+                exit loop_path
              endif
-           endif
 
-         endif
+             !---- determine wether process change occurs or not
+             iprod1 = comm_flag
+             call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
+             comm_flag = iprod2
 
-         !---- determine stop or not
-         iprod1 = stop_flag
-         call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-         stop_flag = iprod2
+             !--- process change occurs
+             if( comm_flag == 1 ) then
+                call MPI_bcast(comm_target, 1, MPI_integer, current_prc, COMM_world, ierr)
+                !--- this part should be changed by 1 to 1 communication
+                call MPI_bcast(k1, 1, MPI_integer, current_prc, COMM_world, ierr)
+                call MPI_bcast(i1, 1, MPI_integer, current_prc, COMM_world, ierr)
+                call MPI_bcast(j1, 1, MPI_integer, current_prc, COMM_world, ierr)
+                call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
+                call MPI_bcast(sign_flash, 1, MPI_integer, current_prc, COMM_world, ierr)
+                !--- change current proc
+                current_prc = comm_target
+             endif
 
-         if( stop_flag == 1 ) then
-           !---- send flag wildfire
-           iprod1 = wild_flag
-           call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-           wild_flag = iprod2
+             if( current_prc == PRC_myrank ) then
+                k = k1
+                j = j1
+                i = i1
+             endif
 
-           call MPI_bcast(end_grid, 4, MPI_integer, current_prc, COMM_world, ierr)
-           call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
+          enddo loop_path
 
-           stop_flag = 0
-           !---- If lightning path reaches end_grid stop
-           exit loop_path
-         endif
+!          call PRC_MPIbarrier
 
-         !---- determine wether process change occurs or not
-         iprod1 = comm_flag
-         call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-         comm_flag = iprod2
-
-         !--- process change occurs
-         if( comm_flag == 1 ) then
-           call MPI_bcast(comm_target, 1, MPI_integer, current_prc, COMM_world, ierr)
-           !--- this part should be changed by 1 to 1 communication
-           call MPI_bcast(k1, 1, MPI_integer, current_prc, COMM_world, ierr)
-           call MPI_bcast(i1, 1, MPI_integer, current_prc, COMM_world, ierr)
-           call MPI_bcast(j1, 1, MPI_integer, current_prc, COMM_world, ierr)
-           call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
-           call MPI_bcast(sign_flash, 1, MPI_integer, current_prc, COMM_world, ierr)
-           !--- change current proc
-           current_prc = comm_target
-         endif
-
-         if( current_prc == PRC_myrank ) then
-           k = k1
-           j = j1
-           i = i1
-         endif
-
-      enddo loop_path
-
-!      call PRC_MPIbarrier
-
-      !---- Wildfire method
-      if( wild_flag == 1 .and. end_grid(4) == PRC_myrank ) then
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)+1
-         j2 = end_grid(2)
-         k2 = end_grid(3)
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)-1
-         j2 = end_grid(2)
-         k2 = end_grid(3)
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)
-         j2 = end_grid(2)+1
-         k2 = end_grid(3)
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)
-         j2 = end_grid(2)-1
-         k2 = end_grid(3)
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)
-         j2 = end_grid(2)
-         k2 = end_grid(3)+1
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-         i1 = end_grid(1)
-         j1 = end_grid(2)
-         k1 = end_grid(3)
-         i2 = end_grid(1)
-         j2 = end_grid(2)
-         k2 = end_grid(3)-1
-         if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
-             abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
-             L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
-         endif
-      endif
-
-!      call PRC_MPIbarrier
-
-    enddo  !--- loop for direction
-
-!    call COMM_vars8( L_path,1 )
-!    call COMM_wait ( L_path,1 )
-
-    !---- Neutralization
-    Npls = 0
-    Nmns = 0
-    sumdqrho_pls = 0.0_RP
-    sumdqrho_mns = 0.0_RP
-    dqrho_pls(:,:,:) = 0.0_RP
-    dqrho_mns(:,:,:) = 0.0_RP
-    do k = KS, KE
-    do i = IS, IE
-    do j = JS, JE
-
-       !---- whether the grid is on lightning path or not
-       if( L_path(k,i,j) /= 0.0_RP ) then
-          if( abs( QCRG(k,i,j) ) > qrho_chan ) then
-             pm = sign( 1.0_RP,QCRG(k,i,j) )   !--- plus or minus
-             if( pm == 1 ) then
-                Npls = Npls + 1
-                dqrho_pls(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
-                sumdqrho_pls = sumdqrho_pls &
-                                 + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
-             elseif( pm == -1 ) then
-                Nmns = Nmns + 1
-                dqrho_mns(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
-                sumdqrho_mns = sumdqrho_mns &
-                                 + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
+          !---- Wildfire method
+          if( wild_flag == 1 .and. end_grid(4) == PRC_myrank ) then
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)+1
+             j2 = end_grid(2)
+             k2 = end_grid(3)
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
+             endif
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)-1
+             j2 = end_grid(2)
+             k2 = end_grid(3)
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
+             endif
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)
+             j2 = end_grid(2)+1
+             k2 = end_grid(3)
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
+             endif
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)
+             j2 = end_grid(2)-1
+             k2 = end_grid(3)
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
+             endif
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)
+             j2 = end_grid(2)
+             k2 = end_grid(3)+1
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
+             endif
+             i1 = end_grid(1)
+             j1 = end_grid(2)
+             k1 = end_grid(3)
+             i2 = end_grid(1)
+             j2 = end_grid(2)
+             k2 = end_grid(3)-1
+             if( abs( QCRG(k2,i2,j2) ) > qrho_chan/DENS(k2,i2,j2) .and. &
+                  abs( E_pot(k2,i2,j2) ) > abs( phi_end(iq) ) ) then
+                L_path( k2,i2,j2 ) = L_path( k1,i1,j1 )
              endif
           endif
-       endif
 
-    enddo
-    enddo
-    enddo
+!          call PRC_MPIbarrier
 
-    iprod1 =  Npls
-    call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-    Npls = buf
+       enddo  !--- loop for direction
 
-    iprod1 =  Nmns
-    call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-    Nmns = buf
+!       call COMM_vars8( L_path,1 )
+!       call COMM_wait ( L_path,1 )
 
-    Ntot = Npls + Nmns
+       !---- Neutralization
+       Npls = 0
+       Nmns = 0
+       sumdqrho_pls = 0.0_RP
+       sumdqrho_mns = 0.0_RP
+       dqrho_pls(:,:,:) = 0.0_RP
+       dqrho_mns(:,:,:) = 0.0_RP
+       do k = KS, KE
+       do i = IS, IE
+       do j = JS, JE
 
-    if( NUTR_ITMAX <= count_path ) then
-      LOG_INFO("ATMOS_PHY_LT_Efield",*) "Reach limit iteration for searching flash path", count_path, Npls, Nmns, current_prc
-      d_QCRG(:,:,:) = 0.0_RP
-      L_path(:,:,:) = 0.0_RP
-      return
-    endif
+          !---- whether the grid is on lightning path or not
+          if( L_path(k,i,j) /= 0.0_RP ) then
+             if( abs( QCRG(k,i,j) ) > qrho_chan ) then
+                if ( QCRG(k,i,j) >= 0.0_RP ) then
+                   Npls = Npls + 1
+                   dqrho_pls(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
+                   sumdqrho_pls = sumdqrho_pls &
+                                + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
+                else
+                   Nmns = Nmns + 1
+                   dqrho_mns(k,i,j) = fp * ( abs( QCRG(k,i,j) )-qrho_neut )
+                   sumdqrho_mns = sumdqrho_mns &
+                                + fp * ( abs( QCRG(k,i,j) )-qrho_neut )
+                endif
+             endif
+          endif
 
-    if( Ntot == 0 ) then
-     count_path = count_path + 1
-     goto 1000
+       enddo
+       enddo
+       enddo
+
+       iprod1 =  Npls
+       call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
+       Npls = buf
+
+       iprod1 =  Nmns
+       call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
+       Nmns = buf
+
+       Ntot = Npls + Nmns
+
+       if ( Ntot > 0 ) exit
+
+    end do
+
+    if ( count_path > NUTR_ITMAX ) then
+       LOG_INFO("ATMOS_PHY_LT_Efield",*) "Reach limit iteration for searching flash path", count_path, Npls, Nmns, current_prc
+       d_QCRG(:,:,:) = 0.0_RP
+       L_path(:,:,:) = 0.0_RP
+       return
     endif
 
     if( corr_flag(1) == 1 .and. corr_flag(2) == 1 ) then
@@ -2289,12 +2074,12 @@ contains
            endif
          endif
 
-         do pm = 1, 3
-           if( flg_num_end(k,IS,j,pm) == 1 ) then
-               NUM_end(k,IE,j,pm) = NUM_end(k,IE,j,pm) + 1.0_RP
+         do iq = 1, 3
+           if( flg_num_end(k,IS,j,iq) == 1 ) then
+               NUM_end(k,IE,j,iq) = NUM_end(k,IE,j,iq) + 1.0_RP
            endif
-           if( flg_num_end(k,IE,j,pm) == 1 ) then
-               NUM_end(k,IS,j,pm) = NUM_end(k,IS,j,pm) + 1.0_RP
+           if( flg_num_end(k,IE,j,iq) == 1 ) then
+               NUM_end(k,IS,j,iq) = NUM_end(k,IS,j,iq) + 1.0_RP
            endif
          enddo
 
@@ -2534,7 +2319,7 @@ contains
       do j = JS, JE
            distance = sqrt( ( CX(i)-E_exce_x_g(ipp) )**2 &
                           + ( CY(j)-E_exce_y_g(ipp) )**2 )
-           C(i,j) = C(i,j) + int(0.5_RP + 0.5_RP * sign( 1.0_RP,R_neut-distance )) !--- when distance > R_neut C=0, and distance < R_neut C=1
+           C(i,j) = C(i,j) + int(0.5_RP + sign( 0.5_RP,R_neut-distance )) !--- when distance > R_neut C=0, and distance < R_neut C=1
       enddo
       enddo
 
@@ -2551,7 +2336,7 @@ contains
          abs_qcrg_cyl(:) = 0.0_RP
          abs_qcrg_cyl(KS:KE) = abs( QCRG(KS:KE,i,j) )
          abs_qcrg_max = maxval( abs_qcrg_cyl,1 )
-         B(i,j) = int( 0.5_RP + 0.5_RP * sign( 1.0_RP,abs_qcrg_max-q_thre )*real( C(i,j) ) )
+         B(i,j) = int( 0.5_RP + sign( 0.5_RP,abs_qcrg_max-q_thre )*real( C(i,j) ) )
     enddo
     enddo
 
@@ -2698,10 +2483,10 @@ contains
        KA, KS, KE, & ! [IN]
        IA, IS, IE, & ! [IN]
        JA, JS, JE, & ! [IN]
-       QA_MP,      & ! [IN]
+       NLIQ,      & ! [IN]
        TEMP,       & ! [IN]
        DENS,       & ! [IN]
-       QTRC,       & ! [IN]
+       QLIQ,       & ! [IN]
        dqcrg,      & ! [OUT]
        beta_crg    ) ! [OUT]
     use scale_const, only: &
@@ -2711,10 +2496,10 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-    integer,  intent(in)  :: QA_MP
+    integer,  intent(in)  :: NLIQ
     real(RP), intent(in)  :: TEMP(KA,IA,JA)
     real(RP), intent(in)  :: DENS(KA,IA,JA)
-    real(RP), intent(in)  :: QTRC(KA,IA,JA,QA_MP)
+    real(RP), intent(in)  :: QLIQ(KA,IA,JA,NLIQ)
     real(RP), intent(out) :: dqcrg(KA,IA,JA)
     real(RP), intent(out) :: beta_crg(KA,IA,JA)
 
@@ -2730,8 +2515,8 @@ contains
     do k = KS, KE
       if( TEMP(k,i,j) <= T00 .and. TEMP(k,i,j) >= tcrglimit ) then
         cwc = 0.0_RP
-        do iq = I_trc_LIQ_s, I_trc_LIQ_e
-          cwc = cwc + QTRC(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
+        do iq = 1, NLIQ
+          cwc = cwc + QLIQ(k,i,j,iq) * DENS(k,i,j) * 1.0E+3_RP ![g/m3]
         enddo
         do pp = 1, nxlut_lt
            diffx( pp ) = abs( grid_lut_t(pp)-TEMP(k,i,j) )
@@ -2742,7 +2527,7 @@ contains
         enddo
         grid(2) = minloc( diffy,1 )
         dqcrg( k,i,j ) = dq_chrg( grid(1), grid(2) ) &
-                       *( 0.50_RP + 0.50_RP*sign( 1.0_RP,cwc-1.0E-2_RP ) ) !--- no charge separation when cwc < 0.01 [g/m3]
+                       *( 0.5_RP + sign( 0.5_RP,cwc-1.0E-2_RP ) ) !--- no charge separation when cwc < 0.01 [g/m3]
       endif
       if( TEMP(k,i,j) >= -30.0_RP+T00 ) then
         beta_crg( k,i,j ) = 1.0_RP

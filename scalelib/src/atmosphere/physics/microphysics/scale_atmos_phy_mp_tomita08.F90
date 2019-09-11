@@ -349,7 +349,7 @@ contains
   !<
   subroutine ATMOS_PHY_MP_tomita08_setup(  &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QA_LT )
+       flg_lt )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -367,7 +367,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    integer, intent(in), optional :: QA_LT
+    logical, intent(in), optional :: flg_lt
 
     real(RP) :: autoconv_nc     = Nc_ocn  !< number concentration of cloud water [1/cc]
 
@@ -418,6 +418,7 @@ contains
 
     real(RP), parameter :: max_term_vel = 10.0_RP  !-- terminal velocity for calculate dt of sedimentation
 
+    logical  :: flg_lt_
     integer  :: ierr
     integer  :: i, j, ip
     !---------------------------------------------------------------------------
@@ -536,7 +537,12 @@ contains
     end do
 
 
-    if( present(QA_LT) ) then
+    if( present(flg_lt) ) then
+       flg_lt_ = flg_lt
+    else
+       flg_lt_ = .false.
+    end if
+    if ( flg_lt_ ) then
       if( enable_RS2014 ) then
          write(*,*) 'xxx ROH and Satoh (2014) scheme is not supported for Lightning'
          call PRC_abort
@@ -574,8 +580,7 @@ contains
        dt,                       &
        TEMP, QTRC, CPtot, CVtot, &
        RHOE_t, EVAPORATE,        &
-       QA_LT,                    &
-       d0_crg, v0_crg, flg_lt,   &
+       flg_lt, d0_crg, v0_crg,   &
        dqcrg, beta_crg,          &
        QSPLT_in, Sarea, QTRC_crg )
     use scale_const, only: &
@@ -604,14 +609,13 @@ contains
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
 
     ! Optional for Lightning
-    integer,  intent(in) :: QA_LT  ! If lightning component is not used, QA_LT = 0
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
-    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)       ! Surface area of each hydrometeor
-    real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)        ! Charge separation
-    real(RP), intent(inout), optional :: QTRC_crg(KA,IA,JA,QA_LT)  ! Tracer for charge density
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_MP-1)      ! Surface area of each hydrometeor
+    real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)         ! Charge separation
+    real(RP), intent(inout), optional :: QTRC_crg(KA,IA,JA,QA_MP-1) ! Tracer for charge density
 
     real(RP) :: RHOE_d_sat(KA,IA,JA)
 
@@ -631,8 +635,7 @@ contains
          TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
          CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
          RHOE_t(:,:,:),                        & ! [OUT]
-         QA_LT,                                & ! [IN]
-         d0_crg, v0_crg, flg_lt,               & ! [IN:Optional]
+         flg_lt, d0_crg, v0_crg,               & ! [IN:Optional]
          dqcrg(:,:,:), beta_crg(:,:,:),        & ! [OUT:Optional]
          QSPLT_in(:,:,:,:),                    & ! [OUT:Optional]
          Sarea(:,:,:,:),                       & ! [OUT:Optional]
@@ -706,9 +709,8 @@ contains
          TEMP0, QTRC0,      &
          CPtot0, CVtot0,    &
          RHOE_t,            &
-         QA_LT,             &
-         d0_crg, v0_crg,    &
          flg_lt,            &
+         d0_crg, v0_crg,    &
          dqcrg,             &
          beta_crg,          &
          QSPLT_in,          &
@@ -761,14 +763,13 @@ contains
 
     real(RP), intent(out) :: RHOE_t(KA,IA,JA)
 
-    integer,  intent(in) :: QA_LT
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
-    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
-    real(RP), intent(inout), optional :: QTRC_crg0(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_MP-1)
+    real(RP), intent(inout), optional :: QTRC_crg0(KA,IA,JA,QA_MP-1)
 
     real(RP) :: dens(KA)            ! density
     real(RP) :: temp(KA)            ! T [K]
@@ -863,14 +864,17 @@ contains
     rdens_g = 1.0_RP / dens_g
     rdens_r = 1.0_RP / DWATR
     rdens_s = 1.0_RP / dens_s
-    if( QA_LT /= 0 ) then
+    if ( present(flg_lt) ) then
        flg_lt_l = flg_lt
+    else
+       flg_lt_l = .false.
+    end if
+    if( flg_lt_l ) then
+       QSPLT_in(:,:,:,:) = 0.0_RP
        call ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS0, TEMP0, QTRC0, &
        Re                   )
-    else
-       flg_lt_l = .false.
     endif
 
     hist_flag = .false.

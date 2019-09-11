@@ -57,6 +57,7 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: ATMOS_PHY_MP_suzuki10_nccn
   integer, public :: ATMOS_PHY_MP_suzuki10_nbnd
 
+
   character(len=H_SHORT), public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_names(:)
   character(len=H_MID)  , public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_descriptions(:)
   character(len=H_SHORT), public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_units(:)
@@ -136,6 +137,7 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: nccn   = 0 ! tentatively public
   integer :: kphase = 0
   integer :: ICEFLG = 1
+  integer :: num_hyd = 0
 
   integer, parameter   :: I_mp_QC  = 1
   integer, parameter   :: I_mp_QCL = 2
@@ -339,6 +341,8 @@ contains
     ATMOS_PHY_MP_suzuki10_nices    = nbin * ( nspc - 1 )   ! number of ice water
     ATMOS_PHY_MP_suzuki10_nccn     = nccn                  ! number of ccn
 
+    num_hyd                        = nbin * nspc
+
     num_start_waters = I_QV + 1
     num_end_waters   = I_QV + ATMOS_PHY_MP_suzuki10_nwaters
     num_start_ices   = num_end_waters + 1
@@ -382,7 +386,7 @@ contains
   !> Setup
   subroutine ATMOS_PHY_MP_suzuki10_setup( &
        KA, IA, JA, &
-       QA_LT, nbnd_rain )
+       flg_lt )
     use scale_prc, only: &
        PRC_abort,    &
        PRC_masterrank, &
@@ -406,8 +410,7 @@ contains
     integer, intent(in) :: KA
     integer, intent(in) :: IA
     integer, intent(in) :: JA
-    integer, intent(in), optional :: QA_LT
-    integer, intent(inout), optional :: nbnd_rain
+    logical, intent(in), optional :: flg_lt
 
     real(RP) :: RHO_AERO  !--- density of aerosol
     real(RP) :: R0_AERO   !--- center radius of aerosol (um)
@@ -445,6 +448,7 @@ contains
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
 
+    logical :: flg_lt_
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
@@ -677,7 +681,12 @@ contains
     ecoll( :,:,:,: ) = 0.0_RP
     rcoll( :,:,:,: ) = 0.0_RP
 
-    if( present(QA_LT) ) then
+    if ( present(flg_lt) ) then
+       flg_lt_ = flg_lt
+    else
+       flg_lt_ = .false.
+    end if
+    if( flg_lt_ ) then
 
       do myu = 1, nspc
       do nyu = 1, nspc
@@ -772,9 +781,7 @@ contains
       endif
     enddo
     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,ES15.7,A)')  'Radius between cloud and rain is ', radc(nbnd), '[m]'
-    if( present(QA_LT) ) then
-       nbnd_rain = nbnd
-    endif
+    ATMOS_PHY_MP_suzuki10_nbnd = nbnd
 
     !--- random number setup for stochastic method
     if ( flg_rndm ) then
@@ -876,9 +883,8 @@ contains
        RHOQ_t, RHOE_t,   &
        CPtot_t, CVtot_t, &
        EVAPORATE,        &
-       QA_LT,            &
-       d0_crg, v0_crg,   &
        flg_lt,           &
+       d0_crg, v0_crg,   &
        dqcrg,            &
        beta_crg,         &
        QTRC_crg,         &
@@ -914,15 +920,14 @@ contains
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
     ! Optional for Lightning
-    integer,  intent(in) :: QA_LT  ! If Lightning component is not used, QA_LT = 0
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
-    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,num_hyd)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
-    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
-    real(RP), intent(out), optional :: RHOQ_t_mp(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,num_hyd)
+    real(RP), intent(out), optional :: RHOQ_t_mp(KA,IA,JA,num_hyd)
 
     real(RP) :: QSAT_L(KA,IA,JA)
     real(RP) :: QSAT_I(KA,IA,JA)
@@ -952,6 +957,7 @@ contains
     real(RP) :: rhoq_new
 
     !--- for lithgning
+    logical  :: flg_lt_l
     real(RP) :: Gcrg_ijk(nbin,nspc,KIJMAX)
     real(RP) :: CRG_SEP_ijk(7,KIJMAX)
     real(RP) :: dqcrg_ijk(KIJMAX)
@@ -966,6 +972,12 @@ contains
     elseif( nspc >  1 ) then
        LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SBM (Mixed phase)'
     endif
+
+    if ( present(flg_lt) ) then
+       flg_lt_l = flg_lt
+    else
+       flg_lt_l = .false.
+    end if
 
     call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
@@ -1087,16 +1099,14 @@ contains
             index_warm(ijkcount_warm) = ijkcount
           endif
 
-          if( QA_LT /= 0 ) then
-             if ( flg_lt ) then
-                countbin = 1
-                do m = 1, nspc
-                do n = 1, nbin
-                   Gcrg_ijk(n,m,ijkcount) = QTRC_crg(k,i,j,countbin) * DENS(k,i,j)
-                   countbin = countbin + 1
-                enddo
-                enddo
-             end if
+          if ( flg_lt_l ) then
+             countbin = 1
+             do m = 1, nspc
+             do n = 1, nbin
+                Gcrg_ijk(n,m,ijkcount) = QTRC_crg(k,i,j,countbin) * DENS(k,i,j)
+                countbin = countbin + 1
+             enddo
+             enddo
             beta_crg_ijk(ijkcount) = beta_crg(k,i,j)
             dqcrg_ijk(ijkcount) = dqcrg(k,i,j)
           endif
@@ -1156,26 +1166,8 @@ contains
 
     call PROF_rapstart('MP_suzuki10', 3)
 
-    if( QA_LT == 0 ) then
-       call MP_suzuki10( KA, IA, JA,                 & ! [IN]
-                         ijkcount,                   & ! [IN]
-                         ijkcount_cold,              & ! [IN]
-                         ijkcount_warm,              & ! [IN]
-                         index_cold(    1:ijkcount), & ! [IN]
-                         index_warm(    1:ijkcount), & ! [IN]
-                         DENS_ijk  (    1:ijkcount), & ! [IN]
-                         PRES_ijk  (    1:ijkcount), & ! [IN]
-                         Qdry_ijk  (    1:ijkcount), & ! [IN]
-                         CCN_ijk   (    1:ijkcount), & ! [IN]
-                         TEMP_ijk  (    1:ijkcount), & ! [INOUT]
-                         Qvap_ijk  (    1:ijkcount), & ! [INOUT]
-                         Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
-                         Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
-                         CP_ijk    (    1:ijkcount), & ! [INOUT]
-                         CV_ijk    (    1:ijkcount), & ! [INOUT]
-                         Evaporate_ijk(1:ijkcount),  & ! [OUT]
-                         dt                          ) ! [IN]
-     else  ! --- with lightning
+    if ( flg_lt_l ) then
+       ! --- with lightning
        call MP_suzuki10( KA, IA, JA,                 & ! [IN]
                          ijkcount,                   & ! [IN]
                          ijkcount_cold,              & ! [IN]
@@ -1194,11 +1186,30 @@ contains
                          CV_ijk    (    1:ijkcount), & ! [INOUT]
                          Evaporate_ijk(1:ijkcount),  & ! [OUT]
                          dt,                         & ! [IN]
-                         d0_crg, v0_crg, flg_lt,     & ! [IN:Optional]
+                         flg_lt_l, d0_crg, v0_crg,   & ! [IN:Optional]
                          dqcrg_ijk (    1:ijkcount), & ! [IN:Optional]
                          beta_crg_ijk(  1:ijkcount), & ! [IN:Optional]
                          Gcrg_ijk  (:,:,1:ijkcount), & ! [INOUT:Optional]
                          CRG_SEP_ijk(:,1:ijkcount)   ) ! [OUT:Optional]
+    else
+       call MP_suzuki10( KA, IA, JA,                 & ! [IN]
+                         ijkcount,                   & ! [IN]
+                         ijkcount_cold,              & ! [IN]
+                         ijkcount_warm,              & ! [IN]
+                         index_cold(    1:ijkcount), & ! [IN]
+                         index_warm(    1:ijkcount), & ! [IN]
+                         DENS_ijk  (    1:ijkcount), & ! [IN]
+                         PRES_ijk  (    1:ijkcount), & ! [IN]
+                         Qdry_ijk  (    1:ijkcount), & ! [IN]
+                         CCN_ijk   (    1:ijkcount), & ! [IN]
+                         TEMP_ijk  (    1:ijkcount), & ! [INOUT]
+                         Qvap_ijk  (    1:ijkcount), & ! [INOUT]
+                         Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
+                         Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
+                         CP_ijk    (    1:ijkcount), & ! [INOUT]
+                         CV_ijk    (    1:ijkcount), & ! [INOUT]
+                         Evaporate_ijk(1:ijkcount),  & ! [OUT]
+                         dt                          ) ! [IN]
     endif
 
     call PROF_rapend  ('MP_suzuki10', 3)
@@ -1276,7 +1287,7 @@ contains
           countbin = countbin + 1
        enddo
 
-       if( QA_LT /= 0 ) then
+       if( flg_lt_l ) then
           countbin = 1
           do m = 1, nspc
           do n = 1, nbin
@@ -1364,7 +1375,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,nspc*nbin)
+    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,num_hyd)
     real(RP), intent(in)  :: mask_criterion
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
 
@@ -1432,10 +1443,10 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nspc*nbin) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)         ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)         ! temperature               [K]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD)   ! effective radius          [cm]
 
     real(RP), parameter :: um2cm = 100.0_RP
 
@@ -1564,8 +1575,8 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)     ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)   ! mixing ratio of each cateory [kg/kg]
 
     integer :: ihydro, ibin, iq, icateg
     integer :: k, i, j
@@ -1594,7 +1605,7 @@ contains
           icateg = I_HS
        elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
           icateg = I_HG
-       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
        endif
 
@@ -1632,9 +1643,9 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: DENS (KA,IA,JA)           ! density [kg/m3]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)     ! number concentration of each cateory [1/m3]
+    real(RP), intent(in)  :: DENS (KA,IA,JA)         ! density [kg/m3]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)   ! number concentration of each cateory [1/m3]
 
     integer :: ihydro, ibin, iq, icateg
     integer :: k, i, j
@@ -1663,7 +1674,7 @@ contains
           icateg = I_HS
        elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
           icateg = I_HG
-       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
        endif
 
@@ -1864,7 +1875,7 @@ contains
 
     endif
 
-    do iq = nbin*nspc+1, QA-1
+    do iq = num_hyd+1, QA-1
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1897,9 +1908,9 @@ contains
        cv,          &
        evaporate,   &
        dt,          &
+       flg_lt,      &
        d0_crg,      &
        v0_crg,      &
-       flg_lt,      &
        dqcrg,       &
        beta_crg,    &
        gcrg,        &
@@ -1931,8 +1942,8 @@ contains
     real(DP), intent(in)    :: dt                             ! Time step interval
 
     ! Optional for Lightning
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(ijkmax), beta_crg(ijkmax)
     real(RP), intent(inout), optional :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout), optional :: crg_sep(7,ijkmax)
@@ -1944,15 +1955,19 @@ contains
     real(RP) :: v0_crg_l, d0_crg_l, tcrglimit_l
     !---------------------------------------------------------------------------
 
-    if( present(gcrg) ) then
+    if ( present(flg_lt) ) then
+       flg_lt_l = flg_lt
+    else
+       flg_lt_l = .false.
+    end if
+
+    if( flg_lt_l ) then
       gcrg_l(:,:,:) = gcrg(:,:,:)
-      flg_lt_l = flg_lt
       d0_crg_l = d0_crg
       v0_crg_l = v0_crg
       crg_sep_l(:,:) = crg_sep(:,:)
     else
       gcrg_l(:,:,:) = 0.0_RP
-      flg_lt_l = .false.
       d0_crg_l = 100.E-6_RP
       v0_crg_l = 8.0_RP
       crg_sep_l(:,:) = 0.0_RP
@@ -2005,7 +2020,7 @@ contains
                             crg_sep_l(:,:),& ! [INOUT]
                             dt             ) ! [IN]
 
-             if( present(gcrg) ) then
+             if( flg_lt_l ) then
                 crg_sep(:,:) = crg_sep_l(:,:)
              endif
 
@@ -2096,7 +2111,7 @@ contains
                              crg_sep_l(:,:),& ! [INOUT]
                              dt             ) ! [IN]
 
-             if( present(gcrg) ) then
+             if( flg_lt_l ) then
                 crg_sep(:,:) = crg_sep_l(:,:)
              endif
 
@@ -2150,7 +2165,7 @@ contains
                             crg_sep_l(:,:),& ! [INOUT]
                             dt             ) ! [IN]
 
-             if( present(gcrg) ) then
+             if( flg_lt_l ) then
                 crg_sep(:,:) = crg_sep_l(:,:)
              endif
 
@@ -2240,7 +2255,7 @@ contains
                              crg_sep_l(:,:),& ! [INOUT]
                              dt             ) ! [IN]
 
-             if( present(gcrg) ) then
+             if( flg_lt_l ) then
                 crg_sep(:,:) = crg_sep_l(:,:)
              endif
 

@@ -60,7 +60,6 @@ module mod_atmos_phy_lt_vars
   integer, public :: QS_LT = -1
   integer, public :: QE_LT = -2
 
-  integer, public :: nbnd_rain = 0
   real(RP), parameter, public :: d0_crg = 100.E-6_RP
   real(RP), parameter, public :: v0_crg = 8.0_RP
   logical,  public :: flg_lt = .false.

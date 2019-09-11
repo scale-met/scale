@@ -57,18 +57,21 @@ contains
        ATMOS_PHY_MP_suzuki10_nwaters, &
        ATMOS_PHY_MP_suzuki10_nices, &
        ATMOS_PHY_MP_suzuki10_nccn
-    use scale_atmos_phy_lt_sato2019, only: &
-       ATMOS_PHY_LT_sato2019_tracer_setup, &
-       ATMOS_PHY_LT_sato2019_NAME => ATMOS_PHY_LT_sato2019_tracer_names, &
-       ATMOS_PHY_LT_sato2019_DESC => ATMOS_PHY_LT_sato2019_tracer_descriptions, &
-       ATMOS_PHY_LT_sato2019_UNIT => ATMOS_PHY_LT_sato2019_tracer_units
     use mod_atmos_phy_lt_vars, only: &
        QA_LT, &
        QS_LT, &
        QE_LT
+    use scale_atmos_hydrometeor, only: &
+       QHA, &
+       QHS
     use scale_prc, only: &
        PRC_abort
     implicit none
+
+    character(len=H_SHORT), allocatable :: NAME(:)
+    character(len=H_MID  ), allocatable :: DESC(:)
+    character(len=H_SHORT), allocatable :: UNIT(:)
+    integer :: iq
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -82,24 +85,16 @@ contains
        case ( 'SATO2019' )
           select case ( ATMOS_PHY_MP_TYPE )
           case ( 'TOMITA08', 'SN14' )
-             call ATMOS_PHY_LT_sato2019_tracer_setup( QA_LT,                          & ! [OUT]
-                                                      ATMOS_PHY_MP_TYPE               ) ! [IN]
-             call TRACER_regist( QS_LT,                           & ! [OUT]
-                                 QA_LT,                           & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_NAME(:),   & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_DESC(:),   & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_UNIT(:)    ) ! [IN]
+             ! do nothing
           case ( 'SUZUKI10' )
-             call ATMOS_PHY_LT_sato2019_tracer_setup( QA_LT,                          & ! [OUT]
-                                                      ATMOS_PHY_MP_TYPE,              & ! [IN]
-                                                      ATMOS_PHY_MP_suzuki10_nwaters,  & ! [IN:Optional]
-                                                      ATMOS_PHY_MP_suzuki10_nices,    & ! [IN:Optional]
-                                                      ATMOS_PHY_MP_suzuki10_nccn      ) ! [IN:Optional]
-             call TRACER_regist( QS_LT,                           & ! [OUT]
-                                 QA_LT,                           & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_NAME(:),   & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_DESC(:),   & ! [IN]
-                                 ATMOS_PHY_LT_sato2019_UNIT(:)    ) ! [IN]
+             if( ATMOS_PHY_MP_suzuki10_nccn /= 0 ) then
+                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', ATMOS_PHY_MP_suzuki10_nccn, '). CHECK!'
+                call PRC_abort
+             endif
+             if ( ATMOS_PHY_MP_suzuki10_nices == 0 ) then
+                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
+                call PRC_abort
+             endif
           case ( 'KESSLER' )
              LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE should be TOMITA08, or SN14, or SUZUKI10 (', ATMOS_PHY_MP_TYPE, '). CHECK!'
              call PRC_abort
@@ -109,7 +104,22 @@ contains
           call PRC_abort
        end select
 
-       QE_LT = QS_LT -1 + QA_LT
+       QA_LT = QHA
+
+       allocate( NAME(QA_LT), DESC(QA_LT), UNIT(QA_LT) )
+       do iq = 1, QA_LT
+          NAME(iq) = 'QCRG_'//trim(TRACER_NAME(QHS+iq-1)(2:))
+          DESC(iq) = 'Ratio of charge density of '//trim(TRACER_NAME(QHS+iq-1))
+          UNIT(iq) = 'fC/kg'
+       end do
+       call TRACER_regist( QS_LT,   & ! [OUT]
+                           QA_LT,   & ! [IN]
+                           NAME(:), & ! [IN]
+                           DESC(:), & ! [IN]
+                           UNIT(:)  ) ! [IN]
+       deallocate( NAME, DESC, UNIT )
+
+       QE_LT = QS_LT - 1 + QA_LT
 
     else
        QA_LT = 0
@@ -137,12 +147,14 @@ contains
     use mod_atmos_phy_lt_vars, only: &
        flg_lt
     use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
        ATMOS_PHY_LT_TYPE, &
        ATMOS_sw_phy_lt
     use scale_prc, only: &
        PRC_abort
-    use mod_atmos_phy_lt_vars, only: &
-       nbnd_rain
+    use scale_atmos_hydrometeor, only: &
+       QLA, &
+       QIA
     implicit none
     !---------------------------------------------------------------------------
 
@@ -163,8 +175,9 @@ contains
                                          IMAXG,      & ! [IN]
                                          JMAXG,      & ! [IN]
                                          KMAX,       & ! [IN]
-                                         nbnd_rain,  & ! [IN]
-                                         CDX, CDY    ) ! [IN]
+                                         ATMOS_PHY_MP_TYPE, & ! [IN]
+                                         QLA, QIA,          & ! [IN]
+                                         CDX, CDY           ) ! [IN]
 
     else
 

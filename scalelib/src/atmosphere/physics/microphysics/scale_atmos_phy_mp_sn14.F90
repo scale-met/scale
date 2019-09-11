@@ -593,7 +593,7 @@ contains
   !! setup
   !<
   subroutine ATMOS_PHY_MP_sn14_setup( &
-    & KA, IA, JA )
+    KA, IA, JA )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -662,14 +662,13 @@ contains
        CPtot_t, &
        CVtot_t, &
        EVAPORATE, &
-       QA_LT, &
-       d0_crg, v0_crg, &
        flg_lt, &
+       d0_crg, v0_crg, &
        dqcrg, &
        beta_crg, &
        QTRC_crg, &
        QSPLT_in, Sarea, &
-       RHOQ_t_mp      )
+       RHOQcrg_t      )
     implicit none
 
     integer, intent(in) :: KA, KS, KE
@@ -696,15 +695,14 @@ contains
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
 
     ! Optional for Lightning
-    integer,  intent(in) :: QA_LT  ! -- If Lightning component is not used, QA_LT = 0
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
-    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,HYDRO_MAX)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
-    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
-    real(RP), intent(out), optional :: RHOQ_t_mp(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,HYDRO_MAX)
+    real(RP), intent(out), optional :: RHOQcrg_t(KA,IA,JA,HYDRO_MAX)
     !---------------------------------------------------------------------------
 
     LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SN14'
@@ -721,10 +719,9 @@ contains
        real(dt,RP), cz(:,:,:), fz(:,:,:),                              & ! (in)
        RHOQ_t(:,:,:,:), RHOE_t(:,:,:), CPtot_t(:,:,:), CVtot_t(:,:,:), & ! (out)
        EVAPORATE(:,:,:),                                               & ! (out)
-       QA_LT,                                                          & ! (in)
-       d0_crg, v0_crg, flg_lt, dqcrg(:,:,:), beta_crg(:,:,:),          & ! (optional in)
+       flg_lt, d0_crg, v0_crg, dqcrg(:,:,:), beta_crg(:,:,:),          & ! (optional in)
        QTRC_crg(:,:,:,:),                                              & ! (optional in)
-       QSPLT_in(:,:,:,:), Sarea(:,:,:,:), RHOQ_t_mp(:,:,:,:)           ) ! (optional out)
+       QSPLT_in(:,:,:,:), Sarea(:,:,:,:), RHOQcrg_t(:,:,:,:)           ) ! (optional out)
 
 #ifdef PROFILE_FIPP
     call fipp_stop()
@@ -2068,10 +2065,9 @@ contains
        CPtot_t, &
        CVtot_t, &
        EVAPORATE, &
-       QA_LT, &
+       flg_lt, &
        d0_crg, &
        v0_crg, &
-       flg_lt, &
        dqcrg, &
        beta_crg, &
        QTRC_crg, &
@@ -2116,15 +2112,14 @@ contains
     real(RP), intent(out)   :: EVAPORATE(KA,IA,JA)   ! number of evaporated cloud [/m3/s]
 
     !--- for lightning
-    integer,  intent(in) :: QA_LT   ! If Lightning component is not used, QA_LT = 0
-    real(RP), intent(in), optional :: d0_crg, v0_crg
     logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
-    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,HYDRO_MAX)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
-    real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)
-    real(RP), intent(out), optional :: RHOQcrg_t_mp(KA,IA,JA,QA_LT)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,HYDRO_MAX)
+    real(RP), intent(out), optional :: RHOQcrg_t_mp(KA,IA,JA,HYDRO_MAX)
 
     real(RP) :: pres (KA)
     real(RP) :: temp (KA)
@@ -2301,19 +2296,24 @@ contains
 
     !---------------------------------------------------------------------------
 
-!    flg_igcol = 0.0_RP
-    flg_lt_l = .false.
-    crg_split_i = 0.0_RP
-    crg_split_s = 0.0_RP
-    crg_split_g = 0.0_RP
+    if ( present(flg_lt) ) then
+       flg_lt_l = flg_lt
+    else
+       flg_lt_l = .false.
+    end if
+
+
     !--- Lightning component is on
-    if( QA_LT /= 0 ) then
-      flg_lt_l = flg_lt
-      d0_crg_l = d0_crg
-      v0_crg_l = v0_crg
-      Qsplt_in(:,:,:,:) = 0.0_RP
-      allocate(RHOQcrg0_t(KA,IA,JA,QA_LT))
-      RHOQcrg_t_mp(:,:,:,:) = 0.0_RP
+    if( flg_lt_l ) then
+!       flg_igcol = 0.0_RP
+       crg_split_i = 0.0_RP
+       crg_split_s = 0.0_RP
+       crg_split_g = 0.0_RP
+       d0_crg_l = d0_crg
+       v0_crg_l = v0_crg
+       Qsplt_in(:,:,:,:) = 0.0_RP
+       allocate(RHOQcrg0_t(KA,IA,JA,HYDRO_MAX))
+       RHOQcrg_t_mp(:,:,:,:) = 0.0_RP
 !      if( MP_doice_graupel_collection ) then
 !        flg_igcol = 1.0_RP
 !      else
@@ -2581,7 +2581,7 @@ contains
        !
        ! update subroutine
        !
-       if( QA_LT /= 0 ) then
+       if( flg_lt_l ) then
           call update_by_phase_change( &
                KA, KS, KE, &
                ntmax_phase_change, dt,          & ! (in)
@@ -2598,7 +2598,6 @@ contains
                RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
                CPtot0_t(:), CVtot0_t(:),        & ! (out)
                EVAPORATE(:,i,j),                & ! (out)
-               QA_LT,                           & ! (in)
                rhoq2_crg(I_QC:I_QG,:),          & ! (in:optional)
                RHOQcrg0_t(:,i,j,:)              ) ! (inout:optional)
        else
@@ -2617,8 +2616,7 @@ contains
                sl_PLCdep, sl_PLRdep, sl_PNRdep, & ! (inout)
                RHOQ0_t(:,:), RHOE0_t(:),        & ! (out)
                CPtot0_t(:), CVtot0_t(:),        & ! (out)
-               EVAPORATE(:,i,j),                & ! (out)
-               QA_LT                            ) ! (in)
+               EVAPORATE(:,i,j)                 ) ! (out)
        endif
 
        ! total tendency
@@ -4689,7 +4687,6 @@ contains
        CPtot_t,              & ! out
        CVtot_t,              & ! out
        qc_evaporate,         & ! out
-       QA_LT,                & ! in
        rhoq2_crg,            & ! in:optional
        RHOQcrg_t             ) ! out:optional
 
@@ -4745,9 +4742,8 @@ contains
 
     !--- for lightning component
     logical, intent(in)   :: flg_lt ! false -> without lightning, true-> with lightning
-    integer, intent(in)   :: QA_LT  ! If Lightning component is not used, QA_LT = 0
     real(RP), intent(in), optional  :: rhoq2_crg(I_QC:I_QG,KA)
-    real(RP), intent(inout), optional :: RHOQcrg_t(KA,QA_LT)
+    real(RP), intent(inout), optional :: RHOQcrg_t(KA,HYDRO_MAX)
 
     real(RP) :: xi               ! mean mass of ice particles
     real(RP) :: rrho             ! 1/rho
