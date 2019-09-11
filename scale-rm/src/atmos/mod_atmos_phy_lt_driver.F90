@@ -156,7 +156,7 @@ contains
           call PRC_abort
        endif
 
-       flg_lt = 1.0_RP
+       flg_lt = .true.
        call ATMOS_PHY_LT_sato2019_setup( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
                                          JA, JS, JE, & ! [IN]
@@ -168,7 +168,7 @@ contains
 
     else
 
-       flg_lt = 0.0_RP
+       flg_lt = .false.
        LOG_INFO("ATMOS_PHY_LT_driver_setup",*) 'This component is never called.'
 
     endif

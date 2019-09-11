@@ -606,7 +606,7 @@ contains
     ! Optional for Lightning
     integer,  intent(in) :: QA_LT  ! If lightning component is not used, QA_LT = 0
     real(RP), intent(in), optional :: d0_crg, v0_crg
-    real(RP), intent(in), optional :: flg_lt
+    logical,  intent(in), optional :: flg_lt
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
     real(RP), intent(out), optional :: Sarea(KA,IA,JA,QA_LT)       ! Surface area of each hydrometeor
@@ -624,30 +624,19 @@ contains
     LOG_PROGRESS(*) 'atmosphere / physics / microphysics / Tomita08'
 
     !##### MP Main #####
-    if( QA_LT /= 0 ) then
-       call MP_tomita08( &
-            KA, KS, KE, IA, IS, IE, JA, JS, JE,   & ! [IN]
-            DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), & ! [IN]
-            dt,                                   & ! [IN]
-            TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
-            CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
-            RHOE_t(:,:,:),                        & ! [OUT]
-            QA_LT,                                & ! [IN]
-            d0_crg, v0_crg, flg_lt,               & ! [IN:Optional]
-            dqcrg(:,:,:), beta_crg(:,:,:),        & ! [OUT:Optional]
-            QSPLT_in(:,:,:,:),                    & ! [OUT:Optional]
-            Sarea(:,:,:,:),                       & ! [OUT:Optional]
-            QTRC_crg(:,:,:,:)                     ) ! [INOUT:Optional]
-    else
-       call MP_tomita08( &
-            KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-            DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), & ! [IN]
-            dt,                                   & ! [IN]
-            TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
-            CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
-            RHOE_t(:,:,:),                        & ! [OUT]
-            QA_LT                                 ) ! [IN]
-    endif
+    call MP_tomita08( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE,   & ! [IN]
+         DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), & ! [IN]
+         dt,                                   & ! [IN]
+         TEMP(:,:,:), QTRC(:,:,:,:),           & ! [INOUT]
+         CPtot(:,:,:), CVtot(:,:,:),           & ! [INOUT]
+         RHOE_t(:,:,:),                        & ! [OUT]
+         QA_LT,                                & ! [IN]
+         d0_crg, v0_crg, flg_lt,               & ! [IN:Optional]
+         dqcrg(:,:,:), beta_crg(:,:,:),        & ! [OUT:Optional]
+         QSPLT_in(:,:,:,:),                    & ! [OUT:Optional]
+         Sarea(:,:,:,:),                       & ! [OUT:Optional]
+         QTRC_crg(:,:,:,:)                     ) ! [INOUT:Optional]
 
     ! save value before saturation adjustment
     do j = JS, JE
@@ -773,7 +762,8 @@ contains
     real(RP), intent(out) :: RHOE_t(KA,IA,JA)
 
     integer,  intent(in) :: QA_LT
-    real(RP), intent(in), optional :: d0_crg, v0_crg, flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    logical,  intent(in), optional :: flg_lt
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
@@ -861,33 +851,26 @@ contains
     real(RP) :: Re(KA,IA,JA,N_HYD)
     real(RP) :: alpha
     real(RP) :: facq(I_QC:I_QG)
-    real(RP) :: flg_lt_l
-    integer :: grid(2), pp, qq, iq
+    logical  :: flg_lt_l
+    integer  :: grid(2), pp, qq, iq
     real(RP) :: qc_crg_t(KA), qr_crg_t(KA), qi_crg_t(KA), qs_crg_t(KA), qg_crg_t(KA)
     real(RP) :: rlambda(I_QC:I_QG)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_tomita08', 3)
 
-    w_q(:,:) = 0.0_RP
-    w_qcrg(:,:) = 0.0_RP
-    Re(:,:,:,:) = 0.0_RP
+    rdens_i = 1.0_RP / DICE
+    rdens_g = 1.0_RP / dens_g
+    rdens_r = 1.0_RP / DWATR
+    rdens_s = 1.0_RP / dens_s
     if( QA_LT /= 0 ) then
        flg_lt_l = flg_lt
-       rdens_i = 1.0_RP / DICE
-       rdens_g = 1.0_RP / dens_g
-       rdens_r = 1.0_RP / DWATR
-       rdens_s = 1.0_RP / dens_s
        call ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS0, TEMP0, QTRC0, &
        Re                   )
     else
-       flg_lt_l = 0.0_RP
-       rdens_i = 1.0_RP / DICE
-       rdens_g = 1.0_RP / dens_g
-       rdens_r = 1.0_RP / DWATR
-       rdens_s = 1.0_RP / dens_s
+       flg_lt_l = .false.
     endif
 
     hist_flag = .false.
@@ -983,31 +966,31 @@ contains
        re_qs(:)  = 0.0_RP
        dcrg(:)   = 0.0_RP
        beta1_crg(:) = 0.0_RP
-       do pp = 1, int(flg_lt_l)
-         ! store to work
-         do k = KS, KE
-            qcrg_c(k) = QTRC_crg0(k,i,j,I_QC-1)
-         enddo
-         do k = KS, KE
-            qcrg_r(k) = QTRC_crg0(k,i,j,I_QR-1)
-         enddo
-         do k = KS, KE
-            qcrg_i(k) = QTRC_crg0(k,i,j,I_QI-1)
-         enddo
-         do k = KS, KE
-            qcrg_s(k) = QTRC_crg0(k,i,j,I_QS-1)
-         enddo
-         do k = KS, KE
-            qcrg_g(k) = QTRC_crg0(k,i,j,I_QG-1)
-         enddo
-         do k = KS, KE
-            re_qs(k) = Re(k,i,j,I_HS) * 1.0E-2_RP   ! [cm] -> [m]
-         enddo
-         do k = KS, KE
-            beta1_crg(k) = beta_crg(k,i,j)
-            dcrg(k) = - dqcrg(k,i,j)
-         end do
-       enddo
+       if ( flg_lt_l ) then
+          ! store to work
+          do k = KS, KE
+             qcrg_c(k) = QTRC_crg0(k,i,j,I_QC-1)
+          enddo
+          do k = KS, KE
+             qcrg_r(k) = QTRC_crg0(k,i,j,I_QR-1)
+          enddo
+          do k = KS, KE
+             qcrg_i(k) = QTRC_crg0(k,i,j,I_QI-1)
+          enddo
+          do k = KS, KE
+             qcrg_s(k) = QTRC_crg0(k,i,j,I_QS-1)
+          enddo
+          do k = KS, KE
+             qcrg_g(k) = QTRC_crg0(k,i,j,I_QG-1)
+          enddo
+          do k = KS, KE
+             re_qs(k) = Re(k,i,j,I_HS) * 1.0E-2_RP   ! [cm] -> [m]
+          enddo
+          do k = KS, KE
+             beta1_crg(k) = beta_crg(k,i,j)
+             dcrg(k) = - dqcrg(k,i,j)
+          end do
+       end if
 
        ! saturation ratio S
        do k = KS, KE
@@ -1236,23 +1219,23 @@ contains
           w(k,I_Piacr) = qi(k) * Ar / mi * 0.25_RP * PI * Eri * N0r(k) * Cr * GAM_6dr * RLMDr_6dr(k) * rho_fact(k)
        end do
 
-       do iq = 1, int(flg_lt_l)
-       do k = KS, KE
-          ! [Qgaci] charge separation of cloud ice
-          alpha = 5.0_RP * ( 2.0_RP * re_qi / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
-          alpha = min( alpha, 10.0_RP )
-          w_qcrg(k,I_Qgaci) = ( 1.0_RP - flg_ecoali ) &
-                            * dens(k) * qi(k) * 1.5_RP * ( 1.0_RP-Egi ) * N0g(k) / ( 2.0_RP * re_qi )**3 &
-                            * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
-                            * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k) * flg_lt_l &
-                            + flg_ecoali &
-                            * dens(k) * qi(k) * 1.5_RP * Egi * ( 1.0_RP-Ecoal_GI ) / Ecoal_GI * N0g(k) / ( 2.0_RP * re_qi )**3 &
-                            * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
-                            * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k) * flg_lt_l
-          QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgaci)*flg_lt_l  !*dt
-          QSPLT_in(k,i,j,2) = QSPLT_in(k,i,j,2) + w_qcrg(k,I_Qgaci)*flg_lt_l  !*dt
-       end do
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             ! [Qgaci] charge separation of cloud ice
+             alpha = 5.0_RP * ( 2.0_RP * re_qi / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
+             alpha = min( alpha, 10.0_RP )
+             w_qcrg(k,I_Qgaci) = ( 1.0_RP - flg_ecoali ) &
+                               * dens(k) * qi(k) * 1.5_RP * ( 1.0_RP-Egi ) * N0g(k) / ( 2.0_RP * re_qi )**3 &
+                               * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
+                               * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k) &
+                               + flg_ecoali &
+                               * dens(k) * qi(k) * 1.5_RP * Egi * ( 1.0_RP-Ecoal_GI ) / Ecoal_GI * N0g(k) / ( 2.0_RP * re_qi )**3 &
+                               * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
+                               * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k)
+             QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgaci) !*dt
+             QSPLT_in(k,i,j,2) = QSPLT_in(k,i,j,2) + w_qcrg(k,I_Qgaci) !*dt
+          end do
+       end if
 
        do k = KS, KE
           ! [Psacr] accretion rate of rain by snow
@@ -1280,7 +1263,7 @@ contains
                          + 2.0_RP * MOMs_1bs(k)            * GAM_2 * RLMDg_2(k) &
                          +          MOMs_2bs(k)            * GAM   * RLMDg  (k) )
 
-          do iq = 1, int(flg_lt_l)
+          if ( flg_lt_l ) then
              ! [Qgacs] charge separation of snow
 !             w_qcrg(I_Qgacs) = 0.0_RP
              alpha = 5.0_RP * ( 2.0_RP * re_qs(k) / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
@@ -1290,16 +1273,16 @@ contains
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
                                * ( GAM_3 * GAM   * RLMDs_3 * RLMDg  (k) &
                                  + GAM_2 * GAM_2 * RLMDs_2 * RLMDg_2(k) &
-                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) ) * flg_lt_l &
+                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) ) &
                                + flg_ecoals &
                                * 0.25_RP * PI * Rdens(k) * Egs_mod * ( 1.0_RP-Ecoal_GS ) / Ecoal_GS * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
                                * ( GAM_3 * GAM   * RLMDs_3 * RLMDg  (k) &
                                  + GAM_2 * GAM_2 * RLMDs_2 * RLMDg_2(k) &
-                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) ) * flg_lt_l
-             QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgacs)*flg_lt_l  !*dt
-             QSPLT_in(k,i,j,3) = QSPLT_in(k,i,j,3) + w_qcrg(k,I_Qgacs)*flg_lt_l  !*dt
-          enddo
+                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) )
+             QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgacs) !*dt
+             QSPLT_in(k,i,j,3) = QSPLT_in(k,i,j,3) + w_qcrg(k,I_Qgacs) !*dt
+          end if
 
        end do
 
@@ -1513,18 +1496,19 @@ contains
           w(k,I_Pgacw  ) = w(k,I_Pgacw  ) * fac
        end do
 
-       do k = KS, KE
-          facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-          !--- if flg_lt = 0, ignore
-          w_q(k,I_Pimlt) = qcrg_c(k) * w(k,I_Pimlt) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Praut) = qcrg_c(k) * w(k,I_Praut) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pracw) = qcrg_c(k) * w(k,I_Pracw) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pihom) = qcrg_c(k) * w(k,I_Pihom) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pihtr) = qcrg_c(k) * w(k,I_Pihtr) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Psacw) = qcrg_c(k) * w(k,I_Psacw) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Psfw ) = qcrg_c(k) * w(k,I_Psfw ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pgacw) = qcrg_c(k) * w(k,I_Pgacw) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
+             w_q(k,I_Pimlt) = qcrg_c(k) * w(k,I_Pimlt) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Praut) = qcrg_c(k) * w(k,I_Praut) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pracw) = qcrg_c(k) * w(k,I_Pracw) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pihom) = qcrg_c(k) * w(k,I_Pihom) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pihtr) = qcrg_c(k) * w(k,I_Pihtr) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Psacw) = qcrg_c(k) * w(k,I_Psacw) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Psfw ) = qcrg_c(k) * w(k,I_Psfw ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pgacw) = qcrg_c(k) * w(k,I_Pgacw) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+          end do
+       end if
 
        ! [QI]
        do k = KS, KE
@@ -1560,22 +1544,24 @@ contains
           w(k,I_Pgaci  ) = w(k,I_Pgaci  ) * fac
        end do
 
-       do k = KS, KE
-          facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-          facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
-          w_q(k,I_Pigen  ) = 0.0_RP
-          w_q(k,I_Pidep  ) = 0.0_RP
-          w_q(k,I_Pihom  ) = qcrg_c(k) * w(k,I_Pihom  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pihtr  ) = qcrg_c(k) * w(k,I_Pihtr  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pisub  ) = qcrg_i(k) * w(k,I_Pisub  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Pimlt  ) = qcrg_i(k) * w(k,I_Pimlt  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Psaut  ) = qcrg_i(k) * w(k,I_Psaut  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Praci_s) = qcrg_i(k) * w(k,I_Praci_s) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Psaci  ) = qcrg_i(k) * w(k,I_Psaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Psfi   ) = qcrg_i(k) * w(k,I_Psfi   ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Praci_g) = qcrg_i(k) * w(k,I_Praci_g) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Pgaci  ) = qcrg_i(k) * w(k,I_Pgaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
+             facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
+             w_q(k,I_Pigen  ) = 0.0_RP
+             w_q(k,I_Pidep  ) = 0.0_RP
+             w_q(k,I_Pihom  ) = qcrg_c(k) * w(k,I_Pihom  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pihtr  ) = qcrg_c(k) * w(k,I_Pihtr  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pisub  ) = qcrg_i(k) * w(k,I_Pisub  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Pimlt  ) = qcrg_i(k) * w(k,I_Pimlt  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Psaut  ) = qcrg_i(k) * w(k,I_Psaut  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Praci_s) = qcrg_i(k) * w(k,I_Praci_s) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Psaci  ) = qcrg_i(k) * w(k,I_Psaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Psfi   ) = qcrg_i(k) * w(k,I_Psfi   ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Praci_g) = qcrg_i(k) * w(k,I_Praci_g) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Pgaci  ) = qcrg_i(k) * w(k,I_Pgaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+          end do
+       end if
 
        ! [QR]
        do k = KS, KE
@@ -1609,24 +1595,26 @@ contains
           w(k,I_Pgfrz  ) = w(k,I_Pgfrz  ) * fac
        end do
 
-       do k = KS, KE
-          facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-          facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
-          facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
-          facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
+             facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
+             facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
+             facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
 
-          w_q(k,I_Praut  ) = qcrg_c(k) * w(k,I_Praut  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Pracw  ) = qcrg_c(k) * w(k,I_Pracw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Psmlt  ) = qcrg_s(k) * w(k,I_Psmlt  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG) * flg_lt_l
-          w_q(k,I_Prevp  ) = qcrg_r(k) * w(k,I_Prevp  ) / ( qr(k) + EPS*EPS ) * facq(I_QG) * flg_lt_l
-          w_q(k,I_Piacr_s) = qcrg_r(k) * w(k,I_Piacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Psacr_s) = qcrg_r(k) * w(k,I_Psacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Pgacr  ) = qcrg_r(k) * w(k,I_Pgacr  ) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Pgfrz  ) = qcrg_r(k) * w(k,I_Pgfrz  ) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-       enddo
+             w_q(k,I_Praut  ) = qcrg_c(k) * w(k,I_Praut  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Pracw  ) = qcrg_c(k) * w(k,I_Pracw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Psmlt  ) = qcrg_s(k) * w(k,I_Psmlt  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG)
+             w_q(k,I_Prevp  ) = qcrg_r(k) * w(k,I_Prevp  ) / ( qr(k) + EPS*EPS ) * facq(I_QG)
+             w_q(k,I_Piacr_s) = qcrg_r(k) * w(k,I_Piacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Psacr_s) = qcrg_r(k) * w(k,I_Psacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Pgacr  ) = qcrg_r(k) * w(k,I_Pgacr  ) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Pgfrz  ) = qcrg_r(k) * w(k,I_Pgfrz  ) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+          enddo
+       end if
 
        ! [QV]
        do k = KS, KE
@@ -1692,28 +1680,30 @@ contains
           w(k,I_Pgacs  ) = w(k,I_Pgacs  ) * fac
        end do
 
-       do k = KS, KE
-          facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-          facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
-          facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
-          facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
-          facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
+             facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
+             facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
+             facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
+             facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
 
-          w_q(k,I_Psdep  ) = 0.0_RP
-          w_q(k,I_Psacw  ) = qcrg_c(k) * w(k,I_Psacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Psfw   ) = qcrg_c(k) * w(k,I_Psfw   ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Piacr_s) = qcrg_r(k) * w(k,I_Piacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Psacr_s) = qcrg_r(k) * w(k,I_Psacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Psaut  ) = qcrg_i(k) * w(k,I_Psaut  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Praci_s) = qcrg_i(k) * w(k,I_Praci_s) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Psaci  ) = qcrg_i(k) * w(k,I_Psaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Psfi   ) = qcrg_i(k) * w(k,I_Psfi   ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Pssub  ) = qcrg_s(k) * w(k,I_Pssub  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Psmlt  ) = qcrg_s(k) * w(k,I_Psmlt  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pgaut  ) = qcrg_s(k) * w(k,I_Pgaut  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pracs  ) = qcrg_s(k) * w(k,I_Pracs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pgacs  ) = qcrg_s(k) * w(k,I_Pgacs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-       enddo
+             w_q(k,I_Psdep  ) = 0.0_RP
+             w_q(k,I_Psacw  ) = qcrg_c(k) * w(k,I_Psacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Psfw   ) = qcrg_c(k) * w(k,I_Psfw   ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Piacr_s) = qcrg_r(k) * w(k,I_Piacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Psacr_s) = qcrg_r(k) * w(k,I_Psacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Psaut  ) = qcrg_i(k) * w(k,I_Psaut  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Praci_s) = qcrg_i(k) * w(k,I_Praci_s) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Psaci  ) = qcrg_i(k) * w(k,I_Psaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Psfi   ) = qcrg_i(k) * w(k,I_Psfi   ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Pssub  ) = qcrg_s(k) * w(k,I_Pssub  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Psmlt  ) = qcrg_s(k) * w(k,I_Psmlt  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgaut  ) = qcrg_s(k) * w(k,I_Pgaut  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pracs  ) = qcrg_s(k) * w(k,I_Pracs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgacs  ) = qcrg_s(k) * w(k,I_Pgacs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+          enddo
+       end if
 
        ! [QG]
        do k = KS, KE
@@ -1751,49 +1741,52 @@ contains
           w(k,I_Pgmlt  ) = w(k,I_Pgmlt  ) * fac
        end do
 
-       do k = KS, KE
-          facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-          facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
-          facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
-          facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
-          facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
-          w_q(k,I_Pgdep  ) = 0.0_RP
-          w_q(k,I_Pgacw  ) = qcrg_c(k) * w(k,I_Pgacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC) * flg_lt_l
-          w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Pgacr  ) = qcrg_r(k) * w(k,I_Pgacr  ) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Pgfrz  ) = qcrg_r(k) * w(k,I_Pgfrz  ) / ( qr(k) + EPS*EPS ) * facq(I_QR) * flg_lt_l
-          w_q(k,I_Praci_g) = qcrg_i(k) * w(k,I_Praci_g) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Pgaci  ) = qcrg_i(k) * w(k,I_Pgaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI) * flg_lt_l
-          w_q(k,I_Pgaut  ) = qcrg_s(k) * w(k,I_Pgaut  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pracs  ) = qcrg_s(k) * w(k,I_Pracs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pgacs  ) = qcrg_s(k) * w(k,I_Pgacs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS) * flg_lt_l
-          w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG) * flg_lt_l
-       enddo
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
+             facq(I_QR) = 0.5_RP + sign( 0.5_RP, qr(k) - EPS )
+             facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
+             facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
+             facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
+             w_q(k,I_Pgdep  ) = 0.0_RP
+             w_q(k,I_Pgacw  ) = qcrg_c(k) * w(k,I_Pgacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Pgacr  ) = qcrg_r(k) * w(k,I_Pgacr  ) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Pgfrz  ) = qcrg_r(k) * w(k,I_Pgfrz  ) / ( qr(k) + EPS*EPS ) * facq(I_QR)
+             w_q(k,I_Praci_g) = qcrg_i(k) * w(k,I_Praci_g) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Pgaci  ) = qcrg_i(k) * w(k,I_Pgaci  ) / ( qi(k) + EPS*EPS ) * facq(I_QI)
+             w_q(k,I_Pgaut  ) = qcrg_s(k) * w(k,I_Pgaut  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pracs  ) = qcrg_s(k) * w(k,I_Pracs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgacs  ) = qcrg_s(k) * w(k,I_Pgacs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG)
+          enddo
+       end if
 
        do k = KS, KE
           qc_t(k) = + w(k,I_Pimlt  ) & ! [prod] i->c
-                   - w(k,I_Praut  ) & ! [loss] c->r
-                   - w(k,I_Pracw  ) & ! [loss] c->r
-                   - w(k,I_Pihom  ) & ! [loss] c->i
-                   - w(k,I_Pihtr  ) & ! [loss] c->i
-                   - w(k,I_Psacw  ) & ! [loss] c->s
-                   - w(k,I_Psfw   ) & ! [loss] c->s
-                   - w(k,I_Pgacw  )   ! [loss] c->g
+                    - w(k,I_Praut  ) & ! [loss] c->r
+                    - w(k,I_Pracw  ) & ! [loss] c->r
+                    - w(k,I_Pihom  ) & ! [loss] c->i
+                    - w(k,I_Pihtr  ) & ! [loss] c->i
+                    - w(k,I_Psacw  ) & ! [loss] c->s
+                    - w(k,I_Psfw   ) & ! [loss] c->s
+                    - w(k,I_Pgacw  )   ! [loss] c->g
           qc_t(k) = max( qc_t(k), -w(k,I_dqc_dt) )
        end do
 
-       do k = KS, KE
-          qc_crg_t(k) = flg_lt_l * &
-                      ( + w_q(k,I_Pimlt  ) & ! [prod] i->c
-                        - w_q(k,I_Praut  ) & ! [loss] c->r
-                        - w_q(k,I_Pracw  ) & ! [loss] c->r
-                        - w_q(k,I_Pihom  ) & ! [loss] c->i
-                        - w_q(k,I_Pihtr  ) & ! [loss] c->i
-                        - w_q(k,I_Psacw  ) & ! [loss] c->s
-                        - w_q(k,I_Psfw   ) & ! [loss] c->s
-                        - w_q(k,I_Pgacw  ) ) ! [loss] c->g
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             qc_crg_t(k) = + w_q(k,I_Pimlt  ) & ! [prod] i->c
+                           - w_q(k,I_Praut  ) & ! [loss] c->r
+                           - w_q(k,I_Pracw  ) & ! [loss] c->r
+                           - w_q(k,I_Pihom  ) & ! [loss] c->i
+                           - w_q(k,I_Pihtr  ) & ! [loss] c->i
+                           - w_q(k,I_Psacw  ) & ! [loss] c->s
+                           - w_q(k,I_Psfw   ) & ! [loss] c->s
+                           - w_q(k,I_Pgacw  )   ! [loss] c->g
+          end do
+       end if
 
        do k = KS, KE
           qr_t(k) = + w(k,I_Praut  ) & ! [prod] c->r
@@ -1811,20 +1804,21 @@ contains
           qr_t(k) = max( qr_t(k), -w(k,I_dqr_dt) )
        end do
 
-       do k = KS, KE
-          qr_crg_t(k) = flg_lt_l * &
-                      ( + w_q(k,I_Praut  ) & ! [prod] c->r
-                        + w_q(k,I_Pracw  ) & ! [prod] c->r
-                        + w_q(k,I_Psmlt  ) & ! [prod] s->r
-                        + w_q(k,I_Pgmlt  ) & ! [prod] g->r
-                        - w_q(k,I_Prevp  ) & ! [loss] r->v
-                        - w_q(k,I_Piacr_s) & ! [loss] r->s
-                        - w_q(k,I_Psacr_s) & ! [loss] r->s
-                        - w_q(k,I_Piacr_g) & ! [loss] r->g
-                        - w_q(k,I_Psacr_g) & ! [loss] r->g
-                        - w_q(k,I_Pgacr  ) & ! [loss] r->g
-                        - w_q(k,I_Pgfrz  ) ) ! [loss] r->g
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             qr_crg_t(k) = + w_q(k,I_Praut  ) & ! [prod] c->r
+                           + w_q(k,I_Pracw  ) & ! [prod] c->r
+                           + w_q(k,I_Psmlt  ) & ! [prod] s->r
+                           + w_q(k,I_Pgmlt  ) & ! [prod] g->r
+                           - w_q(k,I_Prevp  ) & ! [loss] r->v
+                           - w_q(k,I_Piacr_s) & ! [loss] r->s
+                           - w_q(k,I_Psacr_s) & ! [loss] r->s
+                           - w_q(k,I_Piacr_g) & ! [loss] r->g
+                           - w_q(k,I_Psacr_g) & ! [loss] r->g
+                           - w_q(k,I_Pgacr  ) & ! [loss] r->g
+                           - w_q(k,I_Pgfrz  )   ! [loss] r->g
+          end do
+       end if
 
        do k = KS, KE
           qi_t(k) = + w(k,I_Pigen  ) & ! [prod] v->i
@@ -1842,22 +1836,23 @@ contains
           qi_t(k) = max( qi_t(k), -w(k,I_dqi_dt) )
        end do
 
-       do k = KS, KE
-          qi_crg_t(k) = flg_lt_l * &
-                      ( + w_q(k,I_Pigen  ) & ! [prod] v->i
-                        + w_q(k,I_Pidep  ) & ! [prod] v->i
-                        + w_q(k,I_Pihom  ) & ! [prod] c->i
-                        + w_q(k,I_Pihtr  ) & ! [prod] c->i
-                        - w_q(k,I_Pisub  ) & ! [loss] i->v
-                        - w_q(k,I_Pimlt  ) & ! [loss] i->c
-                        - w_q(k,I_Psaut  ) & ! [loss] i->s
-                        - w_q(k,I_Praci_s) & ! [loss] i->s
-                        - w_q(k,I_Psaci  ) & ! [loss] i->s
-                        - w_q(k,I_Psfi   ) & ! [loss] i->s
-                        - w_q(k,I_Praci_g) & ! [loss] i->g
-                        - w_q(k,I_Pgaci  ) & ! [loss] i->g
-                        + w_qcrg(k,I_Qgaci ) ) ! [prod] Charge Split by g-i coll.
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             qi_crg_t(k) = + w_q(k,I_Pigen  ) & ! [prod] v->i
+                           + w_q(k,I_Pidep  ) & ! [prod] v->i
+                           + w_q(k,I_Pihom  ) & ! [prod] c->i
+                           + w_q(k,I_Pihtr  ) & ! [prod] c->i
+                           - w_q(k,I_Pisub  ) & ! [loss] i->v
+                           - w_q(k,I_Pimlt  ) & ! [loss] i->c
+                           - w_q(k,I_Psaut  ) & ! [loss] i->s
+                           - w_q(k,I_Praci_s) & ! [loss] i->s
+                           - w_q(k,I_Psaci  ) & ! [loss] i->s
+                           - w_q(k,I_Psfi   ) & ! [loss] i->s
+                           - w_q(k,I_Praci_g) & ! [loss] i->g
+                           - w_q(k,I_Pgaci  ) & ! [loss] i->g
+                           + w_qcrg(k,I_Qgaci ) ! [prod] Charge Split by g-i coll.
+          end do
+       end if
 
        do k = KS, KE
           qs_t(k) = + w(k,I_Psdep  ) & ! [prod] v->s
@@ -1877,24 +1872,25 @@ contains
           qs_t(k) = max( qs_t(k), -w(k,I_dqs_dt) )
        end do
 
-       do k = KS, KE
-          qs_crg_t(k) = flg_lt_l * &
-                      ( + w_q(k,I_Psdep  ) & ! [prod] v->s
-                        + w_q(k,I_Psacw  ) & ! [prod] c->s
-                        + w_q(k,I_Psfw   ) & ! [prod] c->s
-                        + w_q(k,I_Piacr_s) & ! [prod] r->s
-                        + w_q(k,I_Psacr_s) & ! [prod] r->s
-                        + w_q(k,I_Psaut  ) & ! [prod] i->s
-                        + w_q(k,I_Praci_s) & ! [prod] i->s
-                        + w_q(k,I_Psaci  ) & ! [prod] i->s
-                        + w_q(k,I_Psfi   ) & ! [prod] i->s
-                        - w_q(k,I_Pssub  ) & ! [loss] s->v
-                        - w_q(k,I_Psmlt  ) & ! [loss] s->r
-                        - w_q(k,I_Pgaut  ) & ! [loss] s->g
-                        - w_q(k,I_Pracs  ) & ! [loss] s->g
-                        - w_q(k,I_Pgacs  ) & ! [loss] s->g
-                        + w_qcrg(k,I_Qgacs ) ) ! [prod] Charge Split by g-s coll.
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             qs_crg_t(k) = + w_q(k,I_Psdep  ) & ! [prod] v->s
+                           + w_q(k,I_Psacw  ) & ! [prod] c->s
+                           + w_q(k,I_Psfw   ) & ! [prod] c->s
+                           + w_q(k,I_Piacr_s) & ! [prod] r->s
+                           + w_q(k,I_Psacr_s) & ! [prod] r->s
+                           + w_q(k,I_Psaut  ) & ! [prod] i->s
+                           + w_q(k,I_Praci_s) & ! [prod] i->s
+                           + w_q(k,I_Psaci  ) & ! [prod] i->s
+                           + w_q(k,I_Psfi   ) & ! [prod] i->s
+                           - w_q(k,I_Pssub  ) & ! [loss] s->v
+                           - w_q(k,I_Psmlt  ) & ! [loss] s->r
+                           - w_q(k,I_Pgaut  ) & ! [loss] s->g
+                           - w_q(k,I_Pracs  ) & ! [loss] s->g
+                           - w_q(k,I_Pgacs  ) & ! [loss] s->g
+                           + w_qcrg(k,I_Qgacs ) ! [prod] Charge Split by g-s coll.
+          end do
+       end if
 
        do k = KS, KE
           qg_t(k) = + w(k,I_Pgdep  ) & ! [prod] v->g
@@ -1913,24 +1909,25 @@ contains
           qg_t(k) = max( qg_t(k), -w(k,I_dqg_dt) )
        end do
 
-       do k = KS, KE
-          qg_crg_t(k) = flg_lt_l * &
-                      ( + w_q(k,I_Pgdep  ) & ! [prod] v->g
-                        + w_q(k,I_Pgacw  ) & ! [prod] c->g
-                        + w_q(k,I_Piacr_g) & ! [prod] r->g
-                        + w_q(k,I_Psacr_g) & ! [prod] r->g
-                        + w_q(k,I_Pgacr  ) & ! [prod] r->g
-                        + w_q(k,I_Pgfrz  ) & ! [prod] r->g
-                        + w_q(k,I_Praci_g) & ! [prod] i->g
-                        + w_q(k,I_Pgaci  ) & ! [prod] i->g
-                        + w_q(k,I_Pgaut  ) & ! [prod] s->g
-                        + w_q(k,I_Pracs  ) & ! [prod] s->g
-                        + w_q(k,I_Pgacs  ) & ! [prod] s->g
-                        - w_q(k,I_Pgsub  ) & ! [loss] g->v
-                        - w_q(k,I_Pgmlt  ) & ! [loss] g->r
-                        - w_qcrg(k,I_Qgaci) & ! [prod] Charge Split by g-i coll.
-                        - w_qcrg(k,I_Qgacs) ) ! [prod] Charge Split by g-s coll.
-       end do
+       if ( flg_lt_l ) then
+          do k = KS, KE
+             qg_crg_t(k) = + w_q(k,I_Pgdep  ) & ! [prod] v->g
+                           + w_q(k,I_Pgacw  ) & ! [prod] c->g
+                           + w_q(k,I_Piacr_g) & ! [prod] r->g
+                           + w_q(k,I_Psacr_g) & ! [prod] r->g
+                           + w_q(k,I_Pgacr  ) & ! [prod] r->g
+                           + w_q(k,I_Pgfrz  ) & ! [prod] r->g
+                           + w_q(k,I_Praci_g) & ! [prod] i->g
+                           + w_q(k,I_Pgaci  ) & ! [prod] i->g
+                           + w_q(k,I_Pgaut  ) & ! [prod] s->g
+                           + w_q(k,I_Pracs  ) & ! [prod] s->g
+                           + w_q(k,I_Pgacs  ) & ! [prod] s->g
+                           - w_q(k,I_Pgsub  ) & ! [loss] g->v
+                           - w_q(k,I_Pgmlt  ) & ! [loss] g->r
+                           - w_qcrg(k,I_Qgaci) & ! [prod] Charge Split by g-i coll.
+                           - w_qcrg(k,I_Qgacs)   ! [prod] Charge Split by g-s coll.
+          end do
+       end if
 
        do k = KS, KE
           qv_t(k) = - ( qc_t(k) + qr_t(k) + qi_t(k) + qs_t(k) + qg_t(k) )
@@ -1979,7 +1976,7 @@ contains
           CPtot0(k,i,j) = cptot
        end do
 
-       do pp = 1, int(flg_lt_l)
+       if (flg_lt_l) then
           do k = KS, KE
              QTRC_crg0(k,i,j,I_QC-1) = QTRC_crg0(k,i,j,I_QC-1) + qc_crg_t(k) * dt
           end do
@@ -2011,7 +2008,7 @@ contains
 
              QSPLT_in(k,i,j,:) = QSPLT_in(k,i,j,:) * DENS0(k,i,j)
           enddo
-       enddo
+       end if
 
        if ( hist_flag ) then
           do ip = 1, w_nmax

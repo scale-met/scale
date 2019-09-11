@@ -915,7 +915,8 @@ contains
 
     ! Optional for Lightning
     integer,  intent(in) :: QA_LT  ! If Lightning component is not used, QA_LT = 0
-    real(RP), intent(in), optional :: d0_crg, v0_crg, flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    logical,  intent(in), optional :: flg_lt
     real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
     real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
     real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,QA_LT)
@@ -1087,13 +1088,15 @@ contains
           endif
 
           if( QA_LT /= 0 ) then
-            countbin = 1
-            do m = 1, nspc*int(flg_lt)
-            do n = 1, nbin*int(flg_lt)
-               Gcrg_ijk(n,m,ijkcount) = QTRC_crg(k,i,j,countbin) * DENS(k,i,j)
-               countbin = countbin + 1
-            enddo
-            enddo
+             if ( flg_lt ) then
+                countbin = 1
+                do m = 1, nspc
+                do n = 1, nbin
+                   Gcrg_ijk(n,m,ijkcount) = QTRC_crg(k,i,j,countbin) * DENS(k,i,j)
+                   countbin = countbin + 1
+                enddo
+                enddo
+             end if
             beta_crg_ijk(ijkcount) = beta_crg(k,i,j)
             dqcrg_ijk(ijkcount) = dqcrg(k,i,j)
           endif
@@ -1928,7 +1931,8 @@ contains
     real(DP), intent(in)    :: dt                             ! Time step interval
 
     ! Optional for Lightning
-    real(RP), intent(in), optional :: d0_crg, v0_crg, flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    logical,  intent(in), optional :: flg_lt
     real(RP), intent(in), optional :: dqcrg(ijkmax), beta_crg(ijkmax)
     real(RP), intent(inout), optional :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout), optional :: crg_sep(7,ijkmax)
@@ -1936,7 +1940,8 @@ contains
     integer :: m, n
     real(RP) :: gcrg_l(nbin,nspc,ijkmax), crg_sep_l(7,ijkmax)
     real(RP) :: csum(il,ijkmax)
-    real(RP) :: flg_lt_l, v0_crg_l, d0_crg_l, tcrglimit_l
+    logical  :: flg_lt_l
+    real(RP) :: v0_crg_l, d0_crg_l, tcrglimit_l
     !---------------------------------------------------------------------------
 
     if( present(gcrg) ) then
@@ -1947,7 +1952,7 @@ contains
       crg_sep_l(:,:) = crg_sep(:,:)
     else
       gcrg_l(:,:,:) = 0.0_RP
-      flg_lt_l = 0.0_RP
+      flg_lt_l = .false.
       d0_crg_l = 100.E-6_RP
       v0_crg_l = 8.0_RP
       crg_sep_l(:,:) = 0.0_RP
@@ -4141,7 +4146,7 @@ contains
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: num_cold
     integer,  intent(in)    :: index_cold(ijkmax)
-    real(RP), intent(in)    :: flg_lt
+    logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -4183,13 +4188,15 @@ contains
           dmp = rate*expxctr( n )
           frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
           frz = min( frz, gc( n,il,ijk ) )
-          dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk ) * flg_lt
 
           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
           gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
 
-          gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg * flg_lt
-          gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg * flg_lt
+          if ( flg_lt ) then
+             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+             gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+          end if
 
           sumfrz = sumfrz + frz
        enddo
@@ -4197,13 +4204,15 @@ contains
           dmp = rate*expxctr( n )
           frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
           frz = min( frz, gc( n,il,ijk) )
-          dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk ) * flg_lt
 
           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
           gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
 
-          gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg * flg_lt
-          gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg * flg_lt
+          if ( flg_lt ) then
+             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+             gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
+          end if
 
           sumfrz = sumfrz + frz
        enddo
@@ -4215,14 +4224,19 @@ contains
 !      do n = 1, nbin
 !       frz = gc( (il-1)*nbin+n )*dmp*xctr( n )/dens
 !       frz = max( frz,gc( (il-1)*nbin+n )*dmp*xctr( n )/dens )
-!       dcrg = frz / ( gc( n,il,ijk )+EPS ) * gcrg(n,il,ijk) * flg_lt
 !       gc( (il-1)*nbin+n ) = gc( (il-1)*nbin+n ) - frz
 !       if ( n >= nbound ) then
 !        gc( (ih-1)*nbin+n ) = gc( (ih-1)*nbin+n ) + frz
-!        gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg * flg_lt
 !       else
 !        gc( (ip-1)*nbin+n ) = gc( (ip-1)*nbin+n ) + frz
-!        gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg * flg_lt
+!       endif
+!       if ( flg_lt ) then
+!         dcrg = frz / ( gc( n,il,ijk )+EPS ) * gcrg(n,il,ijk)
+!         if ( n >= nbound ) then
+!           gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+!         else
+!           gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+!         endif
 !       endif
 !
 !
@@ -4266,7 +4280,7 @@ contains
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: num_warm
     integer,  intent(in)    :: index_warm(ijkmax)
-    real(RP), intent(in)    :: flg_lt
+    logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -4291,15 +4305,19 @@ contains
        summlt = 0.0_RP
        do n = 1, nbin
           sumice = 0.0_RP
-          dcrg = 0.0_RP
           do m = ic, ih
              sumice = sumice + gc( n,m,ijk )
-             dcrg = dcrg + gcrg( n,m,ijk ) * flg_lt
              gc( n,m,ijk ) = 0.0_RP
              gcrg( n,m,ijk ) = 0.0_RP
           enddo
           gc( n,il,ijk ) = gc( n,il,ijk ) + sumice
-          gcrg( n,il,ijk ) = gcrg( n,il,ijk ) + dcrg * flg_lt
+          if ( flg_lt ) then
+             dcrg = 0.0_RP
+             do m = ic, ih
+                dcrg = dcrg + gcrg( n,m,ijk )
+             end do
+             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) + dcrg
+          end if
           summlt = summlt + sumice  !--- All freezed particle melt instantaneously
        enddo
        summlt = summlt*dxmic
@@ -4336,7 +4354,8 @@ contains
     integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: flg_lt, v0_crg, d0_crg
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: v0_crg, d0_crg
     real(RP), intent(in)    :: dq(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -4388,7 +4407,8 @@ contains
     integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: flg_lt, v0_crg, d0_crg
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: v0_crg, d0_crg
     real(RP), intent(in)    :: dq(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -4437,7 +4457,8 @@ contains
     implicit none
 
     integer,  intent(in)    :: ijkmax
-    real(RP), intent(in)    :: flg_lt, d0_crg, v0_crg
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: d0_crg, v0_crg
     real(RP), intent(in)    :: dq(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
@@ -4554,29 +4575,32 @@ contains
                 frcj = surj - gc( j,ilrg,ijk )
                 gprime = frci+frcj                                       ! g' in page 119 of Suzuki (2004)
 
-                !--- charge transfer from two particles to generated large particle
-                drhoi = frci/suri*gcrg( i,isml,ijk )
-                drhoj = frcj/surj*gcrg( j,ilrg,ijk )
-                drhok = drhoi + drhoj
+                if ( flg_lt ) then
+                   !--- charge transfer from two particles to generated large particle
+                   drhoi = frci/suri*gcrg( i,isml,ijk )
+                   drhoj = frcj/surj*gcrg( j,ilrg,ijk )
+                   drhok = drhoi + drhoj
 
-                !--- charge density generated by non-inductive charging
-                alpha = 5.0_RP * ( 2.0_RP*radc( i )/d0_crg )**2 &
-                               * abs( vt(ilrg,j)-vt(isml,i) )/v0_crg  ! alpha in eq. (12) of Mansell et al. (2005)
-                alpha = min( 10.0_RP, alpha )
-!                if( ck( isml,ilrg,i,j ) /= 0.0_RP ) then
-!                 dgenei = frci / xi / ck( isml,ilrg,i,j ) * omnecoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
-!                               * alpha * flg_noninduct( isml,ilrg ) * dxmic * flg_lt  ! eq. (8) of Mansell et al. (2005)
-!                else
-!                 dgenei = 0.0_RP
-!                endif
+                   !--- charge density generated by non-inductive charging
+                   alpha = 5.0_RP * ( 2.0_RP*radc( i )/d0_crg )**2 &
+                                  * abs( vt(ilrg,j)-vt(isml,i) )/v0_crg  ! alpha in eq. (12) of Mansell et al. (2005)
+                   alpha = min( 10.0_RP, alpha )
+!                   if( ck( isml,ilrg,i,j ) /= 0.0_RP ) then
+!                     dgenei = frci / xi / ck( isml,ilrg,i,j ) * omnecoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
+!                            * alpha * flg_noninduct( isml,ilrg ) * dxmic  ! eq. (8) of Mansell et al. (2005)
+!                   else
+!                     dgenei = 0.0_RP
+!                   endif
 
-                dgenei = frci / xi * rcoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
-                              * alpha * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
-                dgenej = - dgenei
-                gcrg( i,isml,ijk ) = gcrg( i,isml,ijk ) + ( dgenei-drhoi ) * flg_lt
-                gcrg( j,ilrg,ijk ) = gcrg( j,ilrg,ijk ) + ( dgenej-drhoj ) * flg_lt
-                crg_sep( isml,ijk ) = crg_sep( isml,ijk ) + ( dgenei-drhoi ) * flg_lt
-                crg_sep( ilrg,ijk ) = crg_sep( ilrg,ijk ) + ( dgenej-drhoj ) * flg_lt
+                   dgenei = frci / xi * rcoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
+                          * alpha * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
+                   dgenej = - dgenei
+                   gcrg( i,isml,ijk ) = gcrg( i,isml,ijk ) + ( dgenei-drhoi )
+                   gcrg( j,ilrg,ijk ) = gcrg( j,ilrg,ijk ) + ( dgenej-drhoj )
+                   crg_sep( isml,ijk ) = crg_sep( isml,ijk ) + ( dgenei-drhoi )
+                   crg_sep( ilrg,ijk ) = crg_sep( ilrg,ijk ) + ( dgenej-drhoj )
+                end if
+
                 gprimk = gc( k,irsl,ijk ) + gprime                       ! g'_{k} in page 119 of Suzuki (2004)
                 wgt = gprime / gprimk                                    ! w in page 119 of Suzuki (2004)
                 crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )       ! c_{k} in page 119 of Suzuki (2004)
@@ -4597,12 +4621,14 @@ contains
                 gc( k,irsl,ijk ) = gprimk - flux                         ! tilda{g_{k}} in page 119 of Suzuki (2004)
                 gc( k+1,irsl,ijk ) = gc( k+1,irsl,ijk ) + flux           ! tilda{g_{k+1}} in page 119 of Suzuki (2004)
 
-                !--- charge transfer from two particles to generated large particle
-                if( gprime /= 0.0_RP ) then
-                  gcrg( k,irsl,ijk )   = gcrg( k,irsl,ijk ) + drhok * ( gprime-flux )/gprime * flg_lt
-                  gcrg( k+1,irsl,ijk ) = gcrg( k+1,irsl,ijk ) + drhok * flux/gprime * flg_lt
-                endif
-                crg_sep( irsl,ijk ) = crg_sep( irsl,ijk ) + drhok * flg_lt
+                if ( flg_lt ) then
+                   !--- charge transfer from two particles to generated large particle
+                   if( gprime /= 0.0_RP ) then
+                      gcrg( k,irsl,ijk )   = gcrg( k,irsl,ijk ) + drhok * ( gprime-flux )/gprime
+                      gcrg( k+1,irsl,ijk ) = gcrg( k+1,irsl,ijk ) + drhok * flux/gprime
+                   endif
+                   crg_sep( irsl,ijk ) = crg_sep( irsl,ijk ) + drhok
+                end if
 
              endif
 
