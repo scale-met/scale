@@ -823,12 +823,12 @@ contains
              enddo
 
              call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,               & ! [IN]
-                  QA_MP, QA_LT, DENS(:,:,:),                                            & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                                & ! [IN]
-                  RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                         ) ! [INOUT]
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
+                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
+                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
+                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
+                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
+                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
 
           endif
 
@@ -855,12 +855,12 @@ contains
                   RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)                                                               ) ! [OUT:optional]
 
              call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,               & ! [IN]
-                  QA_MP, QA_LT, DENS(:,:,:),                                            & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                                & ! [IN]
-                  RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                         ) ! [INOUT]
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
+                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
+                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
+                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
+                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
+                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
           else
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -898,12 +898,12 @@ contains
                                                   RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]
 
              call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,               & ! [IN]
-                  QA_MP, QA_LT, DENS(:,:,:),                                            & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                                & ! [IN]
-                  RHOQ_t_MP(:,:,:,QS_MP:QE_MP), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                         ) ! [INOUT]
+                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
+                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
+                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
+                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
+                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
+                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
           else
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
