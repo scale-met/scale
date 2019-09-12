@@ -247,12 +247,12 @@ contains
        FILE_HISTORY_put
     use mod_atmos_admin, only: &
        MP_TYPE => ATMOS_PHY_MP_TYPE
-    use mod_atmos_phy_mp_vars, only: &
-       QA_MP, QS_MP, QE_MP
     use mod_atmos_phy_lt_vars, only: &
        QA_LT, QS_LT, QE_LT
     use mod_atmos_vars, only: &
        DENS, RHOT
+    use scale_atmos_hydrometeor, only: &
+       QHA, QHS, QHE
     implicit none
 
     integer  :: k, i, j, m, n, ip
@@ -275,11 +275,11 @@ contains
        LOG_NEWLINE
        LOG_INFO("USER_update",*) 'USER update'
 
-       allocate( QTRC_local(KA,IA,JA,QS_MP:QE_MP) )
+       allocate( QTRC_local(KA,IA,JA,QHS:QHE) )
        allocate( QCRG_local(KA,IA,JA,QS_LT:QE_LT) )
        QTRC_local(:,:,:,:) = 0.0_RP
        QCRG_local(:,:,:,:) = 0.0_RP
-       allocate( dummy_mp(KA,IA,JA,QS_MP:QE_MP) )
+       allocate( dummy_mp(KA,IA,JA,QHS:QHE) )
        allocate( dummy_lt(KA,IA,JA,QS_LT:QE_LT) )
        allocate( dummy_lt2(KA,IA,JA,QS_LT:QE_LT) )
        allocate( dummy_splt(KA,IA,JA,3) )
@@ -425,13 +425,13 @@ contains
        Efield(:,:,:,:) = 0.d0
        E_old(:,:,:) = 0.d0
        call ATMOS_PHY_LT_sato2019_tendency( &
-            KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,   & ! [IN]
-            QA_MP, QA_LT, DENS(:,:,:),                                & ! [IN]
-            RHOT(:,:,:), QTRC_local(:,:,:,QS_MP:QE_MP),               & ! [IN]
-            QCRG_local(:,:,:,QS_LT:QE_LT), 1.0_DP,                    & ! [IN]
-            1.0_DP, dummy_sarea(:,:,:,:),                             & ! [IN]
-            dummy_mp(:,:,:,QS_MP:QE_MP), dummy_lt(:,:,:,QS_LT:QE_LT), & ! [IN]
-            E_old(:,:,:), dummy_lt2(:,:,:,QS_LT:QE_LT)                ) ! [INOUT]
+            KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, & ! [IN]
+            QHA, QA_LT, DENS(:,:,:),                                & ! [IN]
+            RHOT(:,:,:), QTRC_local(:,:,:,QHS:QHE),                 & ! [IN]
+            QCRG_local(:,:,:,QS_LT:QE_LT), 1.0_DP,                  & ! [IN]
+            1.0_DP, dummy_sarea(:,:,:,:),                           & ! [IN]
+            dummy_mp(:,:,:,QHS:QHE), dummy_lt(:,:,:,QS_LT:QE_LT),   & ! [IN]
+            E_old(:,:,:), dummy_lt2(:,:,:,QS_LT:QE_LT)              ) ! [INOUT]
 
     endif
 
