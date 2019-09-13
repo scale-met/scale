@@ -28,7 +28,7 @@ module mod_atmos_phy_lt_driver
   !
   public :: ATMOS_PHY_LT_driver_tracer_setup
   public :: ATMOS_PHY_LT_driver_setup
-  public :: ATMOS_PHY_LT_driver_calc_tendency
+  public :: ATMOS_PHY_LT_driver_adjustment
 
   !-----------------------------------------------------------------------------
   !
@@ -42,6 +42,27 @@ module mod_atmos_phy_lt_driver
   !
   !++ Private parameters & variables
   !
+
+  !--- For history output
+  integer, private, parameter :: w_nmax = 3
+  integer, private, parameter :: I_CRGD_LIQ = 1
+  integer, private, parameter :: I_CRGD_ICE = 2
+  integer, private, parameter :: I_CRGD_TOT = 3
+  integer,  private              :: HIST_id(w_nmax)
+  character(len=H_SHORT), private :: w_name(w_nmax)
+  character(len=H_MID),   private :: w_longname(w_nmax)
+  character(len=H_SHORT), private :: w_unit(w_nmax)
+  data w_name / 'CRGD_LIQ', &
+                'CRGD_ICE', &
+                'CRGD_TOT' /
+  data w_longname / 'Charge density of liquid water', &
+                    'Charge density of ice water', &
+                    'Charge density of QHYD' /
+  data w_unit / 'nC/m3', &
+                'nC/m3', &
+                'nC/m3' /
+
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -133,9 +154,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_LT_driver_setup
-    use scale_time, only: &
-       dt_LT => TIME_DTSEC_ATMOS_PHY_LT, &
-       dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_atmos_grid_cartesC_real, only: &
        REAL_LON => ATMOS_GRID_CARTESC_REAL_LON, &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
@@ -145,30 +163,26 @@ contains
     use scale_atmos_phy_lt_sato2019, only: &
        ATMOS_PHY_LT_sato2019_setup
     use mod_atmos_phy_lt_vars, only: &
-       flg_lt
+       flg_lt, &
+       ATMOS_PHY_LT_Sarea
     use mod_atmos_admin, only: &
        ATMOS_PHY_MP_TYPE, &
-       ATMOS_PHY_LT_TYPE, &
-       ATMOS_sw_phy_lt
+       ATMOS_PHY_LT_TYPE
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
-       QLA, &
-       QIA
+       QHA
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
+    integer  :: ip
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_LT_driver_setup",*) 'Setup'
 
-    if ( ATMOS_sw_phy_lt ) then
-
-       if( dt_LT /= dt_MP ) then
-          LOG_ERROR("ATMOS_PHY_LT_driver_setup",*) 'dt_LT should be dt_MP. CHECK!'
-          call PRC_abort
-       endif
-
-       flg_lt = .true.
+    select case( ATMOS_PHY_LT_TYPE )
+    case ( 'SATO2019' )
        call ATMOS_PHY_LT_sato2019_setup( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
                                          JA, JS, JE, & ! [IN]
@@ -176,83 +190,137 @@ contains
                                          JMAXG,      & ! [IN]
                                          KMAX,       & ! [IN]
                                          ATMOS_PHY_MP_TYPE, & ! [IN]
-                                         QLA, QIA,          & ! [IN]
                                          CDX, CDY           ) ! [IN]
+       flg_lt = .true.
+    case default
+       flg_lt = .false.
+    end select
+
+
+    if ( flg_lt ) then
+
+       allocate( ATMOS_PHY_LT_Sarea(KA,IA,JA,QHA) )
+
+       do ip = 1, w_nmax
+          call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
+                                 HIST_id(ip)                             ) ! [OUT]
+       end do
+
+       call history
 
     else
-
-       flg_lt = .false.
        LOG_INFO("ATMOS_PHY_LT_driver_setup",*) 'This component is never called.'
-
     endif
+
 
     return
   end subroutine ATMOS_PHY_LT_driver_setup
 
   !-----------------------------------------------------------------------------
   !> Driver
-  subroutine ATMOS_PHY_LT_driver_calc_tendency( update_flag )
-    use scale_tracer, only: &
-       TRACER_NAME
+  subroutine ATMOS_PHY_LT_driver_adjustment
     use scale_time, only: &
        dt_LT => TIME_DTSEC_ATMOS_PHY_LT
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
-    use scale_file_history, only: &
-       FILE_HISTORY_in
     use mod_atmos_vars, only: &
-       DENS   => DENS_av, &
-       QTRC   => QTRC_av, &
-       RHOQ_t => RHOQ_tp
+       DENS => DENS_av, &
+       RHOT => RHOT_av, &
+       QTRC => QTRC_av, &
+       ATMOS_vars_get_diagnostic
     use mod_atmos_phy_lt_vars, only: &
-       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t, &
-       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t, &
-       QA_LT,        &
-       QS_LT,        &
-       QE_LT
+       QA_LT, &
+       QS_LT, &
+       QE_LT, &
+       Sarea => ATMOS_PHY_LT_Sarea, &
+       Epot  => ATMOS_PHY_LT_Epot
+    use scale_atmos_phy_lt_sato2019, only: &
+       ATMOS_PHY_LT_sato2019_adjustment
     implicit none
 
-    logical, intent(in) :: update_flag
-
-    integer  :: k, i, j, iq
+    real(RP) :: QHYD(KA,IA,JA)
     !---------------------------------------------------------------------------
 
-    if ( update_flag ) then
+    call ATMOS_vars_get_diagnostic( "QHYD", QHYD(:,:,:) )
 
-       do iq = QS_LT, QE_LT
-          call FILE_HISTORY_in( RHOQ_t_LT(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_LT', &
-                                'tendency rho*'//trim(TRACER_NAME(iq))//' in LT',    &
-                                'kg/m3/s', fill_halo=.true.                          )
-       enddo
-    endif
+    call ATMOS_PHY_LT_sato2019_adjustment( &
+         KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, QA_LT, & ! [IN]
+         DENS(:,:,:), RHOT(:,:,:), QHYD(:,:,:), Sarea(:,:,:,:), & ! [IN]
+         dt_LT,                                                 & ! [IN]
+         QTRC(:,:,:,QS_LT:QE_LT), Epot(:,:,:)                   ) ! [INOUT]
 
-    do iq = QS_LT, QE_LT
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_
-       do j  = JS, JE
-       do i  = IS, IE
-       do k  = KS, KE
-          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) &
-                           + RHOQ_t_LT(k,i,j,iq) &
-                           + RHOQ_t_LT_mp(k,i,j,iq)
-       enddo
-       enddo
-       enddo
-    enddo
-
-    if ( STATISTICS_checktotal ) then
-       do iq = QS_LT, QE_LT
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 RHOQ_t_LT(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_LT', &
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                  &
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                       )
-       enddo
-    endif
+    call history
 
     return
-  end subroutine ATMOS_PHY_LT_driver_calc_tendency
+  end subroutine ATMOS_PHY_LT_driver_adjustment
+
+  ! private
+  subroutine history
+    use scale_atmos_hydrometeor, only: &
+       QLA
+    use mod_atmos_phy_lt_vars, only: &
+       QS_LT, &
+       QE_LT
+    use mod_atmos_vars, only: &
+       DENS => DENS_av, &
+       QTRC => QTRC_av
+    use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
+    implicit none
+    real(RP) :: work(KA,IA,JA)
+    logical  :: HIST_sw(w_nmax)
+    integer  :: k, i, j, n, ip
+
+    do ip = 1, w_nmax
+       call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
+    end do
+
+    if ( HIST_sw(I_CRGD_LIQ) ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j) = 0.0_RP
+          do n = QS_LT, QS_LT + QLA - 1
+             work(k,i,j) = work(k,i,j) + QTRC(k,i,j,n)
+          enddo
+          work(k,i,j) = work(k,i,j) * DENS(k,i,j) * 1.E-6_RP ! [fC/kg] -> [nc/m3]
+       end do
+       end do
+       end do
+       call FILE_HISTORY_put( HIST_id(I_CRGD_LIQ), work(:,:,:) )
+    end if
+    if ( HIST_sw(I_CRGD_ICE) ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j) = 0.0_RP
+          do n = QS_LT + QLA, QE_LT
+             work(k,i,j) = work(k,i,j) + QTRC(k,i,j,n)
+          enddo
+          work(k,i,j) = work(k,i,j) * DENS(k,i,j) * 1.E-6_RP ! [fC/kg] -> [nc/m3]
+       end do
+       end do
+       end do
+       call FILE_HISTORY_put( HIST_id(I_CRGD_ICE), work(:,:,:) )
+    end if
+    if ( HIST_sw(I_CRGD_TOT) ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          work(k,i,j) = 0.0_RP
+          do n = QS_LT, QE_LT
+             work(k,i,j) = work(k,i,j) + QTRC(k,i,j,n)
+          enddo
+          work(k,i,j) = work(k,i,j) * DENS(k,i,j) * 1.E-6_RP ! [fC/kg] -> [nc/m3]
+       end do
+       end do
+       end do
+       call FILE_HISTORY_put( HIST_id(I_CRGD_TOT), work(:,:,:) )
+    end if
+
+    return
+  end subroutine history
 
 end module mod_atmos_phy_lt_driver

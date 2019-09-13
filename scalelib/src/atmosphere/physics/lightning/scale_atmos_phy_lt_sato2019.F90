@@ -26,7 +26,7 @@ module scale_atmos_phy_lt_sato2019
   !++ Public procedure
   !
   public :: ATMOS_PHY_LT_sato2019_setup
-  public :: ATMOS_PHY_LT_sato2019_tendency
+  public :: ATMOS_PHY_LT_sato2019_adjustment
   public :: ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
 !  public :: ATMOS_PHY_LT_sato2019_mkinit
 !  public :: ATMOS_PHY_LT_electric_field
@@ -86,32 +86,24 @@ module scale_atmos_phy_lt_sato2019
   integer, private, parameter :: I_lt_y = 2
   integer, private, parameter :: I_lt_z = 3
   integer, private, parameter :: I_lt_abs = 4
-  integer, private :: I_crg_LIQ_s, I_crg_LIQ_e
-  integer, private :: I_crg_ICE_s, I_crg_ICE_e
 
   !--- For history output
-  integer, private, parameter :: w_nmax = 13
-  integer, private, parameter :: I_QCRG_LIQ = 1
-  integer, private, parameter :: I_QCRG_ICE = 2
-  integer, private, parameter :: I_QCRG_TOT = 3
-  integer, private, parameter :: I_Ex = 4
-  integer, private, parameter :: I_Ey = 5
-  integer, private, parameter :: I_Ez = 6
-  integer, private, parameter :: I_Eabs = 7
-  integer, private, parameter :: I_Epot = 8
-  integer, private, parameter :: I_Qneut = 9
-  integer, private, parameter :: I_LTpath = 10
-  integer, private, parameter :: I_PosFLASH = 11
-  integer, private, parameter :: I_NegFLASH = 12
-  integer, private, parameter :: I_FlashPoint = 13
+  integer, private, parameter :: w_nmax = 10
+  integer, private, parameter :: I_Ex = 1
+  integer, private, parameter :: I_Ey = 2
+  integer, private, parameter :: I_Ez = 3
+  integer, private, parameter :: I_Eabs = 4
+  integer, private, parameter :: I_Epot = 5
+  integer, private, parameter :: I_Qneut = 6
+  integer, private, parameter :: I_LTpath = 7
+  integer, private, parameter :: I_PosFLASH = 8
+  integer, private, parameter :: I_NegFLASH = 9
+  integer, private, parameter :: I_FlashPoint = 10
   integer,  private              :: HIST_id(w_nmax)
   character(len=H_SHORT), private :: w_name(w_nmax)
   character(len=H_MID),   private :: w_longname(w_nmax)
   character(len=H_SHORT), private :: w_unit(w_nmax)
-  data w_name / 'CRGD_LIQ', &
-                'CRGD_ICE', &
-                'CRGD_TOT',&
-                'Ex', &
+  data w_name / 'Ex', &
                 'Ey', &
                 'Ez', &
                 'Eabs', &
@@ -122,9 +114,6 @@ module scale_atmos_phy_lt_sato2019
                 'NegFLASH', &
                 'FlashPoint' /
   data w_longname / &
-                'Charge density of liquid water', &
-                'Charge density of ice water', &
-                'Charge density of QHYD', &
                 'X component of Electrical Field', &
                 'Y component of Electrical Field', &
                 'Z component of Electrical Field', &
@@ -135,9 +124,7 @@ module scale_atmos_phy_lt_sato2019
                 'Cumulative Number of Positive flash', &
                 'Cumulative Number of Negative flash', &
                 'Cumulative Number of Flash point' /
-  data w_unit / 'nC/m3', &
-                'nC/m3', &
-                'nC/m3', &
+  data w_unit / &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
@@ -159,7 +146,6 @@ contains
                                           JMAXG,      &
                                           KMAX,       &
                                           MP_TYPE,    &
-                                          nliq, nice, &
                                           CDX, CDY    )
     use scale_prc, only: &
        PRC_abort, &
@@ -180,8 +166,6 @@ contains
     integer, intent(in)  :: KMAX
 
     character(len=*), intent(in) :: MP_TYPE
-    integer,          intent(in)  :: nice
-    integer,          intent(in)  :: nliq
     real(RP),         intent(in)  :: CDX(IA)
     real(RP),         intent(in)  :: CDY(JA)
 
@@ -285,11 +269,6 @@ contains
        call PRC_abort
     endif
 
-    I_crg_LIQ_s = 1
-    I_crg_LIQ_e = nliq
-    I_crg_ICE_s = I_crg_LIQ_e + 1
-    I_crg_ICE_e = I_crg_ICE_s + nice - 1
-
     do ip = 1, w_nmax
        call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
                               HIST_id(ip)                             ) ! [OUT]
@@ -299,27 +278,22 @@ contains
   end subroutine ATMOS_PHY_LT_sato2019_setup
 
   !-----------------------------------------------------------------------------
-  !> Calculate tendency of charge density
-  subroutine ATMOS_PHY_LT_sato2019_tendency( &
+  !> Update of charge density
+  subroutine ATMOS_PHY_LT_sato2019_adjustment( &
        KA, KS, KE,   &
        IA, IS, IE,   &
        JA, JS, JE,   &
-       KIJMAX,       &
-       IMAX,         &
-       JMAX,         &
-       QHA,          &
-       QA_LT,        &
-       DENS,         &
-       RHOT,         &
-       QTRC,         &
-       QTRC_crg,     &
-       dt_MP,        &
-       dt_LT,        &
-       Sarea,        &
-       RHOQ_T_MP,    &
-       RHOQ_t_LT_mp, &
-       Epot,         &
-       RHOQ_t_LT     )
+       KIJMAX,   &
+       IMAX,     &
+       JMAX,     &
+       QA_LT,    &
+       DENS,     &
+       RHOT,     &
+       QHYD,     &
+       Sarea,    &
+       dt_LT,    &
+       QTRC,     &
+       Epot      )
     use scale_const, only: &
        SMALL => CONST_EPS
     use scale_prc, only: &
@@ -340,26 +314,18 @@ contains
     integer,  intent(in) :: IMAX
     integer,  intent(in) :: JMAX
 !    character(len=H_SHORT)
-    integer,  intent(in) :: QHA
     integer,  intent(in) :: QA_LT
     real(RP), intent(in) :: DENS(KA,IA,JA)
     real(RP), intent(in) :: RHOT(KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA)
     real(RP), intent(in) :: Sarea(KA,IA,JA,QA_LT)       !--- Surface area and that of each catergory [m2]
-    real(DP), intent(in) :: dt_MP
     real(DP), intent(in) :: dt_LT
-    real(RP), intent(in) :: QTRC(KA,IA,JA,QHA)
-    real(RP), intent(in) :: QTRC_crg(KA,IA,JA,QA_LT)
-    real(RP), intent(in) :: RHOQ_t_MP(KA,IA,JA,QHA)
-    real(RP), intent(in) :: RHOQ_t_LT_mp(KA,IA,JA,QA_LT)
+    real(RP), intent(inout) :: QTRC(KA,IA,JA,QA_LT)
     real(RP), intent(inout) :: Epot(KA,IA,JA) !--- Electrical potential at previous time step [V]
-    real(RP), intent(inout) :: RHOQ_t_LT(KA,IA,JA,QA_LT)
 
     real(RP) :: QHYD_mass(KA,IA,JA)         !--- Mass of total hydrometeor [kg/m3]
     real(RP) :: RHOQ0                       !--- Tracer after lightning component
-    real(RP) :: QTRC0_crg(KA,IA,JA,QA_LT)   !--- Tracer after lightning component
-    real(RP) :: QTRC1_crg(KA,IA,JA,QA_LT)   !--- Tracer after lightning component
     real(RP) :: QCRG(KA,IA,JA)              !--- Total charge density [nC/m3]
-    real(RP) :: Epot_new(KA,IA,JA)          !--- Electrical potential [V]
     real(RP) :: Efield(KA,IA,JA,I_lt_abs)   !--- Electrical field (1-3 ->x,y,z, 4->abs. )
     real(RP) :: NUM_end(KA,IA,JA,3)         !--- Number of each flash type (1->negative, 2->ground, 3->positive)
     real(RP) :: d_QCRG(KA,IA,JA)            !--- Change of charge by charge neutralization [fC/m3]
@@ -367,12 +333,13 @@ contains
     real(RP) :: fls_int_p(KA,IA,JA)
     real(RP) :: Total_Sarea(2)              !--- Sum of surface area and that of each catergory [m2]
     real(RP) :: neg_crg, pos_crg
-    real(RP) :: frac, flg_chrged(5), r_totalSarea(2)
+    real(RP) :: frac, r_totalSarea(2)
+    logical  :: flg_chrged(QA_LT)
     real(RP) :: Emax, Emax_old
     logical  :: output_step
     integer  :: flg_lt_neut
     integer  :: i, j, k, m, n, countbin, ip
-    real(RP) :: zerosw, positive, negative
+    real(RP) :: sw, zerosw, positive, negative
 
     logical  :: HIST_sw(w_nmax)
     real(RP) :: w3d(KA,IA,JA)
@@ -384,29 +351,17 @@ contains
     do j = JS, JE
     do i = IS, IE
 
-       ! Add tendency of charge density by microphysics
-       do n = 1, QA_LT
-       do k = KS, KE
-          QTRC0_crg(k,i,j,n) = QTRC_crg(k,i,j,n) + RHOQ_t_LT_mp(k,i,j,n) / DENS(k,i,j) * dt_MP
-          QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)
-       enddo
-       enddo
-
        ! calc total charge density
        do k = KS, KE
           QCRG(k,i,j) = 0.0_RP
           do n = 1, QA_LT
-             QCRG(k,i,j) = QCRG(k,i,j) + QTRC0_crg(k,i,j,n)
+             QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
           end do
           QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
        enddo
 
        do k = KS, KE
-          QHYD_mass(k,i,j) = 0.0_RP
-          do n = 1, QHA
-             RHOQ0 = QTRC(k,i,j,n) * DENS(k,i,j) + RHOQ_t_MP(k,i,j,n) * dt_MP ![kg/kg] -> [kg/m3]
-             QHYD_mass(k,i,j) = QHYD_mass(k,i,j) + RHOQ0
-          enddo
+          QHYD_mass(k,i,j) = QHYD(k,i,j) * DENS(k,i,j) ![kg/kg] -> [kg/m3]
        enddo
 
     enddo
@@ -419,8 +374,7 @@ contains
                                       QCRG    (:,:,:),              &   ! [IN]
                                       DENS    (:,:,:),              &   ! [IN]
                                       RHOT    (:,:,:),              &   ! [IN]
-                                      Epot    (:,:,:),              &   ! [IN]
-                                      Epot_new(:,:,:),              &   ! [OUT]
+                                      Epot    (:,:,:),              &   ! [INOUT]
                                       Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
 
     !$omp parallel do
@@ -430,7 +384,6 @@ contains
        Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
                                     + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
                                     + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-       Epot(k,i,j) = Epot_new(k,i,j)
 
 
        LT_PATH(k,i,j) = 0.0_RP
@@ -450,7 +403,7 @@ contains
                                      flg_lt_neut             )   ! [OUT]
 
        if( flg_lt_neut > 0 .and. PRC_IsMaster ) then
-          LOG_INFO("ATMOS_PHY_LT_sato2019_calc_tendency",'(F15.7,A)')  &
+          LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
               Emax*1.E-3_RP, '[kV/m] Charge Neutralization is calculated'
        endif
 
@@ -528,9 +481,9 @@ contains
                   zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1)-SMALL )
                   r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
                   do n = 1, QA_LT
-                     QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)  &
-                                        + ( d_QCRG(k,i,j)*1.0E+6_RP )  &
-                                        * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
+                     QTRC(k,i,j,n) = QTRC(k,i,j,n)  &
+                                   + ( d_QCRG(k,i,j)*1.0E+6_RP )  &
+                                   * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
                   enddo
                endif
             enddo
@@ -541,7 +494,7 @@ contains
 
             !$omp parallel do &
             !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac, &
-            !$omp         positive,negative,zerosw)
+            !$omp         positive,negative,zerosw,sw)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -550,23 +503,25 @@ contains
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
                   flg_chrged(:) = 0.0_RP
                   do n = 1, QA_LT
-                     flg_chrged(n) = 0.5_RP + sign( 0.5_RP, abs(QTRC0_crg(k,i,j,n))-SMALL )
+                     flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
                   enddo
 
                   Total_Sarea(:) = 0.0_RP
                   pos_crg = 0.0_RP
                   neg_crg = 0.0_RP
                   do n = 1, QA_LT
-                     positive = 0.5_RP + sign( 0.5_RP, QTRC0_crg(k,i,j,n) )
-                     negative = 1.0_RP - positive
-                     !--- total of positive charge
-                     pos_crg = pos_crg + QTRC0_crg(k,i,j,n) * positive * flg_chrged(n)
-                     !--- total of negative charge
-                     neg_crg = neg_crg - QTRC0_crg(k,i,j,n) * negative * flg_chrged(n)
-                     !--- Sarea of positively charged hydrometeor
-                     Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive * flg_chrged(n)
-                     !--- Sarea of negatively charged hydrometeor
-                     Total_Sarea(2) = Total_Sarea(2) + Sarea(k,i,j,n) * negative * flg_chrged(n)
+                     if ( flg_chrged(n) ) then
+                        positive = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                        negative = 1.0_RP - positive
+                        !--- total of positive charge
+                        pos_crg = pos_crg + QTRC(k,i,j,n) * positive
+                        !--- total of negative charge
+                        neg_crg = neg_crg - QTRC(k,i,j,n) * negative
+                        !--- Sarea of positively charged hydrometeor
+                        Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive
+                        !--- Sarea of negatively charged hydrometeor
+                        Total_Sarea(2) = Total_Sarea(2) + Sarea(k,i,j,n) * negative
+                     end if
                   end do
 
                   zerosw = 0.5_RP - sign( 0.5_RP, abs( QCRG(k,i,j) ) - SMALL )
@@ -582,15 +537,14 @@ contains
                   r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + zerosw ) * ( 1.0_RP - zerosw )
 
                   do n = 1, QA_LT
-                     QTRC1_crg(k,i,j,n) = QTRC0_crg(k,i,j,n)  &
-                                        + ( pos_crg*1.0E+6_RP ) / DENS(k,i,j)  &
-                                        * Sarea(k,i,j,n) * r_totalSarea(1) &
-                                        * ( 0.5_RP + sign( 0.5_RP, QTRC0_crg(k,i,j,n) ) ) &
-                                        * flg_chrged(n) &
-                                        + ( neg_crg*1.0E+6_RP ) / DENS(k,i,j) &
-                                        * Sarea(k,i,j,n) * r_totalSarea(2)  &
-                                        * ( 0.5_RP - sign( 0.5_RP, QTRC0_crg(k,i,j,n) ) ) &
-                                        * flg_chrged(n)
+                     if ( flg_chrged(n) ) then
+                        sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                        QTRC(k,i,j,n) = QTRC(k,i,j,n)  &
+                                    + ( pos_crg*1.0E+6_RP ) / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(1) &
+                                    * sw &
+                                    + ( neg_crg*1.0E+6_RP ) / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(2)  &
+                                    * ( 1.0_RP - sw )
+                     end if
                   enddo
                endif
 
@@ -602,15 +556,14 @@ contains
 
 
          !--- Calculate E field
-         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   &   ! [IN]
-                                           IA, IS, IE,                   &   ! [IN]
-                                           JA, JS, JE,                   &   ! [IN]
-                                           QCRG    (:,:,:),              &   ! [IN]
-                                           DENS    (:,:,:),              &   ! [IN]
-                                           RHOT    (:,:,:),              &   ! [IN]
-                                           Epot    (:,:,:),              &   ! [IN]
-                                           Epot_new(:,:,:),              &   ! [OUT]
-                                           Efield  (:,:,:,I_lt_x:I_lt_z) )   ! [OUT]
+         call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
+                                           IA, IS, IE,                   & ! [IN]
+                                           JA, JS, JE,                   & ! [IN]
+                                           QCRG    (:,:,:),              & ! [IN]
+                                           DENS    (:,:,:),              & ! [IN]
+                                           RHOT    (:,:,:),              & ! [IN]
+                                           Epot    (:,:,:),              & ! [INOUT]
+                                           Efield  (:,:,:,I_lt_x:I_lt_z) ) ! [OUT]
 
          !--- Add Total number of path
          !$omp parallel do
@@ -620,7 +573,6 @@ contains
             Efield(k,i,j,I_lt_abs) = sqrt( Efield(k,i,j,I_lt_x)*Efield(k,i,j,I_lt_x) &
                                          + Efield(k,i,j,I_lt_y)*Efield(k,i,j,I_lt_y) &
                                          + Efield(k,i,j,I_lt_z)*Efield(k,i,j,I_lt_z) )
-            Epot(k,i,j) = Epot_new(k,i,j)
          end do
          end do
          end do
@@ -714,39 +666,6 @@ contains
        call FILE_HISTORY_query( HIST_id(ip), HIST_sw(ip) )
     end do
 
-    if ( HIST_sw(I_QCRG_LIQ) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = 0.0_RP
-          do n = I_crg_LIQ_s, I_crg_LIQ_e
-             w3d(k,i,j) = w3d(k,i,j) + QTRC1_crg(k,i,j,n)
-          enddo
-          w3d(k,i,j) = w3d(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
-       end do
-       end do
-       end do
-       call FILE_HISTORY_put( HIST_id(I_QCRG_LIQ), w3d(:,:,:) )
-    end if
-    if ( HIST_sw(I_QCRG_ICE) ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          w3d(k,i,j) = 0.0_RP
-          do n = I_crg_ICE_s, I_crg_ICE_e
-             w3d(k,i,j) = w3d(k,i,j) + QTRC1_crg(k,i,j,n)
-          enddo
-          w3d(k,i,j) = w3d(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
-       end do
-       end do
-       end do
-       call FILE_HISTORY_put( HIST_id(I_QCRG_ICE), w3d(:,:,:) )
-    end if
-    if ( HIST_sw(I_QCRG_TOT) ) then
-       call FILE_HISTORY_put( HIST_id(I_QCRG_TOT), QCRG(:,:,:) )
-    end if
     if ( HIST_sw(I_Ex  ) ) then
        !$omp parallel do
        do j = JS, JE
@@ -851,20 +770,8 @@ contains
     end if
 
 
-    !--- Calculation of tendency
-    do n = 1, QA_LT
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          RHOQ_t_LT(k,i,j,n) = ( QTRC1_crg(k,i,j,n)-QTRC0_crg(k,i,j,n) )*DENS(k,i,j)/dt_LT
-       enddo
-       enddo
-       enddo
-    enddo
-
     return
-  end subroutine ATMOS_PHY_LT_sato2019_tendency
+  end subroutine ATMOS_PHY_LT_sato2019_adjustment
   !-----------------------------------------------------------------------------
   !> calculate electric field from charge density of each grid
   !> temporaly Bi-CGSTAB is used in this component
@@ -876,7 +783,6 @@ contains
        QCRG,       & ! [IN]
        DENS,       & ! [IN]
        RHOT,       & ! [IN]
-       E_pot_old,  & ! [IN]
        E_pot,      & ! [OUT]
        Efield      ) ! [OUT]
     use scale_prc, only: &
@@ -924,15 +830,14 @@ contains
        COMM_wait
     implicit none
 
-    integer,  intent(in)    :: KA, KS, KE
-    integer,  intent(in)    :: IA, IS, IE
-    integer,  intent(in)    :: JA, JS, JE
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(in)  :: QCRG     (KA,IA,JA)      !-- Charge density [nC/m3]
     real(RP), intent(in)  :: DENS     (KA,IA,JA)      !-- Total density [kg/m3]
     real(RP), intent(in)  :: RHOT     (KA,IA,JA)      !-- density weighted potential temperature [K kg/m3]
-    real(RP), intent(in)  :: E_pot_old(KA,IA,JA)      !-- Electric potential in previous step[V]
-    real(RP), intent(out) :: E_pot    (KA,IA,JA)      !-- Electric potential [V]
-    real(RP), intent(out) :: Efield   (KA,IA,JA,3)    !-- Electric field [V/m]
+    real(RP), intent(inout) :: E_pot (KA,IA,JA)      !-- Electric potential [V]
+    real(RP), intent(out)   :: Efield(KA,IA,JA,3)    !-- Electric field [V/m]
 
     real(RP) :: eps_air(KA,IA,JA)
     !--- A x E_pott = - QCRG/epsiron
@@ -1128,7 +1033,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       E_pot_N(k,i,j) = E_pot_old(k,i,j)   !-- initial value -> previous step value
+       E_pot_N(k,i,j) = E_pot(k,i,j)   !-- initial value -> previous step value
     end do
     end do
     end do

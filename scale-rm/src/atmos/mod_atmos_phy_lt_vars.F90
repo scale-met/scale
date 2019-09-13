@@ -52,9 +52,8 @@ module mod_atmos_phy_lt_vars
   character(len=H_MID),   public :: ATMOS_PHY_LT_RESTART_OUT_TITLE             = 'ATMOS_PHY_LT restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_LT_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
-  real(RP), public, allocatable :: ATMOS_PHY_LT_RHOQ_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
-  real(RP), public, allocatable :: ATMOS_PHY_LT_RHOQ_mp_t(:,:,:,:) ! tendency QTRC [kg/kg/s]
-  real(RP), public, allocatable :: ATMOS_PHY_LT_Epot_old(:,:,:) ! tendency QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_LT_Epot(:,:,:) ! tendency QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_LT_Sarea(:,:,:,:)
 
   integer, public :: QA_LT = 0
   integer, public :: QS_LT = -1
@@ -80,7 +79,7 @@ module mod_atmos_phy_lt_vars
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  data VAR_NAME / 'Epot_old' /
+  data VAR_NAME / 'Epot' /
   data VAR_DESC / 'Electric potential' /
   data VAR_UNIT / 'V' /
 
@@ -93,6 +92,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_RHOC_t
     implicit none
 
     namelist / PARAM_ATMOS_PHY_LT_VARS / &
@@ -113,12 +114,8 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_LT_vars_setup",*) 'Setup'
 
-    allocate( ATMOS_PHY_LT_RHOQ_t(KA,IA,JA,QS_LT:QE_LT) )
-    allocate( ATMOS_PHY_LT_RHOQ_mp_t(KA,IA,JA,QS_LT:QE_LT) )
-    allocate( ATMOS_PHY_LT_Epot_old(KA,IA,JA) )
-    ATMOS_PHY_LT_RHOQ_t(:,:,:,:) = UNDEF
-    ATMOS_PHY_LT_RHOQ_mp_t(:,:,:,:) = UNDEF
-    ATMOS_PHY_LT_Epot_old(:,:,:) = UNDEF
+    allocate( ATMOS_PHY_LT_Epot(KA,IA,JA) )
+    ATMOS_PHY_LT_Epot(:,:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -157,6 +154,12 @@ contains
        ATMOS_PHY_LT_RESTART_OUTPUT = .false.
     endif
 
+
+    ! for cloud microphysics
+    allocate( ATMOS_PHY_MP_RHOC_t(KA,IA,JA,QS_LT:QE_LT) )
+    ATMOS_PHY_MP_RHOC_t(:,:,:,:) = 0.0_RP
+
+
     return
   end subroutine ATMOS_PHY_LT_vars_setup
 
@@ -173,13 +176,13 @@ contains
 
     do j  = JS, JE
     do i  = IS, IE
-       ATMOS_PHY_LT_Epot_old(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot_old(KS,i,j)
-       ATMOS_PHY_LT_Epot_old(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot_old(KE,i,j)
+       ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
+       ATMOS_PHY_LT_Epot(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot(KE,i,j)
     enddo
     enddo
 
-    call COMM_vars8( ATMOS_PHY_LT_Epot_old(:,:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_LT_Epot_old(:,:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_LT_Epot(:,:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_LT_Epot(:,:,:), 1 )
 
     return
   end subroutine ATMOS_PHY_LT_vars_fillhalo
@@ -243,7 +246,7 @@ contains
        LOG_INFO("ATMOS_PHY_LT_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_LT) '
 
        call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
-                               ATMOS_PHY_LT_Epot_old(:,:,:)           ) ! [OUT]
+                               ATMOS_PHY_LT_Epot(:,:,:)         ) ! [OUT]
 
        if ( FILE_get_aggregate( restart_fid ) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -251,8 +254,8 @@ contains
           ! fill K halos
           do j  = 1, JA
           do i  = 1, IA
-             ATMOS_PHY_LT_Epot_old(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot_old(KS,i,j)
-             ATMOS_PHY_LT_Epot_old(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot_old(KE,i,j)
+             ATMOS_PHY_LT_Epot(   1:KS-1,i,j) = ATMOS_PHY_LT_Epot(KS,i,j)
+             ATMOS_PHY_LT_Epot(KE+1:KA,  i,j) = ATMOS_PHY_LT_Epot(KE,i,j)
           enddo
           enddo
        else
@@ -260,10 +263,10 @@ contains
        end if
 
        if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE,        &
-                                 ATMOS_PHY_LT_Epot_old(:,:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL             ) ! (in)
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE,    &
+                                 ATMOS_PHY_LT_Epot(:,:,:), VAR_NAME(1), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
        end if
     else
        LOG_INFO("ATMOS_PHY_LT_vars_restart_read",*) 'invalid restart file for ATMOS_PHY_LT.'
@@ -379,13 +382,13 @@ contains
        call ATMOS_PHY_LT_vars_fillhalo
 
        if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE,        &
-                                 ATMOS_PHY_LT_Epot_old(:,:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL             ) ! (in)
+          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE,    &
+                                 ATMOS_PHY_LT_Epot(:,:,:), VAR_NAME(1), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
        end if
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_LT_Epot_old(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_LT_Epot(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
 
     endif
 

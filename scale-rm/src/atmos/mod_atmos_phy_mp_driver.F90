@@ -559,8 +559,7 @@ contains
        ATMOS_PHY_MP_suzuki10_tendency, &
        ATMOS_PHY_MP_suzuki10_terminal_velocity
     use scale_atmos_phy_lt_sato2019, only: &
-       ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT, &
-       ATMOS_PHY_LT_sato2019_tendency
+       ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
@@ -600,6 +599,7 @@ contains
        RHOU_t_MP => ATMOS_PHY_MP_RHOU_t,    &
        RHOV_t_MP => ATMOS_PHY_MP_RHOV_t,    &
        RHOQ_t_MP => ATMOS_PHY_MP_RHOQ_t,    &
+       RHOC_t_MP => ATMOS_PHY_MP_RHOC_t,    &
        RHOH_MP   => ATMOS_PHY_MP_RHOH,      &
        EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
@@ -614,9 +614,7 @@ contains
        d0_crg, &
        v0_crg, &
        flg_lt, &
-       RHOQ_t_LT => ATMOS_PHY_LT_RHOQ_t, &
-       RHOQ_t_LT_mp => ATMOS_PHY_LT_RHOQ_mp_t, &
-       Epot_old => ATMOS_PHY_LT_Epot_old
+       Sarea => ATMOS_PHY_LT_Sarea
     implicit none
 
     logical, intent(in) :: update_flag
@@ -662,21 +660,15 @@ contains
     integer :: k, i, j, iq
     integer :: step
 
-    real(RP), target :: QTRC1_crg(KA,IA,JA,QS_LT:QE_LT)
+    real(RP) :: QTRC1_crg(KA,IA,JA,QS_LT:QE_LT)
     real(RP) :: RHOQ2_crg(KA,QS_LT:QE_LT)
     real(RP) :: mflux_crg(KA), sflux_crg(2)
     real(RP) :: QSPLT_in(KA,IA,JA,3)
     real(RP) :: dqcrg(KA,IA,JA), beta_crg(KA,IA,JA)
     real(RP) :: dummy(KA)
-    real(RP), allocatable :: Sarea(:,:,:,:)
     !---------------------------------------------------------------------------
 
     if ( update_flag ) then
-
-       if( flg_lt ) then
-          RHOQ_t_LT(:,:,:,:) = 0.0_RP
-          RHOQ_t_LT_mp(:,:,:,:) = 0.0_RP
-       endif
 
        CCN(:,:,:) = CCN_t(:,:,:) * dt_MP
 
@@ -752,7 +744,7 @@ contains
           end do
           end do
 
-          if( ATMOS_sw_phy_lt ) then
+          if( flg_lt ) then
 !OCL XFILL
              do iq = QS_LT, QE_LT
              do j = JS, JE
@@ -763,10 +755,6 @@ contains
              end do
              end do
              end do
-          endif
-
-          if( ATMOS_sw_phy_lt ) then
-             allocate(Sarea(KA,IA,JA,QA_MP-1))
 
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
@@ -774,7 +762,6 @@ contains
                   TEMP1(:,:,:), DENS(:,:,:),          & ! [IN]
                   QTRC1(:,:,:,QLS:QLE),               & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
-
              call ATMOS_PHY_MP_tomita08_adjustment( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), PRES(:,:,:), CCN(:,:,:), dt_MP,                          & ! [IN]
@@ -810,40 +797,27 @@ contains
           end do
           end do
 
-          if( ATMOS_sw_phy_lt ) then
-
+          if( flg_lt ) then
              do iq = QS_LT, QE_LT
              do j = JS, JE
              do i = IS, IE
              do k = KS, KE
-                RHOQ_t_LT_mp(k,i,j,iq) = ( QTRC1_crg(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
+                RHOC_t_MP(k,i,j,iq) = ( QTRC1_crg(k,i,j,iq) - QTRC(k,i,j,iq) ) * DENS(k,i,j) / dt_MP
              enddo
              enddo
              enddo
              enddo
-
-             call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
-                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
-                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
-
           endif
 
        case ( 'SN14' )
 
-          if( ATMOS_sw_phy_lt ) then
-             allocate(Sarea(KA,IA,JA,QA_LT))
-
+          if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                   QLA,                                & ! [IN]
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
-
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), W(:,:,:), QTRC(:,:,:,QS_MP:QE_MP), PRES(:,:,:), TEMP(:,:,:),                     & ! [IN]
@@ -852,15 +826,7 @@ contains
                   flg_lt, d0_crg, v0_crg, dqcrg(:,:,:), beta_crg(:,:,:),                                        & ! [IN:optional]
                   QTRC(:,:,:,QS_LT:QE_LT),                                                                      & ! [IN:optional]
                   QSPLT_in(:,:,:,:), Sarea(:,:,:,:),                                                            & ! [OUT:optional]
-                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)                                                               ) ! [OUT:optional]
-
-             call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
-                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
-                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
+                  RHOC_t_MP(:,:,:,QS_LT:QE_LT)                                                                  ) ! [OUT:optional]
           else
              call ATMOS_PHY_MP_sn14_tendency( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -871,16 +837,13 @@ contains
 
        case ( 'SUZUKI10' )
 
-          if( ATMOS_sw_phy_lt ) then
-             allocate(Sarea(KA,IA,JA,QA_LT))
-
+          if( flg_lt ) then
              call ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! [IN]
                   QLA,                                & ! [IN]
                   TEMP(:,:,:), DENS(:,:,:),           & ! [IN]
                   QTRC(:,:,:,QLS:QLE),                & ! [IN]
                   dqcrg(:,:,:), beta_crg(:,:,:)       ) ! [OUT]
-
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
                                                   DENS(:,:,:),  PRES(:,:,:), TEMP(:,:,:), & ! [IN]
@@ -895,15 +858,7 @@ contains
                                                   dqcrg(:,:,:), beta_crg(:,:,:),          & ! [IN:optional]
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
                                                   Sarea(:,:,:,:),      & ! [OUT:optional]
-                                                  RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT)         ) ! [OUT:optional]
-
-             call ATMOS_PHY_LT_sato2019_tendency( &
-                  KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX,           & ! [IN]
-                  QHA, QA_LT, DENS(:,:,:),                                          & ! [IN]
-                  RHOT(:,:,:), QTRC(:,:,:,QHS:QHE), QTRC(:,:,:,QS_LT:QE_LT), dt_MP, & ! [IN]
-                  dt_LT, Sarea(:,:,:,:),                                            & ! [IN]
-                  RHOQ_t_MP(:,:,:,QHS:QHE), RHOQ_t_LT_mp(:,:,:,QS_LT:QE_LT),        & ! [IN]
-                  Epot_old(:,:,:), RHOQ_t_LT(:,:,:,QS_LT:QE_LT)                     ) ! [INOUT]
+                                                  RHOC_t_MP(:,:,:,QS_LT:QE_LT)            ) ! [OUT:optional]
           else
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
                                                   dt_MP,                                  & ! [IN]
@@ -964,7 +919,7 @@ contains
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
           !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
           !$omp         REFSTATE_dens, &
-          !$omp         ATMOS_sw_phy_lt,RHOQ_t_LT_mp, &
+          !$omp         flg_lt,RHOC_t_MP, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
@@ -1000,7 +955,7 @@ contains
              end do
              end do
 
-             if( ATMOS_sw_phy_lt ) then
+             if( flg_lt ) then
                 do iq = QS_LT, QE_LT
                 do k = KS, KE
                    RHOQ2_crg(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
@@ -1080,7 +1035,7 @@ contains
                    eflux    = 0.0_RP
                 end select
 
-                if( ATMOS_sw_phy_lt ) then
+                if( flg_lt ) then
 
                    select case ( ATMOS_PHY_PRECIP_TYPE )
                    case ( 'Upwind-Euler' )
@@ -1153,10 +1108,10 @@ contains
              enddo
              enddo
 
-             if( ATMOS_sw_phy_lt ) then
+             if( flg_lt ) then
                 do iq = QS_LT, QE_LT
                 do k  = KS, KE
-                   RHOQ_t_LT_mp(k,i,j,iq) = RHOQ_t_LT_mp(k,i,j,iq) &
+                   RHOC_t_MP(k,i,j,iq) = RHOC_t_MP(k,i,j,iq) &
                         + ( RHOQ2_crg(k,iq) - DENS(k,i,j) * QTRC(k,i,j,iq) ) / dt_MP
                 enddo
                 enddo
@@ -1206,10 +1161,16 @@ contains
                         'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'kg/m3/s', fill_halo=.true. )
        enddo
 
-       if ( ATMOS_sw_phy_lt ) then
+       if ( flg_lt ) then
           call FILE_HISTORY_in( QSPLT_in(:,:,:,1), 'QSPLT_I', 'Charge split of QI by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
           call FILE_HISTORY_in( QSPLT_in(:,:,:,2), 'QSPLT_S', 'Charge split of QS by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
           call FILE_HISTORY_in( QSPLT_in(:,:,:,3), 'QSPLT_G', 'Charge split of QG by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
+
+          do iq = QS_LT, QE_LT
+             call FILE_HISTORY_in( RHOC_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
+                                  'tendency rho*'//trim(TRACER_NAME(iq))//' in MP', 'fC/m3/s', fill_halo=.true. )
+          enddo
+
        end if
 
     endif
@@ -1243,18 +1204,18 @@ contains
     enddo
     enddo
 
-!    if( ATMOS_sw_phy_lt ) then
-!      do iq = QS_LT, QE_LT
-!      do j = JS, JE
-!      do i = IS, IE
-!      do k = KS, KE
-!         RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) &
-!                          + RHOQ_t_LT(k,i,j,iq) + RHOQ_t_LT_mp(k,i,j,iq)
-!      enddo
-!      enddo
-!      enddo
-!      enddo
-!    endif
+    if( flg_lt ) then
+       do iq = QS_LT, QE_LT
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          RHOQ_t(k,i,j,iq) = RHOQ_t(k,i,j,iq) &
+                           + RHOC_t_MP(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+       enddo
+    endif
 
     if ( STATISTICS_checktotal ) then
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &

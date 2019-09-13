@@ -218,8 +218,6 @@ contains
        ATMOS_PHY_CP_driver_calc_tendency
     use mod_atmos_phy_bl_driver, only: &
        ATMOS_PHY_BL_driver_calc_tendency
-    use mod_atmos_phy_lt_driver, only: &
-       ATMOS_PHY_LT_driver_calc_tendency
     use mod_admin_time, only: &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
        do_phy_ae => TIME_DOATMOS_PHY_AE, &
@@ -238,8 +236,7 @@ contains
        ATMOS_sw_phy_sf, &
        ATMOS_sw_phy_tb, &
        ATMOS_sw_phy_bl, &
-       ATMOS_sw_phy_cp, &
-       ATMOS_sw_phy_lt
+       ATMOS_sw_phy_cp
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -320,12 +317,6 @@ contains
           call PROF_rapend  ('ATM_PBL', 1)
        endif
     end if
-    ! Lightning
-    if ( ATMOS_sw_phy_lt ) then
-       call PROF_rapstart('ATM_Lightning', 1)
-       call ATMOS_PHY_LT_driver_calc_tendency( update_flag = do_phy_lt .or. force )
-       call PROF_rapend  ('ATM_Lightning', 1)
-    end if
 
     !########## Set Surface Boundary Condition ##########
     call ATMOS_SURFACE_SET( countup = .true. )
@@ -383,7 +374,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
-       ATMOS_sw_phy_ae
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_lt
     use mod_admin_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
@@ -407,6 +399,8 @@ contains
        ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_adjustment
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_adjustment
     use scale_atmos_grid_cartesC, only: &
        CZ   => ATMOS_GRID_CARTESC_CZ,  &
        FZ   => ATMOS_GRID_CARTESC_FZ,  &
@@ -457,6 +451,13 @@ contains
        call PROF_rapend  ('ATM_Aerosol', 1)
        call ATMOS_vars_calc_diagnostics
     endif
+    ! Lightning
+    if ( ATMOS_sw_phy_lt ) then
+       call PROF_rapstart('ATM_Lightning', 1)
+       call ATMOS_PHY_LT_driver_adjustment
+       call PROF_rapend  ('ATM_Lightning', 1)
+       ! calc_diagnostics is not necessary
+    end if
 
 
     !########## Reference State ###########

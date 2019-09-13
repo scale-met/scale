@@ -65,7 +65,8 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOU_t(:,:,:)    ! tendency dens*U [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOV_t(:,:,:)    ! tendency dens*V [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOT_t(:,:,:)    ! tendency RHOT [K*kg/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/kg/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOQ_t(:,:,:,:)  ! tendency rho*QTRC [kg/m3/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_RHOC_t(:,:,:,:)  ! tendency rho*QTRC (charge) [fC/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_RHOH  (:,:,:)    ! diabatic heating rate [J/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
