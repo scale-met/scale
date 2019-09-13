@@ -135,6 +135,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_mp, &
        MP_TYPE => ATMOS_PHY_MP_TYPE
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_Sarea
     implicit none
 
     namelist / PARAM_USER / &
@@ -188,6 +190,8 @@ contains
 
     ATMOS_sw_phy_mp = .false.
 
+    ATMOS_PHY_LT_Sarea(:,:,:,:) = 1.0_RP
+
     return
   end subroutine USER_setup
 
@@ -202,7 +206,16 @@ contains
        RHOT, &
        QTRC, &
        POTT
+    use scale_atmos_grid_cartesC, only: &
+       CX    => ATMOS_GRID_CARTESC_CX, &
+       CY    => ATMOS_GRID_CARTESC_CY, &
+       CZ    => ATMOS_GRID_CARTESC_CZ
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_Epot, &
+       QS_LT
     implicit none
+    real(RP) :: distance(3)
+    integer  :: k, i, j
     !---------------------------------------------------------------------------
 
     QTRC(:,:,:,:) = 0.0_RP
@@ -212,6 +225,25 @@ contains
     MOMZ(:,:,:) = 0.0_RP
     pott(:,:,:) = 300.0_RP
     RHOT(:,:,:) = DENS(:,:,:) * pott(:,:,:)
+
+    do j = 1, JA-1
+    do i = 1, IA-1
+    do k = 1, KA-1
+       distance(3) = sqrt( ( CZ(k)-position_phi_z )**2 &
+                         + ( CX(i)-position_phi_x )**2 &
+                         + ( CY(j)-position_phi_y )**2 )
+
+       if( distance(3) < radius_phi_z ) then
+          QTRC(k,i,j,QS_LT) = qvalue * 1.0E+15_RP  ![fC/kg]
+       else
+          QTRC(k,i,j,QS_LT) = 0.0_RP
+       endif
+
+    enddo
+    enddo
+    enddo
+
+    ATMOS_PHY_LT_Epot (:,:,:)   = 0.0_RP
 
     return
   end subroutine USER_mkinit
@@ -240,54 +272,30 @@ contains
        CY    => ATMOS_GRID_CARTESC_CY, &
        CZ    => ATMOS_GRID_CARTESC_CZ
     use scale_atmos_phy_lt_sato2019, only: &
-       ATMOS_PHY_LT_sato2019_tendency
+       ATMOS_PHY_LT_sato2019_adjustment
     use scale_file_history, only: &
        FILE_HISTORY_in, &
        FILE_HISTORY_query, &
        FILE_HISTORY_put
-    use mod_atmos_admin, only: &
-       MP_TYPE => ATMOS_PHY_MP_TYPE
     use mod_atmos_phy_lt_vars, only: &
        QA_LT, QS_LT, QE_LT
     use mod_atmos_vars, only: &
        DENS, RHOT
     use scale_atmos_hydrometeor, only: &
-       QHA, QHS, QHE
+       QHS, QHE
     implicit none
 
     integer  :: k, i, j, m, n, ip
     real(RP) :: distance(3), point
     real(RP) :: dist(2)
     real(RP) :: Efield(KA,IA,JA,4), E_pot(KA,IA,JA), QCRG_out(KA,IA,JA)
-    real(RP) :: E_old(KA,IA,JA)
     logical  :: HIST_sw(w_nmax), hist_flag
-    real(RP), allocatable :: QCRG_local(:,:,:,:)
-    real(RP), allocatable :: QTRC_local(:,:,:,:)
-    real(RP), allocatable :: dummy_mp(:,:,:,:)
-    real(RP), allocatable :: dummy_lt(:,:,:,:)
-    real(RP), allocatable :: dummy_lt2(:,:,:,:)
-    real(RP), allocatable :: dummy_sarea(:,:,:,:)
-    real(RP), allocatable :: dummy_splt(:,:,:,:)
     !---------------------------------------------------------------------------
 
     if ( USER_do ) then
 
        LOG_NEWLINE
        LOG_INFO("USER_update",*) 'USER update'
-
-       allocate( QTRC_local(KA,IA,JA,QHS:QHE) )
-       allocate( QCRG_local(KA,IA,JA,QS_LT:QE_LT) )
-       QTRC_local(:,:,:,:) = 0.0_RP
-       QCRG_local(:,:,:,:) = 0.0_RP
-       allocate( dummy_mp(KA,IA,JA,QHS:QHE) )
-       allocate( dummy_lt(KA,IA,JA,QS_LT:QE_LT) )
-       allocate( dummy_lt2(KA,IA,JA,QS_LT:QE_LT) )
-       allocate( dummy_splt(KA,IA,JA,3) )
-       allocate( dummy_sarea(KA,IA,JA,QA_LT) )
-       dummy_mp(:,:,:,:) = 0.0_RP
-       dummy_lt(:,:,:,:) = 0.0_RP
-       dummy_splt(:,:,:,:) = 0.0_RP
-       dummy_sarea(:,:,:,:) = 1.0_RP
 
        hist_flag = .false.
        do ip = 1, w_nmax
@@ -401,37 +409,6 @@ contains
           if ( HIST_sw(ip) ) call FILE_HISTORY_put( HIST_id(ip), w3d(:,:,:,ip) )
        enddo
 
-
-       !--- Electric field from Bi-CGSTAB
-       QCRG_local(:,:,:,:) = 0.0_RP
-       do j = 1, JA-1
-       do i = 1, IA-1
-       do k = 1, KA-1
-         distance(3) = sqrt( ( CZ(k)-position_phi_z )**2 &
-                           + ( CX(i)-position_phi_x )**2 &
-                           + ( CY(j)-position_phi_y )**2 )
-
-        if( distance(3) < radius_phi_z ) then
-          QCRG_local(k,i,j,QS_LT) = qvalue * 1.0E+15_RP * DENS(k,i,j)  ![fC/m3]
-        else
-          QCRG_local(k,i,j,QS_LT) = 0.0_RP
-        endif
-
-       enddo
-       enddo
-       enddo
-
-       !--- Electric field from QTRC
-       Efield(:,:,:,:) = 0.d0
-       E_old(:,:,:) = 0.d0
-       call ATMOS_PHY_LT_sato2019_tendency( &
-            KA, KS, KE, IA, IS, IE, JA, JS, JE, KIJMAX, IMAX, JMAX, & ! [IN]
-            QHA, QA_LT, DENS(:,:,:),                                & ! [IN]
-            RHOT(:,:,:), QTRC_local(:,:,:,QHS:QHE),                 & ! [IN]
-            QCRG_local(:,:,:,QS_LT:QE_LT), 1.0_DP,                  & ! [IN]
-            1.0_DP, dummy_sarea(:,:,:,:),                           & ! [IN]
-            dummy_mp(:,:,:,QHS:QHE), dummy_lt(:,:,:,QS_LT:QE_LT),   & ! [IN]
-            E_old(:,:,:), dummy_lt2(:,:,:,QS_LT:QE_LT)              ) ! [INOUT]
 
     endif
 
