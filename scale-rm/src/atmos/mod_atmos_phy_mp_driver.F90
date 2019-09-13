@@ -664,7 +664,7 @@ contains
 
     real(RP), target :: QTRC1_crg(KA,IA,JA,QS_LT:QE_LT)
     real(RP) :: RHOQ2_crg(KA,QS_LT:QE_LT)
-    real(RP) :: vterm_crg(KA,QS_LT:QE_LT), mflux_crg(KA), sflux_crg(2)
+    real(RP) :: mflux_crg(KA), sflux_crg(2)
     real(RP) :: QSPLT_in(KA,IA,JA,3)
     real(RP) :: dqcrg(KA,IA,JA), beta_crg(KA,IA,JA)
     real(RP) :: dummy(KA)
@@ -954,7 +954,7 @@ contains
           end if
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
+          !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QHS,QHE,QLA,QIA, &
           !$omp         QA_LT,QS_LT,QE_LT, &
           !$omp         PRE00,LHF, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
@@ -969,7 +969,7 @@ contains
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
-          !$omp         RHOQ2_crg,vterm_crg,mflux_crg,sflux_crg, &
+          !$omp         RHOQ2_crg,mflux_crg,sflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
@@ -1026,30 +1026,15 @@ contains
                         KA, KS, KE, &
                         DENS2(:), TEMP2(:), RHOQ2(:,:), & ! [IN]
                         vterm(:,:)                      ) ! [OUT]
-                   if( ATMOS_sw_phy_lt ) then
-                      do iq = 1, QA_LT
-                         vterm_crg(:,QS_LT-1+iq) = vterm(:,QS_MP+iq)
-                      enddo
-                   endif
                 case ( 'SN14' )
                    call ATMOS_PHY_MP_sn14_terminal_velocity( &
                         KA, KS, KE, &
                         DENS2(:), TEMP2(:), RHOQ2(:,:), PRES2(:), & ! [IN]
                         vterm(:,:)                                ) ! [OUT]
-                   if( ATMOS_sw_phy_lt ) then
-                      do iq = 1, QA_LT
-                         vterm_crg(:,QS_LT-1+iq) = vterm(:,QS_MP+iq)
-                      enddo
-                   endif
                 case ( 'SUZUKI10' )
                    call ATMOS_PHY_MP_suzuki10_terminal_velocity( &
                         KA,        & ! [IN]
                         vterm(:,:) ) ! [OUT]
-                   if( ATMOS_sw_phy_lt ) then
-                      do iq = 1, QA_LT
-                         vterm_crg(:,QS_LT-1+iq) = vterm(:,QS_MP+iq)
-                      enddo
-                   endif
                 case default
                    vterm(:,:) = 0.0_RP ! tentative
                 end select
@@ -1101,7 +1086,7 @@ contains
                    case ( 'Upwind-Euler' )
                       call ATMOS_PHY_MP_precipitation_upwind( &
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
-                           TEMP2(:), vterm_crg(:,:),   & ! [IN]
+                           TEMP2(:), vterm(:,QHS:QHE),   & ! [IN]
                            FDZ(:), RCDZ(:),            & ! [IN]
                            MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]
@@ -1112,7 +1097,7 @@ contains
                    case ( 'Semilag' )
                       call ATMOS_PHY_MP_precipitation_semilag( &
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
-                           TEMP2(:), vterm_crg(:,:),   & ! [IN]
+                           TEMP2(:), vterm(:,QHS:QHE),   & ! [IN]
                            FZ(:), FDZ(:), RCDZ(:),     & ! [IN]
                            MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]
