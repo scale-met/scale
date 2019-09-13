@@ -1691,9 +1691,9 @@ contains
 
        !--- search grid whose Efield is over threshold of flash inititation
        own_prc_total = 0
-       do k = KS, KE
        do j = JS, JE
        do i = IS, IE
+       do k = KS, KE
           Eint_hgt(k,i,j) = min( Eint*DENS(k,i,j)/rho0,Eint )*flg_eint_hgt &
                           + ( Eint-delEint )*( 1.0_RP-flg_eint_hgt )
           if( flg_eint_hgt == 1.0_RP .and. Eint_hgt(k,i,j) < Estop ) then
@@ -1740,16 +1740,7 @@ contains
           call RANDOM_uniform(randnum)
           init_point(1) = minloc( randnum,1 )
           rank_initpoint = proc_numg(init_point(1))
-          grid_initpoint = 0
-          do i = init_point(1), 0, -1
-             grid_initpoint = grid_initpoint + 1
-             if( i == 0 ) then
-                grid_initpoint = grid_initpoint - 1
-             elseif( i /= 0 .and. proc_numg(i) /= rank_initpoint ) then
-                grid_initpoint = grid_initpoint - 1
-                exit
-             endif
-          enddo
+          grid_initpoint = init_point(1)-countindx(rank_initpoint+1)
        endif
 
        call COMM_bcast( rank_initpoint )
