@@ -2066,7 +2066,11 @@ contains
     endif
 
     if ( FILE_HISTORY_vars(id)%flag_clear ) then
-       if ( FILE_HISTORY_ERROR_PUTMISS ) then
+       if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
+          do i = 1, FILE_HISTORY_vars(id)%size
+             FILE_HISTORY_vars(id)%varsum(i) = RMISS
+          end do
+       else if ( FILE_HISTORY_ERROR_PUTMISS ) then
           LOG_ERROR("FILE_HISTORY_Write_OneVar",*) 'The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.'
           LOG_ERROR_CONT(*) 'Please check the namelist PARAM_TIME, PARAM_FILE_HISTORY, and HISTORY_ITEM.'
