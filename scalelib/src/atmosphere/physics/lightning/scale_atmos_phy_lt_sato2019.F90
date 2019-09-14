@@ -841,7 +841,7 @@ contains
 
     real(RP) :: eps_air(KA,IA,JA)
     !--- A x E_pott = - QCRG/epsiron
-    real(RP) :: A(15,KA,IA,JA)            !--- A : Laplasian
+    real(RP) :: A(KA,15,IA,JA)            !--- A : Laplasian
     real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
     real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
 
@@ -896,7 +896,7 @@ contains
     do i = IS, IE
     do k = KS, KE
        ! (k,i,j)
-       A(1,k,i,j) = &
+       A(k,1,i,j) = &
                   - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i  )*RFDX(i) &
                   - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i-1)*RFDX(i) &
                   + MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
@@ -917,7 +917,7 @@ contains
                   - J33G*J33G*RFDZ(k)*RCDZ(k-1)
 
        ! (k-1,i,j)
-       A(2,k,i,j) = &
+       A(k,2,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
@@ -927,7 +927,7 @@ contains
                   + J33G*J33G*RFDZ(k)*RCDZ(k-1)
 
        ! (k+1,i,j)
-       A(3,k,i,j) = &
+       A(k,3,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*J13G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
@@ -937,7 +937,7 @@ contains
                   + J33G*J33G*RFDZ(k)*RCDZ(k)
 
        ! (k,i-1,j)
-       A(4,k,i,j) = &
+       A(k,4,i,j) = &
                     MAPF(i,j,1,I_XY)*MAPF(i-1,j,1,I_XY)*RFDX(i)*RCDX(i-1) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
@@ -945,7 +945,7 @@ contains
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
 
        ! (k,i+1,j)
-       A(5,k,i,j) = &
+       A(k,5,i,j) = &
                     MAPF(i,j,1,I_XY)*MAPF(i+1,j,1,I_XY)*RFDX(i)*RCDX(i) &
                   + MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
                   - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
@@ -953,7 +953,7 @@ contains
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
 
        ! (k,i,j-1)
-       A(6,k,i,j) = &
+       A(k,6,i,j) = &
                     MAPF(i,j,2,I_XY)*MAPF(i,j-1,2,I_XY)*RFDY(j)*RCDY(j-1) &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
                   + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
@@ -961,7 +961,7 @@ contains
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k)
 
        ! (k,i,j+1)
-       A(7,k,i,j) = &
+       A(k,7,i,j) = &
                     MAPF(i,j,2,I_XY)*MAPF(i,j+1,2,I_XY)*RFDY(j)*RCDY(j) &
                   + MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
@@ -969,42 +969,42 @@ contains
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k)
 
        ! (k-1,i-1,j)
-       A(8,k,i,j) = &
+       A(k,8,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
 
        ! (k-1,i+1,j)
-       A(9,k,i,j) = &
+       A(k,9,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
 
        ! (k-1,i,j-1)
-       A(10,k,i,j) = &
+       A(k,10,i,j) = &
                     MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k)
 
        ! (k-1,i,j+1)
-       A(11,k,i,j) = &
+       A(k,11,i,j) = &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k)
 
        ! (k+1,i-1,j)
-       A(12,k,i,j) = &
+       A(k,12,i,j) = &
                   - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
                   - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
 
        ! (k+1,i+1,j)
-       A(13,k,i,j) = &
+       A(k,13,i,j) = &
                     MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
                   + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
 
        ! (k+1,i,j-1)
-       A(14,k,i,j) = &
+       A(k,14,i,j) = &
                   - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
                   - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k)
 
        ! (k+1,i,j+1)
-       A(15,k,i,j) = &
+       A(k,15,i,j) = &
                     MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
                   + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k)
 
@@ -1012,22 +1012,6 @@ contains
     enddo
     enddo
 
-    !---- fill halo
-    call COMM_vars8( A(1,:,:,:), 3  )
-    call COMM_vars8( A(2,:,:,:), 4  )
-    call COMM_vars8( A(3,:,:,:), 5  )
-    call COMM_vars8( A(4,:,:,:), 6  )
-    call COMM_vars8( A(5,:,:,:), 7  )
-    call COMM_vars8( A(6,:,:,:), 8  )
-    call COMM_vars8( A(7,:,:,:), 9  )
-    call COMM_vars8( A(8,:,:,:), 10 )
-    call COMM_vars8( A(9,:,:,:), 11 )
-    call COMM_vars8( A(10,:,:,:),12 )
-    call COMM_vars8( A(11,:,:,:),13 )
-    call COMM_vars8( A(12,:,:,:),14 )
-    call COMM_vars8( A(13,:,:,:),15 )
-    call COMM_vars8( A(14,:,:,:),16 )
-    call COMM_vars8( A(15,:,:,:),17 )
 
     !$omp parallel do
     do j = JS, JE
@@ -1037,29 +1021,12 @@ contains
     end do
     end do
     end do
-    call COMM_vars8( E_pot_N, 18 )
+    call COMM_vars8( E_pot_N, 3 )
 
 
-    call COMM_wait ( eps_air,1 )
-    call COMM_wait ( B,      2 )
-
-    call COMM_wait ( A(1,:,:,:), 3  )
-    call COMM_wait ( A(2,:,:,:), 4  )
-    call COMM_wait ( A(3,:,:,:), 5  )
-    call COMM_wait ( A(4,:,:,:), 6  )
-    call COMM_wait ( A(5,:,:,:), 7  )
-    call COMM_wait ( A(6,:,:,:), 8  )
-    call COMM_wait ( A(7,:,:,:), 9  )
-    call COMM_wait ( A(8,:,:,:), 10 )
-    call COMM_wait ( A(9,:,:,:), 11 )
-    call COMM_wait ( A(10,:,:,:),12 )
-    call COMM_wait ( A(11,:,:,:),13 )
-    call COMM_wait ( A(12,:,:,:),14 )
-    call COMM_wait ( A(13,:,:,:),15 )
-    call COMM_wait ( A(14,:,:,:),16 )
-    call COMM_wait ( A(15,:,:,:),17 )
-
-    call COMM_wait ( E_pot_N, 18 )
+    call COMM_wait ( eps_air, 1 )
+    call COMM_wait ( B,       2 )
+    call COMM_wait ( E_pot_N, 3 )
 
     !--- calcuclate counter matrix
     call solve_bicgstab( &
@@ -1071,41 +1038,8 @@ contains
        A, B        ) ! (in)
 
     call COMM_vars8( E_pot, 1 )
-    call COMM_wait ( E_pot, 1 )
+    call COMM_wait ( E_pot, 1, .true. )
 
-    !--- boundary condition
-    if( .not. PRC_HAS_W ) then
-       !$omp parallel do
-       do j = 1, JA
-       do k = 1, KA
-          E_pot(k,1:IS-1,j) = E_pot(k,IS,j)
-       enddo
-       enddo
-    endif
-    if( .not. PRC_HAS_E ) then
-       !$omp parallel do
-       do j = 1, JA
-       do k = 1, KA
-          E_pot(k,IE+1:IA,j) = E_pot(k,IE,j)
-       enddo
-       enddo
-    endif
-    if( .not. PRC_HAS_S ) then
-       !$omp parallel do
-       do i = 1, IA
-       do k = 1, KA
-          E_pot(k,i,1:JS-1) = E_pot(k,i,JS)
-       enddo
-       enddo
-    endif
-    if( .not. PRC_HAS_N ) then
-       !$omp parallel do
-       do i = 1, IA
-       do k = 1, KA
-          E_pot(k,i,JE+1:JA) = E_pot(k,i,JE)
-       enddo
-       enddo
-    endif
     !$omp parallel do
     do j = 1, JA
     do i = 1, IA
@@ -1172,7 +1106,7 @@ contains
     integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(out) :: PHI_N(KA,IA,JA)
     real(RP), intent(in)  :: PHI(KA,IA,JA)
-    real(RP), intent(in)  :: M(15,KA,IA,JA)
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
     real(RP), intent(in)  :: B(KA,IA,JA)
 
     real(RP) :: r0(KA,IA,JA)
@@ -1405,7 +1339,7 @@ contains
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
     real(RP), intent(out) :: V(KA,IA,JA)
-    real(RP), intent(in)  :: M(15,KA,IA,JA)
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
     real(RP), intent(in)  :: C(KA,IA,JA)
 
     integer :: k, i, j
@@ -1414,42 +1348,42 @@ contains
     do j = JS, JE
     do i = IS, IE
        do k = KS+1, KE-1
-          V(k,i,j) = M(1,k,i,j) * C(k  ,i  ,j  ) &
-                   + M(2,k,i,j) * C(k-1,i  ,j  ) &
-                   + M(3,k,i,j) * C(k+1,i  ,j  ) &
-                   + M(4,k,i,j) * C(k  ,i-1,j  ) &
-                   + M(5,k,i,j) * C(k  ,i+1,j  ) &
-                   + M(6,k,i,j) * C(k  ,i  ,j-1) &
-                   + M(7,k,i,j) * C(k  ,i  ,j+1) &
-                   + M(8,k,i,j) * C(k-1,i-1,j  ) &
-                   + M(9,k,i,j) * C(k-1,i+1,j  ) &
-                   + M(10,k,i,j)* C(k-1,i  ,j-1) &
-                   + M(11,k,i,j)* C(k-1,i  ,j+1) &
-                   + M(12,k,i,j)* C(k+1,i-1,j  ) &
-                   + M(13,k,i,j)* C(k+1,i+1,j  ) &
-                   + M(14,k,i,j)* C(k+1,i  ,j-1) &
-                   + M(15,k,i,j)* C(k+1,i  ,j+1)
+          V(k,i,j) = M(k,1,i,j) * C(k  ,i  ,j  ) &
+                   + M(k,2,i,j) * C(k-1,i  ,j  ) &
+                   + M(k,3,i,j) * C(k+1,i  ,j  ) &
+                   + M(k,4,i,j) * C(k  ,i-1,j  ) &
+                   + M(k,5,i,j) * C(k  ,i+1,j  ) &
+                   + M(k,6,i,j) * C(k  ,i  ,j-1) &
+                   + M(k,7,i,j) * C(k  ,i  ,j+1) &
+                   + M(k,8,i,j) * C(k-1,i-1,j  ) &
+                   + M(k,9,i,j) * C(k-1,i+1,j  ) &
+                   + M(k,10,i,j)* C(k-1,i  ,j-1) &
+                   + M(k,11,i,j)* C(k-1,i  ,j+1) &
+                   + M(k,12,i,j)* C(k+1,i-1,j  ) &
+                   + M(k,13,i,j)* C(k+1,i+1,j  ) &
+                   + M(k,14,i,j)* C(k+1,i  ,j-1) &
+                   + M(k,15,i,j)* C(k+1,i  ,j+1)
        enddo
-       V(KS,i,j) = M(1,KS,i,j) * C(KS  ,i  ,j  ) &
-                 + M(3,KS,i,j) * C(KS+1,i  ,j  ) &
-                 + M(4,KS,i,j) * C(KS  ,i-1,j  ) &
-                 + M(5,KS,i,j) * C(KS  ,i+1,j  ) &
-                 + M(6,KS,i,j) * C(KS  ,i  ,j-1) &
-                 + M(7,KS,i,j) * C(KS  ,i  ,j+1) &
-                 + M(12,KS,i,j)* C(KS+1,i-1,j  ) &
-                 + M(13,KS,i,j)* C(KS+1,i+1,j  ) &
-                 + M(14,KS,i,j)* C(KS+1,i  ,j-1) &
-                 + M(15,KS,i,j)* C(KS+1,i  ,j+1)
-       V(KE,i,j) = M(1,KE,i,j) * C(KE  ,i  ,j  ) &
-                 + M(2,KE,i,j) * C(KE-1,i  ,j  ) &
-                 + M(4,KE,i,j) * C(KE  ,i-1,j  ) &
-                 + M(5,KE,i,j) * C(KE  ,i+1,j  ) &
-                 + M(6,KE,i,j) * C(KE  ,i  ,j-1) &
-                 + M(7,KE,i,j) * C(KE  ,i  ,j+1) &
-                 + M(8,KE,i,j) * C(KE-1,i-1,j  ) &
-                 + M(9,KE,i,j) * C(KE-1,i+1,j  ) &
-                 + M(10,KE,i,j)* C(KE-1,i  ,j-1) &
-                 + M(11,KE,i,j)* C(KE-1,i  ,j+1)
+       V(KS,i,j) = M(KS,1,i,j) * C(KS  ,i  ,j  ) &
+                 + M(KS,3,i,j) * C(KS+1,i  ,j  ) &
+                 + M(KS,4,i,j) * C(KS  ,i-1,j  ) &
+                 + M(KS,5,i,j) * C(KS  ,i+1,j  ) &
+                 + M(KS,6,i,j) * C(KS  ,i  ,j-1) &
+                 + M(KS,7,i,j) * C(KS  ,i  ,j+1) &
+                 + M(KS,12,i,j)* C(KS+1,i-1,j  ) &
+                 + M(KS,13,i,j)* C(KS+1,i+1,j  ) &
+                 + M(KS,14,i,j)* C(KS+1,i  ,j-1) &
+                 + M(KS,15,i,j)* C(KS+1,i  ,j+1)
+       V(KE,i,j) = M(KE,1,i,j) * C(KE  ,i  ,j  ) &
+                 + M(KE,2,i,j) * C(KE-1,i  ,j  ) &
+                 + M(KE,4,i,j) * C(KE  ,i-1,j  ) &
+                 + M(KE,5,i,j) * C(KE  ,i+1,j  ) &
+                 + M(KE,6,i,j) * C(KE  ,i  ,j-1) &
+                 + M(KE,7,i,j) * C(KE  ,i  ,j+1) &
+                 + M(KE,8,i,j) * C(KE-1,i-1,j  ) &
+                 + M(KE,9,i,j) * C(KE-1,i+1,j  ) &
+                 + M(KE,10,i,j)* C(KE-1,i  ,j-1) &
+                 + M(KE,11,i,j)* C(KE-1,i  ,j+1)
     enddo
     enddo
 
@@ -1560,16 +1494,15 @@ contains
     real(RP) :: L_path(KA,IA,JA)
     real(RP) :: sumdqrho_pls, sumdqrho_mns
     real(RP) :: Ncrit, dqrho_cor
-    real(RP),allocatable :: randnum(:), randnum_3d(:,:,:)
+    real(RP) :: randnum(1)
     real(RP) :: rprod1, rprod2, rbuf, rbuf2, phi_end(2)
-    integer, allocatable :: proc_num(:), proc_numg(:)
     integer  :: Eovid(4,KIJMAX)
     integer  :: Npls, Nmns, Ntot
     integer  :: count1(PRC_nprocs)
     integer  :: countindx(PRC_nprocs+1)
     integer  :: own_prc_total                         !--- number of grid whose |E| > Eint-dEint for each process
-    integer  :: iprod1, iprod2, iprod3(4), buf
-    integer  :: init_point(1), rank_initpoint, grid_initpoint
+    integer  :: iprod(2), ibuf(6), status(MPI_STATUS_SIZE)
+    integer  :: init_point, rank_initpoint, grid_initpoint
     integer  :: current_prc    !--- 1->lightning flash path is include, 0-> nopath in the node
     integer  :: comm_flag, comm_target, stop_flag, corr_flag(2)
     integer  :: end_grid(4), wild_grid(6)
@@ -1616,44 +1549,37 @@ contains
        enddo
        enddo
 
-       !**** proc_num(0~) -> process number of each grid with |E|> E_threthold (local)
-       allocate(proc_num(own_prc_total))
-       proc_num(:) = PRC_myrank
        call MPI_AllGather( own_prc_total, 1, MPI_integer, &
                            count1, 1, MPI_integer, &
                            COMM_world, ierr )
        countindx(1) = 0
 
+       !**** countindx(PROC_nprocs+1) -> total number of grid with |E|>E_threthold
        do ipp = 1, PRC_nprocs
           countindx(ipp+1) = countindx(ipp) + count1(ipp)
        enddo
-
-       !---- Create global version of proc_num(proc_numg)
-       !**** countindx(PROC_nprocs) -> total number of grid with |E|>E_threthold
-       !**** proc_numg(0~) -> process number of each grid with |E|> E_threthold (global)
-       allocate(randnum(countindx(PRC_nprocs+1)))
-       allocate(proc_numg(countindx(PRC_nprocs+1)))
-
-       call MPI_AllGatherv( proc_num, own_prc_total, MPI_integer, &
-                            proc_numg, count1, countindx, MPI_integer, &
-                            COMM_world, ierr )
 
        !---- select initial point of flash by random select
        !**** rank_initpoint -> rank number including initpoint
        !**** grid_initpoint -> grid number of init point in rank (rank_initpoint)
        if( PRC_IsMaster ) then
           call RANDOM_uniform(randnum)
-          init_point(1) = minloc( randnum,1 )
-          rank_initpoint = proc_numg(init_point(1))
-          grid_initpoint = init_point(1)-countindx(rank_initpoint+1)
+          init_point = int( randnum(1) * countindx(PRC_nprocs+1) ) + 1
+          do ipp = 1, PRC_nprocs
+             if ( countindx(ipp+1) >= init_point ) then
+                rank_initpoint = ipp-1
+                exit
+             end if
+          end do
+          grid_initpoint = init_point - countindx(rank_initpoint+1)
+          ibuf(1) = rank_initpoint
+          ibuf(2) = grid_initpoint
        endif
 
-       call COMM_bcast( rank_initpoint )
-       call COMM_bcast( grid_initpoint )
+       call COMM_bcast( ibuf, 2 )
 
-       deallocate(randnum)
-       deallocate(proc_num)
-       deallocate(proc_numg)
+       rank_initpoint = ibuf(1)
+       grid_initpoint = ibuf(2)
 
 
        !--- Propagate lightning
@@ -1879,18 +1805,19 @@ contains
              endif
 
              !---- determine stop or not
-             iprod1 = stop_flag
-             call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-             stop_flag = iprod2
+             call MPI_bcast(stop_flag, 1, MPI_integer, current_prc, COMM_world, ierr)
 
              if( stop_flag == 1 ) then
                 !---- send flag wildfire
-                iprod1 = wild_flag
-                call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-                wild_flag = iprod2
+                call MPI_bcast(wild_flag, 1, MPI_integer, current_prc, COMM_world, ierr)
 
-                call MPI_bcast(end_grid, 4, MPI_integer, current_prc, COMM_world, ierr)
-                call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
+                if ( PRC_myrank == current_prc ) then
+                   ibuf(1:4) = end_grid(:)
+                   ibuf(5:6) = corr_flag(:)
+                end if
+                call MPI_bcast(ibuf, 6, MPI_integer, current_prc, COMM_world, ierr)
+                end_grid(:) = ibuf(1:4)
+                corr_flag(:) = ibuf(5:6)
 
                 stop_flag = 0
                 !---- If lightning path reaches end_grid stop
@@ -1898,19 +1825,30 @@ contains
              endif
 
              !---- determine wether process change occurs or not
-             iprod1 = comm_flag
-             call MPI_AllReduce(iprod1, iprod2, 1, MPI_integer, MPI_MAX, COMM_world, ierr)
-             comm_flag = iprod2
+             call MPI_bcast(comm_flag, 1, MPI_integer, current_prc, COMM_world, ierr)
 
              !--- process change occurs
              if( comm_flag == 1 ) then
                 call MPI_bcast(comm_target, 1, MPI_integer, current_prc, COMM_world, ierr)
-                !--- this part should be changed by 1 to 1 communication
-                call MPI_bcast(k1, 1, MPI_integer, current_prc, COMM_world, ierr)
-                call MPI_bcast(i1, 1, MPI_integer, current_prc, COMM_world, ierr)
-                call MPI_bcast(j1, 1, MPI_integer, current_prc, COMM_world, ierr)
-                call MPI_bcast(corr_flag, 2, MPI_integer, current_prc, COMM_world, ierr)
-                call MPI_bcast(sign_flash, 1, MPI_integer, current_prc, COMM_world, ierr)
+
+                if ( PRC_myrank == comm_target ) then
+                   call MPI_recv(ibuf, 6, MPI_integer, current_prc, 1, COMM_world, status, ierr)
+                   k1 = ibuf(1)
+                   i1 = ibuf(2)
+                   j1 = ibuf(3)
+                   corr_flag(:) = ibuf(4:5)
+                   sign_flash = ibuf(6)
+                end if
+
+                if ( PRC_myrank == current_prc ) then
+                   ibuf(1) = k1
+                   ibuf(2) = i1
+                   ibuf(3) = j1
+                   ibuf(4:5) = corr_flag(:)
+                   ibuf(6) = sign_flash
+                   call MPI_send(ibuf, 6, MPI_integer, comm_target, 1, COMM_world, ierr)
+                end if
+
                 !--- change current proc
                 current_prc = comm_target
              endif
@@ -2030,13 +1968,11 @@ contains
        enddo
        enddo
 
-       iprod1 =  Npls
-       call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-       Npls = buf
-
-       iprod1 =  Nmns
-       call MPI_AllReduce(iprod1, buf, 1, MPI_integer, MPI_SUM, COMM_world, ierr)
-       Nmns = buf
+       iprod(1) =  Npls
+       iprod(2) =  Nmns
+       call MPI_AllReduce(iprod, ibuf, 2, MPI_integer, MPI_SUM, COMM_world, ierr)
+       Npls = ibuf(1)
+       Nmns = ibuf(2)
 
        Ntot = Npls + Nmns
 
@@ -2243,10 +2179,7 @@ contains
        PRC_myrank
     use scale_comm_cartesC, only: &
        COMM_datatype, &
-       COMM_world, &
-       COMM_vars8, &
-       COMM_wait, &
-       COMM_bcast
+       COMM_world
 !    use scale_random, only: &
 !       RANDOM_reset, &
 !       RANDOM_uniform
@@ -2285,6 +2218,7 @@ contains
     integer  :: countindx(PRC_nprocs+1)
     integer  :: num_own                               !--- number of column whose |E| > Eint-dEint for each process
     integer  :: num_total                             !--- total number of column whose |E| > Eint-dEint
+    real(RP) :: rbuf1(2), rbuf2(2)
     integer  :: k, i, j, ipp, iq, ierr
 
     call PROF_rapstart('LT_neut_F2013', 1)
@@ -2390,10 +2324,12 @@ contains
     enddo
     enddo
 
-    call MPI_Allreduce( Spls, Spls_g, 1, COMM_datatype, &
+    rbuf1(1) = Spls
+    rbuf1(2) = Smns
+    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
-    call MPI_Allreduce( Smns, Smns_g, 1, COMM_datatype, &
-                        MPI_SUM, COMM_world, ierr       )
+    Spls_g = rbuf2(1)
+    Smns_g = rbuf2(2)
 
     if( max( Spls_g,Smns_g )*0.3_RP < min( Spls_g,Smns_g ) ) then
       Q_d = 0.3_RP * max( Spls_g,Smns_g )
@@ -2431,9 +2367,16 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('LT_neut_F2013', 1)
-    return
 
+    deallocate(E_exce_x)
+    deallocate(E_exce_y)
+    deallocate(E_exce_x_g)
+    deallocate(E_exce_y_g)
+
+
+    call PROF_rapend('LT_neut_F2013', 1)
+
+    return
   end subroutine ATMOS_PHY_LT_neutralization_F2013
   !-----------------------------------------------------------------------------
   !> judge max of |E| exceeds E_init
