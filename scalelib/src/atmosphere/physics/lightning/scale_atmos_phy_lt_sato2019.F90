@@ -1788,6 +1788,11 @@ contains
                       end_grid(2) = j
                       end_grid(3) = k
                       end_grid(4) = PRC_myrank
+                      if( QHYD(k,i,j) < EPS ) then
+                         corr_flag(iq) = 0
+                      else
+                         corr_flag(iq) = 1
+                      endif
                    elseif( i1 == IS-1 .and. PRC_HAS_W ) then
                       !--- reach west boundary of local domain(propagate)
                       L_path(k,i,j) = pm
@@ -1806,6 +1811,11 @@ contains
                       end_grid(2) = j
                       end_grid(3) = k
                       end_grid(4) = PRC_myrank
+                      if( QHYD(k,i,j) < EPS ) then
+                         corr_flag(iq) = 0
+                      else
+                         corr_flag(iq) = 1
+                      endif
                    elseif( i1 == IE+1 .and. PRC_HAS_E ) then
                       !--- reach east boundary of local domain(propagate)
                       L_path(k,i,j) = pm
