@@ -313,15 +313,13 @@ module scale_file_history
   real(DP)                   :: FILE_HISTORY_NOWMS              !> milli sec
   integer                    :: FILE_HISTORY_NOWSTEP            !> step at the time
 
-  integer(8)                 :: FILE_HISTORY_io_buffer_size = 0 !> internal buffer for PnetCDF
-
   character(len=H_MID)       :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
 
 
   logical                    :: FILE_HISTORY_disabled = .true.
 
   integer                    :: laststep_write = -1
-  logical                    :: firsttime      = .true.
+  logical                    :: list_outputed  = .false.
   logical                    :: debug          = .false.
 
   !-----------------------------------------------------------------------------
@@ -1907,6 +1905,8 @@ contains
        FILE_REAL4
     use scale_file, only: &
        FILE_Create,                   &
+       FILE_Flush,                    &
+       FILE_redef,                    &
        FILE_Set_Option,               &
        FILE_Def_Axis,                 &
        FILE_Def_AssociatedCoordinate, &
@@ -1968,122 +1968,116 @@ contains
                       time_units = tunits,                & ! [IN]
                       calendar = FILE_HISTORY_CALENDAR    ) ! [IN]
 
-    FILE_HISTORY_vars(id)%fid = fid
+    if ( .not. fileexisted ) then
 
-    ! write options
-    ic = -1 ! index of ':'
-    ie = -1 ! index of '='
-    is =  1 ! start index
-    lo = len_trim(options)
-    if ( lo > 0 ) then
-       do m = 1, lo+1
-          if ( m == lo+1 .OR. options(m:m) == '&' ) then
-             if ( ic == -1 .OR. ie == -1 ) then
-                LOG_ERROR("FILE_HISTORY_Create",*)'option is invalid: ', trim(options)
-                call PRC_abort
+       ! write options
+       ic = -1 ! index of ':'
+       ie = -1 ! index of '='
+       is =  1 ! start index
+       lo = len_trim(options)
+       if ( lo > 0 ) then
+          do m = 1, lo+1
+             if ( m == lo+1 .OR. options(m:m) == '&' ) then
+                if ( ic == -1 .OR. ie == -1 ) then
+                   LOG_ERROR("FILE_HISTORY_Create",*)'option is invalid: ', trim(options)
+                   call PRC_abort
+                endif
+                call FILE_Set_Option( fid, options(is:ic-1), options(ic+1:ie-1), options(ie+1:m -1)  ) ! [IN]
+                ic = -1
+                ie = -1
+                is = m+1
+             elseif( options(m:m) == ':' ) then
+                ic = m
+             elseif( options(m:m) == '=' ) then
+                ie = m
              endif
-             call FILE_Set_Option( fid, options(is:ic-1), options(ic+1:ie-1), options(ie+1:m -1)  ) ! [IN]
-             ic = -1
-             ie = -1
-             is = m+1
-          elseif( options(m:m) == ':' ) then
-             ic = m
-          elseif( options(m:m) == '=' ) then
-             ie = m
-          endif
-       enddo
-    endif
+          enddo
+       endif
 
-    if ( RP == DP ) then
-       dtype = FILE_REAL8
-    else
-       dtype = FILE_REAL4
-    end if
-
-    ! define registered history axis variables in the newly created file
-    ! actual writing axis variables are deferred to FILE_HISTORY_WriteAxes
-    do m = 1, FILE_HISTORY_naxes
-       if ( FILE_HISTORY_AGGREGATE ) then ! for shared-file I/O, define axis in its global size
-          dim_size = FILE_HISTORY_axes(m)%gdim_size ! axis global size
-          if ( dim_size < 1 ) then
-             LOG_ERROR("FILE_HISTORY_Create",*) 'gsize is not set by FILE_HISTORY_Set_Axis'
-             LOG_ERROR_CONT(*) 'It is necessary for aggregate file'
-             call PRC_abort
-          end if
+       if ( RP == DP ) then
+          dtype = FILE_REAL8
        else
-          dim_size = FILE_HISTORY_axes(m)%dim_size
-       endif
-       call FILE_Def_Axis( fid,                                           & ! [IN]
-                           FILE_HISTORY_axes(m)%name,                     & ! [IN]
-                           FILE_HISTORY_axes(m)%desc,                     & ! [IN]
-                           FILE_HISTORY_axes(m)%units,                    & ! [IN]
-                           FILE_HISTORY_axes(m)%dim,                      & ! [IN]
-                           dtype, dim_size,                               & ! [IN]
-                           bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
-       if ( FILE_HISTORY_axes(m)%down ) then
-          call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
-       endif
-    enddo
-
-    ! define registered history associated coordinate variables in the newly created file
-    ! actual writing coordinate variables are deferred to FILE_HISTORY_WriteAxes
-    do m = 1, FILE_HISTORY_nassocs
-       ndims = FILE_HISTORY_assocs(m)%ndims
-       call FILE_Def_AssociatedCoordinate( fid,                                  & ! [IN]
-                                           FILE_HISTORY_assocs(m)%name,          & ! [IN]
-                                           FILE_HISTORY_assocs(m)%desc,          & ! [IN]
-                                           FILE_HISTORY_assocs(m)%units,         & ! [IN]
-                                           FILE_HISTORY_assocs(m)%dims(1:ndims), & ! [IN]
-                                           FILE_HISTORY_assocs(m)%dtype          ) ! [IN]
-    enddo
-
-    ! attributes
-    do m = 1, FILE_HISTORY_nattrs
-
-       if ( FILE_HISTORY_attrs(m)%add_variable ) then
-          ! associated variable
-          call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_attrs(m)%varname )
+          dtype = FILE_REAL4
        end if
 
-       select case ( FILE_HISTORY_attrs(m)%type )
-       case ( I_TEXT )
-          call FILE_Set_Attribute( fid,                           & ! [IN]
-                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                   FILE_HISTORY_attrs(m)%text     ) ! [IN]
-       case ( I_INT )
-          call FILE_Set_Attribute( fid,                           & ! [IN]
-                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                   FILE_HISTORY_attrs(m)%int(:)   ) ! [IN]
-       case ( I_FLOAT )
-          call FILE_Set_Attribute( fid,                           & ! [IN]
-                                   FILE_HISTORY_attrs(m)%varname, & ! [IN]
-                                   FILE_HISTORY_attrs(m)%key,     & ! [IN]
-                                   FILE_HISTORY_attrs(m)%float(:) ) ! [IN]
-       case ( I_DOUBLE )
-          call FILE_Set_Attribute( fid,                            & ! [IN]
-                                   FILE_HISTORY_attrs(m)%varname,  & ! [IN]
-                                   FILE_HISTORY_attrs(m)%key,      & ! [IN]
-                                   FILE_HISTORY_attrs(m)%double(:) ) ! [IN]
-       end select
+       ! define registered history axis variables in the newly created file
+       ! actual writing axis variables are deferred to FILE_HISTORY_WriteAxes
+       do m = 1, FILE_HISTORY_naxes
+          if ( FILE_HISTORY_AGGREGATE ) then ! for shared-file I/O, define axis in its global size
+             dim_size = FILE_HISTORY_axes(m)%gdim_size ! axis global size
+             if ( dim_size < 1 ) then
+                LOG_ERROR("FILE_HISTORY_Create",*) 'gsize is not set by FILE_HISTORY_Set_Axis'
+                LOG_ERROR_CONT(*) 'It is necessary for aggregate file'
+                call PRC_abort
+             end if
+          else
+             dim_size = FILE_HISTORY_axes(m)%dim_size
+          endif
+          call FILE_Def_Axis( fid,                                           & ! [IN]
+                              FILE_HISTORY_axes(m)%name,                     & ! [IN]
+                              FILE_HISTORY_axes(m)%desc,                     & ! [IN]
+                              FILE_HISTORY_axes(m)%units,                    & ! [IN]
+                              FILE_HISTORY_axes(m)%dim,                      & ! [IN]
+                              dtype, dim_size,                               & ! [IN]
+                              bounds=associated(FILE_HISTORY_axes(m)%bounds) ) ! [IN]
+          if ( FILE_HISTORY_axes(m)%down ) then
+             call FILE_Set_Attribute( fid, FILE_HISTORY_axes(m)%name, 'positive', 'down' ) ! [IN]
+          endif
+       enddo
 
-    end do
+       ! define registered history associated coordinate variables in the newly created file
+       ! actual writing coordinate variables are deferred to FILE_HISTORY_WriteAxes
+       do m = 1, FILE_HISTORY_nassocs
+          ndims = FILE_HISTORY_assocs(m)%ndims
+          call FILE_Def_AssociatedCoordinate( fid,                                  & ! [IN]
+                                              FILE_HISTORY_assocs(m)%name,          & ! [IN]
+                                              FILE_HISTORY_assocs(m)%desc,          & ! [IN]
+                                              FILE_HISTORY_assocs(m)%units,         & ! [IN]
+                                              FILE_HISTORY_assocs(m)%dims(1:ndims), & ! [IN]
+                                              FILE_HISTORY_assocs(m)%dtype          ) ! [IN]
+       enddo
 
-    ! allows PnetCDF to allocate an internal buffer of size io_buffer_size
-    ! to aggregate write requests for history variables
-    if ( FILE_HISTORY_io_buffer_size == 0 ) then
-       array_size = 0
-       do m = 1, FILE_HISTORY_nitems
-          array_size = array_size + FILE_HISTORY_vars(m)%size
+       ! attributes
+       do m = 1, FILE_HISTORY_nattrs
+
+          if ( FILE_HISTORY_attrs(m)%add_variable ) then
+             ! associated variable
+             call FILE_Add_AssociatedVariable( fid, FILE_HISTORY_attrs(m)%varname )
+          end if
+
+          select case ( FILE_HISTORY_attrs(m)%type )
+          case ( I_TEXT )
+             call FILE_Set_Attribute( fid,                           & ! [IN]
+                                      FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                      FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                      FILE_HISTORY_attrs(m)%text     ) ! [IN]
+          case ( I_INT )
+             call FILE_Set_Attribute( fid,                           & ! [IN]
+                                      FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                      FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                      FILE_HISTORY_attrs(m)%int(:)   ) ! [IN]
+          case ( I_FLOAT )
+             call FILE_Set_Attribute( fid,                           & ! [IN]
+                                      FILE_HISTORY_attrs(m)%varname, & ! [IN]
+                                      FILE_HISTORY_attrs(m)%key,     & ! [IN]
+                                      FILE_HISTORY_attrs(m)%float(:) ) ! [IN]
+          case ( I_DOUBLE )
+             call FILE_Set_Attribute( fid,                            & ! [IN]
+                                      FILE_HISTORY_attrs(m)%varname,  & ! [IN]
+                                      FILE_HISTORY_attrs(m)%key,      & ! [IN]
+                                      FILE_HISTORY_attrs(m)%double(:) ) ! [IN]
+          end select
+
        end do
-       FILE_HISTORY_io_buffer_size = array_size * DP
-    end if
-    call FILE_Attach_Buffer( FILE_HISTORY_vars(id)%fid, FILE_HISTORY_io_buffer_size ) ! [IN]
 
+    else
+       call FILE_Flush( fid )
+       call FILE_redef( fid )
+    end if
 
     do m = 1, FILE_HISTORY_nitems
-       if ( FILE_HISTORY_vars(id)%basename == FILE_HISTORY_vars(m)%basename ) then
+       if ( FILE_HISTORY_vars(id)%basename == FILE_HISTORY_vars(m)%basename .and. &
+            FILE_HISTORY_vars(m)%fid < 0 ) then
           ! Add new variable
           FILE_HISTORY_vars(m)%fid = fid
           dtsec = real(FILE_HISTORY_vars(m)%dstep,kind=DP) * FILE_HISTORY_DTSEC
@@ -2143,7 +2137,19 @@ contains
        end if
     end do
 
-    call FILE_HISTORY_Write_Axes(id) ! [IN]
+
+    ! allows PnetCDF to allocate an internal buffer
+    ! to aggregate write requests for history variables
+    array_size = 0
+    do m = 1, FILE_HISTORY_nitems
+       if ( FILE_HISTORY_vars(m)%fid == FILE_HISTORY_vars(id)%fid ) then
+          array_size = array_size + FILE_HISTORY_vars(m)%size
+       end if
+    end do
+    call FILE_Attach_Buffer( FILE_HISTORY_vars(id)%fid, array_size * DP )
+
+
+    if ( .not. fileexisted ) call FILE_HISTORY_Write_Axes(id) ! [IN]
 
     return
   end subroutine FILE_HISTORY_Create
@@ -2804,7 +2810,11 @@ contains
     endif
 
     if ( FILE_HISTORY_vars(id)%flag_clear ) then
-       if ( FILE_HISTORY_ERROR_PUTMISS ) then
+       if ( FILE_HISTORY_OUTPUT_STEP0 .AND. FILE_HISTORY_NOWSTEP == 1 ) then
+          do i = 1, FILE_HISTORY_vars(id)%size
+             FILE_HISTORY_vars(id)%varsum(i) = RMISS
+          end do
+       else if ( FILE_HISTORY_ERROR_PUTMISS ) then
           LOG_ERROR("FILE_HISTORY_Write_OneVar",*) 'The time interval of history output ', trim(FILE_HISTORY_vars(id)%name), &
                      ' and the time interval of its related scheme are inconsistent.'
           LOG_ERROR_CONT(*) 'Please check the namelist PARAM_TIME, PARAM_FILE_HISTORY, and HISTORY_ITEM.'
@@ -2829,10 +2839,7 @@ contains
        end do
     endif
 
-    if ( firsttime ) then
-       firsttime = .false.
-       call FILE_HISTORY_Output_List
-    endif
+    call FILE_HISTORY_Output_List
 
     if ( step_now > FILE_HISTORY_vars(id)%waitstep ) then
        if ( laststep_write < step_now ) then ! log only once in this step
@@ -2889,45 +2896,56 @@ contains
     integer  :: id
     !---------------------------------------------------------------------------
 
+    if ( list_outputed ) then
+       return
+    endif
+
     if ( FILE_HISTORY_nitems /= FILE_HISTORY_nreqs ) then
 
-       LOG_INFO("FILE_HISTORY_Output_List",*) '[HISTORY] All of requested variable by the namelist HISTORY_ITEM did not find.'
-       do id = 1, FILE_HISTORY_nreqs
-          LOG_INFO("FILE_HISTORY_Output_List",'(A,A24,A,L1)') 'NAME : ', FILE_HISTORY_req(id)%name, &
+       if ( .not. ( FILE_HISTORY_OUTPUT_STEP0 .and. FILE_HISTORY_NOWSTEP == 1 ) ) then
+
+          LOG_INFO("FILE_HISTORY_Output_List",*) '[HISTORY] All of requested variable by the namelist HISTORY_ITEM did not find.'
+          do id = 1, FILE_HISTORY_nreqs
+             LOG_INFO("FILE_HISTORY_Output_List",'(A,A24,A,L1)') 'NAME : ', FILE_HISTORY_req(id)%name, &
                                                       ', registered? : ', FILE_HISTORY_req(id)%registered
-       enddo
-       LOG_INFO("FILE_HISTORY_Output_List",*)  'Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
+          enddo
+          LOG_INFO("FILE_HISTORY_Output_List",*)  'Please set FILE_HISTORY_ERROR_PUTMISS in the namelist PARAM_FILE_HISTORY to .false.', &
                                       ' when you want to disable this check.'
 
-       if ( FILE_HISTORY_ERROR_PUTMISS ) then
-          LOG_ERROR("FILE_HISTORY_Output_List",*) 'Requested variables by the namelist HISTORY_ITEM did not find. Please see detail in log file.'
-          call PRC_abort
-       endif
-    endif
+          if ( FILE_HISTORY_ERROR_PUTMISS ) then
+             LOG_ERROR("FILE_HISTORY_Output_List",*) 'Requested variables by the namelist HISTORY_ITEM did not find. Please see detail in log file.'
+             call PRC_abort
+          endif
+       end if
+
+       return
+    end if
 
     LOG_INFO("FILE_HISTORY_Output_List",*)           '[HISTORY] Output item list '
     LOG_INFO_CONT('(1x,A,I4)') 'Number of history item :', FILE_HISTORY_nreqs
     LOG_INFO_CONT(*)           'ITEM                    :OUTNAME                 ', &
                   ':    size:interval[sec]:    step:timeavg?:zcoord'
     LOG_INFO_CONT(*)           '=================================================', &
-                                             '================================================='
+                               '================================================='
 
 
     do id = 1, FILE_HISTORY_nitems
        dtsec = real(FILE_HISTORY_vars(id)%dstep,kind=DP) * FILE_HISTORY_DTSEC
 
        LOG_INFO_CONT('(1x,A24,1x,A24,1x,I8,1x,F13.3,1x,I8,1x,L8,1x,A8)') &
-                  FILE_HISTORY_vars(id)%name,     &
-                  FILE_HISTORY_vars(id)%outname,  &
-                  FILE_HISTORY_vars(id)%size,     &
-                  dtsec,                          &
-                  FILE_HISTORY_vars(id)%dstep,    &
-                  FILE_HISTORY_vars(id)%taverage, &
-                  FILE_HISTORY_vars(id)%zcoord
+            FILE_HISTORY_vars(id)%name,     &
+            FILE_HISTORY_vars(id)%outname,  &
+            FILE_HISTORY_vars(id)%size,     &
+            dtsec,                          &
+            FILE_HISTORY_vars(id)%dstep,    &
+            FILE_HISTORY_vars(id)%taverage, &
+            FILE_HISTORY_vars(id)%zcoord
     enddo
 
     LOG_INFO_CONT(*)           '=================================================', &
-                                             '================================================='
+                               '================================================='
+
+    list_outputed = .true.
 
     return
   end subroutine FILE_HISTORY_Output_List
