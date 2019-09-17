@@ -1784,6 +1784,17 @@ int32_t file_enddef_c( const int32_t fid ) // (in)
   return file_enddef(fid, ncid);
 }
 
+int32_t file_redef_c( const int32_t fid ) // (in)
+{
+  int ncid;
+
+  if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
+
+  ncid = files[fid]->ncid;
+
+  return file_redef(fid, ncid);
+}
+
 int32_t file_attach_buffer_c( const int32_t fid,         // (in)
 			      const int64_t buf_amount ) // (in)
 {

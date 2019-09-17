@@ -707,6 +707,12 @@ void file_enddef_c_( const int32_t *fid ,   // (in)
   *error = file_enddef_c( *fid );
 }
 
+void file_redef_c_( const int32_t *fid ,   // (in)
+	            int32_t *error ) // (out)
+{
+  *error = file_redef_c( *fid );
+}
+
 void file_attach_buffer_c_( const int32_t *fid ,       // (in)
 			    const int64_t *buf_amount, // (in)
 			          int32_t *error )     // (out)
