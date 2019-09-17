@@ -55,6 +55,7 @@ module scale_file
   public :: FILE_set_attribute
   public :: FILE_add_associatedVariable
   public :: FILE_enddef
+  public :: FILE_redef
   public :: FILE_flush
   public :: FILE_close
   public :: FILE_close_all
@@ -193,6 +194,7 @@ module scale_file
      character(len=FILE_HLONG) :: name
      integer                   :: fid
      logical                   :: aggregate
+     integer                   :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
   integer    :: FILE_nfiles = 0
@@ -4577,6 +4579,34 @@ contains
   end subroutine FILE_enddef
 
   !-----------------------------------------------------------------------------
+  ! enter netCDF define mode and enter data mode
+  subroutine FILE_redef( fid )
+    implicit none
+
+    integer, intent(in) :: fid
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) return
+
+    call file_redef_c( FILE_files(fid)%fid, error )
+
+    if ( error == FILE_SUCCESS_CODE ) then
+
+       LOG_NEWLINE
+       LOG_INFO("FILE_redef",'(1x,A,I3.3,2A)') &
+            'Enter to define mode : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+
+    else
+       LOG_ERROR("FILE_redef",*) 'failed to enter to define mode'
+       call PRC_abort
+    end if
+
+    return
+  end subroutine FILE_redef
+
+  !-----------------------------------------------------------------------------
   ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FILE_attach_buffer( &
        fid,       &
@@ -4591,18 +4621,23 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
+    if ( FILE_files(fid)%buffer_size > 0 ) then
+       call FILE_detach_buffer(fid)
+    end if
+
     call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
 
-    if ( error == FILE_SUCCESS_CODE ) then
-
-       LOG_NEWLINE
-       LOG_INFO("FILE_attach_buffer",'(1x,A,I3.3,3A,I10)') &
-            'Attach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
-            ', size = ', buf_amount
-    else
+    if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_attach_buffer",*) 'failed to attach buffer in PnetCDF'
        call PRC_abort
     end if
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_attach_buffer",'(1x,A,I3.3,3A,I10)') &
+            'Attach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
+            ', size = ', buf_amount
+
+    FILE_files(fid)%buffer_size = buf_amount
 
     return
   end subroutine FILE_attach_buffer
@@ -4621,18 +4656,20 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
+    if ( FILE_files(fid)%buffer_size < 0 ) return ! not attached
+
     call file_detach_buffer_c( FILE_files(fid)%fid, error )
 
-    if ( error == FILE_SUCCESS_CODE ) then
-
-       LOG_NEWLINE
-       LOG_INFO("FILE_detach_buffer",'(1x,A,I3.3,2A)') &
-            'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
-
-    else
+    if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_detach_buffer",*) 'failed to detach buffer in PnetCDF'
        call PRC_abort
     end if
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_detach_buffer",'(1x,A,I3.3,2A)') &
+            'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+
+    FILE_files(fid)%buffer_size = -1
 
     return
   end subroutine FILE_detach_buffer
@@ -4704,6 +4741,7 @@ contains
     FILE_files(fid)%fid = -1
     FILE_files(fid)%name = ''
     FILE_files(fid)%aggregate = .false.
+    FILE_files(fid)%buffer_size = -1
 
     do n = 1, FILE_nvars
        if ( FILE_vars(n)%fid == fid ) then
@@ -4882,6 +4920,7 @@ contains
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
+    FILE_files(fid)%buffer_size = -1
 
     LOG_NEWLINE
     LOG_INFO("FILE_get_fid",'(1x,A,A6,A,I3.3,2A)') &
