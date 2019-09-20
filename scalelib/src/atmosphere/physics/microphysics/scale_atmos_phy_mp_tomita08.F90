@@ -1745,6 +1745,7 @@ contains
              facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
              facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
              w_q(k,I_Pgdep  ) = 0.0_RP
+             w_q(k,I_Pgsub  ) = 0.0_RP
              w_q(k,I_Pgacw  ) = qcrg_c(k) * w(k,I_Pgacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
              w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
              w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)

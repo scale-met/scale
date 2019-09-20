@@ -2244,7 +2244,7 @@ contains
     real(RP) :: rhoq_crg(I_QC:I_QG,KA)
     real(RP) :: rhoq2_crg(I_QC:I_QG,KA)
     real(RP) :: QTRC0(KA,IA,JA,QA_MP)
-    real(RP) :: Crs(KA,IA,JA,QA_MP-1)
+    real(RP) :: Crs(KA,IA,JA,HYDRO_MAX)
     real(RP),allocatable :: RHOQcrg0_t(:,:,:,:)
 
     real(RP) :: crg_split_s
@@ -5325,7 +5325,7 @@ contains
 
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: QA_MP
-    real(RP), intent(out) :: Crs  (KA,QA_MP-1)! Cross section             [cm]
+    real(RP), intent(out) :: Crs  (KA,HYDRO_MAX)! Cross section             [cm]
     real(RP), intent(in)  :: QTRC0(KA,QA_MP)  ! tracer mass concentration [kg/kg]
     real(RP), intent(in)  :: DENS0(KA)        ! density                   [kg/m3]
 
