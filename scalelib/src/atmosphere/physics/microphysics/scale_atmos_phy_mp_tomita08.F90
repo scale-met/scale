@@ -1745,7 +1745,6 @@ contains
              facq(I_QS) = 0.5_RP + sign( 0.5_RP, qs(k) - EPS )
              facq(I_QG) = 0.5_RP + sign( 0.5_RP, qg(k) - EPS )
              w_q(k,I_Pgdep  ) = 0.0_RP
-             w_q(k,I_Pgsub  ) = 0.0_RP
              w_q(k,I_Pgacw  ) = qcrg_c(k) * w(k,I_Pgacw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
              w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
              w_q(k,I_Psacr_g) = qcrg_r(k) * w(k,I_Psacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
@@ -1756,6 +1755,7 @@ contains
              w_q(k,I_Pgaut  ) = qcrg_s(k) * w(k,I_Pgaut  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
              w_q(k,I_Pracs  ) = qcrg_s(k) * w(k,I_Pracs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
              w_q(k,I_Pgacs  ) = qcrg_s(k) * w(k,I_Pgacs  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
+             w_q(k,I_Pgsub  ) = qcrg_g(k) * w(k,I_Pgsub  ) / ( qg(k) + EPS*EPS ) * facq(I_QG)
              w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG)
           enddo
        end if
