@@ -4301,7 +4301,7 @@ contains
        if (flg_lt) then
           sw = 0.5_RP - sign( 0.5_RP, rhoq(k,I_NC)-SMALL )
           Pcrg(I_NCaut,k) = PQ(k,I_NCaut)*(1.0_RP-sw)/(rhoq(k,I_NC)+sw)*rhoq_crg(I_QC,k)
-          Pcrg(I_NRaut,k) = -Pcrg(I_NCaut,k)*flg_lt
+          Pcrg(I_NRaut,k) = -Pcrg(I_NCaut,k)
        end if
        !
        ! Accretion ( cloud-rain => rain )
@@ -5081,9 +5081,9 @@ contains
        !--- reduce charge density of cloud and rain by evaporation
        if (flg_lt) then
           sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NC)-SMALL ) !--- if NC is small,  ignore charge transfer
-          dep_dnc_crg = dep_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw )*rhoq2_crg(I_QC,k)*flg_lt
+          dep_dnc_crg = dep_dnc*( 1.0_RP-sw )/( rhoq2(k,I_NC)+sw )*rhoq2_crg(I_QC,k)
           sw = 0.5_RP - sign( 0.5_RP, rhoq2(k,I_NR)-SMALL ) !--- if NR is small,  ignore charge transfer
-          dep_dnr_crg = dep_dnr*( 1.0_RP-sw )/( rhoq2(k,I_NR)+sw )*rhoq2_crg(I_QR,k)*flg_lt
+          dep_dnr_crg = dep_dnr*( 1.0_RP-sw )/( rhoq2(k,I_NR)+sw )*rhoq2_crg(I_QR,k)
           !--- limiter
           sw = min( abs(rhoq2_crg(I_QC,k)),abs(dep_dnc_crg) )
           dep_dnc_crg = sign( sw,dep_dnc_crg )

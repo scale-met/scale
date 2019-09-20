@@ -1724,7 +1724,7 @@ contains
 
     real(RP) :: coef0, coef1, coef2
     real(RP) :: dummy(nbin)
-    real(RP) :: tmp_hyd, num_hyd, lambda_hyd
+    real(RP) :: tmp_hyd, num_hyd_l, lambda_hyd
 
     integer :: k, i, j, iq
 
@@ -1807,7 +1807,7 @@ contains
           enddo
 
           !--- Snow put into snow bin (gamma)
-          num_hyd = coef0 * n0_sdf(3) * rho_sdf(3)
+          num_hyd_l = coef0 * n0_sdf(3) * rho_sdf(3)
           lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HS) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HS)-EPS)) &
@@ -1815,7 +1815,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo
@@ -1828,7 +1828,7 @@ contains
           enddo
 
           !--- Graupel put into Graupel bin (gamma)
-          num_hyd = coef0 * n0_sdf(4) * rho_sdf(4)
+          num_hyd_l = coef0 * n0_sdf(4) * rho_sdf(4)
           lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HG) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HG)-EPS)) &
@@ -1836,7 +1836,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo
@@ -1849,7 +1849,7 @@ contains
           enddo
 
           !--- Hail put into Hail bin (gamma)
-          num_hyd = coef0 * n0_sdf(5) * rho_sdf(5)
+          num_hyd_l = coef0 * n0_sdf(5) * rho_sdf(5)
           lambda_hyd = ( PI * rho_sdf(5) / 6.0_RP *n0_sdf(5) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HH) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HH)-EPS)) &
@@ -1857,7 +1857,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo

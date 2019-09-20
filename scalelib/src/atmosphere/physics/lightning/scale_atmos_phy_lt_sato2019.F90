@@ -501,7 +501,6 @@ contains
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
 
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
-                  flg_chrged(:) = 0.0_RP
                   do n = 1, QA_LT
                      flg_chrged(n) = abs(QTRC(k,i,j,n)) >= SMALL
                   enddo

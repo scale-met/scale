@@ -135,8 +135,6 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_mp, &
        MP_TYPE => ATMOS_PHY_MP_TYPE
-    use mod_atmos_phy_lt_vars, only: &
-       ATMOS_PHY_LT_Sarea
     implicit none
 
     namelist / PARAM_USER / &
@@ -189,8 +187,6 @@ contains
     end do
 
     ATMOS_sw_phy_mp = .false.
-
-    ATMOS_PHY_LT_Sarea(:,:,:,:) = 1.0_RP
 
     return
   end subroutine USER_setup
