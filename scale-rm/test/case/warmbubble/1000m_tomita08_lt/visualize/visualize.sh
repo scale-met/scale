@@ -33,7 +33,7 @@ do
 
    # time series
    gpview history.pe\*.nc@${var},y=6000:26000,x=6000:26000,z=0:15000 --nocont --mean x,y --exch --wsn 2 -sw:ifl=1 || exit
-   mv dcl_0001.png ${var}${sec}sec.png
+   mv dcl_0001.png ${var}.png
 
    let i="${i} + 1"
 done
