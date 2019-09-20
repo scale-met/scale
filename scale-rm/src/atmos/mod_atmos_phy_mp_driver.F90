@@ -1162,9 +1162,9 @@ contains
        enddo
 
        if ( flg_lt ) then
-          call FILE_HISTORY_in( QSPLT_in(:,:,:,1), 'QSPLT_I', 'Charge split of QI by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
-          call FILE_HISTORY_in( QSPLT_in(:,:,:,2), 'QSPLT_S', 'Charge split of QS by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
-          call FILE_HISTORY_in( QSPLT_in(:,:,:,3), 'QSPLT_G', 'Charge split of QG by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
+          call FILE_HISTORY_in( QSPLT_in(:,:,:,1), 'QSPLT_G', 'Charge split of QG by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
+          call FILE_HISTORY_in( QSPLT_in(:,:,:,2), 'QSPLT_I', 'Charge split of QI by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
+          call FILE_HISTORY_in( QSPLT_in(:,:,:,3), 'QSPLT_S', 'Charge split of QS by Non-inductive process', 'fC/m3/s', fill_halo=.true. )
 
           do iq = QS_LT, QE_LT
              call FILE_HISTORY_in( RHOC_t_MP(:,:,:,iq), trim(TRACER_NAME(iq))//'_t_MP', &
