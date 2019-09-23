@@ -1267,15 +1267,15 @@ contains
              w_qcrg(k,I_Qgacs) = ( 1.0_RP - flg_ecoals ) &
                                * 0.25_RP * PI * Rdens(k) * ( 1.0_RP-Egs_mod ) * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
-                               * ( GAM_3 * GAM   * RLMDs_3 * RLMDg  (k) &
-                                 + GAM_2 * GAM_2 * RLMDs_2 * RLMDg_2(k) &
-                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) ) &
+                               * ( GAM_3 * GAM   * w(k,I_RLMDs)**3 * RLMDg  (k) &
+                                 + GAM_2 * GAM_2 * w(k,I_RLMDs)**2 * RLMDg_2(k) &
+                                 + GAM_3 * GAM   * w(k,I_RLMDs)    * RLMDg_3(k) ) &
                                + flg_ecoals &
                                * 0.25_RP * PI * Rdens(k) * Egs_mod * ( 1.0_RP-Ecoal_GS ) / Ecoal_GS * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
-                               * ( GAM_3 * GAM   * RLMDs_3 * RLMDg  (k) &
-                                 + GAM_2 * GAM_2 * RLMDs_2 * RLMDg_2(k) &
-                                 * GAM_3 * GAM   * RLMDs   * RLMDg_3(k) )
+                               * ( GAM_3 * GAM   * w(k,I_RLMDs)**3 * RLMDg  (k) &
+                                 + GAM_2 * GAM_2 * w(k,I_RLMDs)**2 * RLMDg_2(k) &
+                                 + GAM_3 * GAM   * w(k,I_RLMDs)     * RLMDg_3(k) )
              QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgacs) !*dt
              QSPLT_in(k,i,j,3) = QSPLT_in(k,i,j,3) + w_qcrg(k,I_Qgacs) !*dt
           end if
