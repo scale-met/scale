@@ -45,6 +45,7 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_qtrc2qhyd
   public :: ATMOS_PHY_MP_suzuki10_qtrc2nhyd
   public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
+  public :: ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd
 
   !-----------------------------------------------------------------------------
   !
@@ -959,7 +960,7 @@ contains
     !--- for lithgning
     logical  :: flg_lt_l
     real(RP) :: Gcrg_ijk(nbin,nspc,KIJMAX)
-    real(RP) :: CRG_SEP_ijk(7,KIJMAX)
+    real(RP) :: CRG_SEP_ijk(nspc,KIJMAX)
     real(RP) :: dqcrg_ijk(KIJMAX)
     real(RP) :: beta_crg_ijk(KIJMAX)
 
@@ -1889,6 +1890,74 @@ contains
   end subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc
 
   !-----------------------------------------------------------------------------
+  !> get charge density ratio of each category
+  subroutine ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QTRC0,      &
+       Qecrg       )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer charge density [fC/kg]
+    real(RP), intent(out) :: Qecrg(KA,IA,JA,N_HYD)   ! charge density ratio of each cateory [fC/kg]
+
+    integer :: ihydro, ibin, iq, icateg
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Qecrg(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, nspc
+    do ibin   = 1, nbin
+       iq = nbin*(ihydro-1) + ibin
+
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
+          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
+             icateg = I_HC
+          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
+             icateg = I_HR
+          endif
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
+          icateg = I_HS
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
+          icateg = I_HG
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
+          icateg = I_HH
+       endif
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Qecrg(k,i,j,icateg) = Qecrg(k,i,j,icateg) + QTRC0(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd
+
+  !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &
        KA, IA, JA,  &
        ijkmax,      &
@@ -1946,10 +2015,10 @@ contains
     real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(ijkmax), beta_crg(ijkmax)
     real(RP), intent(inout), optional :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout), optional :: crg_sep(7,ijkmax)
+    real(RP), intent(inout), optional :: crg_sep(nspc,ijkmax)
     !--- local
     integer :: m, n
-    real(RP) :: gcrg_l(nbin,nspc,ijkmax), crg_sep_l(7,ijkmax)
+    real(RP) :: gcrg_l(nbin,nspc,ijkmax), crg_sep_l(nspc,ijkmax)
     real(RP) :: csum(il,ijkmax)
     logical  :: flg_lt_l
     real(RP) :: v0_crg_l, d0_crg_l, tcrglimit_l
@@ -4375,7 +4444,7 @@ contains
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout) :: crg_sep(7,ijkmax)
+    real(RP), intent(inout) :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -4428,7 +4497,7 @@ contains
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout) :: crg_sep(7,ijkmax)
+    real(RP), intent(inout) :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -4478,7 +4547,7 @@ contains
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(out)   :: crg_sep(7,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dtime                  ! Time step interval
 
     integer :: i, j, k, l
@@ -4612,8 +4681,8 @@ contains
                    dgenej = - dgenei
                    gcrg( i,isml,ijk ) = gcrg( i,isml,ijk ) + ( dgenei-drhoi )
                    gcrg( j,ilrg,ijk ) = gcrg( j,ilrg,ijk ) + ( dgenej-drhoj )
-                   crg_sep( isml,ijk ) = crg_sep( isml,ijk ) + ( dgenei-drhoi )
-                   crg_sep( ilrg,ijk ) = crg_sep( ilrg,ijk ) + ( dgenej-drhoj )
+                   crg_sep( isml,ijk ) = crg_sep( isml,ijk ) + dgenei
+                   crg_sep( ilrg,ijk ) = crg_sep( ilrg,ijk ) + dgenej
                 end if
 
                 gprimk = gc( k,irsl,ijk ) + gprime                       ! g'_{k} in page 119 of Suzuki (2004)
@@ -4642,7 +4711,6 @@ contains
                       gcrg( k,irsl,ijk )   = gcrg( k,irsl,ijk ) + drhok * ( gprime-flux )/gprime
                       gcrg( k+1,irsl,ijk ) = gcrg( k+1,irsl,ijk ) + drhok * flux/gprime
                    endif
-                   crg_sep( irsl,ijk ) = crg_sep( irsl,ijk ) + drhok
                 end if
 
              endif

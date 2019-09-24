@@ -173,6 +173,7 @@ contains
 
     ! setup each components
     call ATMOS_DYN_driver_setup
+    call ATMOS_PHY_LT_driver_setup
     call ATMOS_PHY_MP_driver_setup
     call ATMOS_PHY_AE_driver_setup
     call ATMOS_PHY_CH_driver_setup
@@ -181,7 +182,6 @@ contains
     call ATMOS_PHY_TB_driver_setup
     call ATMOS_PHY_BL_driver_setup
     call ATMOS_PHY_CP_driver_setup
-    call ATMOS_PHY_LT_driver_setup
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_setup",*) 'Finish setup of each atmospheric components.'

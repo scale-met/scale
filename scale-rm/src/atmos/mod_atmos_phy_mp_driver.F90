@@ -76,6 +76,9 @@ module mod_atmos_phy_mp_driver
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
+  integer,  private, allocatable :: HIST_hyd_id(:)
+  integer,  private, allocatable :: HIST_crg_id(:)
+
   integer, private, allocatable :: hist_vterm_id(:)
   integer, private              :: hist_nf_rhoh_id
   integer, private              :: hist_nf_dens_id
@@ -228,6 +231,8 @@ contains
        EPS => CONST_EPS
     use scale_time, only: &
        TIME_DTSEC_ATMOS_PHY_MP
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     use scale_atmos_phy_mp_kessler, only: &
        ATMOS_PHY_MP_KESSLER_setup
     use scale_atmos_phy_mp_tomita08, only: &
@@ -263,6 +268,54 @@ contains
        MP_ntmax_sedimentation,  &
        MP_max_term_vel,         &
        MP_cldfrac_thleshold
+
+    character(len=H_SHORT) :: w_name(N_HYD)
+    character(len=H_MID)   :: w_longname(N_HYD)
+    character(len=H_SHORT) :: w_unit(N_HYD)
+    data w_name / 'QC', &
+                  'QR', &
+                  'QI', &
+                  'QS', &
+                  'QG', &
+                  'QH'  /
+    data w_longname / &
+                  'Ratio of Cloud Water mass to total mass', &
+                  'Ratio of Rain Water mass to total mass', &
+                  'Ratio of Ice Water mass to total mass', &
+                  'Ratio of Snow Water mass to total mass', &
+                  'Ratio of Graupel Water mass to total mass', &
+                  'Ratio of Hail Water mass to total mass'  /
+    data w_unit / &
+                  'kg/kg', &
+                  'kg/kg', &
+                  'kg/kg', &
+                  'kg/kg', &
+                  'kg/kg', &
+                  'kg/kg'  /
+
+    character(len=H_SHORT) :: w_crg_name(N_HYD)
+    character(len=H_MID)   :: w_crg_longname(N_HYD)
+    character(len=H_SHORT) :: w_crg_unit(N_HYD)
+    data w_crg_name / 'QCRG_C', &
+                      'QCRG_R', &
+                      'QCRG_I', &
+                      'QCRG_S', &
+                      'QCRG_G', &
+                      'QCRG_H'  /
+    data w_crg_longname / &
+                  'Ratio of charge density of Cloud Water', &
+                  'Ratio of charge density of Rain Water', &
+                  'Ratio of charge density of Ice', &
+                  'Ratio of charge density of Snow', &
+                  'Ratio of charge density of Graupel', &
+                  'Ratio of charge density of Hail'  /
+    data w_crg_unit / &
+                  'fC/kg', &
+                  'fC/kg', &
+                  'fC/kg', &
+                  'fC/kg', &
+                  'fC/kg', &
+                  'fC/kg'  /
 
     real(RP) :: ZERO(KA,IA,JA)
 
@@ -320,6 +373,18 @@ contains
           call ATMOS_PHY_MP_suzuki10_setup( &
                   KA, IA, JA, &
                   flg_lt )
+          allocate( HIST_hyd_id(N_HYD) )
+          do iq = 1, N_HYD
+             call FILE_HISTORY_reg( w_name(iq), w_longname(iq), w_unit(iq), & ! [IN]
+                                    HIST_hyd_id(iq)                         ) ! [OUT]
+          enddo
+          if( flg_lt ) then
+             allocate( HIST_crg_id(N_HYD) )
+             do iq = 1, N_HYD
+                call FILE_HISTORY_reg( w_crg_name(iq), w_crg_longname(iq), w_crg_unit(iq), & ! [IN]
+                                       HIST_crg_id(iq)                                     ) ! [OUT]
+             enddo
+          endif
        end select
 
        ! history putput
@@ -528,7 +593,9 @@ contains
        STATISTICS_checktotal, &
        STATISTICS_total
     use scale_file_history, only: &
-       FILE_HISTORY_in
+       FILE_HISTORY_in, &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     use scale_atmos_hydrometeor, only: &
        LHF,   &
        I_QV,  &
@@ -557,7 +624,9 @@ contains
        ATMOS_PHY_MP_sn14_terminal_velocity
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_tendency, &
-       ATMOS_PHY_MP_suzuki10_terminal_velocity
+       ATMOS_PHY_MP_suzuki10_terminal_velocity, &
+       ATMOS_PHY_MP_suzuki10_qtrc2qhyd, &
+       ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd
     use scale_atmos_phy_lt_sato2019, only: &
        ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
     use scale_file_history, only: &
@@ -650,6 +719,11 @@ contains
     real(RP) :: CP_t, CV_t
 
     real(RP) :: precip   (IA,JA)
+
+    real(RP) :: Qe(KA,IA,JA,N_HYD)
+    logical  :: HIST_sw(N_HYD)
+    real(RP) :: Qecrg(KA,IA,JA,N_HYD)
+    logical  :: HIST_crg_sw(N_HYD)
 
     ! for history output
     real(RP), allocatable :: vterm_hist(:,:,:,:)
@@ -857,7 +931,7 @@ contains
                                                   flg_lt, d0_crg, v0_crg,                 & ! [IN:optional]
                                                   dqcrg(:,:,:), beta_crg(:,:,:),          & ! [IN:optional]
                                                   QTRC(:,:,:,QS_LT:QE_LT),                & ! [IN:optional]
-                                                  Sarea(:,:,:,:),      & ! [OUT:optional]
+                                                  QSPLT_in(:,:,:,:), Sarea(:,:,:,:),      & ! [OUT:optional]
                                                   RHOC_t_MP(:,:,:,QS_LT:QE_LT)            ) ! [OUT:optional]
           else
              call ATMOS_PHY_MP_suzuki10_tendency( KA, KS,  KE, IA, IS, IE, JA, JS, JE, KIJMAX, &
@@ -870,6 +944,36 @@ contains
                                                   RHOE_t(:,:,:),                          & ! [OUT]
                                                   CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
                                                   EVAPORATE(:,:,:)                        ) ! [OUT]
+          endif
+
+          call ATMOS_PHY_MP_suzuki10_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
+                                                QTRC(:,:,:,QS_MP+1:QE_MP),          &  ! [IN]
+                                                Qe(:,:,:,:)                         )  ! [OUT]
+
+          do iq = 1, N_HYD
+             call FILE_HISTORY_query( HIST_hyd_id(iq), HIST_sw(iq) )
+          enddo
+          do iq = 1, N_HYD
+             if( HIST_sw(iq) ) then
+                call FILE_HISTORY_put( HIST_hyd_id(iq), Qe(:,:,:,iq) )
+             endif
+          enddo
+
+          if( flg_lt ) then
+
+             call ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd( KA, KS, KE, IA, IS, IE, JA, JS, JE, &  ! [IN]
+                                                       QTRC(:,:,:,QS_LT:QE_LT),            &  ! [IN]
+                                                       Qecrg(:,:,:,:)                      )  ! [OUT]
+
+             do iq = 1, N_HYD
+                call FILE_HISTORY_query( HIST_crg_id(iq), HIST_crg_sw(iq) )
+             enddo
+             do iq = 1, N_HYD
+                if( HIST_crg_sw(iq) ) then
+                   call FILE_HISTORY_put( HIST_crg_id(iq), Qecrg(:,:,:,iq) )
+                endif
+             enddo
+
           endif
 
        end select
