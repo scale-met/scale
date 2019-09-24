@@ -1298,7 +1298,7 @@ contains
           enddo
 
           Sarea(k,i,j,:) = 0.0_RP
-          countbin = QV+1
+          countbin = 1
           do m = 1, nspc
           do n = 1, nbin
              rhoq_new = Ghyd_ijk(n,m,ijk) * dxmic
