@@ -1298,7 +1298,7 @@ contains
           enddo
 
           Sarea(k,i,j,:) = 0.0_RP
-          countbin = I_QV+1
+          countbin = QV+1
           do m = 1, nspc
           do n = 1, nbin
              rhoq_new = Ghyd_ijk(n,m,ijk) * dxmic
@@ -1589,21 +1589,21 @@ contains
     do ibin   = 1, nbin
        iq = nbin*(ihydro-1) + ibin
 
-       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
           if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
              icateg = I_HC
           elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
              icateg = I_HR
           endif
-       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
           icateg = I_HS
-       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
           icateg = I_HG
        elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
@@ -1658,21 +1658,21 @@ contains
     do ibin   = 1, nbin
        iq = nbin*(ihydro-1) + ibin
 
-       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
           if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
              icateg = I_HC
           elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
              icateg = I_HR
           endif
-       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
           icateg = I_HS
-       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
           icateg = I_HG
        elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
