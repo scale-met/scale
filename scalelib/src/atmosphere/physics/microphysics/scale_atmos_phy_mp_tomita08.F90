@@ -1220,14 +1220,12 @@ contains
              ! [Qgaci] charge separation of cloud ice
              alpha = 5.0_RP * ( 2.0_RP * re_qi / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
              alpha = min( alpha, 10.0_RP )
-             w_qcrg(k,I_Qgaci) = ( 1.0_RP - flg_ecoali ) &
-                               * dens(k) * qi(k) * 1.5_RP * ( 1.0_RP-Egi ) * N0g(k) / ( 2.0_RP * re_qi )**3 &
+             w_qcrg(k,I_Qgaci) = dens(k) * qi(k) * 1.5_RP &
                                * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
                                * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k) &
-                               + flg_ecoali &
-                               * dens(k) * qi(k) * 1.5_RP * Egi * ( 1.0_RP-Ecoal_GI ) / Ecoal_GI * N0g(k) / ( 2.0_RP * re_qi )**3 &
-                               * Cg * GAM_3dg * RLMDg_3dg(k) * rho_fact(k) * rdens_i &
-                               * sign( min( abs(dcrg(k)*alpha),20.0_RP ),dcrg(k)*alpha ) * beta1_crg(k)
+                               * N0g(k) / ( 2.0_RP * re_qi )**3 &
+                               * ( ( 1.0_RP - flg_ecoali ) * ( 1.0_RP-Egi )  &
+                                 + (          flg_ecoali ) * Egi * ( 1.0_RP-Ecoal_GI ) / Ecoal_GI )
              QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgaci) !*dt
              QSPLT_in(k,i,j,2) = QSPLT_in(k,i,j,2) + w_qcrg(k,I_Qgaci) !*dt
           end do
@@ -1264,18 +1262,14 @@ contains
 !             w_qcrg(I_Qgacs) = 0.0_RP
              alpha = 5.0_RP * ( 2.0_RP * re_qs(k) / d0_crg )**2 * ( -Vtg(k) ) / v0_crg
              alpha = min( alpha, 10.0_RP )
-             w_qcrg(k,I_Qgacs) = ( 1.0_RP - flg_ecoals ) &
-                               * 0.25_RP * PI * Rdens(k) * ( 1.0_RP-Egs_mod ) * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
+             w_qcrg(k,I_Qgacs) = 0.25_RP * PI * Rdens(k) &
+                               * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
                                * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
                                * ( GAM_3 * GAM   * w(k,I_RLMDs)**3 * RLMDg  (k) &
                                  + GAM_2 * GAM_2 * w(k,I_RLMDs)**2 * RLMDg_2(k) &
-                                 + GAM_3 * GAM   * w(k,I_RLMDs)    * RLMDg_3(k) ) &
-                               + flg_ecoals &
-                               * 0.25_RP * PI * Rdens(k) * Egs_mod * ( 1.0_RP-Ecoal_GS ) / Ecoal_GS * N0g(k) * N0s(k) * abs(Vtg(k)-Vts(k)) * beta1_crg(k) &
-                               * sign( min( abs(dcrg(k)*alpha),50.0_RP ),dcrg(k)*alpha ) &
-                               * ( GAM_3 * GAM   * w(k,I_RLMDs)**3 * RLMDg  (k) &
-                                 + GAM_2 * GAM_2 * w(k,I_RLMDs)**2 * RLMDg_2(k) &
-                                 + GAM_3 * GAM   * w(k,I_RLMDs)     * RLMDg_3(k) )
+                                 + GAM   * GAM_3 * w(k,I_RLMDs)    * RLMDg_3(k) ) &
+                               * ( ( 1.0_RP - flg_ecoals ) * ( 1.0_RP-Egs_mod ) &
+                                 + (          flg_ecoals ) * Egs_mod * ( 1.0_RP-Ecoal_GS ) / Ecoal_GS )
              QSPLT_in(k,i,j,1) = QSPLT_in(k,i,j,1) - w_qcrg(k,I_Qgacs) !*dt
              QSPLT_in(k,i,j,3) = QSPLT_in(k,i,j,3) + w_qcrg(k,I_Qgacs) !*dt
           end if
