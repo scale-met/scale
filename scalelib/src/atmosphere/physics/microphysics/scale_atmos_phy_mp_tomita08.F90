@@ -1602,7 +1602,7 @@ contains
              w_q(k,I_Pracw  ) = qcrg_c(k) * w(k,I_Pracw  ) / ( qc(k) + EPS*EPS ) * facq(I_QC)
              w_q(k,I_Psmlt  ) = qcrg_s(k) * w(k,I_Psmlt  ) / ( qs(k) + EPS*EPS ) * facq(I_QS)
              w_q(k,I_Pgmlt  ) = qcrg_g(k) * w(k,I_Pgmlt  ) / ( qg(k) + EPS*EPS ) * facq(I_QG)
-             w_q(k,I_Prevp  ) = qcrg_r(k) * w(k,I_Prevp  ) / ( qr(k) + EPS*EPS ) * facq(I_QG)
+             w_q(k,I_Prevp  ) = qcrg_r(k) * w(k,I_Prevp  ) / ( qr(k) + EPS*EPS ) * facq(I_QR)
              w_q(k,I_Piacr_s) = qcrg_r(k) * w(k,I_Piacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
              w_q(k,I_Psacr_s) = qcrg_r(k) * w(k,I_Psacr_s) / ( qr(k) + EPS*EPS ) * facq(I_QR)
              w_q(k,I_Piacr_g) = qcrg_r(k) * w(k,I_Piacr_g) / ( qr(k) + EPS*EPS ) * facq(I_QR)
