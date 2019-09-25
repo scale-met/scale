@@ -4398,13 +4398,13 @@ contains
           do m = ic, ih
              sumice = sumice + gc( n,m,ijk )
              gc( n,m,ijk ) = 0.0_RP
-             gcrg( n,m,ijk ) = 0.0_RP
           enddo
           gc( n,il,ijk ) = gc( n,il,ijk ) + sumice
           if ( flg_lt ) then
              dcrg = 0.0_RP
              do m = ic, ih
                 dcrg = dcrg + gcrg( n,m,ijk )
+                gcrg( n,m,ijk ) = 0.0_RP
              end do
              gcrg( n,il,ijk ) = gcrg( n,il,ijk ) + dcrg
           end if
