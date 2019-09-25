@@ -4279,14 +4279,14 @@ contains
           frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
           frz = min( frz, gc( n,il,ijk ) )
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
-
           if ( flg_lt ) then
              dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
              gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
              gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
           end if
+
+          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+          gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
 
           sumfrz = sumfrz + frz
        enddo
@@ -4295,14 +4295,14 @@ contains
           frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
           frz = min( frz, gc( n,il,ijk) )
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
-
           if ( flg_lt ) then
              dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
              gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
              gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
           end if
+
+          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+          gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
 
           sumfrz = sumfrz + frz
        enddo
