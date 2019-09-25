@@ -976,6 +976,8 @@ contains
 
     if ( present(flg_lt) ) then
        flg_lt_l = flg_lt
+       CRG_SEP_ijk(:,:) = 0.0_RP
+       QSPLT_in(:,:,:,:) = 0.0_RP
     else
        flg_lt_l = .false.
     end if
@@ -2015,7 +2017,7 @@ contains
     real(RP), intent(in), optional :: d0_crg, v0_crg
     real(RP), intent(in), optional :: dqcrg(ijkmax), beta_crg(ijkmax)
     real(RP), intent(inout), optional :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout), optional :: crg_sep(nspc,ijkmax)
+    real(RP), intent(out), optional :: crg_sep(nspc,ijkmax)
     !--- local
     integer :: m, n
     real(RP) :: gcrg_l(nbin,nspc,ijkmax), crg_sep_l(nspc,ijkmax)
@@ -2034,7 +2036,7 @@ contains
       gcrg_l(:,:,:) = gcrg(:,:,:)
       d0_crg_l = d0_crg
       v0_crg_l = v0_crg
-      crg_sep_l(:,:) = crg_sep(:,:)
+      crg_sep_l(:,:) = 0.0_RP
     else
       gcrg_l(:,:,:) = 0.0_RP
       d0_crg_l = 100.E-6_RP
@@ -2086,7 +2088,7 @@ contains
                             temp(:),       & ! [IN]
                             ghyd(:,:,:),   & ! [INOUT]
                             gcrg_l(:,:,:), & ! [INOUT]
-                            crg_sep_l(:,:),& ! [INOUT]
+                            crg_sep_l(:,:),& ! [OUT]
                             dt             ) ! [IN]
 
              if( flg_lt_l ) then
@@ -2177,7 +2179,7 @@ contains
                              temp(:),       & ! [IN]
                              ghyd(:,:,:),   & ! [INOUT]
                              gcrg_l(:,:,:), & ! [INOUT]
-                             crg_sep_l(:,:),& ! [INOUT]
+                             crg_sep_l(:,:),& ! [OUT]
                              dt             ) ! [IN]
 
              if( flg_lt_l ) then
@@ -2231,7 +2233,7 @@ contains
                             temp(:),       & ! [IN]
                             ghyd(:,:,:),   & ! [INOUT]
                             gcrg_l(:,:,:), & ! [INOUT]
-                            crg_sep_l(:,:),& ! [INOUT]
+                            crg_sep_l(:,:),& ! [OUT]
                             dt             ) ! [IN]
 
              if( flg_lt_l ) then
@@ -2321,7 +2323,7 @@ contains
                              temp(:),       & ! [IN]
                              ghyd(:,:,:),   & ! [INOUT]
                              gcrg_l(:,:,:), & ! [INOUT]
-                             crg_sep_l(:,:),& ! [INOUT]
+                             crg_sep_l(:,:),& ! [OUT]
                              dt             ) ! [IN]
 
              if( flg_lt_l ) then
@@ -2332,6 +2334,10 @@ contains
 
        endif
 
+    endif
+
+    if( flg_lt_l ) then
+      gcrg(:,:,:) = gcrg_l(:,:,:)
     endif
 
     return
@@ -4444,7 +4450,7 @@ contains
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout) :: crg_sep(nspc,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -4497,7 +4503,7 @@ contains
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
-    real(RP), intent(inout) :: crg_sep(nspc,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -4669,12 +4675,6 @@ contains
                    alpha = 5.0_RP * ( 2.0_RP*radc( i )/d0_crg )**2 &
                                   * abs( vt(ilrg,j)-vt(isml,i) )/v0_crg  ! alpha in eq. (12) of Mansell et al. (2005)
                    alpha = min( 10.0_RP, alpha )
-!                   if( ck( isml,ilrg,i,j ) /= 0.0_RP ) then
-!                     dgenei = frci / xi / ck( isml,ilrg,i,j ) * omnecoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
-!                            * alpha * flg_noninduct( isml,ilrg ) * dxmic  ! eq. (8) of Mansell et al. (2005)
-!                   else
-!                     dgenei = 0.0_RP
-!                   endif
 
                    dgenei = frci / xi * rcoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
                           * alpha * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
