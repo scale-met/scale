@@ -515,7 +515,7 @@ contains
                         !--- total of positive charge
                         pos_crg = pos_crg + QTRC(k,i,j,n) * positive
                         !--- total of negative charge
-                        neg_crg = neg_crg - QTRC(k,i,j,n) * negative
+                        neg_crg = neg_crg + QTRC(k,i,j,n) * negative
                         !--- Sarea of positively charged hydrometeor
                         Total_Sarea(1) = Total_Sarea(1) + Sarea(k,i,j,n) * positive
                         !--- Sarea of negatively charged hydrometeor
