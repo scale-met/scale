@@ -1489,7 +1489,8 @@ contains
        if ( flg_lt_l ) then
           do k = KS, KE
              facq(I_QC) = 0.5_RP + sign( 0.5_RP, qc(k) - EPS )
-             w_q(k,I_Pimlt) = qcrg_c(k) * w(k,I_Pimlt) / ( qc(k) + EPS*EPS ) * facq(I_QC)
+             facq(I_QI) = 0.5_RP + sign( 0.5_RP, qi(k) - EPS )
+             w_q(k,I_Pimlt) = qcrg_i(k) * w(k,I_Pimlt) / ( qi(k) + EPS*EPS ) * facq(I_QI)
              w_q(k,I_Praut) = qcrg_c(k) * w(k,I_Praut) / ( qc(k) + EPS*EPS ) * facq(I_QC)
              w_q(k,I_Pracw) = qcrg_c(k) * w(k,I_Pracw) / ( qc(k) + EPS*EPS ) * facq(I_QC)
              w_q(k,I_Pihom) = qcrg_c(k) * w(k,I_Pihom) / ( qc(k) + EPS*EPS ) * facq(I_QC)
@@ -1990,7 +1991,7 @@ contains
              rlambda(I_QG) = sqrt(sqrt( DENS0(k,i,j) * max( QTRC0(k,i,j,I_QG),0.0_RP ) / ( Ag * N0g(k) * GAM_1bg ) ))
              Sarea(k,i,j,I_QC-1) = 6.0_RP / ( re_qc*2.0_RP * DWATR ) &
                                  * max( QTRC0(k,i,j,I_QC),0.0_RP ) * DENS0(k,i,j)
-             Sarea(k,i,j,I_QI-1) = 6.0_RP / ( re_qi*2.0_RP * DWATR ) &
+             Sarea(k,i,j,I_QI-1) = 6.0_RP / ( re_qi*2.0_RP * DICE ) &
                                  * max( QTRC0(k,i,j,I_QI),0.0_RP ) * DENS0(k,i,j)
              Sarea(k,i,j,I_QR-1) = PI * N0r(k) * GAM_3 * rlambda(I_QR)**3
              Sarea(k,i,j,I_QS-1) = PI * N0s(k) * GAM_3 * rlambda(I_QS)**3
