@@ -154,10 +154,6 @@ contains
        AF_dcmip
     use mod_grd_conversion, only: &
        grd_gm2rm
-    use mod_runconf, only: &
-       ATMOS_PHY_TYPE
-    use mod_grd_conversion, only: &
-       grd_gm2rm
     implicit none
 
     real(RP) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -263,6 +259,9 @@ contains
       q(:,ADM_kmax+1,l,:) = 0.0_RP
       q(:,ADM_kmin-1,l,:) = 0.0_RP
 
+      !--- sea surface temperature (prescribed)
+      Tsfc(:,ADM_KNONE,l) = tem_sfc(:,l)
+
       !--- surface pressure ( hydrostatic balance )
       pre_srf(:,l) = pre(:,ADM_kmin,l) &
                     + rho(:,ADM_kmin,l) * GRAV * ( z(:,ADM_kmin,l)-z_srf(:,l) )
@@ -277,7 +276,8 @@ contains
 
 
     ! forcing
-    if ( AF_TYPE=='HELD-SUAREZ' ) then
+    select case ( AF_TYPE ) 
+    case ( 'HELD-SUAREZ' )
 
        do l = 1, ADM_lall
           call AF_heldsuarez( ADM_gall_in,  & ! [IN]
@@ -300,10 +300,8 @@ contains
        fw(:,:,:)   = 0.0_RP
        fq(:,:,:,:) = 0.0_RP
        frho(:,:,:) = 0.0_RP
-    endif
 
-    select case( ATMOS_PHY_TYPE )
-    case( 'SIMPLE' )
+    case( 'DCMIP' )
 
        fw (:,:,:)   = 0.0_RP
        frho(:,:,:)  = 0.0_RP
