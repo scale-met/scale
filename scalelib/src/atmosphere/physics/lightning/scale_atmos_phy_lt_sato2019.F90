@@ -554,6 +554,21 @@ contains
          end select
 
 
+         do j = JS, JE
+         do i = IS, IE
+
+            ! calc total charge density
+            do k = KS, KE
+               QCRG(k,i,j) = 0.0_RP
+               do n = 1, QA_LT
+                  QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
+               end do
+               QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
+            enddo
+
+         enddo
+         enddo
+
          !--- Calculate E field
          call ATMOS_PHY_LT_electric_field( KA, KS, KE,                   & ! [IN]
                                            IA, IS, IE,                   & ! [IN]
