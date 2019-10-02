@@ -655,9 +655,27 @@ contains
                                        flg_lt_neut             )   ! [OUT]
 
          if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
-           flg_lt_neut = 0
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7)')  &
+                   'Eabs value after neutralization is same as previous value, Finish'
+            endif
+         elseif( flg_lt_neut == 1 .and. Emax /= Emax_old ) then
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
+                   Emax*1.E-3_RP, '[kV/m] After neutralization, again'
+            endif
          elseif( flg_lt_neut == 2 ) then
-           flg_lt_neut = 0
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
+                   Emax*1.E-3_RP, '[kV/m] After neutralization, Finish' 
+            endif
+         elseif( flg_lt_neut == 0 ) then
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
+                   Emax*1.E-3_RP, '[kV/m] After neutralization, Finish'
+            endif
          endif
 
        enddo
@@ -2216,7 +2234,7 @@ contains
     real(RP), parameter :: q_thre = 0.1_RP ! threshold of discharge zone (Fierro et al. 2013) [nC/m3]
 
     real(RP) :: B(IA,JA)   !--- B in Fierro et al. 2013
-    integer  :: C          !--- flg for cylinder (in cylinder -> C=1)
+    integer  :: C(IA,JA)   !--- flg for cylinder (in cylinder -> C=1)
     real(RP) :: Q_d, Fpls, Fmns
     real(RP) :: Spls, Smns
     real(RP) :: Spls_g, Smns_g
@@ -2302,25 +2320,28 @@ contains
                          E_exce_y_g, count1, countindx, COMM_datatype, &
                          COMM_world, ierr )
 
+    C(:,:) = 0
+    do ipp = 1, num_total
+       do j = JS, JE
+       do i = IS, IE
+          distance = sqrt( ( CX(i)-E_exce_x_g(ipp) )**2 &
+                         + ( CY(j)-E_exce_y_g(ipp) )**2 )
+          if( distance <= R_neut ) then
+             C(i,j) = 1
+          endif
+       enddo
+       enddo
+    enddo
 
     Spls = 0.0_RP
     Smns = 0.0_RP
     !$omp parallel do reduction(+:Spls,Smns) &
-    !$omp private(C,abs_qcrg_max,sw)
+    !$omp private(abs_qcrg_max,sw)
     do j = JS, JE
     do i = IS, IE
-       do ipp = 1, num_total
-
-          distance = sqrt( ( CX(i)-E_exce_x_g(ipp) )**2 &
-                         + ( CY(j)-E_exce_y_g(ipp) )**2 )
-          if ( distance <= R_neut ) then
-             C = 1
-             exit
-          end if
-       enddo
 
        B(i,j) = 0.0_RP
-       if ( C == 1 ) then
+       if ( C(i,j) == 1 ) then
           abs_qcrg_max = abs( QCRG(KS,i,j) )
           do k = KS+1, KE
              abs_qcrg_max = max( abs_qcrg_max, abs( QCRG(k,i,j) ) )
@@ -2339,11 +2360,14 @@ contains
     enddo
 
     rbuf1(1) = Spls
-    rbuf1(2) = Smns
     call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
                         MPI_SUM, COMM_world, ierr       )
     Spls_g = rbuf2(1)
-    Smns_g = rbuf2(2)
+
+    rbuf1(1) = Smns
+    call MPI_Allreduce( rbuf1, rbuf2, 1, COMM_datatype, &
+                        MPI_SUM, COMM_world, ierr       )
+    Smns_g = rbuf2(1)
 
     if( max( Spls_g,Smns_g )*0.3_RP < min( Spls_g,Smns_g ) ) then
       Q_d = 0.3_RP * max( Spls_g,Smns_g )
