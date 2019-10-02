@@ -1643,7 +1643,7 @@ contains
              j = Eovid(2,grid_initpoint)
              k = Eovid(3,grid_initpoint)
              L_path(k,i,j) = pm
-             fls_int_p(k,i,j) = fls_int_p(k,i,j) + 1.0_RP
+             if( iq == 1 ) fls_int_p(k,i,j) = fls_int_p(k,i,j) + 1.0_RP
              sign_flash = 2 + int( sign( 1.0_RP, QCRG(k,i,j) ) )
           else
              i = 0
