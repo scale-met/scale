@@ -49,7 +49,7 @@ module scale_atmos_phy_lt_sato2019
   integer,  private                 :: ITMAX = 3000
   real(RP), private                 :: epsilon = 0.1_RP ** (RP*2)
   character(len=64),private         :: NUTR_TYPE='F2013'
-  character(len=64),private,save    :: NUTR_qhyd='TOTAL'
+  character(len=64),private,save    :: NUTR_qhyd='Each_POLARITY'
   integer,  private                 :: MAX_NUTR = 100
   real(RP), private                 :: Eint = 150.0E+3_RP     ! [V/m]
   real(RP), private                 :: delEint = 10.0E+3_RP   ! [V/m]
