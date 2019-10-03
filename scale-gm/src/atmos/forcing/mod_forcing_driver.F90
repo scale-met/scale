@@ -154,10 +154,6 @@ contains
        AF_dcmip
     use mod_grd_conversion, only: &
        grd_gm2rm
-    use mod_runconf, only: &
-       ATMOS_PHY_TYPE
-    use mod_grd_conversion, only: &
-       grd_gm2rm
     implicit none
 
     real(RP) :: rhog  (ADM_gall_in,ADM_kall,ADM_lall)
@@ -213,10 +209,26 @@ contains
 
     character(len=H_SHORT) :: varname
 
-    integer :: i, j, k, l, nq, k0, ij, ij2
+    integer :: i, j, k, l, nq, ij, ij2
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('__Forcing',1)
+
+    call VMTR_getin_PHI    ( phi     )
+    call GTL_clip_region(GRD_vz(:,:,:,GRD_Z) ,z      ,1,ADM_kall)
+    call GTL_clip_region(GRD_vz(:,:,:,GRD_ZH),zh     ,1,ADM_kall)
+
+    call GTL_clip_region_1layer(GRD_zs(:,ADM_KNONE,:,GRD_ZSFC),z_srf)
+    call GTL_clip_region_1layer(GRD_s (:,ADM_KNONE,:,I_LAT) ,lat  )
+    call GTL_clip_region_1layer(GRD_s (:,ADM_KNONE,:,I_LON) ,lon  )
+
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_IX),ix)
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_IY),iy)
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_IZ),iz)
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_JX),jx)
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_JY),jy)
+    call GTL_clip_region_1layer(GMTR_p(:,ADM_KNONE,:,GMTR_p_JZ),jz)
+
 
     call prgvar_get_in_withdiag( &
        rhog(:,:,:),                                               & ! [OUT]
@@ -226,8 +238,46 @@ contains
        vx(:,:,:), vy(:,:,:), vz(:,:,:), w(:,:,:),                 & ! [OUT]
        q(:,:,:,:)                                                 ) ! [OUT]
 
+
+    ein(:,:,:) = rhoge(:,:,:) / rhog(:,:,:)
+
+    !--- boundary condition
+    do l = 1, ADM_lall
+      call BNDCND_thermo( ADM_gall_in, & ! [IN]
+                          rho(:,:,l),  & ! [INOUT]
+                          pre(:,:,l),  & ! [INOUT]
+                          tem(:,:,l),  & ! [INOUT]
+                          phi(:,:,l)   ) ! [IN]
+
+      vx(:,ADM_kmax+1,l) = vx(:,ADM_kmax,l)
+      vy(:,ADM_kmax+1,l) = vy(:,ADM_kmax,l)
+      vz(:,ADM_kmax+1,l) = vz(:,ADM_kmax,l)
+      vx(:,ADM_kmin-1,l) = vx(:,ADM_kmin,l)
+      vy(:,ADM_kmin-1,l) = vy(:,ADM_kmin,l)
+      vz(:,ADM_kmin-1,l) = vz(:,ADM_kmin,l)
+
+      q(:,ADM_kmax+1,l,:) = 0.0_RP
+      q(:,ADM_kmin-1,l,:) = 0.0_RP
+
+      !--- sea surface temperature (prescribed)
+      Tsfc(:,ADM_KNONE,l) = tem_sfc(:,l)
+
+      !--- surface pressure ( hydrostatic balance )
+      pre_srf(:,l) = pre(:,ADM_kmin,l) &
+                    + rho(:,ADM_kmin,l) * GRAV * ( z(:,ADM_kmin,l)-z_srf(:,l) )
+    enddo
+
+    ! tentative negative fixer
+    if ( NEGATIVE_FIXER ) then
+      do nq = 1, QA
+          q(:,:,:,nq) = max( q(:,:,:,nq), 0.0_RP )
+      enddo
+    endif
+
+
     ! forcing
-    if ( AF_TYPE=='HELD-SUAREZ' ) then
+    select case ( AF_TYPE ) 
+    case ( 'HELD-SUAREZ' )
 
        do l = 1, ADM_lall
           call AF_heldsuarez( ADM_gall_in,  & ! [IN]
@@ -250,10 +300,8 @@ contains
        fw(:,:,:)   = 0.0_RP
        fq(:,:,:,:) = 0.0_RP
        frho(:,:,:) = 0.0_RP
-    endif
 
-    select case( ATMOS_PHY_TYPE )
-    case( 'SIMPLE' )
+    case( 'DCMIP' )
 
        fw (:,:,:)   = 0.0_RP
        frho(:,:,:)  = 0.0_RP
@@ -273,13 +321,13 @@ contains
                          q      (:,:,l,:), & ! [IN]
                          ein    (:,:,l),   & ! [IN]
                          pre_srf(:,l),     & ! [IN]
-                         Tsfc   (:,k0,l),  & ! [IN]
+                         Tsfc   (:,ADM_KNONE,l),  & ! [IN]
                          fvx    (:,:,l),   & ! [OUT]
                          fvy    (:,:,l),   & ! [OUT]
                          fvz    (:,:,l),   & ! [OUT]
                          fe     (:,:,l),   & ! [OUT]
                          fq     (:,:,l,:), & ! [OUT]
-                         precip (:,k0,l),  & ! [OUT]
+                         precip (:,ADM_KNONE,l),  & ! [OUT]
                          ix     (:,l),     & ! [IN]
                          iy     (:,l),     & ! [IN]
                          iz     (:,l),     & ! [IN]
