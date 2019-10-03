@@ -57,7 +57,7 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private                 :: qrho_chan = 0.5_RP     ! [nC/m3]
   real(RP), private                 :: qrho_neut = 0.5_RP     ! [nC/m3]
   real(RP), private                 :: fp = 0.3_RP            ! [-]
-  real(RP), private                 :: zcg = 500.0_RP         ! [m]
+  real(RP), private                 :: zcg = 0.0_RP           ! lowest grid point of lightning path for MG2001 [m]
   integer,  private                 :: NUTR_ITMAX = 1000
   integer,  private                 :: KIJMAXG
   character(len=H_LONG)             :: ATMOS_PHY_LT_LUT_FILENAME !--- LUT file name
@@ -153,6 +153,8 @@ contains
        PRC_myrank
     use scale_comm_cartesC, only: &
        COMM_bcast
+    use scale_atmos_grid_cartesC, only: &
+       CZ   => ATMOS_GRID_CARTESC_CZ
     use scale_const, only: &
        T00 => CONST_TEM00
     use scale_file_history, only: &
@@ -202,6 +204,11 @@ contains
        call PRC_abort
     endif
     LOG_NML(PARAM_ATMOS_PHY_LT_SATO2019)
+
+    !--- If zcg is lower than lowest grid point, zcg set lowest grid point
+    if( zcg <= CZ(KS) ) then
+       zcg = CZ(KS)
+    endif
 
     if( R_neut <= minval( CDX,1 ) .or. R_neut <= minval( CDY,1 ) ) then
         R_neut = 2.d0 * min( minval( CDX,1 ), minval( CDY,1 ) )
@@ -340,6 +347,7 @@ contains
     integer  :: flg_lt_neut
     integer  :: i, j, k, m, n, countbin, ip
     real(RP) :: sw, zerosw, positive, negative
+    integer  :: count_neut
 
     logical  :: HIST_sw(w_nmax)
     real(RP) :: w3d(KA,IA,JA)
@@ -407,6 +415,7 @@ contains
               Emax*1.E-3_RP, '[kV/m] Charge Neutralization is calculated'
        endif
 
+       count_neut = 0
        do while( flg_lt_neut > 0 )
 
          Emax_old = Emax
@@ -654,11 +663,19 @@ contains
                                        Emax,                   &   ! [OUT]
                                        flg_lt_neut             )   ! [OUT]
 
+         count_neut = count_neut + 1
+
          if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
                LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7)')  &
                    'Eabs value after neutralization is same as previous value, Finish'
+            endif
+         elseif( flg_lt_neut == 1 .and. count_neut == MAX_NUTR ) then
+            flg_lt_neut = 0
+            if( PRC_IsMaster ) then
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
+                   Emax*1.E-3_RP, '[kV/m], reach maximum neutralization count, Finish'
             endif
          elseif( flg_lt_neut == 1 .and. Emax /= Emax_old ) then
             if( PRC_IsMaster ) then
@@ -2014,17 +2031,6 @@ contains
 
     if ( count_path > NUTR_ITMAX ) then
        LOG_INFO("ATMOS_PHY_LT_Efield",*) "Reach limit iteration for searching flash path", count_path, Npls, Nmns, current_prc
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          d_QCRG(k,i,j) = 0.0_RP
-          L_path(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
-
-       return
     endif
 
     if( corr_flag(1) == 1 .and. corr_flag(2) == 1 ) then
