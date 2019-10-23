@@ -949,7 +949,7 @@ contains
        fmm_stable = - 0.5_DP * ( a + b * c + d ) * R
     else
        fmm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
     ! apply exp limiter
                     * exp( -min( d*R, 1.E+3_DP ) ) &
 #else
@@ -1022,7 +1022,7 @@ contains
        fhm_stable = - 0.5_DP * ( a + b*c + b ) * R
     else
        fhm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
-#if defined(__PGI) || defined(__ES2)
+#if defined(PGI) || defined(SX)
                     * exp( -min( d*R, 1.E+3_DP) ) &
 #else
                     * exp( -d*R ) &
