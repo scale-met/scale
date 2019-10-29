@@ -30,6 +30,8 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE)                                               
                -Wconversion-extra                                                                   \
                -g -fbacktrace
 
+F77FLAGS = -ffixed-form -ffixed-line-length-132
+
 
 
 ##### C setting
