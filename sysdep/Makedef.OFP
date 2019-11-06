@@ -60,8 +60,11 @@ LDFLAGS = $(FFLAGS)
 ################################################################################
 
 ###### NetCDF library
-SCALE_NETCDF_INCLUDE ?= -I/work/opt/local/apps/intel/2017.1.132/netcdf-fortran/4.4.3/include -I/work/opt/local/apps/intel/2017.1.132/hdf5/1.8.17/include -I/work/opt/local/apps/intel/2017.1.132/netcdf/4.4.1/include
-SCALE_NETCDF_LIBS    ?= -L/work/opt/local/apps/intel/2017.1.132/netcdf-fortran/4.4.3/lib -lnetcdff -L/work/opt/local/apps/intel/2017.1.132/hdf5/1.8.17/lib -L/work/opt/local/apps/intel/2017.1.132/netcdf/4.4.1/lib -lnetcdf -lhdf5_hl -lhdf5 -lnetcdf -lz
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/work/opt/local/apps/intel/2017.1.132/netcdf-fortran/4.4.3/include -I/work/opt/local/apps/intel/2017.1.132/hdf5/1.8.17/include -I/work/opt/local/apps/intel/2017.1.132/netcdf/4.4.1/include"
+# export SCALE_NETCDF_LIBS="-L/work/opt/local/apps/intel/2017.1.132/netcdf-fortran/4.4.3/lib -lnetcdff -L/work/opt/local/apps/intel/2017.1.132/hdf5/1.8.17/lib -L/work/opt/local/apps/intel/2017.1.132/netcdf/4.4.1/lib -lnetcdf -lhdf5_hl -lhdf5 -lnetcdf -lz"
 
 ###### Math library
 SCALE_MATHLIB_LIBS   ?= -mkl=sequential
