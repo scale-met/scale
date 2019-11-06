@@ -128,7 +128,7 @@ URBAN_DYN_TYPE=( "KUSAKA01" ) # required parameters for each domain
 #################################################
 
 HIST_ITEMS_SNAPSHOT_2D=(
-  "MSLP" "U10" "V10" "T2" "Q2"
+  "MSLP" "U10m" "V10m" "U10" "V10" "T2" "Q2"
   "PREC" "OLR" "SFC_PRES" "SFC_TEMP"
   "OCEAN_SFC_TEMP" "LAND_SFC_TEMP" "URBAN_SFC_TEMP"
   "OCEAN_SFC_ALB_IR_dir"  "OCEAN_SFC_ALB_IR_dif"
@@ -142,7 +142,7 @@ HIST_ITEMS_SNAPSHOT_2D=(
 HIST_ITEMS_SNAPSHOT_3D=(
   "DENS" "MOMZ" "MOMX" "MOMY" "RHOT"
   "QV" "QC" "QR" "QI" "QS" "QG" "QHYD"
-  "PRES" "U" "V" "T" "W" "Uabs" "PT" "RH"
+  "PRES" "Umet" "Vmet" "U" "V" "T" "W" "Uabs" "PT" "RH"
 )
 HIST_ITEMS_AVERAGE_2D=(
 )
