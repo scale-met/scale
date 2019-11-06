@@ -374,6 +374,7 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
     real(RP) :: phi_N(KA)
+    real(RP) :: dummy(KA)
     real(RP) :: tke_P
 
     real(RP) :: sf_t
@@ -410,7 +411,7 @@ contains
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
     !$omp         Q1,Qsl,dQsl,dtldz,dqwdz,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
-    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1, &
+    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1,dummy, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
     !$omp         k,i,j)
     do j = JS, JE
@@ -657,8 +658,10 @@ contains
        call MATRIX_SOLVER_tridiagonal( &
             KA, KS, KE_PBL, &
             a(:), b(:), c(:), d(:), & ! (in)
-            phi_n(:)                ) ! (out)
+            dummy(:)                ) ! (out)
+!            phi_n(:)                ) ! (out)
 
+       phi_n(:) = dummy(:)
        RHOU_t(KS,i,j) = ( phi_n(KS) - U(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
           RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * DENS(k,i,j) / dt
