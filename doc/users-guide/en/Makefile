@@ -15,7 +15,7 @@ BIBTEX   = bibtex
 HTMLBIN  = pandoc --to=html
 CURL     = curl -f -s -S --create-dirs
 IMAGE_URL = http://scale.aics.riken.jp/doc/ug_figures
-IMAGE_PATH = $(IMAGE_URL)/$(VERSION)$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release),-devel)
+IMAGE_PATH = $(IMAGE_URL)/$(VERSION)$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release|grep -v hotfix),-devel)
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
