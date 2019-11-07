@@ -1,67 +1,79 @@
 \section{\SecMakeconfTool} \label{sec:basic_makeconf}
 %------------------------------------------------------
 
-現在、実験のための設定ファイル\verb|***.conf|は\verb|pp, init, run|用に
-それぞれ用意することになっているが、本章で説明した通り、
-3つの設定ファイルで共通するネームリストが、不一致である場合モデルが動かない。
-設定ミスを防ぎ、簡易に設定ファイルを用意するためのサポートツールが
-下記に用意されている。
-\begin{alltt}
+実験のための設定ファイル\verb|***.conf|は、
+\verb|pp, init, run|用にそれぞれ用意する必要がある。
+ネームリストのいくつかの項目はこれらの設定ファイル間で共通でなければならず、
+不整合がある場合にはモデルは適切に動かない。
+そのような失敗を避けるために、設定ファイルの準備を行うための便利な補助ツール(\makeconftool)を、下記のように用意している。
+\begin{verbatim}
  $ cd ${Tutorial_DIR}/real/
  $ ls
-    Makefile : 実験セット一式作成のためのMakeファイル
-    README   : 実験セット一式作成ツールに関するREADME
-    USER.sh  : 実験設定の指定
-    config/  : 実験セット一式作成つーつのためのファイル(ユーザは基本書き換えない)
-    sample   : USER.sh のサンプルスクリプト
-\end{alltt}
-これは、初期設定として現実大気実験のチュートリアルに合わせた設定となっているが、
-ユーザが任意の設定に変更することが可能な仕組みとなっている。
-本章で説明した箇所の多くを\verb|USER.sh|で設定できるようになっている。
+    Makefile
+      : 実験に必要なファイルを生成するためのMakefile
+    README
+      : README ファイル
+    USER.sh
+      : 設定を指定するためのシェルスクリプト
+    config/
+      : 各々の設定に対する設定ファイル (ユーザは書き換える必要はない)
+    sample
+      : USER.sh のサンプルスクリプト
+    data
+      : 現実大気実験のチュートリアル用のファイル
+    tools
+      : 現実大気実験のチュートリアル用のファイル。FNL データを grib 形式からバイナリ形式に変換するときに使われる。
+\end{verbatim}
+本ツールの初期設定は現実大気実験のチュートリアルに合わせているが、
+ユーザーは\verb|USER.sh|で設定を変更できる。
 
-また、\verb|sample/| 以下に、いくつかの実験設定を想定した
-サンプルスクリプトが用意されている。
-必要に応じて、\verb|USER.sh|にコピーの上、使用していただきたい。
-\begin{alltt}
+\verb|sample/| ディレクトリの下に、いくつかのサンプルスクリプトを典型的な設定例として用意している。
+必要に応じて、これらの内容を\verb|USER.sh|にコピーして使用すると良いだろう。
+\begin{verbatim}
  $ ls sample/
-   USER.default.sh                 : USER.shと同じ。チュートリアル実大気実験用。(シングルドメイン用)
-   USER.offline-nesting-child.sh   : オフラインネスティングの子領域用。
-   USER.offline-nesting-parent.sh  : オフラインネスティングの親領域用。
-   USER.online-nesting.sh          : オンラインネスティング用。
-\end{alltt}
+   USER.default.sh
+     : 現実大気実験のチュートリアル用の USER.sh と同じ(シングルドメイン用)。
+   USER.offline-nesting-child.sh
+     : オフライン・ネスティングによる実験の子領域用。
+   USER.offline-nesting-parent.sh
+     : オフライン・ネスティングによる実験の親領域用。
+   USER.online-nesting.sh
+     : オンライン・ネスティング用。
+\end{verbatim}
 
 
 \subsubsection{ツールの使い方}
 
 使い方はREADMEに書かれているように、以下の通りである。
 \begin{enumerate}
-  \item ユーザが希望する任意の実験設定に従って、\verb|USER.sh|を編集する。
+  \item ユーザが希望する実験設定に従って、\verb|USER.sh|を編集する。
   \item \verb|make|コマンドを実行する。
-  \item 実験に必要な設定ファイル一式が\verb|experiment|ディレクトリ以下に作成される。
 \end{enumerate}
+これにより、\verb|experiment|ディレクトリ以下に実験に必要な設定ファイル一式が作成される。
 
-現在は、\verb|tutorial|の設定になっているので、
-実際には以下のようにチュートリアル設定を残しておくことを勧める。
+\verb|USER.sh|の設定は現実大気のチュートリアルに対する設定になっているので、
+以下のようにチュートリアル設定を別ファイルとして残しておくことを勧める。
 \begin{verbatim}
- $ mv experiment/ tutorial/    : (すでにexperimentディレクトリがある場合)
+ $ mv experiment/ tutorial/
+     : (既にexperimentディレクトリがある場合)
  $ cp USER.sh USER_tutorial.sh
  ... USER.shを編集 ...
  $ make
- $ cp -rL experiment 任意の場所/ : SCALEのソースがあるディレクトリ以外の場所も可
+ $ cp -rL experiment 任意の場所/
+     : 「任意の場所」は、任意の場所にあるディレクトリの名前を意味する。
 \end{verbatim}
 
 
 \subsubsection{\texttt{USER.sh}の編集}
 
-まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
-\verb|USER.sh| に上書きコピーする。
-スクリプトの中を見ると、まず、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
-その下には、設定ファイルのネームリストで設定する項目が並んでいるので、
-それぞれの項目の設定を書き込んでいけば良い。
-\verb|"# required parameters for each domain"| というコメントがあるところには
-ドメインの数だけ設定変数をスペースで区切って用意する。
-この時、\verb|NUM_DOMAIN|で設定したネスティングドメインの数と変数の数が不一致だと
-メッセージが出力され、実験セットが作成されずに終了してしまうので必ず一致させること。
-\verb|USER.sh|にない項目については、デフォルトの設定で出力されるので
-\verb|experiment|ディレクトリ以下に作成された設定ファイルを直接変更すればよい。
-
+%まず、サンプルプログラムの中、最も想定する実験設定に近いスクリプトを
+%\verb|USER.sh| に上書きコピーする。
+スクリプトファイルの最初の方に、ドメインの数を指定する\verb|NUM_DOMAIN|がある。
+その下には、スクリプトが生成する設定ファイルに指定される項目が並んでいて、
+これらの項目を適切に変更すると良いだろう。
+項目の後に「\verb|# required parameters for each domain|」というコメントが存在する場合には、
+項目の値をドメインの数だけスペースで区切って書く。
+項目の値の数と\verb|NUM_DOMAIN|で設定したネスティングドメインの数が異なれば、
+実験用のファイル一式が作成されないことに注意が必要である。
+\verb|USER.sh|にない項目については、\verb|experiment|ディレクトリ以下に作成された設定ファイルを
+直接編集されたい。

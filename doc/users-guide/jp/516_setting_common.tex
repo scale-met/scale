@@ -1,0 +1,131 @@
+%\section{Setting the common components} \label{sec:common}
+%------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\section{物理定数} \label{subsec:const}
+%-------------------------------------------------------------------------------
+
+いくつかの物理定数の値は、設定ファイルの\namelist{PARAM_CONST}で変更できる。
+
+\editboxtwo{
+\verb|&PARAM_CONST                           | & \\
+\verb| CONST_RADIUS            = 6.37122D+6, | & ; 惑星半径 [m] \\
+\verb| CONST_OHM               = 7.2920D-5,  | & ; 惑星の自転角速度 [1/s] \\
+\verb| CONST_GRAV              = 9.80665D0,  | & ; 標準重力加速度 [m/s2] \\
+\verb| CONST_Rdry              = 287.04D0,   | & ; 気体定数(乾燥空気)  [J/kg/K] \\
+\verb| CONST_CPdry             = 1004.64D0,  | & ; 定圧比熱(乾燥空気) [J/kg/K] \\
+\verb| CONST_LAPS              = 6.5D-3,     | & ; 国際標準大気の温度減率  [K/m] \\
+\verb| CONST_Pstd              = 101325.D0,  | & ; 標準圧力 [Pa] ]\\
+\verb| CONST_PRE00             = 100000.D0,  | & ; 圧力の参照値 [Pa] \\
+\verb| CONST_Tstd              = 288.15D0,   | & ; 標準温度 (15$^\circ$C) [K] \\
+\verb| CONST_THERMODYN_TYPE    = 'EXACT',    | & ; 内部エネルギーの定式化の種類  \\
+\verb| CONST_SmallPlanetFactor = 1.D0,       | & ; 小さな惑星設定に対するファクタ [1] \\
+\verb|/                                      | & \\
+}
+
+\noindent
+
+\nmitem{CONST_THERMODYN_TYPE}が'EXACT'の場合は、潜熱の温度依存性を考慮する。
+%
+\nmitem{CONST_THERMODYN_TYPE}が'SIMPLE'の場合は、水物質の各カテゴリーの比熱を乾燥空気の定積比熱に設定し、
+潜熱の温度依存性は無視する。
+%
+\nmitem{CONST_RADIUS} には\nmitem{CONST_SmallPlanetFactor}が掛けられる.
+同時に、\nmitem{CONST_OHM}には\nmitem{CONST_SmallPlanetFactor}の逆数が掛けられる.
+
+
+%-------------------------------------------------------------------------------
+\section{暦} \label{subsec:calendar}
+%-------------------------------------------------------------------------------
+
+暦の種類は、設定ファイルの\namelist{PARAM_CALENDAR}で指定できる。
+デフォルトでは、グレゴリオ暦を用いる。
+
+\editboxtwo{
+\verb|&PARAM_CALENDAR             | & \\
+\verb| CALENDAR_360DAYS = .false. | & ; 12x30 days の暦を用いるか? \\
+\verb| CALENDAR_365DAYS = .false. | & ; うるう年を考慮するか? \\
+\verb|/                           | & \\
+}
+
+\noindent
+暦の設定は太陽天頂角の計算に影響を及ぼし、一年の長さと黄道の一周が一致するように計算される。
+異なる暦を使用している外部データは、読み込むべきでないことに注意されたい。
+
+\nmitem{CALENDAR_360DAYS}を\verb|.true.|とした場合は、1年が12ヶ月、１ヶ月が30日ある暦を設定する。
+\nmitem{CALENDAR_365DAYS}を\verb|.true.|とした場合は、うるう年の無いグレゴリオ暦を用いる。
+
+
+%-------------------------------------------------------------------------------
+\section{乱数生成} \label{subsec:random}
+%-------------------------------------------------------------------------------
+
+乱数生成のパラメータは設定ファイルの\namelist{PARAM_RANDOM}で設定する。
+
+\editboxtwo{
+\verb|&PARAM_RANDOM         | & \\
+\verb| RANDOM_FIX = .false. | & ; 乱数のシードを固定するか? \\
+\verb|/                     | & \\
+}
+
+\noindent
+\scalelib では、乱数生成のための組み込み関数を用いる。
+生成される乱数は擬似乱数であることに注意が必要である。
+乱数のシードは、現在の日時、cpu 時間、プロセス ID によって決定される。
+%
+\nmitem{RANDOM_FIX}を\verb|.true.|とした場合は, シードを特定の数字に固定する。
+このオプションは、初期場としてランダムな擾乱を用いるシミュレーションの結果を再現するときに便利である。
+
+
+%-------------------------------------------------------------------------------
+\section{パフォーマンスの測定} \label{subsec:prof}
+%-------------------------------------------------------------------------------
+
+パフォーマンス測定のためのパラメータは、設定ファイルの\namelist{PARAM_PROF}で与える。
+
+\editboxtwo{
+\verb|&PARAM_PROF                 | & \\
+\verb| PROF_rap_level   = 2       | & ; ラップを測定するレベル \\
+\verb| PROF_mpi_barrier = .false. | & ; ラップ毎に MPI のバリア命令を追加するか? \\
+\verb|/                           | & \\
+}
+
+\noindent
+経過時間を測定するために、ソースコードにはユーティリティ関数(PROF\_rapstart,PROF\_rapend)が埋め込まれている。
+これらの測定区間は、詳細なパフォーマンス測定のためにも用いられる。
+%
+ラップ時間の結果は、ログファイルの終わりに表示される。
+\namelist{PARAM_IO}の\nmitem{IO_LOG_ALLNODE}を\verb|.true.|とした場合は、
+各プロセスの結果が個々のログファイルに報告される。
+\namelist{PARAM_IO}の\nmitem{IO_LOG_SUPPRESS}が\verb|.true.|とした場合は、
+結果は標準出力に送られる。
+%
+それぞれの測定区間は、出力に関するレベルを持つ。
+\nmitem{PROF_rap_level}よりも大きな出力のレベルを持つ区間は、経過時間が測定されない。
+
+\nmitem{PROF_mpi_barrier}を\verb|.true.|とした場合は、
+現在時刻を取得する前後で MPI のバリア命令が呼ばれる。
+このオプションは計算時間と通信時間を分離するために役立つ。
+計算時間はしばしばプロセス間の大きな不均衡を明らかにする。
+
+
+%-------------------------------------------------------------------------------
+\section{統計量のモニター} \label{subsec:statistics}
+%-------------------------------------------------------------------------------
+
+統計量モニターに関するパラメータは、設定ファイルの\namelist{PARAM_STATISTICS}で与える。
+
+\editboxtwo{
+\verb|&PARAM_STATISTICS                    | & \\
+\verb| STATISTICS_checktotal     = .false. | & ; 変数の合計量を計算し、ログファイルへ出力するか? \\
+\verb| STATISTICS_use_globalcomm = .false. | & ; 全通信を用いて全量を計算するか? \\
+\verb|/                                    | & \\
+}
+
+\noindent
+\nmitem{STATISTICS_checktotal}を\verb|.true.|とした場合は、デバッグのために、
+いくつかの変数の領域内の合計量を計算して、ログファイルに出力する。
+%
+\nmitem{STATISTICS_use_globalcomm}を\verb|.true.|とした場合は、全通信を用いて領域全体の合計量が計算される。
+ただし、これはシミュレーション時間を長くする可能性がある。
+このオプションを\verb|.false.|とした場合は、各プロセスに割り当てられた空間領域内での合計量が計算される。
