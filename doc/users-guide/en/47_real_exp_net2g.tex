@@ -15,7 +15,7 @@ First, move to the directory \verb|net2g|:
     net2g.2D.d01.conf
     net2g.3D.d01.conf
 \end{verbatim}
-There are some configuration files and a binary file in this directory.  The binary file is linked to the executable file compiled in Section \ref{sec:source_net2g}. As an example,  a procedure to convert the 2D variables MSLP and PREC to \grads format is explained here. We also explain how to extract the 3D variables U and V at 850 hPa, 500 hPa, and 200 hPa, and convert them into \grads format.  The configuration files for 2D and 3D variables  are prepared as files \verb|net2g.3D.d01.conf| and \verb|net2g.2D.d01.conf|, respectively. 
+There are some configuration files and a binary file in this directory.  The binary file is linked to the executable file compiled in Section \ref{sec:source_net2g}. As an example,  a procedure to convert the 2D variables MSLP and PREC to \grads format is explained here. We also explain how to extract the 3D variables, zonal wind (Umet) and meridional wind (Vmet), at 850 hPa, 500 hPa, and 200 hPa, and convert them into \grads format.  The configuration files for 2D and 3D variables  are prepared as files \verb|net2g.3D.d01.conf| and \verb|net2g.2D.d01.conf|, respectively.
  
 When \verb|net2g| is executed, the number of processes needs to be a divisor of the number of the processes used for the simulation. 
 The number of processes is four here. Since \verb|net2g| cannot simultaneously convert 2D and 3D variables , they must be converted separately as follows:
@@ -38,12 +38,12 @@ The following files are also found. \verb|**.ctl| represents the ``ctl'' file fo
   PRES_d01z-3d.ctl
   PRES_d01z-3d.grd
   PRES_d01z-3d_lccr.ctl
-  U_d01z-3d.ctl
-  U_d01z-3d.grd
-  U_d01z-3d_lccr.ctl
-  V_d01z-3d.ctl
-  V_d01z-3d.grd
-  V_d01z-3d_lccr.ctl
+  Umet_d01z-3d.ctl
+  Umet_d01z-3d.grd
+  Umet_d01z-3d_lccr.ctl
+  Vmet_d01z-3d.ctl
+  Vmet_d01z-3d.grd
+  Vmet_d01z-3d_lccr.ctl
 \end{verbatim}
 
 

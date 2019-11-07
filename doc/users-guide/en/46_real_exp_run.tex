@@ -66,32 +66,39 @@ The output of the results of the calculation are configured in \nmitem{PARAM_FIL
 \verb|   FILE_HISTORY_OUTPUT_STEP0      = .true.,       | & : output at initial time(t=0) or not \\
 \verb|/| \\
 }
-According to the above setting,  variables listed in the following \nmitem{HISTORY_ITEM} are output.  It is possible to change output intervals at every variable in \nmitem{HISTORY_ITEM} by adding options if needed.  The mean value instead of the snapshot value can be output.  Refer to Section \ref{sec:output} for the details.
+According to the above setting,  variables listed in the following \nmitem{HISTORY_ITEM} are output.
+It is possible to change output intervals at every variable in \nmitem{HISTORY_ITEM} by adding options if needed.
+The mean value instead of the snapshot value can be output.  Refer to Section \ref{sec:output} for the details.
 \editboxtwo{
-\verb|&HISTORY_ITEM NAME="MSLP"     /| & : sea-level pressure \\
-\verb|&HISTORY_ITEM NAME="PREC"     /| & : precipitation intensity (2D) \\
-\verb|&HISTORY_ITEM NAME="OLR"      /| & : outgoing longwave radiation (2D) \\
-\verb|&HISTORY_ITEM NAME="U10"      /| & : horizontal wind speed along X direction at 10 m(2D) \\
-\verb|&HISTORY_ITEM NAME="V10"      /| & : horizontal wind speed along Y direction at 10 m(2D) \\
-\verb|&HISTORY_ITEM NAME="T2"       /| & : temperature at 2m  (2D) \\
-\verb|&HISTORY_ITEM NAME="Q2"       /| & : specific humidity at 2m (2D) \\
-\verb|&HISTORY_ITEM NAME="SFC_PRES" /| & : surface pressure (2D) \\
-\verb|&HISTORY_ITEM NAME="SFC_TEMP" /| & : bulk surface temperature(2D) \\
-\verb|&HISTORY_ITEM NAME="DENS"     /| & : density (3D) \\
-\verb|&HISTORY_ITEM NAME="QV"       /| & : specific humidity (3D) \\
-\verb|&HISTORY_ITEM NAME="QHYD"     /| & : mass concentration of total hydrometeor  (3D) \\
-\verb|&HISTORY_ITEM NAME="PRES"     /| & : pressure (3D) \\
-\verb|&HISTORY_ITEM NAME="U"        /| & : horizontal wind speed along X direction (3D) \\
-\verb|&HISTORY_ITEM NAME="V"        /| & : horizontal wind speed along Y direction (3D) \\
-\verb|&HISTORY_ITEM NAME="T"        /| & : temperature (3D) \\
-\verb|&HISTORY_ITEM NAME="W"        /| & : vertical wind speed (3D) \\
-\verb|&HISTORY_ITEM NAME="Uabs"     /| & : absolute value of wind velocity(3D) \\
-\verb|&HISTORY_ITEM NAME="PT"       /| & : potential temperature (3D) \\
-\verb|&HISTORY_ITEM NAME="RH"       /| & : relative humidity (3D) \\
+\verb|&HISTORY_ITEM NAME="MSLP"     /| & : Sea-level pressure \\
+\verb|&HISTORY_ITEM NAME="PREC"     /| & : Precipitation intensity (2D) \\
+\verb|&HISTORY_ITEM NAME="OLR"      /| & : Outgoing longwave radiation (2D) \\
+\verb|&HISTORY_ITEM NAME="U10m"     /| & : Zonal wind vector at 10 m (2D) \\
+\verb|&HISTORY_ITEM NAME="V10m"     /| & : Meridional wind vector at 10 m (2D) \\
+\verb|&HISTORY_ITEM NAME="U10"      /| & : Horizontal wind speed along X direction at 10 m(2D) \\
+\verb|&HISTORY_ITEM NAME="V10"      /| & : Horizontal wind speed along Y direction at 10 m(2D) \\
+\verb|&HISTORY_ITEM NAME="T2"       /| & : Temperature at 2m  (2D) \\
+\verb|&HISTORY_ITEM NAME="Q2"       /| & : Specific humidity at 2m (2D) \\
+\verb|&HISTORY_ITEM NAME="SFC_PRES" /| & : Surface pressure (2D) \\
+\verb|&HISTORY_ITEM NAME="SFC_TEMP" /| & : Bulk surface temperature(2D) \\
+\verb|&HISTORY_ITEM NAME="DENS"     /| & : Density (3D) \\
+\verb|&HISTORY_ITEM NAME="QV"       /| & : Specific humidity (3D) \\
+\verb|&HISTORY_ITEM NAME="QHYD"     /| & : Mass concentration of total hydrometeor  (3D) \\
+\verb|&HISTORY_ITEM NAME="PRES"     /| & : Pressure (3D) \\
+\verb|&HISTORY_ITEM NAME="Umet"     /| & : Zonal wind vector (3D) \\
+\verb|&HISTORY_ITEM NAME="Vmet"     /| & : Meridional wind vector (3D) \\
+\verb|&HISTORY_ITEM NAME="U"        /| & : Horizontal wind speed along X direction (3D) \\
+\verb|&HISTORY_ITEM NAME="V"        /| & : Horizontal wind speed along Y direction (3D) \\
+\verb|&HISTORY_ITEM NAME="T"        /| & : Temperature (3D) \\
+\verb|&HISTORY_ITEM NAME="W"        /| & : Vertical wind speed (3D) \\
+\verb|&HISTORY_ITEM NAME="Uabs"     /| & : Absolute value of wind velocity(3D) \\
+\verb|&HISTORY_ITEM NAME="PT"       /| & : Potential temperature (3D) \\
+\verb|&HISTORY_ITEM NAME="RH"       /| & : Relative humidity (3D) \\
 }
 
 If other schemes for the dynamics process and the physical processes are used,
-configure \namelist{PARAM_ATMOS_DYN} for the dynamical process  and \namelist{PARAM_ATMOS，PARAM_OCEAN，PARAM_LAND，PARAM_URBAN}  for the physical processes.
+configure \namelist{PARAM_ATMOS_DYN} for the dynamical process and
+\namelist{PARAM_ATMOS, PARAM_OCEAN, PARAM_LAND, PARAM_URBAN} for the physical processes.
 Refer to Sections \ref{sec:atmos_dyn_cartesC} and \ref{sec:basic_usel_physics}  for the details.
 
 
