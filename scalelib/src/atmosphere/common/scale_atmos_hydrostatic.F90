@@ -974,29 +974,28 @@ contains
 
     if ( present(kref) ) then
        kref_ => kref
-    else
-       allocate( kref_(IA,JA) )
+
        !$omp parallel do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
-          kref_(i,j) = KE
-       end do
-       end do
-    end if
-
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
-                                                     pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
-                                                     dz(:,i,j),                         & ! [IN]
-                                                     dens(:,i,j),                       & ! [INOUT]
-                                                     temp(:,i,j), pres(:,i,j)           ) ! [OUT]
-    enddo
-    enddo
-
-    if ( .not. present(kref) ) then
-       deallocate(kref_)
+          call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, kref_(i,j), &
+                                                        pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
+                                                        dz(:,i,j),                         & ! [IN]
+                                                        dens(:,i,j),                       & ! [INOUT]
+                                                        temp(:,i,j), pres(:,i,j)           ) ! [OUT]
+       enddo
+       enddo
+    else
+       !$omp parallel do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          call ATMOS_HYDROSTATIC_buildrho_atmos_rev_1D( KA, KS, KE,                        &
+                                                        pott(:,i,j), qv(:,i,j), qc(:,i,j), & ! [IN]
+                                                        dz(:,i,j),                         & ! [IN]
+                                                        dens(:,i,j),                       & ! [INOUT]
+                                                        temp(:,i,j), pres(:,i,j)           ) ! [OUT]
+       enddo
+       enddo
     end if
 
     return
