@@ -38,15 +38,9 @@ do
    year_dir=`date -u -d "@${usec}" +%Y`
    date_now=`date -u -d "@${usec}" +%Y%m%d%H`
 
-   if [ "${SCALE_SYS}" == "Kmicro" ]; then
-      cp -vf  ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
-      cp -vf  ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
-      cp -vf  ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
-   else
-      ln -svf ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
-      ln -svf ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
-      ln -svf ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
-   fi
+   ln -svf ${indir}/${year_dir}/FNL_ATM_${date_now}.grd ./ATM_${FN}.grd
+   ln -svf ${indir}/${year_dir}/FNL_SFC_${date_now}.grd ./SFC_${FN}.grd
+   ln -svf ${indir}/${year_dir}/FNL_LND_${date_now}.grd ./LND_${FN}.grd
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"
@@ -66,11 +60,7 @@ do
 
    date_now=`date -u -d "@${usec}" +%m`
 
-   if [ "${SCALE_SYS}" == "Kmicro" ]; then
-      cp -vf  ${indir}/rn222_m_1deg-mm${date_now}.p ./CHEM_${FN}.grd
-   else
-      ln -svf ${indir}/rn222_m_1deg-mm${date_now}.p ./CHEM_${FN}.grd
-   fi
+   ln -svf ${indir}/rn222_m_1deg-mm${date_now}.p ./CHEM_${FN}.grd
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"
