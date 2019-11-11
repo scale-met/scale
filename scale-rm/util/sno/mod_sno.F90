@@ -99,26 +99,26 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_file_getinfo( &
-       ismaster,     &
-       basename,     &
-       vars,         &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       nprocs_x_in,  &
-       nprocs_y_in,  &
-       ngrids_z,     &
-       ngrids_x,     &
-       ngrids_y,     &
-       nhalos_z,     &
-       nhalos_x,     &
-       nhalos_y,     &
-       hinfo,        &
-       naxis,        &
-       axisname,     &
-       nvars,        &
-       varname,      &
+       ismaster,        &
+       basename,        &
+       vars,            &
+       nprocs_x_out,    &
+       nprocs_y_out,    &
+       nprocs_x_in,     &
+       nprocs_y_in,     &
+       ngrids_z,        &
+       ngrids_x,        &
+       ngrids_y,        &
+       nhalos_z,        &
+       nhalos_x,        &
+       nhalos_y,        &
+       hinfo,           &
+       naxis,           &
+       axisname,        &
+       nvars,           &
+       varname,         &
        plugin_hgridope, &
-       debug         )
+       debug            )
     use mpi
     use scale_file_h, only: &
        FILE_FREAD
@@ -464,19 +464,17 @@ contains
              axisname(naxis) = varname_file(n)
           endif
        case default
-          if( index( varname_file(n), 'time' ) > 0 ) then
+          if ( index( varname_file(n), 'time' ) > 0 ) then
              ! do nothing
           else
-             ! do nothing
              if ( nvars_req == 0 ) then
-                nvars           = nvars + 1
-                varname (nvars) = varname_file(n)
+                nvars          = nvars + 1
+                varname(nvars) = varname_file(n)
              else
                 do nn = 1, nvars_req
                    if ( varname_file(n) == vars(nn) ) then
                       if ( exist(nn) ) then
-                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), &
-                                                        ' is requested two times. check namelist!'
+                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), ' is requested two times. check namelist!'
                          call PRC_abort
                       endif
 
