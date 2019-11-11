@@ -1,0 +1,77 @@
+################################################################################
+#
+# ------ For Oakbridge-CX -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpiifort
+SFC = ifort
+MODDIROPT = -module
+
+FFLAGS_FAST  = -fpp -m64 -O2 -xHost -ip             \
+               -assume byterecl -convert big_endian \
+               -fp-model source                     \
+               -mcmodel=medium
+
+FFLAGS_AGGRESSIVE = -ipo -no-prec-div -no-heap-arrays
+
+FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -fpp -m64 -O0                        \
+               -assume byterecl -convert big_endian \
+               -fpe0 -fp-model source               \
+               -check all -warn all -g -traceback   \
+               -mcmodel=medium
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC = mpiicc
+
+CFLAGS_FAST       = -O3 -xHost -ip -ftz -mcmodel=medium -shared-intel
+CFLAGS_AGGRESSIVE = -ipo -no-prec-div
+CFLAGS_DEBUG      = -O0
+
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -qopenmp -no-heap-arrays
+
+FFLAGS_SYSDEPEND =
+CFLAGS_SYSDEPEND =
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
+
+###### NetCDF library
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/work/opt/local/apps/intel/2019.4.243/netcdf-fortran/4.4.5/include -I/work/opt/local/apps/intel/2019.4.243/hdf5/1.10.5/include -I/work/opt/local/apps/intel/2019.4.243/netcdf/4.7.0/include"
+# export SCALE_NETCDF_LIBS="-L/work/opt/local/apps/intel/2019.4.243/netcdf-fortran/4.4.5/lib -lnetcdff -L/work/opt/local/apps/intel/2019.4.243/hdf5/1.10.5/lib -L/work/opt/local/apps/intel/2019.4.243/netcdf/4.7.0/lib -lnetcdf -lhdf5_hl -lhdf5 -lz -lcurl -lm"
+
+###### Math library
+SCALE_MATHLIB_LIBS ?= -mkl=sequential
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = pjsub
