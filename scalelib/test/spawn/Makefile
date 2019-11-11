@@ -10,7 +10,7 @@ FFLAGS_CORE = -assume byterecl -convert big_endian -mcmodel=medium -heap-arrays
 FFLAGS_FAST  = -m64 $(FFLAGS_CORE) -O3 -xHost -fp-model source
 
 FFLAGS_DEBUG = -m64 $(FFLAGS_CORE) -O0 -fpe0 -fp-model source \
-               -check all -warn all -g -traceback -assume nobuffered_io 
+               -check all -warn all -g -traceback -assume nobuffered_io
 ####----------------------------------------------------------------------------------
 
 #### GNU Compiler with openMPI -------------------------------------------------------
@@ -25,7 +25,7 @@ FFLAGS_DEBUG = -m64 $(FFLAGS_CORE) -O0 -fpe0 -fp-model source \
 #               -Wall -Wextra -Wcharacter-truncation -Wunderflow -g -fbacktrace
 ####----------------------------------------------------------------------------------
 
-#### K computer & FX10 ---------------------------------------------------------------
+#### FX100 ---------------------------------------------------------------
 #FC=mpifrtpx
 
 #FFLAGS_CORE = -Qi -Qt -X03 -Ncompdisp -Koptmsg=1
