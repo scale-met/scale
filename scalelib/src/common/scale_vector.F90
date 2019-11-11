@@ -549,9 +549,8 @@ contains
     gmm = sin(lat1) * sin(lat2) &
         + cos(lat1) * cos(lat2) * cos(lon2-lon1)
 
-    gno_x = gmm * ( cos(lat2) * sin(lon2-lon1) )
-    gno_y = gmm * ( cos(lat1) * sin(lat2) &
-                  - sin(lat1) * cos(lat2) * cos(lon2-lon1) )
+    gno_x = ( cos(lat2) * sin(lon2-lon1) )
+    gno_y = ( cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon2-lon1) )
 
     dist = r * atan2( sqrt(gno_x*gno_x+gno_y*gno_y), gmm )
 
