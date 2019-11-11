@@ -258,6 +258,7 @@ program sno
                          axisname(:),                  & ! [OUT]
                          nvars,                        & ! [OUT]
                          varname(:),                   & ! [OUT]
+                         plugin_hgridope,              & ! [IN]
                          debug                         ) ! [IN]
 
   ! in->out mapping table (global)
