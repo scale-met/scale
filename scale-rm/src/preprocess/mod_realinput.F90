@@ -1702,6 +1702,7 @@ contains
     !$omp private(kref)
     do j = 1, JA
     do i = 1, IA
+!CDIR NOVECTOR
        do k = KS, KA
           if ( W(k,i,j) .ne. UNDEF ) then
              kref = k

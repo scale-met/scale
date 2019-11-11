@@ -29,6 +29,8 @@ FFLAGS_DEBUG = -O0 $(FFLAGS_CORE)                                               
                -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized \
                -g -fbacktrace
 
+F77FLAGS = -ffixed-form -ffixed-line-length-132
+
 
 
 ##### C setting
