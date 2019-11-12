@@ -740,14 +740,14 @@ contains
 
 
        ! dens * TKE
-       ! production at KS: 2.0 * us3 * phi_m(zeta) / ( KARMAN * z1 )
+       ! production at KS: 2.0 * us3 / ( KARMAN * z1 ) * ( phi_m(zeta) - zeta )
        ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
        if ( l_mo(i,j) > 0 ) then
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       * ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) / z1
+          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
+                       * ( ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) - z1 / l_mo(i,j) )
        else
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) / z1
+          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
+                       * ( 1.0 / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) - z1 / l_mo(i,j) )
        end if
        do k = KS+1, KE_PBL
 !       do k = KS, KE_PBL
