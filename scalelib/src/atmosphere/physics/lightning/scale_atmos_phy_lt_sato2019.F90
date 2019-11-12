@@ -120,7 +120,7 @@ module scale_atmos_phy_lt_sato2019
                 'Absolute value of Electrical Field', &
                 'Electric Potential', &
                 'Cumulative Neutralizated charge', &
-                'Cumulative Number of flash', &
+                'Cumulative Number of flash path', &
                 'Cumulative Number of Positive flash', &
                 'Cumulative Number of Negative flash', &
                 'Cumulative Number of Flash point' /
@@ -341,6 +341,7 @@ contains
     real(RP) :: Total_Sarea(2)              !--- Sum of surface area and that of each catergory [m2]
     real(RP) :: neg_crg, pos_crg
     real(RP) :: frac, r_totalSarea(2)
+    real(RP) :: dqneut(KA,IA,JA,QA_LT)
     logical  :: flg_chrged(QA_LT)
     real(RP) :: Emax, Emax_old
     logical  :: output_step
@@ -473,6 +474,7 @@ contains
          call COMM_wait ( LT_path(:,:,:),1 )
          call COMM_wait ( d_QCRG(:,:,:),2 )
 
+         dqneut(:,:,:,:) = 0.0_RP
          !-- Calculate neutralization of each hydrometeor or each category
          select case( NUTR_qhyd )
          case ( 'TOTAL' )
@@ -490,9 +492,9 @@ contains
                   zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(1)-SMALL )
                   r_totalSarea(1) = 1.0_RP / ( Total_Sarea(1) + zerosw ) * ( 1.0_RP - zerosw )
                   do n = 1, QA_LT
-                     QTRC(k,i,j,n) = QTRC(k,i,j,n)  &
-                                   + ( d_QCRG(k,i,j)*1.0E+6_RP )  &
-                                   * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
+                     dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
+                                     * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
+                     QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
                   enddo
                endif
             enddo
@@ -534,7 +536,6 @@ contains
 
                   zerosw = 0.5_RP - sign( 0.5_RP, abs( QCRG(k,i,j) ) - SMALL )
                   frac = d_QCRG(k,i,j) / ( QCRG(k,i,j) + zerosw ) * ( 1.0_RP - zerosw )
-                  frac = frac * DENS(k,i,j) * 1.E-6_RP ! [fC/kg] -> [nc/m3]
                   pos_crg = frac * pos_crg
                   neg_crg = frac * neg_crg
 
@@ -547,11 +548,12 @@ contains
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                        QTRC(k,i,j,n) = QTRC(k,i,j,n)  &
-                                    + ( pos_crg*1.0E+6_RP ) / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(1) &
+                        dqneut(k,i,j,n) = &
+                                    + pos_crg / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(1) &
                                     * sw &
-                                    + ( neg_crg*1.0E+6_RP ) / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(2)  &
+                                    + neg_crg / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(2)  &
                                     * ( 1.0_RP - sw )
+                        QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
                      end if
                   enddo
                endif
@@ -664,34 +666,51 @@ contains
                                        flg_lt_neut             )   ! [OUT]
 
          count_neut = count_neut + 1
+         LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
+                   'CHECK', &
+                    Emax*1.E-3_RP, Emax_old*1.E-3_RP, count_neut
 
          if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7)')  &
-                   'Eabs value after neutralization is same as previous value, Finish'
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
+                   'Eabs value after neutralization is same as previous value, Finish', &
+                    Emax*1.E-3_RP, Emax_old*1.E-3_RP, count_neut
             endif
          elseif( flg_lt_neut == 1 .and. count_neut == MAX_NUTR ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
-                   Emax*1.E-3_RP, '[kV/m], reach maximum neutralization count, Finish'
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
+                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m], reach maximum neutralization count, Finish', count_neut
             endif
-         elseif( flg_lt_neut == 1 .and. Emax /= Emax_old ) then
+         elseif( flg_lt_neut == 1 .and. Emax > Emax_old ) then
+            flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
-                   Emax*1.E-3_RP, '[kV/m] After neutralization, again'
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
+                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, &
+                   '[kV/m] larger than previous one by neutralization, back to previous step, Finish', count_neut
             endif
+            !---- Back to Charge density as previous step
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               d_QCRG(k,i,j) = 0.0_RP
+               do n = 1, QA_LT
+                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut(k,i,j,n)
+               enddo
+            enddo
+            enddo
+            enddo
          elseif( flg_lt_neut == 2 ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
-                   Emax*1.E-3_RP, '[kV/m] After neutralization, Finish' 
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
+                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] After neutralization, Finish' , count_neut
             endif
          elseif( flg_lt_neut == 0 ) then
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
-                   Emax*1.E-3_RP, '[kV/m] After neutralization, Finish'
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
+                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] After neutralization, Finish', count_neut
             endif
          endif
 
