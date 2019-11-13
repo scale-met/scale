@@ -946,7 +946,7 @@ contains
       RR    = EPSR * ( rflux_LW - STB * (TR**4)  )
       !HR    = RHOO * CPdry * CHR * UA * (TR-TA)
       HR    = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-      ELER  = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
+      ELER  = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) ) * LHV
       G0R   = SR + RR - HR - ELER
 
     !--- calculate temperature in roof
@@ -1034,7 +1034,7 @@ contains
 
      RR      = EPSR * ( rflux_LW - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
-     ELER    = RHOO * LHV   * CHR * UA * BETR * (QS0R-QA)
+     ELER    = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) ) * LHV
      G0R     = SR + RR - HR - ELER
 
      TRL   = TRLP
@@ -1120,11 +1120,11 @@ contains
       RB    = RB1 + RB2
 
       HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-      ELEB  = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
+      ELEB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
       G0B   = SB + RB - HB - ELEB
 
       HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-      ELEG  = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
+      ELEG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
       G0G   = SG + RG - HG - ELEG
 
       TBL = TBLP
@@ -1276,11 +1276,11 @@ contains
      THC    = TC / EXN
 
      HB   = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
-     ELEB = RHOO * LHV   * CHB * UC * BETB * (QS0B-QC)
+     ELEB = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
      G0B  = SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
-     ELEG = RHOO * LHV   * CHG * UC * BETG * (QS0G-QC)
+     ELEG = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
      G0G  = SG + RG - HG - ELEG
 
      TBL   = TBLP

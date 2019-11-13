@@ -30,7 +30,7 @@
 このディレクリの中には設定ファイルとバイナリファイルがある。
 バイナリファイルは、\ref{sec:source_net2g}節でコンパイルした実行ファイルにリンクされている。
 ここでは例として、2次元変数のMSLP、PRECを{\grads}形式に変換する手順を示す。
-また、3次元変数の U、Vを 850 hPa 面、500hPa 面、200 hPa 面で抽出して、
+また、3次元変数の 東西風（Umet）、南北風（Vmet）を 850 hPa 面、500hPa 面、200 hPa 面で抽出して、
 {\grads}形式に変換する手順も説明する。
 2次元変数と3次元変数のための設定ファイルはそれぞれ、
 \verb|net2g.2D.d01.conf| と \verb|net2g.3D.d01.conf| である。
@@ -68,12 +68,12 @@ net2g は2次元変数と3次元変数を同時に変換できないために、
   PRES_d01z-3d.ctl
   PRES_d01z-3d.grd
   PRES_d01z-3d_lccr.ctl
-  U_d01z-3d.ctl
-  U_d01z-3d.grd
-  U_d01z-3d_lccr.ctl
-  V_d01z-3d.ctl
-  V_d01z-3d.grd
-  V_d01z-3d_lccr.ctl
+  Umet_d01z-3d.ctl
+  Umet_d01z-3d.grd
+  Umet_d01z-3d_lccr.ctl
+  Vmet_d01z-3d.ctl
+  Vmet_d01z-3d.grd
+  Vmet_d01z-3d_lccr.ctl
 \end{verbatim}
 
 

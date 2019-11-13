@@ -192,6 +192,7 @@ contains
        RUNOFF                         )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
+       TEM00 => CONST_TEM00, &
        DWATR => CONST_DWATR, &
        EMELT => CONST_EMELT
     use scale_prc, only: &
@@ -239,6 +240,8 @@ contains
 
     real(RP) :: NDG_TEMP (LKMAX,LIA,LJA)
     real(RP) :: NDG_WATER(LKMAX,LIA,LJA)
+
+    real(RP) :: Q
 
     integer :: k, i, j
     !---------------------------------------------------------------------------
@@ -418,8 +421,11 @@ contains
       ! input from atmosphere
       do j = LJS, LJE
       do i = LIS, LIE
+         ! tentative (MUST consider ice water explicitly)
+         Q = SFLX_GH(i,j)
+         if ( TEMP(LKS,i,j) >= TEM00 ) Q = Q - SFLX_ice(i,j) * EMELT
          V(LKS,i,j) = TEMP(LKS,i,j) + NDG_TEMP(LKS,i,j) + TEMP_t(LKS,i,j) &
-                    + ( SFLX_GH(i,j) - SFLX_ice(i,j) * EMELT ) / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
+                    + Q / ( LAND_DENSCS(LKS,i,j) * CDZ(LKS) ) * dt
       end do
       end do
 

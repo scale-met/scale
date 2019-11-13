@@ -387,6 +387,7 @@ contains
     real(RP) :: ap
     real(RP) :: phi_N(KA)
     real(RP) :: tke_P(KA)
+    real(RP) :: dummy(KA)
 
     real(RP) :: sf_t
     real(RP) :: us, us3
@@ -438,6 +439,7 @@ contains
     !$omp private(N2_new,sm25,smp,sh25,shpgh,Nu_f,Kh_f,q,q2_2,ac,SFLX_PT,SFLX_PTV,RHONu,RHONuc,RHOKh,RHOKhc, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,wtl,wqw, &
     !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,rl_mo,zeta,phi_m,phi_h,us,us3,CDZ,FDZ,f2h,z1, &
+    !$omp         dummy, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,tltv25,qwtv25,prod_t1,prod_q1,prod_c1, &
     !$omp         sw,tmp, &
     !$omp         k,i,j,it)
@@ -744,8 +746,10 @@ contains
              call MATRIX_SOLVER_tridiagonal( &
                   KA, KS, KE_PBL, &
                   a(:), b(:), c(:), d(:), & ! (in)
-                  phi_n(:)                ) ! (out)
+                  dummy(:)                ) ! (out)
+!                  phi_n(:)                ) ! (out)
 
+             phi_n(:) = dummy(:)
              RHOU_t(KS,i,j) = ( phi_n(KS) - U(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
              do k = KS+1, KE_PBL
                 RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * DENS(k,i,j) / dt
@@ -861,7 +865,7 @@ contains
                                              - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             prod(KS,i,j) = us3 * phi_m / ( KARMAN * z1 )
+             prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta )
           end if
 
           do k = KS, KE_PBL

@@ -71,7 +71,7 @@ cat << EOF > base.init.conf
  BASENAME_BOUNDARY    = "${BASENAME_BOUNDARY}",
  BOUNDARY_UPDATE_DT   = ${TIME_DT_BOUNDARY},
  USE_FILE_LANDWATER   = ${USE_FILE_LANDWATER},
- INTRP_LAND_TEMP      = "mask",
+ INTRP_LAND_TEMP      = "fill",
  INTRP_LAND_WATER     = "fill",
  INTRP_LAND_SFC_TEMP  = "fill",
 /
