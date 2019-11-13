@@ -1,5 +1,14 @@
 = Release History
 
+== 2019-11-13 (5.3.4)
+* Bug fix:
+  * Fix unexpected decrease of the soil temperature with snow precipitation
+  * Fix unexpected decrease of the urban temperature with evaporation
+  * Fix wrong the TKE production at the bottom layer in the MYNN scheme
+  * Fix some problems with the intel compiler
+  * Fix some problems with the recent FNL data in the real init process
+  * Fix the wrong wind direction in the tutorial real case
+
 == 2019-02-06 (5.3.3)
 * Bug fix:
   * Fix the breakup of the rain in the SN14 scheme

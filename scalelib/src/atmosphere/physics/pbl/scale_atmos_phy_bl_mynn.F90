@@ -374,6 +374,7 @@ contains
     real(RP) :: d(KA)
     real(RP) :: ap
     real(RP) :: phi_N(KA)
+    real(RP) :: dummy(KA)
     real(RP) :: tke_P
 
     real(RP) :: sf_t
@@ -410,7 +411,7 @@ contains
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
     !$omp         Q1,Qsl,dQsl,dtldz,dqwdz,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
-    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1, &
+    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1,dummy, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
     !$omp         k,i,j)
     do j = JS, JE
@@ -657,8 +658,10 @@ contains
        call MATRIX_SOLVER_tridiagonal( &
             KA, KS, KE_PBL, &
             a(:), b(:), c(:), d(:), & ! (in)
-            phi_n(:)                ) ! (out)
+            dummy(:)                ) ! (out)
+!            phi_n(:)                ) ! (out)
 
+       phi_n(:) = dummy(:)
        RHOU_t(KS,i,j) = ( phi_n(KS) - U(KS,i,j) ) * DENS(KS,i,j) / dt - sf_t
        do k = KS+1, KE_PBL
           RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * DENS(k,i,j) / dt
@@ -740,14 +743,14 @@ contains
 
 
        ! dens * TKE
-       ! production at KS: 2.0 * us3 * phi_m(zeta) / ( KARMAN * z1 )
+       ! production at KS: 2.0 * us3 / ( KARMAN * z1 ) * ( phi_m(zeta) - zeta )
        ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
        if ( l_mo(i,j) > 0 ) then
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       * ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) / z1
+          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
+                       * ( ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) - z1 / l_mo(i,j) )
        else
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) &
-                       / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) / z1
+          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
+                       * ( 1.0 / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) - z1 / l_mo(i,j) )
        end if
        do k = KS+1, KE_PBL
 !       do k = KS, KE_PBL

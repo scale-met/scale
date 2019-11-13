@@ -1,0 +1,165 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  File 21_install.tex
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{ダウンロードと環境設定} \label{sec:scale_compile}
+%====================================================================================
+
+以下の説明で使用する環境は次のとおりである。
+\begin{itemize}
+\item CPU: Intel Core i5 2410M 2コア/4スレッド
+\item Memory: DDR3-1333 4GB
+\item OS: CentOS 6.6 x86-64、CentOS 7.1 x86-64、openSUSE 13.2 x86-64
+\item GNU C/C++、Fortran コンパイラ
+\end{itemize}
+
+\subsubsection{ソースコードの入手} \label{subsec:get_source_code}
+%-----------------------------------------------------------------------------------
+最新のリリース版ソースコードは、\url{http://scale.aics.riken.jp/ja/download/index.html}から取得できる。
+ソースコードのtarballファイルを展開すると、\texttt{scale-{\version}/} というディレクトリができる。
+\begin{alltt}
+ $ tar -zxvf scale-{\version}.tar.gz
+ $ ls ./
+    scale-{\version}/
+\end{alltt}
+
+\subsubsection{Makedefファイルと環境変数の設定} \label{subsec:environment}
+%-----------------------------------------------------------------------------------
+
+環境変数「\verb|SCALE_SYS|」に設定したMakedefファイルを使用して、\scalelib はコンパイルされる。
+\texttt{scale-{\version}/sysdep/} には、いくつかの計算機環境に対応する Makedefファイルが用意されており、
+これらの中から自分の環境に合ったものを選択する。
+表\ref{tab:makedef}に、Makedefファイルが用意されている環境を示す。
+自分の環境に合致するファイルがなければ、既存のファイルを基に各自で作成する必要がある。
+%%
+\begin{table}[htb]
+\begin{center}
+\caption{環境例およびそれに対応する Makedefファイル}
+\begin{tabularx}{150mm}{|l|l|X|l|} \hline
+ \rowcolor[gray]{0.9} OS/計算機 & コンパイラ & MPI & Makedefファイル \\ \hline
+                 & gcc/gfortran & openMPI & Makedef.Linux64-gnu-ompi \\ \cline{2-4}
+ Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
+                 & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
+ macOS           & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
+ スーパーコンピュータ「京」 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.K \\ \hline
+ Fujitsu PRIME-HPC FX10 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
+\end{tabularx}
+\label{tab:makedef}
+\end{center}
+\end{table}
+%%
+例えば Linux x86-64 OS、GNUコンパイラ、openMPI を使用する場合には、
+該当する Makedef ファイルは「\verb|Makedef.Linux64-gnu-ompi|」である。
+このとき、環境変数は下記のように設定する必要がある。
+\begin{alltt}
+ $ export SCALE_SYS="Linux64-gnu-ompi"
+\end{alltt}
+実行環境が常に同じならば、\verb|.bashrc|等の環境設定ファイルに環境変数の設定を陽に記述しておくと便利である。
+
+{\scalelib}は{\netcdf}を必要とする。
+多くの場合、{\netcdf}のパスは「nc-config」を用いることで自動的に見つけられる。
+しかし、自動的に見つけられない場合には、例えば以下のように{\netcdf}に関するPATHを設定しなければならない。
+\begin{verbatim}
+ $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
+ $ export SCALE_NETCDF_LIBS= \
+        "-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
+\end{verbatim}
+
+
+\section{コンパイル} %\label{subsec:compile}
+%-----------------------------------------------------------------------------------
+
+\subsubsection{\scalerm のコンパイル}
+
+\scalerm のソースディレクトリに移動し、下記のコマンドによってコンパイルする。
+\begin{alltt}
+ $ cd scale-{\version}/scale-rm/src
+ $ make -j 4
+\end{alltt}
+「\verb|-j 4|」はコンパイル時の並列数を示している(例では4並列)。
+コンパイルにかかる時間を短縮するために、並列コンパイルのオプションを指定することが望ましい。
+並列数は実行環境に応じて設定し、推奨の並列数は 2$\sim$8 である。
+コンパイルが成功すると、下記の 3 つの実行ファイルが scale-{\version}/bin 以下に生成される。
+\begin{alltt}
+ scale-rm  scale-rm_init  scale-rm_pp
+\end{alltt}
+
+\subsubsection{{\scalegm}のコンパイル} %\label{subsec:compile}
+
+{\scalegm}のソースディレクトリに移動し、下記のコマンドによってコンパイルする。
+\begin{alltt}
+  $  cd scale-{\version}/scale-gm/src
+  $  make -j 4
+\end{alltt}
+コンパイルが成功すると、下記の実行ファイルが scale-{\version}/bin 以下に生成される。
+「fio」は、ヘッダー情報を伴う、バイナリに基づく独自形式である。
+\begin{verbatim}
+   scale-gm      (\scalegm の実行バイナリ)
+   gm_fio_cat    (fio 形式のための cat コマンド)
+   gm_fio_dump   (fio 形式のための dump ツール)
+   gm_fio_ico2ll (fio 形式の正二十面体格子データから緯度経度格子データへの変換ツール)
+   gm_fio_sel    (fio 形式のための sel コマンド)
+   gm_mkhgrid    (バネ格子を用いた正二十面体(水平)格子の生成ツール)
+   gm_mkllmap    (緯度経度(水平)格子の生成ツール)
+   gm_mkmnginfo  (MPI プロセスの割り当てを管理するファイルの生成ツール)
+   gm_mkrawgrid  (正二十面体(水平)格子の生成ツール)
+   gm_mkvlayer   (鉛直格子の生成ツール)
+\end{verbatim}
+
+
+\subsubsection{注意点}
+
+コンパイルをやり直したい場合は、下記のコマンドで作成された実行バイナリを消去する。
+\begin{alltt}
+ $ make clean
+\end{alltt}
+ただし、コンパイルされたライブラリは消去されないことに注意が必要である。
+全てのコンパイル済みファイルを消去したい場合は、以下のコマンドを使用する。
+\begin{alltt}
+ $ make allclean
+\end{alltt}
+コンパイル環境、コンパイルオプションを変更して再コンパイルする場合は、
+「allclean」を実行されたい。\\
+
+\scalelib においてコンパイルやアーカイブは、ディレクトリ scale-{\version}/scalelib/ の中で行われる。
+作成されたオブジェクトファイルは、コンパイルを実行したディレクトリ下の
+「\verb|.lib|」という名前の隠しディレクトリの中に置かれる。\\
+
+ デバッグモードでコンパイルしたい場合は、「\verb|make -j 4 SCALE_DEBUG=T|」を実行してコンパイルする
+ (コンパイル時に適用される全ての環境変数リストは表\ref{tab:env_var_list}を参照)。
+細かくコンパイルオプションを変更したい場合は、\verb|Makedef|ファイルを編集されたい。
+
+\begin{table}[htb]
+\begin{center}
+\caption{コンパイル時の環境変数のリスト}
+\begin{tabularx}{150mm}{|l|X|} \hline
+ \rowcolor[gray]{0.9} 環境変数 & 説明  \\ \hline
+ SCALE\_SYS               & システム選択（必須）  \\ \hline
+ SCALE\_DISABLE\_MPI      & MPIを使わない（utilsのみ）  \\ \hline
+ SCALE\_DEBUG             & デバッグ用コンパイルオプションでコンパイル  \\ \hline
+ SCALE\_QUICKDEBUG        & クイックデバッグ用コンパイルオプション利用（高速化そのまま＋浮動小数点エラー検出）  \\ \hline
+ %SCALE\_USE\_MASSCHECK    & 質量保存チェック用の計算を追加（RM力学過程のみ）  \\ \hline
+ SCALE\_USE\_SINGLEFP     & 単精度浮動小数点を使用（全ソース）  \\ \hline
+ SCALE\_USE\_FIXEDINDEX   & 格子サイズをコンパイル時に固定して最適化促進  \\ \hline
+ SCALE\_ENABLE\_OPENMP    & OpenMP機能を有効にする  \\ \hline
+ SCALE\_ENABLE\_OPENACC   & OpenACC機能を有効にする  \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（京・FXのみ）  \\ \hline
+ SCALE\_DISABLE\_INTELVEC & ベクトル化オプションの抑制（インテルコンパイラのみ）  \\ \hline
+ SCALE\_NETCDF\_INCLUDE   & NetCDFライブラリのincludeディレクトリパス  \\ \hline
+ SCALE\_NETCDF\_LIBS      & NetCDFライブラリのディレクトリパスとライブラリ指定  \\ \hline
+ SCALE\_ENABLE\_PNETCDF   & parallel NetCDFを利用する  \\ \hline
+ SCALE\_COMPAT\_NETCDF3   & NetCDF3互換の機能に限定する  \\ \hline
+ SCALE\_ENABLE\_MATHLIB   & 数値計算ライブラリを利用する  \\ \hline
+ SCALE\_MATHLIB\_LIBS     & 数値計算ライブラリのディレクトリパスとライブラリ指定  \\ \hline
+ SCALE\_ENABLE\_PAPI      & PAPIを利用する  \\ \hline
+ SCALE\_PAPI\_INCLUDE     & PAPIライブラリのincludeディレクトリパス  \\ \hline
+ SCALE\_PAPI\_LIBS        & PAPIライブラリのディレクトリパスとライブラリ指定  \\ \hline
+ SCALE\_DISABLE\_LOCALBIN & テストケースディレクトリに特別版のバイナリが作られないようにする  \\ \hline
+ SCALE\_IGNORE\_SRCDEP    & コンパイル時にソースコードの依存関係確認を行わない  \\ \hline
+ SCALE\_ENABLE\_SDM       & 超水滴モデルを利用する   \\ \hline
+\end{tabularx}
+\label{tab:env_var_list}
+\end{center}
+\end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

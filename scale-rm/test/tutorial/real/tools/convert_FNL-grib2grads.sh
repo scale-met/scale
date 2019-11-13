@@ -10,6 +10,8 @@
 #  GRIB1 structure: ${RDIR}/grib1/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib1
 #  GRIB2 structure: ${RDIR}/grib2/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib2
 #
+#  Date format: YYYYMMDDHH
+#
 #-------------------------------------------------------------------------------
 
 # convert date-time string to total seconds from 1/1/1 (Fairfield formula)
@@ -74,10 +76,13 @@ CHECK_DATE1="2007-12-06 06:00:00"
 CHECK_DATE2="2009-12-15 06:00:00"
 # change the name of soil temperature
 CHECK_DATE3="2015-01-14 00:00:00"
+# change the number of layers
+CHECK_DATE4="2019-06-12 06:00:00"
 
 UNIX_CHECK1=$(unix_time "$CHECK_DATE1")
 UNIX_CHECK2=$(unix_time "$CHECK_DATE2")
 UNIX_CHECK3=$(unix_time "$CHECK_DATE3")
+UNIX_CHECK4=$(unix_time "$CHECK_DATE4")
 
 YEAR=${START_YEAR}
 while [ ${YEAR} -le ${END_YEAR} ]
@@ -161,6 +166,11 @@ do
         else
           TSOIL="TSOIL"
         fi
+        if [ $UNIX_NOW -le $UNIX_CHECK4 ]; then
+          LEVS="dummy"
+        else
+          LEVS="0.4 mb|15 mb|40 mb"
+        fi
 
         RFILE=${RDIR}/${FTYPE}/${YYYY}/fnl_${YYYY}${MM}${DD}_${HH}_00.${FTYPE}
 
@@ -197,10 +207,10 @@ do
           wgrib ${RFILE} | grep ":SOILW:" | grep "down:" | wgrib -i ${RFILE} -nh -ieee -o SOILW.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
         else
           # 3D: 26-layer atmosphere until 2016/05/11-06UTC
-          wgrib2 ${RFILE} -match ":HGT:"  -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee HGTprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
+          wgrib2 ${RFILE} -match ":HGT:"  -match "mb:anl:" | sort -n $ZREV | grep -vE "${LEVS}" | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee HGTprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
+          wgrib2 ${RFILE} -match ":TMP:"  -match "mb:anl:" | sort -n $ZREV | grep -vE "${LEVS}" | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee TMPprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
           wgrib2 ${RFILE} -match ":UGRD:" -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee UGRDprs.${YYYY}${MM}${DD}${HH}.grd > /dev/null 2>&1
           wgrib2 ${RFILE} -match ":VGRD:" -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee VGRDprs.${YYYY}${MM}${DD}${HH}.grd > /dev/null 2>&1
-          wgrib2 ${RFILE} -match ":TMP:"  -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee TMPprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
           wgrib2 ${RFILE} -match ":RH:"   -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee RHprs.${YYYY}${MM}${DD}${HH}.grd   > /dev/null 2>&1
           # 2D
           wgrib2 ${RFILE} -match ":PRMSL:" -match ":mean sea level:"    -order "we:ns" -no_header -ieee PRMSLmsl.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
