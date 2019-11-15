@@ -271,10 +271,10 @@ contains
       call PRC_abort
     endif
 
-    if( NUTR_qhyd == 'Each_POLARITY' .and. MP_TYPE == 'SUZUKI10' ) then
-       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'NUTR_qhyd = Each_POLARITY is not supported for MP_TYPE SUZUKI10'
-       call PRC_abort
-    endif
+!    if( NUTR_qhyd == 'Each_POLARITY' .and. MP_TYPE == 'SUZUKI10' ) then
+!       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'NUTR_qhyd = Each_POLARITY is not supported for MP_TYPE SUZUKI10'
+!       call PRC_abort
+!    endif
 
     do ip = 1, w_nmax
        call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
@@ -352,6 +352,10 @@ contains
 
     logical  :: HIST_sw(w_nmax)
     real(RP) :: w3d(KA,IA,JA)
+
+    real(RP) :: diff_qcrg(0:1), lack(0:1), sum_crg(0:1)
+    real(RP) :: crg_rate(QA_LT), qcrg_before(QA_LT)
+    integer  :: int_sw
 
     NUM_end(:,:,:,:) = 0.0_RP
 
@@ -509,6 +513,7 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
+               lack(:) = 0.0_RP
                if( abs( d_QCRG(k,i,j) ) > 0.0_RP ) then
 
                   !--- flg whether the charged or not (0.0-> not charged, 1.0->charged)
@@ -545,16 +550,52 @@ contains
                   zerosw = 0.5_RP - sign( 0.5_RP, Total_Sarea(2) - SMALL )
                   r_totalSarea(2) = 1.0_RP / ( Total_Sarea(2) + zerosw ) * ( 1.0_RP - zerosw )
 
+                  diff_qcrg(:) = 0.0_RP
+                  crg_rate(:) = 0.0_RP
+                  sum_crg(:) = 0.0_RP
                   do n = 1, QA_LT
                      if ( flg_chrged(n) ) then
                         sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
                         dqneut(k,i,j,n) = &
-                                    + pos_crg / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(1) &
-                                    * sw &
-                                    + neg_crg / DENS(k,i,j) * Sarea(k,i,j,n) * r_totalSarea(2)  &
-                                    * ( 1.0_RP - sw )
-                        QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
+                                    + pos_crg * Sarea(k,i,j,n) * r_totalSarea(1) &
+                                    * sw &   ! sw = 1 positive
+                                    + neg_crg * Sarea(k,i,j,n) * r_totalSarea(2)  &
+                                    * ( 1.0_RP - sw ) ! sw = 0 negative
+                        qcrg_before(n) = QTRC(k,i,j,n)
+
+                        if( sw == 1.0_RP ) then
+                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                        elseif( sw == 0.0_RP ) then
+                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                        endif
+
+                        int_sw = int( sw )   ! 0-> negative, 1-> positive
+                        diff_qcrg(int_sw) = diff_qcrg(int_sw) &
+                                          + ( QTRC(k,i,j,n) - qcrg_before(n) )
+                        sum_crg(int_sw) = sum_crg(int_sw) + QTRC(k,i,j,n)
                      end if
+                  enddo
+                  lack(0) = neg_crg - diff_qcrg(0) ! negative (Should be Positive)
+                  lack(1) = pos_crg - diff_qcrg(1) ! positive (Should be Negative)
+                  if( lack(0) > 0.0_RP .and. abs(lack(0)/diff_qcrg(0)) > 1.0E-10_RP ) then
+                      LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7)') &
+                        "Large negative for lack(0) ", lack(0)/diff_qcrg(0)
+                  endif
+                  if( lack(1) < 0.0_RP .and. abs(lack(1)/diff_qcrg(1)) > 1.0E-10_RP ) then
+                     LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7)') &
+                        "Large positive for lack(1) ", lack(1)/diff_qcrg(1)
+                  endif
+                  lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
+                  lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
+                  do n = 1, QA_LT
+                     sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                     int_sw = int( sw )   ! 0-> negative, 1-> positive
+                     if( sum_crg(int_sw) /= 0.0_RP ) then
+                        crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
+                     else
+                        crg_rate(n) = 0.0_RP
+                     endif
+                     QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                   enddo
                endif
 
@@ -687,8 +728,7 @@ contains
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
                LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
-                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, &
-                   '[kV/m] larger than previous one by neutralization, back to previous step, Finish', count_neut
+                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] larger than previous one by neutralization, back to previous step, Finish', count_neut
             endif
             !---- Back to Charge density as previous step
             do j = JS, JE
