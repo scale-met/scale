@@ -1162,18 +1162,26 @@ contains
     end if
 
 
-    FDXG(1:IAG-1) = ATMOS_GRID_CARTESC_FDXG(:)
-    FDXG(0  ) = UNDEF
+    do i = 1, IAG-1
+       FDXG(i) = ATMOS_GRID_CARTESC_FDXG(i)
+    enddo
+    FDXG(0)   = UNDEF
     FDXG(IAG) = UNDEF
-    FDYG(1:JAG-1) = ATMOS_GRID_CARTESC_FDYG(:)
-    FDYG(0  ) = UNDEF
+    do j = 1, JAG-1
+       FDYG(j) = ATMOS_GRID_CARTESC_FDYG(j)
+    enddo
+    FDYG(0)   = UNDEF
     FDYG(JAG) = UNDEF
 
-    FDX(1:IA-1) = ATMOS_GRID_CARTESC_FDX(:)
-    FDX(0 ) = FDXG(IS_inG-IHALO-1)
+    do i = 1, IA-1
+       FDX(i) = ATMOS_GRID_CARTESC_FDX(i)
+    enddo
+    FDX(0)  = FDXG(IS_inG-IHALO-1)
     FDX(IA) = FDXG(IE_inG+IHALO  )
-    FDY(1:JA-1) = ATMOS_GRID_CARTESC_FDY(:)
-    FDY(0 ) = FDYG(JS_inG-JHALO-1)
+    do j = 1, JA-1
+       FDY(j) = ATMOS_GRID_CARTESC_FDY(j)
+    enddo
+    FDY(0)  = FDYG(JS_inG-JHALO-1)
     FDY(JA) = FDYG(JE_inG+JHALO  )
 
 
