@@ -60,6 +60,7 @@ program netcdf2grads_h_launcher
 
   integer               :: universal_comm                         ! universal communicator
   integer               :: universal_nprocs                       ! number of procs in universal communicator
+  integer               :: universal_myrank                       ! my rank         in universal communicator
   logical               :: universal_master                       ! master process  in universal communicator?
   character(len=H_LONG) :: universal_cnf_fname                    ! config file for launcher
 
@@ -84,7 +85,10 @@ program netcdf2grads_h_launcher
 
   call PRC_UNIVERSAL_setup( universal_comm,   & ! [IN]
                             universal_nprocs, & ! [OUT]
+                            universal_myrank, & ! [OUT]
                             universal_master  ) ! [OUT]
+
+  call IO_set_rank( universal_myrank ) ! [IN]
 
   if( universal_master ) write(*,*) '*** Start Launch System for SCALE (POPSCA)'
 

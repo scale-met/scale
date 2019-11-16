@@ -2,10 +2,10 @@
 #define SCALE_LOG_H
 
 #define LOG_ERROR(subroutine_name,format) \
-  write(*,'(3A)',advance='no') "ERROR [",subroutine_name,"]"; \
+  write(*,'(5A)',advance='no') "ERROR on rank ",IO_WHOAMI," [",subroutine_name,"]"; \
   write(*,format)
 #define LOG_ERROR_CONT(format) \
-  write(*,'(5x)',advance='no'); \
+  write(*,'(6x,3A)',advance='no') "on rank ",IO_WHOAMI,": "; \
   write(*,format)
 
 

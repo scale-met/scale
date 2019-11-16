@@ -142,12 +142,14 @@ contains
   subroutine PRC_UNIVERSAL_setup( &
        comm,    &
        nprocs,  &
+       myrank,  &
        ismaster )
     implicit none
 
     integer, intent(in)  :: comm     ! communicator
     integer, intent(out) :: nprocs   ! number of procs in this communicator
-    logical, intent(out) :: ismaster ! master process in this communicator?
+    integer, intent(out) :: myrank   ! myrank          in this communicator
+    logical, intent(out) :: ismaster ! master process  in this communicator?
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -164,6 +166,7 @@ contains
     endif
 
     nprocs   = PRC_UNIVERSAL_nprocs
+    myrank   = PRC_UNIVERSAL_myrank
     ismaster = PRC_UNIVERSAL_IsMaster
 
 

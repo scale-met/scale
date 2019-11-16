@@ -31,6 +31,7 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
+  public :: IO_set_rank
   public :: IO_get_available_fid
   public :: IO_make_idstr
   public :: IO_ARG_getfname
@@ -58,6 +59,7 @@ module scale_io
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
   character(len=H_LONG), public            :: IO_NML_FILENAME     = ''      !< filename of logfile (only for output namelist)
+  character(len=6),      public            :: IO_WHOAMI           = "UNKNWN"!< universal rank id for error log
   logical,               public            :: IO_L                = .false. !< output log or not? (this process)
   logical,               public            :: IO_NML              = .false. !< output log or not? (for namelist, this process)
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
@@ -327,6 +329,20 @@ contains
     endif
 
   end function IO_get_available_fid
+
+  !-----------------------------------------------------------------------------
+  !> Setup LOG
+  subroutine IO_set_rank( &
+       rank )
+    implicit none
+
+    integer, intent(in) :: rank !< my rank ID (global)
+    !---------------------------------------------------------------------------
+
+    write(IO_WHOAMI,'(I6.6)') rank
+
+    return
+  end subroutine IO_set_rank
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename
