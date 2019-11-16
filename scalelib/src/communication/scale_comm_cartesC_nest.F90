@@ -216,9 +216,8 @@ module scale_comm_cartesC_nest
   integer,  private, allocatable :: ireq_d(:)              ! buffer of request-id for daughter
   integer,  private, allocatable :: call_order(:)          ! calling order from parent
 
-  real(RP), private, allocatable :: buffer_2D  (:,:)       ! buffer of communicator: 2D (with HALO)
-  real(RP), private, allocatable :: buffer_3D  (:,:,:)     ! buffer of communicator: 3D (with HALO)
-  real(RP), private, allocatable :: recvbuf_3D (:,:,:,:)   ! buffer of receiver: 3D (with HALO)
+  real(RP), private, allocatable :: recvbuf_2D(:,:,:)      ! buffer of receiver: 2D (with HALO)
+  real(RP), private, allocatable :: recvbuf_3D(:,:,:,:)    ! buffer of receiver: 3D (with HALO)
 
   real(RP), private, allocatable :: buffer_ref_LON  (:,:)  ! buffer of communicator: LON
   real(RP), private, allocatable :: buffer_ref_LONUY(:,:)  ! buffer of communicator: LONUY
@@ -704,10 +703,8 @@ contains
             LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
             LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req. :', max_rq
 
-            allocate( buffer_2D  (                          PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
-            allocate( buffer_3D  ( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM) ) )
-
-            allocate( recvbuf_3D ( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu  ) )
+            allocate( recvbuf_2D(                          PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu ) )
+            allocate( recvbuf_3D( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu ) )
 
             allocate( buffer_ref_LON  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
             allocate( buffer_ref_LONUY(                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
@@ -942,8 +939,7 @@ contains
             end select
 
 
-            deallocate( buffer_2D  )
-            deallocate( buffer_3D  )
+            deallocate( recvbuf_2D )
 
          else
             ONLINE_USE_VELZ = .false.
@@ -1670,6 +1666,7 @@ contains
     integer  :: ierr, ileng
     integer  :: istatus(MPI_STATUS_SIZE)
     integer  :: tag, tagbase, target_rank
+    integer  :: rq_str, rq_end, rq_tot
 
     integer  :: xloc, yloc
     integer  :: xs, xe
@@ -1677,7 +1674,8 @@ contains
 
     real(RP) :: max_ref, max_loc
 
-    real(RP), allocatable :: send_buf(:,:,:)
+    real(RP), allocatable :: sendbuf_2D(:,:,:)
+    real(RP), allocatable :: sendbuf_3D(:,:,:,:)
 
     integer  :: i, k, rq
     !---------------------------------------------------------------------------
@@ -1691,63 +1689,68 @@ contains
 
        !##### parent [send issue] #####
 
-       allocate( send_buf(PARENT_KA(HANDLE), PARENT_IA(HANDLE), PARENT_JA(HANDLE)) )
+       allocate( sendbuf_2D(                    PARENT_IA(HANDLE), PARENT_JA(HANDLE), max_isu ) )
+       allocate( sendbuf_3D( PARENT_KA(HANDLE), PARENT_IA(HANDLE), PARENT_JA(HANDLE), max_isu ) )
 
        do i = 1, NUM_YP
           ! send data to multiple daughter processes
           target_rank = COMM_CARTESC_NEST_TILE_LIST_YP(i)
 
+          rq_str = rq + 1
+
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lon
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LON, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lat
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LAT, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
+          sendbuf_2D(:,:,tag_lonuy) = ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonuy
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,tag_lonuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
+          sendbuf_2D(:,:,tag_latuy) = ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latuy
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,tag_latuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
+          sendbuf_2D(:,:,tag_lonxv) = ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonxv
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,tag_lonxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
+          sendbuf_2D(:,:,tag_latxv) = ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latxv
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,tag_latxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_cz
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_CZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
 
-          send_buf(:,:,:)  = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
+          sendbuf_3D(:,:,:,tag_fz) = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_ISEND(send_buf, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
-          call MPI_WAIT(ireq_p(rq), istatus, ierr)
+          call MPI_ISEND(sendbuf_3D(:,:,:,tag_fz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+
+          rq_end = rq
+          rq_tot = rq_end - rq_str + 1
+
+          call COMM_CARTESC_NEST_waitall( rq_tot, ireq_p(rq_str:rq_end) )
        enddo
 
-       deallocate( send_buf )
+       deallocate( sendbuf_2D )
+       deallocate( sendbuf_3D )
 
     elseif( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
 
@@ -1765,64 +1768,63 @@ contains
           ys = PARENT_JMAX(HANDLE) * (yloc-1) + 1
           ye = PARENT_JMAX(HANDLE) *  yloc
 
+          rq_str = rq + 1
+
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lon
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LON(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lon), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lat
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LAT(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lat), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonuy
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LONUY(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lonuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latuy
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LATUY(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_latuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonxv
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LONXV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lonxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latxv
-          call MPI_IRECV(buffer_2D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          buffer_ref_LATXV(xs:xe,ys:ye)  = buffer_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+          call MPI_IRECV(recvbuf_2D(:,:,tag_latxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_cz
-          call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
-          do k = 1, PARENT_KA(HANDLE)
-             buffer_ref_CZ(k,xs:xe,ys:ye)  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
-          enddo
+          call MPI_IRECV(recvbuf_3D(:,:,:,tag_cz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_IRECV(buffer_3D, ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
-          call MPI_WAIT(ireq_d(rq), istatus, ierr)
+          call MPI_IRECV(recvbuf_3D(:,:,:,tag_fz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+
+          rq_end = rq
+          rq_tot = rq_end - rq_str + 1
+
+          call COMM_CARTESC_NEST_waitall( rq_tot, ireq_d(rq_str:rq_end) )
+
+          buffer_ref_LON  (xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_lon  )
+          buffer_ref_LAT  (xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_lat  )
+          buffer_ref_LONUY(xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_lonuy)
+          buffer_ref_LATUY(xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_latuy)
+          buffer_ref_LONXV(xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_lonxv)
+          buffer_ref_LATXV(xs:xe,ys:ye)  = recvbuf_2D(PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_latxv)
+
           do k = 1, PARENT_KA(HANDLE)
-             buffer_ref_FZ(k,xs:xe,ys:ye)  = buffer_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE))
+             buffer_ref_CZ(k,xs:xe,ys:ye)  = recvbuf_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_cz)
+             buffer_ref_FZ(k,xs:xe,ys:ye)  = recvbuf_3D(k,PRNT_IS(HANDLE):PRNT_IE(HANDLE),PRNT_JS(HANDLE):PRNT_JE(HANDLE),tag_fz)
           enddo
        enddo
 
