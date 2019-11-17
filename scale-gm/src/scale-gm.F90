@@ -103,8 +103,6 @@ program scalegm
                             universal_myrank, & ! [OUT]
                             universal_master  ) ! [OUT]
 
-  call IO_set_rank( universal_myrank ) ! [IN]
-
   if( universal_master ) write(*,*) '*** Start Launch System for SCALE-GM'
 
   !--- read launcher config
@@ -220,6 +218,10 @@ program scalegm
                  use_fpm             ) ! [IN]
 
   call PRC_ERRHANDLER_setup( use_fpm, universal_master )
+
+  call IO_set_globalrank( universal_myrank, & ! [IN]
+                          ID_BULKJOB,       & ! [IN]
+                          ID_DOMAIN         ) ! [IN]
 
   !--- start main routine
 

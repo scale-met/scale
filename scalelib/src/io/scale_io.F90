@@ -31,7 +31,7 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
-  public :: IO_set_rank
+  public :: IO_set_globalrank
   public :: IO_get_available_fid
   public :: IO_make_idstr
   public :: IO_ARG_getfname
@@ -59,13 +59,17 @@ module scale_io
 
   character(len=H_LONG), public            :: IO_LOG_BASENAME     = 'LOG'   !< basename of logfile
   character(len=H_LONG), public            :: IO_NML_FILENAME     = ''      !< filename of logfile (only for output namelist)
-  character(len=6),      public            :: IO_WHOAMI           = "UNKNWN"!< universal rank id for error log
   logical,               public            :: IO_L                = .false. !< output log or not? (this process)
   logical,               public            :: IO_NML              = .false. !< output log or not? (for namelist, this process)
   logical,               public            :: IO_LOG_SUPPRESS     = .false. !< suppress all of log output?
   logical,               public            :: IO_LOG_NML_SUPPRESS = .false. !< suppress all of log output? (for namelist)
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
+
+  character(len=6),      public            :: IO_GLOBALRANK       = "UNKNWN"!< universal rank    for error log
+  character(len=6),      public            :: IO_JOBID            = "UNKNWN"!< bulk job id       for error log
+  character(len=6),      public            :: IO_DOMAINID         = "UNKNWN"!< nesting domain id for error log
+  character(len=6),      public            :: IO_LOCALRANK        = "UNKNWN"!< local     rank    for error log
 
   !-----------------------------------------------------------------------------
   !
@@ -305,6 +309,8 @@ contains
        endif
     endif
 
+    write(IO_LOCALRANK,'(I6.6)') myrank
+
     return
   end subroutine IO_LOG_setup
 
@@ -331,18 +337,24 @@ contains
   end function IO_get_available_fid
 
   !-----------------------------------------------------------------------------
-  !> Setup LOG
-  subroutine IO_set_rank( &
-       rank )
+  !> Put for error log
+  subroutine IO_set_globalrank( &
+       myrank,  &
+       jobid,   &
+       domainid )
     implicit none
 
-    integer, intent(in) :: rank !< my rank ID (global)
+    integer, intent(in) :: myrank   !< my rank ID (global)
+    integer, intent(in) :: jobid    !< bulk job ID
+    integer, intent(in) :: domainid !< nesting domain ID
     !---------------------------------------------------------------------------
 
-    write(IO_WHOAMI,'(I6.6)') rank
+    write(IO_GLOBALRANK,'(I6.6)') myrank
+    write(IO_JOBID     ,'(I6.6)') jobid
+    write(IO_DOMAINID  ,'(I6.6)') domainid
 
     return
-  end subroutine IO_set_rank
+  end subroutine IO_set_globalrank
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename
