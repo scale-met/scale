@@ -31,7 +31,7 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
-  public :: IO_set_globalrank
+  public :: IO_set_universalrank
   public :: IO_get_available_fid
   public :: IO_make_idstr
   public :: IO_ARG_getfname
@@ -66,7 +66,7 @@ module scale_io
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
-  character(len=6),      public            :: IO_GLOBALRANK       = "UNKNWN"!< universal rank    for error log
+  character(len=6),      public            :: IO_UNIVERSALRANK       = "UNKNWN"!< universal rank    for error log
   character(len=6),      public            :: IO_JOBID            = "UNKNWN"!< bulk job id       for error log
   character(len=6),      public            :: IO_DOMAINID         = "UNKNWN"!< nesting domain id for error log
   character(len=6),      public            :: IO_LOCALRANK        = "UNKNWN"!< local     rank    for error log
@@ -338,23 +338,23 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Put for error log
-  subroutine IO_set_globalrank( &
+  subroutine IO_set_universalrank( &
        myrank,  &
        jobid,   &
        domainid )
     implicit none
 
-    integer, intent(in) :: myrank   !< my rank ID (global)
+    integer, intent(in) :: myrank   !< my rank ID (universal)
     integer, intent(in) :: jobid    !< bulk job ID
     integer, intent(in) :: domainid !< nesting domain ID
     !---------------------------------------------------------------------------
 
-    write(IO_GLOBALRANK,'(I6.6)') myrank
-    write(IO_JOBID     ,'(I6.6)') jobid
-    write(IO_DOMAINID  ,'(I6.6)') domainid
+    write(IO_UNIVERSALRANK,'(I6.6)') myrank
+    write(IO_JOBID        ,'(I6.6)') jobid
+    write(IO_DOMAINID     ,'(I6.6)') domainid
 
     return
-  end subroutine IO_set_globalrank
+  end subroutine IO_set_universalrank
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename

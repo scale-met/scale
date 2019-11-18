@@ -160,9 +160,9 @@ program netcdf2grads_h_launcher
                           intercomm_parent, & ! [OUT]
                           intercomm_child   ) ! [OUT]
 
-  call IO_set_globalrank( universal_myrank, & ! [IN]
-                          ID_BULKJOB,       & ! [IN]
-                          ID_DOMAIN         ) ! [IN]
+  call IO_set_universalrank( universal_myrank, & ! [IN]
+                             ID_BULKJOB,       & ! [IN]
+                             ID_DOMAIN         ) ! [IN]
 
   !--- start main routine
 
