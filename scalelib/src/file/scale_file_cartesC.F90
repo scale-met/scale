@@ -4488,7 +4488,7 @@ contains
 
     etype           = MPI_FLOAT
 
-    if( RP == 8 ) etype = MPI_DOUBLE_PRECISION
+    if( RP == 8 ) etype = MPI_DOUBLE
 
     ! for dim_type == 'XY'
     startXY(1)    = IS_inG - IHALO

@@ -1,0 +1,63 @@
+\section{ユーザが設定を行うためのモジュール} \label{sec:mod_user}
+
+計算に対するユーザの要求を満たすために、\scalerm は数多くのオプションを用意している。
+これらはネームリストのパラメータで指定することができる。
+しかし、期待するオプションが存在しない場合は、ユーザ用のモジュール(\verb|mod_user|)にプログラムを記述することで、ユーザが望むようにモデル変数を直接書き換えられる。
+本節では、\verb|mod_user|とは何であるかを説明し、その使い方を記述する。
+
+\subsection{\texttt{mod\_user} モジュールとは?}
+
+デフォルトの\verb|mod_user| モジュールは、 \texttt{scale-{\version}/scale/scale-rm/src/user/mod\_user.F90}に用意されている。
+適宜\verb|mod_user.F90|を書き換え、このファイルをデフォルトのファイルの代わりにコンパイルする。
+
+\verb|mod_user| モジュールには、以下のサブルーチンを含めなければならない。
+\begin{alltt}
+  subroutine USER_tracer_setup
+  subroutine USER_setup
+  subroutine USER_mkinit
+  subroutine USER_update
+  subroutine USER_calc_tendency
+\end{alltt}
+
+\noindent 以下は、\scalerm における各プロセスの実行順序である。
+\begin{alltt}
+初期設定
+  IOの設定
+  MPIの設定
+  格子の設定
+  力学や物理スキームの管理モジュールの設定
+  トレーサーの設定
+  \textcolor{blue}{USER_tracer_setup}
+  地形、陸面の設定
+  力学や物理スキームの変数やドライバーの設定
+  \textcolor{blue}{USER_setup}
+メインルーチン
+  時間進展
+  海洋/陸面/都市/大気モデルの更新
+  \textcolor{blue}{User_update}
+  リスタートファイルの出力
+  海洋/陸面/都市/大気モデルにおける時間変化率の計算
+  \textcolor{blue}{USER_calc_tendency}
+  ヒストリファイルの出力
+\end{alltt}
+\verb|mod_user|の各サブルーチンが呼び出されるタイミングを、青色で示している。
+\verb|USER_mkinit|は、 初期値作成プログラム\verb|scale-rm_init|で呼び出される。
+
+
+\verb|mod_user|のサブルーチンは基本的には各プロセスを処理した後に呼び出されるので、
+設定や変数を思うように置き換えることができる。
+また、\verb|USER_tracer_setup| においてパッシブトレーサー等のトレーサーを追加できる。
+\verb|mod_user.F90|の例として、各テストケース(\texttt{scale-{\version}/scale-rm/test/case}以下)に含まれる
+\verb|mod_user.F90|が参考になるだろう。
+
+
+\subsection{コンパイル}
+テストケース用の Makefile を活用することで、
+ユーザが作成した\verb|mod_user.F90|と共に{\scalerm}をコンパイルできる。
+この手順の例は以下である。\\
+\texttt{ \$ cd scale-\version/scale-rm/test/case}\\
+\texttt{ \$ mkdir -p your\_dir/exp\_name}\\
+\texttt{ \$ cd your\_dir/exp\_name}\\
+\texttt{ \$ cp ../../advection/500m/Makefile .}\\
+\noindent ユーザが作成した\verb|mod_user.F90|を本ディレクトリにコピー \\
+\texttt{ \$ make}

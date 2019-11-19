@@ -1,0 +1,99 @@
+\section{大気下端境界における表面フラックス}
+\label{sec:basic_usel_surface}
+%------------------------------------------------------
+大気下端境界における表面フラックススキームは、
+\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で以下のように設定する。\\
+
+\editboxtwo{
+\verb|&PARAM_ATMOS  | & \\
+\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}から表面フラックススキームを選択。\\
+\verb|/             | & \\
+}\\
+
+海面・陸面・都市モデルを使用しない場合は、
+大気下端境界は理想実験で用いられる仮想的な地表面であることを想定している。
+この表面フラックススキームが呼び出される時間間隔は、
+\namelist{PARAM_TIME}で設定する(詳細は第\ref{sec:timeintiv}節を参照)。
+海面・陸面・都市モデルを用いる場合は、\nmitem{ATMOS_PHY_SF_TYPE}を``COUPLE''に設定する。
+
+
+\begin{table}[h]
+\begin{center}
+  \caption{大気下端境界の選択肢}
+  \label{tab:nml_atm_sf}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明\\ \hline
+      \verb|NONE|         & 地表面フラックスを計算しない(海面・陸面・都市モデルの実行設定に応じてCOUPLEに変更される) \\
+      \verb|OFF|          & 地表面フラックスを計算しない \\
+      \verb|CONST|   　　　& 地表面フラックスを一定値に固定 \\
+      \verb|BULK|    　　　& 地表面フラックスをバルクモデルで計算 \\
+      \verb|COUPLE|  　　　& 海面・陸面・都市モデルから表面フラックスを受け取る \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+%-------------------------------------------------------------------------------
+\subsubsection{一定値を用いる場合の設定}
+
+\nmitem{ATMOS_PHY_SF_TYPE}を\verb|"CONST"|とした場合は、
+表面フラックスは run.conf で指定した値に固定できる。
+下記の値はデフォルト設定である。\\
+
+\editboxtwo{
+ \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: バルク係数を一定にする \\
+                                                  & 1: 摩擦速度を一定にする   \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & 絶対速度の下限値 [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & 運動量に対する一定バルク係数値 \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
+ \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & 運動量に対するバルク係数の下限値 \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & 一定摩擦係数値 [m/s] \\
+                                                  &  (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+ \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & 一定地表面顕熱フラックス値 [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & 顕熱フラックスに日変化をつけるか否か [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & 顕熱フラックスに日変化を付けるときのサイクル [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & 一定地表面潜熱フラックス値 [W/m2] \\
+ \verb|/|            & \\
+}
+
+\subsubsection{バルクモデルを用いる場合の設定}
+%-------------------------------------------------------------------------------
+\nmitem{ATMOS_PHY_SF_TYPE}を\verb|BULK|とした場合は、
+指定した表面温度と粗度長を用いてバルクモデルによって表面フラックスが計算される。
+蒸発効率は、0から1の範囲で任意に与えることができる。
+この柔軟性によって、海面だけでなく陸面を想定した理想実験を行える。
+蒸発効率は run.conf 中の\nmitem{ATMOS_PHY_SF_BULK_beta}の \namelist{PARAM_ATMOS_PHY_SF_BULK}で以下のように指定する。
+
+\editboxtwo{
+\verb|&PARAM_ATMOS_PHY_SF_BULK  | & \\
+\verb| ATMOS_PHY_SF_BULK_beta = 1.0, | & ; 蒸発効率 (0 から1 までの値でなければならない)。値を0に設定した場合、表面は完全に乾燥しているとする。1 に設定した場合は(海面のように)表面は完全に湿っているとする。\\
+\verb|/             | & \\
+}
+
+
+バルク交換係数のスキームは、
+run.conf中の\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で以下のように設定する。\\
+
+\noindent {\gt
+\ovalbox{
+\begin{tabularx}{150mm}{ll}
+\verb|&PARAM_BULKFLUX  | & \\
+\verb| BULKFLUX_TYPE = "B91W01", | & ; 表\ref{tab:nml_bulk}に示すバルク交換係数スキームから選択。\\
+\verb|/             | & \\
+\end{tabularx}
+}}\\
+
+\begin{table}[h]
+\begin{center}
+  \caption{バルク交換係数スキームの選択肢}
+  \label{tab:nml_bulk}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献 \\ \hline
+      \verb|B91W01| & 普遍関数によるバルク法(デフォルト) & \citet{beljaars_1991,wilson_2001} \\
+      \verb|U95|    & Louis 型のバルク法、(\citet{louis_1979}の改良版) & \citet{uno_1995} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
