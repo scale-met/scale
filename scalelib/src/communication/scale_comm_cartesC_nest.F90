@@ -216,7 +216,6 @@ module scale_comm_cartesC_nest
   integer,  private, allocatable :: ireq_d(:)              ! buffer of request-id for daughter
   integer,  private, allocatable :: call_order(:)          ! calling order from parent
 
-  real(RP), private, allocatable :: recvbuf_2D(:,:,:)      ! buffer of receiver: 2D (with HALO)
   real(RP), private, allocatable :: recvbuf_3D(:,:,:,:)    ! buffer of receiver: 3D (with HALO)
 
   real(RP), private, allocatable :: buffer_ref_LON  (:,:)  ! buffer of communicator: LON
@@ -703,7 +702,6 @@ contains
             LOG_INFO_CONT('(1x,A,I6)'  ) '--- TILEALL_JA      :', TILEAL_JA(HANDLING_NUM)
             LOG_INFO_CONT('(1x,A,I6)  ') 'Limit Num. NCOMM req. :', max_rq
 
-            allocate( recvbuf_2D(                          PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu ) )
             allocate( recvbuf_3D( PARENT_KA(HANDLING_NUM), PARENT_IA(HANDLING_NUM), PARENT_JA(HANDLING_NUM), max_isu ) )
 
             allocate( buffer_ref_LON  (                          TILEAL_IA(HANDLING_NUM),TILEAL_JA(HANDLING_NUM)) )
@@ -938,8 +936,6 @@ contains
 
             end select
 
-
-            deallocate( recvbuf_2D )
 
          else
             ONLINE_USE_VELZ = .false.
@@ -1676,6 +1672,7 @@ contains
 
     real(RP), allocatable :: sendbuf_2D(:,:,:)
     real(RP), allocatable :: sendbuf_3D(:,:,:,:)
+    real(RP), allocatable :: recvbuf_2D(:,:,:)
 
     integer  :: i, k, rq
     !---------------------------------------------------------------------------
@@ -1689,8 +1686,8 @@ contains
 
        !##### parent [send issue] #####
 
-       allocate( sendbuf_2D(                    PARENT_IA(HANDLE), PARENT_JA(HANDLE), max_isu ) )
-       allocate( sendbuf_3D( PARENT_KA(HANDLE), PARENT_IA(HANDLE), PARENT_JA(HANDLE), max_isu ) )
+       allocate( sendbuf_2D(                    PARENT_IA(HANDLE), PARENT_JA(HANDLE), 4 ) )
+       allocate( sendbuf_3D( PARENT_KA(HANDLE), PARENT_IA(HANDLE), PARENT_JA(HANDLE), 1 ) )
 
        do i = 1, NUM_YP
           ! send data to multiple daughter processes
@@ -1708,40 +1705,40 @@ contains
           tag   = tagbase + tag_lat
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LAT, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
-          sendbuf_2D(:,:,tag_lonuy) = ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA)
+          sendbuf_2D(:,:,1) = ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonuy
-          call MPI_ISEND(sendbuf_2D(:,:,tag_lonuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,1), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
-          sendbuf_2D(:,:,tag_latuy) = ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA)
+          sendbuf_2D(:,:,2) = ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latuy
-          call MPI_ISEND(sendbuf_2D(:,:,tag_latuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,2), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
-          sendbuf_2D(:,:,tag_lonxv) = ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA)
+          sendbuf_2D(:,:,3) = ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonxv
-          call MPI_ISEND(sendbuf_2D(:,:,tag_lonxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,3), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
-          sendbuf_2D(:,:,tag_latxv) = ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA)
+          sendbuf_2D(:,:,4) = ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latxv
-          call MPI_ISEND(sendbuf_2D(:,:,tag_latxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,4), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_cz
           call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_CZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
-          sendbuf_3D(:,:,:,tag_fz) = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
+          sendbuf_3D(:,:,:,1) = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_ISEND(sendbuf_3D(:,:,:,tag_fz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_3D(:,:,:,1), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
 
           rq_end = rq
           rq_tot = rq_end - rq_str + 1
@@ -1755,6 +1752,8 @@ contains
     elseif( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
 
        !##### child [recv & wait issue] #####
+
+       allocate( recvbuf_2D( PARENT_IA(HANDLE), PARENT_JA(HANDLE), 6 ) )
 
        do i = 1, COMM_CARTESC_NEST_TILE_ALL
           ! receive data from multiple parent tiles
@@ -1838,6 +1837,8 @@ contains
           LOG_ERROR_CONT(*) '--     local max: ', max_loc
           call PRC_abort
        endif
+
+       deallocate( recvbuf_2D )
 
     else
        LOG_ERROR("COMM_CARTESC_NEST_importgrid_nestdown",*) 'internal error'
