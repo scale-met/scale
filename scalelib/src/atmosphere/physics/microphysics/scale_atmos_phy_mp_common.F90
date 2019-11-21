@@ -227,9 +227,10 @@ contains
     if ( flag_liquid ) then ! warm rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(KS,KE,IS,IE,JS,JE, &
-       !$omp        CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
-       !$omp        DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
+       !$omp shared (IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
+       !$omp shared (KS,KE,IS,IE,JS,JE, &
+       !$omp         CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
+       !$omp         DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
        !$omp         QV1,QC1,Emoist,converged)
        do j = JS, JE
@@ -267,6 +268,7 @@ contains
     else ! cold rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared (IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
        !$omp shared (KS,KE,IS,IE,JS,JE, &
        !$omp         CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF, &
        !$omp         DENS,QV,QC,QI,TEMP,CPtot,CVtot,RHOE_d,error) &
