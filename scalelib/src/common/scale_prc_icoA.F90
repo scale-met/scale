@@ -186,8 +186,7 @@ contains
        call PRC_abort
     endif
 
-    if (      PRC_RGN_ndiamond ==  8 &
-         .OR. PRC_RGN_ndiamond == 10 &
+    if (      PRC_RGN_ndiamond == 10 &
          .OR. PRC_RGN_ndiamond == 12 ) then
        PRC_RGN_vlink = PRC_RGN_ndiamond / 2
     else
@@ -882,7 +881,11 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("PRC_ICOA_RGN_setup",'(1x,A)') 'Region management information'
-    LOG_INFO_CONT('(1x,A,A)' )              'Grid sysytem                      : Icosahedral'
+    if ( PRC_RGN_ndiamond == 10 ) then
+       LOG_INFO_CONT('(1x,A,A)' )           'Grid sysytem                      : Icosahedral'
+    elseif( PRC_RGN_ndiamond == 12 ) then
+       LOG_INFO_CONT('(1x,A,A)' )           'Grid sysytem                      : Icosatetrahedral'
+    endif
     LOG_INFO_CONT('(1x,A,I7)')              'number of diamond                 : ', PRC_RGN_ndiamond
     LOG_INFO_CONT('(1x,A,I7)')              'maximum number of vertex linkage  : ', PRC_RGN_vlink
     LOG_NEWLINE
