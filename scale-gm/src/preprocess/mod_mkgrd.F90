@@ -199,7 +199,7 @@ contains
 
     alpha = 2.0_RP * PI / real(PRC_RGN_ndiamond/2,kind=RP)
     beta  = 2.0_RP * PI / 5.0_RP
-    phi   = asin( min( cos(beta) / (1.0_RP-cos(beta)), 1.0_RP ) )
+    phi   = asin( cos(beta) / (1.0_RP-cos(beta)) )
 
     rgn_all_1d = 2**PRC_RGN_level
     rgn_all    = rgn_all_1d * rgn_all_1d
