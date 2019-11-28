@@ -965,7 +965,8 @@ contains
   !> Diagnose grid property
   subroutine GMTR_diagnosis
     use scale_prc_icoA, only: &
-       PRC_have_pl,     &
+       PRC_RGN_ndiamond, &
+       PRC_have_pl,      &
        PRC_RGN_have_sgp
     use scale_const, only: &
        PI     => CONST_PI,     &
@@ -1139,7 +1140,7 @@ contains
 
     call COMM_Stat_sum( local_area, global_area )
 
-    global_grid = 10*4**ADM_glevel + 2
+    global_grid = PRC_RGN_ndiamond * 4**ADM_glevel + 2
     sqarea_avg = sqrt( global_area / real(global_grid,kind=RP) )
 
     sqarea   (:,:,:) = sqrt( GMTR_p   (:,:,:,GMTR_P_AREA) )

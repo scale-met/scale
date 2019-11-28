@@ -57,6 +57,7 @@ program fio_ico2ll
   !--- NAMELIST
   integer                :: glevel              = -1
   integer                :: rlevel              = -1
+  integer                :: ndmd                = 10
   integer                :: npe                 = -1
   character(len=H_LONG)  :: layerfile_dir       = ''
   character(len=H_LONG)  :: llmap_base          = ''
@@ -81,6 +82,7 @@ program fio_ico2ll
   namelist /PARAM_ICO2LL/ &
      glevel,              &
      rlevel,              &
+     ndmd,                &
      npe,                 &
      layerfile_dir,       &
      llmap_base,          &
@@ -265,7 +267,7 @@ program fio_ico2ll
   !#########################################################
 
   PALL_global   = npe
-  PRC_RGN_total = 10 * (4**rlevel)
+  PRC_RGN_total = ndmd * (4**rlevel)
   PRC_RGN_local = PRC_RGN_total / PALL_global
 
   if ( mod( PALL_global, nprocs) /= 0 ) then
@@ -278,6 +280,7 @@ program fio_ico2ll
   allocate( PRC_RGN_lp2r    (PRC_RGN_local,0:PALL_global-1) )
 
   call PRC_ICOA_RGN_generate( rlevel,                  & ! [IN]
+                              ndmd,                    & ! [IN]
                               PALL_global,             & ! [IN]
                               PRC_RGN_total,           & ! [IN]
                               PRC_RGN_local,           & ! [IN]
