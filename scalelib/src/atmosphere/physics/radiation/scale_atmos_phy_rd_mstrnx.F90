@@ -1231,6 +1231,7 @@ contains
     ! for satellite simulator
     real(RP) :: tauCLD (rd_kmax) ! cloud optical thickness
     real(RP) :: emisCLD(rd_kmax) ! cloud emissivity
+    real(RP), allocatable :: acfc_pow(:,:)
 
     real(RP) :: zerosw
     real(RP) :: valsum
@@ -1240,6 +1241,17 @@ contains
     integer  :: iw, ich, iplk, icloud, im
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+    allocate( acfc_pow(MSTRN_ncfc,MSTRN_nband) )
+
+    !$omp parallel do default(none) &
+    !$omp private(iw, icfc) &
+    !$omp shared(MSTRN_nband,ncfc,acfc_pow,acfc)
+    do iw = 1, MSTRN_nband
+       do icfc = 1, ncfc
+          acfc_pow(icfc,iw) = 10.0_RP**acfc(icfc,iw)
+       enddo
+    enddo
+    !$omp end parallel do
 
     !$acc data &
     !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
@@ -1262,7 +1274,8 @@ contains
     !$omp        GRAV, Pstd, &
     !$omp        rd_kmax, IA, IS, IE, JA, JS, JE, ncfc, naero, hydro_str, hydro_end, aero_str, aero_end, &
     !$omp        MSTRN_nradius, MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, &
-    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc, rayleigh, qmol, q, fsol, fsol_tot, wgtch)
+    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc, rayleigh, qmol, q, fsol, fsol_tot, wgtch &
+    !$omp        acfc_pow)
     do j = JS, JE
     !$acc loop gang vector &
     !$acc& private(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR, tauGAS, &
@@ -1427,7 +1440,7 @@ contains
                 valsum = 0.0_RP
                 !$acc loop seq
                 do icfc = 1, ncfc
-                   valsum = valsum + 10.0_RP**acfc(icfc,iw) * cfc(k,i,j,icfc)
+                   valsum = valsum + acfc_pow(icfc,iw) * cfc(k,i,j,icfc)
                 enddo
                 valsum = valsum * PPM * dz_std(k)
 
@@ -1530,6 +1543,51 @@ contains
              enddo
           endif
 
+          if ( irgn == I_SW ) then ! solar
+             do icloud = 1, 2
+                do k = 1, rd_kmax
+                   b(k,0,icloud) = 0.0_RP
+                   b(k,1,icloud) = 0.0_RP
+                   b(k,2,icloud) = 0.0_RP
+                enddo
+             enddo
+
+             b_sfc = 0.0_RP
+             fsol_rgn = fsol(iw) / fsol_tot * solins(i,j)
+
+          elseif( irgn == I_LW ) then ! IR
+             !--- set planck functions
+             wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
+
+             ! from temp at cell center
+             do k = 1, rd_kmax
+                beta = 0.0_RP
+                do iplk = MSTRN_nfitPLK, 1, -1
+                   beta = beta / ( wl*temp(k,i,j) ) + fitPLK(iplk,iw)
+                enddo
+                bbar(k) = exp(-beta) * temp(k,i,j) / (wl*wl)
+             enddo
+
+             ! from temp at cell wall
+             do k = 1, rd_kmax+1
+                beta = 0.0_RP
+                do iplk = MSTRN_nfitPLK, 1, -1
+                   beta = beta / ( wl*temph(k,i,j) ) + fitPLK(iplk,iw)
+                enddo
+                bbarh(k) = exp(-beta) * temph(k,i,j) / (wl*wl)
+             enddo
+
+            ! from temp_sfc
+             beta = 0.0_RP
+             do iplk = MSTRN_nfitPLK, 1, -1
+                beta = beta / ( wl*temp_sfc(i,j) ) + fitPLK(iplk,iw)
+             enddo
+
+             b_sfc = exp(-beta) * temp_sfc(i,j) / (wl*wl)
+
+             fsol_rgn = 0.0_RP
+          endif
+
           ! sub-channel loop
           do ich = 1, chmax
 
@@ -1549,48 +1607,7 @@ contains
                 enddo
              enddo
 
-             !--- bn
-             if ( irgn == I_SW ) then ! solar
-
-                do icloud = 1, 2
-                   !$acc loop gang vector
-                   do k = 1, rd_kmax
-                      b(k,0,icloud) = 0.0_RP
-                      b(k,1,icloud) = 0.0_RP
-                      b(k,2,icloud) = 0.0_RP
-                   enddo
-                enddo
-
-                b_sfc = 0.0_RP
-                fsol_rgn = fsol(iw) / fsol_tot * solins(i,j)
-
-             elseif( irgn == I_LW ) then ! IR
-                !--- set planck functions
-                wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
-
-                ! from temp at cell center
-                !$acc loop gang vector
-                do k = 1, rd_kmax
-                   beta = 0.0_RP
-                   !$acc loop seq
-                   do iplk = MSTRN_nfitPLK, 1, -1
-                      beta = beta / ( wl*temp(k,i,j) ) + fitPLK(iplk,iw)
-                   enddo
-
-                   bbar(k) = exp(-beta) * temp(k,i,j) / (wl*wl)
-                enddo
-
-                ! from temp at cell wall
-                !$acc loop gang vector
-                do k = 1, rd_kmax+1
-                   beta = 0.0_RP
-                   !$acc loop seq
-                   do iplk = MSTRN_nfitPLK, 1, -1
-                      beta = beta / ( wl*temph(k,i,j) ) + fitPLK(iplk,iw)
-                   enddo
-
-                   bbarh(k) = exp(-beta) * temph(k,i,j) / (wl*wl)
-                enddo
+             if( irgn == I_LW ) then ! IR
 
                 do icloud = 1, 2
                    !$acc loop gang vector
@@ -1610,17 +1627,6 @@ contains
                                       ) / ( tau(k,icloud)*tau(k,icloud)-zerosw ) * 2.0_RP
                    enddo
                 enddo
-
-                ! from temp_sfc
-                beta = 0.0_RP
-                !$acc loop seq
-                do iplk = MSTRN_nfitPLK, 1, -1
-                   beta = beta / ( wl*temp_sfc(i,j) ) + fitPLK(iplk,iw)
-                enddo
-
-                b_sfc = exp(-beta) * temp_sfc(i,j) / (wl*wl)
-
-                fsol_rgn = 0.0_RP
 
              endif ! solar/IR switch
 
@@ -1673,6 +1679,8 @@ contains
     !$acc wait
 
     !$acc end data
+
+    deallocate( acfc_pow )
 
     return
   end subroutine RD_MSTRN_DTRN3
