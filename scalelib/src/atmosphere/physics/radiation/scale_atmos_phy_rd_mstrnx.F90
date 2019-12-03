@@ -1274,7 +1274,7 @@ contains
     !$omp        GRAV, Pstd, &
     !$omp        rd_kmax, IA, IS, IE, JA, JS, JE, ncfc, naero, hydro_str, hydro_end, aero_str, aero_end, &
     !$omp        MSTRN_nradius, MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, &
-    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc, rayleigh, qmol, q, fsol, fsol_tot, wgtch &
+    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc, rayleigh, qmol, q, fsol, fsol_tot, wgtch, &
     !$omp        acfc_pow)
     do j = JS, JE
     !$acc loop gang vector &
