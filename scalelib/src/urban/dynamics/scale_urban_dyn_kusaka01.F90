@@ -53,9 +53,13 @@ module scale_urban_dyn_kusaka01
   ! from namelist
   real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
                                               ! 0.1 [K/sec] = 6.0 [K/min]
-  real(RP), private :: ZR         =   10.0_RP ! roof level ( building height) [m]
-  real(RP), private :: roof_width =    9.0_RP ! roof level ( building height) [m]
-  real(RP), private :: road_width =   11.0_RP ! roof level ( building height) [m]
+  integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
+                                              !       [1: Zero-Flux, 2: T = Constant]
+
+  ! urban parameters
+  real(RP), private :: ZR         =   10.0_RP ! roof level (building height) [m]
+  real(RP), private :: roof_width =    9.0_RP ! roof width [m]
+  real(RP), private :: road_width =   11.0_RP ! road width [m]
   real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
   real(RP), private :: AH         =   17.5_RP ! Sensible Anthropogenic heat [W/m^2]
   real(RP), private :: ALH        =    0.0_RP ! Latent Anthropogenic heat   [W/m^2]
@@ -83,8 +87,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: TRLEND     = 293.00_RP ! lower boundary condition of roof temperature [K]
   real(RP), private :: TBLEND     = 293.00_RP ! lower boundary condition of wall temperature [K]
   real(RP), private :: TGLEND     = 293.00_RP ! lower boundary condition of ground temperature [K]
-  integer , private :: BOUND      = 1         ! Boundary Condition for Roof, Wall, Ground Layer Temp
-                                              !       [1: Zero-Flux, 2: T = Constant]
+
   real(RP), private :: ahdiurnal(1:24)        ! AH diurnal profile
 
   ! calculated in subroutine urban_param_set
@@ -127,39 +130,12 @@ contains
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
 
-    namelist / PARAM_URBAN_DYN_KUSAKA01 / &
-       DTS_MAX,    &
-       ZR,         &
-       roof_width, &
-       road_width, &
-       SIGMA_ZED,  &
-       AH,         &
-       ALH,        &
-       BETR,       &
-       BETB,       &
-       BETG,       &
-       STRGR,      &
-       STRGB,      &
-       STRGG,      &
-       CAPR,       &
-       CAPB,       &
-       CAPG,       &
-       AKSR,       &
-       AKSB,       &
-       AKSG,       &
-       ALBR,       &
-       ALBB,       &
-       ALBG,       &
-       EPSR,       &
-       EPSB,       &
-       EPSG,       &
-       Z0R,        &
-       Z0B,        &
-       Z0G,        &
-       TRLEND,     &
-       TBLEND,     &
-       TGLEND,     &
-       BOUND
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = '' !< urban parameters
+
+    namelist / PARAM_URBAN_DYN_KUSAKA01 /     &
+       DTS_MAX,                               &
+       BOUND,                                 &
+       URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME
 
     integer :: i, j
     integer :: ierr
@@ -171,13 +147,18 @@ contains
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_URBAN_DYN_KUSAKA01,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
+    if( ierr < 0 ) then     !--- missing
        LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DYN_KUSAKA01. Check!'
        call PRC_abort
     endif
     LOG_NML(PARAM_URBAN_DYN_KUSAKA01)
+
+    !-- read urban parameter from file
+    if( URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME /= '' ) then
+     call read_urban_param_table( trim(URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME) )
+    endif
 
     ahdiurnal(:) = (/ 0.356, 0.274, 0.232, 0.251, 0.375, 0.647, 0.919, 1.135, 1.249, 1.328, &
                       1.365, 1.363, 1.375, 1.404, 1.457, 1.526, 1.557, 1.521, 1.372, 1.206, &
@@ -1782,6 +1763,81 @@ contains
 
     return
   end subroutine urban_param_setup
+
+  subroutine read_urban_param_table( INFILENAME )
+    use scale_prc, only: &
+        PRC_abort
+    implicit none
+
+    character(len=H_LONG), intent(in) :: INFILENAME
+    integer                           :: IO_FID_URBAN_PARAM
+
+    namelist / PARAM_URBAN_DATA / &
+       ZR,         &
+       roof_width, &
+       road_width, &
+       SIGMA_ZED,  &
+       AH,         &
+       ALH,        &
+       BETR,       &
+       BETB,       &
+       BETG,       &
+       STRGR,      &
+       STRGB,      &
+       STRGG,      &
+       CAPR,       &
+       CAPB,       &
+       CAPG,       &
+       AKSR,       &
+       AKSB,       &
+       AKSG,       &
+       ALBR,       &
+       ALBB,       &
+       ALBG,       &
+       EPSR,       &
+       EPSB,       &
+       EPSG,       &
+       Z0R,        &
+       Z0B,        &
+       Z0G,        &
+       TRLEND,     &
+       TBLEND,     &
+       TGLEND
+
+    integer :: ierr
+
+      IO_FID_URBAN_PARAM = IO_get_available_fid()
+      open( IO_FID_URBAN_PARAM,                   &
+          file   = trim(INFILENAME),              &
+          form   = 'formatted',                   &
+          status = 'old',                         &
+          iostat = ierr                           )
+
+      if ( ierr /= 0 ) then
+        LOG_NEWLINE
+        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Failed to open a parameter file.', &
+                                                 trim(INFILENAME)
+         call PRC_abort
+      else
+        LOG_NEWLINE
+        LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Read urban parameters from file'
+        !--- read namelist
+        rewind(IO_FID_URBAN_PARAM)
+        read  (IO_FID_URBAN_PARAM,nml=PARAM_URBAN_DATA,iostat=ierr)
+        if ( ierr < 0 ) then !--- no data
+           LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
+        elseif( ierr > 0 ) then !--- fatal error
+           LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DATA of ', &
+                                                 trim(INFILENAME),'  Check!'
+           call PRC_abort
+        endif
+        LOG_NML(PARAM_URBAN_DATA)
+      end if
+
+      close( IO_FID_URBAN_PARAM )
+
+    return
+  end subroutine read_urban_param_table
 
   subroutine put_history( &
        UIA, UJA, &
