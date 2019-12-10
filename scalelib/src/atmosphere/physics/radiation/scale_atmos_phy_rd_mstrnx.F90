@@ -179,7 +179,7 @@ module scale_atmos_phy_rd_mstrnx
 
   real(RP), private, allocatable :: akd     (:,:,:,:,:) ! absorption coefficient table
   real(RP), private, allocatable :: skd     (:,:,:,:)   ! absorption coefficient table for H2O self broadening
-  real(RP), private, allocatable :: acfc    (:,:)       ! absorption coefficient table for CFC
+  real(RP), private, allocatable :: acfc_pow(:,:)       ! 10 to the power of absorption coefficient table for CFC
 
   real(RP), private, allocatable :: fitPLK  (:,:)       ! fitting point for planck function
   real(RP), private, allocatable :: fsol    (:)         ! solar insolation    in each band
@@ -827,6 +827,8 @@ contains
     integer, intent(out) :: ngas
     integer, intent(out) :: ncfc
 
+    real(RP) :: acfc(MSTRN_ncfc)                   !< absorption coefficient table for CFC
+
     integer :: nband, nstream, nfitP, nfitT, nflag !< gas             parameters for check
     integer :: nsfc, nptype, nplkord, nfitPLK      !< aerosol/surface parameters for check
     integer :: nradius                             !< hygroscopic     parameters for check
@@ -854,9 +856,10 @@ contains
 
     allocate( akd (MSTRN_ch_limit,MSTRN_nfitP,MSTRN_nfitT,MSTRN_ngas,MSTRN_nband) )
     allocate( skd (MSTRN_ch_limit,MSTRN_nfitP,MSTRN_nfitT,           MSTRN_nband) )
-    allocate( acfc(MSTRN_ncfc,MSTRN_nband) )
+    allocate( acfc_pow(MSTRN_ncfc,MSTRN_nband) )
 
     fid = IO_get_available_fid()
+
     open( fid,                                    &
           file   = trim(MSTRN_GASPARA_INPUTFILE), &
           form   = 'formatted',                   &
@@ -949,7 +952,11 @@ contains
           ! CFC absorption
           if ( iflgb(I_CFC_continuum,iw) > 0 ) then
              read(fid,*) dummy
-             read(fid,*) (acfc(icfc,iw),icfc=1,MSTRN_ncfc)
+             read(fid,*) (acfc(icfc),icfc=1,MSTRN_ncfc)
+
+             do icfc = 1, MSTRN_ncfc
+                acfc_pow(icfc,iw) = 10.0_RP**acfc(icfc)
+             end do
           endif
 
        enddo ! band loop
@@ -1108,7 +1115,7 @@ contains
     !$acc enter data &
     !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
     !$acc& pcopyin(radmode, ngasabs, igasabs) &
-    !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc, nch, AKD, SKD) &
+    !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD) &
     !$acc& pcopyin(Wmns, Wpls, Wscale, W, M)
 
     return
@@ -1231,7 +1238,6 @@ contains
     ! for satellite simulator
     real(RP) :: tauCLD (rd_kmax) ! cloud optical thickness
     real(RP) :: emisCLD(rd_kmax) ! cloud emissivity
-    real(RP), allocatable :: acfc_pow(:,:)
 
     real(RP) :: zerosw
     real(RP) :: valsum
@@ -1241,17 +1247,6 @@ contains
     integer  :: iw, ich, iplk, icloud, im
     integer  :: k, i, j
     !---------------------------------------------------------------------------
-    allocate( acfc_pow(MSTRN_ncfc,MSTRN_nband) )
-
-    !$omp parallel do default(none) &
-    !$omp private(iw, icfc) &
-    !$omp shared(MSTRN_nband,ncfc,acfc_pow,acfc)
-    do iw = 1, MSTRN_nband
-       do icfc = 1, ncfc
-          acfc_pow(icfc,iw) = 10.0_RP**acfc(icfc,iw)
-       enddo
-    enddo
-    !$omp end parallel do
 
     !$acc data &
     !$acc& pcopyin(solins, cosSZA, rhodz, pres, temp, temph, temp_sfc, gas, cfc) &
@@ -1274,8 +1269,7 @@ contains
     !$omp        GRAV, Pstd, &
     !$omp        rd_kmax, IA, IS, IE, JA, JS, JE, ncfc, naero, hydro_str, hydro_end, aero_str, aero_end, &
     !$omp        MSTRN_nradius, MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, &
-    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc, rayleigh, qmol, q, fsol, fsol_tot, wgtch, &
-    !$omp        acfc_pow)
+    !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc_pow, rayleigh, qmol, q, fsol, fsol_tot, wgtch)
     do j = JS, JE
     !$acc loop gang vector &
     !$acc& private(dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR, tauGAS, &
@@ -1545,6 +1539,7 @@ contains
 
           if ( irgn == I_SW ) then ! solar
              do icloud = 1, 2
+                !$acc loop gang vector
                 do k = 1, rd_kmax
                    b(k,0,icloud) = 0.0_RP
                    b(k,1,icloud) = 0.0_RP
@@ -1560,8 +1555,10 @@ contains
              wl = 10000.0_RP / sqrt( waveh(iw) * waveh(iw+1) )
 
              ! from temp at cell center
+             !$acc loop gang vector
              do k = 1, rd_kmax
                 beta = 0.0_RP
+                !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
                    beta = beta / ( wl*temp(k,i,j) ) + fitPLK(iplk,iw)
                 enddo
@@ -1569,8 +1566,10 @@ contains
              enddo
 
              ! from temp at cell wall
+             !$acc loop gang vector
              do k = 1, rd_kmax+1
                 beta = 0.0_RP
+                !$acc loop seq
                 do iplk = MSTRN_nfitPLK, 1, -1
                    beta = beta / ( wl*temph(k,i,j) ) + fitPLK(iplk,iw)
                 enddo
@@ -1579,6 +1578,7 @@ contains
 
             ! from temp_sfc
              beta = 0.0_RP
+             !$acc loop seq
              do iplk = MSTRN_nfitPLK, 1, -1
                 beta = beta / ( wl*temp_sfc(i,j) ) + fitPLK(iplk,iw)
              enddo
@@ -1679,8 +1679,6 @@ contains
     !$acc wait
 
     !$acc end data
-
-    deallocate( acfc_pow )
 
     return
   end subroutine RD_MSTRN_DTRN3
