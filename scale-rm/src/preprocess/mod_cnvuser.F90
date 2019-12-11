@@ -146,12 +146,19 @@ contains
                               CNVUSER_GrADS_LONNAME,              &
                               CNVUSER_INTERP_TYPE,                &
                               interp_level = CNVUSER_INTERP_LEVEL )
+       if ( CNVUSER_OUT_VARNAME == '' ) CNVUSER_OUT_VARNAME = CNVUSER_GrADS_VARNAME
     case default
-       if ( CNVUSER_FILE_TYPE .ne. '' .and. CNVUSER_OUT_BASENAME == '' ) then
-          LOG_ERROR('CNVUSER_setup',*) 'CNVUSER_OUT_BASENAME is required'
+       LOG_ERROR('CNVUSER_setup',*) 'CNVUSER_FILE_TYPE is invalid: ', trim(CNVUSER_FILE_TYPE)
+       LOG_ERROR_CONT(*)            'It must be "TILE" or "GrADS".'
+       call PRC_abort
+    end select
+
+    if ( CNVUSER_FILE_TYPE .ne. '' ) then
+       if ( CNVUSER_OUT_BASENAME == '' .or. CNVUSER_OUT_VARNAME == '' ) then
+          LOG_ERROR('CNVUSER_setup',*) 'CNVUSER_OUT_BASENAME and CNVUSER_OUT_VARNAME are required'
           call PRC_abort
        end if
-    end select
+    end if
 
     return
   end subroutine CNVUSER_setup
