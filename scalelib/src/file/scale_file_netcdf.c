@@ -699,7 +699,6 @@ int32_t file_read_data_c(       void       *var,       // (out)
   size_t *str, *cnt;
   MPI_Offset *strp, *cntp;
   size_t size;
-  int l_rescale;
 
   fid = dinfo->fid;
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -749,8 +748,11 @@ int32_t file_read_data_c(       void       *var,       // (out)
     free(strp);
     free(cntp);
     if ( dtype == MPI_FLOAT ) {
-      float factor, offset;
-      l_rescale = 0;
+      float factor, offset, misval;
+      int l_rescale = 0;
+      if ( ncmpi_get_att_float(ncid, varid, "missing_value", &misval) == NC_NOERR )
+	if ( misval != RMISS )
+	  for (i=0; i<size; i++) if ( ((float*)var)[i] == misval ) ((float*)var)[i] = RMISS;
       if ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
 	factor = 1.0f;
       else
@@ -761,8 +763,11 @@ int32_t file_read_data_c(       void       *var,       // (out)
 	l_rescale = 1;
       if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
     } else if ( dtype == MPI_DOUBLE ) {
-      double factor, offset;
-      l_rescale = 0;
+      double factor, offset, misval;
+      int l_rescale = 0;
+      if ( ncmpi_get_att_double(ncid, varid, "missing_value", &misval) == NC_NOERR )
+	if ( (float)misval != (float)RMISS )
+	  for (i=0; i<size; i++) if ( ((double*)var)[i] == misval ) ((double*)var)[i] = RMISS;
       if ( ncmpi_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
 	factor = 1.0;
       else
@@ -773,7 +778,12 @@ int32_t file_read_data_c(       void       *var,       // (out)
 	l_rescale = 1;
       if ( l_rescale ) for (i=0; i<size; i++) ((double*)var)[i] = ((double*)var)[i] * factor + offset;
     } else {
-      float factor, offset;
+      float factor, offset, misval;
+      if (    ( ncmpi_get_att_float(ncid, varid, "missing_value", &misval) == NC_NOERR ) )
+	if ( misval != (float)RMISS ) {
+	  fprintf(stderr, "missing_value (!=UNDEF) is not supported with a MPI derived type\n");
+	  return ERROR_CODE;
+	}
       if (    ( ncmpi_get_att_float(ncid, varid, "scale_factor", &factor) == NC_NOERR ) 
            || ( ncmpi_get_att_float(ncid, varid, "add_offset",   &offset) == NC_NOERR ) ) {
 	fprintf(stderr, "scale_factor and add_offset is not supported with a MPI derived type\n");
@@ -788,8 +798,13 @@ int32_t file_read_data_c(       void       *var,       // (out)
     case 8:
       CHECK_ERROR( nc_get_vara_double(ncid, varid, str, cnt, (double*)var) )
       {
-	double factor, offset;
-	l_rescale = 0;
+	double factor, offset, misval;
+	float a;
+	int l_rescale = 0;
+	nc_get_att_float(ncid, varid, "missing_value", &a);
+	if ( nc_get_att_double(ncid, varid, "missing_value", &misval) == NC_NOERR )
+	  if ( (float)misval != (float)RMISS )
+	    for (i=0; i<size; i++) if ( ((double*)var)[i] == misval ) ((double*)var)[i] = RMISS;
 	if ( nc_get_att_double(ncid, varid, "scale_factor", &factor) != NC_NOERR )
 	  factor = 1.0;
 	else
@@ -804,8 +819,11 @@ int32_t file_read_data_c(       void       *var,       // (out)
     case 4:
       CHECK_ERROR( nc_get_vara_float(ncid, varid, str, cnt, (float*)var) )
       {
-	float factor, offset;
-	l_rescale = 0;
+	float factor, offset, misval;
+	int l_rescale = 0;
+	if ( nc_get_att_float(ncid, varid, "missing_value", &misval) == NC_NOERR )
+	  if ( misval != (float)RMISS )
+	    for (i=0; i<size; i++) if ( ((float*)var)[i] == misval ) ((float*)var)[i] = RMISS;
 	if ( nc_get_att_float(ncid, varid, "scale_factor", &factor) != NC_NOERR )
 	  factor = 1.0f;
 	else
