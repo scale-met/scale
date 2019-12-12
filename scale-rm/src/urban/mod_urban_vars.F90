@@ -132,7 +132,7 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX              = 27
+  integer,                private, parameter :: VMAX              = 30
   integer,                private, parameter :: I_TR              =  1
   integer,                private, parameter :: I_TB              =  2
   integer,                private, parameter :: I_TG              =  3
@@ -160,6 +160,9 @@ module mod_urban_vars
   integer,                private, parameter :: I_SFLX_LH         = 25
   integer,                private, parameter :: I_SFLX_GH         = 26
   integer,                private, parameter :: I_SFLX_evap       = 27
+  integer,                private, parameter :: I_Z0M             = 28
+  integer,                private, parameter :: I_Z0H             = 29
+  integer,                private, parameter :: I_Z0E             = 30
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -194,7 +197,10 @@ module mod_urban_vars
                   'URBAN_SFLX_SH',         &
                   'URBAN_SFLX_LH',         &
                   'URBAN_SFLX_GH',         &
-                  'URBAN_SFLX_evap'        /
+                  'URBAN_SFLX_evap',       &
+                  'URBAN_Z0M',             &
+                  'URBAN_Z0H',             &
+                  'URBAN_Z0E'              /
 
   data VAR_DESC / 'urban surface temperature of roof',                     &
                   'urban surface temperature of wall',                     &
@@ -222,9 +228,15 @@ module mod_urban_vars
                   'urban grid average of sensible heat flux (upward)',     &
                   'urban grid average of latent heat flux (upward)',       &
                   'urban grid average of subsurface heat flux (downward)', &
-                  'urban grid average of water vapor flux (upward)'        /
+                  'urban grid average of water vapor flux (upward)',       &
+                  'urban parameter of rougness length for momentum',       &
+                  'urban parameter of rougness length for heat',           &
+                  'urban parameter of rougness length for vapor'           /
 
   data VAR_STDN / '', &
+                  '', &
+                  '', &
+                  '', &
                   '', &
                   '', &
                   '', &
@@ -278,8 +290,10 @@ module mod_urban_vars
                   'W/m2',    &
                   'W/m2',    &
                   'W/m2',    &
-                  'kg/m2/s'  /
-
+                  'kg/m2/s', &
+                  'W/m2',    &
+                  'W/m2',    &
+                  'W/m2'     /
 
   logical, private :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
 
@@ -684,6 +698,10 @@ contains
     call FILE_HISTORY_in( URBAN_SFLX_QTRC(:,:,I_QV), VAR_NAME(I_SFLX_evap), VAR_DESC(I_SFLX_evap), VAR_UNIT(I_SFLX_evap) )
     endif
 
+    call FILE_HISTORY_in( URBAN_Z0M(:,:), VAR_NAME(I_Z0M),   VAR_DESC(I_Z0M),   VAR_UNIT(I_Z0M)   )
+    call FILE_HISTORY_in( URBAN_Z0H(:,:), VAR_NAME(I_Z0H),   VAR_DESC(I_Z0H),   VAR_UNIT(I_Z0H)   )
+    call FILE_HISTORY_in( URBAN_Z0E(:,:), VAR_NAME(I_Z0E),   VAR_DESC(I_Z0E),   VAR_UNIT(I_Z0E)   )
+
     call PROF_rapend  ('URB_History', 1)
 
     return
@@ -824,6 +842,19 @@ contains
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),           & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA              ) ! (in)
        endif
+
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_Z0M(:,:), VAR_NAME(I_Z0M),    & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_Z0H(:,:), VAR_NAME(I_Z0H),     & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_Z0E(:,:), VAR_NAME(I_Z0E),     & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
     endif
 
     return
