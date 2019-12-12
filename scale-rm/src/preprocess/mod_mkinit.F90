@@ -1432,7 +1432,7 @@ contains
 
     endif
 
-    ! make density & pressure profile in moist condition
+    ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
@@ -1453,10 +1453,10 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
+          qv_sfc(i,j) = max( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
 
           do k = KS, KE
-             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
+             qv(k,i,j) = max( 0.0_RP, ENV_RH + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
           enddo
        enddo
        enddo
@@ -1465,10 +1465,10 @@ contains
     call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
-       pott_sfc(i,j) = pott_sfc(i,j) + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(i,j) = pott_sfc(i,j) + ( rndm(KS-1,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = pott(k,i,j) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = pott(k,i,j) + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -2041,10 +2041,10 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
+          qv_sfc(i,j) = min( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
 
           do k = KS, KE
-             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
+             qv(k,i,j) = min( 0.0_RP, ENV_RH + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
           enddo
        enddo
        enddo
@@ -2054,10 +2054,10 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
-       pott_sfc(i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(i,j) = SFC_THETA + ( rndm(KS-1,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -2714,7 +2714,7 @@ contains
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ( VELX(k) - OFFSET_velx ) * RHO(k)
        MOMY(k,i,j) = ( VELY(k) - OFFSET_vely ) * RHO(k)
-       RHOT(k,i,j) = RHO(k) * ( POTT(k) + rndm(k,i,j) * RANDOM_THETA )
+       RHOT(k,i,j) = RHO(k) * ( POTT(k) + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_THETA )
        qv  (k,i,j) = QV1D(k)
     enddo
     enddo
@@ -3043,7 +3043,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
        else
           MOMZ(k,i,j) = 0.0_RP
@@ -3057,7 +3057,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        else
           MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3071,7 +3071,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        else
           MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3085,7 +3085,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * DENS(k,i,j)
        else
           RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3258,7 +3258,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
        MOMZ(k,i,j) = 0.0_RP
@@ -3272,7 +3272,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
        MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3286,7 +3286,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3300,7 +3300,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3472,7 +3472,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
        MOMZ(k,i,j) = 0.0_RP
@@ -3487,7 +3487,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
        MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3502,7 +3502,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3516,7 +3516,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3701,7 +3701,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j) - 0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -3710,7 +3710,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+       qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.50_RP ) * PERTURB_AMP_QV
     enddo
     enddo
     enddo
@@ -3910,7 +3910,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
-         RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+         RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP*( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP_PT ) * DENS(k,i,j)
        else
          RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
        endif
@@ -3923,7 +3923,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
-          qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+          qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP_QV
        endif
     enddo
     enddo
@@ -4179,7 +4179,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
        else
           MOMZ(k,i,j) = 0.0_RP
@@ -4193,7 +4193,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMX(k,i,j) = ( velx(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMX(k,i,j) = ( velx(k) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        else
           MOMX(k,i,j) = velx(k) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -4207,7 +4207,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMY(k,i,j) = ( vely(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMY(k,i,j) = ( vely(k) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        else
           MOMY(k,i,j) = vely(k) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -4221,7 +4221,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          RHOT(k,i,j) = ( pott(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          RHOT(k,i,j) = ( pott(k) + 2.0_RP * ( rndm(k,i,j) - 0.5_RP ) * PERTURB_AMP ) &
                       * DENS(k,i,j)
        else
           RHOT(k,i,j) = pott(k) * DENS(k,i,j)
