@@ -43,6 +43,8 @@ module scale_urban_dyn_kusaka01
   private :: mos
   private :: multi_layer
   private :: urban_param_setup
+  private :: read_urban_param_table
+  private :: read_urban_gridded_data
 
   !-----------------------------------------------------------------------------
   !
@@ -97,8 +99,8 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: Z0HR                    ! roughness length for heat of roof
   real(RP), private :: Z0HB                    ! roughness length for heat of building wall
   real(RP), private :: Z0HG                    ! roughness length for heat of ground
-  real(RP), private :: Z0C                     ! Roughness length above canyon for momentum [m]
-  real(RP), private :: Z0HC                    ! Roughness length above canyon for heat [m]
+  real(RP), private :: Z0C_TBL                 ! Roughness length above canyon for momentum [m]
+  real(RP), private :: Z0HC_TBL                ! Roughness length above canyon for heat [m]
   real(RP), private :: ZDC                     ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
 
@@ -120,6 +122,8 @@ contains
        Z0M, Z0H, Z0E  )
     use scale_prc, only: &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
@@ -130,15 +134,23 @@ contains
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
 
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = '' !< urban parameters
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = ''                !< urban parameter table
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = ''          !< gridded data of Z0M
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME  = 'URBAN_Z0M' !< var name of gridded data for Z0M
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME = ''          !< gridded data of Z0H
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME  = 'URBAN_Z0H' !< var name of gridded data for Z0H
 
-    namelist / PARAM_URBAN_DYN_KUSAKA01 /     &
-       DTS_MAX,                               &
-       BOUND,                                 &
-       URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME
+    namelist / PARAM_URBAN_DYN_KUSAKA01 /          &
+       DTS_MAX,                                    &
+       BOUND,                                      &
+       URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME,       &
+       URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
+       URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME
 
-    integer :: i, j
-    integer :: ierr
+    real(RP) :: udata(UIA,UJA)
+
+    integer  :: i, j
+    integer  :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
@@ -170,11 +182,51 @@ contains
     ! judge to run slab land model
     do j = UJS, UJE
     do i = UIS, UIE
-       Z0M(i,j) = Z0C
-       Z0H(i,j) = Z0HC
-       Z0E(i,j) = Z0HC
+       Z0M(i,j) = Z0C_TBL
+       Z0H(i,j) = Z0HC_TBL
+       Z0E(i,j) = Z0HC_TBL
     enddo
     enddo
+
+    !-- read gridded Z0M data from a file
+    if( URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME /= '' ) then
+     udata = 0.0_RP
+     call read_urban_gridded_data(                            &
+            UIA, UJA,                                         &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME), &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME),  &
+            udata                                             )
+
+      ! replace
+      do j = UJS, UJE
+      do i = UIS, UIE
+         if( udata(i,j) /= UNDEF )then
+          Z0M(i,j) = udata(i,j)
+         endif
+      enddo
+      enddo
+    endif
+
+    !-- read gridded Z0H & Z0E data from a file
+    if( URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME /= '' ) then
+     udata = 0.0_RP
+     call read_urban_gridded_data(                            &
+            UIA, UJA,                                         &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME), &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME),  &
+            udata                                             )
+
+      ! replace
+      do j = UJS, UJE
+      do i = UIS, UIE
+         if( udata(i,j) /= UNDEF )then
+          Z0H(i,j) = udata(i,j)
+          Z0E(i,j) = udata(i,j)
+         endif
+      enddo
+      enddo
+    endif
+
 
     call FILE_HISTORY_reg( 'URBAN_SHR',   'urban sensible heat flux on roof',    'W/m2', I_SHR  , ndims=2 )
     call FILE_HISTORY_reg( 'URBAN_SHB',   'urban sensible heat flux on wall',    'W/m2', I_SHB  , ndims=2 )
@@ -214,11 +266,11 @@ contains
        TC_URB, QC_URB, UC_URB,          &
        RAINR_URB, RAINB_URB, RAING_URB, &
        ROFF_URB,                        &
+       Z0M, Z0H, Z0E,                   &
        SFC_TEMP,                        &
        ALBEDO,                          &
        MWFLX, MUFLX, MVFLX,             &
        SHFLX, LHFLX, GHFLX,             &
-       Z0M, Z0H, Z0E,                   &
        U10, V10, T2, Q2                 )
     use scale_const, only: &
        EPS  => CONST_EPS,  &
@@ -270,6 +322,9 @@ contains
     real(RP), intent(inout) :: RAINB_URB(UIA,UJA)
     real(RP), intent(inout) :: RAING_URB(UIA,UJA)
     real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
+    real(RP), intent(inout) :: Z0M      (UIA,UJA)
+    real(RP), intent(inout) :: Z0H      (UIA,UJA)
+    real(RP), intent(inout) :: Z0E      (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBEDO  (UIA,UJA,N_RAD_DIR,N_RAD_RGN)
@@ -279,9 +334,6 @@ contains
     real(RP), intent(out) :: SHFLX   (UIA,UJA)
     real(RP), intent(out) :: LHFLX   (UIA,UJA)
     real(RP), intent(out) :: GHFLX   (UIA,UJA)
-    real(RP), intent(out) :: Z0M     (UIA,UJA)
-    real(RP), intent(out) :: Z0H     (UIA,UJA)
-    real(RP), intent(out) :: Z0E     (UIA,UJA)
     real(RP), intent(out) :: U10     (UIA,UJA)
     real(RP), intent(out) :: V10     (UIA,UJA)
     real(RP), intent(out) :: T2      (UIA,UJA)
@@ -439,6 +491,8 @@ contains
                       RAIN    (i,j),      & ! [IN]
                       SNOW    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
+                      Z0M     (i,j),      & ! [IN]
+                      Z0H     (i,j),      & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
                       tloc, dsec, dt,     & ! (in)
                       i, j                ) ! [IN]
@@ -491,9 +545,9 @@ contains
                       Uabs,          & ! [IN]
                       Z1      (i,j), & ! [IN]
                       PBL     (i,j), & ! [IN]
-                      Z0C,           & ! [IN]
-                      Z0HC,          & ! [IN]
-                      Z0HC           ) ! [IN]
+                      Z0M     (i,j), & ! [IN]
+                      Z0H     (i,j), & ! [IN]
+                      Z0E     (i,j)  ) ! [IN]
 
        if ( Uabs < EPS ) then
           MWFLX(i,j) = 0.0_RP
@@ -506,9 +560,9 @@ contains
           MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
        end if
 
-       Z0M(i,j) = Z0C
-       Z0H(i,j) = Z0HC
-       Z0E(i,j) = Z0HC
+       !Z0M(i,j) = Z0C_TBL
+       !Z0H(i,j) = Z0HC_TBL
+       !Z0E(i,j) = Z0HC_TBL
 
     else
        SFC_TEMP(i,j)     = 300.0_RP ! constant value
@@ -609,6 +663,8 @@ contains
         RAIN,         & ! (in)
         SNOW,         & ! (in)
         RHOO,         & ! (in)
+        Z0C,          & ! (in)
+        Z0HC,         & ! (in)
         DZR, DZB, DZG, & ! (in)
         tloc, dsec,   & ! (in)
         dt,           & ! (in)
@@ -656,6 +712,8 @@ contains
     real(RP), intent(in)    :: RAIN ! liquid water flux                      [kg/m2/s]
     real(RP), intent(in)    :: SNOW ! ice water flux                         [kg/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
+    real(RP), intent(in)    :: Z0C  ! Roughness length above canyon for momentum [m]
+    real(RP), intent(in)    :: Z0HC ! Roughness length above canyon for heat [m]
     real(RP), intent(in)    :: DZR(UKA)
     real(RP), intent(in)    :: DZB(UKA)
     real(RP), intent(in)    :: DZG(UKA)
@@ -845,7 +903,7 @@ contains
 
     !--- calculate canopy wind
 
-    call canopy_wind(ZA, UA, UC)
+    call canopy_wind(ZA, UA, Z0C, UC)
 
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
@@ -1225,8 +1283,8 @@ contains
        LOG_INFO_CONT(*) 'DEBUG Message --- AKSB,AKSG : Thermal conductivity          [W m-1 K] :', AKSB,AKSB
        LOG_INFO_CONT(*) 'DEBUG Message --- QS0B,QS0G : Surface specific humidity       [kg/kg] :', QS0B,QS0G
        LOG_INFO_CONT(*) 'DEBUG Message --- ZDC       : Desplacement height of canopy       [m] :', ZDC
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0C       : Momentum roughness length of canopy [m] :', Z0C
-       LOG_INFO_CONT(*) 'DEBUG Message --- Z0HC      : Thermal roughness length of canopy  [m] :', Z0HC
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0M       : Momentum roughness length of canopy [m] :', Z0C
+       LOG_INFO_CONT(*) 'DEBUG Message --- Z0H/Z0E   : Thermal roughness length of canopy  [m] :', Z0HC
        LOG_INFO_CONT(*) '---------------------------------------------------------------------------------'
      endif
 
@@ -1401,11 +1459,12 @@ contains
   end subroutine SLC_main
 
   !-----------------------------------------------------------------------------
-  subroutine canopy_wind(ZA, UA, UC)
+  subroutine canopy_wind(ZA, UA, Z0C, UC)
     implicit none
 
     real(RP), intent(in)  :: ZA   ! height at 1st atmospheric level [m]
     real(RP), intent(in)  :: UA   ! wind speed at 1st atmospheric level [m/s]
+    real(RP), intent(in)  :: Z0C  ! Roughness length above canyon for momentum [m]
     real(RP), intent(out) :: UC   ! wind speed at 1st atmospheric level [m/s]
 
     real(RP) :: UR,ZC,XLB,BB
@@ -1713,6 +1772,7 @@ contains
   end subroutine multi_layer2
 
   !-----------------------------------------------------------------------------
+  !> set urban parameters
   subroutine urban_param_setup
     implicit none
 
@@ -1720,24 +1780,24 @@ contains
     integer  :: k
 
     ! initialize
-    R    = 0.0_RP
-    RW   = 0.0_RP
-    HGT  = 0.0_RP
-    Z0HR = 0.0_RP
-    Z0HB = 0.0_RP
-    Z0HG = 0.0_RP
-    Z0C  = 0.0_RP
-    Z0HC = 0.0_RP
-    ZDC  = 0.0_RP
-    SVF  = 0.0_RP
+    R        = 0.0_RP
+    RW       = 0.0_RP
+    HGT      = 0.0_RP
+    Z0HR     = 0.0_RP
+    Z0HB     = 0.0_RP
+    Z0HG     = 0.0_RP
+    ZDC      = 0.0_RP
+    Z0C_TBL  = 0.0_RP
+    Z0HC_TBL = 0.0_RP
+    SVF      = 0.0_RP
 
     ! set up other urban parameters
-    Z0HR = 0.1_RP * Z0R
-    Z0HB = 0.1_RP * Z0B
-    Z0HG = 0.1_RP * Z0G
-    ZDC  = ZR * 0.3_RP
-    Z0C  = ZR * 0.15_RP
-    Z0HC = 0.1_RP * Z0C
+    Z0HR     = 0.1_RP * Z0R
+    Z0HB     = 0.1_RP * Z0B
+    Z0HG     = 0.1_RP * Z0G
+    ZDC      = ZR * 0.3_RP
+    Z0C_TBL  = ZR * 0.15_RP
+    Z0HC_TBL = 0.1_RP * Z0C_TBL
 
     ! HGT:  Normalized height
     HGT  = ZR / ( ROAD_WIDTH + ROOF_WIDTH )
@@ -1764,13 +1824,14 @@ contains
     return
   end subroutine urban_param_setup
 
+  !-----------------------------------------------------------------------------
+  !> read urban data from paraneter table
   subroutine read_urban_param_table( INFILENAME )
     use scale_prc, only: &
         PRC_abort
     implicit none
 
     character(len=H_LONG), intent(in) :: INFILENAME
-    integer                           :: IO_FID_URBAN_PARAM
 
     namelist / PARAM_URBAN_DATA / &
        ZR,         &
@@ -1804,10 +1865,11 @@ contains
        TBLEND,     &
        TGLEND
 
+    integer :: fid
     integer :: ierr
-
-      IO_FID_URBAN_PARAM = IO_get_available_fid()
-      open( IO_FID_URBAN_PARAM,                   &
+    !---------------------------------------------------------------------------
+      fid = IO_get_available_fid()
+      open( fid,                   &
           file   = trim(INFILENAME),              &
           form   = 'formatted',                   &
           status = 'old',                         &
@@ -1822,8 +1884,8 @@ contains
         LOG_NEWLINE
         LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Read urban parameters from file'
         !--- read namelist
-        rewind(IO_FID_URBAN_PARAM)
-        read  (IO_FID_URBAN_PARAM,nml=PARAM_URBAN_DATA,iostat=ierr)
+        rewind(fid)
+        read  (fid,nml=PARAM_URBAN_DATA,iostat=ierr)
         if ( ierr < 0 ) then !--- no data
            LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
         elseif( ierr > 0 ) then !--- fatal error
@@ -1834,11 +1896,49 @@ contains
         LOG_NML(PARAM_URBAN_DATA)
       end if
 
-      close( IO_FID_URBAN_PARAM )
+      close( fid )
 
     return
   end subroutine read_urban_param_table
 
+  !-----------------------------------------------------------------------------
+  !> read gridded urban data
+  subroutine read_urban_gridded_data(  &
+       UIA, UJA,                       &
+       INFILENAME,                     &
+       VARNAME,                        &
+       udata                           )
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_open, &
+       FILE_CARTESC_read, &
+       FILE_CARTESC_flush, &
+       FILE_CARTESC_check_coordinates, &
+       FILE_CARTESC_close
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer         , intent(in)  :: UIA, UJA
+    character(len=*), intent(in)  :: INFILENAME
+    character(len=*), intent(in)  :: VARNAME
+    real(RP),         intent(out) :: udata(UIA,UJA) !< value of the variable
+
+    integer :: fid
+    !---------------------------------------------------------------------------
+    LOG_NEWLINE
+    LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_gridded_data ',trim(VARNAME)
+
+    fid = IO_get_available_fid()
+    call FILE_CARTESC_open( INFILENAME, fid )
+    call FILE_CARTESC_read( fid, VARNAME, 'XY', udata(:,:) )
+
+    call FILE_CARTESC_flush( fid )
+    call FILE_CARTESC_check_coordinates( fid )
+    call FILE_CARTESC_close( fid )
+
+    return
+  end subroutine read_urban_gridded_data
+
+  !-----------------------------------------------------------------------------
   subroutine put_history( &
        UIA, UJA, &
        SHR, SHB, SHG, &

@@ -312,11 +312,11 @@ contains
                                 TRL(:,:,:), TBL(:,:,:), TGL(:,:,:),                          & ! [INOUT]
                                 TR(:,:), TB(:,:), TG(:,:), TC(:,:), QC(:,:), UC(:,:),        & ! [INOUT]
                                 RAINR(:,:), RAINB(:,:), RAING(:,:), ROFF(:,:),               & ! [INOUT]
+                                URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [INOUT]
                                 URBAN_SFC_TEMP(:,:),                                         & ! [OUT]
                                 URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
                                 URBAN_SFLX_SH(:,:), URBAN_SFLX_LH(:,:), URBAN_SFLX_GH(:,:),  & ! [OUT]
-                                URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [OUT]
                                 URBAN_U10(:,:), URBAN_V10(:,:), URBAN_T2(:,:), URBAN_Q2(:,:) ) ! [OUT]
 
 !OCL XFILL
