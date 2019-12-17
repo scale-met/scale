@@ -96,10 +96,13 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:)   ! urban grid average of water vapor flux [kg/m2/s]
 
-  ! diagnostic variables
+  ! given 2D variables expressing urban morphology
   real(RP), public, allocatable :: URBAN_Z0M(:,:) ! urban grid average of rougness length (momentum) [m]
   real(RP), public, allocatable :: URBAN_Z0H(:,:) ! urban grid average of rougness length (heat) [m]
   real(RP), public, allocatable :: URBAN_Z0E(:,:) ! urban grid average of rougness length (vapor) [m]
+  real(RP), public, allocatable :: URBAN_AH(:,:)  ! urban grid average of anthropogenic heat [W/m2]
+
+  ! diagnostic variables
   real(RP), public, allocatable :: URBAN_U10(:,:) ! urban grid average of velocity u at 10m [m/s]
   real(RP), public, allocatable :: URBAN_V10(:,:) ! urban grid average of velocity v at 10m [m/s]
   real(RP), public, allocatable :: URBAN_T2 (:,:) ! urban grid average of temperature at 2m [K]
@@ -132,7 +135,7 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX              = 30
+  integer,                private, parameter :: VMAX              = 31
   integer,                private, parameter :: I_TR              =  1
   integer,                private, parameter :: I_TB              =  2
   integer,                private, parameter :: I_TG              =  3
@@ -163,6 +166,7 @@ module mod_urban_vars
   integer,                private, parameter :: I_Z0M             = 28
   integer,                private, parameter :: I_Z0H             = 29
   integer,                private, parameter :: I_Z0E             = 30
+  integer,                private, parameter :: I_AH              = 31
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -200,7 +204,8 @@ module mod_urban_vars
                   'URBAN_SFLX_evap',       &
                   'URBAN_Z0M',             &
                   'URBAN_Z0H',             &
-                  'URBAN_Z0E'              /
+                  'URBAN_Z0E',             &
+                  'URBAN_AH'               /
 
   data VAR_DESC / 'urban surface temperature of roof',                     &
                   'urban surface temperature of wall',                     &
@@ -231,9 +236,11 @@ module mod_urban_vars
                   'urban grid average of water vapor flux (upward)',       &
                   'urban parameter of rougness length for momentum',       &
                   'urban parameter of rougness length for heat',           &
-                  'urban parameter of rougness length for vapor'           /
+                  'urban parameter of rougness length for vapor',          &
+                  'urban parameter of anthropogenic heat'                  /
 
   data VAR_STDN / '', &
+                  '', &
                   '', &
                   '', &
                   '', &
@@ -291,8 +298,9 @@ module mod_urban_vars
                   'W/m2',    &
                   'W/m2',    &
                   'kg/m2/s', &
-                  'W/m2',    &
-                  'W/m2',    &
+                  'm',       &
+                  'm',       &
+                  'm',       &
                   'W/m2'     /
 
   logical, private :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
@@ -404,6 +412,7 @@ contains
     allocate( URBAN_Z0M(UIA,UJA) )
     allocate( URBAN_Z0H(UIA,UJA) )
     allocate( URBAN_Z0E(UIA,UJA) )
+    allocate( URBAN_AH (UIA,UJA) )
     allocate( URBAN_U10(UIA,UJA) )
     allocate( URBAN_V10(UIA,UJA) )
     allocate( URBAN_T2 (UIA,UJA) )
@@ -411,6 +420,7 @@ contains
     URBAN_Z0M(:,:) = UNDEF
     URBAN_Z0H(:,:) = UNDEF
     URBAN_Z0E(:,:) = UNDEF
+    URBAN_AH (:,:) = UNDEF
     URBAN_U10(:,:) = UNDEF
     URBAN_V10(:,:) = UNDEF
     URBAN_T2 (:,:) = UNDEF
@@ -701,6 +711,7 @@ contains
     call FILE_HISTORY_in( URBAN_Z0M(:,:), VAR_NAME(I_Z0M),   VAR_DESC(I_Z0M),   VAR_UNIT(I_Z0M)   )
     call FILE_HISTORY_in( URBAN_Z0H(:,:), VAR_NAME(I_Z0H),   VAR_DESC(I_Z0H),   VAR_UNIT(I_Z0H)   )
     call FILE_HISTORY_in( URBAN_Z0E(:,:), VAR_NAME(I_Z0E),   VAR_DESC(I_Z0E),   VAR_UNIT(I_Z0E)   )
+    call FILE_HISTORY_in( URBAN_AH(:,:),  VAR_NAME(I_AH),    VAR_DESC(I_AH),    VAR_UNIT(I_AH)   )
 
     call PROF_rapend  ('URB_History', 1)
 
@@ -848,11 +859,15 @@ contains
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_Z0H(:,:), VAR_NAME(I_Z0H),     & ! (in)
+                              URBAN_Z0H(:,:), VAR_NAME(I_Z0H),    & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_Z0E(:,:), VAR_NAME(I_Z0E),     & ! (in)
+                              URBAN_Z0E(:,:), VAR_NAME(I_Z0E),    & ! (in)
+                              URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
+                              URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
+       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
+                              URBAN_AH(:,:),  VAR_NAME(I_AH),     & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),  & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA     ) ! (in)
     endif

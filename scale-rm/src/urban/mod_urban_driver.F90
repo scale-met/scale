@@ -44,6 +44,7 @@ module mod_urban_driver
   !
   !++ Private parameters & variables
   !
+  real(RP), private, allocatable :: AH_URB(:,:,:)  ! urban grid average of anthropogenic heat [W/m2]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -51,6 +52,8 @@ contains
   subroutine URBAN_driver_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use mod_urban_admin, only: &
        URBAN_do, &
        URBAN_DYN_TYPE, &
@@ -69,10 +72,14 @@ contains
 
     if ( URBAN_do ) then
 
+       allocate( AH_URB(UIA,UJA,1:24) )
+       AH_URB (:,:,:) = UNDEF
+
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
           call URBAN_DYN_KUSAKA01_setup( UIA, UIS, UIE, UJA, UJS, UJE, &
-                                         URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:) ) ! [OUT]
+                                         URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), &
+                                         AH_URB(:,:,:)                                   ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
        case default
@@ -155,6 +162,7 @@ contains
        URBAN_Z0M,         &
        URBAN_Z0H,         &
        URBAN_Z0E,         &
+       URBAN_AH,          &
        URBAN_U10,         &
        URBAN_V10,         &
        URBAN_T2,          &
@@ -285,6 +293,7 @@ contains
        end do
        end do
 
+
        ! local time
        LAT = BASE_LAT
        LON = BASE_LON
@@ -293,6 +302,23 @@ contains
        tloc = mod( (NOWDATE(4) + int(LON/15.0_RP)),24 )
        dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
        if( tloc == 0 ) tloc = 24
+
+       !--- Calculate AH at LST
+       if ( tloc == 24 ) then
+          do j = UJS, UJE
+          do i = UIS, UIE
+             URBAN_AH(i,j) = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
+                           + (        dsec ) * AH_URB(i,j,1     )
+          enddo
+          enddo
+       else
+          do j = UJS, UJE
+          do i = UIS, UIE
+             URBAN_AH(i,j) = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
+                           + (        dsec ) * AH_URB(i,j,tloc+1)
+          enddo
+          enddo
+       endif
 
        call HYDROMETEOR_LHV( UIA, UIS, UIE, UJA, UJS, UJE, &
                              ATMOS_TEMP(:,:), LHV(:,:) )
@@ -313,6 +339,7 @@ contains
                                 TR(:,:), TB(:,:), TG(:,:), TC(:,:), QC(:,:), UC(:,:),        & ! [INOUT]
                                 RAINR(:,:), RAINB(:,:), RAING(:,:), ROFF(:,:),               & ! [INOUT]
                                 URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [INOUT]
+                                URBAN_AH(:,:),                                               & ! [INOUT]
                                 URBAN_SFC_TEMP(:,:),                                         & ! [OUT]
                                 URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
