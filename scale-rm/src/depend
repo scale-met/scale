@@ -25,7 +25,7 @@ $(BUILD_DIR)/mod_atmos_phy_tb_vars.o: atmos/mod_atmos_phy_tb_vars.F90 $(DEPENDLI
 $(BUILD_DIR)/mod_atmos_vars.o: atmos/mod_atmos_vars.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_atmos_admin.o $(BUILD_DIR)/mod_atmos_dyn_vars.o $(BUILD_DIR)/mod_atmos_phy_ae_vars.o $(BUILD_DIR)/mod_atmos_phy_bl_vars.o $(BUILD_DIR)/mod_atmos_phy_ch_vars.o $(BUILD_DIR)/mod_atmos_phy_cp_vars.o $(BUILD_DIR)/mod_atmos_phy_mp_vars.o $(BUILD_DIR)/mod_atmos_phy_rd_vars.o $(BUILD_DIR)/mod_atmos_phy_sf_vars.o $(BUILD_DIR)/mod_atmos_phy_tb_vars.o $(BUILD_DIR)/mod_cpl_admin.o
 $(BUILD_DIR)/mod_cnv2d.o: preprocess/mod_cnv2d.F90 $(DEPENDLIB)
 $(BUILD_DIR)/mod_cnvlanduse.o: preprocess/mod_cnvlanduse.F90 $(DEPENDLIB)
-$(BUILD_DIR)/mod_cnvtopo.o: preprocess/mod_cnvtopo.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_copytopo.o
+$(BUILD_DIR)/mod_cnvtopo.o: preprocess/mod_cnvtopo.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnv2d.o $(BUILD_DIR)/mod_copytopo.o
 $(BUILD_DIR)/mod_cnvuser.o: preprocess/mod_cnvuser.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnv2d.o
 $(BUILD_DIR)/mod_convert.o: preprocess/mod_convert.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_cnvlanduse.o $(BUILD_DIR)/mod_cnvtopo.o $(BUILD_DIR)/mod_cnvuser.o
 $(BUILD_DIR)/mod_copytopo.o: preprocess/mod_copytopo.F90 $(DEPENDLIB)
