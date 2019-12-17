@@ -102,7 +102,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: Z0HG                    ! roughness length for heat of ground
   real(RP), private :: Z0C_TBL                 ! Roughness length above canyon for momentum [m]
   real(RP), private :: Z0HC_TBL                ! Roughness length above canyon for heat [m]
-  real(RP), private :: ZDC                     ! Displacement height [m]
+  real(RP), private :: ZDC_TBL                 ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
 
   real(RP), private :: XXXR    = 0.0_RP        ! Monin-Obkhov length for roof [-]
@@ -120,7 +120,7 @@ contains
   !> Setup
   subroutine URBAN_DYN_kusaka01_setup( &
        UIA, UIS, UIE, UJA, UJS, UJE, &
-       Z0M, Z0H, Z0E, AH_URB  )
+       Z0M, Z0H, Z0E, ZD, AH_URB  )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -134,6 +134,7 @@ contains
     real(RP), intent(out) :: Z0M(UIA,UJA)
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
+    real(RP), intent(out) :: ZD (UIA,UJA)
     real(RP), intent(out) :: AH_URB (UIA,UJA,1:24)
 
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = ''                !< urban parameter table
@@ -141,8 +142,10 @@ contains
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME  = 'URBAN_Z0M' !< var name of gridded data for Z0M
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME = ''          !< gridded data of Z0H
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME  = 'URBAN_Z0H' !< var name of gridded data for Z0H
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME = ''           !< gridded data of AH
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME  = 'URBAN_AH'   !< var name of gridded data for AH
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME  = ''          !< gridded data of ZD
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME   = 'URBAN_ZD'  !< var name of gridded data for Zd
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = ''           !< gridded data of AH
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME   = 'URBAN_AH'   !< var name of gridded data for AH
 
     namelist / PARAM_URBAN_DYN_KUSAKA01 /          &
        DTS_MAX,                                    &
@@ -150,6 +153,7 @@ contains
        URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME,       &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
+       URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME,  &
        URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME
 
     real(RP) :: udata(UIA,UJA)
@@ -190,6 +194,7 @@ contains
        Z0M(i,j) = Z0C_TBL
        Z0H(i,j) = Z0HC_TBL
        Z0E(i,j) = Z0HC_TBL
+       ZD(i,j)  = ZDC_TBL
        do k = 1, 24
           AH_URB(i,j,k) = AH_TBL * ahdiurnal(k)
        enddo
@@ -230,6 +235,25 @@ contains
          if( udata(i,j) /= UNDEF )then
           Z0H(i,j) = udata(i,j)
           Z0E(i,j) = udata(i,j)
+         endif
+      enddo
+      enddo
+    endif
+
+    !-- read gridded ZD data from a file
+    if( URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME /= '' ) then
+     udata = 0.0_RP
+     call read_urban_gridded_data_2D(                         &
+            UIA, UJA,                                         &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME), &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME),  &
+            udata                                             )
+
+      ! replace to gridded data
+      do j = UJS, UJE
+      do i = UIS, UIE
+         if( udata(i,j) /= UNDEF )then
+          ZD(i,j) = udata(i,j)
          endif
       enddo
       enddo
@@ -295,6 +319,7 @@ contains
        RAINR_URB, RAINB_URB, RAING_URB, &
        ROFF_URB,                        &
        Z0M, Z0H, Z0E,                   &
+       ZD,                              &
        AH_URB_t,                        &
        SFC_TEMP,                        &
        ALBEDO,                          &
@@ -354,6 +379,7 @@ contains
     real(RP), intent(inout) :: Z0M      (UIA,UJA)
     real(RP), intent(inout) :: Z0H      (UIA,UJA)
     real(RP), intent(inout) :: Z0E      (UIA,UJA)
+    real(RP), intent(inout) :: ZD       (UIA,UJA)
     real(RP), intent(inout) :: AH_URB_t (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
@@ -523,6 +549,7 @@ contains
                       DENS    (i,j),      & ! [IN]
                       Z0M     (i,j),      & ! [IN]
                       Z0H     (i,j),      & ! [IN]
+                      ZD      (i,j),      & ! [IN]
                       AH_URB_t(i,j),      & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
                       tloc, dsec, dt,     & ! (in)
@@ -591,10 +618,6 @@ contains
           MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
        end if
 
-       !Z0M(i,j) = Z0C_TBL
-       !Z0H(i,j) = Z0HC_TBL
-       !Z0E(i,j) = Z0HC_TBL
-
     else
        SFC_TEMP(i,j)     = 300.0_RP ! constant value
        ALBEDO  (i,j,:,:) = 0.0_RP
@@ -607,6 +630,7 @@ contains
        Z0M     (i,j)     = 0.0_RP
        Z0H     (i,j)     = 0.0_RP
        Z0E     (i,j)     = 0.0_RP
+       ZD      (i,j)     = 0.0_RP
        AH_URB_t(i,j)     = 0.0_RP
        U10     (i,j)     = 0.0_RP
        V10     (i,j)     = 0.0_RP
@@ -697,6 +721,7 @@ contains
         RHOO,         & ! (in)
         Z0C,          & ! (in)
         Z0HC,         & ! (in)
+        ZDC,          & ! (in)
         AH_t,         & ! (in)
         DZR, DZB, DZG, & ! (in)
         tloc, dsec,   & ! (in)
@@ -747,6 +772,7 @@ contains
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: Z0C  ! Roughness length above canyon for momentum [m]
     real(RP), intent(in)    :: Z0HC ! Roughness length above canyon for heat [m]
+    real(RP), intent(in)    :: ZDC  ! Displacement height                    [m]
     real(RP), intent(in)    :: AH_t ! Anthropogenic heat                     [W/m2]
     real(RP), intent(in)    :: DZR(UKA)
     real(RP), intent(in)    :: DZB(UKA)
@@ -939,7 +965,7 @@ contains
 
     !--- calculate canopy wind
 
-    call canopy_wind(ZA, UA, Z0C, UC)
+    call canopy_wind(ZA, UA, Z0C, ZDC, UC)
 
     !-----------------------------------------------------------
     ! Set evaporation efficiency on roof/wall/road
@@ -1495,12 +1521,13 @@ contains
   end subroutine SLC_main
 
   !-----------------------------------------------------------------------------
-  subroutine canopy_wind(ZA, UA, Z0C, UC)
+  subroutine canopy_wind(ZA, UA, Z0C, ZDC, UC)
     implicit none
 
     real(RP), intent(in)  :: ZA   ! height at 1st atmospheric level [m]
     real(RP), intent(in)  :: UA   ! wind speed at 1st atmospheric level [m/s]
     real(RP), intent(in)  :: Z0C  ! Roughness length above canyon for momentum [m]
+    real(RP), intent(in)  :: ZDC  ! Displacement height [m]
     real(RP), intent(out) :: UC   ! wind speed at 1st atmospheric level [m/s]
 
     real(RP) :: UR,ZC,XLB,BB
@@ -1822,7 +1849,7 @@ contains
     Z0HR     = 0.0_RP
     Z0HB     = 0.0_RP
     Z0HG     = 0.0_RP
-    ZDC      = 0.0_RP
+    ZDC_TBL  = 0.0_RP
     Z0C_TBL  = 0.0_RP
     Z0HC_TBL = 0.0_RP
     SVF      = 0.0_RP
@@ -1831,7 +1858,7 @@ contains
     Z0HR     = 0.1_RP * Z0R
     Z0HB     = 0.1_RP * Z0B
     Z0HG     = 0.1_RP * Z0G
-    ZDC      = ZR * 0.3_RP
+    ZDC_TBL  = ZR * 0.3_RP
     Z0C_TBL  = ZR * 0.15_RP
     Z0HC_TBL = 0.1_RP * Z0C_TBL
 
