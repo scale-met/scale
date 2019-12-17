@@ -65,7 +65,7 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: road_width =   11.0_RP ! road width [m]
   real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
   real(RP), private :: AH_TBL     =   17.5_RP ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: ALH        =    0.0_RP ! Latent Anthropogenic heat   [W/m^2]
+  real(RP), private :: AHL_TBL    =    0.0_RP ! Latent Anthropogenic heat   [W/m^2]
   real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof     [-]
   real(RP), private :: BETB       =    0.0_RP !                        of building [-]
   real(RP), private :: BETG       =    0.0_RP !                        of ground   [-]
@@ -120,7 +120,7 @@ contains
   !> Setup
   subroutine URBAN_DYN_kusaka01_setup( &
        UIA, UIS, UIE, UJA, UJS, UJE, &
-       Z0M, Z0H, Z0E, ZD, AH_URB  )
+       Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -135,7 +135,8 @@ contains
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
     real(RP), intent(out) :: ZD (UIA,UJA)
-    real(RP), intent(out) :: AH_URB (UIA,UJA,1:24)
+    real(RP), intent(out) :: AH_URB  (UIA,UJA,1:24)
+    real(RP), intent(out) :: AHL_URB (UIA,UJA,1:24)
 
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = ''                !< urban parameter table
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = ''          !< gridded data of Z0M
@@ -144,8 +145,10 @@ contains
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME  = 'URBAN_Z0H' !< var name of gridded data for Z0H
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME  = ''          !< gridded data of ZD
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME   = 'URBAN_ZD'  !< var name of gridded data for Zd
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = ''           !< gridded data of AH
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME   = 'URBAN_AH'   !< var name of gridded data for AH
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = ''          !< gridded data of AH
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME   = 'URBAN_AH'  !< var name of gridded data for AH
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME = ''          !< gridded data of AHL
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_VARNAME  = 'URBAN_AHL' !< var name of gridded data for AHL
 
     namelist / PARAM_URBAN_DYN_KUSAKA01 /          &
        DTS_MAX,                                    &
@@ -154,7 +157,8 @@ contains
        URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME,  &
-       URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME
+       URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME,  &
+       URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME
 
     real(RP) :: udata(UIA,UJA)
     real(RP) :: udata2(UIA,UJA,24)
@@ -196,7 +200,8 @@ contains
        Z0E(i,j) = Z0HC_TBL
        ZD(i,j)  = ZDC_TBL
        do k = 1, 24
-          AH_URB(i,j,k) = AH_TBL * ahdiurnal(k)
+          AH_URB (i,j,k) = AH_TBL  * ahdiurnal(k)
+          AHL_URB(i,j,k) = AHL_TBL * ahdiurnal(k)
        enddo
     enddo
     enddo
@@ -259,7 +264,7 @@ contains
       enddo
     endif
 
-    !-- read gridded Z0H & Z0E data from a file
+    !-- read gridded AH data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME /= '' ) then
      udata2 = 0.0_RP
      call read_urban_gridded_data_3D(                        &
@@ -273,7 +278,28 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata2(i,j,k) /= UNDEF )then
-          AH_URB(i,j,k) = udata2(i,j,k)  ! Adachi
+          AH_URB(i,j,k) = udata2(i,j,k)
+         endif
+      enddo
+      enddo
+      enddo
+    endif
+
+    !-- read gridded AHL data from a file
+    if( URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME /= '' ) then
+     udata2 = 0.0_RP
+     call read_urban_gridded_data_3D(                        &
+            UIA, UJA,                                        &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME), &
+            trim(URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_VARNAME),  &
+            udata2                                           )
+
+      ! replace to gridded data
+      do k = 1, 24
+      do j = UJS, UJE
+      do i = UIS, UIE
+         if( udata2(i,j,k) /= UNDEF )then
+          AHL_URB(i,j,k) = udata2(i,j,k)
          endif
       enddo
       enddo
@@ -312,7 +338,7 @@ contains
        CDZ,                             &
        TanSL_X, TanSL_Y,                &
        fact_urban,                      &
-       tloc, dsec, dt,                  &
+       dt,                              &
        TRL_URB, TBL_URB, TGL_URB,       &
        TR_URB, TB_URB, TG_URB,          &
        TC_URB, QC_URB, UC_URB,          &
@@ -320,7 +346,7 @@ contains
        ROFF_URB,                        &
        Z0M, Z0H, Z0E,                   &
        ZD,                              &
-       AH_URB_t,                        &
+       AH_URB_t, AHL_URB_t,             &
        SFC_TEMP,                        &
        ALBEDO,                          &
        MWFLX, MUFLX, MVFLX,             &
@@ -359,8 +385,6 @@ contains
     real(RP), intent(in) :: TanSL_X(UIA,UJA)
     real(RP), intent(in) :: TanSL_Y(UIA,UJA)
     real(RP), intent(in) :: fact_urban(UIA,UJA)
-    integer,  intent(in) :: tloc
-    real(RP), intent(in) :: dsec
     real(DP), intent(in) :: dt
 
     real(RP), intent(inout) :: TR_URB   (UIA,UJA)
@@ -381,6 +405,7 @@ contains
     real(RP), intent(inout) :: Z0E      (UIA,UJA)
     real(RP), intent(inout) :: ZD       (UIA,UJA)
     real(RP), intent(inout) :: AH_URB_t (UIA,UJA)
+    real(RP), intent(inout) :: AHL_URB_t (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBEDO  (UIA,UJA,N_RAD_DIR,N_RAD_RGN)
@@ -551,8 +576,9 @@ contains
                       Z0H     (i,j),      & ! [IN]
                       ZD      (i,j),      & ! [IN]
                       AH_URB_t(i,j),      & ! [IN]
+                      AHL_URB_t(i,j),     & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
-                      tloc, dsec, dt,     & ! (in)
+                      dt,                 & ! [IN]
                       i, j                ) ! [IN]
 
 
@@ -632,6 +658,7 @@ contains
        Z0E     (i,j)     = 0.0_RP
        ZD      (i,j)     = 0.0_RP
        AH_URB_t(i,j)     = 0.0_RP
+       AHL_URB_t(i,j)    = 0.0_RP
        U10     (i,j)     = 0.0_RP
        V10     (i,j)     = 0.0_RP
        T2      (i,j)     = 0.0_RP
@@ -723,8 +750,8 @@ contains
         Z0HC,         & ! (in)
         ZDC,          & ! (in)
         AH_t,         & ! (in)
+        AHL_t,        & ! (in)
         DZR, DZB, DZG, & ! (in)
-        tloc, dsec,   & ! (in)
         dt,           & ! (in)
         i, j          ) ! (in)
     use scale_prc, only: &
@@ -773,12 +800,11 @@ contains
     real(RP), intent(in)    :: Z0C  ! Roughness length above canyon for momentum [m]
     real(RP), intent(in)    :: Z0HC ! Roughness length above canyon for heat [m]
     real(RP), intent(in)    :: ZDC  ! Displacement height                    [m]
-    real(RP), intent(in)    :: AH_t ! Anthropogenic heat                     [W/m2]
+    real(RP), intent(in)    :: AH_t ! Anthropogenic sensible heat            [W/m2]
+    real(RP), intent(in)    :: AHL_t ! Anthropogenic latent heat             [W/m2]
     real(RP), intent(in)    :: DZR(UKA)
     real(RP), intent(in)    :: DZB(UKA)
     real(RP), intent(in)    :: DZG(UKA)
-    integer,  intent(in)    :: tloc
-    real(RP), intent(in)    :: dsec
     real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
@@ -827,9 +853,6 @@ contains
 !    logical  :: SHADOW = .false.
            !  true  = consider svf and shadow effects,
            !  false = consider svf effect only
-
-    !real(RP) :: AH_t     ! Sensible Anthropogenic heat [W/m^2]
-    real(RP) :: ALH_t    ! Latent Anthropogenic heat   [W/m^2]
 
     real(RP) :: SSGD     ! downward direct short wave radiation   [W/m/m]
     real(RP) :: SSGQ     ! downward diffuse short wave radiation  [W/m/m]
@@ -899,8 +922,6 @@ contains
     real(RP) :: EXN  ! exner function at the surface
     real(RP) :: qdry
 
-    real(RP) :: tahdiurnal
-
     integer  :: iteration
 
     !-----------------------------------------------------------
@@ -926,19 +947,6 @@ contains
     RAINBP = RAINB
     RAINGP = RAING
 
-    !--- Calculate AH data at LST
-    if ( tloc == 24 ) then
-       tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
-                  + (        dsec ) * ahdiurnal(1     )
-    else
-       tahdiurnal = ( 1.0_RP-dsec ) * ahdiurnal(tloc  ) &
-                  + (        dsec ) * ahdiurnal(tloc+1)
-    endif
-
-    !print *,"adachi4", tloc, tahdiurnal
-
-    !AH_t  = AH  * tahdiurnal
-    ALH_t = ALH * tahdiurnal
 
     !--- limiter for surface temp change
     DTS_MAX_onestep = DTS_MAX * dt
@@ -1515,7 +1523,7 @@ contains
     !-----------------------------------------------------------
 
     SH     = SH + AH_t           ! Sensible heat flux          [W/m/m]
-    LH     = LH + ALH_t          ! Latent heat flux            [W/m/m]
+    LH     = LH + AHL_t          ! Latent heat flux            [W/m/m]
 
     return
   end subroutine SLC_main
@@ -1902,7 +1910,7 @@ contains
        road_width, &
        SIGMA_ZED,  &
        AH_TBL,     &
-       ALH,        &
+       AHL_TBL,    &
        BETR,       &
        BETB,       &
        BETG,       &

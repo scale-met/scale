@@ -44,7 +44,8 @@ module mod_urban_driver
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: AH_URB(:,:,:)  ! urban grid average of anthropogenic heat [W/m2]
+  real(RP), private, allocatable :: AH_URB (:,:,:)   ! urban grid average of anthropogenic sensible heat [W/m2]
+  real(RP), private, allocatable :: AHL_URB(:,:,:)  ! urban grid average of anthropogenic latent heat [W/m2]
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -73,15 +74,17 @@ contains
 
     if ( URBAN_do ) then
 
-       allocate( AH_URB(UIA,UJA,1:24) )
-       AH_URB (:,:,:) = UNDEF
+       allocate( AH_URB (UIA,UJA,1:24) )
+       allocate( AHL_URB(UIA,UJA,1:24) )
+       AH_URB  (:,:,:) = UNDEF
+       AHL_URB (:,:,:) = UNDEF
 
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
           call URBAN_DYN_KUSAKA01_setup( UIA, UIS, UIE, UJA, UJS, UJE, &
                                          URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), &
                                          URBAN_ZD(:,:),                                  &
-                                         AH_URB(:,:,:)                                   ) ! [OUT]
+                                         AH_URB(:,:,:), AHL_URB(:,:,:)                   ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
        case default
@@ -166,6 +169,7 @@ contains
        URBAN_Z0E,         &
        URBAN_ZD,          &
        URBAN_AH,          &
+       URBAN_AHL,         &
        URBAN_U10,         &
        URBAN_V10,         &
        URBAN_T2,          &
@@ -310,15 +314,19 @@ contains
        if ( tloc == 24 ) then
           do j = UJS, UJE
           do i = UIS, UIE
-             URBAN_AH(i,j) = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                           + (        dsec ) * AH_URB(i,j,1     )
+             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
+                            + (        dsec ) * AH_URB(i,j,1     )
+             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
+                            + (        dsec ) * AHL_URB(i,j,1     )
           enddo
           enddo
        else
           do j = UJS, UJE
           do i = UIS, UIE
-             URBAN_AH(i,j) = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
-                           + (        dsec ) * AH_URB(i,j,tloc+1)
+             URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
+                            + (        dsec ) * AH_URB(i,j,tloc+1)
+             URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
+                            + (        dsec ) * AHL_URB(i,j,tloc+1)
           enddo
           enddo
        endif
@@ -337,13 +345,13 @@ contains
                                 CDZ(:),                                                      & ! [IN]
                                 TanSL_X(:,:), TanSL_Y(:,:),                                  & ! [IN]
                                 LANDUSE_fact_urban(:,:),                                     & ! [IN]
-                                tloc, dsec, dt,                                              & ! [IN]
+                                dt,                                                          & ! [IN]
                                 TRL(:,:,:), TBL(:,:,:), TGL(:,:,:),                          & ! [INOUT]
                                 TR(:,:), TB(:,:), TG(:,:), TC(:,:), QC(:,:), UC(:,:),        & ! [INOUT]
                                 RAINR(:,:), RAINB(:,:), RAING(:,:), ROFF(:,:),               & ! [INOUT]
                                 URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [INOUT]
                                 URBAN_ZD(:,:),                                               & ! [INOUT]
-                                URBAN_AH(:,:),                                               & ! [INOUT]
+                                URBAN_AH(:,:), URBAN_AHL(:,:),                               & ! [INOUT]
                                 URBAN_SFC_TEMP(:,:),                                         & ! [OUT]
                                 URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
