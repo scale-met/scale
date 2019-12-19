@@ -320,6 +320,8 @@ contains
        FILE_CARTESC_flush,             &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     logical, intent(in) :: OCEAN_do
@@ -327,7 +329,6 @@ contains
     logical, intent(in) :: LAKE_do
 
     real(RP) :: temp(IA,JA)
-!    real(RP) :: frac_ocean
 
     character(len=H_SHORT) :: varname
 
@@ -438,7 +439,23 @@ contains
              end do
           else
              ! lake is assumed to be ocean
-             LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
+             !$omp parallel do
+             do j = 1, JA
+             do i = 1, IA
+                if( LANDUSE_frac_land(i,j) == 0.0_RP .and. LANDUSE_frac_urban(i,j) > 0.0_RP)then
+                   LOG_ERROR("LANDUSE_read",*) 'Not appropriate original landuse (w/ Lake). Bug!',i,j
+                   call PRC_abort
+                endif
+
+                LANDUSE_frac_land(i,j)  = min( max( LANDUSE_frac_land(i,j) * (1.0_RP-LANDUSE_frac_lake(i,j)), 0.0_RP), 1.0_RP)
+
+                if( LANDUSE_frac_land(i,j) == 0.0_RP .and. LANDUSE_frac_urban(i,j) > 0.0_RP)then
+                   LOG_ERROR("LANDUSE_read",*) 'Not appropriate replaced landuse (w/o Lake). Bug!',i,j
+                   call PRC_abort
+                endif
+
+             end do
+             end do
           end if
           LANDUSE_frac_lake(:,:) = 0.0_RP
        end if
