@@ -61,6 +61,8 @@ contains
        URBAN_SFC_TYPE
     use scale_urban_dyn_kusaka01, only: &
        URBAN_DYN_KUSAKA01_setup
+    use scale_landuse, only: &
+       LANDUSE_fact_urban
     use mod_urban_vars, only: &
        URBAN_Z0M, &
        URBAN_Z0H, &
@@ -81,9 +83,10 @@ contains
 
        select case ( URBAN_DYN_TYPE )
        case ( 'KUSAKA01' )
-          call URBAN_DYN_KUSAKA01_setup( UIA, UIS, UIE, UJA, UJS, UJE, &
-                                         URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), &
-                                         URBAN_ZD(:,:),                                  &
+          call URBAN_DYN_KUSAKA01_setup( UIA, UIS, UIE, UJA, UJS, UJE,                   & ! [IN]
+                                         LANDUSE_fact_urban(:,:),                        & ! [IN]
+                                         URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:), & ! [OUT]
+                                         URBAN_ZD(:,:),                                  & ! [OUT]
                                          AH_URB(:,:,:), AHL_URB(:,:,:)                   ) ! [OUT]
 
           URBAN_SFC_TYPE = 'KUSAKA01'
@@ -494,21 +497,6 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC_URBAN
     use mod_urban_vars, only: &
-      ! ATMOS_TEMP,      &
-      ! ATMOS_PRES,      &
-      ! ATMOS_W,         &
-      ! ATMOS_U,         &
-      ! ATMOS_V,         &
-      ! ATMOS_DENS,      &
-      ! ATMOS_QV,        &
-      ! ATMOS_PBL,       &
-      ! ATMOS_SFC_DENS,  &
-      ! ATMOS_SFC_PRES,  &
-      ! ATMOS_SFLX_LW,   &
-      ! ATMOS_SFLX_SW,   &
-      ! ATMOS_cosSZA,    &
-      ! ATMOS_SFLX_rain, &
-      ! ATMOS_SFLX_snow, &
        URBAN_TRL_t,       &
        URBAN_TBL_t,       &
        URBAN_TGL_t,       &
@@ -522,21 +510,6 @@ contains
        URBAN_RAINB_t,     &
        URBAN_RAING_t,     &
        URBAN_ROFF_t,      &
-       !URBAN_SFLX_MW,     &
-       !URBAN_SFLX_MU,     &
-       !URBAN_SFLX_MV,     &
-       !URBAN_SFLX_SH,     &
-       !URBAN_SFLX_LH,     &
-       !URBAN_SFLX_QTRC,   &
-       !URBAN_SFLX_GH,     &
-       !URBAN_Z0M,         &
-       !URBAN_Z0H,         &
-       !URBAN_Z0E,         &
-       !URBAN_ZD,          &
-       !URBAN_U10,         &
-       !URBAN_V10,         &
-       !URBAN_T2,          &
-       !URBAN_Q2,          &
        URBAN_TR,          &
        URBAN_TB,          &
        URBAN_TG,          &
@@ -550,10 +523,7 @@ contains
        URBAN_RAINB,       &
        URBAN_RAING,       &
        URBAN_ROFF,        &
-       !URBAN_SFC_TEMP,    &
        URBAN_vars_total
-    use scale_landuse, only: &
-       LANDUSE_fact_urban
     use mod_urban_admin, only: &
        URBAN_DYN_TYPE
     implicit none

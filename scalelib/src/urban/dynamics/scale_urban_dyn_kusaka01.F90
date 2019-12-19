@@ -64,8 +64,8 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: roof_width =    9.0_RP ! roof width [m]
   real(RP), private :: road_width =   11.0_RP ! road width [m]
   real(RP), private :: SIGMA_ZED  =    1.0_RP ! Standard deviation of roof height [m]
-  real(RP), private :: AH_TBL     =   17.5_RP ! Sensible Anthropogenic heat [W/m^2]
-  real(RP), private :: AHL_TBL    =    0.0_RP ! Latent Anthropogenic heat   [W/m^2]
+  real(RP), private :: AH_TBL     =   17.5_RP ! Sensible Anthropogenic heat from urban subgrid [W/m^2]
+  real(RP), private :: AHL_TBL    =    0.0_RP ! Latent Anthropogenic heat from urban subgrid [W/m^2]
   real(RP), private :: BETR       =    0.0_RP ! Evaporation efficiency of roof     [-]
   real(RP), private :: BETB       =    0.0_RP !                        of building [-]
   real(RP), private :: BETG       =    0.0_RP !                        of ground   [-]
@@ -118,8 +118,9 @@ module scale_urban_dyn_kusaka01
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine URBAN_DYN_kusaka01_setup( &
-       UIA, UIS, UIE, UJA, UJS, UJE, &
+  subroutine URBAN_DYN_kusaka01_setup(    &
+       UIA, UIS, UIE, UJA, UJS, UJE,      &
+       fact_urban,                        &
        Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB )
     use scale_prc, only: &
        PRC_abort
@@ -131,6 +132,7 @@ contains
 
     integer,  intent(in)  :: UIA, UIS, UIE
     integer,  intent(in)  :: UJA, UJS, UJE
+    real(RP), intent(in)  :: fact_urban(UIA,UJA)
     real(RP), intent(out) :: Z0M(UIA,UJA)
     real(RP), intent(out) :: Z0H(UIA,UJA)
     real(RP), intent(out) :: Z0E(UIA,UJA)
@@ -200,8 +202,8 @@ contains
        Z0E(i,j) = Z0HC_TBL
        ZD(i,j)  = ZDC_TBL
        do k = 1, 24
-          AH_URB (i,j,k) = AH_TBL  * ahdiurnal(k)
-          AHL_URB(i,j,k) = AHL_TBL * ahdiurnal(k)
+          AH_URB (i,j,k) = AH_TBL  * ahdiurnal(k) * fact_urban(i,j)
+          AHL_URB(i,j,k) = AHL_TBL * ahdiurnal(k) * fact_urban(i,j)
        enddo
     enddo
     enddo
@@ -578,6 +580,7 @@ contains
                       AH_URB_t(i,j),      & ! [IN]
                       AHL_URB_t(i,j),     & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
+                      fact_urban(i,j),    & ! [IN]
                       dt,                 & ! [IN]
                       i, j                ) ! [IN]
 
@@ -752,6 +755,7 @@ contains
         AH_t,         & ! (in)
         AHL_t,        & ! (in)
         DZR, DZB, DZG, & ! (in)
+        facturb,      & ! (in)
         dt,           & ! (in)
         i, j          ) ! (in)
     use scale_prc, only: &
@@ -805,6 +809,7 @@ contains
     real(RP), intent(in)    :: DZR(UKA)
     real(RP), intent(in)    :: DZB(UKA)
     real(RP), intent(in)    :: DZG(UKA)
+    real(RP), intent(in)    :: facturb ! urban fraction                      [0-1]
     real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
@@ -1521,9 +1526,17 @@ contains
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
     !-----------------------------------------------------------
+    ! In CPL_getSFC_ATM of mod_cpl_vars module, grid mean SH is calculated by
+    !
+    !   SFLX_SH  =   fact_ocean * OCN_SFLX_SH
+    !              + fact_land  * LND_SFLX_SH
+    !              + fact_urban * URB_SFLX_SH
+    !
+    ! AH_t and AHL_t is assumed to be AH flux from the grid cell
+    !
 
-    SH     = SH + AH_t           ! Sensible heat flux          [W/m/m]
-    LH     = LH + AHL_t          ! Latent heat flux            [W/m/m]
+    SH     = SH + AH_t  / facturb   ! Sensible heat flux          [W/m/m]
+    LH     = LH + AHL_t / facturb   ! Latent heat flux            [W/m/m]
 
     return
   end subroutine SLC_main
