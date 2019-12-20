@@ -37,7 +37,7 @@ The other parameters are the same as usual.
 
 To use the parent topography for the topography-copy function, edit file \verb|pp.d02.conf| for the child domain as follows.
 Here, the output data of topography in the parent domain is assumed to be saved as file \verb|topo_d01.pe***.nc| in SCALE netCDF file format.
-As other file formats, GrADS and WRF-ARW formats are supported.
+As other file formats, GrADS and WRF-ARW formats are supported (Sec. \ref{sec:adv_datainput}).
 \editboxtwo{
 \verb|&PARAM_NEST| & \\
 \verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & base name of the file of the parent domain \\
@@ -61,8 +61,11 @@ As other file formats, GrADS and WRF-ARW formats are supported.
 \verb|/| & \\
 }
 If \nmitem{CNVTOPO_copy_parent} in \namelist{PARAM_CNVTOPO} is \verb|.true.|, the topography-copy function is applied.
-\nmitem{COPYTOPO_ENTIRE_REGION} is an option whereby the parent’s topography can be copied over the entire child domain. If this is \verb|.true.|, the topography in the child domain is completely copied from that in the parent domain. \nmitem{COPYTOPO_LINEAR_H} is the parameter to determine which the topography transition method is applied. If \nmitem{COPYTOPO_LINEAR_H} $=$ \verb|.true.|, the ratio of the parent’s topography to the child’s topography is linearly changed. Otherwise, it is changed exponentially.
+\nmitem{COPYTOPO_ENTIRE_REGION} is an option whereby the parent’s topography can be copied over the entire child domain
+If this is \verb|.true.|, the topography in the child domain is completely copied from that in the parent domain.
+\nmitem{COPYTOPO_LINEAR_H} is the parameter to determine which the topography transition method is applied. If \nmitem{COPYTOPO_LINEAR_H} $=$ \verb|.true.|, the ratio of the parent’s topography to the child’s topography is linearly changed. Otherwise, it is changed exponentially.
 The width of transition area is specified by \nmitem{COPYTOPO_TRANSITION_DX, COPYTOPO_TRANSITION_DY}. If these have negative value, the default setting is applied: the width of transition area equals to that of relaxation area.
+
 
 \subsubsection{Generation of topography}
 In case of using the topography-copy function, the generation of the topography should start from the parent domain  because a child domain requires the catalog  file of the parent. If the number of domains is greater than three, the order of execution is as follows:
