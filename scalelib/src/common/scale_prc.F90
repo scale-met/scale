@@ -779,7 +779,7 @@ contains
        endif
 
        key = key + 1
-       if ( key >= nprc ) then
+       if ( key >= nprc .and. p < ORG_nrank-1 ) then
           color  = color + 1
           key    = 0
           domain = COL2DOM(color)
