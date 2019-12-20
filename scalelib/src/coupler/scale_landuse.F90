@@ -6,6 +6,13 @@
 !!          Manage land/lake/urban/PFT fraction and PFT index
 !!
 !! @author Team SCALE
+!!
+!!
+!! @note
+!!   frac_urban = fact_urban / ( fact_urban + fact_land )
+!!   frac_lake  = fact_lake  / ( fact_lake + fact_urban + fact_land )
+!!   frac_land  = ( fact_lake + fact_urban + fact_land ) / ( fact_lake + fact_urban + fact_land + fact_ocean)
+!!   fact_lake + fact_urban + fact_land + fact_ocean = 1
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -373,6 +380,25 @@ contains
        call FILE_CARTESC_close( fid )
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
+
+       ! validity check
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+          if ( LANDUSE_frac_land(i,j) < 0.0_RP .or. LANDUSE_frac_land(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_land is invalid: ', i,j, LANDUSE_frac_land(i,j)
+             call PRC_abort
+          end if
+          if ( LANDUSE_frac_lake(i,j) < 0.0_RP .or. LANDUSE_frac_lake(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_lake is invalid: ', i,j, LANDUSE_frac_lake(i,j)
+             call PRC_abort
+          end if
+          if ( LANDUSE_frac_urban(i,j) < 0.0_RP .or. LANDUSE_frac_urban(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_urban is invalid: ', i,j, LANDUSE_frac_urban(i,j)
+             call PRC_abort
+          end if
+       end do
+       end do
 
 !!$       if ( .not. OCEAN_do ) then
 !!$          !$omp parallel do private(frac_ocean)
