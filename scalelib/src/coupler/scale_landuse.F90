@@ -231,6 +231,7 @@ contains
   subroutine LANDUSE_calc_fact
     implicit none
 
+    real(RP) :: fact_soil
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -238,13 +239,15 @@ contains
     LOG_INFO("LANDUSE_calc_fact",*) 'calculate landuse factor'
 
     ! make factors
-    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
-    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) - LANDUSE_frac_lake(:,:) )
-    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
-    LANDUSE_fact_lake (:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_lake (:,:) )
-
+    !$omp parallel do private(fact_soil)
     do j = 1, JA
     do i = 1, IA
+       LANDUSE_fact_ocean(i,j) = max( 1.0_RP - LANDUSE_frac_land(i,j), 0.0_RP )
+       LANDUSE_fact_lake (i,j) = LANDUSE_frac_land(i,j) * LANDUSE_frac_lake(i,j)
+       fact_soil = max( LANDUSE_frac_land(i,j) - LANDUSE_fact_lake(i,j), 0.0_RP )
+       LANDUSE_fact_urban(i,j) = fact_soil * LANDUSE_frac_urban(i,j)
+       LANDUSE_fact_land (i,j) = max( fact_soil - LANDUSE_fact_urban(i,j), 0.0_RP )
+
        if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) LANDUSE_exists_ocean(i,j) = .true.
        if( LANDUSE_fact_land (i,j) > 0.0_RP ) LANDUSE_exists_land (i,j) = .true.
        if( LANDUSE_fact_urban(i,j) > 0.0_RP ) LANDUSE_exists_urban(i,j) = .true.
