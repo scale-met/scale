@@ -435,6 +435,7 @@ contains
                    end if
                 end do
                 LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
+                LANDUSE_frac_urban(i,j) = max( LANDUSE_frac_urban(i,j) * ( 1.0_RP - LANDUSE_frac_lake(i,j) ), 0.0_RP )
              end do
              end do
           else
