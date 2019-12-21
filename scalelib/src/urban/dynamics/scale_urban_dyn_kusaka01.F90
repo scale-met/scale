@@ -221,7 +221,7 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata(i,j) /= UNDEF )then
-          Z0M(i,j) = udata(i,j)
+          Z0M(i,j) = max(udata(i,j), 1.0_RP)
          endif
       enddo
       enddo
@@ -240,8 +240,8 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata(i,j) /= UNDEF )then
-          Z0H(i,j) = udata(i,j)
-          Z0E(i,j) = udata(i,j)
+          Z0H(i,j) = max(udata(i,j), 0.1_RP)
+          Z0E(i,j) = max(udata(i,j), 0.1_RP)
          endif
       enddo
       enddo
