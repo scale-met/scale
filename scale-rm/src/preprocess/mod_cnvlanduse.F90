@@ -240,17 +240,19 @@ contains
           call SORT_exec( LANDUSE_PFT_nmax, PFT_weight(1:,i,j), PFT_idx(:) )
 
 
-          ! land fraction : 1 - ocean / total
+          ! total = ocean + lake + urban + land
+
+          ! land fraction : total - ocean / total
           allsum = lake_wgt + ocean_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
           LANDUSE_frac_land (i,j) = ( allsum-ocean_wgt ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
 
-          ! lake fraction : lake / ( total - ocean )
+          ! lake fraction : lake / ( lake + urban + land )
           allsum = lake_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
           LANDUSE_frac_lake (i,j) = lake_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
 
-          ! urban fraction : urban / ( total - ocean - lake )
+          ! urban fraction : urban / ( urban + land )
           allsum = urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
           LANDUSE_frac_urban(i,j) = urban_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )

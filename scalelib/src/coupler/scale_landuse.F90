@@ -6,6 +6,13 @@
 !!          Manage land/lake/urban/PFT fraction and PFT index
 !!
 !! @author Team SCALE
+!!
+!!
+!! @note
+!!   frac_urban = fact_urban / ( fact_urban + fact_land )
+!!   frac_lake  = fact_lake  / ( fact_lake + fact_urban + fact_land )
+!!   frac_land  = ( fact_lake + fact_urban + fact_land ) / ( fact_lake + fact_urban + fact_land + fact_ocean)
+!!   fact_lake + fact_urban + fact_land + fact_ocean = 1
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -231,6 +238,7 @@ contains
   subroutine LANDUSE_calc_fact
     implicit none
 
+    real(RP) :: fact_soil
     integer  :: i, j
     !---------------------------------------------------------------------------
 
@@ -238,13 +246,15 @@ contains
     LOG_INFO("LANDUSE_calc_fact",*) 'calculate landuse factor'
 
     ! make factors
-    LANDUSE_fact_ocean(:,:) = ( 1.0_RP - LANDUSE_frac_land(:,:) )
-    LANDUSE_fact_land (:,:) = (          LANDUSE_frac_land(:,:) ) * ( 1.0_RP - LANDUSE_frac_urban(:,:) - LANDUSE_frac_lake(:,:) )
-    LANDUSE_fact_urban(:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_urban(:,:) )
-    LANDUSE_fact_lake (:,:) = (          LANDUSE_frac_land(:,:) ) * (          LANDUSE_frac_lake (:,:) )
-
+    !$omp parallel do private(fact_soil)
     do j = 1, JA
     do i = 1, IA
+       LANDUSE_fact_ocean(i,j) = max( 1.0_RP - LANDUSE_frac_land(i,j), 0.0_RP )
+       LANDUSE_fact_lake (i,j) = LANDUSE_frac_land(i,j) * LANDUSE_frac_lake(i,j)
+       fact_soil = max( LANDUSE_frac_land(i,j) - LANDUSE_fact_lake(i,j), 0.0_RP )
+       LANDUSE_fact_urban(i,j) = fact_soil * LANDUSE_frac_urban(i,j)
+       LANDUSE_fact_land (i,j) = max( fact_soil - LANDUSE_fact_urban(i,j), 0.0_RP )
+
        if( LANDUSE_fact_ocean(i,j) > 0.0_RP ) LANDUSE_exists_ocean(i,j) = .true.
        if( LANDUSE_fact_land (i,j) > 0.0_RP ) LANDUSE_exists_land (i,j) = .true.
        if( LANDUSE_fact_urban(i,j) > 0.0_RP ) LANDUSE_exists_urban(i,j) = .true.
@@ -317,6 +327,8 @@ contains
        FILE_CARTESC_flush,             &
        FILE_CARTESC_check_coordinates, &
        FILE_CARTESC_close
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     logical, intent(in) :: OCEAN_do
@@ -324,7 +336,6 @@ contains
     logical, intent(in) :: LAKE_do
 
     real(RP) :: temp(IA,JA)
-!    real(RP) :: frac_ocean
 
     character(len=H_SHORT) :: varname
 
@@ -369,6 +380,25 @@ contains
        call FILE_CARTESC_close( fid )
 
        call LANDUSE_fillhalo( FILL_BND=.false. )
+
+       ! validity check
+       !$omp parallel do
+       do j = 1, JA
+       do i = 1, IA
+          if ( LANDUSE_frac_land(i,j) < 0.0_RP .or. LANDUSE_frac_land(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_land is invalid: ', i,j, LANDUSE_frac_land(i,j)
+             call PRC_abort
+          end if
+          if ( LANDUSE_frac_lake(i,j) < 0.0_RP .or. LANDUSE_frac_lake(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_lake is invalid: ', i,j, LANDUSE_frac_lake(i,j)
+             call PRC_abort
+          end if
+          if ( LANDUSE_frac_urban(i,j) < 0.0_RP .or. LANDUSE_frac_urban(i,j) > 1.0_RP ) then
+             LOG_ERROR("LANDUSE_read",*) 'LANDUSE_frac_urban is invalid: ', i,j, LANDUSE_frac_urban(i,j)
+             call PRC_abort
+          end if
+       end do
+       end do
 
 !!$       if ( .not. OCEAN_do ) then
 !!$          !$omp parallel do private(frac_ocean)
@@ -431,11 +461,28 @@ contains
                    end if
                 end do
                 LANDUSE_frac_PFT(i,j,:) = LANDUSE_frac_PFT(i,j,:) / sum( LANDUSE_frac_PFT(i,j,:) )
+                LANDUSE_frac_urban(i,j) = max( LANDUSE_frac_urban(i,j) * ( 1.0_RP - LANDUSE_frac_lake(i,j) ), 0.0_RP )
              end do
              end do
           else
              ! lake is assumed to be ocean
-             LANDUSE_frac_land(:,:) = max(LANDUSE_frac_land(:,:) - LANDUSE_frac_lake(:,:), 0.0_RP)
+             !$omp parallel do
+             do j = 1, JA
+             do i = 1, IA
+                if( LANDUSE_frac_land(i,j) == 0.0_RP .and. LANDUSE_frac_urban(i,j) > 0.0_RP)then
+                   LOG_ERROR("LANDUSE_read",*) 'Not appropriate original landuse (w/ Lake). Bug!',i,j
+                   call PRC_abort
+                endif
+
+                LANDUSE_frac_land(i,j)  = min( max( LANDUSE_frac_land(i,j) * (1.0_RP-LANDUSE_frac_lake(i,j)), 0.0_RP), 1.0_RP)
+
+                if( LANDUSE_frac_land(i,j) == 0.0_RP .and. LANDUSE_frac_urban(i,j) > 0.0_RP)then
+                   LOG_ERROR("LANDUSE_read",*) 'Not appropriate replaced landuse (w/o Lake). Bug!',i,j
+                   call PRC_abort
+                endif
+
+             end do
+             end do
           end if
           LANDUSE_frac_lake(:,:) = 0.0_RP
        end if
