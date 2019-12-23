@@ -202,7 +202,7 @@ contains
 
     real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
 
-    real(RP) :: LAT, LON
+    real(RP) :: LAT, LON ! [deg]
     integer  :: tloc     ! local time (1-24h)
     real(RP) :: dsec     ! second [s]
 
@@ -285,8 +285,11 @@ contains
        end do
        end do
 
-       LAT = BASE_LAT / D2R
-       LON = BASE_LON / D2R
+       ! local time
+       LAT = BASE_LAT
+       LON = BASE_LON
+       if (LON < 0.0_RP )   LON = mod(LON, 360.0_RP) + 360.0_RP
+       if (LON > 360.0_RP ) LON = mod(LON, 360.0_RP)
        tloc = mod( (NOWDATE(4) + int(LON/15.0_RP)),24 )
        dsec = real( NOWDATE(5)*60.0_RP + NOWDATE(6), kind=RP ) / 3600.0_RP
        if( tloc == 0 ) tloc = 24
