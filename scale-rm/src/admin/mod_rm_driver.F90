@@ -119,9 +119,11 @@ contains
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_setup
     use scale_topography, only: &
-       TOPOGRAPHY_setup
+       TOPOGRAPHY_setup, &
+       TOPOGRAPHY_write
     use scale_landuse, only: &
-       LANDUSE_setup
+       LANDUSE_setup, &
+       LANDUSE_write
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_time, only: &
@@ -387,6 +389,10 @@ contains
     if ( URBAN_do ) call URBAN_driver_setup
 
     call USER_setup
+
+    ! output
+    call TOPOGRAPHY_write
+    call LANDUSE_write
 
     call PROF_rapend('Initialize', 0)
 

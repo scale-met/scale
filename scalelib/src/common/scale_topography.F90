@@ -192,7 +192,7 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( TOPOGRAPHY_OUT_BASENAME /= '' ) then
+    if ( TOPOGRAPHY_OUT_BASENAME /= '' .and. TOPOGRAPHY_OUT_BASENAME /= TOPOGRAPHY_IN_BASENAME ) then
 
        LOG_NEWLINE
        LOG_INFO("TOPOGRAPHY_write",*) 'Output topography file '

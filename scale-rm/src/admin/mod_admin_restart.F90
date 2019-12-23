@@ -348,8 +348,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Write data to restart files
   subroutine ADMIN_restart_write
-    use scale_landuse, only: &
-       LANDUSE_write
     use mod_admin_time, only: &
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
@@ -417,9 +415,6 @@ contains
     if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_close
     if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_close
     if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
-
-    ! output landuse data actually used in the simulation
-    call LANDUSE_write
 
     return
   end subroutine ADMIN_restart_write
