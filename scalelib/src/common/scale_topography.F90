@@ -188,22 +188,37 @@ contains
   !> Write topography
   subroutine TOPOGRAPHY_write
     use scale_file_cartesC, only: &
-       FILE_CARTESC_write
+       FILE_CARTESC_create,    &
+       FILE_CARTESC_def_var,   &
+       FILE_CARTESC_enddef,    &
+       FILE_CARTESC_write_var, &
+       FILE_CARTESC_close
     implicit none
+
+    integer :: fid, vid
     !---------------------------------------------------------------------------
 
-    if ( TOPOGRAPHY_OUT_BASENAME /= '' ) then
+    if ( TOPOGRAPHY_OUT_BASENAME /= '' .and. TOPOGRAPHY_OUT_BASENAME /= TOPOGRAPHY_IN_BASENAME ) then
 
        LOG_NEWLINE
        LOG_INFO("TOPOGRAPHY_write",*) 'Output topography file '
 
        call TOPOGRAPHY_fillhalo( FILL_BND=.false. )
 
-       call FILE_CARTESC_write( TOPOGRAPHY_Zsfc(:,:),                                    & ! [IN]
-                                TOPOGRAPHY_OUT_BASENAME, TOPOGRAPHY_OUT_TITLE,           & ! [IN]
-                                'topo', 'Topography', 'm', 'XY',   TOPOGRAPHY_OUT_DTYPE, & ! [IN]
-                                standard_name="surface_altitude",                        & ! [IN]
-                                haszcoord=.false., aggregate=TOPOGRAPHY_OUT_AGGREGATE    ) ! [IN]
+       call FILE_CARTESC_create( TOPOGRAPHY_OUT_BASENAME, TOPOGRAPHY_OUT_TITLE, TOPOGRAPHY_OUT_DTYPE, & ! [IN]
+                                 fid,                                                                 & ! [OUT]
+                                 haszcoord=.false., aggregate=TOPOGRAPHY_OUT_AGGREGATE                ) ! [IN]
+
+       call FILE_CARTESC_def_var( fid, 'topo', 'Topography', 'm', 'XY', TOPOGRAPHY_OUT_DTYPE, & ! [IN]
+                                  vid,                                                        & ! [OUT]
+                                  standard_name="surface_altitude"                            ) ! [IN]
+
+       call FILE_CARTESC_enddef( fid )
+
+       call FILE_CARTESC_write_var( fid, vid, TOPOGRAPHY_Zsfc(:,:), 'topo', 'XY' ) ! [IN]
+
+
+       call FILE_CARTESC_close( fid )
 
     endif
 
