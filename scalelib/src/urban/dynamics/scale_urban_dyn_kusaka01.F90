@@ -123,6 +123,7 @@ contains
        fact_urban,                        &
        Z0M, Z0H, Z0E, ZD, AH_URB, AHL_URB )
     use scale_prc, only: &
+       PRC_myrank,       &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
@@ -221,7 +222,14 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata(i,j) /= UNDEF )then
-          Z0M(i,j) = max(udata(i,j), 1.0_RP)
+            if ( udata(i,j) > 0.0_RP ) then
+               Z0M(i,j) = udata(i,j)
+            else if ( udata(i,j) < 0.0_RP ) then
+               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0M data includes data less than 0. Please check data!',PRC_myrank,i,j
+               call PRC_abort
+            else ! Z0M = 0[m]
+               LOG_WARN("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0M data includes 0; default or table value is used to avoid zero division',PRC_myrank,i,j
+            endif
          endif
       enddo
       enddo
@@ -240,8 +248,15 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata(i,j) /= UNDEF )then
-          Z0H(i,j) = max(udata(i,j), 0.1_RP)
-          Z0E(i,j) = max(udata(i,j), 0.1_RP)
+            if ( udata(i,j) > 0.0_RP ) then
+               Z0H(i,j) = udata(i,j)
+               Z0E(i,j) = udata(i,j)
+            else if ( udata(i,j) < 0.0_RP ) then
+               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0H data includes data less than 0. Please check data!',PRC_myrank,i,j
+               call PRC_abort
+            else ! Z0H = 0[m]
+               LOG_WARN("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0H data includes 0; default or table value is used to avoid zero division',PRC_myrank,i,j
+            endif
          endif
       enddo
       enddo
@@ -260,7 +275,12 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata(i,j) /= UNDEF )then
-          ZD(i,j) = udata(i,j)
+            if ( udata(i,j) >= 0.0_RP ) then
+               ZD(i,j) = udata(i,j)
+            else
+               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded ZD data includes data less than 0. Please check data!',PRC_myrank,i,j
+               call PRC_abort
+            endif
          endif
       enddo
       enddo
@@ -280,7 +300,7 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata2(i,j,k) /= UNDEF )then
-          AH_URB(i,j,k) = udata2(i,j,k)
+            AH_URB(i,j,k) = udata2(i,j,k)
          endif
       enddo
       enddo
@@ -301,7 +321,7 @@ contains
       do j = UJS, UJE
       do i = UIS, UIE
          if( udata2(i,j,k) /= UNDEF )then
-          AHL_URB(i,j,k) = udata2(i,j,k)
+            AHL_URB(i,j,k) = udata2(i,j,k)
          endif
       enddo
       enddo
@@ -1971,14 +1991,19 @@ contains
         rewind(fid)
         read  (fid,nml=PARAM_URBAN_DATA,iostat=ierr)
         if ( ierr < 0 ) then !--- no data
-           LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'Not found namelist. Default used.'
+           LOG_INFO("read_urban_param_table",*)  'Not found namelist of PARAM_URBAN_DATA. Default used.'
         elseif( ierr > 0 ) then !--- fatal error
-           LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Not appropriate names in namelist PARAM_URBAN_DATA of ', &
+           LOG_ERROR("read_urban_param_table",*) 'Not appropriate names in namelist PARAM_URBAN_DATA of ', &
                                                  trim(INFILENAME),'  Check!'
            call PRC_abort
         endif
         LOG_NML(PARAM_URBAN_DATA)
       end if
+
+      if ( ZR <= 0.0_RP ) then
+         LOG_ERROR("read_urban_param_table",*) 'ZR is not appropriate value; ZR must be larger than 0. ZR=', ZR
+         call PRC_abort
+      endif
 
       close( fid )
 
