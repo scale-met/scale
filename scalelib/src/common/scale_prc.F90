@@ -468,6 +468,7 @@ contains
                              NUM_BULKJOB,    & ! [IN]
                              PRC_BULKJOB(:), & ! [IN]
                              color_reorder,  & ! [IN]
+                             .true.,         & ! [IN]
                              debug,          & ! [IN]
                              prc2color (:),  & ! [OUT]
                              prc2key   (:),  & ! [OUT]
@@ -575,6 +576,7 @@ contains
                              NUM_DOMAIN,     & ! [IN]
                              PRC_DOMAIN(:),  & ! [IN]
                              color_reorder,  & ! [IN]
+                             .false.,        & ! [IN]
                              debug,          & ! [IN]
                              prc2color (:),  & ! [OUT]
                              prc2key   (:),  & ! [OUT]
@@ -651,6 +653,7 @@ contains
       NUM_SUBGROUP,   &
       PRC_SUBGROUP,   &
       color_reorder,  &
+      bulkjob,        &
       debug,          &
       prc2color,      &
       prc2key,        &
@@ -665,6 +668,7 @@ contains
     integer, intent(in)  :: NUM_SUBGROUP
     integer, intent(in)  :: PRC_SUBGROUP(:)
     logical, intent(in)  :: color_reorder
+    logical, intent(in)  :: bulkjob
     logical, intent(in)  :: debug
     integer, intent(out) :: prc2color (0:ORG_nrank-1)     ! color id      for each process
     integer, intent(out) :: prc2key   (0:ORG_nrank-1)     ! local rank id for each process
@@ -685,7 +689,7 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if ( color_reorder ) then ! with reordering of colors
+    if ( color_reorder .AND. .NOT. bulkjob ) then ! with reordering of colors
 
        PRC_REORDER(1:NUM_SUBGROUP) = PRC_SUBGROUP(1:NUM_SUBGROUP)
        call PRC_sort_ascd( PRC_REORDER(1:NUM_SUBGROUP), 1, NUM_SUBGROUP )
@@ -716,22 +720,24 @@ contains
     ! make relationship
     COL_parent(:) = -1
     COL_child (:) = -1
-    do i = 1, NUM_SUBGROUP
-       id_parent = i - 1
-       id_child  = i + 1
+    if ( .NOT. bulkjob ) then
+       do i = 1, NUM_SUBGROUP
+          id_parent = i - 1
+          id_child  = i + 1
 
-       if ( id_parent >= 1 .AND. id_parent <= NUM_SUBGROUP ) then
-          COL_parent(DOM2COL(i)) = DOM2COL(id_parent)
-       endif
-       if ( id_child  >= 1 .AND. id_child  <= NUM_SUBGROUP ) then
-          COL_child (DOM2COL(i)) = DOM2COL(id_child)
-       endif
+          if ( id_parent >= 1 .AND. id_parent <= NUM_SUBGROUP ) then
+             COL_parent(DOM2COL(i)) = DOM2COL(id_parent)
+          endif
+          if ( id_child  >= 1 .AND. id_child  <= NUM_SUBGROUP ) then
+             COL_child (DOM2COL(i)) = DOM2COL(id_child)
+          endif
 
-       if ( debug .AND. PRC_UNIVERSAL_IsMaster ) then
-          write(*,'(4(A,I2))') &
-          "DOMAIN: ", i, ", MY COL: ", DOM2COL(i), ", PARENT COL:", COL_parent(i), ", CHILD COL:", COL_child(i)
-       endif
-    enddo ! domain loop
+          if ( debug .AND. PRC_UNIVERSAL_IsMaster ) then
+             write(*,'(4(A,I2))') &
+             "DOMAIN: ", i, ", MY COL: ", DOM2COL(i), ", PARENT COL:", COL_parent(i), ", CHILD COL:", COL_child(i)
+          endif
+       enddo ! domain loop
+    endif
 
     if ( PRC_UNIVERSAL_IsMaster ) then
        write(*,*)
@@ -769,8 +775,8 @@ contains
        prc2key  (p) = key
 
        if ( key == 0 ) then ! master rank
-          COL_domain (color) = domain
-          COL_master (color) = p
+          COL_domain(color) = domain
+          COL_master(color) = p
        endif
 
        if ( debug .AND. PRC_UNIVERSAL_IsMaster ) then
@@ -779,11 +785,13 @@ contains
        endif
 
        key = key + 1
-       if ( key >= nprc .and. p < ORG_nrank-1 ) then
-          color  = color + 1
-          key    = 0
-          domain = COL2DOM(color)
-          nprc   = PRC_SUBGROUP(domain)
+       if ( key >= nprc ) then
+          color = color + 1
+          key   = 0
+          if ( color < NUM_SUBGROUP ) then ! ignore last
+             domain = COL2DOM(color)
+             nprc   = PRC_SUBGROUP(domain)
+          endif
        endif
     enddo
 
