@@ -343,10 +343,10 @@ contains
     use scale_const, only: &
        CONST_UNDEF8
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        N_HYD, &
        I_HC
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP, &
        QS_MP, &
        QE_MP
     use mod_atmos_admin, only: &
@@ -488,7 +488,7 @@ contains
 
       call SBMAERO_setup( convert_qtrc ) ! [INOUT]
 
-      if ( QA_MP > 0 .AND. convert_qtrc ) then
+      if ( ( .not. ATMOS_HYDROMETEOR_dry ) .AND. convert_qtrc ) then
 !OCL XFILL
          QHYD(:,:,:,I_HC) = qc(:,:,:)
 !OCL XFILL
