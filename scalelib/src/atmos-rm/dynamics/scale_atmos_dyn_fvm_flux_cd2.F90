@@ -152,9 +152,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$omp parallel default(none) private(i,j,k, vel)                    &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
+    
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -172,13 +173,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -189,6 +189,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel    
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -325,9 +328,10 @@ contains
 
     ! note than z-index is added by -1
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
+    !$omp parallel default(none) private(i,j,k,vel)  &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,FDZ,dtrk)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+1, KE-1
@@ -348,13 +352,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -372,6 +375,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_XYW_cd2
@@ -401,9 +407,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+2, KE-1
@@ -415,10 +422,9 @@ contains
     enddo
     enddo
     enddo
-
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF)
+    !$omp end do nowait
+    
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
@@ -439,6 +445,9 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_XYW_cd2
@@ -467,9 +476,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS+2, KE-1
@@ -481,10 +491,9 @@ contains
     enddo
     enddo
     enddo
-
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF)
+    !$omp end do nowait
+    
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
@@ -505,6 +514,9 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_XYW_cd2
@@ -535,10 +547,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS-1, IIE
     do k = KS, KE-1
@@ -564,18 +577,20 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KE,flux)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS-1, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -608,10 +623,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -637,18 +653,20 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KE,flux)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS-1, JJE
     do i = IIS, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -682,10 +700,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ)
+
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -708,13 +727,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -728,6 +746,9 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -759,10 +780,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ)
+  
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -780,11 +802,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -795,7 +815,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do
+    
+    !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_UYZ_cd2
 
@@ -823,10 +845,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ)
+  
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -844,11 +867,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -859,7 +880,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do
+    
+    !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_UYZ_cd2
 
@@ -1000,10 +1023,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
     !$omp shared(CDZ)
+
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -1026,13 +1050,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -1046,6 +1069,9 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do
+    
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1077,10 +1103,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
     !$omp shared(GSQRT,CDZ)
+  
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -1098,11 +1125,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1113,7 +1138,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do
+    
+    !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_XVZ_cd2
 
@@ -1141,10 +1168,11 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
     !$omp shared(GSQRT,CDZ)
+  
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS, KE-1
@@ -1162,11 +1190,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -1177,7 +1203,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do
+    
+    !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_XVZ_cd2
 
