@@ -823,6 +823,7 @@ contains
     logical                :: fileexisted
     logical                :: aggregate_
     logical                :: single_
+    integer                :: date_(6)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -856,10 +857,12 @@ contains
 
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
-       call FILE_get_CFtunits( date(:), tunits )
-       call CALENDAR_get_name( calendar )
-    else if ( NOWDATE(1) > 0 ) then
-       call FILE_get_CFtunits( NOWDATE(:), tunits )
+       date_(:) = date(:)
+    else
+       date_(:) = NOWDATE(:)
+    end if
+    if ( date_(1) > 0 ) then
+       call FILE_get_CFtunits( date_(:), tunits )
        call CALENDAR_get_name( calendar )
     else
        tunits = 'seconds'
