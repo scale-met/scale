@@ -134,7 +134,7 @@ distclean: clean
 	        BINDIR=$(BINDIR)         \
                 BUILD_DIR=$(BUILD_DIR)   \
                 SYSDEP_DIR=$(SYSDEP_DIR)
-	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh
+	rm -f *.nc *LOG.pe* monitor.pe* latlon* run.sh *.png
 
 clean:
 	$(MAKE) -C $(SCALERMDIR)/src clean \

@@ -158,7 +158,11 @@ endif
 
 allclean: distclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
-	rm -rf $(BINDIR)
+	rm -f $(BINDIR)/$(BINNAME)*
+	rm -f $(BINDIR)/$(INITNAME)*
+	rm -f $(BINDIR)/$(PPNAME)*
+	rm -rf $(TOPDIR)/bin
+
 
 distclean: clean
 	rm -f $(BINDIR)/$(BINNAME)$(POSTFIX)
