@@ -127,9 +127,9 @@ contains
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_time, only: &
-       TIME_NOWDATE, &
-       TIME_NOWMS,   &
-       TIME_NOWSTEP, &
+       TIME_NOWDATE,   &
+       TIME_NOWSUBSEC, &
+       TIME_NOWSTEP,   &
        TIME_DTSEC
     use scale_coriolis, only: &
        CORIOLIS_setup
@@ -426,7 +426,7 @@ contains
 
       ! time advance
       call ADMIN_TIME_advance
-      call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
+      call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWSUBSEC, TIME_NOWSTEP )
 
       ! change to next state
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update

@@ -6,11 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2011-11-11 (H.Yashiro)  [new]
-!! @li      2013-01-29 (H.Yashiro)  [mod] exclude calendar tools
-!! @li      2014-05-02 (S.Adachi)   [add] variables for urban
-!!
 !<
 #include "scalelib.h"
 module scale_time
@@ -67,9 +62,9 @@ module scale_time
   integer,  public :: TIME_DSTEP_WALLCLOCK_CHECK !< step interval of wallclock terminator
 
   integer,  public :: TIME_NOWDATE(6)           !< current time [YYYY MM DD HH MM SS]
-  real(DP), public :: TIME_NOWMS                !< subsecond part of current time [millisec]
   integer,  public :: TIME_NOWDAY               !< absolute day of current time [day]
   real(DP), public :: TIME_NOWSEC               !< subday part  of current time [sec]
+  real(DP), public :: TIME_NOWSUBSEC            !< subsecond part of current time [sec]
   real(DP), public :: TIME_NOWDAYSEC            !< second of current time [sec]
   integer,  public :: TIME_NOWSTEP              !< current step [number]
   integer,  public :: TIME_NSTEP                !< total steps [number]
@@ -97,27 +92,27 @@ contains
     !---------------------------------------------------------------------------
 
     ! YYYYMMDD-hhmmss.sss
-    call TIME_time2label( TIME_NOWDATE(:), TIME_NOWMS, & ! [IN]
-                          timelabel                    ) ! [OUT]
+    call TIME_time2label( TIME_NOWDATE(:), TIME_NOWSUBSEC, & ! [IN]
+                          timelabel                        ) ! [OUT]
 
     return
   end subroutine TIME_gettimelabel
 
   !> generate time label
   subroutine TIME_time2label( &
-       date, ms, &
+       date, subsec, &
        timelabel )
     implicit none
 
     integer,  intent(in) :: date(6)
-    real(DP), intent(in) :: ms
+    real(DP), intent(in) :: subsec
 
     character(len=*), intent(out) :: timelabel
     !---------------------------------------------------------------------------
 
     ! YYYYMMDD-hhmmss.sss
     write(timelabel,'(I4.4,I2.2,I2.2,A1,I2.2,I2.2,I2.2,A1,I3.3)') &
-         date(1:3), '-', date(4:6), '.', int(ms*1000.0_DP)
+         date(1:3), '-', date(4:6), '.', int(subsec*1000.0_DP)
 
     return
   end subroutine TIME_time2label

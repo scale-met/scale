@@ -276,7 +276,7 @@ module scale_file_history
   type(attr)                 :: FILE_HISTORY_attrs(FILE_HISTORY_attr_max)
 
   integer                    :: FILE_HISTORY_NOWDATE(6)         !> date at the time
-  real(DP)                   :: FILE_HISTORY_NOWMS              !> milli sec
+  real(DP)                   :: FILE_HISTORY_NOWSUBSEC          !> sub sec
   integer                    :: FILE_HISTORY_NOWSTEP            !> step at the time
 
   character(len=H_MID)       :: FILE_HISTORY_options = ''       !> option to give file.  'filetype1:key1=val1&filetype2:key2=val2&...'
@@ -1162,13 +1162,13 @@ contains
   !-----------------------------------------------------------------------------
   !> set now step
   !-----------------------------------------------------------------------------
-  subroutine FILE_HISTORY_Set_NowDate( NOWDATE, NOWMS, NOWSTEP )
+  subroutine FILE_HISTORY_Set_NowDate( NOWDATE, NOWSUBSEC, NOWSTEP )
     integer,  intent(in) :: NOWDATE(:)
-    real(DP), intent(in) :: NOWMS
+    real(DP), intent(in) :: NOWSUBSEC
     integer,  intent(in) :: NOWSTEP
 
     FILE_HISTORY_NOWDATE(:) = NOWDATE(:)
-    FILE_HISTORY_NOWMS      = NOWMS
+    FILE_HISTORY_NOWSUBSEC  = NOWSUBSEC
     FILE_HISTORY_NOWSTEP    = NOWSTEP
 
     return
@@ -1426,7 +1426,7 @@ contains
     endif
 
     if ( FILE_HISTORY_vars(id)%postfix_timelabel ) then
-       call TIME_time2label( FILE_HISTORY_NOWDATE, FILE_HISTORY_NOWMS, & ! [IN]
+       call TIME_time2label( FILE_HISTORY_NOWDATE, FILE_HISTORY_NOWSUBSEC, & ! [IN]
                              timelabel ) ! [OUT]
        basename_mod = trim(FILE_HISTORY_vars(id)%basename)//'_'//trim(timelabel)
     else
