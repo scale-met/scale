@@ -141,7 +141,7 @@ contains
     real(RP), intent(out) :: AH_URB  (UIA,UJA,1:24)
     real(RP), intent(out) :: AHL_URB (UIA,UJA,1:24)
 
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = ''                !< urban parameter table
+    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME       = ''          !< urban parameter table
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = ''          !< gridded data of Z0M
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME  = 'URBAN_Z0M' !< var name of gridded data for Z0M
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME = ''          !< gridded data of Z0H
@@ -1935,7 +1935,7 @@ contains
         PRC_abort
     implicit none
 
-    character(len=H_LONG), intent(in) :: INFILENAME
+    character(*), intent(in) :: INFILENAME
 
     namelist / PARAM_URBAN_DATA / &
        ZR,         &
@@ -1981,9 +1981,8 @@ contains
 
       if ( ierr /= 0 ) then
         LOG_NEWLINE
-        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Failed to open a parameter file.', &
-                                                 trim(INFILENAME)
-         call PRC_abort
+        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Failed to open a parameter file : ', trim(INFILENAME)
+        call PRC_abort
       else
         LOG_NEWLINE
         LOG_INFO("URBAN_DYN_kusaka01_setup",*) 'read_urban_param_table: Read urban parameters from file'
@@ -1993,8 +1992,7 @@ contains
         if ( ierr < 0 ) then !--- no data
            LOG_INFO("read_urban_param_table",*)  'Not found namelist of PARAM_URBAN_DATA. Default used.'
         elseif( ierr > 0 ) then !--- fatal error
-           LOG_ERROR("read_urban_param_table",*) 'Not appropriate names in namelist PARAM_URBAN_DATA of ', &
-                                                 trim(INFILENAME),'  Check!'
+           LOG_ERROR("read_urban_param_table",*) 'Not appropriate names in PARAM_URBAN_DATA of ', trim(INFILENAME)
            call PRC_abort
         endif
         LOG_NML(PARAM_URBAN_DATA)
