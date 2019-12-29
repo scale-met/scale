@@ -344,7 +344,9 @@ contains
 
        ! pressure, pott. temp.
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel private(i,j,k) 
+      
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS-2, JJE+2
        do i = IIS-2, IIE+2
           do k = KS, KE
@@ -360,10 +362,11 @@ contains
           DPRES(KE+1,i,j) = DPRES0(KE+1,i,j) - DENS(KE,i,j) * ( PHI(KE+1,i,j) - PHI(KE-1,i,j) )
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS-JHALO, JJE+JHALO
        do i = IIS-IHALO, IIE+IHALO
        do k = KS, KE
@@ -375,6 +378,9 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
+
+       !$omp end parallel
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -459,11 +465,13 @@ contains
        ! continuity equation (total rho)
        !########################################################################
 
+       !$omp parallel private(i,j,k,advcv,advch) 
+
        !-----< high order flux >-----
 
        ! at (x, y, w)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -484,24 +492,26 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           mflx_hi(KS-1,i,j,ZDIR) = 0.0_RP
           mflx_hi(KE  ,i,j,ZDIR) = 0.0_RP
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        ! at (u, y, z)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS  , JJE
        do i = IIS-IFS_OFF, min(IIE,IEH)
        do k = KS, KE
@@ -516,13 +526,14 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        ! at (x, v, z)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS-JFS_OFF, min(JJE,JEH)
        do i = IIS  , IIE
        do k = KS, KE
@@ -537,13 +548,15 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
+
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        !-----< update density >-----
 
-       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -572,10 +585,13 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
+
+       !$omp end parallel
+
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-
 
        !########################################################################
        ! momentum equation (z)
@@ -618,9 +634,12 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+      
+       !$omp parallel private(i,j,k,advcv,advch,wdamp,div)  
+
        ! pressure gradient force at (x, y, w)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -628,10 +647,11 @@ contains
        enddo
        enddo
        enddo
-
+       !$omp end do nowait
+       
        ! buoyancy force at (x, y, w)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -642,10 +662,11 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 
        !-----< update momentum (z) -----
 
-       !$omp parallel do private(i,j,k,advcv,advch,wdamp,div) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -689,11 +710,12 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
           MOMZ_RK(KS-1,i,j) = 0.0_RP
@@ -709,6 +731,9 @@ contains
 #endif
        enddo
        enddo
+       !$omp end do nowait
+
+       !$omp end parallel
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -861,8 +886,12 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+      
+       !$omp parallel private(i,j,k,advcv,advch,div) 
+       
        ! pressure gradient force at (u, y, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+      
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -880,10 +909,11 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 
        ! coriolis force at (u, y, z)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -906,10 +936,11 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        !-----< update momentum (x) >-----
 
-       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, min(IIE, IEH)
        do k = KS, KE
@@ -951,6 +982,9 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
+
+       !$omp end parallel       
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1108,9 +1142,12 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
+      
+       !$omp parallel private(i,j,k,advcv,advch,div) 
+
        ! pressure gradient force at (x, v, z)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1128,10 +1165,11 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 
        ! coriolis force at (x, v, z)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE
@@ -1154,10 +1192,11 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do
 
        !-----< update momentum (y) >-----
 
-       !$omp parallel do private(i,j,k,advcv,advch,div) OMP_SCHEDULE_ collapse(2)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, min(JJE, JEH)
        do i = IIS, IIE
        do k = KS, KE
@@ -1200,6 +1239,9 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
+
+       !$omp end parallel       
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
