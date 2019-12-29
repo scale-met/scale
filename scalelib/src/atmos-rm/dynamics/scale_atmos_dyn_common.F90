@@ -565,7 +565,8 @@ contains
 
     !-----< density >-----
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k) 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS-1, KE
@@ -573,13 +574,16 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-2,i,j,I_DENS,ZDIR) = 0.0_RP
        num_diff(KE+1:KA  ,i,j,I_DENS,ZDIR) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -587,6 +591,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
@@ -595,7 +601,8 @@ contains
        num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -603,6 +610,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_DENS,YDIR) = 0.0_RP
@@ -611,7 +620,8 @@ contains
        num_diff(KE+1:KA  ,i,j,I_DENS,YDIR) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do
+    !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -645,7 +655,9 @@ contains
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS+1, KE-1
@@ -654,13 +666,17 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff( 1:KS,i,j,I_MOMZ,ZDIR) = 0.0_RP
        num_diff(KE:KA,i,j,I_MOMZ,ZDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -669,6 +685,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
     do i = IS, IE
        num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
@@ -677,7 +695,9 @@ contains
        num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -686,6 +706,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
     do i = IS, IE
        num_diff( 1:KS-1,i,j,I_MOMZ,YDIR) = 0.0_RP
@@ -695,7 +717,9 @@ contains
        num_diff(KE:KA  ,i,j,I_MOMZ,YDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do
 
+    !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -730,7 +754,9 @@ contains
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k) 
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -739,13 +765,17 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff( 1:KS-1,i,j,I_MOMX,ZDIR) = 0.0_RP
        num_diff(KE:KA  ,i,j,I_MOMX,ZDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -754,6 +784,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
@@ -763,7 +795,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -772,6 +806,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_MOMX,YDIR) = 0.0_RP
@@ -780,7 +816,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -814,7 +852,9 @@ contains
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k) 
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -823,13 +863,17 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
     do i = IS, IE
        num_diff( 1:KS-1,i,j,I_MOMY,ZDIR) = 0.0_RP
        num_diff(KE:KA  ,i,j,I_MOMY,ZDIR) = 0.0_RP
     end do
     end do
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -838,6 +882,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
@@ -846,7 +892,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -855,6 +903,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_MOMY,YDIR) = 0.0_RP
@@ -863,7 +913,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp end parallel 
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -898,7 +950,9 @@ contains
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k) 
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -907,9 +961,8 @@ contains
     enddo
     enddo
     enddo
-    !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,KA,num_diff,work,DENS,iwork,nd_coef_cdz) &
-    !$omp private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-2,i,j,I_RHOT,ZDIR) = 0.0_RP
@@ -920,7 +973,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_RHOT,ZDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -929,6 +984,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
@@ -937,7 +994,9 @@ contains
        num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -946,6 +1005,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
     do i = IS, IE
        num_diff(   1:KS-1,i,j,I_RHOT,YDIR) = 0.0_RP
@@ -954,7 +1015,8 @@ contains
        num_diff(KE+1:KA  ,i,j,I_RHOT,YDIR) = 0.0_RP
     enddo
     enddo
-
+    !$omp end do nowait
+    !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -1128,7 +1190,9 @@ contains
     call PROF_rapstart("NumFilter_Main", 3)
 
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -1137,6 +1201,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff_q(1:KS-2,i,j,ZDIR) = 0.0_RP
@@ -1147,7 +1213,9 @@ contains
        num_diff_q(KE+1:KA,i,j,ZDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1156,6 +1224,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff_q(1:KS-1,i,j,XDIR) = 0.0_RP
@@ -1164,7 +1234,9 @@ contains
        num_diff_q(KE+1:KA,i,j,XDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1173,6 +1245,8 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff_q(1:KS-1,i,j,YDIR) = 0.0_RP
@@ -1181,7 +1255,9 @@ contains
        num_diff_q(KE+1:KA,i,j,YDIR) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
 
+    !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call PROF_rapstart("NumFilter_Comm", 3)
@@ -1607,8 +1683,10 @@ contains
 
     if ( KO == 0 ) then
 
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp parallel default(none) private(i,j,k)  &
        !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
+
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
        do k = KS+1, KE-2
@@ -1625,8 +1703,8 @@ contains
        enddo
        enddo
        enddo
-
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
 #ifdef DEBUG
@@ -1652,11 +1730,14 @@ contains
           diff(KE+2,i,j,ZDIR) = 0.0_RP
        end do
        end do
-
+       !$omp end do nowait
+       !$omp end parallel 
     else ! K0=1
 
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+       !$omp parallel default(none) private(i,j,k) &
        !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ3)
+
+       !$omp do OMP_SCHEDULE_ collapse(2) 
        do j = JS, JE
        do i = IS, IE
        do k = KS+2, KE-2
@@ -1673,8 +1754,8 @@ contains
        enddo
        enddo
        enddo
-
-       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
 #ifdef DEBUG
@@ -1704,7 +1785,8 @@ contains
           diff(KE+2,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
        end do
        end do
-
+       !$omp end do nowait
+       !$omp end parallel 
     end if
 
     if ( IO == 0 ) then
@@ -1826,7 +1908,9 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel private(i,j,k) 
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE-1
@@ -1851,8 +1935,8 @@ contains
     enddo
     enddo
     enddo
-
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
        num_diff_pt1(KS-1,i,j,ZDIR) = - num_diff_pt1(KS  ,i,j,ZDIR)
@@ -1861,8 +1945,9 @@ contains
        num_diff_pt1(KE+1,i,j,ZDIR) = - num_diff_pt1(KE-2,i,j,ZDIR)
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, K1
@@ -1887,8 +1972,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, K1
@@ -1913,10 +1999,13 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
+
+    !$omp end parallel
 
     return
   end subroutine calc_diff4
-
+  
   !-----------------------------------------------------------------------------
   !> Flux Correction Transport Limiter
   subroutine ATMOS_DYN_fct( &
