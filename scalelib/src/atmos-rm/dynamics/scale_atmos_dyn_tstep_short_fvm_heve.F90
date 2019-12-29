@@ -378,7 +378,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
+       !$omp end do nowait
 
        !$omp end parallel
 #ifdef DEBUG
@@ -585,7 +585,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do
+       !$omp end do nowait
 
        !$omp end parallel
 
@@ -731,7 +731,7 @@ contains
 #endif
        enddo
        enddo
-       !$omp end do
+       !$omp end do nowait
 
        !$omp end parallel
 #ifdef DEBUG
@@ -890,6 +890,7 @@ contains
        !$omp parallel private(i,j,k,advcv,advch,div) 
        
        ! pressure gradient force at (u, y, z)
+      
        !$omp do OMP_SCHEDULE_ collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE
@@ -935,7 +936,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do nowait
+       !$omp end do
 
        !-----< update momentum (x) >-----
 
@@ -1191,7 +1192,7 @@ contains
        enddo
        enddo
        enddo
-       !$omp end do nowait
+       !$omp end do
 
        !-----< update momentum (y) >-----
 

@@ -816,7 +816,7 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMX,YDIR) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
 
     !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
@@ -913,7 +913,7 @@ contains
        num_diff(KE+1:KA  ,i,j,I_MOMY,YDIR) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
 
     !$omp end parallel 
     call PROF_rapend  ("NumFilter_Main", 3)
@@ -1255,7 +1255,7 @@ contains
        num_diff_q(KE+1:KA,i,j,YDIR) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
 
     !$omp end parallel
     call PROF_rapend  ("NumFilter_Main", 3)
@@ -1730,7 +1730,7 @@ contains
           diff(KE+2,i,j,ZDIR) = 0.0_RP
        end do
        end do
-       !$omp end do
+       !$omp end do nowait
        !$omp end parallel 
     else ! K0=1
 
@@ -1785,7 +1785,7 @@ contains
           diff(KE+2,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
        end do
        end do
-       !$omp end do
+       !$omp end do nowait
        !$omp end parallel 
     end if
 
@@ -1999,13 +1999,13 @@ contains
     enddo
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
 
     !$omp end parallel
 
     return
   end subroutine calc_diff4
-
+  
   !-----------------------------------------------------------------------------
   !> Flux Correction Transport Limiter
   subroutine ATMOS_DYN_fct( &

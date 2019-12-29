@@ -251,7 +251,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel    
 #ifdef DEBUG
@@ -475,7 +475,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 
@@ -554,7 +554,7 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 
@@ -632,7 +632,7 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 
@@ -714,7 +714,7 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 #ifdef DEBUG
@@ -798,7 +798,7 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 #ifdef DEBUG
@@ -918,7 +918,7 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 #ifdef DEBUG
@@ -1024,7 +1024,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
     return
@@ -1126,7 +1126,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
     return
@@ -1369,7 +1369,7 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
 #ifdef DEBUG
@@ -1475,7 +1475,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
     return
@@ -1577,7 +1577,7 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
-    !$omp end do
+    !$omp end do nowait
     
     !$omp end parallel
     return
@@ -1724,7 +1724,7 @@ contains
     real(RP), intent(in)  :: v1
     real(RP), intent(in)  :: v2
     real(RP), intent(in)  :: v3
-
+    
     real(RP) :: r2
     real(RP) :: zerosw1, zerosw2
     !---------------------------------------------------------------------------
