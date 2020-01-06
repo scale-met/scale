@@ -91,7 +91,8 @@ contains
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+       ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+       ND_SFC_FACT, ND_USE_RS,                               &
        BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
@@ -105,31 +106,10 @@ contains
        USE_AVERAGE,                                          &
        I_QV,                                                 &
        DTL, DTS                                              )
-    use scale_const, only: &
-       Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry
-    use scale_comm_cartesC, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_numfilter_coef,   &
-       ATMOS_DYN_numfilter_coef_q, &
-       ATMOS_DYN_fct
-    use scale_atmos_dyn_fvm_flux_ud1, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxY_XYZ_ud1
-    use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ
+
     use scale_atmos_dyn_tstep_large, only: &
        ATMOS_DYN_tstep_large
-#ifdef HIST_TEND
-    use scale_file_history, only: &
-       FILE_HISTORY_in
-#endif
+
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -197,7 +177,7 @@ contains
 
     real(RP), intent(in)    :: ND_COEF
     real(RP), intent(in)    :: ND_COEF_Q
-    integer,  intent(in)    :: ND_ORDER
+    integer,  intent(in)    :: ND_LAPLACIAN_NUM
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
 
@@ -298,33 +278,33 @@ contains
           end if
 
           call ATMOS_DYN_tstep_large( &
-               DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    PROG,  & ! (inout)
-               DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,        & ! (inout)
-               num_diff, num_diff_q,                                        & ! (out)
-               QTRC0,                                                       & ! (in)
-               DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp,        & ! (in)
-               CORIOLI,                                                     & ! (in)
-               CDZ, CDX, CDY, FDZ, FDX, FDY,                                & ! (in)
-               RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                          & ! (in)
-               PHI, GSQRT,                                                  & ! (in)
-               J13G, J23G, J33G, MAPF,                                      & ! (in)
-               AQ_R, AQ_CV, AQ_CP, AQ_MASS,                                 & ! (in)
-               REF_dens, REF_pott, REF_qv, REF_pres,                        & ! (in)
-               BND_W, BND_E, BND_S, BND_N,                                  & ! (in)
-               ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS,        & ! (in)
-               BND_QA, BND_IQ, BND_SMOOTHER_FACT,                           & ! (in)
-               DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,                 & ! (in)
-               DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,                 & ! (in)
-               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,           & ! (in)
-               DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,           & ! (in)
-               MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                              & ! (in)
-               wdamp_coef, divdmp_coef,                                     & ! (in)
-               FLAG_TRACER_SPLIT_TEND,                                      & ! (in)
-               FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,              & ! (in)
-               FLAG_FCT_ALONG_STREAM,                                       & ! (in)
-               USE_AVERAGE .AND. last,                                      & ! (in)
-               I_QV,                                                        & ! (in)
-               dtrk, dts, last                                              ) ! (in)
+               DENS,    MOMZ,    MOMX,    MOMY,    RHOT,    QTRC,    PROG,   & ! (inout)
+               DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av,         & ! (inout)
+               num_diff, num_diff_q,                                         & ! (out)
+               QTRC0,                                                        & ! (in)
+               DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp,         & ! (in)
+               CORIOLI,                                                      & ! (in)
+               CDZ, CDX, CDY, FDZ, FDX, FDY,                                 & ! (in)
+               RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                           & ! (in)
+               PHI, GSQRT,                                                   & ! (in)
+               J13G, J23G, J33G, MAPF,                                       & ! (in)
+               AQ_R, AQ_CV, AQ_CP, AQ_MASS,                                  & ! (in)
+               REF_dens, REF_pott, REF_qv, REF_pres,                         & ! (in)
+               BND_W, BND_E, BND_S, BND_N,                                   & ! (in)
+               ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS, & ! (in)
+               BND_QA, BND_IQ, BND_SMOOTHER_FACT,                            & ! (in)
+               DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,                  & ! (in)
+               DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,                  & ! (in)
+               DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,            & ! (in)
+               DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,            & ! (in)
+               MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                               & ! (in)
+               wdamp_coef, divdmp_coef,                                      & ! (in)
+               FLAG_TRACER_SPLIT_TEND,                                       & ! (in)
+               FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,               & ! (in)
+               FLAG_FCT_ALONG_STREAM,                                        & ! (in)
+               USE_AVERAGE .AND. last,                                       & ! (in)
+               I_QV,                                                         & ! (in)
+               dtrk, dts, last                                               ) ! (in)
 
        end do
 

@@ -37,8 +37,8 @@ module scale_atmos_dyn_common
   !
   public :: ATMOS_DYN_filter_setup
   public :: ATMOS_DYN_wdamp_setup
-  public :: ATMOS_DYN_numfilter_coef
-  public :: ATMOS_DYN_numfilter_coef_q
+  public :: ATMOS_DYN_numfilter_flux
+  public :: ATMOS_DYN_numfilter_flux_q
   public :: ATMOS_DYN_filter_tend
   public :: ATMOS_DYN_fct
   public :: ATMOS_DYN_Copy_boundary
@@ -60,6 +60,9 @@ module scale_atmos_dyn_common
   !++ Private parameters & variables
   !
   !-----------------------------------------------------------------------------
+  real(RP), allocatable :: CNZ1(:,:)
+  real(RP), allocatable :: CNX1(:,:)
+  real(RP), allocatable :: CNY1(:,:)
   real(RP), allocatable :: CNZ3(:,:,:)
   real(RP), allocatable :: CNX3(:,:,:)
   real(RP), allocatable :: CNY3(:,:,:)
@@ -115,6 +118,9 @@ contains
     end if
 
     ! allocation
+    allocate( CNZ1(KA,2) )
+    allocate( CNX1(IA,2) )
+    allocate( CNY1(JA,2) )    
     allocate( CNZ3(3,KA,2) )
     allocate( CNX3(3,IA,2) )
     allocate( CNY3(3,JA,2) )
@@ -144,6 +150,9 @@ contains
     call COMM_vars8_init( 'num_diff_QTRC_Y', num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
 #ifdef DEBUG
+    CNX1(:,:)   = UNDEF
+    CNY1(:,:)   = UNDEF
+    CNZ1(:,:)   = UNDEF
     CNZ3(:,:,:) = UNDEF
     CNX3(:,:,:) = UNDEF
     CNY3(:,:,:) = UNDEF
@@ -152,7 +161,12 @@ contains
     CNY4(:,:,:) = UNDEF
 #endif
 
-    ! z direction
+    !* z direction **********************************************
+
+    do k = KS-1, KE
+      CNZ1(k,1) = 1.0_RP / FDZ(k)
+    end do
+
     do k = KS+1, KE-1
        CNZ3(1,k,1) = 1.0_RP / ( FDZ(k  ) * CDZ(k  ) * FDZ(k-1) )
        CNZ3(2,k,1) = 1.0_RP / ( FDZ(k  ) * CDZ(k  ) * FDZ(k-1) ) &
@@ -194,6 +208,12 @@ contains
        CNZ4(4,k,1) = ( CNZ3(1,k  ,1) + CNZ3(3,k,1) ) / CDZ(k)
        CNZ4(5,k,1) = ( CNZ3(1,k-1,1)               ) / CDZ(k)
     enddo
+
+    !-
+
+    do k = KS, KE
+      CNZ1(k,2) = 1.0_RP / CDZ(k)
+    end do
 
     do k = KS+1, KE-1
        CNZ3(1,k,2) = 1.0_RP / ( CDZ(k+1) * FDZ(k  ) * CDZ(k  ) )
@@ -239,7 +259,12 @@ contains
     CNZ4(3,KE,2) = ( CNZ3(3,KE+1,2) + CNZ3(2,KE,2) ) / FDZ(KE-1)
     CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) / FDZ(KE-1)
 
-    ! x direction
+    !* x direction *************************************************
+
+    do i = IS-1, IE
+      CNX1(i,1) = 1.0_RP / FDX(i)
+    end do
+
     CNX3(1,IS-1,1) = 1.0_RP / ( FDX(IS-1) * CDX(IS-1) * FDX(IS-2) )
     do i = IS, IE+1
        CNX3(1,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) )
@@ -259,6 +284,12 @@ contains
        CNX4(5,i,1) = ( CNX3(1,i-1,1)               ) / CDX(i)
     enddo
 
+    !-
+
+    do i = IS, IE
+      CNX1(i,2) = 1.0_RP / CDX(i)
+    end do
+
     do i = IS-1, IE+1
        CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) )
        CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) ) &
@@ -277,7 +308,12 @@ contains
        CNX4(5,i,2) = ( CNX3(1,i-1,2)               ) / FDX(i)
     enddo
 
-    ! y direction
+    !* y direction ************************************************    
+
+    do j = JS-1, JE
+      CNY1(j,1) = 1.0_RP / FDY(j)
+    end do
+
     CNY3(1,JS-1,1) = 1.0_RP / ( FDY(JS-1) * CDY(JS-1) * FDY(JS-2) )
     do j = JS, JE+1
        CNY3(1,j,1) = 1.0_RP / ( FDY(j  ) * CDY(j  ) * FDY(j-1) )
@@ -296,6 +332,12 @@ contains
        CNY4(4,j,1) = ( CNY3(1,j  ,1) + CNY3(3,j,1) ) / CDY(j)
        CNY4(5,j,1) = ( CNY3(1,j-1,1)               ) / CDY(j)
     enddo
+
+    !-
+
+    do j = JS, JE
+      CNY1(j,2) = 1.0_RP / CDY(j)
+    end do
 
     do j = JS-1, JE+1
        CNY3(1,j,2) = 1.0_RP / ( CDY(j+1) * FDY(j  ) * CDY(j  ) )
@@ -381,13 +423,22 @@ contains
   end subroutine ATMOS_DYN_wdamp_setup
 
   !-----------------------------------------------------------------------------
-  !> Calc coefficient of numerical filter
-  subroutine ATMOS_DYN_numfilter_coef( &
-       num_diff,                               &
-       DENS, MOMZ, MOMX, MOMY, RHOT,           &
-       CDZ, CDX, CDY, FDZ, FDX, FDY, DT,       &
-       REF_dens, REF_pott,                     &
-       ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
+  !> Calculate fluxes with numerical filter for prognostic variables of dynamical core
+  !
+  ! The num_diff (for example, in the x direction and for the variable, RHOT) 
+  ! is calculated in the following manner: 
+  !   num_diff = - (-1)^(n+1) * (ND_COEF * (Delta x)^2n / (2^2n Delta t))
+  !              * DENS * (d^2n-1 THETA / dx^2n-1)
+  ! where n is ND_LAPLACIAN_NUM. 
+  ! Note that we mulitply a minus sign in the above expression since num_diff fluxes calculated here are 
+  ! directly added to advective fluxes. 
+  !
+  subroutine ATMOS_DYN_numfilter_flux( &
+       num_diff,                                         &
+       DENS, MOMZ, MOMX, MOMY, RHOT,                     &
+       CDZ, CDX, CDY, FDZ, FDX, FDY, DT,                 &
+       REF_dens, REF_pott,                               &
+       ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -414,7 +465,7 @@ contains
     real(RP), intent(in)  :: REF_pott(KA,IA,JA)
 
     real(RP), intent(in)  :: ND_COEF
-    integer,  intent(in)  :: ND_ORDER
+    integer,  intent(in)  :: ND_LAPLACIAN_NUM
     real(RP), intent(in)  :: ND_SFC_FACT
     logical,  intent(in)  :: ND_USE_RS
 
@@ -430,8 +481,8 @@ contains
     real(RP) :: work(KA,IA,JA,3,2)
     integer  :: iwork
 
-    real(RP) :: DIFF4
-    integer  :: nd_order4
+    real(RP) :: diff_coef_tmp
+    integer  :: nd_order
     real(RP) :: nd_coef_cdz(KA)
     real(RP) :: nd_coef_cdx(IA)
     real(RP) :: nd_coef_cdy(JA)
@@ -442,30 +493,31 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    ! numerical diffusion
-    nd_order4 = nd_order * 4
-    DIFF4 = ND_COEF / ( 2**(nd_order4) * DT )
+    ! calculate the coefficient numerical diffusion
+
+    nd_order = ND_LAPLACIAN_NUM * 2
+    diff_coef_tmp = - (-1)**(mod(ND_LAPLACIAN_NUM+1,2)) &
+                    * ND_COEF / ( 2**(nd_order) * DT )
     do k = KS-1, KE
-       nd_coef_cdz(k) = DIFF4 * CDZ(k)**nd_order4
+       nd_coef_cdz(k) = diff_coef_tmp * CDZ(k)**nd_order
     end do
     do k = KS+1, KE-1
-       nd_coef_fdz(k) = DIFF4 * FDZ(k)**nd_order4
+       nd_coef_fdz(k) = diff_coef_tmp * FDZ(k)**nd_order
     end do
     do i = IS, IE
-       nd_coef_cdx(i) = DIFF4 * CDX(i)**nd_order4
-       nd_coef_fdx(i) = DIFF4 * FDX(i)**nd_order4
+       nd_coef_cdx(i) = diff_coef_tmp * CDX(i)**nd_order
+       nd_coef_fdx(i) = diff_coef_tmp * FDX(i)**nd_order
     end do
     do j = JS, JE
-       nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
-       nd_coef_fdy(j) = DIFF4 * FDY(j)**nd_order4
+       nd_coef_cdy(j) = diff_coef_tmp * CDY(j)**nd_order
+       nd_coef_fdy(j) = diff_coef_tmp * FDY(j)**nd_order
     end do
 
-
-    !###########################################################################
-    ! 1st order coefficients
-    !###########################################################################
-
     if ( .NOT. ND_USE_RS ) then
+
+       ! In order to relax the diffusion of the reference state, 
+       ! we smooth the density and potential temperature fields 
+       ! given for calculating fluxes of numerical diffusion. 
 
        call PROF_rapstart("NumFilter_Main", 3)
 
@@ -556,9 +608,9 @@ contains
 
     endif
 
-    call calc_numdiff( work, iwork, & ! (out)
-                       dens_diff, & ! (in)
-                       nd_order, & ! (in)
+    call calc_numdiff( work, iwork,      & ! (out)
+                       dens_diff,        & ! (in)
+                       ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 0, KE )
 
     call PROF_rapstart("NumFilter_Main", 3)
@@ -648,9 +700,9 @@ contains
 
     call PROF_rapend  ("NumFilter_Main", 3)
 
-    call calc_numdiff( work, iwork, & ! (out)
-                       VELZ, & ! (in)
-                       nd_order, & ! (in)
+    call calc_numdiff( work, iwork,      & ! (out)
+                       VELZ,             & ! (in)
+                       ND_LAPLACIAN_NUM, & ! (in)
                        1, 0, 0, KE-1 )
 
     call PROF_rapstart("NumFilter_Main", 3)
@@ -746,9 +798,9 @@ contains
 
     call PROF_rapend  ("NumFilter_Main", 3)
 
-    call calc_numdiff( work, iwork, & ! (out)
-                       VELX, & ! (in)
-                       nd_order, & ! (in)
+    call calc_numdiff( work, iwork,      & ! (out)
+                       VELX,             & ! (in)
+                       ND_LAPLACIAN_NUM, & ! (in)
                        0, 1, 0, KE )
 
 
@@ -845,9 +897,9 @@ contains
 
     call PROF_rapend  ("NumFilter_Main", 3)
 
-    call calc_numdiff( work, iwork, & ! (out)
-                       VELY, & ! (in)
-                       nd_order, & ! (in)
+    call calc_numdiff( work, iwork,      & ! (out)
+                       VELY,             & ! (in)
+                       ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 1, KE )
 
     call PROF_rapstart("NumFilter_Main", 3)
@@ -943,9 +995,9 @@ contains
 
     call PROF_rapend  ("NumFilter_Main", 3)
 
-    call calc_numdiff( work, iwork, & ! (out)
-                       pott_diff, & ! (in)
-                       nd_order, & ! (in)
+    call calc_numdiff( work, iwork,      & ! (out)
+                       pott_diff,        & ! (in)
+                       ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 0, KE )
 
     call PROF_rapstart("NumFilter_Main", 3)
@@ -1044,16 +1096,16 @@ contains
     call PROF_rapend  ("NumFilter_Comm", 3)
 
     return
-  end subroutine ATMOS_DYN_numfilter_coef
+  end subroutine ATMOS_DYN_numfilter_flux
 
   !-----------------------------------------------------------------------------
-  !> Calc coefficient of numerical filter
-  subroutine ATMOS_DYN_numfilter_coef_q( &
-       num_diff_q,                             &
-       DENS, QTRC, is_qv,                      &
-       CDZ, CDX, CDY, dt,                      &
-       REF_qv, iq,                             &
-       ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS )
+  !> Calculate fluxes with numerical filter for tracer variables
+  subroutine ATMOS_DYN_numfilter_flux_q( &
+       num_diff_q,                                       &
+       DENS, QTRC, is_qv,                                &
+       CDZ, CDX, CDY, dt,                                &
+       REF_qv, iq,                                       &
+       ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -1075,7 +1127,7 @@ contains
     integer,  intent(in)  :: iq
 
     real(RP), intent(in)  :: ND_COEF
-    integer,  intent(in)  :: ND_ORDER
+    integer,  intent(in)  :: ND_LAPLACIAN_NUM
     real(RP), intent(in)  :: ND_SFC_FACT
     logical,  intent(in)  :: ND_USE_RS
 
@@ -1084,8 +1136,8 @@ contains
     real(RP) :: work(KA,IA,JA,3,2)
     integer  :: iwork
 
-    real(RP) :: DIFF4
-    integer  :: nd_order4
+    real(RP) :: diff_coef_tmp
+    integer  :: nd_order
     real(RP) :: nd_coef_cdz(KA)
     real(RP) :: nd_coef_cdx(IA)
     real(RP) :: nd_coef_cdy(JA)
@@ -1097,16 +1149,18 @@ contains
     ! 1st order coefficients
     !###########################################################################
 
-    nd_order4 = nd_order * 4
-    DIFF4 = ND_COEF / ( 2**(nd_order4) * DT )
+    nd_order = ND_LAPLACIAN_NUM * 2
+    diff_coef_tmp = - (-1)**(mod(ND_LAPLACIAN_NUM+1,2)) &
+                    * ND_COEF / ( 2**(nd_order) * DT )
+
     do k = KS-1, KE
-       nd_coef_cdz(k) = DIFF4 * CDZ(k)**nd_order4
+       nd_coef_cdz(k) = diff_coef_tmp * CDZ(k)**nd_order
     end do
     do i = IS, IE
-       nd_coef_cdx(i) = DIFF4 * CDX(i)**nd_order4
+       nd_coef_cdx(i) = diff_coef_tmp * CDX(i)**nd_order
     end do
     do j = JS, JE
-       nd_coef_cdy(j) = DIFF4 * CDY(j)**nd_order4
+       nd_coef_cdy(j) = diff_coef_tmp * CDY(j)**nd_order
     end do
 
     if ( is_qv .AND. (.NOT. ND_USE_RS) ) then
@@ -1172,16 +1226,16 @@ contains
 
        endif
 
-       call calc_numdiff( work, iwork, & ! (out)
-                          qv_diff, & ! (in)
-                          nd_order, & ! (in)
+       call calc_numdiff( work, iwork,      & ! (out)
+                          qv_diff,          & ! (in)
+                          ND_LAPLACIAN_NUM, & ! (in)
                           0, 0, 0, KE )
 
     else ! not qv
 
-       call calc_numdiff( work, iwork, & ! (out)
-                          QTRC, & ! (in)
-                          nd_order, & ! (in)
+       call calc_numdiff( work, iwork,      & ! (out)
+                          QTRC,             & ! (in)
+                          ND_LAPLACIAN_NUM, & ! (in)
                           0, 0, 0, KE )
 
     endif ! QV or not?
@@ -1273,7 +1327,7 @@ contains
     call PROF_rapend  ("NumFilter_Comm", 3)
 
     return
-  end subroutine ATMOS_DYN_numfilter_coef_q
+  end subroutine ATMOS_DYN_numfilter_flux_q
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_filter_tend( &
@@ -1298,8 +1352,8 @@ contains
 
     integer :: k, i, j
 
-    call calc_diff3( flux, & ! (out)
-                     phi, & ! (in)
+    call calc_diff3( flux,      & ! (out)
+                     phi,       & ! (in)
                      KO, IO, JO )
 
     call COMM_vars8( flux(:,:,:,XDIR), 1 )
@@ -1592,33 +1646,48 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine calc_numdiff(&
-       work, iwork, &
-       data, &
-       nd_order, &
-       KO, IO, JO, KEE )
+       work, iwork,       & ! (out)
+       data,              & ! (in)
+       nd_laplacian_num,  & ! (in)
+       KO, IO, JO, KEE    ) ! (in)
+   
+    use scale_prc, only: PRC_abort
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     implicit none
+    
     real(RP), intent(out) :: work(KA,IA,JA,3,2)
     integer,  intent(out) :: iwork
     real(RP), intent(in)  :: data(KA,IA,JA)
-    integer,  intent(in)  :: nd_order
+    integer,  intent(in)  :: nd_laplacian_num
     integer,  intent(in)  :: KO
     integer,  intent(in)  :: IO
     integer,  intent(in)  :: JO
     integer,  intent(in)  :: KEE
 
     integer :: i_in, i_out, i_tmp
-
     integer :: no
+    integer :: ho4_itr_num
+    !-----------------------------------------------------------------------------
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    call calc_diff3( work(:,:,:,:,1), & ! (out)
-                     data, & ! (in)
-                     KO, IO, JO ) ! (in)
-
+    if (mod(nd_laplacian_num,2)==0) then
+      call calc_diff3( work(:,:,:,:,1), & ! (out)
+                        data,           & ! (in)
+                        KO, IO, JO )      ! (in)
+      ho4_itr_num = nd_laplacian_num / 2
+    else if (mod(nd_laplacian_num,2)==1 .and. nd_laplacian_num <= 3) then
+      call calc_diff1( work(:,:,:,:,1), & ! (out)
+                        data,           & ! (in)
+                        KO, IO, JO )      ! (in)      
+      ho4_itr_num = nd_laplacian_num / 2 + 1
+    else
+      LOG_ERROR('calc_numdiff',*) 'Numerical filter with nd_laplacian_num=', nd_laplacian_num
+      LOG_ERROR_CONT(*) 'is not supported. Check!'
+      call PRC_abort    
+    end if
     call PROF_rapend  ("NumFilter_Main", 3)
 
     !###########################################################################
@@ -1628,7 +1697,7 @@ contains
     i_in  = 1
     i_out = 2
 
-    do no = 2, nd_order
+    do no = 2, ho4_itr_num
 
        call PROF_rapstart("NumFilter_Comm", 3)
 
@@ -1665,11 +1734,13 @@ contains
   end subroutine calc_numdiff
 
   !-----------------------------------------------------------------------------
-  subroutine calc_diff3( &
-       diff, &
-       phi, &
-       KO, IO, JO )
+  subroutine calc_diff1( &
+    diff,                &
+    phi,                 &
+    KO, IO, JO           )
+
     implicit none
+   
     real(RP), intent(out) :: diff(KA,IA,JA,3)
     real(RP), intent(in ) :: phi(KA,IA,JA)
     integer , intent(in ) :: KO
@@ -1678,6 +1749,140 @@ contains
 
     integer :: kee
     integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+    KEE = KE-KO
+
+    if ( KO == 0 ) then
+
+      !$omp parallel default(none) private(i,j,k)  &
+      !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ1)
+
+      !$omp do OMP_SCHEDULE_ collapse(2)
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE-1
+#ifdef DEBUG
+         call CHECK( __LINE__, phi(k+1,i,j) )
+         call CHECK( __LINE__, phi(k  ,i,j) )
+#endif
+         diff(k,i,j,ZDIR) = CNZ1(k,1) * ( phi(k+1,i,j) - phi(k,i,j) )
+      enddo
+      enddo
+      enddo
+      !$omp end do nowait
+      !$omp do OMP_SCHEDULE_ collapse(2)
+      do j = JS, JE
+      do i = IS, IE
+         diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
+         diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+         diff(KE  ,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
+         diff(KE+1,i,j,ZDIR) = - diff(KE-2,i,j,ZDIR)
+         diff(KE+2,i,j,ZDIR) = 0.0_RP
+      end do
+      end do
+      !$omp end do nowait
+      !$omp end parallel 
+    else ! K0=1
+
+      !$omp parallel default(none) private(i,j,k) &
+      !$omp shared(JS,JE,IS,IE,KS,KE,phi,diff,CNZ1)
+
+      !$omp do OMP_SCHEDULE_ collapse(2) 
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS, KE
+#ifdef DEBUG
+         call CHECK( __LINE__, phi(k  ,i,j) )
+         call CHECK( __LINE__, phi(k-1,i,j) )
+#endif
+         diff(k,i,j,ZDIR) = CNZ1(k,2) * ( phi(k,i,j) - phi(k-1,i,j) )
+      enddo
+      enddo
+      enddo
+      !$omp end do nowait
+      !$omp do OMP_SCHEDULE_ collapse(2)
+      do j = JS, JE
+      do i = IS, IE
+         diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
+         diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+         diff(KE+1,i,j,ZDIR) = - diff(KE  ,i,j,ZDIR)
+         diff(KE+2,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
+      end do
+      end do
+      !$omp end do nowait
+      !$omp end parallel 
+    end if
+
+
+    !$omp parallel default(none) private(i,j,k)                   &
+    !$omp shared(IO,IS,IE,JO,JS,JE,KS,KE,KA,KEE,phi,diff,CNX1,CNY1)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KEE
+#ifdef DEBUG
+      call CHECK( __LINE__, phi(k,i+1-IO,j) )
+      call CHECK( __LINE__, phi(k,i  -IO,j) )
+#endif
+      diff(k,i,j,XDIR) = CNX1(i,1+IO) * ( phi(k,i+1-IO,j) - phi(k,i-IO,j) )
+    enddo
+    enddo
+    enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+      diff(   1:KS-1,i,j,XDIR) = 0.0_RP
+      diff(KE+1:KA  ,i,j,XDIR) = 0.0_RP
+    enddo
+    enddo
+    !$omp end do
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KEE
+#ifdef DEBUG
+      call CHECK( __LINE__, phi(k,i,j+1-JO) )
+      call CHECK( __LINE__, phi(k,i,j  -JO) )
+#endif
+      diff(k,i,j,YDIR) = CNY1(j,1+JO) * ( phi(k,i,j+1-JO) - phi(k,i,j-JO) )
+    enddo
+    enddo
+    enddo
+    !$omp end do nowait
+    !$omp do OMP_SCHEDULE_ collapse(2)
+    do j = JS, JE
+    do i = IS, IE
+      diff(   1:KS-1,i,j,YDIR) = 0.0_RP
+      diff(KE+1:KA  ,i,j,YDIR) = 0.0_RP
+    enddo
+    enddo
+    !$omp end do nowait
+    !$omp end parallel
+
+    return
+  end subroutine calc_diff1
+
+  !-----------------------------------------------------------------------------
+  subroutine calc_diff3( &
+       diff,             &
+       phi,              &
+       KO, IO, JO        )
+   
+    implicit none
+    
+    real(RP), intent(out) :: diff(KA,IA,JA,3)
+    real(RP), intent(in ) :: phi(KA,IA,JA)
+    integer , intent(in ) :: KO
+    integer , intent(in ) :: IO
+    integer , intent(in ) :: JO
+
+    integer :: kee
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
 
     KEE = KE-KO
 
