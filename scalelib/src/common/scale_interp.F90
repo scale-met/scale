@@ -74,6 +74,7 @@ module scale_interp
   real(RP), private :: INTERP_search_limit
   real(RP), private :: INTERP_buffer_size_fact = 2.0_RP
   logical,  private :: INTERP_use_spline_vert = .true.
+  real(RP), private :: INTERP_threshold_undef = 1.0_RP ! [0-1]
 
   real(RP), private :: EPS_bilinear
 
@@ -93,7 +94,8 @@ contains
 
     namelist /PARAM_INTERP/ &
          INTERP_buffer_size_fact, &
-         INTERP_use_spline_vert
+         INTERP_use_spline_vert, &
+         INTERP_threshold_undef
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -1246,11 +1248,12 @@ contains
 
     call PROF_rapstart('INTERP_interp',3)
 
-    th_undef = 0.0_RP
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
+    else
+       th_undef = INTERP_threshold_undef
     end if
-    th_undef = max( th_undef, EPS * 2.0_RP )
+    th_undef = min( max( th_undef, EPS * 2.0_RP ), 1.0_RP - EPS * 2.0_RP )
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(fact,valn,f,w,sw)
@@ -1265,13 +1268,10 @@ contains
           if ( f > EPS .and. abs( w - UNDEF ) > EPS ) then
              fact = fact + f
              valn = valn + f * w
-          else
-             sw = 0.5_RP - sign( 0.5_RP, fact - th_undef + EPS ) ! 1.0 when fact < threshold
-             valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
-             exit
           end if
        end do
-       val(i,j) = valn
+       sw = 0.5_RP - sign( 0.5_RP, fact - th_undef + EPS ) ! 1.0 when fact < threshold
+       val(i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
     enddo
     enddo
 
@@ -1346,11 +1346,12 @@ contains
 
     call PROF_rapstart('INTERP_interp',3)
 
-    th_undef = 0.0_RP
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
+    else
+       th_undef = INTERP_threshold_undef
     end if
-    th_undef = max( th_undef, EPS * 2.0_RP )
+    th_undef = min( max( th_undef, EPS * 2.0_RP ), 1.0_RP - EPS * 2.0_RP )
 
 
     logwgt_ = .false.
@@ -1435,13 +1436,10 @@ contains
              if ( f > EPS .and. abs( w(k,n) - UNDEF ) > EPS ) then
                 fact = fact + f
                 valn = valn + f * w(k,n)
-             else
-                sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
-                valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
-                exit
              endif
           enddo
-          val(k,i,j) = valn
+          sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
+          val(k,i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
        enddo
 
     enddo
