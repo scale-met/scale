@@ -31,6 +31,7 @@ module mod_atmos_phy_mp_driver
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
   public :: ATMOS_PHY_MP_driver_qhyd2qtrc
+  public :: ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
 
   interface abstract
      subroutine qhyd2qtrc( &
@@ -1058,4 +1059,37 @@ contains
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
 
+  subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv( &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       QV, QHYD, &
+       QTRC,     &
+       QNUM      )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP
+    integer, intent(in) :: KA, KS, KE
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: QV  (KA,IA,JA)
+    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
+
+    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
+
+    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
+
+    integer :: k, i, j
+
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, IE
+       QTRC(k,i,j,1) = QV(k,i,j)
+    end do
+    end do
+    end do
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
 end module mod_atmos_phy_mp_driver

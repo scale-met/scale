@@ -52,7 +52,13 @@ contains
   !> Tracer setup
   subroutine ATMOS_driver_tracer_setup
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver_tracer_setup
+       ATMOS_PHY_MP_driver_tracer_setup, &
+       ATMOS_PHY_MP_USER_qhyd2qtrc,      &
+       ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_tracer_setup
     use mod_atmos_phy_ch_driver, only: &
@@ -61,17 +67,37 @@ contains
        ATMOS_PHY_TB_driver_tracer_setup
     use mod_atmos_phy_bl_driver, only: &
        ATMOS_PHY_BL_driver_tracer_setup
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist, &
+       ATMOS_HYDROMETEOR_dry
+    use mod_atmos_admin, only: &
+       ATMOS_USE_QV
     implicit none
+
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_tracer_setup",*) 'Setup'
+
 
     call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_CH_driver_tracer_setup
     call ATMOS_PHY_AE_driver_tracer_setup
     call ATMOS_PHY_TB_driver_tracer_setup
     call ATMOS_PHY_BL_driver_tracer_setup
+
+    if ( ATMOS_HYDROMETEOR_dry .and. ATMOS_USE_QV ) then
+       LOG_INFO("ATMOS_driver_tracer_setup",*) 'Regist QV'
+       call ATMOS_HYDROMETEOR_regist( 0, 0,                                    & ! (in)
+            (/'QV'/),                                                          & ! (in)
+            (/'Ratio of Water Vapor mass to total mass (Specific humidity)'/), & ! (in)
+            (/'kg/kg'/),                                                       & ! (in)
+            QS_MP                                                              ) ! (out)
+       QA_MP = 1
+       QE_MP = QS_MP
+       ATMOS_PHY_MP_USER_qhyd2qtrc => ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
+
+    end if
 
     return
   end subroutine ATMOS_driver_tracer_setup

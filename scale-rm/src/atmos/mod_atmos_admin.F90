@@ -44,6 +44,7 @@ module mod_atmos_admin
 
   character(len=H_SHORT), public :: ATMOS_PHY_PRECIP_TYPE = 'Upwind-Euler'
 
+  logical,                public :: ATMOS_USE_QV      = .false.
   logical,                public :: ATMOS_USE_AVERAGE = .false.
 
   logical,                public :: ATMOS_sw_dyn
@@ -85,6 +86,7 @@ contains
        ATMOS_PHY_BL_TYPE, &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_PHY_PRECIP_TYPE, &
+       ATMOS_USE_QV,      &
        ATMOS_USE_AVERAGE
 
     integer :: ierr
