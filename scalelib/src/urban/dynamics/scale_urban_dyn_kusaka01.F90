@@ -212,11 +212,11 @@ contains
     !-- read gridded Z0M data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME /= '' ) then
      udata = 0.0_RP
-     call read_urban_gridded_data_2D(                         &
-            UIA, UJA,                                         &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME), &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME),  &
-            udata                                             )
+     call read_urban_gridded_data_2D(                   &
+            UIA, UJA,                                   &
+            URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
+            URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME,  &
+            udata                                       )
 
       ! replace to gridded data
       do j = UJS, UJE
@@ -225,7 +225,7 @@ contains
             if ( udata(i,j) > 0.0_RP ) then
                Z0M(i,j) = udata(i,j)
             else if ( udata(i,j) < 0.0_RP ) then
-               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0M data includes data less than 0. Please check data!',PRC_myrank,i,j
+               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0M data includes data less than 0. Please check data!',i,j
                call PRC_abort
             else ! Z0M = 0[m]
                LOG_WARN("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0M data includes 0; default or table value is used to avoid zero division',PRC_myrank,i,j
@@ -238,11 +238,11 @@ contains
     !-- read gridded Z0H & Z0E data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME /= '' ) then
      udata = 0.0_RP
-     call read_urban_gridded_data_2D(                         &
-            UIA, UJA,                                         &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME), &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME),  &
-            udata                                             )
+     call read_urban_gridded_data_2D(                   &
+            UIA, UJA,                                   &
+            URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
+            URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME,  &
+            udata                                       )
 
       ! replace to gridded data
       do j = UJS, UJE
@@ -252,7 +252,7 @@ contains
                Z0H(i,j) = udata(i,j)
                Z0E(i,j) = udata(i,j)
             else if ( udata(i,j) < 0.0_RP ) then
-               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0H data includes data less than 0. Please check data!',PRC_myrank,i,j
+               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0H data includes data less than 0. Please check data!',i,j
                call PRC_abort
             else ! Z0H = 0[m]
                LOG_WARN("URBAN_DYN_kusaka01_setup",*) 'Gridded Z0H data includes 0; default or table value is used to avoid zero division',PRC_myrank,i,j
@@ -266,11 +266,11 @@ contains
     !-- read gridded ZD data from a file
     !if( URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME /= '' ) then
     ! udata = 0.0_RP
-    ! call read_urban_gridded_data_2D(                         &
-    !        UIA, UJA,                                         &
-    !        trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME), &
-    !        trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME),  &
-    !        udata                                             )
+    ! call read_urban_gridded_data_2D(                  &
+    !        UIA, UJA,                                  &
+    !        URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME, &
+    !        URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME,  &
+    !        udata                                      )
     !
     !  ! replace to gridded data
     !  do j = UJS, UJE
@@ -279,7 +279,7 @@ contains
     !        if ( udata(i,j) >= 0.0_RP ) then
     !           ZD(i,j) = udata(i,j)
     !        else
-    !           LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded ZD data includes data less than 0. Please check data!',PRC_myrank,i,j
+    !           LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded ZD data includes data less than 0. Please check data!',i,j
     !           call PRC_abort
     !        endif
     !     endif
@@ -290,11 +290,11 @@ contains
     !-- read gridded AH data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME /= '' ) then
      udata2 = 0.0_RP
-     call read_urban_gridded_data_3D(                        &
-            UIA, UJA,                                        &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME), &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME),  &
-            udata2                                           )
+     call read_urban_gridded_data_3D(                  &
+            UIA, UJA,                                  &
+            URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME, &
+            URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME,  &
+            udata2                                     )
 
       ! replace to gridded data
       do k = 1, 24
@@ -311,11 +311,11 @@ contains
     !-- read gridded AHL data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME /= '' ) then
      udata2 = 0.0_RP
-     call read_urban_gridded_data_3D(                        &
-            UIA, UJA,                                        &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME), &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_VARNAME),  &
-            udata2                                           )
+     call read_urban_gridded_data_3D(                   &
+            UIA, UJA,                                   &
+            URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME, &
+            URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_VARNAME,  &
+            udata2                                      )
 
       ! replace to gridded data
       do k = 1, 24
@@ -358,6 +358,9 @@ contains
        RHOS, PRSS,                      &
        LWD, SWD,                        &
        RAIN, SNOW,                      &
+       Z0M, Z0H, Z0E,                   &
+       ZD,                              &
+       AH_URB_t, AHL_URB_t,             &
        CDZ,                             &
        TanSL_X, TanSL_Y,                &
        fact_urban,                      &
@@ -367,9 +370,6 @@ contains
        TC_URB, QC_URB, UC_URB,          &
        RAINR_URB, RAINB_URB, RAING_URB, &
        ROFF_URB,                        &
-       Z0M, Z0H, Z0E,                   &
-       ZD,                              &
-       AH_URB_t, AHL_URB_t,             &
        SFC_TEMP,                        &
        ALBEDO,                          &
        MWFLX, MUFLX, MVFLX,             &
@@ -404,6 +404,12 @@ contains
     real(RP), intent(in) :: SWD (UIA,UJA,2)
     real(RP), intent(in) :: RAIN(UIA,UJA)
     real(RP), intent(in) :: SNOW(UIA,UJA)
+    real(RP), intent(in) :: Z0M      (UIA,UJA)
+    real(RP), intent(in) :: Z0H      (UIA,UJA)
+    real(RP), intent(in) :: Z0E      (UIA,UJA)
+    real(RP), intent(in) :: ZD       (UIA,UJA)
+    real(RP), intent(in) :: AH_URB_t (UIA,UJA)
+    real(RP), intent(in) :: AHL_URB_t (UIA,UJA)
     real(RP), intent(in) :: CDZ(UKA)
     real(RP), intent(in) :: TanSL_X(UIA,UJA)
     real(RP), intent(in) :: TanSL_Y(UIA,UJA)
@@ -423,12 +429,6 @@ contains
     real(RP), intent(inout) :: RAINB_URB(UIA,UJA)
     real(RP), intent(inout) :: RAING_URB(UIA,UJA)
     real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
-    real(RP), intent(inout) :: Z0M      (UIA,UJA)
-    real(RP), intent(inout) :: Z0H      (UIA,UJA)
-    real(RP), intent(inout) :: Z0E      (UIA,UJA)
-    real(RP), intent(inout) :: ZD       (UIA,UJA)
-    real(RP), intent(inout) :: AH_URB_t (UIA,UJA)
-    real(RP), intent(inout) :: AHL_URB_t (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBEDO  (UIA,UJA,N_RAD_DIR,N_RAD_RGN)
@@ -677,12 +677,6 @@ contains
        SHFLX   (i,j)     = 0.0_RP
        LHFLX   (i,j)     = 0.0_RP
        GHFLX   (i,j)     = 0.0_RP
-       Z0M     (i,j)     = 0.0_RP
-       Z0H     (i,j)     = 0.0_RP
-       Z0E     (i,j)     = 0.0_RP
-       ZD      (i,j)     = 0.0_RP
-       AH_URB_t(i,j)     = 0.0_RP
-       AHL_URB_t(i,j)    = 0.0_RP
        U10     (i,j)     = 0.0_RP
        V10     (i,j)     = 0.0_RP
        T2      (i,j)     = 0.0_RP
