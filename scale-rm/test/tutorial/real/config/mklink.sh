@@ -9,6 +9,7 @@ RPATH_N2G="${TOPDIR}/scale-rm/util/netcdf2grads_h"
 # symbolic link for database
 ln -sf ${RPATH_DAT}/land/param.bucket.conf ${OUTPUT_CONFIGDIR}/init/
 ln -sf ${RPATH_DAT}/land/param.bucket.conf ${OUTPUT_CONFIGDIR}/run/
+ln -sf ${RPATH_DAT}/urban/param.kusaka01.dat  ${OUTPUT_CONFIGDIR}/run/
 ln -sf ${RPATH_DAT}/rad/MIPAS              ${OUTPUT_CONFIGDIR}/run/
 ln -sf ${RPATH_DAT}/rad/PARAG.29           ${OUTPUT_CONFIGDIR}/run/
 ln -sf ${RPATH_DAT}/rad/PARAPC.29          ${OUTPUT_CONFIGDIR}/run/
