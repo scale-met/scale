@@ -146,8 +146,8 @@ contains
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_VARNAME  = 'URBAN_Z0M' !< var name of gridded data for Z0M
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME = ''          !< gridded data of Z0H
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_VARNAME  = 'URBAN_Z0H' !< var name of gridded data for Z0H
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME  = ''          !< gridded data of ZD
-    character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME   = 'URBAN_ZD'  !< var name of gridded data for Zd
+    !character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME  = ''          !< gridded data of ZD
+    !character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME   = 'URBAN_ZD'  !< var name of gridded data for Zd
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = ''          !< gridded data of AH
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_VARNAME   = 'URBAN_AH'  !< var name of gridded data for AH
     character(len=H_LONG) :: URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME = ''          !< gridded data of AHL
@@ -159,7 +159,7 @@ contains
        URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME,       &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME, &
        URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME, &
-       URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME,  &
+       !URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME,  &
        URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME,  &
        URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME
 
@@ -262,29 +262,30 @@ contains
       enddo
     endif
 
+    ! currently NOT USED
     !-- read gridded ZD data from a file
-    if( URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME /= '' ) then
-     udata = 0.0_RP
-     call read_urban_gridded_data_2D(                         &
-            UIA, UJA,                                         &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME), &
-            trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME),  &
-            udata                                             )
-
-      ! replace to gridded data
-      do j = UJS, UJE
-      do i = UIS, UIE
-         if( udata(i,j) /= UNDEF )then
-            if ( udata(i,j) >= 0.0_RP ) then
-               ZD(i,j) = udata(i,j)
-            else
-               LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded ZD data includes data less than 0. Please check data!',PRC_myrank,i,j
-               call PRC_abort
-            endif
-         endif
-      enddo
-      enddo
-    endif
+    !if( URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME /= '' ) then
+    ! udata = 0.0_RP
+    ! call read_urban_gridded_data_2D(                         &
+    !        UIA, UJA,                                         &
+    !        trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_FILENAME), &
+    !        trim(URBAN_DYN_KUSAKA01_GRIDDED_ZD_IN_VARNAME),  &
+    !        udata                                             )
+    !
+    !  ! replace to gridded data
+    !  do j = UJS, UJE
+    !  do i = UIS, UIE
+    !     if( udata(i,j) /= UNDEF )then
+    !        if ( udata(i,j) >= 0.0_RP ) then
+    !           ZD(i,j) = udata(i,j)
+    !        else
+    !           LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Gridded ZD data includes data less than 0. Please check data!',PRC_myrank,i,j
+    !           call PRC_abort
+    !        endif
+    !     endif
+    !  enddo
+    !  enddo
+    !endif
 
     !-- read gridded AH data from a file
     if( URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME /= '' ) then
