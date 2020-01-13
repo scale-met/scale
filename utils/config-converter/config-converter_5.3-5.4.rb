@@ -79,6 +79,39 @@ params.each do |param|
   end
 
 
+  # KUSAKA01
+  if /^&PARAM_URBAN_DYN_KUSAKA01$/i =~ param_name
+    print param_name, "\n"
+    list = Array.new
+    param_items.each do |item|
+      if /DTS_MAX/i =~ item || /BOUND/i =~ item
+        print item, "\n"
+      else
+        list.push item
+      end
+    end
+    if list.any?
+      dir = File.dirname(fname)
+      fn = File.join(dir, "param.kusaka01.dat")
+      if File.exist?(fn)
+        $stderr.print "[ERROR] 'param.kusaka01.dat' file exists\n"
+        exit(-1)
+      end
+      File.open(fn, "w") do |file|
+        file.print "&PARAM_URBAN_DATA\n"
+        list.each do |item|
+          item.sub!(/AH(L?)/, 'AH\1_TBL')
+          file.print item, "\n"
+        end
+        file.print "/\n"
+      end
+      print " URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = '#{File.basename(fn)}',\n"
+    end
+    print "/\n"
+    next
+  end
+
+
   # Others
   print param_name, "\n"
   if param_items

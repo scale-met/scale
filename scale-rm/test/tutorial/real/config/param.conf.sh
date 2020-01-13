@@ -210,9 +210,7 @@ cat <<EOF >> param.physics.conf
 /
 
 &PARAM_URBAN_DYN_KUSAKA01
- STRGR = 0.0,
- STRGB = 0.0,
- STRGG = 0.0,
+ URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = 'param.kusaka01.dat',
 /
 EOF
 
