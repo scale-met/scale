@@ -66,6 +66,7 @@ contains
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        Ustar     => ATMOS_PHY_SF_Ustar,     &
        Tstar     => ATMOS_PHY_SF_Tstar,     &
        Qstar     => ATMOS_PHY_SF_Qstar,     &
@@ -115,6 +116,7 @@ contains
     endif
 
     SFLX_QTRC(:,:,:) = 0.0_RP
+    SFLX_ENGI(:,:)   = 0.0_RP
 
     return
   end subroutine ATMOS_PHY_SF_driver_setup
@@ -123,7 +125,8 @@ contains
   !> calculation tendency
   subroutine ATMOS_PHY_SF_driver_calc_tendency( update_flag )
     use scale_const, only: &
-       UNDEF   => CONST_UNDEF
+       UNDEF  => CONST_UNDEF, &
+       PRE00  => CONST_PRE00
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -142,6 +145,7 @@ contains
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
+       LHV, &
        I_QV
     use scale_atmos_phy_sf_bulk, only: &
        ATMOS_PHY_SF_bulk_flux
@@ -161,12 +165,13 @@ contains
        U,                 &
        V,                 &
        QV,                &
+       CPtot,             &
+       CVtot,             &
        DENS_t => DENS_tp, &
        MOMZ_t => MOMZ_tp, &
        RHOU_t => RHOU_tp, &
        RHOV_t => RHOV_tp, &
        RHOH   => RHOH_p,  &
-       RHOT_t => RHOT_tp, &
        RHOQ_t => RHOQ_tp
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
@@ -179,7 +184,6 @@ contains
        RHOU_t_SF => ATMOS_PHY_SF_RHOU_t,    &
        RHOV_t_SF => ATMOS_PHY_SF_RHOV_t,    &
        RHOH_SF   => ATMOS_PHY_SF_RHOH,      &
-       RHOT_t_SF => ATMOS_PHY_SF_RHOT_t,    &
        RHOQ_t_SF => ATMOS_PHY_SF_RHOQ_t,    &
        SFC_DENS  => ATMOS_PHY_SF_SFC_DENS,  &
        SFC_PRES  => ATMOS_PHY_SF_SFC_PRES,  &
@@ -194,6 +198,7 @@ contains
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_GH   => ATMOS_PHY_SF_SFLX_GH,   &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        Ustar     => ATMOS_PHY_SF_Ustar,     &
        Tstar     => ATMOS_PHY_SF_Tstar,     &
        Qstar     => ATMOS_PHY_SF_Qstar,     &
@@ -217,6 +222,9 @@ contains
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
+    real(RP) :: CP_t, CV_t
+    real(RP) :: ENGI_t
+    real(RP) :: rdz
     real(RP) :: work
 
     integer  :: i, j, iq
@@ -230,6 +238,15 @@ contains
                              SFC_TEMP(:,:),                       & ! [IN]
                              Z1(:,:),                             & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          ATM_DENS(i,j) = DENS(KS,i,j)
+          ATM_TEMP(i,j) = TEMP(KS,i,j)
+          ATM_PRES(i,j) = PRES(KS,i,j)
+       end do
+       end do
 
        if ( CPL_sw ) then
 
@@ -263,9 +280,6 @@ contains
              ATM_U   (i,j) = U   (KS,i,j)
              ATM_V   (i,j) = V   (KS,i,j)
              ATM_W   (i,j) = ATM_U(i,j) * TanSL_X(i,j) + ATM_V(i,j) * TanSL_Y(i,j)
-             ATM_DENS(i,j) = DENS(KS,i,j)
-             ATM_TEMP(i,j) = TEMP(KS,i,j)
-             ATM_PRES(i,j) = PRES(KS,i,j)
              ATM_QV  (i,j) = QV  (KS,i,j)
           enddo
           enddo
@@ -305,6 +319,7 @@ contains
 
           if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
+             SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * ATM_TEMP(:,:) + LHV )
           endif
 
        endif
@@ -312,33 +327,42 @@ contains
        call history_output
 
 !OCL XFILL
-       !$omp parallel do
+       !$omp parallel do &
+       !$omp private(rdz)
        do j = JS, JE
        do i = IS, IE
+          rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
-          RHOU_t_SF(i,j) = SFLX_MU(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-          RHOV_t_SF(i,j) = SFLX_MV(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
-          RHOH_SF  (i,j) = SFLX_SH(i,j) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          RHOU_t_SF(i,j) = SFLX_MU(i,j) * rdz
+          RHOV_t_SF(i,j) = SFLX_MV(i,j) * rdz
           DENS_t_SF(i,j) = 0.0_RP
-          RHOT_t_SF(i,j) = 0.0_RP
        enddo
        enddo
 
-       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-          !$omp parallel do &
-          !$omp private(work)
-          do j = JS, JE
-          do i = IS, IE
-             do iq = 1, QA
-                work = SFLX_QTRC(i,j,iq) / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+       !$omp parallel do &
+       !$omp private(work,rdz,CP_t,CV_t,ENGI_t)
+       do j = JS, JE
+       do i = IS, IE
+          rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          CP_t = 0.0_RP
+          CV_t = 0.0_RP
+          ENGI_t = SFLX_ENGI(i,j) * rdz
+          do iq = 1, QA
+             work = SFLX_QTRC(i,j,iq) * rdz
 
-                RHOQ_t_SF(i,j,iq) = work
-                DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work * TRACER_MASS(iq)
-                RHOT_t_SF(i,j)    = RHOT_t_SF(i,j) + work * TRACER_MASS(iq) * RHOT(KS,i,j) / DENS(KS,i,j)
-             enddo
-          enddo
-          enddo
-       endif
+             RHOQ_t_SF(i,j,iq) = work
+             DENS_t_SF(i,j)    = DENS_t_SF(i,j) + work * TRACER_MASS(iq)
+             CP_t              = CP_t + work * TRACER_CP(iq)
+             CV_t              = CV_t + work * TRACER_CV(iq)
+             ENGI_t            = ENGI_t - TRACER_ENGI0(iq) * work
+          end do
+          CP_t = ( CP_t - CPtot(KS,i,j) * DENS_t_SF(i,j) ) / ATM_DENS(i,j)
+          CV_t = ( CV_t - CVtot(KS,i,j) * DENS_t_SF(i,j) ) / ATM_DENS(i,j)
+
+          RHOH_SF(i,j) = SFLX_SH(i,j) * rdz + ENGI_t &
+                       - ( CP_t + log( ATM_PRES(i,j) / PRE00 ) * ( CVtot(KS,i,j) / CPtot(KS,i,j) * CP_t - CV_t ) ) * ATM_DENS(i,j) * ATM_TEMP(i,j)
+       enddo
+       enddo
 
     endif
 
@@ -349,21 +373,21 @@ contains
        RHOU_t(KS,i,j) = RHOU_t(KS,i,j) + RHOU_t_SF(i,j)
        RHOV_t(KS,i,j) = RHOV_t(KS,i,j) + RHOV_t_SF(i,j)
        RHOH  (KS,i,j) = RHOH  (KS,i,j) + RHOH_SF  (i,j)
+       DENS_t(KS,i,j) = DENS_t(KS,i,j) + DENS_t_SF(i,j)
     enddo
     enddo
 
-    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-          do iq = 1, QA
-             RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
-          enddo
-          DENS_t(KS,i,j)    = DENS_t(KS,i,j)    + DENS_t_SF(i,j)
-          RHOT_t(KS,i,j)    = RHOT_t(KS,i,j)    + RHOT_t_SF(i,j)
-       enddo
-       enddo
-    endif
+    !$omp parallel
+    do iq = 1, QA
+    !$omp do
+    do j = JS, JE
+    do i = IS, IE
+       RHOQ_t(KS,i,j,iq) = RHOQ_t(KS,i,j,iq) + RHOQ_t_SF(i,j,iq)
+    enddo
+    enddo
+    !$omp end do nowait
+    enddo
+    !$omp end parallel
 
     if ( STATISTICS_checktotal ) then
 
@@ -397,18 +421,13 @@ contains
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                               ATMOS_GRID_CARTESC_REAL_TOTAREA    )
 
-       if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
+       do iq = 1, QA
           call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 RHOT_t_SF(:,:), 'RHOT_t_SF',       &
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA    )
-          do iq = 1, QA
-             call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                    RHOQ_t_SF(:,:,iq), trim(TRACER_NAME(iq))//'_t_SF', &
-                                    ATMOS_GRID_CARTESC_REAL_AREA(:,:),                 &
-                                    ATMOS_GRID_CARTESC_REAL_TOTAREA                    )
-          enddo
-       endif
+                                 RHOQ_t_SF(:,:,iq), trim(TRACER_NAME(iq))//'_t_SF', &
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),                 &
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA                    )
+       enddo
+
     endif
 
     return
@@ -444,6 +463,7 @@ contains
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       SFLX_ENGI  => ATMOS_PHY_SF_SFLX_ENGI,  &
        Ustar      => ATMOS_PHY_SF_Ustar,      &
        Tstar      => ATMOS_PHY_SF_Tstar,      &
        Qstar      => ATMOS_PHY_SF_Qstar,      &
@@ -496,13 +516,13 @@ contains
     call FILE_HISTORY_in( SFLX_SH   (:,:),                     'SHFLX',           'sensible heat flux',                    'W/m2'    , fill_halo=.true. )
     call FILE_HISTORY_in( SFLX_LH   (:,:),                     'LHFLX',           'latent heat flux',                      'W/m2'    , fill_halo=.true. )
     call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux',                      'W/m2'    , fill_halo=.true. )
-    if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-       do iq = 1, QA
-          call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)), &
-                                'surface '//trim(TRACER_NAME(iq))//' flux',        &
-                                'kg/m2/s' , fill_halo=.true.                       )
-       enddo
-    endif
+    do iq = 1, QA
+       call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)), &
+                             'surface '//trim(TRACER_NAME(iq))//' flux',        &
+                             'kg/m2/s' , fill_halo=.true.                       )
+    enddo
+    call FILE_HISTORY_in( SFLX_ENGI (:,:),                     'SFLX_ENGI',        'ground internal energy flux (merged)', 'W/m2'    , fill_halo=.true. )
+
     call FILE_HISTORY_in( Ustar (:,:), 'Ustar',  'friction velocity',         'm/s'  , fill_halo=.true. )
     call FILE_HISTORY_in( Tstar (:,:), 'Tstar',  'temperature scale',         'K'    , fill_halo=.true. )
     call FILE_HISTORY_in( Qstar (:,:), 'Qstar',  'moisuter scale',            'kg/kg', fill_halo=.true. )

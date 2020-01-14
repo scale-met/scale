@@ -241,7 +241,8 @@ contains
     use mod_atmos_phy_mp_vars, only: &
        ATMOS_PHY_MP_cldfrac_thleshold, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
+       SFLX_ENGI => ATMOS_PHY_MP_SFLX_ENGI
     use mod_atmos_phy_mp_vars, only: &
        QS_MP, &
        QE_MP
@@ -344,6 +345,7 @@ contains
        LOG_INFO("ATMOS_PHY_MP_driver_setup",*) 'SFLX_rain and SFLX_snow is set to zero.'
        SFLX_rain(:,:) = 0.0_RP
        SFLX_snow(:,:) = 0.0_RP
+       SFLX_ENGI(:,:) = 0.0_RP
 
     endif
 
@@ -510,6 +512,7 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
+       LHF,   &
        I_QV,  &
        N_HYD, &
        QHA,   &
@@ -576,7 +579,8 @@ contains
        RHOH_MP   => ATMOS_PHY_MP_RHOH,      &
        EVAPORATE => ATMOS_PHY_MP_EVAPORATE, &
        SFLX_rain => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow => ATMOS_PHY_MP_SFLX_snow
+       SFLX_snow => ATMOS_PHY_MP_SFLX_snow, &
+       SFLX_ENGI => ATMOS_PHY_MP_SFLX_ENGI
     use mod_atmos_phy_ae_vars, only: &
        CCN_t => ATMOS_PHY_AE_CCN_t
     implicit none
@@ -603,6 +607,7 @@ contains
     real(RP) :: RHOQ2    (KA,QS_MP+1:QE_MP)
     real(RP) :: mflux    (KA)
     real(RP) :: sflux    (2)  !> 1: rain, 2: snow
+    real(RP) :: eflux
 
     real(RP) :: FZ  (KA)
     real(RP) :: FDZ (KA)
@@ -784,19 +789,19 @@ contains
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IS,IE,JS,JE,QS_MP,QE_MP,QHA,QLA,QIA, &
-          !$omp         PRE00, &
+          !$omp         PRE00,LHF, &
           !$omp         ATMOS_PHY_MP_TYPE, ATMOS_PHY_PRECIP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         REAL_CZ,REAL_FZ, &
           !$omp         DENS,MOMZ,U,V,RHOT,TEMP,PRES,QTRC,CPtot,CVtot,EXNER, &
           !$omp         DENS_t_MP,MOMZ_t_MP,RHOU_t_MP,RHOV_t_MP,RHOQ_t_MP,RHOH_MP, &
-          !$omp         SFLX_rain,SFLX_snow, &
+          !$omp         SFLX_rain,SFLX_snow,SFLX_ENGI, &
           !$omp         REFSTATE_dens, &
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
-          !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
+          !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
 
@@ -828,6 +833,7 @@ contains
 
              SFLX_rain(i,j) = 0.0_RP
              SFLX_snow(i,j) = 0.0_RP
+             SFLX_ENGI(i,j) = 0.0_RP
              FLX_hydro(:) = 0.0_RP
              do step = 1, MP_NSTEP_SEDIMENTATION
 
@@ -877,7 +883,8 @@ contains
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
                         RHOE2(:),               & ! [INOUT]
-                        mflux(:), sflux(:)      ) ! [OUT]
+                        mflux(:), sflux(:),     & ! [OUT]
+                        eflux                   ) ! [OUT]
                 case ( 'Semilag' )
                    call ATMOS_PHY_MP_precipitation_semilag( &
                         KA, KS, KE, QE_MP-QS_MP, QLA, QIA, &
@@ -888,10 +895,12 @@ contains
                         DENS2(:), RHOQ2(:,:),   & ! [INOUT]
                         CPtot2(:), CVtot2(:),   & ! [INOUT]
                         RHOE2(:),               & ! [INOUT]
-                        mflux(:), sflux(:)      ) ! [OUT]
+                        mflux(:), sflux(:),     & ! [OUT]
+                        eflux                   ) ! [OUT]
                 case default
                    mflux(:) = 0.0_RP
                    sflux(:) = 0.0_RP
+                   eflux    = 0.0_RP
                 end select
 
                 do k = KS, KE
@@ -904,8 +913,10 @@ contains
 
                 SFLX_rain(i,j) = SFLX_rain(i,j) - sflux(1) * MP_RNSTEP_SEDIMENTATION
                 SFLX_snow(i,j) = SFLX_snow(i,j) - sflux(2) * MP_RNSTEP_SEDIMENTATION
+                SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - eflux    * MP_RNSTEP_SEDIMENTATION
 
              enddo
+             SFLX_ENGI(i,j) = SFLX_ENGI(i,j) - SFLX_snow(i,j) * LHF ! moist internal energy
 
 !OCL XFILL
              do k = KS, KE
@@ -1162,7 +1173,7 @@ contains
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-    do k = KS, IE
+    do k = KS, KE
        QTRC(k,i,j,1) = QV(k,i,j)
     end do
     end do

@@ -70,6 +70,7 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_ENGI(:,:)   ! internal energy flux        [J/m2/s]
 
   integer, public :: QA_MP = 0
   integer, public :: QS_MP = -1
@@ -83,9 +84,10 @@ module mod_atmos_phy_mp_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 2       !< number of the variables
+  integer,                private, parameter :: VMAX = 3       !< number of the variables
   integer,                private, parameter :: I_SFLX_rain = 1
   integer,                private, parameter :: I_SFLX_snow = 2
+  integer,                private, parameter :: I_SFLX_ENGI = 3
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -94,11 +96,14 @@ module mod_atmos_phy_mp_vars
   integer,                private            :: restart_fid = -1  ! file ID
 
   data VAR_NAME / 'SFLX_rain', &
-                  'SFLX_snow'  /
+                  'SFLX_snow', &
+                  'SFLX_ENGI'  /
   data VAR_DESC / 'precipitation flux (liquid)', &
-                  'precipitation flux (solid)'   /
+                  'precipitation flux (solid)',  &
+                  'internal energy flux'         /
   data VAR_UNIT / 'kg/m2/s', &
-                  'kg/m2/s' /
+                  'kg/m2/s', &
+                  'J/m2/s'   /
 
 
   ! for diagnostics
@@ -177,8 +182,10 @@ contains
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
+    allocate( ATMOS_PHY_MP_SFLX_ENGI(IA,JA) )
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
+    ATMOS_PHY_MP_SFLX_ENGI(:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -274,8 +281,10 @@ contains
 
     call COMM_vars8( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )
     call COMM_vars8( ATMOS_PHY_MP_SFLX_snow(:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_MP_SFLX_ENGI(:,:), 3 )
     call COMM_wait ( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )
     call COMM_wait ( ATMOS_PHY_MP_SFLX_snow(:,:), 2 )
+    call COMM_wait ( ATMOS_PHY_MP_SFLX_ENGI(:,:), 3 )
 
     return
   end subroutine ATMOS_PHY_MP_vars_fillhalo
@@ -339,9 +348,10 @@ contains
 
        call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY', & ! [IN]
                                ATMOS_PHY_MP_SFLX_rain(:,:)     ) ! [OUT]
-
        call FILE_CARTESC_read( restart_fid, VAR_NAME(2), 'XY', & ! [IN]
                                ATMOS_PHY_MP_SFLX_snow(:,:)     ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(3), 'XY', & ! [IN]
+                               ATMOS_PHY_MP_SFLX_ENGI(:,:)     ) ! [OUT]
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -356,6 +366,10 @@ contains
                                  ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
           call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
                                  ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_ENGI(:,:), VAR_NAME(3), & ! (in)
                                  ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
                                  ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
        endif
@@ -483,11 +497,17 @@ contains
                                  ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
                                  ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
                                  ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
+          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                                 ATMOS_PHY_MP_SFLX_ENGI(:,:), VAR_NAME(3), & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
+                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
        endif
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
                               VAR_NAME(1), 'XY' ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
+                              VAR_NAME(2), 'XY' ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_MP_SFLX_ENGI(:,:), &
                               VAR_NAME(2), 'XY' ) ! [IN]
 
     endif

@@ -419,7 +419,7 @@ contains
        TEMP, vterm, FDZ, RCDZ, dt,     &
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
-       mflx, sflx                      )
+       mflx, sflx, esflx               )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -446,6 +446,7 @@ contains
 
     real(RP), intent(out)   :: mflx (KA)
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
+    real(RP), intent(out)   :: esflx
 
     real(RP) :: vtermh(KA)
     real(RP) :: qflx  (KA)
@@ -463,6 +464,7 @@ contains
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
+    esflx   = 0.0_RP
     qflx(KE) = 0.0_RP
     eflx(KE) = 0.0_RP
 
@@ -517,6 +519,8 @@ contains
           eflx(k) = qflx(k) * TEMP(k+1) * CV &
                   + qflx(k) * FDZ(k) * GRAV               ! potential energy
        end do
+       esflx = esflx + eflx(KS-1)
+
        !--- update internal energy
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
@@ -539,7 +543,7 @@ contains
        TEMP, vterm, FZ, FDZ, RCDZ, dt, &
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
-       mflx, sflx                      )
+       mflx, sflx, esflx               )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -567,6 +571,7 @@ contains
 
     real(RP), intent(out)   :: mflx (KA)
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
+    real(RP), intent(out)   :: esflx
 
     real(RP) :: qflx(KA)
     real(RP) :: eflx(KA)
@@ -728,6 +733,7 @@ contains
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
        end do
+       esflx = eflx(KS-1)
 
     end do
 
