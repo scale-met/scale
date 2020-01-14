@@ -484,7 +484,7 @@ contains
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_freezetemp
     use mod_ocean_vars, only: &
-       ICE_flag,         &
+       ICE_FLAG,         &
        OCEAN_TEMP,       &
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
@@ -932,7 +932,7 @@ contains
           OCEAN_VVEL(k,i,j) = 0.0_RP
        enddo
        OCEAN_OCN_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       if ( ICE_flag ) then
+       if ( ICE_FLAG ) then
           OCEAN_ICE_TEMP(i,j) = min( OCEAN_SFC_TEMP_ORG(i,j,ns), OCEAN_PHY_ICE_freezetemp )
           OCEAN_ICE_MASS(i,j) = 0.0_RP
        end if

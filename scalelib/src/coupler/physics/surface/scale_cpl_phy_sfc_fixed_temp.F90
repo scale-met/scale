@@ -70,12 +70,13 @@ contains
        Z1, PBL,             &
        RHOS, PRSS,          &
        RFLXD,               &
-       TMPS, QVEF,          &
+       TMPS, WSTR, QVEF,    &
        ALBEDO,              &
        Rb, Z0M, Z0H, Z0E,   &
        calc_flag, dt,       &
        ZMFLX, XMFLX, YMFLX, &
-       SHFLX, QVFLX, GFLX,  &
+       SHFLX, LHFLX, QVFLX, &
+       GFLX,  &
        Ustar, Tstar, Qstar, &
        Wstar,               &
        RLmo,                &
@@ -112,6 +113,7 @@ contains
     real(RP), intent(in)  :: PRSS     (IA,JA)                     ! pressure at the surface [Pa]
     real(RP), intent(in)  :: RFLXD    (IA,JA,N_RAD_DIR,N_RAD_RGN) ! downward radiation flux at the surface (direct/diffuse,IR/near-IR/VIS) [J/m2/s]
     real(RP), intent(in)  :: TMPS     (IA,JA)                     ! surface temperature [K]
+    real(RP), intent(in)  :: WSTR     (IA,JA)                     ! amount of the water storage [kg/m2]
     real(RP), intent(in)  :: QVEF     (IA,JA)                     ! efficiency of evaporation (0-1)
     real(RP), intent(in)  :: ALBEDO   (IA,JA,N_RAD_DIR,N_RAD_RGN) ! surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
     real(RP), intent(in)  :: Rb       (IA,JA)                     ! stomata resistance [1/s]
@@ -125,6 +127,7 @@ contains
     real(RP), intent(out) :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: YMFLX    (IA,JA)                     ! y-momentum      flux at the surface [kg/m/s2]
     real(RP), intent(out) :: SHFLX    (IA,JA)                     ! sensible heat   flux at the surface [J/m2/s]
+    real(RP), intent(out) :: LHFLX    (IA,JA)                     ! latent heat     flux at the surface [J/m2/s]
     real(RP), intent(out) :: QVFLX    (IA,JA)                     ! water vapor     flux at the surface [kg/m2/s]
     real(RP), intent(out) :: GFLX     (IA,JA)                     ! subsurface heat flux at the surface [J/m2/s]
     real(RP), intent(out) :: Ustar    (IA,JA)                     ! friction velocity         [m/s]
@@ -167,9 +170,9 @@ contains
     !$omp parallel do &
 #ifndef __GFORTRAN__
     !$omp default(none) &
-    !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,bulkflux, &
-    !$omp        calc_flag,TMPA,QVA,LH,WA,UA,VA,Z1,PBL,PRSA,TMPS,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
-    !$omp        SHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,bulkflux,dt, &
+    !$omp        calc_flag,TMPA,QVA,LH,WA,UA,VA,Z1,PBL,PRSA,TMPS,WSTR,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        SHFLX,LHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
@@ -222,6 +225,8 @@ contains
           end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Tstar(i,j) * CPdry
           QVFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) )
+          QVFLX(i,j) = min( QVFLX(i,j), WSTR(i,j) / real(dt,RP) )
+          LHFLX(i,j) = QVFLX(i,j) * LH(i,j)
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 
