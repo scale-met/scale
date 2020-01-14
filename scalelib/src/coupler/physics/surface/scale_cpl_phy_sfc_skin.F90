@@ -93,11 +93,11 @@ contains
        JA, JS, JE,          &
        TMPA, PRSA,          &
        WA, UA, VA,          &
-       RHOA, QVA, LH,       &
-       Z1, PBL,             &
+       RHOA, QVA,           &
+       LH, Z1, PBL,         &
        RHOS, PRSS,          &
        RFLXD,               &
-       TG, QVEF,            &
+       TG, WSTR, QVEF,      &
        ALBEDO,              &
        Rb, TC_dZ,           &
        Z0M, Z0H, Z0E,       &
@@ -105,7 +105,8 @@ contains
        model_name,          &
        TMPS,                &
        ZMFLX, XMFLX, YMFLX, &
-       SHFLX, QVFLX, GFLX,  &
+       SHFLX, LHFLX, QVFLX, &
+       GFLX,                &
        Ustar, Tstar, Qstar, &
        Wstar,               &
        RLmo,                &
@@ -117,6 +118,7 @@ contains
        EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF, &
        PRE00 => CONST_PRE00, &
+       TEM00 => CONST_TEM00, &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
        Rvap  => CONST_Rvap,  &
@@ -124,6 +126,12 @@ contains
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_dens2qsat_all
 !       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHV, &
+       ATMOS_HYDROMETEOR_LHS, &
+       CV_WATER, &
+       CV_ICE,   &
+       LHF
     use scale_bulkflux, only: &
        BULKFLUX
     implicit none
@@ -137,13 +145,14 @@ contains
     real(RP),         intent(in)    :: VA       (IA,JA)                     ! velocity v  at the lowest atmospheric layer [m/s]
     real(RP),         intent(in)    :: RHOA     (IA,JA)                     ! density     at the lowest atmospheric layer [kg/m3]
     real(RP),         intent(in)    :: QVA      (IA,JA)                     ! ratio of water vapor mass to total mass at the lowest atmospheric layer [kg/kg]
-    real(RP),         intent(in)    :: LH       (IA,JA)                     ! latent heat at the lowest atmospheric layer [J/kg]
+    real(RP),         intent(in)    :: LH       (IA,JA)                     ! latent heat [J/kg]
     real(RP),         intent(in)    :: Z1       (IA,JA)                     ! cell center height at the lowest atmospheric layer [m]
     real(RP),         intent(in)    :: PBL      (IA,JA)                     ! the top of atmospheric mixing layer [m]
     real(RP),         intent(in)    :: RHOS     (IA,JA)                     ! density  at the surface [kg/m3]
     real(RP),         intent(in)    :: PRSS     (IA,JA)                     ! pressure at the surface [Pa]
     real(RP),         intent(in)    :: RFLXD    (IA,JA,N_RAD_DIR,N_RAD_RGN) ! downward radiation flux at the surface (direct/diffuse,IR/near-IR/VIS) [J/m2/s]
     real(RP),         intent(in)    :: TG       (IA,JA)                     ! subsurface temperature [K]
+    real(RP),         intent(in)    :: WSTR     (IA,JA)                     ! amount of water storage [kg/m2]
     real(RP),         intent(in)    :: QVEF     (IA,JA)                     ! efficiency of evaporation (0-1)
     real(RP),         intent(in)    :: ALBEDO   (IA,JA,N_RAD_DIR,N_RAD_RGN) ! surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
     real(RP),         intent(in)    :: Rb       (IA,JA)                     ! stomata resistance [1/s]
@@ -161,6 +170,7 @@ contains
     real(RP),         intent(out)   :: XMFLX    (IA,JA)                     ! x-momentum      flux at the surface [kg/m/s2]
     real(RP),         intent(out)   :: YMFLX    (IA,JA)                     ! y-momentum      flux at the surface [kg/m/s2]
     real(RP),         intent(out)   :: SHFLX    (IA,JA)                     ! sensible heat   flux at the surface [J/m2/s]
+    real(RP),         intent(out)   :: LHFLX    (IA,JA)                     ! latent heat     flux at the surface [J/m2/s]
     real(RP),         intent(out)   :: QVFLX    (IA,JA)                     ! water vapor     flux at the surface [kg/m2/s]
     real(RP),         intent(out)   :: GFLX     (IA,JA)                     ! subsurface heat flux at the surface [J/m2/s]
     real(RP),         intent(out)   :: Ustar    (IA,JA)                     ! friction velocity         [m/s]
@@ -186,6 +196,7 @@ contains
     real(RP) :: LWU           ! surface upward   longwave  radiation flux [J/m2/s]
     real(RP) :: SWD           ! surface downward shortwave radiation flux [J/m2/s]
     real(RP) :: SWU           ! surface upward   shortwave radiation flux [J/m2/s]
+    real(RP) :: flx_qv        ! surface upward qv flux                    [kg/m2/s]
     real(RP) :: res           ! residual
 
     real(RP) :: dres          ! d(residual)/dTMPS
@@ -232,12 +243,12 @@ contains
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
-    !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
-    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$omp        TG,PRSS,RHOS,TMPS1,WSTR,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
+    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
+    !$omp private(qdry,Rtot,flx_qv,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
     !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,&
     !$omp         Uabs,dUabs,dRLmo,Ra,dRa,FracU10,FracT2,FracQ2,MFLUX)
     do j = JS, JE
@@ -323,13 +334,14 @@ contains
                   + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
              ! calculation for residual
-             res = SWD - SWU + LWD - LWU                                               &
-                 + CPdry   * RHOS(i,j) * Ustar(i,j) * Tstar(i,j)                       &
-                 + LH(i,j) * RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ) &
+             flx_qv = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/real(dt,RP) )
+             res = SWD - SWU + LWD - LWU                         &
+                 + CPdry   * RHOS(i,j) * Ustar(i,j) * Tstar(i,j) &
+                 - LH(i,j) * flx_qv                              &
                  - TC_dZ(i,j) * ( TMPS1(i,j) - TG(i,j) )
 
              ! calculation for d(residual)/dTMPS
-             dres = -4.0_RP * emis / TMPS1(i,j)                                                                           &
+             dres = -4.0_RP * emis / TMPS1(i,j) &
                   + CPdry   * RHOS(i,j) * ( Ustar(i,j)*(dTstar-Tstar(i,j))/dTS0 + Tstar(i,j)*(dUstar-Ustar(i,j))/dTS0 )                       &
                   + LH(i,j) * RHOS(i,j) * ( Ustar(i,j)*(dQstar-Qstar(i,j))/dTS0 + Qstar(i,j)*(dUstar-Ustar(i,j))/dTS0 ) * Ra / ( Ra+Rb(i,j) ) &
                   - TC_dZ(i,j)
@@ -470,7 +482,7 @@ contains
              YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
           end if
           SHFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Tstar(i,j) * CPdry
-          QVFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) )
+          QVFLX(i,j) = min( - RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ), WSTR(i,j)/real(dt,RP) )
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 
@@ -487,8 +499,11 @@ contains
 
           GFLX(i,j) = -TC_dZ(i,j) * ( TMPS(i,j) - TG(i,j) )
 
+          LHFLX(i,j) = QVFLX(i,j) * LH(i,j)
+
+
           ! calculation for residual
-          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j) + GFLX(i,j)
+          res = SWD - SWU + LWD - LWU - SHFLX(i,j) - LHFLX(i,j) + GFLX(i,j)
 
           ! put residual in ground heat flux
           GFLX(i,j) = GFLX(i,j) - res

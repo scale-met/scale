@@ -31,6 +31,7 @@ module mod_land_vars
   public :: LAND_vars_restart_read
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
+  public :: LAND_vars_monitor
   public :: LAND_vars_total
 
   public :: LAND_vars_restart_create
@@ -59,6 +60,7 @@ module mod_land_vars
   ! prognostic variables
   real(RP), public, allocatable :: LAND_TEMP      (:,:,:)   !< temperature of each soil layer [K]
   real(RP), public, allocatable :: LAND_WATER     (:,:,:)   !< moisture of each soil layer    [m3/m3]
+  real(RP), public, allocatable :: LAND_ICE       (:,:,:)   !< ice of each soil layer         [m3/m3]
   real(RP), public, allocatable :: LAND_SFC_TEMP  (:,:)     !< land surface skin temperature  [K]
   real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:,:) !< land surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
 
@@ -72,11 +74,12 @@ module mod_land_vars
   ! tendency variables
   real(RP), public, allocatable :: LAND_TEMP_t (:,:,:) !< tendency of LAND_TEMP
   real(RP), public, allocatable :: LAND_WATER_t(:,:,:) !< tendency of LAND_WATER
+  real(RP), public, allocatable :: LAND_ICE_t  (:,:,:) !< tendency of LAND_ICE
 
   ! surface flux for land
-  real(RP), public, allocatable :: LAND_SFLX_GH   (:,:)   !< land surface heat flux          [J/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_water(:,:)   !< land surface water flux         [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_ice  (:,:)   !< land surface ice   flux         [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_GH   (:,:) !< land surface heat flux            [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_water(:,:) !< land surface water flux           [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_ENGI (:,:) !< land surface internal energy flux [J/m2/s]
 
   ! surface flux for atmosphere
   real(RP), public, allocatable :: LAND_SFLX_MW  (:,:)   !< land surface w-momentum flux    [kg/m2/s]
@@ -89,11 +92,11 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_V10      (:,:)   !< land surface velocity v at 10m [m/s]
   real(RP), public, allocatable :: LAND_T2       (:,:)   !< land surface temperature at 2m [K]
   real(RP), public, allocatable :: LAND_Q2       (:,:)   !< land surface water vapor at 2m [kg/kg]
-  real(RP), public, allocatable, target :: LAND_Ustar(:,:) !< friction velocity              [m/s]
-  real(RP), public, allocatable, target :: LAND_Tstar(:,:) !< temperature scale              [K]
-  real(RP), public, allocatable, target :: LAND_Qstar(:,:) !< moisture scale                 [kg/kg]
-  real(RP), public, allocatable, target :: LAND_Wstar(:,:) !< convective velocity scale      [m/s]
-  real(RP), public, allocatable, target :: LAND_RLmo (:,:) !< inversed Obukhov length        [1/m]
+  real(RP), public, allocatable, target :: LAND_Ustar(:,:) !< friction velocity         [m/s]
+  real(RP), public, allocatable, target :: LAND_Tstar(:,:) !< temperature scale         [K]
+  real(RP), public, allocatable, target :: LAND_Qstar(:,:) !< moisture scale            [kg/kg]
+  real(RP), public, allocatable, target :: LAND_Wstar(:,:) !< convective velocity scale [m/s]
+  real(RP), public, allocatable, target :: LAND_RLmo (:,:) !< inversed Obukhov length   [1/m]
   real(RP), public, pointer :: SOIL_Ustar(:,:)
   real(RP), public, pointer :: SOIL_Tstar(:,:)
   real(RP), public, pointer :: SOIL_Qstar(:,:)
@@ -104,6 +107,10 @@ module mod_land_vars
   real(RP), public, allocatable :: SNOW_Qstar(:,:)
   real(RP), public, allocatable :: SNOW_Wstar(:,:)
   real(RP), public, allocatable :: SNOW_RLmo (:,:)
+
+  real(RP), public, allocatable :: LAND_RUNOFF     (:,:) !< runoff of the land water      [kg/m2/s]
+  real(RP), public, allocatable :: LAND_RUNOFF_ENGI(:,:) !< internal energy of the runoff [J/m2/s]
+
 
   ! recieved atmospheric variables
   real(RP), public, allocatable :: ATMOS_TEMP       (:,:)
@@ -118,8 +125,8 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_SFC_PRES   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_rad_dn(:,:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA     (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_rain  (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_snow  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_water (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_ENGI  (:,:)
 
 
   logical, public :: SNOW_flag
@@ -152,26 +159,26 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  logical, private :: LAND_VARS_CHECKRANGE      = .false.
+  logical, private :: LAND_VARS_CHECKRANGE = .false.
 
   ! index of the prognostic variables
-  integer, private, parameter :: VMAX              = 15 !< number of the variables
+  integer, private, parameter :: VMAX              = 16 !< number of the variables
   integer, private, parameter :: I_TEMP            =  1
   integer, private, parameter :: I_WATER           =  2
-  integer, private, parameter :: I_WATERDS         =  3
-  integer, private, parameter :: I_SFC_TEMP        =  4
-  integer, private, parameter :: I_SFC_ALB_IR_dir  =  5
-  integer, private, parameter :: I_SFC_ALB_IR_dif  =  6
-  integer, private, parameter :: I_SFC_ALB_NIR_dir =  7
-  integer, private, parameter :: I_SFC_ALB_NIR_dif =  8
-  integer, private, parameter :: I_SFC_ALB_VIS_dir =  9
-  integer, private, parameter :: I_SFC_ALB_VIS_dif = 10
-  integer, private, parameter :: I_SNOW_SFC_TEMP   = 11
-  integer, private, parameter :: I_SNOW_SWE        = 12
-  integer, private, parameter :: I_SNOW_Depth      = 13
-  integer, private, parameter :: I_SNOW_Dzero      = 14
-  integer, private, parameter :: I_SNOW_nosnowsec  = 15
-
+  integer, private, parameter :: I_ICE             =  3
+  integer, private, parameter :: I_WATERDS         =  4
+  integer, private, parameter :: I_SFC_TEMP        =  5
+  integer, private, parameter :: I_SFC_ALB_IR_dir  =  6
+  integer, private, parameter :: I_SFC_ALB_IR_dif  =  7
+  integer, private, parameter :: I_SFC_ALB_NIR_dir =  8
+  integer, private, parameter :: I_SFC_ALB_NIR_dif =  9
+  integer, private, parameter :: I_SFC_ALB_VIS_dir = 10
+  integer, private, parameter :: I_SFC_ALB_VIS_dif = 11
+  integer, private, parameter :: I_SNOW_SFC_TEMP   = 12
+  integer, private, parameter :: I_SNOW_SWE        = 13
+  integer, private, parameter :: I_SNOW_Depth      = 14
+  integer, private, parameter :: I_SNOW_Dzero      = 15
+  integer, private, parameter :: I_SNOW_nosnowsec  = 16
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -182,6 +189,7 @@ module mod_land_vars
 
   data VAR_NAME / 'LAND_TEMP',            &
                   'LAND_WATER',           &
+                  'LAND_ICE',             &
                   'LAND_DSAT',            &
                   'LAND_SFC_TEMP',        &
                   'LAND_SFC_ALB_IR_dir',  &
@@ -196,9 +204,9 @@ module mod_land_vars
                   'LAND_SNOW_Dzero',      &
                   'LAND_SNOW_nosnowsec'   /
 
-
   data VAR_DESC / 'temperature at each soil layer',          &
                   'moisture at each soil layer',             &
+                  'ice at each soil layer',                  &
                   'degree of saturation at each soil layer', &
                   'land surface skin temperature',           &
                   'land surface albedo for IR (direct)',     &
@@ -212,8 +220,10 @@ module mod_land_vars
                   'Snow depth',                              &
                   'Snow depth at melting point',             &
                   'Time duration without snow'               /
+
   data VAR_STDN / 'soil_temperature', &
                   'volume_fraction_of_condensed_water_in_soil', &
+                  '', &
                   'volume_fraction_of_condensed_water_in_soil_at_field_capacity', &
                   'surface_temperature_where_land', &
                   '', &
@@ -227,7 +237,9 @@ module mod_land_vars
                   '', &
                   '', &
                   '' /
+
   data VAR_UNIT / 'K',     &
+                  'm3/m3', &
                   'm3/m3', &
                   '1',     &
                   'K',     &
@@ -247,6 +259,23 @@ module mod_land_vars
 
   logical,  private :: LAND_RESTART_IN_CHECK_COORDINATES = .true.
 
+  ! for monitor
+  integer, parameter :: IM_TEMP      = 1
+  integer, parameter :: IM_WATER     = 2
+  integer, parameter :: IM_ICE       = 3
+  integer, parameter :: IM_SFC       = 4
+  integer, parameter :: IM_ROFF      = 5
+  integer, parameter :: IM_MASFLX    = 6
+  integer, parameter :: IM_ENGI      = 7
+  integer, parameter :: IM_W_ENGI    = 8
+  integer, parameter :: IM_I_ENGI    = 9
+  integer, parameter :: IM_ENGSFC_GH = 10
+  integer, parameter :: IM_ENGSFC_EI = 11
+  integer, parameter :: IM_ROFF_EI   = 12
+  integer, parameter :: IM_ENGFLX    = 13
+  integer, parameter :: IM_max = 13
+  integer, private   :: MONIT_id(IM_max)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -265,6 +294,8 @@ contains
        LANDUSE_PFT_nmax
     use mod_land_admin, only: &
        SNOW_TYPE
+    use scale_monitor, only: &
+       MONITOR_reg
     implicit none
 
     namelist / PARAM_LAND_VARS / &
@@ -296,10 +327,13 @@ contains
 
     allocate( LAND_TEMP      (LKMAX,LIA,LJA)               )
     allocate( LAND_WATER     (LKMAX,LIA,LJA)               )
+    allocate( LAND_ICE       (LKMAX,LIA,LJA)               )
     allocate( LAND_SFC_TEMP  (LIA,LJA)                     )
     allocate( LAND_SFC_albedo(LIA,LJA,N_RAD_DIR,N_RAD_RGN) )
+
     LAND_TEMP      (:,:,:)   = UNDEF
     LAND_WATER     (:,:,:)   = UNDEF
+    LAND_ICE       (:,:,:)   = UNDEF
     LAND_SFC_TEMP  (:,:)     = UNDEF
     LAND_SFC_albedo(:,:,:,:) = UNDEF
 
@@ -318,15 +352,22 @@ contains
 
     allocate( LAND_TEMP_t (LKMAX,LIA,LJA) )
     allocate( LAND_WATER_t(LKMAX,LIA,LJA) )
+    allocate( LAND_ICE_t  (LKMAX,LIA,LJA) )
     LAND_TEMP_t (:,:,:) = UNDEF
     LAND_WATER_t(:,:,:) = UNDEF
+    LAND_ICE_t  (:,:,:) = UNDEF
 
     allocate( LAND_SFLX_GH   (LIA,LJA) )
     allocate( LAND_SFLX_water(LIA,LJA) )
-    allocate( LAND_SFLX_ice  (LIA,LJA) )
+    allocate( LAND_SFLX_ENGI (LIA,LJA) )
     LAND_SFLX_GH   (:,:) = UNDEF
     LAND_SFLX_water(:,:) = UNDEF
-    LAND_SFLX_ice  (:,:) = UNDEF
+    LAND_SFLX_ENGI  (:,:) = UNDEF
+
+    allocate( LAND_RUNOFF     (LIA,LJA) )
+    allocate( LAND_RUNOFF_ENGI(LIA,LJA) )
+    LAND_RUNOFF     (:,:) = UNDEF
+    LAND_RUNOFF_ENGI(:,:) = UNDEF
 
     allocate( LAND_SFLX_MW  (LIA,LJA) )
     allocate( LAND_SFLX_MU  (LIA,LJA) )
@@ -334,16 +375,17 @@ contains
     allocate( LAND_SFLX_SH  (LIA,LJA) )
     allocate( LAND_SFLX_LH  (LIA,LJA) )
     allocate( LAND_SFLX_QTRC(LIA,LJA,QA) )
-    allocate( LAND_U10      (LIA,LJA) )
-    allocate( LAND_V10      (LIA,LJA) )
-    allocate( LAND_T2       (LIA,LJA) )
-    allocate( LAND_Q2       (LIA,LJA) )
     LAND_SFLX_MW  (:,:)   = UNDEF
     LAND_SFLX_MU  (:,:)   = UNDEF
     LAND_SFLX_MV  (:,:)   = UNDEF
     LAND_SFLX_SH  (:,:)   = UNDEF
     LAND_SFLX_LH  (:,:)   = UNDEF
     LAND_SFLX_QTRC(:,:,:) = UNDEF
+
+    allocate( LAND_U10      (LIA,LJA) )
+    allocate( LAND_V10      (LIA,LJA) )
+    allocate( LAND_T2       (LIA,LJA) )
+    allocate( LAND_Q2       (LIA,LJA) )
     LAND_U10      (:,:) = UNDEF
     LAND_V10      (:,:) = UNDEF
     LAND_T2       (:,:) = UNDEF
@@ -402,8 +444,8 @@ contains
     allocate( ATMOS_SFC_PRES   (LIA,LJA)                     )
     allocate( ATMOS_SFLX_rad_dn(LIA,LJA,N_RAD_DIR,N_RAD_RGN) )
     allocate( ATMOS_cosSZA     (LIA,LJA)                     )
-    allocate( ATMOS_SFLX_rain  (LIA,LJA)                     )
-    allocate( ATMOS_SFLX_snow  (LIA,LJA)                     )
+    allocate( ATMOS_SFLX_water (LIA,LJA)                     )
+    allocate( ATMOS_SFLX_ENGI  (LIA,LJA)                     )
     ATMOS_TEMP       (:,:)     = UNDEF
     ATMOS_PRES       (:,:)     = UNDEF
     ATMOS_W          (:,:)     = UNDEF
@@ -416,8 +458,8 @@ contains
     ATMOS_SFC_PRES   (:,:)     = UNDEF
     ATMOS_SFLX_rad_dn(:,:,:,:) = UNDEF
     ATMOS_cosSZA     (:,:)     = UNDEF
-    ATMOS_SFLX_rain  (:,:)     = UNDEF
-    ATMOS_SFLX_snow  (:,:)     = UNDEF
+    ATMOS_SFLX_water (:,:)     = UNDEF
+    ATMOS_SFLX_ENGI  (:,:)     = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -480,6 +522,47 @@ contains
     do p = 1, LAND_PROPERTY_nmax
        call COMM_wait ( LAND_PROPERTY(:,:,p), p )
     enddo
+
+    ! monitor
+    call MONITOR_reg( 'LND_TEMP',       'land temperature',                'K m3', & ! (in)
+                      MONIT_id(IM_TEMP),                                           & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_WATER',      'land water',                      'kg',   & ! (in)
+                      MONIT_id(IM_WATER),                                          & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_ICE',        'land ice',                        'kg',   & ! (in)
+                      MONIT_id(IM_ICE),                                            & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_MASSFC',     'SFC water flux',                  'kg',   & ! (in)
+                      MONIT_id(IM_SFC),                                            & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_ROFF',       'runoff water',                    'kg',   & ! (in)
+                      MONIT_id(IM_ROFF),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_MASFLX',     'total mass change',               'kg',   & ! (in)
+                      MONIT_id(IM_MASFLX),                                         & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_ENGI',       'total internal energy',           'J',    & ! (in)
+                      MONIT_id(IM_ENGI),                                           & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_WTR_ENGI',   'water internal energy',           'J',    & ! (in)
+                      MONIT_id(IM_W_ENGI),                                         & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_ICE_ENGI',   'ice internal energy',             'J',    & ! (in)
+                      MONIT_id(IM_I_ENGI),                                         & ! (out)
+                      dim_type='LXY', is_tendency=.false.                          ) ! (in)
+    call MONITOR_reg( 'LND_ENGSFC_GH',  'SFC ground heat flux',            'J',    & ! (in)
+                      MONIT_id(IM_ENGSFC_GH),                                      & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_ENGSFC_EI',  'SFC internal energy flux',        'J',    & ! (in)
+                      MONIT_id(IM_ENGSFC_EI),                                      & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_ROFF_EI',    'internal energy of runoff water', 'J',    & ! (in)
+                      MONIT_id(IM_ROFF_EI),                                        & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
+    call MONITOR_reg( 'LND_ENGFLX',     'total internal energy change',    'J',    & ! (in)
+                      MONIT_id(IM_ENGFLX),                                         & ! (out)
+                      dim_type='XY',  is_tendency=.true.                           ) ! (in)
 
     return
   end subroutine LAND_vars_setup
@@ -548,6 +631,8 @@ contains
                                LAND_TEMP      (:,:,:)                           ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_WATER),           'LXY', & ! [IN]
                                LAND_WATER     (:,:,:)                           ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ICE),             'LXY', & ! [IN]
+                               LAND_ICE       (:,:,:)                           ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),        'XY',  & ! [IN]
                                LAND_SFC_TEMP  (:,:)                             ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_IR_dir),  'XY',  & ! [IN]
@@ -610,10 +695,13 @@ contains
                       LAND_TEMP      (:,:,:),                   0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_TEMP),                        __FILE__, __LINE__, &
                       mask = LANDUSE_fact_land(:,:)                                )
-
        call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
-                      LAND_WATER     (:,:,:),                   0.0_RP, 1000.0_RP, &
+                      LAND_WATER     (:,:,:),                   0.0_RP,    1.0_RP, &
                       VAR_NAME(I_WATER),                       __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(:,:)                                )
+       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
+                      LAND_ICE       (:,:,:),                   0.0_RP,    1.0_RP, &
+                      VAR_NAME(I_ICE),                         __FILE__, __LINE__, &
                       mask = LANDUSE_fact_land(:,:)                                )
        call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
                       LAND_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
@@ -667,6 +755,7 @@ contains
     
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY', standard_name=VAR_STDN(I_TEMP) )
     call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY', standard_name=VAR_STDN(I_WATER) )
+    call FILE_HISTORY_in( LAND_ICE  (:,:,:), VAR_NAME(I_ICE),   VAR_DESC(I_ICE),   VAR_UNIT(I_ICE), dim_type='LXY', standard_name=VAR_STDN(I_ICE) )
     do j = LJS, LJE
     do i = LIS, LIE
     do k = 1, LKMAX
@@ -705,26 +794,32 @@ contains
                              VAR_DESC(I_SNOW_nosnowsec), VAR_UNIT(I_SNOW_nosnowsec), standard_name=VAR_STDN(I_SNOW_nosnowsec) )
     end if
 
-    if ( I_QV > 0 ) &
-    call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV), 'LAND_SFLX_evap',           &
-                          'land surface water vapor flux (upward)',    'kg/m2/s' )
-    call FILE_HISTORY_in( LAND_SFLX_GH   (:,:),      'LAND_SFLX_GH',             &
-                          'land subsurface heat flux (downward)',      'J/m2/s'  )
-    call FILE_HISTORY_in( LAND_SFLX_water(:,:),      'LAND_SFLX_water',          &
-                          'land surface liquid water flux (downward)', 'kg/m2/s' )
-    call FILE_HISTORY_in( LAND_SFLX_ice  (:,:),      'LAND_SFLX_ice',            &
-                          'land surface ice water flux (downward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_GH   (:,:), 'LAND_SFLX_GH',                     &
+                          'land subsurface heat flux (downward)',         'J/m2/s'  )
+    call FILE_HISTORY_in( LAND_SFLX_water(:,:), 'LAND_SFLX_water',                  &
+                          'land surface water mass flux (downward)',      'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_ENGI (:,:), 'LAND_SFLX_ENGI',                   &
+                          'land surface internal energy flux (downward)', 'kg/m2/s' )
 
-    call FILE_HISTORY_in( LAND_SFLX_MW   (:,:), 'LAND_SFLX_MW',                 &
+    call FILE_HISTORY_in( LAND_RUNOFF     (:,:), 'LAND_RUNOFF',        &
+                          'runoff water',                    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_RUNOFF_ENGI(:,:), 'LAND_RUNOFF_ENGI',   &
+                          'internal energy of runoff water', 'J/m2/s'  )
+
+    call FILE_HISTORY_in( LAND_SFLX_MW   (:,:),      'LAND_SFLX_MW',            &
                           'land surface w-momentum flux (upward)',    'kg/m2/s' )
-    call FILE_HISTORY_in( LAND_SFLX_MU   (:,:), 'LAND_SFLX_MU',                 &
+    call FILE_HISTORY_in( LAND_SFLX_MU   (:,:),      'LAND_SFLX_MU',            &
                           'land surface u-momentum flux (upward)',    'kg/m2/s' )
-    call FILE_HISTORY_in( LAND_SFLX_MV   (:,:), 'LAND_SFLX_MV',                 &
+    call FILE_HISTORY_in( LAND_SFLX_MV   (:,:),      'LAND_SFLX_MV',            &
                           'land surface v-momentum flux (upward)',    'kg/m2/s' )
-    call FILE_HISTORY_in( LAND_SFLX_SH   (:,:), 'LAND_SFLX_SH',                 &
+    call FILE_HISTORY_in( LAND_SFLX_SH   (:,:),      'LAND_SFLX_SH',            &
                           'land surface sensible heat flux (upward)', 'J/m2/s'  )
-    call FILE_HISTORY_in( LAND_SFLX_LH   (:,:), 'LAND_SFLX_LH',                 &
+    call FILE_HISTORY_in( LAND_SFLX_LH   (:,:),      'LAND_SFLX_LH',            &
                           'land surface latent heat flux (upward)',   'J/m2/s'  )
+    if ( I_QV > 0 ) &
+    call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV), 'LAND_SFLX_evap',          &
+                          'land surface water vapor flux (upward)',   'kg/m2/s' )
+
     call FILE_HISTORY_in( LAND_U10       (:,:),  'LAND_U10',                    &
                           'land 10m x-wind',                          'm/s'     )
     call FILE_HISTORY_in( LAND_V10       (:,:),  'LAND_V10',                    &
@@ -769,11 +864,126 @@ contains
                              'snow inversed Obukhov length',             '1/m'     )
     end if
 
-
     call PROF_rapend  ('LND_History', 1)
 
     return
   end subroutine LAND_vars_history
+
+  !-----------------------------------------------------------------------------
+  !> monitor output
+  subroutine LAND_vars_monitor
+    use scale_const, only: &
+       DWATR => CONST_DWATR, &
+       DICE  => CONST_DICE
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER, &
+       CV_ICE,   &
+       LHF
+    use scale_monitor, only: &
+       MONITOR_put
+    implicit none
+
+    real(RP)               :: WORK3D(LKA,LIA,LJA)
+    real(RP)               :: WORK2D(LIA,LJA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call MONITOR_put( MONIT_id(IM_TEMP),  LAND_TEMP(:,:,:) )
+    if ( MONIT_id(IM_WATER) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+       do k = LKS, LKE
+          WORK3D(k,i,j) = LAND_WATER(k,i,j) * DWATR
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_WATER), WORK3D(:,:,:) )
+    end if
+    if ( MONIT_id(IM_ICE) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+       do k = LKS, LKE
+          WORK3D(k,i,j) = LAND_ICE(k,i,j) * DICE
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_ICE),   WORK3D(:,:,:) )
+    end if
+
+
+    ! mass budget
+    call MONITOR_put( MONIT_id(IM_SFC),  LAND_SFLX_water(:,:) )
+    call MONITOR_put( MONIT_id(IM_ROFF), LAND_RUNOFF    (:,:) )
+    if ( MONIT_id(IM_MASFLX) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          WORK2D(i,j) = LAND_SFLX_water(i,j) - LAND_RUNOFF(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_MASFLX), WORK2D(:,:) )
+    end if
+
+    ! energy budget
+    if ( MONIT_id(IM_ENGI) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+       do k = LKS, LKE
+          WORK3D(k,i,j) = ( LAND_PROPERTY(i,j,I_HeatCapacity) * ( 1.0_RP - LAND_PROPERTY(i,j,I_WaterLimit) )  & ! soil particles
+                          + CV_WATER * DWATR * LAND_WATER(k,i,j) & ! land water
+                          + CV_ICE   * DICE  * LAND_ICE  (k,i,j) & ! land ice
+                          ) * LAND_TEMP(k,i,j) &
+                        - LHF * DICE * LAND_ICE(k,i,j)
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_ENGI), WORK3D(:,:,:) )
+    end if
+    if ( MONIT_id(IM_W_ENGI) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+       do k = LKS, LKE
+          WORK3D(k,i,j) = CV_WATER * DWATR * LAND_WATER(k,i,j) * LAND_TEMP(k,i,j)
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_W_ENGI), WORK3D(:,:,:) )
+    end if
+    if ( MONIT_id(IM_I_ENGI) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+       do k = LKS, LKE
+          WORK3D(k,i,j) = ( CV_ICE * LAND_TEMP(k,i,j) - LHF ) * DICE * LAND_ICE(k,i,j)
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_I_ENGI), WORK3D(:,:,:) )
+    end if
+
+
+    call MONITOR_put( MONIT_id(IM_ENGSFC_GH), LAND_SFLX_GH    (:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSFC_EI), LAND_SFLX_ENGI  (:,:) )
+    call MONITOR_put( MONIT_id(IM_ROFF_EI),   LAND_RUNOFF_ENGI(:,:) )
+    if ( MONIT_id(IM_ENGFLX) > 0 ) then
+       !$omp parallel do
+       do j = LJS, LJE
+       do i = LIS, LIE
+          WORK2D(i,j) = LAND_SFLX_GH(i,j) + LAND_SFLX_ENGI(i,j) &
+                      - LAND_RUNOFF_ENGI(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_ENGFLX), WORK2D(:,:) )
+    end if
+
+
+    return
+  end subroutine LAND_vars_monitor
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
@@ -799,6 +1009,10 @@ contains
                               LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
        call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
                               LAND_WATER(:,:,:), VAR_NAME(I_WATER), & ! (in)
+                              LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
+                              LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
+       call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
+                              LAND_ICE(:,:,:), VAR_NAME(I_ICE),     & ! (in)
                               LAND_GRID_CARTESC_REAL_VOL(:,:,:),    & ! (in)
                               LAND_GRID_CARTESC_REAL_TOTVOL         ) ! (in)
 
@@ -872,17 +1086,17 @@ contains
 
     integer              :: index
     character(len=H_MID) :: description
-    real(RP)             :: STRGMAX
-    real(RP)             :: STRGCRT
-    real(RP)             :: RSTOMA
-    real(RP)             :: TCS
-    real(RP)             :: HCS
-    real(RP)             :: DFW
-    real(RP)             :: ALBLW
-    real(RP)             :: ALBSW
-    real(RP)             :: Z0M
-    real(RP)             :: Z0H
-    real(RP)             :: Z0E
+    real(RP)             :: STRGMAX ! Water Limit             [0-1]
+    real(RP)             :: STRGCRT ! Water Critical          [0-1]
+    real(RP)             :: RSTOMA  ! Stomata Resistance      [0-1]
+    real(RP)             :: TCS     ! Thermal Conductivity    [W m-1 K-1]
+    real(RP)             :: HCS     ! Dencity x Heat Capacity [J m-3 K-1]
+    real(RP)             :: DFW     ! Water Diffusivity       [m2 s-1]
+    real(RP)             :: ALBLW   ! Albedo Long Wave        [0-1]
+    real(RP)             :: ALBSW   ! Albedo Short Wave       [0-1]
+    real(RP)             :: Z0M     ! Z0 for momentum         [m]
+    real(RP)             :: Z0H     ! Z0 for heat             [m]
+    real(RP)             :: Z0E     ! Z0 for vapor            [m]
 
     namelist / PARAM_LAND_PROPERTY / &
        LAND_PROPERTY_IN_FILENAME
@@ -1131,8 +1345,7 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       do i = I_TEMP, I_WATER
-          if ( i == I_WATERDS ) cycle
+       do i = I_TEMP, I_ICE
           call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
                VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                'LXY', LAND_RESTART_OUT_DTYPE,         & ! [IN]
@@ -1180,6 +1393,9 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_WATER),                        & ! [IN]
                                     LAND_WATER(:,:,:),                                   & ! [IN]
                                     VAR_NAME(I_WATER),           'LXY', fill_halo=.true. ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ICE),                          & ! [IN]
+                                    LAND_ICE(:,:,:),                                     & ! [IN]
+                                    VAR_NAME(I_ICE),             'LXY', fill_halo=.true. ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                     & ! [IN]
                                     LAND_SFC_TEMP(:,:),                                  & ! [IN]
                                     VAR_NAME(I_SFC_TEMP),        'XY',  fill_halo=.true. ) ! [IN]

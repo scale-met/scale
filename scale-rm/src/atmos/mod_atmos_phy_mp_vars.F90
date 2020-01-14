@@ -465,6 +465,8 @@ contains
                                   VAR_ID(1) )
        call FILE_CARTESC_def_var( restart_fid, VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
                                   VAR_ID(2) )
+       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(3), VAR_DESC(3), VAR_UNIT(3), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
+                                  VAR_ID(3) )
     endif
 
     return
@@ -508,7 +510,7 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
                               VAR_NAME(2), 'XY' ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(3), ATMOS_PHY_MP_SFLX_ENGI(:,:), &
-                              VAR_NAME(2), 'XY' ) ! [IN]
+                              VAR_NAME(3), 'XY' ) ! [IN]
 
     endif
 
