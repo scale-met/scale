@@ -75,6 +75,10 @@ cat << EOF > param.region.conf
  UKMAX = ${UKMAX},
 /
 
+&PARAM_OCEAN_GRID_CARTESC
+ ODZ = ${LIST_ODZ},
+/
+
 &PARAM_LAND_GRID_CARTESC
  LDZ = ${LIST_LDZ},
 /
@@ -178,10 +182,6 @@ cat <<EOF >> param.physics.conf
 
 &PARAM_OCEAN_VARS
  OCEAN_VARS_CHECKRANGE = .true.,
-/
-
-&PARAM_OCEAN_DYN_SLAB
- OCEAN_DYN_SLAB_DEPTH = 10.0,
 /
 
 #################################################

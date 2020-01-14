@@ -64,6 +64,7 @@ IMAX=( 45 ) # required parameters for each domain
 JMAX=( 45 ) # required parameters for each domain
 
 OKMAX=1
+ODZ=( "10.0" ) # required parameters for OKMAX
 
 LKMAX=7
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
