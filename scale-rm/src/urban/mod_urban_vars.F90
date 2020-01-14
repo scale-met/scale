@@ -32,6 +32,7 @@ module mod_urban_vars
   public :: URBAN_vars_restart_read
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
+  public :: URBAN_vars_monitor
   public :: URBAN_vars_total
 
   public :: URBAN_vars_restart_create
@@ -68,7 +69,6 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_RAINR(:,:)   ! urban rain storage on roof [mm=kg/m2]
   real(RP), public, allocatable :: URBAN_RAINB(:,:)   ! urban rain storage on wall [mm=kg/m2]
   real(RP), public, allocatable :: URBAN_RAING(:,:)   ! urban rain storage on road [mm=kg/m2]
-  real(RP), public, allocatable :: URBAN_ROFF (:,:)   ! urban runoff [mm=kg/m2]
 
   ! for restart
   real(RP), public, allocatable :: URBAN_SFC_TEMP  (:,:)     ! urban grid average of surface temperature [K]
@@ -87,15 +87,16 @@ module mod_urban_vars
   real(RP), public, allocatable :: URBAN_RAINR_t(:,:)   ! tendency of URBAN_RAINR
   real(RP), public, allocatable :: URBAN_RAINB_t(:,:)   ! tendency of URBAN_RAINB
   real(RP), public, allocatable :: URBAN_RAING_t(:,:)   ! tendency of URBAN_RAING
-  real(RP), public, allocatable :: URBAN_ROFF_t (:,:)   ! tendency of URBAN_ROFF
+
+  real(RP), public, allocatable :: URBAN_ROFF (:,:)     ! urban runoff [mm/s=kg/m2/s]
 
   real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)     ! urban grid average of w-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)     ! urban grid average of u-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)     ! urban grid average of v-momentum flux [kg/m2/s]
   real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)     ! urban grid average of sensible heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)     ! urban grid average of latent heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
   real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:)   ! urban grid average of water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
 
   ! given 2D variables expressing urban morphology
   real(RP), public, allocatable :: URBAN_Z0M  (:,:) ! urban grid average of rougness length (momentum) [m]
@@ -130,8 +131,8 @@ module mod_urban_vars
   real(RP), public, allocatable :: ATMOS_SFLX_LW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_SW  (:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA   (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_rain(:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_snow(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_water(:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_ENGI(:,:)
 
   !-----------------------------------------------------------------------------
   !
@@ -143,7 +144,7 @@ module mod_urban_vars
   !
   logical,                private :: URBAN_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX              = 20
+  integer,                private, parameter :: VMAX              = 19
   integer,                private, parameter :: I_TRL             =  1
   integer,                private, parameter :: I_TBL             =  2
   integer,                private, parameter :: I_TGL             =  3
@@ -156,15 +157,13 @@ module mod_urban_vars
   integer,                private, parameter :: I_RAINR           = 10
   integer,                private, parameter :: I_RAINB           = 11
   integer,                private, parameter :: I_RAING           = 12
-  integer,                private, parameter :: I_ROFF            = 13
-  integer,                private, parameter :: I_SFC_TEMP        = 14
-  integer,                private, parameter :: I_SFC_ALB_IR_dir  = 15
-  integer,                private, parameter :: I_SFC_ALB_IR_dif  = 16
-  integer,                private, parameter :: I_SFC_ALB_NIR_dir = 17
-  integer,                private, parameter :: I_SFC_ALB_NIR_dif = 18
-  integer,                private, parameter :: I_SFC_ALB_VIS_dir = 19
-  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 20
-
+  integer,                private, parameter :: I_SFC_TEMP        = 13
+  integer,                private, parameter :: I_SFC_ALB_IR_dir  = 14
+  integer,                private, parameter :: I_SFC_ALB_IR_dif  = 15
+  integer,                private, parameter :: I_SFC_ALB_NIR_dir = 16
+  integer,                private, parameter :: I_SFC_ALB_NIR_dif = 17
+  integer,                private, parameter :: I_SFC_ALB_VIS_dir = 18
+  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 19
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the urban variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the urban variables
@@ -185,7 +184,6 @@ module mod_urban_vars
                   'URBAN_RAINR',           &
                   'URBAN_RAINB',           &
                   'URBAN_RAING',           &
-                  'URBAN_ROFF',            &
                   'URBAN_SFC_TEMP',        &
                   'URBAN_SFC_ALB_IR_dir',  &
                   'URBAN_SFC_ALB_IR_dif',  &
@@ -206,7 +204,6 @@ module mod_urban_vars
                   'urban rain strage on roof',                             &
                   'urban rain strage on wall',                             &
                   'urban rain strage on road',                             &
-                  'urban runoff ',                                         &
                   'urban grid average of temperature',                     &
                   'urban grid average of albedo for IR (direct)',          &
                   'urban grid average of albedo for IR (diffuse)',         &
@@ -216,7 +213,6 @@ module mod_urban_vars
                   'urban grid average of albedo for VIS (diffuse)'         /
 
   data VAR_STDN / '', &
-                  '', &
                   '', &
                   '', &
                   '', &
@@ -248,7 +244,6 @@ module mod_urban_vars
                   'kg/m2',   &
                   'kg/m2',   &
                   'kg/m2',   &
-                  'kg/m2',   &
                   'K',       &
                   '1',       &
                   '1',       &
@@ -259,6 +254,46 @@ module mod_urban_vars
 
   logical, private :: URBAN_RESTART_IN_CHECK_COORDINATES = .true.
 
+  ! for monitor
+  integer, parameter :: IM_TRL        = 1
+  integer, parameter :: IM_TBL        = 2
+  integer, parameter :: IM_TGL        = 3
+  integer, parameter :: IM_TR         = 4
+  integer, parameter :: IM_TB         = 5
+  integer, parameter :: IM_TG         = 6
+  integer, parameter :: IM_TC         = 7
+  integer, parameter :: IM_UC         = 8
+  integer, parameter :: IM_QC         = 9
+  integer, parameter :: IM_RAINR      = 10
+  integer, parameter :: IM_RAINB      = 11
+  integer, parameter :: IM_RAING      = 12
+  integer, parameter :: IM_ROFF       = 13
+  integer, parameter :: IM_SFCWR      = 14
+  integer, parameter :: IM_SFCWB      = 15
+  integer, parameter :: IM_SFCWG      = 16
+  integer, parameter :: IM_SFCIR      = 17
+  integer, parameter :: IM_SFCIB      = 18
+  integer, parameter :: IM_SFCIG      = 19
+  integer, parameter :: IM_MASFLX     = 20
+  integer, parameter :: IM_ENGI_S     = 21
+  integer, parameter :: IM_ENGI_SR    = 22
+  integer, parameter :: IM_ENGI_SB    = 23
+  integer, parameter :: IM_ENGI_SG    = 24
+  integer, parameter :: IM_ENGI_W     = 25
+  integer, parameter :: IM_ENGI_WR    = 26
+  integer, parameter :: IM_ENGI_WB    = 27
+  integer, parameter :: IM_ENGI_WG    = 28
+  integer, parameter :: IM_ENGSFC_GHR = 29
+  integer, parameter :: IM_ENGSFC_GHB = 30
+  integer, parameter :: IM_ENGSFC_GHG = 31
+  integer, parameter :: IM_ENGSFC_EIR = 32
+  integer, parameter :: IM_ENGSFC_EIB = 33
+  integer, parameter :: IM_ENGSFC_EIG = 34
+  integer, parameter :: IM_ROFF_EI    = 35
+  integer, parameter :: IM_ENGFLX     = 36
+  integer, parameter :: IM_max = 35
+  integer, private   :: MONIT_id(IM_max)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -268,6 +303,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_monitor, only: &
+       MONITOR_reg
     implicit none
 
     namelist / PARAM_URBAN_VARS / &
@@ -334,7 +371,6 @@ contains
     allocate( URBAN_RAINR_t(UIA,UJA)         )
     allocate( URBAN_RAINB_t(UIA,UJA)         )
     allocate( URBAN_RAING_t(UIA,UJA)         )
-    allocate( URBAN_ROFF_t (UIA,UJA)         )
     URBAN_TR_t   (:,:)   = UNDEF
     URBAN_TB_t   (:,:)   = UNDEF
     URBAN_TG_t   (:,:)   = UNDEF
@@ -347,7 +383,6 @@ contains
     URBAN_RAINR_t(:,:)   = UNDEF
     URBAN_RAINB_t(:,:)   = UNDEF
     URBAN_RAING_t(:,:)   = UNDEF
-    URBAN_ROFF_t (:,:)   = UNDEF
 
     allocate( URBAN_SFLX_MW   (UIA,UJA)                     )
     allocate( URBAN_SFLX_MU   (UIA,UJA)                     )
@@ -408,8 +443,8 @@ contains
     allocate( ATMOS_SFLX_LW  (UIA,UJA,2) )
     allocate( ATMOS_SFLX_SW  (UIA,UJA,2) )
     allocate( ATMOS_cosSZA   (UIA,UJA)   )
-    allocate( ATMOS_SFLX_rain(UIA,UJA)   )
-    allocate( ATMOS_SFLX_snow(UIA,UJA)   )
+    allocate( ATMOS_SFLX_water(UIA,UJA)   )
+    allocate( ATMOS_SFLX_ENGI(UIA,UJA)   )
     ATMOS_TEMP     (:,:)   = UNDEF
     ATMOS_PRES     (:,:)   = UNDEF
     ATMOS_W        (:,:)   = UNDEF
@@ -423,8 +458,8 @@ contains
     ATMOS_SFLX_LW  (:,:,:) = UNDEF
     ATMOS_SFLX_SW  (:,:,:) = UNDEF
     ATMOS_cosSZA   (:,:)   = UNDEF
-    ATMOS_SFLX_rain(:,:)   = UNDEF
-    ATMOS_SFLX_snow(:,:)   = UNDEF
+    ATMOS_SFLX_water(:,:)  = UNDEF
+    ATMOS_SFLX_ENGI(:,:)   = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -462,6 +497,47 @@ contains
        LOG_INFO("URBAN_vars_setup",*) 'Restart output? : NO'
        URBAN_RESTART_OUTPUT = .false.
     endif
+
+    ! monitor
+    call MONITOR_reg( 'URB_TRL',      'roof temperature',         'K m3', & ! (in)
+                      MONIT_id(IM_TRL),                                   & ! (out)
+                      dim_type='UXY', is_tendency=.false.                 ) ! (in)
+    call MONITOR_reg( 'URB_TBL',      'wall temperature',         'K m3', & ! (in)
+                      MONIT_id(IM_TBL),                                   & ! (out)
+                      dim_type='UXY', is_tendency=.false.                 ) ! (in)
+    call MONITOR_reg( 'URB_TGL',      'road temperature',         'K m3', & ! (in)
+                      MONIT_id(IM_TGL),                                   & ! (out)
+                      dim_type='UXY', is_tendency=.false.                 ) ! (in)
+    call MONITOR_reg( 'URB_TR',       'roof surface temperature', 'K m2', & ! (in)
+                      MONIT_id(IM_TR),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_TB',       'wall surface temperature', 'K m2', & ! (in)
+                      MONIT_id(IM_TB),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_TG',       'road surface temperature', 'K m2', & ! (in)
+                      MONIT_id(IM_TG),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_TC',       'canopy temperature',       'K m2', & ! (in)
+                      MONIT_id(IM_TC),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_UC',       'canopy wind speed',        'm3/s', & ! (in)
+                      MONIT_id(IM_UC),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_QC',       'canopy humidity',          'kg/m', & ! (in)
+                      MONIT_id(IM_QC),                                    & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_RAINR',    'roof water',               'kg',   & ! (in)
+                      MONIT_id(IM_RAINR),                                 & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_RAINB',    'wall water',               'kg',   & ! (in)
+                      MONIT_id(IM_RAINB),                                 & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_RAING',    'road water',               'kg',   & ! (in)
+                      MONIT_id(IM_RAING),                                 & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
+    call MONITOR_reg( 'URB_ROFF',     'runoff water',             'kg',   & ! (in)
+                      MONIT_id(IM_ROFF),                                  & ! (out)
+                      dim_type='XY', is_tendency=.false.                  ) ! (in)
 
     return
   end subroutine URBAN_vars_setup
@@ -552,8 +628,6 @@ contains
                                URBAN_RAINB(:,:)                      ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_RAING), 'XY', & ! [IN]
                                URBAN_RAING(:,:)                      ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ROFF),  'XY', & ! [IN]
-                               URBAN_ROFF(:,:)                       ) ! [OUT]
 
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),        'XY',  & ! [IN]
                                URBAN_SFC_TEMP(:,:)                              ) ! [OUT]
@@ -618,10 +692,10 @@ contains
                       URBAN_TC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_TC),    &
                      __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
        call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
-                      URBAN_QC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_QC),    &
+                      URBAN_QC   (:,:),     0.0_RP,    1.0_RP, VAR_NAME(I_QC),    &
                      __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
        call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
-                      URBAN_UC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_UC),    &
+                      URBAN_UC   (:,:),     0.0_RP,  100.0_RP, VAR_NAME(I_UC),    &
                      __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
        call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
                       URBAN_RAINR(:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAINR), &
@@ -631,9 +705,6 @@ contains
                      __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
        call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
                       URBAN_RAING(:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAING), &
-                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
-       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
-                      URBAN_ROFF (:,:), -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),  &
                      __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
 
        call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
@@ -681,7 +752,6 @@ contains
     call FILE_HISTORY_in( URBAN_RAINR(:,:), VAR_NAME(I_RAINR), VAR_DESC(I_RAINR), VAR_UNIT(I_RAINR) )
     call FILE_HISTORY_in( URBAN_RAINB(:,:), VAR_NAME(I_RAINB), VAR_DESC(I_RAINB), VAR_UNIT(I_RAINB) )
     call FILE_HISTORY_in( URBAN_RAING(:,:), VAR_NAME(I_RAING), VAR_DESC(I_RAING), VAR_UNIT(I_RAING) )
-    call FILE_HISTORY_in( URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  VAR_DESC(I_ROFF),  VAR_UNIT(I_ROFF)  )
 
     call FILE_HISTORY_in( URBAN_SFC_TEMP  (:,:),                     VAR_NAME(I_SFC_TEMP),                                    &
                           VAR_DESC(I_SFC_TEMP),        VAR_UNIT(I_SFC_TEMP),        standard_name=VAR_STDN(I_SFC_TEMP)        )
@@ -698,6 +768,9 @@ contains
                           VAR_DESC(I_SFC_ALB_VIS_dir), VAR_UNIT(I_SFC_ALB_VIS_dir), standard_name=VAR_STDN(I_SFC_ALB_VIS_dir) )
     call FILE_HISTORY_in( URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dif),                             &
                           VAR_DESC(I_SFC_ALB_VIS_dif), VAR_UNIT(I_SFC_ALB_VIS_dif), standard_name=VAR_STDN(I_SFC_ALB_VIS_dif) )
+
+    call FILE_HISTORY_in( URBAN_ROFF(:,:),          'URBAN_RUNOFF',                          &
+                          'urban runoff water',                                    'kg/m2/s' )
 
     call FILE_HISTORY_in( URBAN_SFLX_MW(:,:),       'URBAN_SFLX_MW',                         &
                           'urban grid average of w-momentum flux',                 'kg/m2/s' )
@@ -751,6 +824,180 @@ contains
 
     return
   end subroutine URBAN_vars_history
+
+  !-----------------------------------------------------------------------------
+  !> monitor output
+  subroutine URBAN_vars_monitor
+    use scale_const, only: &
+       DWATR => CONST_DWATR
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER
+    use scale_monitor, only: &
+       MONITOR_put
+    implicit none
+
+    real(RP)               :: WORK3D(UKA,UIA,UJA)
+    real(RP)               :: WORK2D(UIA,UJA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call MONITOR_put( MONIT_id(IM_TRL),  URBAN_TRL(:,:,:) )
+    call MONITOR_put( MONIT_id(IM_TBL),  URBAN_TBL(:,:,:) )
+    call MONITOR_put( MONIT_id(IM_TGL),  URBAN_TGL(:,:,:) )
+
+    call MONITOR_put( MONIT_id(IM_TR),  URBAN_TR(:,:) )
+    call MONITOR_put( MONIT_id(IM_TB),  URBAN_TB(:,:) )
+    call MONITOR_put( MONIT_id(IM_TG),  URBAN_TG(:,:) )
+    call MONITOR_put( MONIT_id(IM_TC),  URBAN_TC(:,:) )
+    call MONITOR_put( MONIT_id(IM_UC),  URBAN_UC(:,:) )
+    if ( MONIT_id(IM_QC) > 0 ) then
+       !$omp parallel do
+       do j = UJS, UJE
+       do i = UIS, UIE
+          WORK2D(i,j) = URBAN_QC(i,j) * ATMOS_DENS(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_QC), WORK2D(:,:) )
+    end if
+
+    ! mass budget
+    call MONITOR_put( MONIT_id(IM_RAINR),  URBAN_RAINR(:,:) )
+    call MONITOR_put( MONIT_id(IM_RAINB),  URBAN_RAINB(:,:) )
+    call MONITOR_put( MONIT_id(IM_RAING),  URBAN_RAING(:,:) )
+    call MONITOR_put( MONIT_id(IM_ROFF) ,  URBAN_ROFF (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCWR),  URBAN_SFLX_waterR(:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCWB),  URBAN_SFLX_waterB(:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCWG),  URBAN_SFLX_waterG(:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCIR),  URBAN_SFLX_iceR  (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCIB),  URBAN_SFLX_iceB  (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_SFCIG),  URBAN_SFLX_iceG  (:,:) )
+!!$    if ( MONIT_id(IM_MASFLX) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = URBAN_SFLX_waterR(i,j) + URBAN_SFLX_iceR(i,j) &
+!!$                      + URBAN_SFLX_waterB(i,j) + URBAN_SFLX_iceB(i,j) &
+!!$                      + URBAN_SFLX_waterG(i,j) + URBAN_SFLX_iceG(i,j) &
+!!$                      - URBAN_RUNOFF(i,j)
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_MASFLX), WORK2D(:,:) )
+!!$    end if
+
+    ! energy budget
+!!$    if ( MONIT_id(IM_ENGI_S) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$       do k = UKS, UKE
+!!$          WORK3D(k,i,j) = CAPR(i,j) * URBAN_TRL(k,i,j) &
+!!$                        + CAPB(i,j) * URBAN_TRB(k,i,j) &
+!!$                        + CAPG(i,j) * URBAN_TRG(k,i,j)
+!!$       end do
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_S), WORK3D(:,:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_SR) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$       do k = UKS, UKE
+!!$          WORK3D(k,i,j) = CAPR(i,j) * URBAN_TRL(k,i,j)
+!!$       end do
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_SR), WORK3D(:,:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_SB) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$       do k = UKS, UKE
+!!$          WORK3D(k,i,j) = CAPB(i,j) * URBAN_TBL(k,i,j)
+!!$       end do
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_SB), WORK3D(:,:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_SG) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$       do k = UKS, UKE
+!!$          WORK3D(k,i,j) = CAPG(i,j) * URBAN_TGL(k,i,j)
+!!$       end do
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_SG), WORK3D(:,:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_W) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = CV_WATER * ( URBAN_RAINR(k,i,j) * URBAN_TRL(UKS,i,j) &
+!!$                                   + URBAN_RAINB(k,i,j) * URBAN_TBL(UKS,i,j) &
+!!$                                   + URBAN_RAING(k,i,j) * URBAN_TGL(UKS,i,j) )
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_W), WORK2D(:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_WR) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = CV_WATER * URBAN_RAINR(k,i,j) * URBAN_TRL(UKS,i,j)
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_WR), WORK2D(:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_WB) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = CV_WATER * URBAN_RAINB(k,i,j) * URBAN_TBL(UKS,i,j)
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_WB), WORK2D(:,:) )
+!!$    end if
+!!$    if ( MONIT_id(IM_ENGI_WG) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = CV_WATER * URBAN_RAING(k,i,j) * URBAN_TGL(UKS,i,j)
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGI_WG), WORK2D(:,:) )
+!!$    end if
+
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_GHR), URBAN_SFLX_GHR   (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_GHB), URBAN_SFLX_GHB   (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_GHG), URBAN_SFLX_GHG   (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_EIR), URBAN_SFLX_ENGIR  (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_EIB), URBAN_SFLX_ENGIB  (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ENGSFC_EIG), URBAN_SFLX_ENGIG  (:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ROFF_EIR),   URBAN_RUNOFF_ENGIR(:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ROFF_EIB),   URBAN_RUNOFF_ENGIB(:,:) )
+!!$    call MONITOR_put( MONIT_id(IM_ROFF_EIG),   URBAN_RUNOFF_ENGIG(:,:) )
+!!$    if ( MONIT_id(IM_ENGFLX) > 0 ) then
+!!$       !$omp parallel do
+!!$       do j = UJS, UJE
+!!$       do i = UIS, UIE
+!!$          WORK2D(i,j) = URBAN_SFLX_GHR(i,j) + URBAN_SFLX_ENGIR(i,j) &
+!!$                      + URBAN_SFLX_GHB(i,j) + URBAN_SFLX_ENGIB(i,j) &
+!!$                      + URBAN_SFLX_GHG(i,j) + URBAN_SFLX_ENGIG(i,j) &
+!!$                      - URBAN_RUNOFF_ENGIR(i,j) &
+!!$                      - URBAN_RUNOFF_ENGIB(i,j) &
+!!$                      - URBAN_RUNOFF_ENGIG(i,j)
+!!$       end do
+!!$       end do
+!!$       call MONITOR_put( MONIT_id(IM_ENGFLX), WORK2D(:,:) )
+!!$    end if
+
+
+    return
+  end subroutine URBAN_vars_monitor
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for urban
@@ -821,10 +1068,6 @@ contains
                               URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
                               URBAN_RAING(:,:), VAR_NAME(I_RAING), & ! (in)
-                              URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
-                              URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
-       call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_ROFF (:,:), VAR_NAME(I_ROFF),  & ! (in)
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
                               URBAN_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
 
@@ -1003,8 +1246,6 @@ contains
                               VAR_NAME(I_RAINB), 'XY', fill_halo=.true.                     ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_RAING), URBAN_RAING(:,:),            & ! [IN]
                               VAR_NAME(I_RAING), 'XY', fill_halo=.true.                     ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ROFF), URBAN_ROFF(:,:),              & ! [IN]
-                              VAR_NAME(I_ROFF),  'XY', fill_halo=.true.                     ) ! [IN]
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                     & ! [IN]
                                     URBAN_SFC_TEMP(:,:),                                 & ! [IN]

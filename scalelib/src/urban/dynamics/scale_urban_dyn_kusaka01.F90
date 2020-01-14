@@ -357,7 +357,7 @@ contains
        Z1, PBL,                         &
        RHOS, PRSS,                      &
        LWD, SWD,                        &
-       RAIN, SNOW,                      &
+       RAIN, EFLX,                      &
        Z0M, Z0H, Z0E,                   &
        ZD,                              &
        AH_URB_t, AHL_URB_t,             &
@@ -406,7 +406,7 @@ contains
     real(RP), intent(in) :: LWD (UIA,UJA,2)
     real(RP), intent(in) :: SWD (UIA,UJA,2)
     real(RP), intent(in) :: RAIN(UIA,UJA)
-    real(RP), intent(in) :: SNOW(UIA,UJA)
+    real(RP), intent(in) :: EFLX(UIA,UJA)
     real(RP), intent(in) :: Z0M      (UIA,UJA)
     real(RP), intent(in) :: Z0H      (UIA,UJA)
     real(RP), intent(in) :: Z0E      (UIA,UJA)
@@ -431,7 +431,7 @@ contains
     real(RP), intent(inout) :: RAINR_URB(UIA,UJA)
     real(RP), intent(inout) :: RAINB_URB(UIA,UJA)
     real(RP), intent(inout) :: RAING_URB(UIA,UJA)
-    real(RP), intent(inout) :: ROFF_URB (UIA,UJA)
+    real(RP), intent(out)   :: ROFF_URB (UIA,UJA)
 
     real(RP), intent(out) :: SFC_TEMP(UIA,UJA)
     real(RP), intent(out) :: ALBEDO  (UIA,UJA,N_RAD_DIR,N_RAD_RGN)
@@ -470,7 +470,6 @@ contains
     real(RP) :: RAINR
     real(RP) :: RAINB
     real(RP) :: RAING
-    real(RP) :: ROFF
     real(RP) :: ALBD_LW
     real(RP) :: ALBD_SW
 
@@ -544,7 +543,6 @@ contains
        RAINR = RAINR_URB(i,j)
        RAINB = RAINB_URB(i,j)
        RAING = RAING_URB(i,j)
-       ROFF  = ROFF_URB (i,j)
 
        call SLC_main( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
                       TRL     (:),        & ! [INOUT]
@@ -559,7 +557,7 @@ contains
                       RAINR,              & ! [INOUT]
                       RAINB,              & ! [INOUT]
                       RAING,              & ! [INOUT]
-                      ROFF,               & ! [INOUT]
+                      ROFF_URB(i,j),      & ! [OUT]
                       ALBD_LW,            & ! [OUT]
                       ALBD_SW,            & ! [OUT]
                       SHR     (i,j),      & ! [OUT]
@@ -597,7 +595,7 @@ contains
                       SWD     (i,j,:),    & ! [IN]
                       LWD     (i,j,:),    & ! [IN]
                       RAIN    (i,j),      & ! [IN]
-                      SNOW    (i,j),      & ! [IN]
+                      EFLX    (i,j),      & ! [IN]
                       DENS    (i,j),      & ! [IN]
                       Z0M     (i,j),      & ! [IN]
                       Z0H     (i,j),      & ! [IN]
@@ -625,7 +623,6 @@ contains
        RAINR_URB(i,j) = RAINR
        RAINB_URB(i,j) = RAINB
        RAING_URB(i,j) = RAING
-       ROFF_URB(i,j) = ROFF
 
        ALBEDO(i,j,I_R_direct ,I_R_IR ) = ALBD_LW
        ALBEDO(i,j,I_R_diffuse,I_R_IR ) = ALBD_LW
@@ -772,7 +769,7 @@ contains
         SSG,          & ! (in)
         LLG,          & ! (in)
         RAIN,         & ! (in)
-        SNOW,         & ! (in)
+        EFLX,         & ! (in)
         RHOO,         & ! (in)
         Z0C,          & ! (in)
         Z0HC,         & ! (in)
@@ -823,8 +820,8 @@ contains
     real(RP), intent(in)    :: ZA   ! height of 1st atmospheric level        [m]
     real(RP), intent(in)    :: SSG(2) ! downward total short wave radiation  [W/m/m]
     real(RP), intent(in)    :: LLG(2) ! downward long wave radiation         [W/m/m]
-    real(RP), intent(in)    :: RAIN ! liquid water flux                      [kg/m2/s]
-    real(RP), intent(in)    :: SNOW ! ice water flux                         [kg/m2/s]
+    real(RP), intent(in)    :: RAIN ! water flux                             [kg/m2/s]
+    real(RP), intent(in)    :: EFLX ! internal energy flux                   [J/m2/s]
     real(RP), intent(in)    :: RHOO ! air density                            [kg/m^3]
     real(RP), intent(in)    :: Z0C  ! Roughness length above canyon for momentum [m]
     real(RP), intent(in)    :: Z0HC ! Roughness length above canyon for heat [m]
@@ -850,7 +847,7 @@ contains
     real(RP), intent(inout) :: RAINR ! rain amount in storage on roof     [kg/m2]
     real(RP), intent(inout) :: RAINB ! rain amount in storage on building [kg/m2]
     real(RP), intent(inout) :: RAING ! rain amount in storage on road     [kg/m2]
-    real(RP), intent(inout) :: ROFF  ! runoff from urban           [kg/m2]
+    real(RP), intent(out)   :: ROFF  ! runoff from urban           [kg/m2/s]
 
     !-- Output variables from Urban to Coupler
     real(RP), intent(out)   :: ALBD_SW_grid  ! grid mean of surface albedo for SW
@@ -1010,16 +1007,16 @@ contains
     !-----------------------------------------------------------
 
     !!--- calculate evaporation efficiency
-    RAINT = 1.0_RP * ( ( RAIN + SNOW ) * dt )            ! [kg/m2/s -> kg/m2]
+    RAINT = 1.0_RP * ( RAIN * dt )            ! [kg/m2/s -> kg/m2]
     call cal_beta(BETR, RAINT, RAINR, STRGR, ROFFR)
 
-    RAINT = 0.1_RP * ( ( RAIN + SNOW ) * dt )
+    RAINT = 0.1_RP * ( RAIN * dt )
     call cal_beta(BETB, RAINT, RAINB, STRGB, ROFFB)
 
-    RAINT = 0.9_RP * ( ( RAIN + SNOW ) * dt )
+    RAINT = 0.9_RP * ( RAIN * dt )
     call cal_beta(BETG, RAINT, RAING, STRGG, ROFFG)
 
-    ROFF = ROFF +  R * ROFFR  + RW * ( ROFFB + ROFFG )
+    ROFF = ( R * ROFFR  + RW * ( ROFFB + ROFFG ) ) / dt
 
     !-----------------------------------------------------------
     ! Radiation : Net Short Wave Radiation at roof/wall/road
@@ -1174,6 +1171,7 @@ contains
      RR      = EPSR * ( rflux_LW - STB * (TR**4) )
      HR      = RHOO * CPdry * CHR * UA * (THS-THA) * EXN
      ELER    = min( RHOO * CHR * UA * BETR * (QS0R-QA), real(RAINR/dt,RP) ) * LHV
+!     G0R     = SR + RR - HR - ELER + EFLX
      G0R     = SR + RR - HR - ELER
 
      TRL   = TRLP
@@ -1260,10 +1258,12 @@ contains
 
       HB    = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
       ELEB  = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
+!      G0B   = SB + RB - HB - ELEB + EFLX
       G0B   = SB + RB - HB - ELEB
 
       HG    = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
       ELEG  = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
+!      G0G   = SG + RG - HG - ELEG + EFLX
       G0G   = SG + RG - HG - ELEG
 
       TBL = TBLP
@@ -1416,10 +1416,12 @@ contains
 
      HB   = RHOO * CPdry * CHB * UC * (THS1-THC) * EXN
      ELEB = min( RHOO * CHB * UC * BETB * (QS0B-QC), real(RAINB/dt,RP) ) * LHV
+!     G0B  = SB + RB - HB - ELEB + EFLX
      G0B  = SB + RB - HB - ELEB
 
      HG   = RHOO * CPdry * CHG * UC * (THS2-THC) * EXN
      ELEG = min( RHOO * CHG * UC * BETG * (QS0G-QC), real(RAING/dt,RP) ) * LHV
+!     G0G  = SG + RG - HG - ELEG + EFLX
      G0G  = SG + RG - HG - ELEG
 
      TBL   = TBLP
