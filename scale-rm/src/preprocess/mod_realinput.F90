@@ -204,6 +204,7 @@ contains
     implicit none
 
     logical :: USE_SFC_DIAGNOSES          = .false. !> use surface diagnoses
+    logical :: USE_DATA_UNDER_SFC         = .true.  !> use data under the surface
     logical :: USE_NONHYDRO_DENS_BOUNDARY = .false. !> use non-hydrostatic density for boundary data
 
 
@@ -225,6 +226,7 @@ contains
        USE_FILE_DENSITY,           &
        USE_NONHYDRO_DENS_BOUNDARY, &
        USE_SFC_DIAGNOSES,          &
+       USE_DATA_UNDER_SFC,         &
        SAME_MP_TYPE,               &
        INTRP_TYPE
 
@@ -357,23 +359,24 @@ contains
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
-             call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
-                                    basename_mod,      & ! [IN]
-                                    dims(:),           & ! [IN]
-                                    istep,             & ! [IN]
-                                    USE_SFC_DIAGNOSES, & ! [IN]
-                                    SAME_MP_TYPE,      & ! [IN]
-                                    DENS_in(:,:,:),    & ! [OUT]
-                                    MOMZ_in(:,:,:),    & ! [OUT]
-                                    MOMX_in(:,:,:),    & ! [OUT]
-                                    MOMY_in(:,:,:),    & ! [OUT]
-                                    RHOT_in(:,:,:),    & ! [OUT]
-                                    QTRC_in(:,:,:,:),  & ! [OUT]
-                                    VELZ_in(:,:,:),    & ! [OUT]
-                                    VELX_in(:,:,:),    & ! [OUT]
-                                    VELY_in(:,:,:),    & ! [OUT]
-                                    POTT_in(:,:,:),    & ! [OUT]
-                                    PRES_in(:,:,:)     ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,       & ! [IN]
+                                    basename_mod,       & ! [IN]
+                                    dims(:),            & ! [IN]
+                                    istep,              & ! [IN]
+                                    USE_SFC_DIAGNOSES,  & ! [IN]
+                                    USE_DATA_UNDER_SFC, & ! [IN]
+                                    SAME_MP_TYPE,       & ! [IN]
+                                    DENS_in(:,:,:),     & ! [OUT]
+                                    MOMZ_in(:,:,:),     & ! [OUT]
+                                    MOMX_in(:,:,:),     & ! [OUT]
+                                    MOMY_in(:,:,:),     & ! [OUT]
+                                    RHOT_in(:,:,:),     & ! [OUT]
+                                    QTRC_in(:,:,:,:),   & ! [OUT]
+                                    VELZ_in(:,:,:),     & ! [OUT]
+                                    VELX_in(:,:,:),     & ! [OUT]
+                                    VELY_in(:,:,:),     & ! [OUT]
+                                    POTT_in(:,:,:),     & ! [OUT]
+                                    PRES_in(:,:,:)      ) ! [OUT]
           else
              LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -1235,6 +1238,7 @@ contains
        dims,          &
        istep,         &
        sfc_diagnoses, &
+       under_sfc,     &
        same_mptype,   &
        DENS,          &
        MOMZ,          &
@@ -1310,6 +1314,7 @@ contains
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: istep
     logical,          intent(in)  :: sfc_diagnoses
+    logical,          intent(in)  :: under_sfc
     logical,          intent(in)  :: same_mptype   ! Is microphysics type same between outer and inner model
     real(RP),         intent(out) :: DENS(KA,IA,JA)
     real(RP),         intent(out) :: MOMZ(KA,IA,JA)
@@ -1385,6 +1390,7 @@ contains
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
                                        sfc_diagnoses,     & ! [IN]
+                                       under_sfc,         & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
           same_mptype_ = .false.

@@ -275,6 +275,7 @@ contains
        cz_org,   &
        basename_num,  &
        sfc_diagnoses, &
+       under_sfc,     &
        dims, &
        nt )
     use scale_const, only: &
@@ -318,6 +319,7 @@ contains
     real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename_num
     logical,          intent(in)  :: sfc_diagnoses
+    logical,          intent(in)  :: under_sfc
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: nt
 
@@ -1022,42 +1024,67 @@ contains
 
     ! check verticaly extrapolated data in outer model
     if( pressure_coordinates .and. var_id(Ia_ps,1) > 0 ) then
-       !$omp parallel do
+       !$omp parallel do private(k)
        do j = 1, dims(3)
        do i = 1, dims(2)
-       do k = 3, dims(1)+2
-          if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
-             if ( sfc_diagnoses ) then
-                velz_org(k,i,j)   = velz_org(2,i,j)
-                velx_org(k,i,j)   = velx_org(2,i,j)
-                vely_org(k,i,j)   = vely_org(2,i,j)
-                pres_org(k,i,j)   = pres_org(2,i,j)
-                dens_org(k,i,j)   = dens_org(2,i,j)
-                temp_org(k,i,j)   = temp_org(2,i,j)
-                qv_org  (k,i,j)   = qv_org  (2,i,j)
-                qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
-                cz_org  (k,i,j)   = cz_org  (2,i,j)
-                RN222_org(k,i,j)  = RN222_org(2,i,j)
-             else
-                velz_org(k,i,j)   = UNDEF
-                velx_org(k,i,j)   = UNDEF
-                vely_org(k,i,j)   = UNDEF
-                pres_org(k,i,j)   = UNDEF
-                dens_org(k,i,j)   = UNDEF
-                temp_org(k,i,j)   = UNDEF
-                qv_org  (k,i,j)   = UNDEF
-                qhyd_org(k,i,j,:) = UNDEF
-                cz_org  (k,i,j)   = UNDEF
-                RN222_org(k,i,j)  = UNDEF
+          if ( under_sfc ) then
+             k = lm_layer(i,j)
+             if ( pres_org(1,i,j) > pres_org(k,i,j) ) then
+                pres_org(1,i,j) = UNDEF
+                cz_org  (1,i,j) = UNDEF
              end if
+             if ( pres_org(2,i,j) > pres_org(k,i,j) ) then
+                pres_org(2,i,j) = pres_org(1,i,j)
+                cz_org  (2,i,j) = cz_org(1,i,j)
+             end if
+             cycle
           end if
-       enddo
+          do k = 3, dims(1)+2
+             if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
+                if ( sfc_diagnoses ) then
+                   velz_org(k,i,j)   = velz_org(2,i,j)
+                   velx_org(k,i,j)   = velx_org(2,i,j)
+                   vely_org(k,i,j)   = vely_org(2,i,j)
+                   pres_org(k,i,j)   = pres_org(2,i,j)
+                   dens_org(k,i,j)   = dens_org(2,i,j)
+                   temp_org(k,i,j)   = temp_org(2,i,j)
+                   qv_org  (k,i,j)   = qv_org  (2,i,j)
+                   qhyd_org(k,i,j,:) = qhyd_org(2,i,j,:)
+                   cz_org  (k,i,j)   = cz_org  (2,i,j)
+                   RN222_org(k,i,j)  = RN222_org(2,i,j)
+                else
+                   velz_org(k,i,j)   = UNDEF
+                   velx_org(k,i,j)   = UNDEF
+                   vely_org(k,i,j)   = UNDEF
+                   pres_org(k,i,j)   = UNDEF
+                   dens_org(k,i,j)   = UNDEF
+                   temp_org(k,i,j)   = UNDEF
+                   qv_org  (k,i,j)   = UNDEF
+                   qhyd_org(k,i,j,:) = UNDEF
+                   cz_org  (k,i,j)   = UNDEF
+                   RN222_org(k,i,j)  = UNDEF
+                end if
+             end if
+          enddo
        enddo
        enddo
     else if ( var_id(Ia_topo,1) > 0 ) then
-       !$omp parallel do
+       !$omp parallel do private(k)
        do j = 1, dims(3)
        do i = 1, dims(2)
+          if ( under_sfc ) then
+             k = lm_layer(i,j)
+             if ( cz_org(1,i,j) < cz_org(k,i,j) ) then
+                pres_org(1,i,j) = UNDEF
+                cz_org  (1,i,j) = UNDEF
+             end if
+             if ( cz_org(1,i,j) < cz_org(k,i,j) ) then
+                pres_org(2,i,j) = pres_org(1,i,j)
+                cz_org  (2,i,j) = cz_org(1,i,j)
+             end if
+             cycle
+          end if
+
        do k = 3, dims(1)+2
           if( cz_org(k,i,j) < cz_org(2,i,j) ) then
              if ( sfc_diagnoses ) then
