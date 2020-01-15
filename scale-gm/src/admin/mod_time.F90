@@ -63,12 +63,12 @@ module mod_time
   !++ Private parameters & variables
   !
   integer,  private :: TIME_STARTDATE(6) = (/ 0, 1, 1, 0, 0, 0 /)
-  real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
+  real(DP), private :: TIME_STARTSUBSEC  = 0.0_DP !< [sub sec]
   integer,  private :: TIME_STARTDAY
   real(DP), private :: TIME_STARTSEC
 
   integer,  private :: TIME_ENDDATE(6)
-  real(DP), private :: TIME_ENDMS
+  real(DP), private :: TIME_ENDSUBSEC
   integer,  private :: TIME_ENDDAY
   real(DP), private :: TIME_ENDSEC
 
@@ -97,7 +97,7 @@ contains
     use scale_time, only: &
        TIME_DTSEC,                 &
        TIME_NOWDATE,               &
-       TIME_NOWMS,                 &
+       TIME_NOWSUBSEC,             &
        TIME_NOWDAY,                &
        TIME_NOWSEC,                &
        TIME_NOWDAYSEC,             &
@@ -227,7 +227,7 @@ contains
     if ( start_date(6) == -999 ) start_date(6) = start_sec
 
     TIME_STARTDATE(:) = start_date(:)
-    TIME_STARTMS      = 0
+    TIME_STARTSUBSEC  = 0
 
 
 
@@ -236,17 +236,17 @@ contains
     call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
                                TIME_STARTSEC,     & ! [OUT]
                                TIME_STARTDATE(:), & ! [IN]
-                               TIME_STARTMS,      & ! [IN]
+                               TIME_STARTSUBSEC,  & ! [IN]
                                TIME_OFFSET_YEAR   ) ! [IN]
 
     call CALENDAR_date2char( startchardate,     & ! [OUT]
                              TIME_STARTDATE(:), & ! [IN]
-                             TIME_STARTMS       ) ! [IN]
+                             TIME_STARTSUBSEC   ) ! [IN]
 
     TIME_STARTDAYSEC  = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
     TIME_NOWDATE(:)   = TIME_STARTDATE(:)
-    TIME_NOWMS        = TIME_STARTMS
+    TIME_NOWSUBSEC    = TIME_STARTSUBSEC
     TIME_NOWDAY       = TIME_STARTDAY
     TIME_NOWSEC       = TIME_STARTSEC
     TIME_NOWDAYSEC    = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
@@ -259,14 +259,14 @@ contains
     call CALENDAR_adjust_daysec( TIME_ENDDAY, TIME_ENDSEC ) ! [INOUT]
 
     call CALENDAR_daysec2date( TIME_ENDDATE(:), & ! [OUT]
-                               TIME_ENDMS,      & ! [OUT]
+                               TIME_ENDSUBSEC,  & ! [OUT]
                                TIME_ENDDAY,     & ! [IN]
                                TIME_ENDSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
 
     call CALENDAR_date2char( endchardate,     & ! [OUT]
                              TIME_ENDDATE(:), & ! [IN]
-                             TIME_ENDMS       ) ! [IN]
+                             TIME_ENDSUBSEC   ) ! [IN]
 
     if( IO_L ) write(IO_FID_LOG,*)
     if( IO_L ) write(IO_FID_LOG,*) '*** Date/time setting ***'
@@ -328,9 +328,9 @@ contains
     use scale_calendar, only: &
        CALENDAR_date2char
     use scale_time, only: &
-       TIME_NOWDATE, &
-       TIME_NOWMS,   &
-       TIME_NOWSTEP, &
+       TIME_NOWDATE,   &
+       TIME_NOWSUBSEC, &
+       TIME_NOWSTEP,   &
        TIME_NSTEP
     implicit none
 
@@ -340,7 +340,7 @@ contains
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
-                             TIME_NOWMS       ) ! [IN]
+                             TIME_NOWSUBSEC   ) ! [IN]
 
     if ( TIME_WALLCLOCK_LIMIT > 0.0_DP ) then
        WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
@@ -365,7 +365,7 @@ contains
     use scale_time, only: &
        TIME_DTSEC,                &
        TIME_NOWDATE,              &
-       TIME_NOWMS,                &
+       TIME_NOWSUBSEC,            &
        TIME_NOWDAY,               &
        TIME_NOWSEC,               &
        TIME_NOWDAYSEC,            &
@@ -400,7 +400,7 @@ contains
     call CALENDAR_adjust_daysec( TIME_NOWDAY, TIME_NOWSEC ) ! [INOUT]
 
     call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
-                               TIME_NOWMS,      & ! [OUT]
+                               TIME_NOWSUBSEC,  & ! [OUT]
                                TIME_NOWDAY,     & ! [IN]
                                TIME_NOWSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]

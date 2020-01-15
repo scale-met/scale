@@ -65,7 +65,7 @@ module scale_file_history_cartesC
   integer  :: imsh, jmsh
 
   integer  :: FILE_HISTORY_CARTESC_STARTDATE(6) !< start time [YYYY MM DD HH MM SS]
-  real(DP) :: FILE_HISTORY_CARTESC_STARTMS      !< subsecond part of start time [millisec]
+  real(DP) :: FILE_HISTORY_CARTESC_STARTSUBSEC  !< subsecond part of start time [sec]
 
   logical  :: FILE_HISTORY_CARTESC_BOUNDARY = .false.
 
@@ -94,7 +94,7 @@ contains
        PRC_HAS_S
     use scale_time, only: &
        TIME_NOWDATE,     &
-       TIME_NOWMS,       &
+       TIME_NOWSUBSEC,   &
        TIME_NOWSTEP,     &
        TIME_DTSEC,       &
        TIME_STARTDAYSEC
@@ -172,7 +172,7 @@ contains
 
 
     FILE_HISTORY_CARTESC_STARTDATE(:) = TIME_NOWDATE
-    FILE_HISTORY_CARTESC_STARTMS      = TIME_NOWMS
+    FILE_HISTORY_CARTESC_STARTSUBSEC  = TIME_NOWSUBSEC
 
     start_daysec = TIME_STARTDAYSEC
     if ( TIME_NOWDATE(1) > 0 ) then
@@ -182,7 +182,7 @@ contains
                                                           ' ', TIME_NOWDATE(4), &
                                                           ':', TIME_NOWDATE(5), &
                                                           ':', TIME_NOWDATE(6)
-       start_daysec = TIME_NOWMS
+       start_daysec = TIME_NOWSUBSEC
     else
        FILE_HISTORY_CARTESC_T_SINCE = ''
     endif
@@ -234,7 +234,7 @@ contains
                              default_zcoord = 'model',                  & ! [IN]
                              myrank = PRC_myrank                        ) ! [IN]
 
-    call FILE_HISTORY_Set_NowDate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
+    call FILE_HISTORY_Set_NowDate( TIME_NOWDATE, TIME_NOWSUBSEC, TIME_NOWSTEP )
 
     call FILE_HISTORY_CARTESC_set_dims
 
@@ -1765,7 +1765,7 @@ contains
     if ( calendar /= "" ) call FILE_HISTORY_Set_Attribute( "global", "calendar", calendar )
     call FILE_get_CFtunits( FILE_HISTORY_CARTESC_STARTDATE(:), tunits )
     call FILE_HISTORY_Set_Attribute( "global", "time_units", tunits )
-    call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESC_STARTMS/) )
+    call FILE_HISTORY_Set_Attribute( "global", "time_start", (/FILE_HISTORY_CARTESC_STARTSUBSEC/) )
 
     if ( PRC_PERIODIC_X ) then
        ainfo(1)%periodic = .true.

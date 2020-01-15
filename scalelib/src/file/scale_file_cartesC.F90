@@ -792,8 +792,8 @@ contains
        PRC_myrank, &
        PRC_abort
     use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS
+       NOWDATE   => TIME_NOWDATE, &
+       NOWSUBSEC => TIME_NOWSUBSEC
     use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
@@ -918,7 +918,7 @@ contains
        if ( present( subsec ) ) then
           subsec_ = subsec
        else
-          subsec_= NOWMS
+          subsec_= NOWSUBSEC
        end if
 
        call FILE_CARTESC_put_globalAttributes( fid,                            & ! [IN]
