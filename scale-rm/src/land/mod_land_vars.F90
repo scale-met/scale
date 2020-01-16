@@ -45,7 +45,7 @@ module mod_land_vars
   !
   !++ Public parameters & variables
   !
-  logical,               public :: LAND_RESTART_OUTPUT                 = .false.         !< Output restart file?
+  logical,                public :: LAND_RESTART_OUTPUT                = .false.         !< Output restart file?
 
   character(len=H_LONG),  public :: LAND_RESTART_IN_BASENAME           = ''              !< Basename of the input  file
   logical,                public :: LAND_RESTART_IN_AGGREGATE                            !< Switch to use aggregate file
@@ -63,32 +63,47 @@ module mod_land_vars
   real(RP), public, allocatable :: LAND_SFC_albedo(:,:,:,:) !< land surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
 
   ! for snow model
-  real(RP), public, allocatable :: SNOW_SFC_TEMP  (:,:)     !< snow surface temperature     [K]
-  real(RP), public, allocatable :: SNOW_SWE       (:,:)     !< snow water equivalent        [kg/m2]
-  real(RP), public, allocatable :: SNOW_Depth     (:,:)     !< snow depth                   [m]
-  real(RP), public, allocatable :: SNOW_Dzero     (:,:)     !< snow depth at melting point  [m]
-  real(RP), public, allocatable :: SNOW_nosnowsec (:,:)     !< sec while no snow            [s]
+  real(RP), public, allocatable :: SNOW_SFC_TEMP (:,:) !< snow surface temperature     [K]
+  real(RP), public, allocatable :: SNOW_SWE      (:,:) !< snow water equivalent        [kg/m2]
+  real(RP), public, allocatable :: SNOW_Depth    (:,:) !< snow depth                   [m]
+  real(RP), public, allocatable :: SNOW_Dzero    (:,:) !< snow depth at melting point  [m]
+  real(RP), public, allocatable :: SNOW_nosnowsec(:,:) !< sec while no snow            [s]
 
   ! tendency variables
-  real(RP), public, allocatable :: LAND_TEMP_t    (:,:,:)   !< tendency of LAND_TEMP
-  real(RP), public, allocatable :: LAND_WATER_t   (:,:,:)   !< tendency of LAND_WATER
+  real(RP), public, allocatable :: LAND_TEMP_t (:,:,:) !< tendency of LAND_TEMP
+  real(RP), public, allocatable :: LAND_WATER_t(:,:,:) !< tendency of LAND_WATER
 
-  ! surface variables for restart
-  real(RP), public, allocatable :: LAND_SFLX_MW   (:,:)     !< land surface w-momentum flux    [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_MU   (:,:)     !< land surface u-momentum flux    [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_MV   (:,:)     !< land surface v-momentum flux    [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_SH   (:,:)     !< land surface sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_LH   (:,:)     !< land surface latent heat flux   [J/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_QTRC (:,:,:)   !< land surface tracer flux        [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_GH   (:,:)     !< land surface heat flux          [J/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_water(:,:)     !< land surface water flux         [kg/m2/s]
-  real(RP), public, allocatable :: LAND_SFLX_ice  (:,:)     !< land surface ice   flux         [kg/m2/s]
+  ! surface flux for land
+  real(RP), public, allocatable :: LAND_SFLX_GH   (:,:)   !< land surface heat flux          [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_water(:,:)   !< land surface water flux         [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_ice  (:,:)   !< land surface ice   flux         [kg/m2/s]
 
-  ! diagnostic variables
-  real(RP), public, allocatable :: LAND_U10       (:,:)     !< land surface velocity u at 10m [m/s]
-  real(RP), public, allocatable :: LAND_V10       (:,:)     !< land surface velocity v at 10m [m/s]
-  real(RP), public, allocatable :: LAND_T2        (:,:)     !< land surface temperature at 2m [K]
-  real(RP), public, allocatable :: LAND_Q2        (:,:)     !< land surface water vapor at 2m [kg/kg]
+  ! surface flux for atmosphere
+  real(RP), public, allocatable :: LAND_SFLX_MW  (:,:)   !< land surface w-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_MU  (:,:)   !< land surface u-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_MV  (:,:)   !< land surface v-momentum flux    [kg/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_SH  (:,:)   !< land surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_LH  (:,:)   !< land surface latent heat flux   [J/m2/s]
+  real(RP), public, allocatable :: LAND_SFLX_QTRC(:,:,:) !< land surface tracer flux        [kg/m2/s]
+  real(RP), public, allocatable :: LAND_U10      (:,:)   !< land surface velocity u at 10m [m/s]
+  real(RP), public, allocatable :: LAND_V10      (:,:)   !< land surface velocity v at 10m [m/s]
+  real(RP), public, allocatable :: LAND_T2       (:,:)   !< land surface temperature at 2m [K]
+  real(RP), public, allocatable :: LAND_Q2       (:,:)   !< land surface water vapor at 2m [kg/kg]
+  real(RP), public, allocatable, target :: LAND_Ustar(:,:) !< friction velocity              [m/s]
+  real(RP), public, allocatable, target :: LAND_Tstar(:,:) !< temperature scale              [K]
+  real(RP), public, allocatable, target :: LAND_Qstar(:,:) !< moisture scale                 [kg/kg]
+  real(RP), public, allocatable, target :: LAND_Wstar(:,:) !< convective velocity scale      [m/s]
+  real(RP), public, allocatable, target :: LAND_RLmo (:,:) !< inversed Obukhov length        [1/m]
+  real(RP), public, pointer :: SOIL_Ustar(:,:)
+  real(RP), public, pointer :: SOIL_Tstar(:,:)
+  real(RP), public, pointer :: SOIL_Qstar(:,:)
+  real(RP), public, pointer :: SOIL_Wstar(:,:)
+  real(RP), public, pointer :: SOIL_RLmo (:,:)
+  real(RP), public, allocatable :: SNOW_Ustar(:,:)
+  real(RP), public, allocatable :: SNOW_Tstar(:,:)
+  real(RP), public, allocatable :: SNOW_Qstar(:,:)
+  real(RP), public, allocatable :: SNOW_Wstar(:,:)
+  real(RP), public, allocatable :: SNOW_RLmo (:,:)
 
   ! recieved atmospheric variables
   real(RP), public, allocatable :: ATMOS_TEMP       (:,:)
@@ -105,6 +120,10 @@ module mod_land_vars
   real(RP), public, allocatable :: ATMOS_cosSZA     (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_rain  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_snow  (:,:)
+
+
+  logical, public :: SNOW_flag
+
 
   real(RP), public, allocatable :: LAND_PROPERTY(:,:,:) !< land surface property
 
@@ -133,28 +152,26 @@ module mod_land_vars
   !
   !++ Private parameters & variables
   !
-  logical,                private :: LAND_VARS_CHECKRANGE      = .false.
+  logical, private :: LAND_VARS_CHECKRANGE      = .false.
 
-  integer,                private, parameter :: VMAX              = 19 !< number of the variables
-  integer,                private, parameter :: I_TEMP            =  1
-  integer,                private, parameter :: I_WATER           =  2
-  integer,                private, parameter :: I_WATERDS         =  3
-  integer,                private, parameter :: I_SFC_TEMP        =  4
-  integer,                private, parameter :: I_SFC_ALB_IR_dir  =  5
-  integer,                private, parameter :: I_SFC_ALB_IR_dif  =  6
-  integer,                private, parameter :: I_SFC_ALB_NIR_dir =  7
-  integer,                private, parameter :: I_SFC_ALB_NIR_dif =  8
-  integer,                private, parameter :: I_SFC_ALB_VIS_dir =  9
-  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 10
-  integer,                private, parameter :: I_SFLX_MW         = 11
-  integer,                private, parameter :: I_SFLX_MU         = 12
-  integer,                private, parameter :: I_SFLX_MV         = 13
-  integer,                private, parameter :: I_SFLX_SH         = 14
-  integer,                private, parameter :: I_SFLX_LH         = 15
-  integer,                private, parameter :: I_SFLX_evap       = 16
-  integer,                private, parameter :: I_SFLX_GH         = 17
-  integer,                private, parameter :: I_SFLX_water      = 18
-  integer,                private, parameter :: I_SFLX_ice        = 19
+  ! index of the prognostic variables
+  integer, private, parameter :: VMAX              = 15 !< number of the variables
+  integer, private, parameter :: I_TEMP            =  1
+  integer, private, parameter :: I_WATER           =  2
+  integer, private, parameter :: I_WATERDS         =  3
+  integer, private, parameter :: I_SFC_TEMP        =  4
+  integer, private, parameter :: I_SFC_ALB_IR_dir  =  5
+  integer, private, parameter :: I_SFC_ALB_IR_dif  =  6
+  integer, private, parameter :: I_SFC_ALB_NIR_dir =  7
+  integer, private, parameter :: I_SFC_ALB_NIR_dif =  8
+  integer, private, parameter :: I_SFC_ALB_VIS_dir =  9
+  integer, private, parameter :: I_SFC_ALB_VIS_dif = 10
+  integer, private, parameter :: I_SNOW_SFC_TEMP   = 11
+  integer, private, parameter :: I_SNOW_SWE        = 12
+  integer, private, parameter :: I_SNOW_Depth      = 13
+  integer, private, parameter :: I_SNOW_Dzero      = 14
+  integer, private, parameter :: I_SNOW_nosnowsec  = 15
+
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -173,34 +190,28 @@ module mod_land_vars
                   'LAND_SFC_ALB_NIR_dif', &
                   'LAND_SFC_ALB_VIS_dir', &
                   'LAND_SFC_ALB_VIS_dif', &
-                  'LAND_SFLX_MW',         &
-                  'LAND_SFLX_MU',         &
-                  'LAND_SFLX_MV',         &
-                  'LAND_SFLX_SH',         &
-                  'LAND_SFLX_LH',         &
-                  'LAND_SFLX_evap',       &
-                  'LAND_SFLX_GH',         &
-                  'LAND_SFLX_water',      &
-                  'LAND_SFLX_ice'         /
-  data VAR_DESC / 'temperature at each soil layer',            &
-                  'moisture at each soil layer',               &
-                  'degree of saturation at each soil layer',   &
-                  'land surface skin temperature',             &
-                  'land surface albedo for IR (direct)',       &
-                  'land surface albedo for IR (diffuse)',      &
-                  'land surface albedo for NIR (direct)',      &
-                  'land surface albedo for NIR (diffuse)',     &
-                  'land surface albedo for VIS (direct)',      &
-                  'land surface albedo for VIS (diffuse)',     &
-                  'land surface w-momentum flux (upward)',     &
-                  'land surface u-momentum flux (upward)',     &
-                  'land surface v-momentum flux (upward)',     &
-                  'land surface sensible heat flux (upward)',  &
-                  'land surface latent heat flux (upward)',    &
-                  'land surface water vapor flux (upward)',    &
-                  'land subsurface heat flux (downward)',      &
-                  'land surface liquid water flux (downward)', &
-                  'land surface ice water flux (downward)'     /
+                  'LAND_SNOW_SFC_TEMP',   &
+                  'LAND_SNOW_SWE',        &
+                  'LAND_SNOW_Depth',      &
+                  'LAND_SNOW_Dzero',      &
+                  'LAND_SNOW_nosnowsec'   /
+
+
+  data VAR_DESC / 'temperature at each soil layer',          &
+                  'moisture at each soil layer',             &
+                  'degree of saturation at each soil layer', &
+                  'land surface skin temperature',           &
+                  'land surface albedo for IR (direct)',     &
+                  'land surface albedo for IR (diffuse)',    &
+                  'land surface albedo for NIR (direct)',    &
+                  'land surface albedo for NIR (diffuse)',   &
+                  'land surface albedo for VIS (direct)',    &
+                  'land surface albedo for VIS (diffuse)',   &
+                  'Snow surface temperature',                &
+                  'Snow water equivalent',                   &
+                  'Snow depth',                              &
+                  'Snow depth at melting point',             &
+                  'Time duration without snow'               /
   data VAR_STDN / 'soil_temperature', &
                   'volume_fraction_of_condensed_water_in_soil', &
                   'volume_fraction_of_condensed_water_in_soil_at_field_capacity', &
@@ -215,30 +226,22 @@ module mod_land_vars
                   '', &
                   '', &
                   '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
                   '' /
-  data VAR_UNIT / 'K',       &
-                  'm3/m3',   &
-                  '1',       &
-                  'K',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'J/m2/s',  &
-                  'J/m2/s',  &
-                  'kg/m2/s', &
-                  'J/m2/s',  &
-                  'kg/m2/s', &
-                  'kg/m2/s'  /
+  data VAR_UNIT / 'K',     &
+                  'm3/m3', &
+                  '1',     &
+                  'K',     &
+                  '1',     &
+                  '1',     &
+                  '1',     &
+                  '1',     &
+                  '1',     &
+                  '1',     &
+                  'K',     &
+                  'kg/m2', &
+                  'm',     &
+                  'm',     &
+                  's'      /
 
   real(RP), private, allocatable :: LAND_PROPERTY_table(:,:)
 
@@ -260,6 +263,8 @@ contains
        LANDUSE_index_PFT, &
        LANDUSE_PFT_nmin, &
        LANDUSE_PFT_nmax
+    use mod_land_admin, only: &
+       SNOW_TYPE
     implicit none
 
     namelist / PARAM_LAND_VARS / &
@@ -282,58 +287,108 @@ contains
     LOG_NEWLINE
     LOG_INFO("LAND_vars_setup",*) 'Setup'
 
-    allocate( LAND_TEMP       (LKMAX,LIA,LJA)               )
-    allocate( LAND_WATER      (LKMAX,LIA,LJA)               )
-    allocate( LAND_SFC_TEMP   (LIA,LJA)                     )
-    allocate( LAND_SFC_albedo (LIA,LJA,N_RAD_DIR,N_RAD_RGN) )
+    select case ( SNOW_TYPE )
+    case ( 'NONE', 'OFF' )
+       SNOW_flag = .false.
+    case default
+       SNOW_flag = .true.
+    end select
+
+    allocate( LAND_TEMP      (LKMAX,LIA,LJA)               )
+    allocate( LAND_WATER     (LKMAX,LIA,LJA)               )
+    allocate( LAND_SFC_TEMP  (LIA,LJA)                     )
+    allocate( LAND_SFC_albedo(LIA,LJA,N_RAD_DIR,N_RAD_RGN) )
     LAND_TEMP      (:,:,:)   = UNDEF
     LAND_WATER     (:,:,:)   = UNDEF
     LAND_SFC_TEMP  (:,:)     = UNDEF
     LAND_SFC_albedo(:,:,:,:) = UNDEF
 
-    allocate( SNOW_SFC_TEMP  (LIA,LJA) )
-    allocate( SNOW_SWE       (LIA,LJA) )
-    allocate( SNOW_Depth     (LIA,LJA) )
-    allocate( SNOW_Dzero     (LIA,LJA) )
-    allocate( SNOW_nosnowsec (LIA,LJA) )
-    SNOW_SFC_TEMP  (:,:)     = UNDEF
-    SNOW_SWE       (:,:)     = UNDEF
-    SNOW_Depth     (:,:)     = UNDEF
-    SNOW_Dzero     (:,:)     = UNDEF
-    SNOW_nosnowsec (:,:)     = UNDEF
+    if ( SNOW_flag ) then
+       allocate( SNOW_SFC_TEMP (LIA,LJA) )
+       allocate( SNOW_SWE      (LIA,LJA) )
+       allocate( SNOW_Depth    (LIA,LJA) )
+       allocate( SNOW_Dzero    (LIA,LJA) )
+       allocate( SNOW_nosnowsec(LIA,LJA) )
+       SNOW_SFC_TEMP (:,:) = UNDEF
+       SNOW_SWE      (:,:) = UNDEF
+       SNOW_Depth    (:,:) = UNDEF
+       SNOW_Dzero    (:,:) = UNDEF
+       SNOW_nosnowsec(:,:) = UNDEF
+    end if
 
-    allocate( LAND_TEMP_t    (LKMAX,LIA,LJA) )
-    allocate( LAND_WATER_t   (LKMAX,LIA,LJA) )
-    LAND_TEMP_t    (:,:,:)   = UNDEF
-    LAND_WATER_t   (:,:,:)   = UNDEF
+    allocate( LAND_TEMP_t (LKMAX,LIA,LJA) )
+    allocate( LAND_WATER_t(LKMAX,LIA,LJA) )
+    LAND_TEMP_t (:,:,:) = UNDEF
+    LAND_WATER_t(:,:,:) = UNDEF
 
-    allocate( LAND_SFLX_MW   (LIA,LJA) )
-    allocate( LAND_SFLX_MU   (LIA,LJA) )
-    allocate( LAND_SFLX_MV   (LIA,LJA) )
-    allocate( LAND_SFLX_SH   (LIA,LJA) )
-    allocate( LAND_SFLX_LH   (LIA,LJA) )
     allocate( LAND_SFLX_GH   (LIA,LJA) )
-    allocate( LAND_SFLX_QTRC (LIA,LJA,QA) )
     allocate( LAND_SFLX_water(LIA,LJA) )
     allocate( LAND_SFLX_ice  (LIA,LJA) )
-    LAND_SFLX_MW   (:,:)     = UNDEF
-    LAND_SFLX_MU   (:,:)     = UNDEF
-    LAND_SFLX_MV   (:,:)     = UNDEF
-    LAND_SFLX_SH   (:,:)     = UNDEF
-    LAND_SFLX_LH   (:,:)     = UNDEF
-    LAND_SFLX_QTRC (:,:,:)   = UNDEF
-    LAND_SFLX_GH   (:,:)     = UNDEF
-    LAND_SFLX_water(:,:)     = UNDEF
-    LAND_SFLX_ice  (:,:)     = UNDEF
+    LAND_SFLX_GH   (:,:) = UNDEF
+    LAND_SFLX_water(:,:) = UNDEF
+    LAND_SFLX_ice  (:,:) = UNDEF
 
-    allocate( LAND_U10       (LIA,LJA) )
-    allocate( LAND_V10       (LIA,LJA) )
-    allocate( LAND_T2        (LIA,LJA) )
-    allocate( LAND_Q2        (LIA,LJA) )
-    LAND_U10       (:,:)     = UNDEF
-    LAND_V10       (:,:)     = UNDEF
-    LAND_T2        (:,:)     = UNDEF
-    LAND_Q2        (:,:)     = UNDEF
+    allocate( LAND_SFLX_MW  (LIA,LJA) )
+    allocate( LAND_SFLX_MU  (LIA,LJA) )
+    allocate( LAND_SFLX_MV  (LIA,LJA) )
+    allocate( LAND_SFLX_SH  (LIA,LJA) )
+    allocate( LAND_SFLX_LH  (LIA,LJA) )
+    allocate( LAND_SFLX_QTRC(LIA,LJA,QA) )
+    allocate( LAND_U10      (LIA,LJA) )
+    allocate( LAND_V10      (LIA,LJA) )
+    allocate( LAND_T2       (LIA,LJA) )
+    allocate( LAND_Q2       (LIA,LJA) )
+    LAND_SFLX_MW  (:,:)   = UNDEF
+    LAND_SFLX_MU  (:,:)   = UNDEF
+    LAND_SFLX_MV  (:,:)   = UNDEF
+    LAND_SFLX_SH  (:,:)   = UNDEF
+    LAND_SFLX_LH  (:,:)   = UNDEF
+    LAND_SFLX_QTRC(:,:,:) = UNDEF
+    LAND_U10      (:,:) = UNDEF
+    LAND_V10      (:,:) = UNDEF
+    LAND_T2       (:,:) = UNDEF
+    LAND_Q2       (:,:) = UNDEF
+
+    allocate( LAND_Ustar(LIA,LJA) )
+    allocate( LAND_Tstar(LIA,LJA) )
+    allocate( LAND_Qstar(LIA,LJA) )
+    allocate( LAND_Wstar(LIA,LJA) )
+    allocate( LAND_RLmo (LIA,LJA) )
+    LAND_Ustar(:,:) = UNDEF
+    LAND_Tstar(:,:) = UNDEF
+    LAND_Qstar(:,:) = UNDEF
+    LAND_Wstar(:,:) = UNDEF
+    LAND_RLmo (:,:) = UNDEF
+    if ( SNOW_flag ) then
+       allocate( SOIL_Ustar(LIA,LJA) )
+       allocate( SOIL_Tstar(LIA,LJA) )
+       allocate( SOIL_Qstar(LIA,LJA) )
+       allocate( SOIL_Wstar(LIA,LJA) )
+       allocate( SOIL_RLmo (LIA,LJA) )
+       SOIL_Ustar(:,:) = UNDEF
+       SOIL_Tstar(:,:) = UNDEF
+       SOIL_Qstar(:,:) = UNDEF
+       SOIL_Wstar(:,:) = UNDEF
+       SOIL_RLmo (:,:) = UNDEF
+    else
+       SOIL_Ustar => LAND_Ustar
+       SOIL_Tstar => LAND_Tstar
+       SOIL_Qstar => LAND_Qstar
+       SOIL_Wstar => LAND_Wstar
+       SOIL_RLmo  => LAND_RLmo
+    end if
+    if ( SNOW_flag ) then
+       allocate( SNOW_Ustar(LIA,LJA) )
+       allocate( SNOW_Tstar(LIA,LJA) )
+       allocate( SNOW_Qstar(LIA,LJA) )
+       allocate( SNOW_Wstar(LIA,LJA) )
+       allocate( SNOW_RLmo (LIA,LJA) )
+       SNOW_Ustar(:,:) = UNDEF
+       SNOW_Tstar(:,:) = UNDEF
+       SNOW_Qstar(:,:) = UNDEF
+       SNOW_Wstar(:,:) = UNDEF
+       SNOW_RLmo (:,:) = UNDEF
+    end if
 
     allocate( ATMOS_TEMP       (LIA,LJA)                     )
     allocate( ATMOS_PRES       (LIA,LJA)                     )
@@ -508,23 +563,18 @@ contains
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  & ! [IN]
                                LAND_SFC_albedo(:,:,I_R_diffuse,I_R_VIS)         ) ! [OUT]
 
-       !call FILE_CARTESC_read( restart_fid, 'SNOW_SFC_TEMP',      'XY',  & ! [OUT]
-       !                        SNOW_SFC_TEMP(:,:)                        ) ! [IN]
-       !call FILE_CARTESC_read( restart_fid, 'SNOW_SWE',           'XY',  & ! [OUT]
-       !                        SNOW_SWE(:,:)                             ) ! [IN]
-       !call FILE_CARTESC_read( restart_fid, 'SNOW_Depth',         'XY',  & ! [OUT]
-       !                        SNOW_Depth(:,:)                           ) ! [IN]
-       !call FILE_CARTESC_read( restart_fid, 'SNOW_Dzero',         'XY',  & ! [OUT]
-       !                        SNOW_Dzero(:,:)                           ) ! [IN]
-       !call FILE_CARTESC_read( restart_fid, 'SNOW_nosnowsec',     'XY'   & ! [OUT]
-       !                        SNOW_nosnowsec(:,:)                       ) ! [IN]
-
-       !!!!! Tentative for snow model !!!!!
-       SNOW_SFC_TEMP    = 273.15_RP
-       SNOW_SWE         = 0.0_RP
-       SNOW_Depth       = 0.0_RP
-       SNOW_Dzero       = 0.0_RP
-       SNOW_nosnowsec   = 0.0_RP
+       if ( SNOW_flag ) then
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SNOW_SFC_TEMP),  'XY', & ! [OUT]
+                                  SNOW_SFC_TEMP(:,:)                             ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SNOW_SWE),       'XY', & ! [OUT]
+                                  SNOW_SWE(:,:)                                  ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SNOW_Depth),     'XY', & ! [OUT]
+                                  SNOW_Depth(:,:)                                ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SNOW_Dzero),     'XY', & ! [OUT]
+                                  SNOW_Dzero(:,:)                                ) ! [IN]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SNOW_nosnowsec), 'XY', & ! [OUT]
+                                  SNOW_nosnowsec(:,:)                            ) ! [IN]
+       end if
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
@@ -573,16 +623,19 @@ contains
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_VIS_dif),                          __FILE__, __LINE__ )
 
-       !call VALCHECK( SNOW_SFC_TEMP (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SFC_TEMP',        &
-       !              __FILE__, __LINE__ )
-       !call VALCHECK( SNOW_SWE      (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_SWE',             &
-       !              __FILE__, __LINE__ )
-       !call VALCHECK( SNOW_Depth    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Depth',           &
-       !              __FILE__, __LINE__ )
-       !call VALCHECK( SNOW_Dzero    (IS:IE,JS:JE),      0.0_RP, 1000.0_RP, 'SNOW_Dzero',           &
-       !              __FILE__, __LINE__ )
-    endif
+       if ( SNOW_flag ) then
+          call VALCHECK( SNOW_SFC_TEMP(LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_SNOW_SFC_TEMP),      __FILE__, __LINE__ )
+          call VALCHECK( SNOW_SWE     (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_SNOW_SWE),           __FILE__, __LINE__ )
+          call VALCHECK( SNOW_Depth   (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_SNOW_Depth),         __FILE__, __LINE__ )
+          call VALCHECK( SNOW_Dzero   (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_SNOW_Dzero),         __FILE__, __LINE__ )
+       endif
 
+    end if
+    
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY', standard_name=VAR_STDN(I_TEMP) )
     call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY', standard_name=VAR_STDN(I_WATER) )
     do j = LJS, LJE
@@ -609,34 +662,84 @@ contains
                           VAR_DESC(I_SFC_ALB_VIS_dir), VAR_UNIT(I_SFC_ALB_VIS_dir), standard_name=VAR_STDN(I_SFC_ALB_VIS_dir) )
     call FILE_HISTORY_in( LAND_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), VAR_NAME(I_SFC_ALB_VIS_dif),                              &
                           VAR_DESC(I_SFC_ALB_VIS_dif), VAR_UNIT(I_SFC_ALB_VIS_dif), standard_name=VAR_STDN(I_SFC_ALB_VIS_dif) )
+    if ( SNOW_flag ) then
+       ! snow model
+       call FILE_HISTORY_in( SNOW_SFC_TEMP (:,:), VAR_NAME(I_SNOW_SFC_TEMP),                                               &
+                             VAR_DESC(I_SNOW_SFC_TEMP),  VAR_UNIT(I_SNOW_SFC_TEMP),  standard_name=VAR_STDN(I_SNOW_SFC_TEMP)  )
+       call FILE_HISTORY_in( SNOW_SWE      (:,:), VAR_NAME(I_SNOW_SWE),                                                    &
+                             VAR_DESC(I_SNOW_SWE),       VAR_UNIT(I_SNOW_SWE),       standard_name=VAR_STDN(I_SNOW_SWE)       )
+       call FILE_HISTORY_in( SNOW_Depth    (:,:), VAR_NAME(I_SNOW_Depth),                                                  &
+                             VAR_DESC(I_SNOW_Depth),     VAR_UNIT(I_SNOW_Depth),     standard_name=VAR_STDN(I_SNOW_Depth)     )
+       call FILE_HISTORY_in( SNOW_Dzero    (:,:), VAR_NAME(I_SNOW_Dzero),                                                  &
+                             VAR_DESC(I_SNOW_Dzero),     VAR_UNIT(I_SNOW_Dzero),     standard_name=VAR_STDN(I_SNOW_Dzero)     )
+       call FILE_HISTORY_in( SNOW_nosnowsec(:,:), VAR_NAME(I_SNOW_nosnowsec),                                                 &
+                             VAR_DESC(I_SNOW_nosnowsec), VAR_UNIT(I_SNOW_nosnowsec), standard_name=VAR_STDN(I_SNOW_nosnowsec) )
+    end if
 
-    call FILE_HISTORY_in( LAND_SFLX_MW   (:,:),                     VAR_NAME(I_SFLX_MW),                                      &
-                          VAR_DESC(I_SFLX_MW),         VAR_UNIT(I_SFLX_MW),         standard_name=VAR_STDN(I_SFLX_MW)         )
-    call FILE_HISTORY_in( LAND_SFLX_MU   (:,:),                     VAR_NAME(I_SFLX_MU),                                      &
-                          VAR_DESC(I_SFLX_MU),         VAR_UNIT(I_SFLX_MU),         standard_name=VAR_STDN(I_SFLX_MU)         )
-    call FILE_HISTORY_in( LAND_SFLX_MV   (:,:),                     VAR_NAME(I_SFLX_MV),                                      &
-                          VAR_DESC(I_SFLX_MV),         VAR_UNIT(I_SFLX_MV),         standard_name=VAR_STDN(I_SFLX_MV)         )
-    call FILE_HISTORY_in( LAND_SFLX_SH   (:,:),                     VAR_NAME(I_SFLX_SH),                                      &
-                          VAR_DESC(I_SFLX_SH),         VAR_UNIT(I_SFLX_SH),         standard_name=VAR_STDN(I_SFLX_SH)         )
-    call FILE_HISTORY_in( LAND_SFLX_LH   (:,:),                     VAR_NAME(I_SFLX_LH),                                      &
-                          VAR_DESC(I_SFLX_LH),         VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
-    if ( I_QV > 0 ) then
-    call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV),                VAR_NAME(I_SFLX_evap),                                    &
-                          VAR_DESC(I_SFLX_evap),       VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
-    endif
-    call FILE_HISTORY_in( LAND_SFLX_GH   (:,:),                     VAR_NAME(I_SFLX_GH),                                      &
-                          VAR_DESC(I_SFLX_GH),         VAR_UNIT(I_SFLX_GH),         standard_name=VAR_STDN(I_SFLX_GH)         )
-    call FILE_HISTORY_in( LAND_SFLX_water(:,:),                     VAR_NAME(I_SFLX_water),                                   &
-                          VAR_DESC(I_SFLX_water),      VAR_UNIT(I_SFLX_water),      standard_name=VAR_STDN(I_SFLX_water)      )
-    call FILE_HISTORY_in( LAND_SFLX_ice  (:,:),                     VAR_NAME(I_SFLX_ice),                                     &
-                          VAR_DESC(I_SFLX_ice),        VAR_UNIT(I_SFLX_ice),        standard_name=VAR_STDN(I_SFLX_ice)        )
+    if ( I_QV > 0 ) &
+    call FILE_HISTORY_in( LAND_SFLX_QTRC (:,:,I_QV), 'LAND_SFLX_evap',           &
+                          'land surface water vapor flux (upward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_GH   (:,:),      'LAND_SFLX_GH',             &
+                          'land subsurface heat flux (downward)',      'J/m2/s'  )
+    call FILE_HISTORY_in( LAND_SFLX_water(:,:),      'LAND_SFLX_water',          &
+                          'land surface liquid water flux (downward)', 'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_ice  (:,:),      'LAND_SFLX_ice',            &
+                          'land surface ice water flux (downward)',    'kg/m2/s' )
 
-    ! snow model
-    call FILE_HISTORY_in( SNOW_SFC_TEMP (:,:), 'SNOW_SFC_TEMP',  'Snow surface temperature',    'K'      )
-    call FILE_HISTORY_in( SNOW_SWE      (:,:), 'SNOW_SWE',       'Snow water equivalent',       'kg/m2'  )
-    call FILE_HISTORY_in( SNOW_Depth    (:,:), 'SNOW_Depth',     'Snow depth',                  'm'      )
-    call FILE_HISTORY_in( SNOW_Dzero    (:,:), 'SNOW_Dzero',     'Snow depth at melting point', 'm'      )
-    call FILE_HISTORY_in( SNOW_nosnowsec(:,:), 'SNOW_nosnowsec', 'Time duration without snow',  's'      )
+    call FILE_HISTORY_in( LAND_SFLX_MW   (:,:), 'LAND_SFLX_MW',                 &
+                          'land surface w-momentum flux (upward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_MU   (:,:), 'LAND_SFLX_MU',                 &
+                          'land surface u-momentum flux (upward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_MV   (:,:), 'LAND_SFLX_MV',                 &
+                          'land surface v-momentum flux (upward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( LAND_SFLX_SH   (:,:), 'LAND_SFLX_SH',                 &
+                          'land surface sensible heat flux (upward)', 'J/m2/s'  )
+    call FILE_HISTORY_in( LAND_SFLX_LH   (:,:), 'LAND_SFLX_LH',                 &
+                          'land surface latent heat flux (upward)',   'J/m2/s'  )
+    call FILE_HISTORY_in( LAND_U10       (:,:),  'LAND_U10',                    &
+                          'land 10m x-wind',                          'm/s'     )
+    call FILE_HISTORY_in( LAND_V10       (:,:),  'LAND_V10',                    &
+                          'land 10m y-wind',                          'm/s'     )
+    call FILE_HISTORY_in( LAND_T2        (:,:),  'LAND_T2',                     &
+                          'land 2m temperature',                      'K'       )
+    call FILE_HISTORY_in( LAND_Q2        (:,:),  'LAND_Q2',                     &
+                          'land 2m specific humidity',                'kg/kg'   )
+
+    call FILE_HISTORy_in( LAND_Ustar     (:,:), 'LAND_Ustar',                   &
+                          'land friction velocity',                   'm/s'     )
+    call FILE_HISTORY_in( LAND_Tstar     (:,:), 'LAND_Tstar',                   &
+                          'land temperature scale',                   'K'       )
+    call FILE_HISTORY_in( LAND_Qstar     (:,:), 'LAND_Qstar',                   &
+                          'land moisture scale',                      'kg/kg'   )
+    call FILE_HISTORY_in( LAND_Wstar     (:,:),  'LAND_Wstar',                  &
+                          'land convective velocity scale',           'm/s'     )
+    call FILE_HISTORY_in( LAND_RLmo      (:,:),  'LAND_RLmo',                   &
+                          'land inversed Obukhov length',             '1/m'     )
+    if ( SNOW_flag ) then
+       ! soil
+       call FILE_HISTORy_in( SOIL_Ustar     (:,:), 'SOIL_Ustar',                   &
+                             'soil friction velocity',                   'm/s'     )
+       call FILE_HISTORY_in( SOIL_Tstar     (:,:), 'SOIL_Tstar',                   &
+                             'soil temperature scale',                   'K'       )
+       call FILE_HISTORY_in( SOIL_Qstar     (:,:), 'SOIL_Qstar',                   &
+                             'soil moisture scale',                      'kg/kg'   )
+       call FILE_HISTORY_in( SOIL_Wstar     (:,:),  'SOIL_Wstar',                  &
+                             'soil convective velocity scale',           'm/s'     )
+       call FILE_HISTORY_in( SOIL_RLmo      (:,:),  'SOIL_RLmo',                   &
+                             'soil inversed Obukhov length',             '1/m'     )
+       ! snow pack
+       call FILE_HISTORy_in( SNOW_Ustar     (:,:), 'SNOW_Ustar',                   &
+                             'snow friction velocity',                   'm/s'     )
+       call FILE_HISTORY_in( SNOW_Tstar     (:,:), 'SNOW_Tstar',                   &
+                             'snow temperature scale',                   'K'       )
+       call FILE_HISTORY_in( SNOW_Qstar     (:,:), 'SNOW_Qstar',                   &
+                             'snow moisture scale',                      'kg/kg'   )
+       call FILE_HISTORY_in( SNOW_Wstar     (:,:),  'SNOW_Wstar',                  &
+                             'snow convective velocity scale',           'm/s'     )
+       call FILE_HISTORY_in( SNOW_RLmo      (:,:),  'SNOW_RLmo',                   &
+                             'snow inversed Obukhov length',             '1/m'     )
+    end if
+
 
     call PROF_rapend  ('LND_History', 1)
 
@@ -700,22 +803,29 @@ contains
                               LAND_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
                               LAND_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
 
-       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
-                              SNOW_SFC_TEMP  (:,:),     'SNOW_SFC_TEMP', & ! (in)
-                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
-                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
-       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
-                              SNOW_SWE       (:,:),     'SNOW_SWE',      &
-                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
-                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
-       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
-                              SNOW_Depth     (:,:),     'SNOW_Depth',    & ! (in)
-                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
-                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
-       call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
-                              SNOW_Dzero     (:,:),     'SNOW_Dzero',    & ! (in)
-                              LAND_GRID_CARTESC_REAL_AREA(:,:),          & ! (in)
-                              LAND_GRID_CARTESC_REAL_TOTAREA             ) ! (in)
+       if ( SNOW_flag ) then
+          call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                 SNOW_SFC_TEMP (:,:), VAR_NAME(I_SNOW_SFC_TEMP),  & ! (in)
+                                 LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                                 LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+          call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                 SNOW_SWE      (:,:), VAR_NAME(I_SNOW_SWE),       & ! (in)
+                                 LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                                 LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+          call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                 SNOW_Depth    (:,:), VAR_NAME(I_SNOW_Depth),     & ! (in)
+                                 LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                                 LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+          call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                 SNOW_Dzero    (:,:), VAR_NAME(I_SNOW_Dzero),     & ! (in)
+                                 LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                                 LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+          call STATISTICS_total( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                 SNOW_nosnowsec(:,:), VAR_NAME(I_SNOW_nosnowsec), & ! (in)
+                                 LAND_GRID_CARTESC_REAL_AREA(:,:),                & ! (in)
+                                 LAND_GRID_CARTESC_REAL_TOTAREA                   ) ! (in)
+       end if
+
     endif
 
     return
@@ -1008,16 +1118,15 @@ contains
                standard_name=VAR_STDN(i)              ) ! [IN]
        end do
 
-       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_SFC_TEMP',  'Snow surface temperature',    &
-       !                           'K',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
-       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_SWE',       'Snow water equivalent',       &
-       !                           'kg/m2',               'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
-       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_Depth',     'Snow depth',                  &
-       !                           'm',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
-       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_Dzero',     'Snow depth at melting point', &
-       !                           'm',                   'XY',   LAND_RESTART_OUT_DTYPE, ?????  )
-       !call FILE_CARTESC_def_var( restart_fid, 'SNOW_nosnowsec', 'Time duration without snow', &
-       !                           's',                 'XY',   LAND_RESTART_OUT_DTYPE,   ?????  )
+       if ( SNOW_flag ) then
+          do i = I_SNOW_SFC_TEMP, I_SNOW_nosnowsec
+             call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
+                  VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+                  'XY', LAND_RESTART_OUT_DTYPE,          & ! [IN]
+                  VAR_ID(i),                             & ! [OUT]
+                  standard_name=VAR_STDN(i)              ) ! [IN]
+          end do
+       end if
 
     endif
 
@@ -1064,16 +1173,18 @@ contains
                                     LAND_SFC_albedo(:,:,I_R_diffuse,I_R_VIS),            & ! [IN]
                                     VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  fill_halo=.true. ) ! [IN]
 
-       !call FILE_CARTESC_write_var( restart_fid, VMAX+1, SNOW_SFC_TEMP(:,:),                    &
-       !                           'SNOW_SFC_TEMP',       'XY',   fill_halo=.true.               )
-       !call FILE_CARTESC_write_var( restart_fid, VMAX+2, SNOW_SWE(:,:),                         &
-       !                           'SNOW_SWE',            'XY',   fill_halo=.true.               )
-       !call FILE_CARTESC_write_var( restart_fid, VMAX+3, SNOW_Depth(:,:),                       &
-       !                           'SNOW_Depth',          'XY',   fill_halo=.true.               )
-       !call FILE_CARTESC_write_var( restart_fid, VMAX+4, SNOW_Dzero(:,:),                       &
-       !                           'SNOW_Dzero',          'XY',   fill_halo=.true.               )
-       !call FILE_CARTESC_write_var( restart_fid, VMAX+5, SNOW_nosnowsec(:,:),                   &
-       !                           'SNOW_nosnowsec',      'XY',   fill_halo=.true.               )
+       if ( SNOW_flag ) then
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SNOW_SFC_TEMP), SNOW_SFC_TEMP(:,:),   &
+                                       VAR_NAME(I_SNOW_SFC_TEMP),  'XY', fill_halo=.true.          )
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SNOW_SWE), SNOW_SWE(:,:),             &
+                                       VAR_NAME(I_SNOW_SWE),       'XY', fill_halo=.true.          )
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SNOW_Depth), SNOW_Depth(:,:),         &
+                                       VAR_NAME(I_SNOW_Depth),     'XY', fill_halo=.true.          )
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SNOW_Dzero), SNOW_Dzero(:,:),         &
+                                       VAR_NAME(I_SNOW_Dzero),     'XY', fill_halo=.true.          )
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SNOW_nosnowsec), SNOW_nosnowsec(:,:), &
+                                       VAR_NAME(I_SNOW_nosnowsec), 'XY', fill_halo=.true.          )
+       end if
 
     endif
 

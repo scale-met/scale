@@ -48,7 +48,6 @@ module mod_land_driver
   !
   !++ Private parameters & variables
   !
-  logical, private :: snow_flag
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -75,8 +74,6 @@ contains
     LOG_NEWLINE
     LOG_INFO("LAND_driver_setup",*) 'Setup'
 
-    snow_flag = .false.
-
     if ( LAND_do ) then
 
        select case ( LAND_DYN_TYPE )
@@ -102,11 +99,10 @@ contains
        select case ( SNOW_TYPE )
        case ( 'NONE', 'OFF' )
        case ( 'KY90' )
-          LOG_INFO("LAND_driver_setup",*) 'SNOW model is enabled'
-          LOG_INFO("LAND_driver_setup",*) 'SNOW model is on experimental stage.'
-          LOG_INFO("LAND_driver_setup",*) 'Use this with your own risk.'
+          LOG_WARN("LAND_driver_setup",*) 'SNOW model is enabled'
+          LOG_WARN("LAND_driver_setup",*) 'SNOW model is on experimental stage.'
+          LOG_WARN("LAND_driver_setup",*) 'Use this with your own risk.'
           call LAND_PHY_SNOW_KY90_setup
-          snow_flag = .true.
        case default
           LOG_ERROR("LAND_driver_setup",*) 'SNOW_TYPE is invalid: ', trim(SNOW_TYPE)
           call PRC_abort
@@ -143,6 +139,8 @@ contains
        CPL_PHY_SFC_skin
     use scale_cpl_phy_sfc_fixed_temp, only: &
        CPL_PHY_SFC_fixed_temp
+    use scale_bulkflux, only: &
+       BULKFLUX_diagnose
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_ch
     use mod_atmos_phy_ch_driver, only: &
@@ -162,31 +160,47 @@ contains
        I_Z0M,             &
        I_Z0H,             &
        I_Z0E,             &
+       SNOW_flag,         &
        LAND_PROPERTY,     &
        LAND_TEMP,         &
        LAND_WATER,        &
        LAND_SFC_TEMP,     &
        LAND_SFC_albedo,   &
-       LAND_TEMP_t,       &
-       LAND_WATER_t,      &
-       LAND_SFLX_MW,      &
-       LAND_SFLX_MU,      &
-       LAND_SFLX_MV,      &
-       LAND_SFLX_SH,      &
-       LAND_SFLX_LH,      &
-       LAND_SFLX_GH,      &
-       LAND_SFLX_QTRC,    &
-       LAND_SFLX_water,   &
-       LAND_SFLX_ice,     &
-       LAND_U10,          &
-       LAND_V10,          &
-       LAND_T2,           &
-       LAND_Q2,           &
        SNOW_SFC_TEMP,     &
        SNOW_SWE,          &
        SNOW_Depth,        &
        SNOW_Dzero,        &
        SNOW_nosnowsec,    &
+       LAND_TEMP_t,       &
+       LAND_WATER_t,      &
+       LAND_SFLX_GH,      &
+       LAND_SFLX_water,   &
+       LAND_SFLX_ice,     &
+       LAND_SFLX_MW,      &
+       LAND_SFLX_MU,      &
+       LAND_SFLX_MV,      &
+       LAND_SFLX_SH,      &
+       LAND_SFLX_LH,      &
+       LAND_SFLX_QTRC,    &
+       LAND_U10,          &
+       LAND_V10,          &
+       LAND_T2,           &
+       LAND_Q2,           &
+       LAND_Ustar,        &
+       LAND_Tstar,        &
+       LAND_Qstar,        &
+       LAND_Wstar,        &
+       LAND_RLmo,         &
+       SOIL_Ustar,        &
+       SOIL_Tstar,        &
+       SOIL_Qstar,        &
+       SOIL_Wstar,        &
+       SOIL_RLmo,         &
+       SNOW_Ustar,        &
+       SNOW_Tstar,        &
+       SNOW_Qstar,        &
+       SNOW_Wstar,        &
+       SNOW_RLmo,         &
        ATMOS_TEMP,        &
        ATMOS_PRES,        &
        ATMOS_U,           &
@@ -223,7 +237,7 @@ contains
     real(RP) :: SNOW_ATMOS_SFLX_SH  (LIA,LJA)
     real(RP) :: SNOW_ATMOS_SFLX_LH  (LIA,LJA)
     real(RP) :: SNOW_ATMOS_SFLX_GH  (LIA,LJA)
-    !real(RP) :: SNOW_ATMOS_SFLX_evap(LIA,LJA)
+    real(RP) :: SNOW_ATMOS_SFLX_QV  (LIA,LJA)
     real(RP) :: SNOW_LAND_SFLX_GH   (LIA,LJA)
     real(RP) :: SNOW_LAND_SFLX_water(LIA,LJA)
     real(RP) :: SNOW_LAND_SFLX_ice  (LIA,LJA)
@@ -287,7 +301,7 @@ contains
     end do
     end do
 
-    if ( snow_flag ) then
+    if ( SNOW_flag ) then
        !------------------------------------------------------------------------
        !> snow area
 
@@ -325,7 +339,8 @@ contains
                                    SNOW_Depth(:,:), SNOW_Dzero(:,:),                 & ! [INOUT]
                                    SNOW_nosnowsec(:,:),                              & ! [INOUT]
                                    SNOW_albedo(:,:,:),                               & ! [OUT]
-                                   SNOW_ATMOS_SFLX_SH(:,:), SNOW_ATMOS_SFLX_LH(:,:), & ! [OUT]
+                                   SNOW_ATMOS_SFLX_SH(:,:),                          & ! [OUT]
+                                   SNOW_ATMOS_SFLX_LH(:,:), SNOW_ATMOS_SFLX_QV(:,:), & ! [OUT]
                                    SNOW_ATMOS_SFLX_GH(:,:), SNOW_LAND_SFLX_GH(:,:),  & ! [OUT]
                                    SNOW_LAND_SFLX_water(:,:),                        & ! [OUT]
                                    SNOW_frac           (:,:)                         ) ! [OUT]
@@ -340,12 +355,6 @@ contains
        end select
 
 !OCL XFILL
-       !!$omp parallel do
-       !do j = LJS, LJE
-       !do i = LIS, LIE
-       !   SNOW_ATMOS_SFLX_evap (i,j) = - SNOW_ATMOS_SFLX_LH(i,j) / LHV(i,j)
-       !end do
-       !end do
        !call monitor_snow_water(  SNOW_Depth          (:,:),   & ! [IN]
        !                          SNOW_Dzero          (:,:),   & ! [IN]
        !                          MONIT_WCONT1        (:,:)    ) ! [OUT]
@@ -382,25 +391,28 @@ contains
                                  SNOW_ATMOS_SFLX_MW(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MU(:,:),                                       & ! [OUT]
                                  SNOW_ATMOS_SFLX_MV(:,:),                                       & ! [OUT]
+                                 SNOW_Ustar(:,:), SNOW_Tstar(:,:), SNOW_Qstar(:,:),             & ! [OUT]
+                                 SNOW_Wstar(:,:),                                               & ! [OUT]
+                                 SNOW_RLmo(:,:),                                                & ! [OUT]
                                  SNOW_U10(:,:), SNOW_V10(:,:),                                  & ! [OUT]
                                  SNOW_T2(:,:), SNOW_Q2(:,:)                                     ) ! [OUT]
 
-       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '1',      dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '1',      dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_SH  (:,:),      'SNOW_ATMOS_SFLX_SH',   'Snow surface sensible heat flux',          'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_LH  (:,:),      'SNOW_ATMOS_SFLX_LH',   'Snow surface latent heat flux',            'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_GH  (:,:),      'SNOW_ATMOS_SFLX_GH',   'Snowpack received heat flux',              'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:),      'SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'SNOW_LAND_SFLX_water', 'land surface liquid water flux under snow', 'kg/m2/s',dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'SNOW_LAND_SFLX_ice',   'land surface ice water flux under snow',    'kg/m2/s',dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_frac           (:,:),      'SNOW_frac',            'Snow fraction on land subgrid',            '1',      dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MW  (:,:),      'SNOW_ATMOS_SFLX_MW',   'Snow surface w-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MU  (:,:),      'SNOW_ATMOS_SFLX_MU',   'Snow surface u-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MV  (:,:),      'SNOW_ATMOS_SFLX_MV',   'Snow surface v-momentum flux',             'J/m2/s', dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_U10            (:,:),      'SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_V10            (:,:),      'SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s',    dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_T2             (:,:),      'SNOW_T2',              'Air temperature at 2m on snow surface',    'K',      dim_type='XY' )
-       call FILE_HISTORY_in( SNOW_Q2             (:,:),      'SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg',  dim_type='XY' )
+       call FILE_HISTORY_in( SNOW_frac           (:,:),      'LAND_SNOW_frac',            'Snow fraction on land subgrid',            '1'       )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_SW), 'LAND_SNOW_ALB_SW',          'Snow surface albedo (short wave)',         '1'       )
+       call FILE_HISTORY_in( SNOW_albedo         (:,:,I_LW), 'LAND_SNOW_ALB_LW',          'Snow surface albedo (long wave)',          '1'       )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_SH  (:,:),      'LAND_SNOW_SFLX_SH',         'Snow surface sensible heat flux',          'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_LH  (:,:),      'LAND_SNOW_SFLX_LH',         'Snow surface latent heat flux',            'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_GH  (:,:),      'LAND_SNOW_SFLX_GH',         'Snowpack received heat flux',              'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MW  (:,:),      'LAND_SNOW_SFLX_MW',         'Snow surface w-momentum flux',             'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MU  (:,:),      'LAND_SNOW_SFLX_MU',         'Snow surface u-momentum flux',             'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_ATMOS_SFLX_MV  (:,:),      'LAND_SNOW_SFLX_MV',         'Snow surface v-momentum flux',             'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_U10            (:,:),      'LAND_SNOW_U10',             'Wind velocity u at 10 m on snow surface',  'm/s'     )
+       call FILE_HISTORY_in( SNOW_V10            (:,:),      'LAND_SNOW_V10',             'Wind velocity v at 10 m on snow surface',  'm/s'     )
+       call FILE_HISTORY_in( SNOW_T2             (:,:),      'LAND_SNOW_T2',              'Air temperature at 2m on snow surface',    'K'       )
+       call FILE_HISTORY_in( SNOW_Q2             (:,:),      'LAND_SNOW_Q2',              'Specific humidity at 2m on snow surface',  'kg/kg'   )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_GH   (:,:),      'LAND_SNOW_LAND_SFLX_GH',    'land surface ground heat flux under snow', 'J/m2/s'  )
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'LAND_SNOW_LAND_SFLX_water', 'land surface liquid water flux under snow', 'kg/m2/s')
+       call FILE_HISTORY_in( SNOW_LAND_SFLX_water(:,:),      'LAND_SNOW_LAND_SFLX_ice',   'land surface ice water flux under snow',    'kg/m2/s')
     endif
 
 
@@ -458,6 +470,9 @@ contains
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                               LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]
+                              SOIL_Ustar(:,:), SOIL_Tstar(:,:), SOIL_Qstar(:,:),       & ! [OUT]
+                              SOIL_Wstar(:,:),                                         & ! [OUT]
+                              SOIL_RLmo(:,:),                                          & ! [OUT]
                               LAND_U10(:,:), LAND_V10(:,:), LAND_T2(:,:), LAND_Q2(:,:) ) ! [OUT]
 
     case ( 'FIXED-TEMP' )
@@ -497,6 +512,9 @@ contains
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), SFLX_QV(:,:), SFLX_GH(:,:),           & ! [OUT]
+                                    SOIL_Ustar(:,:), SOIL_Tstar(:,:), SOIL_Qstar(:,:),       & ! [OUT]
+                                    SOIL_Wstar(:,:),                                         & ! [OUT]
+                                    SOIL_RLmo(:,:),                                          & ! [OUT]
                                     LAND_U10(:,:), LAND_V10(:,:),                            & ! [OUT]
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
 
@@ -529,7 +547,17 @@ contains
        enddo
     endif
 
-    if ( snow_flag ) then
+    if ( SNOW_flag ) then
+
+       call FILE_HISTORY_in( LAND_SFLX_MW(:,:), 'SOIL_SFLX_MW',  'soil surface w-momentum flux (upward)',    'kg/m2/s' )
+       call FILE_HISTORY_in( LAND_SFLX_MU(:,:), 'SOIL_SFLX_MU',  'soil surface u-momentum flux (upward)',    'kg/m2/s' )
+       call FILE_HISTORY_in( LAND_SFLX_MV(:,:), 'SOIL_SFLX_MV',  'soil surface v-momentum flux (upward)',    'kg/m2/s' )
+       call FILE_HISTORY_in( LAND_SFLX_SH(:,:), 'SOIL_SFLX_SH',  'soil surface sensible heat flux (upward)', 'J/m2/s'  )
+       call FILE_HISTORY_in( LAND_SFLX_LH(:,:), 'SOIL_SFLX_LH',  'soil surface latent heat flux (upward)',   'J/m2/s'  )
+       call FILE_HISTORY_in( LAND_U10    (:,:), 'LAND_SOIL_U10', 'Wind velocity u at 10 m on soil surface',  'm/s'     )
+       call FILE_HISTORY_in( LAND_V10    (:,:), 'LAND_SOIL_V10', 'Wind velocity v at 10 m on soil surface',  'm/s'     )
+       call FILE_HISTORY_in( LAND_T2     (:,:), 'LAND_SOIL_T2',  'Air temperature at 2m on soil surface',    'K'       )
+       call FILE_HISTORY_in( LAND_Q2     (:,:), 'LAND_SOIL_Q2',  'Specific humidity at 2m on soil surface',  'kg/kg'   )
 
        ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !OCL XFILL
@@ -556,22 +584,38 @@ contains
           LAND_SFLX_ice  (i,j) = (        SNOW_frac(i,j) ) * SNOW_LAND_SFLX_ice  (i,j) &
                                + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_SFLX_ice  (i,j)
           ! flux to the atmosphere
-          LAND_SFLX_SH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_SH  (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_SH  (i,j)
-          LAND_SFLX_LH   (i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_LH  (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_LH  (i,j)
+          LAND_SFLX_MW(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_MW(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_MW(i,j)
+          LAND_SFLX_MU(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_MU(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_MU(i,j)
+          LAND_SFLX_MV(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_MV(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_MV(i,j)
+          LAND_SFLX_SH(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_SH(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_SH(i,j)
+          LAND_SFLX_LH(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_LH(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *       LAND_SFLX_LH(i,j)
+               SFLX_QV(i,j) = (        SNOW_frac(i,j) ) * SNOW_ATMOS_SFLX_QV(i,j) &
+                            + ( 1.0_RP-SNOW_frac(i,j) ) *            SFLX_QV(i,j)
 
           ! diagnostics
-          LAND_U10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_U10       (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_U10       (i,j)
-          LAND_V10       (i,j) = (        SNOW_frac(i,j) ) *      SNOW_V10       (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_V10       (i,j)
-          LAND_T2        (i,j) = (        SNOW_frac(i,j) ) *      SNOW_T2        (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_T2        (i,j)
-          LAND_Q2        (i,j) = (        SNOW_frac(i,j) ) *      SNOW_Q2        (i,j) &
-                               + ( 1.0_RP-SNOW_frac(i,j) ) *      LAND_Q2        (i,j)
+          LAND_U10(i,j) = (        SNOW_frac(i,j) ) * SNOW_U10(i,j) &
+                        + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_U10(i,j)
+          LAND_V10(i,j) = (        SNOW_frac(i,j) ) * SNOW_V10(i,j) &
+                        + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_V10(i,j)
+          LAND_T2 (i,j) = (        SNOW_frac(i,j) ) * SNOW_T2 (i,j) &
+                        + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_T2 (i,j)
+          LAND_Q2 (i,j) = (        SNOW_frac(i,j) ) * SNOW_Q2 (i,j) &
+                        + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_Q2 (i,j)
+
        enddo
        enddo
+
+       call BULKFLUX_diagnose( LIA, LIS, LIE, LJA, LJS, LJE, &
+                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [IN]
+                               LAND_SFLX_SH(:,:), SFLX_QV(:,:),                         & ! [IN]
+                               ATMOS_SFC_DENS(:,:), LAND_SFC_TEMP(:,:), ATMOS_PBL(:,:), & ! [IN]
+                               LAND_Ustar(:,:), LAND_Tstar(:,:), LAND_Qstar(:,:),       & ! [OUT]
+                               LAND_Wstar(:,:), LAND_RLmo(:,:)                          ) ! [OUT]
 
     end if
 
@@ -579,7 +623,7 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
-          LAND_SFLX_QTRC(i,j,I_QV) = LAND_SFLX_LH(i,j) / LHV(i,j)
+          LAND_SFLX_QTRC(i,j,I_QV) = SFLX_QV(i,j)
        enddo
        enddo
     endif

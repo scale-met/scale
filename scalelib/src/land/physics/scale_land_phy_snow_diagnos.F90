@@ -51,10 +51,14 @@ contains
        QVEF,                &
        Z0M, Z0H, Z0E,       &
        ZMFLX, XMFLX, YMFLX, &
+       Ustar, Tstar, Qstar, &
+       Wstar,               &
+       RLmo,                &
        U10, V10,            &
        T2, Q2               )
     use scale_const, only: &
       EPS   => CONST_EPS,   &
+      UNDEF => CONST_UNDEF, &
       PRE00 => CONST_PRE00, &
       Rdry  => CONST_Rdry,  &
       CPdry => CONST_CPdry, &
@@ -92,6 +96,11 @@ contains
     real(RP), intent(out) :: ZMFLX(LIA,LJA) ! z-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: XMFLX(LIA,LJA) ! x-momentum flux at the surface [kg/m/s2]
     real(RP), intent(out) :: YMFLX(LIA,LJA) ! y-momentum flux at the surface [kg/m/s2]
+    real(RP), intent(out) :: Ustar(LIA,LJA) ! friction velocity         [m/s]
+    real(RP), intent(out) :: Tstar(LIA,LJA) ! temperature scale         [K]
+    real(RP), intent(out) :: Qstar(LIA,LJA) ! moisture scale            [kg/kg]
+    real(RP), intent(out) :: Wstar(LIA,LJA) ! convective velocity scale [m/s]
+    real(RP), intent(out) :: RLmo (LIA,LJA) ! inversed Obukhov length   [1/m]
     real(RP), intent(out) :: U10  (LIA,LJA) ! velocity u at 10m [m/s]
     real(RP), intent(out) :: V10  (LIA,LJA) ! velocity v at 10m [m/s]
     real(RP), intent(out) :: T2   (LIA,LJA) ! temperature at 2m [K]
@@ -99,10 +108,6 @@ contains
 
 
     ! works
-    real(RP) :: Ustar  ! friction velocity [m/s]
-    real(RP) :: Tstar  ! friction potential temperature [K]
-    real(RP) :: Qstar  ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Wstar  ! free convection velocity scale [m/s]
     real(RP) :: Uabs   ! modified absolute velocity [m/s]
     real(RP) :: Ra     ! Aerodynamic resistance (=1/Ce) [1/s]
 
@@ -142,34 +147,35 @@ contains
         Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
         call BULKFLUX( &
-            Ustar,     & ! [OUT]
-            Tstar,     & ! [OUT]
-            Qstar,     & ! [OUT]
-            Wstar,     & ! [OUT]
-            Ra,        & ! [OUT]
-            FracU10,   & ! [OUT]
-            FracT2,    & ! [OUT]
-            FracQ2,    & ! [OUT]
-            TMPA(i,j), & ! [IN]
-            LST1(i,j), & ! [IN]
-            PRSA(i,j), & ! [IN]
-            PRSS(i,j), & ! [IN]
-            QVA (i,j), & ! [IN]
-            QVS,       & ! [IN]
-            Uabs,      & ! [IN]
-            Z1  (i,j), & ! [IN]
-            PBL (i,j), & ! [IN]
-            Z0M (i,j), & ! [IN]
-            Z0H (i,j), & ! [IN]
-            Z0E (i,j)  ) ! [IN]
+            Ustar(i,j), & ! [OUT]
+            Tstar(i,j), & ! [OUT]
+            Qstar(i,j), & ! [OUT]
+            Wstar(i,j), & ! [OUT]
+            RLmo(i,j),  & ! [OUT]
+            Ra,         & ! [OUT]
+            FracU10,    & ! [OUT]
+            FracT2,     & ! [OUT]
+            FracQ2,     & ! [OUT]
+            TMPA(i,j),  & ! [IN]
+            LST1(i,j),  & ! [IN]
+            PRSA(i,j),  & ! [IN]
+            PRSS(i,j),  & ! [IN]
+            QVA (i,j),  & ! [IN]
+            QVS,        & ! [IN]
+            Uabs,       & ! [IN]
+            Z1  (i,j),  & ! [IN]
+            PBL (i,j),  & ! [IN]
+            Z0M (i,j),  & ! [IN]
+            Z0H (i,j),  & ! [IN]
+            Z0E (i,j)   ) ! [IN]
 
         if ( Uabs < EPS ) then
            ZMFLX(i,j) = 0.0_RP
            XMFLX(i,j) = 0.0_RP
            YMFLX(i,j) = 0.0_RP
         else
-           MFLUX = - RHOS(i,j) * Ustar**2
-           ZMFLX(i,j) = MFLUX * w / Uabs
+           MFLUX = - RHOS(i,j) * Ustar(i,j)**2
+           ZMFLX(i,j) = MFLUX * WA(i,j) / Uabs
            XMFLX(i,j) = MFLUX * UA(i,j) / Uabs
            YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
         end if
@@ -185,13 +191,18 @@ contains
       else
 
         ! not calculate surface flux
-        ZMFLX(i,j) = 0.0_RP
-        XMFLX(i,j) = 0.0_RP
-        YMFLX(i,j) = 0.0_RP
-        U10  (i,j) = 0.0_RP
-        V10  (i,j) = 0.0_RP
-        T2   (i,j) = 0.0_RP
-        Q2   (i,j) = 0.0_RP
+        ZMFLX(i,j) = UNDEF
+        XMFLX(i,j) = UNDEF
+        YMFLX(i,j) = UNDEF
+        Ustar(i,j) = UNDEF
+        Tstar(i,j) = UNDEF
+        Qstar(i,j) = UNDEF
+        Wstar(i,j) = UNDEF
+        RLmo (i,j) = UNDEF
+        U10  (i,j) = UNDEF
+        V10  (i,j) = UNDEF
+        T2   (i,j) = UNDEF
+        Q2   (i,j) = UNDEF
 
       end if
 

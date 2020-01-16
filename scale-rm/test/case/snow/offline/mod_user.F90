@@ -117,6 +117,8 @@ contains
     endif
     LOG_NML(PARAM_USER)
 
+    if ( .not. USER_do ) return ! for init process
+
     LOG_NEWLINE
 
     ! atmosphric model set to off

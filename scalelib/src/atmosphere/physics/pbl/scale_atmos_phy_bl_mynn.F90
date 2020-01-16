@@ -267,7 +267,7 @@ contains
        PRES, EXNER, N2,                    &
        QDRY, QV, Qw, POTL, POTV,           &
        SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
-       l_mo,                               &
+       us, RLmo,                           &
        CZ, FZ, dt_DP,                      &
        RHOU_t, RHOV_t, RHOT_t, RPROG_t,    &
        Nu, Nu_cg, Kh, Kh_cg                )
@@ -308,7 +308,8 @@ contains
     real(RP), intent(in) :: SFLX_MV(   IA,JA) !> surface flux of meridional wind
     real(RP), intent(in) :: SFLX_SH(   IA,JA) !> surface sensible heat flux
     real(RP), intent(in) :: SFLX_QV(   IA,JA) !> surface sensible QV flux
-    real(RP), intent(in) :: l_mo   (   IA,JA) !> Monin-Obukhov length
+    real(RP), intent(in) :: us     (   IA,JA) !> friction velocity
+    real(RP), intent(in) :: RLmo   (   IA,JA) !> inverse of Monin-Obukhov length
 
     real(RP), intent(in)  :: CZ(  KA,IA,JA)
     real(RP), intent(in)  :: FZ(0:KA,IA,JA)
@@ -390,10 +391,9 @@ contains
     real(RP) :: dummy(KA)
 
     real(RP) :: sf_t
-    real(RP) :: us, us3
+    real(RP) :: us3
     real(RP) :: zeta
     real(RP) :: phi_m, phi_h
-    real(RP) :: rl_mo
 
     real(RP) :: FDZ(KA)
     real(RP) :: CDZ(KA)
@@ -432,13 +432,13 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RPROG_t,Nu,Nu_cg,Kh,Kh_cg, &
-    !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,l_mo, &
+    !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,RLmo, &
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
     !$omp private(N2_new,sm25,smp,sh25,shpgh,Nu_f,Kh_f,q,q2_2,ac,SFLX_PT,SFLX_PTV,RHONu,RHONuc,RHOKh,RHOKhc, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,wtl,wqw, &
-    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,rl_mo,zeta,phi_m,phi_h,us,us3,CDZ,FDZ,f2h,z1, &
+    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,f2h,z1, &
     !$omp         dummy, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,tltv25,qwtv25,prod_t1,prod_q1,prod_c1, &
     !$omp         sw,tmp, &
@@ -497,7 +497,7 @@ contains
           call get_length( &
                KA, KS, KE_PBL, &
                POTV(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PTV, l_mo(i,j),           & ! (in)
+               SFLX_PTV, RLmo(i,j),           & ! (in)
                FZ(:,i,j),                     & ! (in)
                l(:,i,j)                       ) ! (out)
 
@@ -541,11 +541,8 @@ contains
                                      betat(:), betaq(:)         ) ! (out)
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PTV / POTV(KS,i,j) ! u_*^3
-             us = max(us3, 0.0_RP)**(1.0_RP/3.0_RP)
-             !us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) )
-             rl_mo = 1.0_RP / sign( max(abs(l_mo(i,j)), EPS), l_mo(i,j) )
-             zeta = z1 * rl_mo
+             us3 = us(i,j)**3
+             zeta = z1 * RLmo(i,j)
 
 !!$             ! Businger et al. (1971)
 !!$             if ( zeta >= 0 ) then
@@ -580,11 +577,11 @@ contains
 
              if ( ATMOS_PHY_BL_MYNN_similarity ) then
                 ! TSQ
-                prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
+                prod_t1 = 1.0_RP / us(i,j) * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
                 ! QSQ
-                prod_q1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
+                prod_q1 = 1.0_RP / us(i,j) * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
                 ! COV
-                prod_c1 = 1.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
+                prod_c1 = 1.0_RP / us(i,j) * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
              end if
 
              do k = KS, KE_PBL
@@ -631,7 +628,7 @@ contains
           call get_length( &
                KA, KS, KE_PBL, &
                POTV(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PTV, l_mo(i,j),           & ! (in)
+               SFLX_PTV, RLmo(i,j),           & ! (in)
                FZ(:,i,j),                     & ! (in)
                l(:,i,j)                       ) ! (out)
 
@@ -695,8 +692,8 @@ contains
           end do
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             Nu(KS,i,j) = KARMAN * CDZ(KS) * us / phi_m
-             Kh(KS,i,j) = KARMAN * CDZ(KS) * us / phi_h
+             Nu(KS,i,j) = KARMAN * CDZ(KS) * us(i,j) / phi_m
+             Kh(KS,i,j) = KARMAN * CDZ(KS) * us(i,j) / phi_h
              Nu_cg(KS,i,j) = 0.0_RP
              Kh_cg(KS,i,j) = 0.0_RP
           end if
@@ -1256,7 +1253,7 @@ contains
   subroutine get_length( &
        KA, KS, KE_PBL, &
        PT0, q, n2,     &
-       SFLX_PTV, l_mo, &
+       SFLX_PTV, RLmo, &
        FZ,             &
        l               )
     use scale_const, only: &
@@ -1270,7 +1267,7 @@ contains
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
     real(RP), intent(in) :: SFLX_PTV  !> surface virtual temperature flux
-    real(RP), intent(in) :: l_mo     !> Monin-Obukhov length
+    real(RP), intent(in) :: RLmo      !> inverse of Monin-Obukhov length
     real(RP), intent(in) :: FZ(0:KA)
 
     real(RP), intent(out) :: l(KA)
@@ -1278,7 +1275,6 @@ contains
     real(RP) :: ls     !> L_S
     real(RP) :: lt     !> L_T
     real(RP) :: lb     !> L_B
-    real(RP) :: rlm    !> 1/L_M
     real(RP) :: rlt    !> 1/L_T
 
     real(RP) :: qc     !> q_c
@@ -1307,13 +1303,11 @@ contains
                   ATMOS_PHY_BL_MYNN_Lt_MAX )
     rlt = 1.0_RP / lt
 
-    rlm = 1.0_RP / sign( max(abs(l_mo),EPS), l_mo )
-
     qc = ( GRAV / PT0 * max(SFLX_PTV,0.0_RP) * lt )**OneOverThree
 
     do k = KS, KE_PBL
        z = ( FZ(k)+FZ(k-1) )*0.5_RP - FZ(KS-1)
-       zeta = z * rlm
+       zeta = z * RLmo
 
        ! LS
        sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
@@ -1324,7 +1318,7 @@ contains
        ! LB
        sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
        rn2sr = 1.0_RP / ( sqrt(n2(k)*sw) + 1.0_RP-sw)
-       lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k) * rn2sr * sw & ! qc=0 when l_mo > 0
+       lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
            +  1.E10_RP * (1.0_RP-sw)
 
        ! L

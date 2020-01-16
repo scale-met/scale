@@ -113,10 +113,7 @@ contains
   !> calculation tendency
   subroutine ATMOS_PHY_SF_driver_calc_tendency( update_flag )
     use scale_const, only: &
-       EPS    => CONST_EPS,    &
-       GRAV   => CONST_GRAV,   &
-       KARMAN => CONST_KARMAN, &
-       CPdry  => CONST_CPdry
+       UNDEF   => CONST_UNDEF
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -140,6 +137,8 @@ contains
        ATMOS_PHY_SF_bulk_flux
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_flux
+    use scale_bulkflux, only: &
+       BULKFLUX_diagnose
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE
     use mod_atmos_vars, only: &
@@ -185,11 +184,15 @@ contains
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_GH   => ATMOS_PHY_SF_SFLX_GH,   &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       Ustar     => ATMOS_PHY_SF_Ustar,     &
+       Tstar     => ATMOS_PHY_SF_Tstar,     &
+       Qstar     => ATMOS_PHY_SF_Qstar,     &
+       Wstar     => ATMOS_PHY_SF_Wstar,     &
+       RLmo      => ATMOS_PHY_SF_RLmo,      &
        U10       => ATMOS_PHY_SF_U10,       &
        V10       => ATMOS_PHY_SF_V10,       &
        T2        => ATMOS_PHY_SF_T2,        &
-       Q2        => ATMOS_PHY_SF_Q2,        &
-       l_mo      => ATMOS_PHY_SF_l_mo
+       Q2        => ATMOS_PHY_SF_Q2
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -204,7 +207,6 @@ contains
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
-    real(RP) :: us, SFLX_PT
     real(RP) :: work
 
     integer  :: i, j, iq
@@ -219,7 +221,31 @@ contains
                              Z1(:,:),                             & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
-       if ( .NOT. CPL_sw ) then
+       if ( CPL_sw ) then
+
+          if ( ATMOS_HYDROMETEOR_dry ) then
+             !$omp parallel do
+             do j = JS, JE
+             do i = IS, IE
+                SFLX_QV(i,j) = 0.0_RP
+             end do
+             end do
+          else
+             !$omp parallel do
+             do j = JS, JE
+             do i = IS, IE
+                SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV)
+             end do
+             end do
+          end if
+
+          call BULKFLUX_diagnose( IA, IS, IE, JA, JS, JE, &
+                                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
+                                  SFLX_SH(:,:), SFLX_QV(:,:),                & ! [IN]
+                                  SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
+                                  Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
+                                  Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
+       else
 
           !$omp parallel do
           do j = JS, JE
@@ -245,6 +271,9 @@ contains
                                           PBL_Zi(:,:), Z1(:,:),                        & ! [IN]
                                           SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),    & ! [OUT]
                                           SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),    & ! [OUT]
+                                          Ustar(:,:), Tstar(:,:), Qstar(:,:),          & ! [OUT]
+                                          Wstar(:,:),                                  & ! [OUT]
+                                          RLmo(:,:),                                   & ! [OUT]
                                           U10(:,:), V10(:,:), T2(:,:), Q2(:,:)         ) ! [OUT]
 
           case ( 'CONST' )
@@ -255,6 +284,10 @@ contains
                                            SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
                                            SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
                                            U10(:,:), V10(:,:)                                 ) ! [OUT]
+             Ustar(:,:) = UNDEF
+             Tstar(:,:) = UNDEF
+             Qstar(:,:) = UNDEF
+             RLmo (:,:) = UNDEF
              T2(:,:) = ATM_TEMP(:,:)
              Q2(:,:) = ATM_QV(:,:)
 
@@ -265,19 +298,6 @@ contains
           endif
 
        endif
-
-       ! temtative
-       !$omp parallel do private(us,sflx_pt)
-       do j = JS, JE
-       do i = IS, IE
-          us = sqrt( sqrt( SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / DENS(KS,i,j) ) ! friction velocity
-
-          SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) ) * POTT(KS,i,j) / TEMP(KS,i,j)
-          SFLX_PT = sign( max(abs(SFLX_PT), EPS), SFLX_PT )
-
-          l_mo(i,j) = - us**3 * POTT(KS,i,j) / ( KARMAN * GRAV * SFLX_PT )
-       enddo
-       enddo
 
        call history_output
 
@@ -414,6 +434,11 @@ contains
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       Ustar      => ATMOS_PHY_SF_Ustar,      &
+       Tstar      => ATMOS_PHY_SF_Tstar,      &
+       Qstar      => ATMOS_PHY_SF_Qstar,      &
+       Wstar      => ATMOS_PHY_SF_Wstar,      &
+       RLmo       => ATMOS_PHY_SF_RLmo,       &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
@@ -445,37 +470,42 @@ contains
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )
-    call FILE_HISTORY_in( SFC_TEMP  (:,:),                     'SFC_TEMP',        'surface skin temperature (merged)',    'K'       )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_IR ), 'SFC_ALB_IR_dir' , 'surface albedo (IR; direct; merged)',  '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 'SFC_ALB_IR_dif' , 'surface albedo (IR; diffuse; merged)',  '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_NIR), 'SFC_ALB_NIR_dir', 'surface albedo (NIR; direct; merged)',  '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 'SFC_ALB_NIR_dif', 'surface albedo (NIR; diffuse; merged)', '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_VIS), 'SFC_ALB_VIS_dir', 'surface albedo (VIS; direct; merged)',  '1'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 'SFC_ALB_VIS_dif', 'surface albedo (VIS; diffuse; merged)', '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_TEMP  (:,:),                     'SFC_TEMP',        'surface skin temperature',             'K'       )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_IR ), 'SFC_ALB_IR_dir' , 'surface albedo (IR; direct',           '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 'SFC_ALB_IR_dif' , 'surface albedo (IR; diffuse)',         '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_NIR), 'SFC_ALB_NIR_dir', 'surface albedo (NIR; direct',          '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 'SFC_ALB_NIR_dif', 'surface albedo (NIR; diffuse',         '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_direct ,I_R_VIS), 'SFC_ALB_VIS_dir', 'surface albedo (VIS; direct',          '1'       , fill_halo=.true. )
+    call FILE_HISTORY_in( SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 'SFC_ALB_VIS_dif', 'surface albedo (VIS; diffuse',         '1'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_Z0M   (:,:),                     'SFC_Z0M',         'roughness length (momentum)',           'm'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_Z0H   (:,:),                     'SFC_Z0H',         'roughness length (heat)',               'm'       , fill_halo=.true. )
     call FILE_HISTORY_in( SFC_Z0E   (:,:),                     'SFC_Z0E',         'roughness length (vapor)',              'm'       , fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_MW   (:,:),                     'MWFLX',           'w-momentum flux (merged)',              'kg/m/s2' )
-    call FILE_HISTORY_in( SFLX_MU   (:,:),                     'MUFLX',           'u-momentum flux (merged)',              'kg/m/s2' )
-    call FILE_HISTORY_in( SFLX_MV   (:,:),                     'MVFLX',           'v-momentum flux (merged)',              'kg/m/s2' )
-    call FILE_HISTORY_in( SFLX_SH   (:,:),                     'SHFLX',           'sensible heat flux (merged)',           'W/m2'    , fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_LH   (:,:),                     'LHFLX',           'latent heat flux (merged)',             'W/m2'    , fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux (merged)',             'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_MW   (:,:),                     'MWFLX',           'w-momentum flux',                       'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MU   (:,:),                     'MUFLX',           'u-momentum flux',                       'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_MV   (:,:),                     'MVFLX',           'v-momentum flux',                       'kg/m/s2' )
+    call FILE_HISTORY_in( SFLX_SH   (:,:),                     'SHFLX',           'sensible heat flux',                    'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_LH   (:,:),                     'LHFLX',           'latent heat flux',                      'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux',                      'W/m2'    , fill_halo=.true. )
     if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
        do iq = 1, QA
-          call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)),   &
-                                'surface '//trim(TRACER_NAME(iq))//' flux (merged)', &
-                                'kg/m2/s' , fill_halo=.true.                         )
+          call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)), &
+                                'surface '//trim(TRACER_NAME(iq))//' flux',        &
+                                'kg/m2/s' , fill_halo=.true.                       )
        enddo
     endif
-    call FILE_HISTORY_in( Uabs10(:,:), 'Uabs10', '10m absolute wind',       'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( U10   (:,:), 'U10',    '10m x-wind',              'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( V10   (:,:), 'V10',    '10m y-wind',              'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( U10m  (:,:), 'U10m',   '10m eastward wind',       'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( V10m  (:,:), 'V10m',   '10m northward wind',      'm/s'  , fill_halo=.true. )
-    call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',      'K'    , fill_halo=.true. )
-    call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',    'kg/kg', fill_halo=.true. )
-    call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure', 'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
+    call FILE_HISTORY_in( Ustar (:,:), 'Ustar',  'friction velocity',         'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( Tstar (:,:), 'Tstar',  'temperature scale',         'K'    , fill_halo=.true. )
+    call FILE_HISTORY_in( Qstar (:,:), 'Qstar',  'moisuter scale',            'kg/kg', fill_halo=.true. )
+    call FILE_HISTORY_in( Wstar (:,:), 'Wstar',  'convective velocity scale', 'm/s',   fill_halo=.true. )
+    call FILE_HISTORY_in( RLmo  (:,:), 'RLmo',   'inverse of Obukhov length', '1/m'  , fill_halo=.true. )
+    call FILE_HISTORY_in( Uabs10(:,:), 'Uabs10', '10m absolute wind',         'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( U10   (:,:), 'U10',    '10m x-wind',                'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( V10   (:,:), 'V10',    '10m y-wind',                'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( U10m  (:,:), 'U10m',   '10m eastward wind',         'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( V10m  (:,:), 'V10m',   '10m northward wind',        'm/s'  , fill_halo=.true. )
+    call FILE_HISTORY_in( T2    (:,:), 'T2 ',    '2m air temperature',        'K'    , fill_halo=.true. )
+    call FILE_HISTORY_in( Q2    (:,:), 'Q2 ',    '2m specific humidity',      'kg/kg', fill_halo=.true. )
+    call FILE_HISTORY_in( MSLP  (:,:), 'MSLP',   'mean sea-level pressure',   'Pa'   , fill_halo=.true., standard_name='air_pressure_at_mean_sea_level' )
 
     return
   end subroutine history_output

@@ -86,6 +86,8 @@ contains
        PBL, ATM_Z1,                  &
        SFLX_MW, SFLX_MU, SFLX_MV,    &
        SFLX_SH, SFLX_LH, SFLX_QV,    &
+       Ustar, Tstar, Qstar, Wstar,   &
+       iL,                           &
        U10, V10, T2, Q2              )
     use scale_const, only: &
        EPS    => CONST_EPS, &
@@ -122,6 +124,11 @@ contains
     real(RP), intent(out) :: SFLX_SH(IA,JA) ! surface flux for sensible heat (area center)   [J/m2/s]
     real(RP), intent(out) :: SFLX_LH(IA,JA) ! surface flux for latent   heat (area center)   [J/m2/s]
     real(RP), intent(out) :: SFLX_QV(IA,JA) ! surface flux for qv            (area center)   [kg/m2/s]
+    real(RP), intent(out) :: Ustar  (IA,JA) ! friction velocity
+    real(RP), intent(out) :: Tstar  (IA,JA) ! temperatuer scale
+    real(RP), intent(out) :: Qstar  (IA,JA) ! moisture scale
+    real(RP), intent(out) :: Wstar  (IA,JA) ! convective veolocity scale
+    real(RP), intent(out) :: iL     (IA,JA) ! inverse of Obukhov length
     real(RP), intent(out) :: U10    (IA,JA) ! velocity u        at 10m height
     real(RP), intent(out) :: V10    (IA,JA) ! velocity v        at 10m height
     real(RP), intent(out) :: T2     (IA,JA) ! temperature t     at  2m height
@@ -130,10 +137,6 @@ contains
     real(RP) :: SFC_PSAT (IA,JA) ! saturatad water vapor pressure [Pa]
     real(RP) :: LHV      (IA,JA)
 
-    real(RP) :: Ustar    ! friction velocity [m/s]
-    real(RP) :: Tstar    ! friction temperature [K]
-    real(RP) :: Qstar    ! friction mixing rate [kg/kg]
-    real(RP) :: Wstar    ! free convection velocity scale [m/s]
     real(RP) :: Uabs     ! modified absolute velocity [m/s]
     real(RP) :: Ra       ! Aerodynamic resistance (=1/Ce) [1/s]
     real(RP) :: SFC_QSAT ! saturatad water vapor mixing ratio [kg/kg]
@@ -164,11 +167,12 @@ contains
     !$omp shared (IS,IE,JS,JE,EPSvap,ATMOS_PHY_SF_BULK_beta,EPS,CPdry,LHV,bulkflux,&
     !$omp         ATM_TEMP,ATM_PRES,ATM_QV,ATM_W,ATM_U,ATM_V,ATM_Z1,               &
     !$omp         SFC_DENS,SFC_TEMP,SFC_PRES,SFC_PSAT,SFC_Z0M,SFC_Z0H,SFC_Z0E,PBL, &
-    !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,U10,V10,T2,Q2)   &
+    !$omp         SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_QV,                 &
+    !$omp         Ustar,Tstar,Qstar,Wstar,iL,U10,V10,T2,Q2)                        &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(SFC_QSAT,SFC_QV,Ustar,Tstar,Qstar,Wstar,Uabs,Ra,FracU10,FracT2,FracQ2,MFLUX)
+    !$omp private(SFC_QSAT,SFC_QV,Uabs,Ra,FracU10,FracT2,FracQ2,MFLUX)
     do j = JS, JE
     do i = IS, IE
        ! qdry = 1 - psat
@@ -177,10 +181,11 @@ contains
        SFC_QV = ( 1.0_RP - ATMOS_PHY_SF_BULK_beta ) * ATM_QV(i,j) + ATMOS_PHY_SF_BULK_beta * SFC_QSAT
        Uabs = sqrt( ATM_W(i,j)**2 + ATM_U(i,j)**2 + ATM_V(i,j)**2 )
 
-       call BULKFLUX( Ustar,         & ! [OUT]
-                      Tstar,         & ! [OUT]
-                      Qstar,         & ! [OUT]
-                      Wstar,         & ! [OUT]
+       call BULKFLUX( Ustar(i,j),    & ! [OUT]
+                      Tstar(i,j),    & ! [OUT]
+                      Qstar(i,j),    & ! [OUT]
+                      Wstar(i,j),    & ! [OUT]
+                      iL(i,j),       & ! [OUT]
                       Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
@@ -204,15 +209,15 @@ contains
           SFLX_MU(i,j) = 0.0_RP
           SFLX_MV(i,j) = 0.0_RP
        else
-          MFLUX = -SFC_DENS(i,j) * Ustar**2
+          MFLUX = -SFC_DENS(i,j) * Ustar(i,j)**2
           SFLX_MW(i,j) = MFLUX * ATM_W(i,j) / Uabs
           SFLX_MU(i,j) = MFLUX * ATM_U(i,j) / Uabs
           SFLX_MV(i,j) = MFLUX * ATM_V(i,j) / Uabs
        end if
 
        !-----< heat flux >-----
-       SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar * Tstar * CPdry
-       SFLX_LH(i,j) = -SFC_DENS(i,j) * Ustar * Qstar * LHV(i,j)
+       SFLX_SH(i,j) = -SFC_DENS(i,j) * Ustar(i,j) * Tstar(i,j) * CPdry
+       SFLX_LH(i,j) = -SFC_DENS(i,j) * Ustar(i,j) * Qstar(i,j) * LHV(i,j)
 
        !-----< mass flux >-----
        SFLX_QV(i,j) = SFLX_LH(i,j) / LHV(i,j)

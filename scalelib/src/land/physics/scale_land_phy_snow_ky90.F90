@@ -142,7 +142,8 @@ contains
        SDepth, SDzero,         & ! [INOUT]
        nosnowsec,              & ! [INOUT]
        Salbedo,                & ! [OUT]
-       SFLX_SH, SFLX_LH,       & ! [OUT]
+       SFLX_SH,                & ! [OUT]
+       SFLX_LH, SFLX_evap,     & ! [OUT]
        SFLX_GH, SNOW_LAND_GH,  & ! [OUT]
        SNOW_LAND_Water,        & ! [OUT]
        SNOW_frac               ) ! [OUT]
@@ -187,6 +188,7 @@ contains
     real(RP), intent(out)     :: Salbedo        (LIA,LJA,2) ! snow albedo             [-]
     real(RP), intent(out)     :: SFLX_SH        (LIA,LJA) ! sensible heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_LH        (LIA,LJA) ! latente  heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
     real(RP), intent(out)     :: SFLX_GH        (LIA,LJA) ! whole snowpack Ground flux   [W/m2]
     real(RP), intent(out)     :: SNOW_LAND_GH   (LIA,LJA) ! heat flux from snow to land  [W/m2]
     real(RP), intent(out)     :: SNOW_LAND_water(LIA,LJA) ! water flux from snow to land [W/m2]
@@ -196,7 +198,6 @@ contains
     real(RP)                  :: QFUSION   (LIA,LJA)
     real(RP)                  :: MELT      (LIA,LJA)
     real(RP)                  :: SWEMELT   (LIA,LJA)
-    real(RP)                  :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
 
     ! works
     real(RP)                  :: TSNOW1           ! updated snow surface temperature [K]
@@ -312,10 +313,10 @@ contains
 
     endif
 
-    call FILE_HISTORY_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( SWEMELT (:,:), 'SNOW_SWEMELT',    'Equivalent water of melt snow',              'kg/m2', dim_type='XY' )
+    call FILE_HISTORY_in( QCC     (:,:), 'LAND_SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( QFUSION (:,:), 'LAND_SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( MELT    (:,:), 'LAND_SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( SWEMELT (:,:), 'LAND_SNOW_SWEMELT',    'Equivalent water of melt snow',              'kg/m2', dim_type='XY' )
 
     end do
     end do

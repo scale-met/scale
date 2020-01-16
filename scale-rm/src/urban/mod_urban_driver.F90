@@ -173,6 +173,11 @@ contains
        URBAN_ZD,          &
        URBAN_AH,          &
        URBAN_AHL,         &
+       URBAN_Ustar,       &
+       URBAN_Tstar,       &
+       URBAN_Qstar,       &
+       URBAN_Wstar,       &
+       URBAN_RLmo,        &
        URBAN_U10,         &
        URBAN_V10,         &
        URBAN_T2,          &
@@ -359,6 +364,9 @@ contains
                                 URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
                                 URBAN_SFLX_SH(:,:), URBAN_SFLX_LH(:,:), URBAN_SFLX_GH(:,:),  & ! [OUT]
+                                URBAN_Ustar(:,:), URBAN_Tstar(:,:), URBAN_Qstar(:,:),        & ! [OUT]
+                                URBAN_Wstar(:,:),                                            & ! [OUT]
+                                URBAN_RLmo(:,:),                                             & ! [OUT]
                                 URBAN_U10(:,:), URBAN_V10(:,:), URBAN_T2(:,:), URBAN_Q2(:,:) ) ! [OUT]
 
 !OCL XFILL

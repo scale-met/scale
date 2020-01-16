@@ -56,30 +56,31 @@ module mod_ocean_vars
   character(len=H_SHORT), public :: OCEAN_RESTART_OUT_DTYPE             = 'DEFAULT'       !< REAL4 or REAL8
 
   ! prognostic variables
-  real(RP), public, allocatable :: OCEAN_TEMP       (:,:,:)   !< ocean temperature         [K]
-  real(RP), public, allocatable :: OCEAN_SALT       (:,:,:)   !< ocean salinity            [PSU]
-  real(RP), public, allocatable :: OCEAN_UVEL       (:,:,:)   !< ocean zonal velocity      [m/s]
-  real(RP), public, allocatable :: OCEAN_VVEL       (:,:,:)   !< ocean meridional velocity [m/s]
+  real(RP), public, allocatable :: OCEAN_TEMP(:,:,:) !< ocean temperature         [K]
+  real(RP), public, allocatable :: OCEAN_SALT(:,:,:) !< ocean salinity            [PSU]
+  real(RP), public, allocatable :: OCEAN_UVEL(:,:,:) !< ocean zonal velocity      [m/s]
+  real(RP), public, allocatable :: OCEAN_VVEL(:,:,:) !< ocean meridional velocity [m/s]
 
-  real(RP), public, allocatable :: OCEAN_OCN_Z0M    (:,:)     !< surface roughness length for momentum, open ocean [m]
+  real(RP), public, allocatable :: OCEAN_OCN_Z0M(:,:) !< surface roughness length for momentum, open ocean [m]
 
-  real(RP), public, allocatable :: OCEAN_ICE_TEMP   (:,:)     !< sea ice temperature [K]
-  real(RP), public, allocatable :: OCEAN_ICE_MASS   (:,:)     !< sea ice mass        [kg]
+  real(RP), public, allocatable :: OCEAN_SFC_TEMP  (:,:)     !< ocean surface skin temperature [K]
+  real(RP), public, allocatable :: OCEAN_SFC_albedo(:,:,:,:) !< ocean surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
+  real(RP), public, allocatable :: OCEAN_SFC_Z0M   (:,:)     !< ocean surface roughness length for momentum [m]
+  real(RP), public, allocatable :: OCEAN_SFC_Z0H   (:,:)     !< ocean surface roughness length for heat     [m]
+  real(RP), public, allocatable :: OCEAN_SFC_Z0E   (:,:)     !< ocean surface roughness length for vapor    [m]
 
-  real(RP), public, allocatable :: OCEAN_SFC_TEMP   (:,:)     !< ocean surface skin temperature [K]
-  real(RP), public, allocatable :: OCEAN_SFC_albedo (:,:,:,:) !< ocean surface albedo (direct/diffuse,IR/near-IR/VIS) (0-1)
-  real(RP), public, allocatable :: OCEAN_SFC_Z0M    (:,:)     !< ocean surface roughness length for momentum [m]
-  real(RP), public, allocatable :: OCEAN_SFC_Z0H    (:,:)     !< ocean surface roughness length for heat     [m]
-  real(RP), public, allocatable :: OCEAN_SFC_Z0E    (:,:)     !< ocean surface roughness length for vapor    [m]
+  real(RP), public, allocatable :: OCEAN_ICE_TEMP(:,:) !< sea ice temperature [K]
+  real(RP), public, allocatable :: OCEAN_ICE_MASS(:,:) !< sea ice mass        [kg]
+
 
   ! tendency variables
-  real(RP), public, allocatable :: OCEAN_TEMP_t     (:,:,:)   !< tendency of OCEAN_OCN_TEMP
-  real(RP), public, allocatable :: OCEAN_SALT_t     (:,:,:)   !< tendency of OCEAN_OCN_SALT
-  real(RP), public, allocatable :: OCEAN_UVEL_t     (:,:,:)   !< tendency of OCEAN_OCN_UVEL
-  real(RP), public, allocatable :: OCEAN_VVEL_t     (:,:,:)   !< tendency of OCEAN_OCN_VVEL
+  real(RP), public, allocatable :: OCEAN_TEMP_t(:,:,:) !< tendency of OCEAN_OCN_TEMP
+  real(RP), public, allocatable :: OCEAN_SALT_t(:,:,:) !< tendency of OCEAN_OCN_SALT
+  real(RP), public, allocatable :: OCEAN_UVEL_t(:,:,:) !< tendency of OCEAN_OCN_UVEL
+  real(RP), public, allocatable :: OCEAN_VVEL_t(:,:,:) !< tendency of OCEAN_OCN_VVEL
 
-  real(RP), public, allocatable :: OCEAN_ICE_TEMP_t (:,:)     !< tendency of OCEAN_ICE_TEMP
-  real(RP), public, allocatable :: OCEAN_ICE_MASS_t (:,:)     !< tendency of OCEAN_ICE_MASS
+  real(RP), public, allocatable :: OCEAN_ICE_TEMP_t(:,:) !< tendency of OCEAN_ICE_TEMP
+  real(RP), public, allocatable :: OCEAN_ICE_MASS_t(:,:) !< tendency of OCEAN_ICE_MASS
 
   ! recieved from lowermost atmosphere
   real(RP), public, allocatable :: ATMOS_TEMP       (:,:)
@@ -97,25 +98,43 @@ module mod_ocean_vars
   real(RP), public, allocatable :: ATMOS_SFLX_rain  (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_snow  (:,:)
 
-  ! send to lowermost atmosphere
-  real(RP), public, allocatable :: OCEAN_SFLX_MW    (:,:)     !< ocean surface w-momentum flux    [kg/m/s2]
-  real(RP), public, allocatable :: OCEAN_SFLX_MU    (:,:)     !< ocean surface u-momentum flux    [kg/m/s2]
-  real(RP), public, allocatable :: OCEAN_SFLX_MV    (:,:)     !< ocean surface v-momentum flux    [kg/m/s2]
-  real(RP), public, allocatable :: OCEAN_SFLX_SH    (:,:)     !< ocean surface sensible heat flux [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_LH    (:,:)     !< ocean surface latent heat flux   [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_QTRC  (:,:,:)   !< ocean surface tracer flux        [kg/m2/s]
-  real(RP), public, allocatable :: OCEAN_U10        (:,:)     !< ocean surface velocity u at 10m  [m/s]
-  real(RP), public, allocatable :: OCEAN_V10        (:,:)     !< ocean surface velocity v at 10m  [m/s]
-  real(RP), public, allocatable :: OCEAN_T2         (:,:)     !< ocean surface temperature at 2m  [K]
-  real(RP), public, allocatable :: OCEAN_Q2         (:,:)     !< ocean surface water vapor at 2m  [kg/kg]
-
   ! send to uppermost ocean
-  real(RP), public, allocatable :: OCEAN_SFLX_G     (:,:)     !< ocean surface water heat flux   [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_water (:,:)     !< ocean surface liquid water flux [kg/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_ice   (:,:)     !< ocean surface ice water flux    [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_G    (:,:) !< ocean surface water heat flux   [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_water(:,:) !< ocean surface liquid water flux [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_ice  (:,:) !< ocean surface ice water flux    [kg/m2/s]
+
+  ! send to lowermost atmosphere
+  real(RP), public, allocatable :: OCEAN_SFLX_MW  (:,:)   !< ocean surface w-momentum flux    [kg/m/s2]
+  real(RP), public, allocatable :: OCEAN_SFLX_MU  (:,:)   !< ocean surface u-momentum flux    [kg/m/s2]
+  real(RP), public, allocatable :: OCEAN_SFLX_MV  (:,:)   !< ocean surface v-momentum flux    [kg/m/s2]
+  real(RP), public, allocatable :: OCEAN_SFLX_SH  (:,:)   !< ocean surface sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_LH  (:,:)   !< ocean surface latent heat flux   [J/m2/s]
+  real(RP), public, allocatable :: OCEAN_SFLX_QTRC(:,:,:) !< ocean surface tracer flux        [kg/m2/s]
+
+  real(RP), public, allocatable, target :: OCEAN_Ustar(:,:) !< ocean surface friction velocity  [m/s]
+  real(RP), public, allocatable, target :: OCEAN_Tstar(:,:) !< ocean surface tempreture scale   [K]
+  real(RP), public, allocatable, target :: OCEAN_Qstar(:,:) !< ocean surface moisture scale     [kg/kg]
+  real(RP), public, allocatable, target :: OCEAN_Wstar(:,:) !< ocean surface convective velocity scale [m/s]
+  real(RP), public, allocatable, target :: OCEAN_RLmo (:,:) !< ocean surface inversed Obukhov length [1/m]
+  real(RP), public, allocatable, target :: OCEAN_U10  (:,:) !< ocean surface velocity u at 10m  [m/s]
+  real(RP), public, allocatable, target :: OCEAN_V10  (:,:) !< ocean surface velocity v at 10m  [m/s]
+  real(RP), public, allocatable, target :: OCEAN_T2   (:,:) !< ocean surface temperature at 2m  [K]
+  real(RP), public, allocatable, target :: OCEAN_Q2   (:,:) !< ocean surface water vapor at 2m  [kg/kg]
+  real(RP), public, pointer :: OCEAN_OCN_Ustar(:,:)
+  real(RP), public, pointer :: OCEAN_OCN_Tstar(:,:)
+  real(RP), public, pointer :: OCEAN_OCN_Qstar(:,:)
+  real(RP), public, pointer :: OCEAN_OCN_Wstar(:,:)
+  real(RP), public, pointer :: OCEAN_OCN_RLmo (:,:)
+  real(RP), public, allocatable :: OCEAN_ICE_Ustar(:,:)
+  real(RP), public, allocatable :: OCEAN_ICE_Tstar(:,:)
+  real(RP), public, allocatable :: OCEAN_ICE_Qstar(:,:)
+  real(RP), public, allocatable :: OCEAN_ICE_Wstar(:,:)
+  real(RP), public, allocatable :: OCEAN_ICE_RLmo (:,:)
 
   ! diagnostic value
   real(RP), public, allocatable :: OCEAN_ICE_FRAC   (:,:)     !< area fraction of sea ice [1]
+
+  logical, public :: ICE_flag
 
   !-----------------------------------------------------------------------------
   !
@@ -128,34 +147,25 @@ module mod_ocean_vars
   logical,                private :: OCEAN_VARS_CHECKRANGE              = .false.
   logical,                private :: OCEAN_RESTART_IN_CHECK_COORDINATES = .true.
 
-  integer,                private, parameter :: VMAX              = 27 !< number of the variables
+  ! prognostic variables
+  integer,                private, parameter :: VMAX              = 17 !< number of the variables
   integer,                private, parameter :: I_TEMP            =  1
   integer,                private, parameter :: I_SALT            =  2
   integer,                private, parameter :: I_UVEL            =  3
   integer,                private, parameter :: I_VVEL            =  4
   integer,                private, parameter :: I_OCN_Z0M         =  5
-  integer,                private, parameter :: I_ICE_TEMP        =  6
-  integer,                private, parameter :: I_ICE_MASS        =  7
-  integer,                private, parameter :: I_SFC_TEMP        =  8
-  integer,                private, parameter :: I_SFC_ALB_IR_dir  =  9
-  integer,                private, parameter :: I_SFC_ALB_IR_dif  = 10
-  integer,                private, parameter :: I_SFC_ALB_NIR_dir = 11
-  integer,                private, parameter :: I_SFC_ALB_NIR_dif = 12
-  integer,                private, parameter :: I_SFC_ALB_VIS_dir = 13
-  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 14
-  integer,                private, parameter :: I_SFC_Z0M         = 15
-  integer,                private, parameter :: I_SFC_Z0H         = 16
-  integer,                private, parameter :: I_SFC_Z0E         = 17
-  integer,                private, parameter :: I_SFLX_MW         = 18
-  integer,                private, parameter :: I_SFLX_MU         = 19
-  integer,                private, parameter :: I_SFLX_MV         = 20
-  integer,                private, parameter :: I_SFLX_SH         = 21
-  integer,                private, parameter :: I_SFLX_LH         = 22
-  integer,                private, parameter :: I_SFLX_evap       = 23
-  integer,                private, parameter :: I_SFLX_G          = 24
-  integer,                private, parameter :: I_SFLX_water      = 25
-  integer,                private, parameter :: I_SFLX_ice        = 26
-  integer,                private, parameter :: I_ICE_FRAC        = 27
+  integer,                private, parameter :: I_SFC_TEMP        =  6
+  integer,                private, parameter :: I_SFC_ALB_IR_dir  =  7
+  integer,                private, parameter :: I_SFC_ALB_IR_dif  =  8
+  integer,                private, parameter :: I_SFC_ALB_NIR_dir =  9
+  integer,                private, parameter :: I_SFC_ALB_NIR_dif = 10
+  integer,                private, parameter :: I_SFC_ALB_VIS_dir = 11
+  integer,                private, parameter :: I_SFC_ALB_VIS_dif = 12
+  integer,                private, parameter :: I_SFC_Z0M         = 13
+  integer,                private, parameter :: I_SFC_Z0H         = 14
+  integer,                private, parameter :: I_SFC_Z0E         = 15
+  integer,                private, parameter :: I_ICE_TEMP        = 16
+  integer,                private, parameter :: I_ICE_MASS        = 17
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX)    !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX)    !< desc. of the variables
@@ -169,8 +179,6 @@ module mod_ocean_vars
                   'OCEAN_UVEL',            &
                   'OCEAN_VVEL',            &
                   'OCEAN_OCN_Z0M',         &
-                  'OCEAN_ICE_TEMP',        &
-                  'OCEAN_ICE_MASS',        &
                   'OCEAN_SFC_TEMP',        &
                   'OCEAN_SFC_ALB_IR_dir',  &
                   'OCEAN_SFC_ALB_IR_dif',  &
@@ -181,51 +189,31 @@ module mod_ocean_vars
                   'OCEAN_SFC_Z0M',         &
                   'OCEAN_SFC_Z0H',         &
                   'OCEAN_SFC_Z0E',         &
-                  'OCEAN_SFLX_MW',         &
-                  'OCEAN_SFLX_MU',         &
-                  'OCEAN_SFLX_MV',         &
-                  'OCEAN_SFLX_SH',         &
-                  'OCEAN_SFLX_LH',         &
-                  'OCEAN_SFLX_evap',       &
-                  'OCEAN_SFLX_G',          &
-                  'OCEAN_SFLX_water',      &
-                  'OCEAN_SFLX_ice',        &
-                  'OCEAN_ICE_FRAC'         /
+                  'OCEAN_ICE_TEMP',        &
+                  'OCEAN_ICE_MASS'         /
 
-  data VAR_DESC / 'ocean temperature',                          &
-                  'ocean salinity',                             &
-                  'ocean u-velocity',                           &
-                  'ocean v-velocity',                           &
-                  'open ocean roughness length (momentum)',     &
-                  'seaice temperature',                         &
-                  'seaice mass',                                &
-                  'ocean surface skin temperature',             &
-                  'ocean surface albedo for IR (direct)',       &
-                  'ocean surface albedo for IR (diffuse)',      &
-                  'ocean surface albedo for NIR (direct)',      &
-                  'ocean surface albedo for NIR (diffuse)',     &
-                  'ocean surface albedo for VIS (direct)',      &
-                  'ocean surface albedo for VIS (diffuse)',     &
-                  'ocean surface roughness length (momentum)',  &
-                  'ocean surface roughness length (heat)',      &
-                  'ocean surface roughness length (vapor)',     &
-                  'ocean surface w-momentum flux (upward)',     &
-                  'ocean surface u-momentum flux (upward)',     &
-                  'ocean surface v-momentum flux (upward)',     &
-                  'ocean surface sensible heat flux (upward)',  &
-                  'ocean surface latent heat flux (upward)',    &
-                  'ocean surface water vapor flux (upward)',    &
-                  'ocean subsurface heat flux (downward)',      &
-                  'ocean surface liquid water flux (downward)', &
-                  'ocean surface ice water flux (downward)',    &
-                  'seaice fraction'                             /
+  data VAR_DESC / 'ocean temperature',                         &
+                  'ocean salinity',                            &
+                  'ocean u-velocity',                          &
+                  'ocean v-velocity',                          &
+                  'open ocean roughness length (momentum)',    &
+                  'ocean surface skin temperature',            &
+                  'ocean surface albedo for IR (direct)',      &
+                  'ocean surface albedo for IR (diffuse)',     &
+                  'ocean surface albedo for NIR (direct)',     &
+                  'ocean surface albedo for NIR (diffuse)',    &
+                  'ocean surface albedo for VIS (direct)',     &
+                  'ocean surface albedo for VIS (diffuse)',    &
+                  'ocean surface roughness length (momentum)', &
+                  'ocean surface roughness length (heat)',     &
+                  'ocean surface roughness length (vapor)',    &
+                  'seaice temperature',                        &
+                  'seaice mass'                                /
 
   data VAR_STDN / 'sea_water_temperature',        &
                   'sea_water_salinity',           &
                   'eastward_sea_water_velocity',  &
                   'northward_sea_water_velocity', &
-                  '', &
-                  '', &
                   '', &
                   'sea_surface_skin_temperature', &
                   '', &
@@ -238,43 +226,25 @@ module mod_ocean_vars
                   '', &
                   '', &
                   '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
-                  '', &
                   '' /
 
-  data VAR_UNIT / 'K',       &
-                  'PSU',     &
-                  'm/s',     &
-                  'm/s',     &
-                  'm',       &
-                  'K',       &
-                  'kg/m2',   &
-                  'K',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  '1',       &
-                  'm',       &
-                  'm',       &
-                  'm',       &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  'J/m2/s',  &
-                  'J/m2/s',  &
-                  'kg/m2/s', &
-                  'J/m2/s',  &
-                  'kg/m2/s', &
-                  'kg/m2/s', &
-                  '1'        /
+  data VAR_UNIT / 'K',    &
+                  'PSU',  &
+                  'm/s',  &
+                  'm/s',  &
+                  'm',    &
+                  'K',    &
+                  '1',    &
+                  '1',    &
+                  '1',    &
+                  '1',    &
+                  '1',    &
+                  '1',    &
+                  'm',    &
+                  'm',    &
+                  'm',    &
+                  'K',    &
+                  'kg/m2' /
 
   !-----------------------------------------------------------------------------
 contains
@@ -285,6 +255,8 @@ contains
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use mod_ocean_admin, only: &
+       OCEAN_ICE_TYPE
     implicit none
 
     namelist / PARAM_OCEAN_VARS / &
@@ -307,6 +279,13 @@ contains
     LOG_NEWLINE
     LOG_INFO("OCEAN_vars_setup",*) 'Setup'
 
+    select case ( OCEAN_ICE_TYPE )
+    case ( 'NONE','OFF' )
+       ICE_flag = .false.
+    case default
+       ICE_flag = .true.
+    end select
+
     allocate( OCEAN_TEMP       (OKMAX,OIA,OJA) )
     allocate( OCEAN_SALT       (OKMAX,OIA,OJA) )
     allocate( OCEAN_UVEL       (OKMAX,OIA,OJA) )
@@ -318,11 +297,6 @@ contains
 
     allocate( OCEAN_OCN_Z0M    (OIA,OJA) )
     OCEAN_OCN_Z0M    (:,:)     = UNDEF
-
-    allocate( OCEAN_ICE_TEMP   (OIA,OJA) )
-    allocate( OCEAN_ICE_MASS   (OIA,OJA) )
-    OCEAN_ICE_TEMP   (:,:)     = UNDEF
-    OCEAN_ICE_MASS   (:,:)     = UNDEF
 
     allocate( OCEAN_SFC_TEMP   (OIA,OJA)                     )
     allocate( OCEAN_SFC_albedo (OIA,OJA,N_RAD_DIR,N_RAD_RGN) )
@@ -344,10 +318,18 @@ contains
     OCEAN_UVEL_t     (:,:,:)   = UNDEF
     OCEAN_VVEL_t     (:,:,:)   = UNDEF
 
-    allocate( OCEAN_ICE_TEMP_t (OIA,OJA) )
-    allocate( OCEAN_ICE_MASS_t (OIA,OJA) )
-    OCEAN_ICE_TEMP_t (:,:)     = UNDEF
-    OCEAN_ICE_MASS_t (:,:)     = UNDEF
+    if ( ICE_flag ) then
+       allocate( OCEAN_ICE_TEMP   (OIA,OJA) )
+       allocate( OCEAN_ICE_MASS   (OIA,OJA) )
+       OCEAN_ICE_TEMP   (:,:)     = UNDEF
+       OCEAN_ICE_MASS   (:,:)     = UNDEF
+
+       allocate( OCEAN_ICE_TEMP_t (OIA,OJA) )
+       allocate( OCEAN_ICE_MASS_t (OIA,OJA) )
+       OCEAN_ICE_TEMP_t (:,:)     = UNDEF
+       OCEAN_ICE_MASS_t (:,:)     = UNDEF
+
+    end if
 
     allocate( ATMOS_TEMP       (OIA,OJA)                     )
     allocate( ATMOS_PRES       (OIA,OJA)                     )
@@ -378,36 +360,78 @@ contains
     ATMOS_SFLX_rain  (:,:)     = UNDEF
     ATMOS_SFLX_snow  (:,:)     = UNDEF
 
-    allocate( OCEAN_SFLX_MW    (OIA,OJA) )
-    allocate( OCEAN_SFLX_MU    (OIA,OJA) )
-    allocate( OCEAN_SFLX_MV    (OIA,OJA) )
-    allocate( OCEAN_SFLX_SH    (OIA,OJA) )
-    allocate( OCEAN_SFLX_LH    (OIA,OJA) )
-    allocate( OCEAN_SFLX_QTRC  (OIA,OJA,QA) )
-    allocate( OCEAN_U10        (OIA,OJA) )
-    allocate( OCEAN_V10        (OIA,OJA) )
-    allocate( OCEAN_T2         (OIA,OJA) )
-    allocate( OCEAN_Q2         (OIA,OJA) )
-    OCEAN_SFLX_MW    (:,:)     = UNDEF
-    OCEAN_SFLX_MU    (:,:)     = UNDEF
-    OCEAN_SFLX_MV    (:,:)     = UNDEF
-    OCEAN_SFLX_SH    (:,:)     = UNDEF
-    OCEAN_SFLX_LH    (:,:)     = UNDEF
-    OCEAN_SFLX_QTRC  (:,:,:)   = UNDEF
-    OCEAN_U10        (:,:)     = UNDEF
-    OCEAN_V10        (:,:)     = UNDEF
-    OCEAN_T2         (:,:)     = UNDEF
-    OCEAN_Q2         (:,:)     = UNDEF
+    allocate( OCEAN_SFLX_G    (OIA,OJA) )
+    allocate( OCEAN_SFLX_water(OIA,OJA) )
+    allocate( OCEAN_SFLX_ice  (OIA,OJA) )
+    OCEAN_SFLX_G    (:,:) = UNDEF
+    OCEAN_SFLX_water(:,:) = UNDEF
+    OCEAN_SFLX_ice  (:,:) = UNDEF
 
-    allocate( OCEAN_SFLX_G     (OIA,OJA) )
-    allocate( OCEAN_SFLX_water (OIA,OJA) )
-    allocate( OCEAN_SFLX_ice   (OIA,OJA) )
-    OCEAN_SFLX_G     (:,:)     = UNDEF
-    OCEAN_SFLX_water (:,:)     = UNDEF
-    OCEAN_SFLX_ice   (:,:)     = UNDEF
+    allocate( OCEAN_SFLX_MW  (OIA,OJA) )
+    allocate( OCEAN_SFLX_MU  (OIA,OJA) )
+    allocate( OCEAN_SFLX_MV  (OIA,OJA) )
+    allocate( OCEAN_SFLX_SH  (OIA,OJA) )
+    allocate( OCEAN_SFLX_LH  (OIA,OJA) )
+    allocate( OCEAN_SFLX_QTRC(OIA,OJA,QA) )
+    allocate( OCEAN_U10      (OIA,OJA) )
+    allocate( OCEAN_V10      (OIA,OJA) )
+    allocate( OCEAN_T2       (OIA,OJA) )
+    allocate( OCEAN_Q2       (OIA,OJA) )
+    OCEAN_SFLX_MW  (:,:)   = UNDEF
+    OCEAN_SFLX_MU  (:,:)   = UNDEF
+    OCEAN_SFLX_MV  (:,:)   = UNDEF
+    OCEAN_SFLX_SH  (:,:)   = UNDEF
+    OCEAN_SFLX_LH  (:,:)   = UNDEF
+    OCEAN_SFLX_QTRC(:,:,:) = UNDEF
+    OCEAN_U10      (:,:)   = UNDEF
+    OCEAN_V10      (:,:)   = UNDEF
+    OCEAN_T2       (:,:)   = UNDEF
+    OCEAN_Q2       (:,:)   = UNDEF
 
-    allocate( OCEAN_ICE_FRAC   (OIA,OJA) )
-    OCEAN_ICE_FRAC   (:,:)     = UNDEF
+    allocate( OCEAN_Ustar(OIA,OJA) )
+    allocate( OCEAN_Tstar(OIA,OJA) )
+    allocate( OCEAN_Qstar(OIA,OJA) )
+    allocate( OCEAN_Wstar(OIA,OJA) )
+    allocate( OCEAN_RLmo (OIA,OJA) )
+    OCEAN_Ustar(:,:) = UNDEF
+    OCEAN_Tstar(:,:) = UNDEF
+    OCEAN_Qstar(:,:) = UNDEF
+    OCEAN_Wstar(:,:) = UNDEF
+    OCEAN_RLmo (:,:) = UNDEF
+    if ( ICE_flag ) then
+       allocate( OCEAN_OCN_Ustar(OIA,OJA) )
+       allocate( OCEAN_OCN_Tstar(OIA,OJA) )
+       allocate( OCEAN_OCN_Qstar(OIA,OJA) )
+       allocate( OCEAN_OCN_Wstar(OIA,OJA) )
+       allocate( OCEAN_OCN_RLmo (OIA,OJA) )
+       OCEAN_OCN_Ustar(:,:) = UNDEF
+       OCEAN_OCN_Tstar(:,:) = UNDEF
+       OCEAN_OCN_Qstar(:,:) = UNDEF
+       OCEAN_OCN_Wstar(:,:) = UNDEF
+       OCEAN_OCN_RLmo (:,:) = UNDEF
+    else
+       OCEAN_OCN_Ustar => OCEAN_Ustar
+       OCEAN_OCN_Tstar => OCEAN_Tstar
+       OCEAN_OCN_Qstar => OCEAN_Qstar
+       OCEAN_OCN_Wstar => OCEAN_Wstar
+       OCEAN_OCN_RLmo  => OCEAN_RLmo
+    end if
+    if ( ICE_flag ) then
+       allocate( OCEAN_ICE_Ustar(OIA,OJA) )
+       allocate( OCEAN_ICE_Tstar(OIA,OJA) )
+       allocate( OCEAN_ICE_Qstar(OIA,OJA) )
+       allocate( OCEAN_ICE_Wstar(OIA,OJA) )
+       allocate( OCEAN_ICE_RLmo (OIA,OJA) )
+       OCEAN_ICE_Ustar(:,:) = UNDEF
+       OCEAN_ICE_Tstar(:,:) = UNDEF
+       OCEAN_ICE_Qstar(:,:) = UNDEF
+       OCEAN_ICE_Wstar(:,:) = UNDEF
+       OCEAN_ICE_RLmo (:,:) = UNDEF
+    end if
+
+    allocate( OCEAN_ICE_FRAC(OIA,OJA) )
+    OCEAN_ICE_FRAC(:,:) = UNDEF
+
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -520,10 +544,6 @@ contains
 !                              OCEAN_VVEL(:,:,:)                                ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_OCN_Z0M),         'XY',  & ! [IN]
                                OCEAN_OCN_Z0M(:,:)                               ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ICE_TEMP),        'XY',  & ! [IN]
-                               OCEAN_ICE_TEMP(:,:)                              ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ICE_MASS),        'XY',  & ! [IN]
-                               OCEAN_ICE_MASS(:,:)                              ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_TEMP),        'XY',  & ! [IN]
                                OCEAN_SFC_TEMP(:,:)                              ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_ALB_IR_dir),  'XY',  & ! [IN]
@@ -544,19 +564,24 @@ contains
                                OCEAN_SFC_Z0H(:,:)                               ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0E),         'XY',  & ! [IN]
                                OCEAN_SFC_Z0E(:,:)                               ) ! [OUT]
+       if ( ICE_flag ) then
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ICE_TEMP),        'XY',  & ! [IN]
+                                  OCEAN_ICE_TEMP(:,:)                              ) ! [OUT]
+          call FILE_CARTESC_read( restart_fid, VAR_NAME(I_ICE_MASS),        'XY',  & ! [IN]
+                                  OCEAN_ICE_MASS(:,:)                              ) ! [OUT]
+       end if
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
 
-       if ( OCEAN_ICE_TYPE == 'NONE' ) then
-          OCEAN_ICE_TEMP(:,:) = OCEAN_PHY_ICE_freezetemp
-          OCEAN_ICE_FRAC(:,:) = 0.0_RP
-       else
+       if ( ICE_flag ) then
           OCEAN_ICE_TEMP(:,:) = min( OCEAN_ICE_TEMP(:,:), OCEAN_PHY_ICE_freezetemp )
           call OCEAN_PHY_ICE_fraction( OIA, OIS, OIE,       & ! [IN]
                                        OJA, OJS, OJE,       & ! [IN]
                                        OCEAN_ICE_MASS(:,:), & ! [IN]
                                        OCEAN_ICE_FRAC(:,:)  ) ! [OUT]
+       else
+          OCEAN_ICE_FRAC(:,:) = 0.0_RP
        endif
 
        call OCEAN_vars_total
@@ -592,13 +617,8 @@ contains
 
        call VALCHECK( OCEAN_OCN_Z0M   (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_OCN_Z0M),                                   __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_ICE_TEMP  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_ICE_TEMP),                                  __FILE__, __LINE__ )
-       call VALCHECK( OCEAN_ICE_MASS  (OIS:OIE,OJS:OJE),                     0.0_RP,   5E+5_RP, &
-                      VAR_NAME(I_ICE_MASS),                                  __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_TEMP  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_TEMP),                                  __FILE__, __LINE__ )
-
        call VALCHECK( OCEAN_SFC_albedo(OIS:OIE,OJS:OJE,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_IR_dir ),                           __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_albedo(OIS:OIE,OJS:OJE,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
@@ -617,6 +637,13 @@ contains
                       VAR_NAME(I_SFC_Z0H),                                   __FILE__, __LINE__ )
        call VALCHECK( OCEAN_SFC_Z0E   (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_Z0E),                                   __FILE__, __LINE__ )
+       if ( ICE_flag ) then
+          call VALCHECK( OCEAN_ICE_TEMP  (OIS:OIE,OJS:OJE),                     0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_ICE_TEMP),                                  __FILE__, __LINE__ )
+          call VALCHECK( OCEAN_ICE_MASS  (OIS:OIE,OJS:OJE),                     0.0_RP,   5E+5_RP, &
+                         VAR_NAME(I_ICE_MASS),                                  __FILE__, __LINE__ )
+       end if
+
     endif
 
     call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),                                               &
@@ -639,13 +666,6 @@ contains
     call FILE_HISTORY_in( OCEAN_OCN_Z0M   (:,:),                                                 &
                           VAR_NAME(I_OCN_Z0M),         VAR_DESC(I_OCN_Z0M),                      &
                           VAR_UNIT(I_OCN_Z0M),         standard_name=VAR_STDN(I_OCN_Z0M)         )
-    call FILE_HISTORY_in( OCEAN_ICE_TEMP  (:,:),                                                 &
-                          VAR_NAME(I_ICE_TEMP),        VAR_DESC(I_ICE_TEMP),                     &
-                          VAR_UNIT(I_ICE_TEMP),        standard_name=VAR_STDN(I_ICE_TEMP)        )
-    call FILE_HISTORY_in( OCEAN_ICE_MASS  (:,:),                                                 &
-                          VAR_NAME(I_ICE_MASS),        VAR_DESC(I_ICE_MASS),                     &
-                          VAR_UNIT(I_ICE_MASS),        standard_name=VAR_STDN(I_ICE_MASS)        )
-
     call FILE_HISTORY_in( OCEAN_SFC_TEMP  (:,:),                                                 &
                           VAR_NAME(I_SFC_TEMP),        VAR_DESC(I_SFC_TEMP),                     &
                           VAR_UNIT(I_SFC_TEMP),        standard_name=VAR_STDN(I_SFC_TEMP)        )
@@ -677,38 +697,68 @@ contains
                           VAR_NAME(I_SFC_Z0E),         VAR_DESC(I_SFC_Z0E),                      &
                           VAR_UNIT(I_SFC_Z0E),         standard_name=VAR_STDN(I_SFC_Z0H)         )
 
-    call FILE_HISTORY_in( OCEAN_SFLX_MW   (:,:),                                                 &
-                          VAR_NAME(I_SFLX_MW),         VAR_DESC(I_SFLX_MW),                      &
-                          VAR_UNIT(I_SFLX_MW),         standard_name=VAR_STDN(I_SFLX_MW)         )
-    call FILE_HISTORY_in( OCEAN_SFLX_MU   (:,:),                                                 &
-                          VAR_NAME(I_SFLX_MU),         VAR_DESC(I_SFLX_MU),                      &
-                          VAR_UNIT(I_SFLX_MU),         standard_name=VAR_STDN(I_SFLX_MU)         )
-    call FILE_HISTORY_in( OCEAN_SFLX_MV   (:,:),                                                 &
-                          VAR_NAME(I_SFLX_MV),         VAR_DESC(I_SFLX_MV),                      &
-                          VAR_UNIT(I_SFLX_MV),         standard_name=VAR_STDN(I_SFLX_MV)         )
-    call FILE_HISTORY_in( OCEAN_SFLX_SH   (:,:),                                                 &
-                          VAR_NAME(I_SFLX_SH),         VAR_DESC(I_SFLX_SH),                      &
-                          VAR_UNIT(I_SFLX_SH),         standard_name=VAR_STDN(I_SFLX_SH)         )
-    call FILE_HISTORY_in( OCEAN_SFLX_LH   (:,:),                                                 &
-                          VAR_NAME(I_SFLX_LH),         VAR_DESC(I_SFLX_LH),                      &
-                          VAR_UNIT(I_SFLX_LH),         standard_name=VAR_STDN(I_SFLX_LH)         )
-    if ( I_QV > 0 ) then
-    call FILE_HISTORY_in( OCEAN_SFLX_QTRC (:,:,I_QV),                                            &
-                          VAR_NAME(I_SFLX_evap),       VAR_DESC(I_SFLX_evap),                    &
-                          VAR_UNIT(I_SFLX_evap),       standard_name=VAR_STDN(I_SFLX_evap)       )
-    endif
-    call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),                                                 &
-                          VAR_NAME(I_SFLX_G),          VAR_DESC(I_SFLX_G),                       &
-                          VAR_UNIT(I_SFLX_G),          standard_name=VAR_STDN(I_SFLX_G)          )
-    call FILE_HISTORY_in( OCEAN_SFLX_water(:,:),                                                 &
-                          VAR_NAME(I_SFLX_water),      VAR_DESC(I_SFLX_water),                   &
-                          VAR_UNIT(I_SFLX_water),      standard_name=VAR_STDN(I_SFLX_water)      )
-    call FILE_HISTORY_in( OCEAN_SFLX_ice  (:,:),                                                 &
-                          VAR_NAME(I_SFLX_ice),        VAR_DESC(I_SFLX_ice),                     &
-                          VAR_UNIT(I_SFLX_ice),        standard_name=VAR_STDN(I_SFLX_ice)        )
-    call FILE_HISTORY_in( OCEAN_ICE_FRAC  (:,:),                                                 &
-                          VAR_NAME(I_ICE_FRAC),        VAR_DESC(I_ICE_FRAC),                     &
-                          VAR_UNIT(I_ICE_FRAC),        standard_name=VAR_STDN(I_ICE_FRAC)        )
+    if ( ICE_flag ) then
+       call FILE_HISTORY_in( OCEAN_ICE_TEMP(:,:),                                          &
+                             VAR_NAME(I_ICE_TEMP), VAR_DESC(I_ICE_TEMP),                     &
+                             VAR_UNIT(I_ICE_TEMP), standard_name=VAR_STDN(I_ICE_TEMP)        )
+       call FILE_HISTORY_in( OCEAN_ICE_MASS(:,:),                                          &
+                             VAR_NAME(I_ICE_MASS), VAR_DESC(I_ICE_MASS),                     &
+                             VAR_UNIT(I_ICE_MASS), standard_name=VAR_STDN(I_ICE_MASS)        )
+    end if
+
+    call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),      'OCEAN_SFLX_G',             &
+                          'ocean subsurface heat flux (downward)',      'J/m2/s'  )
+    call FILE_HISTORY_in( OCEAN_SFLX_water(:,:),      'OCEAN_SFLX_water',         &
+                          'ocean surface liquid water flux (downward)', 'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_ice  (:,:),      'OCEAN_SFLX_ice',           &
+                          'ocean surface ice water flux (downward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_MW   (:,:),      'OCEAN_SFLX_MW',            &
+                          'ocean surface w-momentum flux (upward)',     'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_MU   (:,:),      'OCEAN_SFLX_MU',            &
+                          'ocean surface u-momentum flux (upward)',     'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_MV   (:,:),      'OCEAN_SFLX_MV',            &
+                          'ocean surface v-momentum flux (upward)',     'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_SH   (:,:),      'OCEAN_SFLX_SH',            &
+                          'ocean surface sensible heat flux (upward)',  'J/m2/s'  )
+    call FILE_HISTORY_in( OCEAN_SFLX_LH   (:,:),      'OCEAN_SFLX_LH',            &
+                          'ocean surface latent heat flux (upward)',    'J/m2/s'  )
+    if ( I_QV > 0 ) &
+    call FILE_HISTORY_in( OCEAN_SFLX_QTRC (:,:,I_QV), 'OCEAN_SFLX_evap',          &
+                          'ocean surface water vapor flux (upward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_U10       (:,:),      'OCEAN_U10',                &
+                          'ocean 10m x-wind',                           'm/s'     )
+    call FILE_HISTORY_in( OCEAN_V10       (:,:),      'OCEAN_V10',                &
+                          'ocean 10m y-wind',                           'm/s'     )
+    call FILE_HISTORY_in( OCEAN_T2        (:,:),      'OCEAN_T2',                 &
+                          'ocean 2m temperature',                       'K'       )
+    call FILE_HISTORY_in( OCEAN_Q2        (:,:),      'OCEAN_Q2',                 &
+                          'ocean 2m specific humidity',                 'kg/kg'   )
+    call FILE_HISTORY_in( OCEAN_Ustar     (:,:),      'OCEAN_Ustar',              &
+                          'ocean friction velocity',                    'm/s'     )
+    call FILE_HISTORY_in( OCEAN_Tstar     (:,:),      'OCEAN_Tstar',              &
+                          'ocean temperature scale',                    'K'       )
+    call FILE_HISTORY_in( OCEAN_Qstar     (:,:),      'OCEAN_Qstar',              &
+                          'ocean moisture scale',                       'kg/kg'   )
+    call FILE_HISTORY_in( OCEAN_Wstar     (:,:),      'OCEAN_Wstar',              &
+                          'ocean convective velocity scale',            'm/s'     )
+    call FILE_HISTORY_in( OCEAN_RLmo      (:,:),      'OCEAN_RLmo',               &
+                          'ocean inversed Obukhov length',              '1/m'     )
+
+    if ( ICE_flag ) then
+       call FILE_HISTORY_in( OCEAN_OCN_Ustar(:,:), 'OCEAN_OCN_Ustar', 'friction velocity on open ocean surface',        'm/s'   )
+       call FILE_HISTORY_in( OCEAN_OCN_Tstar(:,:), 'OCEAN_OCN_Tstar', 'temperature scale on open ocean surface',        'K'     )
+       call FILE_HISTORY_in( OCEAN_OCN_Qstar(:,:), 'OCEAN_OCN_Qstar', 'moisture scale on open ocean surface',           'kg/kg' )
+       call FILE_HISTORY_in( OCEAN_OCN_Wstar(:,:), 'OCEAN_OCN_Wstar', 'convective velocity scale on open ocean surface', 'm/s'  )
+       call FILE_HISTORY_in( OCEAN_OCN_RLmo (:,:), 'OCEAN_OCN_RLmo',  'inversed Obukhov length on open ocean surface',   '1/m'  )
+       call FILE_HISTORY_in( OCEAN_ICE_Ustar(:,:), 'OCEAN_ICE_Ustar', 'friction velocity on sea ice surface',        'm/s'   )
+       call FILE_HISTORY_in( OCEAN_ICE_Tstar(:,:), 'OCEAN_ICE_Tstar', 'temperature scale on sea ice surface',        'K',     dim_type='XY' )
+       call FILE_HISTORY_in( OCEAN_ICE_Qstar(:,:), 'OCEAN_ICE_Qstar', 'moisture scale on sea ice surface',           'kg/kg' )
+       call FILE_HISTORY_in( OCEAN_ICE_Wstar(:,:), 'OCEAN_ICE_Wstar', 'convective velocity scale on sea ice surface', 'm/s'  )
+       call FILE_HISTORY_in( OCEAN_ICE_RLmo (:,:), 'OCEAN_ICE_RLmo',  'inversed Obukhov length on sea ice surface',   '1/m'  )
+
+       call FILE_HISTORY_in( OCEAN_ICE_FRAC(:,:), 'OCEAN_ICE_FRAC', &
+                             'seaice fraction',   '1'               )
+    end if
 
     call PROF_rapend  ('OCN_History', 1)
 
@@ -755,15 +805,6 @@ contains
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
        call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                                           & ! [IN]
-                              OCEAN_ICE_TEMP  (:,:),                     VAR_NAME(I_ICE_TEMP),        & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                                           & ! [IN]
-                              OCEAN_ICE_MASS  (:,:),                     VAR_NAME(I_ICE_MASS),        & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
-
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                                           & ! [IN]
                               OCEAN_SFC_TEMP  (:,:),                     VAR_NAME(I_SFC_TEMP),        & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
@@ -804,49 +845,17 @@ contains
                               OCEAN_GRID_CARTESC_REAL_AREA(:,:),                                      & ! [IN]
                               OCEAN_GRID_CARTESC_REAL_TOTAREA                                         ) ! [IN]
 
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_MW   (:,:), VAR_NAME(I_SFLX_MW),    & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_MU   (:,:), VAR_NAME(I_SFLX_MU),    & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_MV   (:,:), VAR_NAME(I_SFLX_MV),    & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_SH   (:,:), VAR_NAME(I_SFLX_SH),    & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_LH   (:,:), VAR_NAME(I_SFLX_LH),    & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       if ( I_QV > 0 ) then
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                      & ! [IN]
-                              OCEAN_SFLX_QTRC (:,:,I_QV), VAR_NAME(I_SFLX_evap), & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),                 & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                    ) ! [IN]
-       endif
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_G    (:,:), VAR_NAME(I_SFLX_G),     & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_water(:,:), VAR_NAME(I_SFLX_water), & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_SFLX_ice  (:,:), VAR_NAME(I_SFLX_ice),   & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
+       if ( ICE_flag ) then
+          call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,              & ! [IN]
+                                 OCEAN_ICE_TEMP(:,:), VAR_NAME(I_ICE_TEMP), & ! [IN]
+                                 OCEAN_GRID_CARTESC_REAL_AREA(:,:),         & ! [IN]
+                                 OCEAN_GRID_CARTESC_REAL_TOTAREA            ) ! [IN]
+          call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,              & ! [IN]
+                                 OCEAN_ICE_MASS(:,:), VAR_NAME(I_ICE_MASS), & ! [IN]
+                                 OCEAN_GRID_CARTESC_REAL_AREA(:,:),         & ! [IN]
+                                 OCEAN_GRID_CARTESC_REAL_TOTAREA            ) ! [IN]
+       end if
 
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                  & ! [IN]
-                              OCEAN_ICE_FRAC  (:,:), VAR_NAME(I_ICE_FRAC),   & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),             & ! [IN]
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA                ) ! [IN]
     endif
 
     return
@@ -942,7 +951,6 @@ contains
                                      VAR_ID(i),                             & ! [OUT]
                                      standard_name=VAR_STDN(i)              ) ! [IN]
        enddo
-
        do i = I_OCN_Z0M, I_SFC_Z0E
           call FILE_CARTESC_def_var( restart_fid,                           & ! [IN]
                                      VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
@@ -950,6 +958,15 @@ contains
                                      VAR_ID(i),                             & ! [OUT]
                                      standard_name=VAR_STDN(i)              ) ! [IN]
        enddo
+       if ( ICE_flag ) then
+          do i = I_ICE_TEMP, I_ICE_MASS
+             call FILE_CARTESC_def_var( restart_fid,                           & ! [IN]
+                                        VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
+                                        'XY', OCEAN_RESTART_OUT_DTYPE,         & ! [IN]
+                                        VAR_ID(i),                             & ! [OUT]
+                                        standard_name=VAR_STDN(i)              ) ! [IN]
+          enddo
+       end if
     endif
 
     return
@@ -982,12 +999,6 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_OCN_Z0M),                      & ! [IN]
                                     OCEAN_OCN_Z0M(:,:),                                  & ! [IN]
                                     VAR_NAME(I_OCN_Z0M),         'XY',  fill_halo=.true. ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ICE_TEMP),                     & ! [IN]
-                                    OCEAN_ICE_TEMP(:,:),                                 & ! [IN]
-                                    VAR_NAME(I_ICE_TEMP),        'XY',  fill_halo=.true. ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ICE_MASS),                     & ! [IN]
-                                    OCEAN_ICE_MASS(:,:),                                 & ! [IN]
-                                    VAR_NAME(I_ICE_MASS),        'XY',  fill_halo=.true. ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                     & ! [IN]
                                     OCEAN_SFC_TEMP(:,:),                                 & ! [IN]
                                     VAR_NAME(I_SFC_TEMP),        'XY',  fill_halo=.true. ) ! [IN]
@@ -1018,6 +1029,14 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_Z0E),                      & ! [IN]
                                     OCEAN_SFC_Z0E(:,:),                                  & ! [IN]
                                     VAR_NAME(I_SFC_Z0E),         'XY',  fill_halo=.true. ) ! [IN]
+       if ( ICE_flag ) then
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ICE_TEMP),                     & ! [IN]
+                                       OCEAN_ICE_TEMP(:,:),                                 & ! [IN]
+                                       VAR_NAME(I_ICE_TEMP),        'XY',  fill_halo=.true. ) ! [IN]
+          call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_ICE_MASS),                     & ! [IN]
+                                       OCEAN_ICE_MASS(:,:),                                 & ! [IN]
+                                       VAR_NAME(I_ICE_MASS),        'XY',  fill_halo=.true. ) ! [IN]
+       end if
     endif
 
     return

@@ -22,8 +22,8 @@ rm -f energy.dat mass.dat
 echo "+visualize by gpview"
 rm -f dcl.pdf
 
-var__set=(SFC_TEMP SHFLX LHFLX)
-rangeset=(auto auto auto)
+var__set=(SFC_TEMP SHFLX LHFLX Ustar Tstar Qstar RLmo)
+rangeset=(auto auto auto auto auto auto auto)
 time_set=
 
 i=0

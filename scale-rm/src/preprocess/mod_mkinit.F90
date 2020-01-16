@@ -920,7 +920,13 @@ contains
        LAND_TEMP,       &
        LAND_WATER,      &
        LAND_SFC_TEMP,   &
-       LAND_SFC_albedo
+       LAND_SFC_albedo, &
+       SNOW_flag,     &
+       SNOW_SFC_TEMP, &
+       SNOW_SWE,      &
+       SNOW_Depth,    &
+       SNOW_Dzero,    &
+       SNOW_nosnowsec
     implicit none
 
     real(RP) :: LND_TEMP                ! land soil temperature      [K]
@@ -961,6 +967,15 @@ contains
     LAND_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
     LAND_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
 
+    if ( SNOW_flag ) then
+      !!!!! Tentative for snow model !!!!!
+       SNOW_SFC_TEMP (:,:) = 273.15_RP
+       SNOW_SWE      (:,:) = 0.0_RP
+       SNOW_Depth    (:,:) = 0.0_RP
+       SNOW_Dzero    (:,:) = 0.0_RP
+       SNOW_nosnowsec(:,:) = 0.0_RP
+    end if
+
     return
   end subroutine land_setup
 
@@ -968,6 +983,7 @@ contains
   !> Ocean setup
   subroutine ocean_setup
     use mod_ocean_vars, only: &
+       ICE_flag,         &
        OCEAN_TEMP,       &
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
@@ -1032,9 +1048,6 @@ contains
     OCEAN_UVEL      (:,:,:) = OCN_UVEL
     OCEAN_VVEL      (:,:,:) = OCN_VVEL
     OCEAN_OCN_Z0M   (:,:)   = SFC_Z0M
-    OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
-    OCEAN_ICE_MASS  (:,:)   = ICE_MASS
-
     OCEAN_SFC_TEMP  (:,:)           = SFC_TEMP
     OCEAN_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
     OCEAN_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
@@ -1042,6 +1055,11 @@ contains
     OCEAN_SFC_Z0M   (:,:)           = SFC_Z0M
     OCEAN_SFC_Z0H   (:,:)           = SFC_Z0H
     OCEAN_SFC_Z0E   (:,:)           = SFC_Z0E
+
+    if ( ICE_flag ) then
+       OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
+       OCEAN_ICE_MASS  (:,:)   = ICE_MASS
+    end if
 
     return
   end subroutine ocean_setup

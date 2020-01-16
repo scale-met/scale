@@ -108,12 +108,16 @@ contains
        TMPS,                &
        ZMFLX, XMFLX, YMFLX, &
        SHFLX, QVFLX, GFLX,  &
+       Ustar, Tstar, Qstar, &
+       Wstar,               &
+       RLmo,                &
        U10, V10, T2, Q2     )
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
        EPS   => CONST_EPS, &
+       UNDEF => CONST_UNDEF, &
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &
        CPdry => CONST_CPdry, &
@@ -161,6 +165,11 @@ contains
     real(RP),         intent(out)   :: SHFLX    (IA,JA)                     ! sensible heat   flux at the surface [J/m2/s]
     real(RP),         intent(out)   :: QVFLX    (IA,JA)                     ! water vapor     flux at the surface [kg/m2/s]
     real(RP),         intent(out)   :: GFLX     (IA,JA)                     ! subsurface heat flux at the surface [J/m2/s]
+    real(RP),         intent(out)   :: Ustar    (IA,JA)                     ! friction velocity         [m/s]
+    real(RP),         intent(out)   :: Tstar    (IA,JA)                     ! temperature scale         [K]
+    real(RP),         intent(out)   :: Qstar    (IA,JA)                     ! moisture scale            [kg/kg]
+    real(RP),         intent(out)   :: Wstar    (IA,JA)                     ! convective velocity scale [m/s]
+    real(RP),         intent(out)   :: RLmo     (IA,JA)                     ! inversed Obukhov length   [1/m]
     real(RP),         intent(out)   :: U10      (IA,JA)                     ! velocity u  at 10m [m/s]
     real(RP),         intent(out)   :: V10      (IA,JA)                     ! velocity v  at 10m [m/s]
     real(RP),         intent(out)   :: T2       (IA,JA)                     ! temperature at 2m  [K]
@@ -185,10 +194,11 @@ contains
     real(RP) :: oldres        ! residual in previous step
     real(RP) :: redf          ! reduced factor
 
-    real(RP) :: Ustar, dUstar ! friction velocity               [m/s]
-    real(RP) :: Tstar, dTstar ! friction potential temperature  [K]
-    real(RP) :: Qstar, dQstar ! friction water vapor mass ratio [kg/kg]
-    real(RP) :: Wstar, dWstar ! free convection velocity scale  [m/s]
+    real(RP) :: dUstar        ! friction velocity difference               [m/s]
+    real(RP) :: dTstar        ! friction potential temperature difference  [K]
+    real(RP) :: dQstar        ! friction water vapor mass ratio difference [kg/kg]
+    real(RP) :: dWstar        ! free convection velocity scale difference  [m/s]
+    real(RP) :: dRLmo         ! inversed Obukhov length         [1/m]
     real(RP) :: Uabs,  dUabs  ! modified absolute velocity      [m/s]
     real(RP) :: Ra,    dRa    ! Aerodynamic resistance (=1/Ce)  [1/s]
 
@@ -221,17 +231,17 @@ contains
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
-    !$omp shared(IS,IE,JS,JE,EPS,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
+    !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
     !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
-    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,U10,V10,T2,Q2) &
+    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
     !$omp private(qdry,Rtot,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
-    !$omp         QVsat,dQVsat,Ustar,dUstar,Tstar,dTstar,Qstar,dQstar,Wstar,dWstar,&
-    !$omp         Uabs,dUabs,Ra,dRa,FracU10,FracT2,FracQ2,MFLUX)
+    !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,&
+    !$omp         Uabs,dUabs,dRLmo,Ra,dRa,FracU10,FracT2,FracQ2,MFLUX)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
@@ -257,10 +267,11 @@ contains
 
              Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
-             call BULKFLUX( Ustar,           & ! [OUT]
-                            Tstar,           & ! [OUT]
-                            Qstar,           & ! [OUT]
-                            Wstar,           & ! [OUT]
+             call BULKFLUX( Ustar(i,j),      & ! [OUT]
+                            Tstar(i,j),      & ! [OUT]
+                            Qstar(i,j),      & ! [OUT]
+                            Wstar(i,j),      & ! [OUT]
+                            RLmo(i,j),       & ! [OUT]
                             Ra,              & ! [OUT]
                             FracU10,         & ! [OUT] ! not used
                             FracT2,          & ! [OUT] ! not used
@@ -282,6 +293,7 @@ contains
                             dTstar,          & ! [OUT]
                             dQstar,          & ! [OUT]
                             dWstar,          & ! [OUT]
+                            dRLmo,           & ! [OUT] ! not used
                             dRa,             & ! [OUT] ! not used
                             FracU10,         & ! [OUT] ! not used
                             FracT2,          & ! [OUT] ! not used
@@ -313,15 +325,15 @@ contains
                   + RFLXD(i,j,I_R_diffuse,I_R_VIS) * ALBEDO(i,j,I_R_diffuse,I_R_VIS)
 
              ! calculation for residual
-             res = SWD - SWU + LWD - LWU                                     &
-                 + CPdry   * RHOS(i,j) * Ustar * Tstar                       &
-                 + LH(i,j) * RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) ) &
+             res = SWD - SWU + LWD - LWU                                               &
+                 + CPdry   * RHOS(i,j) * Ustar(i,j) * Tstar(i,j)                       &
+                 + LH(i,j) * RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) ) &
                  - TC_dZ(i,j) * ( TMPS1(i,j) - TG(i,j) )
 
              ! calculation for d(residual)/dTMPS
              dres = -4.0_RP * emis / TMPS1(i,j)                                                                           &
-                  + CPdry   * RHOS(i,j) * ( Ustar*(dTstar-Tstar)/dTS0 + Tstar*(dUstar-Ustar)/dTS0 )                       &
-                  + LH(i,j) * RHOS(i,j) * ( Ustar*(dQstar-Qstar)/dTS0 + Qstar*(dUstar-Ustar)/dTS0 ) * Ra / ( Ra+Rb(i,j) ) &
+                  + CPdry   * RHOS(i,j) * ( Ustar(i,j)*(dTstar-Tstar(i,j))/dTS0 + Tstar(i,j)*(dUstar-Ustar(i,j))/dTS0 )                       &
+                  + LH(i,j) * RHOS(i,j) * ( Ustar(i,j)*(dQstar-Qstar(i,j))/dTS0 + Qstar(i,j)*(dUstar-Ustar(i,j))/dTS0 ) * Ra / ( Ra+Rb(i,j) ) &
                   - TC_dZ(i,j)
 
              ! convergence test with residual and error levels
@@ -403,10 +415,10 @@ contains
              LOG_INFO_CONT('(A,F32.16)') 'roughness length for vapor         [m]        :', Z0E   (i,j)
              LOG_NEWLINE
              LOG_INFO_CONT('(A,F32.16)') 'latent heat                        [J/kg]     :', LH   (i,j)
-             LOG_INFO_CONT('(A,F32.16)') 'friction velocity                  [m/s]      :', Ustar
-             LOG_INFO_CONT('(A,F32.16)') 'friction potential temperature     [K]        :', Tstar
-             LOG_INFO_CONT('(A,F32.16)') 'friction water vapor mass ratio    [kg/kg]    :', Qstar
-             LOG_INFO_CONT('(A,F32.16)') 'free convection velocity scale     [m/s]      :', Wstar
+             LOG_INFO_CONT('(A,F32.16)') 'friction velocity                  [m/s]      :', Ustar(i,j)
+             LOG_INFO_CONT('(A,F32.16)') 'friction potential temperature     [K]        :', Tstar(i,j)
+             LOG_INFO_CONT('(A,F32.16)') 'friction water vapor mass ratio    [kg/kg]    :', Qstar(i,j)
+             LOG_INFO_CONT('(A,F32.16)') 'free convection velocity scale     [m/s]      :', Wstar(i,j)
              LOG_INFO_CONT('(A,F32.16)') 'd(friction velocity)               [m/s]      :', dUstar
              LOG_INFO_CONT('(A,F32.16)') 'd(friction potential temperature)  [K]        :', dTstar
              LOG_INFO_CONT('(A,F32.16)') 'd(friction water vapor mass ratio) [kg/kg]    :', dQstar
@@ -432,39 +444,40 @@ contains
           QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
               + (        QVEF(i,j) ) * QVsat
 
-          call BULKFLUX( Ustar,     & ! [OUT]
-                         Tstar,     & ! [OUT]
-                         Qstar,     & ! [OUT]
-                         Wstar,     & ! [OUT]
-                         Ra,        & ! [OUT]
-                         FracU10,   & ! [OUT]
-                         FracT2,    & ! [OUT]
-                         FracQ2,    & ! [OUT]
-                         TMPA(i,j), & ! [IN]
-                         TMPS(i,j), & ! [IN]
-                         PRSA(i,j), & ! [IN]
-                         PRSS(i,j), & ! [IN]
-                         QVA (i,j), & ! [IN]
-                         QVS,       & ! [IN]
-                         Uabs,      & ! [IN]
-                         Z1  (i,j), & ! [IN]
-                         PBL (i,j), & ! [IN]
-                         Z0M (i,j), & ! [IN]
-                         Z0H (i,j), & ! [IN]
-                         Z0E (i,j)  ) ! [IN]
+          call BULKFLUX( Ustar(i,j), & ! [OUT]
+                         Tstar(i,j), & ! [OUT]
+                         Qstar(i,j), & ! [OUT]
+                         Wstar(i,j), & ! [OUT]
+                         RLmo(i,j),  & ! [OUT]
+                         Ra,         & ! [OUT]
+                         FracU10,    & ! [OUT]
+                         FracT2,     & ! [OUT]
+                         FracQ2,     & ! [OUT]
+                         TMPA(i,j),  & ! [IN]
+                         TMPS(i,j),  & ! [IN]
+                         PRSA(i,j),  & ! [IN]
+                         PRSS(i,j),  & ! [IN]
+                         QVA (i,j),  & ! [IN]
+                         QVS,        & ! [IN]
+                         Uabs,       & ! [IN]
+                         Z1  (i,j),  & ! [IN]
+                         PBL (i,j),  & ! [IN]
+                         Z0M (i,j),  & ! [IN]
+                         Z0H (i,j),  & ! [IN]
+                         Z0E (i,j)   ) ! [IN]
 
           if ( Uabs < EPS ) then
              ZMFLX(i,j) = 0.0_RP
              XMFLX(i,j) = 0.0_RP
              YMFLX(i,j) = 0.0_RP
           else
-             MFLUX = - RHOS(i,j) * Ustar**2
+             MFLUX = - RHOS(i,j) * Ustar(i,j)**2
              ZMFLX(i,j) = MFLUX * WA(i,j) / Uabs
              XMFLX(i,j) = MFLUX * UA(i,j) / Uabs
              YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
           end if
-          SHFLX(i,j) = -RHOS(i,j) * Ustar * Tstar * CPdry
-          QVFLX(i,j) = -RHOS(i,j) * Ustar * Qstar * Ra / ( Ra+Rb(i,j) )
+          SHFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Tstar(i,j) * CPdry
+          QVFLX(i,j) = -RHOS(i,j) * Ustar(i,j) * Qstar(i,j) * Ra / ( Ra+Rb(i,j) )
 
           emis = ( 1.0_RP-ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS(i,j)**4
 
@@ -502,16 +515,21 @@ contains
                                                            / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
 
        else ! not calculate surface flux
-          ZMFLX(i,j) = 0.0_RP
-          XMFLX(i,j) = 0.0_RP
-          YMFLX(i,j) = 0.0_RP
-          SHFLX(i,j) = 0.0_RP
-          QVFLX(i,j) = 0.0_RP
-          GFLX (i,j) = 0.0_RP
-          U10  (i,j) = 0.0_RP
-          V10  (i,j) = 0.0_RP
-          T2   (i,j) = 0.0_RP
-          Q2   (i,j) = 0.0_RP
+          ZMFLX(i,j) = UNDEF
+          XMFLX(i,j) = UNDEF
+          YMFLX(i,j) = UNDEF
+          SHFLX(i,j) = UNDEF
+          QVFLX(i,j) = UNDEF
+          GFLX (i,j) = UNDEF
+          Ustar(i,j) = UNDEF
+          Tstar(i,j) = UNDEF
+          Qstar(i,j) = UNDEF
+          Wstar(i,j) = UNDEF
+          RLmo (i,j) = UNDEF
+          U10  (i,j) = UNDEF
+          V10  (i,j) = UNDEF
+          T2   (i,j) = UNDEF
+          Q2   (i,j) = UNDEF
        endif
     enddo
     enddo
