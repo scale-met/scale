@@ -79,7 +79,7 @@ cat << EOF1 > ./run.sh
 # ------ For Linux64 & pgi fortran&C & openmpi -----
 #
 ################################################################################
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 
 
 EOF1

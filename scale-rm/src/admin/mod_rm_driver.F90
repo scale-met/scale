@@ -154,7 +154,6 @@ contains
     use scale_monitor, only: &
        MONITOR_write, &
        MONITOR_finalize
-
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
     use mod_admin_versioncheck, only: &

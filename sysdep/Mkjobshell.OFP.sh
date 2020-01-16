@@ -99,7 +99,7 @@ module load hdf5
 module load netcdf
 module load netcdf-fortran
 
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 
 export HFI_NO_CPUAFFINITY=1
 export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,68,69,136,137,204,205
