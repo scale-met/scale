@@ -149,18 +149,18 @@ contains
 
 
     ! monitor
-    call MONITOR_reg( "QTOTFLX_TB_WEST",  "water mass flux at the western boundary",  "kg/s", & ! [IN]
-                      monit_west,                                                             & ! [OUT]
-                      dim_type="ZY-W", is_tendency=.true.                                     ) ! [IN]
-    call MONITOR_reg( "QTOTFLX_TB_EAST",  "water mass flux at the eastern boundary",  "kg/s", & ! [IN]
-                      monit_east,                                                             & ! [OUT]
-                      dim_type="ZY-E", is_tendency=.true.                                     ) ! [IN]
-    call MONITOR_reg( "QTOTFLX_TB_SOUTH", "water mass flux at the southern boundary", "kg/s", & ! [IN]
-                      monit_south,                                                            & ! [OUT]
-                      dim_type="ZX-S", is_tendency=.true.                                     ) ! [IN]
-    call MONITOR_reg( "QTOTFLX_TB_NORTH", "water mass flux at the northern boundary", "kg/s", & ! [IN]
-                      monit_north,                                                            & ! [OUT]
-                      dim_type="ZX-N", is_tendency=.true.                                     ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_WEST",  "water mass flux at the western boundary",  "kg", & ! [IN]
+                      monit_west,                                                           & ! [OUT]
+                      dim_type="ZY-W", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_EAST",  "water mass flux at the eastern boundary",  "kg", & ! [IN]
+                      monit_east,                                                           & ! [OUT]
+                      dim_type="ZY-E", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_SOUTH", "water mass flux at the southern boundary", "kg", & ! [IN]
+                      monit_south,                                                          & ! [OUT]
+                      dim_type="ZX-S", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_NORTH", "water mass flux at the northern boundary", "kg", & ! [IN]
+                      monit_north,                                                          & ! [OUT]
+                      dim_type="ZX-N", is_tendency=.true.                                   ) ! [IN]
 
 
     return
