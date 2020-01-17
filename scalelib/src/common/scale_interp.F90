@@ -74,6 +74,7 @@ module scale_interp
   real(RP), private :: INTERP_search_limit
   real(RP), private :: INTERP_buffer_size_fact = 2.0_RP
   logical,  private :: INTERP_use_spline_vert = .true.
+  real(RP), private :: INTERP_threshold_undef = 1.0_RP ! [0-1]
 
   real(RP), private :: EPS_bilinear
 
@@ -93,7 +94,8 @@ contains
 
     namelist /PARAM_INTERP/ &
          INTERP_buffer_size_fact, &
-         INTERP_use_spline_vert
+         INTERP_use_spline_vert, &
+         INTERP_threshold_undef
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -1209,14 +1211,15 @@ contains
   !-----------------------------------------------------------------------------
   ! interpolation for 2D data (nearest-neighbor)
   subroutine INTERP_interp2d( &
-       npoints,        &
-       IA_ref, JA_ref, &
-       IA,  JA,        &
-       idx_i, idx_j,   &
-       hfact,          &
-       val_ref,        &
-       val,            &
-       threshold_undef )
+       npoints,         &
+       IA_ref, JA_ref,  &
+       IA,  JA,         &
+       idx_i, idx_j,    &
+       hfact,           &
+       val_ref,         &
+       val,             &
+       threshold_undef, &
+       wsum, val2       )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
@@ -1235,22 +1238,28 @@ contains
     real(RP), intent(out) :: val    (IA,JA)         ! value                    (target)
 
     real(RP), intent(in), optional :: threshold_undef !> return UNDEF if sum of the weight factor is undef the shreshold
+    real(RP), intent(out), optional :: wsum(IA,JA)
+    real(RP), intent(out), optional :: val2(IA,JA)
 
     real(RP) :: th_undef
 
     real(RP) :: fact, valn, f, w
     real(RP) :: sw
+    logical  :: lval2
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_interp',3)
 
-    th_undef = 0.0_RP
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
+    else
+       th_undef = INTERP_threshold_undef
     end if
-    th_undef = max( th_undef, EPS * 2.0_RP )
+    th_undef = min( max( th_undef, EPS * 2.0_RP ), 1.0_RP - EPS * 2.0_RP )
+
+    lval2 = present(wsum) .and. present(val2)
 
     !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp private(fact,valn,f,w,sw)
@@ -1265,13 +1274,15 @@ contains
           if ( f > EPS .and. abs( w - UNDEF ) > EPS ) then
              fact = fact + f
              valn = valn + f * w
-          else
-             sw = 0.5_RP - sign( 0.5_RP, fact - th_undef + EPS ) ! 1.0 when fact < threshold
-             valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
-             exit
           end if
        end do
-       val(i,j) = valn
+       sw = 0.5_RP - sign( 0.5_RP, fact - th_undef + EPS ) ! 1.0 when fact < threshold
+       val(i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
+       if ( lval2 ) then
+          wsum(i,j) = fact
+          sw = 0.5_RP - sign( 0.5_RP, fact - EPS ) ! 1.0 when fact < 0.0
+          val2(i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
+       end if
     enddo
     enddo
 
@@ -1283,20 +1294,21 @@ contains
   !-----------------------------------------------------------------------------
   ! interpolation using one-points for 3D data (nearest-neighbor)
   subroutine INTERP_interp3d( &
-       npoints,                &
-       KA_ref, KS_ref, KE_ref, &
-       IA_ref, JA_ref,         &
-       KA, KS, KE,             &
-       IA, JA,                 &
-       idx_i, idx_j,           &
-       hfact,                  &
-       idx_k,                  &
-       vfact,                  &
-       hgt_ref,                &
-       hgt,                    &
-       val_ref,                &
-       val,                    &
-       logwgt, threshold_undef )
+       npoints,                 &
+       KA_ref, KS_ref, KE_ref,  &
+       IA_ref, JA_ref,          &
+       KA, KS, KE,              &
+       IA, JA,                  &
+       idx_i, idx_j,            &
+       hfact,                   &
+       idx_k,                   &
+       vfact,                   &
+       hgt_ref,                 &
+       hgt,                     &
+       val_ref,                 &
+       val,                     &
+       logwgt, threshold_undef, &
+       wsum, val2               )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
        EPS   => CONST_EPS
@@ -1322,6 +1334,8 @@ contains
 
     logical,  intent(in), optional :: logwgt          !> use logarithmic weighted interpolation?
     real(RP), intent(in), optional :: threshold_undef !> return UNDEF if sum of the weight factor is undef the shreshold
+    real(RP), intent(out), optional :: wsum(KA,IA,JA)
+    real(RP), intent(out), optional :: val2(KA,IA,JA)
 
     real(RP) :: th_undef
     logical  :: logwgt_
@@ -1337,6 +1351,7 @@ contains
     real(RP) :: f
     real(RP) :: sw
     real(RP) :: w(KA,npoints)
+    logical  :: lval2
 
     integer :: imin, imax
     integer :: jmin, jmax
@@ -1346,17 +1361,22 @@ contains
 
     call PROF_rapstart('INTERP_interp',3)
 
-    th_undef = 0.0_RP
     if ( present(threshold_undef) ) then
        th_undef = threshold_undef
+    else
+       th_undef = INTERP_threshold_undef
     end if
-    th_undef = max( th_undef, EPS * 2.0_RP )
+    th_undef = min( max( th_undef, EPS * 2.0_RP ), 1.0_RP - EPS * 2.0_RP )
 
 
     logwgt_ = .false.
     if ( present(logwgt) ) then
        logwgt_ = logwgt
     endif
+
+
+    lval2 = present(wsum) .and. present(val2)
+
 
     imin = IA_ref
     jmin = JA_ref
@@ -1435,13 +1455,15 @@ contains
              if ( f > EPS .and. abs( w(k,n) - UNDEF ) > EPS ) then
                 fact = fact + f
                 valn = valn + f * w(k,n)
-             else
-                sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
-                valn = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
-                exit
              endif
           enddo
-          val(k,i,j) = valn
+          sw = 0.5_RP - sign( 0.5_RP, fact - th_undef ) ! 1.0 when fact < threshold
+          val(k,i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
+          if ( lval2 ) then
+             wsum(k,i,j) = fact
+             sw = 0.5_RP - sign( 0.5_RP, fact - EPS ) ! 1.0 when fact < 0.0
+             val2(k,i,j) = valn / ( fact + sw ) * ( 1.0_RP - sw ) + UNDEF * sw
+          end if
        enddo
 
     enddo

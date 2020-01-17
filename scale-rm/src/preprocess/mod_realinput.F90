@@ -204,6 +204,7 @@ contains
     implicit none
 
     logical :: USE_SFC_DIAGNOSES          = .false. !> use surface diagnoses
+    logical :: USE_DATA_UNDER_SFC         = .true.  !> use data under the surface
     logical :: USE_NONHYDRO_DENS_BOUNDARY = .false. !> use non-hydrostatic density for boundary data
 
 
@@ -225,6 +226,7 @@ contains
        USE_FILE_DENSITY,           &
        USE_NONHYDRO_DENS_BOUNDARY, &
        USE_SFC_DIAGNOSES,          &
+       USE_DATA_UNDER_SFC,         &
        SAME_MP_TYPE,               &
        INTRP_TYPE
 
@@ -357,23 +359,24 @@ contains
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
-             call ParentAtmosInput( FILETYPE_ORG,      & ! [IN]
-                                    basename_mod,      & ! [IN]
-                                    dims(:),           & ! [IN]
-                                    istep,             & ! [IN]
-                                    USE_SFC_DIAGNOSES, & ! [IN]
-                                    SAME_MP_TYPE,      & ! [IN]
-                                    DENS_in(:,:,:),    & ! [OUT]
-                                    MOMZ_in(:,:,:),    & ! [OUT]
-                                    MOMX_in(:,:,:),    & ! [OUT]
-                                    MOMY_in(:,:,:),    & ! [OUT]
-                                    RHOT_in(:,:,:),    & ! [OUT]
-                                    QTRC_in(:,:,:,:),  & ! [OUT]
-                                    VELZ_in(:,:,:),    & ! [OUT]
-                                    VELX_in(:,:,:),    & ! [OUT]
-                                    VELY_in(:,:,:),    & ! [OUT]
-                                    POTT_in(:,:,:),    & ! [OUT]
-                                    PRES_in(:,:,:)     ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,       & ! [IN]
+                                    basename_mod,       & ! [IN]
+                                    dims(:),            & ! [IN]
+                                    istep,              & ! [IN]
+                                    USE_SFC_DIAGNOSES,  & ! [IN]
+                                    USE_DATA_UNDER_SFC, & ! [IN]
+                                    SAME_MP_TYPE,       & ! [IN]
+                                    DENS_in(:,:,:),     & ! [OUT]
+                                    MOMZ_in(:,:,:),     & ! [OUT]
+                                    MOMX_in(:,:,:),     & ! [OUT]
+                                    MOMY_in(:,:,:),     & ! [OUT]
+                                    RHOT_in(:,:,:),     & ! [OUT]
+                                    QTRC_in(:,:,:,:),   & ! [OUT]
+                                    VELZ_in(:,:,:),     & ! [OUT]
+                                    VELX_in(:,:,:),     & ! [OUT]
+                                    VELY_in(:,:,:),     & ! [OUT]
+                                    POTT_in(:,:,:),     & ! [OUT]
+                                    PRES_in(:,:,:)      ) ! [OUT]
           else
              LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -1235,6 +1238,7 @@ contains
        dims,          &
        istep,         &
        sfc_diagnoses, &
+       under_sfc,     &
        same_mptype,   &
        DENS,          &
        MOMZ,          &
@@ -1310,6 +1314,7 @@ contains
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: istep
     logical,          intent(in)  :: sfc_diagnoses
+    logical,          intent(in)  :: under_sfc
     logical,          intent(in)  :: same_mptype   ! Is microphysics type same between outer and inner model
     real(RP),         intent(out) :: DENS(KA,IA,JA)
     real(RP),         intent(out) :: MOMZ(KA,IA,JA)
@@ -1338,6 +1343,9 @@ contains
     real(RP) :: X_org(dims(2),dims(3))
     real(RP) :: Y_org(dims(2),dims(3))
     logical  :: zonal, pole
+
+    real(RP) :: wsum(KA,IA,JA)
+    real(RP) :: work(KA,IA,JA)
 
     logical :: same_mptype_ = .false.
 
@@ -1382,6 +1390,7 @@ contains
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
                                        sfc_diagnoses,     & ! [IN]
+                                       under_sfc,         & ! [IN]
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
           same_mptype_ = .false.
@@ -1585,6 +1594,7 @@ contains
                                 hfact  (    :,:,:),      & ! [OUT]
                                 kgrd   (:,:,:,:,:),      & ! [OUT]
                                 vfact  (:,  :,:,:),      & ! [OUT]
+                                flag_extrap = .false.,   & ! [IN]
                                 zonal = zonal,           & ! [IN]
                                 pole  = pole             ) ! [IN]
 
@@ -1604,7 +1614,8 @@ contains
                                 jgrd   (    :,:,:),      & ! [OUT]
                                 hfact  (    :,:,:),      & ! [OUT]
                                 kgrd   (:,:,:,:,:),      & ! [OUT]
-                                vfact  (:,  :,:,:)       ) ! [OUT]
+                                vfact  (:,  :,:,:),      & ! [OUT]
+                                flag_extrap = .false.    ) ! [IN]
 
        end select
 
@@ -1615,15 +1626,33 @@ contains
                           dims(2), dims(3),        &
                           KA, KS, KE,              &
                           IA, JA,                  &
-                          igrd  (    :,:,:), & ! [IN]
-                          jgrd  (    :,:,:), & ! [IN]
-                          hfact (    :,:,:), & ! [IN]
-                          kgrd  (:,:,:,:,:), & ! [IN]
-                          vfact (:,  :,:,:), & ! [IN]
-                          CZ_org(:,:,:),     & ! [IN]
-                          CZ    (:,:,:),     & ! [IN]
-                          W_org (:,:,:),     & ! [IN]
-                          W     (:,:,:)      ) ! [OUT]
+                          igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                          hfact(:,:,:),             & ! [IN]
+                          kgrd(:,:,:,:,:),          & ! [IN]
+                          vfact(:,:,:,:),           & ! [IN]
+                          CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                          W_org(:,:,:),            & ! [IN]
+                          W     (:,:,:),            & ! [OUT]
+                          threshold_undef = 1.0_RP, & ! [IN]
+                          wsum = wsum(:,:,:),       & ! [OUT]
+                          val2 = work(:,:,:)        ) ! [OUT]
+    !$omp parallel do collapse(2) &
+    !$omp private(kref)
+    do j = 1, JA
+    do i = 1, IA
+!CDIR NOVECTOR
+       do k = KS, KA
+          if ( W(k,i,j) .ne. UNDEF ) then
+             kref = k
+             exit
+          end if
+       end do
+       do k = kref-1, KS, -1
+          W(k,i,j) = W(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
+                   + work(k,i,j) * wsum(k,i,j)
+       end do
+    end do
+    end do
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               W(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1631,21 +1660,37 @@ contains
        call COMM_wait ( W(:,:,:), 1, .false. )
     end if
 
-
     call INTERP_interp3d( itp_nh_a,                &
                           dims(1)+2, 1, dims(1)+2, &
                           dims(2), dims(3),        &
                           KA, KS, KE,              &
                           IA, JA,                  &
-                          igrd  (    :,:,:), & ! [IN]
-                          jgrd  (    :,:,:), & ! [IN]
-                          hfact (    :,:,:), & ! [IN]
-                          kgrd  (:,:,:,:,:), & ! [IN]
-                          vfact (:,  :,:,:), & ! [IN]
-                          CZ_org(:,:,:),     & ! [IN]
-                          CZ    (:,:,:),     & ! [IN]
-                          U_org (:,:,:),     & ! [IN]
-                          U     (:,:,:)      ) ! [OUT]
+                          igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                          hfact(:,:,:),             & ! [IN]
+                          kgrd(:,:,:,:,:),          & ! [IN]
+                          vfact(:,:,:,:),           & ! [IN]
+                          CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                          U_org(:,:,:),             & ! [IN]
+                          U(:,:,:),                 & ! [OUT]
+                          threshold_undef = 1.0_RP, & ! [IN]
+                          wsum = wsum(:,:,:),       & ! [OUT]
+                          val2 = work(:,:,:)        ) ! [OUT]
+    !$omp parallel do collapse(2) &
+    !$omp private(kref)
+    do j = 1, JA
+    do i = 1, IA
+       do k = KS, KA
+          if ( U(k,i,j) .ne. UNDEF ) then
+             kref = k
+             exit
+          end if
+       end do
+       do k = kref-1, KS, -1
+          U(k,i,j) = U(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
+                   + work(k,i,j) * wsum(k,i,j)
+       end do
+    end do
+    end do
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               U(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1658,31 +1703,16 @@ contains
                           dims(2), dims(3),        &
                           KA, KS, KE,              &
                           IA, JA,                  &
-                          igrd  (    :,:,:), & ! [IN]
-                          jgrd  (    :,:,:), & ! [IN]
-                          hfact (    :,:,:), & ! [IN]
-                          kgrd  (:,:,:,:,:), & ! [IN]
-                          vfact (:,  :,:,:), & ! [IN]
-                          CZ_org(:,:,:),     & ! [IN]
-                          CZ    (:,:,:),     & ! [IN]
-                          V_org (:,:,:),     & ! [IN]
-                          V     (:,:,:)      ) ! [OUT]
-
-    !$omp parallel do collapse(2) &
-    !$omp private(kref)
-    do j = 1, JA
-    do i = 1, IA
-       do k = KS, KA
-          if ( U(k,i,j) .ne. UNDEF ) then
-             kref = k
-             exit
-          end if
-       end do
-       do k = KS, kref-1
-          U(k,i,j) = U(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
-       end do
-    end do
-    end do
+                          igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                          hfact(:,:,:),             & ! [IN]
+                          kgrd(:,:,:,:,:),          & ! [IN]
+                          vfact(:,:,:,:),           & ! [IN]
+                          CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                          V_org(:,:,:),             & ! [IN]
+                          V(:,:,:),                 & ! [OUT]
+                          threshold_undef = 1.0_RP, & ! [IN]
+                          wsum = wsum(:,:,:),       & ! [OUT]
+                          val2 = work(:,:,:)        ) ! [OUT]
     !$omp parallel do collapse(2) &
     !$omp private(kref)
     do j = 1, JA
@@ -1693,28 +1723,12 @@ contains
              exit
           end if
        end do
-       do k = KS, kref-1
-          V(k,i,j) = V(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
+       do k = kref-1, KS, -1
+          V(k,i,j) = V(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
+                   + work(k,i,j) * wsum(k,i,j)
        end do
     end do
     end do
-    !$omp parallel do collapse(2) &
-    !$omp private(kref)
-    do j = 1, JA
-    do i = 1, IA
-!CDIR NOVECTOR
-       do k = KS, KA
-          if ( W(k,i,j) .ne. UNDEF ) then
-             kref = k
-             exit
-          end if
-       end do
-       do k = KS, kref-1
-          W(k,i,j) = W(kref,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(kref,i,j) - topo(i,j) ) / Z0M(i,j) )
-       end do
-    end do
-    end do
-
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               V(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1805,27 +1819,29 @@ contains
                           dims(2), dims(3),        &
                           KA, KS, KE,              &
                           IA, JA,                  &
-                          igrd    (    :,:,:), & ! [IN]
-                          jgrd    (    :,:,:), & ! [IN]
-                          hfact   (    :,:,:), & ! [IN]
-                          kgrd    (:,:,:,:,:), & ! [IN]
-                          vfact   (:,  :,:,:), & ! [IN]
-                          CZ_org  (:,:,:),     & ! [IN]
-                          CZ      (:,:,:),     & ! [IN]
-                          POTT_org(:,:,:),     & ! [IN]
-                          POTT    (:,:,:)      ) ! [OUT]
-
+                          igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                          hfact(:,:,:),             & ! [IN]
+                          kgrd(:,:,:,:,:),          & ! [IN]
+                          vfact(:,:,:,:),           & ! [IN]
+                          CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                          POTT_org(:,:,:),          & ! [IN]
+                          POTT(:,:,:),              & ! [OUT]
+                          threshold_undef = 1.0_RP, & ! [IN]
+                          wsum = wsum(:,:,:),       & ! [OUT]
+                          val2 = work(:,:,:)        ) ! [OUT]
     !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        do k = KE-1, KS, -1
-          if ( POTT(k,i,j) == UNDEF ) POTT(k,i,j) = POTT(k+1,i,j)
+          if ( POTT(k,i,j) == UNDEF ) then
+             POTT(k,i,j) = POTT(k+1,i,j) * ( 1.0_RP - wsum(k,i,j) ) &
+                         + work(k,i,j) * wsum(k,i,j)
+          end if
        end do
        POTT(   1:KS-1,i,j) = UNDEF
        POTT(KE+1:KA  ,i,j) = UNDEF
     enddo
     enddo
-
     if ( FILTER_NITER > 0 ) then
        call FILTER_hyperdiff( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                               POTT(:,:,:), FILTER_ORDER, FILTER_NITER )
@@ -1839,21 +1855,24 @@ contains
                              dims(2), dims(3),        &
                              KA, KS, KE,              &
                              IA, JA,                  &
-                             igrd    (    :,:,:), & ! [IN]
-                             jgrd    (    :,:,:), & ! [IN]
-                             hfact   (    :,:,:), & ! [IN]
-                             kgrd    (:,:,:,:,:), & ! [IN]
-                             vfact   (:,  :,:,:), & ! [IN]
-                             CZ_org  (:,:,:),     & ! [IN]
-                             CZ      (:,:,:),     & ! [IN]
-                             QTRC_org(:,:,:,iq),  & ! [IN]
-                             QTRC    (:,:,:,iq)   ) ! [OUT]
-
+                             igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                             hfact(:,:,:),             & ! [IN]
+                             kgrd(:,:,:,:,:),          & ! [IN]
+                             vfact(:,:,:,:),           & ! [IN]
+                             CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                             QTRC_org(:,:,:,iq),       & ! [IN]
+                             QTRC(:,:,:,iq),           & ! [OUT]
+                             threshold_undef = 1.0_RP, & ! [IN]
+                             wsum = wsum(:,:,:),       & ! [OUT]
+                             val2 = work(:,:,:)        ) ! [OUT]
        !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
           do k = KE-1, KS, -1
-             if ( QTRC(k,i,j,iq) == UNDEF ) QTRC(k,i,j,iq) = QTRC(k+1,i,j,iq)
+             if ( QTRC(k,i,j,iq) == UNDEF ) then
+                QTRC(k,i,j,iq) = QTRC(k+1,i,j,iq) * ( 1.0_RP - wsum(k,i,j) ) &
+                               + work(k,i,j) * wsum(k,i,j)
+             end if
           end do
           do k = KS, KE
              QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
@@ -1862,7 +1881,6 @@ contains
           QTRC(KE+1:KA  ,i,j,iq) = 0.0_RP
        enddo
        enddo
-
        if ( FILTER_NITER > 0 ) then
           !$omp parallel do collapse(3)
           do j = 1, JA
@@ -1943,16 +1961,16 @@ contains
                              dims(2), dims(3),        &
                              KA, KS, KE,              &
                              IA, JA,                  &
-                             igrd    (    :,:,:), & ! [IN]
-                             jgrd    (    :,:,:), & ! [IN]
-                             hfact   (    :,:,:), & ! [IN]
-                             kgrd    (:,:,:,:,:), & ! [IN]
-                             vfact   (:,  :,:,:), & ! [IN]
-                             CZ_org  (:,:,:),     & ! [IN]
-                             CZ      (:,:,:),     & ! [IN]
-                             DENS_org(:,:,:),     & ! [IN]
-                             DENS    (:,:,:),     & ! [OUT]
-                             logwgt = .true.      ) ! [IN, optional]
+                             igrd(:,:,:), jgrd(:,:,:), & ! [IN]
+                             hfact(:,:,:),             & ! [IN]
+                             kgrd(:,:,:,:,:),          & ! [IN]
+                             vfact(:,:,:,:),           & ! [IN]
+                             CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
+                             DENS_org(:,:,:),          & ! [IN]
+                             DENS(:,:,:),              & ! [OUT]
+                             threshold_undef = 1.0_RP, & ! [IN]
+                             wsum = wsum(:,:,:),       & ! [OUT]
+                             val2 = work(:,:,:)        ) ! [OUT]
        call HYDROSTATIC_buildrho_real( KA, KS, KE, IA, 1, IA, JA, 1, JA, &
                                        POTT(:,:,:), QV(:,:,:), QC(:,:,:), & ! [IN]
                                        CZ(:,:,:),                         & ! [IN]
@@ -1962,7 +1980,10 @@ contains
        do j = 1, JA
        do i = 1, IA
        do k = KS, KE
-          if ( DENS(k,i,j) == UNDEF ) DENS(k,i,j) = DENS2(k,i,j)
+          if ( DENS(k,i,j) == UNDEF ) then
+             DENS(k,i,j) = DENS2(k,i,j) * ( 1.0_RP - wsum(k,i,j) ) &
+                         + work(k,i,j) * wsum(k,i,j)
+          end if
        end do
        end do
        end do
