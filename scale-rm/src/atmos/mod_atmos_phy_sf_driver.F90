@@ -196,7 +196,6 @@ contains
        SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
-       SFLX_GH   => ATMOS_PHY_SF_SFLX_GH,   &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        Ustar     => ATMOS_PHY_SF_Ustar,     &
@@ -515,7 +514,7 @@ contains
     call FILE_HISTORY_in( SFLX_MV   (:,:),                     'MVFLX',           'v-momentum flux',                       'kg/m/s2' )
     call FILE_HISTORY_in( SFLX_SH   (:,:),                     'SHFLX',           'sensible heat flux',                    'W/m2'    , fill_halo=.true. )
     call FILE_HISTORY_in( SFLX_LH   (:,:),                     'LHFLX',           'latent heat flux',                      'W/m2'    , fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux',                      'W/m2'    , fill_halo=.true. )
+    call FILE_HISTORY_in( SFLX_GH   (:,:),                     'GHFLX',           'ground heat flux (downward)',           'W/m2'    , fill_halo=.true. )
     do iq = 1, QA
        call FILE_HISTORY_in( SFLX_QTRC(:,:,iq), 'SFLX_'//trim(TRACER_NAME(iq)), &
                              'surface '//trim(TRACER_NAME(iq))//' flux',        &

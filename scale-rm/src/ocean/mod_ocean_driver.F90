@@ -296,10 +296,10 @@ contains
        OCEAN_ICE_Qstar,   &
        OCEAN_ICE_Wstar,   &
        OCEAN_ICE_RLmo,    &
-       OCEAN_SFLX_G,      &
+       OCEAN_SFLX_GH,     &
        OCEAN_SFLX_water,  &
        OCEAN_SFLX_ENGI,   &
-       OCEAN_OFLX_G,      &
+       OCEAN_OFLX_GH,     &
        OCEAN_OFLX_water,  &
        OCEAN_OFLX_ENGI,   &
        OCEAN_ICE_FRAC,    &
@@ -332,7 +332,7 @@ contains
     real(RP) :: T2           (OIA,OJA)
     real(RP) :: Q2           (OIA,OJA)
     real(RP) :: sflx_hbalance(OIA,OJA)
-    real(RP) :: sflx_G       (OIA,OJA)
+    real(RP) :: sflx_GH      (OIA,OJA)
     real(RP) :: sflx_water   (OIA,OJA)
     real(RP) :: sflx_engi    (OIA,OJA)
     real(RP) :: ice_mass     (OIA,OJA)
@@ -506,7 +506,7 @@ contains
                                     OCEAN_SFLX_SH    (:,:),     & ! [OUT]
                                     OCEAN_SFLX_LH    (:,:),     & ! [OUT]
                                     OCEAN_SFLX_QV    (:,:),     & ! [OUT]
-                                    sflx_G           (:,:),     & ! [OUT]
+                                    OCEAN_SFLX_GH    (:,:),     & ! [OUT]
                                     OCEAN_OCN_Ustar  (:,:),     & ! [OUT]
                                     OCEAN_OCN_Tstar  (:,:),     & ! [OUT]
                                     OCEAN_OCN_Qstar  (:,:),     & ! [OUT]
@@ -521,7 +521,6 @@ contains
     !$omp parallel do
     do j = OJS, OJE
     do i = OIS, OIE
-       OCEAN_SFLX_G    (i,j) = - sflx_G(i,j) ! upward to downward
        OCEAN_SFLX_water(i,j) = ATMOS_SFLX_water(i,j) - OCEAN_SFLX_QV(i,j)
        OCEAN_SFLX_ENGI (i,j) = ATMOS_SFLX_ENGI(i,j)                              & ! internal energy of precipitation
                              - OCEAN_SFLX_QV(i,j) * CV_WATER * OCEAN_SFC_TEMP(i,j) ! internal energy of evaporation water
@@ -559,7 +558,7 @@ contains
           OCEAN_T2      (i,j) = OCEAN_T2      (i,j) * sfc_frac
           OCEAN_Q2      (i,j) = OCEAN_Q2      (i,j) * sfc_frac
 
-          OCEAN_SFLX_G    (i,j) = OCEAN_SFLX_G    (i,j) * sfc_frac
+          OCEAN_SFLX_GH   (i,j) = OCEAN_SFLX_GH   (i,j) * sfc_frac
           OCEAN_SFLX_water(i,j) = OCEAN_SFLX_water(i,j) * sfc_frac
           OCEAN_SFLX_ENGI (i,j) = OCEAN_SFLX_ENGI (i,j) * sfc_frac
 
@@ -684,7 +683,7 @@ contains
                                        sflx_SH          (:,:),     & ! [OUT]
                                        sflx_LH          (:,:),     & ! [OUT]
                                        sflx_QV          (:,:),     & ! [OUT]
-                                       sflx_G           (:,:),     & ! [OUT]
+                                       sflx_GH          (:,:),     & ! [OUT]
                                        OCEAN_ICE_Ustar  (:,:),     & ! [OUT]
                                        OCEAN_ICE_Tstar  (:,:),     & ! [OUT]
                                        OCEAN_ICE_Qstar  (:,:),     & ! [OUT]
@@ -724,11 +723,11 @@ contains
           OCEAN_T2      (i,j) = OCEAN_T2      (i,j) + T2            (i,j) * OCEAN_ICE_FRAC(i,j)
           OCEAN_Q2      (i,j) = OCEAN_Q2      (i,j) + Q2            (i,j) * OCEAN_ICE_FRAC(i,j)
 
-          OCEAN_OFLX_G    (i,j) = OCEAN_SFLX_G    (i,j)
+          OCEAN_OFLX_GH   (i,j) = OCEAN_SFLX_GH   (i,j)
           OCEAN_OFLX_water(i,j) = OCEAN_SFLX_water(i,j)
           OCEAN_OFLX_ENGI (i,j) = OCEAN_SFLX_ENGI (i,j)
 
-          OCEAN_SFLX_G    (i,j) = OCEAN_SFLX_G    (i,j) - sflx_G    (i,j) * OCEAN_ICE_FRAC(i,j) ! upward to downward
+          OCEAN_SFLX_GH   (i,j) = OCEAN_SFLX_GH   (i,j) + sflx_GH   (i,j) * OCEAN_ICE_FRAC(i,j)
           OCEAN_SFLX_water(i,j) = OCEAN_SFLX_water(i,j) + sflx_water(i,j) * OCEAN_ICE_FRAC(i,j)
           OCEAN_SFLX_ENGI (i,j) = OCEAN_SFLX_ENGI (i,j) + sflx_engi (i,j) * OCEAN_ICE_FRAC(i,j)
        end do
@@ -761,8 +760,7 @@ contains
           !$omp parallel do
           do j = OJS, OJE
           do i = OIS, OIE
-             sflx_hbalance(i,j) = - sflx_G(i,j) & ! upward to downward
-                                + sflx_engi(i,j)
+             sflx_hbalance(i,j) = sflx_GH(i,j) + sflx_engi(i,j)
           enddo
           enddo
 
@@ -779,14 +777,14 @@ contains
                                      dt,                    & ! [IN]
                                      OCEAN_ICE_TEMP_t(:,:), & ! [OUT]
                                      OCEAN_ICE_MASS_t(:,:), & ! [OUT]
-                                     sflx_G          (:,:), & ! [OUT]
+                                     sflx_GH         (:,:), & ! [OUT]
                                      sflx_water      (:,:), & ! [OUT]
                                      sflx_engi       (:,:)  ) ! [OUT]
        case ( 'INIT' )
           !$omp parallel do
           do j = OJS, OJE
           do i = OIS, OIE
-             sflx_G    (i,j) = - sflx_G(i,j) * OCEAN_ICE_FRAC(i,j) ! upward to downward
+             sflx_GH   (i,j) = sflx_GH(i,j) * OCEAN_ICE_FRAC(i,j)
              sflx_water(i,j) = 0.0_RP ! no flux from seaice to ocean
              sflx_engi (i,j) = 0.0_RP ! no flux from seaice to ocean
           enddo
@@ -803,7 +801,7 @@ contains
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          OCEAN_OFLX_G    (i,j) = OCEAN_OFLX_G    (i,j) + sflx_g    (i,j)
+          OCEAN_OFLX_GH   (i,j) = OCEAN_OFLX_GH   (i,j) + sflx_GH   (i,j)
           OCEAN_OFLX_water(i,j) = OCEAN_OFLX_water(i,j) + sflx_water(i,j)
           OCEAN_OFLX_ENGI (i,j) = OCEAN_OFLX_ENGI (i,j) + sflx_engi (i,j)
        enddo
@@ -874,7 +872,7 @@ contains
        OCEAN_VVEL_t,     &
        OCEAN_ICE_TEMP_t, &
        OCEAN_ICE_MASS_t, &
-       OCEAN_OFLX_G,     &
+       OCEAN_OFLX_GH,    &
        OCEAN_OFLX_water, &
        OCEAN_OFLX_ENGI,  &
        OCEAN_MASS_SUPL,  &
@@ -896,7 +894,7 @@ contains
     real(RP) :: MASS_SUPL(OIA,OJA)
     real(RP) :: ENGI_SUPL(OIA,OJA)
 
-    real(RP) :: sflx_G(OIA,OJA)
+    real(RP) :: sflx_GH(OIA,OJA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -921,7 +919,7 @@ contains
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          sflx_G(i,j) = OCEAN_OFLX_G(i,j) + OCEAN_OFLX_ENGI(i,j)
+          sflx_GH(i,j) = OCEAN_OFLX_GH(i,j) + OCEAN_OFLX_ENGI(i,j)
        end do
        end do
 
@@ -929,7 +927,7 @@ contains
                             OIA,   OIS, OIE,         & ! [IN]
                             OJA,   OJS, OJE,         & ! [IN]
                             OCEAN_TEMP_t    (:,:,:), & ! [IN]
-                            sflx_G          (:,:),   & ! [IN]
+                            sflx_GH         (:,:),   & ! [IN]
                             OCEAN_OFLX_water(:,:),   & ! [IN]
                             exists_ocean    (:,:),   & ! [IN]
                             dt, NOWDAYSEC,           & ! [IN]
@@ -1081,7 +1079,7 @@ contains
        OCEAN_V10,        &
        OCEAN_T2,         &
        OCEAN_Q2,         &
-       OCEAN_SFLX_G
+       OCEAN_SFLX_GH
     use mod_cpl_vars, only: &
        CPL_putOCN
     implicit none
@@ -1102,7 +1100,7 @@ contains
                         OCEAN_SFLX_MV   (:,:),     & ! [IN]
                         OCEAN_SFLX_SH   (:,:),     & ! [IN]
                         OCEAN_SFLX_LH   (:,:),     & ! [IN]
-                        OCEAN_SFLX_G    (:,:),     & ! [IN]
+                        OCEAN_SFLX_GH   (:,:),     & ! [IN]
                         OCEAN_SFLX_QTRC (:,:,:),   & ! [IN]
                         OCEAN_U10       (:,:),     & ! [IN]
                         OCEAN_V10       (:,:),     & ! [IN]

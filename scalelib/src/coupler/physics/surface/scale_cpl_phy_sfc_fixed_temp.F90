@@ -244,8 +244,8 @@ contains
           ! calculation for residual
           res = SWD - SWU + LWD - LWU - SHFLX(i,j) - QVFLX(i,j) * LH(i,j)
 
-          ! put residual in ground heat flux (positive for upward)
-          GFLX(i,j) = -res
+          ! put residual in ground heat flux (positive for downward)
+          GFLX(i,j) = res
 
           ! diagnostic variables considering unstable/stable state
           !U10(i,j) = FracU10 * UA(i,j)

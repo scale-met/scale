@@ -100,10 +100,10 @@ module mod_ocean_vars
   real(RP), public, allocatable :: ATMOS_SFLX_ENGI  (:,:)
 
   ! send to uppermost ocean
-  real(RP), public, allocatable, target :: OCEAN_SFLX_G    (:,:) !< ocean surface water heat flux   [J/m2/s]
+  real(RP), public, allocatable, target :: OCEAN_SFLX_GH   (:,:) !< ocean surface water heat flux   [J/m2/s]
   real(RP), public, allocatable, target :: OCEAN_SFLX_water(:,:) !< ocean surface water mass flux [kg/m2/s]
   real(RP), public, allocatable, target :: OCEAN_SFLX_ENGI (:,:) !< ocean surface internal energy flux [J/m2/s]
-  real(RP), public, pointer :: OCEAN_OFLX_G    (:,:) !< ocean-ice surface water heat flux [J/m2/s]
+  real(RP), public, pointer :: OCEAN_OFLX_GH   (:,:) !< ocean-ice surface water heat flux [J/m2/s]
   real(RP), public, pointer :: OCEAN_OFLX_water(:,:) !< ocean-ice surface water mass flux [kg/m2/s]
   real(RP), public, pointer :: OCEAN_OFLX_ENGI (:,:) !< ocean-ice surface internal energy flux [J/m2/s]
 
@@ -392,21 +392,21 @@ contains
     ATMOS_SFLX_water (:,:)     = UNDEF
     ATMOS_SFLX_ENGI  (:,:)     = UNDEF
 
-    allocate( OCEAN_SFLX_G    (OIA,OJA) )
+    allocate( OCEAN_SFLX_GH   (OIA,OJA) )
     allocate( OCEAN_SFLX_water(OIA,OJA) )
     allocate( OCEAN_SFLX_ENGI (OIA,OJA) )
-    OCEAN_SFLX_G    (:,:) = UNDEF
+    OCEAN_SFLX_GH   (:,:) = UNDEF
     OCEAN_SFLX_water(:,:) = UNDEF
     OCEAN_SFLX_ENGI (:,:) = UNDEF
     if ( ICE_flag ) then
-       allocate( OCEAN_OFLX_G    (OIA,OJA) )
+       allocate( OCEAN_OFLX_GH   (OIA,OJA) )
        allocate( OCEAN_OFLX_water(OIA,OJA) )
        allocate( OCEAN_OFLX_ENGI (OIA,OJA) )
-       OCEAN_OFLX_G    (:,:) = UNDEF
+       OCEAN_OFLX_GH   (:,:) = UNDEF
        OCEAN_OFLX_water(:,:) = UNDEF
        OCEAN_OFLX_ENGI (:,:) = UNDEF
     else
-       OCEAN_OFLX_G     => OCEAN_SFLX_G
+       OCEAN_OFLX_GH    => OCEAN_SFLX_GH
        OCEAN_OFLX_water => OCEAN_SFLX_water
        OCEAN_OFLX_ENGI  => OCEAN_SFLX_ENGI
     end if
@@ -849,7 +849,7 @@ contains
                              VAR_UNIT(I_ICE_MASS), standard_name=VAR_STDN(I_ICE_MASS)        )
     end if
 
-    call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),      'OCEAN_SFLX_G',                &
+    call FILE_HISTORY_in( OCEAN_SFLX_GH   (:,:),      'OCEAN_SFLX_GH',               &
                           'ocean subsurface heat flux (downward)',         'J/m2/s'  )
     call FILE_HISTORY_in( OCEAN_SFLX_water(:,:),      'OCEAN_SFLX_water',            &
                           'ocean surface liquid water flux (downward)',    'kg/m2/s' )
@@ -1084,16 +1084,16 @@ contains
     end if
 
 
-    call MONITOR_put( MONIT_id(IM_ENGSFC_GH), OCEAN_SFLX_G   (:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSFC_GH), OCEAN_SFLX_GH  (:,:) )
     call MONITOR_put( MONIT_id(IM_ENGSFC_EI), OCEAN_SFLX_ENGI(:,:) )
-    call MONITOR_put( MONIT_id(IM_ENGSSF_GH), OCEAN_OFLX_G   (:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSSF_GH), OCEAN_OFLX_GH  (:,:) )
     call MONITOR_put( MONIT_id(IM_ENGSSF_EI), OCEAN_OFLX_ENGI(:,:) )
     call MONITOR_put( MONIT_id(IM_ENG_SUPL) , OCEAN_ENGI_SUPL(:,:) )
     if ( MONIT_id(IM_T_ENGFLX) > 0 ) then
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          WORK2D(i,j) = OCEAN_SFLX_G(i,j) + OCEAN_SFLX_ENGI(i,j) &
+          WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
                       + OCEAN_ENGI_SUPL(i,j)
        end do
        end do
@@ -1103,7 +1103,7 @@ contains
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          WORK2D(i,j) = OCEAN_OFLX_G(i,j) + OCEAN_OFLX_ENGI(i,j) &
+          WORK2D(i,j) = OCEAN_OFLX_GH(i,j) + OCEAN_OFLX_ENGI(i,j) &
                       + OCEAN_ENGI_SUPL(i,j)
        end do
        end do
@@ -1113,8 +1113,8 @@ contains
        !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
-          WORK2D(i,j) = OCEAN_SFLX_G(i,j) + OCEAN_SFLX_ENGI(i,j) &
-                      - OCEAN_OFLX_G(i,j) - OCEAN_OFLX_ENGI(i,j)
+          WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
+                      - OCEAN_OFLX_GH(i,j) - OCEAN_OFLX_ENGI(i,j)
        end do
        end do
        call MONITOR_put( MONIT_id(IM_I_ENGFLX), WORK2D(:,:) )

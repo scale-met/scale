@@ -75,7 +75,7 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MV   (:,:)     ! y-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SH   (:,:)     ! sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)     ! latent heat flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s] (downward)
   real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_ENGI (:,:)     ! internal energy flux [J/m2/s]
   real(RP), public, pointer     :: ATMOS_PHY_SF_SFLX_QV   (:,:)

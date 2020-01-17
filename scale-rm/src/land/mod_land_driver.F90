@@ -238,7 +238,6 @@ contains
     real(RP) :: LAND_QVEF (LIA,LJA)
     real(RP) :: LAND_TC_dZ(LIA,LJA)
     real(RP) :: SFLX_QV   (LIA,LJA)
-    real(RP) :: SFLX_GH   (LIA,LJA)
     real(RP) :: SFLX_ENGI (LIA,LJA)
     real(RP) :: LH        (LIA,LJA) ! latent heat of vaporization [J/kg]
     real(RP) :: ATMOS_W   (LIA,LJA)
@@ -506,7 +505,7 @@ contains
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                               LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_QV(:,:),      & ! [OUT]
-                              SFLX_GH(:,:),                                            & ! [OUT]
+                              LAND_SFLX_GH(:,:),                                       & ! [OUT]
                               SOIL_Ustar(:,:), SOIL_Tstar(:,:), SOIL_Qstar(:,:),       & ! [OUT]
                               SOIL_Wstar(:,:),                                         & ! [OUT]
                               SOIL_RLmo(:,:),                                          & ! [OUT]
@@ -549,7 +548,7 @@ contains
                                     LANDUSE_exists_land(:,:), dt,                            & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_QV(:,:),      & ! [OUT]
-                                    SFLX_GH(:,:),                                            & ! [OUT]
+                                    LAND_SFLX_GH(:,:),                                       & ! [OUT]
                                     SOIL_Ustar(:,:), SOIL_Tstar(:,:), SOIL_Qstar(:,:),       & ! [OUT]
                                     SOIL_Wstar(:,:),                                         & ! [OUT]
                                     SOIL_RLmo(:,:),                                          & ! [OUT]
@@ -573,7 +572,6 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
-       LAND_SFLX_GH   (i,j) = - SFLX_GH(i,j) ! inverse sign ( positive for upward to downward )
        LAND_SFLX_water(i,j) = ATMOS_SFLX_water(i,j) - SFLX_QV(i,j)
        LAND_SFLX_ENGI (i,j) = ATMOS_SFLX_ENGI(i,j) & ! internal energy of precipitation
                             - SFLX_ENGI(i,j)         ! internal energy of evapolation or sublimation
