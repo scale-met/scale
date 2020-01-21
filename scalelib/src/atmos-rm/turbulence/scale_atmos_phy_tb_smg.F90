@@ -95,7 +95,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_TB_smg_setup( &
-       FZ, CZ, CDX, CDY, MAPF )
+       FZ, CZ, CDX, CDY, MAPF, &
+       horizontal )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
@@ -107,6 +108,8 @@ contains
     real(RP), intent(in) :: CDX (IA)
     real(RP), intent(in) :: CDY (JA)
     real(RP), intent(in) :: MAPF(IA,JA,2)
+
+    logical,  intent(in), optional :: horizontal
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
     real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
@@ -131,6 +134,8 @@ contains
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Smagorinsky-type Eddy Viscocity Model'
 
     ATMOS_PHY_TB_SMG_Cs = Cs
+
+    if ( present(horizontal) ) ATMOS_PHY_TB_SMG_horizontal = horizontal
 
     !--- read namelist
     rewind(IO_FID_CONF)
