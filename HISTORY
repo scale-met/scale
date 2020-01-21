@@ -1,7 +1,12 @@
 = Release History
 
+== 2019-12-23 (5.3.5)
+ * Bug fixes:
+   * Fix wrong local time in the urban model
+   * Fix wrong land use factor
+
 == 2019-11-13 (5.3.4)
-* Bug fix:
+* Bug fixes:
   * Fix unexpected decrease of the soil temperature with snow precipitation
   * Fix unexpected decrease of the urban temperature with evaporation
   * Fix wrong the TKE production at the bottom layer in the MYNN scheme
