@@ -110,7 +110,8 @@ contains
        ATMOS_PHY_TB_dns_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
-       ATMOS_sw_phy_tb
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl
     use mod_atmos_phy_tb_vars, only: &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
     use scale_monitor, only: &
@@ -118,6 +119,7 @@ contains
     implicit none
 
     integer :: i, j
+    logical :: horizontal = .false.
     !---------------------------------------------------------------------------
 
     if ( .not. ATMOS_sw_phy_tb ) return
@@ -137,7 +139,8 @@ contains
     ! setup library component
     select case( ATMOS_PHY_TB_TYPE )
     case( 'SMAGORINSKY' )
-       call ATMOS_PHY_TB_smg_setup( REAL_FZ, REAL_CZ, CDX, CDY, MAPF(:,:,:,I_XY) ) ! [IN]
+       if ( ATMOS_sw_phy_bl ) horizontal = .true.
+       call ATMOS_PHY_TB_smg_setup( REAL_FZ, REAL_CZ, CDX, CDY, MAPF(:,:,:,I_XY), horizontal ) ! [IN]
     case( 'D1980' )
        call ATMOS_PHY_TB_d1980_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
     case( 'DNS' )
