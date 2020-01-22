@@ -599,6 +599,7 @@ contains
     real(RP) :: CVtot2   (KA)
     real(RP) :: RHOE     (KA)
     real(RP) :: RHOE2    (KA)
+    real(RP) :: RHOQ     (KA,QS_MP+1:QE_MP)
     real(RP) :: RHOQ2    (KA,QS_MP+1:QE_MP)
     real(RP) :: mflux    (KA)
     real(RP) :: sflux    (2)  !> 1: rain, 2: snow
@@ -794,7 +795,7 @@ contains
           !$omp         vterm_hist,hist_vterm_idx) &
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
-          !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ2, &
+          !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
           !$omp         vterm,mflux,sflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
@@ -820,7 +821,8 @@ contains
              end do
              do iq = QS_MP+1, QE_MP
              do k = KS, KE
-                RHOQ2(k,iq) = DENS2(k) * QTRC(k,i,j,iq)
+                RHOQ (k,iq) = DENS2(k) * QTRC(k,i,j,iq) + RHOQ_t_MP(k,i,j,iq) * dt_MP
+                RHOQ2(k,iq) = RHOQ(k,iq)
              end do
              end do
 
@@ -927,7 +929,7 @@ contains
              do iq = QS_MP+1, QE_MP
              do k  = KS, KE
                 RHOQ_t_MP(k,i,j,iq) = RHOQ_t_MP(k,i,j,iq) &
-                     + ( RHOQ2(k,iq) - DENS(k,i,j) * QTRC(k,i,j,iq) ) / dt_MP
+                     + ( RHOQ2(k,iq) - RHOQ(k,iq) ) / dt_MP
              enddo
              enddo
 
