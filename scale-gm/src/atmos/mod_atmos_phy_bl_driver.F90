@@ -174,7 +174,8 @@ contains
        SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
        SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_QV => ATMOS_PHY_SF_SFLX_QV, &
-       l_mo    => ATMOS_PHY_SF_l_mo
+       Ustar   => ATMOS_PHY_SF_Ustar, &
+       RLmo    => ATMOS_PHY_SF_RLmo
     use mod_atmos_vars, only: &
        CZ, &
        FZ
@@ -220,7 +221,7 @@ contains
                QDRY(:,:,:,l), QV(:,:,:,l), QW(:,:,:),                          & ! (in)
                POTL(:,:,:,l), POTV(:,:,:,l),                                   & ! (in)
                SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), SFLX_QV(:,:,l), & ! (in)
-               l_mo(:,:,l),                                                    & ! (in)
+               Ustar(:,:,l), RLmo(:,:,l),                                      & ! (in)
                CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                                & ! (in)
                RHOU_t(:,:,:), RHOV_t(:,:,:),                                   & ! (out)
                RHOT_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                             & ! (out)

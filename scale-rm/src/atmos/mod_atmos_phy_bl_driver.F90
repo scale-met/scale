@@ -172,7 +172,8 @@ contains
        SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
        SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_QV => ATMOS_PHY_SF_SFLX_QV, &
-       l_mo    => ATMOS_PHY_SF_l_mo
+       Ustar   => ATMOS_PHY_SF_Ustar, &
+       RLmo    => ATMOS_PHY_SF_RLmo
     implicit none
 
     logical, intent(in) :: update_flag
@@ -215,7 +216,7 @@ contains
                QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
                POTL(:,:,:), POTV(:,:,:),                               & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
-               l_mo(:,:),                                              & ! (in)
+               Ustar(:,:), RLmo(:,:),                                  & ! (in)
                CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                     & ! (out)
                RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),               & ! (out)

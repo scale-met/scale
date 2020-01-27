@@ -80,12 +80,17 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
   real(RP), public, pointer     :: ATMOS_PHY_SF_SFLX_QV   (:,:)
 
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Ustar     (:,:)     ! friction velocity         [m/2]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Tstar     (:,:)     ! temperature scale         [K]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Qstar     (:,:)     ! moisture scale            [kg/kg]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Wstar     (:,:)     ! convective velocity scale [m/s]
+
   real(RP), public, allocatable :: ATMOS_PHY_SF_U10       (:,:)     ! 10m x-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_V10       (:,:)     ! 10m y-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_T2        (:,:)     ! 2m temperature [K]
   real(RP), public, allocatable :: ATMOS_PHY_SF_Q2        (:,:)     ! 2m specific humidity [kg/kg]
 
-  real(RP), public, allocatable :: ATMOS_PHY_SF_l_mo      (:,:)     ! monin-obukov length
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RLmo      (:,:)      ! inverse of monin-obukhov length
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:) ! tracer emission   flux [kg/m2/s]
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QDEP (:,:,:) ! tracer deposition flux [kg/m2/s]
@@ -255,16 +260,24 @@ contains
     ATMOS_PHY_SF_SFLX_GH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   = UNDEF
 
+    allocate( ATMOS_PHY_SF_Ustar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Tstar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Qstar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Wstar     (IA,JA) )
+    ATMOS_PHY_SF_Ustar     (:,:)     = UNDEF
+    ATMOS_PHY_SF_Tstar     (:,:)     = UNDEF
+    ATMOS_PHY_SF_Wstar     (:,:)     = UNDEF
+
     allocate( ATMOS_PHY_SF_U10       (IA,JA) )
     allocate( ATMOS_PHY_SF_V10       (IA,JA) )
     allocate( ATMOS_PHY_SF_T2        (IA,JA) )
     allocate( ATMOS_PHY_SF_Q2        (IA,JA) )
-    allocate( ATMOS_PHY_SF_l_mo      (IA,JA) )
+    allocate( ATMOS_PHY_SF_RLmo      (IA,JA) )
     ATMOS_PHY_SF_U10       (:,:)     = UNDEF
     ATMOS_PHY_SF_V10       (:,:)     = UNDEF
     ATMOS_PHY_SF_T2        (:,:)     = UNDEF
     ATMOS_PHY_SF_Q2        (:,:)     = UNDEF
-    ATMOS_PHY_SF_l_mo      (:,:)     = UNDEF
+    ATMOS_PHY_SF_RLmo      (:,:)     = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)

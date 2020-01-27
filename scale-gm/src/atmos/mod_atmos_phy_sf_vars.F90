@@ -77,7 +77,11 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_T2        (:,:,:)     ! 2m temperature [K]
   real(RP), public, allocatable :: ATMOS_PHY_SF_Q2        (:,:,:)     ! 2m specific humidity [kg/kg]
 
-  real(RP), public, allocatable :: ATMOS_PHY_SF_l_mo      (:,:,:)     ! monin-obukov length
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Ustar     (:,:,:)     ! friction velocity
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Tstar     (:,:,:)     ! temperature scale
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Qstar     (:,:,:)     ! moisture scale
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Wstar     (:,:,:)     ! convective velocity scale
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RLmo      (:,:,:)     ! inverced monin-obukov length
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:,:) ! tracer emission   flux [kg/m2/s]
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QDEP (:,:,:,:) ! tracer deposition flux [kg/m2/s]
@@ -239,12 +243,20 @@ contains
     allocate( ATMOS_PHY_SF_V10       (IA,JA,ADM_lall) )
     allocate( ATMOS_PHY_SF_T2        (IA,JA,ADM_lall) )
     allocate( ATMOS_PHY_SF_Q2        (IA,JA,ADM_lall) )
-    allocate( ATMOS_PHY_SF_l_mo      (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_SF_Ustar     (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_SF_Tstar     (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_SF_Qstar     (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_SF_Wstar     (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_SF_RLmo      (IA,JA,ADM_lall) )
     ATMOS_PHY_SF_U10       (:,:,:)     = UNDEF
     ATMOS_PHY_SF_V10       (:,:,:)     = UNDEF
     ATMOS_PHY_SF_T2        (:,:,:)     = UNDEF
     ATMOS_PHY_SF_Q2        (:,:,:)     = UNDEF
-    ATMOS_PHY_SF_l_mo      (:,:,:)     = UNDEF
+    ATMOS_PHY_SF_Ustar     (:,:,:)     = UNDEF
+    ATMOS_PHY_SF_Tstar     (:,:,:)     = UNDEF
+    ATMOS_PHY_SF_Qstar     (:,:,:)     = UNDEF
+    ATMOS_PHY_SF_Wstar     (:,:,:)     = UNDEF
+    ATMOS_PHY_SF_RLmo      (:,:,:)     = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)

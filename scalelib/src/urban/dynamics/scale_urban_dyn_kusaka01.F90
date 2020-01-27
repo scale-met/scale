@@ -374,11 +374,14 @@ contains
        ALBEDO,                          &
        MWFLX, MUFLX, MVFLX,             &
        SHFLX, LHFLX, GHFLX,             &
+       Ustar, Tstar, Qstar, Wstar,      &
+       RLmo,                            &
        U10, V10, T2, Q2                 )
     use scale_const, only: &
-       EPS  => CONST_EPS,  &
-       Rdry => CONST_Rdry, &
-       Rvap => CONST_Rvap
+       EPS   => CONST_EPS,  &
+       UNDEF => CONST_UNDEF, &
+       Rdry  => CONST_Rdry, &
+       Rvap  => CONST_Rvap
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_dens2qsat_all
 !       qsat => ATMOS_SATURATION_pres2qsat_all
@@ -438,6 +441,11 @@ contains
     real(RP), intent(out) :: SHFLX   (UIA,UJA)
     real(RP), intent(out) :: LHFLX   (UIA,UJA)
     real(RP), intent(out) :: GHFLX   (UIA,UJA)
+    real(RP), intent(out) :: Ustar   (UIA,UJA)
+    real(RP), intent(out) :: Tstar   (UIA,UJA)
+    real(RP), intent(out) :: Qstar   (UIA,UJA)
+    real(RP), intent(out) :: Wstar   (UIA,UJA)
+    real(RP), intent(out) :: RLmo    (UIA,UJA)
     real(RP), intent(out) :: U10     (UIA,UJA)
     real(RP), intent(out) :: V10     (UIA,UJA)
     real(RP), intent(out) :: T2      (UIA,UJA)
@@ -485,10 +493,6 @@ contains
     real(RP) :: DZG(UKA)     ! thickness of each road layer [m]
 
 
-    real(RP) :: Ustar ! friction velocity [m/s]
-    real(RP) :: Tstar ! friction temperature [K]
-    real(RP) :: Qstar ! friction mixing rate [kg/kg]
-    real(RP) :: Wstar ! free convection velocity scale [m/s]
     real(RP) :: Uabs  ! modified absolute velocity [m/s]
     real(RP) :: Ra    ! Aerodynamic resistance (=1/Ce) [1/s]
 
@@ -636,10 +640,11 @@ contains
        call qsat( SFC_TEMP(i,j), RHOS(i,j), & ! [IN]
                   QVsat                     ) ! [OUT]
 
-       call BULKFLUX( Ustar,         & ! [OUT]
-                      Tstar,         & ! [OUT]
-                      Qstar,         & ! [OUT]
-                      Wstar,         & ! [OUT]
+       call BULKFLUX( Ustar(i,j),    & ! [OUT]
+                      Tstar(i,j),    & ! [OUT]
+                      Qstar(i,j),    & ! [OUT]
+                      Wstar(i,j),    & ! [OUT]
+                      RLmo (i,j),    & ! [OUT]
                       Ra,            & ! [OUT]
                       FracU10,       & ! [OUT]
                       FracT2,        & ! [OUT]
@@ -662,38 +667,43 @@ contains
           MUFLX(i,j) = 0.0_RP
           MVFLX(i,j) = 0.0_RP
        else
-          MFLUX = - RHOS(i,j) * Ustar**2
+          MFLUX = - RHOS(i,j) * Ustar(i,j)**2
           MWFLX(i,j) = MFLUX * w / Uabs
           MUFLX(i,j) = MFLUX * U1(i,j) / Uabs
           MVFLX(i,j) = MFLUX * V1(i,j) / Uabs
        end if
 
     else
-       SFC_TEMP(i,j)     = 300.0_RP ! constant value
-       ALBEDO  (i,j,:,:) = 0.0_RP
-       MWFLX   (i,j)     = 0.0_RP
-       MUFLX   (i,j)     = 0.0_RP
-       MVFLX   (i,j)     = 0.0_RP
-       SHFLX   (i,j)     = 0.0_RP
-       LHFLX   (i,j)     = 0.0_RP
-       GHFLX   (i,j)     = 0.0_RP
-       U10     (i,j)     = 0.0_RP
-       V10     (i,j)     = 0.0_RP
-       T2      (i,j)     = 0.0_RP
-       Q2      (i,j)     = 0.0_RP
-       SHR     (i,j)     = 0.0_RP
-       SHB     (i,j)     = 0.0_RP
-       SHG     (i,j)     = 0.0_RP
-       LHR     (i,j)     = 0.0_RP
-       LHB     (i,j)     = 0.0_RP
-       LHG     (i,j)     = 0.0_RP
-       GHR     (i,j)     = 0.0_RP
-       GHB     (i,j)     = 0.0_RP
-       GHG     (i,j)     = 0.0_RP
-       RNR     (i,j)     = 0.0_RP
-       RNB     (i,j)     = 0.0_RP
-       RNG     (i,j)     = 0.0_RP
-       RNgrd   (i,j)     = 0.0_RP
+       SFC_TEMP(i,j)     = UNDEF
+       ALBEDO  (i,j,:,:) = UNDEF
+       MWFLX   (i,j)     = UNDEF
+       MUFLX   (i,j)     = UNDEF
+       MVFLX   (i,j)     = UNDEF
+       SHFLX   (i,j)     = UNDEF
+       LHFLX   (i,j)     = UNDEF
+       GHFLX   (i,j)     = UNDEF
+       Ustar   (i,j)     = UNDEF
+       Tstar   (i,j)     = UNDEF
+       Qstar   (i,j)     = UNDEF
+       Wstar   (i,j)     = UNDEF
+       RLmo    (i,j)     = UNDEF
+       U10     (i,j)     = UNDEF
+       V10     (i,j)     = UNDEF
+       T2      (i,j)     = UNDEF
+       Q2      (i,j)     = UNDEF
+       SHR     (i,j)     = UNDEF
+       SHB     (i,j)     = UNDEF
+       SHG     (i,j)     = UNDEF
+       LHR     (i,j)     = UNDEF
+       LHB     (i,j)     = UNDEF
+       LHG     (i,j)     = UNDEF
+       GHR     (i,j)     = UNDEF
+       GHB     (i,j)     = UNDEF
+       GHG     (i,j)     = UNDEF
+       RNR     (i,j)     = UNDEF
+       RNB     (i,j)     = UNDEF
+       RNG     (i,j)     = UNDEF
+       RNgrd   (i,j)     = UNDEF
     endif
 
     end do
