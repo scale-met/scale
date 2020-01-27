@@ -1651,6 +1651,9 @@ contains
           W(k,i,j) = W(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
                    + work(k,i,j) * wsum(k,i,j)
        end do
+       do k = kref+1, KE
+          if ( W(k,i,j) == UNDEF ) W(k,i,j) = W(k-1,i,j)
+       end do
     end do
     end do
     if ( FILTER_NITER > 0 ) then
@@ -1689,6 +1692,9 @@ contains
           U(k,i,j) = U(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
                    + work(k,i,j) * wsum(k,i,j)
        end do
+       do k = kref+1, KE
+          if ( U(k,i,j) == UNDEF ) U(k,i,j) = U(k-1,i,j)
+       end do
     end do
     end do
     if ( FILTER_NITER > 0 ) then
@@ -1726,6 +1732,9 @@ contains
        do k = kref-1, KS, -1
           V(k,i,j) = V(k+1,i,j) * log( ( CZ(k,i,j) - topo(i,j) ) / Z0M(i,j) ) / log( ( CZ(k+1,i,j) - topo(i,j) ) / Z0M(i,j) ) * ( 1.0_RP - wsum(k,i,j) ) &
                    + work(k,i,j) * wsum(k,i,j)
+       end do
+       do k = kref+1, KE
+          if ( V(k,i,j) == UNDEF ) V(k,i,j) = V(k-1,i,j)
        end do
     end do
     end do
@@ -1832,6 +1841,9 @@ contains
     !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
+       do k = KS+1, KE
+          if ( POTT(k,i,j) == UNDEF .and. POTT(k-1,i,j) .ne. UNDEF ) POTT(k,i,j) = POTT(k-1,i,j)
+       end do
        do k = KE-1, KS, -1
           if ( POTT(k,i,j) == UNDEF ) then
              POTT(k,i,j) = POTT(k+1,i,j) * ( 1.0_RP - wsum(k,i,j) ) &
@@ -1868,6 +1880,9 @@ contains
        !$omp parallel do collapse(2)
        do j = 1, JA
        do i = 1, IA
+       do k = KS+1, KE
+          if ( QTRC(k,i,j,iq) == UNDEF .and. QTRC(k-1,i,j,iq) .ne. UNDEF ) QTRC(k,i,j,iq) = QTRC(k-1,i,j,iq)
+       end do
           do k = KE-1, KS, -1
              if ( QTRC(k,i,j,iq) == UNDEF ) then
                 QTRC(k,i,j,iq) = QTRC(k+1,i,j,iq) * ( 1.0_RP - wsum(k,i,j) ) &
