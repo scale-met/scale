@@ -65,7 +65,12 @@ contains
        SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
-       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       Ustar     => ATMOS_PHY_SF_Ustar,     &
+       Tstar     => ATMOS_PHY_SF_Tstar,     &
+       Qstar     => ATMOS_PHY_SF_Qstar,     &
+       Wstar     => ATMOS_PHY_SF_Wstar,     &
+       RLmo      => ATMOS_PHY_SF_RLmo
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -100,6 +105,11 @@ contains
        SFLX_MV(:,:) = 0.0_RP
        SFLX_SH(:,:) = 0.0_RP
        SFLX_LH(:,:) = 0.0_RP
+       Ustar  (:,:) = 0.0_RP
+       Tstar  (:,:) = 0.0_RP
+       Qstar  (:,:) = 0.0_RP
+       Wstar  (:,:) = 0.0_RP
+       RLmo   (:,:) = 0.0_RP
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
