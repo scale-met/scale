@@ -204,7 +204,7 @@ contains
      write( FID_CTL, '(a)') "TITLE SCALE3 data output"
      write( FID_CTL, '(a)') "OPTIONS BIG_ENDIAN"
      write( FID_CTL, '(a,1x,ES15.7)') "UNDEF", -9.9999001E+30
-     write( FID_CTL, '(a,3x,i7,1x,a)') "XDEF", nx, "LEVELS"
+     write( FID_CTL, '(a,3x,i7,1x,a)', advance="no") "XDEF", nx, "LEVELS"
      write( FID_CTL, '(5(1x,ES15.7))') cx(1:nx)*1.d-3
      write( FID_CTL, '(a,3x,i7,1x,a)') "YDEF", ny, "LEVELS"
      write( FID_CTL, '(5(1x,ES15.7))') cy(1:ny)*1.d-3
