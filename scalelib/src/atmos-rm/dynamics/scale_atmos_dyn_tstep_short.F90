@@ -50,7 +50,7 @@ module scale_atmos_dyn_tstep_short
                        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! (in)
                        PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! (in)
                        REF_dens, REF_rhot,                               & ! (in)
-                       BND_W, BND_E, BND_S, BND_N,                       & ! (in)
+                       BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! (in)
                        dtrk, last                                        ) ! (in)
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -88,7 +88,7 @@ module scale_atmos_dyn_tstep_short
 
        real(RP), intent(in)  :: DPRES0  (KA,IA,JA)
        real(RP), intent(in)  :: RT2P    (KA,IA,JA)
-       real(RP), intent(in)  :: CORIOLI (1, IA,JA)
+       real(RP), intent(in)  :: CORIOLI (   IA,JA)
        real(RP), intent(in)  :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(in)  :: wdamp_coef(KA)
        real(RP), intent(in)  :: divdmp_coef
@@ -122,6 +122,7 @@ module scale_atmos_dyn_tstep_short
        logical,  intent(in)  :: BND_E
        logical,  intent(in)  :: BND_S
        logical,  intent(in)  :: BND_N
+       logical,  intent(in)  :: TwoD
 
        real(RP), intent(in)  :: dtrk
        logical,  intent(in)  :: last

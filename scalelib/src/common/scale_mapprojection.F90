@@ -180,6 +180,8 @@ contains
   subroutine MAPPROJECTION_setup( DOMAIN_CENTER_X, DOMAIN_CENTER_Y )
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_const, only: &
        UNDEF     => CONST_UNDEF,  &
        PI_RP     => CONST_PI,     &
@@ -230,6 +232,11 @@ contains
     endif
     LOG_NML(PARAM_MAPPROJECTION)
 
+    if ( PRC_TwoD .and. MAPPROJECTION_type .ne. 'NONE' ) then
+       LOG_ERROR("MAPPROJECTION_setup",*) 'MAPPROJECTION_type must be "NONE" for 2D experiment'
+       call PRC_abort
+    end if
+
     LOG_NEWLINE
     LOG_INFO("MAPPROJECTION_setup",*) 'Map projection information'
     LOG_INFO_CONT('(1x,A,F15.3)') 'Basepoint(x)    [m] : ', MAPPROJECTION_basepoint_x
@@ -247,7 +254,7 @@ contains
     MAPPROJECTION_mappinginfo%rotation                       = MAPPROJECTION_rotation
 
 
-    select case(trim(MAPPROJECTION_type))
+    select case(MAPPROJECTION_type)
     case('NONE')
        LOG_INFO_CONT(*) '=> NO map projection'
        MAPPROJECTION_mappinginfo%mapping_name = ""

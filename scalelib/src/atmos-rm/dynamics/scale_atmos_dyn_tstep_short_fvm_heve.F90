@@ -122,7 +122,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
-       BND_W, BND_E, BND_S, BND_N,                  &
+       BND_W, BND_E, BND_S, BND_N, TwoD,            &
        dtrk, last                                   )
     use scale_atmos_grid_cartesC_index
     use scale_const, only: &
@@ -204,7 +204,7 @@ contains
 
     real(RP), intent(in)         :: DPRES0  (KA,IA,JA)
     real(RP), intent(in)         :: RT2P    (KA,IA,JA)
-    real(RP), intent(in)         :: CORIOLI (1, IA,JA)
+    real(RP), intent(in)         :: CORIOLI (   IA,JA)
     real(RP), intent(in)         :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in)         :: wdamp_coef(KA)
     real(RP), intent(in)         :: divdmp_coef
@@ -238,6 +238,7 @@ contains
     logical,  intent(in)         :: BND_E
     logical,  intent(in)         :: BND_S
     logical,  intent(in)         :: BND_N
+    logical,  intent(in)         :: TwoD
 
     real(RP), intent(in)         :: dtrk
     logical,  intent(in)         :: last
@@ -293,10 +294,6 @@ contains
 
     DPRES(:,:,:) = UNDEF
 
-    mflx_hi(:,:,:,:) = UNDEF
-    tflx_hi(:,:,:,:) = UNDEF
-    qflx_hi(:,:,:,:) = UNDEF
-
 #ifndef NO_FCT_DYN
     qflx_lo  (:,:,:,:) = UNDEF
     qflx_anti(:,:,:,:) = UNDEF
@@ -347,8 +344,8 @@ contains
        !$omp parallel private(i,j,k) 
       
        !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS-2, JJE+2
-       do i = IIS-2, IIE+2
+       do j = JJS-1, JJE+1
+       do i = max(IIS-1,1), min(IIE+1,IA)
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, DPRES0(k,i,j) )
@@ -393,7 +390,7 @@ contains
        ! momentum -> velocity
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do i = max(IS-1,1), min(IE+2,IA)
        do k = KS, KE-1
 #ifdef DEBUG
           call CHECK( __LINE__, MOMZ0(k,i,j) )
@@ -409,7 +406,7 @@ contains
 #endif
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do i = max(IS-1,1), min(IE+2,IA)
           VELZ(KE,i,j) = 0.0_RP
        enddo
        enddo
@@ -417,26 +414,39 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+2
-       do i = IS-2, IE+1
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JS-1, JE+2
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMX0(k,i,j) )
-          call CHECK( __LINE__, DENS0(k,i  ,j) )
-          call CHECK( __LINE__, DENS0(k,i+1,j) )
+             call CHECK( __LINE__, MOMX0(k,IS,j) )
+             call CHECK( __LINE__, DENS0(k,IS,j) )
 #endif
-          VELX(k,i,j) = 2.0_RP * MOMX0(k,i,j) / ( DENS0(k,i+1,j)+DENS0(k,i,j) )
-       enddo
-       enddo
-       enddo
+             VELX(k,IS,j) = MOMX0(k,IS,j) / DENS0(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS-1, JE+2
+          do i = IS-2, IE+1
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMX0(k,i,j) )
+             call CHECK( __LINE__, DENS0(k,i  ,j) )
+             call CHECK( __LINE__, DENS0(k,i+1,j) )
+#endif
+             VELX(k,i,j) = 2.0_RP * MOMX0(k,i,j) / ( DENS0(k,i+1,j)+DENS0(k,i,j) )
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-2, JE+1
-       do i = IS-1, IE+2
+       do i = max(IS-1,1), min(IE+2,IA)
        do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, MOMY0(k,i,j) )
@@ -511,22 +521,24 @@ contains
 
        ! at (u, y, z)
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-IFS_OFF, min(IIE,IEH)
-       do k = KS, KE
+       if ( .not. TwoD ) then
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS-IFS_OFF, min(IIE,IEH)
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMX(k,i+1,j) )
-          call CHECK( __LINE__, MOMX(k,i  ,j) )
-          call CHECK( __LINE__, MOMX(k,i-1,j) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
+             call CHECK( __LINE__, MOMX(k,i+1,j) )
+             call CHECK( __LINE__, MOMX(k,i  ,j) )
+             call CHECK( __LINE__, MOMX(k,i-1,j) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
-          mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) &
-                              * ( MOMX(k,i,j) + num_diff(k,i,j,I_DENS,XDIR) )
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+             mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) / MAPF(i,j,2,I_UY) &
+                                 * ( MOMX(k,i,j) + num_diff(k,i,j,I_DENS,XDIR) )
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -556,36 +568,64 @@ contains
 
        !-----< update density >-----
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( twoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, DENS0(k,i,j) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, mflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DENS_t(k,i,j) )
+             call CHECK( __LINE__, DENS0(k,IS,j) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DENS_t(k,IS,j) )
 #endif
-          advcv = - ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k)
-          advch = - ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                  - ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j)
-          DENS_RK(k,i,j) = DENS0(k,i,j) &
-                         + dtrk * ( ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                  + DENS_t(k,i,j) )
+             advcv = - ( mflx_hi(k,IS,j,ZDIR)-mflx_hi(k-1,IS,j,  ZDIR) ) * RCDZ(k)
+             advch = - ( mflx_hi(k,IS,j,YDIR)-mflx_hi(k  ,IS,j-1,YDIR) ) * RCDY(j)
+             DENS_RK(k,IS,j) = DENS0(k,IS,j) &
+                             + dtrk * ( ( advcv + advch ) * MAPF(IS,j,2,I_XY) / GSQRT(k,IS,j,I_XYZ) &
+                                      + DENS_t(k,IS,j) )
 #ifdef HIST_TEND
-          if ( lhist ) then
-             advcv_t(k,i,j,I_DENS) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-             advch_t(k,i,j,I_DENS) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
-          endif
+             if ( lhist ) then
+                advcv_t(k,IS,j,I_DENS) = advcv * MAPF(IS,j,2,I_XY) / GSQRT(k,IS,j,I_XYZ)
+                advch_t(k,IS,j,I_DENS) = advch * MAPF(IS,j,2,I_XY) / GSQRT(k,IS,j,I_XYZ)
+             endif
 #endif
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+          enddo
+          enddo
+          !$omp end do nowait
+       else
+                    !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, DENS0(k,i,j) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DENS_t(k,i,j) )
+#endif
+             advcv = - ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i,  j,  ZDIR) ) * RCDZ(k)
+             advch = - ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                     - ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j)
+             DENS_RK(k,i,j) = DENS0(k,i,j) &
+                            + dtrk * ( ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                                     + DENS_t(k,i,j) )
+#ifdef HIST_TEND
+             if ( lhist ) then
+                advcv_t(k,i,j,I_DENS) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
+                advch_t(k,i,j,I_DENS) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ)
+             endif
+#endif
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 
        !$omp end parallel
 
@@ -607,23 +647,25 @@ contains
             num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
             CDZ, FDZ, dtrk, &
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XYW( qflx_J13, & ! (out)
             MOMX, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J13G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, &
+            CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_XYW( qflx_J23, & ! (out)
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J23G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, &
+            CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, y, w)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYW( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, v, w)
@@ -631,7 +673,7 @@ contains
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
       
@@ -666,51 +708,93 @@ contains
 
        !-----< update momentum (z) -----
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( TwoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DDIV(k  ,i,j) )
-          call CHECK( __LINE__, DDIV(k+1,i,j) )
-          call CHECK( __LINE__, MOMZ0(k,i,j) )
-          call CHECK( __LINE__, MOMZ_t(k,i,j) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k  ,IS,j) )
+             call CHECK( __LINE__, DDIV(k+1,IS,j) )
+             call CHECK( __LINE__, MOMZ0(k,IS,j) )
+             call CHECK( __LINE__, MOMZ_t(k,IS,j) )
 #endif
-          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j) &
-                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RFDZ(k)
-          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
-                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
-          wdamp = - wdamp_coef(k) * MOMZ0(k,i,j)
-          div = divdmp_coef / dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
-          MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
-                         + dtrk * ( ( advcv + advch        &
-                                    - pgf (k,i,j)          & ! pressure gradient force
-                                    - buoy(k,i,j)          & ! buoyancy force
-                                    ) / GSQRT(k,i,j,I_XYW) &
-                                  + wdamp                  & ! Rayleigh damping
-                                  + div                    &
-                                  + MOMZ_t(k,i,j) )        ! physics tendency
+             advcv = - ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                       + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j)        ) * RFDZ(k)
+             advch = - ( qflx_hi(k,IS,j,YDIR) - qflx_hi(k,IS,j-1,YDIR) ) * RCDY(j) &
+                     * MAPF(IS,j,2,I_XY)
+             wdamp = - wdamp_coef(k) * MOMZ0(k,IS,j)
+             div = divdmp_coef / dtrk * FDZ(k) * ( DDIV(k+1,IS,j)-DDIV(k,IS,j) ) ! divergence damping
+             MOMZ_RK(k,IS,j) = MOMZ0(k,IS,j) &
+                            + dtrk * ( ( advcv + advch         &
+                                       - pgf (k,IS,j)          & ! pressure gradient force
+                                       - buoy(k,IS,j)          & ! buoyancy force
+                                       ) / GSQRT(k,IS,j,I_XYW) &
+                                     + wdamp                   & ! Rayleigh damping
+                                     + div                     &
+                                     + MOMZ_t(k,IS,j) )        ! physics tendency
 #ifdef HIST_TEND
-          if ( lhist ) then
-             advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
-             advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
-             pg_t(k,i,j,1) = ( - pgf(k,i,j) - buoy(k,i,j) ) / GSQRT(k,i,j,I_XYW)
-             wdmp_t(k,i,j) = wdamp
-             ddiv_t(k,i,j,1) = div
-          endif
+             if ( lhist ) then
+                advcv_t(k,IS,j,I_MOMZ) = advcv / GSQRT(k,IS,j,I_XYW)
+                advch_t(k,IS,j,I_MOMZ) = advch / GSQRT(k,IS,j,I_XYW)
+                pg_t(k,IS,j,1) = ( - pgf(k,IS,j) - buoy(k,IS,j) ) / GSQRT(k,IS,j,I_XYW)
+                wdmp_t(k,IS,j) = wdamp
+                ddiv_t(k,IS,j,1) = div
+             endif
 #endif
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+          enddo
+          enddo
+          !$omp end do nowait
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k  ,i,j) )
+             call CHECK( __LINE__, DDIV(k+1,i,j) )
+             call CHECK( __LINE__, MOMZ0(k,i,j) )
+             call CHECK( __LINE__, MOMZ_t(k,i,j) )
+#endif
+             advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                       + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j) &
+                       + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RFDZ(k)
+             advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k,i-1,j,XDIR) ) * RCDX(i) &
+                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k,i,j-1,YDIR) ) * RCDY(j) ) &
+                     * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)
+             wdamp = - wdamp_coef(k) * MOMZ0(k,i,j)
+             div = divdmp_coef / dtrk * FDZ(k) * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) ! divergence damping
+             MOMZ_RK(k,i,j) = MOMZ0(k,i,j) &
+                            + dtrk * ( ( advcv + advch        &
+                                       - pgf (k,i,j)          & ! pressure gradient force
+                                       - buoy(k,i,j)          & ! buoyancy force
+                                       ) / GSQRT(k,i,j,I_XYW) &
+                                     + wdamp                  & ! Rayleigh damping
+                                     + div                    &
+                                     + MOMZ_t(k,i,j) )        ! physics tendency
+#ifdef HIST_TEND
+             if ( lhist ) then
+                advcv_t(k,i,j,I_MOMZ) = advcv / GSQRT(k,i,j,I_XYW)
+                advch_t(k,i,j,I_MOMZ) = advch / GSQRT(k,i,j,I_XYW)
+                pg_t(k,i,j,1) = ( - pgf(k,i,j) - buoy(k,i,j) ) / GSQRT(k,i,j,I_XYW)
+                wdmp_t(k,i,j) = wdamp
+                ddiv_t(k,i,j,1) = div
+             endif
+#endif
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -751,18 +835,19 @@ contains
                CDZ, FDZ, dtrk, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
+          if ( .not. TwoD ) &
           call ATMOS_DYN_FVM_fluxX_XYW_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYZ), MAPF(:,:,:,I_UY), & ! (in)
                num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_XYW_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMZ0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), MAPF(:,:,:,I_XV), & ! (in)
                num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
        endif
@@ -807,7 +892,8 @@ contains
                            mflx_hi,                   & ! (in)
                            RFDZ, RCDX, RCDY,          & ! (in)
                            GSQRT(:,:,:,I_XYW),        & ! (in)
-                           MAPF(:,:,:,I_XY), dtrk,    & ! (in)
+                           MAPF(:,:,:,I_XY),          & ! (in)
+                           TwoD, dtrk,                & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -816,19 +902,32 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update momentum(z)
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS, KE-1
-             MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
-                            + dtrk * (   ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
-                                     + ( ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                                     * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
-                                     / GSQRT(k,i,j,I_XYW)
-          enddo
-          enddo
-          enddo
+          if ( TwoD ) then
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_
+             do j = JJS, JJE
+             do k = KS, KE-1
+                MOMZ_RK(k,IS,j) = MOMZ_RK(k,IS,j) &
+                               + dtrk * ( ( qflx_anti(k,IS,j,ZDIR) - qflx_anti(k-1,IS,j  ,ZDIR) ) * RFDZ(k) &
+                                        + ( qflx_anti(k,IS,j,YDIR) - qflx_anti(k  ,IS,j-1,YDIR) ) * RCDY(j) &
+                                        * MAPF(IS,j,2,I_XY) ) &
+                                        / GSQRT(k,IS,j,I_XYW)
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE-1
+                MOMZ_RK(k,i,j) = MOMZ_RK(k,i,j) &
+                               + dtrk * (   ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RFDZ(k) &
+                                        + ( ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                          + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                                        * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) ) &
+                                        / GSQRT(k,i,j,I_XYW)
+             enddo
+             enddo
+             enddo
+          end if
 
        enddo
        enddo
@@ -856,26 +955,28 @@ contains
             MOMZ, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYW), J33G, & ! (in)
             num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_UYZ( qflx_J13, & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J13G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_UYZ( qflx_J23, & ! (out)
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J23G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, y, z)
        ! note that x-index is added by -1
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_UYZ( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, v, z)
@@ -883,7 +984,7 @@ contains
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UVZ), MAPF(:,:,1,I_UV), & ! (in)
             num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
       
@@ -891,98 +992,150 @@ contains
        
        ! pressure gradient force at (u, y, z)
       
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          pgf(k,i,j) = ( ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) & ! [x,y,z]
-                         - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) & ! [x,y,z]
-                         ) * RFDX(i) &
-                       + ( J13G(k  ,i,j,I_UYW) &
-                         * 0.5_RP * ( F2H(k,1,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
-                                    + F2H(k,2,I_UYZ) * ( DPRES(k  ,i+1,j)+DPRES(k  ,i,j) ) ) & ! [x,y,z->u,y,w]
-                         - J13G(k-1,i,j,I_UYW) &
-                         * 0.5_RP * ( F2H(k,1,I_UYZ) * ( DPRES(k  ,i+1,j)+DPRES(k  ,i,j) ) &
-                                    + F2H(k,2,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) & ! [x,y,z->u,y,w]
-                         ) * RCDZ(k) ) &
-                     * MAPF(i,j,1,I_UY)
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+       if ( .not. TwoD ) then
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             pgf(k,i,j) = ( ( GSQRT(k,i+1,j,I_XYZ) * DPRES(k,i+1,j) & ! [x,y,z]
+                            - GSQRT(k,i  ,j,I_XYZ) * DPRES(k,i  ,j) & ! [x,y,z]
+                            ) * RFDX(i) &
+                          + ( J13G(k  ,i,j,I_UYW) &
+                            * 0.5_RP * ( F2H(k,1,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
+                                       + F2H(k,2,I_UYZ) * ( DPRES(k  ,i+1,j)+DPRES(k  ,i,j) ) ) & ! [x,y,z->u,y,w]
+                            - J13G(k-1,i,j,I_UYW) &
+                            * 0.5_RP * ( F2H(k,1,I_UYZ) * ( DPRES(k  ,i+1,j)+DPRES(k  ,i,j) ) &
+                                       + F2H(k,2,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) & ! [x,y,z->u,y,w]
+                            ) * RCDZ(k) ) &
+                        * MAPF(i,j,1,I_UY)
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 
        ! coriolis force at (u, y, z)
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( twoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMY(k,i  ,j  ) )
-          call CHECK( __LINE__, MOMY(k,i+1,j  ) )
-          call CHECK( __LINE__, MOMY(k,i  ,j-1) )
-          call CHECK( __LINE__, MOMY(k,i+1,j-1) )
+             call CHECK( __LINE__, MOMY(k,IS,j  ) )
+             call CHECK( __LINE__, MOMY(k,IS,j-1) )
 #endif
-          cor(k,i,j) = 0.125_RP * ( CORIOLI(1,i+1,j  )+CORIOLI(1,i,j  ) ) & ! [x,y,z->u,y,z]
-                                * ( MOMY   (k,i+1,j  )+MOMY   (k,i,j  ) &
-                                  + MOMY   (k,i+1,j-1)+MOMY   (k,i,j-1) ) &  ! [x,v,z->u,y,z]
-                      + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
-                      * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
-                      * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
-                        * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RFDX(i) &
-                        - MOMX(k,i,j) &
-                        * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RCDY(j) ) &
-                      * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
-       enddo
-       enddo
-       enddo
-       !$omp end do
+             cor(k,IS,j) = 0.5_RP * CORIOLI(IS,j) * ( MOMY(k,IS,j) + MOMY(k,IS,j-1) )
+          enddo
+          enddo
+          !$omp end do
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMY(k,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(k,i+1,j  ) )
+             call CHECK( __LINE__, MOMY(k,i  ,j-1) )
+             call CHECK( __LINE__, MOMY(k,i+1,j-1) )
+#endif
+             cor(k,i,j) = 0.125_RP * ( CORIOLI(  i+1,j  )+CORIOLI(  i,j  ) ) & ! [x,y,z->u,y,z]
+                                   * ( MOMY   (k,i+1,j  )+MOMY   (k,i,j  ) &
+                                     + MOMY   (k,i+1,j-1)+MOMY   (k,i,j-1) ) &  ! [x,v,z->u,y,z]
+                         + 0.25_RP * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+                         * ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) &
+                         * ( ( MOMY(k,i,j) + MOMY(k,i,j-1) + MOMY(k,i+1,j) + MOMY(k,i+1,j-1) ) * 0.25_RP &
+                           * ( 1.0_RP/MAPF(i+1,j,2,I_XY) - 1.0_RP/MAPF(i,j,2,I_XY) ) * RFDX(i) &
+                           - MOMX(k,i,j) &
+                           * ( 1.0_RP/MAPF(i,j,1,I_UV) - 1.0_RP/MAPF(i,j-1,1,I_UV) ) * RCDY(j) ) &
+                         * 2.0_RP / ( DENS(k,i+1,j) + DENS(k,i,j) ) ! metric term
+          enddo
+          enddo
+          enddo
+          !$omp end do
+       end if
 
        !-----< update momentum (x) >-----
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, min(IIE, IEH)
-       do k = KS, KE
+       if ( twoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DDIV(k,i+1,j) )
-          call CHECK( __LINE__, DDIV(k,i  ,j) )
-          call CHECK( __LINE__, MOMX0(k,i,j) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, MOMX0(k,IS,j) )
 #endif
-          ! advection
-          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
-                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
-          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
-                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                  * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
-          div = divdmp_coef / dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
-          MOMX_RK(k,i,j) = MOMX0(k,i,j) &
-                         + dtrk * ( ( advcv + advch        & ! advection
-                                    - pgf(k,i,j)           & ! pressure gradient force
-                                    ) / GSQRT(k,i,j,I_UYZ) &
-                                    + cor(k,i,j)           & ! coriolis force
-                                    + div                  & ! divergence damping
-                                    + MOMX_t(k,i,j)        ) ! physics tendency
+             ! advection
+             advcv = - ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                       + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j)        ) * RCDZ(k)
+             advch = - ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,IS,j-1,YDIR) ) * RCDY(j) &
+                     * MAPF(IS,j,2,I_UY)
+             MOMX_RK(k,IS,j) = MOMX0(k,IS,j) &
+                            + dtrk * ( ( advcv + advch         & ! advection
+                                       ) / GSQRT(k,IS,j,I_UYZ) &
+                                       + cor(k,IS,j)           & ! coriolis force
+                                       + div                   & ! divergence damping
+                                       + MOMX_t(k,IS,j)        ) ! physics tendency
 #ifdef HIST_TEND
-          if ( lhist ) then
-             advcv_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
-             advch_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
-             pg_t(k,i,j,2) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
-             cf_t(k,i,j,1) = cor(k,i,j)
-             ddiv_t(k,i,j,2) = div
-          endif
+             if ( lhist ) then
+                advcv_t(k,IS,j,I_MOMX) = advcv / GSQRT(k,IS,j,I_UYZ)
+                advch_t(k,IS,j,I_MOMX) = advch / GSQRT(k,IS,j,I_UYZ)
+                pg_t(k,IS,j,2) = 0.0_RP
+                cf_t(k,IS,j,1) = cor(k,i,j)
+                ddiv_t(k,IS,j,2) = 0.0_RP
+             endif
 #endif
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+          enddo
+          enddo
+          !$omp end do nowait
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, min(IIE, IEH)
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k,i+1,j) )
+             call CHECK( __LINE__, DDIV(k,i  ,j) )
+             call CHECK( __LINE__, MOMX0(k,i,j) )
+#endif
+             ! advection
+             advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                       + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                       + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+             advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                     * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY)
+             div = divdmp_coef / dtrk * FDX(i) * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) ! divergence damping
+             MOMX_RK(k,i,j) = MOMX0(k,i,j) &
+                            + dtrk * ( ( advcv + advch        & ! advection
+                                       - pgf(k,i,j)           & ! pressure gradient force
+                                       ) / GSQRT(k,i,j,I_UYZ) &
+                                       + cor(k,i,j)           & ! coriolis force
+                                       + div                  & ! divergence damping
+                                       + MOMX_t(k,i,j)        ) ! physics tendency
+#ifdef HIST_TEND
+             if ( lhist ) then
+                advcv_t(k,i,j,I_MOMX) = advcv / GSQRT(k,i,j,I_UYZ)
+                advch_t(k,i,j,I_MOMX) = advch / GSQRT(k,i,j,I_UYZ)
+                pg_t(k,i,j,2) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
+                cf_t(k,i,j,1) = cor(k,i,j)
+                ddiv_t(k,i,j,2) = div
+             endif
+#endif
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 
        !$omp end parallel       
 #ifdef DEBUG
@@ -996,22 +1149,23 @@ contains
                MOMZ, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UYW), J33G, & ! (in)
                num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! note that x-index is added by -1
+          if ( .not. TwoD ) &
           call ATMOS_DYN_FVM_fluxX_UYZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_UY), & ! (in)
                num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           call ATMOS_DYN_FVM_fluxY_UYZ_ud1( qflx_lo(:,:,:,YDIR), & ! (out)
                MOMY, MOMX0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XV), & ! (in)
                num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
        endif
@@ -1020,6 +1174,7 @@ contains
 
     if ( FLAG_FCT_MOMENTUM ) then
 
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1029,14 +1184,25 @@ contains
        enddo
        enddo
 
-       do j = JS-1, JE+1
-       do i = IS-1, IE+1
-       do k = KS, KE
-          DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
-          DENS_uvw(k,i,j)  = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i+1,j) )
-       enddo
-       enddo
-       enddo
+       if ( TwoD ) then
+          !$omp parallel do
+          do j = JS-1, JE+1
+          do k = KS, KE
+             DENS0_uvw(k,IS,j) = DENS0(k,IS,j)
+             DENS_uvw(k,IS,j)  = DENS_RK(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JS-1, JE+1
+          do i = IS-1, IE+1
+          do k = KS, KE
+             DENS0_uvw(k,i,j) = 0.5_RP * ( DENS0(k,i,j) + DENS0(k,i+1,j) )
+             DENS_uvw(k,i,j)  = 0.5_RP * ( DENS_RK(k,i,j) + DENS_RK(k,i+1,j) )
+          enddo
+          enddo
+          enddo
+       end if
 
        call COMM_wait ( VELX(:,:,:), 5 )
 
@@ -1046,7 +1212,8 @@ contains
                            mflx_hi,                   & ! (in)
                            RCDZ, RFDX, RCDY,          & ! (in)
                            GSQRT(:,:,:,I_UYZ),        & ! (in)
-                           MAPF(:,:,:,I_UY), dtrk,    & ! (in)
+                           MAPF(:,:,:,I_UY),          & ! (in)
+                           TwoD, dtrk,                & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1055,28 +1222,48 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update momentum(x)
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
-          do i = IIS, min(IIE,IEH)
-          do k = KS, KE
+          if ( TwoD ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = JJS, JJE
+             do k = KS, KE
 #ifdef DEBUG
-             call CHECK( __LINE__, MOMX_RK(k,i,j) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+                call CHECK( __LINE__, MOMX_RK(k,IS,j) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k-1,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,YDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j-1,YDIR) )
 #endif
-             MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
-                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
-                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) &
-                            * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
-                            / GSQRT(k,i,j,I_UYZ)
-          enddo
-          enddo
-          enddo
+                MOMX_RK(k,IS,j) = MOMX_RK(k,IS,j) &
+                               + dtrk * ( ( ( qflx_anti(k,IS,j,ZDIR) - qflx_anti(k-1,IS,j  ,ZDIR) ) * RCDZ(k) &
+                                          + ( qflx_anti(k,IS,j,YDIR) - qflx_anti(k  ,IS,j-1,YDIR) ) * RCDY(j) ) ) &
+                               * MAPF(IS,j,2,I_UY) &
+                               / GSQRT(k,IS,j,I_UYZ)
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, min(IIE,IEH)
+             do k = KS, KE
+#ifdef DEBUG
+                call CHECK( __LINE__, MOMX_RK(k,i,j) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+                MOMX_RK(k,i,j) = MOMX_RK(k,i,j) &
+                               + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+                                          + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) ) &
+                               * MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) &
+                               / GSQRT(k,i,j,I_UYZ)
+             enddo
+             enddo
+             enddo
+          end if
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1112,25 +1299,27 @@ contains
             MOMZ, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVW), J33G, & ! (in)
             num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XVZ( qflx_J13, & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J13G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_XVZ( qflx_J23, & ! (out)
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J23G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, v, z)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XVZ( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), & ! (in)
             num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, y, z)
@@ -1139,7 +1328,7 @@ contains
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             num_diff(:,:,:,I_MOMY,YDIR), & ! (in
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
       
@@ -1169,77 +1358,131 @@ contains
 
        ! coriolis force at (x, v, z)
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMX(k,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(k,i  ,j+1) )
-          call CHECK( __LINE__, MOMX(k,i-1,j  ) )
-          call CHECK( __LINE__, MOMX(k,i-1,j+1) )
+             call CHECK( __LINE__, MOMX(k,IS,j  ) )
+             call CHECK( __LINE__, MOMX(k,IS,j+1) )
 #endif
-          cor(k,i,j) = - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) & ! [x,y,z->x,v,z]
-                                  * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
-                                    + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
-                     - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
-                     * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) )&
-                     * ( MOMY(k,i,j) &
-                       * ( 1.0_RP/MAPF(i,j,2,I_UV) - 1.0_RP/MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
-                       - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
-                       * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
-                     * 2.0_RP / ( DENS(k,i,j) + DENS(k,i,j+1) ) ! metoric term
-       enddo
-       enddo
-       enddo
-       !$omp end do
+             cor(k,IS,j) = - 0.25_RP * ( CORIOLI(  IS,j+1)+CORIOLI(  IS,j) ) & ! [x,y,z->x,v,z]
+                                     * ( MOMX   (k,IS,j+1)+MOMX   (k,IS,j) )
+          enddo
+          enddo
+          !$omp end do
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMX(k,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k,i  ,j+1) )
+             call CHECK( __LINE__, MOMX(k,i-1,j  ) )
+             call CHECK( __LINE__, MOMX(k,i-1,j+1) )
+#endif
+             cor(k,i,j) = - 0.125_RP * ( CORIOLI(  i  ,j+1)+CORIOLI(  i  ,j) ) & ! [x,y,z->x,v,z]
+                                     * ( MOMX   (k,i  ,j+1)+MOMX   (k,i  ,j) &
+                                       + MOMX   (k,i-1,j+1)+MOMX   (k,i-1,j) ) & ! [u,y,z->x,v,z]
+                        - 0.25_RP * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
+                        * ( MOMX(k,i,j) + MOMX(k,i-1,j) + MOMX(k,i,j+1) + MOMX(k,i-1,j+1) )&
+                        * ( MOMY(k,i,j) &
+                          * ( 1.0_RP/MAPF(i,j,2,I_UV) - 1.0_RP/MAPF(i-1,j,2,I_UV) ) * RCDX(i) &
+                          - 0.25_RP * ( MOMX(k,i,j)+MOMX(k,i-1,j)+MOMX(k,i,j+1)+MOMX(k,i-1,j+1) ) &
+                          * ( 1.0_RP/MAPF(i,j+1,1,I_XY) - 1.0_RP/MAPF(i,j,1,I_XY) ) * RFDY(j) ) &
+                        * 2.0_RP / ( DENS(k,i,j) + DENS(k,i,j+1) ) ! metoric term
+          enddo
+          enddo
+          enddo
+          !$omp end do
+       end if
 
        !-----< update momentum (y) >-----
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, min(JJE, JEH)
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp do OMP_SCHEDULE_
+          do j = JJS, min(JJE, JEH)
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DDIV(k,i,j+1) )
-          call CHECK( __LINE__, DDIV(k,i,j  ) )
-          call CHECK( __LINE__, MOMY_t(k,i,j) )
-          call CHECK( __LINE__, MOMY0(k,i,j) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k,IS,j+1) )
+             call CHECK( __LINE__, DDIV(k,IS,j  ) )
+             call CHECK( __LINE__, MOMY_t(k,IS,j) )
+             call CHECK( __LINE__, MOMY0(k,IS,j) )
 #endif
-
-          advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                    + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
-                    + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
-          advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                    + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
-                * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
-          div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
-          MOMY_RK(k,i,j) = MOMY0(k,i,j) &
-                         + dtrk * ( ( advcv + advch        & ! advection
-                                    - pgf(k,i,j)           & ! pressure gradient force
-                                    ) / GSQRT(k,i,j,I_XVZ) &
-                                  + cor(k,i,j)             & ! coriolis force
-                                  + div                    & ! divergence damping
-                                  + MOMY_t(k,i,j)          ) ! physics tendency
+             advcv = - ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                       + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j)        ) * RCDZ(k)
+             advch = - ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,IS,j-1,YDIR) ) * RFDY(j) &
+                   * MAPF(i,j,2,I_XV)
+             div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,IS,j+1)-DDIV(k,IS,j) )
+             MOMY_RK(k,IS,j) = MOMY0(k,IS,j) &
+                            + dtrk * ( ( advcv + advch         & ! advection
+                                       - pgf(k,IS,j)           & ! pressure gradient force
+                                       ) / GSQRT(k,IS,j,I_XVZ) &
+                                     + cor(k,IS,j)             & ! coriolis force
+                                     + div                     & ! divergence damping
+                                     + MOMY_t(k,IS,j)          ) ! physics tendency
 #ifdef HIST_TEND
-          if ( lhist ) then
-             advcv_t(k,i,j,I_MOMY) = advcv / GSQRT(k,i,j,I_UYZ)
-             advch_t(k,i,j,I_MOMY) = advch / GSQRT(k,i,j,I_UYZ)
-             pg_t(k,i,j,3) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
-             cf_t(k,i,j,2) = cor(k,i,j)
-             ddiv_t(k,i,j,3) = div
-          endif
+             if ( lhist ) then
+                advcv_t(k,IS,j,I_MOMY) = advcv / GSQRT(k,IS,j,I_UYZ)
+                advch_t(k,IS,j,I_MOMY) = advch / GSQRT(k,IS,j,I_UYZ)
+                pg_t(k,IS,j,3) = - pgf(k,i,j) / GSQRT(k,IS,j,I_UYZ)
+                cf_t(k,IS,j,2) = cor(k,IS,j)
+                ddiv_t(k,IS,j,3) = div
+             endif
 #endif
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+          enddo
+          enddo
+          !$omp end do nowait
+       else
+                    !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, min(JJE, JEH)
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k,i,j+1) )
+             call CHECK( __LINE__, DDIV(k,i,j  ) )
+             call CHECK( __LINE__, MOMY_t(k,i,j) )
+             call CHECK( __LINE__, MOMY0(k,i,j) )
+#endif
+             advcv = - ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                       + qflx_J13(k,i,j)      - qflx_J13(k-1,i,j)          &
+                       + qflx_J23(k,i,j)      - qflx_J23(k-1,i,j)          ) * RCDZ(k)
+             advch = - ( ( qflx_hi(k,i,j,XDIR) - qflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                       + ( qflx_hi(k,i,j,YDIR) - qflx_hi(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
+                   * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV)
+             div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,i,j+1)-DDIV(k,i,j) )
+             MOMY_RK(k,i,j) = MOMY0(k,i,j) &
+                            + dtrk * ( ( advcv + advch        & ! advection
+                                       - pgf(k,i,j)           & ! pressure gradient force
+                                       ) / GSQRT(k,i,j,I_XVZ) &
+                                     + cor(k,i,j)             & ! coriolis force
+                                     + div                    & ! divergence damping
+                                     + MOMY_t(k,i,j)          ) ! physics tendency
+#ifdef HIST_TEND
+             if ( lhist ) then
+                advcv_t(k,i,j,I_MOMY) = advcv / GSQRT(k,i,j,I_UYZ)
+                advch_t(k,i,j,I_MOMY) = advch / GSQRT(k,i,j,I_UYZ)
+                pg_t(k,i,j,3) = - pgf(k,i,j) / GSQRT(k,i,j,I_UYZ)
+                cf_t(k,i,j,2) = cor(k,i,j)
+                ddiv_t(k,i,j,3) = div
+             endif
+#endif
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 
        !$omp end parallel       
 #ifdef DEBUG
@@ -1255,15 +1498,16 @@ contains
                MOMZ, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XVZ), J33G, & ! (in)
                num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (u, v, layer)
+          if ( .not. TwoD ) &
           call ATMOS_DYN_FVM_fluxX_XVZ_ud1( qflx_lo(:,:,:,XDIR), & ! (out)
                MOMX, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_XY), & ! (in)
                num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (x, y, layer)
@@ -1272,7 +1516,7 @@ contains
                MOMY, MOMY0, DENS, & ! (in)
                GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
                num_diff(:,:,:,I_MOMY,YDIR), & ! (in)
-               CDZ, & ! (in)
+               CDZ, TwoD, & ! (in)
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
        endif
@@ -1307,7 +1551,8 @@ contains
                            mflx_hi,                   & ! (in)
                            RCDZ, RCDX, RFDY,          & ! (in)
                            GSQRT(:,:,:,I_XVZ),        & ! (in)
-                           MAPF(:,:,:,I_XV), dtrk,    & ! (in)
+                           MAPF(:,:,:,I_XV),          & ! (in)
+                           TwoD, dtrk,                & ! (in)
                            FLAG_FCT_ALONG_STREAM      ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1315,29 +1560,50 @@ contains
        do IIS = IS, IE, IBLOCK
        IIE = IIS+IBLOCK-1
 
-          !--- update momentum(y)
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, min(JJE, JEH)
-          do i = IIS, IIE
-          do k = KS, KE
+          if ( TwoD ) then
+             !--- update momentum(y)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_
+             do j = JJS, min(JJE, JEH)
+             do k = KS, KE
 #ifdef DEBUG
-             call CHECK( __LINE__, MOMY_RK(k,i,j) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
-             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+                call CHECK( __LINE__, MOMY_RK(k,IS,j) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k-1,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,YDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,IS,j-1,YDIR) )
 #endif
-             MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
-                            + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                       + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                       + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) ) &
-                            * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
-                            / GSQRT(k,i,j,I_XVZ)
-          enddo
-          enddo
-          enddo
+                MOMY_RK(k,IS,j) = MOMY_RK(k,IS,j) &
+                               + dtrk * ( ( ( qflx_anti(k,IS,j,ZDIR) - qflx_anti(k-1,IS,j  ,ZDIR) ) * RCDZ(k) &
+                                          + ( qflx_anti(k,IS,j,YDIR) - qflx_anti(k  ,IS,j-1,YDIR) ) * RFDY(j) ) ) &
+                               * MAPF(IS,j,2,I_XV) &
+                               / GSQRT(k,IS,j,I_XVZ)
+             enddo
+             enddo
+          else
+                          !--- update momentum(y)
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, min(JJE, JEH)
+             do i = IIS, IIE
+             do k = KS, KE
+#ifdef DEBUG
+                call CHECK( __LINE__, MOMY_RK(k,i,j) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+                call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+                MOMY_RK(k,i,j) = MOMY_RK(k,i,j) &
+                               + dtrk * ( ( ( qflx_anti(k,i,j,ZDIR) - qflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                          + ( qflx_anti(k,i,j,XDIR) - qflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                          + ( qflx_anti(k,i,j,YDIR) - qflx_anti(k  ,i  ,j-1,YDIR) ) * RFDY(j) ) ) &
+                               * MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) &
+                               / GSQRT(k,i,j,I_XVZ)
+             enddo
+             enddo
+             enddo
+          end if
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1375,6 +1641,7 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, y, z)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYZ( tflx_hi(:,:,:,XDIR), & ! (out)
             mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
             num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
@@ -1390,35 +1657,62 @@ contains
 
        !-----< update rho*theta >-----
 
-       !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, RHOT_t(k,i,j) )
-          call CHECK( __LINE__, RHOT0(k,i,j) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, RHOT_t(k,IS,j) )
+             call CHECK( __LINE__, RHOT0(k,IS,j) )
 #endif
-          advcv = - ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
-          advch = - ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                  - ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j)
-          RHOT_RK(k,i,j) = RHOT0(k,i,j) &
-                         + dtrk * ( ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
-                                  + RHOT_t(k,i,j) )
+             advcv = - ( tflx_hi(k,IS,j,ZDIR) - tflx_hi(k-1,IS,j  ,ZDIR) ) * RCDZ(k)
+             advch = - ( tflx_hi(k,IS,j,YDIR) - tflx_hi(k  ,IS,j-1,YDIR) ) * RCDY(j)
+             RHOT_RK(k,IS,j) = RHOT0(k,IS,j) &
+                            + dtrk * ( ( advcv + advch ) * MAPF(IS,j,2,I_XY) / GSQRT(k,IS,j,I_XYZ) &
+                                     + RHOT_t(k,IS,j) )
 #ifdef HIST_TEND
-          if ( lhist ) then
-             advcv_t(k,i,j,I_RHOT) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
-             advch_t(k,i,j,I_RHOT) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
-          endif
+             if ( lhist ) then
+                advcv_t(k,IS,j,I_RHOT) = advcv * MAPF(IS,j,2,I_XY)/ GSQRT(k,IS,j,I_XYZ)
+                advch_t(k,IS,j,I_RHOT) = advch * MAPF(IS,j,2,I_XY)/ GSQRT(k,IS,j,I_XYZ)
+             endif
 #endif
-       enddo
-       enddo
-       enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k,advcv,advch) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, RHOT_t(k,i,j) )
+             call CHECK( __LINE__, RHOT0(k,i,j) )
+#endif
+             advcv = - ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k)
+             advch = - ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                     - ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j)
+             RHOT_RK(k,i,j) = RHOT0(k,i,j) &
+                            + dtrk * ( ( advcv + advch ) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYZ) &
+                                     + RHOT_t(k,i,j) )
+#ifdef HIST_TEND
+             if ( lhist ) then
+                advcv_t(k,i,j,I_RHOT) = advcv * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
+                advch_t(k,i,j,I_RHOT) = advch * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY)/ GSQRT(k,i,j,I_XYZ)
+             endif
+#endif
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1465,6 +1759,7 @@ contains
                IIS-1, IIE+1, JJS-1, JJE+1 ) ! (in)
 
           ! at (u, y, layer)
+          if ( .not. TwoD ) &
           call ATMOS_DYN_FVM_fluxX_XYZ_ud1( tflx_lo(:,:,:,XDIR), & ! (out)
                mflx_hi(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
                num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
@@ -1487,7 +1782,8 @@ contains
                            mflx_hi,                 & ! (in)
                            RCDZ, RCDX, RCDY,        & ! (in)
                            GSQRT(:,:,:,I_XYZ),      & ! (in)
-                           MAPF(:,:,:,I_XY), dtrk,  & ! (in)
+                           MAPF(:,:,:,I_XY),        & ! (in)
+                           TwoD, dtrk,              & ! (in)
                            FLAG_FCT_ALONG_STREAM    ) ! (in)
 
        do JJS = JS, JE, JBLOCK
@@ -1496,28 +1792,50 @@ contains
        IIE = IIS+IBLOCK-1
 
           !--- update rho*theta
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = JJS, JJE
-          do i = IIS, IIE
-          do k = KS, KE
+          if ( TwoD ) then
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
 #ifdef DEBUG
-             call CHECK( __LINE__, RHOT_RK(k,i,j) )
-             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, tflx_anti(k-1,i  ,j  ,ZDIR) )
-             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,XDIR) )
-             call CHECK( __LINE__, tflx_anti(k  ,i-1,j  ,XDIR) )
-             call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,YDIR) )
-             call CHECK( __LINE__, tflx_anti(k  ,i  ,j-1,YDIR) )
+                call CHECK( __LINE__, RHOT_RK(k,IS,j) )
+                call CHECK( __LINE__, tflx_anti(k  ,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, tflx_anti(k-1,IS,j  ,ZDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,IS,j  ,YDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,IS,j-1,YDIR) )
 #endif
-             RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
-                            + dtrk * ( ( tflx_anti(k,i,j,ZDIR) - tflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                                     + ( tflx_anti(k,i,j,XDIR) - tflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                                     + ( tflx_anti(k,i,j,YDIR) - tflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                           * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                           / GSQRT(k,i,j,I_XYZ)
-          enddo
-          enddo
-          enddo
+                RHOT_RK(k,IS,j) = RHOT_RK(k,IS,j) &
+                               + dtrk * ( ( tflx_anti(k,IS,j,ZDIR) - tflx_anti(k-1,IS,j  ,ZDIR) ) * RCDZ(k) &
+                                        + ( tflx_anti(k,IS,j,YDIR) - tflx_anti(k  ,IS,j-1,YDIR) ) * RCDY(j) ) &
+                              * MAPF(IS,j,2,I_XY) &
+                              / GSQRT(k,IS,j,I_XYZ)
+             enddo
+             enddo
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS, KE
+#ifdef DEBUG
+                call CHECK( __LINE__, RHOT_RK(k,i,j) )
+                call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, tflx_anti(k-1,i  ,j  ,ZDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,XDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,i-1,j  ,XDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,i  ,j  ,YDIR) )
+                call CHECK( __LINE__, tflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+                RHOT_RK(k,i,j) = RHOT_RK(k,i,j) &
+                               + dtrk * ( ( tflx_anti(k,i,j,ZDIR) - tflx_anti(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                                        + ( tflx_anti(k,i,j,XDIR) - tflx_anti(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                                        + ( tflx_anti(k,i,j,YDIR) - tflx_anti(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                              * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                              / GSQRT(k,i,j,I_XYZ)
+             enddo
+             enddo
+             enddo
+          end if
 #ifdef DEBUG
           k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1541,12 +1859,14 @@ contains
        call FILE_HISTORY_in(advch_t(:,:,:,I_RHOT), 'RHOT_t_advch', 'tendency of rho*theta  (horiz. advection) (w/ HIST_TEND)',   'K kg/m3/s' )
 
        call FILE_HISTORY_in(pg_t   (:,:,:,1),      'MOMZ_t_pg',    'tendency of momentum z (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZHXY')
+       if ( .not. TwoD ) &
        call FILE_HISTORY_in(pg_t   (:,:,:,2),      'MOMX_t_pg',    'tendency of momentum x (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXHY')
        call FILE_HISTORY_in(pg_t   (:,:,:,3),      'MOMY_t_pg',    'tendency of momentum y (pressure gradient) (w/ HIST_TEND)',  'kg/m2/s2', dim_type='ZXYH')
 
-       call FILE_HISTORY_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Raileight damping) (w/ HIST_TEND)', 'kg/m2/s2',  dim_type='ZHXY')
+       call FILE_HISTORY_in(wdmp_t (:,:,:),        'MOMZ_t_wdamp', 'tendency of momentum z (Rayleigh damping) (w/ HIST_TEND)',   'kg/m2/s2', dim_type='ZHXY')
 
        call FILE_HISTORY_in(ddiv_t (:,:,:,1),      'MOMZ_t_ddiv',  'tendency of momentum z (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZHXY')
+       if ( .not. TwoD ) &
        call FILE_HISTORY_in(ddiv_t (:,:,:,2),      'MOMX_t_ddiv',  'tendency of momentum x (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXHY')
        call FILE_HISTORY_in(ddiv_t (:,:,:,3),      'MOMY_t_ddiv',  'tendency of momentum y (divergence damping) (w/ HIST_TEND)', 'kg/m2/s2', dim_type='ZXYH')
 

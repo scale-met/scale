@@ -44,7 +44,7 @@ module scale_atmos_dyn_tstep_large
           J13G, J23G, J33G, MAPF,                               &
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
-          BND_W, BND_E, BND_S, BND_N,                           &
+          BND_W, BND_E, BND_S, BND_N, TwoD,                     &
           ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
           ND_SFC_FACT, ND_USE_RS,                               &
           BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
@@ -127,6 +127,7 @@ module scale_atmos_dyn_tstep_large
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
 
        real(RP), intent(in)    :: ND_COEF
        real(RP), intent(in)    :: ND_COEF_Q

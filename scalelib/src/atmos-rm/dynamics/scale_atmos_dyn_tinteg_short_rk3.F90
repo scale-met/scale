@@ -197,7 +197,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,      &
        REF_pres, REF_dens,                      &
-       BND_W, BND_E, BND_S, BND_N,              &
+       BND_W, BND_E, BND_S, BND_N, TwoD,        &
        dt                                       )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
@@ -261,6 +261,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
 
     real(RP), intent(in)    :: dt
 
@@ -318,14 +319,14 @@ contains
 !OCL XFILL
     if ( VA > 0 ) PROG0 = PROG
 
-    if ( BND_W ) then
+    if ( BND_W .and. (.not. TwoD) ) then
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IS-1,j,2,:) = mflx_hi(k,IS-1,j,2)
        end do
        end do
     end if
-    if ( BND_E ) then
+    if ( BND_E .and. (.not. TwoD) ) then
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IE,j,2,:) = mflx_hi(k,IE,j,2)
@@ -374,7 +375,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
@@ -384,7 +385,7 @@ contains
                                   PROG_RK1,                                         & ! [INOUT]
                                   DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                                   PROG0,                                            & ! [IN]
-                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD                  ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3_BND",3)
 
@@ -427,7 +428,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3",3)
@@ -437,7 +438,7 @@ contains
                                   PROG_RK2,                                         & ! [INOUT]
                                   DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                                   PROG0,                                            & ! [IN]
-                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD                  ) ! [IN]
 
     call PROF_rapend  ("DYN_RK3_BND",3)
 
@@ -480,7 +481,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .true.                                      ) ! [IN]
 
     if ( .NOT. FLAG_WS2002 ) then

@@ -71,6 +71,8 @@ contains
   subroutine ATMOS_GRID_CARTESC_METRIC_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     implicit none
 
     namelist / PARAM_ATMOS_GRID_CARTESC_METRIC / &
@@ -101,9 +103,15 @@ contains
 
     allocate( ATMOS_GRID_CARTESC_METRIC_ROTC (IA,JA,2) )
 
-    allocate( ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,IA,JA,7) )
-    allocate( ATMOS_GRID_CARTESC_METRIC_J13G (KA,IA,JA,7) )
-    allocate( ATMOS_GRID_CARTESC_METRIC_J23G (KA,IA,JA,7) )
+    if ( PRC_TwoD ) then
+       allocate( ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,IA,JA,4) )
+       allocate( ATMOS_GRID_CARTESC_METRIC_J13G (KA,IA,JA,4) )
+       allocate( ATMOS_GRID_CARTESC_METRIC_J23G (KA,IA,JA,4) )
+    else
+       allocate( ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,IA,JA,7) )
+       allocate( ATMOS_GRID_CARTESC_METRIC_J13G (KA,IA,JA,7) )
+       allocate( ATMOS_GRID_CARTESC_METRIC_J23G (KA,IA,JA,7) )
+    end if
 
     ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,:) = 1.0_RP
     ATMOS_GRID_CARTESC_METRIC_J13G (:,:,:,:) = 0.0_RP
@@ -151,6 +159,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate map factor
   subroutine ATMOS_GRID_CARTESC_METRIC_mapfactor
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_mapprojection, only: &
        MAPPROJECTION_mapfactor
     use scale_atmos_grid_cartesC, only: &
@@ -168,12 +178,14 @@ contains
 
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
          ATMOS_GRID_CARTESC_REAL_LAT  ( :, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY))
+    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
+         ATMOS_GRID_CARTESC_REAL_LATXV( :,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
+    if ( .not. PRC_TwoD ) then
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA,   &
          ATMOS_GRID_CARTESC_REAL_LATUY(1:, :), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY))
     call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
-         ATMOS_GRID_CARTESC_REAL_LATXV( :,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_XV))
-    call MAPPROJECTION_mapfactor( IA, 1, IA, JA, 1, JA, &
          ATMOS_GRID_CARTESC_REAL_LATUV(1:,1:), ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV), ATMOS_GRID_CARTESC_METRIC_MAPF (:,:,2,I_UV))
+    end if
 
     call TOPOGRAPHY_calc_tan_slope( IA, IS, IE, JA, JS, JE, &
          ATMOS_GRID_CARTESC_RCDX(:), ATMOS_GRID_CARTESC_RCDY(:), &
@@ -204,6 +216,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate G^1/2 & Jacobian
   subroutine ATMOS_GRID_CARTESC_METRIC_terrainfollowing
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_RCDZ, &
        ATMOS_GRID_CARTESC_RCDX, &
@@ -229,6 +243,7 @@ contains
     !---------------------------------------------------------------------------
 
     ! G^1/2
+    !$omp parallel do
     do j = 1, JA
     do i = 1, IA
        ! at (x,y,z)
@@ -242,26 +257,31 @@ contains
        enddo
        ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_XYW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_XYW)
 
-       ! at (u,y,w)
-       do k = 1, KA-1
-          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYW) = ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
-       enddo
-       ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_UYW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_UYW)
-
        ! at (x,v,w)
        do k = 1, KA-1
           ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XVW) = ( ATMOS_GRID_CARTESC_REAL_CZXV(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
        enddo
        ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_XVW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_XVW)
 
-       ! at (u,y,z)
-       do k = 1, KA
-          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYZ) = ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
-       enddo
-
        ! at (x,v,z)
        do k = 1, KA
           ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_XVZ) = ( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZXV(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
+       enddo
+    enddo
+    enddo
+    if ( .not. PRC_TwoD ) then
+    !$omp parallel do
+    do j = 1, JA
+    do i = 1, IA
+       ! at (u,y,w)
+       do k = 1, KA-1
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYW) = ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) ) * ATMOS_GRID_CARTESC_RFDZ(k)
+       enddo
+       ATMOS_GRID_CARTESC_METRIC_GSQRT(KA,i,j,I_UYW) = ATMOS_GRID_CARTESC_METRIC_GSQRT(KA-1,i,j,I_UYW)
+
+       ! at (u,y,z)
+       do k = 1, KA
+          ATMOS_GRID_CARTESC_METRIC_GSQRT(k,i,j,I_UYZ) = ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) ) * ATMOS_GRID_CARTESC_RCDZ(k)
        enddo
 
        ! at (u,v,z)
@@ -270,67 +290,96 @@ contains
        enddo
     enddo
     enddo
+    end if
 
     ! Jacobian * G^1/2
+    !$omp parallel do
     do j = 2, JA-1
     do i = 2, IA-1
     do k = 1,  KA
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZUV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+    enddo
+    enddo
+    enddo
+    if ( .not. PRC_TwoD ) then
+    !$omp parallel do
+    do j = 2, JA-1
+    do i = 2, IA-1
+    do k = 1,  KA
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
        ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
     enddo
     enddo
     enddo
+    end if
 
+    !$omp parallel do
     do j = 2, JA-1
     do i = 2, IA-1
     do k = 1,  KA
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
-       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZ  (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZ  (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
+    enddo
+    enddo
+    enddo
+    if ( .not. PRC_TwoD ) then
+    !$omp parallel do
+    do j = 2, JA-1
+    do i = 2, IA-1
+    do k = 1,  KA
+       ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZUV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
     enddo
     enddo
     enddo
+    end if
 
     ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
 
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 10 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 11 )
+    if ( .not. PRC_TwoD ) then
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 12 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 13 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
+    end if
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 10, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 11, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 12, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 13, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 10, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 11, .false. )
+    if ( .not. PRC_TwoD ) then
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 12, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 13, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14, .false. )
+    end if
 
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 17 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 18 )
+    if ( .not. PRC_TwoD ) then
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 19 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 20 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21 )
+    end if
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYZ), 15, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), 16, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 17, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 18, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 19, .false. )
-    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 20, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), 17, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), 18, .false. )
+    if ( .not. PRC_TwoD ) then
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), 19, .false. )
+    call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), 20, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), 21, .false. )
+    endif
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_terrainfollowing
@@ -675,6 +724,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write metrics
   subroutine ATMOS_GRID_CARTESC_METRIC_write
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_const, only: &
        CONST_RADIUS
     use scale_vector, only: &
@@ -706,16 +757,20 @@ contains
                           'MAPF_X_XY', 'Map factor x-dir at XY', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XY', 'Map factor y-dir at XY', 'NIL', 'XY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_X_UY', 'Map factor x-dir at UY', 'NIL', 'UY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UY),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UY', 'Map factor y-dir at UY', 'NIL', 'UY', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_XV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_X_XV', 'Map factor x-dir at XV', 'NIL', 'XV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_XV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_Y_XV', 'Map factor y-dir at XV', 'NIL', 'XV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,1,I_UV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_X_UV', 'Map factor x-dir at UV', 'NIL', 'UV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,2,I_UV),       ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                           'MAPF_Y_UV', 'Map factor y-dir at UV', 'NIL', 'UV', ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
 
@@ -760,18 +815,21 @@ contains
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_XYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_WXY',  'transformation metrics from Z to Xi, G^1/2 at WXY', '1', 'ZHXY',                                            & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_UYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_WUY',  'transformation metrics from Z to Xi, G^1/2 at WUY', '1', 'ZHXHY',                                           & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_XVW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_WXV',  'transformation metrics from Z to Xi, G^1/2 at WXV', '1', 'ZHXYH',                                           & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_UYZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_ZUY',  'transformation metrics from Z to Xi, G^1/2 at ZUY', '1', 'ZXHY',                                            & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_XVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_ZXV',  'transformation metrics from Z to Xi, G^1/2 at ZXV', '1', 'ZXYH',                                            & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_GSQRT(:,:,:,I_UVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'GSQRT_ZUV',  'transformation metrics from Z to Xi, G^1/2 at ZUV', '1', 'ZXHYH',                                           & ! [IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
@@ -782,18 +840,21 @@ contains
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_WXY',  '(1,3) element of Jacobian matrix * {G}^1/2 at WXY', '1', 'ZHXY',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_WUY',  '(1,3) element of Jacobian matrix * {G}^1/2 at WUY', '1', 'ZHXHY',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_WXV',  '(1,3) element of Jacobian matrix * {G}^1/2 at WXV', '1', 'ZHXYH',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_ZUY',  '(1,3) element of Jacobian matrix * {G}^1/2 at ZUY', '1', 'ZXHY',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_ZXV',  '(1,3) element of Jacobian matrix * {G}^1/2 at ZXV', '1', 'ZXYH',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J13G_ZUV',  '(1,3) element of Jacobian matrix * {G}^1/2 at ZUV', '1', 'ZXHYH',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
@@ -804,18 +865,21 @@ contains
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_WXY',  '(2,3) element of Jacobian matrix * {G}^1/2 at WXY', '1', 'ZHXY',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_WUY',  '(2,3) element of Jacobian matrix * {G}^1/2 at WUY', '1', 'ZHXHY',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVW), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_WXV',  '(2,3) element of Jacobian matrix * {G}^1/2 at WXV', '1', 'ZHXYH',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UYZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_ZUY',  '(2,3) element of Jacobian matrix * {G}^1/2 at ZUY', '1', 'ZXHY',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_XVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_ZXV',  '(2,3) element of Jacobian matrix * {G}^1/2 at ZXV', '1', 'ZXYH',                                            & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]
+       if ( .not. PRC_TwoD ) &
        call FILE_CARTESC_write( ATMOS_GRID_CARTESC_METRIC_J23G(:,:,:,I_UVZ), ATMOS_GRID_CARTESC_METRIC_OUT_BASENAME, ATMOS_GRID_CARTESC_METRIC_OUT_TITLE, & ! [IN]
                                 'J23G_ZUV',  '(2,3) element of Jacobian matrix * {G}^1/2 at ZUV', '1', 'ZXHYH',                                           & ![IN]
                                 ATMOS_GRID_CARTESC_METRIC_OUT_DTYPE  ) ! [IN]

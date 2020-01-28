@@ -98,6 +98,7 @@ contains
        GSQRT, MAPF, & ! (in)
        CDZ, RCDZ, RCDX, RCDY, & ! (in)
        BND_W, BND_E, BND_S, BND_N, & ! (in)
+       TwoD, & ! (in)
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -127,6 +128,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
     real(RP), intent(in)    :: dtl
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -140,7 +142,7 @@ contains
     !------------------------------------------------------------------------
 
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
        DENS_RK(k,i,j) = DENS0(k,i,j) &
                       + ( DENS(k,i,j) - DENS0(k,i,j) ) / 3.0_RP
@@ -157,19 +159,20 @@ contains
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
-         dtrk, & ! (in)
+         TwoD, dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
 
-    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK1,                  & ! [INOUT]
-                                         QTRC0,                     & ! [IN]
-                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK1,                   & ! [INOUT]
+                                         QTRC0,                      & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N, & ! [IN]
+                                         TwoD                        ) ! [IN]
 
     call COMM_vars8( QTRC_RK1(:,:,:), I_COMM_RK1 )
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
 
 
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
        DENS_RK(k,i,j) = DENS0(k,i,j) &
                       + ( DENS(k,i,j) - DENS0(k,i,j) ) * 0.5_RP
@@ -186,12 +189,13 @@ contains
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
-         dtrk, & ! (in)
+         TwoD, dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
 
-    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK2,                  & ! [INOUT]
-                                         QTRC0,                     & ! [IN]
-                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK2,                   & ! [INOUT]
+                                         QTRC0,                      & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N, & ! [IN]
+                                         TwoD                        ) ! [IN]
 
     call COMM_vars8( QTRC_RK2(:,:,:), I_COMM_RK2 )
     call COMM_wait ( QTRC_RK2(:,:,:), I_COMM_RK2, .false. )
@@ -206,6 +210,7 @@ contains
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
+         TwoD, & ! (in)
          dtrk, & ! (in)
          FLAG_FCT_TRACER, FLAG_FCT_ALONG_STREAM ) ! (in)
 

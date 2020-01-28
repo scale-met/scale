@@ -228,6 +228,9 @@ contains
   subroutine TOPOGRAPHY_calc_tan_slope( &
        IA, IS, IE, JA, JS, JE, &
        RCDX, RCDY, MAPF )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
        integer,  intent(in) :: IA, IS, IE
        integer,  intent(in) :: JA, JS, JE
        real(RP), intent(in) :: RCDX(IA), RCDY(JA)
@@ -235,11 +238,26 @@ contains
 
        integer :: i, j
 
+       if ( PRC_TwoD ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             TOPOGRAPHY_TanSL_X(i,j) = 0.0_RP
+          end do
+          end do
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
+                                       - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
+                                       * RCDX(i) * MAPF(i,j,1)
+          end do
+          end do
+       end if
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-          TOPOGRAPHY_TanSL_X(i,j) = ( ( TOPOGRAPHY_Zsfc(i+1,j) + TOPOGRAPHY_Zsfc(i  ,j) ) * 0.5_RP &
-                                    - ( TOPOGRAPHY_Zsfc(i  ,j) + TOPOGRAPHY_Zsfc(i-1,j) ) * 0.5_RP ) &
-                                  * RCDX(i) * MAPF(i,j,1)
           TOPOGRAPHY_TanSL_Y(i,j) = ( ( TOPOGRAPHY_Zsfc(i,j+1) + TOPOGRAPHY_Zsfc(i,j  ) ) * 0.5_RP &
                                     - ( TOPOGRAPHY_Zsfc(i,j  ) + TOPOGRAPHY_Zsfc(i,j-1) ) * 0.5_RP ) &
                                   * RCDY(j) * MAPF(i,j,2)

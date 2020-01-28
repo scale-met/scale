@@ -3278,6 +3278,8 @@ contains
        FILE_Set_Attribute
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_mapprojection, only: &
        MAPPROJECTION_mappinginfo
     implicit none
@@ -3298,6 +3300,8 @@ contains
 
     character(len=H_MID)   :: standard_name_
     character(len=H_SHORT) :: cell_measures_
+
+    character(len=H_SHORT) :: dimtype
 
     integer :: dtype, elm_size, ndims
     integer :: dimid, n
@@ -3326,15 +3330,34 @@ contains
        endif
     endif
 
+    if ( PRC_TwoD ) then
+       select case( dim_type )
+       case ( "UY" )
+          dimtype = "XY"
+       case ( "UV" )
+          dimtype = "XV"
+       case ( "ZXHY" )
+          dimtype = "ZXY"
+       case ( "ZXHYH")
+          dimtype = "ZXYH"
+       case ( "ZHXHY" )
+          dimtype = "ZHXY"
+       case default
+          dimtype = dim_type
+       end select
+    else
+       dimtype = dim_type
+    end if
+
     dimid = -1
     do n = 1, FILE_CARTESC_ndims
-       if ( FILE_CARTESC_dims(n)%name == dim_type ) then
+       if ( FILE_CARTESC_dims(n)%name == dimtype ) then
           dimid = n
           exit
        end if
     end do
     if ( dimid <= -1 ) then
-       LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dim_type)
+       LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dimtype)
        call PRC_abort
     end if
 
@@ -3368,27 +3391,27 @@ contains
        select case ( cell_measures )
        case ( "area" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_z" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_z is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_z is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_x" )
           if ( FILE_CARTESC_dims(dimid)%area_x == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_x is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_x is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_y" )
           if ( FILE_CARTESC_dims(dimid)%area_y == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_y is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_y is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "volume" )
           if ( FILE_CARTESC_dims(dimid)%volume == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'volume is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'volume is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case default

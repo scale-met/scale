@@ -74,7 +74,7 @@ module scale_atmos_dyn_fvm_flux
           mom, val, DENS, &
           GSQRT, MAPF, &
           num_diff, &
-          CDZ, &
+          CDZ, TwoD, &
           IIS, IIE, JJS, JJE )
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -87,6 +87,7 @@ module scale_atmos_dyn_fvm_flux
        real(RP), intent(in)  :: MAPF    (   IA,JA,2)
        real(RP), intent(in)  :: num_diff(KA,IA,JA)
        real(RP), intent(in)  :: CDZ(KA)
+       logical,  intent(in)  :: TwoD
        integer,  intent(in)  :: IIS, IIE, JJS, JJE
      end subroutine flux_mom
      subroutine flux_z( &
@@ -94,7 +95,7 @@ module scale_atmos_dyn_fvm_flux
           mom, val, DENS, &
           GSQRT, J33G, &
           num_diff, &
-          CDZ, &
+          CDZ, TwoD, &
           IIS, IIE, JJS, JJE )
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -107,6 +108,7 @@ module scale_atmos_dyn_fvm_flux
        real(RP), intent(in)  :: J33G
        real(RP), intent(in)  :: num_diff(KA,IA,JA)
        real(RP), intent(in)  :: CDZ(KA)
+       logical,  intent(in)  :: TwoD
        integer,  intent(in)  :: IIS, IIE, JJS, JJE
      end subroutine flux_z
      subroutine flux_wz( &
@@ -136,7 +138,7 @@ module scale_atmos_dyn_fvm_flux
           flux, &
           mom, val, DENS, &
           GSQRT, JG, MAPF, &
-          CDZ, &
+          CDZ, TwoD, &
           IIS, IIE, JJS, JJE )
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -149,6 +151,7 @@ module scale_atmos_dyn_fvm_flux
        real(RP), intent(in)  :: JG      (KA,IA,JA)
        real(RP), intent(in)  :: MAPF    (   IA,JA,2)
        real(RP), intent(in)  :: CDZ(KA)
+       logical,  intent(in)  :: TwoD
        integer,  intent(in)  :: IIS, IIE, JJS, JJE
      end subroutine flux_j
   end interface
@@ -277,6 +280,8 @@ contains
        scheme, scheme_tracer )
     use scale_prc, only: &
          PRC_abort
+    use scale_prc_cartesC, only: &
+         PRC_TwoD
 
    use scale_atmos_dyn_fvm_flux_ud1, only: &
       ATMOS_DYN_FVM_flux_valueW_Z_ud1, &
@@ -474,7 +479,7 @@ contains
 
 
 
-      if ( IHALO < 1 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
       end if
@@ -527,7 +532,7 @@ contains
 
 
 
-      if ( IHALO < 1 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
       end if
@@ -580,7 +585,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -633,7 +638,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -686,7 +691,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -739,7 +744,7 @@ contains
 
 
 
-      if ( IHALO < 3 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
       end if
@@ -792,7 +797,7 @@ contains
 
 
 
-      if ( IHALO < 3 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
       end if
@@ -850,7 +855,7 @@ contains
 
 
 
-      if ( IHALO < 1 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
       end if
@@ -901,7 +906,7 @@ contains
 
 
 
-      if ( IHALO < 1 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 1 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 1
          call PRC_abort
       end if
@@ -952,7 +957,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -1003,7 +1008,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -1054,7 +1059,7 @@ contains
 
 
 
-      if ( IHALO < 2 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 2
          call PRC_abort
       end if
@@ -1105,7 +1110,7 @@ contains
 
 
 
-      if ( IHALO < 3 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
       end if
@@ -1156,7 +1161,7 @@ contains
 
 
 
-      if ( IHALO < 3 ) then
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 3
          call PRC_abort
       end if

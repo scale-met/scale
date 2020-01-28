@@ -204,6 +204,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_atmos_grid_cartesC, only: &
        CDZ  => ATMOS_GRID_CARTESC_CDZ,  &
        CDX  => ATMOS_GRID_CARTESC_CDX,  &
@@ -307,6 +309,7 @@ contains
 
     if ( do_flag ) then
 
+       if ( .not. PRC_TwoD ) &
        call COMM_vars8( RHOU_tp, 1 )
        call COMM_vars8( RHOV_tp, 2 )
        call COMM_vars8( MOMZ_tp, 3 )
@@ -328,20 +331,32 @@ contains
        end do
        call COMM_vars8( RHOT_tp, 4 )
 
-       call COMM_wait ( RHOU_tp, 1 )
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j) &
-       !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
-       !$omp         MOMX_tp,RHOU_tp)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          MOMX_tp(k,i,j) = MOMX_tp(k,i,j) &
-                         + 0.5_RP * ( RHOU_tp(k,i,j) + RHOU_tp(k,i+1,j) )
-       end do
-       end do
-       end do
-       call COMM_vars8( MOMX_tp, 1 )
+       if ( PRC_TwoD ) then
+          !$omp parallel do default(none) OMP_SCHEDULE_ &
+          !$omp private(k,j) &
+          !$omp shared (KA,KS,KE,IS,JS,JE, &
+          !$omp         MOMX_tp,RHOU_tp)
+          do j = JS, JE
+          do k = KS, KE
+             MOMX_tp(k,IS,j) = MOMX_tp(k,IS,j) + RHOU_tp(k,IS,j)
+          end do
+          end do
+       else
+          call COMM_wait ( RHOU_tp, 1 )
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(k,i,j) &
+          !$omp shared (KA,KS,KE,IS,IE,JS,JE, &
+          !$omp         MOMX_tp,RHOU_tp)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             MOMX_tp(k,i,j) = MOMX_tp(k,i,j) &
+                            + 0.5_RP * ( RHOU_tp(k,i,j) + RHOU_tp(k,i+1,j) )
+          end do
+          end do
+          end do
+          call COMM_vars8( MOMX_tp, 1 )
+       end if
 
        call COMM_wait ( RHOV_tp, 2 )
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
@@ -363,6 +378,7 @@ contains
        do iq = 1, QA
           call COMM_wait ( RHOQ_tp(:,:,:,iq), 4+iq, .false. )
        end do
+       if ( .not. PRC_TwoD ) &
        call COMM_wait ( MOMX_tp, 1 )
        call COMM_wait ( MOMY_tp, 2 )
 

@@ -86,6 +86,7 @@ contains
        GSQRT, MAPF, & ! (in)
        CDZ, RCDZ, RCDX, RCDY, & ! (in)
        BND_W, BND_E, BND_S, BND_N, & ! (in)
+       TwoD, & ! (in)
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -113,6 +114,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
     real(RP), intent(in)    :: dtl
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -129,6 +131,7 @@ contains
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
+         TwoD, & ! (in)
          dtl, & ! (in)
          FLAG_FCT_TRACER, FLAG_FCT_ALONG_STREAM ) ! (in)
 
