@@ -484,6 +484,7 @@ contains
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_freezetemp
     use mod_ocean_vars, only: &
+       ICE_flag,         &
        OCEAN_TEMP,       &
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
@@ -931,8 +932,10 @@ contains
           OCEAN_VVEL(k,i,j) = 0.0_RP
        enddo
        OCEAN_OCN_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       OCEAN_ICE_TEMP(i,j) = min( OCEAN_SFC_TEMP_ORG(i,j,ns), OCEAN_PHY_ICE_freezetemp )
-       OCEAN_ICE_MASS(i,j) = 0.0_RP
+       if ( ICE_flag ) then
+          OCEAN_ICE_TEMP(i,j) = min( OCEAN_SFC_TEMP_ORG(i,j,ns), OCEAN_PHY_ICE_freezetemp )
+          OCEAN_ICE_MASS(i,j) = 0.0_RP
+       end if
 
        LAND_SFC_TEMP  (i,j)      = LAND_SFC_TEMP_org  (i,j,     nsl)
        do irgn = I_R_IR, I_R_VIS
@@ -3255,6 +3258,7 @@ contains
           end do
           end do
        case( i_intrp_fill )
+          call make_mask( lmask, lst_org, imax, jmax, landdata=.true.)
        case default
           LOG_ERROR("land_interporation",*) 'INTRP_LAND_SFC_TEMP is invalid.'
           call PRC_abort
