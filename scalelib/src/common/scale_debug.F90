@@ -83,7 +83,8 @@ contains
        valmax,       &
        varname,      &
        current_file, &
-       current_line  )
+       current_line, &
+       mask          )
     use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
@@ -96,6 +97,8 @@ contains
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
+    real(RP), intent(in), optional :: mask(:)
+
     logical :: invalid_value
     integer :: k, kstr, kend
     !---------------------------------------------------------------------------
@@ -106,14 +109,26 @@ contains
     kend = ubound( var(:), 1 )
 
     invalid_value = .false.
-    do k = kstr, kend
-       if (      var(k)*0.0_RP /= 0.0_RP &
-            .OR. var(k)        <  valmin &
-            .OR. var(k)        >  valmax ) then
-           invalid_value = .true.
-           exit
-       endif
-    enddo
+    if ( present(mask) ) then
+       do k = kstr, kend
+          if ( mask(k) == 0.0_RP ) cycle
+          if (      var(k)*0.0_RP /= 0.0_RP &
+               .OR. var(k)        <  valmin &
+               .OR. var(k)        >  valmax ) then
+             invalid_value = .true.
+             exit
+          endif
+       enddo
+    else
+       do k = kstr, kend
+          if (      var(k)*0.0_RP /= 0.0_RP &
+               .OR. var(k)        <  valmin &
+               .OR. var(k)        >  valmax ) then
+             invalid_value = .true.
+             exit
+          endif
+       enddo
+    end if
 
     if ( invalid_value ) then
        LOG_ERROR("VALCHECK_1D",*) 'invalid value:', trim(varname), &
@@ -136,7 +151,8 @@ contains
        valmax,       &
        varname,      &
        current_file, &
-       current_line  )
+       current_line, &
+       mask          )
     use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
@@ -148,6 +164,8 @@ contains
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
+
+    real(RP), intent(in), optional :: mask(:,:)
 
     logical :: invalid_value
     integer :: k, kstr, kend
@@ -163,16 +181,30 @@ contains
     iend = ubound( var(:,:), 2 )
 
     invalid_value = .false.
-    outer:do i = istr, iend
-          do k = kstr, kend
-             if (      var(k,i)*0.0_RP /= 0.0_RP &
-                  .OR. var(k,i)        <  valmin &
-                  .OR. var(k,i)        >  valmax ) then
-                 invalid_value = .true.
-                 exit outer
-             endif
-          enddo
-          enddo outer
+    if ( present(mask) ) then
+       outer1:do i = istr, iend
+              do k = kstr, kend
+                 if ( mask(k,i) == 0.0_RP ) cycle
+                 if (      var(k,i)*0.0_RP /= 0.0_RP &
+                      .OR. var(k,i)        <  valmin &
+                      .OR. var(k,i)        >  valmax ) then
+                    invalid_value = .true.
+                    exit outer1
+                 endif
+              enddo
+              enddo outer1
+    else
+       outer2:do i = istr, iend
+              do k = kstr, kend
+                 if (      var(k,i)*0.0_RP /= 0.0_RP &
+                      .OR. var(k,i)        <  valmin &
+                      .OR. var(k,i)        >  valmax ) then
+                    invalid_value = .true.
+                    exit outer2
+                 endif
+              enddo
+              enddo outer2
+    end if
 
     if ( invalid_value ) then
        LOG_ERROR("VALCHECK_2D",*) 'invalid value:', trim(varname), &
@@ -195,7 +227,8 @@ contains
        valmax,       &
        varname,      &
        current_file, &
-       current_line  )
+       current_line, &
+       mask          )
     use scale_prc, only: &
        PRC_abort, &
        PRC_myrank
@@ -207,6 +240,8 @@ contains
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
+
+    real(RP), intent(in), optional :: mask(:,:)
 
     logical :: invalid_value
     integer :: k, kstr, kend
@@ -226,18 +261,34 @@ contains
     jend = ubound( var(:,:,:), 3 )
 
     invalid_value = .false.
-    outer:do j = jstr, jend
-          do i = istr, iend
-          do k = kstr, kend
-             if (      var(k,i,j)*0.0_RP /= 0.0_RP &
-                  .OR. var(k,i,j)        <  valmin &
-                  .OR. var(k,i,j)        >  valmax ) then
-                 invalid_value = .true.
-                 exit outer
-             endif
-          enddo
-          enddo
-          enddo outer
+    if ( present(mask) ) then
+       outer1:do j = jstr, jend
+              do i = istr, iend
+                 if ( mask(i,j) == 0.0_RP ) cycle
+                 do k = kstr, kend
+                    if (      var(k,i,j)*0.0_RP /= 0.0_RP &
+                         .OR. var(k,i,j)        <  valmin &
+                         .OR. var(k,i,j)        >  valmax ) then
+                       invalid_value = .true.
+                       exit outer1
+                    endif
+                 enddo
+              enddo
+              enddo outer1
+    else
+       outer2:do j = jstr, jend
+              do i = istr, iend
+              do k = kstr, kend
+                 if (      var(k,i,j)*0.0_RP /= 0.0_RP &
+                      .OR. var(k,i,j)        <  valmin &
+                      .OR. var(k,i,j)        >  valmax ) then
+                    invalid_value = .true.
+                    exit outer2
+                 endif
+              enddo
+              enddo
+              enddo outer2
+    end if
 
     if ( invalid_value ) then
        LOG_ERROR("VALCHECK_3D",*) 'Invalid value:', trim(varname), &

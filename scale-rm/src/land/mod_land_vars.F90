@@ -594,6 +594,8 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        I_QV
+    use scale_landuse, only: &
+       LANDUSE_fact_land
     implicit none
 
     real(RP) :: LAND_WATERDS(LKMAX,LIA,LJA)
@@ -605,33 +607,47 @@ contains
 
     if ( LAND_VARS_CHECKRANGE ) then
        call VALCHECK( LAND_TEMP      (LKS:LKE,LIS:LIE,LJS:LJE),             0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_TEMP),                                     __FILE__, __LINE__ )
+                      VAR_NAME(I_TEMP),                                    __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
+
        call VALCHECK( LAND_WATER     (LKS:LKE,LIS:LIE,LJS:LJE),             0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_WATER),                                    __FILE__, __LINE__ )
+                      VAR_NAME(I_WATER),                                   __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_TEMP  (LIS:LIE,LJS:LJE),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_TEMP),                                 __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_TEMP),                                __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dir ),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_IR_dir ),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dif ),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_IR_dif ),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dir),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_NIR_dir),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dif),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_NIR_dif),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dir),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_VIS_dir),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
        call VALCHECK( LAND_SFC_albedo(LIS:LIE,LJS:LJE,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dif),                          __FILE__, __LINE__ )
+                      VAR_NAME(I_SFC_ALB_VIS_dif),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)                                )
 
        if ( SNOW_flag ) then
           call VALCHECK( SNOW_SFC_TEMP(LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
-                         VAR_NAME(I_SNOW_SFC_TEMP),      __FILE__, __LINE__ )
+                         VAR_NAME(I_SNOW_SFC_TEMP),     __FILE__, __LINE__, &
+                         mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)          )
           call VALCHECK( SNOW_SWE     (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
-                         VAR_NAME(I_SNOW_SWE),           __FILE__, __LINE__ )
+                         VAR_NAME(I_SNOW_SWE),          __FILE__, __LINE__, &
+                         mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)          )
           call VALCHECK( SNOW_Depth   (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
-                         VAR_NAME(I_SNOW_Depth),         __FILE__, __LINE__ )
+                         VAR_NAME(I_SNOW_Depth),        __FILE__, __LINE__, &
+                         mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)          )
           call VALCHECK( SNOW_Dzero   (LIS:LIE,LJS:LJE), 0.0_RP, 1000.0_RP, &
-                         VAR_NAME(I_SNOW_Dzero),         __FILE__, __LINE__ )
+                         VAR_NAME(I_SNOW_Dzero),        __FILE__, __LINE__, &
+                         mask = LANDUSE_fact_land(LIS:LIE,LJS:LJE)          )
        endif
 
     end if
