@@ -3255,6 +3255,7 @@ contains
           end do
           end do
        case( i_intrp_fill )
+          call make_mask( lmask, lst_org, imax, jmax, landdata=.true.)
        case default
           LOG_ERROR("land_interporation",*) 'INTRP_LAND_SFC_TEMP is invalid.'
           call PRC_abort
