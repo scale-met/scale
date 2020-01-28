@@ -9,10 +9,11 @@ The method of execution of \verb|net2g| is the same as that of \scalerm, i.e.,
 \begin{verbatim}
  $ mpirun -n [the number of the processes] ./net2g [the configuration file]
 \end{verbatim}
-The configuration file \verb|net2g_R20kmDX500m.conf| is intended for special uses of \verb|net2g|.
+The configuration file \verb|sample/net2g_R20kmDX500m.conf| is intended for special uses of \verb|net2g|.
 Give this configuration file to \verb|net2g| and execute it as follows:
 \begin{verbatim}
-  $ mpirun  -n  2  ./net2g  net2g_R20kmDX500m.conf
+  $ cp  sample/net2g_R20kmDX500m.conf  ./net2g_R20kmDX500m.conf
+  $ mpirun  -n  2  ./net2g  ./net2g_R20kmDX500m.conf
 \end{verbatim}
 If there is no error message and the following message is displayed to the standard output,
 the conversion is completed without problem:
@@ -25,8 +26,8 @@ so that the number of MPI processes is identical to, or a divisor of, that used 
 \begin{alltt}
   QHYD_d01z-3d.ctl
   QHYD_d01z-3d.grd
-  U_d01z-3d.ctl
-  U_d01z-3d.grd
+  V_d01z-3d.ctl
+  V_d01z-3d.grd
   W_d01z-3d.ctl
   W_d01z-3d.grd
 \end{alltt}
@@ -65,7 +66,7 @@ To convert the result of the output into binary data for other variables,
 add them to \nmitem{VNAME} in \namelist{VARI} in the configuration file \verb|net2g_R20kmDX500m.conf|:
 \editbox{
 \verb|&VARI|\\
-\verb| VNAME       = "U","W","QHYD"|\\
+\verb| VNAME       = "V","W","QHYD"|\\
 \verb|/|\\
 }
 To check the output variable in the history file, use \verb|ncdump| of {\netcdf}.

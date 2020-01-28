@@ -17,6 +17,7 @@
 \verb|net2g_R20kmDX500m.conf|は\verb|net2g| 専用の設定ファイルである。
 この設定ファイルを\verb|net2g|に与えて、次のように実行する。
 \begin{verbatim}
+  $ cp  sample/net2g_R20kmDX500m.conf  ./net2g_R20kmDX500m.conf
   $ mpirun  -n  2  ./net2g  net2g_R20kmDX500m.conf
 \end{verbatim}
 エラーメッセージがなく、下記のメッセージだけが標準出力へ表示されていれば、変換は正常に完了している。
@@ -31,8 +32,8 @@
 \begin{alltt}
   QHYD_d01z-3d.ctl
   QHYD_d01z-3d.grd
-  U_d01z-3d.ctl
-  U_d01z-3d.grd
+  V_d01z-3d.ctl
+  V_d01z-3d.grd
   W_d01z-3d.ctl
   W_d01z-3d.grd
 \end{alltt}
@@ -69,7 +70,7 @@
 \verb|net2g_R20kmDX500m.conf|の\namelist{VARI}の\nmitem{VNAME} に必要な変数を追加すれば良い。
 \editbox{
 \verb|&VARI|\\
-\verb| VNAME       = "U","W","QHYD"|\\
+\verb| VNAME       = "V","W","QHYD"|\\
 \verb|/|\\
 }
 ヒストリファイルに出力された変数は、{\netcdf} の\verb|ncdump| 等を

@@ -4,7 +4,7 @@
 
 \subsubsection{Experimental setup}
 For this tutorial for an ideal experiment, a case of cumulus cloud convection is used.
-In this experiment, a cumulus appears and develops in a quasi-2D model
+In this experiment, a cumulus appears and develops in a 2D model
 by providing a typical atmospheric vertical profile
 and an initial disturbance in the lower troposphere.
 Table \ref{tab:setting_ideal} shows the experimental settings.
@@ -15,9 +15,9 @@ Table \ref{tab:setting_ideal} shows the experimental settings.
 \caption{Experimental settings of ideal experiment}
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} ~~ & Configuration & Note \\ \hline
- Number of MPI processes& 2: eastward direction, 1: northward direction & 2 MPI parallel \\ \hline
- Horizontal grid spacing & 500 m: eastward direction, 500 m :northward direction & The quasi 2 dimensional experiment in the eastward and vertical directions. \\ \hline
- Number of horizontal grids & 40: eastward direction, 2: northward direction\footnote{In the current version, the pure 2D experimental framework is not prepared. In this case, the initial conditions with the same values are set northward. Thus, the setting corresponds to a 2D experiment. Further, the number of grids northward should be same as the number of halos. Refer to Section \ref{subsec:atmos_dyn_scheme} for the required numbers of halos.} &  \\ \hline
+ Number of MPI processes& 1: eastward direction, 2: northward direction & 2 MPI parallelization \\ \hline
+ Horizontal grid spacing & 500 m: eastward direction, 500 m :northward direction & The 2-dimensional experiment in the northward and vertical directions. \\ \hline
+ Number of horizontal grids & 1: eastward direction, 40: northward direction &  \\ \hline
  Number of vertical layers & 97 layers with model top of 20 km & Stretched grid with finer resolution in the lower layers. \\ \hline
  Lateral boundary condition & Periodic condition & both eastward and northward \\ \hline
  Time step & 5 s      &  10 s in microphysics scheme\\ \hline
@@ -64,9 +64,10 @@ The general form of the executable command in \scalerm is given as follows:
 \end{verbatim}
 The number of processes using MPI parallel processing is given at [the number of processes]. The name of the executable binary is given to [executable binary name],  such as \verb|scale-rm|, \verb|scale-rm_init|, and so on.  The configuration file, where the experimental settings are described, is given to [the configuration file].
 In the case that
-the configuration file \verb|init_R20kmDX500m.conf| is used to conduct \verb|scale-rm_init| using two-MPI parallel, give the command to execute \verb|scale-rm_init| as follows:
+the configuration file \verb|sample/init_R20kmDX500m.conf| is used to conduct \verb|scale-rm_init| using two-MPI parallel, give the command to execute \verb|scale-rm_init| as follows:
 \begin{verbatim}
-  $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
+  $ cp  sample/init_R20kmDX500m.conf  init_R20kmDX500m.conf
+  $ mpirun  -n  2  ./scale-rm_init  ./init_R20kmDX500m.conf
 \end{verbatim}
 \noindent
 If it is successfully completed, the following message is output in the command line:
@@ -109,8 +110,9 @@ It can be directly read by GPhys/Ruby-DCL and ncview.
 %------------------------------------------------------
 
 The number of parallel process is required to be the same as that when creating the initial conditions.
-The configuration file for the run is \verb|run_R20kmDX500m.conf|.
+The configuration file for the run is \verb|sample/run_R20kmDX500m.conf|.
 \begin{verbatim}
+  $ cp  sample/run_R20kmDX500m.conf  ./run_R20kmDX500m.conf
   $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
 \end{verbatim}
 
@@ -129,4 +131,4 @@ the following message is output at the end of this LOG file:
  +++++ finalize MPI...\\
  +++++ MPI is peacefully finalized\\
 }
-The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and each file is approximately 5.8 MB.
+The two files \verb|history.pe000000.nc| and \verb|history.pe000001.nc| are history files containing the results of the calculation. They are formatted by \netcdf, and size of each file is approximately 1.5 MB.

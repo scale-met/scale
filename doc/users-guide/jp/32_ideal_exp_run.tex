@@ -15,9 +15,9 @@
 \caption{理想実験の実験設定}
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} 項目 & 設定内容 & 備考 \\ \hline
- MPIプロセス数 & 東西：2、南北：1 & 計2プロセスでの並列計算を行う \\ \hline
- 水平格子間隔 & 東西：500 m、南北：500 m & 東西-鉛直の面を切り取った準2次元実験である \\ \hline
- 水平格子点数 & 東西：40、南北：2\footnote{現在は２次元実験を行うための枠組みは用意されていないが、{\YDIR}に同じ値をもつ初期値を与える事で２次元実験に相当する実験を行うことが可能である。この場合、ハロの格子数と同じ数の格子数を{\YDIR}に設定する必要がある。ハロに必要な格子数については\ref{subsec:atmos_dyn_scheme}参照。} &  \\ \hline
+ MPIプロセス数 & 東西：1、南北：2 & 計2プロセスでの並列計算を行う \\ \hline
+ 水平格子間隔 & 東西：500 m、南北：500 m & 南北-鉛直の面を切り取った準2次元実験である \\ \hline
+ 水平格子点数 & 東西：1、南北：40 &  \\ \hline
  鉛直層数     & 97層（モデル上端 20 km）& 下層ほど細かい層厚を持ったストレッチ格子の設定である \\ \hline
  側面境界条件 & 周期境界 & 東西、南北境界とも \\ \hline
  積分時間間隔 & 5 sec      & 雲微物理スキームは10 sec毎 \\ \hline
@@ -51,7 +51,7 @@
 \subsubsection{初期値の作成} \label{subsec:ideal_exp_init}
 %------------------------------------------------------
 初期値を作成するには、\verb|scale-rm_init|に与える設定ファイルが必要である。
-設定ファイル\\ \verb|init_R20kmDX500m.conf| には、表\ref{tab:setting_ideal} に対応する実験設定が書かれている。
+設定ファイル\\ \verb|sample/init_R20kmDX500m.conf| には、表\ref{tab:setting_ideal} に対応する実験設定が書かれている。
 この設定ファイルを読み込ませると、大気の成層構造と初期擾乱が計算される。
 
 \scalerm の実行コマンドの一般的な形式は、
@@ -64,9 +64,10 @@
 そして、[設定ファイル]には実験設定を記述した設定ファイルを指定する。
 %
 2 プロセスのMPI並列計算を行うように、
-\verb|init_R20kmDX500m.conf|を設定している場合は、
+\verb|sample/init_R20kmDX500m.conf|を設定している場合は、
 \verb|scale-rm_init|を実行するコマンドは
 \begin{alltt}
+  $ cp  sample/init_R20kmDX500m.conf ./init_R20kmDX500m.conf
   $ mpirun  -n  2  ./scale-rm_init  init_R20kmDX500m.conf
 \end{alltt}
 %
@@ -120,8 +121,9 @@ GPhys/Ruby-DCL や ncview によって直接読み込める。
 \subsubsection{シミュレーションの実行} \label{subsec:ideal_exp_run}
 %------------------------------------------------------
 プロセス並列数は、初期値を作成した時と同じにする必要がある。
-シミュレーション実行用の設定ファイルは \verb|run_R20kmDX500m.conf| である。
+シミュレーション実行用の設定ファイルは \verb|sample/run_R20kmDX500m.conf| である。
 \begin{alltt}
+  $ cp  sample/run_R20kmDX500m.conf  ./run_R20kmDX500m.conf
   $ mpirun  -n  2  ./scale-rm  run_R20kmDX500m.conf
 \end{alltt}
 
@@ -141,4 +143,4 @@ GPhys/Ruby-DCL や ncview によって直接読み込める。
 と出力される。
 \verb|history.pe000000.nc| と \verb|history.pe000001.nc|
 の2つのファイルは、計算結果を含むヒストリファイルである。
-これらのファイル形式は{\netcdf}であり、各ファイルのサイズは約5.8 MBである。
+これらのファイル形式は{\netcdf}であり、各ファイルのサイズは約1.5 MBである。
