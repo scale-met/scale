@@ -95,14 +95,14 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 これらの設定例を以下に示す。
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER       = 1,    |        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,|        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
- \verb|ATMOS_DYN_DIVDMP_COEF                = 0.D0, |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2,    |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF          = 1.D-4,|        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER   = 0.D0, |        & \\
+ \verb|ATMOS_DYN_DIVDMP_COEF                  = 0.D0, |        & \\
 \verb|/                  | & \\
 }
 
-超粘性の微分階数は\nmitem{ATMOS_DYN_NUMERICAL_DIFF_ORDER}の4倍である。
+超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM }で指定する。
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
 超粘性に対する無次元の係数である。
 この係数の値が大きいほど減衰は強く、
