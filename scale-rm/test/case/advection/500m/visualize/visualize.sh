@@ -22,7 +22,7 @@ rm -f energy.dat mass.dat
 echo "+visualize by gpview"
 rm -f dcl.pdf
 
-var__set=(NC)
+var__set=(PTracer)
 rangeset=(0:1)
 time_set=(00000 00300 00600 00900)
 

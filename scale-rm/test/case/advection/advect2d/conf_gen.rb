@@ -6,20 +6,20 @@ TIME_DURATION_SEC       = "600.D0"
 HISTORY_TINTERVAL_SEC   = "50.D0"
 CONF_GEN_RESOL_HASHLIST = \
 [ \
-  { "TAG"=>"500m", "DX"=>500E0, "DY"=>500E0, "DZ"=>500.0E0, 
+  { "TAG"=>"500m", "DX"=>500E0, "DY"=>500E0, "DZ"=>500.0E0,
     "KMAX"=>4, "IMAX"=>40, "JMAX"=>40, "DTDYN"=>1.0, "NPRCX"=> 1, "NPRCY"=>1}, \
-  { "TAG"=>"250m", "DX"=>250E0, "DY"=>250E0, "DZ"=>250.0E0, 
+  { "TAG"=>"250m", "DX"=>250E0, "DY"=>250E0, "DZ"=>250.0E0,
     "KMAX"=>4, "IMAX"=>40, "JMAX"=>40, "DTDYN"=>0.5, "NPRCX"=> 2, "NPRCY"=>2}, \
-  { "TAG"=>"125m", "DX"=>125E0, "DY"=>125E0, "DZ"=>125E0, 
+  { "TAG"=>"125m", "DX"=>125E0, "DY"=>125E0, "DZ"=>125E0,
     "KMAX"=>4, "IMAX"=>40, "JMAX"=>40, "DTDYN"=>0.25, "NPRCX"=> 4, "NPRCY"=>4}, \
-  { "TAG"=>"063m", "DX"=>62.5E0,  "DY"=>62.5E0, "DZ"=>62.5E0, 
+  { "TAG"=>"063m", "DX"=>62.5E0,  "DY"=>62.5E0, "DZ"=>62.5E0,
     "KMAX"=>4, "IMAX"=>80, "JMAX"=>80, "DTDYN"=>0.125, "NPRCX"=> 4, "NPRCY"=>4} \
 ]
 CONF_GEN_CASE_HASH_LIST = \
 [ \
-  {"TAG"=>"COS", "SHAPE_NC"=>"COS"},     \
-  {"TAG"=>"COSBELL", "SHAPE_NC"=>"BUBBLE"}, \
-  {"TAG"=>"RECT", "SHAPE_NC"=>"RECT"},      \
+  {"TAG"=>"COS", "SHAPE_PTracer"=>"COS"},     \
+  {"TAG"=>"COSBELL", "SHAPE_PTracer"=>"BUBBLE"}, \
+  {"TAG"=>"RECT", "SHAPE_PTracer"=>"RECT"},      \
 ]
 CONF_GEN_NUMERIC_HASHLIST = \
 [ \
@@ -29,7 +29,7 @@ CONF_GEN_NUMERIC_HASHLIST = \
 
 #########################################################
 
-def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape_nc)
+def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape_pt)
   f = File.open(conf_name, "w")
   f.print <<EOS
 #####
@@ -43,21 +43,21 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape
 /
 
 &PARAM_PRC_CARTESC
- PRC_NUM_X       = #{nprocx},  
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
 /
 
-&PARAM_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
- JMAX = #{jmax}, JHALO = 3, 
+&PARAM_ATMOS_GRID_CARTESC_INDEX
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
+ JMAX = #{jmax}, JHALO = 3,
 /
 
-&PARAM_GRID
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
- BUFFER_DZ =   0.D0,  
+&PARAM_ATMOS_GRID_CARTESC
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
+ BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
 /
 
@@ -109,20 +109,20 @@ def gen_init_conf(conf_name, nprocx, nprocy, imax, jmax, kmax, dx, dy, dz, shape
 
 &PARAM_MKINIT_TRACERBUBBLE
  ENV_U     = 40.D0,
- ENV_V     = 40.D0, 
- SHAPE_NC  = '#{shape_nc}', 
- BBL_NC    = 1.D0,
+ ENV_V     = 40.D0,
+ SHAPE_PTracer = '#{shape_pt}',
+ BBL_PTracer   = 1.D0,
 /
 
 EOS
   f.close
-  
+
 end
 
-def gen_run_conf( conf_name, 
+def gen_run_conf( conf_name,
       nprocx, nprocy,
       imax, jmax, kmax, dx, dy, dz, dtsec_dyn,
-      shape_nc, flxEvalType,
+      shape_pt, flxEvalType,
       fctFlag, is_FCT_along_stream,
       dataDir )
 
@@ -134,22 +134,22 @@ def gen_run_conf( conf_name,
 #
 #####
 
-&PARAM_PRC
- PRC_NUM_X       = #{nprocx},  
+&PARAM_PRC_CARTESC
+ PRC_NUM_X       = #{nprocx},
  PRC_NUM_Y       = #{nprocy},
 /
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
- KMAX = #{kmax}, 
- IMAX = #{imax}, IHALO = 3, 
- JMAX = #{jmax}, JHALO = 3, 
+ KMAX = #{kmax},
+ IMAX = #{imax}, IHALO = 3,
+ JMAX = #{jmax}, JHALO = 3,
 /
 
-&PARAM_ATSMO_GRID_CARTESC
- DZ =  #{dz}, 
- DX =  #{dx},  
- DY =  #{dy}, 
- BUFFER_DZ =   0.D0,  
+&PARAM_ATMOS_GRID_CARTESC
+ DZ =  #{dz},
+ DX =  #{dx},
+ DY =  #{dy},
+ BUFFER_DZ =   0.D0,
  BUFFFACT  =   1.D0,
 /
 &PARAM_TIME
@@ -157,9 +157,9 @@ def gen_run_conf( conf_name,
  TIME_STARTMS               = 0.D0,
  TIME_DURATION              = #{TIME_DURATION_SEC},
  TIME_DURATION_UNIT         = "SEC",
- TIME_DT                    = #{dtsec_dyn}, 
+ TIME_DT                    = #{dtsec_dyn},
  TIME_DT_UNIT               = "SEC",
- TIME_DT_ATMOS_DYN          = #{dtsec_dyn}, 
+ TIME_DT_ATMOS_DYN          = #{dtsec_dyn},
  TIME_DT_ATMOS_DYN_UNIT     = "SEC",
 /
 
@@ -200,17 +200,17 @@ def gen_run_conf( conf_name,
  ATMOS_DYN_TINTEG_LARGE_TYPE = "EULER",
  ATMOS_DYN_TINTEG_SHORT_TYPE = "RK4",
  ATMOS_DYN_TINTEG_TRACER_TYPE = "RK3WS2002",
- ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",             
- ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}", 
+ ATMOS_DYN_FVM_FLUX_TYPE        = "#{flxEvalType}",
+ ATMOS_DYN_FVM_FLUX_TRACER_TYPE = "#{flxEvalType}",
  ATMOS_DYN_NUMERICAL_DIFF_COEF  = 0.D0,
  ATMOS_DYN_DIVDMP_COEF          = 0.D0,
- ATMOS_DYN_FLAG_FCT_TRACER       = #{fctFlag}, 
+ ATMOS_DYN_FLAG_FCT_TRACER       = #{fctFlag},
  ATMOS_DYN_FLAG_FCT_ALONG_STREAM = #{is_FCT_along_stream}
 /
 
 &PARAM_USER
- USER_do = .true., 
- InitShape = "#{shape_nc}"
+ USER_do = .true.,
+ InitShape = "#{shape_pt}"
 /
 
 
@@ -223,26 +223,26 @@ def gen_run_conf( conf_name,
  FILE_HISTORY_OUTPUT_STEP0      = .true.,
 /
 
-&HISTORY_ITEM item='U'           /
-&HISTORY_ITEM item='V'           /
-&HISTORY_ITEM item='NC'          /
-&HISTORY_ITEM item='NC_diff'     /
-&HISTORY_ITEM item='l2error'     /
-&HISTORY_ITEM item='linferror'   /
-!&HISTORY_ITEM item='DENS'       /
-!&HISTORY_ITEM item='W'          /
+&HISTORY_ITEM name='U'           /
+&HISTORY_ITEM name='V'           /
+&HISTORY_ITEM name='PTracer'     /
+&HISTORY_ITEM name='PTracer_diff'/
+&HISTORY_ITEM name='l2error'     /
+&HISTORY_ITEM name='linferror'   /
+!&HISTORY_ITEM name='DENS'       /
+!&HISTORY_ITEM name='W'          /
 
 
 &PARAM_MONITOR
  MONITOR_STEP_INTERVAL = 12,
 /
 
-&MONITITEM item='QDRY' /
-&MONITITEM item='QTOT' /
-&MONITITEM item='ENGT' /
-&MONITITEM item='ENGP' /
-&MONITITEM item='ENGK' /
-&MONITITEM item='ENGI' /
+&MONITOR_ITEM name='QDRY' /
+&MONITOR_ITEM name='QTOT' /
+&MONITOR_ITEM name='ENGT' /
+&MONITOR_ITEM name='ENGP' /
+&MONITOR_ITEM name='ENGK' /
+&MONITOR_ITEM name='ENGI' /
 EOS
 f.close
 end
@@ -260,23 +260,23 @@ CONF_GEN_RESOL_HASHLIST.each{|resol_hash|
 
         fct_param = fct_hash[fct_sw]
         dataDir = "./#{resol_hash["TAG"]}/#{case_hash["TAG"]}/#{numeric_hash["TAG"]}#{fct_param["dirSuffix"]}/"
-          
+
           puts "Generate init.conf and run.conf (Dir=#{dataDir}) .."
           if !File.exists?(dataDir) then
             puts "Create directory .."
             FileUtils.mkdir_p(dataDir)
           end
-      
+
           init_conf_name = "#{dataDir}init.conf"
-          init_shape = case_hash["SHAPE_NC"]
+          init_shape = case_hash["SHAPE_PTracer"]
           init_shape = "BUBBLE" if  init_shape == "COS"
-          gen_init_conf(init_conf_name, 
-                        resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
+          gen_init_conf(init_conf_name,
+                        resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
                         resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], init_shape )
           run_conf_name = "#{dataDir}run.conf"
-          gen_run_conf(run_conf_name, 
-                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"], 
-                       resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_NC"], 
+          gen_run_conf(run_conf_name,
+                       resol_hash["NPRCX"], resol_hash["NPRCY"], resol_hash["IMAX"], resol_hash["JMAX"], resol_hash["KMAX"],
+                       resol_hash["DX"], resol_hash["DY"], resol_hash["DZ"], resol_hash["DTDYN"], case_hash["SHAPE_PTracer"],
                        numeric_hash["TAG"].sub("FVM_",""), fct_param["fct_flag"], fct_param["is_FCT_along_stream"],
                        dataDir )
         }
