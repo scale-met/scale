@@ -78,6 +78,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (1D)
   subroutine VALCHECK_1D( &
+       KA, KS, KE,   &
        var,          &
        valmin,       &
        valmax,       &
@@ -89,28 +90,25 @@ contains
        PRC_abort, &
        PRC_myrank
     implicit none
-
-    real(RP),         intent(in) :: var(:)
+    integer ,         intent(in) :: KA, KS, KE
+    real(RP),         intent(in) :: var(KA)
     real(RP),         intent(in) :: valmin
     real(RP),         intent(in) :: valmax
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(:)
+    real(RP), intent(in), optional :: mask(KA)
 
     logical :: invalid_value
-    integer :: k, kstr, kend
+    integer :: k
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('Debug', 1)
 
-    kstr = lbound( var(:), 1 )
-    kend = ubound( var(:), 1 )
-
     invalid_value = .false.
     if ( present(mask) ) then
-       do k = kstr, kend
+       do k = KS, KE
           if ( mask(k) == 0.0_RP ) cycle
           if (      var(k)*0.0_RP /= 0.0_RP &
                .OR. var(k)        <  valmin &
@@ -120,7 +118,7 @@ contains
           endif
        enddo
     else
-       do k = kstr, kend
+       do k = KS, KE
           if (      var(k)*0.0_RP /= 0.0_RP &
                .OR. var(k)        <  valmin &
                .OR. var(k)        >  valmax ) then
@@ -131,10 +129,9 @@ contains
     end if
 
     if ( invalid_value ) then
-       LOG_ERROR("VALCHECK_1D",*) 'invalid value:', trim(varname), &
-                  '(', PRC_myrank, ',', k, ')=', var(k)
+       LOG_ERROR("VALCHECK_1D",*) 'invalid value): ', trim(varname), &
+                  '(', k, ')=', var(k)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
-       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 
@@ -146,6 +143,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (2D)
   subroutine VALCHECK_2D( &
+       IA, IS, IE, JA, JS, JE, &
        var,          &
        valmin,       &
        valmax,       &
@@ -157,48 +155,42 @@ contains
        PRC_abort, &
        PRC_myrank
     implicit none
-
-    real(RP),         intent(in) :: var(:,:)
+    integer ,         intent(in) :: IA, IS, IE
+    integer ,         intent(in) :: JA, JS, JE
+    real(RP),         intent(in) :: var(IA,JA)
     real(RP),         intent(in) :: valmin
     real(RP),         intent(in) :: valmax
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(:,:)
+    real(RP), intent(in), optional :: mask(IA,JA)
 
     logical :: invalid_value
-    integer :: k, kstr, kend
-    integer :: i, istr, iend
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('Debug', 1)
 
-    kstr = lbound( var(:,:), 1 )
-    kend = ubound( var(:,:), 1 )
-
-    istr = lbound( var(:,:), 2 )
-    iend = ubound( var(:,:), 2 )
-
     invalid_value = .false.
     if ( present(mask) ) then
-       outer1:do i = istr, iend
-              do k = kstr, kend
-                 if ( mask(k,i) == 0.0_RP ) cycle
-                 if (      var(k,i)*0.0_RP /= 0.0_RP &
-                      .OR. var(k,i)        <  valmin &
-                      .OR. var(k,i)        >  valmax ) then
+       outer1:do j = JS, JE
+              do i = IS, IE
+                 if ( mask(i,j) == 0.0_RP ) cycle
+                 if (      var(i,j)*0.0_RP /= 0.0_RP &
+                      .OR. var(i,j)        <  valmin &
+                      .OR. var(i,j)        >  valmax ) then
                     invalid_value = .true.
                     exit outer1
                  endif
               enddo
               enddo outer1
     else
-       outer2:do i = istr, iend
-              do k = kstr, kend
-                 if (      var(k,i)*0.0_RP /= 0.0_RP &
-                      .OR. var(k,i)        <  valmin &
-                      .OR. var(k,i)        >  valmax ) then
+       outer2:do j = JS, JE
+              do i = IS, IE
+                 if (      var(i,j)*0.0_RP /= 0.0_RP &
+                      .OR. var(i,j)        <  valmin &
+                      .OR. var(i,j)        >  valmax ) then
                     invalid_value = .true.
                     exit outer2
                  endif
@@ -208,9 +200,8 @@ contains
 
     if ( invalid_value ) then
        LOG_ERROR("VALCHECK_2D",*) 'invalid value:', trim(varname), &
-                  '(', PRC_myrank, ',', k, ',', i, ')=', var(k,i)
+                  '(', i, ',', j, ')=', var(i,j)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
-       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 
@@ -222,6 +213,9 @@ contains
   !-----------------------------------------------------------------------------
   !> Nan & extreme value checker (3D)
   subroutine VALCHECK_3D( &
+       KA, KS, KE,   &
+       IA, IS, IE,   &
+       JA, JS, JE,   &
        var,          &
        valmin,       &
        valmax,       &
@@ -233,39 +227,30 @@ contains
        PRC_abort, &
        PRC_myrank
     implicit none
-
-    real(RP),         intent(in) :: var(:,:,:)
+    integer ,         intent(in) :: KA, KS, KE
+    integer ,         intent(in) :: IA, IS, IE
+    integer ,         intent(in) :: JA, JS, JE
+    real(RP),         intent(in) :: var(KA,IA,JA)
     real(RP),         intent(in) :: valmin
     real(RP),         intent(in) :: valmax
     character(len=*), intent(in) :: varname
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(:,:)
+    real(RP), intent(in), optional :: mask(IA,JA)
 
     logical :: invalid_value
-    integer :: k, kstr, kend
-    integer :: i, istr, iend
-    integer :: j, jstr, jend
+    integer :: k, i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('Debug', 1)
 
-    kstr = lbound( var(:,:,:), 1 )
-    kend = ubound( var(:,:,:), 1 )
-
-    istr = lbound( var(:,:,:), 2 )
-    iend = ubound( var(:,:,:), 2 )
-
-    jstr = lbound( var(:,:,:), 3 )
-    jend = ubound( var(:,:,:), 3 )
-
     invalid_value = .false.
     if ( present(mask) ) then
-       outer1:do j = jstr, jend
-              do i = istr, iend
+       outer1:do j = JS, JE
+              do i = IS, IE
                  if ( mask(i,j) == 0.0_RP ) cycle
-                 do k = kstr, kend
+                 do k = KS, KE
                     if (      var(k,i,j)*0.0_RP /= 0.0_RP &
                          .OR. var(k,i,j)        <  valmin &
                          .OR. var(k,i,j)        >  valmax ) then
@@ -276,9 +261,9 @@ contains
               enddo
               enddo outer1
     else
-       outer2:do j = jstr, jend
-              do i = istr, iend
-              do k = kstr, kend
+       outer2:do j = JS, JE
+              do i = IS, IE
+              do k = KS, KE
                  if (      var(k,i,j)*0.0_RP /= 0.0_RP &
                       .OR. var(k,i,j)        <  valmin &
                       .OR. var(k,i,j)        >  valmax ) then
@@ -292,9 +277,8 @@ contains
 
     if ( invalid_value ) then
        LOG_ERROR("VALCHECK_3D",*) 'Invalid value:', trim(varname), &
-                  '(', PRC_myrank, ',', k, ',', i, ',', j, ')=', var(k,i,j)
+                  '(', k, ',', i, ',', j, ')=', var(k,i,j)
        LOG_ERROR_CONT(*) 'in file   : ', trim(current_file), ', at line : ', current_line
-       LOG_ERROR_CONT(*) 'in domain : ', DEBUG_DOMAIN_NUM
        call PRC_abort
     endif
 
