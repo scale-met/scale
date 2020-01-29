@@ -232,7 +232,8 @@ contains
        J13G, J23G, J33G, MAPF,                               &
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+       ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+       ND_SFC_FACT, ND_USE_RS,                               &
        BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
@@ -308,7 +309,7 @@ contains
     real(RP), intent(in)    :: REF_pres(KA,IA,JA)   !< reference pressure
     real(RP), intent(in)    :: ND_COEF
     real(RP), intent(in)    :: ND_COEF_Q
-    integer,  intent(in)    :: ND_ORDER
+    integer,  intent(in)    :: ND_LAPLACIAN_NUM
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
 
@@ -465,7 +466,8 @@ contains
                                  AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          & ! [IN]
                                  REF_dens, REF_pott, REF_qv, REF_pres,                 & ! [IN]
                                  BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
-                                 ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! [IN]
+                                 ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 & ! [IN]
+                                 ND_SFC_FACT, ND_USE_RS,                               & ! [IN]
                                  BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    & ! [IN]
                                  DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          & ! [IN]
                                  DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! [IN]

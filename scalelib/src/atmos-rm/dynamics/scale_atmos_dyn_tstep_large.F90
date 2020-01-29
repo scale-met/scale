@@ -45,7 +45,8 @@ module scale_atmos_dyn_tstep_large
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
           BND_W, BND_E, BND_S, BND_N,                           &
-          ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+          ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+          ND_SFC_FACT, ND_USE_RS,                               &
           BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
           DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
@@ -129,7 +130,7 @@ module scale_atmos_dyn_tstep_large
 
        real(RP), intent(in)    :: ND_COEF
        real(RP), intent(in)    :: ND_COEF_Q
-       integer,  intent(in)    :: ND_ORDER
+       integer,  intent(in)    :: ND_LAPLACIAN_NUM
        real(RP), intent(in)    :: ND_SFC_FACT
        logical,  intent(in)    :: ND_USE_RS
 

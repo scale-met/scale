@@ -101,15 +101,15 @@ Numerical diffusion may improve the stability.
 The setting for them is the following:
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER       = 1,    |        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,|        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
- \verb|ATMOS_DYN_DIVDMP_COEF                = 0.D0, |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2,    |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF          = 1.D-4,|        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER   = 0.D0, |        & \\
+ \verb|ATMOS_DYN_DIVDMP_COEF                  = 0.D0, |        & \\
 \verb|/                  | & \\
 }
 
 
-The order of the hyper-diffusion is 4 times \nmitem{ATMOS_DYN_NUMERICAL_DIFF_ORDER}.\\
+The number of laplacian operator associated with hyper-diffusion is specified by \nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}.\\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
 The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
 The dumping is stronger for larger coefficient.

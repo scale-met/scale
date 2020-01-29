@@ -359,7 +359,8 @@ contains
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
        BND_W, BND_E, BND_S, BND_N,                           &
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
+       ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+       ND_SFC_FACT, ND_USE_RS,                               &
        BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
@@ -384,8 +385,8 @@ contains
        COMM_wait
     use scale_atmos_dyn_common, only: &
        ATMOS_DYN_divergence, &
-       ATMOS_DYN_numfilter_coef,   &
-       ATMOS_DYN_numfilter_coef_q, &
+       ATMOS_DYN_numfilter_flux,   &
+       ATMOS_DYN_numfilter_flux_q, &
        ATMOS_DYN_fct
     use scale_atmos_dyn_fvm_flux_ud1, only: &
        ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
@@ -473,7 +474,7 @@ contains
 
     real(RP), intent(in)    :: ND_COEF
     real(RP), intent(in)    :: ND_COEF_Q
-    integer,  intent(in)    :: ND_ORDER
+    integer,  intent(in)    :: ND_LAPLACIAN_NUM
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
 
@@ -1090,11 +1091,11 @@ contains
 !OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
        else
-          call ATMOS_DYN_numfilter_coef( num_diff(:,:,:,:,:),                    & ! [OUT]
-                                         DENS, MOMZ, MOMX, MOMY, RHOT,           & ! [IN]
-                                         CDZ, CDX, CDY, FDZ, FDX, FDY, dts,      & ! [IN]
-                                         REF_dens, REF_pott,                     & ! [IN]
-                                         ND_COEF, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+          call ATMOS_DYN_numfilter_flux( num_diff(:,:,:,:,:),                              & ! [OUT]
+                                         DENS, MOMZ, MOMX, MOMY, RHOT,                     & ! [IN]
+                                         CDZ, CDX, CDY, FDZ, FDX, FDY, dts,                & ! [IN]
+                                         REF_dens, REF_pott,                               & ! [IN]
+                                         ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS ) ! [IN]
        endif
 
        call PROF_rapend  ("DYN_Large_Numfilter", 2)
@@ -1246,11 +1247,11 @@ contains
 !OCL XFILL
              num_diff_q(:,:,:,:) = 0.0_RP
           else
-             call ATMOS_DYN_numfilter_coef_q( num_diff_q(:,:,:,:),                    & ! [OUT]
+             call ATMOS_DYN_numfilter_flux_q( num_diff_q(:,:,:,:),                    & ! [OUT]
                                               DENS00, QTRC(:,:,:,iq), iq==I_QV,       & ! [IN]
                                               CDZ, CDX, CDY, dtl,                     & ! [IN]
                                               REF_qv, iq,                             & ! [IN]
-                                              ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS ) ! [IN]
+                                              ND_COEF_Q, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS ) ! [IN]
           endif
 
           call PROF_rapend  ("DYN_Large_Numfilter", 2)
