@@ -29,6 +29,7 @@ module scale_tracer
   !++ Public procedure
   !
   public :: TRACER_regist
+  public :: TRACER_inq_id
 
   !-----------------------------------------------------------------------------
   !
@@ -157,5 +158,26 @@ contains
 
     return
   end subroutine TRACER_regist
+
+  !-----------------------------------------------------------------------------
+  !> Inquire tracer ID
+  subroutine TRACER_inq_id( &
+       NAME, &
+       ID    )
+    implicit none
+    character(len=*), intent(in)  :: NAME
+    integer,          intent(out) :: ID
+    integer :: iq
+
+    ID = -1
+    do iq = 1, QA
+       if ( NAME == TRACER_NAME(iq) ) then
+          ID = iq
+          exit
+       end if
+    end do
+
+    return
+  end subroutine TRACER_inq_id
 
 end module scale_tracer
