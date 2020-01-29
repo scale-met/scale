@@ -339,6 +339,12 @@ contains
     mapping = MAPPROJECTION_mappinginfo%mapping_name
 
 
+    ! 0D
+    dims(1,1) = ""
+    start(1,1) = 1
+    count(1,1) = 1
+    call FILE_HISTORY_Set_Dim( "",   0, 1, dims(:,:), zs(:), start(:,:), count(:,:) ) ! [IN]
+
     !  Vertical 1D
     start(1,1) = 1
     dims (1,1) = "z"
