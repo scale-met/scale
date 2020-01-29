@@ -588,54 +588,83 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        I_QV
+    use scale_landuse, only: &
+       LANDUSE_fact_urban
     implicit none
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('URB_History', 1)
 
     if ( URBAN_VARS_CHECKRANGE ) then
-       call VALCHECK( URBAN_TRL  (:,UIS:UIE,UJS:UJE),   0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TBL  (:,UIS:UIE,UJS:UJE),   0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TGL  (:,UIS:UIE,UJS:UJE),   0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),   &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TR   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_TR),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TB   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_TB),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TG   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_TG),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_TC   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_TC),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_QC   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_QC),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_UC   (UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_UC),    &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINR(UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAINR), &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAINB(UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAINB), &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_RAING(UIS:UIE,UJS:UJE),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAING), &
-                     __FILE__, __LINE__ )
-       call VALCHECK( URBAN_ROFF (UIS:UIE,UJS:UJE), -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),  &
-                     __FILE__, __LINE__ )
+       call VALCHECK( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE,                &
+                      URBAN_TRL  (:,:,:),   0.0_RP, 1000.0_RP, VAR_NAME(I_TRL),   &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE,                &
+                      URBAN_TBL  (:,:,:),   0.0_RP, 1000.0_RP, VAR_NAME(I_TBL),   &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE,                &
+                      URBAN_TGL  (:,:,:),   0.0_RP, 1000.0_RP, VAR_NAME(I_TGL),   &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_TR   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_TR),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_TB   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_TB),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_TG   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_TG),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_TC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_TC),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_QC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_QC),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_UC   (:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_UC),    &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_RAINR(:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAINR), &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_RAINB(:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAINB), &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_RAING(:,:),     0.0_RP, 1000.0_RP, VAR_NAME(I_RAING), &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                               &
+                      URBAN_ROFF (:,:), -1000.0_RP, 1000.0_RP, VAR_NAME(I_ROFF),  &
+                     __FILE__, __LINE__,  mask = LANDUSE_fact_urban(:,:)          )
 
-       call VALCHECK( URBAN_SFC_TEMP(UIS:UIE,UJS:UJE), 0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_TEMP),            __FILE__, __LINE__ )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_TEMP(:,:),                       0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_TEMP),                     __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
 
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dir ),                           __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dif ),                           __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dir),                           __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dif),                           __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dir),                           __FILE__, __LINE__ )
-       call VALCHECK( URBAN_SFC_albedo(UIS:UIE,UJS:UJE,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dif),                           __FILE__, __LINE__ )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dir ),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dif ),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dir),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dif),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dir),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
+       call VALCHECK( UIA, UIS, UIE, UJA, UJS, UJE,                                 &
+                      URBAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dif),              __FILE__, __LINE__, &
+                      mask = LANDUSE_fact_urban(:,:)                                )
     endif
 
     call FILE_HISTORY_in( URBAN_TRL(:,:,:), VAR_NAME(I_TRL), VAR_DESC(I_TRL), VAR_UNIT(I_TRL), dim_type='UXY' )
