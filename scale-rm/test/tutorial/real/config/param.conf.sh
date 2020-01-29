@@ -206,7 +206,7 @@ cat <<EOF >> param.physics.conf
 #################################################
 
 &PARAM_URBAN_VARS
-! URBAN_VARS_CHECKRANGE = .true.,
+ URBAN_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_URBAN_DYN_KUSAKA01

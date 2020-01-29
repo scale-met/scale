@@ -1283,11 +1283,16 @@ contains
 
     ! value check for prognostic variables
     if ( ATMOS_VARS_CHECKRANGE ) then
-       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
     endif
 
     ! history output of prognostic variables
