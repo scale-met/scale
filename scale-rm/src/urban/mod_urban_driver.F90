@@ -569,10 +569,10 @@ contains
           URBAN_TG(i,j) = URBAN_TG(i,j) + URBAN_TG_t(i,j) * dt
           URBAN_TC(i,j) = URBAN_TC(i,j) + URBAN_TC_t(i,j) * dt
           URBAN_QC(i,j) = max( real(URBAN_QC(i,j) + URBAN_QC_t(i,j) * dt, RP), 0.0_RP )
-          URBAN_UC(i,j) = URBAN_UC(i,j) + URBAN_UC_t(i,j) * dt
-          URBAN_RAINR(i,j) = URBAN_RAINR(i,j) + URBAN_RAINR_t(i,j) * dt
-          URBAN_RAINB(i,j) = URBAN_RAINB(i,j) + URBAN_RAINB_t(i,j) * dt
-          URBAN_RAING(i,j) = URBAN_RAING(i,j) + URBAN_RAING_t(i,j) * dt
+          URBAN_UC(i,j) = max( real(URBAN_UC(i,j) + URBAN_UC_t(i,j) * dt, RP), 0.0_RP )
+          URBAN_RAINR(i,j) = max( real(URBAN_RAINR(i,j) + URBAN_RAINR_t(i,j) * dt, RP), 0.0_RP )
+          URBAN_RAINB(i,j) = max( real(URBAN_RAINB(i,j) + URBAN_RAINB_t(i,j) * dt, RP), 0.0_RP )
+          URBAN_RAING(i,j) = max( real(URBAN_RAING(i,j) + URBAN_RAING_t(i,j) * dt, RP), 0.0_RP )
           URBAN_ROFF (i,j) = URBAN_ROFF (i,j) + URBAN_ROFF_t (i,j) * dt
        end do
        end do
