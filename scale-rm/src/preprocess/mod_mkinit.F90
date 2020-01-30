@@ -856,15 +856,10 @@ contains
        SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up, &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up, &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
 
     ! Flux from Atmosphere
@@ -898,25 +893,13 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       SFLX_rain   (i,j) = FLX_rain
-       SFLX_snow   (i,j) = FLX_snow
+       SFLX_rain (i,j) = FLX_rain
+       SFLX_snow (i,j) = FLX_snow
 
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = FLX_IR_dn
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = FLX_NIR_dn + FLX_VIS_dn
-
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_IR)  = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_IR)  = FLX_IR_dn
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_NIR) = FLX_NIR_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_NIR) = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_VIS) = FLX_VIS_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_VIS) = 0.0_RP
+       SFLX_LW_up(i,j) = 0.0_RP
+       SFLX_LW_dn(i,j) = FLX_IR_dn
+       SFLX_SW_up(i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = FLX_NIR_dn + FLX_VIS_dn
     enddo
     enddo
 
