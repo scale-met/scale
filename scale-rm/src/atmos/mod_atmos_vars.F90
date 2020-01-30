@@ -2181,9 +2181,6 @@ contains
     case ( 'ENGI' )
        if ( .not. DV_calculated(I_ENGI) ) then
           call allocate_3D( ENGI )
-          if ( moist ) then
-             call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
-          end if
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = 1, IA
@@ -2191,13 +2188,8 @@ contains
              ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
              do iq = 1, QA
                 ENGI(k,i,j) = ENGI(k,i,j) &
-                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * ( TEMP(k,i,j) * TRACER_CV(iq) + TRACER_ENGI0(iq) )
              enddo
-             if ( moist ) then
-                ENGI(k,i,j) = ENGI(k,i,j) &
-                     + DENS_av(k,i,j) * ( QV  (k,i,j) * LHVc & ! Latent Heat [vapor->liquid]
-                                        - QICE(k,i,j) * LHFc ) ! Latent Heat [ice->liquid]
-             end if
           end do
           end do
           end do
