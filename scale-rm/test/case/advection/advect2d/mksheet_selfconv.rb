@@ -13,7 +13,7 @@ RESOL_LIST = ["500m", "250m", "125m", "063m"]
 FLXSCHEME_LIST = [
   "UD1", "UD3", "UD5", "CD2", "CD4", "CD6",
   "UD3_FCT", "UD5_FCT", "CD2_FCT", "CD4_FCT", "CD6_FCT",
-  "UD3_FCTori", "UD5_FCTori", "CD2_FCTori", "CD4_FCTori", "CD6_FCTori"  
+  "UD3_FCTori", "UD5_FCTori", "CD2_FCTori", "CD4_FCTori", "CD6_FCTori"
 ]
 TIME_LIST = [50.0, 100.0, 200.0, 300.0, 400.0, 500.0, 600.0]
 
@@ -43,7 +43,7 @@ CASE_LIST.each_with_index{|expcase,c|
         l2error_table[c,r,s,t] = gp_l2error.cut("time"=>time).val[0].to_f
         linferror_table[c,r,s,t] = gp_lInferror.cut("time"=>time).val[0].to_f
       }
-      
+
     }
   }
 }
@@ -52,7 +52,7 @@ CASE_LIST.each_with_index{|expcase,c|
   dirpath = "#{Dir.pwd}/selfconv/#{expcase}"
   FileUtils.mkdir_p(dirpath) unless FileTest.exists?(dirpath)
 
-  p "Create #{dirpath}/l2error_t*.csv*"  
+  p "Create #{dirpath}/l2error_t*.csv*"
   TIME_LIST.each_with_index{|time,t|
     csv_header = ["# resol #{FLXSCHEME_LIST.join(" ")}" ]
     CSV.open("#{dirpath}/l2error_t#{time.to_i}.csv", "wb", :headers =>csv_header, :write_headers =>true) do |csv|
@@ -62,7 +62,7 @@ CASE_LIST.each_with_index{|expcase,c|
       }
     end
   }
-  p "Create #{dirpath}/linferror_t*.csv*"  
+  p "Create #{dirpath}/linferror_t*.csv*"
   TIME_LIST.each_with_index{|time,t|
     csv_header = ["# resol #{FLXSCHEME_LIST.join(" ")}" ]
     CSV.open("#{dirpath}/linferror_t#{time.to_i}.csv", "wb", :headers =>csv_header, :write_headers =>true) do |csv|
@@ -72,5 +72,5 @@ CASE_LIST.each_with_index{|expcase,c|
       }
     end
   }
-  
+
 }

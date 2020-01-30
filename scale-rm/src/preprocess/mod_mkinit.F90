@@ -188,6 +188,7 @@ module mod_mkinit
   real(RP), private, allocatable         :: nc      (:,:,:) ! cloud water number density [1/kg]
   real(RP), private, allocatable         :: velx    (:,:,:) ! velocity u [m/s]
   real(RP), private, allocatable         :: vely    (:,:,:) ! velocity v [m/s]
+  real(RP), private, allocatable         :: ptrc    (:,:,:) ! passive tracer
 
   real(RP), private, allocatable         :: pres_sfc(:,:) ! surface pressure [Pa]
   real(RP), private, allocatable         :: temp_sfc(:,:) ! surface temperature [K]
@@ -241,6 +242,7 @@ contains
     allocate( nc  (KA,IA,JA) )
     allocate( velx(KA,IA,JA) )
     allocate( vely(KA,IA,JA) )
+    allocate( ptrc(KA,IA,JA) )
 
     allocate( pres_sfc(IA,JA) )
     allocate( temp_sfc(IA,JA) )
@@ -360,6 +362,7 @@ contains
     real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     logical :: convert_qtrc
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( MKINIT_TYPE == I_IGNORE ) then
@@ -391,6 +394,8 @@ contains
       nc    (:,:,:) = 0.0_RP
       qv_sfc(:,:) = 0.0_RP
       qc_sfc(:,:) = 0.0_RP
+
+      ptrc(:,:,:) = CONST_UNDEF8
 
 !OCL XFILL
       QTRC(:,:,:,:) = 0.0_RP
@@ -488,6 +493,7 @@ contains
 
       call SBMAERO_setup( convert_qtrc ) ! [INOUT]
 
+      ! water content
       if ( ( .not. ATMOS_HYDROMETEOR_dry ) .AND. convert_qtrc ) then
 !OCL XFILL
          QHYD(:,:,:,I_HC) = qc(:,:,:)
@@ -498,6 +504,10 @@ contains
                                              QTRC(:,:,:,QS_MP:QE_MP),  & ! [OUT]
                                              QNUM=QNUM(:,:,:,:)        ) ! [IN]
       end if
+
+      ! passive tracer
+      call TRACER_inq_id( "PTracer", iq)
+      if ( iq > 0 ) QTRC(:,:,:,iq) = ptrc(:,:,:)
 
       call PROF_rapend  ('_MkInit_main',3)
 
@@ -1553,8 +1563,8 @@ contains
     real(RP)               :: ENV_U     =   0.0_RP ! velocity u of environment [m/s]
     real(RP)               :: ENV_V     =   0.0_RP ! velocity v of environment [m/s]
     ! Bubble
-    character(len=H_SHORT) :: SHAPE_NC  = 'BUBBLE' ! BUBBLE or RECT
-    real(RP)               :: BBL_NC    =   1.0_RP ! extremum of NC in bubble [kg/kg]
+    character(len=H_SHORT) :: SHAPE_PTracer = 'BUBBLE' ! BUBBLE or RECT
+    real(RP)               :: BBL_PTracer   = 1.0_RP   ! extremum of passive tracer in bubble [kg/kg]
 
     namelist / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
@@ -1562,8 +1572,8 @@ contains
        ENV_THETA, &
        ENV_U,     &
        ENV_V,     &
-       SHAPE_NC,  &
-       BBL_NC
+       SHAPE_PTracer, &
+       BBL_PTracer
 
     real(RP), pointer :: shapeFac(:,:,:) => null()
 
@@ -1618,7 +1628,7 @@ contains
     enddo
 
     ! make tracer bubble
-    select case(SHAPE_NC)
+    select case(SHAPE_PTracer)
     case('BUBBLE')
        call BUBBLE_setup
        shapeFac => bubble
@@ -1626,14 +1636,14 @@ contains
        call RECT_setup
        shapeFac => rect
     case default
-       LOG_ERROR("MKINIT_tracerbubble",*) 'SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
+       LOG_ERROR("MKINIT_tracerbubble",*) 'SHAPE_PTracer=', trim(SHAPE_PTracer), ' cannot be used on advect. Check!'
        call PRC_abort
     end select
 
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       nc(k,i,j) = BBL_NC * shapeFac(k,i,j)
+       ptrc(k,i,j) = BBL_PTracer * shapeFac(k,i,j)
     enddo
     enddo
     enddo
@@ -2208,8 +2218,8 @@ contains
     real(RP) :: ENV_U = 0.0_RP ! velocity u of environment [m/s]
     real(RP) :: ENV_V = 0.0_RP ! velocity v of environment [m/s]
 
-    real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
-    real(RP) :: BBL_NC =   0.0_RP ! extremum of NC in bubble [kg/kg]
+    real(RP) :: SCORER      = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
+    real(RP) :: BBL_PTracer =   0.0_RP ! extremum of passive tracer in bubble [kg/kg]
 
     namelist / PARAM_MKINIT_MOUNTAINWAVE / &
        SFC_THETA, &
@@ -2217,7 +2227,7 @@ contains
        ENV_U,     &
        ENV_V,     &
        SCORER,    &
-       BBL_NC
+       BBL_PTracer
 
     real(RP) :: Ustar2, N2
 
@@ -2282,11 +2292,11 @@ contains
     enddo
 
     ! optional : add tracer bubble
-    if ( BBL_NC > 0.0_RP ) then
+    if ( BBL_PTracer > 0.0_RP ) then
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          nc(k,i,j) = BBL_NC * bubble(k,i,j)
+          ptrc(k,i,j) = BBL_PTracer * bubble(k,i,j)
        enddo
        enddo
        enddo

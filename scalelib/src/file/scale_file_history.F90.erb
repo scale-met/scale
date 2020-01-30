@@ -657,8 +657,8 @@ contains
        LOG_ERROR("FILE_HISTORY_reg",*) 'at least one dim_type must be registerd with FILE_HISTORY_set_dim. name=', trim(name)
        call PRC_abort
     end if
+    dimid = -1
     if ( present(dim_type) ) then
-       dimid = -1
        do n = 1, FILE_HISTORY_ndims
           if ( FILE_HISTORY_dims(n)%name == dim_type ) then
              dimid = n
@@ -970,19 +970,25 @@ contains
     FILE_HISTORY_ndims = FILE_HISTORY_ndims + 1
     id = FILE_HISTORY_ndims
 
-    allocate( FILE_HISTORY_dims(id)%dims(ndims,nzcoords) )
-    allocate( FILE_HISTORY_dims(id)%start(ndims,nzcoords) )
-    allocate( FILE_HISTORY_dims(id)%count(ndims,nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%dims (max(ndims,1),nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%start(max(ndims,1),nzcoords) )
+    allocate( FILE_HISTORY_dims(id)%count(max(ndims,1),nzcoords) )
     allocate( FILE_HISTORY_dims(id)%zcoords(nzcoords) )
     allocate( FILE_HISTORY_dims(id)%size(nzcoords) )
 
     FILE_HISTORY_dims(id)%name       = name
     FILE_HISTORY_dims(id)%ndims      = ndims
-    FILE_HISTORY_dims(id)%dims(:,:)  = dims(:,:)
     FILE_HISTORY_dims(id)%nzcoords   = nzcoords
     FILE_HISTORY_dims(id)%zcoords(:) = zcoords(:)
-    FILE_HISTORY_dims(id)%start(:,:) = start(:,:)
-    FILE_HISTORY_dims(id)%count(:,:) = count(:,:)
+    if ( ndims > 0 ) then
+       FILE_HISTORY_dims(id)%dims(:,:)  = dims(:,:)
+       FILE_HISTORY_dims(id)%start(:,:) = start(:,:)
+       FILE_HISTORY_dims(id)%count(:,:) = count(:,:)
+    else ! 0D
+       FILE_HISTORY_dims(id)%dims(1,1)  = ""
+       FILE_HISTORY_dims(id)%start(1,1) = 1
+       FILE_HISTORY_dims(id)%count(1,1) = 1
+    end if
 
     do m = 1, nzcoords
        size = 1
