@@ -199,10 +199,10 @@ contains
                                          DENS_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOT_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:),  & ! [INOUT]
+                                         kf_nca(:,:),                              & ! [INOUT]
                                          SFLX_rain(:,:),                           & ! [OUT]
                                          cloudtop(:,:), cloudbase(:,:),            & ! [OUT]
-                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:),     & ! [OUT]
-                                         kf_nca(:,:)                               ) ! [OUT]
+                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [OUT]
           !$omp parallel do
           do j = JS, JE
           do i = IS, IE

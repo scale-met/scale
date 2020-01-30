@@ -314,10 +314,18 @@ contains
 
        ! history putput
        if ( MP_do_precipitation ) then
+
           allocate( hist_vterm_id(QS_MP+1:QE_MP) )
           do iq = QS_MP+1, QE_MP
              call FILE_HISTORY_reg( 'Vterm_'//trim(TRACER_NAME(iq)), 'terminal velocity of '//trim(TRACER_NAME(iq)), 'm/s', hist_vterm_id(iq) )
           end do
+
+       else
+
+          SFLX_rain(:,:) = 0.0_RP
+          SFLX_snow(:,:) = 0.0_RP
+          SFLX_ENGI(:,:) = 0.0_RP
+
        end if
 
        ! monitor
@@ -348,7 +356,6 @@ contains
        SFLX_ENGI(:,:) = 0.0_RP
 
     endif
-
 
     return
   end subroutine ATMOS_PHY_MP_driver_setup

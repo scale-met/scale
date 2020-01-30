@@ -2987,13 +2987,6 @@ contains
        ATMOS_DYN_TYPE
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain, &
-       SFLX_ENGI_CP => ATMOS_PHY_CP_SFLX_ENGI
-    use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow, &
-       SFLX_ENGI_MP => ATMOS_PHY_MP_SFLX_ENGI
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
        SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
@@ -3007,13 +3000,13 @@ contains
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
-       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: ENGFLXT    (IA,JA) ! total flux             [J/m2/s]
-    real(RP) :: SFLX_PREC  (IA,JA) ! internal energy flux of precipitation [J/m2/s]
     real(RP) :: SFLX_RD_net(IA,JA) ! net SFC radiation flux [J/m2/s]
     real(RP) :: TFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
 
@@ -3115,10 +3108,8 @@ contains
        TFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
                         + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
 
-       SFLX_PREC  (i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
-
        ENGFLXT    (i,j) = SFLX_SH(i,j) &
-                        + SFLX_ENGI(i,j) - SFLX_PREC(i,j) &
+                        + SFLX_ENGI(i,j) - PREC_ENGI(i,j) &
                         + SFLX_RD_net(i,j) - TFLX_RD_net(i,j)
     enddo
     enddo
@@ -3128,7 +3119,7 @@ contains
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_EVAP),  SFLX_ENGI   (:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_PREC),  SFLX_PREC   (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_PREC),  PREC_ENGI   (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
 

@@ -552,7 +552,9 @@ contains
        U,    &
        V
     use mod_atmos_phy_sf_vars, only: &
-       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
+       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP, &
+       PREC_MASS => ATMOS_PHY_SF_PREC_MASS, &
+       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow, &
@@ -578,9 +580,6 @@ contains
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
 
-    real(RP) :: SFLX_water(IA,JA)
-    real(RP) :: SFLX_ENGI (IA,JA)
-
     integer  :: i,j
     !---------------------------------------------------------------------------
 
@@ -591,8 +590,8 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_
        do j = JSB, JEB
        do i = ISB, IEB
-          SFLX_water(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
-          SFLX_ENGI (i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
+          PREC_MASS(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
+          PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
        enddo
        enddo
 
@@ -615,8 +614,8 @@ contains
                         SFC_PRES   (:,:),     & ! [IN]
                         SFLX_rad_dn(:,:,:,:), & ! [IN]
                         cosSZA     (:,:),     & ! [IN]
-                        SFLX_water (:,:),     & ! [IN]
-                        SFLX_ENGI  (:,:),     & ! [IN]
+                        PREC_MASS  (:,:),     & ! [IN]
+                        PREC_ENGI  (:,:),     & ! [IN]
                         countup               ) ! [IN]
     endif
 
