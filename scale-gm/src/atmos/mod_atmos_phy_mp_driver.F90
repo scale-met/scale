@@ -328,13 +328,18 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV, &
-       QHA, &
+       QLA, &
+       QIA, &
        QHS, &
        QHE
     use scale_atmos_phy_mp_common, only: &
        ATMOS_PHY_MP_negative_fixer
     use mod_atmos_vars, only: &
-       DENS, &
+       TEMP,  &
+       CVtot, &
+       CPtot, &
+       DENS,  &
+       RHOE,  &
        QTRC
     use mod_atmos_phy_mp_vars, only: &
        QA_MP
@@ -345,16 +350,22 @@ contains
 
     if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
 
-!OCL XFILL
-       DENS0(:,:,:,:) = DENS(:,:,:,:)
-
        do l = 1, ADM_lall
 
           call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QHA, &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
                MP_limit_negative,                        & ! [IN]
-               DENS(:,:,:,l),                            & ! [INOUT]
+               DENS(:,:,:,l), TEMP(:,:,:,l),             & ! [INOUT]
+               CVtot(:,:,:,l), CPtot(:,:,:,l),           & ! [INOUT]
                QTRC(:,:,:,I_QV,l), QTRC(:,:,:,QHS:QHE,l) ) ! [INOUT]
+
+          do j = 1, JA
+          do i = 1, IA
+          do k = KS, KE
+             RHOE(k,i,j,l) = TEMP(k,i,j,l) * CVtot(k,i,j,l)
+          end do
+          end do
+          end do
 
           ! for non-mass tracers, such as number density
           do iq = QHE+1, QA_MP
@@ -377,8 +388,6 @@ contains
   !-----------------------------------------------------------------------------
   !> time step
   subroutine ATMOS_PHY_MP_driver_step
-    use scale_const, only: &
-       PRE00 => CONST_PRE00
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
     use scale_file_history, only: &
@@ -594,7 +603,6 @@ contains
 
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
           !$omp shared (KA,KS,KE,IE,JE,QS_MP,QE_MP,QHA,QLA,QIA,l,ADM_imin,ADM_iall, &
-          !$omp         PRE00, &
           !$omp         ATMOS_PHY_MP_TYPE, &
           !$omp         dt_MP,MP_NSTEP_SEDIMENTATION,MP_DTSEC_SEDIMENTATION,MP_RNSTEP_SEDIMENTATION, &
           !$omp         CZ,FZ, &
