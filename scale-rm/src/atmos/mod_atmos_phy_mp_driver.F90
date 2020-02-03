@@ -67,7 +67,7 @@ module mod_atmos_phy_mp_driver
   !
   logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
   logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
-  real(RP), private :: MP_limit_negative    = 1.0_RP   !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  real(RP), private :: MP_limit_negative     = 0.1_RP  !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
   integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
   real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
   real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
@@ -76,8 +76,11 @@ module mod_atmos_phy_mp_driver
   real(DP), private :: MP_DTSEC_SEDIMENTATION
 
   integer, private, allocatable :: hist_vterm_id(:)
-  integer, private              :: hist_nf_id
-  integer, private              :: monit_nf_id
+  integer, private              :: hist_nf_rhoh_id
+  integer, private              :: hist_nf_dens_id
+  integer, private              :: hist_nf_engi_id
+  integer, private              :: monit_nf_mass_id
+  integer, private              :: monit_nf_engi_id
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -317,13 +320,21 @@ contains
 
        ! monitor
        if ( MP_do_negative_fixer ) then
-          call FILE_HISTORY_reg( "DENS_t_MP_NF", "vapor supply by the negative fixer", "kg/m3/s", & ! [IN]
-                                 hist_nf_id                                                       ) ! [OUT]
-          call MONITOR_reg( "QTOTTND_NF", "vapor supply by the negative fixer", "kg", & ! [IN]
-                            monit_nf_id,                                              & ! [OUT]
-                            isflux=.true.                                             ) ! [IN]
+          call FILE_HISTORY_reg( "RHOH_MP_NF",   "sensible heat by the negative fixer",          "J/m3/s", & ! [IN]
+                                 hist_nf_rhoh_id                                                            ) ! [OUT]
+          call FILE_HISTORY_reg( "DENS_t_MP_NF", "vapor supply by the negative fixer",           "kg/m3/s", & ! [IN]
+                                 hist_nf_dens_id                                                            ) ! [OUT]
+          call FILE_HISTORY_reg( "ENGI_t_MP_NF", "internal energy supply by the negative fixer", "J/m3/s",  & ! [IN]
+                                 hist_nf_engi_id                                                            ) ! [OUT]
+          call MONITOR_reg( "QTOTTND_NF", "vapor supply by the negative fixer", "kg",           & ! [IN]
+                            monit_nf_mass_id,                                                   & ! [OUT]
+                            isflux=.true.                                                       ) ! [IN]
+          call MONITOR_reg( "ENGITND_NF", "internal energy supply by the negative fixer", "J",  & ! [IN]
+                            monit_nf_engi_id,                                                   & ! [OUT]
+                            isflux=.true.                                                       ) ! [IN]
           ZERO(:,:,:) = 0.0_RP
-          call MONITOR_put( MONIT_nf_id, ZERO(:,:,:) )
+          call MONITOR_put( MONIT_nf_mass_id, ZERO(:,:,:) )
+          call MONITOR_put( MONIT_nf_engi_id, ZERO(:,:,:) )
        end if
 
     else
@@ -365,29 +376,46 @@ contains
     use scale_time, only: &
        dt => TIME_DTSEC
     use scale_file_history, only: &
+       FILE_HISTORY_query, &
        FILE_HISTORY_put
     use scale_monitor, only: &
        MONITOR_put
 
-    real(RP) :: DENS0(KA,IA,JA)
-    real(RP) :: TEND (KA,IA,JA)
+    real(RP) :: RHOH  (KA,IA,JA)
+    real(RP) :: DENS_d(KA,IA,JA)
+    real(RP) :: ENGI_d(KA,IA,JA)
     real(RP) :: Rtot
+
+    logical :: do_put_rhoh
+    logical :: do_put_dens
+    logical :: do_put_engi
 
     integer :: k, i, j, iq
 
     if ( MP_do_negative_fixer .and. (.not. ATMOS_HYDROMETEOR_dry) ) then
 
-       if ( monit_nf_id > 0 .or. hist_nf_id > 0 ) then
-!OCL XFILL
-          DENS0(:,:,:) = DENS(:,:,:)
-       end if
+       call FILE_HISTORY_query( hist_nf_rhoh_id, do_put_rhoh )
+       call FILE_HISTORY_query( hist_nf_dens_id, do_put_dens )
+       call FILE_HISTORY_query( hist_nf_engi_id, do_put_engi )
 
-       call ATMOS_PHY_MP_negative_fixer( &
-            KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
-            MP_limit_negative,                    & ! [IN]
-            DENS(:,:,:), TEMP(:,:,:),             & ! [INOUT]
-            CVtot(:,:,:), CPtot(:,:,:),           & ! [INOUT]
-            QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
+       if ( monit_nf_mass_id > 0 .or. monit_nf_engi_id > 0 .or. &
+            do_put_rhoh .or. do_put_dens .or. do_put_engi ) then
+          call ATMOS_PHY_MP_negative_fixer( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               MP_limit_negative,                     & ! [IN]
+               DENS(:,:,:), TEMP(:,:,:),              & ! [INOUT]
+               CVtot(:,:,:), CPtot(:,:,:),            & ! [INOUT]
+               QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE), & ! [INOUT]
+               RHOH = RHOH,                           & ! [OUT, optional]
+               DENS_diff = DENS_d, ENGI_diff = ENGI_d ) ! [OUT, optional]
+       else
+          call ATMOS_PHY_MP_negative_fixer( &
+               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               MP_limit_negative,                    & ! [IN]
+               DENS(:,:,:), TEMP(:,:,:),             & ! [INOUT]
+               CVtot(:,:,:), CPtot(:,:,:),           & ! [INOUT]
+               QTRC(:,:,:,I_QV), QTRC(:,:,:,QHS:QHE) ) ! [INOUT]
+       end if
 
        !$omp parallel private(Rtot)
 
@@ -416,17 +444,40 @@ contains
 
        !$omp end parallel
 
-       if ( monit_nf_id > 0 .or. hist_nf_id > 0 ) then
+       if ( do_put_rhoh ) then
           !$omp parallel do
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
-             TEND(k,i,j) = ( DENS(k,i,j) - DENS0(k,i,j) ) / dt
+             RHOH(k,i,j) = RHOH(k,i,j) / dt
           end do
           end do
           end do
-          call FILE_HISTORY_put( hist_nf_id, TEND(:,:,:) )
-          call MONITOR_put( monit_nf_id, TEND(:,:,:) )
+          call FILE_HISTORY_put( hist_nf_rhoh_id, RHOH(:,:,:) )
+       end if
+       if ( monit_nf_mass_id > 0 .or. do_put_dens ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             DENS_d(k,i,j) = DENS_d(k,i,j) / dt
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( hist_nf_dens_id, DENS_d(:,:,:) )
+          call MONITOR_put( monit_nf_mass_id, DENS_d(:,:,:) )
+       end if
+       if ( monit_nf_engi_id > 0 .or. do_put_engi ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             ENGI_d(k,i,j) = ENGI_d(k,i,j) / dt
+          end do
+          end do
+          end do
+          call FILE_HISTORY_put( hist_nf_engi_id, ENGI_d(:,:,:) )
+          call MONITOR_put( monit_nf_engi_id, ENGI_d(:,:,:) )
        end if
 
     end if
