@@ -342,7 +342,6 @@ contains
     real(RP) :: RHOKhc(KA) !> dens * Kh at the half level for the countergradient
     real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
     real(RP) :: SFLX_PT    !> surface potential temperature flux
-    real(RP) :: SFLX_PTV   !> surface virtual potential temperature flux
     real(RP) :: sm25  (KA) !> stability function for velocity for level 2.5
     real(RP) :: smp   (KA) !> stability function for velocity for the countergradient
     real(RP) :: sh25  (KA) !> stability function for scalars for level 2.5
@@ -436,7 +435,7 @@ contains
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
-    !$omp private(N2_new,sm25,smp,sh25,shpgh,Nu_f,Kh_f,q,q2_2,ac,SFLX_PT,SFLX_PTV,RHONu,RHONuc,RHOKh,RHOKhc, &
+    !$omp private(N2_new,sm25,smp,sh25,shpgh,Nu_f,Kh_f,q,q2_2,ac,SFLX_PT,RHONu,RHONuc,RHOKh,RHOKhc, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,wtl,wqw, &
     !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,f2h,z1, &
     !$omp         dummy, &
@@ -493,13 +492,12 @@ contains
        do it = 1, nit
 
           ! length
-          SFLX_PTV = SFLX_PT * ( 1.0_RP + EPSTvap * Qw(KS,i,j) ) + SFLX_QV(i,j) * EPSTvap * POTT(KS,i,j)
           call get_length( &
                KA, KS, KE_PBL, &
-               POTV(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PTV, RLmo(i,j),           & ! (in)
-               FZ(:,i,j),                     & ! (in)
-               l(:,i,j)                       ) ! (out)
+               q(:), n2_new(:),    & ! (in)
+               us(i,j), RLmo(i,j), & ! (in)
+               FZ(:,i,j),          & ! (in)
+               l(:,i,j)            ) ! (out)
 
           call get_q2_level2( &
                KA, KS, KE_PBL, &
@@ -624,13 +622,12 @@ contains
           end do
 
           ! length
-          SFLX_PTV = SFLX_PT * betat(KS) + SFLX_QV(i,j) * betaq(KS)
           call get_length( &
                KA, KS, KE_PBL, &
-               POTV(KS,i,j), q(:), n2_new(:), & ! (in)
-               SFLX_PTV, RLmo(i,j),           & ! (in)
-               FZ(:,i,j),                     & ! (in)
-               l(:,i,j)                       ) ! (out)
+               q(:), n2_new(:),    & ! (in)
+               us(i,j), RLmo(i,j), & ! (in)
+               FZ(:,i,j),          & ! (in)
+               l(:,i,j)            ) ! (out)
 
           call get_q2_level2( &
                KA, KS, KE_PBL, &
@@ -1252,8 +1249,8 @@ contains
 !OCL SERIAL
   subroutine get_length( &
        KA, KS, KE_PBL, &
-       PT0, q, n2,     &
-       SFLX_PTV, RLmo, &
+       q, n2,          &
+       us, RLmo,       &
        FZ,             &
        l               )
     use scale_const, only: &
@@ -1263,10 +1260,9 @@ contains
     implicit none
     integer,  intent(in) :: KA, KS, KE_PBL
 
-    real(RP), intent(in) :: PT0
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
-    real(RP), intent(in) :: SFLX_PTV  !> surface virtual temperature flux
+    real(RP), intent(in) :: us
     real(RP), intent(in) :: RLmo      !> inverse of Monin-Obukhov length
     real(RP), intent(in) :: FZ(0:KA)
 
@@ -1303,7 +1299,7 @@ contains
                   ATMOS_PHY_BL_MYNN_Lt_MAX )
     rlt = 1.0_RP / lt
 
-    qc = ( GRAV / PT0 * max(SFLX_PTV,0.0_RP) * lt )**OneOverThree
+    qc = us * ( - lt * min(RLmo,0.0_RP) / KARMAN )**OneOverThree ! qc=0 if RLmo>=0
 
     do k = KS, KE_PBL
        z = ( FZ(k)+FZ(k-1) )*0.5_RP - FZ(KS-1)
