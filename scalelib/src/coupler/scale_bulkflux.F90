@@ -235,7 +235,7 @@ contains
        Tstar(i,j) = - SFLX_SH(i,j) / ( SFC_DENS(i,j) * Ustar(i,j) * CPdry + sw ) * ( 1.0_RP - sw )
        Qstar(i,j) = - SFLX_QV(i,j) / ( SFC_DENS(i,j) * Ustar(i,j) + sw ) * ( 1.0_RP - sw )
        BFLX = - Ustar(i,j) * Tstar(i,j) - EPSTvap * Ustar(i,j) * Qstar(i,j) * SFC_TEMP(i,j)
-       RLmo(i,j) = KARMAN * GRAV * BFLX / ( Ustar(i,j)**3 * SFC_TEMP(i,j) + sw ) * ( 1.0_RP - sw )
+       RLmo(i,j) = - KARMAN * GRAV * BFLX / ( Ustar(i,j)**3 * SFC_TEMP(i,j) + sw ) * ( 1.0_RP - sw )
 
        if ( ws_flag ) then
           tmp = PBL(i,j) * GRAV / SFC_TEMP(i,j) * BFLX
