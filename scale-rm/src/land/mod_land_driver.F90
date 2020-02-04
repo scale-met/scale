@@ -223,8 +223,7 @@ contains
        ATMOS_SFLX_water,  &
        ATMOS_SFLX_ENGI
     use scale_landuse, only: &
-       LANDUSE_fact_land, &
-       LANDUSE_exists_land
+       exists_land => LANDUSE_exists_land
     implicit none
 
     logical, intent(in) :: force
@@ -343,7 +342,7 @@ contains
                                    ATMOS_W(:,:), ATMOS_U(:,:), ATMOS_V(:,:),         & ! [IN]
                                    ATMOS_SFC_DENS(:,:),                              & ! [IN]
                                    ATMOS_SFLX_rad_dn(:,:,:,:),                       & ! [IN]
-                                   LANDUSE_fact_land(:,:), dt,                       & ! [IN]
+                                   exists_land(:,:), dt,                             & ! [IN]
                                    SNOW_SFC_TEMP(:,:), SNOW_SWE(:,:),                & ! [INOUT]
                                    SNOW_Depth(:,:), SNOW_Dzero(:,:),                 & ! [INOUT]
                                    SNOW_nosnowsec(:,:),                              & ! [INOUT]
@@ -359,8 +358,10 @@ contains
           !$omp parallel do
           do j = LJS, LJE
           do i = LIS, LIE
+          if ( exists_land(i,j) ) then
              SNOW_LAND_SFLX_ENGI(i,j) = ATMOS_SFLX_ENGI(i,j) & ! internal energy of precipitation
                                       - SFLX_ENGI(i,j)         ! internal energy of evapolation
+          end if
           enddo
           enddo
        end select
@@ -432,6 +433,7 @@ contains
     !$omp private(total)
     do j = LJS, LJE
     do i = LIS, LIE
+    if ( exists_land(i,j) ) then
        total = LAND_WATER(LKS,i,j) + LAND_ICE(LKS,i,j)
        LAND_WSTR(i,j) = total * CDZ(LKS) &
                       + dt * ( ATMOS_SFLX_water(i,j) &
@@ -449,6 +451,7 @@ contains
        !               + ( 1.0_RP-sw ) * sqrt( 0.5_RP - 0.5_RP * cos( PI * LAND_WATER(LKS,i,j) / LAND_PROPERTY(i,j,I_WaterCritical) ) )
 
        LAND_TC_dZ(i,j) = LAND_PROPERTY(i,j,I_ThermalCond) / LCZ(LKS)
+    end if
     end do
     end do
 
@@ -460,13 +463,13 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
+    if ( exists_land(i,j) ) then
        if ( LAND_ICE(LKS,i,j) > 0.0_RP ) then
-          call HYDROMETEOR_LHS( LIA, LIS, LIE, LJA, LJS, LJE, &
-                                LAND_SFC_TEMP(:,:), LH(:,:) )
+          call HYDROMETEOR_LHS( LAND_SFC_TEMP(i,j), LH(i,j) )
        else
-          call HYDROMETEOR_LHV( LIA, LIS, LIE, LJA, LJS, LJE, &
-                                LAND_SFC_TEMP(:,:), LH(:,:) )
+          call HYDROMETEOR_LHV( LAND_SFC_TEMP(i,j), LH(i,j) )
        end if
+    end if
     end do
     end do
 
@@ -477,12 +480,14 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
+       if ( exists_land(i,j) ) then
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
+       end if
        end do
        end do
 
@@ -500,7 +505,7 @@ contains
                               LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                               LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                              LANDUSE_exists_land(:,:), dt,                            & ! [IN]
+                              exists_land(:,:), dt,                                    & ! [IN]
                               'LAND',                                                  & ! [IN]
                               LAND_SFC_TEMP(:,:),                                      & ! [INOUT]
                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
@@ -516,19 +521,23 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
+       if ( exists_land(i,j) ) then
           LAND_SFC_TEMP(i,j) = LAND_TEMP(LKS,i,j)
+       end if
        end do
        end do
 !OCL XFILL
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
+       if ( exists_land(i,j) ) then
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_IR ) = LAND_PROPERTY(i,j,I_ALBLW)
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_NIR) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_direct ,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
           LAND_SFC_albedo(i,j,I_R_diffuse,I_R_VIS) = LAND_PROPERTY(i,j,I_ALBSW)
+       end if
        end do
        end do
 
@@ -545,7 +554,7 @@ contains
                                     LAND_PROPERTY(:,:,I_Z0M),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0H),                                & ! [IN]
                                     LAND_PROPERTY(:,:,I_Z0E),                                & ! [IN]
-                                    LANDUSE_exists_land(:,:), dt,                            & ! [IN]
+                                    exists_land(:,:), dt,                                    & ! [IN]
                                     LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [OUT]
                                     LAND_SFLX_SH(:,:), LAND_SFLX_LH(:,:), SFLX_QV(:,:),      & ! [OUT]
                                     LAND_SFLX_GH(:,:),                                       & ! [OUT]
@@ -559,11 +568,13 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
+    if ( exists_land(i,j) ) then
        if ( LAND_ICE(LKS,i,j) > 0.0_RP ) then
           SFLX_ENGI(i,j) = ( CV_ICE * LAND_SFC_TEMP(i,j) - LHF ) * SFLX_QV(i,j)
        else
           SFLX_ENGI(i,j) = CV_WATER * LAND_SFC_TEMP(i,j) * SFLX_QV(i,j)
        end if
+    end if
     end do
     end do
 
@@ -572,9 +583,11 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
+    if ( exists_land(i,j) ) then
        LAND_SFLX_water(i,j) = ATMOS_SFLX_water(i,j) - SFLX_QV(i,j)
        LAND_SFLX_ENGI (i,j) = ATMOS_SFLX_ENGI(i,j) & ! internal energy of precipitation
                             - SFLX_ENGI(i,j)         ! internal energy of evapolation or sublimation
+    end if
     end do
     end do
 
@@ -595,6 +608,7 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
+       if ( exists_land(i,j) ) then
           LAND_SFC_TEMP(i,j) = (        SNOW_frac(i,j) ) * SNOW_SFC_TEMP(i,j) &
                              + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_SFC_TEMP(i,j)
 
@@ -636,7 +650,7 @@ contains
                         + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_T2 (i,j)
           LAND_Q2 (i,j) = (        SNOW_frac(i,j) ) * SNOW_Q2 (i,j) &
                         + ( 1.0_RP-SNOW_frac(i,j) ) * LAND_Q2 (i,j)
-
+       end if
        enddo
        enddo
 
@@ -645,7 +659,8 @@ contains
                                LAND_SFLX_SH(:,:), SFLX_QV(:,:),                         & ! [IN]
                                ATMOS_SFC_DENS(:,:), LAND_SFC_TEMP(:,:), ATMOS_PBL(:,:), & ! [IN]
                                LAND_Ustar(:,:), LAND_Tstar(:,:), LAND_Qstar(:,:),       & ! [OUT]
-                               LAND_Wstar(:,:), LAND_RLmo(:,:)                          ) ! [OUT]
+                               LAND_Wstar(:,:), LAND_RLmo(:,:),                         & ! [OUT]
+                               mask = exists_land(:,:)                                  ) ! [IN]
 
     end if
 
@@ -653,7 +668,9 @@ contains
        !$omp parallel do
        do j = LJS, LJE
        do i = LIS, LIE
+       if ( exists_land(i,j) ) then
           LAND_SFLX_QTRC(i,j,I_QV) = SFLX_QV(i,j)
+       end if
        enddo
        enddo
     end if
@@ -701,7 +718,7 @@ contains
     use scale_land_dyn_bucket, only: &
        LAND_DYN_bucket
     use scale_landuse, only: &
-       LANDUSE_fact_land
+       exists_land => LANDUSE_exists_land
     use scale_time, only: &
        NOWDAYSEC => TIME_NOWDAYSEC
     use scale_file_history, only: &
@@ -731,7 +748,7 @@ contains
                              LAND_SFLX_GH(:,:),                      & ! [IN]
                              LAND_SFLX_water(:,:),                   & ! [IN]
                              LAND_SFLX_ENGI(:,:),                    & ! [IN]
-                             LANDUSE_fact_land(:,:), LCDZ(:),        & ! [IN]
+                             exists_land(:,:), LCDZ(:),              & ! [IN]
                              dt, NOWDAYSEC,                          & ! [IN]
                              LAND_TEMP(:,:,:),                       & ! [INOUT]
                              LAND_WATER(:,:,:), LAND_ICE(:,:,:),     & ! [INOUT]
@@ -745,8 +762,10 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
     do k = LKS, LKE
+    if ( exists_land(i,j) ) then
        LAND_WATER(k,i,j) = max( LAND_WATER(k,i,j), 0.0_RP )
        LAND_ICE  (k,i,j) = max( LAND_ICE  (k,i,j), 0.0_RP )
+    end if
     enddo
     enddo
     enddo
@@ -832,6 +851,8 @@ contains
        LAND_Q2
     use mod_cpl_vars, only: &
        CPL_putLND
+    use scale_landuse, only: &
+       exists_land => LANDUSE_exists_land
     implicit none
 
     ! arguments
@@ -857,6 +878,7 @@ contains
                         LAND_V10       (:,:),       & ! [IN]
                         LAND_T2        (:,:),       & ! [IN]
                         LAND_Q2        (:,:),       & ! [IN]
+                        exists_land    (:,:),       & ! [IN]
                         countup                     ) ! [IN]
     endif
 

@@ -137,7 +137,7 @@ contains
        WA, UA, VA,             & ! [IN]
        DENS,                   & ! [IN]
        SFLX_RAD_dn,            & ! [IN]
-       LANDUSE_fact_land, dt,  & ! [IN]
+       exists_land, dt,        & ! [IN]
        TSNOW, SWE,             & ! [INOUT]
        SDepth, SDzero,         & ! [INOUT]
        nosnowsec,              & ! [INOUT]
@@ -176,7 +176,7 @@ contains
     real(RP), intent(in)      :: DENS      (LIA,LJA)
     real(RP), intent(in)      :: SFLX_RAD_dn(LIA,LJA,N_RAD_DIR,N_RAD_RGN)
     real(DP), intent(in)      :: dt                     ! dt of land
-    real(RP), intent(in)      :: LANDUSE_fact_land(LIA,LJA)
+    logical,  intent(in)      :: exists_land(LIA,LJA)
 
     ! prognostic variables
     real(RP), intent(inout)   :: TSNOW          (LIA,LJA)   ! snow temperature        [K]
@@ -223,7 +223,7 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
 
-    if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
+    if( ( exists_land(i,j) ) .and. &
         ( SWE(i,j)>0. .or. SFLX_water(i,j)>0. ) )then
 
        Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )

@@ -96,7 +96,8 @@ contains
        md,         &
        ld,         &
        iv,         &
-       ov          )
+       ov,         &
+       mask        )
     implicit none
 
     integer,  intent(in)  :: KA, KS, KE   ! array size
@@ -108,20 +109,38 @@ contains
     real(RP), intent(in)  :: iv(KA,IA,JA) ! input  vector
     real(RP), intent(out) :: ov(KA,IA,JA) ! output vector
 
+    logical,  intent(in), optional :: mask(IA,JA)
+
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov) &
-    !$omp private(i,j)
-    do j = JS, JE
-    do i = IS, IE
-       call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
-                                          ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
-                                          iv(:,i,j),                       & ! (in)
-                                          ov(:,i,j)                        ) ! (out)
-    enddo
-    enddo
+    if ( present(mask) ) then
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov,mask) &
+       !$omp private(i,j)
+       do j = JS, JE
+       do i = IS, IE
+          if ( mask(i,j) ) then
+             call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
+                                                ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
+                                                iv(:,i,j),                       & ! (in)
+                                                ov(:,i,j)                        ) ! (out)
+          end if
+       enddo
+       enddo
+    else
+       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov) &
+       !$omp private(i,j)
+       do j = JS, JE
+       do i = IS, IE
+          call MATRIX_SOLVER_tridiagonal_1D( KA, KS, KE, &
+                                             ud(:,i,j), md(:,i,j), ld(:,i,j), & ! (in)
+                                             iv(:,i,j),                       & ! (in)
+                                             ov(:,i,j)                        ) ! (out)
+       enddo
+       enddo
+    end if
 
     return
   end subroutine MATRIX_SOLVER_tridiagonal_3D

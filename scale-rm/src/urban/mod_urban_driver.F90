@@ -209,7 +209,8 @@ contains
     use scale_urban_grid_cartesC, only: &
        CDZ => URBAN_GRID_CARTESC_CDZ
     use scale_landuse, only: &
-       LANDUSE_fact_urban
+       LANDUSE_fact_urban, &
+       exists_urban => LANDUSE_exists_urban
     use mod_urban_admin, only: &
        URBAN_SFC_TYPE
     use scale_urban_dyn_kusaka01, only: &
@@ -319,19 +320,23 @@ contains
        if ( tloc == 24 ) then
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
                             + (        dsec ) * AH_URB(i,j,1     )
              URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
                             + (        dsec ) * AHL_URB(i,j,1     )
+          end if
           enddo
           enddo
        else
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
                             + (        dsec ) * AH_URB(i,j,tloc+1)
              URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
                             + (        dsec ) * AHL_URB(i,j,tloc+1)
+          end if
           enddo
           enddo
        endif
@@ -370,11 +375,13 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
-       do k = UKS, UKE
-          URBAN_TRL_t(k,i,j) = ( TRL(k,i,j) - URBAN_TRL(k,i,j) ) / dt
-          URBAN_TBL_t(k,i,j) = ( TBL(k,i,j) - URBAN_TBL(k,i,j) ) / dt
-          URBAN_TGL_t(k,i,j) = ( TGL(k,i,j) - URBAN_TGL(k,i,j) ) / dt
-       end do
+       if ( exists_urban(i,j) ) then
+          do k = UKS, UKE
+             URBAN_TRL_t(k,i,j) = ( TRL(k,i,j) - URBAN_TRL(k,i,j) ) / dt
+             URBAN_TBL_t(k,i,j) = ( TBL(k,i,j) - URBAN_TBL(k,i,j) ) / dt
+             URBAN_TGL_t(k,i,j) = ( TGL(k,i,j) - URBAN_TGL(k,i,j) ) / dt
+          end do
+       end if
        end do
        end do
 
@@ -382,6 +389,7 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
           URBAN_TR_t(i,j) = ( TR(i,j) - URBAN_TR(i,j) ) / dt
           URBAN_TB_t(i,j) = ( TB(i,j) - URBAN_TB(i,j) ) / dt
           URBAN_TG_t(i,j) = ( TG(i,j) - URBAN_TG(i,j) ) / dt
@@ -391,6 +399,7 @@ contains
           URBAN_RAINR_t(i,j) = ( RAINR(i,j) - URBAN_RAINR(i,j) ) / dt
           URBAN_RAINB_t(i,j) = ( RAINB(i,j) - URBAN_RAINB(i,j) ) / dt
           URBAN_RAING_t(i,j) = ( RAING(i,j) - URBAN_RAING(i,j) ) / dt
+       end if
        end do
        end do
 
@@ -398,7 +407,9 @@ contains
           !$omp parallel do
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
+          end if
           enddo
           enddo
        endif
@@ -527,6 +538,8 @@ contains
        URBAN_vars_total
     use mod_urban_admin, only: &
        URBAN_DYN_TYPE
+    use scale_landuse, only: &
+       exists_urban => LANDUSE_exists_urban
     implicit none
 
     integer :: k, i, j
@@ -545,11 +558,13 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
-       do k = UKS, UKE
-          URBAN_TRL(k,i,j) = URBAN_TRL(k,i,j) + URBAN_TRL_t(k,i,j) * dt
-          URBAN_TBL(k,i,j) = URBAN_TBL(k,i,j) + URBAN_TBL_t(k,i,j) * dt
-          URBAN_TGL(k,i,j) = URBAN_TGL(k,i,j) + URBAN_TGL_t(k,i,j) * dt
-       end do
+       if ( exists_urban(i,j) ) then
+          do k = UKS, UKE
+             URBAN_TRL(k,i,j) = URBAN_TRL(k,i,j) + URBAN_TRL_t(k,i,j) * dt
+             URBAN_TBL(k,i,j) = URBAN_TBL(k,i,j) + URBAN_TBL_t(k,i,j) * dt
+             URBAN_TGL(k,i,j) = URBAN_TGL(k,i,j) + URBAN_TGL_t(k,i,j) * dt
+          end do
+       end if
        end do
        end do
 
@@ -557,6 +572,7 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
           URBAN_TR(i,j) = URBAN_TR(i,j) + URBAN_TR_t(i,j) * dt
           URBAN_TB(i,j) = URBAN_TB(i,j) + URBAN_TB_t(i,j) * dt
           URBAN_TG(i,j) = URBAN_TG(i,j) + URBAN_TG_t(i,j) * dt
@@ -566,6 +582,7 @@ contains
           URBAN_RAINR(i,j) = max( real(URBAN_RAINR(i,j) + URBAN_RAINR_t(i,j) * dt, RP), 0.0_RP )
           URBAN_RAINB(i,j) = max( real(URBAN_RAINB(i,j) + URBAN_RAINB_t(i,j) * dt, RP), 0.0_RP )
           URBAN_RAING(i,j) = max( real(URBAN_RAING(i,j) + URBAN_RAING_t(i,j) * dt, RP), 0.0_RP )
+       end if
        end do
        end do
 
@@ -669,6 +686,8 @@ contains
        URBAN_Q2
     use mod_cpl_vars, only: &
        CPL_putURB
+    use scale_landuse, only: &
+       exists_urban => LANDUSE_exists_urban
     implicit none
 
     ! arguments
@@ -694,6 +713,7 @@ contains
                         URBAN_V10       (:,:),     & ! [IN]
                         URBAN_T2        (:,:),     & ! [IN]
                         URBAN_Q2        (:,:),     & ! [IN]
+                        exists_urban    (:,:),     & ! [IN]
                         countup                    ) ! [IN]
     endif
 

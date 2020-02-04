@@ -81,6 +81,7 @@ contains
   subroutine OCEAN_PHY_ROUGHNESS_moon07( &
        OIA, OIS, OIE, OJA, OJS, OJE, &
        Uabs, Z1,     &
+       mask,         &
        Z0M, Z0H, Z0E )
     use scale_const, only: &
        GRAV   => CONST_GRAV,   &
@@ -97,6 +98,7 @@ contains
 
     real(RP), intent(in) :: Uabs(OIA,OJA) ! velocity at the lowest atomspheric layer [m/s]
     real(RP), intent(in) :: Z1  (OIA,OJA) ! cell center height at the lowest atmospheric layer [m]
+    logical,  intent(in) :: mask(OIA,OJA)
 
     real(RP), intent(inout) :: Z0M(OIA,OJA) ! roughness length for momentum [m]
     real(RP), intent(out)   :: Z0H(OIA,OJA) ! roughness length for heat [m]
@@ -115,35 +117,38 @@ contains
     !$omp        GRAV, &
     !$omp        OCEAN_PHY_ROUGHNESS_Z0M_min,OCEAN_PHY_ROUGHNESS_Z0H_min,OCEAN_PHY_ROUGHNESS_Z0E_min, &
     !$omp        OCEAN_PHY_ROUGHNESS_Ustar_min,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_moon07_itelim, &
-    !$omp        Z0M,Z0H,Z0E,Uabs,Z1) &
+    !$omp        Z0M,Z0H,Z0E,Uabs,Z1,mask) &
     !$omp private(i,j,ite,U10M,Ustar)
     do j = OJS, OJE
     do i = OIS, OIE
+       if ( mask(i,j) ) then
 
-       Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
-
-       do ite = 1, OCEAN_PHY_ROUGHNESS_moon07_itelim
-          Ustar = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_PHY_ROUGHNESS_Ustar_min )
-          U10M = Ustar / KARMAN * log( 10.0_RP/Z0M(i,j) )
-
-          if ( U10M <= 12.5_RP ) then
-             Z0M(i,j) = 0.0185_RP * Ustar**2 / GRAV
-          else
-             Z0M(i,j) = ( 0.085_RP * ( -  0.56_RP  * Ustar**2   &
-                                       + 20.255_RP * Ustar      &
-                                       +  2.458_RP            ) &
-                        - 0.58_RP ) *  1.0E-3_RP
-          end if
           Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
-       enddo
 
-       !  Fairall et al. TOGA V3.0
-       !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
-       Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar / OCEAN_PHY_ROUGHNESS_visck )**0.6_RP, &
-                       1.1E-4_RP )
-       Z0E(i,j) = Z0H(i,j)
-       Z0H(i,j) = max( Z0H(i,j), OCEAN_PHY_ROUGHNESS_Z0H_min )
-       Z0E(i,j) = max( Z0E(i,j), OCEAN_PHY_ROUGHNESS_Z0E_min )
+          do ite = 1, OCEAN_PHY_ROUGHNESS_moon07_itelim
+             Ustar = max( KARMAN * Uabs(i,j) / log( Z1(i,j)/Z0M(i,j) ), OCEAN_PHY_ROUGHNESS_Ustar_min )
+             U10M = Ustar / KARMAN * log( 10.0_RP/Z0M(i,j) )
+
+             if ( U10M <= 12.5_RP ) then
+                Z0M(i,j) = 0.0185_RP * Ustar**2 / GRAV
+             else
+                Z0M(i,j) = ( 0.085_RP * ( -  0.56_RP  * Ustar**2   &
+                                          + 20.255_RP * Ustar      &
+                                          +  2.458_RP            ) &
+                           - 0.58_RP ) *  1.0E-3_RP
+             end if
+             Z0M(i,j) = max( Z0M(i,j), OCEAN_PHY_ROUGHNESS_Z0M_min )
+          enddo
+
+          !  Fairall et al. TOGA V3.0
+          !  Fairall et al. (2003) JCLI, vol. 16, 571-591. Eq. (28)
+          Z0H(i,j) = min( 5.5E-5_RP / ( Z0M(i,j) * Ustar / OCEAN_PHY_ROUGHNESS_visck )**0.6_RP, &
+                          1.1E-4_RP )
+          Z0E(i,j) = Z0H(i,j)
+          Z0H(i,j) = max( Z0H(i,j), OCEAN_PHY_ROUGHNESS_Z0H_min )
+          Z0E(i,j) = max( Z0E(i,j), OCEAN_PHY_ROUGHNESS_Z0E_min )
+
+       end if
     enddo
     enddo
 

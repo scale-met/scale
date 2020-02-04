@@ -646,6 +646,7 @@ contains
        V10,        &
        T2,         &
        Q2,         &
+       mask,       &
        countup     )
     implicit none
 
@@ -665,19 +666,23 @@ contains
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
     real(RP), intent(in) :: Q2        (IA,JA)
+    logical,  intent(in) :: mask      (IA,JA)
     logical,  intent(in) :: countup
 
     integer :: i, j, iq, idir, irgn
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) private(i,j,idir,irgn) OMP_SCHEDULE_ &
-    !$omp shared(JS,JE,IS,IE,QA,OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,QA) &
+    !$omp shared(OCN_SFC_TEMP,OCN_SFC_albedo,OCN_SFC_Z0M,OCN_SFC_Z0H,OCN_SFC_Z0E) &
     !$omp shared(OCN_SFLX_MW,OCN_SFLX_MU,OCN_SFLX_MV,OCN_SFLX_SH,OCN_SFLX_LH,OCN_SFLX_GH,OCN_SFLX_QTRC,OCN_SFLX_ENGI,OCN_U10,OCN_V10,OCN_T2,OCN_Q2) &
     !$omp shared(SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2) &
+    !$omp shared(mask) &
     !$omp shared(CNT_putOCN) &
     !$omp shared(TRACER_CV,TRACER_ENGI0)
     do j = JS, JE
     do i = IS, IE
+    if ( mask(i,j) ) then
        OCN_SFC_TEMP (i,j)   = OCN_SFC_TEMP (i,j)   * CNT_putOCN + SFC_TEMP (i,j)
        OCN_SFC_Z0M  (i,j)   = OCN_SFC_Z0M  (i,j)   * CNT_putOCN + SFC_Z0M  (i,j)
        OCN_SFC_Z0H  (i,j)   = OCN_SFC_Z0H  (i,j)   * CNT_putOCN + SFC_Z0H  (i,j)
@@ -724,6 +729,7 @@ contains
           OCN_SFC_albedo(i,j,idir,irgn) = OCN_SFC_albedo(i,j,idir,irgn) / ( CNT_putOCN + 1.0_RP )
        enddo
        enddo
+       end if
     enddo
     enddo
 
@@ -752,6 +758,7 @@ contains
        V10,        &
        T2,         &
        Q2,         &
+       mask,       &
        countup     )
     implicit none
 
@@ -771,20 +778,24 @@ contains
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
     real(RP), intent(in) :: Q2        (IA,JA)
+    logical,  intent(in) :: mask      (IA,JA)
     logical,  intent(in) :: countup
 
     integer :: i, j, iq, idir, irgn
     !---------------------------------------------------------------------------
 
     !$omp parallel do default(none) &
-    !$omp shared(JS,JE,IS,IE,QA,LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
+    !$omp shared(JS,JE,IS,IE,QA) &
+    !$omp shared(LND_SFC_TEMP,LND_SFC_albedo,LND_SFC_Z0M,LND_SFC_Z0H,LND_SFC_Z0E) &
     !$omp shared(LND_SFLX_MW,LND_SFLX_MU,LND_SFLX_MV,LND_SFLX_SH,LND_SFLX_LH,LND_SFLX_GH,LND_SFLX_QTRC,LND_SFLX_ENGI) &
     !$omp shared(LND_U10,LND_V10,LND_T2,LND_Q2,CNT_putLND,SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H) &
     !$omp shared(SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2) &
+    !$omp shared(mask) &
     !$omp shared(TRACER_CV,TRACER_ENGI0) &
     !$omp private(i,j,idir,irgn) OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
+    if ( mask(i,j) ) then
        LND_SFC_TEMP (i,j)   = LND_SFC_TEMP (i,j)   * CNT_putLND + SFC_TEMP (i,j)
        LND_SFC_Z0M  (i,j)   = LND_SFC_Z0M  (i,j)   * CNT_putLND + SFC_Z0M  (i,j)
        LND_SFC_Z0H  (i,j)   = LND_SFC_Z0H  (i,j)   * CNT_putLND + SFC_Z0H  (i,j)
@@ -831,6 +842,7 @@ contains
           LND_SFC_albedo(i,j,idir,irgn) = LND_SFC_albedo(i,j,idir,irgn) / ( CNT_putLND + 1.0_RP )
        enddo
        enddo
+       end if
     enddo
     enddo
 
@@ -859,6 +871,7 @@ contains
        V10,        &
        T2,         &
        Q2,         &
+       mask,       &
        countup     )
     implicit none
 
@@ -878,6 +891,7 @@ contains
     real(RP), intent(in) :: V10       (IA,JA)
     real(RP), intent(in) :: T2        (IA,JA)
     real(RP), intent(in) :: Q2        (IA,JA)
+    logical,  intent(in) :: mask      (IA,JA)
     logical,  intent(in) :: countup
 
     integer :: i, j, iq, idir, irgn
@@ -888,9 +902,11 @@ contains
     !$omp        URB_SFC_TEMP,URB_SFC_albedo,URB_SFC_Z0M,URB_SFC_Z0H,URB_SFC_Z0E, &
     !$omp        URB_SFLX_MW,URB_SFLX_MU,URB_SFLX_MV,URB_SFLX_SH,URB_SFLX_LH,URB_SFLX_GH,URB_SFLX_QTRC,URB_SFLX_ENGI,URB_U10,URB_V10,URB_T2,URB_Q2,CNT_putURB, &
     !$omp        SFC_TEMP,SFC_albedo,SFC_Z0M,SFC_Z0H,SFC_Z0E,SFLX_MW,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_LH,SFLX_GH,SFLX_QTRC,U10,V10,T2,Q2, &
+    !$omp        mask, &
     !$omp        TRACER_CV,TRACER_ENGI0)
     do j = JS, JE
     do i = IS, IE
+    if ( mask(i,j) ) then
        URB_SFC_TEMP (i,j)   = URB_SFC_TEMP (i,j)   * CNT_putURB + SFC_TEMP (i,j)
        URB_SFC_Z0M  (i,j)   = URB_SFC_Z0M  (i,j)   * CNT_putURB + SFC_Z0M  (i,j)
        URB_SFC_Z0H  (i,j)   = URB_SFC_Z0H  (i,j)   * CNT_putURB + SFC_Z0H  (i,j)
@@ -937,6 +953,7 @@ contains
           URB_SFC_albedo(i,j,idir,irgn) = URB_SFC_albedo(i,j,idir,irgn) / ( CNT_putURB + 1.0_RP )
        enddo
        enddo
+       end if
     enddo
     enddo
 
