@@ -1547,8 +1547,17 @@ contains
     U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
     V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
-    T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+    !T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+     T2  = RTS + ( TA - RTS ) &
+         * ( log( 2.0_RP / Z0C ) * log( 2.0_RP / Z0HC ) ) &
+         / ( log(      Z / Z0C ) * log(      Z / Z0HC ) )
+
     Q2 = QC
+    !Q2 (i,j) = SFC_QV        + ( ATM_QV  (i,j) - SFC_QV        ) &
+    !     * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0E(i,j) ) ) &
+    !     / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
+
+
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
