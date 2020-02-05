@@ -593,7 +593,6 @@ contains
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
-    qflx(:) = 0.0_RP
     eflx(:) = 0.0_RP
 
     do k = KS, KE
@@ -609,6 +608,9 @@ contains
     end do
 
     do iq = 1, QHA
+
+       qflx(:) = 0.0_RP
+
        do k = KS, KE-1
           vtermh(k) = ( CDZ(k) * vterm(k+1,iq) + CDZ(k+1) * vterm(k,iq) ) * rfdz2(k)
        enddo
@@ -650,6 +652,7 @@ contains
              if (       Z_src >  FZ(k  ) &
                   .AND. Z_src <= FZ(k+1) ) then
                 k_src(k_dst) = k
+                exit
              endif
           enddo
           if ( Z_src > FZ(KE) ) k_src(k_dst) = KE
@@ -682,7 +685,7 @@ contains
              eflx(k_dst) = eflx(k_dst) -flx * TEMP(k_src(k_dst)+1) * CV ! internal energy flux
           end if
 
-          eflx(k_dst) = eflx(k_dst) + qflx(k) * FDZ(k_dst) * GRAV ! potential energy
+          eflx(k_dst) = eflx(k_dst) + qflx(k_dst) * FDZ(k_dst) * GRAV ! potential energy
        enddo
 
 !        LOG_INFO_CONT(*) "flux", iq
