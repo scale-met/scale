@@ -41,6 +41,7 @@ module mod_atmos_dyn_driver
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK4'
                                                                    ! 'RK3WS2002'
                                                                    ! 'RK3'
+                                                                   ! 'RK7s6o'
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'RK3WS2002'
                                                                    ! 'EULER'
 

@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Temporal integration for tracer advection for Atmospheric process
-!!          three step Runge-Kutta scheme
+!!          three stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!

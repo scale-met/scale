@@ -139,6 +139,9 @@ contains
     use scale_atmos_dyn_tinteg_short_rk4, only: &
        ATMOS_DYN_Tinteg_short_rk4_setup, &
        ATMOS_DYN_Tinteg_short_rk4
+    use scale_atmos_dyn_tinteg_short_rk7s6o, only: &
+       ATMOS_DYN_Tinteg_short_rk7s6o_setup, &
+       ATMOS_DYN_Tinteg_short_rk7s6o    
     implicit none
 
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
@@ -153,6 +156,10 @@ contains
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
+    case( 'RK7s6o' )
+       call ATMOS_DYN_Tinteg_short_rk7s6o_setup( &
+              ATMOS_DYN_Tinteg_short_TYPE )
+         ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk7s6o
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
