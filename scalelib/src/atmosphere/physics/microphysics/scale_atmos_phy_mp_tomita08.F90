@@ -1205,7 +1205,8 @@ contains
 
        ! [Pgfrz] freezing rate of graupel
        do k = KS, KE
-          w(k,I_Pgfrz) = 2.0_RP * PI * Rdens(k) * N0r(k) * 60.0_RP * B_frz * Ar * ( exp(-A_frz*temc(k)) - 1.0_RP ) * RLMDr_7(k)
+          tmp = ( exp(-A_frz*temc(k)) - 1.0_RP ) * RLMDr_7(k) ! to avoid floating overflow
+          w(k,I_Pgfrz) = 2.0_RP * PI * Rdens(k) * N0r(k) * 60.0_RP * B_frz * Ar * tmp
        end do
 
        ! [Psfw,Psfi] ( Bergeron process ) growth rate of snow by Bergeron process from cloud water/ice
