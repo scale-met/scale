@@ -152,7 +152,7 @@ contains
     use scale_atmos_phy_sf_const, only: &
        ATMOS_PHY_SF_const_flux
     use scale_bulkflux, only: &
-       BULKFLUX_diagnose
+       BULKFLUX_diagnose_scales
     use mod_atmos_admin, only: &
        ATMOS_PHY_SF_TYPE
     use mod_atmos_vars, only: &
@@ -265,12 +265,12 @@ contains
              end do
           end if
 
-          call BULKFLUX_diagnose( IA, IS, IE, JA, JS, JE, &
-                                  SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
-                                  SFLX_SH(:,:), SFLX_QV(:,:),                & ! [IN]
-                                  SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
-                                  Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
-                                  Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
+          call BULKFLUX_diagnose_scales( IA, IS, IE, JA, JS, JE, &
+                                         SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
+                                         SFLX_SH(:,:), SFLX_QV(:,:),                & ! [IN]
+                                         SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
+                                         Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
+                                         Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
        else
 
           !$omp parallel do

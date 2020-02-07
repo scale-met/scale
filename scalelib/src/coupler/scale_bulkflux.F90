@@ -25,44 +25,31 @@ module scale_bulkflux
   !++ Public procedure
   !
   public :: BULKFLUX_setup
-  public :: BULKFLUX_diagnose
+  public :: BULKFLUX_diagnose_scales
+  public :: BULKFLUX_diagnose_surface
+
+  interface BULKFLUX_diagnose_scales
+     module procedure BULKFLUX_diagnose_scales_0D
+     module procedure BULKFLUX_diagnose_scales_2D
+  end interface BULKFLUX_diagnose_scales
+
+  interface BULKFLUX_diagnose_surface
+     module procedure BULKFLUX_diagnose_surface_0D
+     module procedure BULKFLUX_diagnose_surface_2D
+  end interface BULKFLUX_diagnose_surface
 
   abstract interface
      subroutine bc( &
-          Ustar,   & ! (out)
-          Tstar,   & ! (out)
-          Qstar,   & ! (out)
-          Wstar,   & ! (out)
-          iL,      & ! (out)
-          Ra,      & ! (out)
-          FracU10, & ! (out)
-          FracT2,  & ! (out)
-          FracQ2,  & ! (out)
-          T1,      & ! (in)
-          T0,      & ! (in)
-          P1,      & ! (in)
-          P0,      & ! (in)
-          Q1,      & ! (in)
-          Q0,      & ! (in)
-          Uabs,    & ! (in)
-          Z1,      & ! (in)
-          PBL,     & ! (in)
-          Z0M,     & ! (in)
-          Z0H,     & ! (in)
-          Z0E      ) ! (in)
+          T1, T0,                 &
+          P1, P0,                 &
+          Q1, Q0,                 &
+          Uabs, Z1, PBL,          &
+          Z0M, Z0H, Z0E,          &
+          Ustar, Tstar, Qstar,    &
+          Wstar, RLmo, Ra,        &
+          FracU10, FracT2, FracQ2 )
        use scale_precision
        implicit none
-
-       real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
-       real(RP), intent(out) :: Tstar   ! friction temperature [K]
-       real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-       real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
-       real(RP), intent(out) :: iL      ! inversed Obukhov length [1/m]
-       real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
-       real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
-       real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
-       real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
-
        real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
        real(RP), intent(in) :: T0  ! skin temperature [K]
        real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
@@ -75,6 +62,16 @@ module scale_bulkflux
        real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
        real(RP), intent(in) :: Z0H ! roughness length of heat [m]
        real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
+
+       real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+       real(RP), intent(out) :: Tstar   ! friction temperature [K]
+       real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+       real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
+       real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
+       real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
+       real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+       real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+       real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
      end subroutine bc
   end interface
 
@@ -117,6 +114,9 @@ module scale_bulkflux
   real(RP), private :: BULKFLUX_Uabs_min  = 1.0E-2_RP ! minimum of Uabs [m/s]
   real(RP), private :: BULKFLUX_Wstar_min = 1.0E-4_RP ! minimum of W* [m/s]
 
+  ! surface diagnose
+  logical,  private :: BULKFLUX_surfdiag_neutral = .true. ! calculate surface diagnoses with neutral condition
+
   logical,  private :: flag_W01
 
 contains
@@ -138,7 +138,8 @@ contains
        BULKFLUX_err_min,    &
        BULKFLUX_WSCF,       &
        BULKFLUX_Uabs_min,   &
-       BULKFLUX_Wstar_min
+       BULKFLUX_Wstar_min,  &
+       BULKFLUX_surfdiag_neutral
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -188,7 +189,7 @@ contains
   !-----------------------------------------------------------------------------
   ! estimate scales from fluxes
   !-----------------------------------------------------------------------------
-  subroutine BULKFLUX_diagnose( &
+  subroutine BULKFLUX_diagnose_scales_2D( &
        IA, IS, IE, JA, JS, JE, &
        SFLX_MW, SFLX_MU, SFLX_MV, &
        SFLX_SH, SFLX_QV,          &
@@ -196,6 +197,12 @@ contains
        Ustar, Tstar, Qstar,       &
        Wstar, RLmo,               &
        mask                       )
+    use scale_const, only: &
+       EPS     => CONST_EPS,    &
+       GRAV    => CONST_GRAV,   &
+       CPdry   => CONST_CPdry,  &
+       KARMAN  => CONST_KARMAN, &
+       EPSTvap => CONST_EPSTvap
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -224,11 +231,11 @@ contains
        do j = JS, JE
        do i = IS, IE
           if ( mask(i,j) ) then
-             call BULKFLUX_diagnose_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
-                                        SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
-                                        SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
-                                        Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
-                                        Wstar(i,j), RLmo(i,j)                     ) ! (out)
+             call BULKFLUX_diagnose_scales_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
+                                               SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
+                                               SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                               Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
+                                               Wstar(i,j), RLmo(i,j)                     ) ! (out)
           end if
        end do
        end do
@@ -236,19 +243,19 @@ contains
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
-          call BULKFLUX_diagnose_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
-                                     SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
-                                     SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
-                                     Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
-                                     Wstar(i,j), RLmo(i,j)                     ) ! (out)
+          call BULKFLUX_diagnose_scales_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
+                                            SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
+                                            SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                            Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
+                                            Wstar(i,j), RLmo(i,j)                     ) ! (out)
        end do
        end do
     end if
 
     return
-  end subroutine BULKFLUX_diagnose
+  end subroutine BULKFLUX_diagnose_scales_2D
   !-----------------------------------------------------------------------------
-  subroutine BULKFLUX_diagnose_0D( &
+  subroutine BULKFLUX_diagnose_scales_0D( &
        SFLX_MW, SFLX_MU, SFLX_MV, &
        SFLX_SH, SFLX_QV,          &
        SFC_DENS, SFC_TEMP, PBL,   &
@@ -297,33 +304,175 @@ contains
     end if
 
     return
-  end subroutine BULKFLUX_diagnose_0D
+  end subroutine BULKFLUX_diagnose_scales_0D
+
+  !-----------------------------------------------------------------------------
+  ! estimate surface diagnose values (U10, V10, T2, Q2)
+  !-----------------------------------------------------------------------------
+  subroutine BULKFLUX_diagnose_surface_2D( &
+       IA, IS, IE, JA, JS, JE, &
+       ATM_U, ATM_V,              &
+       ATM_TEMP, ATM_QV,          &
+       SFC_TEMP, SFC_QV,          &
+       ATM_Z1,                    &
+       SFC_Z0M, SFC_Z0H, SFC_Z0E, &
+       U10, V10, T2, Q2,          &
+       mask,                      &
+       FracU10, FracT2, FracQ2    )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP), intent(in) :: ATM_U   (IA,JA)
+    real(RP), intent(in) :: ATM_V   (IA,JA)
+    real(RP), intent(in) :: ATM_TEMP(IA,JA)
+    real(RP), intent(in) :: ATM_QV  (IA,JA)
+    real(RP), intent(in) :: SFC_TEMP(IA,JA)
+    real(RP), intent(in) :: SFC_QV  (IA,JA)
+    real(RP), intent(in) :: ATM_Z1  (IA,JA)
+    real(RP), intent(in) :: SFC_Z0M (IA,JA)
+    real(RP), intent(in) :: SFC_Z0H (IA,JA)
+    real(RP), intent(in) :: SFC_Z0E (IA,JA)
+
+    real(RP), intent(out) :: U10(IA,JA)
+    real(RP), intent(out) :: V10(IA,JA)
+    real(RP), intent(out) :: T2 (IA,JA)
+    real(RP), intent(out) :: Q2 (IA,JA)
+
+    logical,  intent(in), optional :: mask   (IA,JA)
+    real(RP), intent(in), optional :: FracU10(IA,JA)
+    real(RP), intent(in), optional :: FracT2 (IA,JA)
+    real(RP), intent(in), optional :: FracQ2 (IA,JA)
+
+    integer :: i, j
+
+    if ( present(FracU10) ) then
+       if ( present(mask) ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          if ( mask(i,j) ) then
+             call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
+                                                 ATM_TEMP(i,j), ATM_QV(i,j),               &
+                                                 SFC_TEMP(i,j), SFC_QV(i,j),               &
+                                                 ATM_Z1(i,j),                              &
+                                                 SFC_Z0M(i,j), SFC_Z0H(i,j), SFC_Z0E(i,j), &
+                                                 U10(i,j), V10(i,j), T2(i,j), Q2(i,j),     &
+                                                 FracU10(i,j), FracT2(i,j), FracQ2(i,j)    )
+          end if
+          end do
+          end do
+
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
+                                                 ATM_TEMP(i,j), ATM_QV(i,j),               &
+                                                 SFC_TEMP(i,j), SFC_QV(i,j),               &
+                                                 ATM_Z1(i,j),                              &
+                                                 SFC_Z0M(i,j), SFC_Z0H(i,j), SFC_Z0E(i,j), &
+                                                 U10(i,j), V10(i,j), T2(i,j), Q2(i,j),     &
+                                                 FracU10(i,j), FracT2(i,j), FracQ2(i,j)    )
+          end do
+          end do
+       end if
+    else
+       if ( present(mask) ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          if ( mask(i,j) ) then
+             call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
+                                                 ATM_TEMP(i,j), ATM_QV(i,j),               &
+                                                 SFC_TEMP(i,j), SFC_QV(i,j),               &
+                                                 ATM_Z1(i,j),                              &
+                                                 SFC_Z0M(i,j), SFC_Z0H(i,j), SFC_Z0E(i,j), &
+                                                 U10(i,j), V10(i,j), T2(i,j), Q2(i,j)      )
+          end if
+          end do
+          end do
+
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             call  BULKFLUX_diagnose_surface_0D( ATM_U(i,j), ATM_V(i,j),                   &
+                                                 ATM_TEMP(i,j), ATM_QV(i,j),               &
+                                                 SFC_TEMP(i,j), SFC_QV(i,j),               &
+                                                 ATM_Z1(i,j),                              &
+                                                 SFC_Z0M(i,j), SFC_Z0H(i,j), SFC_Z0E(i,j), &
+                                                 U10(i,j), V10(i,j), T2(i,j), Q2(i,j)      )
+          end do
+          end do
+       end if
+    end if
+
+    return
+  end subroutine BULKFLUX_diagnose_surface_2D
+
+  subroutine BULKFLUX_diagnose_surface_0D( &
+       ATM_U, ATM_V,              &
+       ATM_TEMP, ATM_QV,          &
+       SFC_TEMP, SFC_QV,          &
+       ATM_Z1,                    &
+       SFC_Z0M, SFC_Z0H, SFC_Z0E, &
+       U10, V10, T2, Q2,          &
+       FracU10, FracT2, FracQ2    )
+    implicit none
+    real(RP), intent(in) :: ATM_U
+    real(RP), intent(in) :: ATM_V
+    real(RP), intent(in) :: ATM_TEMP
+    real(RP), intent(in) :: ATM_QV
+    real(RP), intent(in) :: SFC_TEMP
+    real(RP), intent(in) :: SFC_QV
+    real(RP), intent(in) :: ATM_Z1
+    real(RP), intent(in) :: SFC_Z0M
+    real(RP), intent(in) :: SFC_Z0H
+    real(RP), intent(in) :: SFC_Z0E
+
+    real(RP), intent(out) :: U10
+    real(RP), intent(out) :: V10
+    real(RP), intent(out) :: T2
+    real(RP), intent(out) :: Q2
+
+    real(RP), intent(in), optional :: FracU10
+    real(RP), intent(in), optional :: FracT2
+    real(RP), intent(in), optional :: FracQ2
+
+    real(RP) :: f10m, f2h, f2e
+
+    if ( BULKFLUX_surfdiag_neutral .or. ( .not. present(FracU10) ) ) then
+       ! assume the neutral condition
+       f10m = log( 10.0_RP / SFC_Z0M ) / log( ATM_Z1 / SFC_Z0M )
+       f2h  = log(  2.0_RP / SFC_Z0H ) / log( ATM_Z1 / SFC_Z0H )
+       f2e  = log(  2.0_RP / SFC_Z0E ) / log( ATM_Z1 / SFC_Z0E )
+    else
+       ! take the static stability into account
+       f10m = FracU10
+       f2h  = FracT2
+       f2e  = FracQ2
+    end if
+    U10 = ATM_U * f10m
+    V10 = ATM_V * f10m
+    T2  = SFC_TEMP + ( ATM_TEMP - SFC_TEMP ) * f2h
+    Q2  = SFC_QV   + ( ATM_QV   - SFC_QV   ) * f2e
+
+    return
+  end subroutine BULKFLUX_diagnose_surface_0D
 
   !-----------------------------------------------------------------------------
   ! ref. Uno et al. (1995)
   !-----------------------------------------------------------------------------
   subroutine BULKFLUX_U95( &
-      Ustar,   & ! (out)
-      Tstar,   & ! (out)
-      Qstar,   & ! (out)
-      Wstar,   & ! (out)
-      RLmo,    & ! (out)
-      Ra,      & ! (out)
-      FracU10, & ! (out)
-      FracT2,  & ! (out)
-      FracQ2,  & ! (out)
-      T1,      & ! (in)
-      T0,      & ! (in)
-      P1,      & ! (in)
-      P0,      & ! (in)
-      Q1,      & ! (in)
-      Q0,      & ! (in)
-      Uabs,    & ! (in)
-      Z1,      & ! (in)
-      PBL,     & ! (in)
-      Z0M,     & ! (in)
-      Z0H,     & ! (in)
-      Z0E      ) ! (in)
+       T1, T0,                 &
+       P1, P0,                 &
+       Q1, Q0,                 &
+       Uabs, Z1, PBL,          &
+       Z0M, Z0H, Z0E,          &
+       Ustar, Tstar, Qstar,    &
+       Wstar, RLmo, Ra,        &
+       FracU10, FracT2, FracQ2 )
     use scale_const, only: &
       GRAV   => CONST_GRAV,   &
       KARMAN => CONST_KARMAN, &
@@ -340,16 +489,6 @@ contains
     real(RP), parameter :: LFdh = 5.3_RP     ! Louis factor d for heat (Louis 1979)
 
     ! argument
-    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
-    real(RP), intent(out) :: Tstar   ! friction temperature [K]
-    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
-    real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
-    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
-    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
-    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
-    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
-
     real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: T0  ! skin temperature [K]
     real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
@@ -362,6 +501,16 @@ contains
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
+
+    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+    real(RP), intent(out) :: Tstar   ! friction temperature [K]
+    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
+    real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
+    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
+    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
     ! work
     real(RP) :: UabsW
@@ -457,7 +606,7 @@ contains
     FracT2  = ChZ1 / Ch02 * sqrt( Cm02 / CmZ1 )
     FracQ2  = CqZ1 / Cq02 * sqrt( Cm02 / CmZ1 )
 
-    RLmo = RiB / Z1 * logZ1Z0m**2 / ( logZ1Z0m + logZ0MZ0H )
+    RLmo = RiB / Z1 * KARMAN * ChZ1 / ( CmZ1 * sqrt( CmZ1 ) )
 
     Ra = 1.0_RP / ( CqZ1 * UabsW )
 
@@ -476,27 +625,14 @@ contains
   !-----------------------------------------------------------------------------
 !OCL SERIAL
   subroutine BULKFLUX_B91W01( &
-      Ustar,   & ! (out)
-      Tstar,   & ! (out)
-      Qstar,   & ! (out)
-      Wstar,   & ! (out)
-      RLmo,    & ! (out)
-      Ra,      & ! (out)
-      FracU10, & ! (out)
-      FracT2,  & ! (out)
-      FracQ2,  & ! (out)
-      T1,      & ! (in)
-      T0,      & ! (in)
-      P1,      & ! (in)
-      P0,      & ! (in)
-      Q1,      & ! (in)
-      Q0,      & ! (in)
-      Uabs,    & ! (in)
-      Z1,      & ! (in)
-      PBL,     & ! (in)
-      Z0M,     & ! (in)
-      Z0H,     & ! (in)
-      Z0E      ) ! (in)
+       T1, T0,                 &
+       P1, P0,                 &
+       Q1, Q0,                 &
+       Uabs, Z1, PBL,          &
+       Z0M, Z0H, Z0E,          &
+       Ustar, Tstar, Qstar,    &
+       Wstar, RLmo, Ra,        &
+       FracU10, FracT2, FracQ2 )
     use scale_const, only: &
       GRAV    => CONST_GRAV,    &
       KARMAN  => CONST_KARMAN,  &
@@ -512,16 +648,6 @@ contains
     real(DP), parameter :: dIL = 1.0E-6_DP ! delta [1/m]
 
     ! argument
-    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
-    real(RP), intent(out) :: Tstar   ! friction temperature [K]
-    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
-    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
-    real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
-    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
-    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
-    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
-    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
-
     real(RP), intent(in) :: T1  ! tempearature at the lowest atmospheric layer [K]
     real(RP), intent(in) :: T0  ! skin temperature [K]
     real(RP), intent(in) :: P1  ! pressure at the lowest atmospheric layer [Pa]
@@ -534,6 +660,16 @@ contains
     real(RP), intent(in) :: Z0M ! roughness length of momentum [m]
     real(RP), intent(in) :: Z0H ! roughness length of heat [m]
     real(RP), intent(in) :: Z0E ! roughness length of moisture [m]
+
+    real(RP), intent(out) :: Ustar   ! friction velocity [m/s]
+    real(RP), intent(out) :: Tstar   ! friction temperature [K]
+    real(RP), intent(out) :: Qstar   ! friction mixing rate [kg/kg]
+    real(RP), intent(out) :: Wstar   ! free convection velocity scale [m/s]
+    real(RP), intent(out) :: RLmo    ! inversed Obukhov length [1/m]
+    real(RP), intent(out) :: Ra      ! Aerodynamic resistance (=1/Ce)
+    real(RP), intent(out) :: FracU10 ! calculation parameter for U10 [-]
+    real(RP), intent(out) :: FracT2  ! calculation parameter for T2 [-]
+    real(RP), intent(out) :: FracQ2  ! calculation parameter for Q2 [-]
 
     ! work
     integer :: n
@@ -549,10 +685,6 @@ contains
     real(DP) :: QstarC, dQstarC
     real(DP) :: WstarC, dWstar
 
-    real(DP) :: FracU10US, FracU10S, FracU10C
-    real(DP) :: FracT2US,  FracT2S,  FracT2C
-    real(DP) :: FracQ2US,  FracQ2S,  FracQ2C
-
     real(DP) :: Rtot, CPtot
     real(DP) :: TH1, TH0
     real(DP) :: TV1, TV0, TVM
@@ -563,7 +695,6 @@ contains
 
     real(DP) :: DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E
     real(DP) :: log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E
-    real(DP) :: log_10ovZ0M, log_02ovZ0H, log_02ovZ0E
 
     real(DP) :: RzM, RzH, RzE
     !---------------------------------------------------------------------------
@@ -596,10 +727,6 @@ contains
     log_Z1ovZ0M = log( DP_Z1 / DP_Z0M )
     log_Z1ovZ0H = log( DP_Z1 / DP_Z0H )
     log_Z1ovZ0E = log( DP_Z1 / DP_Z0E )
-
-    log_10ovZ0M = log( 10.0_DP / DP_Z0M )
-    log_02ovZ0H = log(  2.0_DP / DP_Z0H )
-    log_02ovZ0E = log(  2.0_DP / DP_Z0E )
 
     ! bulk Richardson number at initial step
     RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TVM * UabsC**2 )
@@ -694,36 +821,16 @@ contains
          DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
          RzM, RzH, RzE,                         & ! (in)
          WstarC,                                & ! (inout)
-         UstarC, TstarC, QstarC, BFLX           ) ! (out)
+         UstarC, TstarC, QstarC, BFLX,          & ! (out)
+         FracU10 = FracU10,                     & ! (out)
+         FracT2 = FracT2, FracQ2 = FracQ2       ) ! (out)
 
-    FracU10US = ( log_10ovZ0M - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) &
-              / ( log_Z1ovZ0M - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0M,IL) )
-    FracT2US  = ( log_02ovZ0H - fm_unstable( 2.0_DP,IL) + fm_unstable(DP_Z0H,IL) ) &
-              / ( log_Z1ovZ0H - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0H,IL) )
-    FracQ2US  = ( log_02ovZ0E - fm_unstable( 2.0_DP,IL) + fm_unstable(DP_Z0E,IL) ) &
-              / ( log_Z1ovZ0E - fm_unstable(  DP_Z1,IL) + fm_unstable(DP_Z0E,IL) )
-
-    FracU10S = ( log_10ovZ0M - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) &
-             / ( log_Z1ovZ0M - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0M,IL) )
-    FracT2S  = ( log_02ovZ0H - fm_stable( 2.0_DP,IL) + fm_stable(DP_Z0H,IL) ) &
-             / ( log_Z1ovZ0H - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0H,IL) )
-    FracQ2S  = ( log_02ovZ0E - fm_stable( 2.0_DP,IL) + fm_stable(DP_Z0E,IL) ) &
-             / ( log_Z1ovZ0E - fm_stable(  DP_Z1,IL) + fm_stable(DP_Z0E,IL) )
-
-    sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
-
-    FracU10C = ( sw ) * FracU10US + ( 1.0_DP-sw ) * FracU10S
-    FracT2C  = ( sw ) * FracT2US  + ( 1.0_DP-sw ) * FracT2S
-    FracQ2C  = ( sw ) * FracQ2US  + ( 1.0_DP-sw ) * FracQ2S
 
     ! revert to RP
     Ustar   = real( UstarC,   kind=RP )
     Tstar   = real( TstarC,   kind=RP )
     Qstar   = real( QstarC,   kind=RP )
     Wstar   = real( WstarC,   kind=RP )
-    FracU10 = real( FracU10C, kind=RP )
-    FracT2  = real( FracT2C,  kind=RP )
-    FracQ2  = real( FracQ2C,  kind=RP )
 
     Ra = max( ( Q1 - Q0 ) / real(UstarC * QstarC + EPS,kind=RP), real(EPS,kind=RP) )
 
@@ -738,7 +845,8 @@ contains
        DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         &
        RzM, RzH, RzE,                         &
        Wstar,                                 &
-       UstarC, TstarC, QstarC, BFLX           )
+       Ustar, Tstar, Qstar, BFLX,             &
+       FracU10, FracT2, FracQ2                )
     use scale_const, only: &
        GRAV    => CONST_GRAV,    &
        KARMAN  => CONST_KARMAN,  &
@@ -764,73 +872,81 @@ contains
 
     real(DP), intent(inout) :: Wstar
 
-    real(DP), intent(out) :: UstarC
-    real(DP), intent(out) :: TstarC
-    real(DP), intent(out) :: QstarC
+    real(DP), intent(out) :: Ustar
+    real(DP), intent(out) :: Tstar
+    real(DP), intent(out) :: Qstar
     real(DP), intent(out) :: BFLX
 
-    real(DP) :: UabsUS, UabsS
-    real(DP) :: UstarUS, UstarS
-    real(DP) :: TstarUS, TstarS
-    real(DP) :: QstarUS, QstarS
+    real(RP), intent(out), optional :: FracU10
+    real(RP), intent(out), optional :: FracT2
+    real(RP), intent(out), optional :: FracQ2
+
     real(DP) :: denoM, denoH, denoE
 
     real(DP) :: tmp, sw
 
-    ! unstable condition
-    if ( BULKFLUX_NK2018 ) then
-       denoM = log_Z1ovZ0M &
-             - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-             + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
-       tmp = fhm_unstable(DP_Z1,IL)
-       denoH = log_Z1ovZ0H &
-             - tmp + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-             + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
-       denoE = log_Z1ovZ0E &
-             - tmp + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-             + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
-    else
-       denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
-       tmp = fh_unstable(DP_Z1,IL)
-       denoH = log_Z1ovZ0H - tmp + fh_unstable(DP_Z0H,IL)
-       denoE = log_Z1ovZ0E - tmp + fh_unstable(DP_Z0E,IL)
+    if ( IL < 0.0_DP ) then ! unstable condition
+
+       if ( BULKFLUX_NK2018 ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_unstable(DP_Z1,IL) + fmm_unstable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_unstable(DP_Z0M,IL) - 1.0_DP )
+          tmp = fhm_unstable(DP_Z1,IL)
+          denoH = log_Z1ovZ0H &
+                - tmp + fhm_unstable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_unstable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - tmp + fhm_unstable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_unstable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_unstable(DP_Z1,IL) + fm_unstable(DP_Z0M,IL)
+          tmp = fh_unstable(DP_Z1,IL)
+          denoH = log_Z1ovZ0H - tmp + fh_unstable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - tmp + fh_unstable(DP_Z0E,IL)
+       end if
+       Ustar = KARMAN / denoM * sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 )
+       Tstar = KARMAN / denoH * ( TH1 - TH0 )
+       Qstar = KARMAN / denoE * ( Q1  - Q0  )
+       if ( present(FracU10) ) then
+          FracU10 = ( log(10.0_DP/DP_Z0M) - fm_unstable(10.0_DP,IL) + fm_unstable(DP_Z0M,IL) ) / denoM
+          tmp = fm_unstable(2.0_DP,IL)
+          FracT2  = ( log(2.0_DP/DP_Z0H) - tmp + fh_unstable(DP_Z0H,IL) ) / denoH
+          FracQ2  = ( log(2.0_DP/DP_Z0E) - tmp + fh_unstable(DP_Z0E,IL) ) / denoE
+       end if
+
+    else ! stable condition
+
+       if ( BULKFLUX_NK2018 ) then
+          denoM = log_Z1ovZ0M &
+                - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
+                + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
+          tmp = fhm_stable(DP_Z1,IL)
+          denoH = log_Z1ovZ0H &
+                - tmp + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
+                + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
+          denoE = log_Z1ovZ0E &
+                - tmp + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
+                + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
+       else
+          denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
+          tmp = fh_stable(DP_Z1,IL)
+          denoH = log_Z1ovZ0H - tmp + fh_stable(DP_Z0H,IL)
+          denoE = log_Z1ovZ0E - tmp + fh_stable(DP_Z0E,IL)
+       end if
+       Ustar = KARMAN / denoM * Uabs
+       Tstar = KARMAN / denoH * ( TH1 - TH0 )
+       Qstar = KARMAN / denoE * ( Q1  - Q0  )
+       if ( present(FracU10) ) then
+          FracU10 = ( log(10.0_DP/DP_Z0M) - fm_stable(10.0_DP,IL) + fm_stable(DP_Z0M,IL) ) / denoM
+          tmp = fh_stable(2.0_DP,IL)
+          FracT2  = ( log(2.0_DP/DP_Z0H) - tmp + fh_stable(DP_Z0H,IL) ) / denoH
+          FracQ2  = ( log(2.0_DP/DP_Z0E) - tmp + fh_stable(DP_Z0E,IL) ) / denoE
+       end if
+
     end if
-    UabsUS  = max( sqrt( Uabs**2 + (BULKFLUX_WSCF*Wstar)**2 ), real(BULKFLUX_Uabs_min, kind=DP) )
-    UstarUS = KARMAN / denoM * UabsUS
-    TstarUS = KARMAN / denoH * ( TH1 - TH0 )
-    QstarUS = KARMAN / denoE * ( Q1  - Q0  )
-
-    ! stable condition
-    if ( BULKFLUX_NK2018 ) then
-       denoM = log_Z1ovZ0M &
-             - fmm_stable(DP_Z1,IL) + fmm_stable(DP_Z0M,IL) * DP_Z0M / DP_Z1 &
-             + RzM * ( fm_stable(DP_Z0M,IL) - 1.0_DP )
-       tmp = fhm_stable(DP_Z1,IL)
-       denoH = log_Z1ovZ0H &
-             - tmp + fhm_stable(DP_Z0H,IL) * DP_Z0H / DP_Z1 &
-             + RzH * ( fh_stable(DP_Z0H,IL) - 1.0_DP )
-       denoE = log_Z1ovZ0E &
-             - tmp + fhm_stable(DP_Z0E,IL) * DP_Z0E / DP_Z1 &
-             + RzE * ( fh_stable(DP_Z0E,IL) - 1.0_DP )
-    else
-       denoM = log_Z1ovZ0M - fm_stable(DP_Z1,IL) + fm_stable(DP_Z0M,IL)
-       tmp = fh_stable(DP_Z1,IL)
-       denoH = log_Z1ovZ0H - tmp + fh_stable(DP_Z0H,IL)
-       denoE = log_Z1ovZ0E - tmp + fh_stable(DP_Z0E,IL)
-    end if
-    UabsS  = max( Uabs, real(BULKFLUX_Uabs_min, kind=DP) )
-    UstarS = KARMAN / denoM * UabsS
-    TstarS = KARMAN / denoH * ( TH1 - TH0 )
-    QstarS = KARMAN / denoE * ( Q1  - Q0  )
-
-    sw = 0.5_DP - sign( 0.5_DP, IL ) ! if unstable, sw = 1
-
-    UstarC = ( sw ) * UstarUS + ( 1.0_DP-sw ) * UstarS
-    TstarC = ( sw ) * TstarUS + ( 1.0_DP-sw ) * TstarS
-    QstarC = ( sw ) * QstarUS + ( 1.0_DP-sw ) * QstarS
 
     ! estimate buoyancy flux
-    BFLX = - UstarC * TstarC - EPSTvap * UstarC * QstarC * TH0
+    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * TH0
 
     ! update free convection velocity scale
     tmp = PBL * GRAV / TH0 * BFLX
@@ -838,7 +954,7 @@ contains
     Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
 
     ! avoid zero division with UstarC = 0
-    UstarC = sign( max( abs(UstarC), EPS ), UstarC )
+    Ustar = sign( max( abs(Ustar), EPS ), Ustar )
 
     return
   end subroutine calc_scales_B91W01

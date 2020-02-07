@@ -68,7 +68,8 @@ contains
       qsat => ATMOS_SATURATION_dens2qsat_all
 !      qsat => ATMOS_SATURATION_pres2qsat_all
     use scale_bulkflux, only: &
-      BULKFLUX
+      BULKFLUX, &
+      BULKFLUX_diagnose_surface
     implicit none
     integer, intent(in) :: LIA, LIS, LIE
     integer, intent(in) :: LJA, LJS, LJE
@@ -108,20 +109,21 @@ contains
 
 
     ! works
-    real(RP) :: Uabs   ! modified absolute velocity [m/s]
-    real(RP) :: Ra     ! Aerodynamic resistance (=1/Ce) [1/s]
+    real(RP) :: Uabs ! modified absolute velocity [m/s]
+    real(RP) :: Ra   ! Aerodynamic resistance (=1/Ce) [1/s]
 
-    real(RP) :: QVsat  ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS    ! water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: Rtot   ! total gas constant
-    real(RP) :: qdry   ! dry air mass ratio [kg/kg]
+    real(RP) :: QVsat        ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS(LIA,LJA) ! water vapor mixing ratio at surface [kg/kg]
+!    real(RP) :: Rtot         ! total gas constant
+!    real(RP) :: qdry         ! dry air mass ratio [kg/kg]
 
-    real(RP) :: FracU10 ! calculation parameter for U10 [-]
-    real(RP) :: FracT2  ! calculation parameter for T2 [-]
-    real(RP) :: FracQ2  ! calculation parameter for Q2 [-]
+    real(RP) :: FracU10(LIA,LJA) ! calculation parameter for U10 [-]
+    real(RP) :: FracT2 (LIA,LJA) ! calculation parameter for T2 [-]
+    real(RP) :: FracQ2 (LIA,LJA) ! calculation parameter for Q2 [-]
 
     real(RP) :: MFLUX
-    real(RP) :: w
+
+    logical :: calc_flag(LIA,LJA)
 
     integer  :: i, j
     !---------------------------------------------------------------------------
@@ -129,10 +131,14 @@ contains
     LOG_INFO("LAND_PHY_SNOW_DIAGS",*) 'Snow surface diagnostic'
 
     ! calculate surface flux
+    !$omp parallel do &
+    !$omp private(QVsat,Uabs,MFLUX)
     do j = LJS, LJE
     do i = LIS, LIE
 
       if( SNOW_frac(i,j) > 0.0_RP ) then
+
+         calc_flag(i,j) = .true.
 
 !        qdry = 1.0_RP - QVA(i,j)
 !        Rtot = qdry * Rdry + QVA(i,j) * Rvap
@@ -142,32 +148,18 @@ contains
         call qsat( LST1(i,j),  RHOS(i,j), & ! [IN]
                    QVsat                  ) ! [OUT]
 
-        QVS  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
+        QVS(i,j)  = ( 1.0_RP - QVEF(i,j) ) * QVA(i,j) + QVEF(i,j) * QVsat
 
         Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
-        call BULKFLUX( &
-            Ustar(i,j), & ! [OUT]
-            Tstar(i,j), & ! [OUT]
-            Qstar(i,j), & ! [OUT]
-            Wstar(i,j), & ! [OUT]
-            RLmo(i,j),  & ! [OUT]
-            Ra,         & ! [OUT]
-            FracU10,    & ! [OUT]
-            FracT2,     & ! [OUT]
-            FracQ2,     & ! [OUT]
-            TMPA(i,j),  & ! [IN]
-            LST1(i,j),  & ! [IN]
-            PRSA(i,j),  & ! [IN]
-            PRSS(i,j),  & ! [IN]
-            QVA (i,j),  & ! [IN]
-            QVS,        & ! [IN]
-            Uabs,       & ! [IN]
-            Z1  (i,j),  & ! [IN]
-            PBL (i,j),  & ! [IN]
-            Z0M (i,j),  & ! [IN]
-            Z0H (i,j),  & ! [IN]
-            Z0E (i,j)   ) ! [IN]
+        call BULKFLUX( TMPA(i,j), LST1(i,j),                  & ! [IN]
+                       PRSA(i,j), PRSS(i,j),                  & ! [IN]
+                       QVA (i,j), QVS (i,j),                  & ! [IN]
+                       Uabs, Z1(i,j), PBL(i,j),               & ! [IN]
+                       Z0M(i,j), Z0H(i,j), Z0E(i,j),          & ! [IN]
+                       Ustar(i,j), Tstar(i,j), Qstar(i,j),    & ! [OUT]
+                       Wstar(i,j), RLmo(i,j), Ra,             & ! [OUT]
+                       FracU10(i,j), FracT2(i,j), FracQ2(i,j) ) ! [OUT]
 
         if ( Uabs < EPS ) then
            ZMFLX(i,j) = 0.0_RP
@@ -180,34 +172,40 @@ contains
            YMFLX(i,j) = MFLUX * VA(i,j) / Uabs
         end if
 
-        ! diagnostic variables for neutral state
-        U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-        T2 (i,j) = LST1(i,j) + ( TMPA(i,j) - LST1(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-        Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                         / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
-
       else
 
-        ! not calculate surface flux
-        ZMFLX(i,j) = UNDEF
-        XMFLX(i,j) = UNDEF
-        YMFLX(i,j) = UNDEF
-        Ustar(i,j) = UNDEF
-        Tstar(i,j) = UNDEF
-        Qstar(i,j) = UNDEF
-        Wstar(i,j) = UNDEF
-        RLmo (i,j) = UNDEF
-        U10  (i,j) = UNDEF
-        V10  (i,j) = UNDEF
-        T2   (i,j) = UNDEF
-        Q2   (i,j) = UNDEF
+         ! not calculate surface flux
+
+         calc_flag(i,j) = .false.
+
+         ZMFLX(i,j) = UNDEF
+         XMFLX(i,j) = UNDEF
+         YMFLX(i,j) = UNDEF
+         Ustar(i,j) = UNDEF
+         Tstar(i,j) = UNDEF
+         Qstar(i,j) = UNDEF
+         Wstar(i,j) = UNDEF
+         RLmo (i,j) = UNDEF
+         U10  (i,j) = UNDEF
+         V10  (i,j) = UNDEF
+         T2   (i,j) = UNDEF
+         Q2   (i,j) = UNDEF
 
       end if
 
     end do
     end do
+
+    call BULKFLUX_diagnose_surface( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                    UA(:,:), VA(:,:),                      & ! (in)
+                                    TMPA(:,:), QVA(:,:),                   & ! (in)
+                                    LST1(:,:), QVS(:,:),                   & ! (in)
+                                    Z1(:,:), Z0M(:,:), Z0H(:,:), Z0E(:,:), & ! (in)
+                                    U10(:,:), V10(:,:), T2(:,:), Q2(:,:),  & ! (out)
+                                    mask = calc_flag(:,:),                 & ! (in)
+                                    FracU10 = FracU10(:,:),                & ! (in)
+                                    FracT2 = FracT2(:,:),                  & ! (in)
+                                    FracQ2 = FracQ2(:,:)                   ) ! (in)
 
     return
   end subroutine LAND_PHY_SNOW_DIAGS

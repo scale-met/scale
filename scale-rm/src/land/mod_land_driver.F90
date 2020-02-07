@@ -147,7 +147,7 @@ contains
     use scale_cpl_phy_sfc_fixed_temp, only: &
        CPL_PHY_SFC_fixed_temp
     use scale_bulkflux, only: &
-       BULKFLUX_diagnose
+       BULKFLUX_diagnose_scales
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_ch
     use mod_atmos_phy_ch_driver, only: &
@@ -654,13 +654,13 @@ contains
        enddo
        enddo
 
-       call BULKFLUX_diagnose( LIA, LIS, LIE, LJA, LJS, LJE, &
-                               LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [IN]
-                               LAND_SFLX_SH(:,:), SFLX_QV(:,:),                         & ! [IN]
-                               ATMOS_SFC_DENS(:,:), LAND_SFC_TEMP(:,:), ATMOS_PBL(:,:), & ! [IN]
-                               LAND_Ustar(:,:), LAND_Tstar(:,:), LAND_Qstar(:,:),       & ! [OUT]
-                               LAND_Wstar(:,:), LAND_RLmo(:,:),                         & ! [OUT]
-                               mask = exists_land(:,:)                                  ) ! [IN]
+       call BULKFLUX_diagnose_scales( LIA, LIS, LIE, LJA, LJS, LJE, &
+                                      LAND_SFLX_MW(:,:), LAND_SFLX_MU(:,:), LAND_SFLX_MV(:,:), & ! [IN]
+                                      LAND_SFLX_SH(:,:), SFLX_QV(:,:),                         & ! [IN]
+                                      ATMOS_SFC_DENS(:,:), LAND_SFC_TEMP(:,:), ATMOS_PBL(:,:), & ! [IN]
+                                      LAND_Ustar(:,:), LAND_Tstar(:,:), LAND_Qstar(:,:),       & ! [OUT]
+                                      LAND_Wstar(:,:), LAND_RLmo(:,:),                         & ! [OUT]
+                                      mask = exists_land(:,:)                                  ) ! [IN]
 
     end if
 
