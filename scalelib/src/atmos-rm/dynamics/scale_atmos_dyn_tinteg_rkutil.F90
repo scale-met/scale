@@ -35,8 +35,9 @@ module scale_atmos_dyn_tinteg_rkutil
   !++ Public type & procedure
   !
   type, public :: RKUtil
-    integer, allocatable :: comm_ind(:,:)
-    real(RP), allocatable :: tmp(:,:,:,:,:)
+    integer, allocatable :: comm_ind(:)
+    real(RP), allocatable :: rkwork(:,:,:,:,:)
+    real(RP), allocatable :: buf(:,:,:,:)
     integer :: var_num
   end type
 
@@ -65,6 +66,8 @@ contains
   subroutine ATMOS_DYN_Tinteg_RKUtil_setup( this, rk_register_num, varname_list, comm_id_offset )
     use scale_const, only: &
       UNDEF  => CONST_UNDEF
+    use scale_comm_cartesC, only: &
+      COMM_vars8_init      
     implicit none
     
     type(RKUtil), intent(inout) :: this
@@ -79,53 +82,58 @@ contains
 
     this%var_num = size(varname_list)
 
+    !-
     if (rk_register_num > 0) then
-      allocate( this%tmp(KA,IA,JA,this%var_num,rk_register_num) )
-      allocate( this%comm_ind(this%var_num,rk_register_num) )
-
-      do reg_id = 1, rk_register_num
-        do var_id = 1, this%var_num
-          write(rktag,'(a,a,i2.2)') trim(varname_list(var_id)), 'RK', reg_id
-          this%comm_ind(reg_id,var_id) = comm_id_offset + var_id
-          call COMM_vars8_init( trim(rktag), this%tmp(:,:,:,var_id,reg_id), this%comm_ind(var_id,reg_id) )
-        end do
-      end do
-
-      do reg_id = 1, rk_register_num 
-        do var_id = 1, this%var_num
-          this%tmp(:,:,:,var_id,reg_id) = UNDEF
-        end do
-      end do
+      allocate( this%rkwork(KA,IA,JA,this%var_num,rk_register_num) )
+      !$omp parallel workshare
+      this%rkwork  (:,:,:,:,:) = UNDEF
+      !$omp end parallel workshare
     end if
+
+    !-
+    allocate( this%buf(KA,IA,JA,this%var_num) )
+    allocate( this%comm_ind(this%var_num) )
+    
+    !$omp parallel workshare
+    this%buf(:,:,:,:)   = UNDEF
+    !$omp end parallel workshare
+
+    do var_id = 1, this%var_num
+      write(rktag,'(a,a,i2.2)') trim(varname_list(var_id)), 'RK'
+      this%comm_ind(var_id) = comm_id_offset + var_id
+      call COMM_vars8_init( trim(rktag), this%buf(:,:,:,var_id), this%comm_ind(var_id) )
+    end do
 
     return
   end subroutine ATMOS_DYN_Tinteg_RKUtil_setup
 
-  subroutine ATMOS_DYN_Tinteg_RKUtil_comm( this, reg_id )
+  subroutine ATMOS_DYN_Tinteg_RKUtil_comm( this )
+    use scale_comm_cartesC, only: COMM_vars8  
     implicit none
+
     type(RKUtil), intent(inout) :: this
-    integer, intent(in) :: reg_id
 
     integer :: var_id
     !------------------------------------------
 
     do var_id = 1, this%var_num
-      call COMM_vars8( this%tmp(:,:,:,reg_id,var_id), this%comm_ind(reg_id,var_id) )
+      call COMM_vars8( this%buf(:,:,:,var_id), this%comm_ind(var_id) )
     end do 
 
     return
   end subroutine ATMOS_DYN_Tinteg_RKUtil_comm
 
-  subroutine ATMOS_DYN_Tinteg_RKUtil_comm_wait( this, reg_id )
+  subroutine ATMOS_DYN_Tinteg_RKUtil_comm_wait( this )
+    use scale_comm_cartesC, only: COMM_wait
     implicit none
+
     type(RKUtil), intent(inout) :: this
-    integer, intent(in) :: reg_id
 
     integer :: var_id
     !------------------------------------------
 
     do var_id = 1, this%var_num
-      call COMM_wait( this%tmp(:,:,:,reg_id,var_id), this%comm_ind(reg_id,var_id), .false. )
+      call COMM_wait( this%buf(:,:,:,var_id), this%comm_ind(var_id), .false. )
     end do 
     
     return
