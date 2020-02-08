@@ -3,9 +3,8 @@
 
 
 \subsubsection{Experimental setup}
-For this tutorial for an ideal experiment, a case of cumulus cloud convection is used.
-In this experiment, a cumulus appears and develops in a 2D model
-by providing a typical atmospheric vertical profile
+For this tutorial for an ideal experiment, a case of cumulus cloud convection in a 2-dimensional model is used here.
+In this experiment, a cumulus appears and develops by providing a typical atmospheric vertical profile
 and an initial disturbance in the lower troposphere.
 Table \ref{tab:setting_ideal} shows the experimental settings.
 
@@ -20,9 +19,9 @@ Table \ref{tab:setting_ideal} shows the experimental settings.
  Number of horizontal grids & 1: eastward direction, 40: northward direction &  \\ \hline
  Number of vertical layers & 97 layers with model top of 20 km & Stretched grid with finer resolution in the lower layers. \\ \hline
  Lateral boundary condition & Periodic condition & both eastward and northward \\ \hline
- Time step & 5 s      &  10 s in microphysics scheme\\ \hline
- Integration time     & 3,600 s & The time step is 720.\\ \hline
- Time interval of data output & 300 s  &  \\ \hline
+ Time step & 5 sec      &  10 sec in microphysics scheme\\ \hline
+ Integration time     & 3,600 sec & The total nummber of time step is 720.\\ \hline
+ Time interval of data output & 300 sec  &  \\ \hline
  Physical scheme & Only the microphysics scheme &
  6-class single-moment bulk model \citep{tomita_2008} \\ \hline
  Initial vertical profile & GCSS Case1 squall line \citep{Redelsperger2000}&
@@ -62,9 +61,12 @@ The general form of the executable command in \scalerm is given as follows:
   $ mpirun -n [the number of processes] \\
     [executable binary name] [the configuration file]
 \end{verbatim}
-The number of processes using MPI parallel processing is given at [the number of processes]. The name of the executable binary is given to [executable binary name],  such as \verb|scale-rm|, \verb|scale-rm_init|, and so on.  The configuration file, where the experimental settings are described, is given to [the configuration file].
-In the case that
-the configuration file \verb|sample/init_R20kmDX500m.conf| is used to conduct \verb|scale-rm_init| using two-MPI parallel, give the command to execute \verb|scale-rm_init| as follows:
+The number of processes using MPI parallel processing is given at [the number of processes]. 
+The name of the executable binary is given to [executable binary name],  such as \verb|scale-rm|, \verb|scale-rm_init|, and so on.  
+The configuration file, where the experimental settings are described, is given to [the configuration file].
+If \verb|sample/init_R20kmDX500m.conf| is used as the configuration file and 
+\verb|scale-rm_init| using two-MPI parallel is executed, 
+give the command as follows:
 \begin{verbatim}
   $ cp  sample/init_R20kmDX500m.conf  init_R20kmDX500m.conf
   $ mpirun  -n  2  ./scale-rm_init  ./init_R20kmDX500m.conf
