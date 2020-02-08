@@ -3,11 +3,11 @@
 !!
 !! @par Description
 !!          Temporal integration in Dynamical core for Atmospheric process
-!!          7 stage and 6th order Runge-Kutta scheme
+!!          7 stage Runge-Kutta scheme with 6th order accuracy
 !!
 !! @author Team SCALE
 !!
-!! This module provides a 7 stage  and 6th order runge=kutta method proposed by Butcher (1964): 
+!! This module provides a 7 stage and 6th order runge=kutta method proposed by Butcher (1964): 
 !!   y_n+1 = y_n + (11*k1 + 81*k3 + 81*k4 - 32*k5 -32*k6 + 11*k7)/120
 !!  where
 !!   k1 = h f(xn,yn), 
@@ -40,11 +40,14 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
 #endif
 
   use scale_atmos_dyn_tinteg_rkutil, only: &
-   RKUtil,                                              &
-   RKUtil_setup => ATMOS_DYN_Tinteg_RKUtil_setup,       &
-   RKUtil_comm  => ATMOS_DYN_Tinteg_RKUtil_comm,        &
-   RKUtil_comm_wait => ATMOS_DYN_Tinteg_RKUtil_comm_wait
-
+   RKUtil,                                                          &
+   RKUtil_setup => ATMOS_DYN_Tinteg_RKUtil_setup,                   &
+   RKUtil_rkwork_alloc   => ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc,   &
+   RKUtil_rkwork_dealloc => ATMOS_DYN_Tinteg_RKUtil_rkwork_dealloc, &
+   RKUtil_comm  => ATMOS_DYN_Tinteg_RKUtil_comm,                    &
+   RKUtil_comm_wait => ATMOS_DYN_Tinteg_RKUtil_comm_wait,           &
+   RKCoef_a => RKCoef_a_7s6o_Butcher1964,                           &
+   RKCoef_b => RKCoef_b_7s6o_Butcher1964
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -64,6 +67,11 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
   !
   !++ Private procedure
   !
+
+  private :: calc_var_nextstage
+  private :: calc_var_nextstep
+  private :: calc_flux_nextstep
+
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -79,19 +87,6 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
   integer, private, parameter :: I_RK_RHOT = 5
 
   type(RKUtil) :: rk_prgvar
-
-  real(RP), parameter :: RKCoef_a(RK_nstage,RK_nstage) = reshape( &
-   (/ 0.0_RP, 1.0_RP/3.0_RP,        0.0_RP,  1.0_RP/12.0_RP, -1.0_RP/16.0_RP,         0.0_RP,   9.0_RP/44.0_RP,    &
-      0.0_RP,        0.0_RP, 2.0_RP/3.0_RP,   1.0_RP/3.0_RP,   9.0_RP/8.0_RP,  9.0_RP/8.0_RP,  -9.0_RP/11.0_RP,    &
-      0.0_RP,        0.0_RP,        0.0_RP, -1.0_RP/12.0_RP, -3.0_RP/16.0_RP,   -3_RP/8.0_RP,  63.0_RP/44.0_RP,    &
-      0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,  -3.0_RP/8.0_RP, -3.0_RP/4.0_RP,  18.0_RP/11.0_RP,    &
-      0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,  1.0_RP/2.0_RP,           0.0_RP,    &
-      0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP, -16.0_RP/11.0_RP,    &
-      0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP,          0.0_RP /),  &
-   (/ RK_nstage, RK_nstage /) )
-
-  real(RP), parameter :: RKCoef_b(RK_nstage) = &
-      1.0_RP/120.0_RP * (/ 11.0_RP, 0.0_RP, 81.0_RP, 81.0_RP, -32.0_RP, -32.0_RP, 11.0_RP /)
 
   !-----------------------------------------------------------------------------
 contains
@@ -113,12 +108,12 @@ contains
     integer :: stage
     character(len=H_SHORT) :: stage_s
 
-    character(H_MID) :: dynvar_name_list(5)
+    character(H_SHORT) :: dynvar_name_list(5)
     character(H_MID) :: prgvar_name_list(VA)
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'RK7s6o' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk6_setup",*) 'TINTEG_TYPE is not RK4. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk7s6o_setup",*) 'TINTEG_TYPE is not RK7s6o. Check!'
        call PRC_abort
     end if
 
@@ -127,12 +122,13 @@ contains
     dynvar_name_list(3) = 'MOMX'
     dynvar_name_list(4) = 'MOMY'
     dynvar_name_list(5) = 'RHOT'
-    call RKUtil_setup( rk_dynvar, RK_nregister, dynvar_name_list, 0 )
+    call RKUtil_setup( rk_dynvar, RK_nregister, dynvar_name_list, 0, .false. )
 
     do iv = 1, VA
       prgvar_name_list(iv) = 'PROG'
     end do
-    call RKUtil_setup( rk_prgvar, RK_nregister, prgvar_name_list, 5 )
+    call RKUtil_setup( rk_prgvar, RK_nregister, prgvar_name_list, 5, .false. )
+
     !----------------------------------------------------
 
     return
@@ -232,26 +228,15 @@ contains
     integer :: io_prgvar(VA)
     integer :: jo_prgvar(VA)
 
-    real(RP) :: dynvar0(KA,IA,JA,5)
-    real(RP) :: prgvar0(KA,IA,JA,VA)
-
     !---------------------------------------------------------------------------
 
     call PROF_rapstart("DYN_RK7s6o_Prep",3)
 
 #ifdef DEBUG
-    !$omp parallel 
-    !$omp workshare
-    rk_dynvar%rkwork(:,:,:,:,:) = UNDEF
+    !$omp parallel workshare
     mflx_hi_RK(:,:,:,:,:) = UNDEF
     tflx_hi_RK(:,:,:,:,:) = UNDEF
-    !$omp end workshare
-    if (VA > 0) then
-      !$omp workshare
-      rk_prgvar%rkwork(:,:,:,:,:) = UNDEF
-      !$omp end workshare
-    end if
-    !$omp end parallel
+    !$omp end parallel workshare
 #endif
 
 #ifdef QUICKDEBUG
@@ -259,24 +244,27 @@ contains
     mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
 #endif
 
+   call rkutil_rkwork_alloc( rk_dynvar )
+   call rkutil_rkwork_alloc( rk_prgvar )
+
 !OCL XFILL
-    dynvar0(:,:,:,I_RK_DENS) = DENS    
+   rk_dynvar%work0(:,:,:,I_RK_DENS) = DENS    
 !OCL XFILL
-    dynvar0(:,:,:,I_RK_MOMZ) = MOMZ
+   rk_dynvar%work0(:,:,:,I_RK_MOMZ) = MOMZ
 !OCL XFILL
-    dynvar0(:,:,:,I_RK_MOMX) = MOMX
+   rk_dynvar%work0(:,:,:,I_RK_MOMX) = MOMX
 !OCL XFILL
-    dynvar0(:,:,:,I_RK_MOMY) = MOMY
+   rk_dynvar%work0(:,:,:,I_RK_MOMY) = MOMY
 !OCL XFILL
-    dynvar0(:,:,:,I_RK_RHOT) = RHOT
+   rk_dynvar%work0(:,:,:,I_RK_RHOT) = RHOT
 !OCL XFILL
-    rk_dynvar%buf(:,:,:,:) = dynvar0(:,:,:,:)
+   rk_dynvar%buf(:,:,:,:) = rk_dynvar%work0(:,:,:,:)
 
     if (VA > 0) then
       !OCL XFILL
-      prgvar0(:,:,:,:) = PROG
+      rk_prgvar%work0(:,:,:,:) = PROG
       !OCL XFILL
-      rk_prgvar%buf(:,:,:,:) = prgvar0(:,:,:,:)
+      rk_prgvar%buf(:,:,:,:) = rk_prgvar%work0(:,:,:,:)
     end if
 
     if ( BND_W ) then
@@ -317,21 +305,22 @@ contains
     !------------------------------------------------------------------------
 
     do stage = 1, RK_nstage
+
       if ( stage > 1) then
          call PROF_rapstart("DYN_RK7s6o_BND",3)
-         call ATMOS_DYN_Copy_boundary( rk_dynvar%buf(:,:,:,I_RK_DENS),           & ! [INOUT] 
-                                       rk_dynvar%buf(:,:,:,I_RK_MOMZ),           & ! [INOUT]
-                                       rk_dynvar%buf(:,:,:,I_RK_MOMX),           & ! [INOUT]
-                                       rk_dynvar%buf(:,:,:,I_RK_MOMY),           & ! [INOUT]
-                                       rk_dynvar%buf(:,:,:,I_RK_RHOT),           & ! [INOUT]
-                                       rk_prgvar%buf(:,:,:,:        ),           & ! [INOUT]
-                                       dynvar0(:,:,:,I_RK_DENS),                 & ! [IN] 
-                                       dynvar0(:,:,:,I_RK_MOMZ),                 & ! [IN] 
-                                       dynvar0(:,:,:,I_RK_MOMX),                 & ! [IN] 
-                                       dynvar0(:,:,:,I_RK_MOMY),                 & ! [IN] 
-                                       dynvar0(:,:,:,I_RK_RHOT),                 & ! [IN] 
-                                       prgvar0(:,:,:,:),                         & ! [IN]
-                                       BND_W, BND_E, BND_S, BND_N                ) ! [IN]
+         call ATMOS_DYN_Copy_boundary( rk_dynvar%buf(:,:,:,I_RK_DENS),      & ! [INOUT] 
+                                       rk_dynvar%buf(:,:,:,I_RK_MOMZ),      & ! [INOUT]
+                                       rk_dynvar%buf(:,:,:,I_RK_MOMX),      & ! [INOUT]
+                                       rk_dynvar%buf(:,:,:,I_RK_MOMY),      & ! [INOUT]
+                                       rk_dynvar%buf(:,:,:,I_RK_RHOT),      & ! [INOUT]
+                                       rk_prgvar%buf(:,:,:,:        ),      & ! [INOUT]
+                                       rk_dynvar%work0(:,:,:,I_RK_DENS),    & ! [IN] 
+                                       rk_dynvar%work0(:,:,:,I_RK_MOMZ),    & ! [IN] 
+                                       rk_dynvar%work0(:,:,:,I_RK_MOMX),    & ! [IN] 
+                                       rk_dynvar%work0(:,:,:,I_RK_MOMY),    & ! [IN] 
+                                       rk_dynvar%work0(:,:,:,I_RK_RHOT),    & ! [IN] 
+                                       rk_prgvar%work0(:,:,:,:),            & ! [IN]
+                                       BND_W, BND_E, BND_S, BND_N           ) ! [IN]
          call PROF_rapend  ("DYN_RK7s6o_BND",3)
 
          call RKUtil_comm( rk_dynvar )
@@ -344,72 +333,71 @@ contains
       call PROF_rapstart("DYN_RK7s6o",3)
 
       call ATMOS_DYN_tstep( &
-         rk_dynvar%rkwork(:,:,:,I_RK_DENS,stage),               & ! [OUT] 
-         rk_dynvar%rkwork(:,:,:,I_RK_MOMZ,stage),               & ! [OUT]
-         rk_dynvar%rkwork(:,:,:,I_RK_MOMX,stage),               & ! [OUT]
-         rk_dynvar%rkwork(:,:,:,I_RK_MOMY,stage),               & ! [OUT]
-         rk_dynvar%rkwork(:,:,:,I_RK_RHOT,stage),               & ! [OUT]
-         rk_prgvar%rkwork(:,:,:,:        ,stage),               & ! [OUT]
-         mflx_hi_RK(:,:,:,:,stage), tflx_hi_RK(:,:,:,:,stage),  & ! [INOUT,OUT]
-         dynvar0(:,:,:,I_RK_DENS),                              & ! [IN]
-         dynvar0(:,:,:,I_RK_MOMZ),                              & ! [IN]
-         dynvar0(:,:,:,I_RK_MOMX),                              & ! [IN]
-         dynvar0(:,:,:,I_RK_MOMY),                              & ! [IN]
-         dynvar0(:,:,:,I_RK_RHOT),                              & ! [IN]
-         rk_dynvar%buf(:,:,:,I_RK_DENS),                        & ! [IN] 
-         rk_dynvar%buf(:,:,:,I_RK_MOMZ),                        & ! [IN]
-         rk_dynvar%buf(:,:,:,I_RK_MOMX),                        & ! [IN]
-         rk_dynvar%buf(:,:,:,I_RK_MOMY),                        & ! [IN]
-         rk_dynvar%buf(:,:,:,I_RK_RHOT),                        & ! [IN]
-         DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,        & ! [IN]
-         prgvar0, rk_prgvar%buf(:,:,:,:),                       & ! [IN]
-         DPRES0, CVtot, CORIOLI,                                & ! [IN]
-         num_diff, wdamp_coef, divdmp_coef, DDIV,               & ! [IN]
-         FLAG_FCT_MOMENTUM, FLAG_FCT_T,                         & ! [IN]
-         FLAG_FCT_ALONG_STREAM,                                 & ! [IN]
-         CDZ, FDZ, FDX, FDY,                                    & ! [IN]
-         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                    & ! [IN]
-         PHI, GSQRT, J13G, J23G, J33G, MAPF,                    & ! [IN]
-         REF_pres, REF_dens,                                    & ! [IN]
-         BND_W, BND_E, BND_S, BND_N,                            & ! [IN]
-         1.0_RP, .false.                                        ) ! [IN]
+         rk_dynvar%work(:,:,:,I_RK_DENS,stage),                & ! [OUT] 
+         rk_dynvar%work(:,:,:,I_RK_MOMZ,stage),                & ! [OUT]
+         rk_dynvar%work(:,:,:,I_RK_MOMX,stage),                & ! [OUT]
+         rk_dynvar%work(:,:,:,I_RK_MOMY,stage),                & ! [OUT]
+         rk_dynvar%work(:,:,:,I_RK_RHOT,stage),                & ! [OUT]
+         rk_prgvar%work(:,:,:,:        ,stage),                & ! [OUT]
+         mflx_hi_RK(:,:,:,:,stage), tflx_hi_RK(:,:,:,:,stage), & ! [INOUT,OUT]
+         rk_dynvar%work0(:,:,:,I_RK_DENS),                     & ! [IN]
+         rk_dynvar%work0(:,:,:,I_RK_MOMZ),                     & ! [IN]
+         rk_dynvar%work0(:,:,:,I_RK_MOMX),                     & ! [IN]
+         rk_dynvar%work0(:,:,:,I_RK_MOMY),                     & ! [IN]
+         rk_dynvar%work0(:,:,:,I_RK_RHOT),                     & ! [IN]
+         rk_dynvar%buf(:,:,:,I_RK_DENS),                       & ! [IN] 
+         rk_dynvar%buf(:,:,:,I_RK_MOMZ),                       & ! [IN]
+         rk_dynvar%buf(:,:,:,I_RK_MOMX),                       & ! [IN]
+         rk_dynvar%buf(:,:,:,I_RK_MOMY),                       & ! [IN]
+         rk_dynvar%buf(:,:,:,I_RK_RHOT),                       & ! [IN]
+         DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,       & ! [IN]
+         rk_prgvar%work0, rk_prgvar%buf(:,:,:,:),              & ! [IN]
+         DPRES0, CVtot, CORIOLI,                               & ! [IN]
+         num_diff, wdamp_coef, divdmp_coef, DDIV,              & ! [IN]
+         FLAG_FCT_MOMENTUM, FLAG_FCT_T,                        & ! [IN]
+         FLAG_FCT_ALONG_STREAM,                                & ! [IN]
+         CDZ, FDZ, FDX, FDY,                                   & ! [IN]
+         RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                   & ! [IN]
+         PHI, GSQRT, J13G, J23G, J33G, MAPF,                   & ! [IN]
+         REF_pres, REF_dens,                                   & ! [IN]
+         BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
+         1.0_RP, .false.                                       ) ! [IN]
    
       if ( stage < RK_nstage) then
-         call calc_var_nextstage( rk_dynvar%buf,                                      & ! (out)
-            stage, dynvar0, rk_dynvar%rkwork, io_dynvar, jo_dynvar, ko_dynvar,  5, dt ) ! (in)
-         
-         call calc_var_nextstage( rk_prgvar%buf,                                      & ! (out)
-            stage, prgvar0, rk_prgvar%rkwork, io_prgvar, jo_prgvar, ko_prgvar, VA, dt ) ! (in)
+         call calc_var_nextstage( rk_dynvar, stage, io_dynvar, jo_dynvar, ko_dynvar, dt )
+         call calc_var_nextstage( rk_prgvar, stage, io_prgvar, jo_prgvar, ko_prgvar, dt )
       end if
 
       call PROF_rapend  ("DYN_RK7s6o",3)
     end do
 
     call PROF_rapstart("DYN_RK7s6o",3)
-    call calc_var_nextstep( DENS, dynvar0(:,:,:,I_RK_DENS), rk_dynvar%rkwork(:,:,:,I_RK_DENS,:), io_dynvar(I_RK_DENS), jo_dynvar(I_RK_DENS), ko_dynvar(I_RK_DENS), 1, dt )
-    call calc_var_nextstep( MOMZ, dynvar0(:,:,:,I_RK_MOMZ), rk_dynvar%rkwork(:,:,:,I_RK_MOMZ,:), io_dynvar(I_RK_MOMZ), jo_dynvar(I_RK_MOMZ), ko_dynvar(I_RK_MOMZ), 1, dt )
-    call calc_var_nextstep( MOMX, dynvar0(:,:,:,I_RK_MOMX), rk_dynvar%rkwork(:,:,:,I_RK_MOMX,:), io_dynvar(I_RK_MOMX), jo_dynvar(I_RK_MOMX), ko_dynvar(I_RK_MOMX), 1, dt )
-    call calc_var_nextstep( MOMY, dynvar0(:,:,:,I_RK_MOMY), rk_dynvar%rkwork(:,:,:,I_RK_MOMY,:), io_dynvar(I_RK_MOMY), jo_dynvar(I_RK_MOMY), ko_dynvar(I_RK_MOMY), 1, dt )
-    call calc_var_nextstep( RHOT, dynvar0(:,:,:,I_RK_RHOT), rk_dynvar%rkwork(:,:,:,I_RK_RHOT,:), io_dynvar(I_RK_RHOT), jo_dynvar(I_RK_RHOT), ko_dynvar(I_RK_RHOT), 1, dt )
-    call calc_var_nextstep( PROG, prgvar0(:,:,:,:), rk_prgvar%rkwork(:,:,:,:,:), 0, 0, 0, VA, dt )
+    call calc_var_nextstep( DENS, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_DENS, I_RK_DENS, dt )
+    call calc_var_nextstep( MOMZ, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMZ, I_RK_MOMZ, dt )
+    call calc_var_nextstep( MOMX, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMX, I_RK_MOMX, dt )
+    call calc_var_nextstep( MOMY, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMY, I_RK_MOMY, dt )
+    call calc_var_nextstep( RHOT, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_RHOT, I_RK_RHOT, dt )
+    call calc_var_nextstep( PROG, rk_prgvar, io_prgvar, jo_prgvar, ko_prgvar, 1, VA, dt )
     call calc_flux_nextstep( mflx_hi, mflx_hi_RK, 0, 0, 0, 3 ) 
     call calc_flux_nextstep( tflx_hi, tflx_hi_RK, 0, 0, 0, 3 )
     call PROF_rapend("DYN_RK7s6o",3)
+
+    call rkutil_rkwork_dealloc( rk_dynvar )
+    call rkutil_rkwork_dealloc( rk_prgvar )
 
     return
   end subroutine ATMOS_DYN_tinteg_short_rk7s6o
 
   !--- private ---------------------------------------------------------------------------
 
-  subroutine calc_var_nextstage( rk_next, nowstage, rkwork0, rkwork, io, jo, ko, va_, dt )
+  subroutine calc_var_nextstage( rk, nowstage, io, jo, ko, dt )
 
    implicit none
-   integer, intent(in) :: va_
-   real(RP), intent(out) :: rk_next(KA,IA,JA,va_)
+   type(RKUtil), intent(inout) :: rk
    integer, intent(in) :: nowstage
-   real(RP), intent(in) :: rkwork0(KA,IA,JA,va_)
-   real(RP), intent(inout) :: rkwork(KA,IA,JA,va_,RK_nregister)
-   integer, intent(in) :: io(va_), jo(va_), ko(va_)
+   integer, intent(in) :: io(rk%var_num)
+   integer, intent(in) :: jo(rk%var_num)
+   integer, intent(in) :: ko(rk%var_num)   
    real(RP), intent(in) :: dt
 
    integer :: i, j, k, iv
@@ -423,80 +411,80 @@ contains
    select case(nowstage)
    case(1,2)
       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-      do iv=1, va_
+      do iv=1, rk%var_num
       do k=KS-ko(iv), KE
       do j=JS-jo(iv), JE
       do i=IS-io(iv), IE
-         var0 = rkwork0(k,i,j,iv)
-         rkwork(k,i,j,iv,nowstage) = rkwork(k,i,j,iv,nowstage) - var0
+         var0 = rk%work0(k,i,j,iv)
+         rk%work(k,i,j,iv,nowstage) = rk%work(k,i,j,iv,nowstage) - var0
 
-         rk_next(k,i,j,iv) = var0 +                  &
-            a_(nowstage) * rkwork(k,i,j,iv,nowstage)
+         rk%buf(k,i,j,iv) = var0 +                    &
+            a_(nowstage) * rk%work(k,i,j,iv,nowstage)
       end do
       end do
       end do
       end do 
    case(3)
       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-      do iv=1, va_
+      do iv=1, rk%var_num
       do k=KS-ko(iv), KE
       do j=JS-jo(iv), JE
       do i=IS-io(iv), IE
-         var0 = rkwork0(k,i,j,iv)
-         rkwork(k,i,j,iv,3) =  rkwork(k,i,j,iv,3) - var0
+         var0 = rk%work0(k,i,j,iv)
+         rk%work(k,i,j,iv,3) =  rk%work(k,i,j,iv,3) - var0
    
-         rk_next(k,i,j,iv) = var0 + &
-            + a_(1) * rkwork(k,i,j,iv,1) + a_(2) * rkwork(k,i,j,iv,2) &
-            + a_(3) * rkwork(k,i,j,iv,3) 
+         rk%buf(k,i,j,iv) = var0 + &
+            + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2) &
+            + a_(3) * rk%work(k,i,j,iv,3) 
       end do
       end do
       end do
       end do
    case(4)
       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-      do iv=1, va_
+      do iv=1, rk%var_num
       do k=KS-ko(iv), KE
       do j=JS-jo(iv), JE
       do i=IS-io(iv), IE
-         var0 = rkwork0(k,i,j,iv)
-         rkwork(k,i,j,iv,4) = rkwork(k,i,j,iv,4) - var0
+         var0 = rk%work0(k,i,j,iv)
+         rk%work(k,i,j,iv,4) = rk%work(k,i,j,iv,4) - var0
 
-         rk_next(k,i,j,iv) = var0 &
-            + a_(1) * rkwork(k,i,j,iv,1) + a_(2) * rkwork(k,i,j,iv,2) &
-            + a_(3) * rkwork(k,i,j,iv,3) + a_(4) * rkwork(k,i,j,iv,4) 
+         rk%buf(k,i,j,iv) = var0 &
+            + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2) &
+            + a_(3) * rk%work(k,i,j,iv,3) + a_(4) * rk%work(k,i,j,iv,4) 
       end do
       end do
       end do
       end do
    case(5)
       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-      do iv=1, va_
+      do iv=1, rk%var_num
       do k=KS-ko(iv), KE
       do j=JS-jo(iv), JE
       do i=IS-io(iv), IE
-         var0 = rkwork0(k,i,j,iv)
-         rkwork(k,i,j,iv,5) =  rkwork(k,i,j,iv,5) - var0
+         var0 = rk%work0(k,i,j,iv)
+         rk%work(k,i,j,iv,5) =  rk%work(k,i,j,iv,5) - var0
    
-         rk_next(k,i,j,iv) = var0 &
-            + a_(2) * rkwork(k,i,j,iv,2) + a_(3) * rkwork(k,i,j,iv,3) &
-            + a_(4) * rkwork(k,i,j,iv,4) + a_(5) * rkwork(k,i,j,iv,5) 
+         rk%buf(k,i,j,iv) = var0 &
+            + a_(2) * rk%work(k,i,j,iv,2) + a_(3) * rk%work(k,i,j,iv,3) &
+            + a_(4) * rk%work(k,i,j,iv,4) + a_(5) * rk%work(k,i,j,iv,5) 
       end do
       end do
       end do
       end do
    case(6)
       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-      do iv=1, va_
+      do iv=1, rk%var_num
       do k=KS-ko(iv), KE
       do j=JS-jo(iv), JE
       do i=IS-io(iv), IE
-         var0 = rkwork0(k,i,j,iv)
-         rkwork(k,i,j,iv,6) = rkwork(k,i,j,iv,6) - var0
+         var0 = rk%work0(k,i,j,iv)
+         rk%work(k,i,j,iv,6) = rk%work(k,i,j,iv,6) - var0
    
-         rk_next(k,i,j,iv) = var0 + &
-            + a_(1) * rkwork(k,i,j,iv,1) + a_(2) * rkwork(k,i,j,iv,2) &
-            + a_(3) * rkwork(k,i,j,iv,3) + a_(4) * rkwork(k,i,j,iv,4) &
-            + a_(6) * rkwork(k,i,j,iv,6) 
+         rk%buf(k,i,j,iv) = var0 + &
+            + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2) &
+            + a_(3) * rk%work(k,i,j,iv,3) + a_(4) * rk%work(k,i,j,iv,4) &
+            + a_(6) * rk%work(k,i,j,iv,6) 
       end do
       end do
       end do
@@ -506,14 +494,15 @@ contains
    return
   end subroutine calc_var_nextstage
 
- subroutine calc_Var_nextstep( var, rkwork0, rkwork, io, jo, ko, va_, dt ) 
+ subroutine calc_var_nextstep( var, rk, io, jo, ko, vs, ve, dt ) 
    implicit none
 
-   integer, intent(in) :: va_
-   real(RP), intent(inout) :: var(KA,IA,JA, va_)
-   real(RP), intent(in) :: rkwork0(KA,IA,JA,va_)
-   real(RP), intent(in) :: rkwork (KA,IA,JA,va_,RK_nregister)
-   integer, intent(in) :: io, jo, ko
+   integer, intent(in) :: vs, ve
+   real(RP), intent(inout) :: var(KA,IA,JA,vs:ve)
+   type(RKUtil), intent(inout) :: rk
+   integer, intent(in) :: io(rk%var_num)
+   integer, intent(in) :: jo(rk%var_num)
+   integer, intent(in) :: ko(rk%var_num)
    real(RP), intent(in) :: dt
 
    integer :: i, j, k, iv
@@ -526,22 +515,22 @@ contains
    b_(:) = dt * RKCoef_b(:)
 
    !$omp parallel do private(iv,k,j,i,var0) collapse(3)
-   do iv=1, va_
-   do k=KS-ko, KE
-   do j=JS-jo, JE
-   do i=IS-io, IE
-     var0 = rkwork0(k,i,j,iv)
+   do iv=vs, ve
+   do k=KS-ko(iv), KE
+   do j=JS-jo(iv), JE
+   do i=IS-io(iv), IE
+     var0 = rk%work0(k,i,j,iv)
      var(k,i,j,iv) = var0  &
-              + b_(1) *  rkwork(k,i,j,iv,1) + b_(3) *  rkwork(k,i,j,iv,3)       &
-              + b_(4) *  rkwork(k,i,j,iv,4) + b_(5) *  rkwork(k,i,j,iv,5)       &
-              + b_(6) *  rkwork(k,i,j,iv,6) + b_(7) * (rkwork(k,i,j,iv,7) - var0) 
+              + b_(1) *  rk%work(k,i,j,iv,1) + b_(3) *  rk%work(k,i,j,iv,3)        &
+              + b_(4) *  rk%work(k,i,j,iv,4) + b_(5) *  rk%work(k,i,j,iv,5)        &
+              + b_(6) *  rk%work(k,i,j,iv,6) + b_(7) * (rk%work(k,i,j,iv,7) - var0 ) 
    end do
    end do
    end do
    end do
 
    return
- end subroutine calc_Var_nextstep
+ end subroutine calc_var_nextstep
 
  subroutine calc_flux_nextstep( flux, rkwork, io, jo, ko, va_ ) 
    implicit none

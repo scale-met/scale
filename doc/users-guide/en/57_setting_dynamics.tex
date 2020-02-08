@@ -2,7 +2,7 @@
 %------------------------------------------------------
 In this section, the dynamical core for the Cartesian C-grid is described.
 The Cartesian C-grid is employed in \scalerm.
-In the Cartesian C-grid, scalar quantities, such as density, thermodynamics variable, and vapor, is defined at the cell center, while components of vector quantities, such as the momentums and fluxes, are defined at staggered point.
+In the Cartesian C-grid, scalar quantities, such as density, thermodynamics variable and vapor, is defined at the cell center, while components of vector quantities, such as the momentums and fluxes, are defined at staggered point.
 See the description document of \scalerm for more details.
 
 
@@ -37,18 +37,18 @@ Therefore, ``HEVI'' is often used for the real atmospheric simulations.
 \end{table}
 
 
-\subsection{Setting Temporal and Spatial Difference Schemes} \label{subsec:atmos_dyn_scheme}
+\subsection{Setting Temporal and Spatial Schemes} \label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
 
-The temporal integration and spatial difference schemes are configured in \namelist{PARAM_ATMOS_DYN}.
+The temporal　and spatial schemes are configured in \namelist{PARAM_ATMOS_DYN}.
 An example of setting, which is recommended for real atmospheric simulations,
 is shown below.
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; Choose from temporal integration schemes in Table \ref{tab:nml_atm_dyn}\\
- \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; Choose from temporal integration schemes\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; Choose from temporal spatial difference schemes in Table \ref{tab:nml_atm_dyn}\\
- \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; Choose from spatial difference schemes\\
+ \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; Choose from temporal schemes in Table \ref{tab:nml_atm_dyn}\\
+ \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; Choose from temporal schemes\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; Choose from temporal spatial schemes in Table \ref{tab:nml_atm_dyn}\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; Choose from spatial schemes\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; Use FCT scheme (.true.) or not (.false.)\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
@@ -57,36 +57,37 @@ is shown below.
 \verb|/             | & \\
 }
 
-The other options for temporal integration and spatial difference schemes are shown in Table \ref{tab:nml_atm_dyn}.
+The other options for temporal and spatial schemes are shown in Table \ref{tab:nml_atm_dyn}.
 Note that the time step should be set according to the used schemes in order to ensure numerical stability.
 An criteria to determine the time step is described in Section \ref{sec:timeintiv}.
 
 
 \begin{table}[bth]
 \begin{center}
-  \caption{Setting time integration and spatial difference schemes}
+  \caption{Setting temporal and spatial schemes}
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{lllX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{Scheme name} & \multicolumn{1}{l}{Description of scheme} & \\ \hline
-    \multicolumn{3}{l}{Temporal integration} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3rd-order Runge--Kutta scheme} \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{\citet{Wicker_2002}'s 3-step Runge--Kutta scheme} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4th-order Runge--Kutta scheme} \\
+    \multicolumn{3}{l}{Temporal scheme} &  \\ \hline
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3 stage Runge--Kutta scheme with 3rd-order accuracy} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{\citet{Wicker_2002}'s 3-stage Runge--Kutta scheme with generraly 2nd-order accuracy} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4 stage Runge--Kutta scheme with 4th-order accuracy} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{7 stage Runge--Kutta scheme with 6th-order accuracy（Butcher (1964))} \\
     \hline
-    \multicolumn{3}{l}{Spatial difference} & Minimum number of halos\\ \hline
-    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central difference} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4th-order central difference} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6th-order central difference} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3rd-order upwind difference} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5th-order upwind difference} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{l}{3rd-order upwind scheme + \citet{Koren_1993}'s filter} & \multicolumn{1}{l}{2}\\
+    \multicolumn{3}{l}{Spatial scheme} & Minimum number of halos\\ \hline
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central flux} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4th-order central flux} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6th-order central flux} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3rd-order upwind flux} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5th-order upwind flux} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{l}{3rd-order upwind flux + \citet{Koren_1993}'s filter} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
 The default setting for advection scheme used for the prognostic variables in dynamics, spcified by \nmitem{ATMOS_DYN_FVM_FLUX_TYPE}),
-is the 4th-order central difference (\verb|CD4|) in the \scalerm.
+is the 4th-order central flux (\verb|CD4|) in the \scalerm.
 When using \verb|CD4| in a simulation with a steep terrain,
 an artificial grid-scale vertical flow is often seen at the peak of mountains.
 This grid-scale flow may be reduced by using \verb|UD3|.
@@ -109,7 +110,8 @@ The setting for them is the following:
 }
 
 
-The number of laplacian operator associated with hyper-diffusion is specified by \nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}.\\
+The number of laplacian operator associated with hyper-diffusion is specified by \\
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}. 
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
 The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
 The dumping is stronger for larger coefficient.

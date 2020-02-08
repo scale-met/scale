@@ -134,21 +134,22 @@
  \item 支配方程式系: 3次元完全圧縮非静力学方程式系
  \item 空間離散化: 有限体積法
     \begin{itemize}
-      \item 2次, 4次, 6次中央差分
-      \item 3次, 5次風上差分
+      \item 2次, 4次, 6次精度の中心系の移流スキーム
+      \item 3次, 5次精度の風上系の移流スキーム
     \end{itemize}
  \item 時間離散化: 「完全陽解法」または「水平陽解法-鉛直陰解法」から選択
     \begin{itemize}
-      \item Heun型3次ルンゲ・クッタスキーム
-      \item \citet{Wicker_2002}の3段ルンゲ・クッタスキーム
-      \item 4次ルンゲ・クッタスキーム
+      \item \citet{Wicker_2002}の3段ルンゲ・クッタスキーム(一般に2次精度)
+      \item Heun型の3段ルンゲ・クッタスキーム(3次精度)
+      \item 4段のルンゲ・クッタスキーム(4次精度)
+      \item 7段のルンゲ・クッタスキーム(6次精度)
     \end{itemize}
  \item 非負保証:
     \begin{itemize}
       \item フラックス修正法 \citep[Flux Corrected Transport, FCT; ][]{zalesak_1979}
-      \item \citet{Koren_1993}フィルター  (3次風上差分スキーム使用時のみ)
+      \item \citet{Koren_1993}フィルター  (3次精度の風上系の移流スキーム使用時のみ)
     \end{itemize}
- \item 数値フィルタ: 4次超粘性・拡散
+ \item 数値フィルタ: 超粘性・拡散 (2, 4, 6, 8 階微分に対応)
  \item 地形: 地形に沿った座標系を用いて表現
 \end{itemize}
 

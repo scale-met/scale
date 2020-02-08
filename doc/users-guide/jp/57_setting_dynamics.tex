@@ -44,8 +44,8 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; 表\ref{tab:nml_atm_dyn}の時間スキームより選択\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; 時間積分スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 表\ref{tab:nml_atm_dyn}の空間差分スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間差分スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 表\ref{tab:nml_atm_dyn}の空間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; FCTスキームを利用するかどうか\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
@@ -55,37 +55,39 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 \verb|/             | & \\
 }
 
-表\ref{tab:nml_atm_dyn}に、時間積分・空間差分スキームの他のオプションを示す。
+表\ref{tab:nml_atm_dyn}に、時間スキームや空間スキームの他のオプションを示す。
 時間刻み幅は、選択するスキームに応じて数値安定性を考慮して設定すべきである。
-時間ステップを決定する基準は、第\ref{sec:timeintiv}節に記述する。
+時間刻み幅を決定する基準は、第\ref{sec:timeintiv}節に記述する。
 
 \begin{table}[h]
 \begin{center}
-  \caption{時間積分・空間差分スキームの設定}
+  \caption{時間スキーム・空間スキームの設定}
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
     \multicolumn{3}{l}{時間積分スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次3段ルンゲ・クッタスキーム(Heun)} \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲ・クッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次4段ルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次精度の3段ルンゲ・クッタスキーム(Heun)} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲ・クッタスキーム(一般に2次精度)} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次精度の4段ルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{6次精度の7段ルンゲ・クッタスキーム（Butcher (1964))} \\
     \hline
     \multicolumn{3}{l}{空間差分スキーム} & 最小のハロ格子数\\ \hline
-    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次風上差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次風上差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次風上差分 + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次精度の中心系フラックス} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次精度の中心系フラックス} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次精度の中心系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次精度の風上系フラックス} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次精度の風上系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次精度の風上系フラックス + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\scalerm において、力学の予報変数に対する移流スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}で指定)のデフォルト設定は4次中央差分（\verb|CD4|)である。
+\scalerm において、力学の予報変数に対する移流スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}で指定)のデフォルト設定は、
+4次精度の中心系フラックス(\verb|CD4|)である。
 地形の起伏が大きい計算で\verb|CD4|を用いると、格子スケールの偽の鉛直流が山頂周辺でしばしば確認される。
 この格子スケールの流れは、\verb|UD3|を使用することで緩和される。
-そのため、地形の起伏が大きい実験では\verb|UD3| を使用することを推奨する。
+そのため、地形の起伏が大きい実験では\verb|UD3|を使用することを推奨する。
 
 \subsection{数値拡散}
 
@@ -102,7 +104,7 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 \verb|/                  | & \\
 }
 
-超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM }で指定する。
+超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
 超粘性に対する無次元の係数である。
 この係数の値が大きいほど減衰は強く、

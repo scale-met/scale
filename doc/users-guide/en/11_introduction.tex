@@ -131,22 +131,23 @@ in the current version of \scalerm are listed below\footnote{Refer to \citet{sca
  \item Governing equations: 3D fully compressible non-hydrostatic equations
  \item Spatial discretization: finite volume method
     \begin{itemize}
-      \item 2nd-, 4th-, and 6th-order central differences
-      \item 3rd- and 5th-order upwind differences
+      \item central advection schemes with 2nd-, 4th- and 6th-order accuracy
+      \item upwind advection schemes with 3rd- and 5th-order accuracy
     \end{itemize}
  \item Time integration: selection from the ``fully explicit method'' 
    or the ``horizontally explicit and vertically implicit methods''
     \begin{itemize}
-      \item Heun-type 3rd-order Runge--Kutta scheme
-      \item \citet{Wicker_2002}'s 3-step Runge--Kutta scheme
-      \item 4th-order Runge--Kutta scheme
+      \item \citet{Wicker_2002}'s 3 stage Runge--Kutta scheme with generally 2nd order accuracy
+      \item Heun-type 3 stage Runge--Kutta scheme with 3rd order accuracy
+      \item 4 stage Runge--Kutta scheme with 4th order accuracy
+      \item 7 stage Runge--Kutta scheme with 6th order accuracy
     \end{itemize}
  \item Guarantee of non-negative value:
     \begin{itemize}
       \item Flux corrected transport method \citep{zalesak_1979}
-      \item \citet{Koren_1993}'s filter: available only with the use of the 3rd-order upwind scheme
+      \item \citet{Koren_1993}'s filter: available only with the use of the 3rd-order upwind advection scheme
     \end{itemize}
- \item Numerical filter: 4th-order hyper-viscosity and diffusion
+ \item Numerical filter: hyper-viscosity and diffusion with 2nd, 4th, 6th and 8th-order differential operators 
  \item Topography: expressed using terrain-following coordinates
 \end{itemize}
 

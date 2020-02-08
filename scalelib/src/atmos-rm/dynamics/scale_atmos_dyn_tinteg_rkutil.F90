@@ -36,12 +36,16 @@ module scale_atmos_dyn_tinteg_rkutil
   !
   type, public :: RKUtil
     integer, allocatable :: comm_ind(:)
-    real(RP), allocatable :: rkwork(:,:,:,:,:)
+    real(RP), allocatable :: work0(:,:,:,:)
+    real(RP), allocatable :: work(:,:,:,:,:)
     real(RP), allocatable :: buf(:,:,:,:)
     integer :: var_num
+    integer :: register_num
   end type
 
   public :: ATMOS_DYN_Tinteg_RKUtil_setup
+  public :: ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc
+  public :: ATMOS_DYN_Tinteg_RKUtil_rkwork_dealloc
   public :: ATMOS_DYN_Tinteg_RKUtil_comm
   public :: ATMOS_DYN_Tinteg_RKUtil_comm_wait
 
@@ -49,6 +53,24 @@ module scale_atmos_dyn_tinteg_rkutil
   !
   !++ Public parameters & variables
   !
+  !----------------------------------------------------------------------------
+
+  !- coeffecients for 7 stage RK with 6th order --------------
+
+  real(RP), parameter, public :: RKCoef_a_7s6o_Butcher1964(7,7) = reshape( &
+  (/ 0.0_RP, 1.0_RP/3.0_RP,        0.0_RP,  1.0_RP/12.0_RP, -1.0_RP/16.0_RP,         0.0_RP,   9.0_RP/44.0_RP,    &
+     0.0_RP,        0.0_RP, 2.0_RP/3.0_RP,   1.0_RP/3.0_RP,   9.0_RP/8.0_RP,  9.0_RP/8.0_RP,  -9.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP, -1.0_RP/12.0_RP, -3.0_RP/16.0_RP,   -3_RP/8.0_RP,  63.0_RP/44.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,  -3.0_RP/8.0_RP, -3.0_RP/4.0_RP,  18.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,  1.0_RP/2.0_RP,           0.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP, -16.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP,          0.0_RP /),  &
+  shape(RKCoef_a_7s6o_Butcher1964) )
+
+ real(RP), parameter, public :: RKCoef_b_7s6o_Butcher1964(7) = &
+     1.0_RP/120.0_RP * (/ 11.0_RP, 0.0_RP, 81.0_RP, 81.0_RP, -32.0_RP, -32.0_RP, 11.0_RP /)
+
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -63,7 +85,8 @@ module scale_atmos_dyn_tinteg_rkutil
 contains
   !-----------------------------------------------------------------------------
 
-  subroutine ATMOS_DYN_Tinteg_RKUtil_setup( this, rk_register_num, varname_list, comm_id_offset )
+  subroutine ATMOS_DYN_Tinteg_RKUtil_setup( this, rk_register_num, varname_list, &
+      comm_id_offset, alloc_rkwork_flag )
     use scale_const, only: &
       UNDEF  => CONST_UNDEF
     use scale_comm_cartesC, only: &
@@ -72,8 +95,9 @@ contains
     
     type(RKUtil), intent(inout) :: this
     integer, intent(in) :: rk_register_num
-    character(H_MID), intent(in) :: varname_list(:)
+    character(*), intent(in) :: varname_list(:)
     integer, intent(in) :: comm_id_offset
+    logical, intent(in) :: alloc_rkwork_flag
 
     integer :: reg_id
     integer :: var_id
@@ -81,14 +105,9 @@ contains
     !------------------------------------------
 
     this%var_num = size(varname_list)
+    this%register_num = rk_register_num
 
-    !-
-    if (rk_register_num > 0) then
-      allocate( this%rkwork(KA,IA,JA,this%var_num,rk_register_num) )
-      !$omp parallel workshare
-      this%rkwork  (:,:,:,:,:) = UNDEF
-      !$omp end parallel workshare
-    end if
+    if ( alloc_rkwork_flag ) call ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc( this )
 
     !-
     allocate( this%buf(KA,IA,JA,this%var_num) )
@@ -106,6 +125,42 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tinteg_RKUtil_setup
+
+  subroutine ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc( this )
+    implicit none
+
+    type(RKUtil), intent(inout) :: this
+    !------------------------------------------
+
+    if (this%register_num > 0) then
+
+      allocate( this%work0(KA,IA,JA,this%var_num) )
+      allocate( this%work(KA,IA,JA,this%var_num,this%register_num) )
+
+#ifdef DEBUG      
+      !$omp parallel workshare
+      this%work0 (:,:,:,:)   = UNDEF
+      this%work  (:,:,:,:,:) = UNDEF
+      !$omp end parallel workshare
+#endif
+    end if    
+
+    return
+  end subroutine ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc
+
+  subroutine ATMOS_DYN_Tinteg_RKUtil_rkwork_dealloc( this )
+    implicit none
+
+    type(RKUtil), intent(inout) :: this
+    !------------------------------------------
+
+    if ( allocated(this%work) ) then
+      deallocate( this%work0 )
+      deallocate( this%work )
+    end if    
+
+    return
+  end subroutine ATMOS_DYN_Tinteg_RKUtil_rkwork_dealloc
 
   subroutine ATMOS_DYN_Tinteg_RKUtil_comm( this )
     use scale_comm_cartesC, only: COMM_vars8  
@@ -140,6 +195,4 @@ contains
   end subroutine ATMOS_DYN_Tinteg_RKUtil_comm_wait
 
   !-------------------------
-
-
 end module scale_atmos_dyn_tinteg_rkutil
