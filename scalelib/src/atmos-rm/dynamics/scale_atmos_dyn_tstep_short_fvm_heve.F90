@@ -481,28 +481,50 @@ contains
 
        ! at (x, y, w)
 
-       !$omp do OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( TwoD ) then
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMZ(k+1,i,j) )
-          call CHECK( __LINE__, MOMZ(k  ,i,j) )
-          call CHECK( __LINE__, MOMZ(k-1,i,j) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
+             call CHECK( __LINE__, MOMZ(k+1,i,j) )
+             call CHECK( __LINE__, MOMZ(k  ,i,j) )
+             call CHECK( __LINE__, MOMZ(k-1,i,j) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
 #endif
-          mflx_hi(k,i,j,ZDIR) = J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
-                              + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
-                                                              + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
-                              / MAPF(i,j,2,I_XY) & ! [{u,y,z->x,y,w}]
-                              + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
-                                                              + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
-                              / MAPF(i,j,1,I_XY) & ! [{x,v,z->x,y,w}]
-                              + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
-       enddo
-       enddo
-       enddo
-       !$omp end do nowait
+             mflx_hi(k,i,j,ZDIR) = J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
+                                 + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
+                                                                 + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
+                                 / MAPF(i,j,1,I_XY) & ! [{x,v,z->x,y,w}]
+                                 + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMZ(k+1,i,j) )
+             call CHECK( __LINE__, MOMZ(k  ,i,j) )
+             call CHECK( __LINE__, MOMZ(k-1,i,j) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
+#endif
+             mflx_hi(k,i,j,ZDIR) = J33G * MOMZ(k,i,j) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) ) &
+                                 + J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
+                                                                 + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
+                                 / MAPF(i,j,2,I_XY) & ! [{u,y,z->x,y,w}]
+                                 + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
+                                                                 + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
+                                 / MAPF(i,j,1,I_XY) & ! [{x,v,z->x,y,w}]
+                                 + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR) / ( MAPF(i,j,1,I_XY)*MAPF(i,j,2,I_XY) )
+          enddo
+          enddo
+          enddo
+          !$omp end do nowait
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1417,7 +1439,7 @@ contains
              advcv = - ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
                        + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j)        ) * RCDZ(k)
              advch = - ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,IS,j-1,YDIR) ) * RFDY(j) &
-                   * MAPF(i,j,2,I_XV)
+                   * MAPF(IS,j,2,I_XV)
              div = divdmp_coef / dtrk * FDY(j) * ( DDIV(k,IS,j+1)-DDIV(k,IS,j) )
              MOMY_RK(k,IS,j) = MOMY0(k,IS,j) &
                             + dtrk * ( ( advcv + advch         & ! advection
