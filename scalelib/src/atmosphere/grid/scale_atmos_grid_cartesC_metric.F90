@@ -240,6 +240,7 @@ contains
     implicit none
 
     integer :: k, i, j
+    integer :: i_start, i_end
     !---------------------------------------------------------------------------
 
     ! G^1/2
@@ -317,9 +318,14 @@ contains
     enddo
     end if
 
+    if ( .not. PRC_TwoD ) then
+      i_start = 2; i_end = IA-1
+    else
+      i_start = IS; i_end = IS
+    end if    
     !$omp parallel do
     do j = 2, JA-1
-    do i = 2, IA-1
+    do i = i_start, i_end
     do k = 1,  KA
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
