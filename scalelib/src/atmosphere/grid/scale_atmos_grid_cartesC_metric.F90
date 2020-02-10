@@ -294,39 +294,34 @@ contains
     end if
 
     ! Jacobian * G^1/2
-    !$omp parallel do
-    do j = 2, JA-1
-    do i = 2, IA-1
-    do k = 1,  KA
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZUY(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZUV(k,i  ,j) - ATMOS_GRID_CARTESC_REAL_CZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
-    enddo
-    enddo
-    enddo
     if ( .not. PRC_TwoD ) then
     !$omp parallel do
-    do j = 2, JA-1
-    do i = 2, IA-1
-    do k = 1,  KA
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ  (k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
-       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i  ,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+    do j = 1, JA
+    do i = 2, IA
+    do k = 1, KA
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_XVZ) = -( ATMOS_GRID_CARTESC_REAL_CZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_CZUV(k,i-1,j) ) * ATMOS_GRID_CARTESC_RCDX(i)
+    enddo
+    enddo
+    enddo
+    !$omp parallel do
+    do j = 1, JA
+    do i = 1, IA-1
+    do k = 1, KA
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZ  (k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZ  (k,i,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
+       ATMOS_GRID_CARTESC_METRIC_J13G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i+1,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j) ) * ATMOS_GRID_CARTESC_RFDX(i)
     enddo
     enddo
     enddo
     end if
 
-    if ( .not. PRC_TwoD ) then
-      i_start = 2; i_end = IA-1
-    else
-      i_start = IS; i_end = IS
-    end if    
     !$omp parallel do
     do j = 2, JA-1
-    do i = i_start, i_end
-    do k = 1,  KA
+    do i = 1, IA
+    do k = 1, KA
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYZ) = -( ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XYW) = -( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_XVW) = -( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j+1) - ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
@@ -337,8 +332,8 @@ contains
     if ( .not. PRC_TwoD ) then
     !$omp parallel do
     do j = 2, JA-1
-    do i = 2, IA-1
-    do k = 1,  KA
+    do i = 1, IA
+    do k = 1, KA
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYW) = -( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UYZ) = -( ATMOS_GRID_CARTESC_REAL_CZUV(k,i,j  ) - ATMOS_GRID_CARTESC_REAL_CZUV(k,i,j-1) ) * ATMOS_GRID_CARTESC_RCDY(j)
        ATMOS_GRID_CARTESC_METRIC_J23G(k,i,j,I_UVZ) = -( ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j+1) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j  ) ) * ATMOS_GRID_CARTESC_RFDY(j)
@@ -349,20 +344,18 @@ contains
 
     ATMOS_GRID_CARTESC_METRIC_J33G = 1.0_RP ! - 1 / G^1/2 * G^1/2
 
+    if ( .not. PRC_TwoD ) then
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 10 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 11 )
-    if ( .not. PRC_TwoD ) then
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 12 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 13 )
     call COMM_vars8( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14 )
-    end if
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYZ),  8, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XYW),  9, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVW), 10, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_XVZ), 11, .false. )
-    if ( .not. PRC_TwoD ) then
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYW), 12, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UYZ), 13, .false. )
     call COMM_wait ( ATMOS_GRID_CARTESC_METRIC_J13G(:,:,:,I_UVZ), 14, .false. )
