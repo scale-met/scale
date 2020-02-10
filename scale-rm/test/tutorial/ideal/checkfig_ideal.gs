@@ -12,9 +12,9 @@
 ** Open file
 **
 'open QHYD_d01z-3d.ctl'
-'open U_d01z-3d.ctl'
+'open V_d01z-3d.ctl'
 'open W_d01z-3d.ctl'
-'set y 2'
+'set x 1'
 'set t 5'
 'set z 1 70'
 **
@@ -32,9 +32,9 @@
 *
 'set ccolor 1'
 'set cthick 3'
-'d skip(u.2,2);w.3'
+'d skip(v.2,2);w.3'
 'cbarn'
-'draw title (a) QHYD (10^3 kg/kg) & U;W (m/s)'
+'draw title (a) QHYD (10^3 kg/kg) & V;W (m/s)'
 'printim ideal_qhyd.png'
 'c'
 **
@@ -52,9 +52,9 @@
 *
 'set ccolor 1'
 'set cthick 3'
-'d skip(u.2,2);w.3'
+'d skip(v.2,2);w.3'
 'cbarn'
-'draw title (b) W (m/s) & U;W (m/s)'
+'draw title (b) W (m/s) & V;W (m/s)'
 'printim ideal_W.png'
 'c'
 'quit'

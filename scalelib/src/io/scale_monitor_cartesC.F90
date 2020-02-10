@@ -49,6 +49,8 @@ contains
   subroutine MONITOR_CARTESC_setup( &
        dt, &
        ATMOS_do, OCEAN_do, LAND_do, URBAN_do )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_monitor, only: &
        MONITOR_setup, &
        MONITOR_set_dim
@@ -128,10 +130,17 @@ contains
                              "XY", 2, &
                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
-       call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
-                             "ZY-W", 2, &
-                             ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IS-1,:), &
-                             ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IS-1)   )
+       if ( PRC_TwoD ) then
+          call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
+                                "ZY-W", 2, &
+                                ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IS,:), &
+                                ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IS)   )
+       else
+          call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
+                                "ZY-W", 2, &
+                                ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IS-1,:), &
+                                ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IS-1)   )
+       end if
        call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
                              "ZY-E", 2, &
                              ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IE,:), &

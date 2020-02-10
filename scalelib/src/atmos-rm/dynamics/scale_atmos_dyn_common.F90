@@ -97,6 +97,8 @@ contains
        CDZ, CDX, CDY, FDZ, FDX, FDY )
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_comm_cartesC, only: &
        COMM_vars8_init
     implicit none
@@ -112,7 +114,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    if ( IHALO < 2 .or. JHALO < 2 .or. KHALO < 2 ) then
+    if ( ( ( .not. PRC_TwoD ) .and. IHALO < 2 ) .or. JHALO < 2 .or. KHALO < 2 ) then
        LOG_ERROR("ATMOS_DYN_filter_setup",*) 'number of HALO must be at least 2 for numrical filter'
        call PRC_abort
     end if
@@ -260,53 +262,55 @@ contains
     CNZ4(4,KE,2) = ( CNZ3(1,KE  ,2) + CNZ3(3,KE,2) ) / FDZ(KE-1)
 
     !* x direction *************************************************
+    if ( .not. PRC_TwoD ) then
 
-    do i = IS-1, IE
-      CNX1(i,1) = 1.0_RP / FDX(i)
-    end do
+       do i = IS-1, IE
+          CNX1(i,1) = 1.0_RP / FDX(i)
+       end do
 
-    CNX3(1,IS-1,1) = 1.0_RP / ( FDX(IS-1) * CDX(IS-1) * FDX(IS-2) )
-    do i = IS, IE+1
-       CNX3(1,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) )
-       CNX3(2,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) ) &
-                   + 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
-                   + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) )
-       CNX3(3,i,1) = 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
-                   + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) ) &
-                   + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-2) )
-    enddo
+       CNX3(1,IS-1,1) = 1.0_RP / ( FDX(IS-1) * CDX(IS-1) * FDX(IS-2) )
+       do i = IS, IE+1
+          CNX3(1,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) )
+          CNX3(2,i,1) = 1.0_RP / ( FDX(i  ) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) )
+          CNX3(3,i,1) = 1.0_RP / ( FDX(i-1) * CDX(i  ) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-1) ) &
+                      + 1.0_RP / ( FDX(i-1) * CDX(i-1) * FDX(i-2) )
+       enddo
 
-    do i = IS, IE
-       CNX4(1,i,1) = ( CNX3(1,i+1,1)               ) / CDX(i)
-       CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
-       CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
-       CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
-       CNX4(5,i,1) = ( CNX3(1,i-1,1)               ) / CDX(i)
-    enddo
+       do i = IS, IE
+          CNX4(1,i,1) = ( CNX3(1,i+1,1)               ) / CDX(i)
+          CNX4(2,i,1) = ( CNX3(2,i+1,1) + CNX3(1,i,1) ) / CDX(i)
+          CNX4(3,i,1) = ( CNX3(3,i+1,1) + CNX3(2,i,1) ) / CDX(i)
+          CNX4(4,i,1) = ( CNX3(1,i  ,1) + CNX3(3,i,1) ) / CDX(i)
+          CNX4(5,i,1) = ( CNX3(1,i-1,1)               ) / CDX(i)
+       enddo
 
-    !-
+       !-
 
-    do i = IS, IE
-      CNX1(i,2) = 1.0_RP / CDX(i)
-    end do
+       do i = IS, IE
+          CNX1(i,2) = 1.0_RP / CDX(i)
+       end do
 
-    do i = IS-1, IE+1
-       CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) )
-       CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) ) &
-                   + 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
-                   + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) )
-       CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
-                   + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) ) &
-                   + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i-1) )
-    enddo
+       do i = IS-1, IE+1
+          CNX3(1,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) )
+          CNX3(2,i,2) = 1.0_RP / ( CDX(i+1) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) )
+          CNX3(3,i,2) = 1.0_RP / ( CDX(i  ) * FDX(i  ) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i  ) ) &
+                      + 1.0_RP / ( CDX(i  ) * FDX(i-1) * CDX(i-1) )
+       enddo
 
-    do i = IS, IE
-       CNX4(1,i,2) = ( CNX3(1,i+1,2)               ) / FDX(i)
-       CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) / FDX(i)
-       CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) / FDX(i)
-       CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) / FDX(i)
-       CNX4(5,i,2) = ( CNX3(1,i-1,2)               ) / FDX(i)
-    enddo
+       do i = IS, IE
+          CNX4(1,i,2) = ( CNX3(1,i+1,2)               ) / FDX(i)
+          CNX4(2,i,2) = ( CNX3(2,i+1,2) + CNX3(1,i,2) ) / FDX(i)
+          CNX4(3,i,2) = ( CNX3(3,i+1,2) + CNX3(2,i,2) ) / FDX(i)
+          CNX4(4,i,2) = ( CNX3(1,i  ,2) + CNX3(3,i,2) ) / FDX(i)
+          CNX4(5,i,2) = ( CNX3(1,i-1,2)               ) / FDX(i)
+       enddo
+    end if
 
     !* y direction ************************************************    
 
@@ -436,7 +440,8 @@ contains
   subroutine ATMOS_DYN_numfilter_flux( &
        num_diff,                                         &
        DENS, MOMZ, MOMX, MOMY, RHOT,                     &
-       CDZ, CDX, CDY, FDZ, FDX, FDY, DT,                 &
+       CDZ, CDX, CDY, FDZ, FDX, FDY,                     &
+       TwoD, DT,                                         &
        REF_dens, REF_pott,                               &
        ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS )
     use scale_comm_cartesC, only: &
@@ -459,6 +464,7 @@ contains
     real(RP), intent(in)  :: FDX(IA-1)
     real(RP), intent(in)  :: FDY(JA-1)
 
+    logical,  intent(in)  :: TwoD
     real(RP), intent(in)  :: DT
 
     real(RP), intent(in)  :: REF_dens(KA,IA,JA)
@@ -504,10 +510,12 @@ contains
     do k = KS+1, KE-1
        nd_coef_fdz(k) = diff_coef_tmp * FDZ(k)**nd_order
     end do
-    do i = IS, IE
-       nd_coef_cdx(i) = diff_coef_tmp * CDX(i)**nd_order
-       nd_coef_fdx(i) = diff_coef_tmp * FDX(i)**nd_order
-    end do
+    if ( .not. TwoD ) then
+       do i = IS, IE
+          nd_coef_cdx(i) = diff_coef_tmp * CDX(i)**nd_order
+          nd_coef_fdx(i) = diff_coef_tmp * FDX(i)**nd_order
+       end do
+    end if
     do j = JS, JE
        nd_coef_cdy(j) = diff_coef_tmp * CDY(j)**nd_order
        nd_coef_fdy(j) = diff_coef_tmp * FDY(j)**nd_order
@@ -522,57 +530,102 @@ contains
        call PROF_rapstart("NumFilter_Main", 3)
 
        do j = JS-2, JE+2
-       do i = IS-2, IE+2
+       do i = max(IS-2,1), min(IE+2,IA)
        do k = KS, KE
           POTT(k,i,j) = RHOT(k,i,j) / DENS(k,i,j)
        end do
        end do
        end do
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS+1, KE-1
-          dens_diff(k,i,j) = ( ( DENS(k,i,j)                                             ) * 3.0_RP &
-                             + ( DENS(k,i+1,j)+DENS(k,i-1,j)+DENS(k,i,j+1)+DENS(k,i,j-1) ) * 2.0_RP &
-                             + ( DENS(k,i+2,j)+DENS(k,i-2,j)+DENS(k,i,j+2)+DENS(k,i,j-2) ) &
-                             + ( DENS(k+1,i,j)+DENS(k-1,i,j)                             ) * 2.0_RP &
-                             ) / 19.0_RP
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JS, JE
+          do k = KS+1, KE-1
+             dens_diff(k,IS,j) = ( ( DENS(k,IS,j)                  ) * 3.0_RP &
+                                 + ( DENS(k,IS,j+1)+DENS(k,IS,j-1) ) * 2.0_RP &
+                                 + ( DENS(k,IS,j+2)+DENS(k,IS,j-2) ) &
+                                 + ( DENS(k+1,IS,j)+DENS(k-1,IS,j) ) * 2.0_RP &
+                                 ) / 13.0_RP
 
-          pott_diff(k,i,j) = ( ( POTT(k,i,j)                                             ) * 3.0_RP &
-                             + ( POTT(k,i+1,j)+POTT(k,i-1,j)+POTT(k,i,j+1)+POTT(k,i,j-1) ) * 2.0_RP &
-                             + ( POTT(k,i+2,j)+POTT(k,i-2,j)+POTT(k,i,j+2)+POTT(k,i,j-2) ) &
-                             + ( POTT(k+1,i,j)+POTT(k-1,i,j)                             ) * 2.0_RP &
-                             ) / 19.0_RP
-       enddo
-       enddo
-       enddo
+             pott_diff(k,IS,j) = ( ( POTT(k,IS,j)                  ) * 3.0_RP &
+                                 + ( POTT(k,IS,j+1)+POTT(k,IS,j-1) ) * 2.0_RP &
+                                 + ( POTT(k,IS,j+2)+POTT(k,IS,j-2) ) &
+                                 + ( POTT(k+1,IS,j)+POTT(k-1,IS,j) ) * 2.0_RP &
+                                 ) / 13.0_RP
+          enddo
+          enddo
 
-       do j  = JS, JE
-       do i  = IS, IE
-          dens_diff(KS,i,j) = ( ( DENS(KS,i,j)                                                ) * 3.0_RP &
-                              + ( DENS(KS,i+1,j)+DENS(KS,i-1,j)+DENS(KS,i,j+1)+DENS(KS,i,j-1) ) * 2.0_RP &
-                              + ( DENS(KS,i+2,j)+DENS(KS,i-2,j)+DENS(KS,i,j+2)+DENS(KS,i,j-2) ) &
-                              + ( DENS(KS+1,i,j)                                              ) * 2.0_RP &
-                              ) / 17.0_RP
-          dens_diff(KE,i,j) = ( ( DENS(KE,i,j)                                                ) * 3.0_RP &
-                              + ( DENS(KE,i+1,j)+DENS(KE,i-1,j)+DENS(KE,i,j+1)+DENS(KE,i,j-1) ) * 2.0_RP &
-                              + ( DENS(KE,i+2,j)+DENS(KE,i-2,j)+DENS(KE,i,j+2)+DENS(KE,i,j-2) ) &
-                              + ( DENS(KE-1,i,j)                                              ) * 2.0_RP &
-                              ) / 17.0_RP
+          !$omp parallel do
+          do j  = JS, JE
+             dens_diff(KS,IS,j) = ( ( DENS(KS,IS,j)                   ) * 3.0_RP &
+                                  + ( DENS(KS,IS,j+1)+DENS(KS,IS,j-1) ) * 2.0_RP &
+                                  + ( DENS(KS,IS,j+2)+DENS(KS,IS,j-2) ) &
+                                  + ( DENS(KS+1,IS,j)                 ) * 2.0_RP &
+                                  ) / 11.0_RP
+             dens_diff(KE,IS,j) = ( ( DENS(KE,IS,j)                   ) * 3.0_RP &
+                                  + ( DENS(KE,IS,j+1)+DENS(KE,IS,j-1) ) * 2.0_RP &
+                                  + ( DENS(KE,IS,j+2)+DENS(KE,IS,j-2) ) &
+                                  + ( DENS(KE-1,IS,j)                 ) * 2.0_RP &
+                                  ) / 11.0_RP
 
-          pott_diff(KS,i,j) = ( ( POTT(KS,i,j)                                                ) * 3.0_RP &
-                              + ( POTT(KS,i+1,j)+POTT(KS,i-1,j)+POTT(KS,i,j+1)+POTT(KS,i,j-1) ) * 2.0_RP &
-                              + ( POTT(KS,i+2,j)+POTT(KS,i-2,j)+POTT(KS,i,j+2)+POTT(KS,i,j-2) ) &
-                              + ( POTT(KS+1,i,j)                                              ) * 2.0_RP &
-                              ) / 17.0_RP
-          pott_diff(KE,i,j) = ( ( POTT(KE,i,j)                                                ) * 3.0_RP &
-                              + ( POTT(KE,i+1,j)+POTT(KE,i-1,j)+POTT(KE,i,j+1)+POTT(KE,i,j-1) ) * 2.0_RP &
-                              + ( POTT(KE,i+2,j)+POTT(KE,i-2,j)+POTT(KE,i,j+2)+POTT(KE,i,j-2) ) &
-                              + ( POTT(KE-1,i,j)                                              ) * 2.0_RP &
-                              ) / 17.0_RP
-       end do
-       end do
+             pott_diff(KS,IS,j) = ( ( POTT(KS,IS,j)                   ) * 3.0_RP &
+                                  + ( POTT(KS,IS,j+1)+POTT(KS,IS,j-1) ) * 2.0_RP &
+                                  + ( POTT(KS,IS,j+2)+POTT(KS,IS,j-2) ) &
+                                  + ( POTT(KS+1,IS,j)                 ) * 2.0_RP &
+                                  ) / 11.0_RP
+             pott_diff(KE,IS,j) = ( ( POTT(KE,IS,j)                  ) * 3.0_RP &
+                                 + ( POTT(KE,IS,j+1)+POTT(KE,IS,j-1) ) * 2.0_RP &
+                                 + ( POTT(KE,IS,j+2)+POTT(KE,IS,j-2) ) &
+                                 + ( POTT(KE-1,IS,j)                 ) * 2.0_RP &
+                                 ) / 11.0_RP
+          end do
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS+1, KE-1
+             dens_diff(k,i,j) = ( ( DENS(k,i,j)                                             ) * 3.0_RP &
+                                + ( DENS(k,i+1,j)+DENS(k,i-1,j)+DENS(k,i,j+1)+DENS(k,i,j-1) ) * 2.0_RP &
+                                + ( DENS(k,i+2,j)+DENS(k,i-2,j)+DENS(k,i,j+2)+DENS(k,i,j-2) ) &
+                                + ( DENS(k+1,i,j)+DENS(k-1,i,j)                             ) * 2.0_RP &
+                                ) / 19.0_RP
+
+             pott_diff(k,i,j) = ( ( POTT(k,i,j)                                             ) * 3.0_RP &
+                                + ( POTT(k,i+1,j)+POTT(k,i-1,j)+POTT(k,i,j+1)+POTT(k,i,j-1) ) * 2.0_RP &
+                                + ( POTT(k,i+2,j)+POTT(k,i-2,j)+POTT(k,i,j+2)+POTT(k,i,j-2) ) &
+                                + ( POTT(k+1,i,j)+POTT(k-1,i,j)                             ) * 2.0_RP &
+                                ) / 19.0_RP
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do
+          do j  = JS, JE
+          do i  = IS, IE
+             dens_diff(KS,i,j) = ( ( DENS(KS,i,j)                                                ) * 3.0_RP &
+                                 + ( DENS(KS,i+1,j)+DENS(KS,i-1,j)+DENS(KS,i,j+1)+DENS(KS,i,j-1) ) * 2.0_RP &
+                                 + ( DENS(KS,i+2,j)+DENS(KS,i-2,j)+DENS(KS,i,j+2)+DENS(KS,i,j-2) ) &
+                                 + ( DENS(KS+1,i,j)                                              ) * 2.0_RP &
+                                 ) / 17.0_RP
+             dens_diff(KE,i,j) = ( ( DENS(KE,i,j)                                                ) * 3.0_RP &
+                                 + ( DENS(KE,i+1,j)+DENS(KE,i-1,j)+DENS(KE,i,j+1)+DENS(KE,i,j-1) ) * 2.0_RP &
+                                 + ( DENS(KE,i+2,j)+DENS(KE,i-2,j)+DENS(KE,i,j+2)+DENS(KE,i,j-2) ) &
+                                 + ( DENS(KE-1,i,j)                                              ) * 2.0_RP &
+                                 ) / 17.0_RP
+
+             pott_diff(KS,i,j) = ( ( POTT(KS,i,j)                                                ) * 3.0_RP &
+                                 + ( POTT(KS,i+1,j)+POTT(KS,i-1,j)+POTT(KS,i,j+1)+POTT(KS,i,j-1) ) * 2.0_RP &
+                                 + ( POTT(KS,i+2,j)+POTT(KS,i-2,j)+POTT(KS,i,j+2)+POTT(KS,i,j-2) ) &
+                                 + ( POTT(KS+1,i,j)                                              ) * 2.0_RP &
+                                 ) / 17.0_RP
+             pott_diff(KE,i,j) = ( ( POTT(KE,i,j)                                                ) * 3.0_RP &
+                                 + ( POTT(KE,i+1,j)+POTT(KE,i-1,j)+POTT(KE,i,j+1)+POTT(KE,i,j-1) ) * 2.0_RP &
+                                 + ( POTT(KE,i+2,j)+POTT(KE,i-2,j)+POTT(KE,i,j+2)+POTT(KE,i,j-2) ) &
+                                 + ( POTT(KE-1,i,j)                                              ) * 2.0_RP &
+                                 ) / 17.0_RP
+          end do
+          end do
+       end if
 
        call PROF_rapend  ("NumFilter_Main", 3)
 
@@ -597,7 +650,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do i = max(IS-1,1), min(IE+2,IA)
        do k = KS, KE
           dens_diff(k,i,j) = DENS(k,i,j) - REF_dens(k,i,j)
        enddo
@@ -610,6 +663,7 @@ contains
 
     call calc_numdiff( work, iwork,      & ! (out)
                        dens_diff,        & ! (in)
+                       TwoD,             & ! (in)
                        ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 0, KE )
 
@@ -635,25 +689,27 @@ contains
     enddo
     enddo
     !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff(k,i,j,I_DENS,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i)
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
-       num_diff(KS  ,i,j,I_DENS,XDIR) = num_diff(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
-       num_diff(KS+1,i,j,I_DENS,XDIR) = num_diff(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff(k,i,j,I_DENS,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i)
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          num_diff(   1:KS-1,i,j,I_DENS,XDIR) = 0.0_RP
+          num_diff(KS  ,i,j,I_DENS,XDIR) = num_diff(KS  ,i,j,I_DENS,XDIR) * ND_SFC_FACT
+          num_diff(KS+1,i,j,I_DENS,XDIR) = num_diff(KS+1,i,j,I_DENS,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff(KE+1:KA  ,i,j,I_DENS,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -679,6 +735,7 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_DENS,ZDIR),  I_COMM_DENS_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff(:,:,:,I_DENS,XDIR),  I_COMM_DENS_X )
     call COMM_vars8( num_diff(:,:,:,I_DENS,YDIR),  I_COMM_DENS_Y )
 
@@ -691,7 +748,7 @@ contains
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+2
-    do i = IS-2, IE+2
+    do i = max(IS-2,1), min(IE+2,IA)
     do k = KS, KE-1
        VELZ(k,i,j) = 2.0_RP * MOMZ(k,i,j) / ( DENS(k+1,i,j)+DENS(k,i,j) )
     enddo
@@ -702,6 +759,7 @@ contains
 
     call calc_numdiff( work, iwork,      & ! (out)
                        VELZ,             & ! (in)
+                       TwoD,             & ! (in)
                        ND_LAPLACIAN_NUM, & ! (in)
                        1, 0, 0, KE-1 )
 
@@ -728,26 +786,28 @@ contains
     enddo
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE-1
-       num_diff(k,i,j,I_MOMZ,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
-                                   * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)    
-    do j = JS, JE
-    do i = IS, IE
-       num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
-       num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_diff(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
-       num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_diff(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE-1
+          num_diff(k,i,j,I_MOMZ,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
+                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)    
+       do j = JS, JE
+       do i = IS, IE
+          num_diff( 1:KS-1,i,j,I_MOMZ,XDIR) = 0.0_RP
+          num_diff(KS  ,i,j,I_MOMZ,XDIR) = num_diff(KS  ,i,j,I_MOMZ,XDIR) * ND_SFC_FACT
+          num_diff(KS+1,i,j,I_MOMZ,XDIR) = num_diff(KS+1,i,j,I_MOMZ,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff(KE:KA  ,i,j,I_MOMZ,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -777,6 +837,7 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
 
@@ -787,19 +848,29 @@ contains
 
     call PROF_rapstart("NumFilter_Main", 3)
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS-2, JE+2
-    do i = IS-2, IE+1
-    do k = KS, KE
-       VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
+    if ( TwoD ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
+       do j = JS-2, JE+2
+       do k = KS, KE
+          VELX(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
+       enddo
+       enddo
+    else
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS-2, JE+2
+       do i = IS-2, IE+1
+       do k = KS, KE
+          VELX(k,i,j) = 2.0_RP * MOMX(k,i,j) / ( DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+    end if
 
     call PROF_rapend  ("NumFilter_Main", 3)
 
     call calc_numdiff( work, iwork,      & ! (out)
                        VELX,             & ! (in)
+                       TwoD,             & ! (in)
                        ND_LAPLACIAN_NUM, & ! (in)
                        0, 1, 0, KE )
 
@@ -808,16 +879,27 @@ contains
 
     !$omp parallel private(i,j,k) 
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE-1
-       num_diff(k,i,j,I_MOMX,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
-                                   * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( TwoD ) then
+       !$omp do OMP_SCHEDULE_
+       do j = JS, JE
+       do k = KS, KE-1
+          num_diff(k,IS,j,I_MOMX,ZDIR) = work(k,IS,j,ZDIR,iwork) * nd_coef_cdz(k) &
+                                       * 0.5_RP * ( DENS(k+1,IS,j)+DENS(k,IS,j) )
+       enddo
+       enddo
+       !$omp end do nowait
+    else
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE-1
+          num_diff(k,i,j,I_MOMX,ZDIR) = work(k,i,j,ZDIR,iwork) * nd_coef_cdz(k) &
+                                      * 0.25_RP * ( DENS(k+1,i+1,j)+DENS(k+1,i,j)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -827,38 +909,50 @@ contains
     enddo
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff(k,i,j,I_MOMX,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_fdx(i) &
-                                   * DENS(k,i,j)
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
-       num_diff(KS  ,i,j,I_MOMX,XDIR) = num_diff(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
-       num_diff(KS+1,i,j,I_MOMX,XDIR) = num_diff(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMX,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_fdx(i) &
+                                      * DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          num_diff(   1:KS-1,i,j,I_MOMX,XDIR) = 0.0_RP
+          num_diff(KS  ,i,j,I_MOMX,XDIR) = num_diff(KS  ,i,j,I_MOMX,XDIR) * ND_SFC_FACT
+          num_diff(KS+1,i,j,I_MOMX,XDIR) = num_diff(KS+1,i,j,I_MOMX,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
-       num_diff(KE+1:KA  ,i,j,I_MOMX,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
-
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff(k,i,j,I_MOMX,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
-                                   * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( TwoD ) then
+       !$omp do OMP_SCHEDULE_
+       do j = JS, JE
+       do k = KS, KE
+          num_diff(k,IS,j,I_MOMX,YDIR) = work(k,IS,j,YDIR,iwork) * nd_coef_cdy(j) &
+                                       * 0.5_RP * ( DENS(k,IS,j+1)+DENS(k,IS,j) )
+       enddo
+       enddo
+       !$omp end do nowait
+    else
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMX,YDIR) = work(k,i,j,YDIR,iwork) * nd_coef_cdy(j) &
+                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i+1,j)+DENS(k,i,j+1)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
@@ -876,6 +970,7 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
 
@@ -888,7 +983,7 @@ contains
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
     do j = JS-2, JE+1
-    do i = IS-2, IE+2
+    do i = max(IS-2,1), min(IE+2,IA)
     do k = KS, KE
        VELY(k,i,j) = 2.0_RP * MOMY(k,i,j) / ( DENS(k,i,j+1)+DENS(k,i,j) )
     enddo
@@ -899,6 +994,7 @@ contains
 
     call calc_numdiff( work, iwork,      & ! (out)
                        VELY,             & ! (in)
+                       TwoD,             & ! (in)
                        ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 1, KE )
 
@@ -925,26 +1021,28 @@ contains
     end do
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff(k,i,j,I_MOMY,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
-                                   * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
-       num_diff(KS  ,i,j,I_MOMY,XDIR) = num_diff(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
-       num_diff(KS+1,i,j,I_MOMY,XDIR) = num_diff(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff(k,i,j,I_MOMY,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
+                                      * 0.25_RP * ( DENS(k,i+1,j+1)+DENS(k,i,j+1)+DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          num_diff(   1:KS-1,i,j,I_MOMY,XDIR) = 0.0_RP
+          num_diff(KS  ,i,j,I_MOMY,XDIR) = num_diff(KS  ,i,j,I_MOMY,XDIR) * ND_SFC_FACT
+          num_diff(KS+1,i,j,I_MOMY,XDIR) = num_diff(KS+1,i,j,I_MOMY,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff(KE+1:KA  ,i,j,I_MOMY,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -973,6 +1071,7 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
     call COMM_vars8( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
 
@@ -985,7 +1084,7 @@ contains
     if ( ND_USE_RS ) then
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS-1, JE+2
-       do i = IS-1, IE+2
+       do i = max(IS-1,1), min(IE+2,IA)
        do k = KS, KE
           pott_diff(k,i,j) = RHOT(k,i,j) / DENS(k,i,j) - REF_pott(k,i,j)
        enddo
@@ -997,6 +1096,7 @@ contains
 
     call calc_numdiff( work, iwork,      & ! (out)
                        pott_diff,        & ! (in)
+                       TwoD,             & ! (in)
                        ND_LAPLACIAN_NUM, & ! (in)
                        0, 0, 0, KE )
 
@@ -1027,26 +1127,28 @@ contains
     enddo
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff(k,i,j,I_RHOT,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
-                                   * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
-       num_diff(KS  ,i,j,I_RHOT,XDIR) = num_diff(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
-       num_diff(KS+1,i,j,I_RHOT,XDIR) = num_diff(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff(k,i,j,I_RHOT,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
+                                      * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          num_diff(   1:KS-1,i,j,I_RHOT,XDIR) = 0.0_RP
+          num_diff(KS  ,i,j,I_RHOT,XDIR) = num_diff(KS  ,i,j,I_RHOT,XDIR) * ND_SFC_FACT
+          num_diff(KS+1,i,j,I_RHOT,XDIR) = num_diff(KS+1,i,j,I_RHOT,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff(KE+1:KA  ,i,j,I_RHOT,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)    
     do j = JS, JE
@@ -1074,22 +1176,28 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
     call COMM_vars8( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
     call COMM_wait ( num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
     call COMM_wait ( num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
     call COMM_wait ( num_diff(:,:,:,I_MOMZ,ZDIR), I_COMM_MOMZ_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff(:,:,:,I_MOMZ,XDIR), I_COMM_MOMZ_X )
     call COMM_wait ( num_diff(:,:,:,I_MOMZ,YDIR), I_COMM_MOMZ_Y )
     call COMM_wait ( num_diff(:,:,:,I_MOMX,ZDIR), I_COMM_MOMX_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff(:,:,:,I_MOMX,XDIR), I_COMM_MOMX_X )
     call COMM_wait ( num_diff(:,:,:,I_MOMX,YDIR), I_COMM_MOMX_Y )
     call COMM_wait ( num_diff(:,:,:,I_MOMY,ZDIR), I_COMM_MOMY_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff(:,:,:,I_MOMY,XDIR), I_COMM_MOMY_X )
     call COMM_wait ( num_diff(:,:,:,I_MOMY,YDIR), I_COMM_MOMY_Y )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,ZDIR), I_COMM_RHOT_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
     call COMM_wait ( num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
@@ -1103,7 +1211,7 @@ contains
   subroutine ATMOS_DYN_numfilter_flux_q( &
        num_diff_q,                                       &
        DENS, QTRC, is_qv,                                &
-       CDZ, CDX, CDY, dt,                                &
+       CDZ, CDX, CDY, TwoD, dt,                          &
        REF_qv, iq,                                       &
        ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS )
     use scale_comm_cartesC, only: &
@@ -1121,6 +1229,7 @@ contains
     real(RP), intent(in)  :: CDX(IA)
     real(RP), intent(in)  :: CDY(JA)
 
+    logical,  intent(in)  :: TwoD
     real(RP), intent(in)  :: dt
 
     real(RP), intent(in)  :: REF_qv(KA,IA,JA)
@@ -1156,9 +1265,11 @@ contains
     do k = KS-1, KE
        nd_coef_cdz(k) = diff_coef_tmp * CDZ(k)**nd_order
     end do
+    if ( .not. TwoD ) then
     do i = IS, IE
        nd_coef_cdx(i) = diff_coef_tmp * CDX(i)**nd_order
     end do
+    end if
     do j = JS, JE
        nd_coef_cdy(j) = diff_coef_tmp * CDY(j)**nd_order
     end do
@@ -1167,34 +1278,63 @@ contains
 
        call PROF_rapstart("NumFilter_Main", 3)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JS-1, JE+2
-       do i = IS-1, IE+2
-       do k = KS+1, KE-1
-          qv_diff(k,i,j) = ( ( QTRC(k,i,j)                                             ) * 3.0_RP &
-                           + ( QTRC(k,i+1,j)+QTRC(k,i-1,j)+QTRC(k,i,j+1)+QTRC(k,i,j-1) ) * 2.0_RP &
-                           + ( QTRC(k,i+2,j)+QTRC(k,i-2,j)+QTRC(k,i,j+2)+QTRC(k,i,j-2) ) &
-                           + ( QTRC(k+1,i,j)+QTRC(k-1,i,j)                             ) * 2.0_RP &
-                           ) / 19.0_RP
-       enddo
-       enddo
-       enddo
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JS-1, JE+2
+          do k = KS+1, KE-1
+             qv_diff(k,IS,j) = ( ( QTRC(k,IS,j)                  ) * 3.0_RP &
+                               + ( QTRC(k,IS,j+1)+QTRC(k,IS,j-1) ) * 2.0_RP &
+                               + ( QTRC(k,IS,j+2)+QTRC(k,IS,j-2) ) &
+                               + ( QTRC(k+1,IS,j)+QTRC(k-1,IS,j) ) * 2.0_RP &
+                               ) / 13.0_RP
+          enddo
+          enddo
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j  = JS-1, JE+2
-       do i  = IS-1, IE+2
-          qv_diff(KS,i,j) = ( ( QTRC(KS,i,j)                                                ) * 3.0_RP &
-                            + ( QTRC(KS,i+1,j)+QTRC(KS,i-1,j)+QTRC(KS,i,j+1)+QTRC(KS,i,j-1) ) * 2.0_RP &
-                            + ( QTRC(KS,i+2,j)+QTRC(KS,i-2,j)+QTRC(KS,i,j+2)+QTRC(KS,i,j-2) ) &
-                            + ( QTRC(KS+1,i,j)                                              ) * 2.0_RP &
-                            ) / 17.0_RP
-          qv_diff(KE,i,j) = ( ( QTRC(KE,i,j)                                                ) * 3.0_RP &
-                            + ( QTRC(KE,i+1,j)+QTRC(KE,i-1,j)+QTRC(KE,i,j+1)+QTRC(KE,i,j-1) ) * 2.0_RP &
-                            + ( QTRC(KE,i+2,j)+QTRC(KE,i-2,j)+QTRC(KE,i,j+2)+QTRC(KE,i,j-2) ) &
-                            + ( QTRC(KE-1,i,j)                                              ) * 2.0_RP &
-                            ) / 17.0_RP
-       end do
-       end do
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j  = JS-1, JE+2
+             qv_diff(KS,IS,j) = ( ( QTRC(KS,IS,j)                   ) * 3.0_RP &
+                                + ( QTRC(KS,IS,j+1)+QTRC(KS,IS,j-1) ) * 2.0_RP &
+                                + ( QTRC(KS,IS,j+2)+QTRC(KS,IS,j-2) ) &
+                                + ( QTRC(KS+1,IS,j)                 ) * 2.0_RP &
+                                ) / 11.0_RP
+             qv_diff(KE,IS,j) = ( ( QTRC(KE,IS,j)                   ) * 3.0_RP &
+                                + ( QTRC(KE,IS,j+1)+QTRC(KE,IS,j-1) ) * 2.0_RP &
+                                + ( QTRC(KE,IS,j+2)+QTRC(KE,IS,j-2) ) &
+                                + ( QTRC(KE-1,IS,j)                 ) * 2.0_RP &
+                                ) / 11.0_RP
+          end do
+
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JS-1, JE+2
+          do i = IS-1, IE+2
+          do k = KS+1, KE-1
+             qv_diff(k,i,j) = ( ( QTRC(k,i,j)                                             ) * 3.0_RP &
+                              + ( QTRC(k,i+1,j)+QTRC(k,i-1,j)+QTRC(k,i,j+1)+QTRC(k,i,j-1) ) * 2.0_RP &
+                              + ( QTRC(k,i+2,j)+QTRC(k,i-2,j)+QTRC(k,i,j+2)+QTRC(k,i,j-2) ) &
+                              + ( QTRC(k+1,i,j)+QTRC(k-1,i,j)                             ) * 2.0_RP &
+                              ) / 19.0_RP
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j  = JS-1, JE+2
+          do i  = IS-1, IE+2
+             qv_diff(KS,i,j) = ( ( QTRC(KS,i,j)                                                ) * 3.0_RP &
+                               + ( QTRC(KS,i+1,j)+QTRC(KS,i-1,j)+QTRC(KS,i,j+1)+QTRC(KS,i,j-1) ) * 2.0_RP &
+                               + ( QTRC(KS,i+2,j)+QTRC(KS,i-2,j)+QTRC(KS,i,j+2)+QTRC(KS,i,j-2) ) &
+                               + ( QTRC(KS+1,i,j)                                              ) * 2.0_RP &
+                               ) / 17.0_RP
+             qv_diff(KE,i,j) = ( ( QTRC(KE,i,j)                                                ) * 3.0_RP &
+                               + ( QTRC(KE,i+1,j)+QTRC(KE,i-1,j)+QTRC(KE,i,j+1)+QTRC(KE,i,j-1) ) * 2.0_RP &
+                               + ( QTRC(KE,i+2,j)+QTRC(KE,i-2,j)+QTRC(KE,i,j+2)+QTRC(KE,i,j-2) ) &
+                               + ( QTRC(KE-1,i,j)                                              ) * 2.0_RP &
+                               ) / 17.0_RP
+          end do
+          end do
+
+       end if
 
        call PROF_rapend  ("NumFilter_Main", 3)
 
@@ -1215,7 +1355,7 @@ contains
 
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = JS-1, JE+2
-          do i = IS-1, IE+2
+          do i = max(IS-1,1), min(IE+2,IA)
           do k = KS, KE
              qv_diff(k,i,j) = QTRC(k,i,j) - REF_qv(k,i,j)
           enddo
@@ -1228,6 +1368,7 @@ contains
 
        call calc_numdiff( work, iwork,      & ! (out)
                           qv_diff,          & ! (in)
+                          TwoD,             & ! (in)
                           ND_LAPLACIAN_NUM, & ! (in)
                           0, 0, 0, KE )
 
@@ -1235,6 +1376,7 @@ contains
 
        call calc_numdiff( work, iwork,      & ! (out)
                           QTRC,             & ! (in)
+                          TwoD,             & ! (in)
                           ND_LAPLACIAN_NUM, & ! (in)
                           0, 0, 0, KE )
 
@@ -1269,26 +1411,28 @@ contains
     enddo
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       num_diff_q(k,i,j,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
-                              * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       num_diff_q(1:KS-1,i,j,XDIR) = 0.0_RP
-       num_diff_q(KS  ,i,j,XDIR) = num_diff_q(KS  ,i,j,XDIR) * ND_SFC_FACT
-       num_diff_q(KS+1,i,j,XDIR) = num_diff_q(KS+1,i,j,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
-       num_diff_q(KE+1:KA,i,j,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do nowait
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          num_diff_q(k,i,j,XDIR) = work(k,i,j,XDIR,iwork) * nd_coef_cdx(i) &
+                                 * 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          num_diff_q(1:KS-1,i,j,XDIR) = 0.0_RP
+          num_diff_q(KS  ,i,j,XDIR) = num_diff_q(KS  ,i,j,XDIR) * ND_SFC_FACT
+          num_diff_q(KS+1,i,j,XDIR) = num_diff_q(KS+1,i,j,XDIR) * (1.0_RP + ND_SFC_FACT) * 0.5_RP
+          num_diff_q(KE+1:KA,i,j,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -1317,10 +1461,12 @@ contains
     call PROF_rapstart("NumFilter_Comm", 3)
 
     call COMM_vars8( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    if ( .not. TwoD ) &
     call COMM_vars8( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
     call COMM_vars8( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
     call COMM_wait ( num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
+    if ( .not. TwoD ) &
     call COMM_wait ( num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
     call COMM_wait ( num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
 
@@ -1334,6 +1480,7 @@ contains
        phi_t, &
        phi, &
        rdz, rdx, rdy, &
+       TwoD, &
        KO, IO, JO )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
@@ -1344,6 +1491,7 @@ contains
     real(RP), intent(in ) :: rdz(:)
     real(RP), intent(in ) :: rdx(:)
     real(RP), intent(in ) :: rdy(:)
+    logical,  intent(in ) :: TwoD
     integer , intent(in ) :: KO
     integer , intent(in ) :: IO
     integer , intent(in ) :: JO
@@ -1354,22 +1502,36 @@ contains
 
     call calc_diff3( flux,      & ! (out)
                      phi,       & ! (in)
+                     TwoD,      & ! (in)
                      KO, IO, JO )
 
+    if ( .not. TwoD ) &
     call COMM_vars8( flux(:,:,:,XDIR), 1 )
     call COMM_vars8( flux(:,:,:,YDIR), 2 )
+    if ( .not. TwoD ) &
     call COMM_wait ( flux(:,:,:,XDIR), 1 )
     call COMM_wait ( flux(:,:,:,YDIR), 2 )
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       phi_t(k,i,j) = ( flux(k+KO,i,j,ZDIR) - flux(k-1+KO,i,j,ZDIR) ) * RDZ(k) &
-                    + ( flux(k,i+IO,j,XDIR) - flux(k,i-1+IO,j,XDIR) ) * RDX(i) &
-                    + ( flux(k,i,j+JO,YDIR) - flux(k,i,j-1+JO,YDIR) ) * RDY(j)
-    end do
-    end do
-    end do
+    if ( TwoD ) then
+       !$omp parallel do
+       do j = JS, JE
+       do k = KS, KE
+          phi_t(k,IS,j) = ( flux(k+KO,IS,j,ZDIR) - flux(k-1+KO,IS,j,ZDIR) ) * RDZ(k) &
+                        + ( flux(k,IS,j+JO,YDIR) - flux(k,IS,j-1+JO,YDIR) ) * RDY(j)
+       end do
+       end do
+    else
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          phi_t(k,i,j) = ( flux(k+KO,i,j,ZDIR) - flux(k-1+KO,i,j,ZDIR) ) * RDZ(k) &
+                       + ( flux(k,i+IO,j,XDIR) - flux(k,i-1+IO,j,XDIR) ) * RDX(i) &
+                       + ( flux(k,i,j+JO,YDIR) - flux(k,i,j-1+JO,YDIR) ) * RDY(j)
+       end do
+       end do
+       end do
+    end if
 
     return
   end subroutine ATMOS_DYN_filter_tend
@@ -1378,7 +1540,7 @@ contains
   subroutine ATMOS_DYN_Copy_boundary( &
        DENS,  MOMZ,  MOMX,  MOMY,  RHOT,  PROG, &
        DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, PROG0, &
-       BND_W, BND_E, BND_S, BND_N )
+       BND_W, BND_E, BND_S, BND_N, TwoD )
     implicit none
     real(RP), intent(inout) :: DENS (KA,IA,JA)
     real(RP), intent(inout) :: MOMZ (KA,IA,JA)
@@ -1396,10 +1558,11 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
 
     integer :: k, i, j, iv
 
-    if ( BND_W ) then
+    if ( BND_W .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JA,IS,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
@@ -1419,7 +1582,7 @@ contains
        enddo
        enddo
     end if
-    if ( BND_E ) then
+    if ( BND_E .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp private(i,iv) &
        !$omp shared(JA,IE,IA,KS,KE,DENS,DENS0,MOMZ,MOMZ0,MOMX,MOMX0,MOMY,MOMY0,RHOT,RHOT0,VA,PROG,PROG0)
@@ -1500,7 +1663,7 @@ contains
   !-----------------------------------------------------------------------------
   subroutine ATMOS_DYN_Copy_boundary_tracer( &
        QTRC, QTRC0, &
-       BND_W, BND_E, BND_S, BND_N )
+       BND_W, BND_E, BND_S, BND_N, TwoD )
     implicit none
     real(RP), intent(inout) :: QTRC (KA,IA,JA)
     real(RP), intent(in)    :: QTRC0(KA,IA,JA)
@@ -1508,10 +1671,11 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
 
     integer :: k, i, j
 
-    if ( BND_W ) then
+    if ( BND_W .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JA,IS,KS,KE,QTRC,QTRC0)
 !OCL XFILL
@@ -1523,7 +1687,7 @@ contains
        enddo
        enddo
     end if
-    if ( BND_E ) then
+    if ( BND_E .and. (.not. TwoD) ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JA,IE,IA,KS,KE,QTRC,QTRC0)
 !OCL XFILL
@@ -1568,6 +1732,7 @@ contains
        DDIV, &
        MOMZ, MOMX, MOMY, &
        GSQRT, J13G, J23G, J33G, MAPF, &
+       TwoD, &
        RCDZ, RCDX, RCDY, RFDZ, FDZ )
     implicit none
     real(RP), intent(out) :: DDIV(KA,IA,JA)
@@ -1579,6 +1744,7 @@ contains
     real(RP), intent(in)  :: J23G(KA,IA,JA,7)
     real(RP), intent(in)  :: J33G
     real(RP), intent(in)  :: MAPF(IA,JA,2,7)
+    logical,  intent(in)  :: TwoD
     real(RP), intent(in)  :: RCDZ(KA)
     real(RP), intent(in)  :: RCDX(IA)
     real(RP), intent(in)  :: RCDY(JA)
@@ -1591,54 +1757,89 @@ contains
 
     ! 3D divergence
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE+1
-    do i = IS, IE+1
-    do k = KS-1, KE+1
-       DDIV(k,i,j) = J33G * ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
-                   + ( ( MOMX(k+1,i,j) + MOMX(k+1,i-1,j  ) ) * J13G(k+1,i,j,I_XYW) &
-                     - ( MOMX(k-1,i,j) + MOMX(k-1,i-1,j  ) ) * J13G(k-1,i,j,I_XYW) &
-                     + ( MOMY(k+1,i,j) + MOMY(k+1,i  ,j-1) ) * J23G(k+1,i,j,I_XYW) &
-                     - ( MOMY(k-1,i,j) + MOMY(k-1,i  ,j-1) ) * J23G(k-1,i,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
-                   + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                   * ( ( MOMX(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                       - MOMX(k,i-1,j  ) * GSQRT(k,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                     + ( MOMY(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                       - MOMY(k,i,  j-1) * GSQRT(k,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-    enddo
-    enddo
-    enddo
+    if ( TwoD ) then
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
+       do j = JS, JE+1
+       do k = KS-1, KE+1
+          DDIV(k,IS,j) = J33G * ( MOMZ(k,IS,j) - MOMZ(k-1,IS,j) ) * RCDZ(k) &
+                              + ( ( MOMY(k+1,IS,j) + MOMY(k+1,IS,j-1) ) * J23G(k+1,IS,j,I_XYW) &
+                                - ( MOMY(k-1,IS,j) + MOMY(k-1,IS,j-1) ) * J23G(k-1,IS,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
+                      + MAPF(IS,j,2,I_XY) &
+                      * ( MOMY(k,IS,j  ) * GSQRT(k,IS,j  ,I_XVZ) / MAPF(IS,j  ,1,I_XV) &
+                        - MOMY(k,IS,j-1) * GSQRT(k,IS,j-1,I_XVZ) / MAPF(IS,j-1,1,I_XV) ) * RCDY(j)
+       enddo
+       enddo
 #ifdef DEBUG
-    k = IUNDEF; i = IUNDEF; j = IUNDEF
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE+1
-    do i = IS, IE+1
-       DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
-                    + ( ( MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j  ) ) * J13G(KS+1,i,j,I_XYW) &
-                      - ( MOMX(KS-1,i,j) + MOMX(KS  ,i-1,j  ) ) * J13G(KS  ,i,j,I_XYW) &
-                      + ( MOMY(KS+1,i,j) + MOMY(KS+1,i  ,j-1) ) * J23G(KS+1,i,j,I_XYW) &
-                      - ( MOMY(KS  ,i,j) + MOMY(KS  ,i  ,j-1) ) * J23G(KS  ,i,j,I_XYW) ) * RFDZ(KS) &
-                    + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                    * ( ( MOMX(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                        - MOMX(KS,i-1,j  ) * GSQRT(KS,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                      + ( MOMY(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                        - MOMY(KS,i,  j-1) * GSQRT(KS,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-       DDIV(KE,i,j) = J33G * ( - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
-                    + ( ( MOMX(KE  ,i,j) + MOMX(KE  ,i-1,j  ) ) * J13G(KE  ,i,j,I_XYW) &
-                      - ( MOMX(KE-1,i,j) + MOMX(KE-1,i-1,j  ) ) * J13G(KE-1,i,j,I_XYW) &
-                      + ( MOMY(KE  ,i,j) + MOMY(KE  ,i  ,j-1) ) * J23G(KE  ,i,j,I_XYW) &
-                      - ( MOMY(KE-1,i,j) + MOMY(KE-1,i  ,j-1) ) * J23G(KE-1,i,j,I_XYW) ) * RFDZ(KE) &
-                    + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
-                    * ( ( MOMX(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
-                        - MOMX(KE,i-1,j  ) * GSQRT(KE,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
-                      + ( MOMY(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
-                        - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
-    enddo
-    enddo
+       !$omp parallel do private(j) OMP_SCHEDULE_
+       do j = JS, JE+1
+          DDIV(KS,IS,j) = J33G * ( MOMZ(KS,IS,j) ) * RCDZ(KS) &
+                         + ( ( MOMY(KS+1,IS,j) + MOMY(KS+1,IS,j-1) ) * J23G(KS+1,IS,j,I_XYW) &
+                           - ( MOMY(KS  ,IS,j) + MOMY(KS  ,IS,j-1) ) * J23G(KS  ,IS,j,I_XYW) ) * RFDZ(KS) &
+                       + MAPF(IS,j,2,I_XY) &
+                       * ( MOMY(KS,IS,j  ) * GSQRT(KS,IS,j  ,I_XVZ) / MAPF(IS,j  ,1,I_XV) &
+                         - MOMY(KS,IS,j-1) * GSQRT(KS,IS,j-1,I_XVZ) / MAPF(IS,j-1,1,I_XV) ) * RCDY(j)
+          DDIV(KE,IS,j) = J33G * ( - MOMZ(KE-1,IS,j  ) ) * RCDZ(KE) &
+                       + ( ( MOMY(KE  ,IS,j) + MOMY(KE  ,IS,j-1) ) * J23G(KE  ,IS,j,I_XYW) &
+                         - ( MOMY(KE-1,IS,j) + MOMY(KE-1,IS,j-1) ) * J23G(KE-1,IS,j,I_XYW) ) * RFDZ(KE) &
+                       + MAPF(IS,j,2,I_XY) &
+                       * ( MOMY(KE,IS,j  ) * GSQRT(KE,IS,j  ,I_XVZ) / MAPF(IS,j  ,1,I_XV) &
+                         - MOMY(KE,IS,j-1) * GSQRT(KE,IS,j-1,I_XVZ) / MAPF(IS,j-1,1,I_XV) ) * RCDY(j)
+       enddo
 #ifdef DEBUG
-    k = IUNDEF; i = IUNDEF; j = IUNDEF
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+    else
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE+1
+       do i = IS, IE+1
+       do k = KS-1, KE+1
+          DDIV(k,i,j) = J33G * ( MOMZ(k,i,j) - MOMZ(k-1,i  ,j  ) ) * RCDZ(k) &
+                      + ( ( MOMX(k+1,i,j) + MOMX(k+1,i-1,j  ) ) * J13G(k+1,i,j,I_XYW) &
+                        - ( MOMX(k-1,i,j) + MOMX(k-1,i-1,j  ) ) * J13G(k-1,i,j,I_XYW) &
+                        + ( MOMY(k+1,i,j) + MOMY(k+1,i  ,j-1) ) * J23G(k+1,i,j,I_XYW) &
+                        - ( MOMY(k-1,i,j) + MOMY(k-1,i  ,j-1) ) * J23G(k-1,i,j,I_XYW) ) / ( FDZ(k)+FDZ(k-1) ) &
+                      + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                      * ( ( MOMX(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                          - MOMX(k,i-1,j  ) * GSQRT(k,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                        + ( MOMY(k,i  ,j  ) * GSQRT(k,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                          - MOMY(k,i,  j-1) * GSQRT(k,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+       enddo
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE+1
+       do i = IS, IE+1
+          DDIV(KS,i,j) = J33G * ( MOMZ(KS,i,j) ) * RCDZ(KS) &
+                       + ( ( MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j  ) ) * J13G(KS+1,i,j,I_XYW) &
+                         - ( MOMX(KS-1,i,j) + MOMX(KS  ,i-1,j  ) ) * J13G(KS  ,i,j,I_XYW) &
+                         + ( MOMY(KS+1,i,j) + MOMY(KS+1,i  ,j-1) ) * J23G(KS+1,i,j,I_XYW) &
+                         - ( MOMY(KS  ,i,j) + MOMY(KS  ,i  ,j-1) ) * J23G(KS  ,i,j,I_XYW) ) * RFDZ(KS) &
+                       + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                       * ( ( MOMX(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                           - MOMX(KS,i-1,j  ) * GSQRT(KS,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                         + ( MOMY(KS,i  ,j  ) * GSQRT(KS,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                           - MOMY(KS,i,  j-1) * GSQRT(KS,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+          DDIV(KE,i,j) = J33G * ( - MOMZ(KE-1,i  ,j  ) ) * RCDZ(KE) &
+                       + ( ( MOMX(KE  ,i,j) + MOMX(KE  ,i-1,j  ) ) * J13G(KE  ,i,j,I_XYW) &
+                         - ( MOMX(KE-1,i,j) + MOMX(KE-1,i-1,j  ) ) * J13G(KE-1,i,j,I_XYW) &
+                         + ( MOMY(KE  ,i,j) + MOMY(KE  ,i  ,j-1) ) * J23G(KE  ,i,j,I_XYW) &
+                         - ( MOMY(KE-1,i,j) + MOMY(KE-1,i  ,j-1) ) * J23G(KE-1,i,j,I_XYW) ) * RFDZ(KE) &
+                       + MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) &
+                       * ( ( MOMX(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_UYZ) / MAPF(i  ,j  ,2,I_UY) &
+                           - MOMX(KE,i-1,j  ) * GSQRT(KE,i-1,j  ,I_UYZ) / MAPF(i-1,j  ,2,I_UY) ) * RCDX(i) &
+                         + ( MOMY(KE,i  ,j  ) * GSQRT(KE,i  ,j  ,I_XVZ) / MAPF(i  ,j  ,1,I_XV) &
+                           - MOMY(KE,i,  j-1) * GSQRT(KE,i  ,j-1,I_XVZ) / MAPF(i  ,j-1,1,I_XV) ) * RCDY(j) )
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+    end if
     call PROF_rapend  ("DYN_divercence", 2)
 
     return
@@ -1646,10 +1847,11 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine calc_numdiff(&
-       work, iwork,       & ! (out)
-       data,              & ! (in)
-       nd_laplacian_num,  & ! (in)
-       KO, IO, JO, KEE    ) ! (in)
+       work, iwork,       &
+       data,              &
+       TwoD,              &
+       nd_laplacian_num,  &
+       KO, IO, JO, KEE    )
    
     use scale_prc, only: PRC_abort
     use scale_comm_cartesC, only: &
@@ -1660,6 +1862,7 @@ contains
     real(RP), intent(out) :: work(KA,IA,JA,3,2)
     integer,  intent(out) :: iwork
     real(RP), intent(in)  :: data(KA,IA,JA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: nd_laplacian_num
     integer,  intent(in)  :: KO
     integer,  intent(in)  :: IO
@@ -1675,19 +1878,22 @@ contains
 
     if (mod(nd_laplacian_num,2)==0) then
       call calc_diff3( work(:,:,:,:,1), & ! (out)
-                        data,           & ! (in)
-                        KO, IO, JO )      ! (in)
+                       data,           & ! (in)
+                       TwoD,           & ! (in)
+                       KO, IO, JO )      ! (in)
       ho4_itr_num = nd_laplacian_num / 2
     else if (mod(nd_laplacian_num,2)==1 .and. nd_laplacian_num <= 3) then
       call calc_diff1( work(:,:,:,:,1), & ! (out)
-                        data,           & ! (in)
-                        KO, IO, JO )      ! (in)      
+                       data,           & ! (in)
+                       TwoD,           & ! (in)
+                       KO, IO, JO )      ! (in)      
       ho4_itr_num = nd_laplacian_num / 2 + 1
     else
       LOG_ERROR('calc_numdiff',*) 'Numerical filter with nd_laplacian_num=', nd_laplacian_num
       LOG_ERROR_CONT(*) 'is not supported. Check!'
       call PRC_abort    
     end if
+
     call PROF_rapend  ("NumFilter_Main", 3)
 
     !###########################################################################
@@ -1702,10 +1908,12 @@ contains
        call PROF_rapstart("NumFilter_Comm", 3)
 
        call COMM_vars8( work(:,:,:,ZDIR,i_in),  16 )
+       if ( .not. TwoD ) &
        call COMM_vars8( work(:,:,:,XDIR,i_in),  17 )
        call COMM_vars8( work(:,:,:,YDIR,i_in),  18 )
 
        call COMM_wait ( work(:,:,:,ZDIR,i_in),  16 )
+       if ( .not. TwoD ) &
        call COMM_wait ( work(:,:,:,XDIR,i_in),  17 )
        call COMM_wait ( work(:,:,:,YDIR,i_in),  18 )
 
@@ -1718,6 +1926,7 @@ contains
                         CNZ4(:,:,1+KO),      & ! (in)
                         CNX4(:,:,1+IO),      & ! (in)
                         CNY4(:,:,1+JO),      & ! (in)
+                        TwoD,                & ! (in)
                         KEE                  ) ! (in)
 
        call PROF_rapend  ("NumFilter_Main", 3)
@@ -1737,12 +1946,14 @@ contains
   subroutine calc_diff1( &
     diff,                &
     phi,                 &
+    TwoD,                &
     KO, IO, JO           )
 
     implicit none
    
     real(RP), intent(out) :: diff(KA,IA,JA,3)
     real(RP), intent(in ) :: phi(KA,IA,JA)
+    logical,  intent(in ) :: TwoD
     integer , intent(in ) :: KO
     integer , intent(in ) :: IO
     integer , intent(in ) :: JO
@@ -1816,29 +2027,33 @@ contains
 
 
     !$omp parallel default(none) private(i,j,k)                   &
-    !$omp shared(IO,IS,IE,JO,JS,JE,KS,KE,KA,KEE,phi,diff,CNX1,CNY1)
+    !$omp shared(IO,IS,IE,JO,JS,JE,KS,KE,KA,KEE,phi,diff,CNX1,CNY1,TwoD)
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KEE
+    if ( .not. TwoD ) then
+
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KEE
 #ifdef DEBUG
-      call CHECK( __LINE__, phi(k,i+1-IO,j) )
-      call CHECK( __LINE__, phi(k,i  -IO,j) )
+          call CHECK( __LINE__, phi(k,i+1-IO,j) )
+          call CHECK( __LINE__, phi(k,i  -IO,j) )
 #endif
-      diff(k,i,j,XDIR) = CNX1(i,1+IO) * ( phi(k,i+1-IO,j) - phi(k,i-IO,j) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-      diff(   1:KS-1,i,j,XDIR) = 0.0_RP
-      diff(KE+1:KA  ,i,j,XDIR) = 0.0_RP
-    enddo
-    enddo
-    !$omp end do
+          diff(k,i,j,XDIR) = CNX1(i,1+IO) * ( phi(k,i+1-IO,j) - phi(k,i-IO,j) )
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+          diff(   1:KS-1,i,j,XDIR) = 0.0_RP
+          diff(KE+1:KA  ,i,j,XDIR) = 0.0_RP
+       enddo
+       enddo
+       !$omp end do
+
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -1861,6 +2076,7 @@ contains
     enddo
     enddo
     !$omp end do nowait
+
     !$omp end parallel
 
     return
@@ -1870,12 +2086,13 @@ contains
   subroutine calc_diff3( &
        diff,             &
        phi,              &
+       TwoD,             &
        KO, IO, JO        )
-   
     implicit none
     
     real(RP), intent(out) :: diff(KA,IA,JA,3)
     real(RP), intent(in ) :: phi(KA,IA,JA)
+    logical,  intent(in ) :: TwoD
     integer , intent(in ) :: KO
     integer , intent(in ) :: IO
     integer , intent(in ) :: JO
@@ -1994,53 +2211,55 @@ contains
        !$omp end parallel 
     end if
 
-    if ( IO == 0 ) then
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
+    if ( .not. TwoD ) then
+       if ( IO == 0 ) then
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KEE
+#ifdef DEBUG
+             call CHECK( __LINE__, phi(k,i+2,j) )
+             call CHECK( __LINE__, phi(k,i+1,j) )
+             call CHECK( __LINE__, phi(k,i  ,j) )
+             call CHECK( __LINE__, phi(k,i-1,j) )
+#endif
+             diff(k,i,j,XDIR) = ( + CNX3(1,i+1,1) * phi(k,i+2,j) &
+                                  - CNX3(2,i+1,1) * phi(k,i+1,j) &
+                                  + CNX3(3,i+1,1) * phi(k,i  ,j) &
+                                  - CNX3(1,i  ,1) * phi(k,i-1,j) )
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
+          !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KEE
+#ifdef DEBUG
+             call CHECK( __LINE__, phi(k,i+1,j) )
+             call CHECK( __LINE__, phi(k,i  ,j) )
+             call CHECK( __LINE__, phi(k,i-1,j) )
+             call CHECK( __LINE__, phi(k,i-2,j) )
+#endif
+             diff(k,i,j,XDIR) = ( + CNX3(1,i  ,2) * phi(k,i+1,j) &
+                                  - CNX3(2,i  ,2) * phi(k,i  ,j) &
+                                  + CNX3(3,i  ,2) * phi(k,i-1,j) &
+                                  - CNX3(1,i-1,2) * phi(k,i-2,j) )
+          enddo
+          enddo
+          enddo
+       end if
+
+       !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
        do i = IS, IE
-       do k = KS, KEE
-#ifdef DEBUG
-          call CHECK( __LINE__, phi(k,i+2,j) )
-          call CHECK( __LINE__, phi(k,i+1,j) )
-          call CHECK( __LINE__, phi(k,i  ,j) )
-          call CHECK( __LINE__, phi(k,i-1,j) )
-#endif
-          diff(k,i,j,XDIR) = ( + CNX3(1,i+1,1) * phi(k,i+2,j) &
-                               - CNX3(2,i+1,1) * phi(k,i+1,j) &
-                               + CNX3(3,i+1,1) * phi(k,i  ,j) &
-                               - CNX3(1,i  ,1) * phi(k,i-1,j) )
-       enddo
-       enddo
-       enddo
-    else
-       !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(JS,JE,IS,IE,KS,KEE,phi,diff,CNX3)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KEE
-#ifdef DEBUG
-          call CHECK( __LINE__, phi(k,i+1,j) )
-          call CHECK( __LINE__, phi(k,i  ,j) )
-          call CHECK( __LINE__, phi(k,i-1,j) )
-          call CHECK( __LINE__, phi(k,i-2,j) )
-#endif
-          diff(k,i,j,XDIR) = ( + CNX3(1,i  ,2) * phi(k,i+1,j) &
-                               - CNX3(2,i  ,2) * phi(k,i  ,j) &
-                               + CNX3(3,i  ,2) * phi(k,i-1,j) &
-                               - CNX3(1,i-1,2) * phi(k,i-2,j) )
-       enddo
+          diff(   1:KS-1,i,j,XDIR) = 0.0_RP
+          diff(KE+1:KA  ,i,j,XDIR) = 0.0_RP
        enddo
        enddo
     end if
-
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-       diff(   1:KS-1,i,j,XDIR) = 0.0_RP
-       diff(KE+1:KA  ,i,j,XDIR) = 0.0_RP
-    enddo
-    enddo
 
     if ( JO == 0 ) then
        !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
@@ -2100,6 +2319,7 @@ contains
        CNZ4,         &
        CNX4,         &
        CNY4,         &
+       TwoD,         &
        k1            )
     implicit none
 
@@ -2108,6 +2328,7 @@ contains
     real(RP), intent(in)  :: CNZ4(5,KA)
     real(RP), intent(in)  :: CNX4(5,IA)
     real(RP), intent(in)  :: CNY4(5,JA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: k1
 
     integer :: i, j, k
@@ -2152,32 +2373,34 @@ contains
     enddo
     !$omp end do nowait
 
-    !$omp do OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, K1
+    if ( .not. TwoD ) then
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, K1
 #ifdef DEBUG
-       call CHECK( __LINE__, CNX4(1,i) )
-       call CHECK( __LINE__, CNX4(2,i) )
-       call CHECK( __LINE__, CNX4(3,i) )
-       call CHECK( __LINE__, CNX4(4,i) )
-       call CHECK( __LINE__, CNX4(5,i) )
-       call CHECK( __LINE__, num_diff_pt0(k,i-2,j,XDIR) )
-       call CHECK( __LINE__, num_diff_pt0(k,i+1,j,XDIR) )
-       call CHECK( __LINE__, num_diff_pt0(k,i  ,j,XDIR) )
-       call CHECK( __LINE__, num_diff_pt0(k,i-1,j,XDIR) )
-       call CHECK( __LINE__, num_diff_pt0(k,i-2,j,XDIR) )
+          call CHECK( __LINE__, CNX4(1,i) )
+          call CHECK( __LINE__, CNX4(2,i) )
+          call CHECK( __LINE__, CNX4(3,i) )
+          call CHECK( __LINE__, CNX4(4,i) )
+          call CHECK( __LINE__, CNX4(5,i) )
+          call CHECK( __LINE__, num_diff_pt0(k,i-2,j,XDIR) )
+          call CHECK( __LINE__, num_diff_pt0(k,i+1,j,XDIR) )
+          call CHECK( __LINE__, num_diff_pt0(k,i  ,j,XDIR) )
+          call CHECK( __LINE__, num_diff_pt0(k,i-1,j,XDIR) )
+          call CHECK( __LINE__, num_diff_pt0(k,i-2,j,XDIR) )
 #endif
-       num_diff_pt1(k,i,j,XDIR) = &
+          num_diff_pt1(k,i,j,XDIR) = &
                     ( CNX4(1,i) * num_diff_pt0(k,i+2,j,XDIR) &
                     - CNX4(2,i) * num_diff_pt0(k,i+1,j,XDIR) &
                     + CNX4(3,i) * num_diff_pt0(k,i  ,j,XDIR) &
                     - CNX4(4,i) * num_diff_pt0(k,i-1,j,XDIR) &
                     + CNX4(5,i) * num_diff_pt0(k,i-2,j,XDIR) )
-    enddo
-    enddo
-    enddo
-    !$omp end do nowait
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
+    end if
 
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -2219,7 +2442,8 @@ contains
        qflx_hi, qflx_lo,    &
        mflx_hi,             &
        rdz, rdx, rdy,       &
-       GSQRT, MAPF, dt,     &
+       GSQRT, MAPF,         &
+       TwoD, dt,            &
        flag_vect )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
@@ -2247,6 +2471,7 @@ contains
     real(RP), intent(in) :: GSQRT(KA,IA,JA) !< vertical metrics {G}^1/2
     real(RP), intent(in) :: MAPF(IA,JA,2)   !< map factor
 
+    logical,  intent(in) :: TwoD
     real(RP), intent(in) :: dt
 
     logical, intent(in) :: flag_vect
@@ -2313,21 +2538,25 @@ contains
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
+
+       if ( .not. TwoD ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS  , JJE
+          do i = IIS-1, IIE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k,i,j,XDIR) )
-          call CHECK( __LINE__, qflx_lo(k,i,j,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k,i,j,XDIR) )
+             call CHECK( __LINE__, qflx_lo(k,i,j,XDIR) )
 #endif
-          qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
-       enddo
-       enddo
-       enddo
+             qflx_anti(k,i,j,XDIR) = qflx_hi(k,i,j,XDIR) - qflx_lo(k,i,j,XDIR)
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       end if
+
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE
        do i = IIS  , IIE
@@ -2345,76 +2574,130 @@ contains
 #endif
 
        !--- update monotone scheme
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS-1, JJE+1
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_in(k,i,j) )
-          call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_lo(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_lo(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, phi_in(k,IS,j) )
+             call CHECK( __LINE__, qflx_lo(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_lo(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,IS,j-1,YDIR) )
 #endif
-          phi_lo(k,i,j) = ( phi_in(k,i,j) * DENS0(k,i,j) &
-                          + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
-                                     + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
-                                     + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) &
-                                     ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)                 ) &
-                          ) / DENS(k,i,j)
-       enddo
-       enddo
-       enddo
+             phi_lo(k,IS,j) = ( phi_in(k,IS,j) * DENS0(k,IS,j) &
+                            + dt * ( - ( ( qflx_lo(k,IS,j,ZDIR)-qflx_lo(k-1,IS,j  ,ZDIR) ) * RDZ(k) &
+                                       + ( qflx_lo(k,IS,j,YDIR)-qflx_lo(k  ,IS,j-1,YDIR) ) * RDY(j) &
+                                       ) * MAPF(IS,j,2) / GSQRT(k,IS,j)                  ) &
+                             ) / DENS(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS-1, JJE+1
+          do i = IIS-1, IIE+1
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, phi_in(k,i,j) )
+             call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_lo(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_lo(k  ,i  ,j-1,YDIR) )
+#endif
+             phi_lo(k,i,j) = ( phi_in(k,i,j) * DENS0(k,i,j) &
+                             + dt * ( - ( ( qflx_lo(k,i,j,ZDIR)-qflx_lo(k-1,i  ,j  ,ZDIR) ) * RDZ(k) &
+                                        + ( qflx_lo(k,i,j,XDIR)-qflx_lo(k  ,i-1,j  ,XDIR) ) * RDX(i) &
+                                        + ( qflx_lo(k,i,j,YDIR)-qflx_lo(k  ,i  ,j-1,YDIR) ) * RDY(j) &
+                                        ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)                 ) &
+                             ) / DENS(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        !--- calc net incoming quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j-1,YDIR) )
 #endif
-          pjpls(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) - min(0.0_RP,qflx_anti(k,i,j,ZDIR)) ) * RDZ(k) &
-                              + ( max(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) - min(0.0_RP,qflx_anti(k,i,j,XDIR)) ) * RDX(i) &
-                              + ( max(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,i,j,YDIR)) ) * RDY(j) &
-                              ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-       enddo
-       enddo
-       enddo
+             pjpls(k,IS,j) = dt * ( ( max(0.0_RP,qflx_anti(k-1,IS ,j  ,ZDIR)) - min(0.0_RP,qflx_anti(k,IS,j,ZDIR)) ) * RDZ(k) &
+                                  + ( max(0.0_RP,qflx_anti(k  ,IS,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,IS,j,YDIR)) ) * RDY(j) &
+                                 ) * MAPF(IS,j,2) / GSQRT(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             pjpls(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) - min(0.0_RP,qflx_anti(k,i,j,ZDIR)) ) * RDZ(k) &
+                                 + ( max(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) - min(0.0_RP,qflx_anti(k,i,j,XDIR)) ) * RDX(i) &
+                                 + ( max(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) - min(0.0_RP,qflx_anti(k,i,j,YDIR)) ) * RDY(j) &
+                                 ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
        !--- calc net outgoing quantity change by antidiffusive flux
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,IS,j-1,YDIR) )
 #endif
-          pjmns(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k,i,j,ZDIR)) - min(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) ) * RDZ(k) &
-                              + ( max(0.0_RP,qflx_anti(k,i,j,XDIR)) - min(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) ) * RDX(i) &
-                              + ( max(0.0_RP,qflx_anti(k,i,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) ) * RDY(j) &
-                              ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
-       enddo
-       enddo
-       enddo
+             pjmns(k,IS,j) = dt * ( ( max(0.0_RP,qflx_anti(k,IS,j,ZDIR)) - min(0.0_RP,qflx_anti(k-1,IS,j  ,ZDIR)) ) * RDZ(k) &
+                                  + ( max(0.0_RP,qflx_anti(k,IS,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,IS,j-1,YDIR)) ) * RDY(j) &
+                                  ) * MAPF(IS,j,2) / GSQRT(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_anti(k  ,i  ,j-1,YDIR) )
+#endif
+             pjmns(k,i,j) = dt * ( ( max(0.0_RP,qflx_anti(k,i,j,ZDIR)) - min(0.0_RP,qflx_anti(k-1,i  ,j  ,ZDIR)) ) * RDZ(k) &
+                                 + ( max(0.0_RP,qflx_anti(k,i,j,XDIR)) - min(0.0_RP,qflx_anti(k  ,i-1,j  ,XDIR)) ) * RDX(i) &
+                                 + ( max(0.0_RP,qflx_anti(k,i,j,YDIR)) - min(0.0_RP,qflx_anti(k  ,i  ,j-1,YDIR)) ) * RDY(j) &
+                                 ) * MAPF(i,j,1) * MAPF(i,j,2) / GSQRT(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2423,389 +2706,625 @@ contains
 
        if (flag_vect) then
 
-       !$omp parallel do private(i,j,k,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
-          rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! 2 * rho * w / dz
-          ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
-          rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+          if ( TwoD ) then
+             i = IS
+             !$omp parallel do private(j,k,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_
+             do j = JJS, JJE
+             do k = KS+1, KE-1
+                rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! 2 * rho * w / dz
+                ru = 0.0_RP
+                rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
 
-          call get_fact_fct( fact, & ! (out)
-                             rw, ru, rv ) ! (in)
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
 
-          qa_in = fact(1, 1, 1) * phi_in(k+1,i+1,j+1) &
-                + fact(0, 1, 1) * phi_in(k  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_in(k+1,i  ,j+1) &
-                + fact(0, 0, 1) * phi_in(k  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_in(k+1,i-1,j+1) &
-                + fact(1, 1, 0) * phi_in(k+1,i+1,j  ) &
-                + fact(0, 1, 0) * phi_in(k  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_in(k+1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(k+1,i-1,j  ) &
-                + fact(1, 1,-1) * phi_in(k+1,i+1,j-1) &
-                + fact(0, 1,-1) * phi_in(k  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_in(k+1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(k+1,i-1,j-1) &
-                + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
-          qb_in = fact(1, 1, 1) * phi_in(k-1,i-1,j-1) &
-                + fact(0, 1, 1) * phi_in(k  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_in(k-1,i  ,j-1) &
-                + fact(0, 0, 1) * phi_in(k  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_in(k-1,i+1,j-1) &
-                + fact(1, 1, 0) * phi_in(k-1,i-1,j  ) &
-                + fact(0, 1, 0) * phi_in(k  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_in(k-1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(k-1,i+1,j  ) &
-                + fact(1, 1,-1) * phi_in(k-1,i-1,j+1) &
-                + fact(0, 1,-1) * phi_in(k  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_in(k-1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(k-1,i+1,j+1) &
-                + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
-          qa_lo = fact(1, 1, 1) * phi_lo(k+1,i+1,j+1) &
-                + fact(0, 1, 1) * phi_lo(k  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_lo(k+1,i  ,j+1) &
-                + fact(0, 0, 1) * phi_lo(k  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_lo(k+1,i-1,j+1) &
-                + fact(1, 1, 0) * phi_lo(k+1,i+1,j  ) &
-                + fact(0, 1, 0) * phi_lo(k  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_lo(k+1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(k+1,i-1,j  ) &
-                + fact(1, 1,-1) * phi_lo(k+1,i+1,j-1) &
-                + fact(0, 1,-1) * phi_lo(k  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_lo(k+1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(k+1,i-1,j-1) &
-                + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
-          qb_lo = fact(1, 1, 1) * phi_lo(k-1,i-1,j-1) &
-                + fact(0, 1, 1) * phi_lo(k  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_lo(k-1,i  ,j-1) &
-                + fact(0, 0, 1) * phi_lo(k  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_lo(k-1,i+1,j-1) &
-                + fact(1, 1, 0) * phi_lo(k-1,i-1,j  ) &
-                + fact(0, 1, 0) * phi_lo(k  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_lo(k-1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(k-1,i+1,j  ) &
-                + fact(1, 1,-1) * phi_lo(k-1,i-1,j+1) &
-                + fact(0, 1,-1) * phi_lo(k  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_lo(k-1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(k-1,i+1,j+1) &
-                + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
+                qa_in = fact(1, 0, 1) * phi_in(k+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(k  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_in(k+1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(k+1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
+                qb_in = fact(1, 0, 1) * phi_in(k-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(k  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_in(k-1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(k-1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
+                qa_lo = fact(1, 0, 1) * phi_lo(k+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(k  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_lo(k+1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(k+1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
+                qb_lo = fact(1, 0, 1) * phi_lo(k-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(k  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_lo(k-1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(k-1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
 
-          qmax = max( &
-               phi_in(k,i,j), qa_in, qb_in, &
-               phi_lo(k,i,j), qa_lo, qb_lo  )
-          qmin = min( &
-               phi_in(k,i,j), qa_in, qb_in, &
-               phi_lo(k,i,j), qa_lo, qb_lo  )
-          qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
-          qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
-       end do
-       end do
-       end do
+                qmax = max( &
+                     phi_in(k,i,j), qa_in, qb_in, &
+                     phi_lo(k,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(k,i,j), qa_in, qb_in, &
+                     phi_lo(k,i,j), qa_lo, qb_lo  )
+                qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+                qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+             end do
+             end do
 
-       ! k = KS
-       !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-          rw = (mflx_hi(KS,i,j,ZDIR)                           ) * RDZ(KS)! 2 * rho * w / dz
-          ru = (mflx_hi(KS,i,j,XDIR)+mflx_hi(KS  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
-          rv = (mflx_hi(KS,i,j,YDIR)+mflx_hi(KS  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+             ! k = KS
+             !$omp parallel do private(j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_
+             do j = JJS, JJE
+                rw = (mflx_hi(KS,i,j,ZDIR)                           ) * RDZ(KS)! 2 * rho * w / dz
+                ru = 0.0_RP
+                rv = (mflx_hi(KS,i,j,YDIR)+mflx_hi(KS  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
 
-          call get_fact_fct( fact, & ! (out)
-                             rw, ru, rv ) ! (in)
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
 
-          qa_in = fact(1, 1, 1) * phi_in(KS+1,i+1,j+1) &
-                + fact(0, 1, 1) * phi_in(KS  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_in(KS+1,i  ,j+1) &
-                + fact(0, 0, 1) * phi_in(KS  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_in(KS+1,i-1,j+1) &
-                + fact(1, 1, 0) * phi_in(KS+1,i+1,j  ) &
-                + fact(0, 1, 0) * phi_in(KS  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_in(KS+1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(KS+1,i-1,j  ) &
-                + fact(1, 1,-1) * phi_in(KS+1,i+1,j-1) &
-                + fact(0, 1,-1) * phi_in(KS  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_in(KS+1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(KS+1,i-1,j-1) &
-                + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
-          qb_in = fact(1, 1, 1) * phi_in(KS  ,i-1,j-1) &
-                + fact(0, 1, 1) * phi_in(KS  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_in(KS  ,i  ,j-1) &
-                + fact(0, 0, 1) * phi_in(KS  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_in(KS  ,i+1,j-1) &
-                + fact(1, 1, 0) * phi_in(KS  ,i-1,j  ) &
-                + fact(0, 1, 0) * phi_in(KS  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_in(KS  ,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(KS  ,i+1,j  ) &
-                + fact(1, 1,-1) * phi_in(KS  ,i-1,j+1) &
-                + fact(0, 1,-1) * phi_in(KS  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_in(KS  ,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(KS  ,i+1,j+1) &
-                + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
-          qa_lo = fact(1, 1, 1) * phi_lo(KS+1,i+1,j+1) &
-                + fact(0, 1, 1) * phi_lo(KS  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_lo(KS+1,i  ,j+1) &
-                + fact(0, 0, 1) * phi_lo(KS  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_lo(KS+1,i-1,j+1) &
-                + fact(1, 1, 0) * phi_lo(KS+1,i+1,j  ) &
-                + fact(0, 1, 0) * phi_lo(KS  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_lo(KS+1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(KS+1,i-1,j  ) &
-                + fact(1, 1,-1) * phi_lo(KS+1,i+1,j-1) &
-                + fact(0, 1,-1) * phi_lo(KS  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_lo(KS+1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(KS+1,i-1,j-1) &
-                + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
-          qb_lo = fact(1, 1, 1) * phi_lo(KS  ,i-1,j-1) &
-                + fact(0, 1, 1) * phi_lo(KS  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_lo(KS  ,i  ,j-1) &
-                + fact(0, 0, 1) * phi_lo(KS  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_lo(KS  ,i+1,j-1) &
-                + fact(1, 1, 0) * phi_lo(KS  ,i-1,j  ) &
-                + fact(0, 1, 0) * phi_lo(KS  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_lo(KS  ,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(KS  ,i+1,j  ) &
-                + fact(1, 1,-1) * phi_lo(KS  ,i-1,j+1) &
-                + fact(0, 1,-1) * phi_lo(KS  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_lo(KS  ,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(KS  ,i+1,j+1) &
-                + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
+                qa_in = fact(1, 0, 1) * phi_in(KS+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(KS  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_in(KS+1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(KS+1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
+                qb_in = fact(1, 0, 1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_in(KS  ,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
+                qa_lo = fact(1, 0, 1) * phi_lo(KS+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(KS  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_lo(KS+1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(KS+1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
+                qb_lo = fact(1, 0, 1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_lo(KS  ,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
 
-          qmax = max( &
-               phi_in(KS,i,j), qa_in, qb_in, &
-               phi_lo(KS,i,j), qa_lo, qb_lo  )
-          qmin = min( &
-               phi_in(KS,i,j), qa_in, qb_in, &
-               phi_lo(KS,i,j), qa_lo, qb_lo  )
-          qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
-          qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
-       end do
-       end do
+                qmax = max( &
+                     phi_in(KS,i,j), qa_in, qb_in, &
+                     phi_lo(KS,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(KS,i,j), qa_in, qb_in, &
+                     phi_lo(KS,i,j), qa_lo, qb_lo  )
+                qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
+                qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
+             end do
 
-       ! k = KE
-       !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-          rw = (                     mflx_hi(KE-1,i  ,j  ,ZDIR)) * RDZ(KE)! 2 * rho * w / dz
-          ru = (mflx_hi(KE,i,j,XDIR)+mflx_hi(KE  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
-          rv = (mflx_hi(KE,i,j,YDIR)+mflx_hi(KE  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+             ! k = KE
+             !$omp parallel do private(j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_
+             do j = JJS, JJE
+                rw = (                     mflx_hi(KE-1,i  ,j  ,ZDIR)) * RDZ(KE)! 2 * rho * w / dz
+                ru = 0.0_RP
+                rv = (mflx_hi(KE,i,j,YDIR)+mflx_hi(KE  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
 
-          call get_fact_fct( fact, & ! (out)
-                             rw, ru, rv ) ! (in)
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
 
-          qa_in = fact(1, 1, 1) * phi_in(KE  ,i+1,j+1) &
-                + fact(0, 1, 1) * phi_in(KE  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_in(KE  ,i  ,j+1) &
-                + fact(0, 0, 1) * phi_in(KE  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_in(KE  ,i-1,j+1) &
-                + fact(1, 1, 0) * phi_in(KE  ,i+1,j  ) &
-                + fact(0, 1, 0) * phi_in(KE  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_in(KE  ,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(KE  ,i-1,j  ) &
-                + fact(1, 1,-1) * phi_in(KE  ,i+1,j-1) &
-                + fact(0, 1,-1) * phi_in(KE  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_in(KE  ,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(KE  ,i-1,j-1) &
-                + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
-          qb_in = fact(1, 1, 1) * phi_in(KE-1,i-1,j-1) &
-                + fact(0, 1, 1) * phi_in(KE  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_in(KE-1,i  ,j-1) &
-                + fact(0, 0, 1) * phi_in(KE  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_in(KE-1,i+1,j-1) &
-                + fact(1, 1, 0) * phi_in(KE-1,i-1,j  ) &
-                + fact(0, 1, 0) * phi_in(KE  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_in(KE-1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_in(KE-1,i+1,j  ) &
-                + fact(1, 1,-1) * phi_in(KE-1,i-1,j+1) &
-                + fact(0, 1,-1) * phi_in(KE  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_in(KE-1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_in(KE-1,i+1,j+1) &
-                + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
-          qa_lo = fact(1, 1, 1) * phi_lo(KE  ,i+1,j+1) &
-                + fact(0, 1, 1) * phi_lo(KE  ,i+1,j+1) &
-                + fact(1, 0, 1) * phi_lo(KE  ,i  ,j+1) &
-                + fact(0, 0, 1) * phi_lo(KE  ,i  ,j+1) &
-                + fact(1,-1, 1) * phi_lo(KE  ,i-1,j+1) &
-                + fact(1, 1, 0) * phi_lo(KE  ,i+1,j  ) &
-                + fact(0, 1, 0) * phi_lo(KE  ,i+1,j  ) &
-                + fact(1, 0, 0) * phi_lo(KE  ,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(KE  ,i-1,j  ) &
-                + fact(1, 1,-1) * phi_lo(KE  ,i+1,j-1) &
-                + fact(0, 1,-1) * phi_lo(KE  ,i+1,j-1) &
-                + fact(1, 0,-1) * phi_lo(KE  ,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(KE  ,i-1,j-1) &
-                + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
-          qb_lo = fact(1, 1, 1) * phi_lo(KE-1,i-1,j-1) &
-                + fact(0, 1, 1) * phi_lo(KE  ,i-1,j-1) &
-                + fact(1, 0, 1) * phi_lo(KE-1,i  ,j-1) &
-                + fact(0, 0, 1) * phi_lo(KE  ,i  ,j-1) &
-                + fact(1,-1, 1) * phi_lo(KE-1,i+1,j-1) &
-                + fact(1, 1, 0) * phi_lo(KE-1,i-1,j  ) &
-                + fact(0, 1, 0) * phi_lo(KE  ,i-1,j  ) &
-                + fact(1, 0, 0) * phi_lo(KE-1,i  ,j  ) &
-                + fact(1,-1, 0) * phi_lo(KE-1,i+1,j  ) &
-                + fact(1, 1,-1) * phi_lo(KE-1,i-1,j+1) &
-                + fact(0, 1,-1) * phi_lo(KE  ,i-1,j-1) &
-                + fact(1, 0,-1) * phi_lo(KE-1,i  ,j-1) &
-                + fact(1,-1,-1) * phi_lo(KE-1,i+1,j+1) &
-                + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
+                qa_in = fact(1, 0, 1) * phi_in(KE  ,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(KE  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_in(KE  ,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(KE  ,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
+                qb_in = fact(1, 0, 1) * phi_in(KE-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(KE  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_in(KE-1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_in(KE-1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
+                qa_lo = fact(1, 0, 1) * phi_lo(KE  ,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(KE  ,i  ,j+1) &
+                      + fact(1, 0, 0) * phi_lo(KE  ,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(KE  ,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
+                qb_lo = fact(1, 0, 1) * phi_lo(KE-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(KE  ,i  ,j-1) &
+                      + fact(1, 0, 0) * phi_lo(KE-1,i  ,j  ) &
+                      + fact(1, 0,-1) * phi_lo(KE-1,i  ,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
 
-          qmax = max( &
-               phi_in(KE,i,j), qa_in, qb_in, &
-               phi_lo(KE,i,j), qa_lo, qb_lo  )
-          qmin = min( &
-               phi_in(KE,i,j), qa_in, qb_in, &
-               phi_lo(KE,i,j), qa_lo, qb_lo  )
-          qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
-          qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
-       end do
-       end do
+                qmax = max( &
+                     phi_in(KE,i,j), qa_in, qb_in, &
+                     phi_lo(KE,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(KE,i,j), qa_in, qb_in, &
+                     phi_lo(KE,i,j), qa_lo, qb_lo  )
+                qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
+                qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
+             end do
+
+          else
+             !$omp parallel do private(i,j,k,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS+1, KE-1
+                rw = (mflx_hi(k,i,j,ZDIR)+mflx_hi(k-1,i  ,j  ,ZDIR)) * RDZ(k) ! 2 * rho * w / dz
+                ru = (mflx_hi(k,i,j,XDIR)+mflx_hi(k  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
+                rv = (mflx_hi(k,i,j,YDIR)+mflx_hi(k  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
+
+                qa_in = fact(1, 1, 1) * phi_in(k+1,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_in(k  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_in(k+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(k  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_in(k+1,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_in(k+1,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_in(k  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_in(k+1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(k+1,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_in(k+1,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_in(k  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_in(k+1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(k+1,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
+                qb_in = fact(1, 1, 1) * phi_in(k-1,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_in(k  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_in(k-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(k  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_in(k-1,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_in(k-1,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_in(k  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_in(k-1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(k-1,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_in(k-1,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_in(k  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_in(k-1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(k-1,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_in(k  ,i  ,j  )
+                qa_lo = fact(1, 1, 1) * phi_lo(k+1,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_lo(k  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_lo(k+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(k  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_lo(k+1,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_lo(k+1,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(k  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(k+1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(k+1,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(k+1,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_lo(k  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(k+1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(k+1,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
+                qb_lo = fact(1, 1, 1) * phi_lo(k-1,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_lo(k  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_lo(k-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(k  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_lo(k-1,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_lo(k-1,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(k  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(k-1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(k-1,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(k-1,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_lo(k  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(k-1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(k-1,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_lo(k  ,i  ,j  )
+
+                qmax = max( &
+                     phi_in(k,i,j), qa_in, qb_in, &
+                     phi_lo(k,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(k,i,j), qa_in, qb_in, &
+                     phi_lo(k,i,j), qa_lo, qb_lo  )
+                qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+                qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+             end do
+             end do
+             end do
+
+             ! k = KS
+             !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+                rw = (mflx_hi(KS,i,j,ZDIR)                           ) * RDZ(KS)! 2 * rho * w / dz
+                ru = (mflx_hi(KS,i,j,XDIR)+mflx_hi(KS  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
+                rv = (mflx_hi(KS,i,j,YDIR)+mflx_hi(KS  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
+
+                qa_in = fact(1, 1, 1) * phi_in(KS+1,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_in(KS  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_in(KS+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(KS  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_in(KS+1,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_in(KS+1,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_in(KS  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_in(KS+1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(KS+1,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_in(KS+1,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_in(KS  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_in(KS+1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(KS+1,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
+                qb_in = fact(1, 1, 1) * phi_in(KS  ,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_in(KS  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_in(KS  ,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_in(KS  ,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_in(KS  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_in(KS  ,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(KS  ,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_in(KS  ,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_in(KS  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_in(KS  ,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(KS  ,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_in(KS  ,i  ,j  )
+                qa_lo = fact(1, 1, 1) * phi_lo(KS+1,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_lo(KS  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_lo(KS+1,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(KS  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_lo(KS+1,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_lo(KS+1,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(KS  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(KS+1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(KS+1,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(KS+1,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_lo(KS  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(KS+1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(KS+1,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
+                qb_lo = fact(1, 1, 1) * phi_lo(KS  ,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_lo(KS  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_lo(KS  ,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_lo(KS  ,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(KS  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(KS  ,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(KS  ,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(KS  ,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_lo(KS  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(KS  ,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(KS  ,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_lo(KS  ,i  ,j  )
+
+                qmax = max( &
+                     phi_in(KS,i,j), qa_in, qb_in, &
+                     phi_lo(KS,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(KS,i,j), qa_in, qb_in, &
+                     phi_lo(KS,i,j), qa_lo, qb_lo  )
+                qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
+                qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
+             end do
+             end do
+
+             ! k = KE
+             !$omp parallel do private(i,j,rw,ru,rv,fact,qa_in,qb_in,qa_lo,qb_lo,qmax,qmin) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+                rw = (                     mflx_hi(KE-1,i  ,j  ,ZDIR)) * RDZ(KE)! 2 * rho * w / dz
+                ru = (mflx_hi(KE,i,j,XDIR)+mflx_hi(KE  ,i-1,j  ,XDIR)) * RDX(i) ! 2 * rho * u / dx
+                rv = (mflx_hi(KE,i,j,YDIR)+mflx_hi(KE  ,i  ,j-1,YDIR)) * RDY(j) ! 2 * rho * v / dy
+
+                call get_fact_fct( fact, & ! (out)
+                                   rw, ru, rv ) ! (in)
+
+                qa_in = fact(1, 1, 1) * phi_in(KE  ,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_in(KE  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_in(KE  ,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_in(KE  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_in(KE  ,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_in(KE  ,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_in(KE  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_in(KE  ,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(KE  ,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_in(KE  ,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_in(KE  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_in(KE  ,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(KE  ,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
+                qb_in = fact(1, 1, 1) * phi_in(KE-1,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_in(KE  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_in(KE-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_in(KE  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_in(KE-1,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_in(KE-1,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_in(KE  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_in(KE-1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_in(KE-1,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_in(KE-1,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_in(KE  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_in(KE-1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_in(KE-1,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_in(KE  ,i  ,j  )
+                qa_lo = fact(1, 1, 1) * phi_lo(KE  ,i+1,j+1) &
+                      + fact(0, 1, 1) * phi_lo(KE  ,i+1,j+1) &
+                      + fact(1, 0, 1) * phi_lo(KE  ,i  ,j+1) &
+                      + fact(0, 0, 1) * phi_lo(KE  ,i  ,j+1) &
+                      + fact(1,-1, 1) * phi_lo(KE  ,i-1,j+1) &
+                      + fact(1, 1, 0) * phi_lo(KE  ,i+1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(KE  ,i+1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(KE  ,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(KE  ,i-1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(KE  ,i+1,j-1) &
+                      + fact(0, 1,-1) * phi_lo(KE  ,i+1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(KE  ,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(KE  ,i-1,j-1) &
+                      + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
+                qb_lo = fact(1, 1, 1) * phi_lo(KE-1,i-1,j-1) &
+                      + fact(0, 1, 1) * phi_lo(KE  ,i-1,j-1) &
+                      + fact(1, 0, 1) * phi_lo(KE-1,i  ,j-1) &
+                      + fact(0, 0, 1) * phi_lo(KE  ,i  ,j-1) &
+                      + fact(1,-1, 1) * phi_lo(KE-1,i+1,j-1) &
+                      + fact(1, 1, 0) * phi_lo(KE-1,i-1,j  ) &
+                      + fact(0, 1, 0) * phi_lo(KE  ,i-1,j  ) &
+                      + fact(1, 0, 0) * phi_lo(KE-1,i  ,j  ) &
+                      + fact(1,-1, 0) * phi_lo(KE-1,i+1,j  ) &
+                      + fact(1, 1,-1) * phi_lo(KE-1,i-1,j+1) &
+                      + fact(0, 1,-1) * phi_lo(KE  ,i-1,j-1) &
+                      + fact(1, 0,-1) * phi_lo(KE-1,i  ,j-1) &
+                      + fact(1,-1,-1) * phi_lo(KE-1,i+1,j+1) &
+                      + fact(0, 0, 0) * phi_lo(KE  ,i  ,j  )
+
+                qmax = max( &
+                     phi_in(KE,i,j), qa_in, qb_in, &
+                     phi_lo(KE,i,j), qa_lo, qb_lo  )
+                qmin = min( &
+                     phi_in(KE,i,j), qa_in, qb_in, &
+                     phi_lo(KE,i,j), qa_lo, qb_lo  )
+                qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
+                qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
+             end do
+             end do
+          end if
 
        else
 
-       !$omp parallel do private(i,j,k,qmax,qmin) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS+1, KE-1
+          if ( twoD ) then
+             i = IS
+             !$omp parallel do private(j,k,qmax,qmin) OMP_SCHEDULE_
+             do j = JJS, JJE
+             do k = KS+1, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_in(k  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(k-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(k+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(k  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in(k  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in(k  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in(k  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_lo(k  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(k-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(k+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(k  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_lo(k  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_lo(k  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_lo(k  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_in(k  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(k  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j-1) )
 #endif
-          qmax = max( phi_in(k  ,i  ,j  ), &
-                      phi_in(k+1,i  ,j  ), &
-                      phi_in(k-1,i  ,j  ), &
-                      phi_in(k  ,i+1,j  ), &
-                      phi_in(k  ,i-1,j  ), &
-                      phi_in(k  ,i  ,j+1), &
-                      phi_in(k  ,i  ,j-1), &
-                      phi_lo(k  ,i  ,j  ), &
-                      phi_lo(k+1,i  ,j  ), &
-                      phi_lo(k-1,i  ,j  ), &
-                      phi_lo(k  ,i+1,j  ), &
-                      phi_lo(k  ,i-1,j  ), &
-                      phi_lo(k  ,i  ,j+1), &
-                      phi_lo(k  ,i  ,j-1) )
-          qmin = min( phi_in(k  ,i  ,j  ), &
-                      phi_in(k+1,i  ,j  ), &
-                      phi_in(k-1,i  ,j  ), &
-                      phi_in(k  ,i-1,j  ), &
-                      phi_in(k  ,i+1,j  ), &
-                      phi_in(k  ,i  ,j+1), &
-                      phi_in(k  ,i  ,j-1), &
-                      phi_lo(k  ,i  ,j  ), &
-                      phi_lo(k+1,i  ,j  ), &
-                      phi_lo(k-1,i  ,j  ), &
-                      phi_lo(k  ,i-1,j  ), &
-                      phi_lo(k  ,i+1,j  ), &
-                      phi_lo(k  ,i  ,j+1), &
-                      phi_lo(k  ,i  ,j-1) )
-          qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
-          qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
-       enddo
-       enddo
-       enddo
+                qmax = max( phi_in(k  ,i  ,j  ), &
+                            phi_in(k+1,i  ,j  ), &
+                            phi_in(k-1,i  ,j  ), &
+                            phi_in(k  ,i  ,j+1), &
+                            phi_in(k  ,i  ,j-1), &
+                            phi_lo(k  ,i  ,j  ), &
+                            phi_lo(k+1,i  ,j  ), &
+                            phi_lo(k-1,i  ,j  ), &
+                            phi_lo(k  ,i  ,j+1), &
+                            phi_lo(k  ,i  ,j-1) )
+                qmin = min( phi_in(k  ,i  ,j  ), &
+                            phi_in(k+1,i  ,j  ), &
+                            phi_in(k-1,i  ,j  ), &
+                            phi_in(k  ,i  ,j+1), &
+                            phi_in(k  ,i  ,j-1), &
+                            phi_lo(k  ,i  ,j  ), &
+                            phi_lo(k+1,i  ,j  ), &
+                            phi_lo(k-1,i  ,j  ), &
+                            phi_lo(k  ,i  ,j+1), &
+                            phi_lo(k  ,i  ,j-1) )
+                qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+                qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+             enddo
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; j = IUNDEF
 #endif
-       !$omp parallel do private(i,j,qmax,qmin) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
+             !$omp parallel do private(i,j,qmax,qmin) OMP_SCHEDULE_
+             do j = JJS, JJE
 #ifdef DEBUG
-          call CHECK( __LINE__, phi_in(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(KS+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(KS  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in(KS  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in(KS  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in(KS  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_lo(KS  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(KS+1,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(KS  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_lo(KS  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_lo(KS  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_lo(KS  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_in(KE  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(KE-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_in(KE  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_in(KE  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_in(KE  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_in(KE  ,i  ,j-1) )
-          call CHECK( __LINE__, phi_lo(KE  ,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(KE-1,i  ,j  ) )
-          call CHECK( __LINE__, phi_lo(KE  ,i-1,j  ) )
-          call CHECK( __LINE__, phi_lo(KE  ,i+1,j  ) )
-          call CHECK( __LINE__, phi_lo(KE  ,i  ,j+1) )
-          call CHECK( __LINE__, phi_lo(KE  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KS+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KS+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KE-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KE-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j-1) )
 #endif
-          qmax = max( phi_in(KS  ,i  ,j  ), &
-                      phi_in(KS+1,i  ,j  ), &
-                      phi_in(KS  ,i+1,j  ), &
-                      phi_in(KS  ,i-1,j  ), &
-                      phi_in(KS  ,i  ,j+1), &
-                      phi_in(KS  ,i  ,j-1), &
-                      phi_lo(KS  ,i  ,j  ), &
-                      phi_lo(KS+1,i  ,j  ), &
-                      phi_lo(KS  ,i+1,j  ), &
-                      phi_lo(KS  ,i-1,j  ), &
-                      phi_lo(KS  ,i  ,j+1), &
-                      phi_lo(KS  ,i  ,j-1) )
-          qmin = min( phi_in(KS  ,i  ,j  ), &
-                      phi_in(KS+1,i  ,j  ), &
-                      phi_in(KS  ,i+1,j  ), &
-                      phi_in(KS  ,i-1,j  ), &
-                      phi_in(KS  ,i  ,j+1), &
-                      phi_in(KS  ,i  ,j-1), &
-                      phi_lo(KS  ,i  ,j  ), &
-                      phi_lo(KS+1,i  ,j  ), &
-                      phi_lo(KS  ,i+1,j  ), &
-                      phi_lo(KS  ,i-1,j  ), &
-                      phi_lo(KS  ,i  ,j+1), &
-                      phi_lo(KS  ,i  ,j-1) )
-          qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
-          qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
+                qmax = max( phi_in(KS  ,i  ,j  ), &
+                            phi_in(KS+1,i  ,j  ), &
+                            phi_in(KS  ,i  ,j+1), &
+                            phi_in(KS  ,i  ,j-1), &
+                            phi_lo(KS  ,i  ,j  ), &
+                            phi_lo(KS+1,i  ,j  ), &
+                            phi_lo(KS  ,i  ,j+1), &
+                            phi_lo(KS  ,i  ,j-1) )
+                qmin = min( phi_in(KS  ,i  ,j  ), &
+                            phi_in(KS+1,i  ,j  ), &
+                            phi_in(KS  ,i  ,j+1), &
+                            phi_in(KS  ,i  ,j-1), &
+                            phi_lo(KS  ,i  ,j  ), &
+                            phi_lo(KS+1,i  ,j  ), &
+                            phi_lo(KS  ,i  ,j+1), &
+                            phi_lo(KS  ,i  ,j-1) )
+                qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
+                qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
 
-          qmax = max( phi_in(KE  ,i  ,j  ), &
-                      phi_in(KE-1,i  ,j  ), &
-                      phi_in(KE  ,i+1,j  ), &
-                      phi_in(KE  ,i-1,j  ), &
-                      phi_in(KE  ,i  ,j+1), &
-                      phi_in(KE  ,i  ,j-1), &
-                      phi_lo(KE  ,i  ,j  ), &
-                      phi_lo(KE-1,i  ,j  ), &
-                      phi_lo(KE  ,i+1,j  ), &
-                      phi_lo(KE  ,i-1,j  ), &
-                      phi_lo(KE  ,i  ,j+1), &
-                      phi_lo(KE  ,i  ,j-1) )
-          qmin = min( phi_in(KE  ,i  ,j  ), &
-                      phi_in(KE-1,i  ,j  ), &
-                      phi_in(KE  ,i-1,j  ), &
-                      phi_in(KE  ,i+1,j  ), &
-                      phi_in(KE  ,i  ,j+1), &
-                      phi_in(KE  ,i  ,j-1), &
-                      phi_lo(KE  ,i  ,j  ), &
-                      phi_lo(KE-1,i  ,j  ), &
-                      phi_lo(KE  ,i-1,j  ), &
-                      phi_lo(KE  ,i+1,j  ), &
-                      phi_lo(KE  ,i  ,j+1), &
-                      phi_lo(KE  ,i  ,j-1) )
-          qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
-          qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
-       enddo
-       enddo
+                qmax = max( phi_in(KE  ,i  ,j  ), &
+                            phi_in(KE-1,i  ,j  ), &
+                            phi_in(KE  ,i  ,j+1), &
+                            phi_in(KE  ,i  ,j-1), &
+                            phi_lo(KE  ,i  ,j  ), &
+                            phi_lo(KE-1,i  ,j  ), &
+                            phi_lo(KE  ,i  ,j+1), &
+                            phi_lo(KE  ,i  ,j-1) )
+                qmin = min( phi_in(KE  ,i  ,j  ), &
+                            phi_in(KE-1,i  ,j  ), &
+                            phi_in(KE  ,i  ,j+1), &
+                            phi_in(KE  ,i  ,j-1), &
+                            phi_lo(KE  ,i  ,j  ), &
+                            phi_lo(KE-1,i  ,j  ), &
+                            phi_lo(KE  ,i  ,j+1), &
+                            phi_lo(KE  ,i  ,j-1) )
+                qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
+                qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
+             enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+          else
+             !$omp parallel do private(i,j,k,qmax,qmin) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+             do k = KS+1, KE-1
+#ifdef DEBUG
+                call CHECK( __LINE__, phi_in(k  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(k  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_in(k  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_in(k  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(k  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(k  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_lo(k  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(k  ,i  ,j-1) )
+#endif
+                qmax = max( phi_in(k  ,i  ,j  ), &
+                            phi_in(k+1,i  ,j  ), &
+                            phi_in(k-1,i  ,j  ), &
+                            phi_in(k  ,i+1,j  ), &
+                            phi_in(k  ,i-1,j  ), &
+                            phi_in(k  ,i  ,j+1), &
+                            phi_in(k  ,i  ,j-1), &
+                            phi_lo(k  ,i  ,j  ), &
+                            phi_lo(k+1,i  ,j  ), &
+                            phi_lo(k-1,i  ,j  ), &
+                            phi_lo(k  ,i+1,j  ), &
+                            phi_lo(k  ,i-1,j  ), &
+                            phi_lo(k  ,i  ,j+1), &
+                            phi_lo(k  ,i  ,j-1) )
+                qmin = min( phi_in(k  ,i  ,j  ), &
+                            phi_in(k+1,i  ,j  ), &
+                            phi_in(k-1,i  ,j  ), &
+                            phi_in(k  ,i-1,j  ), &
+                            phi_in(k  ,i+1,j  ), &
+                            phi_in(k  ,i  ,j+1), &
+                            phi_in(k  ,i  ,j-1), &
+                            phi_lo(k  ,i  ,j  ), &
+                            phi_lo(k+1,i  ,j  ), &
+                            phi_lo(k-1,i  ,j  ), &
+                            phi_lo(k  ,i-1,j  ), &
+                            phi_lo(k  ,i+1,j  ), &
+                            phi_lo(k  ,i  ,j+1), &
+                            phi_lo(k  ,i  ,j-1) )
+                qjpls(k,i,j) = ( qmax - phi_lo(k,i,j) ) * DENS(k,i,j)
+                qjmns(k,i,j) = ( phi_lo(k,i,j) - qmin ) * DENS(k,i,j)
+             enddo
+             enddo
+             enddo
+#ifdef DEBUG
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+             !$omp parallel do private(i,j,qmax,qmin) OMP_SCHEDULE_ collapse(2)
+             do j = JJS, JJE
+             do i = IIS, IIE
+#ifdef DEBUG
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KS+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KS  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_in(KS  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(KS  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KS+1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KS  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_lo(KS  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(KS  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KE-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_in(KE  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_in(KE  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_in(KE  ,i  ,j-1) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KE-1,i  ,j  ) )
+                call CHECK( __LINE__, phi_lo(KE  ,i-1,j  ) )
+                call CHECK( __LINE__, phi_lo(KE  ,i+1,j  ) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j+1) )
+                call CHECK( __LINE__, phi_lo(KE  ,i  ,j-1) )
+#endif
+                qmax = max( phi_in(KS  ,i  ,j  ), &
+                            phi_in(KS+1,i  ,j  ), &
+                            phi_in(KS  ,i+1,j  ), &
+                            phi_in(KS  ,i-1,j  ), &
+                            phi_in(KS  ,i  ,j+1), &
+                            phi_in(KS  ,i  ,j-1), &
+                            phi_lo(KS  ,i  ,j  ), &
+                            phi_lo(KS+1,i  ,j  ), &
+                            phi_lo(KS  ,i+1,j  ), &
+                            phi_lo(KS  ,i-1,j  ), &
+                            phi_lo(KS  ,i  ,j+1), &
+                            phi_lo(KS  ,i  ,j-1) )
+                qmin = min( phi_in(KS  ,i  ,j  ), &
+                            phi_in(KS+1,i  ,j  ), &
+                            phi_in(KS  ,i+1,j  ), &
+                            phi_in(KS  ,i-1,j  ), &
+                            phi_in(KS  ,i  ,j+1), &
+                            phi_in(KS  ,i  ,j-1), &
+                            phi_lo(KS  ,i  ,j  ), &
+                            phi_lo(KS+1,i  ,j  ), &
+                            phi_lo(KS  ,i+1,j  ), &
+                            phi_lo(KS  ,i-1,j  ), &
+                            phi_lo(KS  ,i  ,j+1), &
+                            phi_lo(KS  ,i  ,j-1) )
+                qjmns(KS,i,j) = ( phi_lo(KS,i,j) - qmin ) * DENS(KS,i,j)
+                qjpls(KS,i,j) = ( qmax - phi_lo(KS,i,j) ) * DENS(KS,i,j)
+
+                qmax = max( phi_in(KE  ,i  ,j  ), &
+                            phi_in(KE-1,i  ,j  ), &
+                            phi_in(KE  ,i+1,j  ), &
+                            phi_in(KE  ,i-1,j  ), &
+                            phi_in(KE  ,i  ,j+1), &
+                            phi_in(KE  ,i  ,j-1), &
+                            phi_lo(KE  ,i  ,j  ), &
+                            phi_lo(KE-1,i  ,j  ), &
+                            phi_lo(KE  ,i+1,j  ), &
+                            phi_lo(KE  ,i-1,j  ), &
+                            phi_lo(KE  ,i  ,j+1), &
+                            phi_lo(KE  ,i  ,j-1) )
+                qmin = min( phi_in(KE  ,i  ,j  ), &
+                            phi_in(KE-1,i  ,j  ), &
+                            phi_in(KE  ,i-1,j  ), &
+                            phi_in(KE  ,i+1,j  ), &
+                            phi_in(KE  ,i  ,j+1), &
+                            phi_in(KE  ,i  ,j-1), &
+                            phi_lo(KE  ,i  ,j  ), &
+                            phi_lo(KE-1,i  ,j  ), &
+                            phi_lo(KE  ,i-1,j  ), &
+                            phi_lo(KE  ,i+1,j  ), &
+                            phi_lo(KE  ,i  ,j+1), &
+                            phi_lo(KE  ,i  ,j-1) )
+                qjpls(KE,i,j) = ( qmax - phi_lo(KE,i,j) ) * DENS(KE,i,j)
+                qjmns(KE,i,j) = ( phi_lo(KE,i,j) - qmin ) * DENS(KE,i,j)
+             enddo
+             enddo
+#ifdef DEBUG
+             k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+          end if
+
        end if
 
        !--- incoming flux limitation factor (0-1)
@@ -2899,35 +3418,37 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       if ( IIS == IS ) then
-          ijs = IIS-1
-       else
-          ijs = IIS
-       end if
+       if ( .not. TwoD ) then
+          if ( IIS == IS ) then
+             ijs = IIS-1
+          else
+             ijs = IIS
+          end if
 
-       !$omp parallel do private(i,j,k,dirsw) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = ijs, IIE
-       do k = KS, KE
+          !$omp parallel do private(i,j,k,dirsw) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = ijs, IIE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
-          call CHECK( __LINE__, rjpls(k,i  ,j) )
-          call CHECK( __LINE__, rjpls(k,i+1,j) )
-          call CHECK( __LINE__, rjmns(k,i  ,j) )
-          call CHECK( __LINE__, rjmns(k,i+1,j) )
+             call CHECK( __LINE__, qflx_anti(k,i,j,XDIR) )
+             call CHECK( __LINE__, rjpls(k,i  ,j) )
+             call CHECK( __LINE__, rjpls(k,i+1,j) )
+             call CHECK( __LINE__, rjmns(k,i  ,j) )
+             call CHECK( __LINE__, rjmns(k,i+1,j) )
 #endif
-          ! if qflx_anti > 0, dirsw = 1
-          dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,XDIR) )
-          qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) &
+             ! if qflx_anti > 0, dirsw = 1
+             dirsw = 0.5_RP + sign( 0.5_RP, qflx_anti(k,i,j,XDIR) )
+             qflx_anti(k,i,j,XDIR) = qflx_anti(k,i,j,XDIR) &
                  * ( 1.0_RP &
                    - min( rjpls(k,i+1,j),rjmns(k,i  ,j) ) * (          dirsw ) &
                    - min( rjpls(k,i  ,j),rjmns(k,i+1,j) ) * ( 1.0_RP - dirsw ) )
-       enddo
-       enddo
-       enddo
+          enddo
+          enddo
+          enddo
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+          k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+       end if
 
        if ( JJS == JS ) then
           ijs = JJS-1

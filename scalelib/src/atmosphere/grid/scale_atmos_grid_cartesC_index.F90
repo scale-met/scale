@@ -114,6 +114,8 @@ contains
        IMAX, JMAX,          &
        KHALO, IHALO, JHALO, &
        IBLOCK, JBLOCK       )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     implicit none
     integer, intent(in), optional :: KMAX
     integer, intent(in), optional :: IMAXG, JMAXG
@@ -127,6 +129,21 @@ contains
          IMAX, JMAX,          &
          KHALO, IHALO, JHALO, &
          IBLOCK, JBLOCK       )
+
+    if ( PRC_TwoD ) then
+       I_XYZ = 1
+       I_XYW = 2
+       I_XVW = 3
+       I_XVZ = 4
+       I_UYW = I_XYW
+       I_UYZ = I_XYZ
+       I_UVZ = I_XVZ
+
+       I_XY  = 1
+       I_XV  = 2
+       I_UY  = I_XY
+       I_UV  = I_XV
+    end if
 
     return
   end subroutine ATMOS_GRID_CARTESC_INDEX_setup
@@ -143,6 +160,7 @@ contains
     use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
+       PRC_TwoD,    &
        PRC_2Drank,  &
        PRC_NUM_X,   &
        PRC_NUM_Y,   &
@@ -244,6 +262,16 @@ contains
        call PRC_abort
     endif
 
+
+    ! check if this is 2D experiment
+    if ( IMAXG == 1 ) then
+       PRC_TwoD = .true.
+       IHALO = 0
+    else
+       PRC_TwoD = .false.
+    end if
+
+
     if ( IMAX < IHALO ) then
        LOG_ERROR("ATMOS_GRID_CARTESC_index_setup_main",*) 'number of grid size IMAX must >= IHALO! ', IMAX, IHALO
        call PRC_abort
@@ -310,7 +338,7 @@ contains
        JEGA = JE_inG
     end if
 
-    if ( PRC_PERIODIC_X ) then
+    if ( PRC_PERIODIC_X .or. PRC_TwoD ) then
        IAGB = IMAXG
        ISGB = IS_inG - IHALO
        IEGB = IE_inG - IHALO

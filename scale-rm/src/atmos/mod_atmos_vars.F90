@@ -1538,6 +1538,8 @@ contains
        CVdry => CONST_CVdry
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_atmos_grid_cartesC, only: &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY
@@ -1946,55 +1948,80 @@ contains
           call allocate_3D( VOR )
           !!!  to move to grid !!!
           ! at x, v, layer
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA-1
-          do i = 2, IA
-          do k = KS, KE
-             UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i  ,j) + MOMX_av(k,i  ,j+1) &
-                                  + MOMX_av(k,i-1,j) + MOMX_av(k,i-1,j+1) ) &
-                       / ( DENS_av(k,i,j) + DENS_av(k,i,j+1) )
-          enddo
-          enddo
-          enddo
           ! at u, y, layer
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          if ( PRC_TwoD ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA
-          do i = 1, IA-1
-          do k = KS, KE
-             VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j  ) + MOMY_av(k,i+1,j  ) &
-                                  + MOMY_av(k,i,j-1) + MOMY_av(k,i+1,j-1) ) &
-                       / ( DENS_av(k,i,j) + DENS_av(k,i+1,j) )
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = 1, JA-1
+             do k = KS, KE
+                UH(k,IS,j) = ( MOMX_av(k,IS,j) + MOMX_av(k,IS,j+1) ) &
+                           / ( DENS_av(k,IS,j) + DENS_av(k,IS,j+1) )
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA-1
-          do i = 2, IA-1
-          do k = KS, KE
-             VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
-                        - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             VOR(k,1 ,j) = VOR(k,2   ,j)
-             VOR(k,IA,j) = VOR(k,IA-1,j)
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_
-          do i = 1, IA
-          do k = KS, KE
-             VOR(k,i,1 ) = VOR(k,i,2   )
-             VOR(k,i,JA) = VOR(k,i,JA-1)
-          enddo
-          enddo
+             do j = 2, JA-1
+             do k = KS, KE
+                VOR(k,IS,j) = - ( UH(k,IS,j) - UH(k,IS,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             !$omp parallel do private(k) OMP_SCHEDULE_
+             do k = KS, KE
+                VOR(k,IS,1 ) = VOR(k,IS,2   )
+                VOR(k,IS,JA) = VOR(k,IS,JA-1)
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 1, JA-1
+             do i = 2, IA
+             do k = KS, KE
+                UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i  ,j) + MOMX_av(k,i  ,j+1) &
+                                     + MOMX_av(k,i-1,j) + MOMX_av(k,i-1,j+1) ) &
+                          / ( DENS_av(k,i,j) + DENS_av(k,i,j+1) )
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA
+             do i = 1, IA-1
+             do k = KS, KE
+                VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j  ) + MOMY_av(k,i+1,j  ) &
+                                     + MOMY_av(k,i,j-1) + MOMY_av(k,i+1,j-1) ) &
+                          / ( DENS_av(k,i,j) + DENS_av(k,i+1,j) )
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA-1
+             do i = 2, IA-1
+             do k = KS, KE
+                VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                           - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VOR(k,1 ,j) = VOR(k,2   ,j)
+                VOR(k,IA,j) = VOR(k,IA-1,j)
+             enddo
+             enddo
+             !$omp parallel do private(i,k) OMP_SCHEDULE_
+             do i = 1, IA
+             do k = KS, KE
+                VOR(k,i,1 ) = VOR(k,i,2   )
+                VOR(k,i,JA) = VOR(k,i,JA-1)
+             enddo
+             enddo
+          end if
           DV_calculated(I_VOR) = .true.
        end if
+       call COMM_vars8( VOR(:,:,:), 1 )
+       call COMM_wait ( VOR(:,:,:), 1, .false. )
        var(KS:KE,:,:) = VOR(KS:KE,:,:)
 
     case ( 'DIV' )
@@ -2020,28 +2047,44 @@ contains
        if ( .not. DV_calculated(I_HDIV) ) then
           call allocate_3D( HDIV )
           !!!! to move to grid !!!!
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          if ( PRC_TwoD ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA
-          do i = 2, IA
-          do k = KS, KE
-             HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
-                         + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_
-          do i = 1, IA
-          do k = KS, KE
-             HDIV(k,i,1) = HDIV(k,i,2)
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             HDIV(k,1,j) = HDIV(k,2,j)
-          enddo
-          enddo
+             do j = 2, JA
+             do k = KS, KE
+                HDIV(k,IS,j) = ( MOMY_av(k,IS,j) - MOMY_av(k  ,IS,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             !$omp parallel do private(k) OMP_SCHEDULE_
+             do k = KS, KE
+                HDIV(k,IS,1) = HDIV(k,IS,2)
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA
+             do i = 2, IA
+             do k = KS, KE
+                HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
+                            + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,k) OMP_SCHEDULE_
+             do i = 1, IA
+             do k = KS, KE
+                HDIV(k,i,1) = HDIV(k,i,2)
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                HDIV(k,1,j) = HDIV(k,2,j)
+             enddo
+             enddo
+          end if
+          call COMM_vars8( HDIV(:,:,:), 1 )
+          call COMM_wait ( HDIV(:,:,:), 1, .false. )
           DV_calculated(I_HDIV) = .true.
        end if
        var(KS:KE,:,:) = HDIV(KS:KE,:,:)
@@ -2356,24 +2399,34 @@ contains
     case ( 'VELX' )
        if ( .not. DV_calculated(I_VELX) ) then
           call allocate_3D( VELX )
+          if ( PRC_TwoD ) then
 !OCL XFILL
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = 1, JA
-          do i = 1, IA-1
-          do k = KS, KE
-             VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
-          enddo
-          enddo
-          enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VELX(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
+             enddo
+             enddo
+          else
+             !OCL XFILL
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = 1, JA
+             do i = 1, IA-1
+             do k = KS, KE
+                VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
+             enddo
+             enddo
+             enddo
 !OCL XFILL
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
-          enddo
-          enddo
-          call COMM_vars8( VELX(:,:,:), 1 )
-          call COMM_wait ( VELX(:,:,:), 1, .false. )
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
+             enddo
+             enddo
+             call COMM_vars8( VELX(:,:,:), 1 )
+             call COMM_wait ( VELX(:,:,:), 1, .false. )
+          end if
           DV_calculated(I_VELX) = .true.
        end if
        var(KS:KE,:,:) = VELX(KS:KE,:,:)
@@ -2910,6 +2963,8 @@ contains
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
@@ -3102,18 +3157,35 @@ contains
 !OCL XFILL
        WORK(:,:,:,:) = 0.0_RP
 
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
           WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-          WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
           WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
                         * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
        enddo
        enddo
        enddo
+       if ( PRC_TwoD ) then
+          !$omp parallel do
+          do j = JS, JE
+          do k = KS, KE
+             WORK(k,IS,j,2) = 0.0_RP
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
+                           * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
+          enddo
+          enddo
+          enddo
+       end if
 
        CFLMAX = maxval( WORK(:,:,:,:) )
 

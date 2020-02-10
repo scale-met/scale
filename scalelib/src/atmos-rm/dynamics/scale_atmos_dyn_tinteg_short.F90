@@ -42,7 +42,7 @@ module scale_atmos_dyn_tinteg_short
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
           REF_pres, REF_dens,                       & ! (in)
-          BND_W, BND_E, BND_S, BND_N,               & ! (in)
+          BND_W, BND_E, BND_S, BND_N, TwoD,         & ! (in)
           dt                                        ) ! (in)
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -101,6 +101,7 @@ module scale_atmos_dyn_tinteg_short
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
 
        real(RP), intent(in)    :: dt
      end subroutine short

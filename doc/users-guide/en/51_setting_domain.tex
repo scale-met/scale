@@ -32,6 +32,10 @@ By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire
 where \nmitem{DX, DY} is grid spacings specified  in \namelist{PARAM_ATMOS_GRID_CARTESC} as described in subsection \ref{subsec:gridinterv}.
 If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
 
+In order to perform a horizontal-vertical two-dimentional experiment, set both the \texttt{IMAX} and \texttt{PRC\_NUM\_X} to 1, i.e., the total number of the grids in the X direction is one.
+In this case, the motion in the Y-Z section is calculated.
+The value of \texttt{DX} does not affect the simulation result.
+
 In the next subsections, the configuration of the MPI processes, the number of grids, and the grid interval are described in more detail.  \textcolor{blue}{Note that it is necessary that these settings  be identical among the configuration files \texttt{pp.conf},  \texttt{init.conf}, and \texttt{run.conf}}.
 
 \begin{figure}[h]

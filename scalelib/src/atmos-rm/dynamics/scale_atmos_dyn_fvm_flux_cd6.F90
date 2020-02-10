@@ -521,7 +521,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -533,6 +533,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -598,7 +599,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -610,6 +611,7 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -677,7 +679,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -689,6 +691,7 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -761,7 +764,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -773,6 +776,7 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -846,7 +850,7 @@ contains
        mom, val, DENS,    &
        GSQRT, J33G,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -858,6 +862,7 @@ contains
     real(RP), intent(in)  :: J33G
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -866,7 +871,106 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
-    !$omp shared(CDZ)
+    !$omp shared(CDZ,TwoD)
+
+
+    if ( TwoD ) then
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+    do k = KS+2, KE-3
+#ifdef DEBUG
+       call CHECK( __LINE__, mom(k,i,j) )
+
+       call CHECK( __LINE__, val(k,i,j) )
+       call CHECK( __LINE__, val(k+1,i,j) )
+
+       call CHECK( __LINE__, val(k-1,i,j) )
+       call CHECK( __LINE__, val(k+2,i,j) )
+
+       call CHECK( __LINE__, val(k-2,i,j) )
+       call CHECK( __LINE__, val(k+3,i,j) )
+
+#endif
+       i = IIS
+       vel = ( mom(k,i,j) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * DENS(k+1,i,j) &
+             + F2H(k,2,I_XYZ) &
+             * DENS(k,i,j) )
+       flux(k,i,j) = J33G * vel &
+                   * ( F61 * ( val(k+1,i,j)+val(k,i,j) ) &
+                     + F62 * ( val(k+2,i,j)+val(k-1,i,j) ) &
+                     + F63 * ( val(k+3,i,j)+val(k-2,i,j) ) ) &
+                   + GSQRT(k,i,j) * num_diff(k,i,j)
+    enddo
+    enddo
+    !$omp end do nowait
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+#ifdef DEBUG
+
+       call CHECK( __LINE__, mom(KS,i  ,j) )
+       call CHECK( __LINE__, val(KS+1,i,j) )
+       call CHECK( __LINE__, val(KS,i,j) )
+
+       call CHECK( __LINE__, mom(KS+1,i  ,j) )
+       call CHECK( __LINE__, val(KS+3,i,j) )
+       call CHECK( __LINE__, val(KS+2,i,j) )
+
+#endif
+       i = IIS
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP
+
+       vel = ( mom(KS,i,j) ) &
+           / ( F2H(KS,1,I_XYZ) &
+             * DENS(KS+1,i,j) &
+             + F2H(KS,2,I_XYZ) &
+             * DENS(KS,i,j) )
+       flux(KS,i,j) = J33G * vel &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) ) &
+                   + GSQRT(KS,i,j) * num_diff(KS,i,j)
+       vel = ( mom(KE-1,i,j) ) &
+           / ( F2H(KE-1,1,I_XYZ) &
+             * DENS(KE,i,j) &
+             + F2H(KE-1,2,I_XYZ) &
+             * DENS(KE-1,i,j) )
+       flux(KE-1,i,j) = J33G * vel &
+                   * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) ) &
+                   + GSQRT(KE-1,i,j) * num_diff(KE-1,i,j)
+
+       vel = ( mom(KS+1,i,j) ) &
+           / ( F2H(KS+1,1,I_XYZ) &
+             * DENS(KS+2,i,j) &
+             + F2H(KS+1,2,I_XYZ) &
+             * DENS(KS+1,i,j) )
+       flux(KS+1,i,j) = J33G * vel &
+                   * ( F41 * ( val(KS+2,i,j)+val(KS+1,i,j) ) &
+                     + F42 * ( val(KS+3,i,j)+val(KS,i,j) ) ) &
+                   + GSQRT(KS+1,i,j) * num_diff(KS+1,i,j)
+       vel = ( mom(KE-2,i,j) ) &
+           / ( F2H(KE-2,1,I_XYZ) &
+             * DENS(KE-1,i,j) &
+             + F2H(KE-2,2,I_XYZ) &
+             * DENS(KE-2,i,j) )
+       flux(KE-2,i,j) = J33G * vel &
+                   * ( F41 * ( val(KE-1,i,j)+val(KE-2,i,j) ) &
+                     + F42 * ( val(KE,i,j)+val(KE-3,i,j) ) ) &
+                   + GSQRT(KE-2,i,j) * num_diff(KE-2,i,j)
+
+       flux(KE,i,j) = 0.0_RP
+    enddo
+    !$omp end do nowait
+
+    else
+
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
@@ -965,7 +1069,10 @@ contains
     enddo
     enddo
     !$omp end do nowait
-    
+
+    end if    
+
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -980,7 +1087,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -992,6 +1099,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1000,8 +1108,10 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp shared(GSQRT,CDZ,TwoD)
   
+
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
@@ -1087,6 +1197,8 @@ contains
     enddo
     !$omp end do nowait
     
+
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_UYZ_cd6
@@ -1097,7 +1209,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1109,6 +1221,7 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1117,8 +1230,96 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp shared(GSQRT,CDZ,TwoD)
   
+
+    if ( TwoD ) then
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+    do k = KS+2, KE-3
+       i = IIS
+       vel = ( F2H(k,1,I_XYZ) &
+             * 0.5_RP * ( mom(k+1,i,j)+mom(k+1,i,j-1) ) &
+             + F2H(k,2,I_XYZ) &
+             * 0.5_RP * ( mom(k,i,j)+mom(k,i,j-1) ) ) &
+           / ( F2H(k,1,I_XYZ) &
+             * DENS(k+1,i,j) &
+             + F2H(k,2,I_XYZ) &
+             * DENS(k,i,j) )
+       vel = vel * J23G(k,i,j)
+       flux(k,i,j) = vel * ( F61 * ( val(k+1,i,j)+val(k,i,j) ) &
+                     + F62 * ( val(k+2,i,j)+val(k-1,i,j) ) &
+                     + F63 * ( val(k+3,i,j)+val(k-2,i,j) ) )
+    enddo
+    enddo
+    !$omp end do nowait
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+       i = IIS
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP
+
+       vel = ( F2H(KS,1,I_XYZ) &
+             * 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i,j-1) ) &
+             + F2H(KS,2,I_XYZ) &
+             * 0.5_RP * ( mom(KS,i,j)+mom(KS,i,j-1) ) ) &
+           / ( F2H(KS,1,I_XYZ) &
+             * DENS(KS+1,i,j) &
+             + F2H(KS,2,I_XYZ) &
+             * DENS(KS,i,j) )
+       vel = vel * J23G(KS,i,j)
+       flux(KS,i,j) = vel / MAPF(i,j,+1) &
+                   * ( F2 * ( val(KS+1,i,j)+val(KS,i,j) ) )
+
+       vel = ( F2H(KE-1,1,I_XYZ) &
+             * 0.5_RP * ( mom(KE,i,j)+mom(KE,i,j-1) ) &
+             + F2H(KE-1,2,I_XYZ) &
+             * 0.5_RP * ( mom(KE-1,i,j)+mom(KE-1,i,j-1) ) ) &
+           / ( F2H(KE-1,1,I_XYZ) &
+             * DENS(KE,i,j) &
+             + F2H(KE-1,2,I_XYZ) &
+             * DENS(KE-1,i,j) )
+       vel = vel * J23G(KE-1,i,j)
+       flux(KE-1,i,j) = vel / MAPF(i,j,+1) &
+                   * ( F2 * ( val(KE,i,j)+val(KE-1,i,j) ) )
+
+       vel = ( F2H(KS+1,1,I_XYZ) &
+             * 0.5_RP * ( mom(KS+2,i,j)+mom(KS+2,i,j-1) ) &
+             + F2H(KS+1,2,I_XYZ) &
+             * 0.5_RP * ( mom(KS+1,i,j)+mom(KS+1,i,j-1) ) ) &
+           / ( F2H(KS+1,1,I_XYZ) &
+             * DENS(KS+2,i,j) &
+             + F2H(KS+1,2,I_XYZ) &
+             * DENS(KS+1,i,j) )
+       vel = vel * J23G(KS+1,i,j)
+       flux(KS+1,i,j) = vel / MAPF(i,j,+1) &
+                   * ( F41 * ( val(KS+2,i,j)+val(KS+1,i,j) ) &
+                     + F42 * ( val(KS+3,i,j)+val(KS,i,j) ) )
+
+       vel = ( F2H(KE-2,1,I_XYZ) &
+             * 0.5_RP * ( mom(KE-1,i,j)+mom(KE-1,i,j-1) ) &
+             + F2H(KE-2,2,I_XYZ) &
+             * 0.5_RP * ( mom(KE-2,i,j)+mom(KE-2,i,j-1) ) ) &
+           / ( F2H(KE-2,1,I_XYZ) &
+             * DENS(KE-1,i,j) &
+             + F2H(KE-2,2,I_XYZ) &
+             * DENS(KE-2,i,j) )
+       vel = vel * J23G(KE-2,i,j)
+       flux(KE-2,i,j) = vel / MAPF(i,j,+1) &
+                   * ( F41 * ( val(KE-1,i,j)+val(KE-2,i,j) ) &
+                     + F42 * ( val(KE,i,j)+val(KE-3,i,j) ) )
+
+       flux(KE  ,i,j) = 0.0_RP
+    enddo
+    !$omp end do nowait
+
+    else
+
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
@@ -1204,6 +1405,10 @@ contains
     enddo
     !$omp end do nowait
     
+
+    end if
+
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_UYZ_cd6
@@ -1215,7 +1420,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1227,6 +1432,7 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1234,6 +1440,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! note that x-index is added by -1
+
+
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
@@ -1269,6 +1477,8 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+
+
     return
   end subroutine ATMOS_DYN_FVM_fluxX_UYZ_cd6
 
@@ -1279,7 +1489,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1291,11 +1501,51 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+
+
+
+    if ( TwoD ) then
+
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff,TwoD)
+    do j = JJS-1, JJE
+    do k = KS, KE
+       i = IIS
+#ifdef DEBUG
+       call CHECK( __LINE__, mom(k,i  ,j) )
+
+       call CHECK( __LINE__, val(k,i,j) )
+       call CHECK( __LINE__, val(k,i,j+1) )
+
+       call CHECK( __LINE__, val(k,i,j-1) )
+       call CHECK( __LINE__, val(k,i,j+2) )
+
+       call CHECK( __LINE__, val(k,i,j-2) )
+       call CHECK( __LINE__, val(k,i,j+3) )
+
+#endif
+       vel = ( mom(k,i,j) ) &
+           / ( 0.5_RP * ( DENS(k,i,j)+DENS(k,i,j+1) ) )
+       flux(k,i,j) = GSQRT(k,i,j) / MAPF(i,j,+1) * vel &
+                   * ( F61 * ( val(k,i,j+1)+val(k,i,j) ) &
+                     + F62 * ( val(k,i,j+2)+val(k,i,j-1) ) &
+                     + F63 * ( val(k,i,j+3)+val(k,i,j-2) ) ) &
+                   + GSQRT(k,i,j) * num_diff(k,i,j)
+    enddo
+    enddo
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+    else
+
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
@@ -1331,6 +1581,10 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+
+    end if
+
+
     return
   end subroutine ATMOS_DYN_FVM_fluxY_UYZ_cd6
 
@@ -1343,7 +1597,7 @@ contains
        mom, val, DENS,    &
        GSQRT, J33G,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1355,6 +1609,7 @@ contains
     real(RP), intent(in)  :: J33G
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1363,7 +1618,8 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
-    !$omp shared(CDZ)
+    !$omp shared(CDZ,TwoD)
+
 
     !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
@@ -1462,7 +1718,8 @@ contains
     enddo
     enddo
     !$omp end do nowait
-    
+
+
     !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
@@ -1477,7 +1734,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J13G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1489,6 +1746,7 @@ contains
     real(RP), intent(in)  :: J13G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1497,8 +1755,10 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J13G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp shared(GSQRT,CDZ,TwoD)
   
+
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
@@ -1584,6 +1844,8 @@ contains
     enddo
     !$omp end do nowait
     
+
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ13_XVZ_cd6
@@ -1594,7 +1856,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, J23G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1606,6 +1868,7 @@ contains
     real(RP), intent(in)  :: J23G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1614,8 +1877,10 @@ contains
 
     !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J23G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp shared(GSQRT,CDZ,TwoD)
   
+
+
     !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
@@ -1701,6 +1966,8 @@ contains
     enddo
     !$omp end do nowait
     
+
+
     !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
@@ -1712,7 +1979,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1724,11 +1991,14 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
+
+
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
@@ -1764,6 +2034,8 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+
+
     return
   end subroutine ATMOS_DYN_FVM_fluxX_XVZ_cd6
 
@@ -1774,7 +2046,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -1786,6 +2058,7 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1793,6 +2066,8 @@ contains
     !---------------------------------------------------------------------------
 
     ! note that y-index is added by -1
+
+
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
@@ -1827,6 +2102,8 @@ contains
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
+
+
 
     return
   end subroutine ATMOS_DYN_FVM_fluxY_XVZ_cd6

@@ -568,6 +568,8 @@ contains
   !> Calc control area/volume
   subroutine ATMOS_GRID_CARTESC_REAL_calc_areavol( &
        MAPF )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_CDX, &
        ATMOS_GRID_CARTESC_FDX, &
@@ -622,61 +624,96 @@ contains
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_AREA  (i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) )
-       ATMOS_GRID_CARTESC_REAL_AREAUY(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )
        ATMOS_GRID_CARTESC_REAL_AREAXV(i,j) = ATMOS_GRID_CARTESC_CDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_XV) * MAPF(i,j,2,I_XV) )
-                               AREAUV(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_UV) * MAPF(i,j,2,I_UV) )
     end do
     end do
+    if ( PRC_TwoD ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          ATMOS_GRID_CARTESC_REAL_AREAUY(i,j) = ATMOS_GRID_CARTESC_REAL_AREA  (i,j)
+                                  AREAUV(i,j) = ATMOS_GRID_CARTESC_REAL_AREAXV(i,j)
+
+       end do
+       end do
+    else
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          ATMOS_GRID_CARTESC_REAL_AREAUY(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_CDY(j) / ( MAPF(i,j,1,I_UY) * MAPF(i,j,2,I_UY) )
+                                  AREAUV(i,j) = ATMOS_GRID_CARTESC_FDX(i) * ATMOS_GRID_CARTESC_FDY(j) / ( MAPF(i,j,1,I_UV) * MAPF(i,j,2,I_UV) )
+
+       end do
+       end do
+    end if
 
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 2 )
-    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 3 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 2 )
+    call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )
     call COMM_vars8(                         AREAUV(:,:), 4 )
 
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA   + ATMOS_GRID_CARTESC_REAL_AREA  (i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTAREAUY = ATMOS_GRID_CARTESC_REAL_TOTAREAUY + ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
        ATMOS_GRID_CARTESC_REAL_TOTAREAXV = ATMOS_GRID_CARTESC_REAL_TOTAREAXV + ATMOS_GRID_CARTESC_REAL_AREAXV(i,j)
-    enddo
-    enddo
+       ATMOS_GRID_CARTESC_REAL_TOTAREAUY = ATMOS_GRID_CARTESC_REAL_TOTAREAUY + ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
+    end do
+    end do
 
     !$omp parallel do collapse(2)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE
-          ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) )
           ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_XV) * ( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZXV(k-1,i,j) )
        end do
        do k = KS-1, KE
-          ATMOS_GRID_CARTESC_REAL_AREAWUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) )
           ATMOS_GRID_CARTESC_REAL_AREAWXV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_XV) * ( ATMOS_GRID_CARTESC_REAL_CZXV(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZXV(k,i,j) )
        end do
        do k = KS, KE
           ATMOS_GRID_CARTESC_REAL_AREAZXY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_XY) * ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) )
-          ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
-          ATMOS_GRID_CARTESC_REAL_AREAZUV_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
           ATMOS_GRID_CARTESC_REAL_AREAZXY_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_XY) * ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) )
        end do
     end do
     end do
 
+    if ( .not. PRC_TwoD ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+          do k = KS, KE
+             ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) )
+          end do
+          do k = KS-1, KE
+             ATMOS_GRID_CARTESC_REAL_AREAWUY_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UY) * ( ATMOS_GRID_CARTESC_REAL_CZUY(k+1,i,j) - ATMOS_GRID_CARTESC_REAL_CZUY(k,i,j) )
+          end do
+          do k = KS, KE
+             ATMOS_GRID_CARTESC_REAL_AREAZUV_Y(k,i,j) = ATMOS_GRID_CARTESC_CDX(i) / MAPF(i,j,1,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+             ATMOS_GRID_CARTESC_REAL_AREAZUV_X(k,i,j) = ATMOS_GRID_CARTESC_CDY(j) / MAPF(i,j,2,I_UV) * ( ATMOS_GRID_CARTESC_REAL_FZUV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUV(k-1,i,j) )
+          end do
+       end do
+       end do
+    end if
+
     call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREA  (:,:), 1 )
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 2 )
-    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 3 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAXV(:,:), 2 )
+    call COMM_wait( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )
     call COMM_wait(                         AREAUV(:,:), 4 )
 
-    do j = JS, JE
-    do i = 1,  IA
-    do k = KS, KE
-       ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(i) = ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(i) + ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j)
-    end do
-    end do
-    end do
+
+    !$omp parallel do
     do j = 1,  JA
     do i = IS, IE
     do k = KS, KE
        ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y(j) = ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y(j) + ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(k,i,j)
+    end do
+    end do
+    end do
+    !$omp parallel do
+    do j = JS, JE
+    do i = 1,  IA
+    do k = KS, KE
+       ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(i) = ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(i) + ATMOS_GRID_CARTESC_REAL_AREAZUY_X(k,i,j)
     end do
     end do
     end do
@@ -687,7 +724,6 @@ contains
     do i = 1, IA
        do k = KS, KE
           ATMOS_GRID_CARTESC_REAL_VOL   (k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZ  (k,i,j) - ATMOS_GRID_CARTESC_REAL_FZ  (k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREA (i,j)
-          ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
           ATMOS_GRID_CARTESC_REAL_VOLZXV(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZXV(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZXV(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAXV(i,j)
        end do
        do k = KS-1, KE
@@ -695,17 +731,37 @@ contains
        end do
     end do
     end do
+    if ( PRC_TwoD ) then
+       !$omp parallel do collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j) = ATMOS_GRID_CARTESC_REAL_VOL(k,i,j)
+       end do
+       end do
+       end do
+    else
+       !$omp parallel do collapse(2)
+       do j = 1, JA
+       do i = 1, IA
+       do k = KS, KE
+          ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j) = ( ATMOS_GRID_CARTESC_REAL_FZUY(k,i,j) - ATMOS_GRID_CARTESC_REAL_FZUY(k-1,i,j) ) * ATMOS_GRID_CARTESC_REAL_AREAUY(i,j)
+       end do
+       end do
+       end do
+    end if
+
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        ATMOS_GRID_CARTESC_REAL_TOTVOL    = ATMOS_GRID_CARTESC_REAL_TOTVOL    + ATMOS_GRID_CARTESC_REAL_VOL   (k,i,j)
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV = ATMOS_GRID_CARTESC_REAL_TOTVOLZXV + ATMOS_GRID_CARTESC_REAL_VOLZXV(k,i,j)
        ATMOS_GRID_CARTESC_REAL_TOTVOLWXY = ATMOS_GRID_CARTESC_REAL_TOTVOLWXY + ATMOS_GRID_CARTESC_REAL_VOLWXY(k,i,j)
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY = ATMOS_GRID_CARTESC_REAL_TOTVOLZUY + ATMOS_GRID_CARTESC_REAL_VOLZUY(k,i,j)
-       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV = ATMOS_GRID_CARTESC_REAL_TOTVOLZXV + ATMOS_GRID_CARTESC_REAL_VOLZXV(k,i,j)
     enddo
     enddo
     enddo
-
 
     ! set latlon and z to fileio module
     call FILE_CARTESC_set_areavol_atmos( ATMOS_GRID_CARTESC_REAL_AREA,   ATMOS_GRID_CARTESC_REAL_AREAZUY_X, ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,                         & ! [IN]

@@ -93,6 +93,7 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
+       PRC_TwoD,  &
        PRC_HAS_E, &
        PRC_HAS_W, &
        PRC_HAS_N, &
@@ -158,8 +159,8 @@ contains
     allocate( I_COMM_QTRC(QA)        )
 
     if ( .NOT. DYN_NONE ) then
-       BND_W = .NOT. PRC_HAS_W
-       BND_E = .NOT. PRC_HAS_E
+       BND_W = ( .NOT. PRC_HAS_W ) .and. ( .NOT. PRC_TwoD )
+       BND_E = ( .NOT. PRC_HAS_E ) .and. ( .NOT. PRC_TwoD )
        BND_S = .NOT. PRC_HAS_S
        BND_N = .NOT. PRC_HAS_N
 
@@ -247,6 +248,8 @@ contains
        USE_AVERAGE,                                          &
        I_QV,                                                 &
        DTSEC, DTSEC_DYN                                      )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -465,7 +468,7 @@ contains
                                  J13G, J23G, J33G, MAPF,                               & ! [IN]
                                  AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          & ! [IN]
                                  REF_dens, REF_pott, REF_qv, REF_pres,                 & ! [IN]
-                                 BND_W, BND_E, BND_S, BND_N,                           & ! [IN]
+                                 BND_W, BND_E, BND_S, BND_N, PRC_TwoD,                 & ! [IN]
                                  ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 & ! [IN]
                                  ND_SFC_FACT, ND_USE_RS,                               & ! [IN]
                                  BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    & ! [IN]

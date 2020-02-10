@@ -90,6 +90,7 @@ contains
     use scale_prc_cartesC, only: &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
+       PRC_TwoD,       &
        PRC_HAS_W,      &
        PRC_HAS_S
     use scale_time, only: &
@@ -206,7 +207,7 @@ contains
        jms  = JS
        jme  = JE
 
-       if ( PRC_HAS_W .OR. PRC_PERIODIC_X ) then
+       if ( PRC_TwoD .OR. PRC_HAS_W .OR. PRC_PERIODIC_X ) then
           imsh = ims
        else
           imsh = ims - 1 ! including i = IS-1
@@ -899,6 +900,7 @@ contains
        PRC_NUM_Y,      &
        PRC_PERIODIC_X, &
        PRC_PERIODIC_Y, &
+       PRC_TwoD,       &
        PRC_HAS_W,      &
        PRC_HAS_S
     use scale_atmos_grid_cartesC, only: &
@@ -1340,20 +1342,31 @@ contains
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_xyw', 'height above ground level (half level xyw)', &
                                                 'm' , AXIS_name(1:3), AXIS(1:im,1:jm,0:), start=start(:,1)  )
 
-    do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
-    do j = 1, jm
-    do i = 1, min(imh,IA-imsh)
-       AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
-    enddo
-    enddo
-    enddo
-    if ( imh == IA-imsh+1 ) then
+    if ( PRC_TwoD ) then
+       !$omp parallel do
        do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
        do j = 1, jm
-          AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
+          AXIS(1,j,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,IS,jms+j-1)
        enddo
        enddo
-    endif
+    else
+       !$omp parallel do
+       do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
+       do j = 1, jm
+       do i = 1, min(imh,IA-imsh)
+          AXIS(i,j,k) = ( ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i-1,jms+j-1) + ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+i,jms+j-1) ) * 0.5_RP
+       enddo
+       enddo
+       enddo
+       if ( imh == IA-imsh+1 ) then
+          !$omp parallel do
+          do k = 1, FILE_HISTORY_CARTESC_MODEL_nlayer
+          do j = 1, jm
+             AXIS(imh,j,k) = ATMOS_GRID_CARTESC_REAL_CZ(k+KS-1,imsh+imh-1,jms+j-1)
+          enddo
+          enddo
+       end if
+    end if
     AXIS_name(1:3) = (/'xh', 'y ', 'z '/)
     call FILE_HISTORY_Set_AssociatedCoordinate( 'height_uyz', 'height above ground level (half level uyz)', &
                                                 'm', AXIS_name(1:3), AXIS(1:imh,1:jm,1:), start=start(:,2)  )

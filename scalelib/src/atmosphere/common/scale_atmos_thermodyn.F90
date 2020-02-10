@@ -588,16 +588,31 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k)
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       call ATMOS_THERMODYN_specific_heat( QA, q(k,i,j,:), Mq(:), Rq(:), CVq(:), CPq(:),        & ! [IN]
-                                           Qdry(k,i,j), Rtot(k,i,j), CVtot(k,i,j), CPtot(k,i,j) ) ! [OUT]
-    end do
-    end do
-    end do
+    if ( QA == 0 ) then
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Qdry (k,i,j) = 1.0_RP
+          Rtot (k,i,j) = Rdry
+          CVtot(k,i,j) = CVdry
+          CPtot(k,i,j) = CPdry
+       end do
+       end do
+       end do
+    else
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,k)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          call ATMOS_THERMODYN_specific_heat( QA, q(k,i,j,:), Mq(:), Rq(:), CVq(:), CPq(:),        & ! [IN]
+                                              Qdry(k,i,j), Rtot(k,i,j), CVtot(k,i,j), CPtot(k,i,j) ) ! [OUT]
+       end do
+       end do
+       end do
+    end if
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_3D

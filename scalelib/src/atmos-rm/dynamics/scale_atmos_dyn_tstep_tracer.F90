@@ -39,6 +39,7 @@ module scale_atmos_dyn_tstep_tracer
           mflx_hi, num_diff, & ! (in)
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
+          TwoD, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -60,6 +61,7 @@ module scale_atmos_dyn_tstep_tracer
        real(RP), intent(in)  :: RCDZ(KA)
        real(RP), intent(in)  :: RCDX(IA)
        real(RP), intent(in)  :: RCDY(JA)
+       logical , intent(in)  :: TwoD
        real(RP), intent(in)  :: dtl
        logical,  intent(in)  :: FLAG_FCT_TRACER
        logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM

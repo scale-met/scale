@@ -40,6 +40,7 @@ module scale_atmos_dyn_tinteg_tracer
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
           BND_W, BND_E, BND_S, BND_N, & ! (in)
+          TwoD, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -64,6 +65,7 @@ module scale_atmos_dyn_tinteg_tracer
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
        real(RP), intent(in)    :: dtl
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM

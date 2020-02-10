@@ -371,8 +371,23 @@ file/scale_file.F90 : scale_file.F90.erb
 
 file/scale_file_history.F90 : scale_file_history.F90.erb
 
-scale_atmos_dyn_fvm_flux_%.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
-	fname=$@ erb $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux.F90 : scale_atmos_dyn_fvm_flux.F90.erb
+	erb $< > $@
+
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud1.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd2.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud3.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud3Koren1993.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd4.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud5.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd6.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
 
 $(BUILD_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o: scale_atmos_dyn_tstep_large_fvm_heve.F90
 $(BUILD_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.o: scale_atmos_dyn_tstep_tracer_fvm_heve.F90
