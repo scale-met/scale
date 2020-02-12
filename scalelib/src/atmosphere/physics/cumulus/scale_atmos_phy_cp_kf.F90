@@ -2347,7 +2347,7 @@ contains
        !< Check to see if mixing ratio dips below zero anywere ; if so, borrow
        !< moisture forom adjacent layers to bring it back up abobe zero
        do kk = KS,k_top
-          if(qv_g(kk) < 0._RP ) then ! negative moisture
+          if(qv_g(kk) < KF_EPS ) then ! negative moisture
              if(kk == KS) then
                 LOG_ERROR("CP_kf_compensational",*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
                 call PRC_abort
@@ -2369,6 +2369,9 @@ contains
              qv_g(kkp1) = tma*emsd(kkp1)
              qv_g(kk-1) = tmb*emsd(kk-1)
           end if
+       end do
+       do kk = KS,k_top
+          if ( qv_g(kk) < KF_EPS ) qv_g(kk) = KF_EPS
        end do
        ! calculate top layer omega and conpare determ omg
        topomg = (updet(k_top) - upent(k_top))*deltap(k_top)*emsd(k_top)
