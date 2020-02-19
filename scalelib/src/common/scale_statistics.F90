@@ -255,18 +255,23 @@ contains
     real(DP) :: mean_, sum_
 
     logical :: suppress_, global_
+
+    real(DP) :: work
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     statval = 0.0_DP
     if ( var(KS,IS,JS) /= UNDEF ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          statval = statval + var(k,i,j) * vol(k,i,j)
-       enddo
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(+:statval) &
+       !$omp private(work)
+       do j = JE, JS, -1
+       do i = IE, IS, -1
+          work = 0.0_RP
+          do k = KE, KS, -1
+             work = work + var(k,i,j) * vol(k,i,j)
+          enddo
+          statval = statval + work
        enddo
        enddo
     end if
@@ -347,6 +352,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = 0.0_DP
+    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF ) then
@@ -398,6 +404,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:,:) = 0.0_DP
+    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -462,6 +469,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval = HUGE
+    !$omp parallel do reduction(min:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) < statval ) then
@@ -514,6 +522,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = HUGE
+    !$omp parallel do reduction(min:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -577,6 +586,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval = - HUGE
+    !$omp parallel do reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) > statval ) then
@@ -629,6 +639,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = - HUGE
+    !$omp parallel do reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
