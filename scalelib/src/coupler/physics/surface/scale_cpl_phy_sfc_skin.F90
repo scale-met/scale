@@ -45,7 +45,6 @@ module scale_cpl_phy_sfc_skin
   real(RP), private :: CPL_PHY_SFC_SKIN_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
   real(RP), private :: CPL_PHY_SFC_SKIN_res_min = 1.0E+0_RP ! minimum value of residual
   real(RP), private :: CPL_PHY_SFC_SKIN_err_min = 1.0E-2_RP ! minimum value of error
-  real(RP), private :: CPL_PHY_SFC_SKIN_dreslim = 1.0E+2_RP ! limiter of d(residual)
 
   logical,  private :: initialized = .false.
 
@@ -62,8 +61,7 @@ contains
        CPL_PHY_SFC_SKIN_itr_max, &
        CPL_PHY_SFC_SKIN_dTS_max, &
        CPL_PHY_SFC_SKIN_res_min, &
-       CPL_PHY_SFC_SKIN_err_min, &
-       CPL_PHY_SFC_SKIN_dreslim
+       CPL_PHY_SFC_SKIN_err_min
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -232,7 +230,7 @@ contains
     !$omp default(none) &
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
-    !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_dreslim,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
+    !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
     !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
     !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
@@ -339,11 +337,6 @@ contains
              ! convergence test with residual and error levels
              if (      abs(res     ) < CPL_PHY_SFC_SKIN_res_min &
                   .OR. abs(res/dres) < CPL_PHY_SFC_SKIN_err_min ) then
-                exit
-             endif
-
-             ! stop iteration to prevent numerical error
-             if ( abs(dres) * CPL_PHY_SFC_SKIN_dreslim < abs(res) ) then
                 exit
              endif
 
