@@ -2741,6 +2741,7 @@ contains
     real(RP) :: TR_TEMP   =   213.0_RP ! temperature      at tropopause  [K]
     real(RP) :: SHEAR_Z   =  3000.0_RP ! center height of shear layer    [m]
     real(RP) :: SHEAR_U   =    15.0_RP ! velocity u over the shear layer [m/s]
+    real(RP) :: QV0       =    14.0_RP ! maximum vapor mixing ration     [g/kg]
     ! Bubble
     real(RP) :: BBL_THETA = 3.D0 ! extremum of temperature in bubble [K]
 
@@ -2752,6 +2753,7 @@ contains
        TR_TEMP,   &
        SHEAR_Z,   &
        SHEAR_U,   &
+       QV0,       &
        BBL_THETA
 
     real(RP) :: rh    (KA,IA,JA)
@@ -2828,12 +2830,15 @@ contains
                                    temp(:,:,:), pres(:,:,:), qdry(:,:,:), & ! [IN]
                                    qsat(:,:,:)                            ) ! [OUT]
 
+    QV0 = QV0 * 1e-3_RP ! g/kg to kg/kg
+    QV0 = QV0 / ( 1.0_RP + QV0 ) ! mixing ratio to specicic humidity
+
     do j = JSB, JEB
     do i = ISB, IEB
        qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-       qv_sfc(i,j) = rh_sfc(i,j) * qsat_sfc(i,j)
+       qv_sfc(i,j) = min( rh_sfc(i,j) * qsat_sfc(i,j), QV0 )
        do k = KS, KE
-          qv(k,i,j) = rh(k,i,j) * qsat(k,i,j)
+          qv(k,i,j) = min( rh(k,i,j) * qsat(k,i,j), QV0 )
        enddo
     enddo
     enddo
