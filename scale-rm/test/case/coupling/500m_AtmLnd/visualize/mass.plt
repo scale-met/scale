@@ -23,7 +23,7 @@ plot "mass.dat" using 1:($6+$7) ti "Land Mass(WATER+ICE)" with linespoints point
 plot "mass.dat" using 1:3       ti "Water Mass(ATMOS)"        with linespoints pointsize 1.0, \
      "mass.dat" using 1:($4-$5) ti "Water Mass change(Total)" with linespoints pointsize 0.2, \
      "mass.dat" using 1:4       ti "Water Mass change(EVAP)"  with linespoints pointsize 0.2, \
-     "mass.dat" using 1:(-$5)   ti "Water Mass change(PRCP)"  with linespoints pointsize 0.2
+     "mass.dat" using 1:(-$5)   ti "Water Mass change(PREC)"  with linespoints pointsize 0.2
 
 plot "mass.dat" using 1:10      ti "Land Mass change(Total)"  with linespoints pointsize 1.0, \
      "mass.dat" using 1:8       ti "Land Mass change(Top)"    with linespoints pointsize 0.2, \
