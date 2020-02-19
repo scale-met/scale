@@ -581,15 +581,6 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
 
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qv_org(1:2,i,j) = qv_org(3,i,j)
-             enddo
-             enddo
-          end if
-
           if( dims(1) > shape(1) ) then
              select case( upper_qv_type )
              case("COPY")
@@ -619,15 +610,6 @@ contains
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qhyd_org(1:2,i,j,I_HC) = qhyd_org(3,i,j,I_HC)
-             enddo
-             enddo
-          end if
-
           ! if shape(1)>knum, QC is assumed to be zero.
 
        case('QR')
@@ -639,15 +621,6 @@ contains
                                 qhyd_org(3:shape(1)+2,:,:,I_HR), & ! (out)
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
-
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qhyd_org(1:2,i,j,I_HR) = qhyd_org(3,i,j,I_HR)
-             enddo
-             enddo
-          end if
 
           ! if shape(1)>knum, QR is assumed to be zero.
 
@@ -661,15 +634,6 @@ contains
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qhyd_org(1:2,i,j,I_HI) = qhyd_org(3,i,j,I_HI)
-             enddo
-             enddo
-          end if
-
           ! if shape(1)>knum, QI is assumed to be zero.
 
        case('QS')
@@ -682,15 +646,6 @@ contains
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
 
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qhyd_org(1:2,i,j,I_HS) = qhyd_org(3,i,j,I_HS)
-             enddo
-             enddo
-          end if
-
           ! if shape(1)>knum, QS is assumed to be zero.
 
        case('QG')
@@ -702,15 +657,6 @@ contains
                                 qhyd_org(3:shape(1)+2,:,:,I_HG), & ! (out)
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
-
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qhyd_org(1:2,i,j,I_HG) = qhyd_org(3,i,j,I_HG)
-             enddo
-             enddo
-          end if
 
           ! if shape(1)>knum, QG is assumed to be zero.
 
@@ -737,7 +683,6 @@ contains
                    qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
                 end if
              enddo
-             if ( sfc_diagnoses ) qv_org(1:2,i,j) = qv_org(3,i,j)
           enddo
           enddo
           if( shape(1) > dims(1) ) then
@@ -850,15 +795,6 @@ contains
                                 step = nt,                   & ! (in)
                                 postfix = basename_num       ) ! (in)
 
-          if ( sfc_diagnoses ) then
-             !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                RN222_org(1:2,i,j) = RN222_org(3,i,j)
-             enddo
-             enddo
-          endif
-
        end select
     enddo loop_InputAtmosGrADS
 
@@ -895,6 +831,19 @@ contains
     if ( sfc_diagnoses ) then
        ! surface
        if ( var_id(Ia_topo,1) > 0 ) then
+          if ( .not. under_sfc ) then
+             !$omp parallel do
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                do k = lm_layer(i,j), dims(1)+2
+                   if ( cz_org(k,i,j) > cz_org(2,i,j) ) then
+                      lm_layer(i,j) = k
+                      exit
+                   end if
+                end do
+             end do
+             end do
+          end if
           if ( var_id(Ia_t2,1) > 0 .and. var_id(Ia_ps,1) > 0 ) then
              !$omp parallel do &
              !$omp private (Rtot)
@@ -979,6 +928,27 @@ contains
           end do
        end if
 
+       if ( var_id(Ia_q2,1) < 0 .and. var_id(Ia_rh2,1) < 0 ) then
+          !$omp parallel do private(k)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             k = lm_layer(i,j)
+             qv_org(2,i,j) = qv_org(k,i,j)
+          end do
+          end do
+       end if
+       !$omp parallel do private(k)
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          k = lm_layer(i,j)
+          qv_org   (1,i,j)   = qv_org   (k,i,j)
+          qhyd_org (1,i,j,:) = qhyd_org (k,i,j,:)
+          qhyd_org (2,i,j,:) = qhyd_org (k,i,j,:)
+          RN222_org(1,i,j)   = RN222_org(k,i,j)
+          RN222_org(2,i,j)   = RN222_org(k,i,j)
+       end do
+       end do
+
        ! sea level
        !$omp parallel do
        do j = 1, dims(3)
@@ -1029,11 +999,11 @@ contains
        do i = 1, dims(2)
           if ( under_sfc ) then
              k = lm_layer(i,j)
-             if ( pres_org(1,i,j) > pres_org(k,i,j) ) then
+             if ( pres_org(1,i,j) < pres_org(k,i,j) ) then
                 pres_org(1,i,j) = UNDEF
                 cz_org  (1,i,j) = UNDEF
              end if
-             if ( pres_org(2,i,j) > pres_org(k,i,j) ) then
+             if ( pres_org(2,i,j) < pres_org(k,i,j) ) then
                 pres_org(2,i,j) = pres_org(1,i,j)
                 cz_org  (2,i,j) = cz_org(1,i,j)
              end if
