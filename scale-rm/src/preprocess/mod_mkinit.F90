@@ -856,15 +856,10 @@ contains
        SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up, &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up, &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
 
     ! Flux from Atmosphere
@@ -898,25 +893,13 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       SFLX_rain   (i,j) = FLX_rain
-       SFLX_snow   (i,j) = FLX_snow
+       SFLX_rain (i,j) = FLX_rain
+       SFLX_snow (i,j) = FLX_snow
 
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = FLX_IR_dn
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = FLX_NIR_dn + FLX_VIS_dn
-
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_IR)  = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_IR)  = FLX_IR_dn
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_NIR) = FLX_NIR_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_NIR) = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_VIS) = FLX_VIS_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_VIS) = 0.0_RP
+       SFLX_LW_up(i,j) = 0.0_RP
+       SFLX_LW_dn(i,j) = FLX_IR_dn
+       SFLX_SW_up(i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = FLX_NIR_dn + FLX_VIS_dn
     enddo
     enddo
 
@@ -929,6 +912,7 @@ contains
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
+       LAND_ICE,        &
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo, &
        SNOW_flag,     &
@@ -941,6 +925,7 @@ contains
 
     real(RP) :: LND_TEMP                ! land soil temperature      [K]
     real(RP) :: LND_WATER     = 0.15_RP ! land soil moisture         [m3/m3]
+    real(RP) :: LND_ICE       = 0.00_RP ! land soil ice              [m3/m3]
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
     real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW (0-1)
     real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW (0-1)
@@ -948,6 +933,7 @@ contains
     namelist / PARAM_MKINIT_LAND / &
        LND_TEMP,      &
        LND_WATER,     &
+       LND_ICE,       &
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW
@@ -971,6 +957,7 @@ contains
 
     LAND_TEMP      (:,:,:)         = LND_TEMP
     LAND_WATER     (:,:,:)         = LND_WATER
+    LAND_ICE       (:,:,:)         = LND_ICE
 
     LAND_SFC_TEMP  (:,:)           = SFC_TEMP
     LAND_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
@@ -1104,10 +1091,9 @@ contains
     real(RP) :: URB_ROOF_LAYER_TEMP           ! temperature in layer of roof          [K]
     real(RP) :: URB_BLDG_LAYER_TEMP           ! temperature in layer of building      [K]
     real(RP) :: URB_GRND_LAYER_TEMP           ! temperature in layer of ground        [K]
-    real(RP) :: URB_ROOF_RAIN       = 0.0_RP  ! temperature in layer of roof          [K]
-    real(RP) :: URB_BLDG_RAIN       = 0.0_RP  ! temperature in layer of building      [K]
-    real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [K]
-    real(RP) :: URB_RUNOFF          = 0.0_RP  ! temperature in layer of ground        [K]
+    real(RP) :: URB_ROOF_RAIN       = 0.0_RP  ! temperature in layer of roof          [kg/m2]
+    real(RP) :: URB_BLDG_RAIN       = 0.0_RP  ! temperature in layer of building      [kg/m2]
+    real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [kg/m2]
     real(RP) :: URB_SFC_TEMP                  ! Grid average of surface temperature   [K]
     real(RP) :: URB_ALB_LW          = 0.10_RP ! Grid average of surface albedo for LW (0-1)
     real(RP) :: URB_ALB_SW          = 0.20_RP ! Grid average of surface albedo for SW (0-1)
@@ -1125,7 +1111,6 @@ contains
        URB_ROOF_RAIN,       &
        URB_BLDG_RAIN,       &
        URB_GRND_RAIN,       &
-       URB_RUNOFF,          &
        URB_SFC_TEMP,        &
        URB_ALB_LW,          &
        URB_ALB_SW
@@ -1166,7 +1151,6 @@ contains
     URBAN_RAINR     (:,:)           = URB_ROOF_RAIN
     URBAN_RAINB     (:,:)           = URB_BLDG_RAIN
     URBAN_RAING     (:,:)           = URB_GRND_RAIN
-    URBAN_ROFF      (:,:)           = URB_RUNOFF
     URBAN_SFC_TEMP  (:,:)           = URB_SFC_TEMP
     URBAN_SFC_albedo(:,:,:,I_R_IR)  = URB_ALB_LW
     URBAN_SFC_albedo(:,:,:,I_R_NIR) = URB_ALB_SW

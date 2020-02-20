@@ -725,7 +725,7 @@ contains
     call MONITOR_reg( 'EVAP',         'evaporation',            'kg', & ! (in)
                       DV_MONIT_id(IM_EVAP),                           & ! (out)
                       dim_type='XY', is_tendency=.true.               ) ! (in)
-    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+    call MONITOR_reg( 'PREC',         'precipitation',          'kg', & ! (in)
                       DV_MONIT_id(IM_PREC),                           & ! (out)
                       dim_type='XY', is_tendency=.true.               ) ! (in)
 

@@ -47,8 +47,8 @@ module scale_ocean_grid_cartesC
   !
   !++ Private parameters & variables
   !
-  integer,  private, parameter :: FZ_MAX = 100
-  real(RP), private :: FZ(FZ_MAX) ! face coordinate without surface (=0 m)
+  integer,  private, parameter :: ODZ_MAX = 100
+  real(RP), private :: ODZ(ODZ_MAX) ! layer thickness for input
 
   character(len=H_LONG) :: OCEAN_GRID_CARTESC_IN_BASENAME  = ''
   logical               :: OCEAN_GRID_CARTESC_IN_AGGREGATE
@@ -67,7 +67,7 @@ contains
     namelist / PARAM_OCEAN_GRID_CARTESC / &
        OCEAN_GRID_CARTESC_IN_BASENAME,  &
        OCEAN_GRID_CARTESC_IN_AGGREGATE, &
-       FZ
+       ODZ
 
     integer :: ierr
     integer :: k
@@ -81,7 +81,7 @@ contains
        return
     end if
 
-    FZ(:) = 0.0_RP
+    ODZ(:) = 10.0_RP
 
     OCEAN_GRID_CARTESC_IN_AGGREGATE = FILE_AGGREGATE
 
@@ -168,17 +168,18 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    if ( OKA == 1 .and. FZ(1) == 0.0_RP ) then
-       FZ(1) = 1.0_RP ! to avoid zero thickness (tentative)
+    if ( OKA == 1 .and. ODZ(1) == 0.0_RP ) then
+       ODZ(1) = 10.0_RP ! to avoid zero thickness (tentative)
     end if
-    OCEAN_GRID_CARTESC_FZ(OKS-1) = 0.0_RP
-    do k = OKS, OKE
-       OCEAN_GRID_CARTESC_FZ(k) = FZ(k)
-    enddo
 
     do k = OKS, OKE
-       OCEAN_GRID_CARTESC_CDZ(k) = OCEAN_GRID_CARTESC_FZ(k) - OCEAN_GRID_CARTESC_FZ(k-1)
-       OCEAN_GRID_CARTESC_CZ (k) = OCEAN_GRID_CARTESC_CDZ(k) / 2.0_RP + OCEAN_GRID_CARTESC_FZ(k-1)
+       OCEAN_GRID_CARTESC_CDZ(k) = ODZ(k)
+    enddo
+
+    OCEAN_GRID_CARTESC_FZ(OKS-1) = 0.0_RP
+    do k = OKS, OKE
+       OCEAN_GRID_CARTESC_CZ(k) = OCEAN_GRID_CARTESC_CDZ(k) / 2.0_RP + OCEAN_GRID_CARTESC_FZ(k-1)
+       OCEAN_GRID_CARTESC_FZ(k) = OCEAN_GRID_CARTESC_CDZ(k)          + OCEAN_GRID_CARTESC_FZ(k-1)
     enddo
 
     return

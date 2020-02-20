@@ -154,7 +154,6 @@ contains
     use scale_monitor, only: &
        MONITOR_write, &
        MONITOR_finalize
-
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
     use mod_admin_versioncheck, only: &
@@ -195,8 +194,9 @@ contains
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup,  &
-       OCEAN_vars_history
+       OCEAN_vars_setup,   &
+       OCEAN_vars_history, &
+       OCEAN_vars_monitor
     use mod_ocean_driver, only: &
        OCEAN_driver_setup,         &
        OCEAN_driver_calc_tendency, &
@@ -205,8 +205,9 @@ contains
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup,  &
-       LAND_vars_history
+       LAND_vars_setup,   &
+       LAND_vars_history, &
+       LAND_vars_monitor
     use mod_land_driver, only: &
        LAND_driver_setup,         &
        LAND_driver_calc_tendency, &
@@ -216,8 +217,9 @@ contains
        URBAN_do,          &
        URBAN_land
     use mod_urban_vars, only: &
-       URBAN_vars_setup,  &
-       URBAN_vars_history
+       URBAN_vars_setup,   &
+       URBAN_vars_history, &
+       URBAN_vars_monitor
     use mod_urban_driver, only: &
        URBAN_driver_setup,         &
        URBAN_driver_calc_tendency, &
@@ -435,6 +437,9 @@ contains
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update( TIME_DOend )
                                              call USER_update
       ! restart & monitor output
+      if ( OCEAN_do ) call OCEAN_vars_monitor
+      if ( LAND_do  ) call LAND_vars_monitor
+      if ( URBAN_do ) call URBAN_vars_monitor
       if ( ATMOS_do ) call ATMOS_vars_monitor
       call ADMIN_restart_write
       call MONITOR_write('MAIN', TIME_NOWSTEP)
@@ -568,21 +573,24 @@ contains
        OCEAN_driver_calc_tendency, &
        OCEAN_SURFACE_SET
     use mod_ocean_vars, only: &
-       OCEAN_vars_history
+       OCEAN_vars_history, &
+       OCEAN_vars_monitor
     use mod_land_admin, only: &
        LAND_do
     use mod_land_driver, only: &
        LAND_driver_calc_tendency, &
        LAND_SURFACE_SET
     use mod_land_vars, only: &
-       LAND_vars_history
+       LAND_vars_history, &
+       LAND_vars_monitor
     use mod_urban_admin, only: &
        URBAN_do
     use mod_urban_driver, only: &
        URBAN_driver_calc_tendency, &
        URBAN_SURFACE_SET
     use mod_urban_vars, only: &
-       URBAN_vars_history
+       URBAN_vars_history, &
+       URBAN_vars_monitor
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_user, only: &
@@ -626,7 +634,10 @@ contains
     if( LAND_do  ) call LAND_vars_history
     if( URBAN_do ) call URBAN_vars_history
 
-    call ATMOS_vars_monitor
+    if( ATMOS_do ) call ATMOS_vars_monitor
+    if( OCEAN_do ) call OCEAN_vars_monitor
+    if( LAND_do  ) call LAND_vars_monitor
+    if( URBAN_do ) call URBAN_vars_monitor
 
     return
   end subroutine restart_read

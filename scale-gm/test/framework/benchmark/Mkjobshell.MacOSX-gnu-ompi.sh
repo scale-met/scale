@@ -79,7 +79,7 @@ cat << EOF1 > ./run.sh
 # ------ For MacOSX & gnu fortran&C & openmpi -----
 #
 ################################################################################
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 export GFORTRAN_UNBUFFERED_ALL=Y
 
 EOF1

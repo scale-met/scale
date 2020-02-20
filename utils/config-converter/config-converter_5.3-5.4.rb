@@ -14,6 +14,7 @@ fname = ARGV.shift
 
 params = Array.new
 inflag = false
+slab_depth = nil
 File.foreach(fname) do |line|
   line.chomp!
 
@@ -28,6 +29,11 @@ File.foreach(fname) do |line|
     params[-1][1].push line
   else # other line
     params.push line
+  end
+
+  # SLAB_DEPTH
+  if /OCEAN_DYN_SLAB_DEPTH\s*=\s*([\d.D]+),?/ =~ line
+    slab_depth = $1
   end
 
 end
@@ -108,6 +114,35 @@ params.each do |param|
       print " URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = '#{File.basename(fn)}',\n"
     end
     print "/\n"
+    next
+  end
+
+  # SLAB_DEPTH
+  if /^&PARAM_OCEAN_DYN_SLAB$/i =~ param_name
+    print param_name, "\n"
+    if param_items
+      param_items.each do |item|
+        next if /OCEAN_DYN_SLAB_DEPTH/ =~ item
+        print item, "\n"
+      end
+      print "/\n"
+    end
+    next
+  end
+  if slab_depth && /^&PARAM_OCEAN_GRID_CARTESC_INDEX$/i =~ param_name
+    print param_name, "\n"
+    if param_items
+      param_items.each do |item|
+        print item, "\n"
+      end
+      print "/\n"
+    end
+    print <<EOF
+
+&PARAM_OCEAN_GRID_CARTESC
+ ODZ = #{slab_depth},
+/
+EOF
     next
   end
 

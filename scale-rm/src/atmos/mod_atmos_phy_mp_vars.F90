@@ -70,6 +70,7 @@ module mod_atmos_phy_mp_vars
   real(RP), public, allocatable :: ATMOS_PHY_MP_EVAPORATE(:,:,:) ! number concentration of evaporated cloud [/m3]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_rain(:,:)   ! precipitation flux (liquid) [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_snow(:,:)   ! precipitation flux (solid)  [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_MP_SFLX_ENGI(:,:)   ! internal energy flux        [J/m2/s]
 
   integer, public :: QA_MP = 0
   integer, public :: QS_MP = -1
@@ -83,9 +84,7 @@ module mod_atmos_phy_mp_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 2       !< number of the variables
-  integer,                private, parameter :: I_SFLX_rain = 1
-  integer,                private, parameter :: I_SFLX_snow = 2
+  integer,                private, parameter :: VMAX = 0       !< number of the variables
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -93,12 +92,9 @@ module mod_atmos_phy_mp_vars
   integer,                private            :: VAR_ID(VMAX)   !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  data VAR_NAME / 'SFLX_rain', &
-                  'SFLX_snow'  /
-  data VAR_DESC / 'precipitation flux (liquid)', &
-                  'precipitation flux (solid)'   /
-  data VAR_UNIT / 'kg/m2/s', &
-                  'kg/m2/s' /
+!  data VAR_NAME / /
+!  data VAR_DESC / /
+!  data VAR_UNIT / /
 
 
   ! for diagnostics
@@ -177,8 +173,10 @@ contains
 
     allocate( ATMOS_PHY_MP_SFLX_rain(IA,JA) )
     allocate( ATMOS_PHY_MP_SFLX_snow(IA,JA) )
+    allocate( ATMOS_PHY_MP_SFLX_ENGI(IA,JA) )
     ATMOS_PHY_MP_SFLX_rain(:,:) = UNDEF
     ATMOS_PHY_MP_SFLX_snow(:,:) = UNDEF
+    ATMOS_PHY_MP_SFLX_ENGI(:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -274,8 +272,10 @@ contains
 
     call COMM_vars8( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )
     call COMM_vars8( ATMOS_PHY_MP_SFLX_snow(:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_MP_SFLX_ENGI(:,:), 3 )
     call COMM_wait ( ATMOS_PHY_MP_SFLX_rain(:,:), 1 )
     call COMM_wait ( ATMOS_PHY_MP_SFLX_snow(:,:), 2 )
+    call COMM_wait ( ATMOS_PHY_MP_SFLX_ENGI(:,:), 3 )
 
     return
   end subroutine ATMOS_PHY_MP_vars_fillhalo
@@ -293,24 +293,24 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'Open restart file (ATMOS_PHY_MP) '
-
-    if ( ATMOS_PHY_MP_RESTART_IN_BASENAME /= '' ) then
-
-       if ( ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
-       endif
-
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'basename: ', trim(basename)
-
-       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_MP_RESTART_IN_AGGREGATE )
-    else
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'restart file for ATMOS_PHY_MP is not specified.'
-    endif
+!!$    LOG_NEWLINE
+!!$    LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'Open restart file (ATMOS_PHY_MP) '
+!!$
+!!$    if ( ATMOS_PHY_MP_RESTART_IN_BASENAME /= '' ) then
+!!$
+!!$       if ( ATMOS_PHY_MP_RESTART_IN_POSTFIX_TIMELABEL ) then
+!!$          call TIME_gettimelabel( timelabel )
+!!$          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)//'_'//trim(timelabel)
+!!$       else
+!!$          basename = trim(ATMOS_PHY_MP_RESTART_IN_BASENAME)
+!!$       endif
+!!$
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'basename: ', trim(basename)
+!!$
+!!$       call FILE_CARTESC_open( basename, restart_fid, aggregate=ATMOS_PHY_MP_RESTART_IN_AGGREGATE )
+!!$    else
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_open",*) 'restart file for ATMOS_PHY_MP is not specified.'
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_open
@@ -333,35 +333,28 @@ contains
 
     !---------------------------------------------------------------------------
 
-    if ( restart_fid /= -1 ) then
-       LOG_NEWLINE
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_MP) '
-
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY', & ! [IN]
-                               ATMOS_PHY_MP_SFLX_rain(:,:)     ) ! [OUT]
-
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(2), 'XY', & ! [IN]
-                               ATMOS_PHY_MP_SFLX_snow(:,:)     ) ! [OUT]
-
-       if ( FILE_get_AGGREGATE(restart_fid) ) then
-          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
-       else
-          call ATMOS_PHY_MP_vars_fillhalo
-       end if
-
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
-          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
-       endif
-    else
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_MP.'
-    endif
+!!$    if ( restart_fid /= -1 ) then
+!!$       LOG_NEWLINE
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_MP) '
+!!$
+!!$       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY', & ! [IN]
+!!$                               ATMOS_PHY_MP_hoge(:,:)          ) ! [OUT]
+!!$
+!!$       if ( FILE_get_AGGREGATE(restart_fid) ) then
+!!$          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+!!$       else
+!!$          call ATMOS_PHY_MP_vars_fillhalo
+!!$       end if
+!!$
+!!$       if ( STATISTICS_checktotal ) then
+!!$          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+!!$                                 ATMOS_PHY_MP_hoge(:,:), VAR_NAME(1), & ! (in)
+!!$                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+!!$                                 ATMOS_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
+!!$       endif
+!!$    else
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_MP.'
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_read
@@ -379,26 +372,26 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
-
-       LOG_NEWLINE
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_create",*) 'Create restart file (ATMOS_PHY_AE) '
-
-       if ( ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL ) then
-          call TIME_gettimelabel( timelabel )
-          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
-       else
-          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
-       endif
-
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_create",*) 'basename: ', trim(basename)
-
-       call FILE_CARTESC_create( &
-            basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE, & ! [IN]
-            restart_fid,                                                              & ! [OUT]
-            aggregate=ATMOS_PHY_MP_RESTART_OUT_AGGREGATE                              ) ! [IN]
-
-    endif
+!!$    if ( ATMOS_PHY_MP_RESTART_OUT_BASENAME /= '' ) then
+!!$
+!!$       LOG_NEWLINE
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_create",*) 'Create restart file (ATMOS_PHY_AE) '
+!!$
+!!$       if ( ATMOS_PHY_MP_RESTART_OUT_POSTFIX_TIMELABEL ) then
+!!$          call TIME_gettimelabel( timelabel )
+!!$          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)//'_'//trim(timelabel)
+!!$       else
+!!$          basename = trim(ATMOS_PHY_MP_RESTART_OUT_BASENAME)
+!!$       endif
+!!$
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_create",*) 'basename: ', trim(basename)
+!!$
+!!$       call FILE_CARTESC_create( &
+!!$            basename, ATMOS_PHY_MP_RESTART_OUT_TITLE, ATMOS_PHY_MP_RESTART_OUT_DTYPE, & ! [IN]
+!!$            restart_fid,                                                              & ! [OUT]
+!!$            aggregate=ATMOS_PHY_MP_RESTART_OUT_AGGREGATE                              ) ! [IN]
+!!$
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_create
@@ -410,9 +403,9 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
-    if ( restart_fid /= -1 ) then
-       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
-    endif
+!!$    if ( restart_fid /= -1 ) then
+!!$       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_enddef
@@ -425,14 +418,14 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( restart_fid /= -1 ) then
-       LOG_NEWLINE
-       LOG_INFO("ATMOS_PHY_MP_vars_restart_close",*) 'Close restart file (ATMOS_PHY_MP) '
-
-       call FILE_CARTESC_close( restart_fid ) ! [IN]
-
-       restart_fid = -1
-    endif
+!!$    if ( restart_fid /= -1 ) then
+!!$       LOG_NEWLINE
+!!$       LOG_INFO("ATMOS_PHY_MP_vars_restart_close",*) 'Close restart file (ATMOS_PHY_MP) '
+!!$
+!!$       call FILE_CARTESC_close( restart_fid ) ! [IN]
+!!$
+!!$       restart_fid = -1
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_close
@@ -443,15 +436,18 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+    integer :: iv
     !---------------------------------------------------------------------------
 
-    if ( restart_fid /= -1 ) then
-
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
-                                  VAR_ID(1) )
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(2), VAR_DESC(2), VAR_UNIT(2), 'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
-                                  VAR_ID(2) )
-    endif
+!!$    if ( restart_fid /= -1 ) then
+!!$
+!!$       do iv = 1, VMAX
+!!$          call FILE_CARTESC_def_var( restart_fid, VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), &
+!!$                                     'XY', ATMOS_PHY_MP_RESTART_OUT_DTYPE, &
+!!$                                     VAR_ID(iv) )
+!!$       end do
+!!$
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_def_var
@@ -470,27 +466,21 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( restart_fid /= -1 ) then
-
-       call ATMOS_PHY_MP_vars_fillhalo
-
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_MP_SFLX_rain(:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
-          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_MP_SFLX_snow(:,:), VAR_NAME(2), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),        & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTAREA           ) ! (in)
-       endif
-
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_SFLX_rain(:,:), &
-                              VAR_NAME(1), 'XY' ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(2), ATMOS_PHY_MP_SFLX_snow(:,:), &
-                              VAR_NAME(2), 'XY' ) ! [IN]
-
-    endif
+!!$    if ( restart_fid /= -1 ) then
+!!$
+!!$       call ATMOS_PHY_MP_vars_fillhalo
+!!$
+!!$       if ( STATISTICS_checktotal ) then
+!!$          call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+!!$                                 ATMOS_PHY_MP_hoge(:,:), VAR_NAME(1), & ! (in)
+!!$                                 ATMOS_GRID_CARTESC_REAL_AREA(:,:),   & ! (in)
+!!$                                 ATMOS_GRID_CARTESC_REAL_TOTAREA      ) ! (in)
+!!$       endif
+!!$
+!!$       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_MP_hoge(:,:), &
+!!$                              VAR_NAME(1), 'XY' ) ! [IN]
+!!$
+!!$    endif
 
     return
   end subroutine ATMOS_PHY_MP_vars_restart_write

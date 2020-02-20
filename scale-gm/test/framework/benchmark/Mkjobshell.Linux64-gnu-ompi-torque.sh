@@ -96,7 +96,7 @@ cat << EOF1 > ./run.sh
 #PBS -N SCALE
 #PBS -o OUT.log
 #PBS -e ERR.log
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 export GFORTRAN_UNBUFFERED_ALL=Y
 
 source /etc/profile.d/modules.sh

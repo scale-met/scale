@@ -61,17 +61,24 @@ contains
 
   subroutine OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_AREA, &
-       ATMOS_GRID_CARTESC_REAL_TOTAREA
+       ATMOS_GRID_CARTESC_REAL_AREA
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_CDZ
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates_ocean
+    use scale_landuse, only: &
+       LANDUSE_fact_ocean
+    implicit none
 
     integer :: k, i, j
 
-    OCEAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
-    OCEAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
+    OCEAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = 1,   OJA
+    do i = 1,   OIA
+       OCEAN_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_ocean(i,j)
+       OCEAN_GRID_CARTESC_REAL_TOTAREA = OCEAN_GRID_CARTESC_REAL_TOTAREA + OCEAN_GRID_CARTESC_REAL_AREA(i,j)
+    end do
+    end do
 
     do j = 1,   OJA
     do i = 1,   OIA

@@ -117,7 +117,8 @@ contains
     use scale_atmos_grid_cartesC_real, only: &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
-       HYD_NAME
+       HYD_NAME, &
+       CV_WATER
     use scale_atmos_phy_cp_kf, only: &
        ATMOS_PHY_CP_kf_tendency
     use scale_atmos_phy_cp_common, only: &
@@ -160,6 +161,7 @@ contains
        RHOHYD_t_CP    => ATMOS_PHY_CP_RHOHYD_t,       &
        MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase, &
        SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
+       SFLX_ENGI      => ATMOS_PHY_CP_SFLX_ENGI,      &  ! internal energy flux [J/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
        cldfrac_dp     => ATMOS_PHY_CP_cldfrac_dp,     &  ! cloud fraction (deep convection) (0-1)
@@ -197,10 +199,17 @@ contains
                                          DENS_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOT_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:),  & ! [INOUT]
+                                         kf_nca(:,:),                              & ! [INOUT]
                                          SFLX_rain(:,:),                           & ! [OUT]
                                          cloudtop(:,:), cloudbase(:,:),            & ! [OUT]
-                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:),     & ! [OUT]
-                                         kf_nca(:,:)                               ) ! [OUT]
+                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [OUT]
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_ENGI(i,j) = SFLX_rain(i,j) * TEMP(KS,i,j) * CV_WATER
+          end do
+          end do
+
        end select
 
 !OCL XFILL

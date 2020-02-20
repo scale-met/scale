@@ -342,12 +342,12 @@ contains
        RHOT_t_CP,      &
        RHOQV_t_CP,     &
        RHOQ_t_CP,      &
+       nca,            &
        SFLX_convrain,  &
        cloudtop,       &
        cloudbase,      &
        cldfrac_dp,     &
-       cldfrac_sh,     &
-       nca             )
+       cldfrac_sh      )
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_const, only: &
@@ -390,13 +390,13 @@ contains
     real(RP), intent(inout) :: RHOQV_t_CP   (KA,IA,JA)       !< tendency rho*QV [kg/kg/s]
     real(RP), intent(inout) :: RHOQ_t_CP    (KA,IA,JA,N_HYD) !< tendency rho*QTRC [kg/kg/s]
 
+    real(RP), intent(inout) :: nca          (IA,JA)          !< convection active time [sec]
+
     real(RP), intent(out)   :: SFLX_convrain(IA,JA)          !< convective rain rate [kg/m2/s]
     real(RP), intent(out)   :: cloudtop     (IA,JA)          !< cloud top height  [m]
     real(RP), intent(out)   :: cloudbase    (IA,JA)          !< cloud base height [m]
     real(RP), intent(out)   :: cldfrac_dp   (KA,IA,JA)       !< cloud fraction (deep convection)
     real(RP), intent(out)   :: cldfrac_sh   (KA,IA,JA)       !< cloud fraction (shallow convection)
-
-    real(RP), intent(inout) :: nca          (IA,JA)          !< convection active time [sec]
 
     integer  :: k, i, j, iq                                !< loop index
     integer  :: nic                                        !< rate of timestep (time_advec/KF_DTSEC)
