@@ -64,10 +64,10 @@ contains
        SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
@@ -97,10 +97,10 @@ contains
        SFCFLX_LW_dn(:,:)     = 0.0_RP
        SFCFLX_SW_up(:,:)     = 0.0_RP
        SFCFLX_SW_dn(:,:)     = 0.0_RP
-       TOAFLX_LW_up(:,:)     = 0.0_RP
-       TOAFLX_LW_dn(:,:)     = 0.0_RP
-       TOAFLX_SW_up(:,:)     = 0.0_RP
-       TOAFLX_SW_dn(:,:)     = 0.0_RP
+       TOMFLX_LW_up(:,:)     = 0.0_RP
+       TOMFLX_LW_dn(:,:)     = 0.0_RP
+       TOMFLX_SW_up(:,:)     = 0.0_RP
+       TOMFLX_SW_dn(:,:)     = 0.0_RP
        SFLX_rad_dn (:,:,:,:) = 0.0_RP
        solins      (:,:)     = 0.0_RP
        cosSZA      (:,:)     = 0.0_RP
@@ -168,10 +168,10 @@ contains
        SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
@@ -195,8 +195,14 @@ contains
     real(RP) :: flux_up     (KA,IA,JA,2)
     real(RP) :: flux_dn     (KA,IA,JA,2)
     real(RP) :: flux_net    (KA,IA,JA,2)
-    real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
+    real(RP) :: flux_net_toa(   IA,JA,2)
+    real(RP) :: flux_net_tom(   IA,JA,2)
+
+    real(RP) :: TOAFLX_LW_up(IA,JA)
+    real(RP) :: TOAFLX_LW_dn(IA,JA)
+    real(RP) :: TOAFLX_SW_up(IA,JA)
+    real(RP) :: TOAFLX_SW_dn(IA,JA)
 
     real(RP) :: SFCFLX_LW_up_c(IA,JA)
     real(RP) :: SFCFLX_LW_dn_c(IA,JA)
@@ -206,6 +212,10 @@ contains
     real(RP) :: TOAFLX_LW_dn_c(IA,JA)
     real(RP) :: TOAFLX_SW_up_c(IA,JA)
     real(RP) :: TOAFLX_SW_dn_c(IA,JA)
+    real(RP) :: TOMFLX_LW_up_c(IA,JA)
+    real(RP) :: TOMFLX_LW_dn_c(IA,JA)
+    real(RP) :: TOMFLX_SW_up_c(IA,JA)
+    real(RP) :: TOMFLX_SW_dn_c(IA,JA)
 
     real(RP) :: CLDFRAC(KA,IA,JA)
     real(RP) :: MP_Re  (KA,IA,JA,N_HYD)
@@ -268,6 +278,7 @@ contains
        end select
 
 
+       ! surface
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -287,6 +298,7 @@ contains
        enddo
        enddo
 
+       ! top of the atmosphere
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -303,6 +315,26 @@ contains
 
           flux_net_toa(i,j,I_LW) = TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j)
           flux_net_toa(i,j,I_SW) = TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j)
+       enddo
+       enddo
+
+       ! top of the model
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          ! for clear-sky
+          TOMFLX_LW_up_c(i,j)    = flux_rad(KE,i,j,I_LW,I_up,1)
+          TOMFLX_LW_dn_c(i,j)    = flux_rad(KE,i,j,I_LW,I_dn,1)
+          TOMFLX_SW_up_c(i,j)    = flux_rad(KE,i,j,I_SW,I_up,1)
+          TOMFLX_SW_dn_c(i,j)    = flux_rad(KE,i,j,I_SW,I_dn,1)
+          ! for all-sky
+          TOMFLX_LW_up  (i,j)    = flux_rad(KE,i,j,I_LW,I_up,2)
+          TOMFLX_LW_dn  (i,j)    = flux_rad(KE,i,j,I_LW,I_dn,2)
+          TOMFLX_SW_up  (i,j)    = flux_rad(KE,i,j,I_SW,I_up,2)
+          TOMFLX_SW_dn  (i,j)    = flux_rad(KE,i,j,I_SW,I_dn,2)
+
+          flux_net_tom(i,j,I_LW) = TOMFLX_LW_up(i,j) - TOMFLX_LW_dn(i,j)
+          flux_net_tom(i,j,I_SW) = TOMFLX_SW_up(i,j) - TOMFLX_SW_dn(i,j)
        enddo
        enddo
 
@@ -361,6 +393,19 @@ contains
 
        call FILE_HISTORY_in( flux_net_toa  (:,:,I_LW), 'TOAFLX_LW_net',  'TOA net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net_toa  (:,:,I_SW), 'TOAFLX_SW_net',  'TOA net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( TOMFLX_LW_up_c(:,:),      'TOMFLX_LW_up_c', 'TOM upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_LW_dn_c(:,:),      'TOMFLX_LW_dn_c', 'TOM downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_up_c(:,:),      'TOMFLX_SW_up_c', 'TOM upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_dn_c(:,:),      'TOMFLX_SW_dn_c', 'TOM downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( TOMFLX_LW_up  (:,:),      'TOMFLX_LW_up',   'TOM upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_LW_dn  (:,:),      'TOMFLX_LW_dn',   'TOM downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_up  (:,:),      'TOMFLX_SW_up',   'TOM upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_dn  (:,:),      'TOMFLX_SW_dn',   'TOM downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( flux_net_tom  (:,:,I_LW), 'TOMFLX_LW_net',  'TOM net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( flux_net_tom  (:,:,I_SW), 'TOMFLX_SW_net',  'TOM net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
        call FILE_HISTORY_in( flux_net_sfc(:,:,I_LW),   'SLR',          'SFC net longwave  radiation flux',  'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net_sfc(:,:,I_SW),   'SSR',          'SFC net shortwave radiation flux',  'W/m2', fill_halo=.true. )

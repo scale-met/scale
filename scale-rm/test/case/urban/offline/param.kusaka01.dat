@@ -3,7 +3,7 @@
  roof_width =  7.5D0,
  road_width = 22.5D0,
  AH_TBL     = 0.0D0,
- ALH_TBL    = 0.0D0,
+ AHL_TBL    = 0.0D0,
  STRGR      = 0.24D0,
  STRGB      = 0.009D0,
  STRGG      = 0.24D0,

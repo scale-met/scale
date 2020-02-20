@@ -467,6 +467,8 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine REALINPUT_surface
+    use scale_const, only: &
+       TEM00 => CONST_TEM00
     use scale_time, only: &
        TIME_gettimelabel
     use scale_landuse, only: &
@@ -484,7 +486,7 @@ contains
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_freezetemp
     use mod_ocean_vars, only: &
-       ICE_flag,         &
+       ICE_FLAG,         &
        OCEAN_TEMP,       &
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
@@ -502,6 +504,7 @@ contains
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
+       LAND_ICE,        &
        LAND_SFC_TEMP,   &
        LAND_SFC_albedo
     use mod_urban_admin, only: &
@@ -932,7 +935,7 @@ contains
           OCEAN_VVEL(k,i,j) = 0.0_RP
        enddo
        OCEAN_OCN_Z0M (i,j) = OCEAN_SFC_Z0_ORG  (i,j,ns)
-       if ( ICE_flag ) then
+       if ( ICE_FLAG ) then
           OCEAN_ICE_TEMP(i,j) = min( OCEAN_SFC_TEMP_ORG(i,j,ns), OCEAN_PHY_ICE_freezetemp )
           OCEAN_ICE_MASS(i,j) = 0.0_RP
        end if
@@ -945,7 +948,13 @@ contains
        enddo
        do k = 1, LKMAX
           LAND_TEMP (k,i,j) = LAND_TEMP_org (k,i,j,nsl)
-          LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,nsl)
+          if ( LAND_TEMP(k,i,j) >= TEM00 ) then
+             LAND_WATER(k,i,j) = LAND_WATER_org(k,i,j,nsl)
+             LAND_ICE  (k,i,j) = 0.0_RP
+          else
+             LAND_WATER(k,i,j) = 0.0_RP
+             LAND_ICE(k,i,j)   = LAND_WATER_org(k,i,j,nsl)
+          end if
        enddo
 
        if ( URBAN_do ) then

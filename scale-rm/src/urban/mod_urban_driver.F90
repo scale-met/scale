@@ -143,8 +143,8 @@ contains
        ATMOS_SFLX_LW,   &
        ATMOS_SFLX_SW,   &
        ATMOS_cosSZA,    &
-       ATMOS_SFLX_rain, &
-       ATMOS_SFLX_snow, &
+       ATMOS_SFLX_water, &
+       ATMOS_SFLX_ENGI, &
        URBAN_TRL_t,     &
        URBAN_TBL_t,     &
        URBAN_TGL_t,     &
@@ -157,7 +157,6 @@ contains
        URBAN_RAINR_t,   &
        URBAN_RAINB_t,   &
        URBAN_RAING_t,   &
-       URBAN_ROFF_t,    &
        URBAN_SFC_TEMP,    &
        URBAN_SFC_albedo,  &
        URBAN_SFLX_MW,     &
@@ -210,7 +209,8 @@ contains
     use scale_urban_grid_cartesC, only: &
        CDZ => URBAN_GRID_CARTESC_CDZ
     use scale_landuse, only: &
-       LANDUSE_fact_urban
+       LANDUSE_fact_urban, &
+       exists_urban => LANDUSE_exists_urban
     use mod_urban_admin, only: &
        URBAN_SFC_TYPE
     use scale_urban_dyn_kusaka01, only: &
@@ -262,7 +262,6 @@ contains
        URBAN_RAINR_t(i,j) = 0.0_RP
        URBAN_RAINB_t(i,j) = 0.0_RP
        URBAN_RAING_t(i,j) = 0.0_RP
-       URBAN_ROFF_t (i,j) = 0.0_RP
     enddo
     enddo
 
@@ -304,7 +303,6 @@ contains
           RAINR(i,j) = URBAN_RAINR(i,j)
           RAINB(i,j) = URBAN_RAINB(i,j)
           RAING(i,j) = URBAN_RAING(i,j)
-          ROFF(i,j) = URBAN_ROFF(i,j)
        end do
        end do
 
@@ -322,19 +320,23 @@ contains
        if ( tloc == 24 ) then
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
                             + (        dsec ) * AH_URB(i,j,1     )
              URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
                             + (        dsec ) * AHL_URB(i,j,1     )
+          end if
           enddo
           enddo
        else
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_AH(i,j)  = ( 1.0_RP-dsec ) * AH_URB(i,j,tloc  ) &
                             + (        dsec ) * AH_URB(i,j,tloc+1)
              URBAN_AHL(i,j) = ( 1.0_RP-dsec ) * AHL_URB(i,j,tloc  ) &
                             + (        dsec ) * AHL_URB(i,j,tloc+1)
+          end if
           enddo
           enddo
        endif
@@ -349,7 +351,7 @@ contains
                                 REAL_Z1(:,:), ATMOS_PBL(:,:),                                & ! [IN]
                                 ATMOS_SFC_DENS(:,:), ATMOS_SFC_PRES(:,:),                    & ! [IN]
                                 ATMOS_SFLX_LW(:,:,:), ATMOS_SFLX_SW(:,:,:),                  & ! [IN]
-                                ATMOS_SFLX_rain(:,:), ATMOS_SFLX_snow(:,:),                  & ! [IN]
+                                ATMOS_SFLX_water(:,:), ATMOS_SFLX_ENGI(:,:),                 & ! [IN]
                                 URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [IN]
                                 URBAN_ZD(:,:),                                               & ! [IN]
                                 URBAN_AH(:,:), URBAN_AHL(:,:),                               & ! [IN]
@@ -359,7 +361,7 @@ contains
                                 dt,                                                          & ! [IN]
                                 TRL(:,:,:), TBL(:,:,:), TGL(:,:,:),                          & ! [INOUT]
                                 TR(:,:), TB(:,:), TG(:,:), TC(:,:), QC(:,:), UC(:,:),        & ! [INOUT]
-                                RAINR(:,:), RAINB(:,:), RAING(:,:), ROFF(:,:),               & ! [INOUT]
+                                RAINR(:,:), RAINB(:,:), RAING(:,:), URBAN_ROFF(:,:),         & ! [INOUT]
                                 URBAN_SFC_TEMP(:,:),                                         & ! [OUT]
                                 URBAN_SFC_albedo(:,:,:,:),                                   & ! [OUT]
                                 URBAN_SFLX_MW(:,:), URBAN_SFLX_MU(:,:), URBAN_SFLX_MV(:,:),  & ! [OUT]
@@ -373,11 +375,13 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
-       do k = UKS, UKE
-          URBAN_TRL_t(k,i,j) = ( TRL(k,i,j) - URBAN_TRL(k,i,j) ) / dt
-          URBAN_TBL_t(k,i,j) = ( TBL(k,i,j) - URBAN_TBL(k,i,j) ) / dt
-          URBAN_TGL_t(k,i,j) = ( TGL(k,i,j) - URBAN_TGL(k,i,j) ) / dt
-       end do
+       if ( exists_urban(i,j) ) then
+          do k = UKS, UKE
+             URBAN_TRL_t(k,i,j) = ( TRL(k,i,j) - URBAN_TRL(k,i,j) ) / dt
+             URBAN_TBL_t(k,i,j) = ( TBL(k,i,j) - URBAN_TBL(k,i,j) ) / dt
+             URBAN_TGL_t(k,i,j) = ( TGL(k,i,j) - URBAN_TGL(k,i,j) ) / dt
+          end do
+       end if
        end do
        end do
 
@@ -385,6 +389,7 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
           URBAN_TR_t(i,j) = ( TR(i,j) - URBAN_TR(i,j) ) / dt
           URBAN_TB_t(i,j) = ( TB(i,j) - URBAN_TB(i,j) ) / dt
           URBAN_TG_t(i,j) = ( TG(i,j) - URBAN_TG(i,j) ) / dt
@@ -394,7 +399,7 @@ contains
           URBAN_RAINR_t(i,j) = ( RAINR(i,j) - URBAN_RAINR(i,j) ) / dt
           URBAN_RAINB_t(i,j) = ( RAINB(i,j) - URBAN_RAINB(i,j) ) / dt
           URBAN_RAING_t(i,j) = ( RAING(i,j) - URBAN_RAING(i,j) ) / dt
-          URBAN_ROFF_t (i,j) = ( ROFF (i,j) - URBAN_ROFF (i,j) ) / dt
+       end if
        end do
        end do
 
@@ -402,7 +407,9 @@ contains
           !$omp parallel do
           do j = UJS, UJE
           do i = UIS, UIE
+          if ( exists_urban(i,j) ) then
              URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
+          end if
           enddo
           enddo
        endif
@@ -418,22 +425,21 @@ contains
     call URBAN_SURFACE_SET( countup=.true. )
 
 
-    call FILE_HISTORY_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K',     dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K',     dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_TG_t(:,:), 'URBAN_TG_t', 'tendency of URBAN_TG', 'K',     dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_TC_t(:,:), 'URBAN_TC_t', 'tendency of URBAN_TC', 'K',     dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_QC_t(:,:), 'URBAN_QC_t', 'tendency of URBAN_QC', 'kg/kg', dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_UC_t(:,:), 'URBAN_UC_t', 'tendency of URBAN_UC', 'm/s',   dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K/s',     dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K/s',     dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_TG_t(:,:), 'URBAN_TG_t', 'tendency of URBAN_TG', 'K/s',     dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_TC_t(:,:), 'URBAN_TC_t', 'tendency of URBAN_TC', 'K/s',     dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_QC_t(:,:), 'URBAN_QC_t', 'tendency of URBAN_QC', 'kg/kg/s', dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_UC_t(:,:), 'URBAN_UC_t', 'tendency of URBAN_UC', 'm/s2',    dim_type='XY' )
 
-    call FILE_HISTORY_in( URBAN_TRL_t(:,:,:), 'URBAN_TRL_t', 'tendency of URBAN_TRL', 'K', dim_type='UXY' )
-    call FILE_HISTORY_in( URBAN_TBL_t(:,:,:), 'URBAN_TBL_t', 'tendency of URBAN_TBL', 'K', dim_type='UXY' )
-    call FILE_HISTORY_in( URBAN_TGL_t(:,:,:), 'URBAN_TGL_t', 'tendency of URBAN_TGL', 'K', dim_type='UXY' )
+    call FILE_HISTORY_in( URBAN_TRL_t(:,:,:), 'URBAN_TRL_t', 'tendency of URBAN_TRL', 'K/s', dim_type='UXY' )
+    call FILE_HISTORY_in( URBAN_TBL_t(:,:,:), 'URBAN_TBL_t', 'tendency of URBAN_TBL', 'K/s', dim_type='UXY' )
+    call FILE_HISTORY_in( URBAN_TGL_t(:,:,:), 'URBAN_TGL_t', 'tendency of URBAN_TGL', 'K/s', dim_type='UXY' )
 
-    call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'K', dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'K', dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'K', dim_type='XY' )
-    call FILE_HISTORY_in( URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  'tendency of URBAN_ROFF',  'K', dim_type='XY' )
-
+    call FILE_HISTORY_in( URBAN_RAINR_t(:,:), 'URBAN_RAINR_t', 'tendency of URBAN_RAINR', 'kg/m2/s', dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_RAINB_t(:,:), 'URBAN_RAINB_t', 'tendency of URBAN_RAINB', 'kg/m2/s', dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_RAING_t(:,:), 'URBAN_RAING_t', 'tendency of URBAN_RAING', 'kg/m2/s', dim_type='XY' )
+    call FILE_HISTORY_in( URBAN_ROFF   (:,:), 'URBAN_ROFF',    'urban runoff water',      'kg/m2/s', dim_type='XY' )
 
     if ( STATISTICS_checktotal ) then
 
@@ -488,7 +494,7 @@ contains
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
                               URBAN_GRID_CARTESC_REAL_TOTAREA      )
        call STATISTICS_total( UIA, UIS, UIE, UJA, UJS, UJE, &
-                              URBAN_ROFF_t (:,:), 'URBAN_ROFF_t',  &
+                              URBAN_ROFF(:,:),    'URBAN_ROFF',    &
                               URBAN_GRID_CARTESC_REAL_AREA(:,:),   &
                               URBAN_GRID_CARTESC_REAL_TOTAREA      )
     endif
@@ -517,7 +523,6 @@ contains
        URBAN_RAINR_t,     &
        URBAN_RAINB_t,     &
        URBAN_RAING_t,     &
-       URBAN_ROFF_t,      &
        URBAN_TR,          &
        URBAN_TB,          &
        URBAN_TG,          &
@@ -530,10 +535,11 @@ contains
        URBAN_RAINR,       &
        URBAN_RAINB,       &
        URBAN_RAING,       &
-       URBAN_ROFF,        &
        URBAN_vars_total
     use mod_urban_admin, only: &
        URBAN_DYN_TYPE
+    use scale_landuse, only: &
+       exists_urban => LANDUSE_exists_urban
     implicit none
 
     integer :: k, i, j
@@ -552,11 +558,13 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
-       do k = UKS, UKE
-          URBAN_TRL(k,i,j) = URBAN_TRL(k,i,j) + URBAN_TRL_t(k,i,j) * dt
-          URBAN_TBL(k,i,j) = URBAN_TBL(k,i,j) + URBAN_TBL_t(k,i,j) * dt
-          URBAN_TGL(k,i,j) = URBAN_TGL(k,i,j) + URBAN_TGL_t(k,i,j) * dt
-       end do
+       if ( exists_urban(i,j) ) then
+          do k = UKS, UKE
+             URBAN_TRL(k,i,j) = URBAN_TRL(k,i,j) + URBAN_TRL_t(k,i,j) * dt
+             URBAN_TBL(k,i,j) = URBAN_TBL(k,i,j) + URBAN_TBL_t(k,i,j) * dt
+             URBAN_TGL(k,i,j) = URBAN_TGL(k,i,j) + URBAN_TGL_t(k,i,j) * dt
+          end do
+       end if
        end do
        end do
 
@@ -564,6 +572,7 @@ contains
        !$omp parallel do
        do j = UJS, UJE
        do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
           URBAN_TR(i,j) = URBAN_TR(i,j) + URBAN_TR_t(i,j) * dt
           URBAN_TB(i,j) = URBAN_TB(i,j) + URBAN_TB_t(i,j) * dt
           URBAN_TG(i,j) = URBAN_TG(i,j) + URBAN_TG_t(i,j) * dt
@@ -573,7 +582,7 @@ contains
           URBAN_RAINR(i,j) = max( real(URBAN_RAINR(i,j) + URBAN_RAINR_t(i,j) * dt, RP), 0.0_RP )
           URBAN_RAINB(i,j) = max( real(URBAN_RAINB(i,j) + URBAN_RAINB_t(i,j) * dt, RP), 0.0_RP )
           URBAN_RAING(i,j) = max( real(URBAN_RAING(i,j) + URBAN_RAING_t(i,j) * dt, RP), 0.0_RP )
-          URBAN_ROFF (i,j) = URBAN_ROFF (i,j) + URBAN_ROFF_t (i,j) * dt
+       end if
        end do
        end do
 
@@ -605,8 +614,8 @@ contains
        ATMOS_SFLX_LW,   &
        ATMOS_SFLX_SW,   &
        ATMOS_cosSZA,    &
-       ATMOS_SFLX_rain, &
-       ATMOS_SFLX_snow
+       ATMOS_SFLX_water, &
+       ATMOS_SFLX_ENGI
     use mod_cpl_vars, only: &
        CPL_getATM_URB
     implicit none
@@ -631,8 +640,8 @@ contains
                             ATMOS_SFC_PRES   (:,:),     & ! [OUT]
                             ATMOS_SFLX_rad_dn(:,:,:,:), & ! [OUT]
                             ATMOS_cosSZA     (:,:),     & ! [OUT]
-                            ATMOS_SFLX_rain  (:,:),     & ! [OUT]
-                            ATMOS_SFLX_snow  (:,:)      ) ! [OUT]
+                            ATMOS_SFLX_water (:,:),     & ! [OUT]
+                            ATMOS_SFLX_ENGI  (:,:)      ) ! [OUT]
     endif
 
 !OCL XFILL
@@ -677,6 +686,8 @@ contains
        URBAN_Q2
     use mod_cpl_vars, only: &
        CPL_putURB
+    use scale_landuse, only: &
+       exists_urban => LANDUSE_exists_urban
     implicit none
 
     ! arguments
@@ -702,6 +713,7 @@ contains
                         URBAN_V10       (:,:),     & ! [IN]
                         URBAN_T2        (:,:),     & ! [IN]
                         URBAN_Q2        (:,:),     & ! [IN]
+                        exists_urban    (:,:),     & ! [IN]
                         countup                    ) ! [IN]
     endif
 

@@ -58,7 +58,6 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOU_t    (:,:)     ! tendency rho*U    [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOV_t    (:,:)     ! tendency rho*V    [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOH      (:,:)     ! diabatic heating  [J/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOT_t    (:,:)     ! tendency RHOT     [K  *kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t    (:,:,:)   ! tendency rho*QTRC [    kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)     ! surface skin temperature             [K]
@@ -71,13 +70,16 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_DENS  (:,:)     ! surface atmosphere density  [kg/m3]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_PRES  (:,:)     ! surface atmosphere pressure [Pa]
 
+  real(RP), public, allocatable :: ATMOS_PHY_SF_PREC_MASS (:,:)     ! mass flux of the precipitation [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_PREC_ENGI (:,:)     ! internal energy flux of the precipitation [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MW   (:,:)     ! z-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MU   (:,:)     ! x-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MV   (:,:)     ! y-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SH   (:,:)     ! sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)     ! latent heat flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s] (downward)
   real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_ENGI (:,:)     ! internal energy flux [J/m2/s]
   real(RP), public, pointer     :: ATMOS_PHY_SF_SFLX_QV   (:,:)
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_Ustar     (:,:)     ! friction velocity         [m/2]
@@ -104,7 +106,7 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX              = 10 !< number of the variables
+  integer,                private, parameter :: VMAX              = 12 !< number of the variables
   integer,                private, parameter :: I_SFC_TEMP        =  1
   integer,                private, parameter :: I_SFC_ALB_IR_dir  =  2
   integer,                private, parameter :: I_SFC_ALB_IR_dif  =  3
@@ -115,6 +117,8 @@ module mod_atmos_phy_sf_vars
   integer,                private, parameter :: I_SFC_Z0M         =  8
   integer,                private, parameter :: I_SFC_Z0H         =  9
   integer,                private, parameter :: I_SFC_Z0E         = 10
+  integer,                private, parameter :: I_PREC_MASS       = 11
+  integer,                private, parameter :: I_PREC_ENGI       = 12
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -132,7 +136,9 @@ module mod_atmos_phy_sf_vars
                   'SFC_ALB_VIS_dif', &
                   'SFC_Z0M',         &
                   'SFC_Z0H',         &
-                  'SFC_Z0E'          /
+                  'SFC_Z0E',         &
+                  'SFC_PREC_MASS',   &
+                  'SFC_PREC_ENGI'    /
 
   data VAR_DESC / 'surface skin temperature',            &
                   'surface albedo for IR,  direct ',     &
@@ -143,7 +149,9 @@ module mod_atmos_phy_sf_vars
                   'surface albedo for VIS, diffuse',     &
                   'surface roughness length (momentum)', &
                   'surface roughness length (heat)',     &
-                  'surface roughness length (vapor)'     /
+                  'surface roughness length (vapor)',    &
+                  'precipitation mass flux',             &
+                  'precipitation internal energy flux'   /
 
   data VAR_STDN / 'surface_temp', &
                   '', &
@@ -154,7 +162,9 @@ module mod_atmos_phy_sf_vars
                   '', &
                   'surface_roughness_length_for_momentum_in_air', &
                   'surface_roughness_length_for_heat_in_air', &
-                  '' /
+                  '', &
+                  '', &
+                  ''  /
 
   data VAR_UNIT / 'K', &
                   '1', &
@@ -165,7 +175,9 @@ module mod_atmos_phy_sf_vars
                   '1', &
                   'm', &
                   'm', &
-                  'm'  /
+                  'm', &
+                  'kg/m2/s', &
+                  'J/m2/s'   /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04_RP
@@ -213,14 +225,12 @@ contains
     allocate( ATMOS_PHY_SF_MOMZ_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOU_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOV_t    (IA,JA)    )
-    allocate( ATMOS_PHY_SF_RHOT_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOH      (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOQ_t    (IA,JA,QA) )
     ATMOS_PHY_SF_DENS_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_MOMZ_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOU_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOV_t    (:,:)     = UNDEF
-    ATMOS_PHY_SF_RHOT_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOH      (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOQ_t    (:,:,:)   = UNDEF
 
@@ -245,6 +255,11 @@ contains
     ATMOS_PHY_SF_SFC_DENS  (:,:)     = UNDEF
     ATMOS_PHY_SF_SFC_PRES  (:,:)     = UNDEF
 
+    allocate( ATMOS_PHY_SF_PREC_MASS (IA,JA) )
+    allocate( ATMOS_PHY_SF_PREC_ENGI (IA,JA) )
+    ATMOS_PHY_SF_PREC_MASS(:,:)      = UNDEF
+    ATMOS_PHY_SF_PREC_ENGI(:,:)      = UNDEF
+
     allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_MV   (IA,JA) )
@@ -252,6 +267,7 @@ contains
     allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_GH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,max(QA,1)) )
+    allocate( ATMOS_PHY_SF_SFLX_ENGI (IA,JA) )
     ATMOS_PHY_SF_SFLX_MW   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_MU   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_MV   (:,:)     = UNDEF
@@ -259,6 +275,7 @@ contains
     ATMOS_PHY_SF_SFLX_LH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_GH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_ENGI (:,:)     = UNDEF
 
     allocate( ATMOS_PHY_SF_Ustar     (IA,JA) )
     allocate( ATMOS_PHY_SF_Tstar     (IA,JA) )
@@ -337,12 +354,14 @@ contains
     integer :: n ,idir, irgn
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP(:,:), 1 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0M (:,:), 2 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0H (:,:), 3 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0E (:,:), 4 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP (:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
+    call COMM_vars8( ATMOS_PHY_SF_PREC_MASS(:,:), 5 )
+    call COMM_vars8( ATMOS_PHY_SF_PREC_ENGI(:,:), 6 )
 
-    n = 4
+    n = 6
     do irgn = I_R_IR, I_R_VIS
     do idir = I_R_direct, I_R_diffuse
        n = n + 1
@@ -350,12 +369,14 @@ contains
     enddo
     enddo
 
-    call COMM_wait ( ATMOS_PHY_SF_SFC_TEMP(:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M (:,:), 2 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H (:,:), 3 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E (:,:), 4 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_TEMP (:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
+    call COMM_wait ( ATMOS_PHY_SF_PREC_MASS(:,:), 5 )
+    call COMM_wait ( ATMOS_PHY_SF_PREC_ENGI(:,:), 6 )
 
-    n = 4
+    n = 6
     do irgn = I_R_IR, I_R_VIS
     do idir = I_R_direct, I_R_diffuse
        n = n + 1
@@ -437,6 +458,10 @@ contains
                                ATMOS_PHY_SF_SFC_Z0H   (:,:)                     ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0E),         'XY',  & ! [IN]
                                ATMOS_PHY_SF_SFC_Z0E   (:,:)                     ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_PREC_MASS),       'XY',  & ! [IN]
+                               ATMOS_PHY_SF_PREC_MASS (:,:)                     ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_PREC_ENGI),       'XY',  & ! [IN]
+                               ATMOS_PHY_SF_PREC_ENGI (:,:)                     ) ! [OUT]
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -535,7 +560,7 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       do i = I_SFC_TEMP, I_SFC_Z0E
+       do i = 1, VMAX
           call FILE_CARTESC_def_var( restart_fid,                           & ! [IN]
                                      VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                                      'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE,  & ! [IN]
@@ -592,7 +617,12 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_Z0E),                   & ! [IN]
                                     ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
                                     VAR_NAME(I_SFC_Z0E), 'XY'                         ) ! [IN]
-
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_PREC_MASS),                 & ! [IN]
+                                    ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
+                                    VAR_NAME(I_PREC_MASS), 'XY'                       ) ! [IN]
+       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_PREC_ENGI),                 & ! [IN]
+                                    ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
+                                    VAR_NAME(I_PREC_ENGI), 'XY'                       ) ! [IN]
     endif
 
     return
@@ -658,6 +688,16 @@ contains
        call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
                               ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
                               VAR_NAME(I_SFC_Z0E),                              & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                              ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
+                              VAR_NAME(I_PREC_MASS),                            & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                              ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
+                              VAR_NAME(I_PREC_ENGI),                            & ! [IN]
                               ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
                               ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
     endif

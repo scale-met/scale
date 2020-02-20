@@ -1402,7 +1402,7 @@ contains
        var_name_nc = "Q2"
        var_desc_nc = "Chlorine gas mixing ratio"
        var_unit_nc = "kg/kg"
-    case( 'PRCP', 'prcp' )
+    case( 'PREC', 'prec' )
        var_name_nc = "PRECL"
        var_desc_nc = "Large-scale precipitation rate"
        var_unit_nc = "m/s"

@@ -59,7 +59,7 @@ module scale_monitor
   integer                :: MONITOR_FID = -1                    !< fileID for monitor output file
 
   character(len=H_LONG)  :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
-  logical                :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
+  logical                :: MONITOR_USEDEVIATION  = .true.    !< use deviation from first step?
   integer                :: MONITOR_STEP_INTERVAL = 1         !< step interval
   logical                :: MONITOR_GLOBAL_SUM    = .true.    !< global or local sum
 
@@ -110,7 +110,7 @@ contains
 
     namelist / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME, &
-       MONITOR_USEDEVATION,  &
+       MONITOR_USEDEVIATION, &
        MONITOR_GLOBAL_SUM,   &
        MONITOR_STEP_INTERVAL
 
@@ -154,7 +154,7 @@ contains
     else
        LOG_INFO('MONITOR_setup',*) 'Number of requested monitor item : ', MONITOR_nreqs
        LOG_INFO('MONITOR_setup',*) 'Monitor output interval   [step] : ', MONITOR_STEP_INTERVAL
-       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?   : ', MONITOR_USEDEVATION
+       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?   : ', MONITOR_USEDEVIATION
     endif
 
     allocate( MONITOR_items(MONITOR_nreqs) )
@@ -368,7 +368,7 @@ contains
           MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
-       if ( MONITOR_USEDEVATION ) then
+       if ( MONITOR_USEDEVIATION ) then
           if ( MONITOR_items(itemid)%first ) then
              MONITOR_items(itemid)%var  = 0.0_RP
              MONITOR_items(itemid)%var0 = total
@@ -421,7 +421,7 @@ contains
           MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
-       if ( MONITOR_USEDEVATION ) then
+       if ( MONITOR_USEDEVIATION ) then
           if ( MONITOR_items(itemid)%first ) then
              MONITOR_items(itemid)%var   = 0.0_RP
              MONITOR_items(itemid)%var0  = total

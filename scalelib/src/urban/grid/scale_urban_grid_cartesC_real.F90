@@ -61,17 +61,23 @@ contains
 
   subroutine URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_AREA, &
-       ATMOS_GRID_CARTESC_REAL_TOTAREA
+       ATMOS_GRID_CARTESC_REAL_AREA
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_CDZ
     use scale_file_cartesC, only: &
        FILE_CARTESC_set_coordinates_urban
+    use scale_landuse, only: &
+       LANDUSE_fact_urban
 
     integer :: k, i, j
 
-    URBAN_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
-    URBAN_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
+    URBAN_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = 1, UJA
+    do i = 1, UIA
+       URBAN_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_urban(i,j)
+       URBAN_GRID_CARTESC_REAL_TOTAREA = URBAN_GRID_CARTESC_REAL_TOTAREA + URBAN_GRID_CARTESC_REAL_AREA(i,j)
+    end do
+    end do
 
     do j = 1,   UJA
     do i = 1,   UIA

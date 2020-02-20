@@ -83,7 +83,7 @@ cat << EOF1 > ./run.sh
 # ------ For Linux64 & intel fortran&C & intel mpi -----
 #
 ################################################################################
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 
 export HFI_NO_CPUAFFINITY=1
 export I_MPI_PIN_PROCESSOR_EXCLUDE_LIST=0,1,72,73,144,145,216,217

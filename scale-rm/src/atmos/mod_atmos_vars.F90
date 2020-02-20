@@ -429,17 +429,19 @@ module mod_atmos_vars
   integer, private, parameter   :: IM_ENGFLXT      =  9
   integer, private, parameter   :: IM_ENGSFC_SH    = 10
   integer, private, parameter   :: IM_ENGSFC_LH    = 11
-  integer, private, parameter   :: IM_ENGSFC_RD    = 12
-  integer, private, parameter   :: IM_ENGTOA_RD    = 13
-  integer, private, parameter   :: IM_ENGSFC_LW_up = 14
-  integer, private, parameter   :: IM_ENGSFC_LW_dn = 15
-  integer, private, parameter   :: IM_ENGSFC_SW_up = 16
-  integer, private, parameter   :: IM_ENGSFC_SW_dn = 17
-  integer, private, parameter   :: IM_ENGTOA_LW_up = 18
-  integer, private, parameter   :: IM_ENGTOA_LW_dn = 19
-  integer, private, parameter   :: IM_ENGTOA_SW_up = 20
-  integer, private, parameter   :: IM_ENGTOA_SW_dn = 21
-  integer, private, parameter   :: DVM_nmax        = 21
+  integer, private, parameter   :: IM_ENGSFC_EVAP  = 12
+  integer, private, parameter   :: IM_ENGSFC_PREC  = 13
+  integer, private, parameter   :: IM_ENGSFC_RD    = 14
+  integer, private, parameter   :: IM_ENGTOM_RD    = 15
+  integer, private, parameter   :: IM_ENGSFC_LW_up = 16
+  integer, private, parameter   :: IM_ENGSFC_LW_dn = 17
+  integer, private, parameter   :: IM_ENGSFC_SW_up = 18
+  integer, private, parameter   :: IM_ENGSFC_SW_dn = 19
+  integer, private, parameter   :: IM_ENGTOM_LW_up = 20
+  integer, private, parameter   :: IM_ENGTOM_LW_dn = 21
+  integer, private, parameter   :: IM_ENGTOM_SW_up = 22
+  integer, private, parameter   :: IM_ENGTOM_SW_dn = 23
+  integer, private, parameter   :: DVM_nmax        = 23
   integer, private              :: DV_MONIT_id(DVM_nmax)
 
 
@@ -761,7 +763,7 @@ contains
     call MONITOR_reg( 'EVAP',         'evaporation at the surface', 'kg', & ! (in)
                       DV_MONIT_id(IM_EVAP),                           & ! (out)
                       dim_type='XY', is_tendency=.true.               ) ! (in)
-    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+    call MONITOR_reg( 'PREC',         'precipitation',          'kg', & ! (in)
                       DV_MONIT_id(IM_PREC),                           & ! (out)
                       dim_type='XY', is_tendency=.true.               ) ! (in)
 
@@ -781,17 +783,23 @@ contains
     call MONITOR_reg( 'ENGFLXT',      'total energy flux convergence', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
-    call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
+    call MONITOR_reg( 'ENGSFC_SH',    'SFC sensible heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SH),                     & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_LH',    'SFC latent   heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LH),                     & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGSFC_EVAP',  'SFC internal energy flux of the evapolation', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_EVAP),                   & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGSFC_PREC',  'SFC internal energy flux of the precipitation', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_PREC),                   & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_RD',    'SFC net radiation flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_RD),                     & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
-    call MONITOR_reg( 'ENGTOA_RD',    'TOA net radiation flux', 'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_RD),                     & ! (out)
+    call MONITOR_reg( 'ENGTOM_RD',    'TOM net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_RD),                     & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
 
     call MONITOR_reg( 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J', & ! (in)
@@ -807,17 +815,17 @@ contains
                       DV_MONIT_id(IM_ENGSFC_SW_dn),                  & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
 
-    call MONITOR_reg( 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_LW_up),                  & ! (out)
+    call MONITOR_reg( 'ENGTOM_LW_up', 'TOM LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_LW_up),                  & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
-    call MONITOR_reg( 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_LW_dn),                  & ! (out)
+    call MONITOR_reg( 'ENGTOM_LW_dn', 'TOM LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_LW_dn),                  & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
-    call MONITOR_reg( 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_SW_up),                  & ! (out)
+    call MONITOR_reg( 'ENGTOM_SW_up', 'TOM SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_SW_up),                  & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
-    call MONITOR_reg( 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_SW_dn),                  & ! (out)
+    call MONITOR_reg( 'ENGTOM_SW_dn', 'TOM SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_SW_dn),                  & ! (out)
                       dim_type='XY', is_tendency=.true.              ) ! (in)
 
     return
@@ -2181,9 +2189,6 @@ contains
     case ( 'ENGI' )
        if ( .not. DV_calculated(I_ENGI) ) then
           call allocate_3D( ENGI )
-          if ( moist ) then
-             call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
-          end if
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = 1, IA
@@ -2191,13 +2196,8 @@ contains
              ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
              do iq = 1, QA
                 ENGI(k,i,j) = ENGI(k,i,j) &
-                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * ( TEMP(k,i,j) * TRACER_CV(iq) + TRACER_ENGI0(iq) )
              enddo
-             if ( moist ) then
-                ENGI(k,i,j) = ENGI(k,i,j) &
-                     + DENS_av(k,i,j) * ( QV  (k,i,j) * LHVc & ! Latent Heat [vapor->liquid]
-                                        - QICE(k,i,j) * LHFc ) ! Latent Heat [ice->liquid]
-             end if
           end do
           end do
           end do
@@ -2987,31 +2987,28 @@ contains
        ATMOS_DYN_TYPE
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
-    use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
        SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn
     use mod_atmos_phy_sf_vars, only: &
-       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH, &
-       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
+       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
 
     real(RP) :: ENGFLXT    (IA,JA) ! total flux             [J/m2/s]
     real(RP) :: SFLX_RD_net(IA,JA) ! net SFC radiation flux [J/m2/s]
-    real(RP) :: TFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
+    real(RP) :: TFLX_RD_net(IA,JA) ! net TOM radiation flux [J/m2/s]
 
     real(RP)               :: WORK (KA,IA,JA,3)
     character(len=H_SHORT) :: WNAME(3)
@@ -3100,7 +3097,6 @@ contains
        call MONITOR_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
     end if
 
-
     ! radiation flux
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
@@ -3109,10 +3105,11 @@ contains
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
                         + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
 
-       TFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
-                        + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
+       TFLX_RD_net(i,j) = ( TOMFLX_LW_up(i,j) - TOMFLX_LW_dn(i,j) ) &
+                        + ( TOMFLX_SW_up(i,j) - TOMFLX_SW_dn(i,j) )
 
-       ENGFLXT    (i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
+       ENGFLXT    (i,j) = SFLX_SH(i,j) &
+                        + SFLX_ENGI(i,j) - PREC_ENGI(i,j) &
                         + SFLX_RD_net(i,j) - TFLX_RD_net(i,j)
     enddo
     enddo
@@ -3121,18 +3118,20 @@ contains
 
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_EVAP),  SFLX_ENGI   (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_PREC),  PREC_ENGI   (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_RD),    TFLX_RD_net (:,:) )
 
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
 
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_LW_up), TOMFLX_LW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_LW_dn), TOMFLX_LW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_up), TOMFLX_SW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_dn), TOMFLX_SW_dn(:,:) )
 
 
 

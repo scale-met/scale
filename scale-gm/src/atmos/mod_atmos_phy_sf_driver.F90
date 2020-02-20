@@ -165,7 +165,6 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &

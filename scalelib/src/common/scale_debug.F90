@@ -98,7 +98,7 @@ contains
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(KA)
+    logical, intent(in), optional :: mask(KA)
 
     logical :: invalid_value
     integer :: k
@@ -109,7 +109,7 @@ contains
     invalid_value = .false.
     if ( present(mask) ) then
        do k = KS, KE
-          if ( mask(k) == 0.0_RP ) cycle
+          if ( .not. mask(k) ) cycle
           if (      var(k)*0.0_RP /= 0.0_RP &
                .OR. var(k)        <  valmin &
                .OR. var(k)        >  valmax ) then
@@ -164,7 +164,7 @@ contains
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(IA,JA)
+    logical, intent(in), optional :: mask(IA,JA)
 
     logical :: invalid_value
     integer :: i, j
@@ -176,7 +176,7 @@ contains
     if ( present(mask) ) then
        outer1:do j = JS, JE
               do i = IS, IE
-                 if ( mask(i,j) == 0.0_RP ) cycle
+                 if ( .not. mask(i,j) ) cycle
                  if (      var(i,j)*0.0_RP /= 0.0_RP &
                       .OR. var(i,j)        <  valmin &
                       .OR. var(i,j)        >  valmax ) then
@@ -237,7 +237,7 @@ contains
     character(len=*), intent(in) :: current_file
     integer,          intent(in) :: current_line
 
-    real(RP), intent(in), optional :: mask(IA,JA)
+    logical, intent(in), optional :: mask(IA,JA)
 
     logical :: invalid_value
     integer :: k, i, j
@@ -249,7 +249,7 @@ contains
     if ( present(mask) ) then
        outer1:do j = JS, JE
               do i = IS, IE
-                 if ( mask(i,j) == 0.0_RP ) cycle
+                 if ( .not. mask(i,j) ) cycle
                  do k = KS, KE
                     if (      var(k,i,j)*0.0_RP /= 0.0_RP &
                          .OR. var(k,i,j)        <  valmin &

@@ -64,6 +64,7 @@ if [ ${NUM_DOMAIN} -ne ${#KMAX[*]} ];      then echo "Error: Wrong array size (K
 if [ ${NUM_DOMAIN} -ne ${#IMAX[*]} ];      then echo "Error: Wrong array size (IMAX).";      exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#JMAX[*]} ];      then echo "Error: Wrong array size (JMAX).";      exit 1; fi
 
+if [ ${OKMAX} -ne ${#ODZ[*]} ]; then echo "Error: Wrong array size (ODZ)."; exit 1; fi
 if [ ${LKMAX} -ne ${#LDZ[*]} ]; then echo "Error: Wrong array size (LDZ)."; exit 1; fi
 if [ ${UKMAX} -ne ${#UDZ[*]} ]; then echo "Error: Wrong array size (UDZ)."; exit 1; fi
 
@@ -181,6 +182,7 @@ eval 'STARTDATE[6]=`printf "%03d" ${STARTDATE[6]}`'
 
 INITTIME="${STARTDATE[0]}${STARTDATE[1]}${STARTDATE[2]}-${STARTDATE[3]}${STARTDATE[4]}${STARTDATE[5]}.${STARTDATE[6]}"
 
+IFS="," eval 'LIST_ODZ="${ODZ[*]}"'
 IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 

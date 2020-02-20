@@ -8,85 +8,192 @@ The default format of the monitor file is configured at \namelist{PARAM_MONITOR}
 \editboxtwo{
 \verb|&PARAM_MONITOR                      | & \\
 \verb| MONITOR_OUT_BASENAME  = "monitor", | & ; Base name of the output file \\
-\verb| MONITOR_USEDEVATION   = .true.,    | & ; Use deviation from first step? \\
+\verb| MONITOR_USEDEVIATION  = .true.,    | & ; Use deviation from first step? \\
+\verb| MONITOR_GLOBAL_SUM    = .true.,    | & ; Use global summation? \\
 \verb| MONITOR_STEP_INTERVAL = 1,         | & ; Step interval of monitor output \\
 \verb|/                                   | & \\
 }
 
-Monitor component outputs global domain total of physical quantity such as dry air mass, water vapor, total energy, surface precipitation flux, and so on.
+Monitor component outputs domain total of physical quantity such as dry air mass, water vapor, total energy, surface precipitation flux, and so on.
 These output is useful to check mass and energy budget.
-The monitor file is ASCII format and the name of the file is set by \nmitem{MONITOR_OUT_BASENAME} \verb|.pe000000|.
+The output value is global domain total if \nmitem{MONITOR_GLOBAL_SUM} is \verb|.true.|, while it is total in the individual MPI process.
+The output value is the difference from the initial value for the snapshot-type quantity, if \nmitem{MONITOR_USEDEVIATION} is \verb|.true.|
+For the tendency-type quantity, the output value is temporally accumulated value.
+
+The monitor file is ASCII format, and the name of the file is set by \nmitem{MONITOR_OUT_BASENAME}.
+It is \nmitem{MONITOR_OUT_BASENAME}\verb|.peall| if \nmitem{MONITOR_GLOBAL_SUM} is \verb|.true.|,\\
+nothewise it is \nmitem{MONITOR_OUT_BASENAME}\verb|.peXXXXXX|, where \verb|XXXXXX| is the process number.
+
 The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INTERVAL} as the multiple of time step ($\Delta t$).
+
 
 \editboxtwo{
 \verb|&MONITOR_ITEM   | & \\
-\verb| NAME = "ENGT", | &  Variable name. List of variables is shown in Table \ref{tab:varlist_monitor} \\
+\verb| NAME = "ENGT", | &  Variable name. List of variables is shown in Table \ref{tab:varlist_monitor_atmos}, \ref{tab:varlist_monitor_ocean}, \ref{tab:varlist_monitor_land}, and \ref{tab:varlist_monitor_urban} \\
 \verb|/               | & \\
 }
 
 \begin{table}[h]
 \begin{center}
-  \caption{Variables available for monitor output}
-  \label{tab:varlist_monitor}
-  \begin{tabularx}{150mm}{|l|X|l|} \hline
-    \rowcolor[gray]{0.9}  Values & Description & Unit \\ \hline
-      \verb|DENS|         & Air mass                                  & [kg]     \\
-      \verb|MOMZ|         & Momentum in z-direction                   & [kg m/s] \\
-      \verb|MOMX|         & Momentum in x-direction                   & [kg m/s] \\
-      \verb|MOMY|         & Momentum in y-direction                   & [kg m/s] \\
-      \verb|RHOT|         & Potential temperature                     & [kg K]   \\
-      \verb|TRACER*|      & Tracers in prognostic variable            & [each unit $\times$ kg] \\
-      \verb|QDRY|         & Dry air mass                              & [kg] \\
-      \verb|QTOT|         & Water mass                                & [kg] \\
-      \verb|EVAP|         & Evaporation at the surface                & [kg] \\
-      \verb|PRCP|         & Precipitation                             & [kg] \\
-      \verb|ENGT|         & Total     energy (\verb|ENGP + ENGK + ENGI|)  & [J] \\
-      \verb|ENGP|         & Potential energy ($\rho * g * z$)             & [J] \\
-      \verb|ENGK|         & Kinetic   energy ($\rho * (W^2+U^2+V^2) / 2$) & [J] \\
-      \verb|ENGI|         & Internal  energy ($\rho * C_v * T$)           & [J] \\
-      \verb|ENGFLXT|      & Total energy flux convergence (\verb|SH + LH + SFC_RD - TOA_RD|) & [J] \\
-      \verb|ENGSFC_SH|    & Surface sensible heat flux                & [J] \\
-      \verb|ENGSFC_LH|    & Surface latent   heat flux                & [J] \\
-      \verb|ENGSFC_RD|    & Surface net radiation flux                & [J] \\
-                          & (\verb|SFC_LW_up + SFC_SW_up - SFC_LW_dn - SFC_SW_dn|) & \\
-      \verb|ENGTOA_RD|    & Top-of-atmosphere net radiation flux      & [J] \\
-                          & (\verb|TOA_LW_up + TOA_SW_up - TOA_LW_dn - TOA_SW_dn|) & \\
-      \verb|ENGSFC_LW_up| & Surface longwave  upward   flux           & [J] \\
-      \verb|ENGSFC_LW_dn| & Surface longwave  downward flux           & [J] \\
-      \verb|ENGSFC_SW_up| & Surface shortwave upward   flux           & [J] \\
-      \verb|ENGSFC_SW_dn| & Surface shortwave downward flux           & [J] \\
-      \verb|ENGTOA_LW_up| & Top-of-atmosphere longwave  upward   flux & [J] \\
-      \verb|ENGTOA_LW_dn| & Top-of-atmosphere longwave  downward flux & [J] \\
-      \verb|ENGTOA_SW_up| & Top-of-atmosphere shortwave upward   flux & [J] \\
-      \verb|ENGTOA_SW_dn| & Top-of-atmosphere shortwave downward flux & [J] \\
+  \caption{Variables in the atmospheric model available for monitor output}
+  \label{tab:varlist_monitor_atmos}
+  \begin{tabularx}{150mm}{|l|X|l|l|} \hline
+    \rowcolor[gray]{0.9}  Values & Description & Unit & Type \\ \hline
+      \verb|DENS|         & Air mass                                  & kg     & snapshot \\
+      \verb|MOMZ|         & Momentum in z-direction                   & kg m/s & snapshot \\
+      \verb|MOMX|         & Momentum in x-direction                   & kg m/s & snapshot \\
+      \verb|MOMY|         & Momentum in y-direction                   & kg m/s & snapshot \\
+      \verb|RHOT|         & Potential temperature                     & kg K   & snapshot \\
+      \verb|TRACER*|      & Tracers in prognostic variable            & unit $\times$ kg & snapshot \\
+      \verb|QDRY|         & Dry air mass                              & kg & snapshot \\
+      \verb|QTOT|         & Water mass                                & kg & snapshot \\
+      \verb|EVAP|         & Evaporation at the surface                & kg & tendency \\
+      \verb|PREC|         & Precipitation                             & kg & tendency \\
+      \verb|ENGT|         & Total     energy (\verb|ENGP + ENGK + ENGI|)  & J & snapshot \\
+      \verb|ENGP|         & Potential energy ($\rho * g * z$)             & J & snapshot \\
+      \verb|ENGK|         & Kinetic   energy ($\rho * (W^2+U^2+V^2) / 2$) & J & snapshot \\
+      \verb|ENGI|         & Internal  energy ($\rho * C_v * T$)           & J & snapshot \\
+      \verb|ENGFLXT|      & Total energy flux convergence                 & J & tendency \\
+                          & (\verb|SH + LH + SFC_RD - TOM_RD|) & & \\
+      \verb|ENGSFC_SH|    & Surface sensible heat flux                & J & tendency \\
+      \verb|ENGSFC_LH|    & Surface latent   heat flux                & J & tendency \\
+      \verb|ENGSFC_EVAP|  & Internal energy of surface evapolation    & J & tendency \\
+      \verb|ENGSFC_PREC|  & Internal energy of precipitation          & J & tendency \\
+      \verb|ENGSFC_RD|    & Surface net radiation flux                & J & tendency \\
+                          & (\verb|SFC_LW_up+SFC_SW_up-SFC_LW_dn-SFC_SW_dn|) & & \\
+      \verb|ENGTOM_RD|    & Top-of-model net radiation flux           & J & tendency \\
+                          & (\verb|TOM_LW_up+TOM_SW_up-TOM_LW_dn-TOM_SW_dn|) & & \\
+      \verb|ENGSFC_LW_up| & Surface longwave  upward   flux           & J & tendency \\
+      \verb|ENGSFC_LW_dn| & Surface longwave  downward flux           & J & tendency \\
+      \verb|ENGSFC_SW_up| & Surface shortwave upward   flux           & J & tendency \\
+      \verb|ENGSFC_SW_dn| & Surface shortwave downward flux           & J & tendency \\
+      \verb|ENGTOM_LW_up| & Top-of-model longwave  upward   flux      & J & tendency \\
+      \verb|ENGTOM_LW_dn| & Top-of-model longwave  downward flux      & J & tendency \\
+      \verb|ENGTOM_SW_up| & Top-of-model shortwave upward   flux      & J & tendency \\
+      \verb|ENGTOM_SW_dn| & Top-of-model shortwave downward flux      & J & tendency \\
+      \verb|MASSTND_DAMP|  & Mass tendency by nudging                 & kg & tendency \\
+      \verb|MASSFLX_WEST|  & Mass flux at western  boundary           & kg & tendency \\
+      \verb|MASSFLX_EAST|  & Mass flux at eastern  boundary           & kg & tendency \\
+      \verb|MASSFLX_SOUTH| & Mass flux at southern boundary           & kg & tendency \\
+      \verb|MASSFLX_NORTH| & Mass flux at northern boundary           & kg & tendency \\
+      \verb|QTOTTND_DAMP|  & Water mass tendency by nudging           & kg & tendency \\
+      \verb|QTOTFLX_WEST|  & Water mass flux at western  boundary     & kg & tendency \\
+      \verb|QTOTFLX_EAST|  & Water mass flux at eastern  boundary     & kg & tendency \\
+      \verb|QTOTFLX_SOUTH| & Water mass flux at southern boundary     & kg & tendency \\
+      \verb|QTOTFLX_NORTH| & Water mass flux at northern boundary     & kg & tendency \\
+      \verb|QTOTTND_NF|    & Water mass tendency by negative fixer                & kg & tendency \\
+      \verb|ENGITND_NF|    & internal energy tendency by negative fixer           & kg & tendency \\
+      \verb|QTOTFLX_TB_WEST|  & Water mass flux at western  boundary by turbulence & kg & tendency \\
+      \verb|QTOTFLX_TB_EAST|  & Water mass flux at eastern  boundary by turbulence & kg & tendency \\
+      \verb|QTOTFLX_TB_SOUTH| & Water mass flux at southern boundary by turbulence & kg & tendency \\
+      \verb|QTOTFLX_TB_NORTH| & Water mass flux at northern boundary by turbulence & kg & tendency \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-For example, let the below setting for \namelist{MONITOR_ITEM} be added with \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| and \nmitem{MONITOR_USEDEVATION} \verb|= .false.|,
+\begin{table}[h]
+\begin{center}
+  \caption{Variables in the ocean model available for monitor output}
+  \label{tab:varlist_monitor_ocean}
+  \begin{tabularx}{150mm}{|l|X|l|l|} \hline
+    \rowcolor[gray]{0.9}  Values & Description & Unit & Type \\ \hline
+      \verb|OCN_TEMP|        & Sea water temperature                 & K m$^3$ & snapshot \\
+      \verb|OCN_ICE_TEMP|    & Sea ice temperature                   & K m$^3$ & snapshot \\
+      \verb|OCN_ICE_MASS|    & Sea ice mas                           & kg   & snapshot \\
+      \verb|OCN_MASFLX_TOP|  & Surface mass flux (top of open ocean and sea ice)               & kg & snapshot \\
+      \verb|OCN_MASFLX_MID|  & Sea surface mass flux (top of open ocean and bottom of sea ice) & kg & snapshot \\
+      \verb|OCN_MAS_SUPL|    & Mass supply to conserve sea water     & kg   & tendency \\
+      \verb|OCN_MASCNV|      & Total mass convergence                & kg   & tendency \\
+      \verb|OCN_WTR_MASCNV|  & Sea water mass convergence            & kg   & tendency \\
+      \verb|OCN_ICE_MASCNV|  & Sea ice mass convergence              & kg   & tendency \\
+      \verb|OCN_WTR_ENGI|    & Sea water internal energy             & J    & snapshot \\
+      \verb|OCN_ICE_ENGI|    & Sea ice internal energy               & J    & snapshot \\
+      \verb|OCN_GHFLX_TOP|   & Surface ground heat flux              & J    & tendency \\
+      \verb|OCN_GHFLX_MID|   & Sea surface ground heat flux          & J    & tendency \\
+      \verb|OCN_ENGIFLX_TOP| & Surface internal energy flux          & J    & tendency \\
+      \verb|OCN_ENGIFLX_MID| & Sea surface internal energy flux      & J    & tendency \\
+      \verb|OCN_ENGI_SUPL|   & Internal energy supply                & J    & tendency \\
+      \verb|OCN_ENGICNV|     & Total internal energy convergence     & J    & tendency \\
+      \verb|OCN_WTR_ENGICNV| & Sea water internal energy convergence & J    & tendency \\
+      \verb|OCN_ICE_ENGICNV| & Sea ice internal energy convergence   & J    & tendency \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{Variables in the land model available for monitor output}
+  \label{tab:varlist_monitor_land}
+  \begin{tabularx}{150mm}{|l|X|l|l|} \hline
+    \rowcolor[gray]{0.9}  Values & Description & Unit & Type \\ \hline
+      \verb|LND_TEMP|      & Land temperature                & K m$^3$ & snapshot \\
+      \verb|LND_WATER|     & Land water                      & kg   & snapshot \\
+      \verb|LND_ICE|       & Land ice                        & kg   & snapshot \\
+      \verb|LND_MASSFC|    & Surface water mss flux          & kg   & tendency \\
+      \verb|LND_ROFF|      & Runoff water                    & kg   & tendency \\
+      \verb|LND_MASFLX|    & Total mass change               & kg   & tendency \\
+      \verb|LND_ENGI|      & Total internal energy           & J    & snapshot \\
+      \verb|LND_WTR_ENGI|  & Water internal energy           & J    & snapshot \\
+      \verb|LND_ICE_ENGI|  & Ice internal energy             & J    & snapshot \\
+      \verb|LND_ENGSFC_GH| & Surface ground heat flux        & J    & tendency \\
+      \verb|LND_ENGSFC_EI| & Surface internal energy flux    & J    & tendency \\
+      \verb|LND_ROFF_EI|   & Internal energy of runoff water & J    & tendency \\
+      \verb|LND_ENGFLX|    & Total internal energy change    & J    & tendency \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[h]
+\begin{center}
+  \caption{Variables in the urban model available for monitor output}
+  \label{tab:varlist_monitor_urban}
+  \begin{tabularx}{150mm}{|l|X|l|l|} \hline
+    \rowcolor[gray]{0.9}  Values & Description & Unit & Type \\ \hline
+      \verb|URB_TRL|    & Roof temperature         & K m$^3$ & snapshot \\
+      \verb|URB_TBL|    & Wall temperature         & K m$^3$ & snapshot \\
+      \verb|URB_TGL|    & Road temperature         & K m$^3$ & snapshot \\
+      \verb|URB_TR|     & Roof surface temperature & K m$^2$ & snapshot \\
+      \verb|URB_TB|     & Wall surface temperature & K m$^2$ & snapshot \\
+      \verb|URB_TG|     & Road surface temperature & K m$^2$ & snapshot \\
+      \verb|URB_TC|     & Canopy temperature       & K m$^2$ & snapshot \\
+      \verb|URB_UC|     & Canopy wind speede       & m$^3$/s & snapshot \\
+      \verb|URB_QC|     & Canopy humidity          & kg/m & snapshot \\
+      \verb|URB_RAINR|  & Roof water               & kg   & snapshot \\
+      \verb|URB_RAINB|  & Wall water               & kg   & snapshot \\
+      \verb|URB_RAING|  & Road water               & kg   & snapshot \\
+      \verb|URB_ROFF|   & Runoff water             & kg   & tendency \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+For example, let the below setting for \namelist{MONITOR_ITEM} be added with \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| and \nmitem{MONITOR_USEDEVATION} \verb|= .true.|,
 
 \editbox{
-\verb|&MONITOR_ITEM  NAME="ENGK" /|\\
-\verb|&MONITOR_ITEM  NAME="ENGP" /|\\
-\verb|&MONITOR_ITEM  NAME="ENGI" /|\\
-\verb|&MONITOR_ITEM  NAME="ENGT" /|\\
+\verb|&MONITOR_ITEM  NAME="DENS" /|\\
+\verb|&MONITOR_ITEM  NAME="QTOT" /|\\
+\verb|&MONITOR_ITEM  NAME="EVAP" /|\\
+\verb|&MONITOR_ITEM  NAME="PREC" /|\\
 }
 
 \noindent
 The monitor file is output as follows;
 
 \msgbox{
-                   ENGT            ENGP            ENGK            ENGI            \\
-STEP=      1 (MAIN)  1.18127707E+17  2.92701438E+16  2.40231436E+13  8.88335403E+16\\
-STEP=     11 (MAIN)  1.18127712E+17  2.92701415E+16  2.40249223E+13  8.88335453E+16\\
-STEP=     21 (MAIN)  1.18127711E+17  2.92701439E+16  2.40223566E+13  8.88335443E+16\\
-STEP=     31 (MAIN)  1.18127710E+17  2.92701454E+16  2.40213480E+13  8.88335435E+16\\
-STEP=     41 (MAIN)  1.18127710E+17  2.92701495E+16  2.40210662E+13  8.88335392E+16\\
-STEP=     51 (MAIN)  1.18127710E+17  2.92701439E+16  2.40205575E+13  8.88335456E+16\\
-STEP=     61 (MAIN)  1.18127711E+17  2.92701565E+16  2.40200252E+13  8.88335340E+16\\
-STEP=     71 (MAIN)  1.18127711E+17  2.92701457E+16  2.40195927E+13  8.88335455E+16\\
-STEP=     81 (MAIN)  1.18127710E+17  2.92701486E+16  2.40193679E+13  8.88335425E+16\\
-STEP=     91 (MAIN)  1.18127710E+17  2.92701573E+16  2.40188095E+13  8.88335342E+16\\
-STEP=    101 (MAIN)  1.18127710E+17  2.92701404E+16  2.40180752E+13  8.88335517E+16\\
+                   DENS            QTOT            EVAP            PREC\\
+STEP=      1 (MAIN)  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00\\
+STEP=     11 (MAIN) -2.27510244E+11  6.67446186E+11  9.39963392E+10  2.98914905E+11\\
+STEP=     21 (MAIN) -3.04179976E+11  1.16811060E+12  1.64602175E+11  7.56753096E+11\\
+STEP=     31 (MAIN) -7.55688670E+11  1.42784177E+12  2.25452889E+11  1.42932656E+12\\
+STEP=     41 (MAIN) -9.45082752E+11  1.56057082E+12  2.82959478E+11  2.19673659E+12\\
+STEP=     51 (MAIN) -1.02869018E+12  1.66179511E+12  3.45854371E+11  2.98295445E+12\\
+STEP=     61 (MAIN) -1.69997222E+12  1.74413176E+12  4.20139948E+11  3.78414734E+12\\
+STEP=     71 (MAIN) -1.72816474E+12  1.81512719E+12  5.04055360E+11  4.59740827E+12\\
+STEP=     81 (MAIN) -1.58692434E+12  1.88174470E+12  5.93665632E+11  5.41341475E+12\\
+STEP=     91 (MAIN) -1.71362764E+12  1.94867974E+12  6.86327009E+11  6.22069061E+12\\
+STEP=    101 (MAIN) -2.04231630E+12  1.99886166E+12  7.80859828E+11  7.03479603E+12\\
 }

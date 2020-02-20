@@ -497,6 +497,7 @@ contains
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       SFLX_ENGI  => ATMOS_PHY_SF_SFLX_ENGI,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
@@ -523,6 +524,7 @@ contains
                             SFLX_LH   (:,:),     & ! [OUT]
                             SFLX_GH   (:,:),     & ! [OUT]
                             SFLX_QTRC (:,:,:),   & ! [OUT]
+                            SFLX_ENGI (:,:),     & ! [OUT]
                             U10       (:,:),     & ! [OUT]
                             V10       (:,:),     & ! [OUT]
                             T2        (:,:),     & ! [OUT]
@@ -543,7 +545,6 @@ contains
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
        DENS, &
-       QTRC, &
        QV,   &
        TEMP, &
        PRES, &
@@ -551,12 +552,16 @@ contains
        U,    &
        V
     use mod_atmos_phy_sf_vars, only: &
-       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
+       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP, &
+       PREC_MASS => ATMOS_PHY_SF_PREC_MASS, &
+       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow, &
+       SFLX_ENGI_MP => ATMOS_PHY_MP_SFLX_ENGI
     use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain, &
+       SFLX_ENGI_CP => ATMOS_PHY_CP_SFLX_ENGI
     use mod_atmos_phy_rd_vars, only: &
        SFLX_rad_dn => ATMOS_PHY_RD_SFLX_down, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
@@ -575,9 +580,6 @@ contains
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
 
-    real(RP) :: SFLX_rain(IA,JA)
-    real(RP) :: SFLX_snow(IA,JA)
-
     integer  :: i,j
     !---------------------------------------------------------------------------
 
@@ -588,8 +590,8 @@ contains
        !$omp parallel do private(i,j) OMP_SCHEDULE_
        do j = JSB, JEB
        do i = ISB, IEB
-          SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
-          SFLX_snow(i,j) = SFLX_snow_MP(i,j)
+          PREC_MASS(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
+          PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
        enddo
        enddo
 
@@ -600,21 +602,21 @@ contains
                              REAL_Z1(:,:),                        & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
-       call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
-                        PRES       (KS,:,:),   & ! [IN]
-                        W          (KS,:,:),   & ! [IN]
-                        U          (KS,:,:),   & ! [IN]
-                        V          (KS,:,:),   & ! [IN]
-                        DENS       (KS,:,:),   & ! [IN]
-                        QTRC       (KS,:,:,:), & ! [IN]
-                        ATM_PBL    (:,:),      & ! [IN]
-                        SFC_DENS   (:,:),      & ! [IN]
-                        SFC_PRES   (:,:),      & ! [IN]
-                        SFLX_rad_dn(:,:,:,:),  & ! [IN]
-                        cosSZA     (:,:),      & ! [IN]
-                        SFLX_rain  (:,:),      & ! [IN]
-                        SFLX_snow  (:,:),      & ! [IN]
-                        countup                ) ! [IN]
+       call CPL_putATM( TEMP       (KS,:,:),  & ! [IN]
+                        PRES       (KS,:,:),  & ! [IN]
+                        W          (KS,:,:),  & ! [IN]
+                        U          (KS,:,:),  & ! [IN]
+                        V          (KS,:,:),  & ! [IN]
+                        DENS       (KS,:,:),  & ! [IN]
+                        QV         (KS,:,:),  & ! [IN]
+                        ATM_PBL    (:,:),     & ! [IN]
+                        SFC_DENS   (:,:),     & ! [IN]
+                        SFC_PRES   (:,:),     & ! [IN]
+                        SFLX_rad_dn(:,:,:,:), & ! [IN]
+                        cosSZA     (:,:),     & ! [IN]
+                        PREC_MASS  (:,:),     & ! [IN]
+                        PREC_ENGI  (:,:),     & ! [IN]
+                        countup               ) ! [IN]
     endif
 
     call PROF_rapend  ('ATM_SfcExch', 2)

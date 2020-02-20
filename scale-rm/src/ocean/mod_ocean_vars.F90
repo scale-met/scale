@@ -33,6 +33,7 @@ module mod_ocean_vars
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
   public :: OCEAN_vars_total
+  public :: OCEAN_vars_monitor
 
   public :: OCEAN_vars_restart_create
   public :: OCEAN_vars_restart_open
@@ -95,13 +96,16 @@ module mod_ocean_vars
   real(RP), public, allocatable :: ATMOS_SFC_PRES   (:,:)
   real(RP), public, allocatable :: ATMOS_SFLX_rad_dn(:,:,:,:)
   real(RP), public, allocatable :: ATMOS_cosSZA     (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_rain  (:,:)
-  real(RP), public, allocatable :: ATMOS_SFLX_snow  (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_water (:,:)
+  real(RP), public, allocatable :: ATMOS_SFLX_ENGI  (:,:)
 
   ! send to uppermost ocean
-  real(RP), public, allocatable :: OCEAN_SFLX_G    (:,:) !< ocean surface water heat flux   [J/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_water(:,:) !< ocean surface liquid water flux [kg/m2/s]
-  real(RP), public, allocatable :: OCEAN_SFLX_ice  (:,:) !< ocean surface ice water flux    [kg/m2/s]
+  real(RP), public, allocatable, target :: OCEAN_SFLX_GH   (:,:) !< ocean surface water heat flux   [J/m2/s]
+  real(RP), public, allocatable, target :: OCEAN_SFLX_water(:,:) !< ocean surface water mass flux [kg/m2/s]
+  real(RP), public, allocatable, target :: OCEAN_SFLX_ENGI (:,:) !< ocean surface internal energy flux [J/m2/s]
+  real(RP), public, pointer :: OCEAN_OFLX_GH   (:,:) !< ocean-ice surface water heat flux [J/m2/s]
+  real(RP), public, pointer :: OCEAN_OFLX_water(:,:) !< ocean-ice surface water mass flux [kg/m2/s]
+  real(RP), public, pointer :: OCEAN_OFLX_ENGI (:,:) !< ocean-ice surface internal energy flux [J/m2/s]
 
   ! send to lowermost atmosphere
   real(RP), public, allocatable :: OCEAN_SFLX_MW  (:,:)   !< ocean surface w-momentum flux    [kg/m/s2]
@@ -110,16 +114,16 @@ module mod_ocean_vars
   real(RP), public, allocatable :: OCEAN_SFLX_SH  (:,:)   !< ocean surface sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: OCEAN_SFLX_LH  (:,:)   !< ocean surface latent heat flux   [J/m2/s]
   real(RP), public, allocatable :: OCEAN_SFLX_QTRC(:,:,:) !< ocean surface tracer flux        [kg/m2/s]
+  real(RP), public, allocatable :: OCEAN_U10      (:,:)   !< ocean surface velocity u at 10m  [m/s]
+  real(RP), public, allocatable :: OCEAN_V10      (:,:)   !< ocean surface velocity v at 10m  [m/s]
+  real(RP), public, allocatable :: OCEAN_T2       (:,:)   !< ocean surface temperature at 2m  [K]
+  real(RP), public, allocatable :: OCEAN_Q2       (:,:)   !< ocean surface water vapor at 2m  [kg/kg]
 
-  real(RP), public, allocatable, target :: OCEAN_Ustar(:,:) !< ocean surface friction velocity  [m/s]
-  real(RP), public, allocatable, target :: OCEAN_Tstar(:,:) !< ocean surface tempreture scale   [K]
-  real(RP), public, allocatable, target :: OCEAN_Qstar(:,:) !< ocean surface moisture scale     [kg/kg]
+  real(RP), public, allocatable, target :: OCEAN_Ustar(:,:) !< ocean surface friction velocity         [m/s]
+  real(RP), public, allocatable, target :: OCEAN_Tstar(:,:) !< ocean surface tempreture scale          [K]
+  real(RP), public, allocatable, target :: OCEAN_Qstar(:,:) !< ocean surface moisture scale            [kg/kg]
   real(RP), public, allocatable, target :: OCEAN_Wstar(:,:) !< ocean surface convective velocity scale [m/s]
-  real(RP), public, allocatable, target :: OCEAN_RLmo (:,:) !< ocean surface inversed Obukhov length [1/m]
-  real(RP), public, allocatable, target :: OCEAN_U10  (:,:) !< ocean surface velocity u at 10m  [m/s]
-  real(RP), public, allocatable, target :: OCEAN_V10  (:,:) !< ocean surface velocity v at 10m  [m/s]
-  real(RP), public, allocatable, target :: OCEAN_T2   (:,:) !< ocean surface temperature at 2m  [K]
-  real(RP), public, allocatable, target :: OCEAN_Q2   (:,:) !< ocean surface water vapor at 2m  [kg/kg]
+  real(RP), public, allocatable, target :: OCEAN_RLmo (:,:) !< ocean surface inversed Obukhov length   [1/m]
   real(RP), public, pointer :: OCEAN_OCN_Ustar(:,:)
   real(RP), public, pointer :: OCEAN_OCN_Tstar(:,:)
   real(RP), public, pointer :: OCEAN_OCN_Qstar(:,:)
@@ -136,6 +140,9 @@ module mod_ocean_vars
 
   logical, public :: ICE_flag
 
+  ! external supply of water mass and internel energy to the slab ocean (for conservation check)
+  real(RP), public, allocatable :: OCEAN_MASS_SUPL  (:,:)
+  real(RP), public, allocatable :: OCEAN_ENGI_SUPL  (:,:)
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -246,6 +253,29 @@ module mod_ocean_vars
                   'K',    &
                   'kg/m2' /
 
+  ! for monitor
+  integer, parameter :: IM_O_TEMP    = 1
+  integer, parameter :: IM_I_TEMP    = 2
+  integer, parameter :: IM_I_MASS    = 3
+  integer, parameter :: IM_SFC       = 4
+  integer, parameter :: IM_SSF       = 5
+  integer, parameter :: IM_MAS_SUPL  = 6
+  integer, parameter :: IM_T_MASFLX  = 7
+  integer, parameter :: IM_O_MASFLX  = 8
+  integer, parameter :: IM_I_MASFLX  = 9
+  integer, parameter :: IM_O_ENGI    = 10
+  integer, parameter :: IM_I_ENGI    = 11
+  integer, parameter :: IM_ENGSFC_GH = 12
+  integer, parameter :: IM_ENGSFC_EI = 13
+  integer, parameter :: IM_ENGSSF_GH = 14
+  integer, parameter :: IM_ENGSSF_EI = 15
+  integer, parameter :: IM_ENG_SUPL  = 16
+  integer, parameter :: IM_T_ENGFLX  = 17
+  integer, parameter :: IM_O_ENGFLX  = 18
+  integer, parameter :: IM_I_ENGFLX  = 19
+  integer, parameter :: IM_max = 19
+  integer, private   :: MONIT_id(IM_max)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -257,6 +287,8 @@ contains
        UNDEF => CONST_UNDEF
     use mod_ocean_admin, only: &
        OCEAN_ICE_TYPE
+    use scale_monitor, only: &
+       MONITOR_reg
     implicit none
 
     namelist / PARAM_OCEAN_VARS / &
@@ -343,8 +375,8 @@ contains
     allocate( ATMOS_SFC_PRES   (OIA,OJA)                     )
     allocate( ATMOS_SFLX_rad_dn(OIA,OJA,N_RAD_DIR,N_RAD_RGN) )
     allocate( ATMOS_cosSZA     (OIA,OJA)                     )
-    allocate( ATMOS_SFLX_rain  (OIA,OJA)                     )
-    allocate( ATMOS_SFLX_snow  (OIA,OJA)                     )
+    allocate( ATMOS_SFLX_water (OIA,OJA)                     )
+    allocate( ATMOS_SFLX_ENGI  (OIA,OJA)                     )
     ATMOS_TEMP       (:,:)     = UNDEF
     ATMOS_PRES       (:,:)     = UNDEF
     ATMOS_W          (:,:)     = UNDEF
@@ -357,15 +389,27 @@ contains
     ATMOS_SFC_PRES   (:,:)     = UNDEF
     ATMOS_SFLX_rad_dn(:,:,:,:) = UNDEF
     ATMOS_cosSZA     (:,:)     = UNDEF
-    ATMOS_SFLX_rain  (:,:)     = UNDEF
-    ATMOS_SFLX_snow  (:,:)     = UNDEF
+    ATMOS_SFLX_water (:,:)     = UNDEF
+    ATMOS_SFLX_ENGI  (:,:)     = UNDEF
 
-    allocate( OCEAN_SFLX_G    (OIA,OJA) )
+    allocate( OCEAN_SFLX_GH   (OIA,OJA) )
     allocate( OCEAN_SFLX_water(OIA,OJA) )
-    allocate( OCEAN_SFLX_ice  (OIA,OJA) )
-    OCEAN_SFLX_G    (:,:) = UNDEF
+    allocate( OCEAN_SFLX_ENGI (OIA,OJA) )
+    OCEAN_SFLX_GH   (:,:) = UNDEF
     OCEAN_SFLX_water(:,:) = UNDEF
-    OCEAN_SFLX_ice  (:,:) = UNDEF
+    OCEAN_SFLX_ENGI (:,:) = UNDEF
+    if ( ICE_flag ) then
+       allocate( OCEAN_OFLX_GH   (OIA,OJA) )
+       allocate( OCEAN_OFLX_water(OIA,OJA) )
+       allocate( OCEAN_OFLX_ENGI (OIA,OJA) )
+       OCEAN_OFLX_GH   (:,:) = UNDEF
+       OCEAN_OFLX_water(:,:) = UNDEF
+       OCEAN_OFLX_ENGI (:,:) = UNDEF
+    else
+       OCEAN_OFLX_GH    => OCEAN_SFLX_GH
+       OCEAN_OFLX_water => OCEAN_SFLX_water
+       OCEAN_OFLX_ENGI  => OCEAN_SFLX_ENGI
+    end if
 
     allocate( OCEAN_SFLX_MW  (OIA,OJA) )
     allocate( OCEAN_SFLX_MU  (OIA,OJA) )
@@ -432,6 +476,10 @@ contains
     allocate( OCEAN_ICE_FRAC(OIA,OJA) )
     OCEAN_ICE_FRAC(:,:) = UNDEF
 
+    allocate( OCEAN_MASS_SUPL  (OIA,OJA) )
+    allocate( OCEAN_ENGI_SUPL  (OIA,OJA) )
+    OCEAN_MASS_SUPL  (:,:)     = UNDEF
+    OCEAN_ENGI_SUPL  (:,:)     = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -468,6 +516,65 @@ contains
        LOG_INFO("OCEAN_vars_setup",*) 'Restart output? : NO'
        OCEAN_RESTART_OUTPUT = .false.
     endif
+
+    ! monitor
+    call MONITOR_reg( 'OCN_TEMP',          'sea water temperature',            'K m3', & ! (in)
+                      MONIT_id(IM_O_TEMP),                                             & ! (out)
+                      dim_type='OXY', is_tendency=.false.                              ) ! (in)
+    call MONITOR_reg( 'OCN_ICE_TEMP',      'sea ice temperature',              'K m3', & ! (in)
+                      MONIT_id(IM_I_TEMP),                                             & ! (out)
+                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    call MONITOR_reg( 'OCN_ICE_MASS',      'sea ice mass',                     'kg',   & ! (in)
+                      MONIT_id(IM_I_MASS),                                             & ! (out)
+                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    call MONITOR_reg( 'OCN_MASFLX_TOP',    'SFC mass flux',                    'kg',   & ! (in)
+                      MONIT_id(IM_SFC),                                                & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_MASFLX_MID',    'sea surface mass flux',            'kg',   & ! (in)
+                      MONIT_id(IM_SSF),                                                & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_MAS_SUPL',      'mass supply',                      'kg',   & ! (in)
+                      MONIT_id(IM_MAS_SUPL),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_MASCNV',        'total mass convergence',           'kg',   & ! (in)
+                      MONIT_id(IM_T_MASFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_WTR_MASCNV',    'sea water mass convergence',       'kg',   & ! (in)
+                      MONIT_id(IM_O_MASFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ICE_MASCNV',    'sea ice mass convergence',         'kg',   & ! (in)
+                      MONIT_id(IM_I_MASFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_WTR_ENGI',      'sea water internal energy',        'J',    & ! (in)
+                      MONIT_id(IM_O_ENGI),                                             & ! (out)
+                      dim_type='OXY', is_tendency=.false.                              ) ! (in)
+    call MONITOR_reg( 'OCN_ICE_ENGI',      'sea ice internal energy',          'J',    & ! (in)
+                      MONIT_id(IM_I_ENGI),                                             & ! (out)
+                      dim_type='XY',  is_tendency=.false.                              ) ! (in)
+    call MONITOR_reg( 'OCN_GHFLX_TOP',     'SFC ground heat flux',             'J',    & ! (in)
+                      MONIT_id(IM_ENGSFC_GH),                                          & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ENGIFLX_TOP',   'SFC internal energy flux',         'J',    & ! (in)
+                      MONIT_id(IM_ENGSFC_EI),                                          & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_GHFLX_MID',     'sea surface ground heat flux',     'J',    & ! (in)
+                      MONIT_id(IM_ENGSSF_GH),                                          & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ENGIFLX_MID',   'sea surface internal energy flux', 'J',    & ! (in)
+                      MONIT_id(IM_ENGSSF_EI),                                          & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ENGI_SUPL',     'internal energy supply',           'J',    & ! (in)
+                      MONIT_id(IM_ENG_SUPL),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ENGICNV',       'total internal energy convergence','J',    & ! (in)
+                      MONIT_id(IM_T_ENGFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_WTR_ENGICNV',   'sea water internal energy convergence', 'J',    & ! (in)
+                      MONIT_id(IM_O_ENGFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
+    call MONITOR_reg( 'OCN_ICE_ENGICNV',   'sea ice internal energy convergence',   'J',    & ! (in)
+                      MONIT_id(IM_I_ENGFLX),                                           & ! (out)
+                      dim_type='XY',  is_tendency=.true.                               ) ! (in)
 
     return
   end subroutine OCEAN_vars_setup
@@ -601,7 +708,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_landuse, only: &
-       LANDUSE_fact_ocean
+       LANDUSE_exists_ocean
     implicit none
     !---------------------------------------------------------------------------
 
@@ -611,73 +718,73 @@ contains
        call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
                       OCEAN_TEMP      (:,:,:),             0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_TEMP),                   __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                          )
+                      mask = LANDUSE_exists_ocean(:,:)                        )
 !       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
 !                      OCEAN_SALT      (:,:,:),             0.0_RP, 1000.0_RP, &
 !                      VAR_NAME(I_SALT),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_fact_ocean(:,:)                          )
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
 !       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
 !                      OCEAN_UVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
 !                      VAR_NAME(I_UVEL),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_fact_ocean(:,:)                          )
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
 !       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
 !                      OCEAN_VVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
 !                      VAR_NAME(I_VVEL),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_fact_ocean(:,:)                          )
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
 
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,  &
                       OCEAN_OCN_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_OCN_Z0M),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_TEMP),                     __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_IR_dir ),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_IR_dif ),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_NIR_dir),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_NIR_dif),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_VIS_dir),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
                       VAR_NAME(I_SFC_ALB_VIS_dif),              __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_Z0M),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_Z0H   (:,:),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_Z0H),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                       OCEAN_SFC_Z0E   (:,:),                     0.0_RP, 1000.0_RP, &
                       VAR_NAME(I_SFC_Z0E),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_fact_ocean(:,:)                                )
+                      mask = LANDUSE_exists_ocean(:,:)                              )
        if ( ICE_flag ) then
           call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                          OCEAN_ICE_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
                          VAR_NAME(I_ICE_TEMP),                     __FILE__, __LINE__, &
-                         mask = LANDUSE_fact_ocean(:,:)                                )
+                         mask = LANDUSE_exists_ocean(:,:)                              )
           call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
                          OCEAN_ICE_MASS  (:,:),                     0.0_RP,   5E+5_RP, &
                          VAR_NAME(I_ICE_MASS),                     __FILE__, __LINE__, &
-                         mask = LANDUSE_fact_ocean(:,:)                                )
+                         mask = LANDUSE_exists_ocean(:,:)                              )
        end if
 
     endif
@@ -742,12 +849,13 @@ contains
                              VAR_UNIT(I_ICE_MASS), standard_name=VAR_STDN(I_ICE_MASS)        )
     end if
 
-    call FILE_HISTORY_in( OCEAN_SFLX_G    (:,:),      'OCEAN_SFLX_G',             &
-                          'ocean subsurface heat flux (downward)',      'J/m2/s'  )
-    call FILE_HISTORY_in( OCEAN_SFLX_water(:,:),      'OCEAN_SFLX_water',         &
-                          'ocean surface liquid water flux (downward)', 'kg/m2/s' )
-    call FILE_HISTORY_in( OCEAN_SFLX_ice  (:,:),      'OCEAN_SFLX_ice',           &
-                          'ocean surface ice water flux (downward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_GH   (:,:),      'OCEAN_SFLX_GH',               &
+                          'ocean subsurface heat flux (downward)',         'J/m2/s'  )
+    call FILE_HISTORY_in( OCEAN_SFLX_water(:,:),      'OCEAN_SFLX_water',            &
+                          'ocean surface liquid water flux (downward)',    'kg/m2/s' )
+    call FILE_HISTORY_in( OCEAN_SFLX_ENGI (:,:),      'OCEAN_SFLX_ENGI',             &
+                          'ocean surface internal energy flux (downward)', 'J/m2/s'  )
+
     call FILE_HISTORY_in( OCEAN_SFLX_MW   (:,:),      'OCEAN_SFLX_MW',            &
                           'ocean surface w-momentum flux (upward)',     'kg/m2/s' )
     call FILE_HISTORY_in( OCEAN_SFLX_MU   (:,:),      'OCEAN_SFLX_MU',            &
@@ -792,8 +900,7 @@ contains
        call FILE_HISTORY_in( OCEAN_ICE_Wstar(:,:), 'OCEAN_ICE_Wstar', 'convective velocity scale on sea ice surface', 'm/s'  )
        call FILE_HISTORY_in( OCEAN_ICE_RLmo (:,:), 'OCEAN_ICE_RLmo',  'inversed Obukhov length on sea ice surface',   '1/m'  )
 
-       call FILE_HISTORY_in( OCEAN_ICE_FRAC(:,:), 'OCEAN_ICE_FRAC', &
-                             'seaice fraction',   '1'               )
+       call FILE_HISTORY_in( OCEAN_ICE_FRAC(:,:), 'OCEAN_ICE_FRAC', 'seaice fraction', '1' )
     end if
 
     call PROF_rapend  ('OCN_History', 1)
@@ -896,6 +1003,126 @@ contains
 
     return
   end subroutine OCEAN_vars_total
+
+  !-----------------------------------------------------------------------------
+  !> monitor output
+  subroutine OCEAN_vars_monitor
+    use scale_const, only: &
+       DWATR => CONST_DWATR
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER, &
+       CV_ICE,   &
+       LHF
+    use scale_monitor, only: &
+       MONITOR_put
+    implicit none
+
+    real(RP)               :: WORK3D(OKA,OIA,OJA)
+    real(RP)               :: WORK2D(OIA,OJA)
+
+    integer  :: k, i, j
+    !---------------------------------------------------------------------------
+
+    call MONITOR_put( MONIT_id(IM_O_TEMP), OCEAN_TEMP    (:,:,:) )
+    call MONITOR_put( MONIT_id(IM_I_TEMP), OCEAN_ICE_TEMP(:,:) )
+    call MONITOR_put( MONIT_id(IM_I_MASS), OCEAN_ICE_MASS(:,:) )
+
+
+    ! mass budget
+    call MONITOR_put( MONIT_id(IM_SFC), OCEAN_SFLX_water(:,:) )
+    call MONITOR_put( MONIT_id(IM_SSF), OCEAN_OFLX_water(:,:) )
+    call MONITOR_put( MONIT_id(IM_MAS_SUPL), OCEAN_MASS_SUPL(:,:) )
+    if ( MONIT_id(IM_T_MASFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_SFLX_water(i,j) + OCEAN_MASS_SUPL(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_T_MASFLX), WORK2D(:,:) )
+    end if
+    if ( MONIT_id(IM_O_MASFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_OFLX_water(i,j) + OCEAN_MASS_SUPL(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_O_MASFLX), WORK2D(:,:) )
+    end if
+    if ( MONIT_id(IM_I_MASFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_SFLX_water(i,j) - OCEAN_OFLX_water(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_I_MASFLX), WORK2D(:,:) )
+    end if
+
+
+    ! energy budget
+    if ( MONIT_id(IM_O_ENGI) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+       do k = OKS, OKE
+          WORK3D(k,i,j) = CV_WATER * DWATR * OCEAN_TEMP(k,i,j)
+       end do
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_O_ENGI), WORK3D(:,:,:) )
+    end if
+    if ( MONIT_id(IM_I_ENGI) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = ( CV_ICE * OCEAN_ICE_TEMP(i,j) - LHF ) * OCEAN_ICE_MASS(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_I_ENGI), WORK2D(:,:) )
+    end if
+
+
+    call MONITOR_put( MONIT_id(IM_ENGSFC_GH), OCEAN_SFLX_GH  (:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSFC_EI), OCEAN_SFLX_ENGI(:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSSF_GH), OCEAN_OFLX_GH  (:,:) )
+    call MONITOR_put( MONIT_id(IM_ENGSSF_EI), OCEAN_OFLX_ENGI(:,:) )
+    call MONITOR_put( MONIT_id(IM_ENG_SUPL) , OCEAN_ENGI_SUPL(:,:) )
+    if ( MONIT_id(IM_T_ENGFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
+                      + OCEAN_ENGI_SUPL(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_T_ENGFLX), WORK2D(:,:) )
+    end if
+    if ( MONIT_id(IM_O_ENGFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_OFLX_GH(i,j) + OCEAN_OFLX_ENGI(i,j) &
+                      + OCEAN_ENGI_SUPL(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_O_ENGFLX), WORK2D(:,:) )
+    end if
+    if ( MONIT_id(IM_I_ENGFLX) > 0 ) then
+       !$omp parallel do
+       do j = OJS, OJE
+       do i = OIS, OIE
+          WORK2D(i,j) = OCEAN_SFLX_GH(i,j) + OCEAN_SFLX_ENGI(i,j) &
+                      - OCEAN_OFLX_GH(i,j) - OCEAN_OFLX_ENGI(i,j)
+       end do
+       end do
+       call MONITOR_put( MONIT_id(IM_I_ENGFLX), WORK2D(:,:) )
+    end if
+
+
+    return
+  end subroutine OCEAN_vars_monitor
 
   !-----------------------------------------------------------------------------
   !> Create ocean restart file

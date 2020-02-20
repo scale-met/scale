@@ -194,13 +194,8 @@ contains
        SFLX_SH, SFLX_QV,          &
        SFC_DENS, SFC_TEMP, PBL,   &
        Ustar, Tstar, Qstar,       &
-       Wstar, RLmo                )
-    use scale_const, only: &
-       EPS     => CONST_EPS,    &
-       GRAV    => CONST_GRAV,   &
-       CPdry   => CONST_CPdry,  &
-       KARMAN  => CONST_KARMAN, &
-       EPSTvap => CONST_EPSTvap
+       Wstar, RLmo,               &
+       mask                       )
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
@@ -220,37 +215,89 @@ contains
     real(RP), intent(out) :: Wstar(IA,JA)
     real(RP), intent(out) :: RLmo (IA,JA)
 
+    logical, intent(in), optional :: mask(IA,JA)
+
+    integer :: i, j
+
+    if ( present(mask) ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          if ( mask(i,j) ) then
+             call BULKFLUX_diagnose_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
+                                        SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
+                                        SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                        Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
+                                        Wstar(i,j), RLmo(i,j)                     ) ! (out)
+          end if
+       end do
+       end do
+    else
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call BULKFLUX_diagnose_0D( SFLX_MW(i,j), SFLX_MU(i,j), SFLX_MV(i,j), & ! (in)
+                                     SFLX_SH(i,j), SFLX_QV(i,j),               & ! (in)
+                                     SFC_DENS(i,j), SFC_TEMP(i,j), PBL(i,j),   & ! (in)
+                                     Ustar(i,j), Tstar(i,j), Qstar(i,j),       & ! (out)
+                                     Wstar(i,j), RLmo(i,j)                     ) ! (out)
+       end do
+       end do
+    end if
+
+    return
+  end subroutine BULKFLUX_diagnose
+  !-----------------------------------------------------------------------------
+  subroutine BULKFLUX_diagnose_0D( &
+       SFLX_MW, SFLX_MU, SFLX_MV, &
+       SFLX_SH, SFLX_QV,          &
+       SFC_DENS, SFC_TEMP, PBL,   &
+       Ustar, Tstar, Qstar,       &
+       Wstar, RLmo                )
+    use scale_const, only: &
+       EPS     => CONST_EPS,    &
+       GRAV    => CONST_GRAV,   &
+       CPdry   => CONST_CPdry,  &
+       KARMAN  => CONST_KARMAN, &
+       EPSTvap => CONST_EPSTvap
+    implicit none
+    real(RP), intent(in) :: SFLX_MW
+    real(RP), intent(in) :: SFLX_MU
+    real(RP), intent(in) :: SFLX_MV
+    real(RP), intent(in) :: SFLX_SH
+    real(RP), intent(in) :: SFLX_QV
+    real(RP), intent(in) :: SFC_DENS
+    real(RP), intent(in) :: SFC_TEMP
+    real(RP), intent(in) :: PBL
+
+    real(RP), intent(out) :: Ustar
+    real(RP), intent(out) :: Tstar
+    real(RP), intent(out) :: Qstar
+    real(RP), intent(out) :: Wstar
+    real(RP), intent(out) :: RLmo
+
     real(RP) :: BFLX, tmp, sw
     logical :: ws_flag
     integer :: i, j
 
     ws_flag = ( BULKFLUX_type == 'B91W01' )
 
-    !$omp parallel do &
-    !$omp private(BFLX,tmp,sw)
-    do j = JS, JE
-    do i = IS, IE
-       Ustar(i,j) = sqrt( sqrt( SFLX_MW(i,j)**2 + SFLX_MU(i,j)**2 + SFLX_MV(i,j)**2 ) / SFC_DENS(i,j) )
-       sw = 0.5_RP - sign( 0.5_RP, Ustar(i,j) - EPS )
-       Tstar(i,j) = - SFLX_SH(i,j) / ( SFC_DENS(i,j) * Ustar(i,j) * CPdry + sw ) * ( 1.0_RP - sw )
-       Qstar(i,j) = - SFLX_QV(i,j) / ( SFC_DENS(i,j) * Ustar(i,j) + sw ) * ( 1.0_RP - sw )
-       BFLX = - Ustar(i,j) * Tstar(i,j) - EPSTvap * Ustar(i,j) * Qstar(i,j) * SFC_TEMP(i,j)
-       RLmo(i,j) = - KARMAN * GRAV * BFLX / ( Ustar(i,j)**3 * SFC_TEMP(i,j) + sw ) * ( 1.0_RP - sw )
-
-       if ( ws_flag ) then
-          tmp = PBL(i,j) * GRAV / SFC_TEMP(i,j) * BFLX
-          sw  = 0.5_RP + sign( 0.5_RP, tmp ) ! if tmp is plus, sw = 1
-          Wstar(i,j) = ( tmp * sw )**( 1.0_RP / 3.0_RP )
-       else
-          Wstar(i,j) = 0.0_RP
-       end if
-
-    end do
-    end do
-
+    Ustar = sqrt( sqrt( SFLX_MW**2 + SFLX_MU**2 + SFLX_MV**2 ) / SFC_DENS )
+    sw = 0.5_RP - sign( 0.5_RP, Ustar - EPS )
+    Tstar = - SFLX_SH / ( SFC_DENS * Ustar * CPdry + sw ) * ( 1.0_RP - sw )
+    Qstar = - SFLX_QV / ( SFC_DENS * Ustar + sw ) * ( 1.0_RP - sw )
+    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * SFC_TEMP
+    RLmo = - KARMAN * GRAV * BFLX / ( Ustar**3 * SFC_TEMP + sw ) * ( 1.0_RP - sw )
+    if ( ws_flag ) then
+       tmp = PBL * GRAV / SFC_TEMP * BFLX
+       sw  = 0.5_RP + sign( 0.5_RP, tmp ) ! if tmp is plus, sw = 1
+       Wstar = ( tmp * sw )**( 1.0_RP / 3.0_RP )
+    else
+       Wstar = 0.0_RP
+    end if
 
     return
-  end subroutine BULKFLUX_diagnose
+  end subroutine BULKFLUX_diagnose_0D
 
   !-----------------------------------------------------------------------------
   ! ref. Uno et al. (1995)

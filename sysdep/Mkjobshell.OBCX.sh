@@ -97,7 +97,7 @@ module load hdf5
 module load netcdf
 module load netcdf-fortran
 
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 export OMP_NUM_THREADS=1
 
 EOF1
