@@ -72,6 +72,7 @@ program fio_ico2ll
   logical                :: use_NearestNeighbor = .false.
   logical                :: output_grads        = .true.
   logical                :: output_netcdf       = .false.
+  integer                :: netcdf_comp_level   = 1         ! netcdf deflate (compression) level. 0: no-compression, 1: normal, 2-9: higher
   logical                :: datainfo_nodep_pe   = .true.    ! <- can be .true. if data header do not depend on pe.
   character(len=H_SHORT) :: selectvar(max_nvar) = ''
   integer                :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
@@ -97,6 +98,7 @@ program fio_ico2ll
      use_NearestNeighbor, &
      output_grads,        &
      output_netcdf,       &
+     netcdf_comp_level,   &
      datainfo_nodep_pe,   &
      selectvar,           &
      nlim_llgrid,         &
@@ -814,7 +816,8 @@ program fio_ico2ll
                                        var_name    = trim(var_name_nc),          & ! [IN]
                                        var_desc    = trim(var_desc_nc),          & ! [IN]
                                        var_units   = trim(var_unit_nc),          & ! [IN]
-                                       var_missing = CONST_UNDEF4                 ) ! [IN]
+                                       var_missing = CONST_UNDEF4,               & ! [IN]
+                                       netcdf_comp_level = netcdf_comp_level    )  ! [IN]
 
            deallocate(lon_tmp)
            call PROF_rapend  ('+FILE O NETCDF')

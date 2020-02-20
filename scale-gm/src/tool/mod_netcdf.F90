@@ -209,7 +209,8 @@ contains
        var_force_to_set_valid_min, &
        var_force_to_set_valid_max, &
        chunksizes,                 &
-       var_comp_table_file         &  ! [add] C.Kodama 2014.05.09
+       var_comp_table_file,        &  ! [add] C.Kodama 2014.05.09
+       netcdf_comp_level           & 
        )
     type(netcdf_handler),intent(out)          :: nc        ! handler
     character(*),        intent(in)           :: ncfile    ! output netcdf filename
@@ -247,6 +248,7 @@ contains
     real(4),             intent(in) ,optional :: var_force_to_set_valid_max
     integer,             intent(in) ,optional :: chunksizes(4)
     character(*),        intent(in) ,optional :: var_comp_table_file  ! [add] C.Kodama 2014.05.09
+    integer,             intent(in) ,optional :: netcdf_comp_level
     integer :: i, j, k, t
 
     !--- set mode
@@ -363,6 +365,12 @@ contains
     endif
     if( nc%nf90_cmode == NF90_HDF5      ) write(log_fid,*) '  using NetCDF4/HDF5'
     if( nc%nf90_cmode == NF90_NOCLOBBER ) write(log_fid,*) '  using NetCDF3'
+
+    ! change compression level from default (1)
+    if( present( netcdf_comp_level ) ) then
+      nc%deflate_level = netcdf_comp_level ! set compression level
+    endif
+  
 
     ! valid range
     !nc%var_valid_min = nc%var_missing
