@@ -893,7 +893,7 @@ contains
     
     if (flag_restart_output) then
       if (step == TIME_LSTEP_MAX) then
-        restart_step = 0
+        restart_step = 0 ! 0 is for the last step for convenience of restarting from the last step.
       else
         restart_step = step/output_interval
       endif
