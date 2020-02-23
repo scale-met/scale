@@ -270,7 +270,7 @@ contains
            var0 = rk%work0(k,i,j,iv)
            rk%work(k,i,j,iv,2) =  rk%work(k,i,j,iv,2) - var0
      
-           rk%buf(k,i,j,iv) = var0 + &
+           rk%buf(k,i,j,iv) = var0 &
               + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2)
         end do
         end do
@@ -285,7 +285,7 @@ contains
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,3) =  rk%work(k,i,j,iv,3) - var0
     
-          rk%buf(k,i,j,iv) = var0 + &
+          rk%buf(k,i,j,iv) = var0 &
              + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2) &
              + a_(3) * rk%work(k,i,j,iv,3) 
        end do
@@ -334,7 +334,7 @@ contains
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,6) = rk%work(k,i,j,iv,6) - var0
     
-          rk%buf(k,i,j,iv) = var0 + &
+          rk%buf(k,i,j,iv) = var0 &
              + a_(1) * rk%work(k,i,j,iv,1) + a_(2) * rk%work(k,i,j,iv,2) &
              + a_(3) * rk%work(k,i,j,iv,3) + a_(4) * rk%work(k,i,j,iv,4) &
              + a_(5) * rk%work(k,i,j,iv,5) + a_(6) * rk%work(k,i,j,iv,6) 
