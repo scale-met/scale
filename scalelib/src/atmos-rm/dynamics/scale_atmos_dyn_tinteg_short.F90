@@ -126,7 +126,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Register
   subroutine ATMOS_DYN_Tinteg_short_setup( &
-       ATMOS_DYN_Tinteg_short_TYPE )
+       ATMOS_DYN_Tinteg_short_TYPE, ATMOS_DYN_Tstep_short_TYPE )
 
     use scale_precision
     use scale_atmos_grid_cartesC_index
@@ -145,6 +145,7 @@ contains
     implicit none
 
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
+    character(len=*), intent(in)  :: ATMOS_DYN_Tstep_short_TYPE
     !---------------------------------------------------------------------------
 
     select case( ATMOS_DYN_Tinteg_short_TYPE )
@@ -157,6 +158,9 @@ contains
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
     case( 'RK7s6o' )
+       if ( ATMOS_DYN_Tstep_short_TYPE /= 'HEVE' ) then
+         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE 'RK7s6o' is now supported only for 'HEVE'."
+       end if 
        call ATMOS_DYN_Tinteg_short_rk7s6o_setup( &
               ATMOS_DYN_Tinteg_short_TYPE )
          ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk7s6o

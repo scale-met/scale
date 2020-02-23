@@ -41,7 +41,7 @@ module mod_atmos_dyn_driver
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_SHORT_TYPE    = 'RK4'
                                                                    ! 'RK3WS2002'
                                                                    ! 'RK3'
-                                                                   ! 'RK7s6o'
+                                                                   ! 'RK7s6o' (only for FVM-HEVE)
   character(len=H_SHORT), public :: ATMOS_DYN_TINTEG_TRACER_TYPE   = 'RK3WS2002'
                                                                    ! 'EULER'
 
@@ -188,6 +188,7 @@ contains
                              ATMOS_DYN_TINTEG_LARGE_TYPE,        & ! [IN]
                              ATMOS_DYN_TSTEP_TRACER_TYPE,        & ! [IN]
                              ATMOS_DYN_TSTEP_LARGE_TYPE,         & ! [IN]
+                             ATMOS_DYN_TYPE,                     & ! [IN] Note that ATMOS_DYN_TYPE corresponds to ATMOS_DYN_TSTEP_SHORT_TYPE. 
                              ATMOS_DYN_FVM_FLUX_TYPE,            & ! [IN]
                              ATMOS_DYN_FVM_FLUX_TRACER_TYPE,     & ! [IN]
                              DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! [IN]

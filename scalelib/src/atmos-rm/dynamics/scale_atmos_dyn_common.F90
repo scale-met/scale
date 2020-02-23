@@ -2002,7 +2002,7 @@ contains
       !$omp do OMP_SCHEDULE_ collapse(2) 
       do j = JS, JE
       do i = IS, IE
-      do k = KS, KE
+      do k = KS+1, KE-1
 #ifdef DEBUG
          call CHECK( __LINE__, phi(k  ,i,j) )
          call CHECK( __LINE__, phi(k-1,i,j) )
@@ -2015,8 +2015,10 @@ contains
       !$omp do OMP_SCHEDULE_ collapse(2)
       do j = JS, JE
       do i = IS, IE
-         diff(KS-1,i,j,ZDIR) = - diff(KS  ,i,j,ZDIR)
-         diff(KS-2,i,j,ZDIR) = - diff(KS+1,i,j,ZDIR)
+         diff(KS  ,i,j,ZDIR) = CNZ1(KS,2) * ( phi(KS,i,j) - phi(KS+1,i,j) )
+         diff(KS-1,i,j,ZDIR) = - diff(KS+2,i,j,ZDIR)
+         diff(KS-2,i,j,ZDIR) = - diff(KS+3,i,j,ZDIR)
+         diff(KE  ,i,j,ZDIR) = CNZ1(KE,2) * (             - phi(KE-1,i,j) )
          diff(KE+1,i,j,ZDIR) = - diff(KE  ,i,j,ZDIR)
          diff(KE+2,i,j,ZDIR) = - diff(KE-1,i,j,ZDIR)
       end do

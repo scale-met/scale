@@ -134,13 +134,13 @@ in the current version of \scalerm are listed below\footnote{Refer to \citet{sca
       \item central advection schemes with 2nd-, 4th- and 6th-order accuracy
       \item upwind advection schemes with 3rd- and 5th-order accuracy
     \end{itemize}
- \item Time integration: selection from the ``fully explicit method'' 
-   or the ``horizontally explicit and vertically implicit methods''
+ \item Time integration: selection from the ``fully explicit method'' (HEVE)
+   or the ``horizontally explicit and vertically implicit methods'' (HEVI)
     \begin{itemize}
       \item \citet{Wicker_2002}'s 3 stage Runge--Kutta scheme with generally 2nd order accuracy
       \item Heun-type 3 stage Runge--Kutta scheme with 3rd order accuracy
       \item 4 stage Runge--Kutta scheme with 4th order accuracy
-      \item 7 stage Runge--Kutta scheme with 6th order accuracy
+      \item 7 stage Runge--Kutta scheme with 6th order accuracy (supported only for HEVE)
     \end{itemize}
  \item Guarantee of non-negative value:
     \begin{itemize}
