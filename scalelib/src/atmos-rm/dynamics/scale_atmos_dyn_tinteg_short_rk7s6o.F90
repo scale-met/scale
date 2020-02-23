@@ -153,7 +153,7 @@ contains
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+    real(RP), intent(out) :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(in)    :: DENS_t(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)

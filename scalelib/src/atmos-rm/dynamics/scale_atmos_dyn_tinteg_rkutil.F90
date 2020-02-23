@@ -248,11 +248,12 @@ contains
  
     select case(nowstage)
     case(1)
-       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+       !$omp parallel
        do iv=1, rk%var_num
-       do k=KS-ko(iv), KE
+       !$omp do private(k,i,j,var0) collapse(2) 
        do j=JS-jo(iv), JE
        do i=IS-io(iv), IE
+       do k=KS-ko(iv), KE
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,1) = rk%work(k,i,j,iv,1) - var0
 
@@ -260,13 +261,15 @@ contains
        end do
        end do
        end do
-       end do 
+       end do
+       !$omp end parallel
       case(2)
-        !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+        !$omp parallel
         do iv=1, rk%var_num
-        do k=KS-ko(iv), KE
+        !$omp do private(k,i,j,var0) collapse(2)
         do j=JS-jo(iv), JE
         do i=IS-io(iv), IE
+        do k=KS-ko(iv), KE
            var0 = rk%work0(k,i,j,iv)
            rk%work(k,i,j,iv,2) =  rk%work(k,i,j,iv,2) - var0
      
@@ -275,13 +278,15 @@ contains
         end do
         end do
         end do
-        end do       
+        end do
+        !$omp end parallel     
     case(3)
-       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+       !$omp parallel
        do iv=1, rk%var_num
-       do k=KS-ko(iv), KE
+       !$omp do private(k,i,j,var0) collapse(2)
        do j=JS-jo(iv), JE
        do i=IS-io(iv), IE
+       do k=KS-ko(iv), KE
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,3) =  rk%work(k,i,j,iv,3) - var0
     
@@ -292,12 +297,14 @@ contains
        end do
        end do
        end do
+       !$omp end parallel
     case(4)
-       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+       !$omp parallel
        do iv=1, rk%var_num
-       do k=KS-ko(iv), KE
+       !$omp do private(k,i,j,var0) collapse(2)
        do j=JS-jo(iv), JE
        do i=IS-io(iv), IE
+       do k=KS-ko(iv), KE
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,4) = rk%work(k,i,j,iv,4) - var0
  
@@ -308,12 +315,14 @@ contains
        end do
        end do
        end do
+       !$omp end parallel
     case(5)
-       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+       !$omp parallel 
        do iv=1, rk%var_num
-       do k=KS-ko(iv), KE
+       !$omp do private(k,i,j,var0) collapse(2)
        do j=JS-jo(iv), JE
        do i=IS-io(iv), IE
+       do k=KS-ko(iv), KE
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,5) =  rk%work(k,i,j,iv,5) - var0
     
@@ -325,12 +334,14 @@ contains
        end do
        end do
        end do
+       !$omp end parallel
     case(6)
-       !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+       !$omp parallel
        do iv=1, rk%var_num
-       do k=KS-ko(iv), KE
+       !$omp do private(k,i,j,var0) collapse(2)
        do j=JS-jo(iv), JE
        do i=IS-io(iv), IE
+       do k=KS-ko(iv), KE
           var0 = rk%work0(k,i,j,iv)
           rk%work(k,i,j,iv,6) = rk%work(k,i,j,iv,6) - var0
     
@@ -342,6 +353,7 @@ contains
        end do
        end do
        end do
+       !$omp end parallel
     end select
  
     return
@@ -367,11 +379,12 @@ contains
  
     b_(:) = dt * RKCoef_b_7s6o(:)
  
-    !$omp parallel do private(iv,k,j,i,var0) collapse(3)
+    !$omp parallel
     do iv=vs, ve
-    do k=KS-ko(iv), KE
+    !$omp do private(k,i,j,var0) collapse(2)
     do j=JS-jo(iv), JE
     do i=IS-io(iv), IE
+    do k=KS-ko(iv), KE      
       var0 = rk%work0(k,i,j,iv)
       var(k,i,j,iv) = var0  &
                + b_(1) *  rk%work(k,i,j,iv,1) + b_(3) *  rk%work(k,i,j,iv,3)        &
@@ -381,7 +394,8 @@ contains
     end do
     end do
     end do
- 
+    !$omp end parallel
+    
     return
   end subroutine ATMOS_DYN_Tinteg_RKUtil_7s6o_updateVar
  
@@ -401,9 +415,9 @@ contains
 
     !$omp parallel do private(iv,k,j,i) collapse(3)
     do iv=1, va_
-    do k=KS-ko, KE
     do j=JS-jo, JE
     do i=IS-io, IE
+    do k=KS-ko, KE
       flux(k,i,j,iv) = &
          b_(1) * rkwork(k,i,j,iv,1) + b_(3) * rkwork(k,i,j,iv,3)  &
        + b_(4) * rkwork(k,i,j,iv,4) + b_(5) * rkwork(k,i,j,iv,5)  &
