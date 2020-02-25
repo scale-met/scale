@@ -385,19 +385,19 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_USE_VELZ = .false.,    | & ; wに対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_VELX = .false.,    | & ; uに対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_VELY = .false.,    | & ; vに対するナッジングのスイッチ. \\
-  \verb| ATMOS_BOUNDARY_USE_POTT = .false.,    | & ; $\theta$に対するナッジングのスイッチ. \\
+  \verb| ATMOS_BOUNDARY_USE_PT = .false.,      | & ; $\theta$に対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_QV = .false.,      | & ; 水蒸気に対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_QHYD = .false.,    | & ; 水物質に対するナッジングのスイッチ. \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELZ =   0.0D0,  | & ; wの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELX =   0.0D0,  | & ; uの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELY =   0.0D0,  | & ; vの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_POTT = 300.0D0,  | & ; $\theta$の値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELZ = 0.0D0,    | & ; wの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELX = 0.0D0,    | & ; uの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELY = 0.0D0,    | & ; vの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_PT = 300.0D0,    | & ; $\theta$の値 (\verb|CONST| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_VALUE_QTRC =   0.0D0,  | & ; 水蒸気の値 (\verb|CONST| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0D0,| & ; 密度に対する$1/\tau$の係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; wに対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELX = 1.0D0,| & ; uに対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; vに対する係数. \\
-  \verb| ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0D0,| & ; $\theta$に対する係数. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_PT = 1.0D0,  | & ; $\theta$に対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0D0,| & ; 水蒸気に対する係数. \\
   \verb| ATMOS_BOUNDARY_SMOOTHER_FACT = 0.2D0, | & ; 点ごとの差に対する水平方向の平滑化の係数. \\
   \verb| ATMOS_BOUNDARY_FRACZ = 1.0D0,         | & ; z方向の緩和領域に対するナッジング領域の割合. \\
@@ -455,9 +455,7 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 
 
 \namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が\verb|REAL|であれば、
-水平速度・温位・水蒸気に対する側面境界でのナッジングが強制的に適用される。
-この場合は、\nmitem{ATMOS_BOUNDARY_USE_VELX}, \nmitem{ATMOS_BOUNDARY_USE_VELY},
-\nmitem{ATMOS_BOUNDARY_USE_POTT}, \nmitem{ATMOS_BOUNDARY_USE_QV} といったスイッチは、上端境界に対してのみ使われる。
+水平速度・温位・水蒸気に対する上部および側面境界でのナッジングが適用される。
 オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域で計算が行われるときには、
 境界の種類として\verb|REAL|を用いて上記と同様の設定が適用される。
 
