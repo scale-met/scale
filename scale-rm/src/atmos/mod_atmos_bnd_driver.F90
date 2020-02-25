@@ -132,7 +132,7 @@ module mod_atmos_bnd_driver
   logical,               private :: ATMOS_BOUNDARY_USE_VELZ     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_VELX     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_VELY     = .false. ! read from file?
-  logical,               private :: ATMOS_BOUNDARY_USE_POTT     = .false. ! read from file?
+  logical,               private :: ATMOS_BOUNDARY_USE_PT       = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_QV       = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_QHYD     = .false. ! read from file?
   logical,               private :: ATMOS_BOUNDARY_USE_CHEM     = .false. ! read from file?
@@ -140,14 +140,14 @@ module mod_atmos_bnd_driver
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELZ   =   0.0_RP ! velocity w      at boundary, 0   [m/s]
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELX   =   0.0_RP ! velocity u      at boundary, 0   [m/s]
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_VELY   =   0.0_RP ! velocity v      at boundary, 0   [m/s]
-  real(RP),              private :: ATMOS_BOUNDARY_VALUE_POTT   = 300.0_RP ! potential temp. at boundary, 300 [K]
+  real(RP),              private :: ATMOS_BOUNDARY_VALUE_PT     = 300.0_RP ! potential temp. at boundary, 300 [K]
   real(RP),              private :: ATMOS_BOUNDARY_VALUE_QTRC   =   0.0_RP ! tracer          at boundary, 0   [kg/kg]
 
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_VELX = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_VELY = 1.0_RP ! alpha factor again default
-  real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0_RP ! alpha factor again default
+  real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_PT   = 1.0_RP ! alpha factor again default
   real(RP),              private :: ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0_RP ! alpha factor again default
 
   real(RP),              private :: ATMOS_BOUNDARY_FRACZ        =   1.0_RP ! fraction of boundary region for dumping (z) (0-1)
@@ -255,7 +255,7 @@ contains
        ATMOS_BOUNDARY_USE_VELZ,       &
        ATMOS_BOUNDARY_USE_VELX,       &
        ATMOS_BOUNDARY_USE_VELY,       &
-       ATMOS_BOUNDARY_USE_POTT,       &
+       ATMOS_BOUNDARY_USE_PT,       &
        ATMOS_BOUNDARY_USE_DENS,       &
        ATMOS_BOUNDARY_USE_QV,         &
        ATMOS_BOUNDARY_USE_QHYD,       &
@@ -265,13 +265,13 @@ contains
        ATMOS_BOUNDARY_VALUE_VELZ,     &
        ATMOS_BOUNDARY_VALUE_VELX,     &
        ATMOS_BOUNDARY_VALUE_VELY,     &
-       ATMOS_BOUNDARY_VALUE_POTT,     &
+       ATMOS_BOUNDARY_VALUE_PT,     &
        ATMOS_BOUNDARY_VALUE_QTRC,     &
        ATMOS_BOUNDARY_ALPHAFACT_DENS, &
        ATMOS_BOUNDARY_ALPHAFACT_VELZ, &
        ATMOS_BOUNDARY_ALPHAFACT_VELX, &
        ATMOS_BOUNDARY_ALPHAFACT_VELY, &
-       ATMOS_BOUNDARY_ALPHAFACT_POTT, &
+       ATMOS_BOUNDARY_ALPHAFACT_PT, &
        ATMOS_BOUNDARY_ALPHAFACT_QTRC, &
        ATMOS_BOUNDARY_SMOOTHER_FACT,  &
        ATMOS_BOUNDARY_FRACZ,          &
@@ -515,7 +515,7 @@ contains
     LOG_INFO_CONT(*) 'Is VELZ used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_VELZ
     LOG_INFO_CONT(*) 'Is VELX used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_VELX
     LOG_INFO_CONT(*) 'Is VELY used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_VELY
-    LOG_INFO_CONT(*) 'Is POTT used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_POTT
+    LOG_INFO_CONT(*) 'Is PT used in atmospheric boundary?            : ', ATMOS_BOUNDARY_USE_PT
     LOG_INFO_CONT(*) 'Is DENS used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_DENS
     LOG_INFO_CONT(*) 'Is QV   used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_QV
     LOG_INFO_CONT(*) 'Is QHYD used in atmospheric boundary?          : ', ATMOS_BOUNDARY_USE_QHYD
@@ -524,7 +524,7 @@ contains
     LOG_INFO_CONT(*) 'Atmospheric boundary VELZ values               : ', ATMOS_BOUNDARY_VALUE_VELZ
     LOG_INFO_CONT(*) 'Atmospheric boundary VELX values               : ', ATMOS_BOUNDARY_VALUE_VELX
     LOG_INFO_CONT(*) 'Atmospheric boundary VELY values               : ', ATMOS_BOUNDARY_VALUE_VELY
-    LOG_INFO_CONT(*) 'Atmospheric boundary POTT values               : ', ATMOS_BOUNDARY_VALUE_POTT
+    LOG_INFO_CONT(*) 'Atmospheric boundary PT values                 : ', ATMOS_BOUNDARY_VALUE_PT
     LOG_INFO_CONT(*) 'Atmospheric boundary QTRC values               : ', ATMOS_BOUNDARY_VALUE_QTRC
     LOG_NEWLINE
     LOG_INFO_CONT(*) 'Atmospheric boundary smoother factor           : ', ATMOS_BOUNDARY_SMOOTHER_FACT
@@ -870,7 +870,7 @@ contains
     !$omp shared(ATMOS_BOUNDARY_USE_DENS,ATMOS_BOUNDARY_alpha_DENS,ATMOS_BOUNDARY_ALPHAFACT_DENS)        &
     !$omp shared(ATMOS_BOUNDARY_USE_VELX,ATMOS_BOUNDARY_alpha_VELX,ATMOS_BOUNDARY_ALPHAFACT_VELX)        &
     !$omp shared(ATMOS_BOUNDARY_USE_VELY,ATMOS_BOUNDARY_alpha_VELY,ATMOS_BOUNDARY_ALPHAFACT_VELY)        &
-    !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_POTT)        &
+    !$omp shared(ATMOS_BOUNDARY_USE_POTT,ATMOS_BOUNDARY_alpha_POTT,ATMOS_BOUNDARY_ALPHAFACT_PT)        &
     !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
     !$omp shared(ATMOS_BOUNDARY_DENS_ADJUST,ATMOS_BOUNDARY_DENS_ADJUST_tau,ATMOS_BOUNDARY_UPDATE_DT) &
     !$omp shared(BND_QA,BND_IQ,I_QV) &
@@ -973,7 +973,7 @@ contains
           end if
           ATMOS_BOUNDARY_alpha_VELX(k,i,j) = max( alpha_z1, alpha_x2, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELX
           ATMOS_BOUNDARY_alpha_VELY(k,i,j) = max( alpha_z1, alpha_x1, alpha_y2 ) * ATMOS_BOUNDARY_ALPHAFACT_VELY
-          ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
+          ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_PT
           do iq = 1, BND_QA
              ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
           end do
@@ -998,8 +998,8 @@ contains
           else
              ATMOS_BOUNDARY_alpha_VELY(k,i,j) = 0.0_RP
           end if
-          if ( ATMOS_BOUNDARY_USE_POTT ) then
-             ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_POTT
+          if ( ATMOS_BOUNDARY_USE_PT ) then
+             ATMOS_BOUNDARY_alpha_POTT(k,i,j) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_PT
           else
              ATMOS_BOUNDARY_alpha_POTT(k,i,j) = 0.0_RP
           end if
@@ -1112,7 +1112,7 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELZ &
          .OR. ATMOS_BOUNDARY_USE_VELX &
          .OR. ATMOS_BOUNDARY_USE_VELY &
-         .OR. ATMOS_BOUNDARY_USE_POTT &
+         .OR. ATMOS_BOUNDARY_USE_PT &
          ) then
        call FILE_CARTESC_read( fid, 'DENS', 'ZXY', ATMOS_BOUNDARY_DENS(:,:,:) )
     end if
@@ -1135,9 +1135,9 @@ contains
        call FILE_CARTESC_read( fid, 'ALPHA_VELY', 'ZXYH', ATMOS_BOUNDARY_alpha_VELY(:,:,:) )
     endif
 
-    if ( ATMOS_BOUNDARY_USE_POTT ) then
-       call FILE_CARTESC_read( fid, 'POTT', 'ZXY', ATMOS_BOUNDARY_POTT(:,:,:) )
-       call FILE_CARTESC_read( fid, 'ALPHA_POTT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
+    if ( ATMOS_BOUNDARY_USE_PT ) then
+       call FILE_CARTESC_read( fid, 'PT', 'ZXY', ATMOS_BOUNDARY_POTT(:,:,:) )
+       call FILE_CARTESC_read( fid, 'ALPHA_PT', 'ZXY', ATMOS_BOUNDARY_alpha_POTT(:,:,:) )
     endif
 
     do iq = 1, QA
@@ -1189,7 +1189,7 @@ contains
          .OR. ATMOS_BOUNDARY_USE_VELZ &
          .OR. ATMOS_BOUNDARY_USE_VELX &
          .OR. ATMOS_BOUNDARY_USE_VELY &
-         .OR. ATMOS_BOUNDARY_USE_POTT &
+         .OR. ATMOS_BOUNDARY_USE_PT &
          .OR. l_bnd                   ) then
        call FILE_CARTESC_def_var( fid, 'DENS', 'Reference Density', 'kg/m3', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_dens )
     else
@@ -1223,9 +1223,9 @@ contains
        vid_vely = -1
     end if
 
-    if ( ATMOS_BOUNDARY_USE_POTT .OR. l_bnd ) then
-       call FILE_CARTESC_def_var( fid, 'POTT', 'Reference POTT', 'K', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_pott )
-       call FILE_CARTESC_def_var( fid, 'ALPHA_POTT', 'Alpha for POTT', '1', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_pott )
+    if ( ATMOS_BOUNDARY_USE_PT .OR. l_bnd ) then
+       call FILE_CARTESC_def_var( fid, 'PT', 'Reference PT', 'K', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_pott )
+       call FILE_CARTESC_def_var( fid, 'ALPHA_PT', 'Alpha for PT', '1', 'ZXY', ATMOS_BOUNDARY_OUT_DTYPE, vid_a_pott )
     else
        vid_pott = -1
     end if
@@ -1266,8 +1266,8 @@ contains
     end if
 
     if ( vid_pott > 0 ) then
-       call FILE_CARTESC_write_var( fid, vid_pott, ATMOS_BOUNDARY_POTT(:,:,:), 'POTT', 'ZXY' )
-       call FILE_CARTESC_write_var( fid, vid_a_pott, ATMOS_BOUNDARY_alpha_POTT(:,:,:), 'ALPHA_POTT', 'ZXY' )
+       call FILE_CARTESC_write_var( fid, vid_pott, ATMOS_BOUNDARY_POTT(:,:,:), 'PT', 'ZXY' )
+       call FILE_CARTESC_write_var( fid, vid_a_pott, ATMOS_BOUNDARY_alpha_POTT(:,:,:), 'ALPHA_PT', 'ZXY' )
     end if
 
     do iqb = 1, BND_QA
@@ -1302,7 +1302,7 @@ contains
        ATMOS_BOUNDARY_VELZ(k,i,j) = ATMOS_BOUNDARY_VALUE_VELZ
        ATMOS_BOUNDARY_VELX(k,i,j) = ATMOS_BOUNDARY_VALUE_VELX
        ATMOS_BOUNDARY_VELY(k,i,j) = ATMOS_BOUNDARY_VALUE_VELY
-       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_VALUE_POTT
+       ATMOS_BOUNDARY_POTT(k,i,j) = ATMOS_BOUNDARY_VALUE_PT
        do iq = 1, BND_QA
           ATMOS_BOUNDARY_QTRC(k,i,j,iq) = ATMOS_BOUNDARY_VALUE_QTRC
        end do
