@@ -255,7 +255,7 @@ contains
        ATMOS_BOUNDARY_USE_VELZ,       &
        ATMOS_BOUNDARY_USE_VELX,       &
        ATMOS_BOUNDARY_USE_VELY,       &
-       ATMOS_BOUNDARY_USE_PT,       &
+       ATMOS_BOUNDARY_USE_PT,         &
        ATMOS_BOUNDARY_USE_DENS,       &
        ATMOS_BOUNDARY_USE_QV,         &
        ATMOS_BOUNDARY_USE_QHYD,       &
@@ -265,13 +265,13 @@ contains
        ATMOS_BOUNDARY_VALUE_VELZ,     &
        ATMOS_BOUNDARY_VALUE_VELX,     &
        ATMOS_BOUNDARY_VALUE_VELY,     &
-       ATMOS_BOUNDARY_VALUE_PT,     &
+       ATMOS_BOUNDARY_VALUE_PT,       &
        ATMOS_BOUNDARY_VALUE_QTRC,     &
        ATMOS_BOUNDARY_ALPHAFACT_DENS, &
        ATMOS_BOUNDARY_ALPHAFACT_VELZ, &
        ATMOS_BOUNDARY_ALPHAFACT_VELX, &
        ATMOS_BOUNDARY_ALPHAFACT_VELY, &
-       ATMOS_BOUNDARY_ALPHAFACT_PT, &
+       ATMOS_BOUNDARY_ALPHAFACT_PT,   &
        ATMOS_BOUNDARY_ALPHAFACT_QTRC, &
        ATMOS_BOUNDARY_SMOOTHER_FACT,  &
        ATMOS_BOUNDARY_FRACZ,          &
@@ -1802,7 +1802,7 @@ contains
     call FILE_CARTESC_read( fid, 'DENS', 'ZXY',  ATMOS_BOUNDARY_ref_DENS(:,:,:,ref), step=boundary_timestep )
     call FILE_CARTESC_read( fid, 'VELX', 'ZXHY', ATMOS_BOUNDARY_ref_VELX(:,:,:,ref), step=boundary_timestep )
     call FILE_CARTESC_read( fid, 'VELY', 'ZXYH', ATMOS_BOUNDARY_ref_VELY(:,:,:,ref), step=boundary_timestep )
-    call FILE_CARTESC_read( fid, 'POTT', 'ZXY',  ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), step=boundary_timestep )
+    call FILE_CARTESC_read( fid, 'PT',   'ZXY',  ATMOS_BOUNDARY_ref_POTT(:,:,:,ref), step=boundary_timestep )
     do iq = 1, QA
        iqb = BND_IQ(iq)
        if ( iqb > 0 ) then
@@ -2698,7 +2698,7 @@ contains
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELZ(:,:,:), 'VELZ_BND', 'Boundary velocity z-direction',  'm/s',  dim_type='ZHXY' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELX(:,:,:), 'VELX_BND', 'Boundary velocity x-direction',  'm/s',  dim_type='ZXHY' )
     call FILE_HISTORY_in( ATMOS_BOUNDARY_VELY(:,:,:), 'VELY_BND', 'Boundary velocity y-direction',  'm/s',  dim_type='ZXYH' )
-    call FILE_HISTORY_in( ATMOS_BOUNDARY_POTT(:,:,:), 'POTT_BND', 'Boundary potential temperature', 'K'                 )
+    call FILE_HISTORY_in( ATMOS_BOUNDARY_POTT(:,:,:), 'PT_BND',   'Boundary potential temperature', 'K'                 )
     do iq = 1, QA
        iqb = BND_IQ(iq)
        if ( iqb > 0 ) then
