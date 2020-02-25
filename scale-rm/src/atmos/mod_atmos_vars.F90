@@ -1082,6 +1082,17 @@ contains
        call PRC_abort
     endif
 
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
+    
     if ( ATMOS_USE_AVERAGE ) then
        DENS_av(:,:,:)   = DENS(:,:,:)
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
