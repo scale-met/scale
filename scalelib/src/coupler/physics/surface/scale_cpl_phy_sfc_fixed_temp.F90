@@ -266,6 +266,7 @@ contains
           XMFLX(i,j) = UNDEF
           YMFLX(i,j) = UNDEF
           SHFLX(i,j) = UNDEF
+          LHFLX(i,j) = UNDEF
           QVFLX(i,j) = UNDEF
           GFLX (i,j) = UNDEF
           Ustar(i,j) = UNDEF

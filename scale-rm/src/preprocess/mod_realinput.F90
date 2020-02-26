@@ -2179,7 +2179,7 @@ contains
          vid(4),                                                  & ! [OUT]
          timeintv=timeintv                                        ) ! [IN]
     call FILE_CARTESC_def_var( fid, &
-         'POTT', 'Reference PT',      'K',     'ZXYT',  datatype, & ! [IN]
+         'PT',   'Reference PT',      'K',     'ZXYT',  datatype, & ! [IN]
          vid(5),                                                  & ! [OUT]
          timeintv=timeintv                                        ) ! [IN]
 
@@ -2262,7 +2262,7 @@ contains
     call FILE_CARTESC_write_var( fid, vid(4), work(:,:,:,:), 'VELY', 'ZXYHT', timeintv, timeofs=timeofs )
 !OCL XFILL
     work(:,:,:,1) = POTT(:,:,:)
-    call FILE_CARTESC_write_var( fid, vid(5), work(:,:,:,:), 'POTT', 'ZXYT', timeintv, timeofs=timeofs )
+    call FILE_CARTESC_write_var( fid, vid(5), work(:,:,:,:), 'PT',   'ZXYT', timeintv, timeofs=timeofs )
 
     do iq = QS_MP, QE_MP
        call FILE_CARTESC_write_var( fid, vid(5+iq),QTRC(:,:,:,iq:iq), TRACER_NAME(iq), &
