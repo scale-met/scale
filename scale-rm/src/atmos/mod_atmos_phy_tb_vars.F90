@@ -215,12 +215,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_TB_vars_restart_read
-!!$    use scale_statistics, only: &
-!!$       STATISTICS_checktotal, &
-!!$       STAT_total
-!!$    use scale_atmos_grid_cartesC_real, only: &
-!!$       ATMOS_GRID_CARTESC_REAL_VOL, &
-!!$       ATMOS_GRID_CARTESC_REAL_TOTVOL
 !!$    use scale_file, only: &
 !!$       FILE_get_aggregate
 !!$    use scale_file_cartesC, only: &
@@ -252,12 +246,8 @@ contains
 !          call ATMOS_PHY_TB_vars_fillhalo
 !       end if
 !
-!       if ( STATISTICS_checktotal ) then
-!          call STAT_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-!                           ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1), &
-!                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
-!                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
-!       endif
+!       call ATMOS_PHY_TB_vars_check
+!
 !    else
 !       LOG_INFO("ATMOS_PHY_TB_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_TB.'
 !    endif
@@ -358,14 +348,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_TB_vars_restart_write
-!!$    use scale_statistics, only: &
-!!$       STATISTICS_checktotal, &
-!!$       STAT_total
-!!$    use scale_atmos_grid_cartesC_real, only: &
-!!$       ATMOS_GRID_CARTESC_REAL_VOL, &
-!!$       ATMOS_GRID_CARTESC_REAL_TOTVOL
-!!$    use scale_file_cartesC, only: &
-!!$       FILE_CARTESC_write_var
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_write_var
     implicit none
 
     !---------------------------------------------------------------------------
@@ -374,12 +358,7 @@ contains
 !
 !       call ATMOS_PHY_TB_vars_fillhalo
 !
-!       if ( STATISTICS_checktotal ) then
-!          call STAT_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-!                           ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1), &
-!                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
-!                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
-!       endif
+!       call ATMOS_PHY_TB_vars_check
 !
 !       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_TB_??(:,:,:), &
 !                              VAR_NAME(1), 'ZXY' ) ! [IN]
@@ -389,4 +368,25 @@ contains
     return
   end subroutine ATMOS_PHY_TB_vars_restart_write
 
+  subroutine ATMOS_PHY_TB_vars_check
+    use scale_statistics, only: &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    implicit none
+
+!!$    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!!$                   ATMOS_PHY_TB_??(:,:),        & ! (in)
+!!$                   0.0_RP, 0.0_RP, VAR_NAME(1), & ! (in)
+!!$                   __FILE__, __LINE__           ) ! (in)
+!!$
+!!$    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!!$                           ATMOS_PHY_TB_??(:,:,:), VAR_NAME(1), &
+!!$                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+!!$                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
+
+    return
+  end subroutine ATMOS_PHY_TB_vars_check
+  
 end module mod_atmos_phy_tb_vars

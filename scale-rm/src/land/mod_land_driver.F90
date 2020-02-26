@@ -712,7 +712,7 @@ contains
        LAND_TEMP_t,       &
        LAND_WATER_t,      &
        LAND_ICE_t,        &
-       LAND_vars_total
+       LAND_vars_check
     use scale_land_grid_cartesC, only: &
        LCDZ => LAND_GRID_CARTESC_CDZ
     use scale_land_dyn_bucket, only: &
@@ -770,7 +770,7 @@ contains
     enddo
     enddo
 
-    call LAND_vars_total
+    call LAND_vars_check
 
     call PROF_rapend  ('LND_Update', 1)
 

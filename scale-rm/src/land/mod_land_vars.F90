@@ -32,7 +32,7 @@ module mod_land_vars
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
   public :: LAND_vars_monitor
-  public :: LAND_vars_total
+  public :: LAND_vars_check
 
   public :: LAND_vars_restart_create
   public :: LAND_vars_restart_open
@@ -663,7 +663,7 @@ contains
 
        if( FILE_get_AGGREGATE(restart_fid) ) call FILE_CARTESC_flush( restart_fid ) ! commit all pending read requests
 
-       call LAND_vars_total
+       call LAND_vars_check( force = .true. )
     else
        LOG_ERROR("LAND_vars_restart_read",*) 'invalid restart file ID for land.'
        call PRC_abort
@@ -679,8 +679,6 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use scale_landuse, only: &
-       LANDUSE_exists_land
     implicit none
 
     real(RP) :: LAND_WATERDS(LKMAX,LIA,LJA)
@@ -690,70 +688,6 @@ contains
     call PROF_rapstart('LND_History', 1)
 
 
-    if ( LAND_VARS_CHECKRANGE ) then
-       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
-                      LAND_TEMP      (:,:,:),                   0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_TEMP),                        __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
-                      LAND_WATER     (:,:,:),                   0.0_RP,    1.0_RP, &
-                      VAR_NAME(I_WATER),                       __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
-                      LAND_ICE       (:,:,:),                   0.0_RP,    1.0_RP, &
-                      VAR_NAME(I_ICE),                         __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_TEMP),                    __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dir ),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dif ),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dir),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dif),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dir),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
-                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dif),             __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_land(:,:)                              )
-
-       if ( SNOW_flag ) then
-          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
-                         SNOW_SFC_TEMP(:,:), 0.0_RP, 1000.0_RP,             &
-                         VAR_NAME(I_SNOW_SFC_TEMP),     __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_land(:,:)                    )
-          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
-                         SNOW_SWE     (:,:), 0.0_RP, 1000.0_RP,             &
-                         VAR_NAME(I_SNOW_SWE),          __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_land(:,:)                    )
-          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
-                         SNOW_Depth   (:,:), 0.0_RP, 1000.0_RP,             &
-                         VAR_NAME(I_SNOW_Depth),        __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_land(:,:)                    )
-
-          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
-                         SNOW_Dzero   (:,:), 0.0_RP, 1000.0_RP,             &
-                         VAR_NAME(I_SNOW_Dzero),        __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_land(:,:)                    )
-       endif
-
-    end if
-    
     call FILE_HISTORY_in( LAND_TEMP (:,:,:), VAR_NAME(I_TEMP),  VAR_DESC(I_TEMP),  VAR_UNIT(I_TEMP),  dim_type='LXY', standard_name=VAR_STDN(I_TEMP) )
     call FILE_HISTORY_in( LAND_WATER(:,:,:), VAR_NAME(I_WATER), VAR_DESC(I_WATER), VAR_UNIT(I_WATER), dim_type='LXY', standard_name=VAR_STDN(I_WATER) )
     call FILE_HISTORY_in( LAND_ICE  (:,:,:), VAR_NAME(I_ICE),   VAR_DESC(I_ICE),   VAR_UNIT(I_ICE), dim_type='LXY', standard_name=VAR_STDN(I_ICE) )
@@ -988,7 +922,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
-  subroutine LAND_vars_total
+  subroutine LAND_vars_check( force )
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -997,11 +931,90 @@ contains
        LAND_GRID_CARTESC_REAL_TOTAREA, &
        LAND_GRID_CARTESC_REAL_VOL,     &
        LAND_GRID_CARTESC_REAL_TOTVOL
+    use scale_landuse, only: &
+       LANDUSE_exists_land
     implicit none
-
+    logical, intent(in), optional :: force
+    logical :: check
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
+    if ( present(force) ) then
+       check = force
+    else
+       check = LAND_VARS_CHECKRANGE
+    end if
+
+    if ( check ) then
+       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
+                      LAND_TEMP      (:,:,:),                   0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_TEMP),                        __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
+                      LAND_WATER     (:,:,:),                   0.0_RP,    1.0_RP, &
+                      VAR_NAME(I_WATER),                       __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE,                 &
+                      LAND_ICE       (:,:,:),                   0.0_RP,    1.0_RP, &
+                      VAR_NAME(I_ICE),                         __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_TEMP),                    __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dir ),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dif ),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dir),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dif),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dir),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+       call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                                &
+                      LAND_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dif),             __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_land(:,:)                              )
+
+       if ( SNOW_flag ) then
+          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
+                         SNOW_SFC_TEMP(:,:), 0.0_RP, 1000.0_RP,             &
+                         VAR_NAME(I_SNOW_SFC_TEMP),     __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_land(:,:)                    )
+          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
+                         SNOW_SWE     (:,:), 0.0_RP, 1000.0_RP,             &
+                         VAR_NAME(I_SNOW_SWE),          __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_land(:,:)                    )
+          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
+                         SNOW_Depth   (:,:), 0.0_RP, 1000.0_RP,             &
+                         VAR_NAME(I_SNOW_Depth),        __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_land(:,:)                    )
+
+          call VALCHECK( LIA, LIS, LIE, LJA, LJS, LJE,                      &
+                         SNOW_Dzero   (:,:), 0.0_RP, 1000.0_RP,             &
+                         VAR_NAME(I_SNOW_Dzero),        __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_land(:,:)                    )
+       endif
+
+    end if
+
+    if ( present(force) ) then
+       check = force
+    else
+       check = STATISTICS_checktotal
+    end if
+
+    if ( check ) then
 
        ! 3D
        call STATISTICS_total( LKA, LKS, LKE, LIA, LIS, LIE, LJA, LJS, LJE, &
@@ -1073,7 +1086,7 @@ contains
     endif
 
     return
-  end subroutine LAND_vars_total
+  end subroutine LAND_vars_check
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for land
@@ -1386,7 +1399,7 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       call LAND_vars_total
+       call LAND_vars_check( force = .true. )
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP),                         & ! [IN]
                                     LAND_TEMP(:,:,:),                                    & ! [IN]

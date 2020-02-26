@@ -235,7 +235,7 @@ contains
     use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_vars, only: &
-       ATMOS_vars_total,  &
+       ATMOS_vars_check,  &
        DENS,    &
        MOMZ,    &
        MOMX,    &
@@ -428,7 +428,7 @@ contains
                        TIME_DTSEC,                                           & ! [IN]
                        TIME_DTSEC_ATMOS_DYN                                  ) ! [IN]
 
-       call ATMOS_vars_total
+       call ATMOS_vars_check
     endif
 
     return

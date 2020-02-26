@@ -17,6 +17,7 @@ module mod_atmos_phy_sf_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_cpl_sfc_index
@@ -469,7 +470,7 @@ contains
           call ATMOS_PHY_SF_vars_fillhalo
        end if
 
-       call ATMOS_PHY_SF_vars_checktotal
+       call ATMOS_PHY_SF_vars_check
 
     else
        LOG_INFO("ATMOS_PHY_SF_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_SF.'
@@ -585,7 +586,7 @@ contains
 
        call ATMOS_PHY_SF_vars_fillhalo
 
-       call ATMOS_PHY_SF_vars_checktotal
+       call ATMOS_PHY_SF_vars_check
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                  & ! [IN]
                                     ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
@@ -629,9 +630,8 @@ contains
   end subroutine ATMOS_PHY_SF_vars_restart_write
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_vars_checktotal
+  subroutine ATMOS_PHY_SF_vars_check
     use scale_statistics, only: &
-       STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA, &
@@ -639,70 +639,117 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_TEMP),                             & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_IR_dir),                       & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_IR_dif),                       & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_NIR_dir),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_NIR_dif),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_VIS_dir),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_VIS_dif),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0M   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0M),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0H   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0H),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0E),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
-                              VAR_NAME(I_PREC_MASS),                            & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
-                              VAR_NAME(I_PREC_ENGI),                            & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-    endif
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_TEMP(:,:),                       & ! (in)
+                   0.0_RP, 1.0E3_RP, VAR_NAME(I_SFC_TEMP),           & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_IR_dir),     & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_IR_dif),     & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_NIR_dir),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_NIR_dif),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_VIS_dir),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_VIS_dif),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0M(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0M),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0H(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0H),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0E(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0E),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_PREC_MASS(:,:),                      & ! (in)
+                   0.0_RP, 1.0E1_RP, VAR_NAME(I_PREC_MASS),          & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_PREC_ENGI(:,:),                      & ! (in)
+                   0.0_RP, 1.0E7_RP, VAR_NAME(I_PREC_ENGI),          & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_TEMP),                             & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_IR_dir),                       & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_IR_dif),                       & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_NIR_dir),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_NIR_dif),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_VIS_dir),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_VIS_dif),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0M   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0M),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0H   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0H),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0E),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
+                           VAR_NAME(I_PREC_MASS),                            & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
+                           VAR_NAME(I_PREC_ENGI),                            & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
 
     return
-  end subroutine ATMOS_PHY_SF_vars_checktotal
+  end subroutine ATMOS_PHY_SF_vars_check
 
 end module mod_atmos_phy_sf_vars

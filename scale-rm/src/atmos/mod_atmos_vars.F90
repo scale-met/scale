@@ -35,7 +35,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_history_setpres
   public :: ATMOS_vars_history
-  public :: ATMOS_vars_total
+  public :: ATMOS_vars_check
   public :: ATMOS_vars_calc_diagnostics
   public :: ATMOS_vars_get_diagnostic
   public :: ATMOS_vars_monitor
@@ -1076,23 +1076,12 @@ contains
           call ATMOS_vars_fillhalo
        end if
 
-       call ATMOS_vars_total
+       call ATMOS_vars_check( force = .true. )
     else
        LOG_ERROR("ATMOS_vars_restart_read",*) 'invalid restart file ID for atmosphere. STOP!'
        call PRC_abort
     endif
 
-    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
-    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
-    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
-    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
-    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
-    
     if ( ATMOS_USE_AVERAGE ) then
        DENS_av(:,:,:)   = DENS(:,:,:)
        MOMZ_av(:,:,:)   = MOMZ(:,:,:)
@@ -1300,20 +1289,6 @@ contains
 
     call PROF_rapstart('ATM_History', 1)
 
-    ! value check for prognostic variables
-    if ( ATMOS_VARS_CHECKRANGE ) then
-       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                      DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                      MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                      MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                      MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                      RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
-    endif
-
     ! history output of prognostic variables
     call FILE_HISTORY_put  ( PV_HIST_id(I_DENS), DENS(:,:,:) )
     call FILE_HISTORY_put  ( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
@@ -1377,8 +1352,8 @@ contains
   end subroutine ATMOS_vars_history
 
   !-----------------------------------------------------------------------------
-  !> Budget monitor for atmosphere
-  subroutine ATMOS_vars_total
+  !> Check variables for atmosphere
+  subroutine ATMOS_vars_check( force )
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
@@ -1395,12 +1370,40 @@ contains
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
     implicit none
+    logical, intent(in), optional :: force
 
     real(RP) :: RHOQ(KA,IA,JA)
     integer  :: iq
+    logical  :: check
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
+    if ( present(force) ) then
+       check = force
+    else
+       check = ATMOS_VARS_CHECKRANGE
+    end if
+
+    ! value check for prognostic variables
+    if ( check ) then
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
+    endif
+
+    if ( present(force) ) then
+       check = force
+    else
+       check = STATISTICS_checktotal
+    end if
+
+    if ( check ) then
 
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               DENS(:,:,:), PV_info(I_DENS)%NAME,    & ! (in)
@@ -1472,7 +1475,7 @@ contains
     endif
 
     return
-  end subroutine ATMOS_vars_total
+  end subroutine ATMOS_vars_check
 
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
@@ -3588,7 +3591,7 @@ contains
 
        call ATMOS_vars_fillhalo
 
-       call ATMOS_vars_total
+       call ATMOS_vars_check( force = .true. )
 
        call FILE_CARTESC_write_var( restart_fid, PV_ID(I_DENS), DENS(:,:,:), PV_info(I_DENS)%NAME, 'ZXY'  ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, PV_ID(I_MOMZ), MOMZ(:,:,:), PV_info(I_MOMZ)%NAME, 'ZHXY' ) ! [IN]

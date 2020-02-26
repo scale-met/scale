@@ -17,6 +17,7 @@ module mod_atmos_phy_ae_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -265,12 +266,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_AE_vars_restart_read
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file, only: &
        FILE_get_aggregate
     use scale_file_cartesC, only: &
@@ -302,12 +297,8 @@ contains
           call ATMOS_PHY_AE_vars_fillhalo
        end if
 
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
-       end if
+       call ATMOS_PHY_AE_vars_check
+
     else
        LOG_INFO("ATMOS_PHY_AE_vars_restart_read",*) 'invlaid restart file ID for ATMOS_PHY_AE.'
     endif
@@ -405,12 +396,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_AE_vars_restart_write
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
@@ -420,12 +405,7 @@ contains
 
        call ATMOS_PHY_AE_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
-       end if
+       call ATMOS_PHY_AE_vars_check
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
 
@@ -516,5 +496,27 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_vars_reset_diagnostics
+
+  subroutine ATMOS_PHY_AE_vars_check
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    implicit none
+
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_AE_CCN(:,:,:),        & ! (in)
+                   0.0_RP, 1.0E12_RP, VAR_NAME(1), & ! (in)
+                   __FILE__, __LINE__              ) ! (in)
+
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_check
 
 end module mod_atmos_phy_ae_vars
