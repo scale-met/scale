@@ -761,12 +761,12 @@ contains
     !$omp parallel do
     do j = LJS, LJE
     do i = LIS, LIE
-    do k = LKS, LKE
-    if ( exists_land(i,j) ) then
-       LAND_WATER(k,i,j) = max( LAND_WATER(k,i,j), 0.0_RP )
-       LAND_ICE  (k,i,j) = max( LAND_ICE  (k,i,j), 0.0_RP )
-    end if
-    enddo
+       if ( exists_land(i,j) ) then
+          do k = LKS, LKE
+             LAND_WATER(k,i,j) = max( LAND_WATER(k,i,j), 0.0_RP )
+             LAND_ICE  (k,i,j) = max( LAND_ICE  (k,i,j), 0.0_RP )
+          enddo
+       end if
     enddo
     enddo
 

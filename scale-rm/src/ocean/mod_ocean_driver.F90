@@ -660,6 +660,7 @@ contains
           end if
           end do
           end do
+
           call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
                                        OJA, OJS, OJE,              & ! [IN]
                                        ATMOS_TEMP       (:,:),     & ! [IN]
@@ -709,7 +710,7 @@ contains
        if ( exists_ocean(i,j) ) then
           sflx_water(i,j) = ATMOS_SFLX_water(i,j) - sflx_QV(i,j)
           sflx_engi (i,j) = ATMOS_SFLX_ENGI(i,j)                           & ! internal energy of precipitation
-                          - sflx_QV (i,j) * ( CV_ICE * sfc_temp(i,j) - LHF ) ! internal energy of evaporation water
+                          - sflx_QV (i,j) * ( CV_ICE * OCEAN_ICE_TEMP(i,j) - LHF ) ! internal energy of evaporation water
        end if
        enddo
        enddo
