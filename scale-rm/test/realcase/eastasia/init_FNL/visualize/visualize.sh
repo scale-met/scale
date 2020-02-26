@@ -32,7 +32,7 @@ do
 done
 
 # boundary conditions
-var__set=(DENS VELZ VELX VELY POTT QV  )
+var__set=(DENS VELZ VELX VELY PT QV  )
 rangeset=(auto auto auto auto auto auto)
 
 i=0
