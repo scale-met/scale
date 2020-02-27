@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Temporal integration for tracer advection for Atmospheric process
-!!          three step Runge-Kutta scheme
+!!          three stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!
@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'RK3WS2002' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_rk3_setup",*) 'TINTEG_LARGE_TYPE is not RK3WS2002. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_rk3_setup",*) 'TINTEG_TRACER_TYPE is not RK3WS2002. Check!'
        call PRC_abort
     end if
 

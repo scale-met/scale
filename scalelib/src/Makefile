@@ -130,12 +130,14 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_rkcommon.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_rk3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
@@ -222,6 +224,7 @@ OBJS_FOR_DYN = \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\

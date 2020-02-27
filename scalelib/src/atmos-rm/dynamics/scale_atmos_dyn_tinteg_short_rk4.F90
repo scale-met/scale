@@ -3,10 +3,17 @@
 !!
 !! @par Description
 !!          Temporal integration in Dynamical core for Atmospheric process
-!!          four step Runge-Kutta scheme
+!!          four stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!
+!! This module provides a 4th order and 4 stage classical runge=kutta method which is widely used. 
+!!   y_n+1 = y_n + (k1 + 2*k2 + 2*k3 + k4)/6
+!!  where
+!!   k1 = h f(xn,yn), 
+!!   k2 = h f(xn +  h/2, yn + k1/2), 
+!!   k3 = h f(xn +  h/2, yn + k2/2), 
+!!   k4 = h f(xn +  h  , yn + k3  ). 
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -50,19 +57,19 @@ module scale_atmos_dyn_tinteg_short_rk4
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (+1/4 step)
+  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (registers for stage2)
   real(RP), private, allocatable :: MOMZ_RK1(:,:,:)
   real(RP), private, allocatable :: MOMX_RK1(:,:,:)
   real(RP), private, allocatable :: MOMY_RK1(:,:,:)
   real(RP), private, allocatable :: RHOT_RK1(:,:,:)
   real(RP), private, allocatable :: PROG_RK1(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/4 step)
+  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (registers for stage3)
   real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
   real(RP), private, allocatable :: MOMX_RK2(:,:,:)
   real(RP), private, allocatable :: MOMY_RK2(:,:,:)
   real(RP), private, allocatable :: RHOT_RK2(:,:,:)
   real(RP), private, allocatable :: PROG_RK2(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK3(:,:,:) ! prognostic variables (+3/4 step)
+  real(RP), private, allocatable :: DENS_RK3(:,:,:) ! prognostic variables (registers for stage4)
   real(RP), private, allocatable :: MOMZ_RK3(:,:,:)
   real(RP), private, allocatable :: MOMX_RK3(:,:,:)
   real(RP), private, allocatable :: MOMY_RK3(:,:,:)
