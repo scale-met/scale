@@ -1354,12 +1354,18 @@ contains
   !-----------------------------------------------------------------------------
   !> Check variables for atmosphere
   subroutine ATMOS_vars_check( force )
+    use scale_prc, only: &
+       PRC_myrank, &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
     use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STATISTICS_total
+       STATISTICS_total, &
+       STATISTICS_detail
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_VOL,       &
        ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
@@ -1369,11 +1375,27 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE
+    use scale_atmos_grid_cartesC, only: &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_DYN
     implicit none
     logical, intent(in), optional :: force
 
     real(RP) :: RHOQ(KA,IA,JA)
-    integer  :: iq
+
+    real(RP)               :: WORK (KA,IA,JA,3)
+    character(len=H_SHORT) :: WNAME(3)
+    real(RP)               :: CFLMAX
+
+    integer  :: k, i, j, iq
     logical  :: check
     !---------------------------------------------------------------------------
 
@@ -1395,6 +1417,22 @@ contains
                       MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
        call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                       RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
+
+       !$omp parallel workshare
+!OCL XFILL
+       WORK(:,:,:,1) = W(:,:,:)
+!OCL XFILL
+       WORK(:,:,:,2) = U(:,:,:)
+!OCL XFILL
+       WORK(:,:,:,3) = V(:,:,:)
+       !$omp end parallel workshare
+
+       WNAME(1) = "W"
+       WNAME(2) = "U"
+       WNAME(3) = "V"
+
+       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                               WNAME(:), WORK(:,:,:,:)                )
     endif
 
     if ( present(force) ) then
@@ -1472,7 +1510,80 @@ contains
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
+    end if
+
+
+    ! CFL condition check
+    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
+         .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
+       !$omp parallel workshare
+!OCL XFILL
+       WORK(:,:,:,:) = 0.0_RP
+       !$omp end parallel workshare
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+          WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
+       enddo
+       enddo
+       enddo
+       if ( PRC_TwoD ) then
+          !$omp parallel do
+          do j = JS, JE
+          do k = KS, KE
+             WORK(k,IS,j,2) = 0.0_RP
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
+                           * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
+          enddo
+          enddo
+          enddo
+       end if
+
+       CFLMAX = maxval( WORK(:,:,:,:) )
+
+       if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
+          LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
+          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
+
+          call PRC_abort
+       endif
+
+       if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_SOFT ) then
+          LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
+       endif
+
     endif
+
 
     return
   end subroutine ATMOS_vars_check
@@ -2974,31 +3085,8 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
-    use scale_prc, only: &
-       PRC_myrank, &
-       PRC_abort
-    use scale_prc_cartesC, only: &
-       PRC_TwoD
-    use scale_const, only: &
-       GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry
-    use scale_atmos_grid_cartesC, only: &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total,            &
-       STATISTICS_detail
     use scale_monitor, only: &
        MONITOR_put
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_DYN
-    use mod_atmos_admin, only: &
-       ATMOS_DYN_TYPE
     use scale_atmos_hydrometeor, only: &
        I_QV
     use mod_atmos_phy_rd_vars, only: &
@@ -3023,10 +3111,6 @@ contains
     real(RP) :: ENGFLXT    (IA,JA) ! total flux             [J/m2/s]
     real(RP) :: SFLX_RD_net(IA,JA) ! net SFC radiation flux [J/m2/s]
     real(RP) :: TFLX_RD_net(IA,JA) ! net TOM radiation flux [J/m2/s]
-
-    real(RP)               :: WORK (KA,IA,JA,3)
-    character(len=H_SHORT) :: WNAME(3)
-    real(RP)               :: CFLMAX
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -3146,91 +3230,6 @@ contains
     call MONITOR_put( DV_MONIT_id(IM_ENGTOM_LW_dn), TOMFLX_LW_dn(:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_up), TOMFLX_SW_up(:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_dn), TOMFLX_SW_dn(:,:) )
-
-
-
-    if ( ATMOS_VARS_CHECKRANGE ) then
-!OCL XFILL
-       WORK(:,:,:,1) = W(:,:,:)
-!OCL XFILL
-       WORK(:,:,:,2) = U(:,:,:)
-!OCL XFILL
-       WORK(:,:,:,3) = V(:,:,:)
-
-       WNAME(1) = "W"
-       WNAME(2) = "U"
-       WNAME(3) = "V"
-
-       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                               WNAME(:), WORK(:,:,:,:)                )
-    endif
-
-    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
-         .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
-!OCL XFILL
-       WORK(:,:,:,:) = 0.0_RP
-
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-          WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
-       enddo
-       enddo
-       enddo
-       if ( PRC_TwoD ) then
-          !$omp parallel do
-          do j = JS, JE
-          do k = KS, KE
-             WORK(k,IS,j,2) = 0.0_RP
-          enddo
-          enddo
-       else
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
-                           * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
-          enddo
-          enddo
-          enddo
-       end if
-
-       CFLMAX = maxval( WORK(:,:,:,:) )
-
-       if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
-          LOG_INFO("ATMOS_vars_monitor",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR("ATMOS_vars_monitor",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
-
-          WNAME(1) = "Courant num. Z"
-          WNAME(2) = "Courant num. X"
-          WNAME(3) = "Courant num. Y"
-          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                                  WNAME(:), WORK(:,:,:,:),               &
-                                  local=.true.                           )
-
-          call PRC_abort
-       endif
-
-       if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_SOFT ) then
-          LOG_INFO("ATMOS_vars_monitor",*) "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
-          LOG_ERROR("ATMOS_vars_monitor",*)                     "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-
-          WNAME(1) = "Courant num. Z"
-          WNAME(2) = "Courant num. X"
-          WNAME(3) = "Courant num. Y"
-          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                                  WNAME(:), WORK(:,:,:,:),               &
-                                  local=.true.                           )
-       endif
-    endif
 
     return
   end subroutine ATMOS_vars_monitor
