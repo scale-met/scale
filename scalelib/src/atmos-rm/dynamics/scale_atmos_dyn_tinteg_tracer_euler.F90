@@ -68,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'EULER' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_LARGE_TYPE is not EULER. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_TRACER_TYPE is not EULER. Check!'
        call PRC_abort
     end if
 

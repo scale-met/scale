@@ -80,6 +80,7 @@ contains
        DYN_Tinteg_Large_TYPE,        &
        DYN_Tstep_Tracer_TYPE,        &
        DYN_Tstep_Large_TYPE,         &
+       DYN_Tstep_Short_TYPE,         &
        DYN_FVM_FLUX_TYPE,            &
        DYN_FVM_FLUX_TYPE_TRACER,     &
        DENS, MOMZ, MOMX, MOMY, RHOT, &
@@ -126,6 +127,7 @@ contains
     character(len=*),  intent(in)    :: DYN_Tinteg_Large_TYPE
     character(len=*),  intent(in)    :: DYN_Tstep_Tracer_TYPE
     character(len=*),  intent(in)    :: DYN_Tstep_Large_TYPE
+    character(len=*),  intent(in)    :: DYN_Tstep_Short_TYPE
     character(len=*),  intent(in)    :: DYN_FVM_FLUX_TYPE
     character(len=*),  intent(in)    :: DYN_FVM_FLUX_TYPE_TRACER
     real(RP),          intent(inout) :: DENS(KA,IA,JA)    ! MPI_RECV_INIT requires intent(inout)
@@ -181,7 +183,7 @@ contains
                                            DENS, MOMZ, MOMX, MOMY, RHOT, & ! [INOUT]
                                            QTRC, PROG                    ) ! [INOUT]
 
-       call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE  ) ! [IN]
+       call ATMOS_DYN_Tinteg_short_setup ( DYN_Tinteg_Short_TYPE, DYN_Tstep_Short_TYPE  ) ! [IN]
 
        call ATMOS_DYN_Tinteg_tracer_setup( DYN_Tinteg_Tracer_TYPE ) ! [IN]
 

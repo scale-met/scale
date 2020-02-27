@@ -257,6 +257,7 @@ contains
        DYN_Tinteg_Large_TYPE,              & ! (in)
        DYN_Tstep_Tracer_TYPE,              & ! (in)
        DYN_Tstep_Large_TYPE,               & ! (in)
+       DYN_TYPE,                           & ! (in)
        DYN_FVM_FLUX_TYPE,                  & ! (in)
        DYN_FVM_FLUX_TYPE_TRACER,           & ! (in)
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)

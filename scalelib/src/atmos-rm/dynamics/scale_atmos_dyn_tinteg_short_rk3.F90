@@ -3,10 +3,12 @@
 !!
 !! @par Description
 !!          Temporal integration in Dynamical core for Atmospheric process
-!!          three step Runge-Kutta scheme
+!!          three stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!
+!! This module provides two types of 3rd order and 3 stage Runge=Kutta method: Heun's method and one in Wichere and Skamarock (2002). 
+!! Note that, Wicker and Skamarock's one ensures 3rd order accuracy only for the case of linear eqautions, and is generally 2nd order accuracy.  
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -50,13 +52,13 @@ module scale_atmos_dyn_tinteg_short_rk3
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (+1/3 step)
+  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (registers for stage2)
   real(RP), private, allocatable :: MOMZ_RK1(:,:,:)
   real(RP), private, allocatable :: MOMX_RK1(:,:,:)
   real(RP), private, allocatable :: MOMY_RK1(:,:,:)
   real(RP), private, allocatable :: RHOT_RK1(:,:,:)
   real(RP), private, allocatable :: PROG_RK1(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/3 step)
+  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (registers for stage3)
   real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
   real(RP), private, allocatable :: MOMX_RK2(:,:,:)
   real(RP), private, allocatable :: MOMY_RK2(:,:,:)
@@ -115,12 +117,13 @@ contains
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 2.0_RP / 3.0_RP
     case( 'RK3WS2002' )
-       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Wichere and Skamarock (2002) is used"
-       ! Wicher and Skamarock (2002) RK3 scheme
+       LOG_INFO("ATMOS_DYN_Tinteg_short_rk3_setup",*) "RK3: Wicker and Skamarock (2002) is used"
+       ! Wicker and Skamarock (2002) RK3 scheme
        ! k1 = f(\phi_n); r1 = \phi_n + k1 * dt / 3
        ! k2 = f(r1);     r2 = \phi_n + k2 * dt / 2
        ! k3 = f(r2);     r3 = \phi_n + k3 * dt
        ! \phi_{n+1} = r3
+       ! Unlike to Heun's RK3 method, the memory arrays are not needed in this case. 
        FLAG_WS2002 = .true.
        fact_dt1 = 1.0_RP / 3.0_RP
        fact_dt2 = 1.0_RP / 2.0_RP

@@ -3,9 +3,12 @@
 !!
 !! @par Description
 !!          Temporal integration in Dynamical core for Atmospheric process
-!!          three step Runge-Kutta scheme
+!!          three stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
+
+!! This module provides two types of 3rd order and 3 stage Runge=Kutta method in Wichere and Skamarock (2002). 
+!! Note that, it ensures 3rd order accuracy only for the case of linear eqautions, and is generally 2nd order accuracy.  
 !!
 !<
 !-------------------------------------------------------------------------------
