@@ -7,8 +7,10 @@
 !!
 !! @author Team SCALE
 !!
-!! This module provides a 7 stage and 6th order runge=kutta method with extended region of stability proposed by Lawson (1967)
-!! See scale_atmos_dyn_tinteg_rkutil.F90 for the detail of RK coffecients. 
+!! This module provides two type of 7 stage Runge-Kutta scheme with 6th order accuracy: 
+!!   * one with extended region of stability proposed by Lawson (1967) (default)
+!!   * one proposed by Butcher (1964).
+!! See this source file for the detail of RK coffecients. 
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -31,16 +33,16 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
      IUNDEF => CONST_UNDEF2
 #endif
 
-  use scale_atmos_dyn_tinteg_rkutil, only: &
-   RKUtil,                                                          &
-   RKUtil_setup => ATMOS_DYN_Tinteg_RKUtil_setup,                   &
-   RKUtil_rkwork_alloc   => ATMOS_DYN_Tinteg_RKUtil_rkwork_alloc,   &
-   RKUtil_rkwork_dealloc => ATMOS_DYN_Tinteg_RKUtil_rkwork_dealloc, &
-   RKUtil_comm  => ATMOS_DYN_Tinteg_RKUtil_comm,                    &
-   RKUtil_comm_wait => ATMOS_DYN_Tinteg_RKUtil_comm_wait,           &
-   RKUtil_nextstage => ATMOS_DYN_Tinteg_RKUtil_7s6o_nextstage,      &
-   RKUtil_updateVar => ATMOS_DYN_Tinteg_RKUtil_7s6o_updateVar,      &
-   RKUtil_updateFlux => ATMOS_DYN_Tinteg_RKUtil_7s6o_updateFlux
+  use scale_atmos_dyn_tinteg_rkcommon, only: &
+   RKInfo,                                                              &
+   RKCommon_setup => ATMOS_DYN_Tinteg_RKCommon_setup,                   &
+   RKCommon_rkwork_alloc   => ATMOS_DYN_Tinteg_RKCommon_rkwork_alloc,   &
+   RKCommon_rkwork_dealloc => ATMOS_DYN_Tinteg_RKCommon_rkwork_dealloc, &
+   RKCommon_comm  => ATMOS_DYN_Tinteg_RKCommon_comm,                    &
+   RKCommon_comm_wait => ATMOS_DYN_Tinteg_RKCommon_comm_wait,           &
+   RKCommon_nextstage => ATMOS_DYN_Tinteg_RKCommon_nextstage,           &
+   RKCommon_updateVar => ATMOS_DYN_Tinteg_RKCommon_updateVar,           &
+   RKCommon_updateFlux => ATMOS_DYN_Tinteg_RKCommon_updateFlux
 
 
   !-----------------------------------------------------------------------------
@@ -58,6 +60,41 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
   !++ Public parameters & variables
   !
   !-----------------------------------------------------------------------------
+
+  !- coeffecients for 7 stage RK with 6th order and extended region of stability by Lawson (1967) --------------
+
+  real(RP), parameter, public :: RKCoef_a_7s6o_Lawson1967(7,7) = reshape( &
+  (/ 0.0_RP, 3.0_RP/19.0_RP,  9.0_RP/152.0_RP,   94474764.0_RP/318611987.0_RP,       -76607525678.0_RP/925997907411.0_RP,        -113193410749715476.0_RP/1376008387821185625.0_RP,                510341547912673.0_RP/1709758911034368.0_RP,    &
+     0.0_RP,         0.0_RP, 27.0_RP/152.0_RP, -310753854.0_RP/318611987.0_RP,             309768324.0_RP/200562683.0_RP,                              68309142.0_RP/42280325.0_RP,                               -3074637.0_RP/21410624.0_RP,    &
+     0.0_RP,         0.0_RP,           0.0_RP,  375818328.0_RP/318611987.0_RP,  -57882086555344.0_RP/37088653028409.0_RP, -9901869473098663108168.0_RP/5940196722617929711875.0_RP,          205532548800199165.0_RP/6225256605226855824.0_RP,    &
+     0.0_RP,         0.0_RP,           0.0_RP,                         0.0_RP, 643400862141470.0_RP/704684407539771.0_RP,  8947230518934447694268.0_RP/9333225588784524496875.0_RP, 32370527990426718666299.0_RP/90521226376106372167680.0_RP,    &
+     0.0_RP,         0.0_RP,           0.0_RP,                         0.0_RP,                                    0.0_RP,          -8377112295767292.0_RP/1089624335851065625.0_RP,          2610287999955961017.0_RP/236243323046620160.0_RP,    &
+     0.0_RP,         0.0_RP,           0.0_RP,                         0.0_RP,                                    0.0_RP,                                                   0.0_RP,         -2690946369187951875.0_RP/253991013039290368.0_RP,    &
+     0.0_RP,         0.0_RP,           0.0_RP,                         0.0_RP,                                    0.0_RP,                                                   0.0_RP,                                                    0.0_RP /), &
+  shape(RKCoef_a_7s6o_Lawson1967) )
+
+  real(RP), parameter, public :: RKCoef_b_7s6o_Lawson1967(7) = &
+    (/                     119490041.0_RP/1597112640.0_RP,                                     0.0_RP,  55710603179056.0_RP/168638187800205.0_RP, &
+       5739605598843081731.0_RP/28834038834414422400.0_RP, 1477688286853979.0_RP/291957783566400.0_RP, -298030839900625.0_RP/62778200252544.0_RP, &
+       5352656.0_RP/65415735.0_RP /)
+     
+
+  !- coeffecients for 7 stage RK with 6th order by Butcher (1964) --------------
+
+  real(RP), parameter, public :: RKCoef_a_7s6o_Butcher1964(7,7) = reshape( &
+  (/ 0.0_RP, 1.0_RP/3.0_RP,        0.0_RP,  1.0_RP/12.0_RP, -1.0_RP/16.0_RP,         0.0_RP,   9.0_RP/44.0_RP,    &
+     0.0_RP,        0.0_RP, 2.0_RP/3.0_RP,   1.0_RP/3.0_RP,   9.0_RP/8.0_RP,  9.0_RP/8.0_RP,  -9.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP, -1.0_RP/12.0_RP, -3.0_RP/16.0_RP,   -3_RP/8.0_RP,  63.0_RP/44.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,  -3.0_RP/8.0_RP, -3.0_RP/4.0_RP,  18.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,  1.0_RP/2.0_RP,           0.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP, -16.0_RP/11.0_RP,    &
+     0.0_RP,        0.0_RP,        0.0_RP,          0.0_RP,          0.0_RP,         0.0_RP,           0.0_RP /), &
+  shape(RKCoef_a_7s6o_Butcher1964) )
+
+   real(RP), parameter, public :: RKCoef_b_7s6o_Butcher1964(7) = &
+     1.0_RP/120.0_RP * (/ 11.0_RP, 0.0_RP, 81.0_RP, 81.0_RP, -32.0_RP, -32.0_RP, 11.0_RP /)
+
+  !-----------------------------------------------------------------------------  
   !
   !++ Private procedure
   !
@@ -68,14 +105,17 @@ module scale_atmos_dyn_tinteg_short_rk7s6o
   integer, private, parameter :: RK_nstage    = 7
   integer, private, parameter :: RK_nregister = 7
 
-  type(RKUtil), private :: rk_dynvar
+  type(RKInfo), private :: rk_dynvar
   integer, private, parameter :: I_RK_DENS = 1
   integer, private, parameter :: I_RK_MOMZ = 2
   integer, private, parameter :: I_RK_MOMX = 3
   integer, private, parameter :: I_RK_MOMY = 4
   integer, private, parameter :: I_RK_RHOT = 5
 
-  type(RKUtil), private :: rk_prgvar
+  type(RKInfo), private :: rk_prgvar
+
+  type(RKInfo), private :: rk_mflx_hi
+  type(RKInfo), private :: rk_tflx_hi
 
   !-----------------------------------------------------------------------------
 contains
@@ -93,28 +133,51 @@ contains
 
     character(len=*) :: tinteg_type
 
-    integer :: iv
+    integer :: iv, d
     character(H_SHORT) :: dynvar_name_list(5)
-    character(H_MID) :: prgvar_name_list(VA)
+    character(H_SHORT) :: prgvar_name_list(VA)
+    character(H_SHORT) :: flux_name_list(3)
+
+    real(RP) :: RKCoef_a(RK_nstage,RK_nstage)
+    real(RP) :: RKCoef_b(RK_nstage)
+
     !---------------------------------------------------------------------------
 
-    if ( tinteg_type /= 'RK7s6o' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk7s6o_setup",*) 'TINTEG_TYPE is not RK7s6o. Check!'
+    select case( trim(tinteg_type) )
+    case ('RK7s6o', 'RK7s6oLawson1967')
+      RKCoef_a(:,:) = RKCoef_a_7s6o_Lawson1967
+      RKCoef_b(:) = RKCoef_b_7s6o_Lawson1967
+    case ('RK7s6oButcher1964')
+      RKCoef_a(:,:) = RKCoef_a_7s6o_Butcher1964
+      RKCoef_b(:) = RKCoef_b_7s6o_Butcher1964   
+    case default
+       LOG_ERROR("ATMOS_DYN_Tinteg_short_rk7s6o_setup",*) 'The specified TINTEG_TYPE is invalid. Check!', tinteg_type
        call PRC_abort
-    end if
+    end select
 
     dynvar_name_list(1) = 'DENS'
     dynvar_name_list(2) = 'MOMZ'
     dynvar_name_list(3) = 'MOMX'
     dynvar_name_list(4) = 'MOMY'
     dynvar_name_list(5) = 'RHOT'
-    call RKUtil_setup( rk_dynvar, RK_nstage, RK_nregister, dynvar_name_list, 0, .false. )
+    call RKCommon_setup( rk_dynvar, RK_nstage, RK_nregister, RKCoef_a, RKCoef_b, dynvar_name_list )
 
     do iv = 1, VA
-      prgvar_name_list(iv) = 'PROG'
+      flux_name_list(iv) = 'PROG'
     end do
-    call RKUtil_setup( rk_prgvar, RK_nstage, RK_nregister, prgvar_name_list, 5, .false. )
+    call RKCommon_setup(  rk_prgvar, RK_nstage, RK_nregister, RKCoef_a, RKCoef_b,prgvar_name_list, comm_id_offset=5 )
 
+    do d = 1, 3
+      flux_name_list(iv) = 'mflx_hi'
+    end do
+    call RKCommon_setup(  rk_mflx_hi, RK_nstage, RK_nregister, RKCoef_a, RKCoef_b, flux_name_list, is_type_flux=.true. )
+
+
+    do d = 1, 3
+      flux_name_list(iv) = 'tflx_hi'
+    end do
+    call RKCommon_setup(  rk_tflx_hi, RK_nstage, RK_nregister, RKCoef_a, RKCoef_b, flux_name_list, is_type_flux=.true. )
+    
     !----------------------------------------------------
 
     return
@@ -202,9 +265,6 @@ contains
 
     real(RP), intent(in)    :: dt
 
-    real(RP) :: mflx_hi_RK(KA,IA,JA,3,RK_nstage)
-    real(RP) :: tflx_hi_RK(KA,IA,JA,3,RK_nstage)
-
     integer  :: i, j, k, iv, n, s
     integer :: stage
 
@@ -219,20 +279,13 @@ contains
 
     call PROF_rapstart("DYN_RK7s6o_Prep",3)
 
-#ifdef DEBUG
-    !$omp parallel workshare
-    mflx_hi_RK(:,:,:,:,:) = UNDEF
-    tflx_hi_RK(:,:,:,:,:) = UNDEF
-    !$omp end parallel workshare
-#endif
+    call RKCommon_rkwork_alloc( rk_dynvar )
+    call RKCommon_rkwork_alloc( rk_prgvar )
 
 #ifdef QUICKDEBUG
-    mflx_hi(   1:KS-1,:,:,:) = UNDEF
-    mflx_hi(KE+1:KA  ,:,:,:) = UNDEF
+    rk_mflx_hi%buf(   1:KS-1,:,:,:) = UNDEF
+    rk_mflx_hi%buf(KE+1:KA  ,:,:,:) = UNDEF
 #endif
-
-    call RKUtil_rkwork_alloc( rk_dynvar )
-    call RKUtil_rkwork_alloc( rk_prgvar )
 
     !$omp parallel 
    
@@ -264,28 +317,28 @@ contains
     if ( BND_W ) then
        do j = JS, JE
        do k = KS, KE
-          mflx_hi_RK(k,IS-1,j,2,:) = mflx_hi(k,IS-1,j,2)
+         rk_mflx_hi%buf(k,IS-1,j,2) = mflx_hi(k,IS-1,j,2)
        end do
        end do
     end if
     if ( BND_E ) then
        do j = JS, JE
        do k = KS, KE
-          mflx_hi_RK(k,IE,j,2,:) = mflx_hi(k,IE,j,2)
+         rk_mflx_hi%buf(k,IE,j,2) = mflx_hi(k,IE,j,2)
        end do
        end do
     end if
     if ( BND_S ) then
        do i = IS, IE
        do k = KS, KE
-          mflx_hi_RK(k,i,JS-1,3,:) = mflx_hi(k,i,JS-1,3)
+         rk_mflx_hi%buf(k,i,JS-1,3) = mflx_hi(k,i,JS-1,3)
        end do
        end do
     end if
     if ( BND_N ) then
        do i = IS, IE
        do k = KS, KE
-          mflx_hi_RK(k,i,JE,3,:) = mflx_hi(k,i,JE,3)
+         rk_mflx_hi%buf(k,i,JE,3) = mflx_hi(k,i,JE,3)
        end do
        end do
     end if
@@ -317,10 +370,10 @@ contains
                                        BND_W, BND_E, BND_S, BND_N, TwoD     ) ! [IN]
          call PROF_rapend  ("DYN_RK7s6o_BND",3)
 
-         call RKUtil_comm( rk_dynvar )
-         call RKUtil_comm( rk_prgvar )
-         call RKUtil_comm_wait( rk_dynvar )
-         call RKUtil_comm_wait( rk_prgvar )
+         call RKCommon_comm( rk_dynvar )
+         call RKCommon_comm( rk_prgvar )
+         call RKCommon_comm_wait( rk_dynvar )
+         call RKCommon_comm_wait( rk_prgvar )
       end if
       !--
 
@@ -333,7 +386,7 @@ contains
          rk_dynvar%work(:,:,:,I_RK_MOMY,stage),                & ! [OUT]
          rk_dynvar%work(:,:,:,I_RK_RHOT,stage),                & ! [OUT]
          rk_prgvar%work(:,:,:,:        ,stage),                & ! [OUT]
-         mflx_hi_RK(:,:,:,:,stage), tflx_hi_RK(:,:,:,:,stage), & ! [INOUT,OUT]
+         rk_mflx_hi%buf(:,:,:,:), rk_tflx_hi%buf(:,:,:,:),     & ! [INOUT,OUT]
          rk_dynvar%work0(:,:,:,I_RK_DENS),                     & ! [IN]
          rk_dynvar%work0(:,:,:,I_RK_MOMZ),                     & ! [IN]
          rk_dynvar%work0(:,:,:,I_RK_MOMX),                     & ! [IN]
@@ -358,26 +411,24 @@ contains
          1.0_RP, .false.                                       ) ! [IN]
    
       if ( stage < RK_nstage) then
-         call RKUtil_nextstage( rk_dynvar, stage, io_dynvar, jo_dynvar, ko_dynvar, dt )
-         call RKUtil_nextstage( rk_prgvar, stage, io_prgvar, jo_prgvar, ko_prgvar, dt )
+         call RKCommon_nextstage( rk_dynvar, stage, io_dynvar, jo_dynvar, ko_dynvar, dt )
+         call RKCommon_nextstage( rk_prgvar, stage, io_prgvar, jo_prgvar, ko_prgvar, dt )
+      else
+         call RKCommon_updateVar( rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_DENS, I_RK_DENS, dt, DENS )
+         call RKCommon_updateVar( rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMZ, I_RK_MOMZ, dt, MOMZ )
+         call RKCommon_updateVar( rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMX, I_RK_MOMX, dt, MOMX )
+         call RKCommon_updateVar( rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMY, I_RK_MOMY, dt, MOMY )
+         call RKCommon_updateVar( rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_RHOT, I_RK_RHOT, dt, RHOT )
+         call RKCommon_updateVar( rk_prgvar, io_prgvar, jo_prgvar, ko_prgvar, 1, VA, dt, PROG )     
       end if
+      call RKCommon_updateFlux( rk_mflx_hi, stage, 0, 0, 0, 3, mflx_hi ) 
+      call RKCommon_updateFlux( rk_tflx_hi, stage, 0, 0, 0, 3, tflx_hi )
 
       call PROF_rapend  ("DYN_RK7s6o",3)
     end do
 
-    call PROF_rapstart("DYN_RK7s6o",3)
-    call RKUtil_updateVar( DENS, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_DENS, I_RK_DENS, dt )
-    call RKUtil_updateVar( MOMZ, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMZ, I_RK_MOMZ, dt )
-    call RKUtil_updateVar( MOMX, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMX, I_RK_MOMX, dt )
-    call RKUtil_updateVar( MOMY, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_MOMY, I_RK_MOMY, dt )
-    call RKUtil_updateVar( RHOT, rk_dynvar, io_dynvar, jo_dynvar, ko_dynvar, I_RK_RHOT, I_RK_RHOT, dt )
-    call RKUtil_updateVar( PROG, rk_prgvar, io_prgvar, jo_prgvar, ko_prgvar, 1, VA, dt )
-    call RKUtil_updateFlux( mflx_hi, mflx_hi_RK, 0, 0, 0, 3 ) 
-    call RKUtil_updateFlux( tflx_hi, tflx_hi_RK, 0, 0, 0, 3 )
-    call PROF_rapend("DYN_RK7s6o",3)
-
-    call RKUtil_rkwork_dealloc( rk_dynvar )
-    call RKUtil_rkwork_dealloc( rk_prgvar )
+    call RKCommon_rkwork_dealloc( rk_dynvar )
+    call RKCommon_rkwork_dealloc( rk_prgvar )
 
     return
   end subroutine ATMOS_DYN_tinteg_short_rk7s6o

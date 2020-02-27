@@ -157,9 +157,9 @@ contains
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
-    case( 'RK7s6o' )
+    case( 'RK7s6o', 'RK7s6oLawson1967', 'RK7s6oButcher1964' )
        if ( .not. (ATMOS_DYN_Tstep_short_TYPE == 'HEVE' .or. ATMOS_DYN_Tstep_short_TYPE == 'FVM-HEVE') ) then
-         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE 'RK7s6o' is now supported only for 'HEVE'."
+         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE is now supported only for 'HEVE',", ATMOS_DYN_Tinteg_short_TYPE
        end if 
        call ATMOS_DYN_Tinteg_short_rk7s6o_setup( &
               ATMOS_DYN_Tinteg_short_TYPE )
