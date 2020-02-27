@@ -550,11 +550,11 @@ contains
        PRES, &
        W,    &
        U,    &
-       V
+       V,    &
+       PREC, &
+       PREC_ENGI
     use mod_atmos_phy_sf_vars, only: &
-       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP, &
-       PREC_MASS => ATMOS_PHY_SF_PREC_MASS, &
-       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
+       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow, &
@@ -585,15 +585,16 @@ contains
 
     call PROF_rapstart('ATM_SfcExch', 2)
 
+    ! sum of rainfall from mp and cp
+    !$omp parallel do private(i,j) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
+       PREC     (i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
+       PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
+    enddo
+    enddo
+
     if ( CPL_sw ) then
-       ! sum of rainfall from mp and cp
-       !$omp parallel do private(i,j) OMP_SCHEDULE_
-       do j = JSB, JEB
-       do i = ISB, IEB
-          PREC_MASS(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
-          PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
-       enddo
-       enddo
 
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
@@ -614,7 +615,7 @@ contains
                         SFC_PRES   (:,:),     & ! [IN]
                         SFLX_rad_dn(:,:,:,:), & ! [IN]
                         cosSZA     (:,:),     & ! [IN]
-                        PREC_MASS  (:,:),     & ! [IN]
+                        PREC       (:,:),     & ! [IN]
                         PREC_ENGI  (:,:),     & ! [IN]
                         countup               ) ! [IN]
     endif

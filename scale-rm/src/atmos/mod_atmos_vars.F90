@@ -141,6 +141,8 @@ module mod_atmos_vars
   real(RP), public, allocatable, target :: CVtot(:,:,:) !> specific heat          [J/kg/K]
   real(RP), public, allocatable, target :: CPtot(:,:,:) !> specific heat          [J/kg/K]
 
+  real(RP), public, allocatable, target :: PREC     (:,:) !> total precipitation [kg/m2/s]
+  real(RP), public, allocatable         :: PREC_ENGI(:,:) !> internal energy of precipitation [J/m2]
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -194,7 +196,6 @@ module mod_atmos_vars
   real(RP), allocatable, target :: IWP  (:,:)   !> ice    water path  [g/m2]
   real(RP), allocatable, target :: PW   (:,:)   !> precipitable water [g/m2]
 
-  real(RP), allocatable, target :: PREC (:,:)   !> surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
   real(RP), allocatable, target :: RAIN (:,:)   !> surface rain rate CP+MP [kg/m2/s]
   real(RP), allocatable, target :: SNOW (:,:)   !> surface snow rate CP+MP [kg/m2/s]
 
@@ -594,6 +595,11 @@ contains
     Rtot (:,:,:) = UNDEF
     CVtot(:,:,:) = UNDEF
     CPtot(:,:,:) = UNDEF
+
+    allocate( PREC     (IA,JA) )
+    allocate( PREC_ENGI(IA,JA) )
+    PREC     (:,:) = UNDEF
+    PREC_ENGI(:,:) = UNDEF
 
     ! obsolute
     allocate( MOMX_tp(KA,IA,JA)    )
@@ -2794,9 +2800,16 @@ contains
           end do
        end select
 
-    case ( 'PREC', 'RAIN', 'SNOW' )
-       if ( .not. DV_calculated(I_PREC) ) then
-          call allocate_2D( PREC )
+    case ( 'PREC' )
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+          var(i,j) = PREC(i,j)
+       end do
+       end do
+
+    case ( 'RAIN', 'SNOW' )
+       if ( .not. DV_calculated(I_RAIN) ) then
           call allocate_2D( RAIN )
           call allocate_2D( SNOW )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
@@ -2804,10 +2817,9 @@ contains
           do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
              SNOW(i,j) = SFLX_snow_MP(i,j)
-             PREC(i,j) = RAIN(i,j) + SNOW(i,j)
           enddo
           enddo
-          DV_calculated(I_PREC) = .true.
+          DV_calculated(I_RAIN) = .true.
        end if
        select case (vname)
        case ( 'RAIN' )
@@ -2822,13 +2834,6 @@ contains
           do j = JS, JE
           do i = IS, IE
              var(i,j) = SNOW(i,j)
-          end do
-          end do
-       case ( 'PREC' )
-          !$omp parallel do private(i,j) OMP_SCHEDULE_
-          do j = JS, JE
-          do i = IS, IE
-             var(i,j) = PREC(i,j)
           end do
           end do
        end select
@@ -3102,8 +3107,7 @@ contains
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
        SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
-       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
-       PREC_ENGI => ATMOS_PHY_SF_PREC_ENGI
+       SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
     real(RP) :: RHOQ(KA,IA,JA)
@@ -3171,8 +3175,7 @@ contains
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then
-       call ATMOS_vars_get_diagnostic( 'PREC', WORK2D(:,:) )
-       call MONITOR_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_PREC), PREC(:,:) )
     end if
 
 

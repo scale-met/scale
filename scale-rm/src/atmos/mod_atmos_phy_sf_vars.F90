@@ -107,7 +107,7 @@ module mod_atmos_phy_sf_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX              = 12 !< number of the variables
+  integer,                private, parameter :: VMAX              = 10 !< number of the variables
   integer,                private, parameter :: I_SFC_TEMP        =  1
   integer,                private, parameter :: I_SFC_ALB_IR_dir  =  2
   integer,                private, parameter :: I_SFC_ALB_IR_dif  =  3
@@ -118,8 +118,6 @@ module mod_atmos_phy_sf_vars
   integer,                private, parameter :: I_SFC_Z0M         =  8
   integer,                private, parameter :: I_SFC_Z0H         =  9
   integer,                private, parameter :: I_SFC_Z0E         = 10
-  integer,                private, parameter :: I_PREC_MASS       = 11
-  integer,                private, parameter :: I_PREC_ENGI       = 12
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
   character(len=H_MID),   private            :: VAR_DESC(VMAX) !< desc. of the variables
@@ -137,9 +135,7 @@ module mod_atmos_phy_sf_vars
                   'SFC_ALB_VIS_dif', &
                   'SFC_Z0M',         &
                   'SFC_Z0H',         &
-                  'SFC_Z0E',         &
-                  'SFC_PREC_MASS',   &
-                  'SFC_PREC_ENGI'    /
+                  'SFC_Z0E'          /
 
   data VAR_DESC / 'surface skin temperature',            &
                   'surface albedo for IR,  direct ',     &
@@ -150,9 +146,7 @@ module mod_atmos_phy_sf_vars
                   'surface albedo for VIS, diffuse',     &
                   'surface roughness length (momentum)', &
                   'surface roughness length (heat)',     &
-                  'surface roughness length (vapor)',    &
-                  'precipitation mass flux',             &
-                  'precipitation internal energy flux'   /
+                  'surface roughness length (vapor)'     /
 
   data VAR_STDN / 'surface_temp', &
                   '', &
@@ -163,8 +157,6 @@ module mod_atmos_phy_sf_vars
                   '', &
                   'surface_roughness_length_for_momentum_in_air', &
                   'surface_roughness_length_for_heat_in_air', &
-                  '', &
-                  '', &
                   ''  /
 
   data VAR_UNIT / 'K', &
@@ -176,9 +168,7 @@ module mod_atmos_phy_sf_vars
                   '1', &
                   'm', &
                   'm', &
-                  'm', &
-                  'kg/m2/s', &
-                  'J/m2/s'   /
+                  'm'  /
 
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04_RP
@@ -359,10 +349,8 @@ contains
     call COMM_vars8( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
     call COMM_vars8( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
     call COMM_vars8( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
-    call COMM_vars8( ATMOS_PHY_SF_PREC_MASS(:,:), 5 )
-    call COMM_vars8( ATMOS_PHY_SF_PREC_ENGI(:,:), 6 )
 
-    n = 6
+    n = 4
     do irgn = I_R_IR, I_R_VIS
     do idir = I_R_direct, I_R_diffuse
        n = n + 1
@@ -374,10 +362,8 @@ contains
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
     call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
-    call COMM_wait ( ATMOS_PHY_SF_PREC_MASS(:,:), 5 )
-    call COMM_wait ( ATMOS_PHY_SF_PREC_ENGI(:,:), 6 )
 
-    n = 6
+    n = 4
     do irgn = I_R_IR, I_R_VIS
     do idir = I_R_direct, I_R_diffuse
        n = n + 1
@@ -459,10 +445,6 @@ contains
                                ATMOS_PHY_SF_SFC_Z0H   (:,:)                     ) ! [OUT]
        call FILE_CARTESC_read( restart_fid, VAR_NAME(I_SFC_Z0E),         'XY',  & ! [IN]
                                ATMOS_PHY_SF_SFC_Z0E   (:,:)                     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_PREC_MASS),       'XY',  & ! [IN]
-                               ATMOS_PHY_SF_PREC_MASS (:,:)                     ) ! [OUT]
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(I_PREC_ENGI),       'XY',  & ! [IN]
-                               ATMOS_PHY_SF_PREC_ENGI (:,:)                     ) ! [OUT]
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
@@ -618,12 +600,6 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_Z0E),                   & ! [IN]
                                     ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
                                     VAR_NAME(I_SFC_Z0E), 'XY'                         ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_PREC_MASS),                 & ! [IN]
-                                    ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
-                                    VAR_NAME(I_PREC_MASS), 'XY'                       ) ! [IN]
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_PREC_ENGI),                 & ! [IN]
-                                    ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
-                                    VAR_NAME(I_PREC_ENGI), 'XY'                       ) ! [IN]
     endif
 
     return
@@ -679,14 +655,6 @@ contains
                    ATMOS_PHY_SF_SFC_Z0E(:,:),                        & ! (in)
                    0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0E),            & ! (in)
                    __FILE__, __LINE__                                ) ! (in)
-    call VALCHECK( IA, IS, IE, JA, JS, JE, &
-                   ATMOS_PHY_SF_PREC_MASS(:,:),                      & ! (in)
-                   0.0_RP, 1.0E1_RP, VAR_NAME(I_PREC_MASS),          & ! (in)
-                   __FILE__, __LINE__                                ) ! (in)
-    call VALCHECK( IA, IS, IE, JA, JS, JE, &
-                   ATMOS_PHY_SF_PREC_ENGI(:,:),                      & ! (in)
-                   0.0_RP, 1.0E7_RP, VAR_NAME(I_PREC_ENGI),          & ! (in)
-                   __FILE__, __LINE__                                ) ! (in)
 
     call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
                            ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
@@ -736,16 +704,6 @@ contains
     call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
                            ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
                            VAR_NAME(I_SFC_Z0E),                              & ! [IN]
-                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                           ATMOS_PHY_SF_PREC_MASS (:,:),                     & ! [IN]
-                           VAR_NAME(I_PREC_MASS),                            & ! [IN]
-                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                           ATMOS_PHY_SF_PREC_ENGI (:,:),                     & ! [IN]
-                           VAR_NAME(I_PREC_ENGI),                            & ! [IN]
                            ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
                            ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
 
