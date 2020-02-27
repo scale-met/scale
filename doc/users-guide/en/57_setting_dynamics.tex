@@ -40,7 +40,7 @@ Therefore, ``HEVI'' is often used for the real atmospheric simulations.
 \subsection{Setting Temporal and Spatial Schemes} \label{subsec:atmos_dyn_scheme}
 %------------------------------------------------------
 
-The temporal　and spatial schemes are configured in \namelist{PARAM_ATMOS_DYN}.
+The temporal and spatial schemes are configured in \namelist{PARAM_ATMOS_DYN}.
 An example of setting, which is recommended for real atmospheric simulations,
 is shown below.
 \editboxtwo{
@@ -69,10 +69,10 @@ An criteria to determine the time step is described in Section \ref{sec:timeinti
   \begin{tabularx}{150mm}{lllX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{Scheme name} & \multicolumn{1}{l}{Description of scheme} & \\ \hline
     \multicolumn{3}{l}{Temporal scheme} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3 stage Runge--Kutta scheme with 3rd-order accuracy} \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{\citet{Wicker_2002}'s 3-stage Runge--Kutta scheme with generraly 2nd-order accuracy} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4 stage Runge--Kutta scheme with 4th-order accuracy} \\
-    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{7 stage Runge--Kutta scheme with 6th-order accuracy（Lawson, 1967) supported only for HEVE} \\
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3 stage and 3rd-order Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{3 stage and generraly 2nd-order Runge--Kutta scheme in \citet{Wicker_2002}} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4 stage and 4th-order Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{7 stage and 6th-order Runge--Kutta scheme in Lawson (1967) (supported only for HEVE)} \\
     \hline
     \multicolumn{3}{l}{Spatial scheme} & Minimum number of halos\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central flux} & \multicolumn{1}{l}{1}\\
@@ -112,7 +112,8 @@ The setting for them is the following:
 
 The number of laplacian operator associated with hyper-diffusion is specified by \\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}. 
-\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \\
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
 The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
 The dumping is stronger for larger coefficient.
 The hyper-diffusion itself would be numerically unstable if the coefficient is larger than 1.
