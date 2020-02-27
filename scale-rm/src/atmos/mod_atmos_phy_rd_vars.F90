@@ -17,6 +17,7 @@ module mod_atmos_phy_rd_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_cpl_sfc_index
@@ -323,7 +324,7 @@ contains
           call ATMOS_PHY_RD_vars_fillhalo
        end if
 
-       call ATMOS_PHY_RD_vars_checktotal
+       call ATMOS_PHY_RD_vars_check
 
     else
        LOG_INFO("ATMOS_PHY_RD_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_RD.'
@@ -439,7 +440,7 @@ contains
 
        call ATMOS_PHY_RD_vars_fillhalo
 
-       call ATMOS_PHY_RD_vars_checktotal
+       call ATMOS_PHY_RD_vars_check
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFLX_LW_up),               & ! [IN]
                                     ATMOS_PHY_RD_SFLX_LW_up(:,:),                    & ! [IN]
@@ -460,9 +461,8 @@ contains
   end subroutine ATMOS_PHY_RD_vars_restart_write
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_RD_vars_checktotal
+  subroutine ATMOS_PHY_RD_vars_check
     use scale_statistics, only: &
-       STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA,   &
@@ -470,30 +470,45 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
-                              ATMOS_PHY_RD_SFLX_LW_up(:,:),                    & ! [IN]
-                              VAR_NAME(I_SFLX_LW_up),                          & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
-                              ATMOS_PHY_RD_SFLX_LW_dn(:,:),                    & ! [IN]
-                              VAR_NAME(I_SFLX_LW_dn),                          & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
-                              ATMOS_PHY_RD_SFLX_SW_up(:,:),                    & ! [IN]
-                              VAR_NAME(I_SFLX_SW_up),                          & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
-                              ATMOS_PHY_RD_SFLX_SW_dn(:,:),                    & ! [IN]
-                              VAR_NAME(I_SFLX_SW_dn),                          & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
-    end if
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_RD_SFLX_LW_up(:,:),             & ! (in)
+                   0.0_RP, 1.0E4_RP, VAR_NAME(I_SFLX_LW_up), & ! (in)
+                   __FILE__, __LINE__                        ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_RD_SFLX_LW_dn(:,:),             & ! (in)
+                   0.0_RP, 1.0E4_RP, VAR_NAME(I_SFLX_LW_dn), & ! (in)
+                   __FILE__, __LINE__                        ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_RD_SFLX_SW_up(:,:),             & ! (in)
+                   0.0_RP, 1.0E4_RP, VAR_NAME(I_SFLX_SW_up), & ! (in)
+                   __FILE__, __LINE__                        ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_RD_SFLX_SW_dn(:,:),             & ! (in)
+                   0.0_RP, 1.0E4_RP, VAR_NAME(I_SFLX_SW_dn), & ! (in)
+                   __FILE__, __LINE__                        ) ! (in)
+
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                           ATMOS_PHY_RD_SFLX_LW_up(:,:),                    & ! [IN]
+                           VAR_NAME(I_SFLX_LW_up),                          & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                           ATMOS_PHY_RD_SFLX_LW_dn(:,:),                    & ! [IN]
+                           VAR_NAME(I_SFLX_LW_dn),                          & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                           ATMOS_PHY_RD_SFLX_SW_up(:,:),                    & ! [IN]
+                           VAR_NAME(I_SFLX_SW_up),                          & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                          & ! [IN]
+                           ATMOS_PHY_RD_SFLX_SW_dn(:,:),                    & ! [IN]
+                           VAR_NAME(I_SFLX_SW_dn),                          & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! [IN]
 
     return
-  end subroutine ATMOS_PHY_RD_vars_checktotal
+  end subroutine ATMOS_PHY_RD_vars_check
 
 end module mod_atmos_phy_rd_vars

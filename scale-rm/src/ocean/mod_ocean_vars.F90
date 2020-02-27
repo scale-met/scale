@@ -32,7 +32,7 @@ module mod_ocean_vars
   public :: OCEAN_vars_restart_read
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
-  public :: OCEAN_vars_total
+  public :: OCEAN_vars_check
   public :: OCEAN_vars_monitor
 
   public :: OCEAN_vars_restart_create
@@ -691,7 +691,7 @@ contains
           OCEAN_ICE_FRAC(:,:) = 0.0_RP
        endif
 
-       call OCEAN_vars_total
+       call OCEAN_vars_check( force = .true. )
     else
        LOG_ERROR("OCEAN_vars_restart_read",*) 'invalid restart file ID for ocean.'
        call PRC_abort
@@ -707,87 +707,10 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use scale_landuse, only: &
-       LANDUSE_exists_ocean
     implicit none
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('OCN_History', 1)
-
-    if ( OCEAN_VARS_CHECKRANGE ) then
-       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
-                      OCEAN_TEMP      (:,:,:),             0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_TEMP),                   __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                        )
-!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
-!                      OCEAN_SALT      (:,:,:),             0.0_RP, 1000.0_RP, &
-!                      VAR_NAME(I_SALT),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_exists_ocean(:,:)                        )
-!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
-!                      OCEAN_UVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
-!                      VAR_NAME(I_UVEL),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_exists_ocean(:,:)                        )
-!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
-!                      OCEAN_VVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
-!                      VAR_NAME(I_VVEL),                   __FILE__, __LINE__, &
-!                      mask = LANDUSE_exists_ocean(:,:)                        )
-
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,  &
-                      OCEAN_OCN_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_OCN_Z0M),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_TEMP),                     __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dir ),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_IR_dif ),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dir),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_NIR_dif),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dir),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
-                      VAR_NAME(I_SFC_ALB_VIS_dif),              __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_Z0M),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_Z0H   (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_Z0H),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                      OCEAN_SFC_Z0E   (:,:),                     0.0_RP, 1000.0_RP, &
-                      VAR_NAME(I_SFC_Z0E),                      __FILE__, __LINE__, &
-                      mask = LANDUSE_exists_ocean(:,:)                              )
-       if ( ICE_flag ) then
-          call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                         OCEAN_ICE_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
-                         VAR_NAME(I_ICE_TEMP),                     __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_ocean(:,:)                              )
-          call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
-                         OCEAN_ICE_MASS  (:,:),                     0.0_RP,   5E+5_RP, &
-                         VAR_NAME(I_ICE_MASS),                     __FILE__, __LINE__, &
-                         mask = LANDUSE_exists_ocean(:,:)                              )
-       end if
-
-    endif
 
     call FILE_HISTORY_in( OCEAN_TEMP      (:,:,:),                                               &
                           VAR_NAME(I_TEMP),            VAR_DESC(I_TEMP),                         &
@@ -910,7 +833,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Budget monitor for ocean
-  subroutine OCEAN_vars_total
+  subroutine OCEAN_vars_check( force )
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -921,10 +844,101 @@ contains
        OCEAN_GRID_CARTESC_REAL_TOTAREA, &
        OCEAN_GRID_CARTESC_REAL_VOL,     &
        OCEAN_GRID_CARTESC_REAL_TOTVOL
+    use scale_landuse, only: &
+       LANDUSE_exists_ocean
     implicit none
+    logical, intent(in), optional :: force
+    logical :: check
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
+    if ( present(force) ) then
+       check = force
+    else
+       check = OCEAN_VARS_CHECKRANGE
+    end if
+
+    if ( check ) then
+       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
+                      OCEAN_TEMP      (:,:,:),             0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_TEMP),                   __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                        )
+!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
+!                      OCEAN_SALT      (:,:,:),             0.0_RP, 1000.0_RP, &
+!                      VAR_NAME(I_SALT),                   __FILE__, __LINE__, &
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
+!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
+!                      OCEAN_UVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
+!                      VAR_NAME(I_UVEL),                   __FILE__, __LINE__, &
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
+!       call VALCHECK( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE,            &
+!                      OCEAN_VVEL      (:,:,:),             0.0_RP, 1000.0_RP, &
+!                      VAR_NAME(I_VVEL),                   __FILE__, __LINE__, &
+!                      mask = LANDUSE_exists_ocean(:,:)                        )
+
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,  &
+                      OCEAN_OCN_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_OCN_Z0M),                      __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_TEMP),                     __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dir ),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_IR_dif ),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dir),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_NIR_dif),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_direct ,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dir),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), 0.0_RP,    2.0_RP, &
+                      VAR_NAME(I_SFC_ALB_VIS_dif),              __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_Z0M   (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_Z0M),                      __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_Z0H   (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_Z0H),                      __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                      OCEAN_SFC_Z0E   (:,:),                     0.0_RP, 1000.0_RP, &
+                      VAR_NAME(I_SFC_Z0E),                      __FILE__, __LINE__, &
+                      mask = LANDUSE_exists_ocean(:,:)                              )
+       if ( ICE_flag ) then
+          call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                         OCEAN_ICE_TEMP  (:,:),                     0.0_RP, 1000.0_RP, &
+                         VAR_NAME(I_ICE_TEMP),                     __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_ocean(:,:)                              )
+          call VALCHECK( OIA, OIS, OIE, OJA, OJS, OJE,                                 &
+                         OCEAN_ICE_MASS  (:,:),                     0.0_RP,   5E+5_RP, &
+                         VAR_NAME(I_ICE_MASS),                     __FILE__, __LINE__, &
+                         mask = LANDUSE_exists_ocean(:,:)                              )
+       end if
+
+    endif
+
+    if ( present(force) ) then
+       check = force
+    else
+       check = STATISTICS_checktotal
+    end if
+
+    if ( check ) then
 
        call STATISTICS_total( OKA, OKS, OKE, OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
                               OCEAN_TEMP(:,:,:), VAR_NAME(I_TEMP),         & ! [IN]
@@ -1002,7 +1016,7 @@ contains
     endif
 
     return
-  end subroutine OCEAN_vars_total
+  end subroutine OCEAN_vars_check
 
   !-----------------------------------------------------------------------------
   !> monitor output
@@ -1244,7 +1258,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
-       call OCEAN_vars_total
+       call OCEAN_vars_check( force = .true. )
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_TEMP),                         & ! [IN]
                                     OCEAN_TEMP(:,:,:),                                   & ! [IN]

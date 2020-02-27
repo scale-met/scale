@@ -535,7 +535,7 @@ contains
        URBAN_RAINR,       &
        URBAN_RAINB,       &
        URBAN_RAING,       &
-       URBAN_vars_total
+       URBAN_vars_check
     use mod_urban_admin, only: &
        URBAN_DYN_TYPE
     use scale_landuse, only: &
@@ -588,7 +588,7 @@ contains
 
     end select
 
-    call URBAN_vars_total
+    call URBAN_vars_check
 
     call PROF_rapend  ('URB_Update', 1)
 
