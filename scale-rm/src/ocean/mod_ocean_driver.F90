@@ -302,8 +302,7 @@ contains
        OCEAN_OFLX_GH,     &
        OCEAN_OFLX_water,  &
        OCEAN_OFLX_ENGI,   &
-       OCEAN_ICE_FRAC,    &
-       OCEAN_vars_total
+       OCEAN_ICE_FRAC
     use scale_file_history, only: &
        FILE_HISTORY_in
     implicit none
@@ -902,7 +901,7 @@ contains
        OCEAN_OFLX_ENGI,  &
        OCEAN_MASS_SUPL,  &
        OCEAN_ENGI_SUPL,  &
-       OCEAN_vars_total
+       OCEAN_vars_check
     use scale_ocean_dyn_slab, only: &
        OCEAN_DYN_SLAB
     use scale_ocean_dyn_offline, only: &
@@ -1035,7 +1034,7 @@ contains
        ! Never update OCEAN_ICE_TEMP, OCEAN_ICE_MASS, OCEAN_ICE_FRAC from initial condition
     end select
 
-    call OCEAN_vars_total
+    call OCEAN_vars_check
 
     call PROF_rapend  ('OCN_Update', 2)
 

@@ -17,6 +17,7 @@ module mod_atmos_phy_cp_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -60,7 +61,7 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) ! tendency rho*QHYD [kg/kg/s]
 
   ! only for K-F scheme
-  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale/dt for KF[step]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale for KF[sec]
 
 
   ! diagnostic variables
@@ -104,9 +105,9 @@ module mod_atmos_phy_cp_vars
 
   data VAR_NAME / 'kf_nca'           /
 
-  data VAR_DESC / 'advection/cumulus convection timescale/dt for KF'  /
+  data VAR_DESC / 'advection/cumulus convection timescale for KF'  /
 
-  data VAR_UNIT / 'step'     /
+  data VAR_UNIT / 'sec'     /
 
   data VAR_DIM  / 'XY'   /
 
@@ -386,7 +387,7 @@ contains
           call ATMOS_PHY_CP_vars_fillhalo
        end if
 
-       call ATMOS_PHY_CP_vars_checktotal
+       call ATMOS_PHY_CP_vars_check
 
     else
        LOG_INFO("ATMOS_PHY_CP_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_CP.'
@@ -522,7 +523,7 @@ contains
 
        call ATMOS_PHY_CP_vars_fillhalo
 
-       call ATMOS_PHY_CP_vars_checktotal
+       call ATMOS_PHY_CP_vars_check
 
        call FILE_CARTESC_write( restart_fid, VAR_ID(1), ATMOS_PHY_CP_kf_nca(:,:), & ! [IN]
                                 VAR_NAME(1), 'XY' ) ! [IN]
@@ -544,7 +545,7 @@ contains
     return
   end subroutine ATMOS_PHY_CP_vars_restart_write
 
-  subroutine ATMOS_PHY_CP_vars_checktotal
+  subroutine ATMOS_PHY_CP_vars_check
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -555,38 +556,58 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_atmos_hydrometeor, only: &
        N_HYD
-
+    implicit none
     integer :: iq
-
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(1), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
-       ! tendency
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_CP_kf_nca(:,:),           & ! (in)
+                   -100.0_RP, 1.0E5_RP, VAR_NAME(1),   & ! (in)
+                   __FILE__, __LINE__                  ) ! (in)
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_CP_DENS_t(:,:,:),         & ! (in)
+                   -1.0E0_RP, 1.0E0_RP, VAR_t_NAME(1), & ! (in)
+                   __FILE__, __LINE__                  ) ! (in)
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_CP_RHOT_t(:,:,:),         & ! (in)
+                   -1.0E3_RP, 1.0E3_RP, VAR_t_NAME(2), & ! (in)
+                   __FILE__, __LINE__                  ) ! (in)
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_CP_RHOQV_t(:,:,:),        & ! (in)
+                   -1.0E0_RP, 1.0E0_RP, VAR_t_NAME(3), & ! (in)
+                   __FILE__, __LINE__                  ) ! (in)
+    do iq = 1, N_HYD
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq),       & ! (in)
+                      -1.0E0_RP, 1.0E0_RP, VAR_t_NAME(3+iq), & ! (in)
+                      __FILE__, __LINE__                     ) ! (in)
+    end do
+
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(1), & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
+    ! tendency
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1), & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2), & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_CP_RHOQV_t       (:,:,:), VAR_t_NAME(3), & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
+    do iq = 1, N_HYD
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_CP_DENS_t        (:,:,:), VAR_t_NAME(1), & ! (in)
+                              ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VAR_t_NAME(3+iq), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_CP_RHOT_t        (:,:,:), VAR_t_NAME(2), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
-       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                              ATMOS_PHY_CP_RHOQV_t       (:,:,:), VAR_t_NAME(3), & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
-                              ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
-       do iq = 1, N_HYD
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VAR_t_NAME(3+iq), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),                & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL                     ) ! (in)
-       enddo
-    endif
+    enddo
 
     return
-  end subroutine ATMOS_PHY_CP_vars_checktotal
+  end subroutine ATMOS_PHY_CP_vars_check
 
 end module mod_atmos_phy_cp_vars
