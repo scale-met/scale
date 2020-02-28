@@ -785,6 +785,8 @@ contains
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_dens2qsat_all
 !       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_bulkflux, only: &
+       BULKFLUX_diagnose_surface
     implicit none
 
     integer, intent(in) :: UKA, UKS, UKE
@@ -935,6 +937,8 @@ contains
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
     real(RP) :: qdry
+
+    real(RP) :: FracU10, FracT2
 
     integer  :: iteration
 
@@ -1529,22 +1533,19 @@ contains
     XXX10 = (10.0_RP/Z) * XXX
     call cal_psi(XXX10,psim10,psih10)
 
-    !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
-    !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
-    U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
-    V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
-    !T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
-     T2  = RTS + ( TA - RTS ) &
-         * ( log( 2.0_RP / Z0C ) * log( 2.0_RP / Z0HC ) ) &
-         / ( log(      Z / Z0C ) * log(      Z / Z0HC ) )
+    FracU10 = ( log(10.0_RP/Z0C ) - psim10 ) / ( log(Z/Z0C ) - psim )
+    FracT2  = ( log( 2.0_RP/Z0HC) - psih2  ) / ( log(Z/Z0HC) - psih )
+
+    call BULKFLUX_diagnose_surface( U1, V1,                 & ! [IN]
+                                    TA, QA,                 & ! [IN]
+                                    RTS, 1.0_RP,            & ! [IN]
+                                    Z,                      & ! [IN]
+                                    Z0C, Z0HC, 1.0_RP,      & ! [IN]
+                                    U10, V10, T2, Q2,       & ! [OUT] ! Q2 is dummy
+                                    FracU10, FracT2, 1.0_RP ) ! [IN]
 
     Q2 = QC
-    !Q2 (i,j) = SFC_QV        + ( ATM_QV  (i,j) - SFC_QV        ) &
-    !     * ( log(      2.0_RP / SFC_Z0M(i,j) ) * log(      2.0_RP / SFC_Z0E(i,j) ) ) &
-    !     / ( log( ATM_Z1(i,j) / SFC_Z0M(i,j) ) * log( ATM_Z1(i,j) / SFC_Z0E(i,j) ) )
-
-
 
     !-----------------------------------------------------------
     ! add anthropogenic heat fluxes
