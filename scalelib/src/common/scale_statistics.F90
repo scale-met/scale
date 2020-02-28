@@ -352,7 +352,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = 0.0_DP
-    !$omp parallel do reduction(+:statval)
+!    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF ) then
@@ -404,7 +404,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:,:) = 0.0_DP
-    !$omp parallel do reduction(+:statval)
+!    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -522,7 +522,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = HUGE
-    !$omp parallel do reduction(min:statval)
+!    !$omp parallel do reduction(min:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -639,7 +639,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = - HUGE
-    !$omp parallel do reduction(max:statval)
+!    !$omp parallel do reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
