@@ -4020,6 +4020,10 @@ contains
        LANDUSE_fillhalo
     use scale_atmos_grid_cartesC, only: &
        DOMAIN_CENTER_X => ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_set_areavol
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_set_areavol
     implicit none
 
     real(RP) :: LAND_SIZE
@@ -4068,6 +4072,9 @@ contains
     ! calculate landuse factors
     call LANDUSE_fillhalo( FILL_BND=.true. )
     call LANDUSE_calc_fact
+
+    call LAND_GRID_CARTESC_REAL_set_areavol
+    call OCEAN_GRID_CARTESC_REAL_set_areavol
 
     return
   end subroutine MKINIT_seabreeze
