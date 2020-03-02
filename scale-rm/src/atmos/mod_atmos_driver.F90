@@ -540,7 +540,7 @@ contains
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
@@ -600,7 +600,7 @@ contains
        call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
-                             REAL_Z1(:,:),                        & ! [IN]
+                             REAL_FZ(:,:,:),                      & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        call CPL_putATM( TEMP       (KS,:,:),  & ! [IN]
