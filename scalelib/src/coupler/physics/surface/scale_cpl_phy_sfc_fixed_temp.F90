@@ -94,7 +94,8 @@ contains
 !       qsat => ATMOS_SATURATION_pres2qsat_all
        qsat => ATMOS_SATURATION_dens2qsat_all
     use scale_bulkflux, only: &
-       BULKFLUX
+       BULKFLUX, &
+       BULKFLUX_diagnose_surface
     implicit none
 
     integer,  intent(in)  :: IA, IS, IE
@@ -140,24 +141,24 @@ contains
     real(RP), intent(out) :: T2       (IA,JA)                     ! temperature at 2m  [K]
     real(RP), intent(out) :: Q2       (IA,JA)                     ! water vapor at 2m  [kg/kg]
 
-    real(RP) :: emis    ! surface longwave emission                 [J/m2/s]
-    real(RP) :: LWD     ! surface downward longwave  radiation flux [J/m2/s]
-    real(RP) :: LWU     ! surface upward   longwave  radiation flux [J/m2/s]
-    real(RP) :: SWD     ! surface downward shortwave radiation flux [J/m2/s]
-    real(RP) :: SWU     ! surface upward   shortwave radiation flux [J/m2/s]
-    real(RP) :: res     ! residual
+    real(RP) :: emis ! surface longwave emission                 [J/m2/s]
+    real(RP) :: LWD  ! surface downward longwave  radiation flux [J/m2/s]
+    real(RP) :: LWU  ! surface upward   longwave  radiation flux [J/m2/s]
+    real(RP) :: SWD  ! surface downward shortwave radiation flux [J/m2/s]
+    real(RP) :: SWU  ! surface upward   shortwave radiation flux [J/m2/s]
+    real(RP) :: res  ! residual
 
-    real(RP) :: Uabs    ! absolute velocity               [m/s]
-    real(RP) :: Ra      ! Aerodynamic resistance (=1/Ce)  [1/s]
+    real(RP) :: Uabs ! absolute velocity               [m/s]
+    real(RP) :: Ra   ! Aerodynamic resistance (=1/Ce)  [1/s]
 
-    real(RP) :: QVsat   ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS     ! water vapor mixing ratio at surface            [kg/kg]
-    real(RP) :: Rtot    ! total gas constant
-    real(RP) :: qdry    ! dry air mass ratio [kg/kg]
+    real(RP) :: QVsat      ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS(IA,JA) ! water vapor mixing ratio at surface            [kg/kg]
+    real(RP) :: Rtot       ! total gas constant
+    real(RP) :: qdry       ! dry air mass ratio [kg/kg]
 
-    real(RP) :: FracU10 ! calculation parameter for U10 [1]
-    real(RP) :: FracT2  ! calculation parameter for T2  [1]
-    real(RP) :: FracQ2  ! calculation parameter for Q2  [1]
+    real(RP) :: FracU10(IA,JA) ! calculation parameter for U10 [1]
+    real(RP) :: FracT2 (IA,JA) ! calculation parameter for T2  [1]
+    real(RP) :: FracQ2 (IA,JA) ! calculation parameter for Q2  [1]
 
     real(RP) :: MFLUX
 
@@ -171,12 +172,13 @@ contains
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,bulkflux,dt, &
-    !$omp        calc_flag,TMPA,QVA,LH,WA,UA,VA,Z1,PBL,PRSA,TMPS,WSTR,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        calc_flag,TMPA,QVA,QVS,LH,WA,UA,VA,Z1,PBL,PRSA,TMPS,WSTR,PRSS,RHOS,QVEF,Z0M,Z0H,Z0E,ALBEDO,RFLXD,Rb, &
+    !$omp        FracU10,FracT2,FracQ2, &
     !$omp        SHFLX,LHFLX,QVFLX,GFLX,ZMFLX,XMFLX,YMFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(qdry,Rtot,QVsat,QVS,Uabs,Ra,FracU10,FracT2,FracQ2,res,emis,LWD,LWU,SWD,SWU,MFLUX)
+    !$omp private(qdry,Rtot,QVsat,Uabs,Ra,res,emis,LWD,LWU,SWD,SWU,MFLUX)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
@@ -186,32 +188,19 @@ contains
 !          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
           call qsat( TMPS(i,j), RHOS(i,j), QVsat )
 
-          QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
-              + (        QVEF(i,j) ) * QVsat
+          QVS(i,j) = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
+                   + (        QVEF(i,j) ) * QVsat
 
           Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
-          call BULKFLUX( Ustar(i,j), & ! [OUT]
-                         Tstar(i,j), & ! [OUT]
-                         Qstar(i,j), & ! [OUT]
-                         Wstar(i,j), & ! [OUT]
-                         RLmo(i,j),  & ! [OUT]
-                         Ra,         & ! [OUT]
-                         FracU10,    & ! [OUT]
-                         FracT2,     & ! [OUT]
-                         FracQ2,     & ! [OUT]
-                         TMPA(i,j),  & ! [IN]
-                         TMPS(i,j),  & ! [IN]
-                         PRSA(i,j),  & ! [IN]
-                         PRSS(i,j),  & ! [IN]
-                         QVA (i,j),  & ! [IN]
-                         QVS,        & ! [IN]
-                         Uabs,       & ! [IN]
-                         Z1  (i,j),  & ! [IN]
-                         PBL (i,j),  & ! [IN]
-                         Z0M (i,j),  & ! [IN]
-                         Z0H (i,j),  & ! [IN]
-                         Z0E (i,j)   ) ! [IN]
+          call BULKFLUX( TMPA(i,j), TMPS(i,j),                  & ! [IN]
+                         PRSA(i,j), PRSS(i,j),                  & ! [IN]
+                         QVA (i,j), QVS (i,j),                  & ! [IN]
+                         Uabs, Z1(i,j), PBL(i,j),               & ! [IN]
+                         Z0M(i,j), Z0H(i,j), Z0E(i,j),          & ! [IN]
+                         Ustar(i,j), Tstar(i,j), Qstar(i,j),    & ! [OUT]
+                         Wstar(i,j), RLmo(i,j), Ra,             & ! [OUT]
+                         FracU10(i,j), FracT2(i,j), FracQ2(i,j) ) ! [OUT]
 
           if ( Uabs < EPS ) then
              ZMFLX(i,j) = 0.0_RP
@@ -247,20 +236,6 @@ contains
           ! put residual in ground heat flux (positive for downward)
           GFLX(i,j) = res
 
-          ! diagnostic variables considering unstable/stable state
-          !U10(i,j) = FracU10 * UA(i,j)
-          !V10(i,j) = FracU10 * VA(i,j)
-          !T2 (i,j) = ( 1.0_RP - FracT2 ) * TMPS(i,j) + FracT2 * TMPA(i,j)
-          !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS       + FracQ2 * QVA (i,j)
-
-          ! diagnostic variables for neutral state
-          U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-          V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-          T2 (i,j) = TMPS(i,j) + ( TMPA(i,j) - TMPS(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-          Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
-
        else ! not calculate surface flux
           ZMFLX(i,j) = UNDEF
           XMFLX(i,j) = UNDEF
@@ -281,6 +256,17 @@ contains
        endif
     enddo
     enddo
+
+    call BULKFLUX_diagnose_surface( IA, IS, IE, JA, JS, JE, &
+                                    UA(:,:), VA(:,:),                      & ! (in)
+                                    TMPA(:,:), QVA(:,:),                   & ! (in)
+                                    TMPS(:,:), QVS(:,:),                   & ! (in)
+                                    Z1(:,:), Z0M(:,:), Z0H(:,:), Z0E(:,:), & ! (in)
+                                    U10(:,:), V10(:,:), T2(:,:), Q2(:,:),  & ! (out)
+                                    mask = calc_flag(:,:),                 & ! (in)
+                                    FracU10 = FracU10(:,:),                & ! (in)
+                                    FracT2 = FracT2(:,:),                  & ! (in)
+                                    FracQ2 = FracQ2(:,:)                   ) ! (in)
 
     return
   end subroutine CPL_PHY_SFC_fixed_temp

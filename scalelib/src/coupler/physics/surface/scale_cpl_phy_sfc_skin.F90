@@ -133,7 +133,8 @@ contains
        CV_ICE,   &
        LHF
     use scale_bulkflux, only: &
-       BULKFLUX
+       BULKFLUX, &
+       BULKFLUX_diagnose_surface
     implicit none
 
     integer,          intent(in)    :: IA, IS, IE
@@ -191,34 +192,34 @@ contains
 
     real(RP) :: TMPS1(IA,JA)
 
-    real(RP) :: emis          ! surface longwave emission                 [J/m2/s]
-    real(RP) :: LWD           ! surface downward longwave  radiation flux [J/m2/s]
-    real(RP) :: LWU           ! surface upward   longwave  radiation flux [J/m2/s]
-    real(RP) :: SWD           ! surface downward shortwave radiation flux [J/m2/s]
-    real(RP) :: SWU           ! surface upward   shortwave radiation flux [J/m2/s]
-    real(RP) :: flx_qv        ! surface upward qv flux                    [kg/m2/s]
-    real(RP) :: res           ! residual
+    real(RP) :: emis   ! surface longwave emission                 [J/m2/s]
+    real(RP) :: LWD    ! surface downward longwave  radiation flux [J/m2/s]
+    real(RP) :: LWU    ! surface upward   longwave  radiation flux [J/m2/s]
+    real(RP) :: SWD    ! surface downward shortwave radiation flux [J/m2/s]
+    real(RP) :: SWU    ! surface upward   shortwave radiation flux [J/m2/s]
+    real(RP) :: flx_qv ! surface upward qv flux                    [kg/m2/s]
+    real(RP) :: res    ! residual
 
-    real(RP) :: dres          ! d(residual)/dTMPS
-    real(RP) :: oldres        ! residual in previous step
-    real(RP) :: redf          ! reduced factor
+    real(RP) :: dres   ! d(residual)/dTMPS
+    real(RP) :: oldres ! residual in previous step
+    real(RP) :: redf   ! reduced factor
 
-    real(RP) :: dUstar        ! friction velocity difference               [m/s]
-    real(RP) :: dTstar        ! friction potential temperature difference  [K]
-    real(RP) :: dQstar        ! friction water vapor mass ratio difference [kg/kg]
-    real(RP) :: dWstar        ! free convection velocity scale difference  [m/s]
-    real(RP) :: dRLmo         ! inversed Obukhov length         [1/m]
-    real(RP) :: Uabs,  dUabs  ! modified absolute velocity      [m/s]
-    real(RP) :: Ra,    dRa    ! Aerodynamic resistance (=1/Ce)  [1/s]
+    real(RP) :: dUstar      ! friction velocity difference               [m/s]
+    real(RP) :: dTstar      ! friction potential temperature difference  [K]
+    real(RP) :: dQstar      ! friction water vapor mass ratio difference [kg/kg]
+    real(RP) :: dWstar      ! free convection velocity scale difference  [m/s]
+    real(RP) :: dRLmo       ! inversed Obukhov length         [1/m]
+    real(RP) :: Uabs, dUabs ! modified absolute velocity      [m/s]
+    real(RP) :: Ra,   dRa   ! Aerodynamic resistance (=1/Ce)  [1/s]
 
-    real(RP) :: QVsat, dQVsat ! saturation water vapor mixing ratio at surface [kg/kg]
-    real(RP) :: QVS, dQVS     ! water vapor mixing ratio at surface            [kg/kg]
-    real(RP) :: Rtot          ! total gas constant
-    real(RP) :: qdry          ! dry air mass ratio [kg/kg]
+    real(RP) :: QVsat, dQVsat    ! saturation water vapor mixing ratio at surface [kg/kg]
+    real(RP) :: QVS(IA,JA), dQVS ! water vapor mixing ratio at surface            [kg/kg]
+    real(RP) :: Rtot             ! total gas constant
+    real(RP) :: qdry             ! dry air mass ratio [kg/kg]
 
-    real(RP) :: FracU10       ! calculation parameter for U10 [1]
-    real(RP) :: FracT2        ! calculation parameter for T2  [1]
-    real(RP) :: FracQ2        ! calculation parameter for Q2  [1]
+    real(RP) :: FracU10(IA,JA), dFracU10 ! calculation parameter for U10 [1]
+    real(RP) :: FracT2 (IA,JA), dFracT2  ! calculation parameter for T2  [1]
+    real(RP) :: FracQ2 (IA,JA), dFracQ2  ! calculation parameter for Q2  [1]
 
     real(RP) :: MFLUX
 
@@ -241,16 +242,17 @@ contains
     !$omp default(none) &
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,PRC_myrank,IO_FID_LOG,IO_L,model_name,bulkflux, &
-    !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min, CPL_PHY_SFC_SKIN_res_min, &
-    !$omp        calc_flag,dt,QVA,TMPA,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
+    !$omp        CPL_PHY_SFC_SKIN_itr_max,CPL_PHY_SFC_SKIN_dTS_max,CPL_PHY_SFC_SKIN_err_min,CPL_PHY_SFC_SKIN_res_min, &
+    !$omp        calc_flag,dt,QVA,QVS,TMPA,TMPS,PRSA,RHOA,WA,UA,VA,LH,Z1,PBL, &
     !$omp        TG,PRSS,RHOS,TMPS1,WSTR,QVEF,Z0M,Z0H,Z0E,Rb,TC_dZ,ALBEDO,RFLXD, &
-    !$omp        TMPS,ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
+    !$omp        FracU10,FracT2,FracQ2, &
+    !$omp        ZMFLX,XMFLX,YMFLX,SHFLX,LHFLX,QVFLX,GFLX,Ustar,Tstar,Qstar,Wstar,RLmo,U10,V10,T2,Q2) &
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(qdry,Rtot,flx_qv,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,QVS,dQVS, &
-    !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,&
-    !$omp         Uabs,dUabs,dRLmo,Ra,dRa,FracU10,FracT2,FracQ2,MFLUX)
+    !$omp private(qdry,Rtot,flx_qv,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
+    !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
+    !$omp         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     do j = JS, JE
     do i = IS, IE
        if ( calc_flag(i,j) ) then
@@ -269,56 +271,30 @@ contains
 !             call qsat( TMPS1(i,j),      PRSS(i,j), qdry, QVsat  )
 !             call qsat( TMPS1(i,j)+dTS0, PRSS(i,j), qdry, dQVsat )
 
-             QVS  = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
-                  + (        QVEF(i,j) ) * QVsat
-             dQVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
-                  + (        QVEF(i,j) ) * dQVsat
+             QVS(i,j) = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
+                      + (        QVEF(i,j) ) * QVsat
+             dQVS     = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
+                      + (        QVEF(i,j) ) * dQVsat
 
              Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
-             call BULKFLUX( Ustar(i,j),      & ! [OUT]
-                            Tstar(i,j),      & ! [OUT]
-                            Qstar(i,j),      & ! [OUT]
-                            Wstar(i,j),      & ! [OUT]
-                            RLmo(i,j),       & ! [OUT]
-                            Ra,              & ! [OUT]
-                            FracU10,         & ! [OUT] ! not used
-                            FracT2,          & ! [OUT] ! not used
-                            FracQ2,          & ! [OUT] ! not used
-                            TMPA (i,j),      & ! [IN]
-                            TMPS1(i,j),      & ! [IN]
-                            PRSA (i,j),      & ! [IN]
-                            PRSS (i,j),      & ! [IN]
-                            QVA  (i,j),      & ! [IN]
-                            QVS,             & ! [IN]
-                            Uabs,            & ! [IN]
-                            Z1   (i,j),      & ! [IN]
-                            PBL  (i,j),      & ! [IN]
-                            Z0M  (i,j),      & ! [IN]
-                            Z0H  (i,j),      & ! [IN]
-                            Z0E  (i,j)       ) ! [IN]
+             call BULKFLUX( TMPA(i,j), TMPS1(i,j),                 & ! [IN]
+                            PRSA(i,j), PRSS (i,j),                 & ! [IN]
+                            QVA (i,j), QVS  (i,j),                 & ! [IN]
+                            Uabs, Z1(i,j), PBL(i,j),               & ! [IN]
+                            Z0M(i,j), Z0H(i,j), Z0E(i,j),          & ! [IN]
+                            Ustar(i,j), Tstar(i,j), Qstar(i,j),    & ! [OUT]
+                            Wstar(i,j), RLmo(i,j), Ra,             & ! [OUT]
+                            FracU10(i,j), FracT2(i,j), FracQ2(i,j) ) ! [OUT]
 
-             call BULKFLUX( dUstar,          & ! [OUT]
-                            dTstar,          & ! [OUT]
-                            dQstar,          & ! [OUT]
-                            dWstar,          & ! [OUT]
-                            dRLmo,           & ! [OUT] ! not used
-                            dRa,             & ! [OUT] ! not used
-                            FracU10,         & ! [OUT] ! not used
-                            FracT2,          & ! [OUT] ! not used
-                            FracQ2,          & ! [OUT] ! not used
-                            TMPA (i,j),      & ! [IN]
-                            TMPS1(i,j)+dTS0, & ! [IN]
-                            PRSA (i,j),      & ! [IN]
-                            PRSS (i,j),      & ! [IN]
-                            QVA  (i,j),      & ! [IN]
-                            dQVS,            & ! [IN]
-                            Uabs,            & ! [IN]
-                            Z1   (i,j),      & ! [IN]
-                            PBL  (i,j),      & ! [IN]
-                            Z0M  (i,j),      & ! [IN]
-                            Z0H  (i,j),      & ! [IN]
-                            Z0E  (i,j)       ) ! [IN]
+             call BULKFLUX( TMPA (i,j), TMPS1(i,j)+dTS0,  & ! [IN]
+                            PRSA (i,j), PRSS (i,j),       & ! [IN]
+                            QVA  (i,j), dQVS,             & ! [IN]
+                            Uabs, Z1(i,j), PBL(i,j),      & ! [IN]
+                            Z0M(i,j), Z0H(i,j), Z0E(i,j), & ! [IN]
+                            dUstar, dTstar, dQstar,       & ! [OUT]
+                            dWstar, dRLmo, dRa,           & ! [OUT] ! not used
+                            dFracU10, dFracT2, dFracQ2    ) ! [OUT] ! not used
 
              emis = ( 1.0_RP - ALBEDO(i,j,I_R_diffuse,I_R_IR) ) * STB * TMPS1(i,j)**4
 
@@ -446,30 +422,17 @@ contains
           call qsat( TMPS(i,j), RHOS(i,j), QVsat )
 !          call qsat( TMPS(i,j), PRSS(i,j), qdry, QVsat )
 
-          QVS = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
-              + (        QVEF(i,j) ) * QVsat
+          QVS(i,j) = ( 1.0_RP-QVEF(i,j) ) * QVA(i,j) &
+                   + (        QVEF(i,j) ) * QVsat
 
-          call BULKFLUX( Ustar(i,j), & ! [OUT]
-                         Tstar(i,j), & ! [OUT]
-                         Qstar(i,j), & ! [OUT]
-                         Wstar(i,j), & ! [OUT]
-                         RLmo(i,j),  & ! [OUT]
-                         Ra,         & ! [OUT]
-                         FracU10,    & ! [OUT]
-                         FracT2,     & ! [OUT]
-                         FracQ2,     & ! [OUT]
-                         TMPA(i,j),  & ! [IN]
-                         TMPS(i,j),  & ! [IN]
-                         PRSA(i,j),  & ! [IN]
-                         PRSS(i,j),  & ! [IN]
-                         QVA (i,j),  & ! [IN]
-                         QVS,        & ! [IN]
-                         Uabs,       & ! [IN]
-                         Z1  (i,j),  & ! [IN]
-                         PBL (i,j),  & ! [IN]
-                         Z0M (i,j),  & ! [IN]
-                         Z0H (i,j),  & ! [IN]
-                         Z0E (i,j)   ) ! [IN]
+          call BULKFLUX( TMPA(i,j), TMPS(i,j),                  & ! [IN]
+                         PRSA(i,j), PRSS(i,j),                  & ! [IN]
+                         QVA (i,j), QVS (i,j),                  & ! [IN]
+                         Uabs, Z1(i,j), PBL(i,j),               & ! [IN]
+                         Z0M(i,j), Z0H(i,j), Z0E(i,j),          & ! [IN]
+                         Ustar(i,j), Tstar(i,j), Qstar(i,j),    & ! [OUT]
+                         Wstar(i,j), RLmo(i,j), Ra,             & ! [OUT]
+                         FracU10(i,j), FracT2(i,j), FracQ2(i,j) ) ! [OUT]
 
           if ( Uabs < EPS ) then
              ZMFLX(i,j) = 0.0_RP
@@ -508,20 +471,6 @@ contains
           ! put residual in ground heat flux
           GFLX(i,j) = GFLX(i,j) + res
 
-          ! diagnostic variables considering unstable/stable state
-          !U10(i,j) = FracU10 * UA(i,j)
-          !V10(i,j) = FracU10 * VA(i,j)
-          !T2 (i,j) = ( 1.0_RP - FracT2 ) * TMPS(i,j) + FracT2 * TMPA(i,j)
-          !Q2 (i,j) = ( 1.0_RP - FracQ2 ) * QVS       + FracQ2 * QVA (i,j)
-
-          ! diagnostic variables for neutral state
-          U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-          V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-          T2 (i,j) = TMPS(i,j) + ( TMPA(i,j) - TMPS(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-          Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
-
        else ! not calculate surface flux
           ZMFLX(i,j) = UNDEF
           XMFLX(i,j) = UNDEF
@@ -542,6 +491,17 @@ contains
        endif
     enddo
     enddo
+
+    call BULKFLUX_diagnose_surface( IA, IS, IE, JA, JS, JE, &
+                                    UA(:,:), VA(:,:),                      & ! (in)
+                                    TMPA(:,:), QVA(:,:),                   & ! (in)
+                                    TMPS(:,:), QVS(:,:),                   & ! (in)
+                                    Z1(:,:), Z0M(:,:), Z0H(:,:), Z0E(:,:), & ! (in)
+                                    U10(:,:), V10(:,:), T2(:,:), Q2(:,:),  & ! (out)
+                                    mask = calc_flag(:,:),                 & ! (in)
+                                    FracU10 = FracU10(:,:),                & ! (in)
+                                    FracT2 = FracT2(:,:),                  & ! (in)
+                                    FracQ2 = FracQ2(:,:)                   ) ! (in)
 
     return
   end subroutine CPL_PHY_SFC_skin
