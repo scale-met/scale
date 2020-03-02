@@ -46,7 +46,7 @@ contains
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS, PRES, QV, &
        SFC_TEMP,       &
-       Z1,             &
+       FZ,             &
        SFC_DENS, SFC_PRES )
     use scale_const, only: &
        GRAV    => CONST_GRAV, &
@@ -61,11 +61,15 @@ contains
     real(RP), intent(in)  :: PRES    (KA,IA,JA)
     real(RP), intent(in)  :: QV      (KA,IA,JA)
     real(RP), intent(in)  :: SFC_TEMP(IA,JA)
-    real(RP), intent(in)  :: Z1      (IA,JA)
+    real(RP), intent(in)  :: FZ      (0:KA,IA,JA)
     real(RP), intent(out) :: SFC_DENS(IA,JA)
     real(RP), intent(out) :: SFC_PRES(IA,JA)
 
     real(RP) :: Rtot
+    real(RP) :: dz1, dz2
+    real(RP) :: F2H1, F2H2
+    real(RP) :: LogP1, LogP2
+    real(RP) :: PRESH
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -74,11 +78,22 @@ contains
     !$omp private (Rtot)
     do j = JS, JE
     do i = IS, IE
+       ! interpolate half-level pressure
+       dz1 = FZ(KS+1,i,j) - FZ(KS,i,j)
+       dz2 = FZ(KS,i,j) - FZ(KS-1,i,j)
+
+       F2H1 = dz2 / ( dz1 + dz2 )
+       F2H2 = dz1 / ( dz1 + dz2 )
+
+       LogP1 = log10(PRES(KS+1,i,j))
+       LogP2 = log10(PRES(KS,i,j))
+
+       PRESH = 10.0_RP ** (F2H1 * LogP1 + F2H2 * LogP2)
+
        Rtot = Rdry * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
-       ! ( PRES(KS) - ( SFC_DENS * Rtot * SFC_TEMP ) ) / Z1 = - GRAV * ( DENS(KS) + SFC_DENS ) * 0.5
-       SFC_DENS(i,j) = ( PRES(KS,i,j) + GRAV * Z1(i,j) * DENS(KS,i,j) * 0.5_RP ) &
-                     / ( Rtot * SFC_TEMP(i,j) - GRAV * Z1(i,j) * 0.5_RP )
-       SFC_PRES(i,j) = SFC_DENS(i,j) * Rtot * SFC_TEMP(i,j)
+       ! ( PRESH - SFC_PRES ) / dz2 = - GRAV * DENS(KS)
+       SFC_PRES(i,j) = PRESH + GRAV * DENS(KS,i,j) * dz2
+       SFC_DENS(i,j) = SFC_PRES(i,j) / ( Rtot * SFC_TEMP(i,j) )
     enddo
     enddo
 
