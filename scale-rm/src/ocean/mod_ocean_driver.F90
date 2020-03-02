@@ -231,7 +231,7 @@ contains
     use scale_ocean_phy_ice_simple, only: &
        OCEAN_PHY_ICE_simple
     use scale_bulkflux, only: &
-       BULKFLUX_diagnose
+       BULKFLUX_diagnose_scales
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_ch
     use mod_atmos_phy_ch_driver, only: &
@@ -758,16 +758,6 @@ contains
        enddo
        enddo
 
-       call BULKFLUX_diagnose( OIA, OIS, OIE, OJA, OJS, OJE, &
-                               OCEAN_SFLX_MW(:,:), OCEAN_SFLX_MU(:,:), OCEAN_SFLX_MV(:,:), & ! [IN]
-                               OCEAN_SFLX_SH(:,:), OCEAN_SFLX_QV(:,:),                     & ! [IN]
-                               ATMOS_SFC_DENS(:,:), OCEAN_SFC_TEMP(:,:), ATMOS_PBL(:,:),   & ! [IN]
-                               OCEAN_Ustar(:,:), OCEAN_Tstar(:,:), OCEAN_Qstar(:,:),       & ! [OUT]
-                               OCEAN_Wstar(:,:), OCEAN_RLmo(:,:),                          & ! [OUT]
-                               mask = exists_ocean(:,:)                                    ) ! [IN]
-
-
-
 
        ! seaice
        select case ( OCEAN_ICE_TYPE )
@@ -828,6 +818,17 @@ contains
        end if
        enddo
        enddo
+
+       call BULKFLUX_diagnose_scales( OIA, OIS, OIE, OJA, OJS, OJE, &
+                                      OCEAN_SFLX_MW(:,:), OCEAN_SFLX_MU(:,:), OCEAN_SFLX_MV(:,:), & ! [IN]
+                                      OCEAN_SFLX_SH(:,:), OCEAN_SFLX_QV(:,:),                     & ! [IN]
+                                      ATMOS_SFC_DENS(:,:), OCEAN_SFC_TEMP(:,:), ATMOS_PBL(:,:),   & ! [IN]
+                                      OCEAN_Ustar(:,:), OCEAN_Tstar(:,:), OCEAN_Qstar(:,:),       & ! [OUT]
+                                      OCEAN_Wstar(:,:), OCEAN_RLmo(:,:),                          & ! [OUT]
+                                      mask = exists_ocean(:,:)                                    ) ! [IN]
+
+
+
 
     endif ! ICE process?
 

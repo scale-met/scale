@@ -637,27 +637,14 @@ contains
        call qsat( SFC_TEMP(i,j), RHOS(i,j), & ! [IN]
                   QVsat                     ) ! [OUT]
 
-       call BULKFLUX( Ustar(i,j),    & ! [OUT]
-                      Tstar(i,j),    & ! [OUT]
-                      Qstar(i,j),    & ! [OUT]
-                      Wstar(i,j),    & ! [OUT]
-                      RLmo (i,j),    & ! [OUT]
-                      Ra,            & ! [OUT]
-                      FracU10,       & ! [OUT]
-                      FracT2,        & ! [OUT]
-                      FracQ2,        & ! [OUT]
-                      TMPA    (i,j), & ! [IN]
-                      SFC_TEMP(i,j), & ! [IN]
-                      PRSA    (i,j), & ! [IN]
-                      PRSS    (i,j), & ! [IN]
-                      QA      (i,j), & ! [IN]
-                      QVsat,         & ! [IN]
-                      Uabs,          & ! [IN]
-                      Z1      (i,j), & ! [IN]
-                      PBL     (i,j), & ! [IN]
-                      Z0M     (i,j), & ! [IN]
-                      Z0H     (i,j), & ! [IN]
-                      Z0E     (i,j)  ) ! [IN]
+       call BULKFLUX( TMPA(i,j), SFC_TEMP(i,j),           & ! [IN]
+                      PRSA(i,j), PRSS    (i,j),           & ! [IN]
+                      QA  (i,j), QVsat,                   & ! [IN]
+                      Uabs, Z1(i,j), PBL(i,j),            & ! [IN]
+                      Z0M(i,j), Z0H(i,j), Z0E(i,j),       & ! [IN]
+                      Ustar(i,j), Tstar(i,j), Qstar(i,j), & ! [OUT]
+                      Wstar(i,j), RLmo(i,j), Ra,          & ! [OUT]
+                      FracU10, FracT2, FracQ2             ) ! [OUT]
 
        if ( Uabs < EPS ) then
           MWFLX(i,j) = 0.0_RP
@@ -798,6 +785,8 @@ contains
     use scale_atmos_saturation, only: &
        qsat => ATMOS_SATURATION_dens2qsat_all
 !       qsat => ATMOS_SATURATION_pres2qsat_all
+    use scale_bulkflux, only: &
+       BULKFLUX_diagnose_surface
     implicit none
 
     integer, intent(in) :: UKA, UKS, UKE
@@ -948,6 +937,8 @@ contains
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
     real(RP) :: qdry
+
+    real(RP) :: FracU10, FracT2
 
     integer  :: iteration
 
@@ -1542,12 +1533,18 @@ contains
     XXX10 = (10.0_RP/Z) * XXX
     call cal_psi(XXX10,psim10,psih10)
 
-    !U10 = U1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! u at 10 m [m/s]
-    !V10 = V1 * ((log(10.0_RP/Z0C)-psim10)/(log(Z/Z0C)-psim))  ! v at 10 m [m/s]
-    U10 = U1 * log(10.0_RP/Z0C) / log(Z/Z0C)
-    V10 = V1 * log(10.0_RP/Z0C) / log(Z/Z0C)
 
-    T2  = RTS + (TA-RTS)*((log(2.0_RP/Z0HC)-psih2)/(log(Z/Z0HC)-psih))
+    FracU10 = ( log(10.0_RP/Z0C ) - psim10 ) / ( log(Z/Z0C ) - psim )
+    FracT2  = ( log( 2.0_RP/Z0HC) - psih2  ) / ( log(Z/Z0HC) - psih )
+
+    call BULKFLUX_diagnose_surface( U1, V1,                 & ! [IN]
+                                    TA, QA,                 & ! [IN]
+                                    RTS, 1.0_RP,            & ! [IN]
+                                    Z,                      & ! [IN]
+                                    Z0C, Z0HC, 1.0_RP,      & ! [IN]
+                                    U10, V10, T2, Q2,       & ! [OUT] ! Q2 is dummy
+                                    FracU10, FracT2, 1.0_RP ) ! [IN]
+
     Q2 = QC
 
     !-----------------------------------------------------------
