@@ -75,7 +75,7 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do OMP_SCHEDULE_ &
-    !$omp private (Rtot)
+    !$omp private (Rtot,dz1,dz2,F2H1,F2H2,LogP1,LogP2,PRESH)
     do j = JS, JE
     do i = IS, IE
        ! interpolate half-level pressure
@@ -85,10 +85,10 @@ contains
        F2H1 = dz2 / ( dz1 + dz2 )
        F2H2 = dz1 / ( dz1 + dz2 )
 
-       LogP1 = log10(PRES(KS+1,i,j))
-       LogP2 = log10(PRES(KS,i,j))
+       LogP1 = log( PRES(KS+1,i,j) )
+       LogP2 = log( PRES(KS,i,j) )
 
-       PRESH = 10.0_RP ** (F2H1 * LogP1 + F2H2 * LogP2)
+       PRESH = exp( F2H1 * LogP1 + F2H2 * LogP2 )
 
        Rtot = Rdry * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
        ! ( PRESH - SFC_PRES ) / dz2 = - GRAV * DENS(KS)
