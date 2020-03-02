@@ -201,7 +201,7 @@ contains
        call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:,l), PRES(:,:,:,l), QV(:,:,:,l), & ! [IN]
                              SFC_TEMP(:,:,l),                           & ! [IN]
-                             Z1(:,:,l),                                 & ! [IN]
+                             FZ(:,:,:,l),                               & ! [IN]
                              SFC_DENS(:,:,l), SFC_PRES(:,:,l)           ) ! [OUT]
 
     end do

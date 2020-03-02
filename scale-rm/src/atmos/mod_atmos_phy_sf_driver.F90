@@ -235,7 +235,7 @@ contains
        call BOTTOM_estimate( KA, KS,  KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
-                             Z1(:,:),                             & ! [IN]
+                             FZ(:,:,:),                           & ! [IN]
                              SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
        !$omp parallel do
