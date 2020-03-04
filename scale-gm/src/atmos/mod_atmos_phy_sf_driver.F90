@@ -318,7 +318,9 @@ contains
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
     use mod_atmos_vars, only: &
-       TOPO_Zsfc
+       TEMP, &
+       PRES, &
+       CZ
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
@@ -354,9 +356,9 @@ contains
        end do
        end do
 
-       call barometric_law_mslp( IA, IS, IE, JA, JS, JE, &
-                                 SFC_PRES(:,:,l), T2(:,:,l), TOPO_Zsfc(:,:,l), & ! [IN]
-                                 MSLP(:,:,l)                                   ) ! [OUT]
+       call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                 PRES(:,:,:,l), TEMP(:,:,:,l), CZ(:,:,:,l), & ! [IN]
+                                 MSLP(:,:,l)                                ) ! [OUT]
     end do
 
 
