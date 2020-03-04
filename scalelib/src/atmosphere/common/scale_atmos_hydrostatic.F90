@@ -27,7 +27,8 @@ module scale_atmos_hydrostatic
      CPvap   => CONST_CPvap,   &
      LAPS    => CONST_LAPS,    &
      LAPSdry => CONST_LAPSdry, &
-     P00     => CONST_PRE00
+     P00     => CONST_PRE00,   &
+     EPSTvap => CONST_EPSTvap
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -1413,26 +1414,31 @@ contains
 !OCL NOSIMD
   subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_0D( &
        KA, KS, KE, &
-       pres, temp, &
-       cz,         &
-       mslp        )
+       pres, temp, qv, &
+       cz,             &
+       mslp            )
     implicit none
     integer,  intent(in)  :: KA, KS, KE
 
-    real(RP), intent(in)  :: pres(KA) !< surface pressure        [Pa]
-    real(RP), intent(in)  :: temp(KA) !< surface air temperature [K]
-    real(RP), intent(in)  :: cz  (KA) !< surface height from MSL [m]
+    real(RP), intent(in)  :: pres(KA) !< pressure          [Pa]
+    real(RP), intent(in)  :: temp(KA) !< air temperature   [K]
+    real(RP), intent(in)  :: qv  (KA) !< specific humidity [kg/kg]
+    real(RP), intent(in)  :: cz  (KA) !< height from MSL   [m]
 
     real(RP), intent(out) :: mslp !< mean sea-level pressure [Pa]
 
     ! work
     integer  :: kref
+    real(RP) :: vtemp
     !---------------------------------------------------------------------------
 
     kref = HYDROSTATIC_barometric_law_mslp_kref + KS - 1
 
+    ! virtual temperature
+    vtemp = temp(kref) * (1.0_RP + EPSTvap * qv(kref) )
+
     ! barometric law assuming constant lapse rate
-    mslp = pres(kref) * ( ( temp(kref) + LAPS * cz(kref) ) / temp(kref) ) ** ( GRAV / ( Rdry * LAPS ) )
+    mslp = pres(kref) * ( ( vtemp + LAPS * cz(kref) ) / vtemp ) ** ( GRAV / ( Rdry * LAPS ) )
 
     return
   end subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_0D
@@ -1441,17 +1447,18 @@ contains
   !> Calculate mean sea-level pressure from barometric law (2D)
   subroutine ATMOS_HYDROSTATIC_barometric_law_mslp_2D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       pres, temp, &
-       cz,         &
-       mslp        )
+       pres, temp, qv, &
+       cz,             &
+       mslp            )
     implicit none
     integer,  intent(in) :: KA, KS, KE
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: pres(KA,IA,JA) !< surface pressure        [Pa]
-    real(RP), intent(in)  :: temp(KA,IA,JA) !< surface air temperature [K]
-    real(RP), intent(in)  :: cz  (KA,IA,JA) !< surface height from MSL [m]
+    real(RP), intent(in)  :: pres(KA,IA,JA) !< pressure          [Pa]
+    real(RP), intent(in)  :: temp(KA,IA,JA) !< air temperature   [K]
+    real(RP), intent(in)  :: qv  (KA,IA,JA) !< specific humidity [kg/kg]
+    real(RP), intent(in)  :: cz  (KA,IA,JA) !< height from MSL   [m]
 
     real(RP), intent(out) :: mslp(IA,JA) !< mean sea-level pressure [Pa]
 
@@ -1462,7 +1469,8 @@ contains
     do j = JS, JE
     do i = IS, IE
        call ATMOS_HYDROSTATIC_barometric_law_mslp_0D( KA, KS, KE, &
-                                                      pres(:,i,j), temp(:,i,j), cz(:,i,j), & ! [IN]
+                                                      pres(:,i,j), temp(:,i,j), qv(:,i,j), & ! [IN]
+                                                      cz(:,i,j),                           & ! [IN]
                                                       mslp(i,j)                            ) ! [OUT]
     enddo
     enddo
