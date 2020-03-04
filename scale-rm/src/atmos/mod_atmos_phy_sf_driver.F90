@@ -401,7 +401,8 @@ contains
        I_QV
     use mod_atmos_vars, only: &
        TEMP, &
-       PRES
+       PRES, &
+       QV
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
@@ -442,9 +443,10 @@ contains
     enddo
 
 
-    call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,       & ! [IN]
-                              PRES(:,:,:), TEMP(:,:,:), REAL_CZ(:,:,:), & ! [IN]
-                              MSLP(:,:)                                 ) ! [OUT]
+    call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
+                              PRES(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
+                              REAL_CZ(:,:,:),                      & ! [IN]
+                              MSLP(:,:)                            ) ! [OUT]
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )

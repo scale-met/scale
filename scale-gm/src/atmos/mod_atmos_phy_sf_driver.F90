@@ -320,6 +320,7 @@ contains
     use mod_atmos_vars, only: &
        TEMP, &
        PRES, &
+       QV,   &
        CZ
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
@@ -357,7 +358,8 @@ contains
        end do
 
        call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 PRES(:,:,:,l), TEMP(:,:,:,l), CZ(:,:,:,l), & ! [IN]
+                                 PRES(:,:,:,l), TEMP(:,:,:,l), QV(:,:,:,l), & ! [IN]
+                                 CZ(:,:,:,l),                               & ! [IN]
                                  MSLP(:,:,l)                                ) ! [OUT]
     end do
 
