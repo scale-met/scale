@@ -26,12 +26,12 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 ただし、ファイルは{\scalerm}の境界値データの作成に必要な全てのデータを含まなければならない。
 
 本書における「バイナリデータ形式」は、Fortran が直接アクセスできる単精度浮動小数点のバイナリデータとして定義される。
-GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
-この方法は、第\ref{sec:tutrial_real_data}節で説明される。
-その他の任意のデータについても、バイナリデータ形式に変換すれば使用できる。
+例えば GRIB/GRIB2 データなどの他のフォーマットデータは、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
+この方法は、第\ref{sec:tutrial_real_data}節で説明する。
 
-{\scalelib}の最新版の出力ファイル形式は、バージョン5.2以前の形式とは異なる。
-そのため、バージョン5.2以前で作成された初期値/境界値ファイルは{\scalelib}{\version}では使用できない。
+
+{\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
+そのため、バージョン5.3以前で作成された初期値/境界値ファイルは{\scalelib}{\version}では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
@@ -46,28 +46,28 @@ GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\
 \\
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
+\verb| NUMBER_OF_TSTEPS     = 1, |\\
 \verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
 \verb| BASENAME_BOUNDARY    = "boundary_d01",|\\
 \verb| BOUNDARY_UPDATE_DT   = 21600.0,|\\
-\verb| PARENT_MP_TYPE       = 3,|\\
 \verb| USE_FILE_DENSITY     = .false.,|\\
 \verb|/|\\
-\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
+\verb| NUMBER_OF_TSTEPS     = 1, |\\
 \verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
 \verb| INTRP_OCEAN_SFC_TEMP = "mask",|\\
 \verb| INTRP_OCEAN_TEMP     = "mask",|\\
 \verb|/|\\
-\\
 \verb|&PARAM_MKINIT_REAL_LAND|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
+\verb| NUMBER_OF_TSTEPS     = 1, |\\
 \verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
 \verb| USE_FILE_LANDWATER   = .true.,|\\
-\verb| INTRP_LAND_TEMP      = "mask",|\\
+\verb| INTRP_LAND_TEMP      = "fill",|\\
 \verb| INTRP_LAND_WATER     = "fill",|\\
 \verb| INTRP_LAND_SFC_TEMP  = "fill",|\\
 \verb|/|\\
@@ -78,27 +78,47 @@ GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\
 \scalerm では ファイル名やバイナリデータの構造を含むネームリストファイル\verb|namelist.grads_boundary**|を「ctl」ファイルの代わりに準備する。
 
 \nmitem{NUMBER_OF_FILES}は入力ファイルの数である。
+入力ファイルのベース名はネームリストファイルで指定する
+以降の説明では、\verb|ファイル名| とする。
 単一の入力ファイルの場合は、ファイル「\verb|ファイル名.grd|」のみを準備する。
-複数の入力ファイルの場合には、時間の進む方向に「\verb|ファイル名.XXXXX.grd|」と名前をつけたファイルを準備する。
-プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを読み込む。
-入力ファイルのヘッダー名(つまり「\verb|ファイル名|」)はネームリストファイルで指定されるが、これについては後で説明する。
+複数の入力ファイルの場合もしくは\nmitem{BASENAME_ADD_NUM}が\verb|.true.|の場合には、「\verb|ファイル名.XXXXX.grd|」と番号付けされたファイルを準備する。
+プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを順に読み込む。
+
+\nmitem{NUMBER_OF_FILES}は各ファイル中に保存されているデータの時間ステップ数である。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
 変換された初期値ファイルのヘッダー名は、\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。
 \nmitem{BASENAME_BOUNDARY}は、変換された境界値ファイルのヘッダー名である。
 \nmitem{BASENAME_BOUNDARY}を指定しなければ、 境界値ファイルは出力されない。
 
+\nmitem{INTRP_TYPE}で空間補間の種類を指定する。
+\verb|''LINEAR''|と \verb|''DIST-WEIGHT''|が設定可能である。
+\verb|''LINEAR''|の場合は2次元線形補間が用いられ、\verb|''DIST-WEIGHT''|の場合は隣接$N$点の距離重み付け平均が用いられる。
+距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定される。
+
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}、
 \namelist{PARAM_MKINIT_REAL_OCEAN}、\\
 \namelist{PARAM_MKINIT_REAL_LAND}の間で共通である。
 \namelist{PARAM_MKINIT_REAL_OCEAN}や \\
-\namelist{PARAM_MKINIT_REAL_LAND}を別途指定しない限り、
-これらの情報は引き継がれる。
+\namelist{PARAM_MKINIT_REAL_LAND}で別途指定しない限り、
+\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が引き継がれる。
 %
-\nmitem{USE_FILE_DENSITY}は\verb|FILETYPE_ORG="SCALE-RM"|とした場合のオプションであり、
-バイナリデータを選択した場合は\verb|.false.|を与えなければならない。
-\nmitem{PARENT_MP_TYPE}は親モデルの水物質カテゴリーの種類であるが、
-バイナリデータを読み込む場合は\verb| 3 |を設定しなければならない。
+
+\nmitem{USE_FILE_DENSITY}は密度の計算方法の設定である。
+\nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合は、入力データの密度が使われ、そうでない場合は、静水圧平衡を仮定して計算される。\\
+\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|と設定された場合は、たとえ\nmitem{USE_FILE_DENSITY} = \verb|.false.|であっても、境界値データの密度には入力データの密度が使われる。
+
+\nmitem{USE_SFC_DIAGNOSES}は親モデルの最下層高度よりも低い層における値の計算のためのスイッチである。
+\nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合, T2, RH2, U10, V10, PSFC といった地表面変数が使われるが、そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
+
+\nmitem{USE_DATA_UNDER_SFC}は入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
+地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
+
+
+\nmitem{SAME_MP_TYPE}は親モデルと同じ雲微物理スキームを使うかどうかを指定するパラメータである。
+これは\nmitem{FILETYPE_ORG} = \verb|''SCALE-RM''|でのみ有効である。
+
+
 
 土壌水分の設定は、親モデルからデータを与える方法と、
 領域全体で一定値を与える方法の２種類ある。
@@ -112,7 +132,7 @@ GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\
 \verb|&PARAM_MKINIT_REAL_LAND| &\\
 \verb| USE_FILE_LANDWATER   = .false.| & 土壌水分をファイルから読むかどうか。デフォルトは\verb|.true.| \\
 \verb| INIT_LANDWATER_RATIO = 0.5    | & \verb|USE_FILE_LANDWATER=.false.|の場合、 \\
-                                       & 空隙率に対する水が占める割合(飽和度)。\\
+                                       & 飽和度。\\
 \verb|  .....略.....                 | & \\
 \verb|/| & \\
 }
@@ -127,45 +147,45 @@ GRIB/GRIB2 データは、バイナリデータ形式に変換することで {\
 \verb|#| \\
 \verb|# Dimension    |  \\
 \verb|#|                \\
-\verb|&nml_grads_grid|  \\
-\verb| outer_nx     = 360,|~~~   ; 大気データのx方向の格子数 \\
-\verb| outer_ny     = 181,|~~~   ; 大気データのy方向の格子数 \\
-\verb| outer_nz     = 26, |~~~~~ ; 大気データのz方向の層数 \\
-\verb| outer_nl     = 4,  |~~~~~~ ; 土壌データの層数 \\
+\verb|&GrADS_DIMS|  \\
+\verb| nx     = 360,|~~~   ; default value of the number of grids in the x direction \\
+\verb| ny     = 181,|~~~   ; default value of the number of grids in the y direction \\
+\verb| nz     = 26, |~~~~~ ; default value of the number of layers in the z direction \\
 \verb|/|                \\
 \\
 \verb|#              |  \\
 \verb|# Variables    |  \\
 \verb|#              |  \\
-\verb|&grdvar  item='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
-\verb|&grdvar  item='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
-\verb|&grdvar  item='plev',    dtype='levels',  lnum=26,| \\
-~~~\verb|      lvars=100000,97500,...(省略)...,2000,1000, /     |  \\
-\verb|&grdvar  item='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=6   / |  \\
-\verb|&grdvar  item='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=6   / |  \\
-\verb|&grdvar  item='U10',     dtype='map',     fname='FNLsfc', startrec=3,  totalrec=6   / |  \\
-\verb|&grdvar  item='V10',     dtype='map',     fname='FNLsfc', startrec=4,  totalrec=6   / |  \\
-\verb|&grdvar  item='T2',      dtype='map',     fname='FNLsfc', startrec=5,  totalrec=6   / |  \\
-\verb|&grdvar  item='RH2',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=6   / |  \\
-\verb|&grdvar  item='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
-\verb|&grdvar  item='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
-\verb|&grdvar  item='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
-\verb|&grdvar  item='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
-\verb|&grdvar  item='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, knum=21 /  |  \\
-\verb|&grdvar  item='llev',    dtype='levels',  lnum=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
-\verb|&grdvar  item='lsmask',  dtype='map',     fname='FNLland', startrec=1, totalrec=10 /  |  \\
-\verb|&grdvar  item='SKINT',   dtype='map',     fname='FNLland', startrec=2, totalrec=10 /  |  \\
-\verb|&grdvar  item='STEMP',   dtype='map',     fname='FNLland', startrec=3, totalrec=10,|\\
+\verb|&GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.0d0,   dd=1.0d0 /  |  \\
+\verb|&GrADS_ITEM  name='lat',     dtype='linear',  swpoint=90.0d0,  dd=-1.0d0 / |  \\
+\verb|&GrADS_ITEM  name='plev',    dtype='levels',  lnum=26,| \\
+~~~\verb|      lvars=100000,97500,.........,2000,1000, /     |  \\
+\verb|&GrADS_ITEM  name='HGT',     dtype='map',     fname='FNLatm', startrec=1,  totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='U',       dtype='map',     fname='FNLatm', startrec=27, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='V',       dtype='map',     fname='FNLatm', startrec=53, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='T',       dtype='map',     fname='FNLatm', startrec=79, totalrec=125 / |  \\
+\verb|&GrADS_ITEM  name='RH',      dtype='map',     fname='FNLatm', startrec=105,totalrec=125, nz=21 /  |  \\
+\verb|&GrADS_ITEM  name='MSLP',    dtype='map',     fname='FNLsfc', startrec=1,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='PSFC',    dtype='map',     fname='FNLsfc', startrec=2,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='SKINT',   dtype='map',     fname='FNLsfc', startrec=3,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='topo',    dtype='map',     fname='FNLsfc', startrec=4,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='lsmask',  dtype='map',     fname='FNLsfc', startrec=5,  totalrec=9  /  |  \\
+\verb|&GrADS_ITEM  name='U10',     dtype='map',     fname='FNLsfc', startrec=6,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='V10',     dtype='map',     fname='FNLsfc', startrec=7,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='T2',      dtype='map',     fname='FNLsfc', startrec=8,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='RH2',     dtype='map',     fname='FNLsfc', startrec=9,  totalrec=9   / |  \\
+\verb|&GrADS_ITEM  name='llev',    dtype='levels',  nz=4, lvars=0.05,0.25,0.70,1.50, /        |  \\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
-\verb|&grdvar  item='SMOISVC', dtype='map',     fname='FNLland', startrec=7, totalrec=10,|\\
+\verb|&GrADS_ITEM  name='STEMP',   dtype='map',     fname='FNLland', nz=4, startrec=1, totalrec=8,|\\
+~~~~~~~~\verb| missval=9.999e+20 /|  \\
+\verb|&GrADS_ITEM  name='SMOISVC', dtype='map',     fname='FNLland', nz=4, startrec=5, totalrec=8,|\\
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
-大気データの格子数を\verb|outer_nx, outer_ny, outer_nz|で指定し、
-土壌データ(STEMP、SMOISVC) の層数を\verb|outer_nl|で指定する。
-
-QVやRHのデータは大気上層でしばしば提供されていない。
-そのような場合はデータが存在する層数を\verb|knum|で指定する。
+格子数のデフォルト値を\verb|nx, ny, nz|で指定する。
+デフォルト値と異なる場合には、\namelist{GrADS_ITEM}で個々の変数ごとに格子数を設定することができる。
+例えば、QVやRHのデータは大気上層でしばしば提供されていない。
+そのような場合はデータが存在する層数を\verb|nz|で指定する。
 上層での値の与え方として２種類の方法を用意している。
 デフォルトでは、以下のように\verb| upper_qv_type = "ZERO"|である。\\
 \editboxtwo{
@@ -175,7 +195,7 @@ QVやRHのデータは大気上層でしばしば提供されていない。
 \verb|/|\\
 }
 
-\namelist{grdvar}の設定は、表\ref{tab:namelist_grdvar}に示すようにデータによって異なる。
+表\ref{tab:namelist_grdvar}に示すように変数ごとに\namelist{GrADS_ITEM}を設定する。
 表\ref{tab:grdvar_item}において、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
 また、飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
 \namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}が\verb|.true.|である場合は、
@@ -184,25 +204,27 @@ QVやRHのデータは大気上層でしばしば提供されていない。
 {\small
 \begin{table}[htb]
 \begin{center}
-\caption{\namelist{grdvar}の変数}
+\caption{\namelist{GrADS_ITEM}の変数}
 \label{tab:namelist_grdvar}
 \begin{tabularx}{150mm}{llX} \hline
-\rowcolor[gray]{0.9} \verb|grdvar|の項目  & 説明 & 備考 \\ \hline
-\multicolumn{1}{l}{item}    & \multicolumn{1}{l}{変数名} & 表\ref{tab:grdvar_item}より選択      \\
-\multicolumn{1}{l}{dtype}   & \multicolumn{1}{l}{データ形式} & \verb|"linear", "levels", "map"|から選択 \\\hline
+\rowcolor[gray]{0.9} \verb|GrADS_ITEM|の項目  & 説明 & 備考 \\ \hline
+\multicolumn{1}{l}{name}    & \multicolumn{1}{l}{変数名} & 表\ref{tab:grdvar_item}より選択      \\
+\multicolumn{1}{l}{dtype}   & \multicolumn{1}{l}{データ形式} & \verb|"linear"|, \verb|"levels"|, \verb|"map"|から選択 \\\hline
 \multicolumn{3}{l}{\nmitem{dtype}が\verb|"linear"|の場合のネームリスト (\verb|"lon", "lat"|専用)} \\ \hline
+\multicolumn{1}{l}{fname}    & \multicolumn{1}{l}{ファイル名の頭}       &  \\
 \multicolumn{1}{l}{swpoint}  & \multicolumn{1}{l}{スタートポイントの値} &  \\
 \multicolumn{1}{l}{dd}       & \multicolumn{1}{l}{増分}                 &  \\ \hline
 \multicolumn{3}{l}{\nmitem{dtype}が\verb|"levels"|の場合のネームリスト (\verb|"plev", "llev"|専用)} \\ \hline
 \multicolumn{1}{l}{lnum}     & \multicolumn{1}{l}{レベルの数(層数)}     &  \\
 \multicolumn{1}{l}{lvars}    & \multicolumn{1}{l}{各層の値}             &  \\ \hline
 \multicolumn{3}{l}{\nmitem{dtype}が\verb|"map"|の場合のネームリスト}           \\ \hline
-\multicolumn{1}{l}{fname}    & \multicolumn{1}{l}{ファイル名の頭}       &  \\
 \multicolumn{1}{l}{startrec} & \multicolumn{1}{l}{変数\nmitem{item}のレコード番号} &  \multicolumn{1}{l}{t=1 の時刻の値}\\
 \multicolumn{1}{l}{totalrec} & \multicolumn{1}{l}{一時刻あたりの全変数のレコード長}  &  \\
-\multicolumn{1}{l}{knum}     & \multicolumn{1}{l}{3次元データの層数} & \multicolumn{1}{l}{(オプション) \verb|outer_nz|と異なる場合。}\\
-                             &                                  & \multicolumn{1}{l}{~~~~~~~~~~ RHとQVのみ使用可。}\\
 \multicolumn{1}{l}{missval}  & \multicolumn{1}{l}{欠陥値の値}   　    & \multicolumn{1}{l}{(オプション)}\\ \hline
+\multicolumn{1}{l}{nx}       & \multicolumn{1}{l}{x方向の格子数} & \multicolumn{1}{l}{(オプション)}\\ \hline
+\multicolumn{1}{l}{ny}       & \multicolumn{1}{l}{y方向の格子数} & \multicolumn{1}{l}{(オプション)}\\ \hline
+\multicolumn{1}{l}{nz}       & \multicolumn{1}{l}{z方向の層数} & \multicolumn{1}{l}{(オプション)}\\ \hline
+\multicolumn{1}{l}{yrev}     & データが北から南の順に記録されている場合は\verb|.true.|とする & \multicolumn{1}{l}{(オプション)} \\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
@@ -211,47 +233,46 @@ QVやRHのデータは大気上層でしばしば提供されていない。
 {\small
 \begin{table}[hbt]
 \begin{center}
-\caption{\namelist{grdvar}の\nmitem{item}の変数リスト。
+\caption{\namelist{GrADS_ITEM}の\nmitem{item}の変数リスト。
 アスタリスクは「オプションであるが、可能な限り推奨される」ことを意味する。
 二重のアスタリスクは、「利用できるが、推奨されない」ことを意味する。
-高高度の場所を対象とする場合は、\texttt{HGT}を用いることを強く推奨する。
 }
 \label{tab:grdvar_item}
 \begin{tabularx}{150mm}{rl|l|l|l} \hline
  \rowcolor[gray]{0.9} & 変数名 & 説明 & 単位 & \nmitem{dtype} \\ \hline
-             &\verb|lon|     & 経度データ                 & [deg.]   & \verb|linear, map| \\
-             &\verb|lat|     & 緯度データ                 & [deg.]   & \verb|linear, map| \\
-             &\verb|plev|    & 気圧データ                 & [Pa]     & \verb|levels, map| \\
-      $\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)データ & [m]      & \verb|map| \\
-$\ast$$\ast$ &\verb|DENS|    & air density               & [kg/m3]        & \verb|map|         \\
-             &\verb|U|       & 東西風速                   & [m/s]    & \verb|map| \\
-             &\verb|V|       & 南北風速                   & [m/s]    & \verb|map| \\
-$\ast$$\ast$ &\verb|W|       & 鉛直風速                   & [m/s]    & \verb|map| \\
-             &\verb|T|       & 気温                      & [K]       & \verb|map| \\
-             &\verb|RH|      & 相対湿度 (QVがある場合は省略可) & [\%]    & \verb|map| \\
-             &\verb|QV|      & 比湿 (RH がある場合は省略可)   & [kg/kg] & \verb|map| \\
-$\ast$$\ast$ &\verb|QC|      & 雲水の質量比    & [kg/kg] & \verb|map| \\
-$\ast$$\ast$ &\verb|QR|      & 雨水の質量比    & [kg/kg] & \verb|map| \\
-$\ast$$\ast$ &\verb|QI|      & 雲氷の質量比    & [kg/kg] & \verb|map| \\
-$\ast$$\ast$ &\verb|QS|      & 雪の質量比      & [kg/kg] & \verb|map| \\
-$\ast$$\ast$ &\verb|QG|      & 霰の質量比      & [kg/kg] & \verb|map| \\
-      $\ast$ &\verb|MSLP|    & 海面更正気圧     & [Pa]     & \verb|map| \\
-      $\ast$ &\verb|PSFC|    & 地上気圧        & [Pa]     & \verb|map| \\
-      $\ast$ &\verb|U10|     & 10m 東西風速    & [m/s]    & \verb|map| \\
-      $\ast$ &\verb|V10|     & 10m 南北風速    & [m/s]    & \verb|map| \\
-      $\ast$ &\verb|T2|      & 2m 気温         & [K]      & \verb|map| \\
-      $\ast$ &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [\%]  & \verb|map| \\
-      $\ast$ &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)   &[kg/kg] & \verb|map| \\
-      $\ast$ &\verb|TOPO|    & GCMの地形                      & [m]      & \verb|map| \\
-      $\ast$ &\verb|lsmask|  & GCMの海陸分布                   & 0:海1:陸 & \verb|map| \\
-             &\verb|SKINT|   & 地表面温度                      & [K]      & \verb|map| \\
-             &\verb|llev|    & 土壌の深さ                      & [m]      & \verb|levels| \\
-             &\verb|STEMP|   & 土壌温度                        & [K]      & \verb|map| \\
-             &\verb|SMOISVC| & 土壌水分(体積含水率)             & [-] & \verb|map| \\
-             &               & (SMOISDS がある場合は省略可)     &                &                    \\
-             &\verb|SMOISDS| & 土壌水分(飽和度)                & [-] & \verb|map| \\
-             &               & (SMOISVC がある場合は省略可)     &                &                    \\
-             &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & \verb|map|\\ \hline
+           &\verb|lon|     & 経度データ                 & [deg.]   & \verb|linear, map| \\
+           &\verb|lat|     & 緯度データ                 & [deg.]   & \verb|linear, map| \\
+           &\verb|plev|    & 気圧データ                 & [Pa]     & \verb|levels, map| \\
+    $\ast$ &\verb|HGT|     & 高度(ジオポテンシャル)データ & [m]      & \verb|map| \\
+    $\ast$ &\verb|DENS|    & air density               & [kg/m3]        & \verb|map|         \\
+           &\verb|U|       & 東西風速                   & [m/s]    & \verb|map| \\
+           &\verb|V|       & 南北風速                   & [m/s]    & \verb|map| \\
+$\ast\ast$ &\verb|W|       & 鉛直風速                   & [m/s]    & \verb|map| \\
+           &\verb|T|       & 気温                      & [K]       & \verb|map| \\
+           &\verb|RH|      & 相対湿度 (QVがある場合は省略可) & [\%]    & \verb|map| \\
+           &\verb|QV|      & 比湿 (RH がある場合は省略可)   & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|QC|      & 雲水の質量比    & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|QR|      & 雨水の質量比    & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|QI|      & 雲氷の質量比    & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|QS|      & 雪の質量比      & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|QG|      & 霰の質量比      & [kg/kg] & \verb|map| \\
+$\ast\ast$ &\verb|MSLP|    & 海面更正気圧     & [Pa]     & \verb|map| \\
+$\ast\ast$ &\verb|PSFC|    & 地上気圧        & [Pa]     & \verb|map| \\
+$\ast\ast$ &\verb|U10|     & 10m 東西風速    & [m/s]    & \verb|map| \\
+$\ast\ast$ &\verb|V10|     & 10m 南北風速    & [m/s]    & \verb|map| \\
+$\ast\ast$ &\verb|T2|      & 2m 気温         & [K]      & \verb|map| \\
+$\ast\ast$ &\verb|RH2|     & 2m 相対湿度 (Q2がある場合は省略可) & [\%]  & \verb|map| \\
+$\ast\ast$ &\verb|Q2|      & 2m 比湿 (RH2がある場合は省略可)   &[kg/kg] & \verb|map| \\
+    $\ast$ &\verb|TOPO|    & GCMの地形                      & [m]      & \verb|map| \\
+    $\ast$ &\verb|lsmask|  & GCMの海陸分布                   & 0:海1:陸 & \verb|map| \\
+           &\verb|SKINT|   & 地表面温度                      & [K]      & \verb|map| \\
+           &\verb|llev|    & 土壌の深さ                      & [m]      & \verb|levels| \\
+           &\verb|STEMP|   & 土壌温度                        & [K]      & \verb|map| \\
+           &\verb|SMOISVC| & 土壌水分(体積含水率)             & [-] & \verb|map| \\
+           &               & (SMOISDS がある場合は省略可)     &                &                    \\
+           &\verb|SMOISDS| & 土壌水分(飽和度)                & [-] & \verb|map| \\
+           &               & (SMOISVC がある場合は省略可)     &                &                    \\
+           &\verb|SST|     & 海面温度(SKINTがある場合は省略可) & [K] & \verb|map|\\ \hline
 \end{tabularx}
 \end{center}
 \end{table}
