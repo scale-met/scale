@@ -111,6 +111,8 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   integer :: MONIT_qflx_south
   integer :: MONIT_qflx_north
 
+  character(len=H_SHORT) :: EVAL_TYPE_NUMFILTER = 'TENDENCY'
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -149,7 +151,31 @@ contains
     real(RP),               intent(inout) :: PROG(KA,IA,JA,VA)
 
     integer :: iv, iq
+
+    namelist /ATMOS_DYN_TSTEP_LARGE_FVM_HEVE/ &
+      EVAL_TYPE_NUMFILTER
+   
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=ATMOS_DYN_TSTEP_LARGE_FVM_HEVE,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("ATMOS_DYN_Tstep_large_fvm_heve_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("ATMOS_DYN_Tstep_large_fvm_heve_setup",*) 'Not appropriate names in namelist ATMOS_DYN_TSTEP_LARGE_FVM_HEVE. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(ATMOS_DYN_TSTEP_LARGE_FVM_HEVE)
+
+    select case( EVAL_TYPE_NUMFILTER ) 
+    case( 'TENDENCY', 'FILTER' )
+    case default
+      LOG_ERROR("ATMOS_DYN_Tstep_large_fvm_heve_setup",*) 'The specfied value of EVAL_TYPE_NUMFILTER is not appropriate. Check!'
+      call PRC_abort
+    end select
+    !--
 
     allocate( DENS_t(KA,IA,JA) )
     allocate( MOMZ_t(KA,IA,JA) )
@@ -379,27 +405,18 @@ contains
        I_QV,                                                 &
        DTLS, DTSS, Llast                                     )
     use scale_const, only: &
-       EPS    => CONST_EPS, &
-       P0     => CONST_PRE00, &
-       Rdry   => CONST_Rdry, &
-       CVdry  => CONST_CVdry, &
-       CPdry  => CONST_CPdry
+       EPS    => CONST_EPS
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
     use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_divergence, &
-       ATMOS_DYN_numfilter_flux,   &
-       ATMOS_DYN_numfilter_flux_q, &
-       ATMOS_DYN_fct
-    use scale_atmos_dyn_fvm_flux_ud1, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxY_XYZ_ud1
-    use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ
+       ATMOS_DYN_fill_halo,               &
+       ATMOS_DYN_prep_pres_linearization, &
+       ATMOS_DYN_divergence
+    use scale_atmos_dyn_fvm_numfilter, only: &
+       ATMOS_DYN_FVM_numfilter_flux,   &
+       ATMOS_DYN_FVM_numfilter_flux_q, &
+       ATMOS_DYN_fvm_apply_numfilter
     use scale_file_history, only: &
        FILE_HISTORY_query, &
        FILE_HISTORY_put,   &
@@ -548,15 +565,6 @@ contains
     real(RP) :: RT2P    (KA,IA,JA) ! factor of RHOT to PRES
     real(RP) :: REF_rhot(KA,IA,JA) ! reference of RHOT
 
-    real(RP) :: QDRY  ! dry air
-    real(RP) :: Rtot  ! total R
-    real(RP) :: CVtot ! total CV
-    real(RP) :: CPtot ! total CP
-    real(RP) :: PRES  ! pressure
-#ifdef DRY
-    real(RP) :: CPovCV
-#endif
-
     real(RP) :: DENS_tq(KA,IA,JA)
     real(RP) :: diff(KA,IA,JA), diff2(KA,IA,JA), diff3(KA,IA,JA)
     real(RP) :: damp
@@ -580,16 +588,17 @@ contains
     logical :: do_put
 
     ! for monitor
-    real(RP), pointer :: mflx_x(:,:)
-    real(RP), pointer :: mflx_y(:,:)
     real(RP), target  :: qflx_west (KA,JA)
     real(RP), target  :: qflx_east (KA,JA)
     real(RP), target  :: qflx_south(KA,IA)
     real(RP), target  :: qflx_north(KA,IA)
+    logical :: MONIT_lateral_flag(3)
 
     integer  :: i, j, k, iq, iqb, step
     integer  :: iv
     integer  :: n
+
+
     !---------------------------------------------------------------------------
 
     call PROF_rapstart("DYN_Large_Preparation", 2)
@@ -599,15 +608,17 @@ contains
     nstep = ceiling( ( dtl - eps ) / dts )
     dts   = dtl / nstep                    ! dts is divisor of dtl and smaller or equal to dtss
 
+    MONIT_lateral_flag(ZDIR) = .false.
+    MONIT_lateral_flag(XDIR) = MONIT_mflx_west > 0 .or. MONIT_mflx_east > 0 
+    MONIT_lateral_flag(YDIR) = MONIT_mflx_south > 0 .or. MONIT_mflx_north > 0 
+
 #ifdef DEBUG
     LOG_INFO("ATMOS_DYN_Tstep_large_fvm_heve",*)                         'Dynamics large time step'
     LOG_INFO_CONT('(1x,A,F0.2,A,F0.2,A,I0)') &
     '-> DT_large, DT_small, DT_large/DT_small : ', dtl, ', ', dts, ', ', nstep
 
     DENS00  (:,:,:) = UNDEF
-
     num_diff (:,:,:,:,:) = UNDEF
-
 #endif
 
 !OCL XFILL
@@ -650,61 +661,11 @@ contains
     end do
     end do
 
-#ifdef DRY
-    CPovCV = CPdry / CVdry
-#endif
-    !------------------------------------------------------------------------
-    ! prepare thermodynamical data
-    !   specific heat
-    !   pressure data ( linearization )
-    !
-    ! pres = P0 * ( R * rhot / P0 )**(CP/CV)
-    ! d pres / d rhot ~ CP*R/CV * ( R * rhot / P0 )**(R/CV)
-    !                 = CP*R/CV * ( pres / P0 )**(R/CP)
-    !                 = CP*R/CV * temp / pott
-    !                 = CP/CV * pres / rhot
-    ! pres ~ P0 * ( R * rhot0 / P0 ) ** (CP/CV) + CV*R/CP * ( pres / P0 )**(R/CP) * rhot'
-    !------------------------------------------------------------------------
-!OCL XFILL
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JA,IA,KS,KE) &
-    !$omp shared(P0,Rdry,RHOT,AQ_R,AQ_CV,AQ_CP,QTRC,AQ_MASS,REF_rhot,REF_pres,CPdry,CVdry,QA,RT2P,DPRES0) &
-#ifdef DRY
-    !$omp shared(CPovCV) &
-#endif
-    !$omp private(i,j,k,iq) &
-    !$omp private(PRES,Rtot,CVtot,CPtot,QDRY)
-    do j = 1, JA
-    do i = 1, IA
-       do k = KS, KE
-#ifdef DRY
-          PRES = P0 * ( Rdry * RHOT(k,i,j) / P0 )**CPovCV
-          RT2P(k,i,j) = CPovCV * PRES / RHOT(k,i,j)
-#else
-          Rtot  = 0.0_RP
-          CVtot = 0.0_RP
-          CPtot = 0.0_RP
-          QDRY  = 1.0_RP
-          do iq = 1, QA
-             Rtot  = Rtot + AQ_R(iq) * QTRC(k,i,j,iq)
-             CVtot = CVtot + AQ_CV(iq) * QTRC(k,i,j,iq)
-             CPtot = CPtot + AQ_CP(iq) * QTRC(k,i,j,iq)
-             QDRY  = QDRY  - QTRC(k,i,j,iq) * AQ_MASS(iq)
-          enddo
-          Rtot  = Rtot  + Rdry  * QDRY
-          CVtot = CVtot + CVdry * QDRY
-          CPtot = CPtot + CPdry * QDRY
-          PRES = P0 * ( Rtot * RHOT(k,i,j) / P0 )**( CPtot / CVtot )
-          RT2P(k,i,j) = CPtot / CVtot * PRES / RHOT(k,i,j)
-#endif
-          DPRES0(k,i,j) = PRES - REF_pres(k,i,j)
-          REF_rhot(k,i,j) = RHOT(k,i,j)
-       end do
-       DPRES0(KS-1,i,j) = DPRES0(KS+1,i,j) + ( REF_pres(KS+1,i,j) - REF_pres(KS-1,i,j) )
-       DPRES0(KE+1,i,j) = DPRES0(KE-1,i,j) + ( REF_pres(KE-1,i,j) - REF_pres(KE+1,i,j) )
-    end do
-    end do
-
+    !- prepare some variables for pressure linearization 
+    call ATMOS_DYN_prep_pres_linearization( &
+       DPRES0, RT2P, REF_rhot,                            & ! (out)
+       RHOT, QTRC, REF_pres, AQ_R, AQ_CV, AQ_CP, AQ_MASS  ) ! (in)
+   
     call PROF_rapend  ("DYN_Large_Preparation", 2)
 
     !###########################################################################
@@ -809,14 +770,7 @@ contains
              call FILE_HISTORY_put( HIST_phys_QTRC(iq), RHOQ_tp(:,:,:,iq) )
           end if
 
-!OCL XFILL
-          do j = JS, JE
-          do i = IS, IE
-             RHOQ_t(   1:KS-1,i,j,iq) = 0.0_RP
-             RHOQ_t(KE+1:KA  ,i,j,iq) = 0.0_RP
-          enddo
-          enddo
-
+          call ATMOS_DYN_fill_halo( RHOQ_t(:,:,:,iq), 0.0_RP, .false., .true. )
           call COMM_vars8( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq) )
           call COMM_wait ( RHOQ_t(:,:,:,iq), I_COMM_RHOQ_t(iq), .false. )
 
@@ -879,7 +833,6 @@ contains
 
     call PROF_rapend  ("DYN_Large_Boundary", 2)
 
-
 !OCL XFILL
     !$omp parallel do collapse(2)
     do j = 1, JA
@@ -894,51 +847,8 @@ contains
     end do
     end do
 
-!OCL XFILL
-    do j = 1, JA
-    do i = 1, ISB-1
-    do k = 1, KA
-       DENS_damp(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    do i = IEB+1, IA
-    do k = 1, KA
-       DENS_damp(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = 1, JSB-1
-    do i = 1, IA
-    do k = 1, KA
-       DENS_damp(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JEB+1, JA
-    do i = 1, IA
-    do k = 1, KA
-       DENS_damp(k,i,j) = 0.0_RP
-    enddo
-    enddo
-    enddo
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       DENS_damp(   1:KS-1,i,j) = 0.0_RP
-       DENS_damp(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-
-!OCL XFILL
-    do j = JS, JE
-    do i = IS, IE
-       DENS_t(   1:KS-1,i,j) = 0.0_RP
-       DENS_t(KE+1:KA  ,i,j) = 0.0_RP
-    enddo
-    enddo
-
+    call ATMOS_DYN_fill_halo( DENS_damp, 0.0_RP, .true., .true. )
+    call ATMOS_DYN_fill_halo( DENS_t, 0.0_RP, .false., .true. )
 
     do step = 1, nstep
 
@@ -1218,13 +1128,8 @@ contains
           enddo
           enddo
        end if
-!OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMX_t(   1:KS-1,i,j) = 0.0_RP
-          MOMX_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
+
+       call ATMOS_DYN_fill_halo( MOMX_t, 0.0_RP, .false., .true. )
        call COMM_vars8( MOMX_t(:,:,:), I_COMM_MOMX_t )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1321,12 +1226,8 @@ contains
           enddo
        end if
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          MOMY_t(   1:KS-1,i,j) = 0.0_RP
-          MOMY_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
+
+       call ATMOS_DYN_fill_halo( MOMY_t, 0.0_RP, .false., .true. )
        call COMM_vars8( MOMY_t(:,:,:), I_COMM_MOMY_t )
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
@@ -1423,12 +1324,8 @@ contains
           enddo
        end if
 !OCL XFILL
-       do j = JS, JE
-       do i = IS, IE
-          RHOT_t(   1:KS-1,i,j) = 0.0_RP
-          RHOT_t(KE+1:KA  ,i,j) = 0.0_RP
-       enddo
-       enddo
+
+       call ATMOS_DYN_fill_halo( RHOT_t, 0.0_RP, .false., .true. )
        call COMM_vars8( RHOT_t(:,:,:), I_COMM_RHOT_t )
 
        call COMM_wait ( DENS_t(:,:,:), I_COMM_DENS_t, .false. )
@@ -1441,13 +1338,12 @@ contains
 
        call PROF_rapstart("DYN_Large_Numfilter", 2)
 
-       !-----< prepare numerical diffusion coefficient >-----
-
-       if ( ND_COEF == 0.0_RP ) then
+       !-----< prepare the fluxes of explicit numerical diffusion >-----
+       if ( ND_COEF == 0.0_RP .or. EVAL_TYPE_NUMFILTER == 'FILTER' ) then
 !OCL XFILL
           num_diff(:,:,:,:,:) = 0.0_RP
        else
-          call ATMOS_DYN_numfilter_flux( num_diff(:,:,:,:,:),                              & ! [OUT]
+          call ATMOS_DYN_FVM_numfilter_flux( num_diff(:,:,:,:,:),                          & ! [OUT]
                                          DENS, MOMZ, MOMX, MOMY, RHOT,                     & ! [IN]
                                          CDZ, CDX, CDY, FDZ, FDX, FDY, TwoD, dts,          & ! [IN]
                                          REF_dens, REF_pott,                               & ! [IN]
@@ -1456,14 +1352,16 @@ contains
 
        call PROF_rapend  ("DYN_Large_Numfilter", 2)
 
+       !-----< calculate the divegence term >-----
+
        if ( divdmp_coef > 0.0_RP ) then
 
-          call ATMOS_DYN_divergence( DDIV, & ! (out)
-               MOMZ, MOMX, MOMY, & ! (in)
+          call ATMOS_DYN_divergence( DDIV,    & ! (out)
+               MOMZ, MOMX, MOMY,              & ! (in)
                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
-               TwoD, & ! (in)
-               RCDZ, RCDX, RCDY, RFDZ, FDZ ) ! (in)
-
+               TwoD,                          & ! (in)
+               RCDZ, RCDX, RCDY, RFDZ, FDZ    ) ! (in)
+      
        else
 
 !XFILL
@@ -1497,6 +1395,28 @@ contains
 
 
        call FILE_HISTORY_set_disable( .false. )
+
+       if ( ND_COEF > 0.0_RP .and. EVAL_TYPE_NUMFILTER == 'FILTER' ) then
+         call COMM_vars8( DENS(:,:,:), I_COMM_DENS )
+         call COMM_vars8( MOMZ(:,:,:), I_COMM_MOMZ )
+         call COMM_vars8( MOMX(:,:,:), I_COMM_MOMX )
+         call COMM_vars8( MOMY(:,:,:), I_COMM_MOMY )
+         call COMM_vars8( RHOT(:,:,:), I_COMM_RHOT )
+         call COMM_wait ( DENS(:,:,:), I_COMM_DENS, .false. )
+         call COMM_wait ( MOMZ(:,:,:), I_COMM_MOMZ, .false. )
+         call COMM_wait ( MOMX(:,:,:), I_COMM_MOMX, .false. )
+         call COMM_wait ( MOMY(:,:,:), I_COMM_MOMY, .false. )
+         call COMM_wait ( RHOT(:,:,:), I_COMM_RHOT, .false. )
+
+         call ATMOS_DYN_fvm_apply_numfilter( &
+            num_diff,                                          & ! (out)
+            DENS, MOMZ, MOMX, MOMY, RHOT,                      & ! (inout)
+            CDZ, CDX, CDY, FDZ, FDX, FDY,                      & ! (in)
+            RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,                & ! (in)
+            TwoD, dts,                                         & ! (in)
+            GSQRT, MAPF, REF_dens, REF_pott,                   & ! (in)
+            ND_COEF, ND_LAPLACIAN_NUM, ND_SFC_FACT, ND_USE_RS  ) ! (in)         
+       endif
 
        !$omp parallel do default(none) private(i,j,iv) OMP_SCHEDULE_ collapse(2) &
        !$omp shared(JSB,JEB,ISB,IEB,KS,KA,DENS,MOMZ,MOMX,MOMY,RHOT,VA,PROG,KE)
@@ -1612,7 +1532,7 @@ contains
 !OCL XFILL
              num_diff_q(:,:,:,:) = 0.0_RP
           else
-             call ATMOS_DYN_numfilter_flux_q( num_diff_q(:,:,:,:),                    & ! [OUT]
+             call ATMOS_DYN_FVM_numfilter_flux_q( num_diff_q(:,:,:,:),                & ! [OUT]
                                               DENS00, QTRC(:,:,:,iq), iq==I_QV,       & ! [IN]
                                               CDZ, CDX, CDY, TwoD, dtl,               & ! [IN]
                                               REF_qv, iq,                             & ! [IN]
@@ -1656,42 +1576,13 @@ contains
           call PROF_rapend  ("DYN_Tracer_Tinteg", 2)
 
           if ( Llast ) then
-             call FILE_HISTORY_query( HIST_qflx(1,iq), do_put )
-             if ( do_put ) then
-                !$omp parallel do
-                do j = JS, JE
-                do i = IS, IE
-                do k = KS-1, KE
-                   qflx(k,i,j,ZDIR) = qflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
-                end do
-                end do
-                end do
-                call FILE_HISTORY_put( HIST_qflx(1,iq), qflx(:,:,:,ZDIR) )
-             end if
-             call FILE_HISTORY_query( HIST_qflx(2,iq), do_put )
-             if ( do_put .or. MONIT_qflx_west > 0 .or. MONIT_qflx_east > 0 ) then
-                !$omp parallel do
-                do j = JS, JE
-                do i = ISB, IEB
-                do k = KS, KE
-                   qflx(k,i,j,XDIR) = qflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
-                end do
-                end do
-                end do
-                call FILE_HISTORY_put( HIST_qflx(2,iq), qflx(:,:,:,XDIR) )
-             end if
-             call FILE_HISTORY_query( HIST_qflx(3,iq), do_put )
-             if ( do_put .or. MONIT_qflx_south > 0 .or. MONIT_qflx_north > 0 ) then
-                !$omp parallel do
-                do j = JSB, JEB
-                do i = IS, IE
-                do k = KS, KE
-                   qflx(k,i,j,YDIR) = qflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
-                end do
-                end do
-                end do
-                call FILE_HISTORY_put( HIST_qflx(3,iq), qflx(:,:,:,YDIR) )
-             end if
+             do iv = 1, 3
+              call FILE_HISTORY_query( HIST_qflx(iv,iq), do_put )
+              if ( do_put .or. MONIT_lateral_flag(iv) ) then
+               call multiply_flux_by_metric_xyz( iv, qflx, GSQRT, MAPF )               
+               call FILE_HISTORY_put( HIST_qflx(iv,iq), qflx(:,:,:,iv) )
+              end if 
+             end do
 
              if ( TRACER_MASS(iq) == 1.0_RP ) then
                 if ( BND_W .and. MONIT_qflx_west > 0 ) then
@@ -1765,8 +1656,7 @@ contains
 #endif
 
     if ( Llast ) then
-
-       ! history
+       !- history ---------------------------------------
        call FILE_HISTORY_put( HIST_phys(1), DENS_tp )
        call FILE_HISTORY_put( HIST_phys(2), MOMZ_tp )
        call FILE_HISTORY_put( HIST_phys(3), MOMX_tp )
@@ -1779,146 +1669,107 @@ contains
        call FILE_HISTORY_put( HIST_damp(4), damp_t_MOMY )
        call FILE_HISTORY_put( HIST_damp(5), damp_t_RHOT )
 
-       call FILE_HISTORY_query( HIST_mflx(1), do_put )
-       if ( do_put ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS-1, KE
-             mflx(k,i,j,ZDIR) = mflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_mflx(1), mflx(:,:,:,ZDIR) )
-       end if
-       call FILE_HISTORY_query( HIST_mflx(2), do_put )
-       if ( do_put .or. MONIT_mflx_west > 0 .or. MONIT_mflx_east > 0 ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = ISB, IEB
-          do k = KS, KE
-             mflx(k,i,j,XDIR) = mflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_mflx(2), mflx(:,:,:,XDIR) )
-       end if
-       call FILE_HISTORY_query( HIST_mflx(3), do_put )
-       if ( do_put .or. MONIT_mflx_south > 0 .or. MONIT_mflx_north > 0 ) then
-          !$omp parallel do
-          do j = JSB, JEB
-          do i = IS, IE
-          do k = KS, KE
-             mflx(k,i,j,YDIR) = mflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_mflx(3), mflx(:,:,:,YDIR) )
-       end if
+       do iv = 1, 3
+         call FILE_HISTORY_query( HIST_mflx(iv), do_put )
+         if ( do_put .or. MONIT_lateral_flag(iv) ) then
+           call multiply_flux_by_metric_xyz( iv, mflx, GSQRT, MAPF )
+           call FILE_HISTORY_put( HIST_mflx(iv), mflx(:,:,:,iv) )
+         end if   
+       end do
 
-       call FILE_HISTORY_query( HIST_tflx(1), do_put )
-       if ( do_put ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS-1, KE
-             tflx(k,i,j,ZDIR) = tflx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_tflx(1), tflx(:,:,:,ZDIR) )
-       end if
-       call FILE_HISTORY_query( HIST_tflx(2), do_put )
-       if ( do_put ) then
-          !$omp parallel do
-          do j = JS, JE
-          do i = ISB, IEB
-          do k = KS, KE
-             tflx(k,i,j,XDIR) = tflx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_tflx(2), tflx(:,:,:,XDIR) )
-       end if
-       call FILE_HISTORY_query( HIST_tflx(3), do_put )
-       if ( do_put ) then
-          !$omp parallel do
-          do j = JSB, JEB
-          do i = IS, IE
-          do k = KS, KE
-             tflx(k,i,j,YDIR) = tflx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
-          end do
-          end do
-          end do
-          call FILE_HISTORY_put( HIST_tflx(3), tflx(:,:,:,YDIR) )
-       end if
+       do iv = 1, 3
+         call FILE_HISTORY_query( HIST_tflx(iv), do_put )
+         if ( do_put ) then
+           call multiply_flux_by_metric_xyz( iv, tflx, GSQRT, MAPF )
+           call FILE_HISTORY_put( HIST_tflx(iv), tflx(:,:,:,iv) )
+         end if   
+       end do
 
-
-       ! monitor
+       !- monitor mass budget ------------------------------------
        call MONITOR_put( MONIT_damp_mass, damp_t_DENS(:,:,:) )
-
-       if ( BND_W .and. MONIT_mflx_west > 0 ) then
-          mflx_x => mflx(:,IS-1,:,XDIR)
-       else
-          mflx_x => zero_x
-       end if
-       call MONITOR_put( MONIT_mflx_west, mflx_x(:,:) )
-
-       if ( BND_E .and. MONIT_mflx_east > 0 ) then
-          mflx_x => mflx(:,IE,:,XDIR)
-       else
-          mflx_x => zero_x
-       end if
-       call MONITOR_put( MONIT_mflx_east, mflx_x(:,:) )
-
-       if ( BND_S .and. MONIT_mflx_south > 0 ) then
-          mflx_y => mflx(:,:,JS-1,YDIR)
-       else
-          mflx_y => zero_y
-       end if
-       call MONITOR_put( MONIT_mflx_south, mflx_y(:,:) )
-
-       if ( BND_N .and. MONIT_mflx_north > 0 ) then
-          mflx_y => mflx(:,:,JE,YDIR)
-       else
-          mflx_y => zero_y
-       end if
-       call MONITOR_put( MONIT_mflx_north, mflx_y(:,:) )
-
+       call MONITOR_put_lateral_flux( MONIT_mflx_west, BND_W .and. MONIT_mflx_west > 0, mflx(:,IS-1,:,XDIR), zero_x )
+       call MONITOR_put_lateral_flux( MONIT_mflx_east, BND_E .and. MONIT_mflx_east > 0, mflx(:,IE,:,XDIR), zero_x )
+       call MONITOR_put_lateral_flux( MONIT_mflx_south, BND_S .and. MONIT_mflx_south > 0, mflx(:,:,JS-1,YDIR), zero_y )
+       call MONITOR_put_lateral_flux( MONIT_mflx_north, BND_N .and. MONIT_mflx_north > 0, mflx(:,:,JE,YDIR), zero_y )
 
        call MONITOR_put( MONIT_damp_qtot, DENS_tq(:,:,:) )
-
-       if ( BND_W ) then
-          mflx_x => qflx_west
-       else
-          mflx_x => zero_x
-       end if
-       call MONITOR_put( MONIT_qflx_west, mflx_x(:,:) )
-
-       if ( BND_E ) then
-          mflx_x => qflx_east
-       else
-          mflx_x => zero_x
-       end if
-       call MONITOR_put( MONIT_qflx_east, mflx_x(:,:) )
-
-       if ( BND_S ) then
-          mflx_y => qflx_south
-       else
-          mflx_y => zero_y
-       end if
-       call MONITOR_put( MONIT_qflx_south, mflx_y(:,:) )
-
-       if ( BND_N ) then
-          mflx_y => qflx_north
-       else
-          mflx_y => zero_y
-       end if
-       call MONITOR_put( MONIT_qflx_north, mflx_y(:,:) )
-
+       call MONITOR_put_lateral_flux( MONIT_qflx_west, BND_W, qflx_west, zero_x )
+       call MONITOR_put_lateral_flux( MONIT_qflx_east, BND_E, qflx_east, zero_x )
+       call MONITOR_put_lateral_flux( MONIT_qflx_south, BND_S, qflx_south, zero_y )       
+       call MONITOR_put_lateral_flux( MONIT_qflx_north, BND_N, qflx_north, zero_y )
     end if
 
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve
+
+  !-- private subroutines --------------------------------------------
+  
+  subroutine MONITOR_put_lateral_flux( MONIT_ID, BND_flag, flx, flx_zero )
+    use scale_monitor, only: &
+      MONITOR_put   
+    implicit none
+
+    integer, intent(in) :: MONIT_ID
+    logical, intent(in) :: BND_flag
+    real(RP), target, intent(in) :: flx(:,:)
+    real(RP), target, intent(in) :: flx_zero(:,:)
+
+    real(RP), pointer :: flx_ptr(:,:)
+    !------------------------------------------
+    if ( BND_flag ) then
+      flx_ptr => flx
+    else
+      flx_ptr => flx_zero
+    end if
+    call MONITOR_put( MONIT_ID, flx_ptr(:,:) )
+
+    return
+  end subroutine MONITOR_put_lateral_flux
+
+  subroutine multiply_flux_by_metric_xyz( I_DIR, flx, GSQRT, MAPF )
+    implicit none
+    integer, intent(in) :: I_DIR
+    real(RP), intent(inout) :: flx(KA,IA,JA,3)
+    real(RP), intent(in)    :: GSQRT(KA,IA,JA,7)
+    real(RP), intent(in)    :: MAPF (IA,JA,2,4)
+
+    integer :: i, j, k
+    !---------------------------------------------------
+
+    if (I_DIR == ZDIR) then
+      !$omp parallel do
+      do j = JS, JE
+      do i = IS, IE
+      do k = KS-1, KE
+         flx(k,i,j,ZDIR) = flx(k,i,j,ZDIR) * MAPF(i,j,1,I_XY) * MAPF(i,j,2,I_XY) / GSQRT(k,i,j,I_XYW)
+      end do
+      end do
+      end do
+    end if 
+
+    if (I_DIR == XDIR) then
+      !$omp parallel do
+      do j = JS, JE
+      do i = ISB, IEB
+      do k = KS, KE
+         flx(k,i,j,XDIR) = flx(k,i,j,XDIR) * MAPF(i,j,2,I_UY) / GSQRT(k,i,j,I_UYZ)
+      end do
+      end do
+      end do
+    end if 
+
+    if (I_DIR == YDIR) then
+      !$omp parallel do
+      do j = JSB, JEB
+      do i = IS, IE
+      do k = KS, KE
+        flx(k,i,j,YDIR) = flx(k,i,j,YDIR) * MAPF(i,j,1,I_XV) / GSQRT(k,i,j,I_XVZ)
+      end do
+      end do
+      end do
+    end if 
+
+    return
+  end subroutine multiply_flux_by_metric_xyz
 
 end module scale_atmos_dyn_tstep_large_fvm_heve

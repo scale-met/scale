@@ -183,8 +183,8 @@ contains
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_fct
+    use scale_atmos_dyn_fvm_fct, only: &
+       ATMOS_DYN_FVM_fct
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_valueW_Z, &
        ATMOS_DYN_FVM_fluxZ_XYZ,     &

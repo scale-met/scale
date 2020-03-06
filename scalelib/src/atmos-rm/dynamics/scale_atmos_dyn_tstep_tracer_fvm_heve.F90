@@ -81,8 +81,8 @@ contains
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_fct
+    use scale_atmos_dyn_fvm_fct, only: &
+       ATMOS_DYN_FVM_fct
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_fluxZ_XYZ_tracer, &
        ATMOS_DYN_FVM_fluxX_XYZ_tracer, &
@@ -182,7 +182,7 @@ contains
 
     if ( FLAG_FCT_TRACER ) then
 
-       call ATMOS_DYN_fct( qflx_anti,            & ! (out)
+       call ATMOS_DYN_FVM_fct( qflx_anti,        & ! (out)
                            QTRC0, DENS0, DENS,   & ! (in)
                            qflx_hi, qflx_lo,     & ! (in)
                            mflx_hi,              & ! (in)

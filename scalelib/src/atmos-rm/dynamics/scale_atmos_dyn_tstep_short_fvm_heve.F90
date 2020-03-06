@@ -132,8 +132,8 @@ contains
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_fct
+    use scale_atmos_dyn_fvm_fct, only: &
+       ATMOS_DYN_FVM_fct
     use scale_atmos_dyn_fvm_flux_ud1, only: &
        ATMOS_DYN_FVM_fluxZ_XYW_ud1, &
        ATMOS_DYN_FVM_fluxX_XYW_ud1, &
@@ -908,7 +908,7 @@ contains
 
        call COMM_wait ( VELZ(:,:,:), 4 )
 
-       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+       call ATMOS_DYN_FVM_fct( qflx_anti,             & ! (out)
                            VELZ, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
@@ -1228,7 +1228,7 @@ contains
 
        call COMM_wait ( VELX(:,:,:), 5 )
 
-       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+       call ATMOS_DYN_FVM_fct( qflx_anti,             & ! (out)
                            VELX, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
@@ -1567,7 +1567,7 @@ contains
 
        call COMM_wait ( VELY(:,:,:), 6 )
 
-       call ATMOS_DYN_fct( qflx_anti,                 & ! (out)
+       call ATMOS_DYN_FVM_fct( qflx_anti,             & ! (out)
                            VELY, DENS0_uvw, DENS_uvw, & ! (in)
                            qflx_hi, qflx_lo,          & ! (in)
                            mflx_hi,                   & ! (in)
@@ -1798,7 +1798,7 @@ contains
        enddo
        enddo
 
-       call ATMOS_DYN_fct( tflx_anti,               & ! (out)
+       call ATMOS_DYN_FVM_fct( tflx_anti,           & ! (out)
                            POTT, DENS0, DENS_RK,    & ! (out)
                            tflx_hi, tflx_lo,        & ! (in)
                            mflx_hi,                 & ! (in)

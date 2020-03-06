@@ -133,6 +133,8 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud7.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_numfilter.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_fct.o	      \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_rkcommon.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\

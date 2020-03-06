@@ -104,8 +104,9 @@ contains
     use scale_comm_cartesC, only: &
        COMM_vars8_init
     use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_filter_setup, &
        ATMOS_DYN_wdamp_setup
+    use scale_atmos_dyn_fvm_numfilter, only: &
+       ATMOS_DYN_FVM_numfilter_setup
     use scale_atmos_dyn_tinteg_short, only: &
        ATMOS_DYN_tinteg_short_setup
     use scale_atmos_dyn_tinteg_tracer, only: &
@@ -192,10 +193,10 @@ contains
        call ATMOS_DYN_Tinteg_large_setup ( DYN_Tinteg_Large_TYPE  ) ! [IN]
 
        ! numerical diffusion
-       call ATMOS_DYN_filter_setup( num_diff, num_diff_q,        & ! [INOUT]
-                                    CDZ, CDX, CDY, FDZ, FDX, FDY ) ! [IN]
+       call ATMOS_DYN_FVM_numfilter_setup( num_diff, num_diff_q,     & ! [INOUT]
+                                        CDZ, CDX, CDY, FDZ, FDX, FDY ) ! [IN]
 
-       ! numerical diffusion
+       ! sponge layer
        call ATMOS_DYN_wdamp_setup( wdamp_coef(:),           & ! [INOUT]
                                    wdamp_tau, wdamp_height, & ! [IN]
                                    FZ(:)                    ) ! [IN]
