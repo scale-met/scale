@@ -40,7 +40,7 @@ In the next subsections, the configuration of the MPI processes, the number of g
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition_v2.png}\\
+  \includegraphics[width=0.8\hsize]{./../../figure/domain_decomposition_v2.png}\\
   \caption{Relation between horizontal grid interval (\texttt{DX}, \texttt{DY}),
    number of grids (\texttt{IMAX}, \texttt{JMAX}) per MPI process,
    and the number of MPI processes (\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y}) in the entire domain.
@@ -123,7 +123,7 @@ When the vertical grid locations are directly specified, provide them in \nmitem
 
 \begin{figure}[tb]
 \begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/verticalface.pdf}\\
+  \includegraphics[width=0.4\hsize]{./../../figure/verticalface.pdf}\\
   \caption{The point of definition of the face point in \scalerm. If \nmitem{FZ} is given in \namelist{PARAM_ATMOS_GRID_CARTESC}, the top height at the first layer is given for the value at $k=1$. Note that $k=1$ is not the ground surface height.}
   \label{fig:scale_grid}
 \end{center}
@@ -228,7 +228,7 @@ using the number of grids \verb|kbuff| in the upper buffer region.
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.pdf}\\
+  \includegraphics[width=0.8\hsize]{./../../figure/buffer_xz.pdf}\\
   \caption{Location of the buffer region in the entire calculation domain: the shaded area indicates the buffer region. This figure shows the XZ cross-section. It is the same as the YZ cross-section.}
   \label{fig:buff_xz}
 \end{center}

@@ -9,38 +9,28 @@ LATEX    = platex
 BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 
+CURL     = curl -f -s -S --create-dirs
+IMAGE_URL = http://scale.aics.riken.jp/doc/figure
+IMAGE_PATH = $(IMAGE_URL)/$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release|grep -v hotfix),devel,$(VERSION))
+
+VERSION  = $(shell cat ../../scale-rm/src/VERSION)
+
 # target file name
 TARGET = scale_rm_description
 
-SRCS = ${TARGET}.tex \
-       introduction.tex \
-       governing_equation.tex \
-       temporal_integration.tex \
-       dynamical_process.tex \
-       dynamical_process_terrainfollowing.tex \
-       dynamical_process_mapfactor.tex \
-       dynamical_process_hevi.tex \
-       dynamical_process_hivi.tex \
-       turbulence.tex \
-       turbulence_mynn.tex \
-       microphysics.tex \
-       microphysics_kessler.tex \
-       microphysics_tomita08.tex \
-       microphysics_seiki.tex \
-       microphysics_suzuki.tex \
-       surface_flux.tex \
-       ocean.tex \
-       land.tex \
-       urban.tex \
-       large_scale_sinking.tex \
-       cd4.tex \
-       fct.tex \
-       microphysics_seiki_details.tex \
-       notation.tex \
-       variables.tex
-#       aerosol.tex \
+IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includegraphics.*\{(.+)\}/ =~ $$_.split(":")[1] && print(/\A([^.]+)(\..+)?\Z/=~File.basename($$1) && $$1+($$2 || ".eps"),"\n") ')
+FIG_DIR = ../figure
+IMAGES = $(patsubst %,$(FIG_DIR)/%,$(IMAGE_BASENAME))
+
+SRCS = $(wildcard *.tex) $(IMAGES)
 
 all: ${TARGET}.pdf
+
+update_images:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	for image in $(IMAGES) ; do \
+	  $(CURL) $(IMAGE_PATH)/`basename $$image` -z $$image -o $$image; \
+	done
 
 clean:
 	rm -f ${TARGET}.aux ${TARGET}.bbl ${TARGET}.blg ${TARGET}.dvi ${TARGET}.log ${TARGET}.out ${TARGET}.toc
@@ -54,4 +44,18 @@ ${TARGET}.dvi: ${SRCS} reference.bib
 	$(LATEX)  ${TARGET}
 	$(LATEX)  ${TARGET}
 
+.SUFFIXES:
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .png .eps
 
+$(FIG_DIR)/%.png:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+$(FIG_DIR)/%.pdf:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+$(FIG_DIR)/%.eps:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+
+
+.PHONY : pdf clean html

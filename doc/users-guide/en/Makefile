@@ -14,13 +14,14 @@ LATEX    = pdflatex
 BIBTEX   = bibtex
 HTMLBIN  = pandoc --to=html
 CURL     = curl -f -s -S --create-dirs
-IMAGE_URL = http://scale.aics.riken.jp/doc/ug_figures
-IMAGE_PATH = $(IMAGE_URL)/$(VERSION)$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release|grep -v hotfix),-devel)
+IMAGE_URL = http://scale.aics.riken.jp/doc/figure
+IMAGE_PATH = $(IMAGE_URL)/$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release|grep -v hotfix),devel,$(VERSION))
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
 IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includegraphics.*\{(.+)\}/ =~ $$_.split(":")[1] && print(/\A([^.]+)(\..+)?\Z/=~File.basename($$1) && $$1+($$2 || ".eps"),"\n") ') title_wallpaper.pdf scale_logo_final_ULWB.pdf
-IMAGES = $(patsubst %,figure/%,$(IMAGE_BASENAME))
+FIG_DIR = ../../figure
+IMAGES = $(patsubst %,$(FIG_DIR)/%,$(IMAGE_BASENAME))
 
 SRCS = $(wildcard *.tex) $(IMAGES)
 
@@ -41,7 +42,7 @@ clean:
 	rm -f *.dvi *.aux *.bbl *.blg *.log *.out *.toc $(VERFNAME)
 
 allclean: clean
-	rm -rf *.pdf figure
+	rm -rf *.pdf $(FIG_DIR)
 
 $(TEXNAME).pdf: $(VERFNAME) $(SRCS) reference.bib
 	$(LATEX)  $(TEXNAME)
@@ -59,13 +60,13 @@ $(TEXNAME).html: $(TEXNAME).tex
 .SUFFIXES:
 .SUFFIXES: .tex .bbl .dvi .pdf .bib .html .png .eps
 
-figure/%.png:
+$(FIG_DIR)/%.png:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
 	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
-figure/%.pdf:
+$(FIG_DIR)/%.pdf:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
 	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
-figure/%.eps:
+$(FIG_DIR)/%.eps:
 	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
 	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
 
