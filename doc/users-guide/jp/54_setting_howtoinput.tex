@@ -36,7 +36,10 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
 
-入力データの形式は、設定ファイル\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_***}で以下のように指定する。\\
+バイナリデータ({\grads}形式)を入力ファイルに用いる場合、ユーザはデータを予め用意しておく必要がある。
+バイナリデータ({\grads}形式)の形式については、\grads の Web ページ
+(\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})を参照されたい。
+入力データに関する設定は、設定ファイル\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_***}で以下のように指定する。\\
 
 \editbox{
 \verb|&PARAM_RESTART|\\
@@ -79,13 +82,18 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 バイナリデータを読み込むときは、\nmitem{FILETYPE_ORG}に\verb|"GrADS"|を設定する。
-\scalerm では ファイル名やバイナリデータの構造を含むネームリストファイル\verb|namelist.grads_boundary**|を「ctl」ファイルの代わりに準備する。
+\scalerm では バイナリデータ({\grads}形式)のファイル名やデータ構造について、
+「ctl」ファイルの代わりに、ネームリストファイル\verb|namelist.grads_boundary**|で指定する。
+このネームリストファイルも予め用意しておく必要がある。
+ネームリストファイルは、\nmitem{BASENAME_ORG}で指定する。
+
 
 \nmitem{NUMBER_OF_FILES}は入力ファイルの数である。
-入力ファイルのベース名は、\nmitem{BASENAME_ORG}で指定されたネームリストファイル内の\verb|fname|で設定する。
-以降の説明では、\verb|fname="filename"| と指定されたものとして説明をする。
-入力ファイルが１つの場合は、入力ファイルは「\verb|filename.grd|」という名前で準備する。
-入力ファイルが複数の場合、もしくは、\nmitem{BASENAME_ADD_NUM}が\verb|.true.|の場合には、「\verb|filename.XXXXX.grd|」と番号付けされたファイルを準備する。
+入力ファイルのベース名は、ネームリストファイル内の\verb|fname|で設定する。
+\verb|fname="filename"| と指定されている場合、
+入力ファイルが１つのときは、入力ファイルは「\verb|filename.grd|」という名前で準備する。
+入力ファイルが複数あるとき、もしくは、\nmitem{BASENAME_ADD_NUM} = \verb|.true.|の場合には、
+「\verb|filename.XXXXX.grd|」と番号付けされたファイルを準備する。
 プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを順に読み込む。
 
 \nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
@@ -98,8 +106,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 \nmitem{INTRP_TYPE}で空間補間の種類を指定する。
-\verb|''LINEAR''|と \verb|''DIST-WEIGHT''|が設定可能である。
-\verb|''LINEAR''|の場合は2次元線形補間が用いられ、\verb|''DIST-WEIGHT''|の場合は隣接$N$点の距離重み付け平均が用いられる。
+\verb|``LINEAR''|と \verb|``DIST-WEIGHT''|が設定可能である。
+\verb|``LINEAR''|の場合は2次元線形補間が用いられ、\verb|``DIST-WEIGHT''|の場合は隣接$N$点の距離重み付け平均が用いられる。
 距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定される。
 
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}、
@@ -110,15 +118,28 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が基本的に引き継がれる。
 %
 
-\nmitem{USE_FILE_DENSITY}は密度の計算方法の設定である。
-\nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合は、入力データの密度が使われ、そうでない場合は、静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
-\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|の場合は、\nmitem{USE_FILE_DENSITY}にかかわらず、境界値データの密度は気温、気圧、比湿などの入力データをもとに状態方程式 ($\rho = p/RT$) によって計算される。
-この密度は、一般的には、入力データの密度と整合的である。
-\nmitem{USE_NONHYDRO_DENS_BOUNDARY} は初期値データには影響しないため、\nmitem{USE_FILE_DENSITY}=\verb|.false.|かつ\\ \nmitem{USE_FILE_DENSITY_BOUNDARY}=\verb|.true.|の場合は、初期値データおよび境界値データの密度は異なるものとなる。
+\nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}は
+密度の計算方法に関する設定を行う。
+デフォルトの設定は、
+\nmitem{USE_FILE_DENSITY} = \verb|.false.| 及び 
+\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.false.|であり、
+この時、初期値・境界値の密度は、読み込んだ気圧と高度データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
+%（ここで見積った密度は、親モデルの密度とは必ずしも一致しない）。
+\nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合、他の変数同様に、
+入力ファイルから読み込んだ密度の値を初期値・境界値として使用する。
+\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|の場合は、\nmitem{USE_FILE_DENSITY}の設定にかかわらず、境界値データの密度のみ、気温、気圧、比湿などの入力データをもとに状態方程式 ($\rho = p/RT$) によって計算される。
+（ここで計算された密度は、一般的には親モデルの値と整合的である）。
+\nmitem{USE_NONHYDRO_DENS_BOUNDARY} の設定は初期値データには影響しない。
+%\nmitem{USE_FILE_DENSITY}=\verb|.false.|かつ\\ \nmitem{USE_FILE_DENSITY}=\verb|.true.|の場合は、初期値データおよび境界値データの密度は異なるものとなる。
+このオプションが用意された理由は次の通りである。
 多くの場合、計算初期ショックを抑えるため、初期値データは静水圧平衡にある密度を使うのが望ましい。
-一方、静水圧平衡により作成した密度は親モデルの密度と一致しない場合があるため、境界データにおける密度の不整合により計算結果に大きな質量バイアスが生じる可能性がある。
-そのような場合は、\nmitem{USE_NONHUDRO_DENS_BOUNDARY}=\verb|.true.|として親モデルとの整合的な密度を使う方が良い場合がある。
-境界データとして静水圧平衡からずれた密度を使うことにより生じる鉛直加速や波は、境界領域ナッジングにより速やかに減衰されると期待される。
+一方、静水圧平衡により作成した密度は
+親モデルの密度（多くの場合、実際の値に近いと期待される）と一致しない場合があり、
+これが、\scalerm での計算結果に大きな質量バイアスを生じる可能性がある。
+そのような場合、気圧の再現性などの観点において、
+\nmitem{USE_NONHUDRO_DENS_BOUNDARY}=\verb|.true.|として親モデルとの整合的な密度を与える方が良い場合がある。
+境界値に静水圧平衡からずれた密度を使うことにより生じる鉛直加速や波は、境界領域ナッジングにより速やかに減衰されると期待される。
+
 
 \nmitem{USE_SFC_DIAGNOSES}は親モデルの最下層高度よりも低い層における値の計算のためのスイッチである。
 \nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合, T2, RH2, U10, V10, PSFC といった地表面変数が使われるが、そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
@@ -132,14 +153,18 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 
-土壌水分の設定は、親モデルからデータを与える方法と、
-領域全体で一定値を与える方法の２種類ある。
-前者の場合は、3次元の土壌水分データを必要とする。
-後者の場合は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}に
-\verb|USE_FILE_LANDWATER = .false.| を設定する。
-また、土壌水分の条件は、土壌空隙率に対する水が占める割合(飽和度)として
+土壌水分の設定は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}の
+\nmitem{USE_FILE_LANDWATER}で行う。
+土壌水分データの与え方は、(1)親モデルの値など入力データとして与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.true.|)と、
+(2)領域全体で一定値を与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.false.|)の２種類ある。
+(1)の場合には、3次元の土壌水分データとして
+\verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。
+体積含水率(\verb|SMOISVC|)は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
+また、飽和度(\verb|SMOISDS|)は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
+%
+(2)の場合には、以下の例のように、土壌空隙率に対する水が占める割合(飽和度)を
 \verb|INIT_LANDWATER_RATIO| で指定する。デフォルト値は 0.5 である。
-また、単位体積あたりの土壌の隙間の大きさ(空隙率)は土地利用に応じて変わる。\\
+また、単位体積あたりの土壌の隙間の大きさ(空隙率)は土地利用に応じて変わる。
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_LAND| &\\
 \verb| USE_FILE_LANDWATER   = .false.| & 土壌水分をファイルから読むかどうか。デフォルトは\verb|.true.| \\
@@ -149,12 +174,10 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb|/| & \\
 }
 
-バイナリデータ({\grads}形式)を入力ファイルに用いる場合は、ユーザが用意する。
-その形式については、\grads の Web ページ
-(\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})を参照されたい。
-「ctl」ファイルの代わりに、データのファイル名やデータ構造を \scalerm に与えるための
-ネームリストファイル(\verb|namelist.grads_boundary**|)の一例を下記に示す。\\
 
+
+バイナリデータのファイル名やデータ構造を指定する
+ネームリストファイル(\verb|namelist.grads_boundary**|)の一例を下記に示す。
 \editbox{
 \verb|#| \\
 \verb|# Dimension    |  \\
@@ -195,15 +218,15 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 }
 
 
-各変数に関する設定は、\namelist{GrADS_ITEM}で変数ごとに設定する。
-\namelist{GrADS_ITEM}の説明は、表\ref{tab:namelist_grdvar}に示す。
-
 格子数のデフォルト値は\verb|nx, ny, nz|で指定する。
-格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}で個々の変数ごとに格子数を設定することができる。
+また、入力データに関する説明は、各変数ごとに\namelist{GrADS_ITEM}を用意し指定する。
+\namelist{GrADS_ITEM}に関する説明は、表\ref{tab:namelist_grdvar}に示す。
+
+ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定することができる。
 例えば、ある層から上では、QVやRHのデータが利用できない場合がある。
 その場合には、データが存在する層数を\verb|nz|で指定する。
 \verb|nz|より上層での値の与え方として２種類の方法を用意している。
-デフォルトは、QV=0（\verb| upper_qv_type = "ZERO"|）である。\\
+デフォルトは、QV=0（\verb| upper_qv_type = "ZERO"|）である。
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS| & \\
 \verb| upper_qv_type = "ZERO"| & \verb|"ZERO"|: QV=0 \\
@@ -212,12 +235,6 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 }
 
 \scalerm の計算に必要な変数のリストは、表\ref{tab:grdvar_item}に示す。
-このうち、土壌水分に関して、
-\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}が\verb|.true.|である場合は、
-\verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。
-体積含水率(\verb|SMOISVC|)は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
-また、飽和度(\verb|SMOISDS|)は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
-
 
 {\small
 \begin{table}[htb]
