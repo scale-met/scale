@@ -42,13 +42,17 @@ as follows:
 \verb|/|\\
 \\
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
-\verb| NUMBER_OF_FILES      = 2,|\\
-\verb| NUMBER_OF_TSTEPS     = 1, |\\
-\verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
-\verb| BASENAME_BOUNDARY    = "boundary_d01",|\\
-\verb| BOUNDARY_UPDATE_DT   = 21600.0,|\\
-\verb| USE_FILE_DENSITY     = .false.,|\\
+\verb| NUMBER_OF_FILES            = 2,|\\
+\verb| NUMBER_OF_TSTEPS           = 1, |\\
+\verb| FILETYPE_ORG               = "GrADS",|\\
+\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| BASENAME_BOUNDARY          = "boundary_d01",|\\
+\verb| BOUNDARY_UPDATE_DT         = 21600.0,|\\
+\verb| USE_FILE_DENSITY           = .false.,|\\
+\verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|\\
+\verb| USE_SFC_DIAGNOSES          = .false.,|\\
+\verb| USE_DATA_UNDER_SFC         = .true.,|\\
+\verb| SAME_MP_TYPE               = .false.,|\\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
@@ -100,8 +104,16 @@ If they are not specified in\\ \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{
 
 
 \nmitem{USE_FILE_DENSITY} is the way to prepare the density.
-If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the input density is used, otherwise that calculated with hydrostatic balance is used.\\
-If \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|, the input density is used for the density in the output boundary data even if \nmitem{USE_FILE_DENSITY} = \verb|.false.|.
+If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the input density is used, otherwise that calculated with hydrostatic balance, i.e., $\frac{dp}{dz}=-\rho g$, is used.\\
+If \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|, regardless of the \nmitem{USE_FILE_DENS}, the density in the output boundary data is calculated with the equation of state, i.e., $\rho = p/RT$,  from the input data, such as temperature, pressure and humidity.
+This density is generally consistent with that in the parent model (or analysis).
+The \nmitem{USE_NONHYDRO_DENS_BOUNDARY} does not affect the initial data, so that the densities in the initial and boundary data become different if \nmitem{USE_FILE_DENSITY}=\verb|.false.| and \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|.
+In most cases, density under the hydrostatic balance is preffered to reduce initial shock in the simulation for the initial data.
+Therefore, \nmitem{USE_FILE_DENSITY}=\verb|.false.| is recommended.
+On the other hand, since the density constructed with the hydrostatic balance could differ from that in the parent model, the inconsistency of the boundary density may cause a significant mass bias in the simulation.
+In such case, it could be better to use consistent density with the parent's one as \nmitem{USE_NONHYDRO_DENS_BOUNDARY}=\verb|.true.|.
+The vertical acceralation or waves associated with using hydrostatically inbalanced density as the boundary data is expected to be quickly dumped by the lateral nudging.
+
 
 \nmitem{USE_SFC_DIAGNOSES} is swich for the calculation of the values at the layers below the lowermost grid of the input data.
 If \nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|, the surface quantities, such as T2, RH2, U10, V10, and PSFC, are used.
