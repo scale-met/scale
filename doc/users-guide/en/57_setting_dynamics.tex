@@ -52,7 +52,6 @@ is shown below.
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; Use FCT scheme (.true.) or not (.false.)\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
- \verb|ATMOS_DYN_coriolis_type              = 'SPHERE',|     & \\
  \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ; height [m] of the bottom of sponge layer (for Rayleigh damping)\\
 \verb|/             | & \\
 }
@@ -154,26 +153,25 @@ For example, the configuration of the halo for the fifth-order upwind difference
 In this subsection, treatments of the Coriolis force in \scalerm is explained.
 The Coriolis parameter is zero as the default, so that you have to set (some) parameter(s) to introduce the Coriolis force in the simulation.
 There are two types of setting for the Coriolis parameter: $f$-/$\beta$-plane and sphere.
-The type can be specified by \nmitem{ATMOS_DYN_coriolis_type} in \namelist{PARAM_ATMOS_DYN}.
+The type can be specified by \nmitem{CORIOLIS_type} in \namelist{PARAM_CORIOLIS}.
 
 \subsubsection{$f$-/$\beta$-plane}
-If \nmitem{ATMOS_DYN_coriolis_type} is set to ``PLANE'', the Coriolis parameter $f$ is $f=f_0 + \beta (y-y_0)$.
+If \nmitem{CORIOLIS_type} is set to ``PLANE'', the Coriolis parameter $f$ is $f=f_0 + \beta (y-y_0)$.
 When $f_0=0$ and $\beta=0$, which is default, no Coriolis force is taken into account.
 
 The plane for $\beta=0$ is called $f$-plane, otherwise it is called $\beta$-plane.
-The parameters of $f_0, \beta$ and $y_0$ is set with the parameters of \namelist{PARAM_ATMOS_DYN} as follows:
+The parameters of $f_0, \beta$ and $y_0$ is set with the parameters of \namelist{PARAM_CORIOLIS} as follows:
 \editbox{
-  \verb|&PARAM_ATMOS_DYN| \\
-  \verb| ATMOS_DYN_coriolis_type = 'PLANE',| \\
-  \verb| ATMOS_DYN_coriolis_f0   = 1.0D-5, | ! $f_0$ \\
-  \verb| ATMOS_DYN_coriolis_beta = 0.0D0,  | ! $\beta$ \\
-  \verb| ATMOS_DYN_coriolis_y0   = 0.0D0,  | ! $y_0$ \\
-  \verb| : | \\
+  \verb|&PARAM_CORIOLIS| \\
+  \verb| CORIOLIS_type = 'PLANE',| ! PLANE or SPHERE \\
+  \verb| CORIOLIS_f0   = 1.0D-5, | ! $f_0$ \\
+  \verb| CORIOLIS_beta = 0.0D0,  | ! $\beta$ \\
+  \verb| CORIOLIS_y0   = 0.0D0,  | ! $y_0$ \\
   \verb|/| \\
 }
 
-The default values of the \nmitem{ATMOS_DYN_coriolis_f0}, \nmitem{ATMOS_DYN_coriolis_beta}, \\
-and \nmitem{ATMOS_DYN_coriolis_y0} are 0.0, 0.0, and $y$ at the domain center, respectively.
+The default values of the \nmitem{CORIOLIS_f0}, \nmitem{CORIOLIS_beta}, 
+and \nmitem{CORIOLIS_y0} are 0.0, 0.0, and $y$ at the domain center, respectively.
 
 If you want to add the geostrophic pressure gradient force that is in balance with the Coriolis force accompanied by the geostrophic wind, you need to modify the user specific file \verb|mod_user.f90| (see Section \ref{sec:mod_user}).
 The test case of \verb|scale-rm/test/case/inertial_oscillation/20km| is an example of a simulation on the $f$-plane with the geostrophic pressure gradient force.
@@ -181,19 +179,21 @@ The test case of \verb|scale-rm/test/case/inertial_oscillation/20km| is an examp
 
 \subsubsection{Sphere}
 On the sphere, the Coriolis parameter depends on the latitude as $f = 2\Omega \sin(\phi)$, where $\Omega$ and $\phi$ are angular velocity of the sphere and latitude, respectively.
-In this case, you have to set \nmitem{ATMOS_DYN_coriolis_type} = ``SPHERE''.
+In this case, you have to set \nmitem{CORIOLIS_type} = ``SPHERE''.
 The angular velocity of the sphere is set by \nmitem{CONST_OHM} parameter of \namelist{PARAM_CONST} (see Section \ref{subsec:const}).
 The latitude of the individual grids is determined depending on the map projection, which is explained in Section \ref{subsec:adv_mapproj}.
 
 
 
-\subsection{Lateral Boundary Condition for Coriolis Force}
+\subsubsection{Lateral Boundary Condition for Coriolis Force}
 
-The lateral boundary in the x-direction for the all the setting (i.e., the $f$-plane, $\beta$-plane, and sphere) can be periodic boundary, and that in the y-direction for the $f$-plane also can be periodic boundary.
-On the other hand, the periodic boundary condition cannot be used in the y-direction for the $\beta$-plane or sphere, because the Coriolis parameter differs at the southern and northern boundaries.
+If there exists geostrophic wind, the periodic boundary conditions cannot be applied in its perpendicular direction, since the wind is not periodic.
+For the $f$-plane, the double periodic boundary conditions can be applied with no geostrophic wind.
+For the $\beta$-plane or sphere, the periodic boundary condition cannot be used in the y-direction, since the Coriolis parameter differs at the southern and northern boundaries.
+In the absent of meridional geostrophic wind, the periodic boundary in the x-direction is allowed for the all the settings (i.e., the $f$-plane, $\beta$-plane, and sphere).
 
 
 The nudge lateral boundary conditions at the south and north boundaries might be used for $f$- and $\beta$-plane experiment.
-The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
 For the details of the nudging boundary, see Sections \ref{subsec:buffer}.
+The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
 
