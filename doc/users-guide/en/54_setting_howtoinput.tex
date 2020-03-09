@@ -28,7 +28,7 @@ The ``binary format'' in this documentation is defined as binary data with singl
 Other format data, such as GRIB/GRIB2 data, should be converted to the binary format; this procedure is explained in Section \ref{sec:tutrial_real_data}.
 
 Note that the format of output files in the latest version is different from that in the version 5.3 or older.
-Therefore, the init/boundary files which are made in the version 5.3 or older can't be used in the \scalelib \version.
+Therefore, the init/boundary files which are made in the version 5.3 or older can't be used in the current version (\scalelib \version).
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{Input from binary format data} \label{sec:datainput_grads}
@@ -75,10 +75,10 @@ In \scalerm, the namelist file \verb|namelist.grads_boundary**|, which contains 
 Give its path at \nmitem{BASENAME_ORG}.
 
 \nmitem{NUMBER_OF_FILES} is the number of input files.
-The base name of input files is specified in the namelist file.
-In the following description, \verb|"filename"| is used as the base name.
-In case of a single input file, prepare a file as specified in the namelist file like \verb|"filename.grd"|.
-In the number of the input files is larger than 1 or \nmitem{BASENAME_ADD_NUM} is \verb|.true.|, prepare the files numbered as \verb|"filename_XXXXX.grd"|.
+The base name of input files is set as \verb|fname| in the namelist file, specified by \nmitem{BASENAME_ORG}.
+The following description explains the naming rule of the input file(s), assuming the case of \verb|fname="filename"|.
+When the number of input files is one, prepare the file named \verb|"filename.grd"| as specified in the namelist file.
+When the number of input files is larger than 1 or \nmitem{BASENAME_ADD_NUM} is \verb|.true.|, prepare the files numbered as \verb|"filename_XXXXX.grd"|.
 The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| to the given number \nmitem{NUMBER_OF_FILES}-1.
 
 \nmitem{NUMBER_OF_TSTEPS} is the number of time steps stored in each file.
@@ -87,7 +87,8 @@ The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| 
 \nmitem{BOUNDARY_UPDATE_DT} is the time step of input data.
 \nmitem{RESTART_OUT_BASENAME} in \namelist{PARAM_RESTART} is the base name of the initial file to be output.
 \nmitem{BASENAME_BOUNDARY} is the base name of the output boundary files.
-If \nmitem{BASENAME_BOUNDARY} is empty, no boundary files are output.
+If \nmitem{BASENAME_BOUNDARY} is not specified, no boundary files are output.
+For example, in the above case, the boundary file(s) are created only for the atmospheric variables; the initial file is prepared for all ofatmosperic, ocean, and land variables.
 
 \nmitem{INTRP_TYPE} is type of horizontal interpolation.
 \verb|''LINEAR''| and \verb|''DIST-WEIGHT''| are valid for the type.
@@ -171,6 +172,10 @@ The following example is the namelist file \verb|namelist.grads_boundary**| to p
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
+
+Configure \namelist{GrADS_ITEM} for the individual variables as shown in Table \ref{tab:namelist_GrADS_ITEM}.
+The list of \namelist{GrADS_ITEM} is shown in Table \ref{tab:grdvar_item}.
+
 The default value of the number of grids is specified as \verb|nx, ny, nz| in \namelist{GrADS_DIMS}.
 You can specify the number of grids for individual variables in \namelist{GrADS_ITEM}, if it is different from the default value.
 For example, the input data to \verb|QV| and \verb|RH| is not often provided in the upper layers.
@@ -184,11 +189,13 @@ Two methods to extrapolate value to the upper layers are prepared:
 }
 \verb| upper_qv_type = "ZERO"| is default.
 
-Configure \namelist{GrADS_ITEM} for the individual variables as shown in Table \ref{tab:namelist_GrADS_ITEM}.
-The list of \namelist{GrADS_ITEM} is shown in Table \ref{tab:grdvar_item}.
-In Table \ref{tab:grdvar_item}, soil moisture (fraction of volume) is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$.
-The saturation ratio is the ratio of water volume $V_w$ to void spaces in $V$, i.e., $V_w / V_v$.
-If \nmitem{USE_FILE_LANDWATER}\verb|=.true.| in \namelist{PARAM_MKINIT_REAL_LAND}, prepare data either for \verb|SMOISVC| or \verb|SMOISDS|.
+
+The variables required for the \scalerm calculation are listed in Table \ref{tab:grdvar_item}.
+Regarding soil moisture,
+if \nmitem{USE_FILE_LANDWATER}\verb|=.true.| in \namelist{PARAM_MKINIT_REAL_LAND}, prepare data either for \verb|SMOISVC| or \verb|SMOISDS|.
+The fraction of volume of soil moisture (\verb|SMOISVC|) is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$.
+The saturation ratio (\verb|SMOISDS|) is the ratio of water volume $V_w$ to void spaces in $V$, i.e., $V_w / V_v$.
+
 
 
 {\small
@@ -224,7 +231,7 @@ yrev     & If the data is stored from the north to south, set \verb|.true.| & (o
 {
 \begin{table}[bth]
 \begin{center}
-\caption{Variable list of \nmitem{item} in \namelist{GrADS_ITEM}. The asterisk means ``it is optional but recommended as possible''. The double-asterisk means ``it is available but not recommended''.}
+\caption{Variable list of \nmitem{name} in \namelist{GrADS_ITEM}. The asterisk means ``it is optional but recommended as possible''. The double-asterisk means ``it is available but not recommended''.}
 \label{tab:grdvar_item}
 \small
 \begin{tabularx}{150mm}{rl|l|l|l} \hline

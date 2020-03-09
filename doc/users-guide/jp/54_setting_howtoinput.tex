@@ -31,7 +31,7 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
-そのため、バージョン5.3以前で作成された初期値/境界値ファイルは{\scalelib}{\version}では使用できない。
+そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
@@ -78,18 +78,20 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \scalerm では ファイル名やバイナリデータの構造を含むネームリストファイル\verb|namelist.grads_boundary**|を「ctl」ファイルの代わりに準備する。
 
 \nmitem{NUMBER_OF_FILES}は入力ファイルの数である。
-入力ファイルのベース名はネームリストファイルで指定する
-以降の説明では、\verb|ファイル名| とする。
-単一の入力ファイルの場合は、ファイル「\verb|ファイル名.grd|」のみを準備する。
-複数の入力ファイルの場合もしくは\nmitem{BASENAME_ADD_NUM}が\verb|.true.|の場合には、「\verb|ファイル名.XXXXX.grd|」と番号付けされたファイルを準備する。
+入力ファイルのベース名は、\nmitem{BASENAME_ORG}で指定されたネームリストファイル内の\verb|fname|で設定する。
+以降の説明では、\verb|fname="filename"| と指定されたものとして説明をする。
+入力ファイルが１つの場合は、入力ファイルは「\verb|filename.grd|」という名前で準備する。
+入力ファイルが複数の場合、もしくは、\nmitem{BASENAME_ADD_NUM}が\verb|.true.|の場合には、「\verb|filename.XXXXX.grd|」と番号付けされたファイルを準備する。
 プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを順に読み込む。
 
-\nmitem{NUMBER_OF_FILES}は各ファイル中に保存されているデータの時間ステップ数である。
+\nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
 変換された初期値ファイルのヘッダー名は、\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。
 \nmitem{BASENAME_BOUNDARY}は、変換された境界値ファイルのヘッダー名である。
 \nmitem{BASENAME_BOUNDARY}を指定しなければ、 境界値ファイルは出力されない。
+つまり、上記の例では、境界値ファイルは大気データのみ作成される。初期値ファイルは、大気、海洋、陸面すべてについて作成される。
+
 
 \nmitem{INTRP_TYPE}で空間補間の種類を指定する。
 \verb|''LINEAR''|と \verb|''DIST-WEIGHT''|が設定可能である。
@@ -100,8 +102,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \namelist{PARAM_MKINIT_REAL_OCEAN}、\\
 \namelist{PARAM_MKINIT_REAL_LAND}の間で共通である。
 \namelist{PARAM_MKINIT_REAL_OCEAN}や \\
-\namelist{PARAM_MKINIT_REAL_LAND}で別途指定しない限り、
-\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が引き継がれる。
+\namelist{PARAM_MKINIT_REAL_LAND}に関しては、別途指定しない限り、
+\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が基本的に引き継がれる。
 %
 
 \nmitem{USE_FILE_DENSITY}は密度の計算方法の設定である。
@@ -182,12 +184,16 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 ~~~~~~~~\verb| missval=9.999e+20 /|  \\
 }
 
-格子数のデフォルト値を\verb|nx, ny, nz|で指定する。
-デフォルト値と異なる場合には、\namelist{GrADS_ITEM}で個々の変数ごとに格子数を設定することができる。
-例えば、QVやRHのデータは大気上層でしばしば提供されていない。
-そのような場合はデータが存在する層数を\verb|nz|で指定する。
-上層での値の与え方として２種類の方法を用意している。
-デフォルトでは、以下のように\verb| upper_qv_type = "ZERO"|である。\\
+
+各変数に関する設定は、\namelist{GrADS_ITEM}で変数ごとに設定する。
+\namelist{GrADS_ITEM}の説明は、表\ref{tab:namelist_grdvar}に示す。
+
+格子数のデフォルト値は\verb|nx, ny, nz|で指定する。
+格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}で個々の変数ごとに格子数を設定することができる。
+例えば、ある層から上では、QVやRHのデータが利用できない場合がある。
+その場合には、データが存在する層数を\verb|nz|で指定する。
+\verb|nz|より上層での値の与え方として２種類の方法を用意している。
+デフォルトは、QV=0（\verb| upper_qv_type = "ZERO"|）である。\\
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS| & \\
 \verb| upper_qv_type = "ZERO"| & \verb|"ZERO"|: QV=0 \\
@@ -195,11 +201,13 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb|/|\\
 }
 
-表\ref{tab:namelist_grdvar}に示すように変数ごとに\namelist{GrADS_ITEM}を設定する。
-表\ref{tab:grdvar_item}において、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
-また、飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
+\scalerm の計算に必要な変数のリストは、表\ref{tab:grdvar_item}に示す。
+このうち、土壌水分に関して、
 \namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}が\verb|.true.|である場合は、
 \verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。
+体積含水率(\verb|SMOISVC|)は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
+また、飽和度(\verb|SMOISDS|)は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
+
 
 {\small
 \begin{table}[htb]
@@ -230,10 +238,11 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \end{table}
 }
 
+
 {\small
 \begin{table}[hbt]
 \begin{center}
-\caption{\namelist{GrADS_ITEM}の\nmitem{item}の変数リスト。
+\caption{\namelist{GrADS_ITEM}の\nmitem{name}の変数リスト。
 アスタリスクは「オプションであるが、可能な限り推奨される」ことを意味する。
 二重のアスタリスクは、「利用できるが、推奨されない」ことを意味する。
 }
