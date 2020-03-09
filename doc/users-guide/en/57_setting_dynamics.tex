@@ -187,11 +187,13 @@ The latitude of the individual grids is determined depending on the map projecti
 
 \subsubsection{Lateral Boundary Condition for Coriolis Force}
 
-The lateral boundary in the x-direction for the all the setting (i.e., the $f$-plane, $\beta$-plane, and sphere) can be periodic boundary, and that in the y-direction for the $f$-plane also can be periodic boundary.
-On the other hand, the periodic boundary condition cannot be used in the y-direction for the $\beta$-plane or sphere, because the Coriolis parameter differs at the southern and northern boundaries.
+If there exists geostrophic wind, the periodic boundary conditions cannot be applied in its perpendicular direction, since the wind is not periodic.
+For the $f$-plane, the double periodic boundary conditions can be applied with no geostrophic wind.
+For the $\beta$-plane or sphere, the periodic boundary condition cannot be used in the y-direction, since the Coriolis parameter differs at the southern and northern boundaries.
+In the absent of meridional geostrophic wind, the periodic boundary in the x-direction is allowed for the all the settings (i.e., the $f$-plane, $\beta$-plane, and sphere).
 
 
 The nudge lateral boundary conditions at the south and north boundaries might be used for $f$- and $\beta$-plane experiment.
-The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
 For the details of the nudging boundary, see Sections \ref{subsec:buffer}.
+The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
 
