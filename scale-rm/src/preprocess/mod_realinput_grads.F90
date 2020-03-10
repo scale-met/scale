@@ -353,6 +353,15 @@ contains
        basename_num,  &
        sfc_diagnoses, &
        under_sfc,     &
+       KA_local, &
+       KS_local, &
+       KE_local, &
+       IA_local, &
+       IS_local, &
+       IE_local, &
+       JA_local, &
+       JS_local, &
+       JE_local, &
        dims, &
        nt )
     use scale_const, only: &
@@ -395,6 +404,15 @@ contains
     character(len=*), intent(in)  :: basename_num
     logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: under_sfc
+    integer,          intent(in)  :: KA_local
+    integer,          intent(in)  :: KS_local
+    integer,          intent(in)  :: KE_local
+    integer,          intent(in)  :: IA_local
+    integer,          intent(in)  :: IS_local
+    integer,          intent(in)  :: IE_local
+    integer,          intent(in)  :: JA_local
+    integer,          intent(in)  :: JS_local
+    integer,          intent(in)  :: JE_local
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: nt
 
@@ -402,7 +420,8 @@ contains
 
     integer  :: lm_layer(dims(2),dims(3))
 
-    real(RP) :: lev1D(dims(1))
+    integer  :: dummy = 1
+    real(RP) :: work( dims(1), dims(2), dims(3) )
 
     logical  :: pressure_coordinates
     real(RP) :: p_sat, qm, dz
@@ -454,21 +473,29 @@ contains
                 call PRC_abort
              endif
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lev1D(:)                  ) ! (out)
+                                   work(:,dummy,dummy)       ) ! (out)
              !$omp parallel do collapse(3)
              do j = 1, dims(3)
              do i = 1, dims(2)
              do k = 1, dims(1)
-                pres_org(k+2,i,j) = lev1D(k)
+                pres_org(k+2,i,j) = work(k,dummy,dummy)
              enddo
              enddo
              enddo
           else
              pressure_coordinates = .false.
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   pres_org(3:,:,:),         & ! (out)
+                                   work(:,:,:),              & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+             do k = 1, dims(1)
+                pres_org(k+2,i,j) = work(k,i,j)
+             enddo
+             enddo
+             enddo
           endif
        case('DENS')
 
@@ -480,10 +507,17 @@ contains
           endif
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                dens_org(3:,:,:),         & ! (out)
+                                work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, dims(1)
+             dens_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
        case('U')
 
@@ -495,12 +529,15 @@ contains
           endif
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                velx_org(3:,:,:),         & ! (out)
+                                work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do
+          !$omp parallel do collapse(3)
           do j = 1, dims(3)
           do i = 1, dims(2)
+          do k = 1, dims(1)
+             velx_org(k+2,i,j) = work(k,i,j)
+          enddo
              velx_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -515,12 +552,15 @@ contains
           endif
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                vely_org(3:,:,:),         & ! (out)
+                                work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do
+          !$omp parallel do collapse(3)
           do j = 1, dims(3)
           do i = 1, dims(2)
+          do k = 1, dims(1)
+             vely_org(k+2,i,j) = work(k,i,j)
+          enddo
              vely_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -535,12 +575,15 @@ contains
           endif
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                velz_org(3:,:,:),         & ! (out)
+                                work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do
+          !$omp parallel do collapse(3)
           do j = 1, dims(3)
           do i = 1, dims(2)
+          do k = 1, dims(1)
+             velz_org(k+2,i,j) = work(k,i,j)
+          enddo
              velz_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -555,9 +598,17 @@ contains
           endif
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                temp_org(3:,:,:),         & ! (out)
+                                work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, dims(1)
+             temp_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
        case('HGT')
 
@@ -576,25 +627,28 @@ contains
                 call PRC_abort
              endif
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lev1D(:)                  ) ! (out)
+                                   work(:,dummy,dummy)       ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
                 cz_org(1,i,j) = 0.0_RP
                 do k = 1, dims(1)
-                   cz_org(k+2,i,j) = lev1D(k)
+                   cz_org(k+2,i,j) = work(k,dummy,dummy)
                 enddo
              enddo
              enddo
           else
              pressure_coordinates = .false.
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   cz_org(3:,:,:),           & ! (out)
+                                   work(:,:,:),              & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do collapse(3)
              do j = 1, dims(3)
              do i = 1, dims(2)
+             do k = 1, dims(1)
+                cz_org(k+2,i,j) = work(k,i,j)
+             enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
              enddo
@@ -606,9 +660,17 @@ contains
                                      shape(:)                  ) ! (out)
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                qv_org(3:shape(1)+2,:,:), & ! (out)
+                                work(:shape(1),:,:),      & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qv_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           if( dims(1) > shape(1) ) then
              select case( upper_qv_type )
@@ -634,10 +696,18 @@ contains
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
-                                qhyd_org(3:shape(1)+2,:,:,I_HC), & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),      & ! (out)
+                                step = nt,                & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qhyd_org(k+2,i,j,I_HC) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           ! if shape(1)>knum, QC is assumed to be zero.
 
@@ -646,10 +716,18 @@ contains
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
-                                qhyd_org(3:shape(1)+2,:,:,I_HR), & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),      & ! (out)
+                                step = nt,                & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qhyd_org(k+2,i,j,I_HR) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           ! if shape(1)>knum, QR is assumed to be zero.
 
@@ -658,10 +736,18 @@ contains
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
-                                qhyd_org(3:shape(1)+2,:,:,I_HI), & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),      & ! (out)
+                                step = nt,                & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qhyd_org(k+2,i,j,I_HI) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           ! if shape(1)>knum, QI is assumed to be zero.
 
@@ -670,10 +756,18 @@ contains
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
-                                qhyd_org(3:shape(1)+2,:,:,I_HS), & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),      & ! (out)
+                                step = nt,                & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qhyd_org(k+2,i,j,I_HS) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           ! if shape(1)>knum, QS is assumed to be zero.
 
@@ -682,10 +776,18 @@ contains
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),        & ! (in)
-                                qhyd_org(3:shape(1)+2,:,:,I_HG), & ! (out)
-                                step = nt,                       & ! (in)
-                                postfix = basename_num           ) ! (in)
+          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),      & ! (out)
+                                step = nt,                & ! (in)
+                                postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qhyd_org(k+2,i,j,I_HG) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           ! if shape(1)>knum, QG is assumed to be zero.
 
@@ -695,9 +797,17 @@ contains
                                      shape(:)                  ) ! (out)
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                qv_org(3:shape(1)+2,:,:), & ! (out)
+                                work(:shape(1),:,:),      & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             qv_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
           !$omp parallel do collapse(2) &
           !$omp private(qm,p_sat)
@@ -741,60 +851,102 @@ contains
        case('MSLP')
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                pres_org(1,:,:),          & ! (out)
+                                work(dummy,:,:),          & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             pres_org(1,i,j) = work(dummy,i,j)
+          enddo
+          enddo
 
        case('PSFC')
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                pres_org(2,:,:),          & ! (out)
+                                work(dummy,:,:),          & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             pres_org(2,i,j) = work(dummy,i,j)
+          enddo
+          enddo
 
        case('U10')
 
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   velx_org(2,:,:),          & ! (out)
+                                   work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                velx_org(2,i,j) = work(dummy,i,j)
+             enddo
+             enddo
           end if
 
        case('V10')
 
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   vely_org(2,:,:),          & ! (out)
+                                   work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                vely_org(2,i,j) = work(dummy,i,j)
+             enddo
+             enddo
           end if
 
        case('T2')
 
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   temp_org(2,:,:),          & ! (out)
+                                   work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                temp_org(2,i,j) = work(dummy,i,j)
+             enddo
+             enddo
           end if
 
        case('Q2')
 
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   qv_org(2,:,:),            & ! (out)
+                                   work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                qv_org(2,i,j) = work(dummy,i,j)
+             enddo
+             enddo
           end if
 
        case('RH2')
 
           if ( sfc_diagnoses ) then
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   qv_org(2,:,:),            & ! (out)
+                                   work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
+             !$omp parallel do collapse(3)
+             do j = 1, dims(3)
+             do i = 1, dims(2)
+                qv_org(2,i,j) = work(dummy,i,j)
+             enddo
+             enddo
              !$omp parallel do collapse(2) &
              !$omp private (qm,p_sat)
              do j = 1, dims(3)
@@ -811,8 +963,14 @@ contains
        case('topo')
 
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                cz_org(2,:,:),            & ! (out)
+                                work(dummy,:,:),          & ! (out)
                                 postfix = basename_num    ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+             cz_org(2,i,j) = work(dummy,i,j)
+          enddo
+          enddo
 
        case('RN222')
 
@@ -820,9 +978,17 @@ contains
                                      shape(:)                  ) ! (out)
 
           call FILE_GrADS_read( file_id, var_id(ielem,1),    & ! (in)
-                                RN222_org(3:shape(1)+2,:,:), & ! (out)
+                                work(:shape(1),:,:),         & ! (out)
                                 step = nt,                   & ! (in)
                                 postfix = basename_num       ) ! (in)
+          !$omp parallel do collapse(3)
+          do j = 1, dims(3)
+          do i = 1, dims(2)
+          do k = 1, shape(1)
+             RN222_org(k+2,i,j) = work(k,i,j)
+          enddo
+          enddo
+          enddo
 
        end select
     enddo loop_InputAtmosGrADS

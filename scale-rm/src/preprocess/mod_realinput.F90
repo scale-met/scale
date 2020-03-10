@@ -1193,6 +1193,9 @@ contains
        inputtype, &
        basename,  &
        dims       )
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_LON, &
+       ATMOS_GRID_CARTESC_REAL_LAT
     use mod_realinput_scale, only: &
        ParentAtmosOpenSCALE
     use mod_realinput_wrfarw, only: &
@@ -1240,6 +1243,15 @@ contains
       IA_org = dims(2)
       JA_org = dims(3)
     case('GrADS')
+      !do j = 1, JA
+      !do i = 1, IA
+      !  max( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+      !  min( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+      !  max( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+      !  min( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+      !end do
+      !end do
+
       KA_org = dims(1) + 2
       IA_org = dims(2)
       JA_org = dims(3)
@@ -1417,21 +1429,24 @@ contains
                                        istep              ) ! [IN]
           same_mptype_ = .true.
        case('GrADS')
-          call ParentAtmosInputGrADS ( W_org   (:,:,:),   & ! [OUT]
-                                       U_org   (:,:,:),   & ! [OUT]
-                                       V_org   (:,:,:),   & ! [OUT]
-                                       PRES_org(:,:,:),   & ! [OUT]
-                                       DENS_org(:,:,:),   & ! [OUT]
-                                       TEMP_org(:,:,:),   & ! [OUT]
-                                       QV_org  (:,:,:),   & ! [OUT]
-                                       QHYD_org(:,:,:,:), & ! [OUT]
-                                       RN222_org(:,:,:),  & ! [OUT]
-                                       CZ_org  (:,:,:),   & ! [OUT]
-                                       basename,          & ! [IN]
-                                       sfc_diagnoses,     & ! [IN]
-                                       under_sfc,         & ! [IN]
-                                       dims(:),           & ! [IN]
-                                       istep              ) ! [IN]
+          call ParentAtmosInputGrADS ( W_org   (:,:,:),       & ! [OUT]
+                                       U_org   (:,:,:),       & ! [OUT]
+                                       V_org   (:,:,:),       & ! [OUT]
+                                       PRES_org(:,:,:),       & ! [OUT]
+                                       DENS_org(:,:,:),       & ! [OUT]
+                                       TEMP_org(:,:,:),       & ! [OUT]
+                                       QV_org  (:,:,:),       & ! [OUT]
+                                       QHYD_org(:,:,:,:),     & ! [OUT]
+                                       RN222_org(:,:,:),      & ! [OUT]
+                                       CZ_org  (:,:,:),       & ! [OUT]
+                                       basename,              & ! [IN]
+                                       sfc_diagnoses,         & ! [IN]
+                                       under_sfc,             & ! [IN]
+                                       KA_org-2, 1, KA_org-2, & ! [IN]
+                                       IA_org,   1, IA_org,   & ! [IN]
+                                       JA_org,   1, JA_org,   & ! [IN]
+                                       dims(:),               & ! [IN]
+                                       istep                  ) ! [IN]
           same_mptype_ = .false.
           !$omp parallel do collapse(4)
           do iq = 1, N_HYD
