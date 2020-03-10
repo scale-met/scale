@@ -77,12 +77,12 @@ The configurations for the input data are specified in \namelist{PARAM_MKINIT_RE
 
 To use the binary data file as input data, set \verb|"GrADS"| to \nmitem{FILETYPE_ORG}.
 In \scalerm, the file name and the data structure of the \grads formatted binary data are specified in the namelist file \verb|namelist.grads_boundary**| instead of the ``ctl'' file.
-User should prepare the namelist file.
+User has to prepare the namelist file beforehand.
 The namelist file is specified by \nmitem{BASENAME_ORG}.
 
 \nmitem{NUMBER_OF_FILES} is the number of input files.
 The base name of input files is set as \verb|fname| in the namelist file.
-If the base name is set as \verb|fname="filename"|, the input binary data file should be named  \verb|filename.grd| in the case that the number of the input binary file is one.
+Given the base name is set as \verb|fname="filename"|, the input binary data file should be named  \verb|filename.grd| in the case that the number of the input binary file is one.
 In the case that the number of input files is larger than 1 or \nmitem{BASENAME_ADD_NUM} = \verb|.true.|, prepare the files numbered as \verb|"filename_XXXXX.grd"|.
 The program \verb|scale-rm_init| reads these files enumerated from \verb|00000| to the given number \nmitem{NUMBER_OF_FILES}-1.
 
@@ -101,39 +101,39 @@ If it is ``\verb|LINEAR|'', the bi-linear interpolation is used, and distance-we
 In the case of ``\verb|DIST-WEIGHT|'', the number of the neighbors is set by \nmitem{COMM_CARTESC_NEST_INTERP_LEVEL} in \namelist{PARAM_COMM_CARTESC_NEST}.
 
 The above configurations are the common among \namelist{PARAM_MKINIT_REAL_ATMOS},\\ \namelist{PARAM_MKINIT_REAL_OCEAN}, and \namelist{PARAM_MKINIT_REAL_LAND}.
-If they are not specified in\\ \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, the same value specified in\\ \namelist{PARAM_MKINIT_REAL_ATMOS} is used.
+If the namelists except for \nmitem{BASENAME_BOUNDARY} are not specified in\\ \namelist{PARAM_MKINIT_REAL_OCEAN} and \namelist{PARAM_MKINIT_REAL_LAND}, the same values specified in\\ \namelist{PARAM_MKINIT_REAL_ATMOS} are used.
 
 
 \nmitem{USE_FILE_DENSITY} and \nmitem{USE_NONHYDRO_DENS_BOUNDARY} are settings for the calculation of the density.
 The default values are \nmitem{USE_FILE_DENSITY} = \verb|.false.| and \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.false.|.
 In that case, the density in initial and boundary data is calculated with hydrostatic balance, i.e., $\frac{dp}{dz}=-\rho g$ from the input temperature and humidity data.
 % The density may differ from that in the parent data.
-If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the input density is used for the density as well as the other variables.\\
+If \nmitem{USE_FILE_DENSITY} = \verb|.true.|, the density read from the input file(s) is used as well as the other variables.\\
 If \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|, regardless of the \nmitem{USE_FILE_DENS}, the density only in the boundary data is calculated with the equation of state, i.e., $\rho = p/RT$,  from the input temperature, pressure and humidity data.
 This density is generally consistent with that in the parent model.
 The \nmitem{USE_NONHYDRO_DENS_BOUNDARY} does not affect the initial data.
 % The densities in the initial and boundary data become different if \nmitem{USE_FILE_DENSITY}=\verb|.false.| and \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|.
 The reason why these options are provided is the following.
-In most cases, density under the hydrostatic balance is preferred to reduce initial shock in the simulation for the initial data.
+In most cases, the density satisfying the hydrostatic balance is preferred for the initial data to reduce initial shock in the simulation.
 Therefore, \nmitem{USE_FILE_DENSITY}=\verb|.false.| is recommended.
-On the other hand, since the density constructed with the hydrostatic balance could differ from that in the parent model, which is expected to be realistic, this may cause a significant mass bias in the simulation.
+On the other hand, since the density constructed with the hydrostatic balance could differ from that in the parent model (or realistic value), this may cause a significant mass bias in the simulation.
 In such cases, in terms of representation of the simulation, it could be better to use consistent density with the parent's one as \nmitem{USE_NONHYDRO_DENS_BOUNDARY}=\verb|.true.|.
-The vertical acceleration or waves due to use of hydrostatically inbalanced density as the boundary data is expected to be quickly dumped by the lateral nudging.
+The vertical acceleration or waves due to the use of hydrostatically inbalanced density as the boundary data is expected to be quickly dumped by the lateral nudging.
 
 
-\nmitem{USE_SFC_DIAGNOSES} is switch for the calculation of the values at the layers below the lowermost grid of the input data.
+\nmitem{USE_SFC_DIAGNOSES} is the switch of the calculation way for the values at the \scale layers below the lowermost grid of the input data.
 If \nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|, the surface quantities, such as T2, RH2, U10, V10, and PSFC, are used.
-Otherwise, constant potential temperature and hydrostatic balance is assumed.
+Otherwise, constant potential temperature and hydrostatic balance are assumed.
 
-\nmitem{USE_DATA_UNDER_SFC} is switch whether the input data below the surface is used or ignored.
-The data below the surface may appear on a high-pressure surface at high mountainous region.
+\nmitem{USE_DATA_UNDER_SFC} is switch whether the input data below its surface is used or ignored.
+%The data below the surface may appear on a high-pressure surface at high mountainous region.
 
 \nmitem{SAME_MP_TYPE} is to specify if the same cloud microphysical scheme is used as the parent model.
 This is valid only for \nmitem{FILETYPE_ORG} = ``\verb|SCALE-RM|''.
 
 
 The soil water is configured by \nmitem{USE_FILE_LANDWATER} of \namelist{PARAM_MKINIT_REAL_LAND} in \verb|init.conf|.
-There are two options in preparation of soil moisture: i) to provide the data from the input file (\nmitem{USE_FILE_LANDWATER} = \verb|.true.|) and ii) to provide it as a constant value in the entire region (\nmitem{USE_FILE_LANDWATER} = \verb|.false.|).
+There are two options in preparation of soil moisture: i) the data providedfrom the input file (\nmitem{USE_FILE_LANDWATER} = \verb|.true.|) and ii) a constant value in the entire region (\nmitem{USE_FILE_LANDWATER} = \verb|.false.|).
 In the case of the option i), either \verb|SMOISVC| or \verb|SMOISDS| as the 3D soil moisture data is required.
 The fraction of volume of soil moisture (\verb|SMOISVC|) is the ratio of water volume ($V_w$) to soil volume ($V$), i.e., $V_w / V$.
 The saturation ratio (\verb|SMOISDS|) is the ratio of water volume $V_w$ to void spaces in $V$, i.e., $V_w / V_v$.
@@ -199,9 +199,9 @@ The explanations of \namelist{GrADS_ITEM} is described in Table \ref{tab:namelis
 
 
 If the number of grids is different from the default value, specify the number in \namelist{GrADS_ITEM}.
-For example, the input data to \verb|QV| and \verb|RH| is not often provided in the upper layers.
+For example, the \verb|QV| and \verb|RH| in upper levels are not always available.
 In such cases, the number of layers where the data exist is specified as \verb|nz|.
-Two methods to extrapolate value to the upper layers are prepared:
+Then, two methods to extrapolate values to the upper layers in \scale are prepared:
 \verb| upper_qv_type = "ZERO"| is default.
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS| & \\

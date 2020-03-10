@@ -106,8 +106,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 \nmitem{INTRP_TYPE}で空間補間の種類を指定する。
-\verb|``LINEAR''|と \verb|``DIST-WEIGHT''|が設定可能である。
-\verb|``LINEAR''|の場合は2次元線形補間が用いられ、\verb|``DIST-WEIGHT''|の場合は隣接$N$点の距離重み付け平均が用いられる。
+``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が設定可能である。
+``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
 距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定される。
 
 以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}、
@@ -115,8 +115,9 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \namelist{PARAM_MKINIT_REAL_LAND}の間で共通である。
 \namelist{PARAM_MKINIT_REAL_OCEAN}や \\
 \namelist{PARAM_MKINIT_REAL_LAND}に関しては、別途指定しない限り、
+\nmitem{BASENAME_BOUNDARY} を除いて
 \namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が基本的に引き継がれる。
-%
+
 
 \nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}は
 密度の計算方法に関する設定を行う。
@@ -145,11 +146,11 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合, T2, RH2, U10, V10, PSFC といった地表面変数が使われるが、そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
 
 \nmitem{USE_DATA_UNDER_SFC}は入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
-地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
+%地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
 
 
 \nmitem{SAME_MP_TYPE}は親モデルと同じ雲微物理スキームを使うかどうかを指定するパラメータである。
-これは\nmitem{FILETYPE_ORG} = \verb|''SCALE-RM''|でのみ有効である。
+これは\nmitem{FILETYPE_ORG} =``\verb|SCALE-RM|''でのみ有効である。
 
 
 
