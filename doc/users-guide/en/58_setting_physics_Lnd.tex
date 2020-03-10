@@ -1,0 +1,84 @@
+\section{Land Model} \label{sec:basic_usel_land}
+%-------------------------------------------------------------------------------
+Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of flux at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+
+\subsection{Land and Surface Scheme}
+%-------------------------------------------------------------------------------
+The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_DYN_TYPE} and \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
+
+\editboxtwo{
+\verb|&PARAM_LAND                | & \\
+\verb| LAND_DYN_TYPE = "BUCKET", | & ; Select the land type shown in Table \ref{tab:nml_land_dyn}\\
+\verb| LAND_SFC_TYPE = "SKIN",   | & ; Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
+\verb|/                          | & \\
+}
+
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of land scheme}
+  \label{tab:nml_land_dyn}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Do not use land model \\
+      \verb|BUCKET|      & Heat diffusion/bucket model \\
+      \verb|INIT|        & Fixed to the initial condition \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of land surface scheme}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+      \verb|SKIN|       & Determine surface temperature in the scheme \\
+      \verb|FIXED-TEMP| & Assume surface temperature is the same as uppermost land soil temperature \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the land type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither NONE nor OFF can be given to \nmitem{LAND_DYN_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Land fraction exists, but land component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+If \nmitem{LAND_DYN_TYPE} = \verb|"BUCKET"|, you can apply relaxation (nudging) of land variables by using external data.
+The parameter of the nudging can be specified in \verb|run.conf|.
+
+\editboxtwo{
+ \verb|&PARAM_LAND_DYN_BUCKET                                    | & \\
+ \verb| LAND_DYN_BUCKET_nudging                       = .false., | & ; use nudging for land variables? \\
+ \verb| LAND_DYN_BUCKET_nudging_tau                   = 0.0_DP,  | & ; relaxation time for nudging \\
+ \verb| LAND_DYN_BUCKET_nudging_tau_unit              = "SEC",   | & ; relaxation time unit \\
+ \verb| LAND_DYN_BUCKET_nudging_basename              = "",      | & ; base name of input data \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_year  = .false., | & ; annually cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_month = .false., | & ; monthly cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false., | & ; dayly cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_step_fixed            = 0,       | & ; Option for using specific step number of the data \\
+ \verb| LAND_DYN_BUCKET_nudging_offset                = 0.0_RP,  | & ; offset value of the variables \\
+ \verb| LAND_DYN_BUCKET_nudging_defval                = UNDEF,   | & ; default value of the variables \\
+ \verb| LAND_DYN_BUCKET_nudging_check_coordinates     = .true.,  | & ; check coordinate of variables \\
+ \verb| LAND_DYN_BUCKET_nudging_step_limit            = 0,       | & ; maximum limit of the time steps of the data \\
+ \verb|/                                                        | & \\
+}
+
+When \nmitem{LAND_DYN_BUCKET_nudging_tau} is 0, the value of land variables is totally replaced by the external file. This configuration is the same as \nmitem{LAND_TYPE} = \verb|"FILE"| in the old version.
+%
+When \nmitem{LAND_DYN_BUCKET_nudging_step_fixed} is less than 1, the certain time of the input data is used and temporal interpolation is applied to calculate the value of current time. When the specific step number is set for \nmitem{LAND_DYN_BUCKET_nudging_step_fixed}, the data of that step is always used without interpolation.
+%
+When the number larger than 0 is set to \nmitem{LAND_DYN_BUCKET_nudging_step_limit}, The data at the time step exceed this limit would not be read. When \nmitem{LAND_DYN_BUCKET_nudging_step_limit} is 0, no limit is set.
+
+If \nmitem{LAND_DYN_TYPE} except \verb|"NONE"| or \verb|"OFF"| is specified,
+it is necessary to prepare parameter tables for the length of roughness and the input to the land-use distribution.
+A parameter table is provided
+in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
+
+\subsubsection{Flux between atmosphere and on land}
+%-------------------------------------------------------------------------------
+The albedo and roughness length of land surface are provided by the parameter table. The surface flux between atmosphere and land is calculated by the scheme selected by \nmitem{LAND_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
+
+
