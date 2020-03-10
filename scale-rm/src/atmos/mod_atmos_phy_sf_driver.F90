@@ -440,13 +440,17 @@ contains
        FILE_HISTORY_in
     use scale_atmos_hydrostatic, only: &
        barometric_law_mslp => ATMOS_HYDROSTATIC_barometric_law_mslp
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
-    use scale_topography, only: &
-       TOPOGRAPHY_Zsfc
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry, &
        I_QV
+    use mod_atmos_vars, only: &
+       TEMP, &
+       PRES, &
+       QV
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS   => ATMOS_PHY_SF_SFC_DENS,   &
        SFC_PRES   => ATMOS_PHY_SF_SFC_PRES,   &
@@ -493,9 +497,10 @@ contains
     enddo
 
 
-    call barometric_law_mslp( IA, IS, IE, JA, JS, JE,                       & ! [IN]
-                              SFC_PRES(:,:), T2(:,:), TOPOGRAPHY_Zsfc(:,:), & ! [IN]
-                              MSLP(:,:)                                     ) ! [OUT]
+    call barometric_law_mslp( KA, KS, KE, IA, IS, IE, JA, JS, JE,  & ! [IN]
+                              PRES(:,:,:), TEMP(:,:,:), QV(:,:,:), & ! [IN]
+                              REAL_CZ(:,:,:),                      & ! [IN]
+                              MSLP(:,:)                            ) ! [OUT]
 
     call FILE_HISTORY_in( SFC_DENS  (:,:),                     'SFC_DENS',        'surface atmospheric density',          'kg/m3'   )
     call FILE_HISTORY_in( SFC_PRES  (:,:),                     'SFC_PRES',        'surface atmospheric pressure',         'Pa'      )
