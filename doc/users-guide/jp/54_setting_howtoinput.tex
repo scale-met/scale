@@ -123,7 +123,7 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 デフォルトの設定は、
 \nmitem{USE_FILE_DENSITY} = \verb|.false.| 及び 
 \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.false.|であり、
-この時、初期値・境界値の密度は、読み込んだ気圧と高度データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
+この時、初期値・境界値の密度は、読み込んだ温度と比湿データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
 %（ここで見積った密度は、親モデルの密度とは必ずしも一致しない）。
 \nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合、他の変数同様に、
 入力ファイルから読み込んだ密度の値を初期値・境界値として使用する。
@@ -218,8 +218,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 }
 
 
-格子数のデフォルト値は\verb|nx, ny, nz|で指定する。
-また、入力データに関する説明は、各変数ごとに\namelist{GrADS_ITEM}を用意し指定する。
+格子数のデフォルト値は\namelist{GrADS_DIMS}の\verb|nx, ny, nz|で指定する。
+また、入力データに関する設定は、各変数ごとに\namelist{GrADS_ITEM}を用意し指定する。
 \namelist{GrADS_ITEM}に関する説明は、表\ref{tab:namelist_grdvar}に示す。
 
 ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定することができる。
