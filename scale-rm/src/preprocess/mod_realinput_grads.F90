@@ -253,104 +253,29 @@ contains
   end subroutine ParentAtmosSetupGrADS
 
   !-----------------------------------------------------------------------------
-  subroutine ParentAtmosOpenGrADS
-    implicit none
-
-    return
-  end subroutine ParentAtmosOpenGrADS
-
-  !-----------------------------------------------------------------------------
-  subroutine ParentAtmosInputGrADS( &
-       velz_org, &
-       velx_org, &
-       vely_org, &
-       pres_org, &
-       dens_org, &
-       temp_org, &
-       qv_org,   &
-       qhyd_org, &
-       RN222_org,&
+  subroutine ParentAtmosOpenGrADS( &
        lon_org,  &
        lat_org,  &
-       cz_org,   &
        basename_num,  &
-       sfc_diagnoses, &
-       under_sfc,     &
-       dims, &
-       nt )
+       dims )
     use scale_const, only: &
-       UNDEF   => CONST_UNDEF, &
-       D2R     => CONST_D2R,   &
-       EPS     => CONST_EPS,   &
-       EPSvap  => CONST_EPSvap, &
-       EPSTvap => CONST_EPSTvap, &
-       GRAV    => CONST_GRAV, &
-       LAPS    => CONST_LAPS, &
-       P00     => CONST_PRE00, &
-       Rdry    => CONST_Rdry, &
-       CPdry   => CONST_CPdry
-    use scale_atmos_hydrometeor, only: &
-       N_HYD, &
-       I_HC, &
-       I_HR, &
-       I_HI, &
-       I_HS, &
-       I_HG
-    use scale_atmos_saturation, only: &
-       psat => ATMOS_SATURATION_psat_liq
+       D2R => CONST_D2R
     use scale_file_grads, only: &
-       FILE_GrADS_isOneD,    &
-       FILE_GrADS_get_shape, &
+       FILE_GrADS_isOneD, &
        FILE_GrADS_read
     implicit none
 
-
-    real(RP),         intent(out) :: velz_org(:,:,:)
-    real(RP),         intent(out) :: velx_org(:,:,:)
-    real(RP),         intent(out) :: vely_org(:,:,:)
-    real(RP),         intent(out) :: pres_org(:,:,:)
-    real(RP),         intent(out) :: dens_org(:,:,:)
-    real(RP),         intent(out) :: temp_org(:,:,:)
-    real(RP),         intent(out) :: qv_org  (:,:,:)
-    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
-    real(RP),         intent(out) :: RN222_org(:,:,:)
     real(RP),         intent(out) :: lon_org(:,:)
     real(RP),         intent(out) :: lat_org(:,:)
-    real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename_num
-    logical,          intent(in)  :: sfc_diagnoses
-    logical,          intent(in)  :: under_sfc
     integer,          intent(in)  :: dims(6)
-    integer,          intent(in)  :: nt
+
+    real(RP) :: lon1D(dims(2)), lat1D(dims(3))
 
     character(len=H_SHORT) :: item
 
-    integer  :: lm_layer(dims(2),dims(3))
-
-    real(RP) :: lev1D(dims(1)), lon1D(dims(2)), lat1D(dims(3))
-
-    logical  :: pressure_coordinates
-    real(RP) :: p_sat, qm, dz
-    real(RP) :: rh(dims(2),dims(3))
-    real(RP) :: Rtot
-
-    integer  :: shape(3)
-    integer  :: i, j, k, iq, ielem
+    integer  :: i, j, ielem
     !---------------------------------------------------------------------------
-
-    !$omp parallel do collapse(3)
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)+2
-       dens_org (k,i,j)   = UNDEF
-       pres_org (k,i,j)   = UNDEF
-       velz_org (k,i,j)   = 0.0_RP
-       qv_org   (k,i,j)   = 0.0_RP
-       qhyd_org (k,i,j,:) = 0.0_RP
-       RN222_org(k,i,j )  = 0.0_RP
-    end do
-    end do
-    end do
 
     !--- read grads data
     loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
@@ -407,6 +332,110 @@ contains
              enddo
           end if
 
+       end select
+    enddo loop_InputAtmosGrADS
+
+    return
+  end subroutine ParentAtmosOpenGrADS
+
+  !-----------------------------------------------------------------------------
+  subroutine ParentAtmosInputGrADS( &
+       velz_org, &
+       velx_org, &
+       vely_org, &
+       pres_org, &
+       dens_org, &
+       temp_org, &
+       qv_org,   &
+       qhyd_org, &
+       RN222_org,&
+       cz_org,   &
+       basename_num,  &
+       sfc_diagnoses, &
+       under_sfc,     &
+       dims, &
+       nt )
+    use scale_const, only: &
+       UNDEF   => CONST_UNDEF, &
+       D2R     => CONST_D2R,   &
+       EPS     => CONST_EPS,   &
+       EPSvap  => CONST_EPSvap, &
+       EPSTvap => CONST_EPSTvap, &
+       GRAV    => CONST_GRAV, &
+       LAPS    => CONST_LAPS, &
+       P00     => CONST_PRE00, &
+       Rdry    => CONST_Rdry, &
+       CPdry   => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC, &
+       I_HR, &
+       I_HI, &
+       I_HS, &
+       I_HG
+    use scale_atmos_saturation, only: &
+       psat => ATMOS_SATURATION_psat_liq
+    use scale_file_grads, only: &
+       FILE_GrADS_isOneD,    &
+       FILE_GrADS_get_shape, &
+       FILE_GrADS_read
+    implicit none
+
+
+    real(RP),         intent(out) :: velz_org(:,:,:)
+    real(RP),         intent(out) :: velx_org(:,:,:)
+    real(RP),         intent(out) :: vely_org(:,:,:)
+    real(RP),         intent(out) :: pres_org(:,:,:)
+    real(RP),         intent(out) :: dens_org(:,:,:)
+    real(RP),         intent(out) :: temp_org(:,:,:)
+    real(RP),         intent(out) :: qv_org  (:,:,:)
+    real(RP),         intent(out) :: qhyd_org(:,:,:,:)
+    real(RP),         intent(out) :: RN222_org(:,:,:)
+    real(RP),         intent(out) :: cz_org(:,:,:)
+    character(len=*), intent(in)  :: basename_num
+    logical,          intent(in)  :: sfc_diagnoses
+    logical,          intent(in)  :: under_sfc
+    integer,          intent(in)  :: dims(6)
+    integer,          intent(in)  :: nt
+
+    character(len=H_SHORT) :: item
+
+    integer  :: lm_layer(dims(2),dims(3))
+
+    real(RP) :: lev1D(dims(1))
+
+    logical  :: pressure_coordinates
+    real(RP) :: p_sat, qm, dz
+    real(RP) :: rh(dims(2),dims(3))
+    real(RP) :: Rtot
+
+    integer  :: shape(3)
+    integer  :: i, j, k, iq, ielem
+    !---------------------------------------------------------------------------
+
+    !$omp parallel do collapse(3)
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)+2
+       dens_org (k,i,j)   = UNDEF
+       pres_org (k,i,j)   = UNDEF
+       velz_org (k,i,j)   = 0.0_RP
+       qv_org   (k,i,j)   = 0.0_RP
+       qhyd_org (k,i,j,:) = 0.0_RP
+       RN222_org(k,i,j )  = 0.0_RP
+    end do
+    end do
+    end do
+
+    !--- read grads data
+    loop_InputAtmosGrADS : do ielem = 1, num_item_list_atom
+
+       if ( var_id(ielem,1) < 0 ) cycle
+
+       item  = item_list_atom(ielem)
+
+       ! read data
+       select case(item)
        case("plev")
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)

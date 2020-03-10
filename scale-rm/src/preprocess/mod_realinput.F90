@@ -1120,10 +1120,11 @@ contains
 
     case('GrADS')
 
-       if ( read_by_myproc_atmos ) then
-          call ParentAtmosSetupGrADS ( dims(:), & ! [OUT]
-                                       basename ) ! [IN]
-       endif
+       serial_atmos         = .false. ! force false
+       read_by_myproc_atmos = .true.
+
+       call ParentAtmosSetupGrADS ( dims(:), & ! [OUT]
+                                    basename ) ! [IN]
        timelen = -1
 
        use_file_density = use_file_density_in
@@ -1166,31 +1167,18 @@ contains
        call COMM_bcast( timelen )
     endif
 
-    allocate( LON_org (            dims(2), dims(3)     ) )
-    allocate( LAT_org (            dims(2), dims(3)     ) )
-    allocate( CZ_org  ( dims(1)+2, dims(2), dims(3)     ) )
-
-    allocate( W_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( U_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( V_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( POTT_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( TEMP_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( PRES_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
-
-    allocate( QV_org   ( dims(1)+2, dims(2), dims(3)        ) )
-    allocate( QHYD_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
-
+    allocate( LON_org( dims(2), dims(3) ) )
+    allocate( LAT_org( dims(2), dims(3) ) )
+    select case(inputtype)
+    case('SCALE-RM','NETCDF')
+       allocate( CZ_org( dims(1)+2, dims(2), dims(3) ) )
+    end select
 
     allocate( igrd (     IA,JA,itp_nh_a) )
     allocate( jgrd (     IA,JA,itp_nh_a) )
     allocate( hfact(     IA,JA,itp_nh_a) )
     allocate( kgrd (KA,2,IA,JA,itp_nh_a) )
     allocate( vfact(KA,  IA,JA,itp_nh_a) )
-
 
     return
   end subroutine ParentAtmosSetup
@@ -1226,7 +1214,10 @@ contains
                                      basename,       & ! [IN]
                                      dims   (:)      ) ! [IN]
        case('GrADS')
-          call ParentAtmosOpenGrADS
+          call ParentAtmosOpenGrADS( LON_org(:,:), & ! [OUT]
+                                     LAT_org(:,:), & ! [OUT]
+                                     basename,     & ! [IN]
+                                     dims   (:)    ) ! [IN]
        case('WRF-ARW')
           call ParentAtmosOpenWRFARW
        case('NETCDF')
@@ -1369,6 +1360,25 @@ contains
 
     call PROF_rapstart('___AtmosInput',3)
 
+    select case(inputtype)
+    case('GrADS','WRF-ARW')
+       allocate( CZ_org( dims(1)+2, dims(2), dims(3) ) )
+    end select
+
+    allocate( W_org   ( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( U_org   ( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( V_org   ( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( POTT_org( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( TEMP_org( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( PRES_org( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
+    allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
+
+    allocate( QV_org   ( dims(1)+2, dims(2), dims(3)        ) )
+    allocate( QHYD_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
+    allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
+
     if ( read_by_myproc_atmos ) then
        select case(inputtype)
        case('SCALE-RM')
@@ -1397,8 +1407,6 @@ contains
                                        QV_org  (:,:,:),   & ! [OUT]
                                        QHYD_org(:,:,:,:), & ! [OUT]
                                        RN222_org(:,:,:),  & ! [OUT]
-                                       LON_org (:,:),     & ! [OUT]
-                                       LAT_org (:,:),     & ! [OUT]
                                        CZ_org  (:,:,:),   & ! [OUT]
                                        basename,          & ! [IN]
                                        sfc_diagnoses,     & ! [IN]
@@ -2121,6 +2129,25 @@ contains
     call COMM_wait ( MOMY(:,:,:), 3, .false. )
 
     first_atmos = .false.
+
+    select case(inputtype)
+    case('GrADS','WRF-ARW')
+       deallocate( CZ_org )
+    end select
+
+    deallocate( W_org    )
+    deallocate( U_org    )
+    deallocate( V_org    )
+    deallocate( POTT_org )
+    deallocate( TEMP_org )
+    deallocate( PRES_org )
+    deallocate( DENS_org )
+    deallocate( QTRC_org )
+
+    deallocate( QV_org    )
+    deallocate( QHYD_org  )
+    deallocate( QNUM_org  )
+    deallocate( RN222_org )
 
     call PROF_rapend  ('___AtmosInterp',3)
 
