@@ -1,0 +1,46 @@
+\section{都市モデル} \label{sec:basic_usel_urban}
+%------------------------------------------------------
+都市過程は都市の状態量の更新と大気ー都市面間のフラックス計算の２つに大別される。
+これらの過程を計算する時間間隔はどちらも\namelist{PARAM_TIME}で設定する(詳細は第\ref{sec:timeintiv}節を参照)。
+
+\subsection{大気-都市面間フラックス}
+%-------------------------------------------------------------------------------
+都市の表面温度や水分量等の都市面の状態量の更新、大気-都市面間のフラックス計算を担う都市スキームは、
+init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で以下のように設定する。
+
+\editboxtwo{
+\verb|&PARAM_URBAN         | & \\
+\verb| URBAN_DYN_TYPE = "KUSAKA01", | & ; 表\ref{tab:nml_urban}から都市スキームを選択。\\
+\verb|/                    | & \\
+}
+
+\begin{table}[h]
+\begin{center}
+  \caption{都市スキームの選択肢}
+  \label{tab:nml_urban}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  スキーム名  & スキームの説明 &  参考文献 \\ \hline
+      \verb|NONE または OFF|   & 都市モデルを利用しない                      \\
+      \verb|LAND|             & 都市域は陸モデルによって計算される            \\
+      \verb|KUSAKA01|         & 単層キャノピーモデル  & \citet{kusaka_2001} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\namelist{PARAM LANDUSE}で入力・設定された土地利用分布に都市が含まれる場合は、
+\nmitem{URBAN_TYPE}にNONEまたはOFFを選択できない。この条件を満たさない場合は、
+下記のメッセージをLOGファイルに出力して、プログラムは計算を行わずに直ちに終了する。
+%
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+\nmitem{URBAN_DYN_TYPE}として\verb|LAND|を選択した場合は、
+表面フラックスや都市域の土壌変数を計算するために陸モデルが用いられる。
+この場合、第\ref{sec:basic_usel_land}節に記述した陸面に対するパラメータテーブルに、
+都市域に対するパラメータを与える必要がある。
+
+\verb|KUSAKA01|スキームには、都市の形態を指定するパラメータが数多く存在する。
+都市モデルのパラメータは、第\ref{sec:reference_manual}節のネームリストの記述を参照されたい。
