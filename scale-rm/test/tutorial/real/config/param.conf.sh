@@ -113,6 +113,10 @@ cat << EOF > param.physics.conf
  ATMOS_VARS_CHECKRANGE = .true.,
 /
 
+&PARAM_ATMOS_HYDROSTATIC
+ HYDROSTATIC_barometric_law_mslp_kref = 2,
+/
+
 &PARAM_ATMOS_REFSTATE
  ATMOS_REFSTATE_TYPE      = "INIT",
  ATMOS_REFSTATE_UPDATE_DT = ${TIME_DT_REFSTATE},
