@@ -14,10 +14,17 @@ LATEX    = platex
 BIBTEX   = bibtex
 DVIPDF   = dvipdfmx -p a4
 HTMLBIN  = pandoc --to=html
+CURL     = curl -f -s -S --create-dirs
+IMAGE_URL = http://scale.aics.riken.jp/doc/figure
+IMAGE_PATH = $(IMAGE_URL)/$(if $(shell git branch --contains 2>/dev/null|grep -v master|grep -v release|grep -v hotfix),devel,$(VERSION))
 
 VERSION  = $(shell cat ../../../scale-rm/src/VERSION)
 
-SRCS = $(wildcard *.tex)
+IMAGE_BASENAME = $(shell grep includegraphics *tex | ruby -n -e '/^\s*\\includegraphics.*\{(.+)\}/ =~ $$_.split(":")[1] && print(/\A([^.]+)(\..+)?\Z/=~File.basename($$1) && $$1+($$2 || ".eps"),"\n") ')
+FIG_DIR = ../../figure
+IMAGES = $(patsubst %,$(FIG_DIR)/%,$(IMAGE_BASENAME))
+
+SRCS = $(wildcard *.tex) $(IMAGES)
 
 all: pdf
 
@@ -44,6 +51,11 @@ $(TEXNAME).html: $(TEXNAME).tex
 
 
 .SUFFIXES:
-.SUFFIXES: .tex .bbl .dvi .pdf .bib .html
+.SUFFIXES: .tex .bbl .dvi .pdf .bib .html .jpg
+
+$(FIG_DIR)/%.jpg:
+	$(if $(IMAGE_URL),,$(error IMAGE_URL is empty))
+	$(CURL) $(IMAGE_PATH)/`basename $@` -o $@
+
 
 .PHONY : pdf clean html
