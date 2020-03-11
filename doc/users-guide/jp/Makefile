@@ -47,7 +47,7 @@ allclean: clean
 $(TEXNAME).pdf: $(TEXNAME).dvi
 	$(DVIPDF) $(TEXNAME)
 
-$(TEXNAME).dvi: $(VERFNAME) $(SRCS) reference.bib
+$(TEXNAME).dvi: $(VERFNAME) $(SRCS) ../../reference.bib
 	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
