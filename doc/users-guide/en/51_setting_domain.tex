@@ -29,10 +29,10 @@ By using Eqs. (\ref{eq:xgridnum} and \ref{eq:ygridnum}),  the size of the entire
 && \verb|Domain length in the Y direction| \nonumber\\
 &&    \qquad = \verb|number of grids in the Y direction| \times \verb|DY|,
 \end{eqnarray}
-where \nmitem{DX, DY} is grid spacings specified  in \namelist{PARAM_ATMOS_GRID_CARTESC} as described in subsection \ref{subsec:gridinterv}.
+where \nmitem{DX, DY} is grid spacings specified in \namelist{PARAM_ATMOS_GRID_CARTESC} as described in subsection \ref{subsec:gridinterv}.
 If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
 
-In order to perform a horizontal-vertical two-dimentional experiment, set both the \texttt{IMAX} and \texttt{PRC\_NUM\_X} to 1, i.e., the total number of the grids in the X direction is one.
+In order to perform a horizontal-vertical two-dimensional experiment, set both the \texttt{IMAX} and \texttt{PRC\_NUM\_X} to 1, i.e., the total number of the grids in the X direction is one.
 In this case, the motion in the Y-Z section is calculated.
 The value of \texttt{DX} does not affect the simulation result.
 
@@ -302,6 +302,10 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; Title for the output file. \\
   \verb| ATMOS_BOUNDARY_OUT_DTYPE = 'DEFAULT', | & ; Data type (\verb|REAL4| or \verb|REAL8|) for the output. \\
+  \\ ({\small\slshape continued on next page})
+}
+\editboxtwo{
+  ({\small\slshape continued from previous page}) \\ \\
   \verb| ATMOS_BOUNDARY_USE_DENS = .false.,    | & ; Switch of the nudging for the density. \\
   \verb| ATMOS_BOUNDARY_USE_VELZ = .false.,    | & ; Switch for the w. \\
   \verb| ATMOS_BOUNDARY_USE_VELX = .false.,    | & ; Switch for the u. \\
@@ -325,11 +329,14 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_FRACX = 1.0D0,         | & ; Fraction in the x-direction. \\
   \verb| ATMOS_BOUNDARY_FRACY = 1.0D0,         | & ; Fraction in the y-direction. \\
   \verb| ATMOS_BOUNDARY_TAUZ = DT * 10.0D0,    | & ; Time scale of the nudging at the top boundary (in second). \\
-  \verb| ATMOS_BOUNDARY_TAUX = DT * 10.0D0,    | & ; Time scale at the western and eastern boundary. \\
-  \verb| ATMOS_BOUNDARY_TAUY = DT * 10.0D0,    | & ; Time scale at the southern and northern boundary. \\
+  \verb| ATMOS_BOUNDARY_TAUX = DT * 10.0D0,    | & ; Time scale at the western and eastern boundaries. \\
+  \verb| ATMOS_BOUNDARY_TAUY = DT * 10.0D0,    | & ; Time scale at the southern and northern boundaries. \\
   \verb| ATMOS_BOUNDARY_LINEAR_V = .false.,    | & ; Profile type of the time scale in the z-direction. If \verb|.true.|, it is a linear profile, otherwise a sinusoidal profile. \\
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; Profile type in the x- and y-direction. If \verb|.true.|, it is a linear profile, otherwise a exponential profile. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; Factor of the exponent of the exponential profile. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST = .false., | & ; Switch of the density adjustment. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
+  ~~\verb|     = -1.0D0,                       | & ; Time scale of the density nudging when the density adjustment is enabled (in second). \\
 }
 
 The tendency due to the nudging is written as
@@ -371,8 +378,22 @@ The default value of the $\tau$ is ten times of \nmitem{TIME_DT}.
 Please refer to Section \ref{sec:timeintiv} for \nmitem{TIME_DT}.
 
 
-If \nmitem{ATMOS_BOUNDARY_TYPE} in \namelist{PARAM_ATMOS_BOUNDARY} is \verb|REAL|, the nudging at the top and lateral boundaries for the horizontal velocities, potential temperature, and vapor is applied.
-If the simulation is on a daughter domain of the online nesting (See Section \ref{subsec:nest_online}), the same setting is applied with the \verb|REAL| boundary type.
+If \nmitem{ATMOS_BOUNDARY_TYPE} = ``\verb|REAL|'' in \namelist{PARAM_ATMOS_BOUNDARY}, the nudging at the top and lateral boundaries for the horizontal velocities, potential temperature, density, and vapor is applied.
+In addition, the vertical velocity and hydrometeors can be nudged by set \nmitem{ATMOS_BOUNDARY_USE_VELZ} and \nmitem{ATMOS_BOUNDARY_USE_QHYD} to \verb|.true.|, respectively.
+If the simulation is on a child domain of the online nesting (See Section \ref{subsec:nest_online}), the same setting is applied with the \verb|REAL| boundary type but \nmitem{ONLINE_USE_VELZ} and \nmitem{ONLINE_BOUNDARY_USE_QHYD} in \namelist{PARAM_COMM_CARTESC_NEST} instead of \nmitem{ATMOS_BOUNDARY_USE_VELZ} and \nmitem{ATMOS_BOUNDARY_USE_QHYD}, respectively.
+
+The density nudging reduces the pressure gradient, which plays a role to transfer the information of boundary data into the inner domain especially in outflow region, although it is necessary to reduce total mass bias in the simulation.
+The density nudging could be weaken by adjusting the mass flux at the lateral boundaries, which can also reduce the mass bias.
+If \nmitem{ATMOS_BOUNDARY_DENS_ADJUSTMENT} = \verb|.true.|, the mass flux is adjusted so that the difference in the total mass between the parent model and the simulation becomes small.
+For example, if the total mass in the simulation is less than that in the parent model, the $\rho u$ at the western boundary and the $\rho v$ at the southern boundary are increased, and the $\rho u$ at the eastern boundary and the $\rho v$ at the northern boundary are decreased to enlarge the total mass convergence.
+The mass flux adjustment is available only for the \verb|REAL| boundary type and child domain of the online nesting.
+When the density adjustment is enabled, the time scale of the density nudging is specified by \nmitem{ATMOS_BOUNDARY_DENS_ADJUSTMENT_TAU}.
+If the value is negative, the time scale is internally determined as $\nmitemeq{ATMOS_BOUNDARY_UPDATE_DT} / 6.0$.
+To weaken the density nudging, set the time scale larger than \nmitem{ATMOS_BOUNDARY_TAUX} and \nmitem{ATMOS_BOUNDARY_TAUY}.
+The adjustment method in \scalerm is constructed under the assumption that the total mass change due to convergence of the mass flux at the lateral boundaries is much larger than that due to the physical processes, such as precipitation and surface latent heat flux.
+The validity of the assumption depends on target domain and situation.
+
+
 
 
 There exists a similar dumping method at near the top boundary, i.e., Rayleigh dumping. See Section \ref{subsec:raydamp}.

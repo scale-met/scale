@@ -27,26 +27,28 @@ The below explanation assumes that the generations of the topography/land-use da
 
 
 \subsubsection{Configurations for Online Nesting}
-In the configuration files \verb|run.***.conf| for the parent and child domains, some nesting settings are added to \namelist{PARAM_NEST}:
+In the configuration files \verb|run.***.conf| for the parent and child domains, some nesting settings are added to \namelist{PARAM_COMM_CARTESC_NEST}:
 
 \noindent {\rm --- Configuration in \verb|run.d01.conf| ---}\\
 \editboxtwo{
-\verb|&PARAM_NEST|                          & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 1,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .true., | & \\
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
+\verb| ONLINE_USE_VELZ          = .false.,| & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
 ~\\
 \noindent {\rm --- Configuration in \verb|run.d02.conf| ---}\\
 \editboxtwo{
-\verb|&PARAM_NEST| & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 2,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .false.,| & \\
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
+\verb| ONLINE_USE_VELZ          = .false.,| & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
@@ -74,9 +76,12 @@ Table \ref{tab:triple_nested} gives the configuration for an $N$-domain nesting 
 \end{table}
 
 
-\nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation is used for the boundary condition. When the boundary condition is generated from external input data, water condensations are not usually employed. However, in the nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because there is often no difference in physical schemes between the two domains.
+\nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation (hydrometeors) is used for the boundary condition.
+When the boundary condition is generated from external input data, water condensations are not usually employed.
+However, in the \scalerm nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because there is often no difference in physical schemes between the two domains.
 %, and the resolution of both are similar.
 The delay in the generation of clouds and rain, possible to have the influence on interior target domain, is expected to be suppressed by this remedy.
+\nmitem{ONLINE_USE_VELZ} specifies whether vertical velocity is used for the boundary condition in the child domain.
 
 \subsubsection{Configuration of Launcher}
 \label{subsubsec:launch}

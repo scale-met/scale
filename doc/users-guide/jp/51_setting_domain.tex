@@ -371,6 +371,10 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
   ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界値データの開始時刻(\verb|REAL| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界値データの時間間隔(\verb|REAL| type の場合のみ) \\
+  \\ ({\small\slshape 次のページへ続く})
+}
+\editboxtwo{
+  ({\small\slshape 前のページからの続き}) \\ \\
   \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
   ~~\verb|                  = 'lerp_initpoint',| & ; 時間方向の補間の種類 \\
                                                  &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\
@@ -409,6 +413,9 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_LINEAR_V = .false.,    | & ; z方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければサイン型の分布.\\
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; x, y 方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければ指数関数分布. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; 指数関数分布の場合における指数の係数. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST = .true.,  | & ; 密度調整に対するスイッチ. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
+  ~~\verb|     = -1.0D0,                       | & ; 密度調整が有効な場合の密度ナッジングの時定数 (秒). \\
 }
 
 ナッジングによる時間変化率は、
@@ -449,14 +456,29 @@ $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値で
 $\alpha_y$は$\alpha_x$と同様の方法によって導かれる。
 
 $\tau$は境界($d=0$)での緩和時間であり、計算された値と境界値の差はこの時間スケールで$1/e$倍となる。
-他方、式\ref{eq:nudging}の右辺2項目によって、$\Delta \phi$の two-grid スケールの成分は$\tau/\nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$の時間で$1/e$倍となる。
+他方、式\ref{eq:nudging}の右辺2項目によって、$\Delta \phi$の two-grid スケールの成分は\\ $\tau/\nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$の時間で$1/e$倍となる。
 $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 \nmitem{TIME_DT}については第\ref{sec:timeintiv}節を参照されたい。
 
 
-\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が\verb|REAL|であれば、
+\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が ``\verb|REAL|'' であれば、
 水平速度・温位・水蒸気に対する上部および側面境界でのナッジングが適用される。
+加えて \nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD} が \verb|.true.| の場合、それぞれ鉛直速度および水凝結物に対するナッジングが適用される。
 オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域で計算が行われるときには、
-境界の種類として\verb|REAL|を用いて上記と同様の設定が適用される。
+境界の種類として\verb|REAL|を用いた場合と同様の設定が適用される。
+この場合、\namelist{PARAM_COMM_CARTESC_NEST} 内の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDAYR_USE_QHYD} がそれぞれ\nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD} の代わりに用いられる。
+
+密度ナッジングは質量バイアスを軽減するために必要である。
+一方で、気圧傾度力は特に流出域において境界データ情報をドメイン内部に伝える役割をもっているが、密度ナッジングはその気圧傾度力を減少させてしまう。
+質量バイアス軽減させるように側面境界における質量フラックスを調整することで、密度ナッジングを弱くすることができる。
+\nmitem{ATMOS_BOUNDARY_DENS_ADJUST} を \verb|.true.| とすると、親モデルとシミュレーションにおける全領域総質量の差が小さくなるように、側面境界質量フラックスが調整される。
+例えば、シミュレーションにおける全質量が親モデルの質量に比べて小さい場合は、西境界における $\rho u$ および南境界における $\rho v$ を増加、東境界における $\rho u$ および北境界における $\rho v$ を減少させることで、全質量収束を増加させる。
+側面質量フラックス調整は、境界の種類として\verb|REAL|を用いた場合およびオンライン・ネスティングの子領域においてのみ利用可能である。
+質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DEN_ADJUST_TAU} で設定する。
+負の値が設定された場合は、内部で $\nmitemeq{ATMOS_BOUNDARY_UPDATE_DT} / 6.0$ と設定される。
+密度ナッジングを弱めるためには、この時定数を \nmitem{ATMOS_BOUNDARY_TAUX} や \nmitem{ATMOS_BOUNDARY_TAUY} よりも大きな値に設定する。
+\scalerm における質量フラックス調整方法は、側面境界における質量フラックスによる全質量変化が、降水や地表面潜熱フラックス等の物理過程による質量変化に比べて十分大きいという仮定のもとで作られている。
+この仮定が妥当であるかどうかは、対象とするドメインや状況による。
+
 
 上端境界の周辺における同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。

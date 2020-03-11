@@ -40,26 +40,28 @@ USER.shに名前を変更して、「\makeconftool」を実行することで作
 
 \subsubsection{オンライン・ネスティングの設定}
 親領域と子領域のそれぞれの設定ファイル(\verb|run.***.conf|)において、
-オンライン・ネスティングのための設定を以下のように\namelist{PARAM_NEST}に追加する。
+オンライン・ネスティングのための設定を以下のように\namelist{PARAM_COMM_CARTESC_NEST}に追加する。
 
 \noindent {\gt \verb|run.d01.conf|の設定}\\
 \editboxtwo{
-\verb|&PARAM_NEST|                          & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 1,      | & 領域の番号。外側から1番。\\
 \verb| ONLINE_IAM_PARENT        = .true., | & \\
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false., | & \\
+\verb| ONLINE_USE_VELZ          = .false., | & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
 ~\\
 \noindent {\gt \verb|run.d02.conf|の設定}\\
 \editboxtwo{
-\verb|&PARAM_NEST| & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 2,      | & 領域の番号。外側から1番。\\
 \verb| ONLINE_IAM_PARENT        = .false.,| & \\
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false., | & \\
+\verb| ONLINE_USE_VELZ          = .false., | & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
@@ -91,12 +93,13 @@ $N$番目の境界データは$N-1$番の領域番号をもった親から受け
 \end{center}
 \end{table}
 
-\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、境界条件として凝結物の値を使うかを指定する。
-外部入力データから側面境界条件を作成するときには、凝結物の値は通常使われない。
-しかし、ネスティング実験では、二領域間で物理スキームが違わないために、
-親領域で計算された凝結物を子領域の境界条件として与えることができる。
+\nmitem{ONLINE_BOUNDARY_USE_QHYD}は、子ドメインの境界条件として水凝結物の値を使うかを指定する。
+外部入力データから側面境界条件を作成するときには、水凝結物の値は通常使われない。
+しかし、\scalerm ネスティング実験では、二領域間で物理スキームが違わないために、
+親領域で計算された水凝結物を子領域の境界条件として与えることができる。
 計算領域の内部に影響を与えるような、流入境界付近での雲や降水の発生の遅れが、
 この改善策によって抑制されると考えられる。
+\nmitem{ONLINE_USE_VELZ}は、鉛直速度を子ドメインの境界条件として使うかを指定する。
 
 
 \subsubsection{ランチャーの設定}

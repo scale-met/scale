@@ -59,7 +59,7 @@ USER.shに名前を変更して、「{\makeconftool}」を実行することで�
 子領域に対する\verb|pp.d02.conf|ファイルを以下のように編集する。
 ここでは、親領域の地形の出力データが SCALE netCDF フォーマット で \verb|topo_d01.pe***.nc|として保存されていると想定する。その他のフォーマットとしては、GrADS および WRF-ARW がサポートされている（第\ref{sec:adv_datainput}節）。
 \editboxtwo{
-\verb|&PARAM_NEST| & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & 親領域のファイルのベース名 \\
 \verb| OFFLINE_PARENT_PRC_NUM_X  = 2,          | & 親領域の\verb|PRC_NUM_X| \\
 \verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,          | & 親領域の\verb|PRC_NUM_Y| \\
