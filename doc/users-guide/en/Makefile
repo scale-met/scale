@@ -44,7 +44,7 @@ clean:
 allclean: clean
 	rm -rf *.pdf $(FIG_DIR)
 
-$(TEXNAME).pdf: $(VERFNAME) $(SRCS) reference.bib
+$(TEXNAME).pdf: $(VERFNAME) $(SRCS) ../../reference.bib
 	$(LATEX)  $(TEXNAME)
 	$(BIBTEX) $(TEXNAME)
 	$(LATEX)  $(TEXNAME)
