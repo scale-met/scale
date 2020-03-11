@@ -38,7 +38,7 @@ clean:
 ${TARGET}.pdf: ${TARGET}.dvi
 	$(DVIPDF) ${TARGET}
 
-${TARGET}.dvi: ${SRCS} reference.bib
+${TARGET}.dvi: ${SRCS} ../reference.bib
 	$(LATEX)  ${TARGET}
 	$(BIBTEX) ${TARGET}
 	$(LATEX)  ${TARGET}
