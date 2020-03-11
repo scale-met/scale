@@ -1,0 +1,44 @@
+%-------------------------------------------------------------------------------
+\section{Urban model} \label{sec:basic_usel_urban}
+%-------------------------------------------------------------------------------
+The urban process consists of two main parts, that is updating the urban state and calculating fluxes at the interface between the atmosphere and the urban.
+The timing of calling these schemes is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+
+\subsection{Flux in Atmosphere and Urban Area}
+%-------------------------------------------------------------------------------
+
+The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates fluxes at the interface between atmosphere and the urban environment is configured in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
+%
+\editboxtwo{
+\verb|&PARAM_URBAN                  | & \\
+\verb| URBAN_DYN_TYPE = "KUSAKA01", | & ; Select the urban type shown in Table \ref{tab:nml_urban}\\
+\verb|/                             | & \\
+}
+
+\begin{table}[hbt]
+\begin{center}
+  \caption{Choices of urban scheme}
+  \label{tab:nml_urban}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
+      \verb|NONE or OFF|         & Do not use the urban scheme            \\
+      \verb|LAND|                & Urban area is calculated by a land model \\
+      \verb|KUSAKA01|            & Single-layer canopy model  & \citet{kusaka_2001} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+If the type of urban area is included in the land-use specified by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}.
+If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
+%
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE}, the land model is used to calculate the surface flux and soil variables for urban areas.
+In this case, parameters for the urban area should be provided in the land parameter table described in Section \ref{sec:basic_usel_land}.
+
+There are many parameters specifying urban morphology in the \verb|KUSAKA01| scheme.
+Regarding the urban parameters, please refer to description about namelist in Section \ref{sec:reference_manual}.
