@@ -119,7 +119,7 @@
 親領域の計算で得られたヒストリデータを用いて初期値/境界値データを作成する場合は、
 \initconf を以下のように設定する。
 \editboxtwo{
-\textcolor{blue}{\verb|&PARAM_NEST|} & \\
+\textcolor{blue}{\verb|&PARAM_COMM_CARTESC_NEST|} & \\
 \textcolor{blue}{\verb| OFFLINE_PARENT_BASENAME   = "history_d01",|}  & 親領域のファイル名 \\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
@@ -156,7 +156,7 @@
 基本的に、\nmitem{BOUNDARY_UPDATE_DT}は親領域の設定ファイル(\verb|run.d01.conf|)の\\
 \nmitem{FILE_HISTORY_DEFAULT_TINTERVAL}と同じ値を設定する。
 %
-\namelist{PARAM_NEST}の項目は、ネスティング実験のための設定項目である。
+\namelist{PARAM_COMM_CAETESC_NEST}の項目は、ネスティング実験のための設定項目である。
 オフライン・ネスティングでは、\nmitem{OFFLINE_PARENT_BASENAME}に親領域データのファイル名を指定する。
 また、\nmitem{OFFLINE_PARENT_PRC_NUM_*} に親領域のプロセス数を設定する。
 これらは、親領域の設定ファイル(\verb|run.d01.conf|) を参照して適切にの設定されたい。
