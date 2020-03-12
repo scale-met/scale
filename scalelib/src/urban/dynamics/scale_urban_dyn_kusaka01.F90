@@ -54,8 +54,8 @@ module scale_urban_dyn_kusaka01
   !-----------------------------------------------------------------------------
   !
   ! from namelist
-  real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one minute [K/sec]
-                                              ! 0.1 [K/sec] = 6.0 [K/min]
+  real(RP), private :: DTS_MAX    =    0.1_RP ! maximum dT during one step [K/step]
+                                              ! DTS_MAX * dt
   integer , private :: BOUND      =    1      ! Boundary Condition for Roof, Wall, Ground Layer Temp
                                               !       [1: Zero-Flux, 2: T = Constant]
 
