@@ -73,27 +73,40 @@ GTOPO30 と DEM50M に対応している。
 \section{ユーザー定義の地形の準備} \label{subsec:topo_userfile}
 
 \nmitem{CNVTOPO_UseUSERFILE}を\verb|.true.|に設定した場合は、プログラム\verb|scale-rm_pp|は \\
-\namelist{PARAM_CNVTOPO_USERFILE}で指定したファイルの変換を試みる.
-以下はその設定例である。
+\namelist{PARAM_CNVTOPO_USERFILE}で指定したファイルの変換を行う.
 
+入力データのタイプを\nmitem{USERFILE_TYPE}で指定する。
+サポートされているタイプは ``GrADS'' と ``TILE'' である。
+
+``GrADS''タイプを指定した場合、別途入力ファイルのデータ構造を記述するネームリストファイルが必要となる。
+このネームリストファイルは\nmitem{USERFILE_GrADS_FILENAME}で指定する。
+ネームリストファイルの詳細については、\ref{sec:datainput_grads}を参照のこと。
+デフォルトでは、地形、緯度、経度データの変数名のデフォルト値はそれぞれ``topo'', ``lat'', ``lon''であるが、
+異なる場合は、それぞれ\nmitem{USERFILE_GrADS_VARNAME}、\nmitem{USERFILE_GrADS_LATNAME}、\nmitem{USERFILE_GrADS_LONNAME}で指定することができる。
+
+
+``TILE''タイプを指定した場合、カタログファイルが必要である。
+カタログファイルには、それぞれのタイルデータファイルの名前およびそれぞれがカバーする領域についての情報が記述されている。
+同じ形式である GTOPO30 や DEM50 のカタログファイルを参照するとよい。
+以下はカタログファイルの例である。
 \editboxtwo{
-\verb|&PARAM_CNVTOPO_USERFILE                        | & \\
-\verb|USERFILE_IN_DIR       = "./input_topo",        | & ; 入力ファイルがあるディレクトリのパス \\
-\verb|USERFILE_IN_FILENAME  = "GTOPO30_e100n40.grd", | & ; 入力ファイルの名前 \\
-\verb|USERFILE_DLAT         = 0.0083333333333333D0,  | & ; 格子間隔 (緯度,degree) \\
-\verb|USERFILE_DLON         = 0.0083333333333333D0,  | & ; 格子間隔 (経度,degree) \\
-\verb|USERFILE_IN_DATATYPE  = "INT2",                | & ; データの種類 (INT2,INT4,REAL4,REAL8) \\
-\verb|USERFILE_LATORDER_N2S = .true.,                | & ; データは緯度方向に関して北から南へと格納されているか? \\
-\verb|USERFILE_LAT_START    = -10.D0,                | & ; 格子点の開始位置 (緯度,degree) \\
-\verb|USERFILE_LAT_END      =  40.D0,                | & ; 格子点の終了位置 (緯度,degree) \\
-\verb|USERFILE_LON_START    = 100.D0,                | & ; 格子点の開始位置 (経度,degree) \\
-\verb|USERFILE_LON_END      = 140.D0,                | & ; 格子点の終了位置 (経度,degree) \\
-\verb|/                                              | \\
+\verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; 南緯90--0 西経180--0 の範囲, ファイル名 \verb|TILE_sw.grd| \\
+\verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; 南緯90--0 東経0--180 の範囲, ファイル名 \verb|TILE_se.grd| \\
+\verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; 北緯0--90 西経180--0 の範囲, ファイル名 \verb|TILE_nw.grd| \\
+\verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; 北緯0--90 東経0--180 の範囲, ファイル名 \verb|TILE_ne.grd| \\
 }
-
-この例では、\verb|GTOPO30_e100n40.grd|という名前のデータファイルが、ティレクトリ\verb|./input_topo|に存在する。
-データは、北緯40度から南緯10度、東経100度から東経140度までを対象としている。
-格子間隔は緯度経度ともに 30 秒角である。
-よって、このデータは緯度方向に6000点、経度方向に4800点を含む。
+それぞれのタイルデータは \grads(direct access) 形式と同じ単純なバイナリ形式である。
+以下は設定例である。
+\editboxtwo{
+\verb|&PARAM_CNVTOPO_USERFILE                     | & \\
+\verb|USERFILE_CATALOGUE  = "catalogue.txt",      | & ; カタログファイルの名前 \\
+\verb|USERFILE_DIR        = "./input_topo",       | & ; 入力ファイルがあるディレクトリのパス \\
+\verb|USERFILE_DLAT       = 0.0083333333333333D0, | & ; 格子間隔 (緯度,degree) \\
+\verb|USERFILE_DLON       = 0.0083333333333333D0, | & ; 格子間隔 (経度,degree) \\
+\verb|USERFILE_DTYPE      = "INT2",               | & ; データの種類 (INT2,INT4,REAL4,REAL8) \\
+\verb|USERFILE_yrevers    = .true.,               | & ; データは緯度方向に関して北から南へと格納されているか? \\
+\verb|/                                           | \\
+}
+この例では、\verb|catalogue.txt|という名前のカタログファイルが、ティレクトリ\verb|./input_topo|に存在する。
 値は2バイトの整数で格納されている。
-ユーザー定義の地形データは、 \verb|USERFILE_IN_DATATYPE|を除いて{\grads}(direct access)形式と同様な単純なバイナリでなければならない。
+

@@ -239,15 +239,17 @@ See also Table \ref{table:netcdf_axes}.
 
 \subsection{Single File I/O} \label{subsec:single_io}
 As default, all the data files are output by each process, namely file I/O is separated.
-If \scalerm is compiled with pnetCDF (environmental variable SCALE\_ENABLE\_PNETCDF=T),
-the data from all processes can be combined into a single file (See Section \ref{subsec:environment}).
+If you compile \scalerm with pnetCDF by specifying an environmental variable as SCALE\_ENABLE\_PNETCDF=T,
+the data from all processes can be combined into a single file (see Section \ref{subsec:environment}).
 To do this, \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE} should be set to \verb|.true.|.
-Instead, you can switch on/off of the single I/O for individual file types, i.e., history, init/restart, topography, and land use files.
-Set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY} for the history file.
-For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART},\\
-or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
-Here, \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
-For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
+Instead, you can switch on/off of the single I/O for individual file types: history, init/restart, topography, and land use files. 
+For the history file, set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY}.
+For the init/restart file, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART}, or \\ 
+\nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS} 
+where \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
+For the topography and land use files, set \\ 
+\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPOGRAPHY}, 
+and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
 
 \subsection{Restrictions with \Netcdf 3}

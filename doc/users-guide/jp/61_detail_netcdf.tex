@@ -222,7 +222,7 @@ pnetCDF を使用するように \scalerm をコンパルした場合(環境変�
 初期値/リスタートファイルについては、\namelist{PARAM_RESTART}の\nmitem{RESTART_(IN|OUT)_AGGREGATE}、または\namelist{PARAM_(MODELNAME)_VARS}の
 \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
 ただし、\verb|(MODELNAME)|には「ATMOS」、「OCEAN」、「LAND」、「URBAN」が入る。
-地形ファイルや土地利用区分ファイルについてはそれぞれ、\namelist{PARAM_TOPO}の\nmitem{TOPO_(IN|OUT)_AGGREGATE}や\namelist{PARAM_LANDUSE}の\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
+地形ファイルや土地利用区分ファイルについてはそれぞれ、\namelist{PARAM_TOPOGRAPHY}の\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}や\namelist{PARAM_LANDUSE}の\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
 
 \subsection{\Netcdf 3 に伴う制限}
 {\netcdf} version 3 と共に\scale をコンパイルした場合は、次の制限が存在する。

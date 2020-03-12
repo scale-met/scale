@@ -61,23 +61,39 @@ To avoid this problem, the topography of the parent domain can be copied to the 
 
 \section{Preparation of user-defined topography} \label{subsec:topo_userfile}
 
-When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|, the program \verb|scale-rm_pp| try to convert the file specified by \namelist{PARAM_CNVTOPO_USERFILE}.
-The sample of the setting is as follows:
+When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|, the program \verb|scale-rm_pp| converts the data as specified by \namelist{PARAM_CNVTOPO_USERFILE}.
+The type of the input data is specified with \nmitem{USERFILE_TYPE}.
+The supported types are ``GrADS'' and ``TILE''.
 
+For the ``GrADS'' type, another namelist file which contains structure of input file is necessary.
+\nmitem{USERFILE_GrADS_FILENAME} is used to set the namelist file.
+See Section \ref{sec:datainput_grads} for the details of the namelist file.
+As the default, the variable name for the topography, latitude, and longitude are ``topo'', ``lat'', and ``lon'', respectively.
+If the name is different from the default value, it can be specified with \nmitem{USERFILE_GrADS_VARNAME}, \nmitem{USERFILE_GrADS_LATNAME}, and \nmitem{USERFILE_GrADS_LONNAME}, respectively.
+
+
+
+For the ``TILE'' type, a catalogue file is required.
+It contains information of the name of individual tiled data files and the area which the tiled data covers.
+Refer the catalogue files of the GTOPO30 and DEM50, which has the same format.
+The following is a sample of the catalogue file.
 \editboxtwo{
-\verb|&PARAM_CNVTOPO_USERFILE                        | & \\
-\verb|USERFILE_IN_DIR       = "./input_topo",        | & ; Directory path of input file \\
-\verb|USERFILE_IN_FILENAME  = "GTOPO30_e100n40.grd", | & ; Name of the input file \\
-\verb|USERFILE_DLAT         = 0.0083333333333333D0,  | & ; Interval of the grid (latitude,degree) \\
-\verb|USERFILE_DLON         = 0.0083333333333333D0,  | & ; Interval of the grid (longitude,degree) \\
-\verb|USERFILE_IN_DATATYPE  = "INT2",                | & ; Type of the data (INT2,INT4,REAL4,REAL8) \\
-\verb|USERFILE_LATORDER_N2S = .true.,                | & ; Data is stored from north to south in latitudinal direction? \\
-\verb|USERFILE_LAT_START    = -10.D0,                | & ; Start of the grid point (latitude,degree) \\
-\verb|USERFILE_LAT_END      =  40.D0,                | & ; End   of the grid point (latitude,degree) \\
-\verb|USERFILE_LON_START    = 100.D0,                | & ; Start of the grid point (longitude,degree) \\
-\verb|USERFILE_LON_END      = 140.D0,                | & ; End   of the grid point (longitude,degree) \\
-\verb|/                                              | \\
+\verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
+\verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; latitude: -90--0, longitude: 0--180,  name: \verb|TILE_se.grd| \\
+\verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; latitude: 0--90,  longitude: -180--0, name: \verb|TILE_nw.grd| \\
+\verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; latitude: 0--90,  longitude: 0--180,  name: \verb|TILE_ne.grd| \\
 }
-
-In this sample, the data file named \verb|GTOPO30_e100n40.grd| is located in the directory \verb|./input_topo|. The data covers from 40 degree north to 10 degree south in latitude, and from 100 degree east to 140 degree east in longitude. The grid interval is 30 arc second for both latitude and longitude. Thus, this data contains 100 and 80 points for latitude and longitude, respectively. The value is stored with a 2-byte integer.
-The user-defined data must be a simple binary as same as the format of \grads (direct access) except for \verb|USERFILE_IN_DATATYPE|.
+The individual tiled data is a simple binary as same as the format of \grads (direct access).
+The sample of the setting is as follows:
+\editboxtwo{
+\verb|&PARAM_CNVTOPO_USERFILE                     | & \\
+\verb|USERFILE_CATALOGUE  = "catalogue.txt",      | & ; Name of the catalogue file \\
+\verb|USERFILE_DIR        = "./input_topo",       | & ; Directory path of input file \\
+\verb|USERFILE_DLAT       = 0.0083333333333333D0, | & ; Interval of the grid (latitude,degree) \\
+\verb|USERFILE_DLON       = 0.0083333333333333D0, | & ; Interval of the grid (longitude,degree) \\
+\verb|USERFILE_DTYPE      = "INT2",               | & ; Type of the data (INT2,INT4,REAL4,REAL8) \\
+\verb|USERFILE_yrevers    = .true.,               | & ; Data is stored from north to south in latitudinal direction? \\
+\verb|/                                           | \\
+}
+In this sample, the catalogue file named \verb|catalogue.txt| is located in the directory \verb|./input_topo|.
+The value is stored with a 2-byte integer.
