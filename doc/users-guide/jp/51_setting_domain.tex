@@ -413,9 +413,9 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_LINEAR_V = .false.,    | & ; z方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければサイン型の分布.\\
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; x, y 方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければ指数関数分布. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; 指数関数分布の場合における指数の係数. \\
-  \verb| ATMOS_BOUNDARY_DENS_ADJUST = .true.,  | & ; 密度調整に対するスイッチ. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST = .true.,  | & ; 質量フラックス調整に対するスイッチ. \\
   \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
-  ~~\verb|     = -1.0D0,                       | & ; 密度調整が有効な場合の密度ナッジングの時定数 (秒). \\
+  ~~\verb|     = -1.0D0,                       | & ; 質量フラックス調整が有効な場合の密度ナッジングの時定数 (秒). \\
 }
 
 ナッジングによる時間変化率は、
@@ -461,17 +461,25 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 \nmitem{TIME_DT}については第\ref{sec:timeintiv}節を参照されたい。
 
 
-\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が ``\verb|REAL|'' であれば、
-水平速度・温位・水蒸気に対する上部および側面境界でのナッジングが適用される。
+\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_TYPE}が ``\verb|REAL|'' の時、\\
+\nmitem{ATMOS_BOUNDARY_USE_{VELX,VELY,PT,QV,DENS}}の設定に関わらず、
+水平速度・温位・水蒸気・密度に対する上部および側面境界でのナッジングが適用される。
 加えて \nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD} が \verb|.true.| の場合、それぞれ鉛直速度および水凝結物に対するナッジングが適用される。
-オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域で計算が行われるときには、
-境界の種類として\verb|REAL|を用いた場合と同様の設定が適用される。
-この場合、\namelist{PARAM_COMM_CARTESC_NEST} 内の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDAYR_USE_QHYD} がそれぞれ\nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD} の代わりに用いられる。
+オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域として
+計算が行われる場合、
+境界での親データの扱いは、上記の``\verb|REAL|''と同様の設定が適用される。
+ただし、\nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD}の代わりに、
+\namelist{PARAM_COMM_CARTESC_NEST} の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDAYR_USE_QHYD} で指定する。
 
-密度ナッジングは質量バイアスを軽減するために必要である。
-一方で、気圧傾度力は特に流出域において境界データ情報をドメイン内部に伝える役割をもっているが、密度ナッジングはその気圧傾度力を減少させてしまう。
-質量バイアス軽減させるように側面境界における質量フラックスを調整することで、密度ナッジングを弱くすることができる。
-\nmitem{ATMOS_BOUNDARY_DENS_ADJUST} を \verb|.true.| とすると、親モデルとシミュレーションにおける全領域総質量の差が小さくなるように、側面境界質量フラックスが調整される。
+
+密度のナッジングは、側面境界値に対する計算領域での質量バイアスを軽減するために有用である。
+一方で、密度ナッジングの適用は、緩和領域での気圧傾度力を減少させる。
+この結果、特に流出域において、気圧傾度力によって境界値情報をドメイン内部に伝える効果も弱まる。
+この効果（気圧傾度）を維持したまま、質量バイアスを軽減させる方法として、
+側面境界における質量フラックスの調整が可能である。これを適用することで、密度ナッジングを弱くすることができる。
+%
+\nmitem{ATMOS_BOUNDARY_DENS_ADJUST} を \verb|.true.| とすると、
+親モデルと\scale の計算領域の間の全領域総質量の差が小さくなるように、側面境界質量フラックスが調整される。
 例えば、シミュレーションにおける全質量が親モデルの質量に比べて小さい場合は、西境界における $\rho u$ および南境界における $\rho v$ を増加、東境界における $\rho u$ および北境界における $\rho v$ を減少させることで、全質量収束を増加させる。
 側面質量フラックス調整は、境界の種類として\verb|REAL|を用いた場合およびオンライン・ネスティングの子領域においてのみ利用可能である。
 質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DEN_ADJUST_TAU} で設定する。

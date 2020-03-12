@@ -78,9 +78,9 @@ Table \ref{tab:triple_nested} gives the configuration for an $N$-domain nesting 
 
 \nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation (hydrometeors) is used for the boundary condition.
 When the boundary condition is generated from external input data, water condensations are not usually employed.
-However, in the \scalerm nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because there is often no difference in physical schemes between the two domains.
-%, and the resolution of both are similar.
-The delay in the generation of clouds and rain, possible to have the influence on interior target domain, is expected to be suppressed by this remedy.
+However, in the \scalerm nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because the two domains usually use the same physical schemes.
+By receving hydrometeors' condition at the lateral boundary,
+the delay in the generation of clouds and rain near the inflow boundary of the nested domain is expected to be suppressed.
 \nmitem{ONLINE_USE_VELZ} specifies whether vertical velocity is used for the boundary condition in the child domain.
 
 \subsubsection{Configuration of Launcher}
