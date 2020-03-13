@@ -3122,7 +3122,7 @@ contains
              do iq = I_QC, I_NG
                  QTRC0(k,i,j,iq) = rhoq(k,iq) / DENS(k,i,j)
               enddo
-           enddo
+          enddo
 
           call Cross_Section( Crs(:,i,j,:),   & ! [OUT]
                               KA, KS, KE,     & ! [IN]

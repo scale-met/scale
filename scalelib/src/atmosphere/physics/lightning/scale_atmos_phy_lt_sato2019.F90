@@ -49,7 +49,7 @@ module scale_atmos_phy_lt_sato2019
   integer,  private                 :: ITMAX = 3000
   real(RP), private                 :: epsilon = 0.1_RP ** (RP*2)
   character(len=64),private         :: NUTR_TYPE='F2013'
-  character(len=64),private,save    :: NUTR_qhyd='Each_POLARITY'
+  character(len=64),private,save    :: NUTR_qhyd='Each_POLARITY2'
   integer,  private                 :: MAX_NUTR = 100
   real(RP), private                 :: Eint = 150.0E+3_RP     ! [V/m]
   real(RP), private                 :: delEint = 10.0E+3_RP   ! [V/m]
@@ -266,13 +266,13 @@ contains
       flg_eint_hgt = 1.0_RP
     endif
 
-    if( NUTR_qhyd /= 'TOTAL' .and. NUTR_qhyd /= 'Each_POLARITY' ) then
-      LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx NUTR_qhyd should be TOTAL or Each_POLARITY, stop!'
+    if( NUTR_qhyd /= 'TOTAL' .and. NUTR_qhyd /= 'Each_POLARITY' .and. NUTR_qhyd /= 'Each_POLARITY2' ) then
+      LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx NUTR_qhyd should be TOTAL, or Each_POLARITY, or Each_POLARITY2, stop!'
       call PRC_abort
     endif
 
-!    if( NUTR_qhyd == 'Each_POLARITY' .and. MP_TYPE == 'SUZUKI10' ) then
-!       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'NUTR_qhyd = Each_POLARITY is not supported for MP_TYPE SUZUKI10'
+!    if( ( NUTR_qhyd == 'Each_POLARITY' .or. NUTR_qhyd /= 'Each_POLARITY2' ) .and. MP_TYPE == 'SUZUKI10' ) then
+!       LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'NUTR_qhyd = Each_POLARITY, Each_POLARITY2 is not supported for MP_TYPE SUZUKI10'
 !       call PRC_abort
 !    endif
 
@@ -415,10 +415,6 @@ contains
                                      Emax,                   &   ! [OUT]
                                      flg_lt_neut             )   ! [OUT]
 
-       if( flg_lt_neut > 0 .and. PRC_IsMaster ) then
-          LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(F15.7,A)')  &
-              Emax*1.E-3_RP, '[kV/m] Charge Neutralization is calculated'
-       endif
 
        count_neut = 0
        do while( flg_lt_neut > 0 )
@@ -505,7 +501,7 @@ contains
             enddo
             enddo
 
-         case ( 'Each_POLARITY' )
+         case ( 'Each_POLARITY', 'Each_POLARITY2' )
 
             !$omp parallel do &
             !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac, &
@@ -575,28 +571,33 @@ contains
                         sum_crg(int_sw) = sum_crg(int_sw) + QTRC(k,i,j,n)
                      end if
                   enddo
-                  lack(0) = neg_crg - diff_qcrg(0) ! negative (Should be Positive)
-                  lack(1) = pos_crg - diff_qcrg(1) ! positive (Should be Negative)
-                  if( lack(0) > 0.0_RP .and. abs(lack(0)/diff_qcrg(0)) > 1.0E-10_RP ) then
-                      LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7)') &
-                        "Large negative for lack(0) ", lack(0)/diff_qcrg(0)
+
+                  if( NUTR_qhyd == 'Each_POLARITY2' ) then ! Adjust
+                    lack(0) = neg_crg - diff_qcrg(0) ! negative (Should be Positive)
+                    lack(1) = pos_crg - diff_qcrg(1) ! positive (Should be Negative)
+#ifdef DEBUG
+                    if( lack(0) > 0.0_RP .and. abs(lack(0)/diff_qcrg(0)) > 1.0E-10_RP ) then
+                        LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
+                          "Large negative for lack(0) ", lack(0)/diff_qcrg(0), neg_crg, lack(0), diff_qcrg(0)
+                    endif
+                    if( lack(1) < 0.0_RP .and. abs(lack(1)/diff_qcrg(1)) > 1.0E-10_RP ) then
+                       LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,4E15.7)') &
+                          "Large positive for lack(1) ", lack(1)/diff_qcrg(1), pos_crg, lack(1), diff_qcrg(1)
+                    endif
+#endif
+                    lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
+                    lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
+                    do n = 1, QA_LT
+                       sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                       int_sw = int( sw )   ! 0-> negative, 1-> positive
+                       if( sum_crg(int_sw) /= 0.0_RP ) then
+                          crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
+                       else
+                          crg_rate(n) = 0.0_RP
+                       endif
+                       QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
+                    enddo
                   endif
-                  if( lack(1) < 0.0_RP .and. abs(lack(1)/diff_qcrg(1)) > 1.0E-10_RP ) then
-                     LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7)') &
-                        "Large positive for lack(1) ", lack(1)/diff_qcrg(1)
-                  endif
-                  lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
-                  lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
-                  do n = 1, QA_LT
-                     sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                     int_sw = int( sw )   ! 0-> negative, 1-> positive
-                     if( sum_crg(int_sw) /= 0.0_RP ) then
-                        crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
-                     else
-                        crg_rate(n) = 0.0_RP
-                     endif
-                     QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
-                  enddo
                endif
 
             enddo
@@ -707,28 +708,33 @@ contains
                                        flg_lt_neut             )   ! [OUT]
 
          count_neut = count_neut + 1
-         LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
+#ifdef DEBUG
+         LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7,A,F15.7,1X,I0)')  &
                    'CHECK', &
-                    Emax*1.E-3_RP, Emax_old*1.E-3_RP, count_neut
+                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
+#endif
 
          if( flg_lt_neut == 1 .and. Emax == Emax_old ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
                LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,2E15.7,1X,I0)')  &
                    'Eabs value after neutralization is same as previous value, Finish', &
-                    Emax*1.E-3_RP, Emax_old*1.E-3_RP, count_neut
+                    Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, count_neut
             endif
          elseif( flg_lt_neut == 1 .and. count_neut == MAX_NUTR ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
-                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m], reach maximum neutralization count, Finish', count_neut
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   ' [kV/m], reach maximum neutralization count, Finish', count_neut
             endif
          elseif( flg_lt_neut == 1 .and. Emax > Emax_old ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
-                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] larger than previous one by neutralization, back to previous step, Finish', count_neut
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   ' [kV/m] larger than previous one by neutralization, back to previous step, Finish', &
+                   count_neut
             endif
             !---- Back to Charge density as previous step
             do j = JS, JE
@@ -744,13 +750,15 @@ contains
          elseif( flg_lt_neut == 2 ) then
             flg_lt_neut = 0
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
-                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] After neutralization, Finish' , count_neut
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(E15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   '[kV/m] After neutralization, Finish' , count_neut
             endif
          elseif( flg_lt_neut == 0 ) then
             if( PRC_IsMaster ) then
-               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2F15.7,A,1X,I0)')  &
-                   Emax*1.E-3_RP, Emax_old*1.E-3_RP, '[kV/m] After neutralization, Finish', count_neut
+               LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(2(F15.7,A),1X,I0)')  &
+                   Emax_old*1.E-3_RP, ' [kV/m] -> ', Emax*1.E-3_RP, &
+                   '[kV/m] After neutralization, Finish', count_neut
             endif
          endif
 
