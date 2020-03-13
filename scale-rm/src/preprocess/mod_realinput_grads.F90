@@ -854,7 +854,7 @@ contains
                                 work(dummy,:,:),          & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
              pres_org(1,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -867,7 +867,7 @@ contains
                                 work(dummy,:,:),          & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
              pres_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -896,7 +896,7 @@ contains
                                    work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 vely_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -911,7 +911,7 @@ contains
                                    work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 temp_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -926,7 +926,7 @@ contains
                                    work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -941,7 +941,7 @@ contains
                                    work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -965,7 +965,7 @@ contains
           call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                 work(dummy,:,:),          & ! (out)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
              cz_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -985,7 +985,7 @@ contains
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
-             RN222_org(k+2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
+             RN222_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
