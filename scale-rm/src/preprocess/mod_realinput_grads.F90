@@ -809,19 +809,19 @@ contains
           enddo
           enddo
 
-          !$omp parallel do collapse(2) &
+          !$omp parallel do collapse(3) &
           !$omp private(qm,p_sat)
           do j = 1, JA_org
           do i = 1, IA_org
-             do k = 1, shape(1)
-                if( qv_org(k+1,i,j) .ne. UNDEF ) then
-                   rh(i,j) = qv_org(k+2,i,j) / 100.0_RP         ! relative humidity
-                   call psat( temp_org(k+2,i,j), p_sat )   ! satulation pressure
-                   qm = EPSvap * rh(i,j) * p_sat &
-                      / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
-                   qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
-                end if
-             enddo
+          do k = 1, shape(1)
+             if( qv_org(k+1,i,j) .ne. UNDEF ) then
+                rh(i,j) = qv_org(k+2,i,j) / 100.0_RP         ! relative humidity
+                call psat( temp_org(k+2,i,j), p_sat )   ! satulation pressure
+                qm = EPSvap * rh(i,j) * p_sat &
+                   / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
+                qv_org(k+2,i,j) = qm / ( 1.0_RP + qm )  ! specific humidity
+             end if
+          enddo
           enddo
           enddo
           if( KA_org-2 > shape(1) ) then
@@ -881,7 +881,7 @@ contains
                                    work(dummy,:,:),          & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 velx_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
