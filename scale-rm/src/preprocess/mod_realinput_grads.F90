@@ -282,7 +282,7 @@ contains
 
        if ( var_id(ielem,1) < 0 ) cycle
 
-       item  = item_list_atom(ielem)
+       item = item_list_atom(ielem)
 
        ! read data
        select case(item)
@@ -353,15 +353,15 @@ contains
        basename_num,  &
        sfc_diagnoses, &
        under_sfc,     &
-       KA_local, &
-       KS_local, &
-       KE_local, &
-       IA_local, &
-       IS_local, &
-       IE_local, &
-       JA_local, &
-       JS_local, &
-       JE_local, &
+       KA_org, &
+       KS_org, &
+       KE_org, &
+       IA_org, &
+       IS_org, &
+       IE_org, &
+       JA_org, &
+       JS_org, &
+       JE_org, &
        dims, &
        nt )
     use scale_const, only: &
@@ -404,28 +404,28 @@ contains
     character(len=*), intent(in)  :: basename_num
     logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: under_sfc
-    integer,          intent(in)  :: KA_local
-    integer,          intent(in)  :: KS_local
-    integer,          intent(in)  :: KE_local
-    integer,          intent(in)  :: IA_local
-    integer,          intent(in)  :: IS_local
-    integer,          intent(in)  :: IE_local
-    integer,          intent(in)  :: JA_local
-    integer,          intent(in)  :: JS_local
-    integer,          intent(in)  :: JE_local
+    integer,          intent(in)  :: KA_org
+    integer,          intent(in)  :: KS_org
+    integer,          intent(in)  :: KE_org
+    integer,          intent(in)  :: IA_org
+    integer,          intent(in)  :: IS_org
+    integer,          intent(in)  :: IE_org
+    integer,          intent(in)  :: JA_org
+    integer,          intent(in)  :: JS_org
+    integer,          intent(in)  :: JE_org
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: nt
 
     character(len=H_SHORT) :: item
 
-    integer  :: lm_layer(dims(2),dims(3))
+    integer  :: lm_layer( IA_org, JA_org )
 
     integer  :: dummy = 1
     real(RP) :: work( dims(1), dims(2), dims(3) )
 
     logical  :: pressure_coordinates
     real(RP) :: p_sat, qm, dz
-    real(RP) :: rh(dims(2),dims(3))
+    real(RP) :: rh( IA_org, JA_org )
     real(RP) :: Rtot
 
     integer  :: shape(3)
@@ -433,9 +433,9 @@ contains
     !---------------------------------------------------------------------------
 
     !$omp parallel do collapse(3)
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-    do k = 1, dims(1)+2
+    do j = 1, JA_org
+    do i = 1, IA_org
+    do k = 1, KA_org
        dens_org (k,i,j)   = UNDEF
        pres_org (k,i,j)   = UNDEF
        velz_org (k,i,j)   = 0.0_RP
@@ -451,7 +451,7 @@ contains
 
        if ( var_id(ielem,1) < 0 ) cycle
 
-       item  = item_list_atom(ielem)
+       item = item_list_atom(ielem)
 
        ! read data
        select case(item)
@@ -459,8 +459,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item), shape(1), dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item), shape(1), KA_org-2
              call PRC_abort
           endif
 
@@ -468,16 +468,16 @@ contains
              pressure_coordinates = .true. ! use pressure coordinate in the input data
              call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                         shape(:)                  ) ! (out)
-             if ( dims(1) .ne. shape(1) ) then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for plev! ',shape(1), dims(1)
+             if ( KA_org-2 .ne. shape(1) ) then
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for plev! ',shape(1), KA_org-2
                 call PRC_abort
              endif
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    work(:,dummy,dummy)       ) ! (out)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-             do k = 1, dims(1)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
                 pres_org(k+2,i,j) = work(k,dummy,dummy)
              enddo
              enddo
@@ -489,10 +489,10 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-             do k = 1, dims(1)
-                pres_org(k+2,i,j) = work(k,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
+                pres_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
              enddo
@@ -501,8 +501,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
@@ -511,10 +511,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)
-             dens_org(k+2,i,j) = work(k,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             dens_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -523,8 +523,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
@@ -533,10 +533,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)
-             velx_org(k+2,i,j) = work(k,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             velx_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
              velx_org(1:2,i,j) = 0.0_RP
           enddo
@@ -546,8 +546,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
@@ -556,10 +556,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)
-             vely_org(k+2,i,j) = work(k,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             vely_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
              vely_org(1:2,i,j) = 0.0_RP
           enddo
@@ -569,8 +569,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
@@ -579,10 +579,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)
-             velz_org(k+2,i,j) = work(k,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             velz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
              velz_org(1:2,i,j) = 0.0_RP
           enddo
@@ -592,8 +592,8 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
@@ -602,10 +602,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)
-             temp_org(k+2,i,j) = work(k,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org-2
+             temp_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -614,25 +614,25 @@ contains
 
           call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                      shape(:)                  ) ! (out)
-          if ( dims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',dims(1)
+          if ( KA_org-2 .ne. shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
           if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
              call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
                                         shape(:)                  ) ! (out)
-             if ( dims(1) .ne. shape(1) ) then
-                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for HGT! ',dims(1), shape(1)
+             if ( KA_org-2 .ne. shape(1) ) then
+                LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for HGT! ',KA_org-2, shape(1)
                 call PRC_abort
              endif
              call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
                                    work(:,dummy,dummy)       ) ! (out)
              !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 cz_org(1,i,j) = 0.0_RP
-                do k = 1, dims(1)
+                do k = 1, KA_org-2
                    cz_org(k+2,i,j) = work(k,dummy,dummy)
                 enddo
              enddo
@@ -644,10 +644,10 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-             do k = 1, dims(1)
-                cz_org(k+2,i,j) = work(k,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+             do k = 1, KA_org-2
+                cz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
              enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
@@ -664,21 +664,21 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qv_org(k+2,i,j) = work(k,i,j)
+             qv_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
 
-          if( dims(1) > shape(1) ) then
+          if( KA_org-2 > shape(1) ) then
              select case( upper_qv_type )
              case("COPY")
                 !$omp parallel do collapse(2)
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                do k = shape(1)+1, dims(1)
+                do j = 1, JA_org
+                do i = 1, IA_org
+                do k = shape(1)+1, KA_org-2
                    qv_org(k+2,i,j) = qv_org(shape(1)+2,i,j)
                 enddo
                 enddo
@@ -701,10 +701,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HC) = work(k,i,j)
+             qhyd_org(k+2,i,j,I_HC) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -721,10 +721,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HR) = work(k,i,j)
+             qhyd_org(k+2,i,j,I_HR) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -741,10 +741,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HI) = work(k,i,j)
+             qhyd_org(k+2,i,j,I_HI) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -761,10 +761,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HS) = work(k,i,j)
+             qhyd_org(k+2,i,j,I_HS) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -781,10 +781,10 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qhyd_org(k+2,i,j,I_HG) = work(k,i,j)
+             qhyd_org(k+2,i,j,I_HG) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -801,18 +801,18 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             qv_org(k+2,i,j) = work(k,i,j)
+             qv_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
 
           !$omp parallel do collapse(2) &
           !$omp private(qm,p_sat)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              do k = 1, shape(1)
                 if( qv_org(k+1,i,j) .ne. UNDEF ) then
                    rh(i,j) = qv_org(k+2,i,j) / 100.0_RP         ! relative humidity
@@ -824,14 +824,14 @@ contains
              enddo
           enddo
           enddo
-          if( shape(1) > dims(1) ) then
+          if( KA_org-2 > shape(1) ) then
              select case( upper_qv_type )
              case("COPY")
                 !$omp parallel do &
                 !$omp private(qm,p_sat)
-                do j = 1, dims(3)
-                do i = 1, dims(2)
-                do k = shape(1)+1, dims(1)
+                do j = 1, JA_org
+                do i = 1, IA_org
+                do k = shape(1)+1, KA_org-2
                    call psat( temp_org(k+2,i,j), p_sat )   ! satulated specific humidity
                    qm = EPSvap * rh(i,j) * p_sat &
                       / ( pres_org(k+2,i,j) - rh(i,j) * p_sat ) ! mixing ratio
@@ -855,9 +855,9 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             pres_org(1,i,j) = work(dummy,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(1,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
 
@@ -868,9 +868,9 @@ contains
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             pres_org(2,i,j) = work(dummy,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+             pres_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
 
@@ -882,9 +882,9 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                velx_org(2,i,j) = work(dummy,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+                velx_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
           end if
@@ -897,9 +897,9 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                vely_org(2,i,j) = work(dummy,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+                vely_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
           end if
@@ -912,9 +912,9 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                temp_org(2,i,j) = work(dummy,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+                temp_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
           end if
@@ -927,9 +927,9 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qv_org(2,i,j) = work(dummy,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+                qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
           end if
@@ -942,15 +942,15 @@ contains
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
              !$omp parallel do collapse(3)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                qv_org(2,i,j) = work(dummy,i,j)
+             do j = 1, JA_org
+             do i = 1, IA_org
+                qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
              !$omp parallel do collapse(2) &
              !$omp private (qm,p_sat)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 rh(i,j) = qv_org(2,i,j) / 100.0_RP
                 call psat( temp_org(2,i,j), p_sat )   ! satulation pressure
                 qm = EPSvap * rh(i,j) * p_sat &
@@ -966,9 +966,9 @@ contains
                                 work(dummy,:,:),          & ! (out)
                                 postfix = basename_num    ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             cz_org(2,i,j) = work(dummy,i,j)
+          do j = 1, JA_org
+          do i = 1, IA_org
+             cz_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
 
@@ -982,10 +982,10 @@ contains
                                 step = nt,                   & ! (in)
                                 postfix = basename_num       ) ! (in)
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
           do k = 1, shape(1)
-             RN222_org(k+2,i,j) = work(k,i,j)
+             RN222_org(k+2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
           enddo
           enddo
           enddo
@@ -996,9 +996,9 @@ contains
     lm_layer(:,:) = 3
 
     !$omp parallel do
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       do k = 3, dims(1)+2
+    do j = 1, JA_org
+    do i = 1, IA_org
+       do k = 3, KA_org
           ! search the lowermost layer excluding UNDEF
           if( abs( pres_org(k,i,j) - UNDEF ) < EPS ) then
              lm_layer(i,j) = k + 1
@@ -1013,9 +1013,9 @@ contains
     if ( var_id(Ia_dens,1) < 0 ) then
        !$omp parallel do &
        !$omp private (Rtot)
-       do j = 1, dims(3)
-       do i = 1, dims(2)
-       do k = lm_layer(i,j), dims(1)+2
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = lm_layer(i,j), KA_org
           Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(k,i,j) )
           dens_org(k,i,j) = pres_org(k,i,j) / ( Rtot * temp_org(k,i,j) )
        end do
@@ -1028,9 +1028,9 @@ contains
        if ( var_id(Ia_topo,1) > 0 ) then
           if ( .not. under_sfc ) then
              !$omp parallel do
-             do j = 1, dims(3)
-             do i = 1, dims(2)
-                do k = lm_layer(i,j), dims(1)+2
+             do j = 1, JA_org
+             do i = 1, IA_org
+                do k = lm_layer(i,j), KA_org
                    if ( cz_org(k,i,j) > cz_org(2,i,j) ) then
                       lm_layer(i,j) = k
                       exit
@@ -1042,8 +1042,8 @@ contains
           if ( var_id(Ia_t2,1) > 0 .and. var_id(Ia_ps,1) > 0 ) then
              !$omp parallel do &
              !$omp private (Rtot)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
                 dens_org(2,i,j) = pres_org(2,i,j) / ( Rtot * temp_org(2,i,j) )
              end do
@@ -1051,8 +1051,8 @@ contains
           else if ( var_id(Ia_ps,1) > 0 ) then
              !$omp parallel do &
              !$omp private (k,dz,Rtot)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 k = lm_layer(i,j)
                 dz = cz_org(k,i,j) - cz_org(2,i,j)
                 dens_org(2,i,j) = - ( pres_org(k,i,j) - pres_org(2,i,j) ) * 2.0_RP / ( GRAV * dz ) &
@@ -1064,8 +1064,8 @@ contains
           else if ( var_id(Ia_t2,1) > 0 ) then
              !$omp parallel do &
              !$omp private (k,dz,Rtot)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 k = lm_layer(i,j)
                 dz = cz_org(k,i,j) - cz_org(2,i,j)
                 Rtot = Rdry * ( 1.0_RP + EPSTvap * qv_org(2,i,j) )
@@ -1077,8 +1077,8 @@ contains
           else
              !$omp parallel do &
              !$omp private(k,dz,Rtot)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 k = lm_layer(i,j)
                 dz = cz_org(k,i,j) - cz_org(2,i,j)
                 temp_org(2,i,j) = temp_org(k,i,j) + LAPS * dz
@@ -1092,8 +1092,8 @@ contains
        else
           !$omp parallel do &
           !$omp private(k)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              k = lm_layer(i,j)
              ! ignore surface variables
              cz_org  (2,i,j)   = cz_org  (k,i,j)
@@ -1125,16 +1125,16 @@ contains
 
        if ( var_id(Ia_q2,1) < 0 .and. var_id(Ia_rh2,1) < 0 ) then
           !$omp parallel do private(k)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              k = lm_layer(i,j)
              qv_org(2,i,j) = qv_org(k,i,j)
           end do
           end do
        end if
        !$omp parallel do private(k)
-       do j = 1, dims(3)
-       do i = 1, dims(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
           k = lm_layer(i,j)
           qv_org   (1,i,j)   = qv_org   (k,i,j)
           qhyd_org (1,i,j,:) = qhyd_org (k,i,j,:)
@@ -1146,22 +1146,22 @@ contains
 
        ! sea level
        !$omp parallel do
-       do j = 1, dims(3)
-       do i = 1, dims(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
           temp_org(1,i,j) = temp_org(2,i,j) + LAPS * cz_org(2,i,j)
        end do
        end do
        if ( var_id(Ia_slp,1) > 0 ) then
           !$omp parallel do
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1,i,j) )
           end do
           end do
        else
           !$omp parallel do
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
                              / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP )
              pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1,i,j)
@@ -1171,8 +1171,8 @@ contains
 
     else
        !$omp parallel do
-       do j = 1, dims(3)
-       do i = 1, dims(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
           velz_org(1:2,i,j)   = UNDEF
           velx_org(1:2,i,j)   = UNDEF
           vely_org(1:2,i,j)   = UNDEF
@@ -1190,8 +1190,8 @@ contains
     ! check verticaly extrapolated data in outer model
     if( pressure_coordinates .and. var_id(Ia_ps,1) > 0 ) then
        !$omp parallel do private(k)
-       do j = 1, dims(3)
-       do i = 1, dims(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
           if ( under_sfc ) then
              k = lm_layer(i,j)
              if ( pres_org(1,i,j) < pres_org(k,i,j) ) then
@@ -1204,7 +1204,7 @@ contains
              end if
              cycle
           end if
-          do k = 3, dims(1)+2
+          do k = 3, KA_org
              if( pres_org(k,i,j) > pres_org(2,i,j) ) then ! if Pressure is larger than Surface pressure
                 if ( sfc_diagnoses ) then
                    velz_org(k,i,j)   = velz_org(2,i,j)
@@ -1235,8 +1235,8 @@ contains
        enddo
     else if ( var_id(Ia_topo,1) > 0 ) then
        !$omp parallel do private(k)
-       do j = 1, dims(3)
-       do i = 1, dims(2)
+       do j = 1, JA_org
+       do i = 1, IA_org
           if ( under_sfc ) then
              k = lm_layer(i,j)
              if ( cz_org(1,i,j) < cz_org(k,i,j) ) then
@@ -1250,7 +1250,7 @@ contains
              cycle
           end if
 
-       do k = 3, dims(1)+2
+       do k = 3, KA_org
           if( cz_org(k,i,j) < cz_org(2,i,j) ) then
              if ( sfc_diagnoses ) then
                 velz_org(k,i,j)   = velz_org(2,i,j)
