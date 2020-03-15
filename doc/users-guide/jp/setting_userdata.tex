@@ -1,0 +1,112 @@
+\section{ユーザ定義データの作成方法} \label{sec:userdata}
+
+いくつかのスキームでは、初期値/境界値以外の入力データを必要する。
+そのようなスキームを使用する場合、そのダータはシミュレーション実行の前に準備する必要がある。
+入力データは　\scalenetcdf ファイルである必要があり、また、シミュレーションと同じ格子である必要がある。
+そのような入力データを用意するために、\scalerm にはユーザ定義データを変換する方法が用意されている。
+\namelist{PARAM_CONVERT} の \nmitem{CNVERT_USER} を \verb|.true.| と設定することで、\verb|scale-rm_init| でデータ変換が行われる。
+サポートされているユーザ定義データの種類が表\ref{tab:userdata_type}に記載されている。
+一度の実行で一つの変数しか変換されないため、変換が必要なユーザ定義変数の数だけ実行を繰り返す必要がある。
+現時点では、2次元データのみ変換が可能である。
+
+
+\begin{table}[tbh]
+\begin{center}
+\caption{\scalerm でサポートされているユーザ定義データの種類}
+\begin{tabularx}{150mm}{l|X} \hline
+ \rowcolor[gray]{0.9} データ種類 & 説明 \\ \hline
+ \verb|GrADS| & \grads 形式バイナリデータ    \\ \hline
+ \verb|TILE|  & 水平方向に分割されたタイルデータ \\ \hline
+\end{tabularx}
+\label{tab:userdata_type}
+\end{center}
+\end{table}
+
+
+ユーザ定義データに関する設定は、以下のように \namelist{PARAM_CNVUSER} で行う。
+\editboxtwo{
+\verb|&PARAM_CNVUSER| & \\
+\verb| CNVUSER_FILE_TYPE = '',| & ; ユーザ定義データの種類。 表\ref{tab:userdata_type}参照。 \\
+\verb| CNVUSER_INTERP_TYPE = 'LINEAR',| & ; 水平内挿の種類。 \\
+\verb| CNVUSER_INTERP_LEVEL = 5,| & ; 内挿のレベル。 \\
+\verb| CNVUSER_OUT_TITLE = 'SCALE-RM 2D Boundary',| & ; 出力ファイル中のタイトル。 \\
+\verb| CNVUSER_OUT_VARNAME = '',| & ; 出力ファイルにおける変数名。 \\
+\verb| CNVUSER_OUT_VARDESC = '',| & ; 出力変数の説明。 \\
+\verb| CNVUSER_OUT_VARUNIT = '',| & ; 出力変数の単位。 \\
+\verb| CNVUSER_OUT_DTYPE 'DEFAULT',| & ; 出力変数のデータタイプ (DEFAULT,INT2,INT4,REAL4,REAL8)。 \\
+\verb| CNVUSER_NSTEPS =  10,| & ; データの時間ステップ数。 \\
+\verb| CNVUSER_OUT_DT = -1.0D0,| & ; 出力データの時間間隔 (秒)。 \\
+\verb| CNVUSER_GrADS_FILENAME = '', | & ; \grads データのネームリストファイル名。 \\
+\verb| CNVUSER_GrADS_VARNAME = '', | & ; ネームリスト中の変数名。 \\
+\verb| CNVUSER_GrADS_LATNAME = 'lat', | & ; ネームリスト中の緯度の名前。 \\
+\verb| CNVUSER_GrADS_LONNAME = 'lon', | & ; ネームリスト中の経度の名前。 \\
+\verb| CNVUSER_TILE_DIR = '', | & ; タイルデータとカタログファイルが配置されているのディレクトリ名。 \\
+\verb| CNVUSER_TILE_CATALOGUE = '', | & ; カタログファイルの名前。 \\
+\verb| CNVUSER_TILE_DLAT = 1.0D0, | & ; タイルデータの緯度間隔。 \\
+\verb| CNVUSER_TILE_DLON = 1.0D0, | & ; タイルデータの経度間隔。 \\
+\verb| CNVUSER_TILE_DTYPE = 'REAL4', | & ; タイルデータのデータタイプ (INT2,INT4,REAL4,REAL8)。 \\
+\verb|/|\\
+}
+
+空間内挿の種類およびそのレベルをそれぞれ \nmitem{CNVUSER_INTERP_TYPE} および \nmitem{CNVUSER_INTERP_LEVEL} で指定する。
+空間内挿についての詳細は \ref{sec:datainput_grads}節参照のこと。
+
+出力ファイル中のタイトル、変数名、変数の説明、変数の単位は、\nmitem{CNVUSE_OUT_TITLE}, \\
+\nmitem{CNVUSE_OUT_VARNAME}, \nmitem{CNVUSE_OUT_VARDESC}, \nmitem{CNVUSE_OUT_VARUNIT} でそれぞれ設定する。
+ユーザ定義データの種類が \verb|GrADS| の場合は, \nmitem{CNVUSE_OUT_VARNAME} が設定されていなければ \nmitem{CNVUSER_GrADS_VARNAME} が出力変数名として用いられる。
+
+\nmitem{CNVUSER_OUT_DTYPE} が \verb|DEFAULT|の場合, シミュレーションにおけるデータタイプが使われる。
+シミュレーションのデータタイプのデフォルト値は \verb|REAL8| であり、\scalerm が \\
+\verb|SCALE_USE_SINGLEFP = "T"| としてコンパイルされた場合 (\ref{sec:compile}章参照) は \verb|REAL4| となる。
+
+
+ユーザ定義データの時間ステップ数は \nmitem{CNVUSER_NSTEPS} で指定する。
+出力ファイル中の時刻座標の初期値は \namelist{PARAM_TIME} の \nmitem{TIME_STARTDATE} (\ref{sec:timeintiv}章参照) で指定し、時間間隔は \nmitem{CNVUSER_OUT_DT} で秒単位で指定する。
+
+
+\verb|GrADS| タイプでは、入力のデータ構造を記述したネームリストファイルが必要である。
+ネームリストファイルは \nmitem{USERFILE_GrADS_FILENAME} で指定する。
+ネームリストの詳細については \ref{sec:datainput_grads} 章を参照のこと。
+デフォルトでは、緯度および経度の名前はそれぞれ \verb|lat| および \verb|lon| である。
+デフォルト値と異なる場合は、それぞれ \nmitem{CNVUSER_GrADS_LATNAME} および \nmitem{CNVUSER_GrADS_LONNAME} で指定する。
+\verb|GrADS| タイプのユーザ定義データの変換を行う2つのサンプルが \\
+\verb|scale/scale-rm/test/framework/cnvuser| に用意されている。
+以下はネームリストファイルの例である。
+\editbox{
+\verb|#| \\
+\verb|# Dimension| \\
+\verb|#| \\
+\verb|&GrADS_DIMS| \\
+\verb| nx = 361,| \\
+\verb| ny = 181,| \\
+\verb| nz =   1,| \\
+\verb|/| \\
+\verb|#| \\
+\verb|# Variables | \\
+\verb|#| \\
+\verb|&GrADS_ITEM name='lon', dtype='linear', swpoint=0.0D0, dd=1.0D0 /| \\
+\verb|&GrADS_ITEM name='lat', dtype='linear', swpoint=-90.0D0, dd=1.0D0 /| \\
+\verb|&GrADS_ITEM name='var', dtype='map', fname='fname_in', startrec=1, totalrec=1,| \textbackslash \ \\
+~~~~~~~~~~~~~ \verb|bintype='int1', yrev=.true. /| \\
+}
+
+
+
+\verb|TILE| タイプは、ユーザ定義データは空間方向にタイル状に分割されたデータである。
+個々のタイルデータは \grads フォーマット (direct access) と同じバイナリデータでなければならない。
+バイナリデータの種類は \nmitem{CNVUSER_TILE_DTYPE} で指定する。
+データは、等間隔の緯度経度格子である必要があるり、それぞれの間隔は、\nmitem{CNVUSER_TILE_DLAT} および \nmitem{CNVUSER_TILE_DLON} で指定する。
+個々のタイルデータファイルの名前やカバーする領域の情報を記述したカタログファイルが必要となる。
+カタログファイルの名前は \nmitem{CNVUSER_TILE_CATALOGUE} で指定する。
+カタログファイルおよびタイルデータファイルは \nmitem{CNVUSER_TILE_DIR} で指定するディレクトリに配置する。
+カタログファイルの各行には、通し番号、最南端、最北端の緯度、最西端、最東端の経度、タイルデータの名前が記載されている。
+カタログファイルについては \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| および \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| が参考になる。
+以下はカタログファイルの例である。
+\editboxtwo{
+\verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
+\verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; latitude: -90--0, longitude: 0--180,  name: \verb|TILE_se.grd| \\
+\verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; latitude: 0--90,  longitude: -180--0, name: \verb|TILE_nw.grd| \\
+\verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; latitude: 0--90,  longitude: 0--180,  name: \verb|TILE_ne.grd| \\
+}
+この例では、全球のデータが南北それぞれ 2x2 の 4つに分割されている。
+
