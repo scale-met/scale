@@ -1263,27 +1263,33 @@ contains
       LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
 
       do i = 1, dims(2)
-         if( all( LON_min > LON_all(i,:) ) ) IS_org = i
+         if( any( LON_min > LON_all(i,:) ) ) IS_org = i - 1
       end do
       do i = dims(2), 1, -1
-         if( all( LON_max < LON_all(i,:) ) ) IE_org = i
+         if( any( LON_max < LON_all(i,:) ) ) IE_org = i + 1
       end do
       ! which is the direction, south->north or north->south?
       if( sum( LAT_all(:,1) ) < sum( LAT_all(:,dims(3)) ) ) then
          do j = 1, dims(3)
-            if( all( LAT_min > LAT_all(:,j) ) ) JS_org = j
+            if( any( LAT_min > LAT_all(:,j) ) ) JS_org = j - 1
          end do
          do j = dims(3), 1, -1
-            if( all( LAT_max < LAT_all(:,j) ) ) JE_org = j
+            if( any( LAT_max < LAT_all(:,j) ) ) JE_org = j + 1
          end do
       else ! north->south
          do j = 1, dims(3)
-            if( all( LAT_max < LAT_all(:,j) ) ) JS_org = j
+            if( any( LAT_max < LAT_all(:,j) ) ) JS_org = j - 1
          end do
          do j = dims(3), 1, -1
-            if( all( LAT_min > LAT_all(:,j) ) ) JE_org = j
+            if( any( LAT_min > LAT_all(:,j) ) ) JE_org = j + 1
          end do
       end if
+
+      ! fix over number of grids
+      if( IS_org < 1       ) IS_org = 1
+      if( IE_org > dims(2) ) IE_org = dims(2)
+      if( JS_org < 1       ) JS_org = 1
+      if( JE_org > dims(3) ) JE_org = dims(3)
 
       KA_org = dims(1) + 2
       IA_org = IE_org - IS_org + 1
