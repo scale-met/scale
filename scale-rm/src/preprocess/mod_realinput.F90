@@ -1124,11 +1124,10 @@ contains
 
     case('GrADS')
 
-       serial_atmos         = .false. ! force false
-       read_by_myproc_atmos = .true.
-
-       call ParentAtmosSetupGrADS ( dims(:), & ! [OUT]
-                                    basename ) ! [IN]
+       if ( read_by_myproc_atmos ) then
+          call ParentAtmosSetupGrADS ( dims(:), & ! [OUT]
+                                       basename ) ! [IN]
+       endif
        timelen = -1
 
        use_file_density = use_file_density_in
@@ -1214,105 +1213,106 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    if ( read_by_myproc_atmos ) then
+    select case(inputtype)
+    case('SCALE-RM')
+       KA_org = dims(1) + 2
+       IA_org = dims(2)
+       JA_org = dims(3)
 
-       select case(inputtype)
-       case('SCALE-RM')
-          if( .NOT. allocated( LON_org ) ) allocate( LON_org(            dims(2), dims(3) ) )
-          if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(            dims(2), dims(3) ) )
-          if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( dims(1)+2, dims(2), dims(3) ) )
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
 
-          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                     LAT_org(:,:),   & ! [OUT]
-                                     CZ_org (:,:,:), & ! [OUT]
-                                     basename,       & ! [IN]
-                                     dims   (:)      ) ! [IN]
-       case('GrADS')
-          if( .NOT. allocated( LON_all ) ) allocate( LON_all( dims(2), dims(3) ) )
-          if( .NOT. allocated( LAT_all ) ) allocate( LAT_all( dims(2), dims(3) ) )
+       if ( read_by_myproc_atmos ) then
+           call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
+                                      LAT_org(:,:),   & ! [OUT]
+                                      CZ_org (:,:,:), & ! [OUT]
+                                      basename,       & ! [IN]
+                                      dims   (:)      ) ! [IN]
+       endif
 
+    case('GrADS')
+       if( .NOT. allocated( LON_all ) ) allocate( LON_all( dims(2), dims(3) ) )
+       if( .NOT. allocated( LAT_all ) ) allocate( LAT_all( dims(2), dims(3) ) )
+
+       if ( read_by_myproc_atmos ) then
           call ParentAtmosOpenGrADS( LON_all(:,:), & ! [OUT]
                                      LAT_all(:,:), & ! [OUT]
                                      basename,     & ! [IN]
                                      dims   (:)    ) ! [IN]
-       case('WRF-ARW')
-          call ParentAtmosOpenWRFARW
-       case('NETCDF')
-          if( .NOT. allocated( LON_org ) ) allocate( LON_org(            dims(2), dims(3) ) )
-          if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(            dims(2), dims(3) ) )
-          if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( dims(1)+2, dims(2), dims(3) ) )
+       endif
 
-          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                     LAT_org(:,:),   & ! [OUT]
-                                     CZ_org (:,:,:), & ! [OUT]
-                                     basename,       & ! [IN]
-                                     dims   (:)      ) ! [IN]
-       end select
+       if ( serial_atmos ) then
+          ! read all data in the master process
+          IS_org = 1
+          IE_org = dims(2)
+          JS_org = 1
+          JE_org = dims(3)
 
-    endif
+          call COMM_bcast( LON_all, dims(2), dims(3) )
+          call COMM_bcast( LAT_all, dims(2), dims(3) )
+       else
+          LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+          LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+          LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+          LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
 
-    select case(inputtype)
-    case('SCALE-RM')
-      KA_org = dims(1) + 2
-      IA_org = dims(2)
-      JA_org = dims(3)
-    case('GrADS')
-      LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
-      LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
-      LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
-      LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+          do i = 1, dims(2)
+             if( any( LON_min > LON_all(i,:) ) ) IS_org = i - 1
+          end do
+          do i = dims(2), 1, -1
+             if( any( LON_max < LON_all(i,:) ) ) IE_org = i + 1
+          end do
+          ! which is the direction, south->north or north->south?
+          if( sum( LAT_all(:,1) ) < sum( LAT_all(:,dims(3)) ) ) then
+             do j = 1, dims(3)
+                if( any( LAT_min > LAT_all(:,j) ) ) JS_org = j - 1
+             end do
+             do j = dims(3), 1, -1
+                if( any( LAT_max < LAT_all(:,j) ) ) JE_org = j + 1
+             end do
+          else ! north->south
+             do j = 1, dims(3)
+                if( any( LAT_max < LAT_all(:,j) ) ) JS_org = j - 1
+             end do
+             do j = dims(3), 1, -1
+                if( any( LAT_min > LAT_all(:,j) ) ) JE_org = j + 1
+             end do
+          end if
 
-      do i = 1, dims(2)
-         if( any( LON_min > LON_all(i,:) ) ) IS_org = i - 1
-      end do
-      do i = dims(2), 1, -1
-         if( any( LON_max < LON_all(i,:) ) ) IE_org = i + 1
-      end do
-      ! which is the direction, south->north or north->south?
-      if( sum( LAT_all(:,1) ) < sum( LAT_all(:,dims(3)) ) ) then
-         do j = 1, dims(3)
-            if( any( LAT_min > LAT_all(:,j) ) ) JS_org = j - 1
-         end do
-         do j = dims(3), 1, -1
-            if( any( LAT_max < LAT_all(:,j) ) ) JE_org = j + 1
-         end do
-      else ! north->south
-         do j = 1, dims(3)
-            if( any( LAT_max < LAT_all(:,j) ) ) JS_org = j - 1
-         end do
-         do j = dims(3), 1, -1
-            if( any( LAT_min > LAT_all(:,j) ) ) JE_org = j + 1
-         end do
-      end if
+          ! fix over number of grids
+          if( IS_org < 1       ) IS_org = 1
+          if( IE_org > dims(2) ) IE_org = dims(2)
+          if( JS_org < 1       ) JS_org = 1
+          if( JE_org > dims(3) ) JE_org = dims(3)
+       endif
 
-      ! fix over number of grids
-      if( IS_org < 1       ) IS_org = 1
-      if( IE_org > dims(2) ) IE_org = dims(2)
-      if( JS_org < 1       ) JS_org = 1
-      if( JE_org > dims(3) ) JE_org = dims(3)
+       KA_org = dims(1) + 2
+       IA_org = IE_org - IS_org + 1
+       JA_org = JE_org - JS_org + 1
 
-      KA_org = dims(1) + 2
-      IA_org = IE_org - IS_org + 1
-      JA_org = JE_org - JS_org + 1
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
 
-      if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
-      if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
-      if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LON_org(i,j) = LON_all(i-1+IS_org,j-1+JS_org)
+          LAT_org(i,j) = LAT_all(i-1+IS_org,j-1+JS_org)
+       end do
+       end do
 
-      do j = 1, JA_org
-      do i = 1, IA_org
-         LON_org(i,j) = LON_all(i-1+IS_org,j-1+JS_org)
-         LAT_org(i,j) = LAT_all(i-1+IS_org,j-1+JS_org)
-      end do
-      end do
     case('WRF-ARW')
-      KA_org = dims(1) + 2
-      IA_org = dims(2)
-      JA_org = dims(3)
+       KA_org = dims(1) + 2
+       IA_org = dims(2)
+       JA_org = dims(3)
 
-      if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
-      if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
-      if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
+
+       call ParentAtmosOpenWRFARW
+
     end select
 
     if( .NOT. allocated( W_org    ) ) allocate( W_org   ( KA_org, IA_org, JA_org     ) )
