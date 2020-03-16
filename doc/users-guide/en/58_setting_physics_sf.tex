@@ -11,10 +11,10 @@ If ocean, land, and urban models are not used, the bottom atmospheric boundary i
 
 \begin{table}[htb]
 \begin{center}
-  \caption{Choices for the atmospheric bottom boundary }
+  \caption{List for the atmospheric bottom boundary types}
   \label{tab:nml_atm_sf}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  Value & Description of scheme\\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme\\ \hline
       \verb|NONE   | & Do not calculate surface flux, but \verb|"NONE"| is replaced to \verb|"COUPLE"| according to settings of ocean, land, and urban models) \\
       \verb|OFF    | & Do not calculate surface flux\\
       \verb|CONST  | & Fix the constant value of surface flux \\
@@ -70,10 +70,10 @@ The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \
 }
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of bulk coefficient scheme}
+  \caption{List of bulk coefficient scheme types}
   \label{tab:nml_bulk}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme & Reference\\ \hline
       \verb|B91W01| & Bulk method by the universal function (Default) & \citet{beljaars_1991,wilson_2001} \\
       \verb|U95|    & Louis-type bulk method  (improved version of Louis (1979) & \citet{uno_1995} \\
     \hline
