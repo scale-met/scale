@@ -212,7 +212,6 @@ module scale_atmos_phy_mp_suzuki10
 
   logical :: flg_regeneration = .false.      ! flag regeneration of aerosol
   logical :: flg_nucl         = .false.      ! flag nucleated cloud move into smallest bin
-  logical :: flg_icenucl      = .false.      ! flag ice nucleation
   logical :: flg_sf_aero      = .false.      ! flag surface flux of aerosol
 
   integer, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
@@ -234,6 +233,9 @@ module scale_atmos_phy_mp_suzuki10
   real(RP)             :: wgtbin
   integer              :: mspc, mbin
   real(RP)             :: rndm(1,1,1)
+
+  !--- use for ice_nucleation
+  real(RP) :: n0_icenucl = 1.E+3_RP    ! N0 of Meyer et al. (1992)
 
   !--- use for model without aerosol
   real(RP) :: c_ccn = 100.E+6_RP    ! N0 of Nc = N0*s^kappa
@@ -427,6 +429,7 @@ contains
        S10_RNDM_MSPC, &
        S10_RNDM_MBIN, &
        c_ccn, kappa, &
+       n0_icenucl,   &
        sigma, vhfct
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
@@ -474,7 +477,6 @@ contains
     R0_AERO = r0a
     S10_FLAG_REGENE = flg_regeneration
     S10_FLAG_NUCLEAT = flg_nucl
-    S10_FLAG_ICENUCLEAT = flg_icenucl
     S10_FLAG_SFAERO = flg_sf_aero
     S10_RNDM_FLGP = rndm_flgp
     S10_RNDM_MSPC = mspc
@@ -503,7 +505,6 @@ contains
     r0a   = R0_AERO
     flg_regeneration = S10_FLAG_REGENE
     flg_nucl = S10_FLAG_NUCLEAT
-    flg_icenucl = S10_FLAG_ICENUCLEAT
     flg_sf_aero = S10_FLAG_SFAERO
     rndm_flgp = S10_RNDM_FLGP
     mspc = S10_RNDM_MSPC
@@ -3648,6 +3649,7 @@ contains
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_ice
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHS, &
        CP_VAPOR, &
        CP_ICE,   &
        CV_VAPOR, &
@@ -3678,13 +3680,17 @@ contains
     !
     real(RP) :: qsati(ijkmax)
     integer :: ijk, indirect
-
+    real(RP) :: numice
+    integer :: myu, n, ispc
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
     call ATMOS_SATURATION_pres2qsat_ice( ijkmax, 1, ijkmax, &
                                          temp(:), pres(:), qdry(:), & ! [IN]
                                          qsati(:)                   ) ! [OUT]
+    ! lhs
+    call ATMOS_HYDROMETEOR_LHS( ijkmax, 1, ijkmax, temp(:), qlsbl(:) )
+
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
@@ -3693,26 +3699,37 @@ contains
 
        if( ssice <= 0.0_RP ) cycle
 
-       numin = bcoef * exp( acoef + bcoef * ssice )
-       numin = numin * expxctr( 1 )/dxmic
-       numin = min( numin,qvap(ijk)*dens(ijk) )
-       !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
-       if ( temp(ijk) <= tplatu .OR. ( temp(ijk) >= tcolml .AND. temp(ijk) < tcolmu ) ) then
-          gc( 1,ic,ijk ) = gc( 1,ic,ijk ) + numin
-          !--- -14 [deg] > T >= -18 [deg] -> dendrite
-       elseif( temp(ijk) <= tdendu .AND. temp(ijk) >= tdendl ) then
-          gc( 1,id,ijk ) = gc( 1,id,ijk ) + numin
-          !--- else -> plate
-       else
-          gc( 1,ip,ijk ) = gc( 1,ip,ijk ) + numin
-       endif
+       numice = 0.0_RP
+       do myu = ic, ih
+         do n = 1, nbin
+           numice = numice + gc( n,myu,ijk )*rexpxctr( n )*dxmic
+         enddo
+       enddo
 
-       qdel = numin/dens(ijk)
-       qvap(ijk) = qvap(ijk) - qdel
-       tdel = numin/dens(ijk)*qlmlt/cp(ijk)
-       temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * qdel
-       cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * qdel
+       numin = n0_icenucl * exp( acoef + bcoef * ssice * 1.E+2_RP )
+       if( numin > numice ) then
+         !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
+         if ( temp(ijk) <= tplatu .OR. ( temp(ijk) >= tcolml .AND. temp(ijk) < tcolmu ) ) then
+            ispc = ic
+            !--- -14 [deg] > T >= -18 [deg] -> dendrite
+         elseif( temp(ijk) <= tdendu .AND. temp(ijk) >= tdendl ) then
+            ispc = id
+            !--- else -> plate
+         else
+            ispc = ip
+         endif
+
+         numin = (numin-numice) * expxctr( 1 )
+         numin = min( numin,qvap(ijk)*dens(ijk) )
+         gc( 1,ispc,ijk ) = gc( 1,ispc,ijk ) + numin / dxmic
+
+         tdel = numin/dens(ijk)*qlsbl(ijk)/cp(ijk)
+         temp(ijk) = temp(ijk) + tdel
+         qdel = numin/dens(ijk)
+         qvap(ijk) = qvap(ijk) - qdel
+         cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * qdel
+         cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * qdel
+       endif
 
     enddo
 
