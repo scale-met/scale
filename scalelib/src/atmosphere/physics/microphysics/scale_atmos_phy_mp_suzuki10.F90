@@ -3753,9 +3753,9 @@ contains
     use scale_const, only: &
        PI    => CONST_PI,    &
        TMLT  => CONST_TMELT, &
-       QLMLT => CONST_EMELT, &
        RHOW  => CONST_DWATR
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHF, &
        CP_WATER, &
        CP_ICE,   &
        CV_WATER, &
@@ -3781,15 +3781,19 @@ contains
 !    real(RP), parameter :: ncoefim = 1.0E+7_RP  ! N_{im0} of eq.(3.18) of Suzuki (2004)
 !    real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
     integer :: ijk, indirect
+    real(RP) :: qlmlt(ijkmax)
 
     call PROF_rapstart('_SBM_Freezing', 3)
+
+    call ATMOS_HYDROMETEOR_LHF( ijkmax, 1, ijkmax, temp(:), qlmlt(:) )
+
+    xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
+    nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
 
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
 !       if ( temp <= tthreth ) then !--- Bigg (1975)
-       xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
-       nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
 
        tc = temp(ijk)-tmlt
        rate = coefa*exp( -coefb*tc )
@@ -3835,7 +3839,7 @@ contains
 !     endif
        sumfrz = sumfrz*dxmic
 
-       tdel = sumfrz/dens(ijk)*qlmlt/cp(ijk)
+       tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cp(ijk)
        temp(ijk) = temp(ijk) + tdel
        cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz/dens(ijk)
        cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz/dens(ijk)
@@ -3857,9 +3861,8 @@ contains
        cp,         &
        cv,         &
        dtime       )
-    use scale_const, only: &
-       QLMLT => CONST_EMELT
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHF, &
        CP_WATER, &
        CP_ICE,   &
        CV_WATER, &
@@ -3879,8 +3882,11 @@ contains
     integer :: n, m
     real(RP) :: summlt, sumice, tdel
     integer :: ijk, indirect
+    real(RP) :: qlmlt(ijkmax)
 
     call PROF_rapstart('_SBM_Melting', 3)
+
+    call ATMOS_HYDROMETEOR_LHF( ijkmax, 1, ijkmax, temp(:), qlmlt(:) )
 
     do indirect = 1, num_warm
        ijk = index_warm(indirect)
@@ -3897,7 +3903,7 @@ contains
        enddo
        summlt = summlt*dxmic
 
-       tdel = - summlt/dens(ijk)*qlmlt/cp(ijk)
+       tdel = - summlt/dens(ijk)*qlmlt(ijk)/cp(ijk)
        temp(ijk) = temp(ijk) + tdel
        cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt/dens(ijk)
        cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt/dens(ijk)
