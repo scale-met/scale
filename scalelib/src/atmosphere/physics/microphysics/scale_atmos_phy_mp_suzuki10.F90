@@ -3837,8 +3837,8 @@ contains
 
        tdel = sumfrz/dens(ijk)*qlmlt/cp(ijk)
        temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz
-       cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz
+       cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz/dens(ijk)
+       cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz/dens(ijk)
     enddo
 
     call PROF_rapend  ('_SBM_Freezing', 3)
@@ -3899,8 +3899,8 @@ contains
 
        tdel = - summlt/dens(ijk)*qlmlt/cp(ijk)
        temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt
-       cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt
+       cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt/dens(ijk)
+       cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt/dens(ijk)
        !
     enddo
 
