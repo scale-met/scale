@@ -18,10 +18,10 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of subsurface ocean schemes (\texttt{OCEAN\_DYN\_TYPE}).}
+  \caption{List of subsurface ocean scheme types (\texttt{OCEAN\_DYN\_TYPE}).}
   \label{tab:nml_ocean_dyn}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
       \verb|NONE or OFF| & Disable the ocean submodel \\
       \verb|INIT|        & Fixed to the initial condition \\
       \verb|OFFILNE|     & Update by external data \\
@@ -33,10 +33,10 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface schemes (\texttt{OCEAN\_SFC\_TYPE}). There is one option in current version.}
+  \caption{List of ocean surface scheme types (\texttt{OCEAN\_SFC\_TYPE}). There is one option in current version.}
   \label{tab:nml_ocean_sfc}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
       \verb|FIXED-TEMP| & Calculate flux without diagnosing surface skin temperature \\
     \hline
   \end{tabularx}
@@ -45,10 +45,10 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of sea ice schemes (\texttt{OCEAN\_ICE\_TYPE}).}
+  \caption{List of sea ice scheme types (\texttt{OCEAN\_ICE\_TYPE}).}
   \label{tab:nml_ocean_ice}
   \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  Values & Description of scheme \\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
       \verb|NONE|   & Disable the sea ice model \\
       \verb|INIT|   & Fixed to the initial condition \\
       \verb|SIMPLE| & Simple sea ice model \\
@@ -59,10 +59,10 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface albedo schemes (\texttt{OCEAN\_ALB\_TYPE}).}
+  \caption{List of ocean surface albedo scheme types (\texttt{OCEAN\_ALB\_TYPE}).}
   \label{tab:nml_ocean_alb}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme & Reference \\ \hline
       \verb|INIT|       & Fixed to the initial condition \\
       \verb|CONST|      & Use constant value \\
       \verb|NAKAJIMA00| & Calculate albedo for short-wave by solar zenith angle & \citet{nakajima_2000} \\
@@ -73,10 +73,10 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of ocean surface roughness schemes (\texttt{OCEAN\_RGN\_TYPE}).}
+  \caption{List of ocean surface roughness scheme types (\texttt{OCEAN\_RGN\_TYPE}).}
   \label{tab:nml_ocean_rgn}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  Values & Description of scheme & reference \\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme & Reference \\ \hline
       \verb|MOON07|   & Based on empirical formula with time development    & \citet{moon_2007} \\
       \verb|INIT|     & Fixed to the initial condition \\
       \verb|CONST|    & Use constant value \\

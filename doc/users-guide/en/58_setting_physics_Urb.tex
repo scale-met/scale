@@ -1,44 +1,158 @@
 %-------------------------------------------------------------------------------
 \section{Urban model} \label{sec:basic_usel_urban}
 %-------------------------------------------------------------------------------
-The urban process consists of two main parts, that is updating the urban state and calculating fluxes at the interface between the atmosphere and the urban.
-The timing of calling these schemes is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of calling timing.
+The urban scheme calculates the energy and water fluxes between the atmosphere and urban surface/canopy.
+To calculate them, it also updates the urban state, e.g., urban surface temperature, moisture, and so on. 
+The timing of updating (calling) the urban scheme is configured
+at \nmitem{TIME_DT_URBAN} and \nmitem{TIME_DT_URBAN_UNIT} in \namelist{PARAM_TIME}
+(Refer to Section \ref{sec:timeintiv} for the details).
 
-\subsection{Flux in Atmosphere and Urban Area}
+%\subsection{Flux in Atmosphere and Urban Area}
 %-------------------------------------------------------------------------------
 
-The urban scheme that updates the urban surface state, e.g., urban surface temperature and moisture, and calculates fluxes at the interface between atmosphere and the urban environment is configured in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
+The urban scheme used is specified in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
 %
 \editboxtwo{
 \verb|&PARAM_URBAN                  | & \\
-\verb| URBAN_DYN_TYPE = "KUSAKA01", | & ; Select the urban type shown in Table \ref{tab:nml_urban}\\
+\verb| URBAN_DYN_TYPE = "NONE", | & ; Select a scheme from Table \ref{tab:nml_urban}\\
 \verb|/                             | & \\
 }
 
 \begin{table}[hbt]
 \begin{center}
-  \caption{Choices of urban scheme}
+  \caption{List of urban scheme types}
   \label{tab:nml_urban}
   \begin{tabularx}{150mm}{llX} \hline
-    \rowcolor[gray]{0.9}  Value  & Description of scheme & reference \\ \hline
-      \verb|NONE or OFF|         & Do not use the urban scheme            \\
-      \verb|LAND|                & Urban area is calculated by a land model \\
-      \verb|KUSAKA01|            & Single-layer canopy model  & \citet{kusaka_2001} \\
+    \rowcolor[gray]{0.9}  Schemes  & Description of scheme & reference \\ \hline
+      \verb|NONE or OFF|          & Do not use an urban scheme     &                  \\
+      \verb|LAND|                 & Urban areas are calculated by a land model   &   \\
+      \verb|KUSAKA01|             & Single-layer canopy model  & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-If the type of urban area is included in the land-use specified by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{URBAN_TYPE}.
-If this condition is not satisfied, the program immediately stops without computation, outputting the following message to LOG file:
+If urban land-use is included in the calculation domain, neither \verb|NONE| nor \verb|OFF| can be chosen as \nmitem{URBAN_TYPE}.
+When they are selected under that situation, the program immediately stops without calculation, outputting the following message to LOG file:
 %
 \msgbox{
 \verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE}, the land model is used to calculate the surface flux and soil variables for urban areas.
-In this case, parameters for the urban area should be provided in the land parameter table described in Section \ref{sec:basic_usel_land}.
+If \verb|LAND| type is selected as \nmitem{URBAN_DYN_TYPE},
+the land model specified in \namelist{PARAM_LAND} is used to calculate the surface fluxes and soil variables for urban areas.
+Since the land model implemented is only the slab model in the current version,
+Choosing \verb|LAND| type means applying the slab model to the urban areas.
+In this case, parameters for an urban area should be provided in the land parameter table described in Section \ref{sec:basic_usel_land}.
 
-There are many parameters specifying urban morphology in the \verb|KUSAKA01| scheme.
-Regarding the urban parameters, please refer to description about namelist in Section \ref{sec:reference_manual}.
+
+\verb|KUSAKA01| scheme is a single-layer urban canopy model.
+Since the scheme considers the energy exchange between the top of urban canopy and atmosphere,
+the building height, i.e., \nmitem{ZR} in \namelist{PARAM_URBAN_DATA}, must be located at least the two meters lower than the face level of the 1st atmospheric layer.
+
+
+
+\subsection{Settings of urban parameters for \texttt{KUSAKA01} scheme}
+
+There are many parameters characterizing urban morphology in the \verb|KUSAKA01| scheme.
+Regarding the available urban parameters,
+please refer to the namelist of \namelist{PARAM_URBAN_DATA};
+you can find it from the link in the ``NAMELIST Parameters'' of Section \ref{sec:reference_manual}.
+The sample file for the \namelist{PARAM_URBAN_DATA} is provided at \verb|scale/scale-rm/test/data/urban/param.kusaka01.dat|.
+
+
+The configuration for urban parameters is specified in \namelist{PARAM_URBAN_DYN_KUSAKA01}.
+%
+\editboxtwo{
+\verb|&PARAM_URBAN_DYN_KUSAKA01                         | & \\
+\verb| DTS_MAX = 0.1,                                   | & ; Limit of temperature change per 1 step\\
+                                                          & ~\verb|  = DTS_MAX * DT [K/step]|\\
+\verb| BOUND   = 1,                                     | & ; Boundary condition at the innermost level of building, roof, and load\\
+                                                          & ~\verb|  1: Zero-flux, 2: Temperature const.| \\
+\verb| URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME       = "", | & ; File name of urban parameter table\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = "", | & ; File name of gridded Z0m data\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = "", | & ; File name of gridded AH data\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME = "", | & ; File name of gridded AHL data\\
+\verb|/                                                 | & \\
+}
+
+
+The values of urban parameters used in a calculation are determined through the following three steps.
+\begin{enumerate}[1)]
+\item The default values given in the \scalelib source code are applied to all grid cells in the calculation domain.
+\item If any file is given to \nmitem{URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME} of \namelist{PARAM_URBAN_DYN_KUSAKA01},
+  the value of urban parameter(s) specified in \namelist{PARAM_URBAN_DATA} in the file is read.
+  Then, the default value(s) is replaced with the given value(s).
+  The replaced data is also applied to all grid cells in the calculation domain. 
+\item For the roughness length for momentum (Z0m) and anthropogenic sensible heat (AH) and latent heat (AHL),
+  if the gridded data file is given, the gridded data is read from the file. Then, the value specified by 1) or 2) is replaced with the gridded data.
+  That is, it is possible to use different values for each grid for Z0m, AH, and AHL.
+  The gridded data file for Z0m, AH, and AHL is specified by
+  \nmitem{URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME}, \\
+\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME}, and\\
+\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME}, respectively.
+\end{enumerate}
+
+
+Users need to prepare beforehand the gridded data for \\ \nmitem{URBAN_DYN_KUSAKA01_GRIDDED_(Z0M|AH|AHL)_IN_FILENAME}
+with the \scalenetcdf format according to the experimental settings.
+These \scalenetcdf data can be converted from the simple binary format data using \verb|scale_init|.
+
+
+\subsubsection{How to prepare gridded urban data with \scalenetcdf}
+
+\verb|scale_init| is used to prepare the gridded urban data; the detailed explanations are given in Section x.x.
+Here, a practical usage is demonstrated with examples of configuration file and namelist file.
+
+To create the \scalenetcdf file according to the experimental settings from a certain binary format data,
+add \namelist{PARAM_CONVERT} and \namelist{PARAM_CNVUSER} to \verb|init.conf|.
+The following shows an example of \verb|init.conf| in the case of preparing AH gridded data.
+
+\editboxtwo{
+\verb|&PARAM_CONVERT          | & \\
+\verb| CONVERT_USER = .true., | & \\
+\verb|/                       | & \\
+&  \\
+\verb|&PARAM_CNVUSER                                   | & \\
+\verb| CNVUSER_FILE_TYPE       = "GrADS",              | & \\
+\verb| CNVUSER_NSTEPS          =  24,                  | & ; Set 1 for Z0M and 24 for AH and AHL\\
+\verb| CNVUSER_GrADS_FILENAME  = "namelist.grads.ah",  | & \\
+\verb| CNVUSER_GrADS_VARNAME   = "AH",                 | & ; \nmitem{name} of \nmitem{GrADS_ITEM} in namelist file\\
+\verb| CNVUSER_GrADS_LONNAME   = "lon",                | & ; \nmitem{name} of \nmitem{GrADS_ITEM} in namelist file\\
+\verb| CNVUSER_GrADS_LATNAME   = "lat",                | & ; \nmitem{name} of \nmitem{GrADS_ITEM} in namelist file\\
+\verb| CNVUSER_OUT_BASENAME    = "urb_ah.d01",         | & \\
+\verb| CNVUSER_OUT_VARNAME     = "URBAN_AH",           | & ; \verb|URBAN_AH|, \verb|URBAN_AHL|, or \verb|URBAN_Z0M|\\
+\multicolumn{2}{l}{\verb| CNVUSER_OUT_VARDESC     = "Anthropogenic sensible heat flux",  |}  \\
+\verb| CNVUSER_OUT_VARUNIT     = "W/m2",               | & ; Unit\\
+\verb| CNVUSER_OUT_DTYPE       = "REAL8"               | & \\
+\verb| CNVUSER_OUT_DT          = 3600D0,               | & \\
+\verb|/                                                | & \\
+}
+
+The following shows an example of namelist file, corresponding to ``ctl'' file of \grads.
+\editbox{
+\verb|#              | \\
+\verb|# Dimension    | \\
+\verb|#              | \\
+\verb|&GrADS_DIMS    | \\
+\verb| nx = 361,     | \\
+\verb| ny = 181,     | \\
+\verb| nz = 1,       | \\
+\verb|/              | \\
+\\
+\verb|#              | \\
+\verb|# Variables    | \\
+\verb|#              | \\
+\verb|&GrADS_ITEM  name='lon',   dtype='linear',  swpoint=0.0d0, dd=1.0d0 /     | \\
+\verb|&GrADS_ITEM  name='lat',   dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /   | \\
+\verb|&GrADS_ITEM  name='AH',   dtype='map',     fname='urb_ah', startrec=1, totalrec=1,|  \textbackslash \\
+   ~~~~~~~~~ \verb|bintype='real4', yrev=.false., missval=-999.0E+0 /                    | \\
+}
+%
+The ways to prepare the gridded Z0M and AHL data are basically the same as that for AH.
+Note that, the gridded AH and AHL data have to contain the data for 24 hours in the order from 1 to 24 UTC,
+while the Z0M data contains only one data because Z0M is assumed to be unchanged during the simulation
+(Namely, \nmitem{CNVUSER_NSTEPS}=1).
+\verb|tdef| of ``ctl'' corresponds to \nmitem{CNVUSER_NSTEPS} of \namelist{PARAM_CNVUSER} in \scale.
+
