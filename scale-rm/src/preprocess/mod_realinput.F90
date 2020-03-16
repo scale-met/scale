@@ -1257,27 +1257,15 @@ contains
           LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
           LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
 
-          do i = 1, dims(2)
-             if( any( LON_min > LON_all(i,:) ) ) IS_org = i - 1
-          end do
-          do i = dims(2), 1, -1
-             if( any( LON_max < LON_all(i,:) ) ) IE_org = i + 1
-          end do
+          IS_org = maxval( maxloc( (/ (i,i=1,dims(2)) /), mask=any( LON_min > LON_all(:,:), dim=2 ) ) ) - 1
+          IE_org = maxval( minloc( (/ (i,i=1,dims(2)) /), mask=any( LON_max < LON_all(:,:), dim=2 ) ) ) + 1
           ! which is the direction, south->north or north->south?
           if( sum( LAT_all(:,1) ) < sum( LAT_all(:,dims(3)) ) ) then
-             do j = 1, dims(3)
-                if( any( LAT_min > LAT_all(:,j) ) ) JS_org = j - 1
-             end do
-             do j = dims(3), 1, -1
-                if( any( LAT_max < LAT_all(:,j) ) ) JE_org = j + 1
-             end do
+             JS_org = maxval( maxloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_min > LAT_all(:,:), dim=1 ) ) ) - 1
+             JE_org = maxval( minloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_max < LAT_all(:,:), dim=1 ) ) ) + 1
           else ! north->south
-             do j = 1, dims(3)
-                if( any( LAT_max < LAT_all(:,j) ) ) JS_org = j - 1
-             end do
-             do j = dims(3), 1, -1
-                if( any( LAT_min > LAT_all(:,j) ) ) JE_org = j + 1
-             end do
+             JS_org = maxval( maxloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_max < LAT_all(:,:), dim=1 ) ) ) - 1
+             JE_org = maxval( minloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_min > LAT_all(:,:), dim=1 ) ) ) + 1
           end if
 
           ! fix over number of grids
