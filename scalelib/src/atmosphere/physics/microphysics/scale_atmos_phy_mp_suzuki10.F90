@@ -212,6 +212,7 @@ module scale_atmos_phy_mp_suzuki10
 
   logical :: flg_regeneration = .false.      ! flag regeneration of aerosol
   logical :: flg_nucl         = .false.      ! flag nucleated cloud move into smallest bin
+  logical :: flg_icenucl      = .false.      ! flag ice nucleation
   logical :: flg_sf_aero      = .false.      ! flag surface flux of aerosol
 
   integer, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
@@ -423,12 +424,12 @@ contains
        S10_EMAER, &
        S10_FLAG_REGENE,  &
        S10_FLAG_NUCLEAT, &
-       S10_FLAG_ICENUCLEAT, &
        S10_FLAG_SFAERO,  &
        S10_RNDM_FLGP, &
        S10_RNDM_MSPC, &
        S10_RNDM_MBIN, &
        c_ccn, kappa, &
+       flg_icenucl, &
        n0_icenucl,   &
        sigma, vhfct
 
@@ -1838,18 +1839,20 @@ contains
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
 
-!          call ice_nucleat( ijkmax,        & ! [IN]
-!                            ijkmax_cold,   & ! [IN]
-!                            index_cold(:), & ! [IN]
-!                            dens(:),       & ! [IN]
-!                            pres(:),       & ! [IN]
-!                            qdry(:),       & ! [IN]
-!                            temp(:),       & ! [INOUT]
-!                            qvap(:),       & ! [INOUT]
-!                            ghyd(:,:,:),   & ! [INOUT]
-!                            cp(:),         & ! [INOUT]
-!                            cv(:),         & ! [INOUT]
-!                            dt             ) ! [IN]
+          if( flg_icenucl ) then
+            call ice_nucleat( ijkmax,        & ! [IN]
+                              ijkmax_cold,   & ! [IN]
+                              index_cold(:), & ! [IN]
+                              dens(:),       & ! [IN]
+                              pres(:),       & ! [IN]
+                              qdry(:),       & ! [IN]
+                              temp(:),       & ! [INOUT]
+                              qvap(:),       & ! [INOUT]
+                              ghyd(:,:,:),   & ! [INOUT]
+                              cp(:),         & ! [INOUT]
+                              cv(:),         & ! [INOUT]
+                              dt             ) ! [IN]
+          endif
 
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
@@ -1953,18 +1956,20 @@ contains
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
 
-          call ice_nucleat( ijkmax,        & ! [IN]
-                            ijkmax_cold,   & ! [IN]
-                            index_cold(:), & ! [IN]
-                            dens(:),       & ! [IN]
-                            pres(:),       & ! [IN]
-                            qdry(:),       & ! [IN]
-                            temp(:),       & ! [INOUT]
-                            qvap(:),       & ! [INOUT]
-                            ghyd(:,:,:),   & ! [INOUT]
-                            cp(:),         & ! [INOUT]
-                            cv(:),         & ! [INOUT]
-                            dt             ) ! [IN]
+          if( flg_icenucl ) then
+            call ice_nucleat( ijkmax,        & ! [IN]
+                              ijkmax_cold,   & ! [IN]
+                              index_cold(:), & ! [IN]
+                              dens(:),       & ! [IN]
+                              pres(:),       & ! [IN]
+                              qdry(:),       & ! [IN]
+                              temp(:),       & ! [INOUT]
+                              qvap(:),       & ! [INOUT]
+                              ghyd(:,:,:),   & ! [INOUT]
+                              cp(:),         & ! [INOUT]
+                              cv(:),         & ! [INOUT]
+                              dt             ) ! [IN]
+          endif
 
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
@@ -2066,7 +2071,7 @@ contains
           gc( 1,il,ijk ) = gc( 1,il,ijk ) + dmp/dxmic
           dqv = dmp/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
        enddo
@@ -2103,7 +2108,7 @@ contains
                 dqv = dmp/dens(ijk)
                 qvap(ijk) = qvap(ijk) - dqv
                 qvap(ijk) = max( qvap(ijk),0.0_RP )
-                temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+                temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
                 cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
                 cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
              endif
@@ -2237,7 +2242,7 @@ contains
           dqv = dmp/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
           qvap(ijk) = max( qvap(ijk),0.0_RP )
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
        enddo
@@ -2579,7 +2584,7 @@ contains
           !----- supersaturation tendency
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
-          cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cp(ijk)/rvap/temp(ijk)/temp(ijk) )
+          cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cv(ijk)/rvap/temp(ijk)/temp(ijk) )
           a = - cefliq*sumliq(ijk)*gtliq(ijk)/dens(ijk)   ! a of eq. (A.19) of Suzuki (2004)
           a = a + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
@@ -2744,7 +2749,7 @@ contains
           cndmss = gclnew(ijk) - gclold(ijk)
           dqv = cndmss/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
           !
@@ -2775,7 +2780,7 @@ contains
              gc( n,il,ijk ) = 0.0_RP
              dqv = cndmss/dens(ijk)
              qvap(ijk) = qvap(ijk) + dqv
-             temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cp(ijk)
+             temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cv(ijk)
              cp(ijk) = cp(ijk) + ( CP_VAPOR - CP_WATER ) * dqv
              cv(ijk) = cv(ijk) + ( CV_VAPOR - CV_WATER ) * dqv
           endif
@@ -2984,7 +2989,7 @@ contains
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
 
-          cefice = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cp(ijk)/rvap/temp(ijk)/temp(ijk) )
+          cefice = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cv(ijk)/rvap/temp(ijk)/temp(ijk) )
           d = - cefice*sumice(ijk)*gtice(ijk)/dens(ijk)  ! d of (A.19) of Suzuki (2004)
           d = d + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
@@ -3144,7 +3149,7 @@ contains
           sblmss = gcinew(ijk) - gciold(ijk)
           dqv = sblmss/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlsbl(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlsbl(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * dqv
 
@@ -3405,10 +3410,10 @@ contains
 
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
-          cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp(ijk) )
-          cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cp(ijk) )
-          cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp(ijk) )
-          cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cp(ijk) )
+          cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cv(ijk) )
+          cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cv(ijk) )
+          cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cv(ijk) )
+          cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cv(ijk) )
 
           a = - cef1*sumliq(ijk)*gtliq(ijk)/dens(ijk)  ! a of (A.19) of Suzuki (2004)
           b = - cef2*sumice(ijk)*gtice(ijk)/dens(ijk)  ! b of (A.19) of Suzuki (2004)
@@ -3600,7 +3605,7 @@ contains
           sblmss = gcinew(ijk) - gciold(ijk)
 
           qvap(ijk) = qvap(ijk) - ( cndmss + sblmss ) / dens(ijk)
-          temp(ijk) = temp(ijk) + ( cndmss*qlevp(ijk)+sblmss*qlsbl(ijk) ) / dens(ijk) / cp(ijk)
+          temp(ijk) = temp(ijk) + ( cndmss*qlevp(ijk)+sblmss*qlsbl(ijk) ) / dens(ijk) / cv(ijk)
           cp(ijk) = cp(ijk) + ( ( CP_WATER - CP_VAPOR ) * cndmss + ( CP_ICE - CP_VAPOR ) * sblmss ) / dens(ijk)
           cv(ijk) = cv(ijk) + ( ( CV_WATER - CV_VAPOR ) * cndmss + ( CV_ICE - CV_VAPOR ) * sblmss ) / dens(ijk)
 
@@ -3723,7 +3728,7 @@ contains
          numin = min( numin,qvap(ijk)*dens(ijk) )
          gc( 1,ispc,ijk ) = gc( 1,ispc,ijk ) + numin / dxmic
 
-         tdel = numin/dens(ijk)*qlsbl(ijk)/cp(ijk)
+         tdel = numin/dens(ijk)*qlsbl(ijk)/cv(ijk)
          temp(ijk) = temp(ijk) + tdel
          qdel = numin/dens(ijk)
          qvap(ijk) = qvap(ijk) - qdel
@@ -3839,7 +3844,7 @@ contains
 !     endif
        sumfrz = sumfrz*dxmic
 
-       tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cp(ijk)
+       tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cv(ijk)
        temp(ijk) = temp(ijk) + tdel
        cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz/dens(ijk)
        cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz/dens(ijk)
@@ -3903,7 +3908,7 @@ contains
        enddo
        summlt = summlt*dxmic
 
-       tdel = - summlt/dens(ijk)*qlmlt(ijk)/cp(ijk)
+       tdel = - summlt/dens(ijk)*qlmlt(ijk)/cv(ijk)
        temp(ijk) = temp(ijk) + tdel
        cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt/dens(ijk)
        cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt/dens(ijk)
