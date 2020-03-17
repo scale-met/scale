@@ -1185,6 +1185,8 @@ contains
        inputtype, &
        basename,  &
        dims       )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON, &
        ATMOS_GRID_CARTESC_REAL_LAT
@@ -1209,6 +1211,9 @@ contains
 
     real(RP) :: LON_min, LON_max
     real(RP) :: LAT_min, LAT_max
+
+    logical :: LON_mask( dims(2) )
+    logical :: LAT_mask( dims(3) )
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -1254,25 +1259,29 @@ contains
        else
           LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
           LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+
+          LON_min = maxval( minval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) < LON_min, dim=2 ) )
+          LON_max = minval( maxval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) > LON_max, dim=2 ) )
+          LON_mask(:) = any( LON_all(:,:) - LON_min > -EPS, dim=2 ) .AND. any( LON_all(:,:) - LON_max < EPS, dim=2 )
+          do i = 1, dims(2)
+            if( LON_mask(i) ) then; IS_org = i; exit; endif
+          end do
+          do i = dims(2), 1, -1
+            if( LON_mask(i) ) then; IE_org = i; exit; endif
+          end do
+
           LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
           LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
 
-          IS_org = maxval( maxloc( (/ (i,i=1,dims(2)) /), mask=any( LON_min > LON_all(:,:), dim=2 ) ) ) - 1
-          IE_org = maxval( minloc( (/ (i,i=1,dims(2)) /), mask=any( LON_max < LON_all(:,:), dim=2 ) ) ) + 1
-          ! which is the direction, south->north or north->south?
-          if( sum( LAT_all(:,1) ) < sum( LAT_all(:,dims(3)) ) ) then
-             JS_org = maxval( maxloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_min > LAT_all(:,:), dim=1 ) ) ) - 1
-             JE_org = maxval( minloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_max < LAT_all(:,:), dim=1 ) ) ) + 1
-          else ! north->south
-             JS_org = maxval( maxloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_max < LAT_all(:,:), dim=1 ) ) ) - 1
-             JE_org = maxval( minloc( (/ (j,j=1,dims(3)) /), mask=any( LAT_min > LAT_all(:,:), dim=1 ) ) ) + 1
-          end if
-
-          ! fix over number of grids
-          if( IS_org < 1       ) IS_org = 1
-          if( IE_org > dims(2) ) IE_org = dims(2)
-          if( JS_org < 1       ) JS_org = 1
-          if( JE_org > dims(3) ) JE_org = dims(3)
+          LAT_min = maxval( minval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) < LAT_min, dim=1 ) )
+          LAT_max = minval( maxval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) > LAT_max, dim=1 ) )
+          LAT_mask(:) = any( LAT_all(:,:) - LAT_min > -EPS, dim=1 ) .AND. any( LAT_all(:,:) - LAT_max < EPS, dim=1 )
+          do j = 1, dims(3)
+            if( LAT_mask(j) ) then; JS_org = j; exit; endif
+          end do
+          do j = dims(3), 1, -1
+            if( LAT_mask(j) ) then; JE_org = j; exit; endif
+          end do
        endif
 
        KA_org = dims(1) + 2
