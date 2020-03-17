@@ -17,7 +17,7 @@
 
 \scalerm では、表\ref{tab:inputdata_format}に示される様々な種類の外部データを読み込むことによって、初期値データや境界値データを作成できる。
 プログラム\verb|scale-rm_init|は、ファイル\verb|init.conf|の設定に従って外部データを初期値・境界値データに変換する。
-入力データの形式は、\namelist{PARAM_MKINIT_REAL_***}の\nmitem{FILETYPE_ORG}で指定する。
+入力データの形式は、\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の\nmitem{FILETYPE_ORG}で指定する。
 
 SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
 詳細については、第\ref{subsec:nest_offline}節を参照されたい。
@@ -26,53 +26,55 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 ただし、ファイルは{\scalerm}の境界値データの作成に必要な全てのデータを含まなければならない。
 
 本書における「バイナリデータ形式」は、Fortran が直接アクセスできる単精度浮動小数点のバイナリデータとして定義される。
-例えば GRIB/GRIB2 データなどの他のフォーマットデータは、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
-この方法は、第\ref{sec:tutorial_real_data}節で説明する。
+例えば、GRIB/GRIB2 データなどの他のフォーマットデータは、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
+この方法は、第\ref{sec:tutrial_real_data}節で説明する。
 
 
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
 そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
 
 %%%---------------------------------------------------------------------------------%%%%
-\subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
+\subsubsection{SCALE形式とバイナリ形式で共通の設定} \label{sec:datainput_common_setting}
+%%
 
-バイナリデータ({\grads}形式)を入力ファイルに用いる場合、ユーザはデータを予め用意しておく必要がある。
-バイナリデータ({\grads}形式)の形式については、\grads の Web ページ
-(\url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})を参照されたい。
-入力データに関する設定は、設定ファイル\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_***}で以下のように指定する。\\
-
+出力する初期値ファイルのベース名は、次のように\namelist{PARAM_RESTART}の\nmitem{RESTART_OUT_BASENAME}で設定する。
+%%
 \editbox{
 \verb|&PARAM_RESTART|\\
 \verb| RESTART_OUTPUT       = .true.,|\\
 \verb| RESTART_OUT_BASENAME = "init_d01",|\\
 \verb|/|\\
-\\
+}
+
+入力データに対する設定は、設定ファイル\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}において次のように指定する。
+%%
+\editbox{
 \verb|&PARAM_MKINIT_REAL_ATMOS|\\
 \verb| NUMBER_OF_FILES            = 2,|\\
 \verb| NUMBER_OF_TSTEPS           = 1, |\\
-\verb| FILETYPE_ORG               = "GrADS",|\\
-\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| FILETYPE_ORG               = *値は入力データの形式に依存*,|\\
+\verb| BASENAME_ORG               = *値は入力データの形式に依存*,|\\
 \verb| BASENAME_BOUNDARY          = "boundary_d01",|\\
 \verb| BOUNDARY_UPDATE_DT         = 21600.0,|\\
 \verb| USE_FILE_DENSITY           = .false.,|\\
 \verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|\\
 \verb| USE_SFC_DIAGNOSES          = .false.,|\\
 \verb| USE_DATA_UNDER_SFC         = .true.,|\\
-\verb| SAME_MP_TYPE               = .false.,|\\
+\verb| INTRP_TYPE                 = 'LINEAR',|\\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_OCEAN|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
 \verb| NUMBER_OF_TSTEPS     = 1, |\\
-\verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| FILETYPE_ORG         = *値は入力データの形式に依存*,|\\
+\verb| BASENAME_ORG         = *値は入力データの形式に依存*,|\\
 \verb| INTRP_OCEAN_SFC_TEMP = "mask",|\\
 \verb| INTRP_OCEAN_TEMP     = "mask",|\\
 \verb|/|\\
 \verb|&PARAM_MKINIT_REAL_LAND|\\
 \verb| NUMBER_OF_FILES      = 2,|\\
 \verb| NUMBER_OF_TSTEPS     = 1, |\\
-\verb| FILETYPE_ORG         = "GrADS",|\\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+\verb| FILETYPE_ORG         = *値は入力データの形式に依存*,|\\
+\verb| BASENAME_ORG         = *値は入力データの形式に依存*,|\\
 \verb| USE_FILE_LANDWATER   = .true.,|\\
 \verb| INTRP_LAND_TEMP      = "fill",|\\
 \verb| INTRP_LAND_WATER     = "fill",|\\
@@ -81,22 +83,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb|/|\\
 }
 
-
-バイナリデータを読み込むときは、\nmitem{FILETYPE_ORG}に\verb|"GrADS"|を設定する。
-\scalerm では バイナリデータ({\grads}形式)のファイル名やデータ構造について、
-「ctl」ファイルの代わりに、ネームリストファイル\verb|namelist.grads_boundary**|で指定する。
-このネームリストファイルも予め用意しておく必要がある。
-ネームリストファイルは、\nmitem{BASENAME_ORG}で指定する。
-
-
 \nmitem{NUMBER_OF_FILES}は入力ファイルの数である。
-入力ファイルのベース名は、ネームリストファイル内の\verb|fname|で設定する。
-\verb|fname="filename"| と指定されている場合、
-入力ファイルが１つのときは、入力ファイルは「\verb|filename.grd|」という名前で準備する。
-入力ファイルが複数あるとき、もしくは、\nmitem{BASENAME_ADD_NUM} = \verb|.true.|の場合には、
-「\verb|filename.XXXXX.grd|」と番号付けされたファイルを準備する。
 プログラム\verb|scale-rm_init|は、\verb|00000|から\nmitem{NUMBER_OF_FILES}-1 までの数字を付けたファイルを順に読み込む。
-
 \nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
@@ -106,41 +94,33 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 つまり、上記の例では、境界値ファイルは大気データのみ作成される。初期値ファイルは、大気、海洋、陸面すべてについて作成される。
 
 
-\nmitem{INTRP_TYPE}で空間補間の種類を指定する。
-``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が設定可能である。
+空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
+``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が指定できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
 距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定される。
 
-以上の設定は、\namelist{PARAM_MKINIT_REAL_ATMOS}、
-\namelist{PARAM_MKINIT_REAL_OCEAN}、\\
-\namelist{PARAM_MKINIT_REAL_LAND}の間で共通である。
-\namelist{PARAM_MKINIT_REAL_OCEAN}や \\
-\namelist{PARAM_MKINIT_REAL_LAND}に関しては、別途指定しない限り、
-\nmitem{BASENAME_BOUNDARY} を除いて
-\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が基本的に引き継がれる。
+以上の設定は、\nmitem{BASENAME_BOUNDARY} を除いて共有することができる。
+つまり、\namelist{PARAM_MKINIT_REAL_(OCEAN|LAND}でネームリストの項目を指定しなければ、
+\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が用いられる。
 
-
-\nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}は
-密度の計算方法に関する設定を行う。
-デフォルトの設定は、
-\nmitem{USE_FILE_DENSITY} = \verb|.false.| 及び
-\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.false.|であり、
-この時、初期値・境界値の密度は、読み込んだ温度と比湿データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
+密度の計算方法に関する設定は、\nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}で行う。
+デフォルトの設定では両方が\verb|.false.|であり、
+初期値・境界値の密度は、読み込んだ温度と比湿データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
 %（ここで見積った密度は、親モデルの密度とは必ずしも一致しない）。
 \nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合、他の変数同様に、
 入力ファイルから読み込んだ密度の値を初期値・境界値として使用する。
-\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|の場合は、\nmitem{USE_FILE_DENSITY}の設定にかかわらず、境界値データの密度のみ、気温、気圧、比湿などの入力データをもとに状態方程式 ($\rho = p/RT$) によって計算される。
-（ここで計算された密度は、一般的には親モデルの値と整合的である）。
-\nmitem{USE_NONHYDRO_DENS_BOUNDARY} の設定は初期値データには影響しない。
+\nmitem{USE_FILE_DENSITY}の設定にかかわらず、\nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.true.|とした場合には、
+気温、気圧、比湿などの入力データと状態方程式 ($\rho = p/RT$)を用いて、境界値データの密度が計算される(初期値データには影響しない)。
+ここで計算された密度は、一般的には親モデルの値と整合的である。
 %\nmitem{USE_FILE_DENSITY}=\verb|.false.|かつ\\ \nmitem{USE_FILE_DENSITY}=\verb|.true.|の場合は、初期値データおよび境界値データの密度は異なるものとなる。
 このオプションが用意された理由は次の通りである。
-多くの場合、計算初期ショックを抑えるため、初期値データは静水圧平衡にある密度を使うのが望ましい。
+多くの場合、計算初期ショックを抑えるため、初期値データは静水圧平衡にある密度を使うことが望ましい。
 一方、静水圧平衡により作成した密度は
 親モデルの密度（多くの場合、実際の値に近いと期待される）と一致しない場合があり、
 これが、\scalerm での計算結果に大きな質量バイアスを生じる可能性がある。
 そのような場合、気圧の再現性などの観点において、
-\nmitem{USE_NONHUDRO_DENS_BOUNDARY}=\verb|.true.|として親モデルとの整合的な密度を与える方が良い場合がある。
-境界値に静水圧平衡からずれた密度を使うことにより生じる鉛直加速や波は、境界領域ナッジングにより速やかに減衰されると期待される。
+\nmitem{USE_NONHYDRO_DENS_BOUNDARY}=\verb|.true.|として親モデルとの整合的な密度を与える方が良い場合がある。
+境界値に静水圧平衡からずれた密度を使うことで生じる鉛直加速や波は、境界領域ナッジングにより速やかに減衰されると期待される。
 
 
 \nmitem{USE_SFC_DIAGNOSES}は親モデルの最下層高度よりも低い層における値の計算のためのスイッチである。
@@ -148,12 +128,6 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 \nmitem{USE_DATA_UNDER_SFC}は入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
 %地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
-
-
-\nmitem{SAME_MP_TYPE}は親モデルと同じ雲微物理スキームを使うかどうかを指定するパラメータである。
-これは\nmitem{FILETYPE_ORG} =``\verb|SCALE-RM|''でのみ有効である。
-
-
 
 土壌水分の設定は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}の
 \nmitem{USE_FILE_LANDWATER}で行う。
@@ -176,6 +150,69 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb|/| & \\
 }
 
+%%%---------------------------------------------------------------------------------%%%%
+\subsubsection{SCALE形式データの入力} \label{sec:datainput_scale}
+
+SCALE 形式データに対して, \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}で指定する設定は以下である. 
+\editbox{
+\verb|&PARAM_MKINIT_REAL_ATMOS|\\
+... \\
+\verb| FILETYPE_ORG               = "SCALE-RM",|\\
+\verb| BASENAME_ORG               = "history_d01",|\\
+\verb| SAME_MP_TYPE               = .false.,|\\
+... \\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_OCEAN|\\
+... \\
+\verb| FILETYPE_ORG         = "SCALE-RM",|\\
+\verb| BASENAME_ORG         = "history_d01",|\\
+... \\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_LAND|\\
+... \\
+\verb| FILETYPE_ORG         = "SCALE-RM",|\\
+\verb| BASENAME_ORG         = "history_d01",|\\
+... \\
+\verb|/|\\
+}
+
+\nmitem{FILETYPE_ORG}は、\verb|"SCALE-RM"|に設定する。
+入力ファイルのベース名は、\nmitem{BASENAME_ORG}で指定する。
+\verb|BASENAME_ORG|を\verb|"history_d01"|としたならば、入力ファイル数が1の場合、そのファイルは「\verb|history_d01.nc|」というファイル名で準備する。
+入力ファイルが複数ある場合や\namelist{PARAM_RESTART}で\nmitem{BASENAME_ADD_NUM} = \verb|.true.|とした場合には、
+「\verb|history_d01_XXXXX.nc|」と番号付けされた入力ファイルを準備する。
+
+使用する雲微物理スキームが親モデルと同じである場合は、\nmitem{SAME_MP_TYPE}を指定する。
+
+
+%%%---------------------------------------------------------------------------------%%%%
+\subsubsection{バイナリ形式データの入力} \label{sec:datainput_grads}
+
+バイナリデータ({\grads}形式; \url{http://cola.gmu.edu/grads/gadoc/aboutgriddeddata.html#structure})を入力ファイルとして用いる場合は、
+ユーザはデータを予め用意しておく必要がある。
+
+バイナリ形式データに対して\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}で指定する設定は以下である. 
+
+\editbox{
+\verb|&PARAM_MKINIT_REAL_ATMOS|\\
+... \\
+\verb| FILETYPE_ORG               = "GrADS",|\\
+\verb| BASENAME_ORG               = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+... \\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_OCEAN|\\
+... \\
+\verb| FILETYPE_ORG         = "GrADS",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+... \\
+\verb|/|\\
+\verb|&PARAM_MKINIT_REAL_LAND|\\
+... \\
+\verb| FILETYPE_ORG         = "GrADS",|\\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2016051106",|\\
+... \\
+\verb|/|\\
+}
 
 \namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}は、初期値・境界値データの土壌温度・地表面気温の作成において、
 親モデルの地形との高度差に応じた補正を行うオプションである。
@@ -188,7 +225,13 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 
-バイナリデータのファイル名やデータ構造を指定する
+\nmitem{FILETYPE_ORG}は\verb|"GrADS"|に設定する。
+\scalerm では、バイナリデータ({\grads}形式)のファイル名やデータ構造について、
+「ctl」ファイルの代わりに、ネームリストファイル\verb|namelist.grads_boundary**|で指定する。
+\nmitem{BASENAME_ORG}で指定するネームリストファイルは、予め用意しておく必要がある。
+
+
+バイナリデータのファイル名やデータ構造の情報を与える
 ネームリストファイル(\verb|namelist.grads_boundary**|)の一例を下記に示す。
 \editbox{
 \verb|#| \\
@@ -233,6 +276,12 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 格子数のデフォルト値は\namelist{GrADS_DIMS}の\verb|nx, ny, nz|で指定する。
 また、入力データに関する設定は、各変数ごとに\namelist{GrADS_ITEM}を用意し指定する。
 \namelist{GrADS_ITEM}に関する説明は、表\ref{tab:namelist_grdvar}に示す。
+
+入力ファイルのベース名は、ネームリストファイル内の\verb|fname|で設定する。
+\verb|fname="filename"| と指定されている場合、
+入力ファイルが１つのときは、入力ファイルは「\verb|filename.grd|」という名前で準備する。
+入力ファイルが複数あるとき、もしくは、\namelist{PARAM_RESTART}で\nmitem{BASENAME_ADD_NUM} = \verb|.true.|とした場合には、
+「\verb|filename.XXXXX.grd|」と番号付けされたファイルを準備する。
 
 ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定することができる。
 例えば、ある層から上では、QVやRHのデータが利用できない場合がある。
