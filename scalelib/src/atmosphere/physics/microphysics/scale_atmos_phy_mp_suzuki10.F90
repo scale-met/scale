@@ -408,7 +408,6 @@ contains
 
     logical :: S10_FLAG_REGENE  !--- flag of regeneration
     logical :: S10_FLAG_NUCLEAT !--- flag of regeneration
-    logical :: S10_FLAG_ICENUCLEAT !--- flag of regeneration
     logical :: S10_FLAG_SFAERO  !--- flag of surface flux of aeorol
     integer :: S10_RNDM_FLGP  !--- flag of surface flux of aeorol
     integer :: S10_RNDM_MSPC
