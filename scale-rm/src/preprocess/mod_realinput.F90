@@ -74,6 +74,10 @@ module mod_realinput
 !  integer, public, parameter :: iNICAM  = 3
   integer, public, parameter :: iGrADS  = 4
 
+  integer, private :: IA_org, IS_org, IE_org
+  integer, private :: JA_org, JS_org, JE_org
+  integer, private :: KA_org
+
   real(RP), private, allocatable :: LON_org (:,:)
   real(RP), private, allocatable :: LAT_org (:,:)
   real(RP), private, allocatable :: CZ_org  (:,:,:)
@@ -1166,31 +1170,11 @@ contains
        call COMM_bcast( timelen )
     endif
 
-    allocate( LON_org (            dims(2), dims(3)     ) )
-    allocate( LAT_org (            dims(2), dims(3)     ) )
-    allocate( CZ_org  ( dims(1)+2, dims(2), dims(3)     ) )
-
-    allocate( W_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( U_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( V_org   ( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( POTT_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( TEMP_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( PRES_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( DENS_org( dims(1)+2, dims(2), dims(3)     ) )
-    allocate( QTRC_org( dims(1)+2, dims(2), dims(3), QA ) )
-
-    allocate( QV_org   ( dims(1)+2, dims(2), dims(3)        ) )
-    allocate( QHYD_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( QNUM_org ( dims(1)+2, dims(2), dims(3), N_HYD ) )
-    allocate( RN222_org( dims(1)+2, dims(2), dims(3)        ) )
-
-
     allocate( igrd (     IA,JA,itp_nh_a) )
     allocate( jgrd (     IA,JA,itp_nh_a) )
     allocate( hfact(     IA,JA,itp_nh_a) )
     allocate( kgrd (KA,2,IA,JA,itp_nh_a) )
     allocate( vfact(KA,  IA,JA,itp_nh_a) )
-
 
     return
   end subroutine ParentAtmosSetup
@@ -1201,6 +1185,13 @@ contains
        inputtype, &
        basename,  &
        dims       )
+    use scale_const, only: &
+       EPS => CONST_EPS
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_LON, &
+       ATMOS_GRID_CARTESC_REAL_LAT
+    use scale_atmos_hydrometeor, only: &
+       N_HYD
     use mod_realinput_scale, only: &
        ParentAtmosOpenSCALE
     use mod_realinput_wrfarw, only: &
@@ -1214,30 +1205,126 @@ contains
     character(len=*), intent(in)  :: inputtype
     character(len=*), intent(in)  :: basename
     integer,          intent(in)  :: dims(6)
+
+    real(RP), allocatable :: LON_all(:,:)
+    real(RP), allocatable :: LAT_all(:,:)
+
+    real(RP) :: LON_min, LON_max
+    real(RP) :: LAT_min, LAT_max
+
+    logical :: LON_mask( dims(2) )
+    logical :: LAT_mask( dims(3) )
+
+    integer :: i, j
     !---------------------------------------------------------------------------
 
-    if ( read_by_myproc_atmos ) then
+    select case(inputtype)
+    case('SCALE-RM')
+       KA_org = dims(1) + 2
+       IA_org = dims(2)
+       JA_org = dims(3)
 
-       select case(inputtype)
-       case('SCALE-RM')
-          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                     LAT_org(:,:),   & ! [OUT]
-                                     CZ_org (:,:,:), & ! [OUT]
-                                     basename,       & ! [IN]
-                                     dims   (:)      ) ! [IN]
-       case('GrADS')
-          call ParentAtmosOpenGrADS
-       case('WRF-ARW')
-          call ParentAtmosOpenWRFARW
-       case('NETCDF')
-          call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
-                                     LAT_org(:,:),   & ! [OUT]
-                                     CZ_org (:,:,:), & ! [OUT]
-                                     basename,       & ! [IN]
-                                     dims   (:)      ) ! [IN]
-       end select
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
 
-    endif
+       if ( read_by_myproc_atmos ) then
+           call ParentAtmosOpenSCALE( LON_org(:,:),   & ! [OUT]
+                                      LAT_org(:,:),   & ! [OUT]
+                                      CZ_org (:,:,:), & ! [OUT]
+                                      basename,       & ! [IN]
+                                      dims   (:)      ) ! [IN]
+       endif
+
+    case('GrADS')
+       if( .NOT. allocated( LON_all ) ) allocate( LON_all( dims(2), dims(3) ) )
+       if( .NOT. allocated( LAT_all ) ) allocate( LAT_all( dims(2), dims(3) ) )
+
+       if ( read_by_myproc_atmos ) then
+          call ParentAtmosOpenGrADS( LON_all(:,:), & ! [OUT]
+                                     LAT_all(:,:), & ! [OUT]
+                                     basename,     & ! [IN]
+                                     dims   (:)    ) ! [IN]
+       endif
+
+       if ( serial_atmos ) then
+          ! read all data in the master process
+          IS_org = 1
+          IE_org = dims(2)
+          JS_org = 1
+          JE_org = dims(3)
+
+          call COMM_bcast( LON_all, dims(2), dims(3) )
+          call COMM_bcast( LAT_all, dims(2), dims(3) )
+       else
+          LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+          LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
+
+          LON_min = maxval( minval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) < LON_min, dim=2 ) )
+          LON_max = minval( maxval( LON_all(:,:), dim=2 ), mask=all( LON_all(:,:) > LON_max, dim=2 ) )
+          LON_mask(:) = any( LON_all(:,:) - LON_min > -EPS, dim=2 ) .AND. any( LON_all(:,:) - LON_max < EPS, dim=2 )
+          do i = 1, dims(2)
+            if( LON_mask(i) ) then; IS_org = i; exit; endif
+          end do
+          do i = dims(2), 1, -1
+            if( LON_mask(i) ) then; IE_org = i; exit; endif
+          end do
+
+          LAT_min = minval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+          LAT_max = maxval( ATMOS_GRID_CARTESC_REAL_LAT(:,:) )
+
+          LAT_min = maxval( minval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) < LAT_min, dim=1 ) )
+          LAT_max = minval( maxval( LAT_all(:,:), dim=1 ), mask=all( LAT_all(:,:) > LAT_max, dim=1 ) )
+          LAT_mask(:) = any( LAT_all(:,:) - LAT_min > -EPS, dim=1 ) .AND. any( LAT_all(:,:) - LAT_max < EPS, dim=1 )
+          do j = 1, dims(3)
+            if( LAT_mask(j) ) then; JS_org = j; exit; endif
+          end do
+          do j = dims(3), 1, -1
+            if( LAT_mask(j) ) then; JE_org = j; exit; endif
+          end do
+       endif
+
+       KA_org = dims(1) + 2
+       IA_org = IE_org - IS_org + 1
+       JA_org = JE_org - JS_org + 1
+
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
+
+       do j = 1, JA_org
+       do i = 1, IA_org
+          LON_org(i,j) = LON_all(i-1+IS_org,j-1+JS_org)
+          LAT_org(i,j) = LAT_all(i-1+IS_org,j-1+JS_org)
+       end do
+       end do
+
+    case('WRF-ARW')
+       KA_org = dims(1) + 2
+       IA_org = dims(2)
+       JA_org = dims(3)
+
+       if( .NOT. allocated( LON_org ) ) allocate( LON_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( LAT_org ) ) allocate( LAT_org(         IA_org, JA_org ) )
+       if( .NOT. allocated( CZ_org  ) ) allocate( CZ_org ( KA_org, IA_org, JA_org ) )
+
+       call ParentAtmosOpenWRFARW
+
+    end select
+
+    if( .NOT. allocated( W_org    ) ) allocate( W_org   ( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( U_org    ) ) allocate( U_org   ( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( V_org    ) ) allocate( V_org   ( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( POTT_org ) ) allocate( POTT_org( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( TEMP_org ) ) allocate( TEMP_org( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( PRES_org ) ) allocate( PRES_org( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( DENS_org ) ) allocate( DENS_org( KA_org, IA_org, JA_org     ) )
+    if( .NOT. allocated( QTRC_org ) ) allocate( QTRC_org( KA_org, IA_org, JA_org, QA ) )
+
+    if( .NOT. allocated( QV_org    ) ) allocate( QV_org   ( KA_org, IA_org, JA_org        ) )
+    if( .NOT. allocated( QHYD_org  ) ) allocate( QHYD_org ( KA_org, IA_org, JA_org, N_HYD ) )
+    if( .NOT. allocated( QNUM_org  ) ) allocate( QNUM_org ( KA_org, IA_org, JA_org, N_HYD ) )
+    if( .NOT. allocated( RN222_org ) ) allocate( RN222_org( KA_org, IA_org, JA_org        ) )
 
     return
   end subroutine ParentAtmosOpen
@@ -1352,8 +1439,8 @@ contains
 
     real(RP) :: qdry, Rtot, CPtot
 
-    real(RP) :: X_org(dims(2),dims(3))
-    real(RP) :: Y_org(dims(2),dims(3))
+    real(RP) :: X_org(IA_org,JA_org)
+    real(RP) :: Y_org(IA_org,JA_org)
     logical  :: zonal, pole
 
     real(RP) :: wsum(KA,IA,JA)
@@ -1388,29 +1475,30 @@ contains
                                        istep              ) ! [IN]
           same_mptype_ = .true.
        case('GrADS')
-          call ParentAtmosInputGrADS ( W_org   (:,:,:),   & ! [OUT]
-                                       U_org   (:,:,:),   & ! [OUT]
-                                       V_org   (:,:,:),   & ! [OUT]
-                                       PRES_org(:,:,:),   & ! [OUT]
-                                       DENS_org(:,:,:),   & ! [OUT]
-                                       TEMP_org(:,:,:),   & ! [OUT]
-                                       QV_org  (:,:,:),   & ! [OUT]
-                                       QHYD_org(:,:,:,:), & ! [OUT]
-                                       RN222_org(:,:,:),  & ! [OUT]
-                                       LON_org (:,:),     & ! [OUT]
-                                       LAT_org (:,:),     & ! [OUT]
-                                       CZ_org  (:,:,:),   & ! [OUT]
-                                       basename,          & ! [IN]
-                                       sfc_diagnoses,     & ! [IN]
-                                       under_sfc,         & ! [IN]
-                                       dims(:),           & ! [IN]
-                                       istep              ) ! [IN]
+          call ParentAtmosInputGrADS ( W_org    (:,:,:),       & ! [OUT]
+                                       U_org    (:,:,:),       & ! [OUT]
+                                       V_org    (:,:,:),       & ! [OUT]
+                                       PRES_org (:,:,:),       & ! [OUT]
+                                       DENS_org (:,:,:),       & ! [OUT]
+                                       TEMP_org (:,:,:),       & ! [OUT]
+                                       QV_org   (:,:,:),       & ! [OUT]
+                                       QHYD_org (:,:,:,:),     & ! [OUT]
+                                       RN222_org(:,:,:),       & ! [OUT]
+                                       CZ_org   (:,:,:),       & ! [OUT]
+                                       basename,               & ! [IN]
+                                       sfc_diagnoses,          & ! [IN]
+                                       under_sfc,              & ! [IN]
+                                       KA_org,      1, KA_org, & ! [IN]
+                                       IA_org, IS_org, IE_org, & ! [IN]
+                                       JA_org, JS_org, JE_org, & ! [IN]
+                                       dims(:),                & ! [IN]
+                                       istep                   ) ! [IN]
           same_mptype_ = .false.
           !$omp parallel do collapse(4)
           do iq = 1, N_HYD
-          do j  = 1, dims(3)
-          do i  = 1, dims(2)
-          do k  = 1, dims(1)+2
+          do j  = 1, JA_org
+          do i  = 1, IA_org
+          do k  = 1, KA_org
              QNUM_org(k,i,j,iq) = 0.0_RP
           end do
           end do
@@ -1434,9 +1522,9 @@ contains
                                        istep              ) ! [IN]
           same_mptype_ = .false.
           !$omp parallel do collapse(3)
-          do j  = 1, dims(3)
-          do i  = 1, dims(2)
-          do k  = 1, dims(1)+2
+          do j  = 1, JA_org
+          do i  = 1, IA_org
+          do k  = 1, KA_org
              DENS_org(k,i,j) = 0.0_RP
           end do
           end do
@@ -1456,32 +1544,32 @@ contains
 
        if ( .not. same_mptype_ ) then
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)+2
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org
              QTRC_org(k,i,j,:QS_MP-1) = 0.0_RP
              QTRC_org(k,i,j,QE_MP+1:) = 0.0_RP
           end do
           end do
           end do
           if ( .not. sfc_diagnoses ) then
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 3, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 3, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
                                                  QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                                  QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
                                                  QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
              !$omp parallel do collapse(2)
-             do j = 1, dims(3)
-             do i = 1, dims(2)
+             do j = 1, JA_org
+             do i = 1, IA_org
                 do k = 1, 2
                    QTRC_org(k,i,j,QS_MP:QE_MP) = UNDEF
                 end do
-                do k = 3, dims(1)+2
+                do k = 3, KA_org
                    if ( QV_org(k,i,j) == UNDEF ) QTRC_org(k,i,j,QS_MP:QE_MP) = UNDEF
                 end do
              end do
              end do
           else
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 1, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
                                                  QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
                                                  QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
                                                  QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
@@ -1490,9 +1578,9 @@ contains
 
        if ( ATMOS_PHY_CH_TYPE == 'RN222' ) then
           !$omp parallel do collapse(3)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)+2
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org
              QTRC_org(k,i,j,QS_CH) = RN222_org(k,i,j)
           end do
           end do
@@ -1502,9 +1590,9 @@ contains
        if ( temp2pott ) then
           !$omp parallel do collapse(3) &
           !$omp private(qdry,Rtot,CPtot)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-          do k = 1, dims(1)+2
+          do j = 1, JA_org
+          do i = 1, IA_org
+          do k = 1, KA_org
              if ( TEMP_org(k,i,j) == UNDEF ) then
                 POTT_org(k,i,j) = UNDEF
              else
@@ -1546,9 +1634,9 @@ contains
 
     !$omp parallel do collapse(4)
     do iq = 1, QA
-       do j  = 1, dims(3)
-       do i  = 1, dims(2)
-       do k  = 1, dims(1)+2
+       do j = 1, JA_org
+       do i = 1, IA_org
+       do k = 1, KA_org
           if ( QTRC_org(k,i,j,iq) .ne. UNDEF ) then
              QTRC_org(k,i,j,iq) = max( QTRC_org(k,i,j,iq), 0.0_RP )
           end if
@@ -1562,7 +1650,7 @@ contains
 
     if ( first_atmos .OR. update_coord ) then
 
-       k = dims(1) + 2
+       k = KA_org
        call INTERP_domain_compatibility( LON_org(:,:),    & ! [IN]
                                          LAT_org(:,:),    & ! [IN]
                                          CZ_org (k,:,:),  & ! [IN]
@@ -1574,27 +1662,30 @@ contains
        select case( itp_type_a )
        case ( i_intrp_linear )
 
-          if ( dims(2) == 1 .or. dims(3) == 1 ) then
+          if ( IA_org == 1 .or. JA_org == 1 ) then
              LOG_ERROR("ParentAtmosInput",*) 'LINER interpolation requires nx, ny > 1'
              LOG_ERROR_CONT(*)               'Use "DIST-WEIGHT" as INTRP_TYPE of PARAM_MKINIT_REAL_ATMOS'
              call PRC_abort
           end if
 
           !$omp parallel do collapse(2)
-          do j = 1, dims(3)
-          do i = 1, dims(2)
+          do j = 1, JA_org
+          do i = 1, IA_org
              LAT_org(i,j) = sign( min( abs(LAT_org(i,j)), PI * 0.499999_RP ), LAT_org(i,j) )
           end do
           end do
 
-          call MAPPROJECTION_lonlat2xy( dims(2), 1, dims(2), dims(3), 1, dims(3), &
-                                        LON_org(:,:), LAT_org(:,:), & ! [IN]
-                                        X_org(:,:), Y_org(:,:)      ) ! [OUT]
+          call MAPPROJECTION_lonlat2xy( IA_org, 1, IA_org, & ! [IN]
+                                        JA_org, 1, JA_org, & ! [IN]
+                                        LON_org(:,:),      & ! [IN]
+                                        LAT_org(:,:),      & ! [IN]
+                                        X_org  (:,:),      & ! [OUT]
+                                        Y_org  (:,:)       ) ! [OUT]
 
           zonal = ( maxval(LON_org) - minval(LAT_org) ) > 2.0_RP * PI * 0.9_RP
           pole = ( maxval(LAT_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(LAT_org) < - PI * 0.5_RP * 0.9_RP )
-          call INTERP_factor3d( dims(1)+2, 1, dims(1)+2, & ! [IN]
-                                dims(2), dims(3),        & ! [IN]
+          call INTERP_factor3d( KA_org, 1, KA_org,       & ! [IN]
+                                IA_org, JA_org,          & ! [IN]
                                 KA, KS, KE,              & ! [IN]
                                 IA, JA,                  & ! [IN]
                                 X_org(:,:), Y_org(:,:),  & ! [IN]
@@ -1612,38 +1703,39 @@ contains
 
        case ( I_intrp_dstwgt )
 
-          call INTERP_factor3d( itp_nh_a,                & ! [IN]
-                                dims(1)+2, 1, dims(1)+2, & ! [IN]
-                                dims(2), dims(3),        & ! [IN]
-                                KA, KS, KE,              & ! [IN]
-                                IA, JA,                  & ! [IN]
-                                LON_org(:,:),            & ! [IN]
-                                LAT_org(:,:),            & ! [IN]
-                                CZ_org (:,:,:),          & ! [IN]
-                                LON(:,:), LAT(:,:),      & ! [IN]
-                                CZ     (:,:,:),          & ! [IN]
-                                igrd   (    :,:,:),      & ! [OUT]
-                                jgrd   (    :,:,:),      & ! [OUT]
-                                hfact  (    :,:,:),      & ! [OUT]
-                                kgrd   (:,:,:,:,:),      & ! [OUT]
-                                vfact  (:,  :,:,:),      & ! [OUT]
-                                flag_extrap = .false.    ) ! [IN]
+          call INTERP_factor3d( itp_nh_a,             & ! [IN]
+                                KA_org, 1, KA_org,    & ! [IN]
+                                IA_org, JA_org,       & ! [IN]
+                                KA, KS, KE,           & ! [IN]
+                                IA, JA,               & ! [IN]
+                                LON_org(:,:),         & ! [IN]
+                                LAT_org(:,:),         & ! [IN]
+                                CZ_org (:,:,:),       & ! [IN]
+                                LON    (:,:),         & ! [IN]
+                                LAT    (:,:),         & ! [IN]
+                                CZ     (:,:,:),       & ! [IN]
+                                igrd   (    :,:,:),   & ! [OUT]
+                                jgrd   (    :,:,:),   & ! [OUT]
+                                hfact  (    :,:,:),   & ! [OUT]
+                                kgrd   (:,:,:,:,:),   & ! [OUT]
+                                vfact  (:,  :,:,:),   & ! [OUT]
+                                flag_extrap = .false. ) ! [IN]
 
        end select
 
     endif
 
-    call INTERP_interp3d( itp_nh_a,                &
-                          dims(1)+2, 1, dims(1)+2, &
-                          dims(2), dims(3),        &
-                          KA, KS, KE,              &
-                          IA, JA,                  &
+    call INTERP_interp3d( itp_nh_a,                 &
+                          KA_org, 1, KA_org,        &
+                          IA_org, JA_org,           &
+                          KA, KS, KE,               &
+                          IA, JA,                   &
                           igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                           hfact(:,:,:),             & ! [IN]
                           kgrd(:,:,:,:,:),          & ! [IN]
                           vfact(:,:,:,:),           & ! [IN]
                           CZ_org(:,:,:), CZ(:,:,:), & ! [IN]
-                          W_org(:,:,:),            & ! [IN]
+                          W_org(:,:,:),             & ! [IN]
                           W     (:,:,:),            & ! [OUT]
                           threshold_undef = 1.0_RP, & ! [IN]
                           wsum = wsum(:,:,:),       & ! [OUT]
@@ -1675,11 +1767,11 @@ contains
        call COMM_wait ( W(:,:,:), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh_a,                &
-                          dims(1)+2, 1, dims(1)+2, &
-                          dims(2), dims(3),        &
-                          KA, KS, KE,              &
-                          IA, JA,                  &
+    call INTERP_interp3d( itp_nh_a,                 &
+                          KA_org, 1, KA_org,        &
+                          IA_org, JA_org,           &
+                          KA, KS, KE,               &
+                          IA, JA,                   &
                           igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                           hfact(:,:,:),             & ! [IN]
                           kgrd(:,:,:,:,:),          & ! [IN]
@@ -1716,11 +1808,11 @@ contains
        call COMM_wait ( U(:,:,:), 1, .false. )
     end if
 
-    call INTERP_interp3d( itp_nh_a,                &
-                          dims(1)+2, 1, dims(1)+2, &
-                          dims(2), dims(3),        &
-                          KA, KS, KE,              &
-                          IA, JA,                  &
+    call INTERP_interp3d( itp_nh_a,                 &
+                          KA_org, 1, KA_org,        &
+                          IA_org, JA_org,           &
+                          KA, KS, KE,               &
+                          IA, JA,                   &
                           igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                           hfact(:,:,:),             & ! [IN]
                           kgrd(:,:,:,:,:),          & ! [IN]
@@ -1835,11 +1927,11 @@ contains
     call COMM_wait ( VELX(:,:,:), 2, .false. )
     call COMM_wait ( VELY(:,:,:), 3, .false. )
 
-    call INTERP_interp3d( itp_nh_a,                &
-                          dims(1)+2, 1, dims(1)+2, &
-                          dims(2), dims(3),        &
-                          KA, KS, KE,              &
-                          IA, JA,                  &
+    call INTERP_interp3d( itp_nh_a,                 &
+                          KA_org, 1, KA_org,        &
+                          IA_org, JA_org,           &
+                          KA, KS, KE,               &
+                          IA, JA,                   &
                           igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                           hfact(:,:,:),             & ! [IN]
                           kgrd(:,:,:,:,:),          & ! [IN]
@@ -1874,11 +1966,11 @@ contains
     end if
 
     do iq = 1, QA
-       call INTERP_interp3d( itp_nh_a,                &
-                             dims(1)+2, 1, dims(1)+2, &
-                             dims(2), dims(3),        &
-                             KA, KS, KE,              &
-                             IA, JA,                  &
+       call INTERP_interp3d( itp_nh_a,                 &
+                             KA_org, 1, KA_org,        &
+                             IA_org, JA_org,           &
+                             KA, KS, KE,               &
+                             IA, JA,                   &
                              igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                              hfact(:,:,:),             & ! [IN]
                              kgrd(:,:,:,:,:),          & ! [IN]
@@ -1925,11 +2017,11 @@ contains
        end if
     enddo
 
-    call INTERP_interp3d( itp_nh_a,                &
-                          dims(1)+2, 1, dims(1)+2, &
-                          dims(2), dims(3),        &
-                          KA, KS, KE,              &
-                          IA, JA,                  &
+    call INTERP_interp3d( itp_nh_a,            &
+                          KA_org, 1, KA_org,   &
+                          IA_org, JA_org,      &
+                          KA, KS, KE,          &
+                          IA, JA,              &
                           igrd    (    :,:,:), & ! [IN]
                           jgrd    (    :,:,:), & ! [IN]
                           hfact   (    :,:,:), & ! [IN]
@@ -1983,11 +2075,11 @@ contains
     end do
 
     if ( use_file_density ) then
-       call INTERP_interp3d( itp_nh_a,                &
-                             dims(1)+2, 1, dims(1)+2, &
-                             dims(2), dims(3),        &
-                             KA, KS, KE,              &
-                             IA, JA,                  &
+       call INTERP_interp3d( itp_nh_a,                 &
+                             KA_org, 1, KA_org,        &
+                             IA_org, JA_org,           &
+                             KA, KS, KE,               &
+                             IA, JA,                   &
                              igrd(:,:,:), jgrd(:,:,:), & ! [IN]
                              hfact(:,:,:),             & ! [IN]
                              kgrd(:,:,:,:,:),          & ! [IN]
