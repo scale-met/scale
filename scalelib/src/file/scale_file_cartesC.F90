@@ -1062,7 +1062,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate          )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
@@ -1070,19 +1072,21 @@ contains
 
     real(RP),         intent(out) :: var(:)   !< value of the variable
 
-    integer,          intent(in), optional  :: step     !< step number
+    integer,          intent(in), optional :: step     !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate ) ! [IN]
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_1D( fid, varname, dim_type, & ! [IN]
-                                   var(:),                 & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_1D( fid, varname, dim_type,     & ! [IN]
+                                   var(:),                     & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1095,7 +1099,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate    )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
@@ -1105,17 +1111,19 @@ contains
 
     integer,          intent(in), optional :: step     !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate ) ! [IN]
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_2D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:),               & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_2D( fid, varname, dim_type,     & ! [IN]
+                                   var(:,:),                   & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1128,7 +1136,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate    )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
@@ -1138,17 +1148,19 @@ contains
 
     integer,          intent(in), optional :: step       !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate )
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_3D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:,:),             & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_3D( fid, varname, dim_type,     & ! [IN]
+                                   var(:,:,:),                 & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1161,7 +1173,8 @@ contains
        basename, varname, &
        dim_type, step,    &
        var,               &
-       aggregate          )
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename     !< basename of the file
     character(len=*), intent(in)  :: varname      !< name of the variable
@@ -1171,16 +1184,18 @@ contains
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate )
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
     call FILE_CARTESC_read_var_4D( fid, varname, dim_type, step, & ! [IN]
-                                   var(:,:,:,:)                  ) ! [OUT]
+                                   var(:,:,:,:),                 & ! [OUT]
+                                   allow_missing=allow_missing   ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1193,7 +1208,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1212,6 +1228,7 @@ contains
     real(RP),         intent(out) :: var(:)   !< value of the variable
 
     integer,          intent(in), optional :: step     !< step number
+    logical,          intent(in), optional :: allow_missing
 
     integer :: vsize
     integer :: dim1_S, dim1_E
@@ -1267,9 +1284,10 @@ contains
           call PRC_abort
        end if
        count(1) = dim1_E - dim1_S + 1
-       call FILE_Read( fid, varname,                                          & ! (in)
-            var(dim1_S:dim1_E),                                               & ! (out)
-            step=step, ntypes=count(1), dtype=etype, start=start, count=count ) ! (in)
+       call FILE_Read( fid, varname,                               & ! (in)
+            var(dim1_S:dim1_E),                                    & ! (out)
+            step=step, allow_missing=allow_missing,                & ! (in)
+            ntypes=count(1), dtype=etype, start=start, count=count ) ! (in)
 
     else
        if    ( dim_type == 'Z' ) then
@@ -1327,7 +1345,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1342,6 +1361,7 @@ contains
     real(RP),         intent(out) :: var(:,:) !< value of the variable
 
     integer,          intent(in), optional :: step     !< step number
+    logical,          intent(in), optional :: allow_missing
 
     integer :: vsize
     integer :: ntypes, dtype
@@ -1382,9 +1402,10 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname,                                        & ! (in)
-            var(:,:),                                                       & ! (out)
-            step=step, ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+       call FILE_Read( fid, varname,                             & ! (in)
+            var(:,:),                                            & ! (out)
+            step=step, allow_missing=allow_missing,              & ! (in)
+            ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
 
     else
 
@@ -1423,7 +1444,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1441,6 +1463,7 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
 
     integer,          intent(in), optional :: step       !< step number
+    logical,          intent(in), optional :: allow_missing
 
     integer :: vsize
     integer :: ntypes, dtype
@@ -1514,9 +1537,10 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname,                                        & ! (in)
-            var(:,:,:),                                                     & ! (out)
-            step=step, ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+       call FILE_Read( fid, varname,                             & ! (in)
+            var(:,:,:),                                          & ! (out)
+            step=step, allow_missing=allow_missing,              & ! (in)
+            ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
 
     else
        if(      dim_type == 'ZXY'  &
@@ -1582,7 +1606,8 @@ contains
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
           call PRC_abort
        end if
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), step=step )
+       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                       step=step, allow_missing=allow_missing                        )
 
     endif
 
@@ -1597,7 +1622,8 @@ contains
        fid, varname, &
        dim_type,     &
        step,         &
-       var           )
+       var,          &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1615,6 +1641,7 @@ contains
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
+    logical,          intent(in), optional :: allow_missing
 
     integer :: vsize
     integer :: dtype
@@ -1678,6 +1705,7 @@ contains
        count(4) = step
        call FILE_Read( fid, varname,                           & ! (in)
             var(:,:,:,:),                                      & ! (out)
+            allow_missing=allow_missing,                       & ! (in)
             ntypes=step, dtype=dtype, start=start, count=count ) ! (in)
 
     else

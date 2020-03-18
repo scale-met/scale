@@ -62,14 +62,27 @@ module scale_mapprojection
   public :: MAPPROJECTION_rotcoef_EquidistantCylindrical
 
   interface MAPPROJECTION_xy2lonlat
-     module procedure MAPPROJECTION_xy2lonlat_0D
-     module procedure MAPPROJECTION_xy2lonlat_2D
+     module procedure MAPPROJECTION_xy2lonlat_0D_initialized
+     module procedure MAPPROJECTION_xy2lonlat_2D_initialized
+     module procedure MAPPROJECTION_xy2lonlat_0D_param
+     module procedure MAPPROJECTION_xy2lonlat_2D_param
   end interface
   interface MAPPROJECTION_lonlat2xy
-     module procedure MAPPROJECTION_lonlat2xy_0D
-     module procedure MAPPROJECTION_lonlat2xy_2D
+     module procedure MAPPROJECTION_lonlat2xy_0D_initialized
+     module procedure MAPPROJECTION_lonlat2xy_2D_initialized
+     module procedure MAPPROJECTION_lonlat2xy_0D_param
+     module procedure MAPPROJECTION_lonlat2xy_2D_param
   end interface
 
+  interface MAPPROJECTION_mapfactor
+     module procedure MAPPROJECTION_mapfactor_initialized
+     module procedure MAPPROJECTION_mapfactor_param
+  end interface MAPPROJECTION_mapfactor
+
+  interface MAPPROJECTION_rotcoef
+     module procedure MAPPROJECTION_rotcoef_initialized
+     module procedure MAPPROJECTION_rotcoef_param
+  end interface MAPPROJECTION_rotcoef
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -361,31 +374,22 @@ contains
 
   !-----------------------------------------------------------------------------
   !> (x,y) -> (lon,lat)
-  subroutine MAPPROJECTION_xy2lonlat_0D( &
+  subroutine MAPPROJECTION_xy2lonlat_0D_initialized( &
        x, y,    &
        lon, lat )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     implicit none
     real(RP), intent(in)  :: x, y
     real(RP), intent(out) :: lon, lat ! [rad]
-
     !---------------------------------------------------------------------------
-
-    if ( x == UNDEF .or. y == UNDEF ) then
-       lon = UNDEF
-       lat = UNDEF
-       return
-    end if
 
     call xy2lonlat( x, y,                       & ! (in)
                     MAPPROJECTION_mappingparam, & ! (in)
                     lon, lat                    ) ! (out)
 
     return
-  end subroutine MAPPROJECTION_xy2lonlat_0D
+  end subroutine MAPPROJECTION_xy2lonlat_0D_initialized
 
-  subroutine MAPPROJECTION_xy2lonlat_2D( &
+  subroutine MAPPROJECTION_xy2lonlat_2D_initialized( &
        IA, IS, IE, JA, JS, JE, &
        x, y,    &
        lon, lat )
@@ -404,41 +408,152 @@ contains
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-       call MAPPROJECTION_xy2lonlat_0D( x(i,j), y(i,j), lon(i,j), lat(i,j) )
+       call MAPPROJECTION_xy2lonlat_0D_initialized( x(i,j), y(i,j), lon(i,j), lat(i,j) )
     end do
     end do
 
     return
-  end subroutine MAPPROJECTION_xy2lonlat_2D
+  end subroutine MAPPROJECTION_xy2lonlat_2D_initialized
+
+  subroutine MAPPROJECTION_xy2lonlat_0D_param( &
+       x, y,          &
+       mapping_name,  &
+       mapping_param, &
+       lon, lat       )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    real(RP),           intent(in) :: x, y
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: lon, lat ! [rad]
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       call MAPPROJECTION_xy2lonlat_None( x, y,          & ! (in)
+                                          mapping_param, & ! (in)
+                                          lon, lat       ) ! (out)
+    case( "lambert_conformal_conic" )
+       call MAPPROJECTION_xy2lonlat_LambertConformal( x, y,          & ! (in)
+                                                      mapping_param, & ! (in)
+                                                      lon, lat       ) ! (out)
+    case( "polar_stereographic" )
+       call MAPPROJECTION_xy2lonlat_PolarStereographic( x, y,          & ! (in)
+                                                        mapping_param, & ! (in)
+                                                        lon, lat       ) ! (out)
+    case( "mercator" )
+       call MAPPROJECTION_xy2lonlat_Mercator( x, y,          & ! (in)
+                                              mapping_param, & ! (in)
+                                              lon, lat       ) ! (out)
+    case( "equirectangular" )
+       call MAPPROJECTION_xy2lonlat_EquidistantCylindrical( x, y,          & ! (in)
+                                                            mapping_param, & ! (in)
+                                                            lon, lat       ) ! (out)
+    case default
+       LOG_ERROR("MAPPROJECTION_xy2lonlat_0D_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_xy2lonlat_0D_param
+
+  subroutine MAPPROJECTION_xy2lonlat_2D_param( &
+       IA, IS, IE, JA, JS, JE, &
+       x, y,          &
+       mapping_name,  &
+       mapping_param, &
+       lon, lat       )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP),           intent(in)  :: x(IA,JA)
+    real(RP),           intent(in)  :: y(IA,JA)
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: lon(IA,JA) ! [rad]
+    real(RP), intent(out) :: lat(IA,JA) ! [rad]
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_xy2lonlat_None( x(i,j), y(i,j),    & ! (in)
+                                             mapping_param,     & ! (in)
+                                             lon(i,j), lat(i,j) ) ! (out)
+       end do
+       end do
+    case( "lambert_conformal_conic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_xy2lonlat_LambertConformal( x(i,j), y(i,j),    & ! (in)
+                                                         mapping_param,     & ! (in)
+                                                         lon(i,j), lat(i,j) ) ! (out)
+       end do
+       end do
+    case( "polar_stereographic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_xy2lonlat_PolarStereographic( x(i,j), y(i,j),    & ! (in)
+                                                           mapping_param,     & ! (in)
+                                                           lon(i,j), lat(i,j) ) ! (out)
+       end do
+       end do
+    case( "mercator" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_xy2lonlat_Mercator( x(i,j), y(i,j),    & ! (in)
+                                                 mapping_param,     & ! (in)
+                                                 lon(i,j), lat(i,j) ) ! (out)
+       end do
+       end do
+    case( "equirectangular" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_xy2lonlat_EquidistantCylindrical( x(i,j), y(i,j),    & ! (in)
+                                                               mapping_param,     & ! (in)
+                                                               lon(i,j), lat(i,j) ) ! (out)
+       end do
+       end do
+    case default
+       LOG_ERROR("MAPPROJECTION_xy2lonlat_2D_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_xy2lonlat_2D_param
 
   !-----------------------------------------------------------------------------
   !> (lon,lat) -> (x,y)
-  subroutine MAPPROJECTION_lonlat2xy_0D( &
+  subroutine MAPPROJECTION_lonlat2xy_0D_initialized( &
        lon, lat, &
        x, y      )
-    use scale_const, only: &
-       UNDEF => CONST_UNDEF
     implicit none
     real(RP), intent(in)  :: lon, lat ! [rad]
     real(RP), intent(out) :: x, y
-
     !---------------------------------------------------------------------------
-
-    if ( lon == UNDEF .or. lat == UNDEF ) then
-       x = UNDEF
-       y = UNDEF
-
-       return
-    end if
 
     call lonlat2xy( lon, lat,                   & ! (in)
                     MAPPROJECTION_mappingparam, & ! (in)
                     x, y                       ) ! (out)
 
     return
-  end subroutine MAPPROJECTION_lonlat2xy_0D
+  end subroutine MAPPROJECTION_lonlat2xy_0D_initialized
 
-  subroutine MAPPROJECTION_lonlat2xy_2D( &
+  subroutine MAPPROJECTION_lonlat2xy_2D_initialized( &
        IA, IS, IE, JA, JS, JE, &
        lon, lat, &
        x, y      )
@@ -457,16 +572,137 @@ contains
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-       call MAPPROJECTION_lonlat2xy_0D( lon(i,j), lat(i,j), x(i,j), y(i,j) )
+       call MAPPROJECTION_lonlat2xy_0D_initialized( lon(i,j), lat(i,j), x(i,j), y(i,j) )
     end do
     end do
 
     return
-  end subroutine MAPPROJECTION_lonlat2xy_2D
+  end subroutine MAPPROJECTION_lonlat2xy_2D_initialized
+
+  subroutine MAPPROJECTION_lonlat2xy_0D_param( &
+       lon, lat,      &
+       mapping_name,  &
+       mapping_param, &
+       x, y           )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    real(RP),           intent(in) :: lon, lat ! [rad]
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: x, y
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       call MAPPROJECTION_lonlat2xy_None( lon, lat,      & ! (in)
+                                          mapping_param, & ! (in)
+                                          x, y             ) ! (out)
+    case( "lambert_conformal_conic" )
+       call MAPPROJECTION_lonlat2xy_LambertConformal( lon, lat,      & ! (in)
+                                                      mapping_param, & ! (in)
+                                                      x, y             ) ! (out)
+    case( "polar_stereographic" )
+       call MAPPROJECTION_lonlat2xy_PolarStereographic( lon, lat,      & ! (in)
+                                                        mapping_param, & ! (in)
+                                                        x, y             ) ! (out)
+    case( "mercator" )
+       call MAPPROJECTION_lonlat2xy_Mercator( lon, lat,      & ! (in)
+                                              mapping_param, & ! (in)
+                                              x, y             ) ! (out)
+    case( "equirectangular" )
+       call MAPPROJECTION_lonlat2xy_EquidistantCylindrical( lon, lat,      & ! (in)
+                                                            mapping_param, & ! (in)
+                                                            x, y             ) ! (out)
+    case default
+       LOG_ERROR("MAPPROJECTION_lonlat2xy_0D_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_lonlat2xy_0D_param
+
+  subroutine MAPPROJECTION_lonlat2xy_2D_param( &
+       IA, IS, IE, JA, JS, JE, &
+       lon, lat,      &
+       mapping_name,  &
+       mapping_param, &
+       x, y           )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP),           intent(in)  :: lon(IA,JA) ! [rad]
+    real(RP),           intent(in)  :: lat(IA,JA) ! [rad]
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: x(IA,JA)
+    real(RP), intent(out) :: y(IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_lonlat2xy_None( lon(i,j), lat(i,j), & ! (in)
+                                             mapping_param,      & ! (in)
+                                             x(i,j), y(i,j)      ) ! (out)
+       end do
+       end do
+    case( "lambert_conformal_conic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_lonlat2xy_LambertConformal( lon(i,j), lat(i,j), & ! (in)
+                                                         mapping_param,      & ! (in)
+                                                         x(i,j), y(i,j)      ) ! (out)
+       end do
+       end do
+    case( "polar_stereographic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_lonlat2xy_PolarStereographic( lon(i,j), lat(i,j), & ! (in)
+                                                           mapping_param,      & ! (in)
+                                                           x(i,j), y(i,j)      ) ! (out)
+       end do
+       end do
+    case( "mercator" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_lonlat2xy_Mercator( lon(i,j), lat(i,j), & ! (in)
+                                                  mapping_param,      & ! (in)
+                                                  x(i,j), y(i,j)      ) ! (out)
+       end do
+       end do
+    case( "equirectangular" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_lonlat2xy_EquidistantCylindrical( lon(i,j), lat(i,j), & ! (in)
+                                                               mapping_param,      & ! (in)
+                                                               x(i,j), y(i,j)      ) ! (out)
+       end do
+       end do
+    case default
+       LOG_ERROR("MAPPROJECTION_lonlat2xy_2D_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_lonlat2xy_2D_param
 
   !-----------------------------------------------------------------------------
   !> (x,y) -> (lon,lat)
-  subroutine MAPPROJECTION_mapfactor( &
+  subroutine MAPPROJECTION_mapfactor_initialized( &
        IA, IS, IE, JA, JS, JE, &
        lat,   &
        m1, m2 )
@@ -478,12 +714,10 @@ contains
     real(RP), intent(out) :: m1 (IA,JA)
     real(RP), intent(out) :: m2 (IA,JA)
 
-    real(RP) :: mm1, mm2
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do &
-    !$omp private(mm1,mm2)
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
        call mapfactor( lat(i,j),                   & ! (in)
@@ -493,22 +727,99 @@ contains
     end do
 
     return
-  end subroutine MAPPROJECTION_mapfactor
+  end subroutine MAPPROJECTION_mapfactor_initialized
+
+  subroutine MAPPROJECTION_mapfactor_param( &
+       IA, IS, IE, JA, JS, JE, &
+       lat,           &
+       mapping_name,  &
+       mapping_param, &
+       m1, m2         )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP),           intent(in) :: lat(IA,JA) ! [rad]
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: m1 (IA,JA)
+    real(RP), intent(out) :: m2 (IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_mapfactor_None( lat(i,j),        & ! (in)
+                                             mapping_param,   & ! (in)
+                                             m1(i,j), m2(i,j) ) ! (out)
+       end do
+       end do
+    case( "lambert_conformal_conic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_mapfactor_LambertConformal( lat(i,j),        & ! (in)
+                                                         mapping_param,   & ! (in)
+                                                         m1(i,j), m2(i,j) ) ! (out)
+       end do
+       end do
+    case( "polar_stereographic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_mapfactor_PolarStereographic( lat(i,j),        & ! (in)
+                                                           mapping_param,   & ! (in)
+                                                           m1(i,j), m2(i,j) ) ! (out)
+       end do
+       end do
+    case( "mercator" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_mapfactor_Mercator( lat(i,j),        & ! (in)
+                                                 mapping_param,   & ! (in)
+                                                 m1(i,j), m2(i,j) ) ! (out)
+       end do
+       end do
+    case( "equirectangular" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_mapfactor_EquidistantCylindrical( lat(i,j),        & ! (in)
+                                                               mapping_param,   & ! (in)
+                                                               m1(i,j), m2(i,j) ) ! (out)
+       end do
+       end do
+    case default
+       LOG_ERROR("MAPPROJECTION_mapfactor_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_mapfactor_param
 
   !-----------------------------------------------------------------------------
   !> u(lat,lon) = cos u(x,y) - sin v(x,y)
   !> v(lat,lon) = sin u(x,y) + cos v(x,y)
-  subroutine MAPPROJECTION_rotcoef( &
+  subroutine MAPPROJECTION_rotcoef_initialized( &
        IA, IS, IE, JA, JS, JE, &
-       lon, lat, &
-       rotc      )
+       lon, lat,          &
+       rotc_cos, rotc_sin )
     implicit none
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
     real(RP), intent(in)  :: lon(IA,JA)    ! [rad]
     real(RP), intent(in)  :: lat(IA,JA)    ! [rad]
-    real(RP), intent(out) :: rotc(IA,JA,2) !< rotc(:,:,1)->cos, rotc(:,:,2)->sin
+    real(RP), intent(out) :: rotc_cos(IA,JA)
+    real(RP), intent(out) :: rotc_sin(IA,JA)
 
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -516,14 +827,91 @@ contains
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
-       call rotcoef( lon(i,j), lat(i,j),         & ! (in)
-                     MAPPROJECTION_mappingparam, & ! (in)
-                     rotc(i,j,1), rotc(i,j,2)    ) ! (out)
+       call rotcoef( lon(i,j), lat(i,j),          & ! (in)
+                     MAPPROJECTION_mappingparam,  & ! (in)
+                     rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
     end do
     end do
 
     return
-  end subroutine MAPPROJECTION_rotcoef
+  end subroutine MAPPROJECTION_rotcoef_initialized
+
+  subroutine MAPPROJECTION_rotcoef_param( &
+       IA, IS, IE, JA, JS, JE, &
+       lon, lat,          &
+       mapping_name,      &
+       mapping_param,     &
+       rotc_cos, rotc_sin )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+
+    real(RP),           intent(in) :: lon(IA,JA)    ! [rad]
+    real(RP),           intent(in) :: lat(IA,JA)    ! [rad]
+    character(len=*),   intent(in) :: mapping_name
+    type(mappingparam), intent(in) :: mapping_param
+
+    real(RP), intent(out) :: rotc_cos(IA,JA)
+    real(RP), intent(out) :: rotc_sin(IA,JA)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    select case( mapping_name )
+    case( "" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_rotcoef_None( lon(i,j), lat(i,j),          & ! (in)
+                                           mapping_param,               & ! (in)
+                                           rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+       end do
+       end do
+    case( "lambert_conformal_conic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_rotcoef_LambertConformal( lon(i,j), lat(i,j),          & ! (in)
+                                                       mapping_param,               & ! (in)
+                                                       rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+       end do
+       end do
+    case( "polar_stereographic" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_rotcoef_PolarStereographic( lon(i,j), lat(i,j),          & ! (in)
+                                                         mapping_param,               & ! (in)
+                                                         rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+       end do
+       end do
+    case( "mercator" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_rotcoef_Mercator( lon(i,j), lat(i,j),          & ! (in)
+                                               mapping_param,               & ! (in)
+                                               rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+       end do
+       end do
+    case( "equirectangular" )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          call MAPPROJECTION_rotcoef_EquidistantCylindrical( lon(i,j), lat(i,j),          & ! (in)
+                                                             mapping_param,               & ! (in)
+                                                             rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
+       end do
+       end do
+    case default
+       LOG_ERROR("MAPPROJECTION_rotcoef_param",*) 'Unsupported mapping type. STOP: ', trim(mapping_name)
+       call PRC_abort
+    endselect
+
+    return
+  end subroutine MAPPROJECTION_rotcoef_param
 
   !-----------------------------------------------------------------------------
   !> No projection
@@ -540,6 +928,8 @@ contains
        x, y,    &
        param,   &
        lon, lat )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
@@ -551,6 +941,13 @@ contains
     real(DP) :: gmmc, gmms
     real(DP) :: latc, lats
     !---------------------------------------------------------------------------
+
+    if ( x==UNDEF .or. y==UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     call xy_rotate( x, y,  & ! (in)
                     param, & ! (in)
@@ -584,6 +981,8 @@ contains
        lon, lat, &
        param,    &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -596,6 +995,13 @@ contains
     real(DP) :: cos_gmm
     !---------------------------------------------------------------------------
     ! http://mathworld.wolfram.com/GnomonicProjection.html
+
+    if ( lon==UNDEF .or. lat==UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     lat_d  = real(lat,kind=DP)
     lat0_d = param%basepoint_lat
@@ -632,6 +1038,8 @@ contains
        lat,   &
        param, &
        m1, m2 )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -735,6 +1143,8 @@ contains
        x, y,    &
        param,   &
        lon, lat )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
@@ -742,6 +1152,13 @@ contains
 
     real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
+
+    if ( x==UNDEF .or. y==UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     call xy_rotate( x, y,  & ! (in)
                     param, & ! (in)
@@ -765,6 +1182,8 @@ contains
        lon, lat, &
        param,    &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -773,6 +1192,13 @@ contains
     real(DP) :: xx, yy
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
+
+    if ( lon==UNDEF .or. lat==UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     dlon = lon - param%basepoint_lon
     if ( dlon >  PI ) dlon = dlon - PI*2.0_DP
@@ -898,6 +1324,8 @@ contains
        x, y,    &
        param,   &
        lon, lat )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
@@ -905,6 +1333,13 @@ contains
 
     real(DP) :: xx, yy, dist
     !---------------------------------------------------------------------------
+
+    if ( x==UNDEF .or. y==UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     call xy_rotate( x, y,  & ! (in)
                     param, & ! (in)
@@ -927,6 +1362,8 @@ contains
        lon, lat, &
        param,    &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -935,6 +1372,13 @@ contains
     real(DP) :: dlon, latrot, dist
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( lon==UNDEF .or. lat==UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     dlon = lon - param%basepoint_lon
 
@@ -1055,6 +1499,8 @@ contains
        x, y,    &
        param,   &
        lon, lat )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
@@ -1062,6 +1508,13 @@ contains
 
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( x==UNDEF .or. y==UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     call xy_rotate( x, y,  & ! (in)
                     param, & ! (in)
@@ -1083,6 +1536,8 @@ contains
        lon, lat, &
        param,    &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -1090,6 +1545,13 @@ contains
 
     real(DP) :: dlon, latrot, dist
     !---------------------------------------------------------------------------
+
+    if ( lon==UNDEF .or. lat==UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     dlon = lon - param%basepoint_lon
 
@@ -1192,6 +1654,8 @@ contains
        lon, lat )
     use scale_prc, only: &
        PRC_abort
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: x, y
     type(mappingparam), intent(in)  :: param
@@ -1199,6 +1663,13 @@ contains
 
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( x==UNDEF .or. y==UNDEF ) then
+       lon = UNDEF
+       lat = UNDEF
+
+       return
+    end if
 
     call xy_rotate( x, y,  & ! (in)
                     param, & ! (in)
@@ -1224,6 +1695,8 @@ contains
        lon, lat, &
        param,    &
        x, y      )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     implicit none
     real(RP),           intent(in)  :: lon, lat ! [rad]
     type(mappingparam), intent(in)  :: param
@@ -1232,6 +1705,13 @@ contains
     real(DP) :: dlon
     real(DP) :: xx, yy
     !---------------------------------------------------------------------------
+
+    if ( lon==UNDEF .or. lat==UNDEF ) then
+       x = UNDEF
+       y = UNDEF
+
+       return
+    end if
 
     dlon = lon - param%basepoint_lon
 

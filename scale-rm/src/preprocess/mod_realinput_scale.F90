@@ -116,7 +116,7 @@ contains
        mappinginfo, &
        mappingparam, &
        MAPPROJECTION_get_param, &
-       MAPPROJECTION_rotcoef_lambertconformal
+       MAPPROJECTION_rotcoef
     implicit none
 
     real(RP),         intent(out) :: lon_org(:,:)
@@ -196,21 +196,11 @@ contains
     if ( mapping_info%mapping_name .ne. "" ) then
        call MAPPROJECTION_get_param( mapping_info, & ! (in)
                                      mapping_param ) ! (out)
-       select case ( mapping_info%mapping_name )
-       case ( "lambert_conformal_conic" )
-          !$omp parallel do
-          do j = 1, dims(3)
-          do i = 1, dims(2)
-             call MAPPROJECTION_rotcoef_LambertConformal( &
-                  lon_org(i,j), lat_org(i,j),  & ! (in)
-                  mapping_param,               & ! (in)
-                  rotc_cos(i,j), rotc_sin(i,j) ) ! (out)
-          end do
-          end do
-       case default
-          LOG_ERROR("ParentAtmosOpenSCALE",*) 'Unsupported map projection type. STOP'
-          call PRC_abort
-       end select
+       call MAPPROJECTION_rotcoef( dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                   lon_org(:,:), lat_org(:,:),  & ! (in)
+                                   mapping_info%mapping_name,   & ! (in)
+                                   mapping_param,               & ! (in)
+                                   rotc_cos(:,:), rotc_sin(:,:) ) ! (out)
     else
 !OCL XFILL
        !$omp parallel do

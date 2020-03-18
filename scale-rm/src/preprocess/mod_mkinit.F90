@@ -2903,6 +2903,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -2929,6 +2935,8 @@ contains
     real(RP) :: pi2
     real(RP) :: sint
     real(RP) :: GEOP_sw ! switch for geopotential energy correction
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3038,6 +3046,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3132,6 +3144,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3155,6 +3173,7 @@ contains
     real(RP) :: fact
     real(RP) :: pi2
     real(RP) :: sint
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3253,6 +3272,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3347,6 +3370,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3375,7 +3404,8 @@ contains
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
     real(RP) :: pi2
-    real(RP) :: RovCP
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3462,11 +3492,14 @@ contains
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
-    RovCP = Rdry / CPdry
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3563,6 +3596,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3579,6 +3618,8 @@ contains
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3672,6 +3713,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo

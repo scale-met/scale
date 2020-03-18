@@ -131,6 +131,7 @@ contains
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF
     implicit none
 
@@ -196,16 +197,26 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       sum_  = recvbuf(1)
-       mean_ = recvbuf(1) / recvbuf(2)
+       if ( recvbuf(2) < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = recvbuf(1)
+          mean_ = recvbuf(1) / recvbuf(2)
+       end if
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
           LOG_INFO("STATISTICS_total_2D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       sum_ = statval
-       mean_ = statval / total
+       if ( total < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = statval
+          mean_ = statval / total
+       end if
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
@@ -233,6 +244,7 @@ contains
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS , &
        UNDEF => CONST_UNDEF
     implicit none
 
@@ -306,16 +318,26 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       sum_  = recvbuf(1)
-       mean_ = recvbuf(1) / recvbuf(2)
+       if ( recvbuf(2) < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = recvbuf(1)
+          mean_ = recvbuf(1) / recvbuf(2)
+       end if
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
           LOG_INFO("STATISTICS_total_3D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       sum_  = statval
-       mean_ = statval / total
+       if ( total < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = statval
+          mean_ = statval / total
+       end if
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output

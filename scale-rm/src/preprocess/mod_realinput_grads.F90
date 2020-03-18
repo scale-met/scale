@@ -532,12 +532,12 @@ contains
                                 work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
-          do k = 1, KA_org-2
-             velx_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
+             do k = 1, KA_org-2
+                velx_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
+             enddo
              velx_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -555,12 +555,12 @@ contains
                                 work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
-          do k = 1, KA_org-2
-             vely_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
+             do k = 1, KA_org-2
+                vely_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
+             enddo
              vely_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -578,12 +578,12 @@ contains
                                 work(:,:,:),              & ! (out)
                                 step = nt,                & ! (in)
                                 postfix = basename_num    ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
-          do k = 1, KA_org-2
-             velz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-          enddo
+             do k = 1, KA_org-2
+                velz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
+             enddo
              velz_org(1:2,i,j) = 0.0_RP
           enddo
           enddo
@@ -643,12 +643,12 @@ contains
                                    work(:,:,:),              & ! (out)
                                    step = nt,                & ! (in)
                                    postfix = basename_num    ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
-             do k = 1, KA_org-2
-                cz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
-             enddo
+                do k = 1, KA_org-2
+                   cz_org(k+2,i,j) = work(k,i-1+IS_org,j-1+JS_org)
+                enddo
                 cz_org(1,i,j) = 0.0_RP
              enddo
              enddo
