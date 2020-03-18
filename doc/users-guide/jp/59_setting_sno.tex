@@ -32,7 +32,6 @@ Parallel \netcdf (PnetCDF) を利用できる(第\ref{subsec:single_io}節を参
 \sno は複数のプロセスを用いて実行できる。利用できるプロセスの最大数は \sno への入出力ファイルの数に制限される。
 例えば、数百個の \scalenetcdf ファイルを１個のファイルに変換は可能だが、2個以上のファイルに変換することはできない。
 複数個に変換処理する場合は、使用できるMPIプロセス数は変換したいプロセス数を設定すること。
-また、測地線（緯度経度）格子系へリグリッドした場合、変換後のファイルはSNOではなくなるので、SNOによる処理は行えなくなる。
 GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませることは難しい。
 そのため、各変数は個別の集約したファイルに出力される。
 
@@ -126,8 +125,6 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 しかし、\grads のインターフェイスは制限的であり、関連する座標や地図投影を含む \scalenetcdf 形式を解釈できない。
 そのため、上記のコントロールファイルが必要である。
 
-\subsubsection{複数の \scalenetcdf ファイルを単一の NetCDF ファイルに変換する場合（複数実行プロセス）}
-
 \subsubsection{複数の \scalenetcdf ファイルを GrADS ファイルに変換する場合}
 
 \editbox{
@@ -192,9 +189,23 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 これらの格子点数にはハロ格子は考慮しない。
 したがって、x方向やy方向の分割数にはこれらの格子点数の約数を用いる。
 
-\subsubsection{鉛直高度座標の変換を行う場合}
+\subsubsection{複数の \scalenetcdf ファイルを単一の NetCDF ファイルに変換する場合（複数実行プロセス）}
 
-\subsubsection{測地線（緯度経度）格子系への変換を行う場合}
+\editbox{
+\verb|&PARAM_SNO                               | \\
+\verb| basename_in     = 'input/history_d02',  | \\
+\verb| basename_out    = 'output/history_d02', | \\
+\verb| nprocs_x_out    = 4,                    | \\
+\verb| nprocs_y_out    = 6,                    | \\
+\verb| output_single   = .true.,               | \\
+\verb|/                                        | \\
+}
+
+この例はMPIプロセスを24個用いて変換するが、出力されるhistoryファイルは1つとなる。
+この例では、入力ファイルは単一ファイルに結合され、全ての変数は維持される。
+GrADS用のctlファイルを記述すれば、GrADSで読み込むことが可能になる。
+
+現時点で、この出力方法は周期境界を設定された実験でのhistoryファイルには対応していないことに注意すること。
 
 \subsubsection{まとめ}
 
@@ -210,6 +221,7 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 \verb| vars            = "",      | & ; 処理を行う変数の名前 \\
 \verb| output_grads    = .false., | & ; grads 形式で出力するか? \\
 \verb| output_gradsctl = .false., | & ; 単一の\netcdf ファイルに対する grads のコントロールファイルを出力するか? \\
+\verb| output_single   = .false., | & ; 複数プロセス実行時、単一の\netcdf ファイルに出力するか?\\
 \verb| debug           = .false., | & ; デバッグのための詳細なログを出力するか? \\
 \verb|/                           | & \\
 }
@@ -229,7 +241,7 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 \subsection{設定例: プラグインされている機能}
 
 \sno のいくつかの特徴は、プラグインとして与えられる。ファイルの出力や結合/分割を行う前に、
-時間平均や水平方向のリマッピング等の演算を適用できる。
+時間平均や水平・鉛直方向のリマッピング等の演算を適用できる。
 
 \subsubsection{月平均する場合}
 
@@ -301,3 +313,24 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 
 緯度-経度の領域は、シミュレーションで用いた領域よりも大きく取ることができる。
 リマッピングの過程で外挿は許されず、内挿値を持たない格子には欠損値が埋められる。
+
+\subsubsection{気圧高度座標への変換を行う場合}
+
+\editbox{
+\verb|&PARAM_SNO                                               | \\
+\verb| basename_in  = 'input/history_d02',                     | \\
+\verb| basename_out = 'output/history_d02',                    | \\
+\verb|/                                                        | \\
+\verb|                                                         | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
+\verb| SNOPLGIN_vgridope_type     = 'PLEV',                    | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
+\verb| SNOPLGIN_vgridope_lev_data = 850.e+2, 500.e+2, 200.e+2, | \\
+\verb|/                                                        | \\
+}
+
+\namelist{PARAM_SNOPLGIN_VGRIDOPE}の\nmitem{SNOPLGIN_vgridope_type}を\verb|'PLEV'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
+同時に\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で気圧高度座標の情報を与える。
+気圧高度座標の単位はPaで設定する。
+このプラグインの演算は、出力ファイルが複数であっても利用できる。
+ただし、気圧高度の情報を必要とするため、入力するファイルにモデル高度での気圧データ（\verb|PRES|）がなければならない。
