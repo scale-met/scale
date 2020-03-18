@@ -210,6 +210,7 @@ contains
     logical :: USE_SFC_DIAGNOSES          = .false. !> use surface diagnoses
     logical :: USE_DATA_UNDER_SFC         = .true.  !> use data under the surface
     logical :: USE_NONHYDRO_DENS_BOUNDARY = .false. !> use non-hydrostatic density for boundary data
+    logical :: SKIP_VERTICAL_RANGE_CHECK  = .false. !> skip chkecking if the domain top does not exceed that of the parent in the vertical direction
 
 
     namelist / PARAM_MKINIT_REAL_ATMOS / &
@@ -232,7 +233,8 @@ contains
        USE_SFC_DIAGNOSES,          &
        USE_DATA_UNDER_SFC,         &
        SAME_MP_TYPE,               &
-       INTRP_TYPE
+       INTRP_TYPE,                 &
+       SKIP_VERTICAL_RANGE_CHECK
 
     character(len=H_LONG) :: basename_mod
     character(len=H_LONG) :: basename_out_mod
@@ -363,24 +365,25 @@ contains
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, ']'
 
              ! read prepared data
-             call ParentAtmosInput( FILETYPE_ORG,       & ! [IN]
-                                    basename_mod,       & ! [IN]
-                                    dims(:),            & ! [IN]
-                                    istep,              & ! [IN]
-                                    USE_SFC_DIAGNOSES,  & ! [IN]
-                                    USE_DATA_UNDER_SFC, & ! [IN]
-                                    SAME_MP_TYPE,       & ! [IN]
-                                    DENS_in(:,:,:),     & ! [OUT]
-                                    MOMZ_in(:,:,:),     & ! [OUT]
-                                    MOMX_in(:,:,:),     & ! [OUT]
-                                    MOMY_in(:,:,:),     & ! [OUT]
-                                    RHOT_in(:,:,:),     & ! [OUT]
-                                    QTRC_in(:,:,:,:),   & ! [OUT]
-                                    VELZ_in(:,:,:),     & ! [OUT]
-                                    VELX_in(:,:,:),     & ! [OUT]
-                                    VELY_in(:,:,:),     & ! [OUT]
-                                    POTT_in(:,:,:),     & ! [OUT]
-                                    PRES_in(:,:,:)      ) ! [OUT]
+             call ParentAtmosInput( FILETYPE_ORG,              & ! [IN]
+                                    basename_mod,              & ! [IN]
+                                    dims(:),                   & ! [IN]
+                                    istep,                     & ! [IN]
+                                    USE_SFC_DIAGNOSES,         & ! [IN]
+                                    USE_DATA_UNDER_SFC,        & ! [IN]
+                                    SAME_MP_TYPE,              & ! [IN]
+                                    SKIP_VERTICAL_RANGE_CHECK, & ! [IN]
+                                    DENS_in(:,:,:),            & ! [OUT]
+                                    MOMZ_in(:,:,:),            & ! [OUT]
+                                    MOMX_in(:,:,:),            & ! [OUT]
+                                    MOMY_in(:,:,:),            & ! [OUT]
+                                    RHOT_in(:,:,:),            & ! [OUT]
+                                    QTRC_in(:,:,:,:),          & ! [OUT]
+                                    VELZ_in(:,:,:),            & ! [OUT]
+                                    VELX_in(:,:,:),            & ! [OUT]
+                                    VELY_in(:,:,:),            & ! [OUT]
+                                    POTT_in(:,:,:),            & ! [OUT]
+                                    PRES_in(:,:,:)             ) ! [OUT]
           else
              LOG_PROGRESS('(1x,A,I4,A,I5,A,I6,A)') &
                           '[file,step,cons.] = [', ifile, ',', istep, ',', tall, '] ...skip.'
@@ -1339,6 +1342,7 @@ contains
        sfc_diagnoses, &
        under_sfc,     &
        same_mptype,   &
+       skip_vcheck,   &
        DENS,          &
        MOMZ,          &
        MOMX,          &
@@ -1415,6 +1419,7 @@ contains
     logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: under_sfc
     logical,          intent(in)  :: same_mptype   ! Is microphysics type same between outer and inner model
+    logical,          intent(in)  :: skip_vcheck
     real(RP),         intent(out) :: DENS(KA,IA,JA)
     real(RP),         intent(out) :: MOMZ(KA,IA,JA)
     real(RP),         intent(out) :: MOMX(KA,IA,JA)
@@ -1657,7 +1662,8 @@ contains
                                          LON    (:,:),    & ! [IN]
                                          LAT    (:,:),    & ! [IN]
                                          CZ     (KE,:,:), & ! [IN]
-                                         FZ     (KE,:,:)  ) ! [IN]
+                                         FZ     (KE,:,:), & ! [IN]
+                                         skip_z = skip_vcheck ) ! [IN]
 
        select case( itp_type_a )
        case ( i_intrp_linear )

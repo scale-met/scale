@@ -206,9 +206,10 @@ contains
     !---------------------------------------------------------------------------
 
     call MAPPROJECTION_rotcoef( IA, 1, IA, JA, 1, JA, &
-         ATMOS_GRID_CARTESC_REAL_LON   (:,:),  & ! [IN]
-         ATMOS_GRID_CARTESC_REAL_LAT   (:,:),  & ! [IN]
-         ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,:) ) ! [OUT]
+         ATMOS_GRID_CARTESC_REAL_LON   (:,:),   & ! [IN]
+         ATMOS_GRID_CARTESC_REAL_LAT   (:,:),   & ! [IN]
+         ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,1), & ! [OUT]
+         ATMOS_GRID_CARTESC_METRIC_ROTC(:,:,2)  ) ! [OUT]
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_rotcoef
