@@ -108,14 +108,17 @@ contains
           case ( 'TOMITA08', 'SN14' )
              ! do nothing
           case ( 'SUZUKI10' )
-             if( ATMOS_PHY_MP_suzuki10_nccn /= 0 ) then
-                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', ATMOS_PHY_MP_suzuki10_nccn, '). CHECK!'
-                call PRC_abort
-             endif
-             if ( ATMOS_PHY_MP_suzuki10_nices == 0 ) then
-                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
-                call PRC_abort
-             endif
+             LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE of SUZUKI10 is not supported for lightning component.'
+             LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE should be TOMITA08 or SN14 (', ATMOS_PHY_MP_TYPE, '). CHECK!'
+             call PRC_abort
+!             if( ATMOS_PHY_MP_suzuki10_nccn /= 0 ) then
+!                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', ATMOS_PHY_MP_suzuki10_nccn, '). CHECK!'
+!                call PRC_abort
+!             endif
+!             if ( ATMOS_PHY_MP_suzuki10_nices == 0 ) then
+!                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
+!                call PRC_abort
+!             endif
           case ( 'KESSLER' )
              LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE should be TOMITA08, or SN14, or SUZUKI10 (', ATMOS_PHY_MP_TYPE, '). CHECK!'
              call PRC_abort
