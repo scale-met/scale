@@ -2865,7 +2865,6 @@ contains
     real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
     real(RP) :: cmins, cplus
     integer :: nloopmax
-    real(RP) :: qlsbl( ijkmax )
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_Icephase', 3)
