@@ -59,31 +59,22 @@ To avoid this problem, the topography of the parent domain can be copied to the 
 
 
 
-\section{Preparation of user-defined topography} \label{subsec:topo_userfile}
+\subsection{Preparation of user-defined topography} \label{subsec:topo_userfile}
 
 When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|, the program \verb|scale-rm_pp| converts the data as specified by \namelist{PARAM_CNVTOPO_USERFILE}.
 The type of the input data is specified with \nmitem{USERFILE_TYPE}.
 The supported types are ``GrADS'' and ``TILE''.
+The details for the file types are described in Section \ref{sec:userdata}.
 
-For the ``GrADS'' type, another namelist file which contains structure of input file is necessary.
-\nmitem{USERFILE_GrADS_FILENAME} is used to set the namelist file.
+For the ``GrADS'' type, \nmitem{USERFILE_GrADS_FILENAME} is used to set the namelist file containing the information of the \grads binary data.
 See Section \ref{sec:datainput_grads} for the details of the namelist file.
 As the default, the variable name for the topography, latitude, and longitude are ``topo'', ``lat'', and ``lon'', respectively.
 If the name is different from the default value, it can be specified with \nmitem{USERFILE_GrADS_VARNAME}, \nmitem{USERFILE_GrADS_LATNAME}, and \nmitem{USERFILE_GrADS_LONNAME}, respectively.
 
 
 
-For the ``TILE'' type, a catalogue file is required.
-It contains information of the name of individual tiled data files and the area which the tiled data covers.
+For the ``TILE'' type, \nmitem{USERFILE_CATALOGUE} is used to set the cataloue file containing information of the name of individual tiled data files and the area which the tiled data covers.
 Refer the catalogue files of the GTOPO30 and DEM50, which has the same format.
-The following is a sample of the catalogue file.
-\editboxtwo{
-\verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
-\verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; latitude: -90--0, longitude: 0--180,  name: \verb|TILE_se.grd| \\
-\verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; latitude: 0--90,  longitude: -180--0, name: \verb|TILE_nw.grd| \\
-\verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; latitude: 0--90,  longitude: 0--180,  name: \verb|TILE_ne.grd| \\
-}
-The individual tiled data is a simple binary as same as the format of \grads (direct access).
 The sample of the setting is as follows:
 \editboxtwo{
 \verb|&PARAM_CNVTOPO_USERFILE                     | & \\

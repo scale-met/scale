@@ -102,7 +102,7 @@ These \scalenetcdf data can be converted from the simple binary format data usin
 
 \subsubsection{How to prepare gridded urban data with \scalenetcdf}
 
-\verb|scale_init| is used to prepare the gridded urban data; the detailed explanations are given in Section x.x.
+\verb|scale_init| is used to prepare the gridded urban data; the detailed explanations are given in Section \ref{sec:userdata}.
 Here, a practical usage is demonstrated with examples of configuration file and namelist file.
 
 To create the \scalenetcdf file according to the experimental settings from a certain binary format data,
@@ -150,9 +150,9 @@ The following shows an example of namelist file, corresponding to ``ctl'' file o
    ~~~~~~~~~ \verb|bintype='real4', yrev=.false., missval=-999.0E+0 /                    | \\
 }
 %
-The ways to prepare the gridded Z0M and AHL data are basically the same as that for AH.
-Note that, the gridded AH and AHL data have to contain the data for 24 hours in the order from 1 to 24 UTC,
-while the Z0M data contains only one data because Z0M is assumed to be unchanged during the simulation
-(Namely, \nmitem{CNVUSER_NSTEPS}=1).
-\verb|tdef| of ``ctl'' corresponds to \nmitem{CNVUSER_NSTEPS} of \namelist{PARAM_CNVUSER} in \scale.
-
+Although the initial time and the time interval in the output file are specified by \nmitem{TIME_STARTDATE} in \namelist{PARAM_TIME} and \nmitem{CNVUSER_OUT_DT}, respectively, as described in Sec. \ref{sec:userdata},
+the urban scheme ignores these settings when reading the data.
+That is, regardless of the time coordinate in the \scalenetcdf file,
+the gridded AH and AHL data are assumed to contain the data for 24 hours in the order from 1 to 24 UTC with the interval of one hour.
+The Z0M data is read only the first data because Z0M is assumed to be unchanged during the simulation (namely, \nmitem{CNVUSER_NSTEPS}=1).
+The other settings are as described in Sec. \ref{sec:userdata}.
