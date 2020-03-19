@@ -2865,6 +2865,7 @@ contains
     real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
     real(RP) :: cmins, cplus
     integer :: nloopmax
+    real(RP) :: qlsbl( ijkmax )
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_Icephase', 3)
@@ -3682,7 +3683,7 @@ contains
     real(RP), parameter :: tdendu = 257.0_RP, tdendl = 255.0_RP! -14[degC], -18[degC]
     real(RP), parameter :: tplatu = 250.6_RP                   ! -22.4[degC]
     !
-    real(RP) :: qsati(ijkmax)
+    real(RP) :: qsati(ijkmax), qlsbl(ijkmax)
     integer :: ijk, indirect
     real(RP) :: numice
     integer :: myu, n, ispc
