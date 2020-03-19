@@ -7,7 +7,6 @@
 (詳細は第\ref{sec:timeintiv}節を参照)。
 
 
-%\subsection{大気-都市面間フラックス}
 %-------------------------------------------------------------------------------
 使用する都市スキームは、
 init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設定する。
@@ -153,8 +152,16 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
    ~~~~~~~~~ \verb|bintype='real4', yrev=.false., missval=-999.0E+0 /                    | \\
 }
 
-Z0MとAHLの作成方法は基本的にAHと同じである。
-ただし、AHとAHLデータは、1時から24時(UTC)までの24時間分のデータを１時間毎に用意する必要があるのに対し、
+
+第\ref{sec:userdata}節に記載されているように、
+出力ファイル中の時刻座標の初期値は \namelist{PARAM_TIME} の\nmitem{TIME_STARTDATE} で指定し、
+時間間隔は \nmitem{CNVUSER_OUT_DT} で指定することになっているが、
+都市スキームでは、これらの情報を無視してデータを読み込む。
+%
+つまり、AHとAHLデータは、\scalenetcdf の時刻情報に関わらず、
+1時から24時(UTC)までの24時間分のデータが１時間毎で用意されていることを仮定して読み込まれる。
 Z0Mは時間変化を考慮しないので、データは１時刻分でよい (つまり、\nmitem{CNVUSER_NSTEPS}=1)。
-``ctl''の\verb|tdef|は \scale では \namelist{PARAM_CNVUSER}の\nmitem{CNVUSER_NSTEPS}に相当する。
+その他の項目については、第\ref{sec:userdata}節に記載の通りである。
+
+
 

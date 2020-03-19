@@ -1,13 +1,13 @@
 \section{ユーザ定義データの作成方法} \label{sec:userdata}
 
-いくつかのスキームでは、初期値/境界値以外の入力データを必要する。
-そのようなスキームを使用する場合、そのダータはシミュレーション実行の前に準備する必要がある。
-入力データは　\scalenetcdf ファイルである必要があり、また、シミュレーションと同じ格子である必要がある。
+いくつかのスキームでは、初期値/境界値以外の入力データを必要とする。
+そのようなスキームを使用する場合、そのデータはシミュレーション実行の前に準備する必要がある。
+入力データは \scalenetcdf ファイルである必要があり、また、実験設定に応じた格子データである必要がある。
 そのような入力データを用意するために、\scalerm にはユーザ定義データを変換する方法が用意されている。
-\namelist{PARAM_CONVERT} の \nmitem{CNVERT_USER} を \verb|.true.| と設定することで、\verb|scale-rm_init| でデータ変換が行われる。
+データ変換は、\namelist{PARAM_CONVERT} の \nmitem{CNVERT_USER} を \verb|.true.| と設定することで、\verb|scale-rm_init| で変換が行われる。
 サポートされているユーザ定義データの種類が表\ref{tab:userdata_type}に記載されている。
 一度の実行で一つの変数しか変換されないため、変換が必要なユーザ定義変数の数だけ実行を繰り返す必要がある。
-現時点では、2次元データのみ変換が可能である。
+現時点では、空間方向には2次元データのみ変換が可能である。
 
 
 \begin{table}[tbh]
@@ -26,25 +26,25 @@
 ユーザ定義データに関する設定は、以下のように \namelist{PARAM_CNVUSER} で行う。
 \editboxtwo{
 \verb|&PARAM_CNVUSER| & \\
-\verb| CNVUSER_FILE_TYPE = '',| & ; ユーザ定義データの種類。 表\ref{tab:userdata_type}参照。 \\
+\verb| CNVUSER_FILE_TYPE = '',        | & ; ユーザ定義データの種類。 表\ref{tab:userdata_type}参照。 \\
 \verb| CNVUSER_INTERP_TYPE = 'LINEAR',| & ; 水平内挿の種類。 \\
-\verb| CNVUSER_INTERP_LEVEL = 5,| & ; 内挿のレベル。 \\
+\verb| CNVUSER_INTERP_LEVEL = 5,      | & ; 内挿のレベル。 \\
 \verb| CNVUSER_OUT_TITLE = 'SCALE-RM 2D Boundary',| & ; 出力ファイル中のタイトル。 \\
-\verb| CNVUSER_OUT_VARNAME = '',| & ; 出力ファイルにおける変数名。 \\
-\verb| CNVUSER_OUT_VARDESC = '',| & ; 出力変数の説明。 \\
-\verb| CNVUSER_OUT_VARUNIT = '',| & ; 出力変数の単位。 \\
-\verb| CNVUSER_OUT_DTYPE 'DEFAULT',| & ; 出力変数のデータタイプ (DEFAULT,INT2,INT4,REAL4,REAL8)。 \\
-\verb| CNVUSER_NSTEPS =  10,| & ; データの時間ステップ数。 \\
-\verb| CNVUSER_OUT_DT = -1.0D0,| & ; 出力データの時間間隔 (秒)。 \\
-\verb| CNVUSER_GrADS_FILENAME = '', | & ; \grads データのネームリストファイル名。 \\
-\verb| CNVUSER_GrADS_VARNAME = '', | & ; ネームリスト中の変数名。 \\
+\verb| CNVUSER_OUT_VARNAME = '',      | & ; 出力ファイルにおける変数名。 \\
+\verb| CNVUSER_OUT_VARDESC = '',      | & ; 出力変数の説明。 \\
+\verb| CNVUSER_OUT_VARUNIT = '',      | & ; 出力変数の単位。 \\
+\verb| CNVUSER_OUT_DTYPE 'DEFAULT',   | & ; 出力変数のデータタイプ (DEFAULT,INT2,INT4,REAL4,REAL8)。 \\
+\verb| CNVUSER_NSTEPS =  10,          | & ; データの時間ステップ数。 \\
+\verb| CNVUSER_OUT_DT = -1.0D0,       | & ; 出力データの時間間隔 (秒)。 \\
+\verb| CNVUSER_GrADS_FILENAME = '',   | & ; \grads データのネームリストファイル名。 \\
+\verb| CNVUSER_GrADS_VARNAME = '',    | & ; ネームリスト中の変数名。 \\
 \verb| CNVUSER_GrADS_LATNAME = 'lat', | & ; ネームリスト中の緯度の名前。 \\
 \verb| CNVUSER_GrADS_LONNAME = 'lon', | & ; ネームリスト中の経度の名前。 \\
-\verb| CNVUSER_TILE_DIR = '', | & ; タイルデータとカタログファイルが配置されているのディレクトリ名。 \\
-\verb| CNVUSER_TILE_CATALOGUE = '', | & ; カタログファイルの名前。 \\
-\verb| CNVUSER_TILE_DLAT = 1.0D0, | & ; タイルデータの緯度間隔。 \\
-\verb| CNVUSER_TILE_DLON = 1.0D0, | & ; タイルデータの経度間隔。 \\
-\verb| CNVUSER_TILE_DTYPE = 'REAL4', | & ; タイルデータのデータタイプ (INT2,INT4,REAL4,REAL8)。 \\
+\verb| CNVUSER_TILE_DIR = '',         | & ; タイルデータとカタログファイルが配置されているのディレクトリ名。 \\
+\verb| CNVUSER_TILE_CATALOGUE = '',   | & ; カタログファイルの名前。 \\
+\verb| CNVUSER_TILE_DLAT = 1.0D0,     | & ; タイルデータの緯度間隔。 \\
+\verb| CNVUSER_TILE_DLON = 1.0D0,     | & ; タイルデータの経度間隔。 \\
+\verb| CNVUSER_TILE_DTYPE = 'REAL4',  | & ; タイルデータのデータタイプ (INT2,INT4,REAL4,REAL8)。 \\
 \verb|/|\\
 }
 
@@ -92,8 +92,8 @@
 
 
 
-\verb|TILE| タイプは、ユーザ定義データは空間方向にタイル状に分割されたデータである。
-個々のタイルデータは \grads フォーマット (direct access) と同じバイナリデータでなければならない。
+\verb|TILE| タイプは、空間方向にタイル状に分割されたユーザ定義データを読み込む。
+個々のタイルデータは ダイレクトアクセスのバイナリデータでなければならない。
 バイナリデータの種類は \nmitem{CNVUSER_TILE_DTYPE} で指定する。
 データは、等間隔の緯度経度格子である必要があるり、それぞれの間隔は、\nmitem{CNVUSER_TILE_DLAT} および \nmitem{CNVUSER_TILE_DLON} で指定する。
 個々のタイルデータファイルの名前やカバーする領域の情報を記述したカタログファイルが必要となる。
@@ -101,12 +101,11 @@
 カタログファイルおよびタイルデータファイルは \nmitem{CNVUSER_TILE_DIR} で指定するディレクトリに配置する。
 カタログファイルの各行には、通し番号、最南端、最北端の緯度、最西端、最東端の経度、タイルデータの名前が記載されている。
 カタログファイルについては \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| および \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| が参考になる。
-以下はカタログファイルの例である。
+以下は、全球のデータが南北それぞれ 2x2 の 4つに分割されたユーザ定義データのためのカタログファイルの例である。
 \editboxtwo{
 \verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
 \verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; latitude: -90--0, longitude: 0--180,  name: \verb|TILE_se.grd| \\
 \verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; latitude: 0--90,  longitude: -180--0, name: \verb|TILE_nw.grd| \\
 \verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; latitude: 0--90,  longitude: 0--180,  name: \verb|TILE_ne.grd| \\
 }
-この例では、全球のデータが南北それぞれ 2x2 の 4つに分割されている。
 
