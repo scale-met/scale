@@ -1,4 +1,4 @@
-\section{How to prepare user-defined data} \label{sec:userdata}
+\subsection{How to prepare user-defined data} \label{sec:userdata}
 
 Some schemes requires other input data than initial and boundary data.
 In order to use these schemes, the data are necessary be prepared before the simulation.
@@ -98,8 +98,6 @@ A catalogue file is required; the catalogue contains information of the name of 
 The name of the catalogue file is specified by \nmitem{CNVUSER_TILE_CATALOGUE}.
 The catalogue and tiled data files are located at the directory specified by \nmitem{CNVUSER_TILE_DIR}.
 Each line of the catalogue file describes the serial number, the southernmost and the northernmost latitudes, the westernmost and the easternmost longitudes, and the name of the tiled data.
-Refer the catalogue files of the \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| and \\
-\verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt|.
 The following is an example of the catalogue file for the global data decomposed into total 4 (2 x 2) files.
 \editboxtwo{
 \verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
