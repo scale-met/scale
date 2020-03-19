@@ -890,7 +890,7 @@ contains
        beta_crg,         &
        QTRC_crg,         &
        QSPLT_in, Sarea,  &
-       RHOQ_t_mp         )
+       RHOC_t_mp         )
     use scale_const, only: &
        TEM00 => CONST_TEM00, &
        PI    => CONST_PI
@@ -928,7 +928,7 @@ contains
     real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,num_hyd)
     real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
     real(RP), intent(out), optional :: Sarea(KA,IA,JA,num_hyd)
-    real(RP), intent(out), optional :: RHOQ_t_mp(KA,IA,JA,num_hyd)
+    real(RP), intent(out), optional :: RHOC_t_mp(KA,IA,JA,num_hyd)
 
     real(RP) :: QSAT_L(KA,IA,JA)
     real(RP) :: QSAT_I(KA,IA,JA)
@@ -1295,7 +1295,7 @@ contains
           do m = 1, nspc
           do n = 1, nbin
              rhoq_new = Gcrg_ijk(n,m,ijk)
-             RHOQ_t_mp(k,i,j,countbin) = ( rhoq_new - QTRC_crg(k,i,j,countbin)*DENS(k,i,j) ) / dt
+             RHOC_t_mp(k,i,j,countbin) = ( rhoq_new - QTRC_crg(k,i,j,countbin)*DENS(k,i,j) ) / dt
              countbin = countbin + 1
           enddo
           enddo
@@ -2085,6 +2085,7 @@ contains
                             d0_crg_l,      & ! [IN]
                             v0_crg_l,      & ! [IN]
                             dqcrg(:),      & ! [IN]
+                            beta_crg(:),   & ! [IN]
                             temp(:),       & ! [IN]
                             ghyd(:,:,:),   & ! [INOUT]
                             gcrg_l(:,:,:), & ! [INOUT]
@@ -2098,7 +2099,7 @@ contains
           endif
 
        elseif( nspc > 1 ) then
-          !---< mixed phase rain only with aerosol tracer >---
+          !---< mixed phase with aerosol tracer >---
 
           ! nucleation from aerosol
           call nucleata( ijkmax,      & ! [IN]
@@ -2176,6 +2177,7 @@ contains
                              d0_crg_l,      & ! [IN]
                              v0_crg_l,      & ! [IN]
                              dqcrg(:),      & ! [IN]
+                             beta_crg(:),   & ! [IN]
                              temp(:),       & ! [IN]
                              ghyd(:,:,:),   & ! [INOUT]
                              gcrg_l(:,:,:), & ! [INOUT]
@@ -2230,6 +2232,7 @@ contains
                             d0_crg_l,      & ! [IN]
                             v0_crg_l,      & ! [IN]
                             dqcrg(:),      & ! [IN]
+                            beta_crg(:),   & ! [IN]
                             temp(:),       & ! [IN]
                             ghyd(:,:,:),   & ! [INOUT]
                             gcrg_l(:,:,:), & ! [INOUT]
@@ -2243,7 +2246,7 @@ contains
           endif
 
        elseif( nspc > 1 ) then
-          !---< mixed phase rain only without aerosol tracer >---
+          !---< mixed phase without aerosol tracer >---
 
           ! nucleation
           call nucleat( ijkmax,      & ! [IN]
@@ -2320,6 +2323,7 @@ contains
                              d0_crg_l,      & ! [IN]
                              v0_crg_l,      & ! [IN]
                              dqcrg(:),      & ! [IN]
+                             beta_crg(:),   & ! [IN]
                              temp(:),       & ! [IN]
                              ghyd(:,:,:),   & ! [INOUT]
                              gcrg_l(:,:,:), & ! [INOUT]
@@ -2843,6 +2847,7 @@ contains
           csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
        enddo
        if( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
+
     enddo
 
     ! lhv
@@ -3160,6 +3165,7 @@ contains
           if ( gc( n,il,ijk ) < 0.0_RP ) then
              cndmss = -gc( n,il,ijk )
              gc( n,il,ijk ) = 0.0_RP
+             gcrg( n,il,ijk ) = 0.0_RP
              dqv = cndmss/dens(ijk)
              qvap(ijk) = qvap(ijk) + dqv
              temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cv(ijk)
@@ -3705,6 +3711,7 @@ contains
        do myu = 1, nspc
           if ( csum( myu,ijk ) > cldmin ) iflg( myu,ijk ) = 1
        enddo
+
     enddo
 
     ! lhv
@@ -4149,7 +4156,8 @@ contains
     real(RP) :: qsati(ijkmax), qlsbl(ijkmax)
     integer :: ijk, indirect
     real(RP) :: numice
-    integer :: myu, n, ispc
+    integer :: myu, n
+    integer :: ispc
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
@@ -4267,72 +4275,80 @@ contains
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
-!       if ( temp <= tthreth ) then !--- Bigg (1975)
+!       if ( temp(ijk) <= tthreth ) then !--- Bigg (1975)
 
-       tc = temp(ijk)-tmlt
-       rate = coefa*exp( -coefb*tc )
+         tc = temp(ijk)-tmlt
+         rate = coefa*exp( -coefb*tc )
 
-       dcrg = 0.0_RP
-       sumfrz = 0.0_RP
-       do n = 1, nbound-1
-          dmp = rate*expxctr( n )
-          frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
-          frz = min( frz, gc( n,il,ijk ) )
+         dcrg = 0.0_RP
+         sumfrz = 0.0_RP
+         do n = 1, nbound-1
+            dmp = rate*expxctr( n )
+            frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
+            frz = min( frz, gc( n,il,ijk ) )
 
-          if ( flg_lt ) then
-             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
-             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
-             gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
-          end if
+            if ( flg_lt ) then
+               dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+               gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+               gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+            end if
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
+            gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+            gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
 
-          sumfrz = sumfrz + frz
-       enddo
-       do n = nbound, nbin
-          dmp = rate*expxctr( n )
-          frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
-          frz = min( frz, gc( n,il,ijk) )
+            sumfrz = sumfrz + frz
+         enddo
+         do n = nbound, nbin
+            dmp = rate*expxctr( n )
+            frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
+            frz = min( frz, gc( n,il,ijk ) )
 
-          if ( flg_lt ) then
-             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
-             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
-             gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
-          end if
+            if ( flg_lt ) then
+               dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+               gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+               gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
+            end if
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
+            gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+            gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
 
-          sumfrz = sumfrz + frz
-       enddo
-!     elseif( temp > tthreth ) then !--- Vali (1975)
+            sumfrz = sumfrz + frz
+         enddo
+
+!       elseif( temp(ijk) > tthreth ) then !--- Vali (1975)
 !
-!      tc = temp-tmlt
-!      dmp = ncoefim * ( 0.1_RP * ( tmlt-temp )**gamm )
-!      sumfrz = 0.0_RP
-!      do n = 1, nbin
-!       frz = gc( (il-1)*nbin+n )*dmp*xctr( n )/dens
-!       frz = max( frz,gc( (il-1)*nbin+n )*dmp*xctr( n )/dens )
-!       gc( (il-1)*nbin+n ) = gc( (il-1)*nbin+n ) - frz
-!       if ( n >= nbound ) then
-!        gc( (ih-1)*nbin+n ) = gc( (ih-1)*nbin+n ) + frz
-!       else
-!        gc( (ip-1)*nbin+n ) = gc( (ip-1)*nbin+n ) + frz
+!         tc = temp(ijk)-tmlt
+!         dmp = ncoefim * ( 0.1_RP * ( -tc )**gamm )
+!         sumfrz = 0.0_RP
+!         do n = 1, nbound-1
+!           frz = gc( n,il,ijk )*expxctr( n )/rhow*dmp
+!           frz = min( frz,gc( n,il,ijk ) )
+!           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+!           gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
+!
+!           if ( flg_lt ) then
+!             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+!             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+!             gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+!           endif
+!
+!           sumfrz = sumfrz + frz
+!         enddo
+!         do n = nbound, nbin
+!           frz = gc( n,il,ijk )*dmp*expxctr( n )/rhow
+!           frz = min( frz,gc( n,il,ijk ) )
+!           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+!           gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
+!
+!           if ( flg_lt ) then
+!             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+!             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+!             gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
+!           endif
+!
+!           sumfrz = sumfrz + frz
+!         enddo
 !       endif
-!       if ( flg_lt ) then
-!         dcrg = frz / ( gc( n,il,ijk )+EPS ) * gcrg(n,il,ijk)
-!         if ( n >= nbound ) then
-!           gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
-!         else
-!           gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
-!         endif
-!       endif
-!
-!
-!       sumfrz = sumfrz + frz
-!      enddo
-!     endif
        sumfrz = sumfrz*dxmic
 
        tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cv(ijk)
@@ -4432,6 +4448,7 @@ contains
        d0_crg, &
        v0_crg, &
        dq,     &
+       beta,   &
        temp,   &
        ghyd,   &
        gcrg,   &
@@ -4447,6 +4464,7 @@ contains
     logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: v0_crg, d0_crg
     real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
@@ -4467,6 +4485,7 @@ contains
                       d0_crg,      & ! [IN]
                       v0_crg,      & ! [IN]
                       dq(:),       & ! [IN]
+                      beta(:),     & ! [IN]
                       temp(:),     & ! [IN]
                       ghyd(:,:,:), & ! [INOUT]
                       gcrg(:,:,:), & ! [INOUT]
@@ -4485,6 +4504,7 @@ contains
        d0_crg, &
        v0_crg, &
        dq,     &
+       beta,   &
        temp,   &
        ghyd,   &
        gcrg,   &
@@ -4500,6 +4520,7 @@ contains
     logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: v0_crg, d0_crg
     real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
@@ -4520,6 +4541,7 @@ contains
                       d0_crg,      & ! [IN]
                       v0_crg,      & ! [IN]
                       dq(:),       & ! [IN]
+                      beta(:),     & ! [IN]
                       temp(:),     & ! [IN]
                       ghyd(:,:,:), & ! [INOUT]
                       gcrg(:,:,:), & ! [INOUT]
@@ -4539,6 +4561,7 @@ contains
        d0_crg, &
        v0_crg, &
        dq,     &
+       beta,   &
        temp,   &
        gc,     &
        gcrg,   &
@@ -4550,6 +4573,7 @@ contains
     logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: d0_crg, v0_crg
     real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
@@ -4677,7 +4701,7 @@ contains
                    alpha = min( 10.0_RP, alpha )
 
                    dgenei = frci / xi * rcoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
-                          * alpha * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
+                          * alpha * beta( ijk ) * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
                    dgenej = - dgenei
                    gcrg( i,isml,ijk ) = gcrg( i,isml,ijk ) + ( dgenei-drhoi )
                    gcrg( j,ilrg,ijk ) = gcrg( j,ilrg,ijk ) + ( dgenej-drhoj )

@@ -1145,7 +1145,7 @@ contains
                    case ( 'Upwind-Euler' )
                       call ATMOS_PHY_MP_precipitation_upwind( &
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
-                           TEMP2(:), vterm(:,QHS:QHE),   & ! [IN]
+                           TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FDZ(:), RCDZ(:),            & ! [IN]
                            MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]
@@ -1156,7 +1156,7 @@ contains
                    case ( 'Semilag' )
                       call ATMOS_PHY_MP_precipitation_semilag( &
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
-                           TEMP2(:), vterm(:,QHS:QHE),   & ! [IN]
+                           TEMP2(:), vterm(:,QHS:QHE), & ! [IN]
                            FZ(:), FDZ(:), RCDZ(:),     & ! [IN]
                            MP_DTSEC_SEDIMENTATION,     & ! [IN]
                            i, j,                       & ! [IN]

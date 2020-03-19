@@ -560,9 +560,9 @@ contains
                         qcrg_before(n) = QTRC(k,i,j,n)
 
                         if( sw == 1.0_RP ) then
-                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
                         elseif( sw == 0.0_RP ) then
-                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
                         endif
 
                         int_sw = int( sw )   ! 0-> negative, 1-> positive
