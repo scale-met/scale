@@ -235,6 +235,9 @@ module scale_atmos_phy_mp_suzuki10
   integer              :: mspc, mbin
   real(RP)             :: rndm(1,1,1)
 
+  !--- use for ice_nucleation
+  real(RP) :: n0_icenucl = 1.E+3_RP    ! N0 of Meyer et al. (1992)
+
   !--- use for model without aerosol
   real(RP) :: c_ccn = 100.E+6_RP    ! N0 of Nc = N0*s^kappa
   real(RP) :: kappa = 0.462_RP      ! kappa of Nc = N0*s^kappa
@@ -405,7 +408,6 @@ contains
 
     logical :: S10_FLAG_REGENE  !--- flag of regeneration
     logical :: S10_FLAG_NUCLEAT !--- flag of regeneration
-    logical :: S10_FLAG_ICENUCLEAT !--- flag of regeneration
     logical :: S10_FLAG_SFAERO  !--- flag of surface flux of aeorol
     integer :: S10_RNDM_FLGP  !--- flag of surface flux of aeorol
     integer :: S10_RNDM_MSPC
@@ -421,12 +423,13 @@ contains
        S10_EMAER, &
        S10_FLAG_REGENE,  &
        S10_FLAG_NUCLEAT, &
-       S10_FLAG_ICENUCLEAT, &
        S10_FLAG_SFAERO,  &
        S10_RNDM_FLGP, &
        S10_RNDM_MSPC, &
        S10_RNDM_MBIN, &
        c_ccn, kappa, &
+       flg_icenucl, &
+       n0_icenucl,   &
        sigma, vhfct
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
@@ -474,7 +477,6 @@ contains
     R0_AERO = r0a
     S10_FLAG_REGENE = flg_regeneration
     S10_FLAG_NUCLEAT = flg_nucl
-    S10_FLAG_ICENUCLEAT = flg_icenucl
     S10_FLAG_SFAERO = flg_sf_aero
     S10_RNDM_FLGP = rndm_flgp
     S10_RNDM_MSPC = mspc
@@ -503,7 +505,6 @@ contains
     r0a   = R0_AERO
     flg_regeneration = S10_FLAG_REGENE
     flg_nucl = S10_FLAG_NUCLEAT
-    flg_icenucl = S10_FLAG_ICENUCLEAT
     flg_sf_aero = S10_FLAG_SFAERO
     rndm_flgp = S10_RNDM_FLGP
     mspc = S10_RNDM_MSPC
@@ -1837,18 +1838,20 @@ contains
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
 
-!          call ice_nucleat( ijkmax,        & ! [IN]
-!                            ijkmax_cold,   & ! [IN]
-!                            index_cold(:), & ! [IN]
-!                            dens(:),       & ! [IN]
-!                            pres(:),       & ! [IN]
-!                            qdry(:),       & ! [IN]
-!                            temp(:),       & ! [INOUT]
-!                            qvap(:),       & ! [INOUT]
-!                            ghyd(:,:,:),   & ! [INOUT]
-!                            cp(:),         & ! [INOUT]
-!                            cv(:),         & ! [INOUT]
-!                            dt             ) ! [IN]
+          if( flg_icenucl ) then
+            call ice_nucleat( ijkmax,        & ! [IN]
+                              ijkmax_cold,   & ! [IN]
+                              index_cold(:), & ! [IN]
+                              dens(:),       & ! [IN]
+                              pres(:),       & ! [IN]
+                              qdry(:),       & ! [IN]
+                              temp(:),       & ! [INOUT]
+                              qvap(:),       & ! [INOUT]
+                              ghyd(:,:,:),   & ! [INOUT]
+                              cp(:),         & ! [INOUT]
+                              cv(:),         & ! [INOUT]
+                              dt             ) ! [IN]
+          endif
 
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
@@ -1952,18 +1955,20 @@ contains
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
 
-          call ice_nucleat( ijkmax,        & ! [IN]
-                            ijkmax_cold,   & ! [IN]
-                            index_cold(:), & ! [IN]
-                            dens(:),       & ! [IN]
-                            pres(:),       & ! [IN]
-                            qdry(:),       & ! [IN]
-                            temp(:),       & ! [INOUT]
-                            qvap(:),       & ! [INOUT]
-                            ghyd(:,:,:),   & ! [INOUT]
-                            cp(:),         & ! [INOUT]
-                            cv(:),         & ! [INOUT]
-                            dt             ) ! [IN]
+          if( flg_icenucl ) then
+            call ice_nucleat( ijkmax,        & ! [IN]
+                              ijkmax_cold,   & ! [IN]
+                              index_cold(:), & ! [IN]
+                              dens(:),       & ! [IN]
+                              pres(:),       & ! [IN]
+                              qdry(:),       & ! [IN]
+                              temp(:),       & ! [INOUT]
+                              qvap(:),       & ! [INOUT]
+                              ghyd(:,:,:),   & ! [INOUT]
+                              cp(:),         & ! [INOUT]
+                              cv(:),         & ! [INOUT]
+                              dt             ) ! [IN]
+          endif
 
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
@@ -2065,7 +2070,7 @@ contains
           gc( 1,il,ijk ) = gc( 1,il,ijk ) + dmp/dxmic
           dqv = dmp/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
        enddo
@@ -2102,7 +2107,7 @@ contains
                 dqv = dmp/dens(ijk)
                 qvap(ijk) = qvap(ijk) - dqv
                 qvap(ijk) = max( qvap(ijk),0.0_RP )
-                temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+                temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
                 cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
                 cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
              endif
@@ -2236,7 +2241,7 @@ contains
           dqv = dmp/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
           qvap(ijk) = max( qvap(ijk),0.0_RP )
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
        enddo
@@ -2578,7 +2583,7 @@ contains
           !----- supersaturation tendency
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
-          cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cp(ijk)/rvap/temp(ijk)/temp(ijk) )
+          cefliq = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)*qlevp(ijk)/cv(ijk)/rvap/temp(ijk)/temp(ijk) )
           a = - cefliq*sumliq(ijk)*gtliq(ijk)/dens(ijk)   ! a of eq. (A.19) of Suzuki (2004)
           a = a + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
@@ -2743,7 +2748,7 @@ contains
           cndmss = gclnew(ijk) - gclold(ijk)
           dqv = cndmss/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlevp(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_WATER - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_WATER - CV_VAPOR ) * dqv
           !
@@ -2774,7 +2779,7 @@ contains
              gc( n,il,ijk ) = 0.0_RP
              dqv = cndmss/dens(ijk)
              qvap(ijk) = qvap(ijk) + dqv
-             temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cp(ijk)
+             temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cv(ijk)
              cp(ijk) = cp(ijk) + ( CP_VAPOR - CP_WATER ) * dqv
              cv(ijk) = cv(ijk) + ( CV_VAPOR - CV_WATER ) * dqv
           endif
@@ -2860,6 +2865,7 @@ contains
     real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
     real(RP) :: cmins, cplus
     integer :: nloopmax
+    real(RP) :: qlsbl( ijkmax )
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_Icephase', 3)
@@ -2983,7 +2989,7 @@ contains
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
 
-          cefice = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cp(ijk)/rvap/temp(ijk)/temp(ijk) )
+          cefice = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)*qlsbl(ijk)/cv(ijk)/rvap/temp(ijk)/temp(ijk) )
           d = - cefice*sumice(ijk)*gtice(ijk)/dens(ijk)  ! d of (A.19) of Suzuki (2004)
           d = d + EPS * ( 1.0_RP - zerosw )  !--- avoiding division by zero when qv = 0
 
@@ -3143,7 +3149,7 @@ contains
           sblmss = gcinew(ijk) - gciold(ijk)
           dqv = sblmss/dens(ijk)
           qvap(ijk) = qvap(ijk) - dqv
-          temp(ijk) = temp(ijk) + dqv*qlsbl(ijk)/cp(ijk)
+          temp(ijk) = temp(ijk) + dqv*qlsbl(ijk)/cv(ijk)
           cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * dqv
           cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * dqv
 
@@ -3404,10 +3410,10 @@ contains
 
           zerosw = 0.5_RP + sign( 0.5_RP,qvap(ijk)-EPS )  !--- zerosw = 1 (qv>0), zerosw=0 (qv=0)
           qvtmp = qvap(ijk) * zerosw + ( qvap(ijk)+EPS ) * ( 1.0_RP-zerosw )
-          cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp(ijk) )
-          cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cp(ijk) )
-          cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cp(ijk) )
-          cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cp(ijk) )
+          cef1 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cv(ijk) )
+          cef2 = ( ssliq+1.0_RP )*( 1.0_RP/qvtmp + qlevp(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cv(ijk) )
+          cef3 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlevp(ijk)/cv(ijk) )
+          cef4 = ( ssice+1.0_RP )*( 1.0_RP/qvtmp + qlsbl(ijk)/rvap/temp(ijk)/temp(ijk)*qlsbl(ijk)/cv(ijk) )
 
           a = - cef1*sumliq(ijk)*gtliq(ijk)/dens(ijk)  ! a of (A.19) of Suzuki (2004)
           b = - cef2*sumice(ijk)*gtice(ijk)/dens(ijk)  ! b of (A.19) of Suzuki (2004)
@@ -3599,7 +3605,7 @@ contains
           sblmss = gcinew(ijk) - gciold(ijk)
 
           qvap(ijk) = qvap(ijk) - ( cndmss + sblmss ) / dens(ijk)
-          temp(ijk) = temp(ijk) + ( cndmss*qlevp(ijk)+sblmss*qlsbl(ijk) ) / dens(ijk) / cp(ijk)
+          temp(ijk) = temp(ijk) + ( cndmss*qlevp(ijk)+sblmss*qlsbl(ijk) ) / dens(ijk) / cv(ijk)
           cp(ijk) = cp(ijk) + ( ( CP_WATER - CP_VAPOR ) * cndmss + ( CP_ICE - CP_VAPOR ) * sblmss ) / dens(ijk)
           cv(ijk) = cv(ijk) + ( ( CV_WATER - CV_VAPOR ) * cndmss + ( CV_ICE - CV_VAPOR ) * sblmss ) / dens(ijk)
 
@@ -3648,6 +3654,7 @@ contains
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_ice
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHS, &
        CP_VAPOR, &
        CP_ICE,   &
        CV_VAPOR, &
@@ -3676,15 +3683,19 @@ contains
     real(RP), parameter :: tdendu = 257.0_RP, tdendl = 255.0_RP! -14[degC], -18[degC]
     real(RP), parameter :: tplatu = 250.6_RP                   ! -22.4[degC]
     !
-    real(RP) :: qsati(ijkmax)
+    real(RP) :: qsati(ijkmax), qlsbl(ijkmax)
     integer :: ijk, indirect
-
+    real(RP) :: numice
+    integer :: myu, n, ispc
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
     call ATMOS_SATURATION_pres2qsat_ice( ijkmax, 1, ijkmax, &
                                          temp(:), pres(:), qdry(:), & ! [IN]
                                          qsati(:)                   ) ! [OUT]
+    ! lhs
+    call ATMOS_HYDROMETEOR_LHS( ijkmax, 1, ijkmax, temp(:), qlsbl(:) )
+
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
@@ -3693,26 +3704,37 @@ contains
 
        if( ssice <= 0.0_RP ) cycle
 
-       numin = bcoef * exp( acoef + bcoef * ssice )
-       numin = numin * expxctr( 1 )/dxmic
-       numin = min( numin,qvap(ijk)*dens(ijk) )
-       !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
-       if ( temp(ijk) <= tplatu .OR. ( temp(ijk) >= tcolml .AND. temp(ijk) < tcolmu ) ) then
-          gc( 1,ic,ijk ) = gc( 1,ic,ijk ) + numin
-          !--- -14 [deg] > T >= -18 [deg] -> dendrite
-       elseif( temp(ijk) <= tdendu .AND. temp(ijk) >= tdendl ) then
-          gc( 1,id,ijk ) = gc( 1,id,ijk ) + numin
-          !--- else -> plate
-       else
-          gc( 1,ip,ijk ) = gc( 1,ip,ijk ) + numin
-       endif
+       numice = 0.0_RP
+       do myu = ic, ih
+         do n = 1, nbin
+           numice = numice + gc( n,myu,ijk )*rexpxctr( n )*dxmic
+         enddo
+       enddo
 
-       qdel = numin/dens(ijk)
-       qvap(ijk) = qvap(ijk) - qdel
-       tdel = numin/dens(ijk)*qlmlt/cp(ijk)
-       temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * qdel
-       cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * qdel
+       numin = n0_icenucl * exp( acoef + bcoef * ssice * 1.E+2_RP )
+       if( numin > numice ) then
+         !--- -4 [deg] > T >= -8 [deg] and T < -22.4 [deg] -> column
+         if ( temp(ijk) <= tplatu .OR. ( temp(ijk) >= tcolml .AND. temp(ijk) < tcolmu ) ) then
+            ispc = ic
+            !--- -14 [deg] > T >= -18 [deg] -> dendrite
+         elseif( temp(ijk) <= tdendu .AND. temp(ijk) >= tdendl ) then
+            ispc = id
+            !--- else -> plate
+         else
+            ispc = ip
+         endif
+
+         numin = (numin-numice) * expxctr( 1 )
+         numin = min( numin,qvap(ijk)*dens(ijk) )
+         gc( 1,ispc,ijk ) = gc( 1,ispc,ijk ) + numin / dxmic
+
+         tdel = numin/dens(ijk)*qlsbl(ijk)/cv(ijk)
+         temp(ijk) = temp(ijk) + tdel
+         qdel = numin/dens(ijk)
+         qvap(ijk) = qvap(ijk) - qdel
+         cp(ijk) = cp(ijk) + ( CP_ICE - CP_VAPOR ) * qdel
+         cv(ijk) = cv(ijk) + ( CV_ICE - CV_VAPOR ) * qdel
+       endif
 
     enddo
 
@@ -3736,9 +3758,9 @@ contains
     use scale_const, only: &
        PI    => CONST_PI,    &
        TMLT  => CONST_TMELT, &
-       QLMLT => CONST_EMELT, &
        RHOW  => CONST_DWATR
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHF, &
        CP_WATER, &
        CP_ICE,   &
        CV_WATER, &
@@ -3764,15 +3786,19 @@ contains
 !    real(RP), parameter :: ncoefim = 1.0E+7_RP  ! N_{im0} of eq.(3.18) of Suzuki (2004)
 !    real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
     integer :: ijk, indirect
+    real(RP) :: qlmlt(ijkmax)
 
     call PROF_rapstart('_SBM_Freezing', 3)
+
+    call ATMOS_HYDROMETEOR_LHF( ijkmax, 1, ijkmax, temp(:), qlmlt(:) )
+
+    xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
+    nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
 
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
 !       if ( temp <= tthreth ) then !--- Bigg (1975)
-       xbound = log( rhow * 4.0_RP*pi/3.0_RP * rbound**3 )
-       nbound = int( ( xbound-xbnd( 1 ) )/dxmic ) + 1
 
        tc = temp(ijk)-tmlt
        rate = coefa*exp( -coefb*tc )
@@ -3818,10 +3844,10 @@ contains
 !     endif
        sumfrz = sumfrz*dxmic
 
-       tdel = sumfrz/dens(ijk)*qlmlt/cp(ijk)
+       tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cv(ijk)
        temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz
-       cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz
+       cp(ijk) = cp(ijk) + ( CP_ICE - CP_WATER ) * sumfrz/dens(ijk)
+       cv(ijk) = cv(ijk) + ( CV_ICE - CV_WATER ) * sumfrz/dens(ijk)
     enddo
 
     call PROF_rapend  ('_SBM_Freezing', 3)
@@ -3840,9 +3866,8 @@ contains
        cp,         &
        cv,         &
        dtime       )
-    use scale_const, only: &
-       QLMLT => CONST_EMELT
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHF, &
        CP_WATER, &
        CP_ICE,   &
        CV_WATER, &
@@ -3862,8 +3887,11 @@ contains
     integer :: n, m
     real(RP) :: summlt, sumice, tdel
     integer :: ijk, indirect
+    real(RP) :: qlmlt(ijkmax)
 
     call PROF_rapstart('_SBM_Melting', 3)
+
+    call ATMOS_HYDROMETEOR_LHF( ijkmax, 1, ijkmax, temp(:), qlmlt(:) )
 
     do indirect = 1, num_warm
        ijk = index_warm(indirect)
@@ -3880,10 +3908,10 @@ contains
        enddo
        summlt = summlt*dxmic
 
-       tdel = - summlt/dens(ijk)*qlmlt/cp(ijk)
+       tdel = - summlt/dens(ijk)*qlmlt(ijk)/cv(ijk)
        temp(ijk) = temp(ijk) + tdel
-       cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt
-       cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt
+       cp(ijk) = cp(ijk) + ( CP_WATER - CP_ICE ) * summlt/dens(ijk)
+       cv(ijk) = cv(ijk) + ( CV_WATER - CV_ICE ) * summlt/dens(ijk)
        !
     enddo
 
