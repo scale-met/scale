@@ -45,6 +45,7 @@ module scale_atmos_phy_mp_suzuki10
   public :: ATMOS_PHY_MP_suzuki10_qtrc2qhyd
   public :: ATMOS_PHY_MP_suzuki10_qtrc2nhyd
   public :: ATMOS_PHY_MP_suzuki10_qhyd2qtrc
+  public :: ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd
 
   !-----------------------------------------------------------------------------
   !
@@ -55,6 +56,8 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: ATMOS_PHY_MP_suzuki10_nwaters
   integer, public :: ATMOS_PHY_MP_suzuki10_nices
   integer, public :: ATMOS_PHY_MP_suzuki10_nccn
+  integer, public :: ATMOS_PHY_MP_suzuki10_nbnd
+
 
   character(len=H_SHORT), public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_names(:)
   character(len=H_MID)  , public, allocatable :: ATMOS_PHY_MP_suzuki10_tracer_descriptions(:)
@@ -135,6 +138,7 @@ module scale_atmos_phy_mp_suzuki10
   integer, public :: nccn   = 0 ! tentatively public
   integer :: kphase = 0
   integer :: ICEFLG = 1
+  integer :: num_hyd = 0
 
   integer, parameter   :: I_mp_QC  = 1
   integer, parameter   :: I_mp_QCL = 2
@@ -281,6 +285,12 @@ module scale_atmos_phy_mp_suzuki10
 
   ! for qhyd2qtrc
   real(RP) :: sigma_sdf(5), r0_sdf(5), n0_sdf(5), rho_sdf(5)
+
+  ! for lightning
+  real(RP), allocatable :: flg_noninduct(:,:)
+  real(RP), allocatable :: ecoll(:,:,:,:), rcoll(:,:,:,:)
+  real(RP), allocatable, save :: NUM_end(:,:,:,:)
+  real(RP), save :: Ecoal_GSI = 0.0_RP
   !----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -332,6 +342,8 @@ contains
     ATMOS_PHY_MP_suzuki10_nices    = nbin * ( nspc - 1 )   ! number of ice water
     ATMOS_PHY_MP_suzuki10_nccn     = nccn                  ! number of ccn
 
+    num_hyd                        = nbin * nspc
+
     num_start_waters = I_QV + 1
     num_end_waters   = I_QV + ATMOS_PHY_MP_suzuki10_nwaters
     num_start_ices   = num_end_waters + 1
@@ -374,7 +386,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_MP_suzuki10_setup( &
-       KA, IA, JA )
+       KA, IA, JA, &
+       flg_lt )
     use scale_prc, only: &
        PRC_abort,    &
        PRC_masterrank, &
@@ -398,6 +411,7 @@ contains
     integer, intent(in) :: KA
     integer, intent(in) :: IA
     integer, intent(in) :: JA
+    logical, intent(in), optional :: flg_lt
 
     real(RP) :: RHO_AERO  !--- density of aerosol
     real(RP) :: R0_AERO   !--- center radius of aerosol (um)
@@ -430,10 +444,12 @@ contains
        S10_RNDM_MBIN, &
        c_ccn, kappa, &
        n0_icenucl,   &
-       sigma, vhfct
+       sigma, vhfct, &
+       Ecoal_GSI
 
     real(RP), parameter :: max_term_vel = 10.0_RP !-- terminal velocity for calculate dt of sedimentation
 
+    logical :: flg_lt_
     integer :: nnspc, nnbin
     integer :: nn, mm, mmyu, nnyu
     integer :: myu, nyu, i, j, k, n, ierr
@@ -659,6 +675,56 @@ contains
     call MPI_BCAST( br, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
     call MPI_BCAST( vt, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
 
+    allocate( flg_noninduct( nspc,nspc ) )
+    allocate( ecoll( nspc,nspc,nbin,nbin ) )
+    allocate( rcoll( nspc,nspc,nbin,nbin ) )
+    flg_noninduct(:,:) = 0.0_RP
+    ecoll( :,:,:,: ) = 0.0_RP
+    rcoll( :,:,:,: ) = 0.0_RP
+
+    if ( present(flg_lt) ) then
+       flg_lt_ = flg_lt
+    else
+       flg_lt_ = .false.
+    end if
+    if( flg_lt_ ) then
+
+      do myu = 1, nspc
+      do nyu = 1, nspc
+         if( ( myu >= ic .and. myu <= iss ) .and. ( nyu == ig .or. nyu == ih ) ) then
+           flg_noninduct( myu,nyu ) = 1.0_RP
+         endif
+      enddo
+      enddo
+
+      do myu = 1, nspc
+      do nyu = 1, nspc
+        do i = 1, nbin
+        do j = 1, nbin
+          if( vt( myu,i ) /= vt( nyu,j ) ) then
+           ecoll( myu,nyu,i,j ) = ck( myu,nyu,i,j ) &
+                                / ( pi*( radc( i )+radc( j ) )**2 * abs( vt( myu,i )-vt( nyu,j ) ) )
+           ecoll( myu,nyu,i,j ) = max( min( 1.0_RP, ecoll( myu,nyu,i,j ) ),0.0_RP )
+          else
+           ecoll( myu,nyu,i,j ) = 0.0_RP
+          endif
+
+          if( Ecoal_GSI /= 0.0_RP ) then
+            ecoll( myu,nyu,i,j ) = Ecoal_GSI
+          endif
+
+          if( ecoll( myu,nyu,i,j ) /= 0.0_RP ) then
+            rcoll( myu,nyu,i,j ) = ( 1.0_RP-ecoll( myu,nyu,i,j ) ) / ecoll( myu,nyu,i,j )
+          elseif( ecoll( myu,nyu,i,j ) == 0.0_RP ) then
+            rcoll( myu,nyu,i,j ) = 1.0_RP
+          endif
+        enddo
+        enddo
+      enddo
+      enddo
+
+    endif
+
     !--- aerosol ( CCN ) (not supported)
     if ( nccn /= 0 ) then
 
@@ -716,6 +782,7 @@ contains
       endif
     enddo
     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,ES15.7,A)')  'Radius between cloud and rain is ', radc(nbnd), '[m]'
+    ATMOS_PHY_MP_suzuki10_nbnd = nbnd
 
     !--- random number setup for stochastic method
     if ( flg_rndm ) then
@@ -808,17 +875,25 @@ contains
   !> Cloud Microphysics
   subroutine ATMOS_PHY_MP_suzuki10_tendency( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       KIJMAX,     &
-       dt,         &
+       KIJMAX,           &
+       dt,               &
        DENS, PRES, TEMP, &
        QTRC, QDRY,       &
        CPtot, CVtot,     &
        CCN,              &
        RHOQ_t, RHOE_t,   &
        CPtot_t, CVtot_t, &
-       EVAPORATE         )
+       EVAPORATE,        &
+       flg_lt,           &
+       d0_crg, v0_crg,   &
+       dqcrg,            &
+       beta_crg,         &
+       QTRC_crg,         &
+       QSPLT_in, Sarea,  &
+       RHOC_t_mp         )
     use scale_const, only: &
-       TEM00 => CONST_TEM00
+       TEM00 => CONST_TEM00, &
+       PI    => CONST_PI
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_pres2qsat_liq, &
        ATMOS_SATURATION_pres2qsat_ice
@@ -844,6 +919,16 @@ contains
     real(RP), intent(out) :: CPtot_t(KA,IA,JA)
     real(RP), intent(out) :: CVtot_t(KA,IA,JA)
     real(RP), intent(out) :: EVAPORATE(KA,IA,JA)   !--- number of evaporated cloud [/m3]
+
+    ! Optional for Lightning
+    logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    real(RP), intent(in), optional :: dqcrg(KA,IA,JA)
+    real(RP), intent(in), optional :: beta_crg(KA,IA,JA)
+    real(RP), intent(in), optional :: QTRC_crg(KA,IA,JA,num_hyd)
+    real(RP), intent(out), optional :: QSPLT_in(KA,IA,JA,3)
+    real(RP), intent(out), optional :: Sarea(KA,IA,JA,num_hyd)
+    real(RP), intent(out), optional :: RHOC_t_mp(KA,IA,JA,num_hyd)
 
     real(RP) :: QSAT_L(KA,IA,JA)
     real(RP) :: QSAT_I(KA,IA,JA)
@@ -872,6 +957,13 @@ contains
     integer  :: countbin
     real(RP) :: rhoq_new
 
+    !--- for lithgning
+    logical  :: flg_lt_l
+    real(RP) :: Gcrg_ijk(nbin,nspc,KIJMAX)
+    real(RP) :: CRG_SEP_ijk(nspc,KIJMAX)
+    real(RP) :: dqcrg_ijk(KIJMAX)
+    real(RP) :: beta_crg_ijk(KIJMAX)
+
     integer  :: step
     integer  :: k, i, j, m, n, iq
     !---------------------------------------------------------------------------
@@ -881,6 +973,14 @@ contains
     elseif( nspc >  1 ) then
        LOG_PROGRESS(*) 'atmosphere / physics / microphysics / SBM (Mixed phase)'
     endif
+
+    if ( present(flg_lt) ) then
+       flg_lt_l = flg_lt
+       CRG_SEP_ijk(:,:) = 0.0_RP
+       QSPLT_in(:,:,:,:) = 0.0_RP
+    else
+       flg_lt_l = .false.
+    end if
 
     call ATMOS_SATURATION_pres2qsat_liq( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
@@ -943,7 +1043,7 @@ contains
     enddo
     enddo
     enddo
-
+    Gcrg_ijk(:,:,:) = 0.0_RP
     ijkcount = 0
     ijkcount_cold = 0
     ijkcount_warm = 0
@@ -1002,6 +1102,18 @@ contains
             index_warm(ijkcount_warm) = ijkcount
           endif
 
+          if ( flg_lt_l ) then
+             countbin = 1
+             do m = 1, nspc
+             do n = 1, nbin
+                Gcrg_ijk(n,m,ijkcount) = QTRC_crg(k,i,j,countbin) * DENS(k,i,j)
+                countbin = countbin + 1
+             enddo
+             enddo
+            beta_crg_ijk(ijkcount) = beta_crg(k,i,j)
+            dqcrg_ijk(ijkcount) = dqcrg(k,i,j)
+          endif
+
        else
 
           ! no hudrometeors and undersaturation (no microphysical process occcurs)
@@ -1057,24 +1169,51 @@ contains
 
     call PROF_rapstart('MP_suzuki10', 3)
 
-    call MP_suzuki10( KA, IA, JA,                 & ! [IN]
-                      ijkcount,                   & ! [IN]
-                      ijkcount_cold,              & ! [IN]
-                      ijkcount_warm,              & ! [IN]
-                      index_cold(    1:ijkcount), & ! [IN]
-                      index_warm(    1:ijkcount), & ! [IN]
-                      DENS_ijk  (    1:ijkcount), & ! [IN]
-                      PRES_ijk  (    1:ijkcount), & ! [IN]
-                      Qdry_ijk  (    1:ijkcount), & ! [IN]
-                      CCN_ijk   (    1:ijkcount), & ! [IN]
-                      TEMP_ijk  (    1:ijkcount), & ! [INOUT]
-                      Qvap_ijk  (    1:ijkcount), & ! [INOUT]
-                      Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
-                      Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
-                      CP_ijk    (    1:ijkcount), & ! [INOUT]
-                      CV_ijk    (    1:ijkcount), & ! [INOUT]
-                      Evaporate_ijk(1:ijkcount),  & ! [OUT]
-                      dt                          ) ! [IN]
+    if ( flg_lt_l ) then
+       ! --- with lightning
+       call MP_suzuki10( KA, IA, JA,                 & ! [IN]
+                         ijkcount,                   & ! [IN]
+                         ijkcount_cold,              & ! [IN]
+                         ijkcount_warm,              & ! [IN]
+                         index_cold(    1:ijkcount), & ! [IN]
+                         index_warm(    1:ijkcount), & ! [IN]
+                         DENS_ijk  (    1:ijkcount), & ! [IN]
+                         PRES_ijk  (    1:ijkcount), & ! [IN]
+                         Qdry_ijk  (    1:ijkcount), & ! [IN]
+                         CCN_ijk   (    1:ijkcount), & ! [IN]
+                         TEMP_ijk  (    1:ijkcount), & ! [INOUT]
+                         Qvap_ijk  (    1:ijkcount), & ! [INOUT]
+                         Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
+                         Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
+                         CP_ijk    (    1:ijkcount), & ! [INOUT]
+                         CV_ijk    (    1:ijkcount), & ! [INOUT]
+                         Evaporate_ijk(1:ijkcount),  & ! [OUT]
+                         dt,                         & ! [IN]
+                         flg_lt_l, d0_crg, v0_crg,   & ! [IN:Optional]
+                         dqcrg_ijk (    1:ijkcount), & ! [IN:Optional]
+                         beta_crg_ijk(  1:ijkcount), & ! [IN:Optional]
+                         Gcrg_ijk  (:,:,1:ijkcount), & ! [INOUT:Optional]
+                         CRG_SEP_ijk(:,1:ijkcount)   ) ! [OUT:Optional]
+    else
+       call MP_suzuki10( KA, IA, JA,                 & ! [IN]
+                         ijkcount,                   & ! [IN]
+                         ijkcount_cold,              & ! [IN]
+                         ijkcount_warm,              & ! [IN]
+                         index_cold(    1:ijkcount), & ! [IN]
+                         index_warm(    1:ijkcount), & ! [IN]
+                         DENS_ijk  (    1:ijkcount), & ! [IN]
+                         PRES_ijk  (    1:ijkcount), & ! [IN]
+                         Qdry_ijk  (    1:ijkcount), & ! [IN]
+                         CCN_ijk   (    1:ijkcount), & ! [IN]
+                         TEMP_ijk  (    1:ijkcount), & ! [INOUT]
+                         Qvap_ijk  (    1:ijkcount), & ! [INOUT]
+                         Ghyd_ijk  (:,:,1:ijkcount), & ! [INOUT]
+                         Gaer_ijk  (:,  1:ijkcount), & ! [INOUT]
+                         CP_ijk    (    1:ijkcount), & ! [INOUT]
+                         CV_ijk    (    1:ijkcount), & ! [INOUT]
+                         Evaporate_ijk(1:ijkcount),  & ! [OUT]
+                         dt                          ) ! [IN]
+    endif
 
     call PROF_rapend  ('MP_suzuki10', 3)
 
@@ -1150,6 +1289,35 @@ contains
           RHOQ_t(k,i,j,countbin) = ( rhoq_new - QTRC(k,i,j,countbin)*DENS(k,i,j) ) / dt
           countbin = countbin + 1
        enddo
+
+       if( flg_lt_l ) then
+          countbin = 1
+          do m = 1, nspc
+          do n = 1, nbin
+             rhoq_new = Gcrg_ijk(n,m,ijk)
+             RHOC_t_mp(k,i,j,countbin) = ( rhoq_new - QTRC_crg(k,i,j,countbin)*DENS(k,i,j) ) / dt
+             countbin = countbin + 1
+          enddo
+          enddo
+
+          Sarea(k,i,j,:) = 0.0_RP
+          countbin = 1
+          do m = 1, nspc
+          do n = 1, nbin
+             rhoq_new = Ghyd_ijk(n,m,ijk) * dxmic
+             Sarea(k,i,j,countbin) = 4.0_RP*PI*radc(n)**2*rhoq_new*rexpxctr( n )
+             countbin = countbin + 1
+          enddo
+          enddo
+
+          QSPLT_in(k,i,j,1) = CRG_SEP_ijk(ig,ijk) * DENS(k,i,j) / dt
+          QSPLT_in(k,i,j,2) = ( CRG_SEP_ijk(ic,ijk) &
+                              + CRG_SEP_ijk(ip,ijk) &
+                              + CRG_SEP_ijk(id,ijk) ) * DENS(k,i,j) / dt
+          QSPLT_in(k,i,j,3) = CRG_SEP_ijk(iss,ijk) * DENS(k,i,j) / dt
+
+       endif
+
     enddo
 
 
@@ -1210,7 +1378,7 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,nspc*nbin)
+    real(RP), intent(in)  :: QTRC0  (KA,IA,JA,num_hyd)
     real(RP), intent(in)  :: mask_criterion
     real(RP), intent(out) :: cldfrac(KA,IA,JA)
 
@@ -1278,10 +1446,10 @@ contains
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
 
-    real(RP), intent(in)  :: DENS0(KA,IA,JA)       ! density                   [kg/m3]
-    real(RP), intent(in)  :: TEMP0(KA,IA,JA)       ! temperature               [K]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nspc*nbin) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD) ! effective radius          [cm]
+    real(RP), intent(in)  :: DENS0(KA,IA,JA)         ! density                   [kg/m3]
+    real(RP), intent(in)  :: TEMP0(KA,IA,JA)         ! temperature               [K]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Re   (KA,IA,JA,N_HYD)   ! effective radius          [cm]
 
     real(RP), parameter :: um2cm = 100.0_RP
 
@@ -1410,8 +1578,8 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)     ! mixing ratio of each cateory [kg/kg]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Qe   (KA,IA,JA,N_HYD)   ! mixing ratio of each cateory [kg/kg]
 
     integer :: ihydro, ibin, iq, icateg
     integer :: k, i, j
@@ -1424,23 +1592,23 @@ contains
     do ibin   = 1, nbin
        iq = nbin*(ihydro-1) + ibin
 
-       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
           if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
              icateg = I_HC
           elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
              icateg = I_HR
           endif
-       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
           icateg = I_HS
-       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
           icateg = I_HG
-       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
        endif
 
@@ -1478,9 +1646,9 @@ contains
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
     integer,  intent(in)  :: JA, JS, JE
-    real(RP), intent(in)  :: DENS (KA,IA,JA)           ! density [kg/m3]
-    real(RP), intent(in)  :: QTRC0(KA,IA,JA,nbin*nspc) ! tracer mass concentration [kg/kg]
-    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)     ! number concentration of each cateory [1/m3]
+    real(RP), intent(in)  :: DENS (KA,IA,JA)         ! density [kg/m3]
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer mass concentration [kg/kg]
+    real(RP), intent(out) :: Ne   (KA,IA,JA,N_HYD)   ! number concentration of each cateory [1/m3]
 
     integer :: ihydro, ibin, iq, icateg
     integer :: k, i, j
@@ -1493,23 +1661,23 @@ contains
     do ibin   = 1, nbin
        iq = nbin*(ihydro-1) + ibin
 
-       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC -1) ) then ! liquid
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
           if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
              icateg = I_HC
           elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
              icateg = I_HR
           endif
-       elseif( iq > nbin*(I_mp_QC -1) .AND. iq <= nbin*(I_mp_QCL-1) ) then ! ice (column)
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QP -1) ) then ! ice (plate)
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QS -1) ) then ! ice (dendrite)
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
           icateg = I_HI
-       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QG -1) ) then ! snow
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
           icateg = I_HS
-       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QH -1) ) then ! graupel
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
           icateg = I_HG
-       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= nbin*nspc         ) then ! hail
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
           icateg = I_HH
        endif
 
@@ -1559,7 +1727,7 @@ contains
 
     real(RP) :: coef0, coef1, coef2
     real(RP) :: dummy(nbin)
-    real(RP) :: tmp_hyd, num_hyd, lambda_hyd
+    real(RP) :: tmp_hyd, num_hyd_l, lambda_hyd
 
     integer :: k, i, j, iq
 
@@ -1642,7 +1810,7 @@ contains
           enddo
 
           !--- Snow put into snow bin (gamma)
-          num_hyd = coef0 * n0_sdf(3) * rho_sdf(3)
+          num_hyd_l = coef0 * n0_sdf(3) * rho_sdf(3)
           lambda_hyd = ( PI * rho_sdf(3) / 6.0_RP *n0_sdf(3) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HS) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HS)-EPS)) &
@@ -1650,7 +1818,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo
@@ -1663,7 +1831,7 @@ contains
           enddo
 
           !--- Graupel put into Graupel bin (gamma)
-          num_hyd = coef0 * n0_sdf(4) * rho_sdf(4)
+          num_hyd_l = coef0 * n0_sdf(4) * rho_sdf(4)
           lambda_hyd = ( PI * rho_sdf(4) / 6.0_RP *n0_sdf(4) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HG) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HG)-EPS)) &
@@ -1671,7 +1839,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo
@@ -1684,7 +1852,7 @@ contains
           enddo
 
           !--- Hail put into Hail bin (gamma)
-          num_hyd = coef0 * n0_sdf(5) * rho_sdf(5)
+          num_hyd_l = coef0 * n0_sdf(5) * rho_sdf(5)
           lambda_hyd = ( PI * rho_sdf(5) / 6.0_RP *n0_sdf(5) * SF_gamma(4.0_RP) &
                / ( Qe(k,i,j,I_HH) &
                + (0.50_RP-sign(0.50_RP,Qe(k,i,j,I_HH)-EPS)) &
@@ -1692,7 +1860,7 @@ contains
 
           tmp_hyd = 0.0_RP
           do iq = 1, nbin
-             dummy(iq) = num_hyd * radc( iq )**3 &
+             dummy(iq) = num_hyd_l * radc( iq )**3 &
                   * exp( -lambda_hyd * 0.5_RP * radc( iq ) )
              tmp_hyd = tmp_hyd + dummy(iq)
           enddo
@@ -1710,7 +1878,7 @@ contains
 
     endif
 
-    do iq = nbin*nspc+1, QA-1
+    do iq = num_hyd+1, QA-1
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1722,6 +1890,74 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_suzuki10_qhyd2qtrc
+
+  !-----------------------------------------------------------------------------
+  !> get charge density ratio of each category
+  subroutine ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd( &
+       KA, KS, KE, &
+       IA, IS, IE, &
+       JA, JS, JE, &
+       QTRC0,      &
+       Qecrg       )
+    use scale_atmos_hydrometeor, only: &
+       N_HYD, &
+       I_HC,  &
+       I_HR,  &
+       I_HI,  &
+       I_HS,  &
+       I_HG,  &
+       I_HH
+    implicit none
+
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: QTRC0(KA,IA,JA,num_hyd) ! tracer charge density [fC/kg]
+    real(RP), intent(out) :: Qecrg(KA,IA,JA,N_HYD)   ! charge density ratio of each cateory [fC/kg]
+
+    integer :: ihydro, ibin, iq, icateg
+    integer :: k, i, j
+    !---------------------------------------------------------------------------
+
+!OCL XFILL
+    Qecrg(:,:,:,:) = 0.0_RP
+
+    do ihydro = 1, nspc
+    do ibin   = 1, nbin
+       iq = nbin*(ihydro-1) + ibin
+
+       if    ( iq > 0                 .AND. iq <= nbin*(I_mp_QC ) ) then ! liquid
+          if    ( iq > 0    .AND. iq <= nbnd ) then ! cloud
+             icateg = I_HC
+          elseif( iq > nbnd .AND. iq <= nbin ) then ! rain
+             icateg = I_HR
+          endif
+       elseif( iq > nbin*(I_mp_QCL-1) .AND. iq <= nbin*(I_mp_QCL) ) then ! ice (column)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QP -1) .AND. iq <= nbin*(I_mp_QP ) ) then ! ice (plate)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QD -1) .AND. iq <= nbin*(I_mp_QD ) ) then ! ice (dendrite)
+          icateg = I_HI
+       elseif( iq > nbin*(I_mp_QS -1) .AND. iq <= nbin*(I_mp_QS ) ) then ! snow
+          icateg = I_HS
+       elseif( iq > nbin*(I_mp_QG -1) .AND. iq <= nbin*(I_mp_QG ) ) then ! graupel
+          icateg = I_HG
+       elseif( iq > nbin*(I_mp_QH -1) .AND. iq <= num_hyd           ) then ! hail
+          icateg = I_HH
+       endif
+
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          Qecrg(k,i,j,icateg) = Qecrg(k,i,j,icateg) + QTRC0(k,i,j,iq)
+       enddo
+       enddo
+       enddo
+    enddo
+    enddo
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_crg_qtrc2qhyd
 
   !-----------------------------------------------------------------------------
   subroutine MP_suzuki10( &
@@ -1742,7 +1978,16 @@ contains
        cp,          &
        cv,          &
        evaporate,   &
-       dt           )
+       dt,          &
+       flg_lt,      &
+       d0_crg,      &
+       v0_crg,      &
+       dqcrg,       &
+       beta_crg,    &
+       gcrg,        &
+       crg_sep      )
+    use scale_const, only: &
+       TEMP00 => CONST_TEM00
     implicit none
 
     integer,  intent(in)    :: KA
@@ -1766,7 +2011,38 @@ contains
     real(RP), intent(inout) :: cv        (ijkmax)             ! specific heat
     real(RP), intent(out)   :: evaporate (ijkmax)             ! Number concentration of evaporated cloud [/m3/s]
     real(DP), intent(in)    :: dt                             ! Time step interval
+
+    ! Optional for Lightning
+    logical,  intent(in), optional :: flg_lt
+    real(RP), intent(in), optional :: d0_crg, v0_crg
+    real(RP), intent(in), optional :: dqcrg(ijkmax), beta_crg(ijkmax)
+    real(RP), intent(inout), optional :: gcrg(nbin,nspc,ijkmax)
+    real(RP), intent(out), optional :: crg_sep(nspc,ijkmax)
+    !--- local
+    integer :: m, n
+    real(RP) :: gcrg_l(nbin,nspc,ijkmax), crg_sep_l(nspc,ijkmax)
+    real(RP) :: csum(il,ijkmax)
+    logical  :: flg_lt_l
+    real(RP) :: v0_crg_l, d0_crg_l, tcrglimit_l
     !---------------------------------------------------------------------------
+
+    if ( present(flg_lt) ) then
+       flg_lt_l = flg_lt
+    else
+       flg_lt_l = .false.
+    end if
+
+    if( flg_lt_l ) then
+      gcrg_l(:,:,:) = gcrg(:,:,:)
+      d0_crg_l = d0_crg
+      v0_crg_l = v0_crg
+      crg_sep_l(:,:) = 0.0_RP
+    else
+      gcrg_l(:,:,:) = 0.0_RP
+      d0_crg_l = 100.E-6_RP
+      v0_crg_l = 8.0_RP
+      crg_sep_l(:,:) = 0.0_RP
+    endif
 
     if ( nccn /= 0 ) then
        if ( nspc == 1 ) then
@@ -1797,19 +2073,33 @@ contains
                            cp(:),       & ! [INOUT]
                            cv(:),       & ! [INOUT]
                            evaporate(:),& ! [OUT]
-                           dt           ) ! [IN]
+                           dt,          & ! [IN]
+                           gcrg_l(:,:,:)) ! [INOUT]
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmain( KA, IA, JA,  & ! [IN]
-                            ijkmax,      & ! [IN]
-                            temp(:),     & ! [IN]
-                            ghyd(:,:,:), & ! [INOUT]
-                            dt           ) ! [IN]
+
+             call collmain( KA, IA, JA,    & ! [IN]
+                            ijkmax,        & ! [IN]
+                            flg_lt_l,      & ! [IN]
+                            d0_crg_l,      & ! [IN]
+                            v0_crg_l,      & ! [IN]
+                            dqcrg(:),      & ! [IN]
+                            beta_crg(:),   & ! [IN]
+                            temp(:),       & ! [IN]
+                            ghyd(:,:,:),   & ! [INOUT]
+                            gcrg_l(:,:,:), & ! [INOUT]
+                            crg_sep_l(:,:),& ! [OUT]
+                            dt             ) ! [IN]
+
+             if( flg_lt_l ) then
+                crg_sep(:,:) = crg_sep_l(:,:)
+             endif
+
           endif
 
        elseif( nspc > 1 ) then
-          !---< mixed phase rain only with aerosol tracer >---
+          !---< mixed phase with aerosol tracer >---
 
           ! nucleation from aerosol
           call nucleata( ijkmax,      & ! [IN]
@@ -1828,9 +2118,11 @@ contains
           call freezing( ijkmax,        & ! [IN]
                          ijkmax_cold,   & ! [IN]
                          index_cold(:), & ! [IN]
+                         flg_lt_l,      & ! [IN]
                          dens(:),       & ! [IN]
                          temp(:),       & ! [INOUT]
                          ghyd(:,:,:),   & ! [INOUT]
+                         gcrg_l(:,:,:), & ! [INOUT]
                          cp(:),         & ! [INOUT]
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
@@ -1853,34 +2145,49 @@ contains
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
                         index_warm(:), & ! [IN]
+                        flg_lt_l,      & ! [IN]
                         dens(:),       & ! [IN]
                         temp(:),       & ! [INOUT]
                         ghyd(:,:,:),   & ! [INOUT]
+                        gcrg_l(:,:,:), & ! [INOUT]
                         cp(:),         & ! [INOUT]
                         cv(:),         & ! [INOUT]
                         dt             ) ! [IN]
 
           ! condensation / evaporation
-          call cndevpsbla( ijkmax,      & ! [IN]
-                           dens(:),     & ! [IN]
-                           pres(:),     & ! [IN]
-                           qdry(:),     & ! [IN]
-                           temp(:),     & ! [INOUT]
-                           qvap(:),     & ! [INOUT]
-                           ghyd(:,:,:), & ! [INOUT]
-                           gaer(:,:),   & ! [INOUT]
-                           cp(:),       & ! [INOUT]
-                           cv(:),       & ! [INOUT]
-                           evaporate(:),& ! [OUT]
-                           dt           ) ! [IN]
+          call cndevpsbla( ijkmax,       & ! [IN]
+                           dens(:),      & ! [IN]
+                           pres(:),      & ! [IN]
+                           qdry(:),      & ! [IN]
+                           temp(:),      & ! [INOUT]
+                           qvap(:),      & ! [INOUT]
+                           ghyd(:,:,:),  & ! [INOUT]
+                           gaer(:,:),    & ! [INOUT]
+                           cp(:),        & ! [INOUT]
+                           cv(:),        & ! [INOUT]
+                           evaporate(:), & ! [OUT]
+                           dt,           & ! [IN]
+                           gcrg_l(:,:,:) ) ! [INOUT]
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmainf( KA, IA, JA,  & ! [IN]
-                             ijkmax,      & ! [IN]
-                             temp(:),     & ! [IN]
-                             ghyd(:,:,:), & ! [INOUT]
-                             dt           ) ! [IN]
+             call collmainf( KA, IA, JA,    & ! [IN]
+                             ijkmax,        & ! [IN]
+                             flg_lt_l,      & ! [IN]
+                             d0_crg_l,      & ! [IN]
+                             v0_crg_l,      & ! [IN]
+                             dqcrg(:),      & ! [IN]
+                             beta_crg(:),   & ! [IN]
+                             temp(:),       & ! [IN]
+                             ghyd(:,:,:),   & ! [INOUT]
+                             gcrg_l(:,:,:), & ! [INOUT]
+                             crg_sep_l(:,:),& ! [OUT]
+                             dt             ) ! [IN]
+
+             if( flg_lt_l ) then
+                crg_sep(:,:) = crg_sep_l(:,:)
+             endif
+
           endif
 
        endif
@@ -1904,29 +2211,42 @@ contains
                         dt           ) ! [IN]
 
           ! condensation / evaporation
-          call cndevpsbl( ijkmax,      & ! [IN]
-                          dens(:),     & ! [IN]
-                          pres(:),     & ! [IN]
-                          qdry(:),     & ! [IN]
-                          temp(:),     & ! [INOUT]
-                          qvap(:),     & ! [INOUT]
-                          ghyd(:,:,:), & ! [INOUT]
-                          cp(:),       & ! [INOUT]
-                          cv(:),       & ! [INOUT]
-                          evaporate(:),& ! [OUT]
-                          dt           ) ! [IN]
+          call cndevpsbl( ijkmax,       & ! [IN]
+                          dens(:),      & ! [IN]
+                          pres(:),      & ! [IN]
+                          qdry(:),      & ! [IN]
+                          temp(:),      & ! [INOUT]
+                          qvap(:),      & ! [INOUT]
+                          ghyd(:,:,:),  & ! [INOUT]
+                          cp(:),        & ! [INOUT]
+                          cv(:),        & ! [INOUT]
+                          evaporate(:), & ! [OUT]
+                          dt,           & ! [IN]
+                          gcrg_l(:,:,:) ) ! [INOUT]
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmain( KA, IA, JA,  & ! [IN]
-                            ijkmax,      & ! [IN]
-                            temp(:),     & ! [IN]
-                            ghyd(:,:,:), & ! [INOUT]
-                            dt           ) ! [IN]
+             call collmain( KA, IA, JA,    & ! [IN]
+                            ijkmax,        & ! [IN]
+                            flg_lt_l,      & ! [IN]
+                            d0_crg_l,      & ! [IN]
+                            v0_crg_l,      & ! [IN]
+                            dqcrg(:),      & ! [IN]
+                            beta_crg(:),   & ! [IN]
+                            temp(:),       & ! [IN]
+                            ghyd(:,:,:),   & ! [INOUT]
+                            gcrg_l(:,:,:), & ! [INOUT]
+                            crg_sep_l(:,:),& ! [OUT]
+                            dt             ) ! [IN]
+
+             if( flg_lt_l ) then
+                crg_sep(:,:) = crg_sep_l(:,:)
+             endif
+
           endif
 
        elseif( nspc > 1 ) then
-          !---< mixed phase rain only without aerosol tracer >---
+          !---< mixed phase without aerosol tracer >---
 
           ! nucleation
           call nucleat( ijkmax,      & ! [IN]
@@ -1945,9 +2265,11 @@ contains
           call freezing( ijkmax,        & ! [IN]
                          ijkmax_cold,   & ! [IN]
                          index_cold(:), & ! [IN]
+                         flg_lt_l,      & ! [IN]
                          dens(:),       & ! [IN]
                          temp(:),       & ! [INOUT]
                          ghyd(:,:,:),   & ! [INOUT]
+                         gcrg_l(:,:,:), & ! [INOUT]
                          cp(:),         & ! [INOUT]
                          cv(:),         & ! [INOUT]
                          dt             ) ! [IN]
@@ -1970,37 +2292,56 @@ contains
           call melting( ijkmax,        & ! [IN]
                         ijkmax_warm,   & ! [IN]
                         index_warm(:), & ! [IN]
+                        flg_lt_l,      & ! [IN]
                         dens(:),       & ! [IN]
                         temp(:),       & ! [INOUT]
                         ghyd(:,:,:),   & ! [INOUT]
+                        gcrg_l(:,:,:), & ! [INOUT]
                         cp(:),         & ! [INOUT]
                         cv(:),         & ! [INOUT]
                         dt             ) ! [IN]
 
           ! condensation / evaporation
-          call cndevpsbl( ijkmax,      & ! [IN]
-                          dens(:),     & ! [IN]
-                          pres(:),     & ! [IN]
-                          qdry(:),     & ! [IN]
-                          temp(:),     & ! [INOUT]
-                          qvap(:),     & ! [INOUT]
-                          ghyd(:,:,:), & ! [INOUT]
-                          cp(:),       & ! [INOUT]
-                          cv(:),       & ! [INOUT]
-                          evaporate(:),& ! [OUT]
-                          dt           ) ! [IN]
+          call cndevpsbl( ijkmax,       & ! [IN]
+                          dens(:),      & ! [IN]
+                          pres(:),      & ! [IN]
+                          qdry(:),      & ! [IN]
+                          temp(:),      & ! [INOUT]
+                          qvap(:),      & ! [INOUT]
+                          ghyd(:,:,:),  & ! [INOUT]
+                          cp(:),        & ! [INOUT]
+                          cv(:),        & ! [INOUT]
+                          evaporate(:), & ! [OUT]
+                          dt,           & ! [IN]
+                          gcrg_l(:,:,:) ) ! [INOUT]
 
           if ( MP_doautoconversion ) then
              ! collision-coagulation
-             call collmainf( KA, IA, JA,  & ! [IN]
-                             ijkmax,      & ! [IN]
-                             temp(:),     & ! [IN]
-                             ghyd(:,:,:), & ! [INOUT]
-                             dt           ) ! [IN]
+             call collmainf( KA, IA, JA,    & ! [IN]
+                             ijkmax,        & ! [IN]
+                             flg_lt_l,      & ! [IN]
+                             d0_crg_l,      & ! [IN]
+                             v0_crg_l,      & ! [IN]
+                             dqcrg(:),      & ! [IN]
+                             beta_crg(:),   & ! [IN]
+                             temp(:),       & ! [IN]
+                             ghyd(:,:,:),   & ! [INOUT]
+                             gcrg_l(:,:,:), & ! [INOUT]
+                             crg_sep_l(:,:),& ! [OUT]
+                             dt             ) ! [IN]
+
+             if( flg_lt_l ) then
+                crg_sep(:,:) = crg_sep_l(:,:)
+             endif
+
           endif
 
        endif
 
+    endif
+
+    if( flg_lt_l ) then
+      gcrg(:,:,:) = gcrg_l(:,:,:)
     endif
 
     return
@@ -2267,7 +2608,8 @@ contains
        cp,        &
        cv,        &
        evaporate, &
-       dtime      )
+       dtime,     &
+       gcrg       )
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -2281,6 +2623,7 @@ contains
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dtime                  ! Time step interval
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     !---------------------------------------------------------------------------
 
     call liqphase( ijkmax,        & ! [IN]
@@ -2290,6 +2633,7 @@ contains
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
+                   gcrg(:,:,:),   & ! [INOUT]
                    cp  (:),       & ! [INOUT]
                    cv  (:),       & ! [INOUT]
                    evaporate(:),  & ! [OUT]
@@ -2303,6 +2647,7 @@ contains
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
+                     gcrg(:,:,:),   & ! [INOUT]
                      cp  (:),       & ! [INOUT]
                      cv  (:),       & ! [INOUT]
                      dtime          ) ! [IN]
@@ -2314,6 +2659,7 @@ contains
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
+                     gcrg(:,:,:),   & ! [INOUT]
                      cp  (:),       & ! [INOUT]
                      cv  (:),       & ! [INOUT]
                      dtime          ) ! [IN]
@@ -2335,7 +2681,8 @@ contains
        cp,        &
        cv,        &
        evaporate, &
-       dtime      )
+       dtime,     &
+       gcrg       )
     implicit none
 
     integer,  intent(in)    :: ijkmax
@@ -2350,6 +2697,7 @@ contains
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(RP), intent(out)   :: evaporate(ijkmax)      ! Number concentration of evaporated cloud [/m3]
     real(DP), intent(in)    :: dtime                  ! Time step interval
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
     !---------------------------------------------------------------------------
 
     call liqphase( ijkmax,        & ! [IN]
@@ -2359,6 +2707,7 @@ contains
                    temp(:),       & ! [INOUT]
                    qvap(:),       & ! [INOUT]
                    gc  (:,:,:),   & ! [INOUT]
+                   gcrg(:,:,:),   & ! [INOUT]
                    cp  (:),       & ! [INOUT]
                    cv  (:),       & ! [INOUT]
                    evaporate(:),  & ! [OUT]
@@ -2380,6 +2729,7 @@ contains
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
+                     gcrg(:,:,:),   & ! [INOUT]
                      cp  (:),       & ! [INOUT]
                      cv  (:),       & ! [INOUT]
                      dtime          ) ! [IN]
@@ -2391,6 +2741,7 @@ contains
                      temp(:),       & ! [INOUT]
                      qvap(:),       & ! [INOUT]
                      gc  (:,:,:),   & ! [INOUT]
+                     gcrg(:,:,:),   & ! [INOUT]
                      cp  (:),       & ! [INOUT]
                      cv  (:),       & ! [INOUT]
                      dtime          ) ! [IN]
@@ -2408,6 +2759,7 @@ contains
        temp,       &
        qvap,       &
        gc,         &
+       gcrg,       &
        cp,         &
        cv,         &
        regene_gcn, &
@@ -2436,6 +2788,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout) :: cp(ijkmax)             ! specific heat
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(RP), intent(out)   :: regene_gcn(ijkmax)     ! mass of regenerated aerosol
@@ -2477,6 +2830,14 @@ contains
     real(RP) :: cmins, cplus
     integer :: nloopmax
 
+    !--- for lithgning component (if not use lightning component, arrays shown below work dummy array)
+    real(RP) :: gcrgn( -1:nbin+2,nspc,ijkmax )
+    real(RP) :: flq_c( 1:nbin+1,nspc,ijkmax )
+    real(RP) :: acoef_c( 0:2,0:nbin+1,nspc,ijkmax )
+    real(RP) :: aip_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: aim_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: ai_c   ( 0:nbin+1,nspc,ijkmax )
+
     call PROF_rapstart('_SBM_Liqphase', 3)
 
     iflg(:,:) = 0
@@ -2486,6 +2847,7 @@ contains
           csum( il,ijk ) = csum( il,ijk ) + gc( n,il,ijk )*dxmic
        enddo
        if( csum( il,ijk ) > cldmin ) iflg( il,ijk ) = 1
+
     enddo
 
     ! lhv
@@ -2506,11 +2868,16 @@ contains
        !------- mass -> number
        do n = 1, nbin
           gcn( n,il,ijk ) = gc( n,il,ijk ) * rexpxctr( n )
+          gcrgn( n,il,ijk ) = gcrg( n,il,ijk )
        enddo
        gcn( -1,il,ijk ) = 0.0_RP
        gcn(  0,il,ijk ) = 0.0_RP
        gcn( nbin+1,il,ijk ) = 0.0_RP
        gcn( nbin+2,il,ijk ) = 0.0_RP
+       gcrgn( -1,il,ijk ) = 0.0_RP
+       gcrgn(  0,il,ijk ) = 0.0_RP
+       gcrgn( nbin+1,il,ijk ) = 0.0_RP
+       gcrgn( nbin+2,il,ijk ) = 0.0_RP
        !
        !--- super saturation
        ssliq = qvap(ijk)/qsatl(ijk) - 1.0_RP
@@ -2631,6 +2998,9 @@ contains
              acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
              acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
              acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef_c(0,n,myu,ijk) = - ( gcrgn( n+1,myu,ijk )-26.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef_c(1,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )                           -gcrgn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef_c(2,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )- 2.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
           enddo
        enddo
        enddo
@@ -2649,6 +3019,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
 
              aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+
+             aip_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                              + acoef_c(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
+
+             aip_c(n,myu,ijk) = max( aip_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -2667,6 +3043,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
 
              aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+
+             aim_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                              - acoef_c(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
+
+             aim_c(n,myu,ijk) = max( aim_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -2682,6 +3064,11 @@ contains
                            + acoef(2,n,myu,ijk) * 2.0_RP
 
              ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+
+             ai_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * 2.0_RP &
+                             + acoef_c(2,n,myu,ijk) * 2.0_RP
+
+             ai_c(n,myu,ijk) = max( ai_c(n,myu,ijk), aip_c(n,myu,ijk)+aim_c(n,myu,ijk)+cldmin )
           enddo
        enddo
        enddo
@@ -2695,6 +3082,8 @@ contains
           do n = 1, nbin+1
              flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
                               - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+             flq_c(n,myu,ijk) = ( aip_c(n-1,myu,ijk)/ai_c(n-1,myu,ijk)*gcrgn( n-1,myu,ijk ) &
+                                - aim_c(n  ,myu,ijk)/ai_c(n  ,myu,ijk)*gcrgn( n  ,myu,ijk ) )/dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -2718,6 +3107,7 @@ contains
        do mm  = 1, iflg( myu,ijk )
           do n = 1, nbin
              gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+             gcrgn( n,myu,ijk ) = gcrgn( n,myu,ijk ) - ( flq_c(n+1,myu,ijk)-flq_c(n,myu,ijk) )*dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -2762,6 +3152,7 @@ contains
        !------- number -> mass
        do n = 1 , nbin
           gc( n,il,ijk ) = gcn( n,il,ijk )*expxctr( n )
+          gcrg( n,il,ijk ) = gcrgn( n,il,ijk )
        enddo
     enddo
 
@@ -2774,6 +3165,7 @@ contains
           if ( gc( n,il,ijk ) < 0.0_RP ) then
              cndmss = -gc( n,il,ijk )
              gc( n,il,ijk ) = 0.0_RP
+             gcrg( n,il,ijk ) = 0.0_RP
              dqv = cndmss/dens(ijk)
              qvap(ijk) = qvap(ijk) + dqv
              temp(ijk) = temp(ijk) - dqv*qlevp(ijk)/cv(ijk)
@@ -2797,6 +3189,7 @@ contains
        temp,   &
        qvap,   &
        gc,     &
+       gcrg,   &
        cp,     &
        cv,     &
        dtime   )
@@ -2824,6 +3217,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout) :: cp(ijkmax)             ! specific heat
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -2862,6 +3256,14 @@ contains
     real(RP) :: ai   ( 0:nbin+1,nspc,ijkmax )
     real(RP) :: cmins, cplus
     integer :: nloopmax
+
+    !--- for lithgning component (if not use lightning component, arrays shown below work dummy array)
+    real(RP) :: gcrgn( -1:nbin+2,nspc,ijkmax )
+    real(RP) :: flq_c( 1:nbin+1,nspc,ijkmax )
+    real(RP) :: acoef_c( 0:2,0:nbin+1,nspc,ijkmax )
+    real(RP) :: aip_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: aim_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: ai_c   ( 0:nbin+1,nspc,ijkmax )
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_Icephase', 3)
@@ -2904,11 +3306,16 @@ contains
        do myu = 2, nspc
           do n = 1, nbin
              gcn( n,myu,ijk ) = gc( n,myu,ijk ) * rexpxctr( n )
+             gcrgn( n,myu,ijk ) = gcrg( n,myu,ijk )
           enddo
           gcn( -1,myu,ijk ) = 0.0_RP
           gcn(  0,myu,ijk ) = 0.0_RP
           gcn( nbin+1,myu,ijk ) = 0.0_RP
           gcn( nbin+2,myu,ijk ) = 0.0_RP
+          gcrgn( -1,myu,ijk ) = 0.0_RP
+          gcrgn(  0,myu,ijk ) = 0.0_RP
+          gcrgn( nbin+1,myu,ijk ) = 0.0_RP
+          gcrgn( nbin+2,myu,ijk ) = 0.0_RP
        enddo
 
        !--- supersaturation
@@ -3034,6 +3441,9 @@ contains
              acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
              acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
              acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef_c(0,n,myu,ijk) = - ( gcrgn( n+1,myu,ijk )-26.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef_c(1,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )                           -gcrgn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef_c(2,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )- 2.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
           enddo
        enddo
        enddo
@@ -3052,6 +3462,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
 
              aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+
+             aip_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                              + acoef_c(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
+
+             aip_c(n,myu,ijk) = max( aip_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -3070,6 +3486,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
 
              aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+
+             aim_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                              - acoef_c(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
+
+             aim_c(n,myu,ijk) = max( aim_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -3085,6 +3507,11 @@ contains
                            + acoef(2,n,myu,ijk) * 2.0_RP
 
              ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+
+             ai_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * 2.0_RP &
+                             + acoef_c(2,n,myu,ijk) * 2.0_RP
+
+             ai_c(n,myu,ijk) = max( ai_c(n,myu,ijk), aip_c(n,myu,ijk)+aim_c(n,myu,ijk)+cldmin )
           enddo
        enddo
        enddo
@@ -3098,6 +3525,9 @@ contains
           do n = 1, nbin+1
              flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
                               - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+
+             flq_c(n,myu,ijk) = ( aip_c(n-1,myu,ijk)/ai_c(n-1,myu,ijk)*gcrgn( n-1,myu,ijk ) &
+                                - aim_c(n  ,myu,ijk)/ai_c(n  ,myu,ijk)*gcrgn( n  ,myu,ijk ) )/dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -3121,6 +3551,7 @@ contains
        do mm  = 1, iflg( myu,ijk )
           do n = 1, nbin
              gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+             gcrgn( n,myu,ijk ) = gcrgn( n,myu,ijk ) - ( flq_c(n+1,myu,ijk)-flq_c(n,myu,ijk) )*dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -3163,6 +3594,7 @@ contains
        do myu = 2, nspc
        do n = 1, nbin
           gc( n,myu,ijk ) = gcn( n,myu,ijk )*expxctr( n )
+          gcrg( n,myu,ijk ) = gcrgn( n,myu,ijk )
        enddo
        enddo
     enddo
@@ -3181,6 +3613,7 @@ contains
        temp,   &
        qvap,   &
        gc,     &
+       gcrg,   &
        cp,     &
        cv,     &
        dtime   )
@@ -3212,6 +3645,7 @@ contains
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature        [K]
     real(RP), intent(inout) :: qvap(ijkmax)           ! Specific humidity  [kg/kg]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout) :: cp(ijkmax)             ! specific heat
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -3253,6 +3687,14 @@ contains
     real(RP) :: cmins, cplus
     integer :: nloopmax
 
+    !--- for lithgning component (if not use lightning component, arrays shown below work dummy array)
+    real(RP) :: gcrgn( -1:nbin+2,nspc,ijkmax )
+    real(RP) :: flq_c( 1:nbin+1,nspc,ijkmax )
+    real(RP) :: acoef_c( 0:2,0:nbin+1,nspc,ijkmax )
+    real(RP) :: aip_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: aim_c  ( 0:nbin+1,nspc,ijkmax )
+    real(RP) :: ai_c   ( 0:nbin+1,nspc,ijkmax )
+
     call PROF_rapstart('_SBM_Mixphase', 3)
 
     dumm_regene( : ) = 0.0_RP
@@ -3269,6 +3711,7 @@ contains
        do myu = 1, nspc
           if ( csum( myu,ijk ) > cldmin ) iflg( myu,ijk ) = 1
        enddo
+
     enddo
 
     ! lhv
@@ -3302,11 +3745,16 @@ contains
        do myu = 1, nspc
           do n = 1, nbin
              gcn( n,myu,ijk ) = gc( n,myu,ijk ) * rexpxctr( n )
+             gcrgn( n,myu,ijk ) = gcrg( n,myu,ijk )
           enddo
           gcn( -1,myu,ijk ) = 0.0_RP
           gcn(  0,myu,ijk ) = 0.0_RP
           gcn( nbin+1,myu,ijk ) = 0.0_RP
           gcn( nbin+2,myu,ijk ) = 0.0_RP
+          gcrgn( -1,myu,ijk ) = 0.0_RP
+          gcrgn(  0,myu,ijk ) = 0.0_RP
+          gcrgn( nbin+1,myu,ijk ) = 0.0_RP
+          gcrgn( nbin+2,myu,ijk ) = 0.0_RP
        enddo
 
        !-- supersaturation
@@ -3485,6 +3933,10 @@ contains
              acoef(0,n,myu,ijk) = - ( gcn( n+1,myu,ijk )-26.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
              acoef(1,n,myu,ijk) =   ( gcn( n+1,myu,ijk )                         -gcn( n-1,myu,ijk ) ) / 16.0_RP
              acoef(2,n,myu,ijk) =   ( gcn( n+1,myu,ijk )- 2.0_RP*gcn( n,myu,ijk )+gcn( n-1,myu,ijk ) ) / 48.0_RP
+
+             acoef_c(0,n,myu,ijk) = - ( gcrgn( n+1,myu,ijk )-26.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
+             acoef_c(1,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )                           -gcrgn( n-1,myu,ijk ) ) / 16.0_RP
+             acoef_c(2,n,myu,ijk) =   ( gcrgn( n+1,myu,ijk )- 2.0_RP*gcrgn( n,myu,ijk )+gcrgn( n-1,myu,ijk ) ) / 48.0_RP
           enddo
        enddo
        enddo
@@ -3503,6 +3955,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
 
              aip(n,myu,ijk) = max( aip(n,myu,ijk), 0.0_RP )
+
+             aip_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cplus**1 ) &
+                              + acoef_c(1,n,myu,ijk) * ( 1.0_RP-cplus**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cplus**3 )
+
+             aip_c(n,myu,ijk) = max( aip_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -3521,6 +3979,12 @@ contains
                             + acoef(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
 
              aim(n,myu,ijk) = max( aim(n,myu,ijk), 0.0_RP )
+
+             aim_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * ( 1.0_RP-cmins**1 ) &
+                              - acoef_c(1,n,myu,ijk) * ( 1.0_RP-cmins**2 ) &
+                              + acoef_c(2,n,myu,ijk) * ( 1.0_RP-cmins**3 )
+
+             aim_c(n,myu,ijk) = max( aim_c(n,myu,ijk), 0.0_RP )
           enddo
        enddo
        enddo
@@ -3536,6 +4000,11 @@ contains
                            + acoef(2,n,myu,ijk) * 2.0_RP
 
              ai(n,myu,ijk) = max( ai(n,myu,ijk), aip(n,myu,ijk)+aim(n,myu,ijk)+cldmin )
+
+             ai_c(n,myu,ijk) = acoef_c(0,n,myu,ijk) * 2.0_RP &
+                             + acoef_c(2,n,myu,ijk) * 2.0_RP
+
+             ai_c(n,myu,ijk) = max( ai_c(n,myu,ijk), aip_c(n,myu,ijk)+aim_c(n,myu,ijk)+cldmin )
           enddo
        enddo
        enddo
@@ -3549,6 +4018,9 @@ contains
           do n = 1, nbin+1
              flq(n,myu,ijk) = ( aip(n-1,myu,ijk)/ai(n-1,myu,ijk)*gcn( n-1,myu,ijk ) &
                               - aim(n  ,myu,ijk)/ai(n  ,myu,ijk)*gcn( n  ,myu,ijk ) )*dxmic/dtcnd(ijk)
+
+             flq_c(n,myu,ijk) = ( aip_c(n-1,myu,ijk)/ai_c(n-1,myu,ijk)*gcrgn( n-1,myu,ijk ) &
+                                - aim_c(n  ,myu,ijk)/ai_c(n  ,myu,ijk)*gcrgn( n  ,myu,ijk ) )/dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -3572,6 +4044,7 @@ contains
        do mm  = 1, iflg( myu,ijk )
           do n = 1, nbin
              gcn( n,myu,ijk ) = gcn( n,myu,ijk ) - ( flq(n+1,myu,ijk)-flq(n,myu,ijk) )*dtcnd(ijk)/dxmic
+             gcrgn( n,myu,ijk ) = gcrgn( n,myu,ijk ) - ( flq_c(n+1,myu,ijk)-flq_c(n,myu,ijk) )*dtcnd(ijk)
           enddo
        enddo
        enddo
@@ -3618,6 +4091,7 @@ contains
        do myu = 1, nspc
        do n = 1, nbin
           gc( n,myu,ijk ) = gcn( n,myu,ijk )*expxctr( n )
+          gcrg( n,myu,ijk ) = gcrgn( n,myu,ijk )
        enddo
        enddo
     enddo
@@ -3682,7 +4156,8 @@ contains
     real(RP) :: qsati(ijkmax), qlsbl(ijkmax)
     integer :: ijk, indirect
     real(RP) :: numice
-    integer :: myu, n, ispc
+    integer :: myu, n
+    integer :: ispc
 
     call PROF_rapstart('_SBM_IceNucleat', 3)
 
@@ -3745,13 +4220,16 @@ contains
        ijkmax,     &
        num_cold,   &
        index_cold, &
+       flg_lt,     &
        dens,       &
        temp,       &
        gc,         &
+       gcrg,       &
        cp,         &
        cv,         &
        dtime       )
     use scale_const, only: &
+       EPS   => CONST_EPS,   &
        PI    => CONST_PI,    &
        TMLT  => CONST_TMELT, &
        RHOW  => CONST_DWATR
@@ -3766,9 +4244,11 @@ contains
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: num_cold
     integer,  intent(in)    :: index_cold(ijkmax)
+    logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout) :: cp(ijkmax)             ! specific heat
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -3783,6 +4263,7 @@ contains
 !    real(RP), parameter :: gamm = 3.3_RP        ! gamma of eq.(3.18) of Suzuki (2004)
     integer :: ijk, indirect
     real(RP) :: qlmlt(ijkmax)
+    real(RP) :: dcrg
 
     call PROF_rapstart('_SBM_Freezing', 3)
 
@@ -3794,50 +4275,80 @@ contains
     do indirect = 1, num_cold
        ijk = index_cold(indirect)
 
-!       if ( temp <= tthreth ) then !--- Bigg (1975)
+!       if ( temp(ijk) <= tthreth ) then !--- Bigg (1975)
 
-       tc = temp(ijk)-tmlt
-       rate = coefa*exp( -coefb*tc )
+         tc = temp(ijk)-tmlt
+         rate = coefa*exp( -coefb*tc )
 
-       sumfrz = 0.0_RP
-       do n = 1, nbound-1
-          dmp = rate*expxctr( n )
-          frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
-          frz = min( frz, gc( n,il,ijk ) )
+         dcrg = 0.0_RP
+         sumfrz = 0.0_RP
+         do n = 1, nbound-1
+            dmp = rate*expxctr( n )
+            frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
+            frz = min( frz, gc( n,il,ijk ) )
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
+            if ( flg_lt ) then
+               dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+               gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+               gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+            end if
 
-          sumfrz = sumfrz + frz
-       enddo
-       do n = nbound, nbin
-          dmp = rate*expxctr( n )
-          frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
-          frz = min( frz, gc( n,il,ijk) )
+            gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+            gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
 
-          gc( n,il,ijk ) = gc( n,il,ijk ) - frz
-          gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
+            sumfrz = sumfrz + frz
+         enddo
+         do n = nbound, nbin
+            dmp = rate*expxctr( n )
+            frz = gc( n,il,ijk )*( 1.0_RP-exp( -dmp*dtime ) )
+            frz = min( frz, gc( n,il,ijk ) )
 
-          sumfrz = sumfrz + frz
-       enddo
-!     elseif( temp > tthreth ) then !--- Vali (1975)
+            if ( flg_lt ) then
+               dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+               gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+               gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
+            end if
+
+            gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+            gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
+
+            sumfrz = sumfrz + frz
+         enddo
+
+!       elseif( temp(ijk) > tthreth ) then !--- Vali (1975)
 !
-!      tc = temp-tmlt
-!      dmp = ncoefim * ( 0.1_RP * ( tmlt-temp )**gamm )
-!      sumfrz = 0.0_RP
-!      do n = 1, nbin
-!       frz = gc( (il-1)*nbin+n )*dmp*xctr( n )/dens
-!       frz = max( frz,gc( (il-1)*nbin+n )*dmp*xctr( n )/dens )
-!       gc( (il-1)*nbin+n ) = gc( (il-1)*nbin+n ) - frz
-!       if ( n >= nbound ) then
-!        gc( (ih-1)*nbin+n ) = gc( (ih-1)*nbin+n ) + frz
-!       else
-!        gc( (ip-1)*nbin+n ) = gc( (ip-1)*nbin+n ) + frz
+!         tc = temp(ijk)-tmlt
+!         dmp = ncoefim * ( 0.1_RP * ( -tc )**gamm )
+!         sumfrz = 0.0_RP
+!         do n = 1, nbound-1
+!           frz = gc( n,il,ijk )*expxctr( n )/rhow*dmp
+!           frz = min( frz,gc( n,il,ijk ) )
+!           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+!           gc( n,ip,ijk ) = gc( n,ip,ijk ) + frz
+!
+!           if ( flg_lt ) then
+!             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+!             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+!             gcrg( n,ip,ijk ) = gcrg( n,ip,ijk ) + dcrg
+!           endif
+!
+!           sumfrz = sumfrz + frz
+!         enddo
+!         do n = nbound, nbin
+!           frz = gc( n,il,ijk )*dmp*expxctr( n )/rhow
+!           frz = min( frz,gc( n,il,ijk ) )
+!           gc( n,il,ijk ) = gc( n,il,ijk ) - frz
+!           gc( n,ih,ijk ) = gc( n,ih,ijk ) + frz
+!
+!           if ( flg_lt ) then
+!             dcrg = frz / ( gc(n,il,ijk)+EPS ) * gcrg( n,il,ijk )
+!             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) - dcrg
+!             gcrg( n,ih,ijk ) = gcrg( n,ih,ijk ) + dcrg
+!           endif
+!
+!           sumfrz = sumfrz + frz
+!         enddo
 !       endif
-!
-!       sumfrz = sumfrz + frz
-!      enddo
-!     endif
        sumfrz = sumfrz*dxmic
 
        tdel = sumfrz/dens(ijk)*qlmlt(ijk)/cv(ijk)
@@ -3856,9 +4367,11 @@ contains
        ijkmax,     &
        num_warm,   &
        index_warm, &
+       flg_lt,     &
        dens,       &
        temp,       &
        gc,         &
+       gcrg,       &
        cp,         &
        cv,         &
        dtime       )
@@ -3873,9 +4386,11 @@ contains
     integer,  intent(in)    :: ijkmax
     integer,  intent(in)    :: num_warm
     integer,  intent(in)    :: index_warm(ijkmax)
+    logical,  intent(in)    :: flg_lt
     real(RP), intent(in)    :: dens(ijkmax)           ! Density           [kg/m3]
     real(RP), intent(inout) :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
     real(RP), intent(inout) :: cp(ijkmax)             ! specific heat
     real(RP), intent(inout) :: cv(ijkmax)             ! specific heat
     real(DP), intent(in)    :: dtime                  ! Time step interval
@@ -3884,6 +4399,7 @@ contains
     real(RP) :: summlt, sumice, tdel
     integer :: ijk, indirect
     real(RP) :: qlmlt(ijkmax)
+    real(RP) :: dcrg
 
     call PROF_rapstart('_SBM_Melting', 3)
 
@@ -3900,6 +4416,14 @@ contains
              gc( n,m,ijk ) = 0.0_RP
           enddo
           gc( n,il,ijk ) = gc( n,il,ijk ) + sumice
+          if ( flg_lt ) then
+             dcrg = 0.0_RP
+             do m = ic, ih
+                dcrg = dcrg + gcrg( n,m,ijk )
+                gcrg( n,m,ijk ) = 0.0_RP
+             end do
+             gcrg( n,il,ijk ) = gcrg( n,il,ijk ) + dcrg
+          end if
           summlt = summlt + sumice  !--- All freezed particle melt instantaneously
        enddo
        summlt = summlt*dxmic
@@ -3920,8 +4444,15 @@ contains
   subroutine collmain( &
        KA, IA, JA , &
        ijkmax, &
+       flg_lt, &
+       d0_crg, &
+       v0_crg, &
+       dq,     &
+       beta,   &
        temp,   &
        ghyd,   &
+       gcrg,   &
+       crg_sep,&
        dt      )
     implicit none
 
@@ -3930,8 +4461,14 @@ contains
     integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: v0_crg, d0_crg
+    real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -3944,8 +4481,15 @@ contains
                         dt           ) ! [IN]
     else  ! default
        call collcoag( ijkmax,      & ! [IN]
+                      flg_lt,      & ! [IN]
+                      d0_crg,      & ! [IN]
+                      v0_crg,      & ! [IN]
+                      dq(:),       & ! [IN]
+                      beta(:),     & ! [IN]
                       temp(:),     & ! [IN]
                       ghyd(:,:,:), & ! [INOUT]
+                      gcrg(:,:,:), & ! [INOUT]
+                      crg_sep(:,:),& ! [OUT]
                       dt           ) ! [IN]
     endif
 
@@ -3956,8 +4500,15 @@ contains
   subroutine collmainf( &
        KA, IA, JA, &
        ijkmax, &
+       flg_lt, &
+       d0_crg, &
+       v0_crg, &
+       dq,     &
+       beta,   &
        temp,   &
        ghyd,   &
+       gcrg,   &
+       crg_sep,&
        dt      )
     implicit none
 
@@ -3966,8 +4517,14 @@ contains
     integer,  intent(in)    :: JA
 
     integer,  intent(in)    :: ijkmax
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: v0_crg, d0_crg
+    real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: ghyd(nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
@@ -3980,8 +4537,15 @@ contains
                         dt           ) ! [IN]
     else  ! default
        call collcoag( ijkmax,      & ! [IN]
+                      flg_lt,      & ! [IN]
+                      d0_crg,      & ! [IN]
+                      v0_crg,      & ! [IN]
+                      dq(:),       & ! [IN]
+                      beta(:),     & ! [IN]
                       temp(:),     & ! [IN]
                       ghyd(:,:,:), & ! [INOUT]
+                      gcrg(:,:,:), & ! [INOUT]
+                      crg_sep(:,:),& ! [OUT]
                       dt           ) ! [IN]
     endif
 
@@ -3993,14 +4557,27 @@ contains
   !    Bott et al. (1998) J. Atmos. Sci. vol.55, pp. 2284-
   subroutine collcoag( &
        ijkmax, &
+       flg_lt, &
+       d0_crg, &
+       v0_crg, &
+       dq,     &
+       beta,   &
        temp,   &
        gc,     &
+       gcrg,   &
+       crg_sep,&
        dtime   )
     implicit none
 
     integer,  intent(in)    :: ijkmax
+    logical,  intent(in)    :: flg_lt
+    real(RP), intent(in)    :: d0_crg, v0_crg
+    real(RP), intent(in)    :: dq(ijkmax)
+    real(RP), intent(in)    :: beta(ijkmax)
     real(RP), intent(in)    :: temp(ijkmax)           ! Temperature       [K]
     real(RP), intent(inout) :: gc  (nbin,nspc,ijkmax) ! Mass size distribution function of hydrometeor
+    real(RP), intent(inout) :: gcrg(nbin,nspc,ijkmax)
+    real(RP), intent(out)   :: crg_sep(nspc,ijkmax)
     real(DP), intent(in)    :: dtime                  ! Time step interval
 
     integer :: i, j, k, l
@@ -4017,6 +4594,10 @@ contains
     integer :: iexst( nbin,nspc,ijkmax )
     real(RP) :: csum( nspc,ijkmax )
     integer :: ijk, nn, mm, pp, qq
+
+    !--- for non-inducting charge separation
+    real(RP) :: drhoi, drhoj, drhok, alpha, dgenei, dgenej
+    integer :: ispc
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('_SBM_CollCoag', 3)
@@ -4024,6 +4605,7 @@ contains
     iflg( :,: ) = 0
     iexst( :,:,: ) = 0
     csum( :,: ) = 0.0_RP
+    crg_sep( :,: ) = 0.0_RP
     do ijk = 1, ijkmax
        !--- judgement of particle existence
        do myu = 1, nspc
@@ -4060,6 +4642,12 @@ contains
        do mm = 1, iflg( ilrg,ijk )
           !--- rule of interaction
           irsl = ifrsl( ibnd(ijk),isml,ilrg )
+
+          if ( isml /= ilrg ) then
+           ispc = 0
+          else if ( isml == ilrg ) then
+           ispc = 1
+          endif
 
           do i = 1, nbin-1  ! small
           do pp  = 1, iexst( i,isml,ijk )
@@ -4101,6 +4689,26 @@ contains
                 frcj = surj - gc( j,ilrg,ijk )
                 gprime = frci+frcj                                       ! g' in page 119 of Suzuki (2004)
 
+                if ( flg_lt ) then
+                   !--- charge transfer from two particles to generated large particle
+                   drhoi = frci/suri*gcrg( i,isml,ijk )
+                   drhoj = frcj/surj*gcrg( j,ilrg,ijk )
+                   drhok = drhoi + drhoj
+
+                   !--- charge density generated by non-inductive charging
+                   alpha = 5.0_RP * ( 2.0_RP*radc( i )/d0_crg )**2 &
+                                  * abs( vt(ilrg,j)-vt(isml,i) )/v0_crg  ! alpha in eq. (12) of Mansell et al. (2005)
+                   alpha = min( 10.0_RP, alpha )
+
+                   dgenei = frci / xi * rcoll( isml,ilrg,i,j ) * ( -dq( ijk ) ) &
+                          * alpha * beta( ijk ) * flg_noninduct( isml,ilrg )           ! eq. (8) of Mansell et al. (2005)
+                   dgenej = - dgenei
+                   gcrg( i,isml,ijk ) = gcrg( i,isml,ijk ) + ( dgenei-drhoi )
+                   gcrg( j,ilrg,ijk ) = gcrg( j,ilrg,ijk ) + ( dgenej-drhoj )
+                   crg_sep( isml,ijk ) = crg_sep( isml,ijk ) + dgenei
+                   crg_sep( ilrg,ijk ) = crg_sep( ilrg,ijk ) + dgenej
+                end if
+
                 gprimk = gc( k,irsl,ijk ) + gprime                       ! g'_{k} in page 119 of Suzuki (2004)
                 wgt = gprime / gprimk                                    ! w in page 119 of Suzuki (2004)
                 crn = ( xnew-xctr( k ) )/( xctr( k+1 )-xctr( k ) )       ! c_{k} in page 119 of Suzuki (2004)
@@ -4120,6 +4728,14 @@ contains
 
                 gc( k,irsl,ijk ) = gprimk - flux                         ! tilda{g_{k}} in page 119 of Suzuki (2004)
                 gc( k+1,irsl,ijk ) = gc( k+1,irsl,ijk ) + flux           ! tilda{g_{k+1}} in page 119 of Suzuki (2004)
+
+                if ( flg_lt ) then
+                   !--- charge transfer from two particles to generated large particle
+                   if( gprime /= 0.0_RP ) then
+                      gcrg( k,irsl,ijk )   = gcrg( k,irsl,ijk ) + drhok * ( gprime-flux )/gprime
+                      gcrg( k+1,irsl,ijk ) = gcrg( k+1,irsl,ijk ) + drhok * flux/gprime
+                   endif
+                end if
 
              endif
 
