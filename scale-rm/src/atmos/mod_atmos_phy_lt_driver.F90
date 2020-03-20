@@ -108,17 +108,15 @@ contains
           case ( 'TOMITA08', 'SN14' )
              ! do nothing
           case ( 'SUZUKI10' )
-             LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE of SUZUKI10 is not supported for lightning component.'
-             LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE should be TOMITA08 or SN14 (', ATMOS_PHY_MP_TYPE, '). CHECK!'
-             call PRC_abort
-!             if( ATMOS_PHY_MP_suzuki10_nccn /= 0 ) then
-!                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', ATMOS_PHY_MP_suzuki10_nccn, '). CHECK!'
-!                call PRC_abort
-!             endif
-!             if ( ATMOS_PHY_MP_suzuki10_nices == 0 ) then
-!                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
-!                call PRC_abort
-!             endif
+
+             if( ATMOS_PHY_MP_suzuki10_nccn /= 0 ) then
+                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'nccn in SUZUKI10 should be 0 for lithgning component(', ATMOS_PHY_MP_suzuki10_nccn, '). CHECK!'
+                call PRC_abort
+             endif
+             if ( ATMOS_PHY_MP_suzuki10_nices == 0 ) then
+                LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ICEFLG in SUZUKI10 should be 1 for lithgning component. CHECK!'
+                call PRC_abort
+             endif
           case ( 'KESSLER' )
              LOG_ERROR("ATMOS_PHY_LT_driver_tracer_setup",*) 'ATMOS_PHY_MP_TYPE should be TOMITA08, or SN14, or SUZUKI10 (', ATMOS_PHY_MP_TYPE, '). CHECK!'
              call PRC_abort
@@ -178,14 +176,42 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
-    integer  :: ip
+
+    logical :: LT_force_with_SUZUKI10 = .false. ! experimental use only
+
+    namelist / PARAM_ATMOS_PHY_LT / &
+         LT_force_with_SUZUKI10
+
+    integer :: ip
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_LT_driver_setup",*) 'Setup'
 
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_LT,iostat=ierr)
+    if ( ierr < 0 ) then !--- missing
+       LOG_INFO("ATMOS_PHY_LT_driver_setup",*) 'Not found namelist. Default used.'
+    elseif ( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("ATMOS_PHY_LT_dirver_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_LT. Check!'
+       call PRC_abort
+    end if
+    LOG_NML(PARAM_ATMOS_PHY_LT)
+
     select case( ATMOS_PHY_LT_TYPE )
     case ( 'SATO2019' )
+
+       if ( ATMOS_PHY_MP_TYPE == "SUZUKI10" ) then
+          LOG_WARN("ATMOS_PHY_LT_driver_setup",*) 'At this moment, ATMOS_PHY_MP_TYPE of SUZUKI10 with SATO2019 scheme is for experimental use only.'
+          if ( .not. LT_force_with_SUZUKI10 ) then
+             LOG_ERROR("ATMOS_PHY_LT_driver_setup",*) 'At this moment, ATMOS_PHY_MP_TYPE of SUZUKI10 with SATO2019 scheme is for experimental use only.'
+             call PRC_abort
+          end if
+       end if
+
+
        call ATMOS_PHY_LT_sato2019_setup( KA, KS, KE, & ! [IN]
                                          IA, IS, IE, & ! [IN]
                                          JA, JS, JE, & ! [IN]
