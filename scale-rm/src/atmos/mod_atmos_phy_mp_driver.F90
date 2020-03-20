@@ -736,7 +736,7 @@ contains
 
     real(RP) :: QTRC1_crg(KA,IA,JA,QS_LT:QE_LT)
     real(RP) :: RHOQ2_crg(KA,QS_LT:QE_LT)
-    real(RP) :: mflux_crg(KA), sflux_crg(2)
+    real(RP) :: mflux_crg(KA), sflux_crg(2), eflux_crg
     real(RP) :: QSPLT_in(KA,IA,JA,3)
     real(RP) :: dqcrg(KA,IA,JA), beta_crg(KA,IA,JA)
     real(RP) :: dummy(KA)
@@ -1028,7 +1028,7 @@ contains
           !$omp private(i,j,k,iq,step, &
           !$omp         FZ,FDZ,RFDZ,RCDZ, &
           !$omp         DENS2,TEMP2,PRES2,CPtot2,CVtot2,RHOE,RHOE2,RHOQ,RHOQ2, &
-          !$omp         RHOQ2_crg,mflux_crg,sflux_crg, &
+          !$omp         RHOQ2_crg,mflux_crg,sflux_crg,eflux_crg, &
           !$omp         vterm,mflux,sflux,eflux,FLX_hydro,CP_t,CV_t)
           do j = JS, JE
           do i = IS, IE
@@ -1152,7 +1152,8 @@ contains
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]
                            RHOE2(:),                   & ! [INOUT]
-                           mflux_crg(:), sflux_crg(:)  ) ! [OUT]
+                           mflux_crg(:), sflux_crg(:), & ! [OUT] dummy
+                           eflux_crg                   ) ! [OUT] dummy
                    case ( 'Semilag' )
                       call ATMOS_PHY_MP_precipitation_semilag( &
                            KA, KS, KE, QA_LT, 0, 0,    & ! no mass tracer for charge density
@@ -1163,10 +1164,12 @@ contains
                            DENS2(:), RHOQ2_crg(:,:),   & ! [INOUT]
                            CPtot2(:), CVtot2(:),       & ! [INOUT]
                            RHOE2(:),                   & ! [INOUT]
-                           mflux_crg(:), sflux_crg(:)  ) ! [OUT]
+                           mflux_crg(:), sflux_crg(:), & ! [OUT] dummy
+                           eflux_crg                   ) ! [OUT] dummy
                    case default
                       mflux_crg(:) = 0.0_RP
                       sflux_crg(:) = 0.0_RP
+                      eflux_crg    = 0.0_RP
                    end select
 
                 endif
