@@ -210,12 +210,11 @@ module scale_atmos_phy_mp_suzuki10
   real(RP) :: raend  = 1.E-06_RP             ! maximum radius of aerosol (m)
   real(RP) :: r0a    = 1.E-07_RP             ! average radius of aerosol (m)
 
-  logical :: flg_regeneration = .false.      ! flag regeneration of aerosol
-  logical :: flg_nucl         = .false.      ! flag nucleated cloud move into smallest bin
-  logical :: flg_icenucl      = .false.      ! flag ice nucleation
-  logical :: flg_sf_aero      = .false.      ! flag surface flux of aerosol
-
-  integer, save :: rndm_flgp = 0    ! flag for sthastic integration for coll.-coag.
+  logical :: flg_regeneration ! flag regeneration of aerosol
+  logical :: flg_nucl         ! flag nucleated cloud move into smallest bin
+  logical :: flg_icenucl      ! flag ice nucleation
+  logical :: flg_sf_aero      ! flag surface flux of aerosol
+  logical :: flg_rndm         ! flag for sthastic integration for coll.-coag.
 
   real(RP), allocatable        :: marate( : )         ! mass rate of each aerosol bin to total aerosol mass
   integer,  allocatable, save  :: ncld( : )           ! bin number of aerosol in bin of hydrometeor
@@ -406,10 +405,11 @@ contains
     real(RP) :: R_MAX     !--- maximum radius of aerosol (um)
     real(RP) :: S10_EMAER !--- moleculer weight of aerosol
 
-    logical :: S10_FLAG_REGENE  !--- flag of regeneration
-    logical :: S10_FLAG_NUCLEAT !--- flag of regeneration
-    logical :: S10_FLAG_SFAERO  !--- flag of surface flux of aeorol
-    integer :: S10_RNDM_FLGP  !--- flag of surface flux of aeorol
+    logical :: S10_FLAG_REGENE     = .false. !--- flag of regeneration
+    logical :: S10_FLAG_NUCLEAT    = .false. !--- flag of regeneration
+    logical :: S10_FLAG_ICENUCLEAT = .false. !--- flag of ice nucleation
+    logical :: S10_FLAG_SFAERO     = .false. !--- flag of surface flux of aeorol
+    logical :: S10_FLAG_RNDM       = .false. !--- flag for sthastic integration for coll.-coag.
     integer :: S10_RNDM_MSPC
     integer :: S10_RNDM_MBIN
 
@@ -423,12 +423,12 @@ contains
        S10_EMAER, &
        S10_FLAG_REGENE,  &
        S10_FLAG_NUCLEAT, &
+       S10_FLAG_ICENUCLEAT, &
        S10_FLAG_SFAERO,  &
-       S10_RNDM_FLGP, &
+       S10_FLAG_RNDM, &
        S10_RNDM_MSPC, &
        S10_RNDM_MBIN, &
        c_ccn, kappa, &
-       flg_icenucl, &
        n0_icenucl,   &
        sigma, vhfct
 
@@ -475,10 +475,6 @@ contains
     R_MIN = rasta
     R_MAX = raend
     R0_AERO = r0a
-    S10_FLAG_REGENE = flg_regeneration
-    S10_FLAG_NUCLEAT = flg_nucl
-    S10_FLAG_SFAERO = flg_sf_aero
-    S10_RNDM_FLGP = rndm_flgp
     S10_RNDM_MSPC = mspc
     S10_RNDM_MBIN = mbin
 
@@ -505,8 +501,9 @@ contains
     r0a   = R0_AERO
     flg_regeneration = S10_FLAG_REGENE
     flg_nucl = S10_FLAG_NUCLEAT
+    flg_icenucl = S10_FLAG_ICENUCLEAT
     flg_sf_aero = S10_FLAG_SFAERO
-    rndm_flgp = S10_RNDM_FLGP
+    flg_rndm = S10_FLAG_RNDM
     mspc = S10_RNDM_MSPC
     mbin = S10_RNDM_MBIN
 
@@ -721,7 +718,7 @@ contains
     LOG_INFO("ATMOS_PHY_MP_suzuki10_setup",'(A,ES15.7,A)')  'Radius between cloud and rain is ', radc(nbnd), '[m]'
 
     !--- random number setup for stochastic method
-    if ( rndm_flgp > 0 ) then
+    if ( flg_rndm ) then
      call random_setup( IA*JA*KA )
     endif
 
@@ -3938,7 +3935,7 @@ contains
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
-    if ( rndm_flgp == 1 ) then ! stochastic method
+    if ( flg_rndm ) then ! stochastic method
        call r_collcoag( KA, IA, JA,  & ! [IN]
                         ijkmax,      & ! [IN]
                         wgtbin,      & ! [IN]
@@ -3974,7 +3971,7 @@ contains
     real(DP), intent(in)    :: dt                     ! Time step interval
     !---------------------------------------------------------------------------
 
-    if ( rndm_flgp == 1 ) then ! stochastic method
+    if ( flg_rndm ) then ! stochastic method
        call r_collcoag( KA, IA, JA,  & ! [IN]
                         ijkmax,      & ! [IN]
                         wgtbin,      & ! [IN]
