@@ -547,9 +547,9 @@ contains
     integer                  :: INTRP_ITER_MAX       = 100
     character(len=H_SHORT)   :: SOILWATER_DS2VC      = 'limit'
     logical                  :: soilwater_DS2VC_flag           ! true: 'critical', false: 'limit'
-    logical                  :: elevation_collection = .true.
-    logical                  :: elevation_collection_land
-    logical                  :: elevation_collection_ocean
+    logical                  :: elevation_correction = .true.
+    logical                  :: elevation_correction_land
+    logical                  :: elevation_correction_ocean
 
     namelist / PARAM_MKINIT_REAL_LAND / &
        NUMBER_OF_FILES,            &
@@ -572,7 +572,7 @@ contains
        FILTER_ORDER,               &
        FILTER_NITER,               &
        SOILWATER_DS2VC,            &
-       ELEVATION_COLLECTION,       &
+       ELEVATION_CORRECTION,       &
        SERIAL_PROC_READ
 
     namelist / PARAM_MKINIT_REAL_OCEAN / &
@@ -697,7 +697,7 @@ contains
     BOUNDARY_POSTFIX_TIMELABEL_LAND = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_LAND             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_LAND         = BOUNDARY_UPDATE_DT
-    elevation_collection_land       = elevation_collection
+    elevation_correction_land       = elevation_correction
 
     if ( FILETYPE_LAND .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM_LAND ) ) then
        BASENAME_LAND = trim(BASENAME_ORG)//"_00000"
@@ -755,7 +755,7 @@ contains
     BOUNDARY_POSTFIX_TIMELABEL_OCEAN = BOUNDARY_POSTFIX_TIMELABEL
     BOUNDARY_TITLE_OCEAN             = BOUNDARY_TITLE
     BOUNDARY_UPDATE_DT_OCEAN         = BOUNDARY_UPDATE_DT
-    elevation_collection_ocean       = elevation_collection
+    elevation_correction_ocean       = elevation_correction
 
     if ( FILETYPE_OCEAN .ne. "GrADS" .and. ( NUMBER_OF_FILES > 1 .OR. BASENAME_ADD_NUM_OCEAN ) ) then
        BASENAME_OCEAN = trim(BASENAME_ORG)//"_00000"
@@ -902,8 +902,8 @@ contains
                                 INIT_OCEAN_Z0W,                          &
                                 INTRP_ITER_MAX,                          &
                                 SOILWATER_DS2VC_flag,                    &
-                                elevation_collection_land,               &
-                                elevation_collection_ocean,              &
+                                elevation_correction_land,               &
+                                elevation_correction_ocean,              &
                                 multi_land, multi_ocean,                 &
                                 NUMBER_OF_TSTEPS_OCEAN,                  &
                                 NUMBER_OF_SKIP_TSTEPS_LAND, skip_steps,  &
@@ -2656,8 +2656,8 @@ contains
        init_ocean_z0w,                    &
        intrp_iter_max,                    &
        soilwater_ds2vc_flag,              &
-       elevation_collection_land,         &
-       elevation_collection_ocean,        &
+       elevation_correction_land,         &
+       elevation_correction_ocean,        &
        multi_land, multi_ocean,           &
        timelen, skiplen_land, skiplen,    &
        URBAN_do                           )
@@ -2726,8 +2726,8 @@ contains
     real(RP),         intent(in)  :: init_ocean_z0w
     integer,          intent(in)  :: intrp_iter_max
     logical,          intent(in)  :: soilwater_ds2vc_flag
-    logical,          intent(in)  :: elevation_collection_land
-    logical,          intent(in)  :: elevation_collection_ocean
+    logical,          intent(in)  :: elevation_correction_land
+    logical,          intent(in)  :: elevation_correction_ocean
     logical,          intent(in)  :: multi_land
     logical,          intent(in)  :: multi_ocean
     integer,          intent(in)  :: timelen          ! time steps in one file
@@ -2754,7 +2754,7 @@ contains
     real(RP) :: omask    (         odims(1),odims(2))
     real(RP) :: lst_ocean(         odims(1),odims(2))
 
-    ! elevation collection
+    ! elevation correction
     real(RP) :: work(ldims(2),ldims(3))
 
     integer :: i, j
@@ -3047,7 +3047,7 @@ contains
                use_file_landwater,              & ! (in)
                use_waterratio,                  & ! (in)
                soilwater_ds2vc_flag,            & ! (in)
-               elevation_collection_land,       & ! (in)
+               elevation_correction_land,       & ! (in)
                intrp_iter_max,                  & ! (in)
                ol_interp                        ) ! (in)
 
@@ -3090,7 +3090,7 @@ contains
                                  sst_org(:,:), tw_org(:,:),            & ! (in)
                                  albw_org(:,:,:,:), z0w_org(:,:),      & ! (inout)
                                  CX(:), CY(:),                         & ! (in)
-                                 elevation_collection_ocean,           & ! (in)
+                                 elevation_correction_ocean,           & ! (in)
                                  init_ocean_alb_lw, init_ocean_alb_sw, & ! (in)
                                  init_ocean_z0w,                       & ! (in)
                                  first_surface, update_coord,          & ! (in)
@@ -3257,7 +3257,7 @@ contains
        use_file_landwater,         &
        use_waterratio,             &
        soilwater_ds2vc_flag,       &
-       elevation_collection,       &
+       elevation_correction,       &
        intrp_iter_max,             &
        ol_interp                   )
     use scale_prc, only: &
@@ -3315,7 +3315,7 @@ contains
     logical,  intent(in)    :: use_file_landwater
     logical,  intent(in)    :: use_waterratio
     logical,  intent(in)    :: soilwater_ds2vc_flag
-    logical,  intent(in)    :: elevation_collection
+    logical,  intent(in)    :: elevation_correction
     integer,  intent(in)    :: intrp_iter_max
     logical,  intent(in)    :: ol_interp
 
@@ -3343,7 +3343,7 @@ contains
     real(RP) :: lz3d_org(kmax,imax,jmax)
     real(RP) :: lcz_3D(LKMAX,IA,JA)
 
-    ! elevation collection
+    ! elevation correction
     real(RP) :: topo(IA,JA)
     real(RP) :: tdiff
 
@@ -3620,8 +3620,8 @@ contains
     end if
 
 
-    ! elevation collection
-    if ( elevation_collection ) then
+    ! elevation correction
+    if ( elevation_correction ) then
        call INTERP_interp2d( itp_nh_l,        & ! [IN]
                              imax, jmax,      & ! [IN]
                              IA, JA,          & ! [IN]
@@ -3824,7 +3824,7 @@ contains
        imax, jmax, &
        sst_org, tw_org, albw_org, z0w_org,   &
        CX, CY,                               &
-       elevation_collection_ocean,           &
+       elevation_correction_ocean,           &
        init_ocean_alb_lw, init_ocean_alb_sw, &
        init_ocean_z0w,                       &
        first_surface, update_coord,          &
@@ -3853,7 +3853,7 @@ contains
     real(RP), intent(inout) :: z0w_org (imax,jmax)
     real(RP), intent(in)    :: CX(IA)
     real(RP), intent(in)    :: CY(JA)
-    logical,  intent(in)    :: elevation_collection_ocean
+    logical,  intent(in)    :: elevation_correction_ocean
     real(RP), intent(in)    :: init_ocean_alb_lw
     real(RP), intent(in)    :: init_ocean_alb_sw
     real(RP), intent(in)    :: init_ocean_z0w
@@ -3971,8 +3971,8 @@ contains
        call COMM_wait ( sst(:,:), 1, .false. )
     end if
 
-    ! elevation collection
-    if ( elevation_collection_ocean ) then
+    ! elevation correction
+    if ( elevation_correction_ocean ) then
 
        !$omp parallel do collapse(2) &
        !$omp private(tdiff)
