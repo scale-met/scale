@@ -59,9 +59,9 @@ TIME_DT_URBAN=(         "75.0" ) # required parameters for each domain - unit: S
 PRC_NUM_X=( 4 ) # required parameters for each domain
 PRC_NUM_Y=( 4 ) # required parameters for each domain
 
-KMAX=( 60 ) # required parameters for each domain
-IMAX=( 32 ) # required parameters for each domain
-JMAX=( 32 ) # required parameters for each domain
+KMAX=(   60 ) # required parameters for each domain
+IMAXG=( 128 ) # required parameters for each domain
+JMAXG=( 128 ) # required parameters for each domain
 
 OKMAX=1
 ODZ=( "10.0" ) # required parameters for OKMAX

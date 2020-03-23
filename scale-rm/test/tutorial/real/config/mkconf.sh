@@ -61,8 +61,8 @@ if [ ${NUM_DOMAIN} -ne ${#TIME_DT_URBAN[*]} ];        then echo "Error: Wrong ar
 if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_X[*]} ]; then echo "Error: Wrong array size (PRC_NUM_X)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_Y[*]} ]; then echo "Error: Wrong array size (PRC_NUM_Y)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#KMAX[*]} ];      then echo "Error: Wrong array size (KMAX).";      exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#IMAX[*]} ];      then echo "Error: Wrong array size (IMAX).";      exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#JMAX[*]} ];      then echo "Error: Wrong array size (JMAX).";      exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#IMAXG[*]} ];     then echo "Error: Wrong array size (IMAXG).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#JMAXG[*]} ];     then echo "Error: Wrong array size (JMAXG).";     exit 1; fi
 
 if [ ${OKMAX} -ne ${#ODZ[*]} ]; then echo "Error: Wrong array size (ODZ)."; exit 1; fi
 if [ ${LKMAX} -ne ${#LDZ[*]} ]; then echo "Error: Wrong array size (LDZ)."; exit 1; fi
