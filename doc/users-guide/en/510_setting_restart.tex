@@ -42,7 +42,7 @@ When they are not specified, the restart files are generated at the end of the s
 The file names of output restart files are specified by \nmitem{RESTART_OUT_BASENAME}.\\
 \nmitem{RESTART_OUT_POSTFIX_TIMELABEL} indicates
 whether date and time at output are automatically added to the file name after \nmitem{RESTART_OUT_BASENAME}.\\
-The default setting is \nmitem{RESTART_OUT_POSTFIX_TIMELABEL=.true.}.
+The default setting is \nmitem{RESTART_OUT_POSTFIX_TIMELABEL} = \verb|.true.|.
 
 The restart files are not compatible for all simulation.
 The variables included in the restart file are different by the schemes, which chosen in the configuration file.
@@ -55,9 +55,9 @@ while the restart run uses a restart file output by the previous run.
 %
 \nmitem{RESTART_IN_POSTFIX_TIMELABEL} is the same as \nmitem{RESTART_OUT_POSTFIX_TIMELABEL},
 but for \nmitem{RESTART_IN_BASENAME}.
-The default setting is \nmitem{RESTART_IN_POSTFIX_TIMELABEL = .false.}.\\
-In avobe example, setting \nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01_20070715-000000.000"| is equivalent to
-setting \nmitem{RESTART_IN_POSTFIX_TIMELABEL = .true.} and \nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01"|.
+The default setting is \nmitem{RESTART_IN_POSTFIX_TIMELABEL} = \verb|.false.|.\\
+In avobe example, setting \nmitem{RESTART_IN_BASENAME} = \verb|"restart1_d01_20070715-000000.000"| is equivalent to
+setting \nmitem{RESTART_IN_POSTFIX_TIMELABEL} = \verb|.true.| and \nmitem{RESTART_IN_BASENAME} = \verb|"restart1_d01"|.
 \nmitem{TIME_STARTDATE} and \nmitem{TIME_DURATION} represent the start date and the integration time for the restart simulation.
 
 
