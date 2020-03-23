@@ -3,31 +3,34 @@
 \clearpage
 \section*{Answer}
 \begin{enumerate}
-\item {\bf How is the number of MPIs parallel changed while maintaining the computational domain?}\\
-\nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} and \nmitem{PRC_NUM_X, PRC_NUM_Y} in  \namelist{PARAM_PRC}
-are changed. If the below conditions are satisfied, your answer is correct:
+\item {\bf How is the number of MPI processes changed while maintaining the computational domain?}\\
+\nmitem{PRC_NUM_X, PRC_NUM_Y} in \namelist{PARAM_PRC} are changed.
+If the below conditions are satisfied, your answer is correct:
 \begin{eqnarray}
-&& \verb|Number of MPIs parallel| = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& \verb|Number of grid cells along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
-&& \verb|Number of grid cells along the X direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
+&& \verb|Number of MPIs parallel| = \nmitemeq{PRC_NUM_X} \times \nmitemeq{PRC_NUM_Y} = 6 \nonumber\\
+&& \nmitemeq{IMAXG} \bmod \nmitemeq{PRC_NUM_X} = 0 \nonumber\\
+&& \nmitemeq{JMAXG} \bmod \nmitemeq{PRC_NUM_Y} = 0 \nonumber
 \end{eqnarray}
 
 
-\item {\bf How is the computational domain altered while maintaining the number of MPIs parallel?}\\
-If the number of grid cells per MPI process increases n times, the total number of grid cells also increases n times. Thus, only \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} are changed. The red parts indicate the answer below:\\
+\item {\bf How is the computational domain altered while maintaining the number of MPI processes?}\\
+If the number of grid points increases n times, the domain size also increases n times.
+Thus, only \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} are changed.
+The red parts indicate the answer below:
+
 \noindent {\small {\rm
 \ovalbox{
 \begin{tabularx}{140mm}{ll}
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 60,|}  & (\verb|IMAX = 45| in the original settings)\\
-\textcolor{red}{\verb| JMAX = 30,|}  & (\verb|JMAX = 45| in the original settings)\\
+\textcolor{red}{\verb| IMAXG = 120,|}  & (\verb|IMAXG = 90| in the original settings)\\
+\textcolor{red}{\verb| JMAXG =  60,|}  & (\verb|JMAXG = 90| in the original settings)\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
 \item {\bf How is horizontal grid interval changed while maintaining the computational domain?}\\
-When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} and  \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} should be changed.
+When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} and \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} should be changed.
 
 \noindent {\small {\rm
 \ovalbox{
@@ -38,8 +41,8 @@ When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PA
 \\
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 180,|} &  (\verb|IMAX = 45| in the original settings)\\
-\textcolor{red}{\verb| JMAX = 180,|} &  (\verb|JMAX = 45| in the original settings)\\
+\textcolor{red}{\verb| IMAXG = 360,|} &  (\verb|IMAXG = 90| in the original settings)\\
+\textcolor{red}{\verb| JMAXG = 360,|} &  (\verb|JMAXG = 90| in the original settings)\\
 \verb|/| &\\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC| & \\
@@ -49,14 +52,16 @@ When the number of MPIs parallel is not changed, \nmitem{DX, DY} in \namelist{PA
 \end{tabularx}
 }}}\\
 
-In case the number of MPIs parallel are also changed, if the below conditions are satisfied in the setting of \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
+In case the number of MPI processes are also changed, if the below conditions are satisfied in the setting of \verb|&PARAM_ATMOS_GRID_CARTESC|, your answer is correct:
 \begin{eqnarray}
-&& \verb|Number of grids along the X direction| = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \nonumber \\
-&& \verb|Number of grids along the Y direction| = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& \nmitemeq{IMAXG} \bmod \nmitemeq{PRC_NUM_X} = 0 \nonumber\\
+&& \nmitemeq{JMAXG} \bmod \nmitemeq{PRC_NUM_Y} = 0 \nonumber
 \end{eqnarray}
 
 Moreover, it is necessary to suitably change the time interval for the dynamics,\\
- i.e., \nmitem{TIME_DT_ATMOS_DYN} and \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} (refer to Section \ref{sec:timeintiv}). The width of the buffer region should be set between 20 and 40 times of the grid spacing. Below is an example of the answer, indicating the case where the buffer region was set to 20 times the grid spacing.
+ i.e., \nmitem{TIME_DT_ATMOS_DYN} and \nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} (refer to Section \ref{sec:timeintiv}).
+ The width of the buffer region should be set between 20 and 40 times of the grid spacing.
+ Below is an example of the answer, indicating the case where the buffer region was set to 20 times the grid spacing.
 
 \noindent {\small {\rm
 \ovalbox{

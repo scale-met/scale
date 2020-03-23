@@ -152,7 +152,7 @@ MPIプロセスを配置するのが合理的である\footnote{正確を期す�
 ここで、時間積分の計算量は、格子数とタイムステップ数の積として定義する。
 
 ここでは、N段ネスティングを考える。
-n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|IMAX_n|、\verb|JMAX_n|、\verb|KMAX_n|と表す。
+n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|IMAXG_n|、\verb|JMAXG_n|、\verb|KMAX_n|と表す。
 また、n番目の領域の時間ステップ\nmitem{TIME_DT}を\verb|DT_n|と表す。
 この時、一番外側の領域(n=1)の時間積分のタイムステップ\verb|DT_1|を基準とし、この時間を積分するのに必要なn番目の領域の計算ステップ数は、
 \begin{eqnarray}
@@ -160,7 +160,7 @@ n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|I
 \end{eqnarray}
 と表される。領域全体での計算量は、領域が持つ格子数を掛けて
 \begin{eqnarray}
- \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
+ \verb|OPR_n| = \verb|IMAXG_n| \times \verb|JMAXG_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
 と見積もられる。
 したがって、n番目の領域に配分するMPIプロセス数の目安は、
@@ -172,7 +172,7 @@ n番目の領域の{\XDIR}、{\YDIR}、{\ZDIR}の格子数をそれぞれ\verb|I
 
 
 {\XDIR} と{\YDIR}に分配するプロセス数\nmitem{PRC_NUM_X, PRC_NUM_Y}には任意性が残る。
-\verb|IMAX|と\verb|JMAX|の違いができるだけ小さくなるように、これらを設定することが推奨される。
+$\nmitemeq{IMAX}(=\nmitemeq{IMAXG}/\nmitemeq{PRC_NUM_X})$と$\nmitemeq{IMAX}(=\nmitemeq{JMAXG}/\nmitemeq{PRC_NUM_Y})$の違いができるだけ小さくなるように、これらを設定することが推奨される。
 その理由は、このような設定によってハロ領域を減らせるためである。
 結果的に、計算機の演算性能を引き出しやすいと考えられる
 \footnote{ただし、スレッド並列も併用するハイブリッド並列の場合には、
