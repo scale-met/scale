@@ -72,6 +72,8 @@ contains
        ATMOS_HYDROMETEOR_dry
     use mod_atmos_admin, only: &
        ATMOS_USE_QV
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_tracer_setup
     implicit none
 
     !---------------------------------------------------------------------------
@@ -85,6 +87,7 @@ contains
     call ATMOS_PHY_AE_driver_tracer_setup
     call ATMOS_PHY_TB_driver_tracer_setup
     call ATMOS_PHY_BL_driver_tracer_setup
+    call ATMOS_PHY_LT_driver_tracer_setup
 
     if ( ATMOS_HYDROMETEOR_dry .and. ATMOS_USE_QV ) then
        LOG_INFO("ATMOS_driver_tracer_setup",*) 'Regist QV'
@@ -135,6 +138,8 @@ contains
        ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_setup
     use scale_atmos_grid_cartesC, only: &
        CZ => ATMOS_GRID_CARTESC_CZ, &
        FZ => ATMOS_GRID_CARTESC_FZ
@@ -168,6 +173,7 @@ contains
 
     ! setup each components
     call ATMOS_DYN_driver_setup
+    call ATMOS_PHY_LT_driver_setup
     call ATMOS_PHY_MP_driver_setup
     call ATMOS_PHY_AE_driver_setup
     call ATMOS_PHY_CH_driver_setup
@@ -220,7 +226,8 @@ contains
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
        do_phy_bl => TIME_DOATMOS_PHY_BL, &
-       do_phy_cp => TIME_DOATMOS_PHY_CP
+       do_phy_cp => TIME_DOATMOS_PHY_CP, &
+       do_phy_lt => TIME_DOATMOS_PHY_LT
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_mp, &
        ATMOS_sw_phy_ae, &
@@ -367,7 +374,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
-       ATMOS_sw_phy_ae
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_lt
     use mod_admin_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
@@ -391,6 +399,8 @@ contains
        ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_adjustment
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_adjustment
     use scale_atmos_grid_cartesC, only: &
        CZ   => ATMOS_GRID_CARTESC_CZ,  &
        FZ   => ATMOS_GRID_CARTESC_FZ,  &
@@ -441,6 +451,13 @@ contains
        call PROF_rapend  ('ATM_Aerosol', 1)
        call ATMOS_vars_calc_diagnostics
     endif
+    ! Lightning
+    if ( ATMOS_sw_phy_lt ) then
+       call PROF_rapstart('ATM_Lightning', 1)
+       call ATMOS_PHY_LT_driver_adjustment
+       call PROF_rapend  ('ATM_Lightning', 1)
+       ! calc_diagnostics is not necessary
+    end if
 
 
     !########## Reference State ###########

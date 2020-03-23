@@ -502,6 +502,8 @@ contains
        ATMOS_PHY_BL_vars_setup
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_setup
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_setup
     implicit none
 
     namelist / PARAM_ATMOS_VARS / &
@@ -686,6 +688,7 @@ contains
     call ATMOS_PHY_TB_vars_setup
     call ATMOS_PHY_BL_vars_setup
     call ATMOS_PHY_CP_vars_setup
+    call ATMOS_PHY_LT_vars_setup
 
 
     ! water content
@@ -923,7 +926,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_open
     use mod_atmos_phy_mp_vars, only: &
@@ -940,6 +944,8 @@ contains
        ATMOS_PHY_TB_vars_restart_open
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_open
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_open
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -990,6 +996,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_open
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_open
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_open
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_open
 
     return
   end subroutine ATMOS_vars_restart_open
@@ -1013,7 +1020,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -1030,6 +1038,8 @@ contains
        ATMOS_PHY_TB_vars_restart_read
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_read
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_read
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -1105,6 +1115,7 @@ contains
     if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_read
     if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
     if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
+    if ( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_read
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -3252,7 +3263,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3271,6 +3283,8 @@ contains
        ATMOS_PHY_TB_vars_restart_create
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_create
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_create
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3321,6 +3335,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_create
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_create
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_create
 
     return
   end subroutine ATMOS_vars_restart_create
@@ -3338,7 +3353,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3357,6 +3373,8 @@ contains
        ATMOS_PHY_TB_vars_restart_enddef
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_enddef
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_enddef
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3384,6 +3402,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_enddef
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_enddef
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_enddef
 
     return
   end subroutine ATMOS_vars_restart_enddef
@@ -3401,7 +3420,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3420,6 +3440,8 @@ contains
        ATMOS_PHY_TB_vars_restart_close
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_close
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_close
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3453,6 +3475,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_close
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_close
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_close
 
     return
   end subroutine ATMOS_vars_restart_close
@@ -3470,7 +3493,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3489,6 +3513,8 @@ contains
        ATMOS_PHY_TB_vars_restart_def_var
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_def_var
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_def_var
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3537,6 +3563,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_def_var
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_def_var
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_def_var
 
     return
   end subroutine ATMOS_vars_restart_def_var
@@ -3554,7 +3581,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3573,6 +3601,8 @@ contains
        ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_write
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3615,6 +3645,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_write
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write
