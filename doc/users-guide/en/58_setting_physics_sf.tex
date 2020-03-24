@@ -1,13 +1,15 @@
-\section{Surface Flux at the Bottom of Atmospheric Boundary } \label{sec:basic_usel_surface}
+\section{Surface flux scheme} \label{sec:basic_usel_surface}
 %------------------------------------------------------
-The flux scheme at the bottom atmospheric boundary is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS} as follows:
-
+The surface flux scheme calculates momentum, heat and moisture fluxes at the bottom atmospheric boundary.
+Type of the scheme is configured in \nmitem{ATMOS_PHY_SF_TYPE} in \namelist{PARAM_ATMOS}.
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | &  ; Select the surface flux scheme shown in Table \ref{tab:nml_atm_sf}\\
+\verb| ATMOS_PHY_SF_TYPE = "NONE", | &  ; Select the surface flux scheme shown in Table \ref{tab:nml_atm_sf}\\
 \verb|/             | & \\
 }
-If ocean, land, and urban models are not used, the bottom atmospheric boundary is assumed to be a virtual surface used in an ideal experiment. The timing of the calling of the surface flux scheme is configured in \namelist{PARAM_TIME}. Refer to Section \ref{sec:timeintiv} for the detailed configuration of the calling timing. If ocean, land, and urban models are used, ``COUPLE'' is given to \nmitem{ATMOS_PHY_SF_TYPE}:
+If ocean, land, and urban models are used, \nmitem{ATMOS_PHY_SF_TYPE} must be \verb|COUPLE| or \verb|NONE|;
+\verb|NONE| is ultimately automatically replaced to \verb|COUPLE|.
+Using these models, the surface fluxes are individually calculated in these models, and then, the merged grid value is calculated as area-weighted average of them.
 
 \begin{table}[htb]
 \begin{center}
@@ -15,59 +17,94 @@ If ocean, land, and urban models are not used, the bottom atmospheric boundary i
   \label{tab:nml_atm_sf}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Schemes & Description of scheme\\ \hline
-      \verb|NONE   | & Do not calculate surface flux, but \verb|"NONE"| is replaced to \verb|"COUPLE"| according to settings of ocean, land, and urban models) \\
-      \verb|OFF    | & Do not calculate surface flux\\
-      \verb|CONST  | & Fix the constant value of surface flux \\
-      \verb|BULK   | & Calculate the surface flux in bulk model \\
-      \verb|COUPLE | & Receive surface flux from ocean, land, and urban models \\
+      \verb|NONE   | & Do not calculate surface flux, but \verb|NONE| is replaced to \verb|COUPLE| according to settings of ocean, land, and urban models \\
+      \verb|OFF    | & Do not calculate surface flux \\
+      \verb|CONST  | & Use constant values in calculation of surface flux \\
+      \verb|BULK   | & Calculate the surface flux by a bulk model \\
+      \verb|COUPLE | & Merge surface fluxes from ocean, land, and urban models \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
+
+The time step to call the surface flux scheme is configured in \nmitem{PARAM_DT_ATMOS_PHY_SF} and \nmitem{PARAM_DT_ATMOS_PHY_SF_UNIT} in \namelist{PARAM_TIME}.
+Refer to Section \ref{sec:timeintiv} for the detailed configuration of the time step.
+
+
+
 %-------------------------------------------------------------------------------
-\subsubsection{Configuration of Constant}
+\subsubsection{Constant scheme}
 
-If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"CONST"|, the surface flux can be kept to a value specified in \runconf as follows. The values below are the default ones.
-
+If \nmitem{ATMOS_PHY_SF_TYPE} is \verb|CONST|, the surface flux is determined as configured in \\
+\namelist{PARAM_ATMOS_PHY_SF_CONST}.
+%
 \editboxtwo{
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
- \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & 0: Bulk coefficient is constant \\
-                                                  & 1: Frictional velocity is constant  \\
- \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & Lower limit of absolute velocity  [m/s] \\
- \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & Constant bulk coefficient for momentum \\
-                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0|) \\
- \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & Lower limit of bulk coefficient for momentum \\
-                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
- \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & Constant fictional velocity [m/s] \\
-                                                  &  (Active at \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
- \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & Constant sensible heat flux at the surface [W/m2] \\
- \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & Whether diurnal variation is enabled for sensible heat flux [logical]\\
- \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & Daily cycle if diurnal variation is enabled [hour]\\
- \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & Constant latent heat flux at the surface [W/m2] \\
+ \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & ; 0: Bulk coefficient is constant \\
+                                                  & ; 1: Friction velocity is constant \\
+ \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & ; Lower limit of absolute velocity [m/s] \\
+ \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & ; Constant bulk coefficient for momentum \\
+                                                  & ;  (valid if \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0|) \\
+ \verb| ATMOS_PHY_SF_Cm_min         =    1.0E-5 | & ; Lower limit of bulk coefficient for momentum \\
+                                                  & ;  (valid if \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & ; Constant friction velocity [m/s] \\
+                                                  & ;  (valid if \verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1|) \\
+ \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & ; Constant sensible heat flux at the surface [W/m$^2$] \\
+ \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & ; Whether diurnal variation is considered for sensible heat flux [logical]\\
+ \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & ; Daily cycle if diurnal variation is enabled [hour]\\
+ \verb| ATMOS_PHY_SF_Const_LH       =   115.E0  | & ; Constant latent heat flux at the surface [W/m$^2$] \\
  \verb|/|            & \\
 }
 
-\subsubsection{Bulk Configuration}
+If \nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} is 0, a constant bulk coefficient is used to calculate the surface momentum flux; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Cm}. \\
+If \nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} is 1, a constant friction velocity is used to calculate the bulk coefficient; its value is specified by \nmitem{ATMOS_PHY_SF_Const_Ustar}.
+In the constant friction velocity case, the lower limit of the coefficient is set by \nmitem{ATMOS_PHY_SF_Cm_min}.
+The lower limit of absolute velocity at the lowermost layer used in the calculation is set by \nmitem{ATMOS_PHY_SF_U_minM} in both cases.
+
+If \nmitem{ATMOS_PHY_SF_FLG_SH_DIURNAL} = \verb|.false.|, sensible heat flux is constant;
+its value is specified by \nmitem{ATMOS_PHY_SF_Const_SH}.
+If \nmitem{ATMOS_PHY_SF_FLG_SH_DIURNAL} = \verb|.true.|, the sensible heat flux has temporal sinusoidal variation whose amplitude and time period are \\ \nmitem{ATMOS_PHY_SF_Const_SH} and \nmitem{ATMOS_PHY_SF_Const_FREQ}, respectively, as \\
+$\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF_Const_FREQ})$,
+where $t$ is the integrated time [sec] from start of calculation.
+
+Latent heat flux is constant and its value is specified by \nmitem{ATMOS_PHY_SF_Const_LH}.
+
+
+
+\subsubsection{Bulk scheme}
 %-------------------------------------------------------------------------------
-If \nmitem{ATMOS_PHY_SF_TYPE} $=$ \verb|"BULK"|, the surface flux is calculated by the bulk model using the prescribed surface temperature and roughness lengths.
-Evaporation efficiency can also be given optionally in a range of 0 to 1.
+If \nmitem{ATMOS_PHY_SF_TYPE} is \verb|BULK|, the surface flux is calculated by the bulk model using the prescribed surface state, such as surface temperature, roughness length, and albedo.
+The values of the surface state are read from the initial data file.
+The surface temperature, roughness length and albedos for short- and long-wave radiation can be set respectively with \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_TEMP}, \\ \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_Z0}, \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_SW}, \\ and \nmitem{ATMOS_PHY_SF_DEFAULT_SFC_ALBEDO_LW} in \namelist{PARAM_ATMOS_PHY_SF_VARS} at generating the initial data with the \verb|scale-rm_init|.
+
+For calculation of latent heat flux, evaporation efficiency can be given in a range of 0 to 1.
 This flexibility enables the ideal experiment not only for ocean surfaces but also for land.
-The evaporation efficiency is specified in \nmitem{ATMOS_PHY_SF_BULK_beta} in \namelist{PARAM_ATMOS_PHY_SF_BULK} in \runconf as follows:
-
+If this value is 0, the surface is assumed to be completely dry, resulting no latent heat flux.
+If the value is 1, it is assumed to be completely wet like ocean surface.
+The evaporation efficiency is specified in \nmitem{ATMOS_PHY_SF_BULK_beta} in \namelist{PARAM_ATMOS_PHY_SF_BULK}.
 \editboxtwo{
-\verb|&PARAM_ATMOS_PHY_SF_BULK  | & \\
-\verb| ATMOS_PHY_SF_BULK_beta = 1.0, | & ; Evaporation efficiency (the value must be in a range of 0 to 1). If this value is set as 0, the surface is assumed to be completely dry. If the value is 1, it is assumued to be completely wet (like ocean surface).\\
-\verb|/             | & \\
+\verb|&PARAM_ATMOS_PHY_SF_BULK       | & \\
+\verb| ATMOS_PHY_SF_BULK_beta = 1.0, | & ; Evaporation efficiency (range of 0--1) \\
+\verb|/                              | & \\
 }
 
-The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} in the file \runconf as follows:
 
+
+\subsubsection{Bulk coefficient}
+If \nmitem{ATMOS_PHY_SF_TYPE} is \verb|BULK| or \verb|COUPLE|, the bulk coefficients are calculated based on the Monin-Obukhov similarity.
+The parameters for calculation of the coefficients are configured in \namelist{PARAM_BULKFLUX}.
 \editboxtwo{
-\verb|&PARAM_BULKFLUX  | & \\
-\verb| BULKFLUX_TYPE = "B91W01", | & ; Select the bulk coefficient scheme shown in Table \ref{tab:nml_bulk}\\
-\verb|/                | & \\
+\verb|&PARAM_BULKFLUX                      | & \\
+\verb| BULKFLUX_TYPE = "B91W01",           | & ; Select the bulk coefficient scheme shown in Table \ref{tab:nml_bulk} \\
+\verb| BULKFLUX_Uabs_min = 1.0D-2,         | & ; Minimum absolute velocity speed in the surface flux calculation [m/s] \\
+\verb| BULKFLUX_surfdiag_neutral = .true., | & ; Switch to assume neutral condition in calculation of surface diagnostics \\
+\verb| BULKFLUX_WSCF = 1.2D0,              | & ; Empirical scaling factor for w$^{\ast}$ \citep{beljaars_1994} \\
+\verb| BULKFLUX_Wstar_min = 1.0E-4,        | & ; Minimum value of w$^{\ast}$ [m/s] \\
+\verb| BULKFLUX_NK2018 = .true.,           | & ; Switch to use scheme of \citet{nishizawa_2018} \\
+\verb|/                                    | & \\
 }
+
 \begin{table}[h]
 \begin{center}
   \caption{List of bulk coefficient scheme types}
@@ -75,8 +112,32 @@ The scheme for the bulk coefficient is configured in \nmitem{BULKFLUX_TYPE} in \
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  Schemes & Description of scheme & Reference\\ \hline
       \verb|B91W01| & Bulk method by the universal function (Default) & \citet{beljaars_1991,wilson_2001} \\
-      \verb|U95|    & Louis-type bulk method  (improved version of Louis (1979) & \citet{uno_1995} \\
+      \verb|U95|    & Louis-type bulk method  (improved version of \citet{louis_1979}) & \citet{uno_1995} \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
+
+The scheme to calculate the bulk coefficients is specified by \nmitem{BULKFLUX_TYPE}.
+The supported schemes are listed in Table \ref{tab:nml_bulk}.
+
+The coefficients strongly depend on the wind speed.
+Because the velocity in simulation does not contain sub-grid scale component, the surface flux may be underestimated especially under calm condition.
+Therefore, a lower limit can be introduced for the absolute velocity at the lowermost layer used in the calculation.
+The lower limit is specified by \nmitem{BULKFLUX_Uabs_min}.
+
+The surface diagnostic variables, such as 10-m velocities and 2-m temperature and humidity, are calculated so that they are consistent with the bulk coefficients.
+It means that these variables significantly depend on the surface conditions and static stability.
+Thus, when grid cells having different surface conditions are adjacently distributed such as near coasts, the values of the diagnostics may have a large gap at the boundaries between these grid cells.
+In addition, when the static stability greatly changes around sunrise or sunset, the values of the diagnostics may change drastically in a short time.
+These large gaps can be reduced by assuming neutral static stability in the calculation of the surface diagnostic variables.
+To use the assumption of neutral stability, set \nmitem{BULKFLUX_surfdiag_neutral} to \verb|.true.|.
+
+
+For the \verb|B91W01| scheme, a couple of additional parameters are available.
+\nmitem{BULKFLUX_WSCF} is an empirical scaling factor for the free convection velocity scale $w^{\ast}$ introduced by \citet{beljaars_1994} ($\beta$ in his paper).
+By default, it is determined depending on the horizontal grid spacing $\Delta x$ as $1.2 \times \min(\Delta x/1000, 1)$.
+In simulations with the grid spacing larger than 1 km, the factor is 1.2.
+For smaller grid spacing, it decreases in proportional to the grid spacing, c.f., $\lim_{\Delta x \to 0} w^{\ast} = 0$.
+Note that, the minimum of $w^{\ast}$ is specified by \nmitem{BULKFLUX_Wstar_min} and its default value is 1.0E-4.
+\nmitem{BULKFLUX_NK2018} is a switch to use the more appropriate formulation of the similarity for finite volume models proposed by \citet{nishizawa_2018}.
