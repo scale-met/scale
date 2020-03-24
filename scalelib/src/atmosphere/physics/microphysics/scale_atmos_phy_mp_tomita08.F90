@@ -231,9 +231,11 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: Di_max      = 500.E-6_RP
   real(RP), private, parameter   :: Di_a        = 11.9_RP
 
-  ! For coalesence coefficient of ice and sno
-  real(RP), private :: Ecoal_GI = 0.0_RP, Ecoal_GS = 0.0_RP
-  real(RP), private :: flg_ecoali = 0.0_RP, flg_ecoals = 0.0_RP
+  ! For coalesence coefficient of ice and snow
+  real(RP), private :: Ecoal_GI = 0.0_RP
+  real(RP), private :: Ecoal_GS = 0.0_RP
+  real(RP), private :: flg_ecoali = 0.0_RP
+  real(RP), private :: flg_ecoals = 0.0_RP
 
   integer,  private, parameter   :: w_nmax = 49
   integer,  private, parameter   :: I_dqv_dt  =  1 !
