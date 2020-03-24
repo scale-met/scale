@@ -2004,7 +2004,11 @@ contains
 
        if ( hist_flag ) then
           do ip = 1, w_nmax
-             if ( HIST_sw(ip) ) w3d(k,i,j,ip) = w(k,ip)
+             if ( HIST_sw(ip) ) then
+                do k = KS, KE
+                   w3d(k,i,j,ip) = w(k,ip)
+                enddo
+             end if
           enddo
        end if
 
