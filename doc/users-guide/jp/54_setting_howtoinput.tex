@@ -77,6 +77,7 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb| INTRP_LAND_TEMP      = "fill",|\\
 \verb| INTRP_LAND_WATER     = "fill",|\\
 \verb| INTRP_LAND_SFC_TEMP  = "fill",|\\
+\verb| ELEVATION_CORRECTION = .true.,|\\
 \verb|/|\\
 }
 
@@ -122,7 +123,7 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}は
 密度の計算方法に関する設定を行う。
 デフォルトの設定は、
-\nmitem{USE_FILE_DENSITY} = \verb|.false.| 及び 
+\nmitem{USE_FILE_DENSITY} = \verb|.false.| 及び
 \nmitem{USE_NONHYDRO_DENS_BOUNDARY} = \verb|.false.|であり、
 この時、初期値・境界値の密度は、読み込んだ温度と比湿データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
 %（ここで見積った密度は、親モデルの密度とは必ずしも一致しない）。
@@ -174,6 +175,16 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb|  .....略.....                 | & \\
 \verb|/| & \\
 }
+
+
+\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}は、初期値・境界値データの土壌温度・地表面気温の作成において、
+親モデルの地形との高度差に応じた補正を行うオプションである。
+親モデルの地形とSCALE-RMが作成する地形は一般には異なるため、親モデルの土壌温度・地表面気温をそのまま内挿して初期値・境界値データを作成した場合、
+高度差の分だけ不整合が生じる。
+\nmitem{ELEVATION_CORRECTION}を\verb|.true.|にした場合、初期値・境界値データの土壌温度・地表面気温は高度差に応じて補正される。
+例えば、SCALE-RMが作成した地形が親モデルの地形よりも$\Delta h$高い場合、
+土壌温度・地表面気温は$\Delta h\Gamma$（$\Gamma$は国際標準大気の温度減率：$\Gamma=6.5\times 10^{-3}$ [K/m]）の分だけ一様に減じられる。
+デフォルト設定は\nmitem{ELEVATION_CORRECTION} = \verb|.true.|である。
 
 
 
