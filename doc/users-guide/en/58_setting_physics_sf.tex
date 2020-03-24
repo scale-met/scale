@@ -122,7 +122,7 @@ The scheme to calculate the bulk coefficients is specified by \nmitem{BULKFLUX_T
 The supported schemes are listed in Table \ref{tab:nml_bulk}.
 
 The coefficients strongly depend on the wind speed.
-Because the velocity in simulation does not contain sub-grid scale component, the surface flux may be underestimated under calm condition.
+Because the velocity in simulation does not contain sub-grid scale component, the surface flux may be underestimated especially under calm condition.
 Therefore, a lower limit can be introduced for the absolute velocity at the lowermost layer used in the calculation.
 The lower limit is specified by \nmitem{BULKFLUX_Uabs_min}.
 
