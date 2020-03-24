@@ -1108,9 +1108,11 @@ contains
     W   (I_LW) = 1.0_RP
     Wbar(I_LW) = 2.0_RP * M(I_LW)
 
-    Wmns  (:) = sqrt( W(:) / M(:) )
-    Wpls  (:) = sqrt( W(:) * M(:) )
-    Wscale(:) = Wpls(:) / Wbar(:)
+    do im = 1, 2
+       Wmns  (im) = sqrt( W(im) / M(im) )
+       Wpls  (im) = sqrt( W(im) * M(im) )
+       Wscale(im) = Wpls(im) / Wbar(im)
+    end do
 
     !$acc enter data &
     !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
