@@ -1607,8 +1607,10 @@ contains
        end do
 
        if ( hist_flag ) then
+          do k = KS, KE
           do ip = 1, w_nmax
              if ( HIST_sw(ip) ) w3d(k,i,j,ip) = w(k,ip)
+          enddo
           enddo
        end if
 
