@@ -5,7 +5,7 @@
 スキームの種類は、以下のように\namelist{PARAM_ATMOS}の\nmitem{ATMOS_PHY_SF_TYPE}で設定する。
 \editboxtwo{
 \verb|&PARAM_ATMOS  | & \\
-\verb| ATMOS_PHY_SF_TYPE = "COUPLE", | & ; 表\ref{tab:nml_atm_sf}から表面フラックススキームを選択。\\
+\verb| ATMOS_PHY_SF_TYPE = "NONE", | & ; 表\ref{tab:nml_atm_sf}から表面フラックススキームを選択。\\
 \verb|/             | & \\
 }
 
@@ -38,18 +38,18 @@
 
 \nmitem{ATMOS_PHY_SF_TYPE}を\verb|CONST|とした場合は、
 地表面フラックスは \namelist{PARAM_ATMOS_PHY_SF_CONST} の設定にしたがって計算される。
-以下は設定の例である。
+%
 \editboxtwo{
  \verb|&PARAM_ATMOS_PHY_SF_CONST                | & \\
  \verb| ATMOS_PHY_SF_FLG_MOM_FLUX   =    0      | & ; 0: バルク交換係数を一定にする \\
-                                             & ; 1: 摩擦速度を一定にする   \\
+                                                  & ; 1: 摩擦速度を一定にする   \\
  \verb| ATMOS_PHY_SF_U_minM         =    0.0E0  | & ; 絶対速度の下限値 [m/s] \\
  \verb| ATMOS_PHY_SF_Const_Cm       = 0.0011E0  | & ; 運動量に対する一定バルク係数値 \\
-                                             & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
- \verb| ATMOS_PHY_SF_CM_min         =    1.0E-5 | & ; 運動量に対するバルク係数の下限値 \\
-                                             & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+                                                  & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 0| のとき有効) \\
+ \verb| ATMOS_PHY_SF_Cm_min         =    1.0E-5 | & ; 運動量に対するバルク係数の下限値 \\
+                                                  & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
  \verb| ATMOS_PHY_SF_Const_Ustar    =   0.25E0  | & ; 一定摩擦係数値 [m/s] \\
-                                             & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
+                                                  & ; (\verb|ATMOS_PHY_SF_FLG_MOM_FLUX = 1| のとき有効) \\
  \verb| ATMOS_PHY_SF_Const_SH       =    15.E0  | & ; 一定地表面顕熱フラックス値 [W/m$^2$] \\
  \verb| ATMOS_PHY_SF_FLG_SH_DIURNAL =   .false. | & ; 顕熱フラックスに日変化をつけるか否か [logical]\\
  \verb| ATMOS_PHY_SF_Const_FREQ     =    24.E0  | & ; 顕熱フラックスに日変化を付けるときのサイクル [hour]\\
@@ -61,8 +61,8 @@
 係数の値は \nmitem{ATMOS_PHY_SF_Const_Cm} で設定する。
 \nmitem{ATMOS_PHY_SF_FLAG_MOM_FLUX} が 1 の場合は、固定値の摩擦速度を用いて交換係数が計算される。
 摩擦速度の値は \\ \nmitem{ATMOS_PHY_SF_Const_Ustar} で設定する。
-摩擦速度固定の場合、計算される交換係数の下限値を \nmitem{ATMOS_PHY_SF_CM_min} で設定する。
-両方の場合において、計算中に用いる最下層における絶対速度の下限値を \nmitem{ATMOS_PHY_SF_U_minM} で設定する。
+摩擦速度固定の場合、計算される交換係数の下限値を \nmitem{ATMOS_PHY_SF_Cm_min} で設定する。
+両方の場合において、計算中に用いる最下層の絶対速度の下限値を \nmitem{ATMOS_PHY_SF_U_minM} で設定する。
 
 \nmitem{ATMOS_PHY_SF_FLG_SH_DIURNAL} が \verb|.false.| の場合は、顕熱フラックスは固定値となる。
 この値は \nmitem{ATMOS_PHY_SF_Const_SH} で設定する。
@@ -70,6 +70,7 @@
 振幅および周期はそれぞれ \nmitem{ATMOS_PHY_SF_Const_SH} および \\ \nmitem{ATMOS_PHY_SF_Const_FREQ} で指定する。
 つまり顕熱フラックスは \\
 $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF_Const_FREQ})$ となる。
+ここで$t$は、積分開始からの積分時間[sec]である。
 
 潜熱フラックスは固定値となり、値は \nmitem{ATMOS_PHY_SF_Const_LH} で設定する。
 
@@ -86,6 +87,7 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
 値を 0 に設定した場合、表面は完全に乾燥していることになり、潜熱フラックスは 0 となる。
 1 に設定した場合は、海面のように表面は完全に湿っていることになる。
 蒸発効率は \namelist{PARAM_ATMOS_PHY_SF_BULK} の \nmitem{ATMOS_PHY_SF_BULK_beta} で以下のように指定する。
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_SF_BULK       | & \\
 \verb| ATMOS_PHY_SF_BULK_beta = 1.0, | & ; 蒸発効率 (0 から1 までの範囲) \\
@@ -99,12 +101,14 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
 \nmitem{ATMOS_PHY_SF_TYPE} が \verb|BULK| もしくは \verb|COUPLE| の場合、
 バルク交換係数は Monin-Obukhov の相似則に基づいて計算される。
 係数計算のためのパラメータは、以下のように \namelist{PARAM_BULKFLUX} で設定する。
+%
 \editboxtwo{
 \verb|&PARAM_BULKFLUX                      | & \\
 \verb| BULKFLUX_TYPE = "B91W01",           | & ; 表\ref{tab:nml_bulk}に示すバルク交換係数スキームから選択 \\
 \verb| BULKFLUX_Uabs_min = 1.0D-2,         | & ; 地表面フラックス計算における絶対風速の下限値 [m/s] \\
 \verb| BULKFLUX_surfdiag_neutral = .true., | & ; 地表面診断変数の計算において中立を仮定するかどうかのスイッチ \\
-\verb| BULKFLUX_WSCF = 1.2D0,              | & ; w$^*$ に対する経験係数 \citep{beljaars_1994} \\
+\verb| BULKFLUX_WSCF = 1.2D0,              | & ; w$^{\ast}$ に対する経験係数 \citep{beljaars_1994} \\
+\verb| BULKFLUX_Wstar_min = 1.0E-4,        | & ; w$^{\ast}$ の下限値 [m/s] \\
 \verb| BULKFLUX_NK2018 = .true.,           | & ; \citet{nishizawa_2018} のスキームを使うかどうかのスイッチ \\
 \verb|/                                    | & \\
 }
@@ -116,7 +120,7 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 & 参考文献 \\ \hline
       \verb|B91W01| & 繰り返し計算によるバルク法(デフォルト) & \citet{beljaars_1991,wilson_2001} \\
-      \verb|U95|    & Louis 型のバルク法、(\citet{louis_1979}の改良版) & \citet{uno_1995} \\
+      \verb|U95|    & Louis 型のバルク法 (\citet{louis_1979}の改良版) & \citet{uno_1995} \\
     \hline
   \end{tabularx}
 \end{center}
@@ -126,22 +130,23 @@ $\nmitemeq{ATMOS_PHY_SF_Const_SH} \times \sin(2\pi t/3600/\nmitemeq{ATMOS_PHY_SF
 サポートされているスキームは表\ref{tab:nml_bulk}にリストされている。
 
 交換係数は風速に強く依存している。
-モデルで計算される風速には格子スケール以下の成分が含まれておらず、地表面フラックスが過小評価される可能性がある。
-したがって、計算に用いる最下層における絶対風速に下限値を設けることができる。
+モデルで計算される風速には格子スケール以下の成分が含まれていないので、静穏時に地表面フラックスが過小評価される可能性がある。
+したがって、計算に用いる最下層の絶対風速に下限値を設けることができる。
 この下限値は \nmitem{BULKFLUX_Uabs_min} で設定する。
 
 10 m 風速や 2 m 気温・比湿といった地上診断変数は、交換係数と整合するように計算される。
 これらの値は地表面状態や静的安定度に依存する。
-したがって、海岸など隣接する格子店において地表面状態が大きく異なる場合に、地上変数の値が近い距離で大きく変化する場合がある。
-また、日の出や日没時近くなど静的安定度が大きく変化する場合に、地上変数の値が短い時間で大きく変化することがある。
-地上診断変数の計算において中立の静的安定度を仮定することにより、これらの違いを小さくすることができる。
+したがって、海岸など地表面状態が大きく異なる格子が隣り合って分布している場合、地上診断変数の値はそれらの格子の境で大きな差異を持つ場合がある。
+また、日の出や日没時近くなど静的安定度が大きく変化する場合にも、地上診断変数の値は短時間の間に大きく変化することがある。
+これらの時空間方向のギャップは、地上診断変数の計算において中立の静的安定度を仮定することにより小さくすることができる。
 中立を仮定した計算を行うためには、\nmitem{BULKFLUX_surfdiag_neutral} を \verb|.true.| とする。
 
 
 \verb|B91W01| スキームには、加えていくつかのパラメータが用意されている。
-\nmitem{BULKFLUX_WSCF} は、\citet{beljaars_1994} で導入された自由対流速度スケール $w^*$ に対する経験スケール定数 (彼らの論文中では $\beta$ と表記されている) である。
+\nmitem{BULKFLUX_WSCF} は、\citet{beljaars_1994} で導入された自由対流速度スケール $w^{\ast}$ に対する経験スケール定数 (彼らの論文中では $\beta$ と表記されている) である。
 デフォルトでは、水平格子間隔にしたがって値が決まっており、$1.2 \times \min(\Delta x/1000, 1)$ となる。
 1 km よりも大きな格子間隔のシミュレーションでは、その定数は 1.2 となる。
-格子間隔が 1 km よりも小さい場合は、格子間隔に比例して小さくなり、$\lim_{\Delta x\to0}w^*=0$ である。
+格子間隔が 1 km よりも小さい場合は、格子間隔に比例して小さくなり、$\lim_{\Delta x\to0}w^{\ast}=0$ である。
+ただし、$w^{\ast}$の下限値は\nmitem{BULKFLUX_Wstar_min}で設定し、デフォルト値は1.0E-4である。
 \nmitem{BULKFLUX_NK2018} は、\citet{nishizawa_2018} によって提案された相似則の定式化を使うためのスイッチである。
 これは有限体積モデルにおいてより適切となるよう定式化されたものである。
