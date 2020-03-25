@@ -46,7 +46,6 @@ If the environment is always the same, it is convenient to explicitly describe t
  Linux OS x86-64 & icc/ifort    & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
                  & icc/ifort    & SGI-MPT  & Makedef.Linux64-intel-mpt \\ \hline
  Mac OS          & gcc/gfortran & openMPI  & Makedef.MacOSX-gnu-ompi \\ \hline
- K Computer      & fccpx/frtpx  & mpiccpx/mpifrtpx & Makedef.K \\ \hline
  Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
@@ -156,7 +155,7 @@ If you want to change the compilation options in detail, edit \verb|Makedef.***|
  SCALE\_USE\_FIXEDINDEX   & Fix grid index size at the compile time \\ \hline
  SCALE\_ENABLE\_OPENMP    & Enable to use OpenMP \\ \hline
  SCALE\_ENABLE\_OPENACC   & Enable to use OpenACC \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for K computer and FX, this can be a side effect) \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & Conduct strong optimization (only for FX, this can be a side effect) \\ \hline
  SCALE\_DISABLE\_INTELVEC & Suppress option for vectorization (only with Intel compiler) \\ \hline
  SCALE\_NETCDF\_INCLUDE   & Include path of NetCDF library \\ \hline
  SCALE\_NETCDF\_LIBS      & Directory path of NetCDF library and specifying libraries \\ \hline

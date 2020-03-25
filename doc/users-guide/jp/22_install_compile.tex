@@ -41,8 +41,7 @@
  Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
                  & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
  macOS           & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
- スーパーコンピュータ「京」 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.K \\ \hline
- Fujitsu PRIME-HPC FX10 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
+ Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
@@ -143,7 +142,7 @@
  SCALE\_USE\_FIXEDINDEX   & 格子サイズをコンパイル時に固定して最適化促進  \\ \hline
  SCALE\_ENABLE\_OPENMP    & OpenMP機能を有効にする  \\ \hline
  SCALE\_ENABLE\_OPENACC   & OpenACC機能を有効にする  \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（京・FXのみ）  \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（FXのみ）  \\ \hline
  SCALE\_DISABLE\_INTELVEC & ベクトル化オプションの抑制（インテルコンパイラのみ）  \\ \hline
  SCALE\_NETCDF\_INCLUDE   & NetCDFライブラリのincludeディレクトリパス  \\ \hline
  SCALE\_NETCDF\_LIBS      & NetCDFライブラリのディレクトリパスとライブラリ指定  \\ \hline
