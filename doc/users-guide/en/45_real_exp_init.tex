@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{Creating the initial and boundary data: init} \label{sec:tutrial_real_init}
+\section{Creating the initial and boundary data: init} \label{sec:tutorial_real_init}
 %-------------------------------------------------------%
 
 Move to the directory \verb|init| and create the initial and boundary data for the \scalerm simulation as follows:
@@ -55,7 +55,7 @@ In particular,  the contents of \namelist{PARAM_MKINIT_REAL_ATMOS}, \namelist{PA
 The file format of the meteorological field data is specified in \nmitem{FILETYPE_ORG}. In this case, it is given as ``\grads'' to read data in \grads format. Refer to Section \ref{sec:adv_datainput} for the details of the input file.
 
 
-Link the input data (FNL) that are converted into binary form in Section \ref{sec:tutrial_real_data} to the current working directory. A shell script for this appropriate linkage is prepared as \verb|"gradsinput-link_FNL.sh"| in the directory \verb|${Tutorial_DIR}/real/data|:
+Link the input data (FNL) that are converted into binary form in Section \ref{sec:tutorial_real_data} to the current working directory. A shell script for this appropriate linkage is prepared as \verb|"gradsinput-link_FNL.sh"| in the directory \verb|${Tutorial_DIR}/real/data|:
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh

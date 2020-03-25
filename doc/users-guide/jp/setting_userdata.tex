@@ -26,25 +26,25 @@
 ユーザ定義データに関する設定は、以下のように \namelist{PARAM_CNVUSER} で行う。
 \editboxtwo{
 \verb|&PARAM_CNVUSER| & \\
-\verb| CNVUSER_FILE_TYPE = '',        | & ; ユーザ定義データの種類。 表\ref{tab:userdata_type}参照。 \\
-\verb| CNVUSER_INTERP_TYPE = 'LINEAR',| & ; 水平内挿の種類。 \\
-\verb| CNVUSER_INTERP_LEVEL = 5,      | & ; 内挿のレベル。 \\
-\verb| CNVUSER_OUT_TITLE = 'SCALE-RM 2D Boundary',| & ; 出力ファイル中のタイトル。 \\
-\verb| CNVUSER_OUT_VARNAME = '',      | & ; 出力ファイルにおける変数名。 \\
-\verb| CNVUSER_OUT_VARDESC = '',      | & ; 出力変数の説明。 \\
-\verb| CNVUSER_OUT_VARUNIT = '',      | & ; 出力変数の単位。 \\
-\verb| CNVUSER_OUT_DTYPE 'DEFAULT',   | & ; 出力変数のデータタイプ (DEFAULT,INT2,INT4,REAL4,REAL8)。 \\
-\verb| CNVUSER_NSTEPS =  10,          | & ; データの時間ステップ数。 \\
-\verb| CNVUSER_OUT_DT = -1.0D0,       | & ; 出力データの時間間隔 (秒)。 \\
-\verb| CNVUSER_GrADS_FILENAME = '',   | & ; \grads データのネームリストファイル名。 \\
-\verb| CNVUSER_GrADS_VARNAME = '',    | & ; ネームリスト中の変数名。 \\
-\verb| CNVUSER_GrADS_LATNAME = 'lat', | & ; ネームリスト中の緯度の名前。 \\
-\verb| CNVUSER_GrADS_LONNAME = 'lon', | & ; ネームリスト中の経度の名前。 \\
-\verb| CNVUSER_TILE_DIR = '',         | & ; タイルデータとカタログファイルが配置されているのディレクトリ名。 \\
-\verb| CNVUSER_TILE_CATALOGUE = '',   | & ; カタログファイルの名前。 \\
-\verb| CNVUSER_TILE_DLAT = 1.0D0,     | & ; タイルデータの緯度間隔。 \\
-\verb| CNVUSER_TILE_DLON = 1.0D0,     | & ; タイルデータの経度間隔。 \\
-\verb| CNVUSER_TILE_DTYPE = 'REAL4',  | & ; タイルデータのデータタイプ (INT2,INT4,REAL4,REAL8)。 \\
+\verb| CNVUSER_FILE_TYPE = '',        | & ; ユーザ定義データの種類、 表\ref{tab:userdata_type}参照 \\
+\verb| CNVUSER_INTERP_TYPE = 'LINEAR',| & ; 水平内挿の種類 \\
+\verb| CNVUSER_INTERP_LEVEL = 5,      | & ; 内挿のレベル   \\
+\verb| CNVUSER_OUT_TITLE = 'SCALE-RM 2D Boundary',| & ; 出力ファイル中のタイトル \\
+\verb| CNVUSER_OUT_VARNAME = '',      | & ; 出力ファイルにおける変数名 \\
+\verb| CNVUSER_OUT_VARDESC = '',      | & ; 出力変数の説明 \\
+\verb| CNVUSER_OUT_VARUNIT = '',      | & ; 出力変数の単位 \\
+\verb| CNVUSER_OUT_DTYPE 'DEFAULT',   | & ; 出力変数のデータタイプ (DEFAULT,INT2,INT4,REAL4,REAL8) \\
+\verb| CNVUSER_NSTEPS =  10,          | & ; データの時間ステップ数 \\
+\verb| CNVUSER_OUT_DT = -1.0D0,       | & ; 出力データの時間間隔 [秒] \\
+\verb| CNVUSER_GrADS_FILENAME = '',   | & ; \grads データ用のネームリストファイル名 \\
+\verb| CNVUSER_GrADS_VARNAME = '',    | & ; ネームリスト中の変数名 \\
+\verb| CNVUSER_GrADS_LATNAME = 'lat', | & ; ネームリスト中の緯度の名前 \\
+\verb| CNVUSER_GrADS_LONNAME = 'lon', | & ; ネームリスト中の経度の名前 \\
+\verb| CNVUSER_TILE_DIR = '',         | & ; タイルデータとカタログファイルがあるディレクトリパス \\
+\verb| CNVUSER_TILE_CATALOGUE = '',   | & ; カタログファイルの名前 \\
+\verb| CNVUSER_TILE_DLAT = 1.0D0,     | & ; タイルデータの緯度間隔 \\
+\verb| CNVUSER_TILE_DLON = 1.0D0,     | & ; タイルデータの経度間隔 \\
+\verb| CNVUSER_TILE_DTYPE = 'REAL4',  | & ; タイルデータのデータタイプ (INT2,INT4,REAL4,REAL8) \\
 \verb|/|\\
 }
 
