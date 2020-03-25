@@ -155,14 +155,14 @@ The porosity of the soil depends on the land use.
 
 \nmitem{ELEVATION_CORRECTION} in \namelist{PARAM_MKINIT_REAL_LAND} determines
 whether soil temperature and land surface temperature for the initial and boundary data are corrected
-according to the topographical difference between the parent model and the SCALE-RM.
-In general, topographies of the parent model and the SCALE-RM are different.
+according to the topographical difference between the parent model and the \scalerm.
+In general, topographies of the parent model and the \scalerm are different.
 Therefore, if soil temperature and land surface temperature for the initial and boundary data are made by simply interpolating the data of the parent model,
 there could be inconsistency of temperature according to the height difference of the topography.
 If \nmitem{ELEVATION_CORRECTION} is \verb|.true.|,
 soil temperature and land surface temperature for the initial and boundary data are corrected according to the height difference.
-For example, if the topography made by the SCALE-RM is $\Delta h$ higher than that of the parent model,
-soil temperature and land surface temperature is uniformly reduced by $\Delta h\Gamma$,
+For example, if the topography made by the \scalerm is $\Delta h$ higher than that of the parent model,
+soil temperature and land surface temperature are uniformly reduced by $\Delta h\Gamma$,
 where $\Gamma$ is lapse rate of the international standard atmosphere (ISA): $\Gamma=6.5\times 10^{-3}$ [K/m].
 The default value is \nmitem{ELEVATION_CORRECTION} = \verb|.true.|.
 
