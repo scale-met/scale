@@ -9,8 +9,27 @@
 \namelist{PARAM_CONVERT} の \nmitem{CONVERT_TOPO} を \verb|.true.| とすると、\verb|scale-rm_pp|は外部標高データを変換する。
 変換されたデータは \namelist{PARAM_TOPOGRAPHY} の \nmitem{TOPOGRAPHY_OUT_BASENAME} で指定したファイルに保存される。
 作成されたファイルを \verb|scale-rm_init| や \verb|scale-rm| で使用するには、\namelist{PARAM_TOPOGRAPHY} の \nmitem{TOPOGRAPHY_IN_BASENAME} に設定する。
+%
+\editboxtwo{
+\verb|&PARAM_CONVERT  | &\\
+\verb| CONVERT_TOPO    = .true.,|                  & ; 地形データの変換を実行するかどうか\\
+\verb|  ......                   |                 & \\
+\verb|/| & \\
+\verb|&PARAM_TOPOGRAPHY| & \\
+\verb| TOPOGRAPHY_IN_BASENAME   = ''             | & ; (入力時) 入力ファイルのベース名 \\
+\verb| TOPOGRAPHY_IN_VARNAME    = 'topo'         | & ; (入力時) 入力ファイルの地形データの変数名 \\
+\verb| TOPOGRAPHY_IN_AGGREGATE  = .false.        | & ; (入力時) PnetCDF を用いて単一ファイルから読むか \\
+\verb| TOPOGRAPHY_IN_CHECK_COORDINATES = .false. | & ; (入力時) データの座標が正しいことを確認するかどうか \\
+\verb| TOPOGRAPHY_OUT_BASENAME  = ''             | & ; (出力時) 出力ファイルのベース名 \\
+\verb| TOPOGRAPHY_OUT_AGGREGATE = .false.        | & ; (出力時) PnetCDF を用いて単一のファイルにまとめるか \\
+\verb| TOPOGRAPHY_OUT_DTYPE     = 'DEFAULT'      | & ; (出力時) 出力変数のデータ型 \\
+                                                   & ~~~ ("\verb|DEFAULT|","\verb|REAL4|","\verb|REAL8|") \\
+\verb|/| & \\
+}
 
-変換に関する設定は、以下のように \namelist{PARAM_CNVTOPO} で行う。
+
+外部入力データなど変換に関する設定は、以下のように \namelist{PARAM_CNVTOPO} で行う。
+%
 \editboxtwo{
 \verb|&PARAM_CNVTOPO                               | & \\
 \verb| CNVTOPO_name                  = 'NONE',      | & ; '\verb|NONE|','\verb|GTOPO30|','\verb|DEM50M|','\verb|USERFILE|' \\
@@ -35,14 +54,14 @@
 また、ユーザ定義データもサポートしている (詳細は \ref{subsec:topo_userfile}節参照のこと)。
 
 利用する外部データの種類は \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} もしくは \\ \nmitem{CNVTOPO_name} で設定する。
-\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} はそれぞれ \\ GTOPO30, DEM50M, ユーザ定義データを利用するかどうかのスイッチであり、これらのデフォルト値は \verb|.false.| である。
+\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} はそれぞれ \\ GTOPO30、DEM50M、ユーザ定義データを利用するかどうかのスイッチであり、これらのデフォルト値は \verb|.false.| である。
 それらのスイッチの代わりに \nmitem{CNVTOPO_name} を使って設定することもできる。
-\nmitem{CNVTOPO_name} の値にしたがって、\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} は表\ref{tab:cvntopo_name}で示されている値に設定される。
+その際、\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} は\nmitem{CNVTOPO_name} の値にしたがって、表\ref{tab:cvntopo_name}で示されている値に設定される。
 表\ref{tab:cvntopo_name} の$\ast$ 印は、
-\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定も有効であることを示している。
-また、複数のデータセットを組み合わせることも可能である。
-\nmitem{CNVTOPO_UseGTOPO30}、\nmitem{CNVTOPO_UseDEM50M}、\nmitem{CNVTOPO_UseUSERFILE} のうち、利用したいデータすべてに \verb|.true.| を設定する。
+ネームリストで指定された\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定も有効であることを示している。
 
+また、複数のデータセットを組み合わせることも可能である。
+その場合、\nmitem{CNVTOPO_UseGTOPO30}、\nmitem{CNVTOPO_UseDEM50M}、\nmitem{CNVTOPO_UseUSERFILE} のうち、利用したいデータすべてに \verb|.true.| を設定する。
 
 \begin{table}[tbh]
 \begin{center}
@@ -60,8 +79,7 @@
 
 
 
-
-プログラムは以下のステップでデータを作成する。
+プログラムは、上記の設定に従って、以下のステップでデータを作成する。
 \begin{enumerate}[1)]
  \item すべての計算格子点に未定義値を設定する。
  \item \nmitem{CNVTOPO_UseGTOPO30}=\verb|.true.|なら、GTOPO30 のデータセットを計算格子点に内挿する。
@@ -73,9 +91,9 @@
 GTOPO30 および DEM50M データの内挿には2次元線形補間が用いられ、ユーザ定義データには指定した補完法が用いられる (\ref{subsec:topo_userfile}節参照)。
 
 GTOPO30データを使うためには、データが配置されているディレクトリおよびカタログファイルのパスを \namelist{PARAM_CNVTOPO_GTOPO30} のそれぞれ \nmitem{GTOPO30_IN_DIR} および \nmitem{GTOPO30_IN_CATALOGUE} で指定する必要がある。
-GTOPO30データが \ref{sub:tutorial_real_data}章で説明されている通りに保存されている場合には、これらの値はそれぞれ \verb|$SCALE_DB/topo/GTOPO30/Products| および \\ \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| となる。
+GTOPO30データが \ref{sec:tutorial_real_data}章で説明されている通りに保存されている場合には、これらの値はそれぞれ \verb|$SCALE_DB/topo/GTOPO30/Products| および \\ \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| となる。
 ここで、\verb|$SCALE_DB| は実際のパスに展開すること。
-同様に、DEM50Mデータについては、\nmitem{DEM50M_IN_DIR} および \\ \nmitem{DEM50_IN_CATALOGUE} に、それぞれ \verb|$SCALE_DB/topo/DEM50M/Products| および \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| となる。
+同様に、DEM50Mデータについては、\nmitem{DEM50M_IN_DIR} および \\ \nmitem{DEM50_IN_CATALOGUE} に設定し、それぞれ \verb|$SCALE_DB/topo/DEM50M/Products| および \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| となる。
 ユーザ定義データの設定については \ref{subsec:topo_userfile}節で説明されている。
 
 
@@ -101,7 +119,7 @@ $\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定�
 \nmitem{CNVTOPO_smooth_hypdiff_(niter|order)}は、小さな空間スケールのノイズを取り除くための付加的な超粘性フィルタを適用するための設定である。
 計算実行時における数値的なノイズを減らすために、このフィルタリングを適用することを推奨する。
 \nmitem{CNVTOPO_smooth_hypdiff_order} は超粘性の次数である。
-超粘性はフィルタ、\nmitem{CNVTOPO_smooth_hypdiff_niter} で設定した回数だけ繰り返し適用される。
+超粘性フィルタは、\nmitem{CNVTOPO_smooth_hypdiff_niter} で設定した回数だけ繰り返し適用される。
 \nmitem{CNVTOPO_smooth_hypdiff_niter}に負の値を設定した場合は、超粘性フィルタは適用されない。
 
 平滑化や超粘性フィルターをかけると、海岸線がなまり、海岸線付近の海面高度が0より高くなる。
@@ -147,14 +165,14 @@ $\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定�
 読み込まれたデータは計算格子へ補完される。
 補完法は \nmitem{USERFILE_INTERP_TYPE} で指定する。
 サポートされているのは \verb|LINEAR| と \verb|DIST-WEIGHT| である。
-詳細については \ref{sec:datainput_grads}章を参照のこと。
+詳細については 第\ref{sec:datainput_grads}章を参照のこと。
 \verb|DIST-WEIGHT| を指定した場合に用いられる隣接点の数は \nmitem{USERFILE_INTERP_LEVEL} で指定する。
 
 
 
 ``GrADS''タイプを指定した場合、別途入力ファイルのデータ構造を記述するネームリストファイルが必要となる。
 このネームリストファイルは\nmitem{USERFILE_GrADS_FILENAME}で指定する。
-ネームリストファイルの詳細については、\ref{sec:datainput_grads}を参照のこと。
+ネームリストファイルの詳細については、第\ref{sec:datainput_grads}節を参照のこと。
 デフォルトでは、地形、緯度、経度データの変数名のデフォルト値はそれぞれ``topo'', ``lat'', ``lon''であるが、
 異なる場合には、それぞれ\nmitem{USERFILE_GrADS_VARNAME}、\nmitem{USERFILE_GrADS_LATNAME}、\nmitem{USERFILE_GrADS_LONNAME}で指定する。
 

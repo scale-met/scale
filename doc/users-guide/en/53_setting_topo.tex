@@ -10,9 +10,26 @@ Topography data used in the program \verb|scale-rm_init| and \verb|scale-rm| sho
 The program \verb|scale-rm_pp| converts external topography data when \nmitem{CONVERT_TOPO} in \\ \namelist{PARAM_CONVERT} is \verb|.true.|.
 Then, the converted data is saved in the file specified by \\ \nmitem{TOPOGRAPHY_OUT_BASENAME} in \namelist{PARAM_TOPOGRAPHY}.
 The generated file is used in \verb|scale-rm_init| and \verb|scale-rm| by setting to \nmitem{TOPOGRAPHY_IN_BASENAME} in \namelist{PARAM_TOPOGRAPHY}.
+%
+\editboxtwo{
+\verb|&PARAM_CONVERT  | &\\
+\verb| CONVERT_TOPO    = .true., |                 & ; Whether execute the conversion of topography data\\
+\verb|  ......                   |                 & \\
+\verb|/| & \\
+\verb|&PARAM_TOPOGRAPHY| & \\
+\verb| TOPOGRAPHY_IN_BASENAME   = ''             | & ; (Input)  Base name of input topography file  \\
+\verb| TOPOGRAPHY_IN_VARNAME    = 'topo'         | & ; (Input)  Variable name of topography in the input file \\
+\verb| TOPOGRAPHY_IN_AGGREGATE  = .false.        | & ; (Input)  Whether read from one file with PnetCDF \\
+\verb| TOPOGRAPHY_IN_CHECK_COORDINATES = .false. | & ; (Input)  Whether check coordinate variables in the input file \\
+\verb| TOPOGRAPHY_OUT_BASENAME  = ''             | & ; (Output) Base name of output file \\
+\verb| TOPOGRAPHY_OUT_AGGREGATE = .false.        | & ; (Output) Whether aggregate to one file with PnetCDF \\
+\verb| TOPOGRAPHY_OUT_DTYPE     = 'DEFAULT'      | & ; (Output) Data type to output \\
+                                                   & ~~~ ("\verb|DEFAULT|","\verb|REAL4|","\verb|REAL8|") \\
+\verb|/| & \\
+}
 
 
-The configurations for the conversion are specified in \namelist{PARAM_CNVTOPO} as follows:
+The configurations for the conversion, including information of external input data, are specified in \namelist{PARAM_CNVTOPO}.
 \editboxtwo{
 \verb|&PARAM_CNVTOPO                               | & \\
 \verb| CNVTOPO_name                  = 'NONE',      | & ; '\verb|NONE|','\verb|GTOPO30|','\verb|DEM50M|', or '\verb|USERFILE|' \\
@@ -39,12 +56,13 @@ The user-defined binary data is also supported (refer to Section \ref{subsec:top
 The types of the external data used are specified by \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} and/or \nmitem{CNVTOPO_name}.
 It the switches of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are set to \verb|.true.|, the GTOPO30, DEM50M, and user-defined data are used, respectively.
 The default settings of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are \verb|.false.|.
-User can use the parameter \nmitem{CNVTOPO_name} to specify which data to be used, instead of the switches;
+User can use \nmitem{CNVTOPO_name} to specify which data to be used, instead of the individual switches;
 preset values of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are set by \nmitem{CNVTOPO_name} as shown in Table \ref{tab:cvntopo_name}.
 The mark of asterisk ($\ast$) in Table \ref{tab:cvntopo_name} indicates that
 settings of the \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are also valid.
+
 The combination of these datasets is also available.
-Set all parameters of \nmitem{CNVTOPO_UseGTOPO30}, \nmitem{CNVTOPO_UseDEM50M}, and \nmitem{CNVTOPO_UseUSERFILE} to \verb|.true.|, which are to be used.
+Set all parameters of \nmitem{CNVTOPO_UseGTOPO30}, \nmitem{CNVTOPO_UseDEM50M}, and \nmitem{CNVTOPO_UseUSERFILE}, which are to be used, to \verb|.true.|.
 
 \begin{table}[tbh]
 \begin{center}
@@ -61,7 +79,7 @@ Set all parameters of \nmitem{CNVTOPO_UseGTOPO30}, \nmitem{CNVTOPO_UseDEM50M}, a
 \end{table}
 
 
-The program makes the data as follows:
+The program makes the data according to the settings described above as follows:
 \begin{enumerate}[1)]
  \item Set all simulation grid points to undefined value.
  \item If \nmitem{CNVTOPO_UseGTOPO30}=\verb|.true.|, interpolate GTOPO30 dataset to the simulation grid points.
@@ -70,14 +88,14 @@ The program makes the data as follows:
  \item Set zero where the grid points that remain undefined.
  \item Apply smoothing.
 \end{enumerate}
-The GTOPO30 and DEM50M data are interpolated with the bi-linear interpolation method, while the user-defined data is with the method specified in the configuration (see Section \ref{subsec:topo_userfile}).
+The GTOPO30 and DEM50M data are interpolated with the bi-linear interpolation method, while the user-defined data is interpolated with the method specified in the configuration (see Section \ref{subsec:topo_userfile}).
 
-To use the GTOPO30 data, directory where the data is stored and the path of the catalogue file must be specified by \nmitem{GTOPO30_IN_DIR} and \nmitem{GTOPO30_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_GTOPO30}, respectively.
+To use the GTOPO30 data, the directory where the data is stored and the path of the catalogue file must be specified by \nmitem{GTOPO30_IN_DIR} and \nmitem{GTOPO30_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_GTOPO30}, respectively.
 If the data is stored as explained in Section \ref{sec:tutorial_real_data}, they should be \\ \verb|$SCALE_DB/topo/GTOPO30/Products| and \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt|, respectively (\verb|$SCALE_DB| must be expanded to the actual path.).
-In the same manner, for the DEM50M data, \nmitem{DEM50M_IN_DIR} and \nmitem{DEM50_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_DEM50M} is need to be set to \\ \verb|$SCALE_DB/topo/DEM50M/Products| and \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt|, respectively.
+In the same manner, for the DEM50M data, \nmitem{DEM50M_IN_DIR} and \nmitem{DEM50_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_DEM50M} is need to be set such as \verb|$SCALE_DB/topo/DEM50M/Products| and \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt|, respectively.
 Configurations for the user-defined data are explained in Section \ref{subsec:topo_userfile}.
 
-There are two types of filter for the smoothing the elevation with the steep slope in interpolated topography: Laplacian and Gaussian filters.
+There are two types of filter for smoothing the elevation with the steep slope in the interpolated topography: Laplacian and Gaussian filters.
 The type is specified by \nmitem{CNVTOPO_smooth_type}. The Laplacian filter is used in default.
 In the smoothing operation, the filter is applied multiple times until the angle of the topography slope is below the maximum allowable angle $\theta_{\max}$.
 The maximum allowable angle [radian] is calculated as follows:
@@ -89,7 +107,7 @@ As shown in the above equation, $\theta_{\max}$ depends on spatial resolution.
 Greater $\mathrm{RATIO}$ results in a finer topography.
 Note that the risk of numerical instability increases as $\mathrm{RATIO}$ becomes greater.
 The $\mathrm{RATIO}$ is specified by \nmitem{CNVTOPO_smooth_maxslope_ratio}, and its default value is 0.5.
-Instead of \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can directly set the maximum angle $\theta_{\max}$ by setting the parameter \nmitem{CNVTOPO_smooth_maxslope} in degree.
+Instead of \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can directly set the maximum angle $\theta_{\max}$ by setting \nmitem{CNVTOPO_smooth_maxslope} in degree.
 The number limit of the smoothing iteration is 10000 times in default.
 You can increase the limit by setting \nmitem{CNVTOPO_smooth_itelim}.
 When \nmitem{CNVTOPO_smooth_local} is set to \verb|.true.|, the operation for smoothing is continued only at the grid points where the smoothing is not completed.
@@ -171,7 +189,8 @@ The data is stored with a 2-byte integer.
 \verb| USERFILE_DIR        = "./input_topo",       | & ; Directory path of input file \\
 \verb| USERFILE_DLAT       = 0.0083333333333333D0, | & ; Interval of the grid (latitude,  degree) \\
 \verb| USERFILE_DLON       = 0.0083333333333333D0, | & ; Interval of the grid (longitude, degree) \\
-\verb| USERFILE_DTYPE      = "INT2",               | & ; Type of the data ("\verb|INT2|", "\verb|INT4|", "\verb|REAL4|", "\verb|REAL8|") \\
+\verb| USERFILE_DTYPE      = "INT2",               | & ; Type of the data \\
+                                                     & ~~~("\verb|INT2|", "\verb|INT4|", "\verb|REAL4|", "\verb|REAL8|") \\
 \verb| USERFILE_yrevers    = .true.,               | & ; Data is stored from north to south in latitudinal direction? \\
 \verb|/                                           | \\
 }
