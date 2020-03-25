@@ -2,89 +2,195 @@
 %-----------------------------------------------------------------------
 
 \scalerm employs the terrain-following coordinates to represent topography.
-In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude. The maximum allowable angle of inclination, $\theta_{\max}$[radian] is calculated as follows:
-\begin{eqnarray}
-  && \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )\nonumber,
-\end{eqnarray}
-where $\mathrm{DZ}$ and $\mathrm{DX}$ are the horizontal and vertical grid intervals, respectively.  As shown in the above equation, $\theta_{\max}$ depends on spatial resolution.
-If $\mathrm{RATIO}$ is greater than unity, the fine topography is expressed, and vice versa. Note that if $\mathrm{RATIO}$ is set to a greatly large value, the risk of numerical instability increases.
-In \scalerm, the default value of $\mathrm{RATIO}$ is 10.0.
+In these coordinates, the bottom face of the lowest grid is given such that it can follow the surface altitude, i.e., topography.
+Topography data used in the program \verb|scale-rm_init| and \verb|scale-rm| should be prepared in \scalelib format beforehand, except for some ideal experiments.
+\scalerm has a pre-processing function to convert external topography data to the format.
 
-The program \verb|scale-rm_pp| converts external topography data into \scalelib format.
-The detailed configurations are specified in \namelist{PARAM_CNVTOPO} in configuration file \verb|pp.conf|. An example is as follows:
 
+The program \verb|scale-rm_pp| converts external topography data when \nmitem{CONVERT_TOPO} in \\ \namelist{PARAM_CONVERT} is \verb|.true.|.
+Then, the converted data is saved in the file specified by \\ \nmitem{TOPOGRAPHY_OUT_BASENAME} in \namelist{PARAM_TOPOGRAPHY}.
+The generated file is used in \verb|scale-rm_init| and \verb|scale-rm| by setting to \nmitem{TOPOGRAPHY_IN_BASENAME} in \namelist{PARAM_TOPOGRAPHY}.
+%
+\editboxtwo{
+\verb|&PARAM_CONVERT  | &\\
+\verb| CONVERT_TOPO    = .true., |                 & ; Whether execute the conversion of topography data\\
+\verb|  ......                   |                 & \\
+\verb|/| & \\
+\verb|&PARAM_TOPOGRAPHY| & \\
+\verb| TOPOGRAPHY_IN_BASENAME   = ''             | & ; (Input)  Base name of input topography file  \\
+\verb| TOPOGRAPHY_IN_VARNAME    = 'topo'         | & ; (Input)  Variable name of topography in the input file \\
+\verb| TOPOGRAPHY_IN_AGGREGATE  = .false.        | & ; (Input)  Whether read from one file with PnetCDF \\
+\verb| TOPOGRAPHY_IN_CHECK_COORDINATES = .false. | & ; (Input)  Whether check coordinate variables in the input file \\
+\verb| TOPOGRAPHY_OUT_BASENAME  = ''             | & ; (Output) Base name of output file \\
+\verb| TOPOGRAPHY_OUT_AGGREGATE = .false.        | & ; (Output) Whether aggregate to one file with PnetCDF \\
+\verb| TOPOGRAPHY_OUT_DTYPE     = 'DEFAULT'      | & ; (Output) Data type to output \\
+                                                   & ~~~ ("\verb|DEFAULT|","\verb|REAL4|","\verb|REAL8|") \\
+\verb|/| & \\
+}
+
+
+The configurations for the conversion, including information of external input data, are specified in \namelist{PARAM_CNVTOPO}.
 \editboxtwo{
 \verb|&PARAM_CNVTOPO                               | & \\
-\verb|CNVTOPO_UseGTOPO30            = .true.,      | & ; Use GTOPO30 dataset? \\
-\verb|CNVTOPO_UseDEM50M             = .false.,     | & ; Use DEM50M dataset? \\
-\verb|CNVTOPO_UseUSERFILE           = .false.,     | & ; Use user-defined dataset? \\
-\verb|CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; Type of smoothing filter (OFF,LAPLACIAN,GAUSSIAN) \\
-\verb|CNVTOPO_smooth_maxslope_ratio = 5.D0,        | & ; Maximum allowable ratio of inclination to $\mathrm{DZ}$/$\mathrm{DX}$ \\
-\verb|CNVTOPO_smooth_maxslope       = -1.D0,       | & ; Maximum allowable angle of inclination [deg] \\
-\verb|CNVTOPO_smooth_local          = .true.,      | & ; Try to continue smoothing, for only grids whose angles of inclination exceed the maximum value? \\
-\verb|CNVTOPO_smooth_itelim         = 10000,       | & ; Number limit of the smoothing iteration \\
-\verb|CNVTOPO_smooth_hypdiff_niter  = 20,          | & ; Number of the smoothing iteration by hyperdiffusion \\
-\verb|CNVTOPO_interp_level          = 5,           | & ; Number of the neighbor grid points for interpolation \\
-\verb|CNVTOPO_copy_parent           = .false.,     | & ; The topography in the buffer region of child domain is copied from parent domain? \\
+\verb| CNVTOPO_name                  = 'NONE',      | & ; '\verb|NONE|','\verb|GTOPO30|','\verb|DEM50M|', or '\verb|USERFILE|' \\
+\verb| CNVTOPO_UseGTOPO30            = .false.,     | & ; Use GTOPO30 dataset? \\
+\verb| CNVTOPO_UseDEM50M             = .false.,     | & ; Use DEM50M dataset? \\
+\verb| CNVTOPO_UseUSERFILE           = .false.,     | & ; Use user-defined dataset? \\
+\verb| CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; Type of smoothing filter \\
+                                                     & ~~~ ("\verb|OFF|", "\verb|LAPLACIAN|", "\verb|GAUSSIAN|") \\
+\verb| CNVTOPO_smooth_maxslope_ratio =  5.D0,       | & ; Maximum allowable ratio of inclination to $\Delta z/\Delta x$ \\
+\verb| CNVTOPO_smooth_maxslope       = -1.D0,       | & ; Maximum allowable angle of inclination [deg] \\
+\verb| CNVTOPO_smooth_local          = .true.,      | & ; Try to continue smoothing, for only grids whose angles of inclination exceed the maximum value? \\
+\verb| CNVTOPO_smooth_trim_ocean     = .true.       | & ; Switch to keep ocean coast line \\
+\verb| CNVTOPO_smooth_itelim         = 10000,       | & ; Number limit of the smoothing iteration \\
+\verb| CNVTOPO_smooth_hypdiff_niter  = 20,          | & ; Number of the repetitions of the hyperdiffusion \\
+\verb| CNVTOPO_smooth_hypdiff_order  = 4,           | & ; The order of the hyperdiffusion \\
+\verb| CNVTOPO_copy_parent           = .false.,     | & ; The topography in the buffer region of child domain is copied from parent domain? \\
 \verb|/                                            | \\
 }
 
-\scalerm supports GTOPO30 and DEM50M provided by the Geospatial Information Authority of Japan as the input of the topography data.
-The program \verb|scale-rm_pp| can convert the topographic data prepared by user. Please refer to the next section \ref{subsec:topo_userfile}, too.
-The combination of these datasets is also available. If both \nmitem{CNVTOPO_UseGTOPO30} and \nmitem{CNVTOPO_UseDEM50M} are set to \verb|true|, the program makes the data as follows:
 
-\begin{itemize}
- \item Interpolate GTOPO30 dataset to the grid point of simulation domain,
- \item Interpolate DEM50M dataset and overwrite the region covered by DEM50M,
+As external topography data, \scalerm supports GTOPO30 provided by the U.S. Geological Survey and DEM50M provided by the Geospatial Information Authority of Japan.
+The user-defined binary data is also supported (refer to Section \ref{subsec:topo_userfile} for the details).
+
+The types of the external data used are specified by \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} and/or \nmitem{CNVTOPO_name}.
+It the switches of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are set to \verb|.true.|, the GTOPO30, DEM50M, and user-defined data are used, respectively.
+The default settings of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are \verb|.false.|.
+User can use \nmitem{CNVTOPO_name} to specify which data to be used, instead of the individual switches;
+preset values of \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are set by \nmitem{CNVTOPO_name} as shown in Table \ref{tab:cvntopo_name}.
+The mark of asterisk ($\ast$) in Table \ref{tab:cvntopo_name} indicates that
+settings of the \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} are also valid.
+
+The combination of these datasets is also available.
+Set all parameters of \nmitem{CNVTOPO_UseGTOPO30}, \nmitem{CNVTOPO_UseDEM50M}, and \nmitem{CNVTOPO_UseUSERFILE}, which are to be used, to \verb|.true.|.
+
+\begin{table}[tbh]
+\begin{center}
+\caption{The relationship between \nmitem{CNVTOPO_name} and \nmitem{CNVTOPO_UseGTOPO30}, \nmitem{CNVTOPO_UseDEM50M}, and \nmitem{CNVTOPO_UseUSERFILE}.}
+\begin{tabularx}{150mm}{X|l|l|l} \hline
+  \rowcolor[gray]{0.9} \verb|CNVTOPO_name| & \verb|CNVTOPO_UseGTOPO30| & \verb|CNVTOPO_UseDEM50M| & \verb|CNVTOPO_UseUSERFILE| \\ \hline
+                       \verb|NONE|           & $\ast$         & $\ast$         & $\ast$          \\ \hline
+                       \verb|GTOPO30|        & \verb|.true.|  & \verb|.false.| & \verb|.false.|  \\ \hline
+                       \verb|DEM50M|         & \verb|.false.| & \verb|.true.|  & \verb|.false.|  \\ \hline
+                       \verb|USERFILE|       & $\ast$         & $\ast$         & \verb|.true.|   \\ \hline
+\end{tabularx}
+\label{tab:cvntopo_name}
+\end{center}
+\end{table}
+
+
+The program makes the data according to the settings described above as follows:
+\begin{enumerate}[1)]
+ \item Set all simulation grid points to undefined value.
+ \item If \nmitem{CNVTOPO_UseGTOPO30}=\verb|.true.|, interpolate GTOPO30 dataset to the simulation grid points.
+ \item If \nmitem{CNVTOPO_UseDEM50M}=\verb|.true.|, interpolate DEM50M dataset to the simulation grid, and overwrite the data of step 2 where the interpolated DEM50M data is not the missing value.
+ \item If \nmitem{CNVTOPO_UseUSERFILE}=\verb|.true.|, interpolate the user-defined data to the simulation grid, and overwrite the data of step 3 where the interpolated user data is not the missing value.
+ \item Set zero where the grid points that remain undefined.
  \item Apply smoothing.
-\end{itemize}
+\end{enumerate}
+The GTOPO30 and DEM50M data are interpolated with the bi-linear interpolation method, while the user-defined data is interpolated with the method specified in the configuration (see Section \ref{subsec:topo_userfile}).
 
-In default, the nearest five grid points of input data around the target grid point are used for the interpolation. The number of using grid point is determined by \nmitem{CNVTOPO_interp_level}.
-There are two types of filter for smoothing the elevation of the steep slope in re-gridded topography: Laplacian and Gaussian filter.
-The type can be chosen by \nmitem{CNVTOPO_smooth_type}. The Laplacian filter is used in default.
-In the smoothing operation, the selected filter is applied multiple times until the angle is below the maximum allowable angle $\theta_{\max}$.
-By specifying \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can set $\mathrm{RATIO}$ described above directly. Or, you can use the parameter \nmitem{CNVTOPO_smooth_maxslope}, which determines the maximum angle in degree.
-The number limit of the smoothing iteration is 10000 times in default. You can set larger number by setting \nmitem{CNVTOPO_smooth_itelim}.
-When \nmitem{CNVTOPO_smooth_local} is set to \verb|.true.|, the iterative filter operation is continued only at the grid point where the smoothing is not completed.
+To use the GTOPO30 data, the directory where the data is stored and the path of the catalogue file must be specified by \nmitem{GTOPO30_IN_DIR} and \nmitem{GTOPO30_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_GTOPO30}, respectively.
+If the data is stored as explained in Section \ref{sec:tutorial_real_data}, they should be \\ \verb|$SCALE_DB/topo/GTOPO30/Products| and \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt|, respectively (\verb|$SCALE_DB| must be expanded to the actual path.).
+In the same manner, for the DEM50M data, \nmitem{DEM50M_IN_DIR} and \nmitem{DEM50_IN_CATALOGUE} in \namelist{PARAM_CNVTOPO_DEM50M} is need to be set such as \verb|$SCALE_DB/topo/DEM50M/Products| and \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt|, respectively.
+Configurations for the user-defined data are explained in Section \ref{subsec:topo_userfile}.
 
-Additional hyperdiffusion is applied to the topography for removing the noise in a small spatial scale. We recommend to do this filtering to reduce the numerical noise in the simulation.
-If \nmitem{CNVTOPO_smooth_hypdiff_niter} is set to negative, the filter is not applied.
+There are two types of filter for smoothing the elevation with the steep slope in the interpolated topography: Laplacian and Gaussian filters.
+The type is specified by \nmitem{CNVTOPO_smooth_type}. The Laplacian filter is used in default.
+In the smoothing operation, the filter is applied multiple times until the angle of the topography slope is below the maximum allowable angle $\theta_{\max}$.
+The maximum allowable angle [radian] is calculated as follows:
+\begin{equation*}
+  \theta_{\max} = \arctan( \mathrm{RATIO} \times \Delta z/\Delta x ),
+\end{equation*}
+where $\Delta z$ and $\Delta x$ are the vertical and horizontal grid spacings at the bottom layer, respectively.
+As shown in the above equation, $\theta_{\max}$ depends on spatial resolution.
+Greater $\mathrm{RATIO}$ results in a finer topography.
+Note that the risk of numerical instability increases as $\mathrm{RATIO}$ becomes greater.
+The $\mathrm{RATIO}$ is specified by \nmitem{CNVTOPO_smooth_maxslope_ratio}, and its default value is 0.5.
+Instead of \nmitem{CNVTOPO_smooth_maxslope_ratio}, you can directly set the maximum angle $\theta_{\max}$ by setting \nmitem{CNVTOPO_smooth_maxslope} in degree.
+The number limit of the smoothing iteration is 10000 times in default.
+You can increase the limit by setting \nmitem{CNVTOPO_smooth_itelim}.
+When \nmitem{CNVTOPO_smooth_local} is set to \verb|.true.|, the operation for smoothing is continued only at the grid points where the smoothing is not completed.
 
-\nmitem{CNVTOPO_copy_parent} is the item used for the nesting computation.
-In general, the topography in the child domain is finer than in the parent domain due to higher spatial resolution.
-At this time, problems often occurs due to
-an inconsistency between
-the atmospheric data in the buffer region of the child domain and that in the parent domain.
-To avoid this problem, the topography of the parent domain can be copied to the buffer region of the child domain by specifying \nmitem{CNVTOPO_copy_parent}$=$\verb|.true.| If there is no parent domain, \nmitem{CNVTOPO_copy_parent} must be \verb|.false.|. Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copy_parent}.
+Additional hyperdiffusion is prepared to smooth the rugged terrain on a small spatial scale.
+We recommend applying this filtering to reduce the numerical noise induced by the rugged terrain in the simulation.
+The order of the hyperdiffusion is specified by \nmitem{CNV_TOPO_smooth_hypdiff_norder}.
+The hyperdiffusion is applied repeatedly for the number of times specified by \\ \nmitem{CONV_TOPO_smooth_hyperdiff_niter}.
+If \nmitem{CNVTOPO_smooth_hypdiff_niter} is set to negative, the hyperdiffusion is not applied.
+
+
+The smoothing filter and the hyperdiffusion blur coast line and raise the elevation of the sea surface near the coast above zero.
+If \nmitem{CNVTOPO_smooth_trim_ocean} is set to \verb|.true.|, the land is trimmed along the coast line in each iteration of the filtering operation and then the coast line is fixed.
+Note that the total volume of the soil is not conserved in this case.
+
+
+
+\nmitem{CNVTOPO_copy_parent} is the parameter used for the nesting computation.
+Since the spatial resolution of the child domain is higher than the parent domain in general,
+the topography in the child domain is finer than that in the parent domain.
+At this time, problems may occur due to an inconsistency between the atmospheric data in the buffer region of the child domain and the boundary data which is generated from the parent data.
+To avoid this problem, the topography in the buffer region of the child domain can be the same as that in the parent domain by setting \nmitem{CNVTOPO_copy_parent}$=$\verb|.true.|.
+If there is no parent domain, \nmitem{CNVTOPO_copy_parent} must be \verb|.false.|.
+Section \ref{subsec:nest_topo} provides a more detailed explanation of the case that involves the use of \nmitem{CNVTOPO_copy_parent}.
 
 
 
 \subsection{Preparation of user-defined topography} \label{subsec:topo_userfile}
 
-When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|, the program \verb|scale-rm_pp| converts the data as specified by \namelist{PARAM_CNVTOPO_USERFILE}.
-The type of the input data is specified with \nmitem{USERFILE_TYPE}.
-The supported types are ``GrADS'' and ``TILE''.
-The details for the file types are described in Section \ref{sec:userdata}.
+When \nmitem{CNVTOPO_UseUSERFILE} is set to \verb|.true.|,
+the \verb|scale-rm_pp| creates the \scale topography data from the user-defined data according to \namelist{PARAM_CNVTOPO_USERFILE}.
+The input data supports the type of ``GrADS'' and ``TILE''; they are specified by \nmitem{USERFILE_TYPE}.
+The details for these file types are described in Section \ref{sec:userdata}.
+The available items for \namelist{PARAM_CNVTOPO_USERFILE} as follows:
+\editboxtwo{
+\verb|&PARAM_CNVTOPO_USERFILE              | & \\
+\verb| USERFILE_TYPE           = '',       | & ; "GrADS" or "TILE" \\
+\verb| USERFILE_DTYPE          = 'REAL4',  | & ; (for TILE) Type of the data \\
+                                             & ~~~("\verb|INT2|","\verb|INT4|","\verb|REAL4|","\verb|REAL8|") \\
+\verb| USERFILE_DLAT           = -1.0,     | & ; (for TILE) Interval of the grid (latitude,degree) \\
+\verb| USERFILE_DLON           = -1.0,     | & ; (for TILE) Interval of the grid (longitude,degree) \\
+\verb| USERFILE_CATALOGUE      = '',       | & ; (for TILE) Name of the catalogue file   \\
+\verb| USERFILE_DIR            = '.',      | & ; (for TILE) Directory path of input file \\
+\verb| USERFILE_yrevers        = .false.,  | & ; (for TILE) If data is stored from north to south, set \verb|.true.| \\
+\verb| USERFILE_MINVAL         = 0.0,      | & ; (for TILE) The data lower than \verb|MINVAL| is recognized as missing value \\
+\verb| USERFILE_GrADS_FILENAME = '',       | & ; (for GrADS) Name of the namelist for the \grads data \\
+\verb| USERFILE_GrADS_VARNAME  = 'topo',   | & ; (for GrADS) Name of the target variable in the namelist \\
+\verb| USERFILE_GrADS_LATNAME  = 'lat',    | & ; (for GrADS) Name of latitude in the namelist \\
+\verb| USERFILE_GrADS_LONNAME  = 'lon',    | & ; (for GrADS) Name of longitude in the namelist \\
+\verb| USERFILE_INTERP_TYPE    = 'LINEAR', | & ; (for GrADS) Type for the horizontal interpolation \\
+\verb| USERFILE_INTERP_LEVEL   = 5,        | & ; (for GrADS) Level of the interpolation \\
+\verb|/                                    | \\
+}
 
-For the ``GrADS'' type, \nmitem{USERFILE_GrADS_FILENAME} is used to set the namelist file containing the information of the \grads binary data.
-See Section \ref{sec:datainput_grads} for the details of the namelist file.
+
+The read data is interpolated at the target grid.
+The type of the interpolation is specified by \nmitem{USERFILE_INTERP_TYPE}, and two types are supported: \verb|LINEAR| and \verb|DIST-WEIGHT|.
+Pleas see Section \ref{sec:datainput_grads} for the details.
+The number of neighbor points is specified by \nmitem{USERFILE_INTERP_LEVEL} in the case of \verb|DIST-WEIGHT|.
+
+
+
+For the ``GrADS'' type, the namelist file specified by \nmitem{USERFILE_GrADS_FILENAME} is required to set the information of the \grads binary data.
+Please see Section \ref{sec:datainput_grads} for the details of the namelist file.
 As the default, the variable name for the topography, latitude, and longitude are ``topo'', ``lat'', and ``lon'', respectively.
 If the name is different from the default value, it can be specified with \nmitem{USERFILE_GrADS_VARNAME}, \nmitem{USERFILE_GrADS_LATNAME}, and \nmitem{USERFILE_GrADS_LONNAME}, respectively.
 
 
-
-For the ``TILE'' type, \nmitem{USERFILE_CATALOGUE} is used to set the cataloue file containing information of the name of individual tiled data files and the area which the tiled data covers.
-Refer the catalogue files of the GTOPO30 and DEM50, which has the same format.
-The sample of the setting is as follows:
+For the ``TILE'' type, the catalogue file specified by \nmitem{USERFILE_CATALOGUE} is required;
+it contains information of the name of individual tiled data files and the area where the tiled data covers.
+Refer the catalogue files of the \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| and \\
+\verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| as samples.
+The sample setting of \namelist{PARAM_CNVTOPO_USERFILE} for the ``TILE'' data is as follows.
+In this sample, the catalogue file named \verb|catalogue.txt| is located in the directory \verb|./input_topo|.
+The data is stored with a 2-byte integer.
 \editboxtwo{
 \verb|&PARAM_CNVTOPO_USERFILE                     | & \\
-\verb|USERFILE_CATALOGUE  = "catalogue.txt",      | & ; Name of the catalogue file \\
-\verb|USERFILE_DIR        = "./input_topo",       | & ; Directory path of input file \\
-\verb|USERFILE_DLAT       = 0.0083333333333333D0, | & ; Interval of the grid (latitude,degree) \\
-\verb|USERFILE_DLON       = 0.0083333333333333D0, | & ; Interval of the grid (longitude,degree) \\
-\verb|USERFILE_DTYPE      = "INT2",               | & ; Type of the data (INT2,INT4,REAL4,REAL8) \\
-\verb|USERFILE_yrevers    = .true.,               | & ; Data is stored from north to south in latitudinal direction? \\
+\verb| USERFILE_CATALOGUE  = "catalogue.txt",      | & ; Name of the catalogue file \\
+\verb| USERFILE_DIR        = "./input_topo",       | & ; Directory path of input file \\
+\verb| USERFILE_DLAT       = 0.0083333333333333D0, | & ; Interval of the grid (latitude,  degree) \\
+\verb| USERFILE_DLON       = 0.0083333333333333D0, | & ; Interval of the grid (longitude, degree) \\
+\verb| USERFILE_DTYPE      = "INT2",               | & ; Type of the data \\
+                                                     & ~~~("\verb|INT2|", "\verb|INT4|", "\verb|REAL4|", "\verb|REAL8|") \\
+\verb| USERFILE_yrevers    = .true.,               | & ; Data is stored from north to south in latitudinal direction? \\
 \verb|/                                           | \\
 }
-In this sample, the catalogue file named \verb|catalogue.txt| is located in the directory \verb|./input_topo|.
-The value is stored with a 2-byte integer.

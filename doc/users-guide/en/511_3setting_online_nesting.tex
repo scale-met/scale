@@ -13,7 +13,7 @@ In the online nesting experiment in \scalerm, the time integrations of multiple 
 \begin{figure}[tbh]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./../../figure/mpisplit_nesting.pdf}\\
-  \caption{ MPI process distribution in the online nesting experiment. In this example,   13 processes were launched at the beginning. These processes were distributed appropriately;     4-MPI parallel for $2 \times 2$ in Domain 1 and 9-MPI parallel for $3 \times 3$ in Domain 2 were executed.     MPI communication flowed from Domain 1 to Domain 2.
+  \caption{ MPI process distribution in the online nesting experiment. In this example, 13 processes were launched at the beginning. These processes were distributed appropriately; 4-MPI parallel for $2 \times 2$ in Domain 1 and 9-MPI parallel for $3 \times 3$ in Domain 2 were executed. MPI communication flowed from Domain 1 to Domain 2.
   }
   \label{fig_mpisplit}
 \end{center}
@@ -146,7 +146,7 @@ Therefore, the standard number of processes allocated to the n-th domain is esti
 where \verb|MPI_total| is the total number of MPI processes.
 
 The number of processes distributed along the x and y directions \nmitem{PRC_NUM_X, PRC_NUM_Y} can be arbitrarily decided.
-It is recommended to configure them so that the difference between \verb|IMAX| and \verb|JMAX| is as small as possible. This is because such a configuration can reduce the area of the halo. As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism,  e.g., in the K computer, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}. 
+It is recommended to configure them so that the difference between \verb|IMAX| and \verb|JMAX| is as small as possible. This is because such a configuration can reduce the area of the halo. As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}.
 
 
 In the above explanation, only the number of grids and time steps are considered. However, in actual calculations such as nesting simulation in real atmospheric experiment, the time interval for each physical process, and intra-domain and inter-domain communications affect the elapsed time. In the online nesting configuration, because the calculation in the innermost domain is largest in general, it is reasonable to distribute MPI processes so that waiting time caused by MPI communications is minimized in the innermost domain.  In case of large-scale computations, long integration and many ensemble simulations, it is recommended to tune for the distribution of processes following the above rough estimation.

@@ -456,7 +456,7 @@ contains
     character(len=H_SHORT) :: USERFILE_TYPE = '' ! "TILE" or "GrADS"
 
     ! TILE data
-    character(len=H_SHORT) :: USERFILE_DTYPE     = 'REAL4'  ! datatype (REAL4,REAL8,INT2)
+    character(len=H_SHORT) :: USERFILE_DTYPE     = 'REAL4'  ! datatype (REAL4,REAL8,INT2,INT4)
     real(RP)               :: USERFILE_DLAT      = -1.0_RP  ! width  of latitude  tile [deg.]
     real(RP)               :: USERFILE_DLON      = -1.0_RP  ! width  of longitude tile [deg.]
     character(len=H_LONG)  :: USERFILE_DIR       = '.'      ! directory contains data files (GrADS format)
