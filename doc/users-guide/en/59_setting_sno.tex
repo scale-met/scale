@@ -1,5 +1,5 @@
 %-------------------------------------------------------------------------------
-\section{SCALE NetCDF Operator (\sno)} \label{sec:snoutil}
+\section{SCALE NetCDF Operator (\sno)} \label{sec:sno}
 %-------------------------------------------------------------------------------
 
 In default, the output file of \scalerm (called as \scalenetcdf file) is divided according to the horizontal domain decomposition by the multiple processes. This style is efficient to the throughput of the file I/O during the model simulation. However, it is hard to handle a lot of files. The number of the file increases with increasing the number of process, and we cannot use these files for the next simulation, with changing only the number of the MPI processes. Furthermore, many analytical and visualization tools do not support such distributed files. One solution to these problems is the aggregation of the output file. We can use the Parallel \netcdf (PnetCDF). Please refer to Section \ref{subsec:single_io}. The other solution is usage of the post process tool \sno. \sno has the feature as follows:
