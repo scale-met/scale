@@ -1,4 +1,7 @@
+%-------------------------------------------------------------------------------
 \section{\scalenetcdf ファイルとは?} \label{sec:netcdf}
+%-------------------------------------------------------------------------------
+
 本節では、{\scalelib}が直接読み書きする{\scalenetcdf}ファイルについて説明する。
 \scalelib では、データファイルの形式として{\netcdf}(network Common Data Format)を採用している。
 \Netcdf は Unidata (\url{http://www.unidata.ucar.edu}) が開発を行っているソフトウェアであり、自己記述的で計算機に依存しないデータ形式のファイルを生成することを可能にする。
@@ -7,7 +10,7 @@
 \scalelib では、上記の利点に基づいてある規約(\scalenetcdf convention )を定めている。
 この規約は、CF convection (\url{http://cfconventions.org})におおよそ従っている。
 
-\subsection{グローバル属性}
+\subsection{グローバル属性} \label{sec:global_attr}
 \scalenetcdf ファイルには、ファイルに含まれるデータの情報(空間分割に関する情報等)がグローバル属性(global attribute)として格納されている(表\ref{table:netcdf_global_attrs})。
 
 \begin{table}
