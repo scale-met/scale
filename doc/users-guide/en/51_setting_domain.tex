@@ -407,3 +407,57 @@ The validity of the assumption depends on target domain and situation.
 
 
 There exists a similar dumping method at near the top boundary, i.e., Rayleigh dumping. See Section \ref{subsec:raydamp}.
+
+%-----------------------------------------------------------------------
+\subsection{Setting vertical grids for ocean, land, and urban models} \label{subsec:gridolu}
+%-----------------------------------------------------------------------
+
+Settings for horizontal grids of ocean, land, and urban models are same as those for the atmospheric model.
+The numbers of grids per MPI process are specified by \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
+The horizontal grid intervals are specified by \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC}.
+On the other hand, settings for vertical grids should be specified for each model separately.
+
+\subsubsection{Setting vertical grids for ocean model}
+The number of vertical layers for ocean model is specified by \nmitem{OKMAX} in \namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}.
+The vertical grid intervals are specified by \nmitem{ODZ} in \namelist{PARAM_OCEAN_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
+\verb| OKMAX = 1,|  & ; number of vertical layers \\
+\verb|/|\\
+\\
+\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
+\verb| ODZ = 10.D0,| & ; grid interval along the vertical direction\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{ODZ} for the number of vertical layers specified by \nmitem{OKMAX}.
+The order of the array is from the sea surface to the deep ocean.
+
+\subsubsection{Setting vertical grids for land model}
+The number of vertical layers for land model is specified by \nmitem{LKMAX} in \namelist{PARAM_LAND_GRID_CARTESC_INDEX}.
+The vertical grid intervals are specified by \nmitem{LDZ} in \namelist{PARAM_LAND_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_LAND_GRID_CARTESC_INDEX| & \\
+\verb| LKMAX = 7,|  & ; number of vertical layers \\
+\verb|/|\\
+\\
+\verb|&PARAM_LAND_GRID_CARTESC| & \\
+\verb| LDZ = 0.05, 0.15, 0.30, 0.50, 1.00, 2.00, 4.00,| & ; grid interval along the vertical direction\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{LDZ} for the number of vertical layers specified by \nmitem{LKMAX}.
+The order of the array is from the ground surface to the underground.
+
+\subsubsection{Setting vertical grids for urban model}
+The number of vertical layers for urban model is specified by \nmitem{UKMAX} in \namelist{PARAM_URBAN_GRID_CARTESC_INDEX}.
+The vertical grid intervals are specified by \nmitem{UDZ} in \namelist{PARAM_URBAN_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_URBAN_GRID_CARTESC_INDEX| & \\
+\verb| UKMAX = 5,|  & ; number of vertical layers \\
+\verb|/|\\
+\\
+\verb|&PARAM_URBAN_GRID_CARTESC| & \\
+\verb| UDZ = 0.01, 0.01, 0.03, 0.05, 0.10,| & ; grid interval along the vertical direction\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{UDZ} for the number of vertical layers specified by \nmitem{UKMAX}.
+The order of the array is from the ground surface to the atmosphere.
