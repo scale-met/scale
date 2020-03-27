@@ -16,19 +16,19 @@
 \end{table}
 
 プログラム\verb|scale-rm_init|は、ファイル\verb|init.conf|の設定に従って外部データを初期値・境界値データに変換する。
-\scalerm では、表\ref{tab:inputdata_format}に示される様々な種類の外部データから、初期値・境界値データを作成可能である。
+\verb|scale-rm_init|は、表\ref{tab:inputdata_format}に示される様々な種類の外部データを扱える。
 入力データの形式は、\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の\nmitem{FILETYPE_ORG}で指定する。
 
-SCALEデータ形式は主にオフライン・ネスティング実験で使用される。
+「SCALEデータ形式」は、主にオフライン・ネスティング実験で使用される。
 詳細については、第\ref{subsec:nest_offline}節を参照されたい。
 
-バイナリ形式は、Fortran が直接アクセスできる単精度浮動小数点のバイナリデータである。
-詳細については、第\ref{sec:tutrial_real_data}節で説明する。
+「バイナリ形式」は、Fortran が直接アクセスできる単精度浮動小数点数のバイナリ形式データである。
+詳細については、第\ref{sec:tutorial_real_data}節で説明する。
 
-WRFデータ形式も使用でき、WRFによるモデル出力データを直接使用できる。
-ただし、ファイルは{\scalerm}の境界値データの作成に必要な全てのデータを含まなければならない。
+「WRFデータ形式」では、WRFによるモデル出力データを直接読み込める。
+ただし、そのファイルには、{\scalerm}の境界値データを作成するために必要な全てのデータを含まなければならない。
 
-その他のフォーマットデータ（例えば、GRIB/GRIB2 データなど）は、バイナリデータ形式に変換することで {\scalerm} に読み込ませることができる。
+その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} に読み込ませられる。
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
 そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
 
@@ -37,7 +37,6 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 %%
 
 初期値ファイルに関する設定は、設定ファイル\verb|init.conf|の\namelist{PARAM_RESTART}で行う。
-（初期値ファイルとリスタートファイルは同じネームリストを使用し、作成されたファイルは同じ構造を持つ（リスタートに関する説明は 第\ref{sec:restart}章参照））
 %
 \editboxtwo{
 \verb|&PARAM_RESTART|                      & \\
@@ -47,7 +46,9 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 }
 初期値ファイルを作成する場合には、\nmitem{RESTART_OUTPUT}に\verb|.true.|を設定する。
 初期値ファイルのベース名は\nmitem{RESTART_OUT_BASENAME}で設定する。
-チュートリアルでは、\nmitem{RESTART_OUT_BASENAME} = '\verb|init_d01|'を使用している。
+例えば\ref{sec:tutorial_real_intro}節に記述したチュートリアルでは、\nmitem{RESTART_OUT_BASENAME} = '\verb|init_d01|'を使用している。
+これらの設定は、\scalerm の実行時にリスタートファイルを出力する際にも指定する(詳細は第\ref{sec:restart}章を参照)。
+生成される初期値ファイルやリスタートファイルは、同じ構造を持つ。
 
 
 入力データと境界値ファイルに関する設定は、設定ファイル\verb|init.conf|の\\\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}で行う。
@@ -62,8 +63,8 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb| BASENAME_ADD_NUM           = .false.,|                        & ; \verb|NUMBER_OF_FILES|=1の時ファイル名に番号付けするかどうか\\
 \verb| BASENAME_BOUNDARY          = '',|                             & ; 境界値ファイルのベース名\\
 \verb| BOUNDARY_UPDATE_DT         = 0.0,|                            & ; 入力データの時間間隔 [s]\\
-\verb| USE_FILE_DENSITY           = .false.,|                        & ; 入力ファイルの密度を使用するかどうか\\
-\verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|                        & ; 境界値に静力を満たさない密度を使用するかどうか\\
+\verb| USE_FILE_DENSITY           = .false.,|                        & ; 入力ファイル中の密度データを使用するかどうか\\
+\verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|                        & ; 境界値に静力学平衡を満たさない密度を使用するかどうか\\
 \verb| USE_SFC_DIAGNOSES          = .false.,|                        & ; 親モデルの地上診断変数を使用するかどうか\\
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; 親モデルの地面より下の値を使用するかどうか\\
 \verb| SAME_MP_TYPE               = .false.,|                        & ; (for SCALE形式) 雲微物理スキームは親モデルと同じかどうか\\
@@ -88,6 +89,7 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \verb| INTRP_LAND_TEMP            = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_LAND_WATER           = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_LAND_SFC_TEMP        = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| ELEVATION_CORRECTION       = .true.,|                         & ; 親モデルの地形との高度差を補正するかどうか \\
 \verb|/| & \\
 }
 
@@ -98,26 +100,26 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
-\nmitem{BASENAME_BOUNDARY}は、変換された境界値ファイルのベース名である。
+\nmitem{BASENAME_BOUNDARY}は、出力される境界値ファイルのベース名である。
 \nmitem{BASENAME_BOUNDARY}を指定しなければ、境界値ファイルは出力されない。
 モデル積分を実行するためには、大気変数は少なくとも二時刻分の境界値データが必須である。
 一方、海洋・陸面変数については、境界値データが必要かどうかは、実行時に使用するスキームに依存する。
 
 
 空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
-``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択可能である。
+``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
-距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定される。
+距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
 
-以上の設定は、\nmitem{BASENAME_BOUNDARY} を除き、\verb|ATMOS|と\verb|OCEAN|もしくは\verb|LAND|の間で共有することができる。
+以上の設定は、\nmitem{BASENAME_BOUNDARY} を除き、\verb|ATMOS|と\verb|OCEAN|もしくは\verb|LAND|の間で共有できる。
 つまり、\namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)}でネームリストの項目を指定しなければ、
-\namelist{PARAM_MKINIT_REAL_ATMOS}で設定された値が使用される。
+\namelist{PARAM_MKINIT_REAL_ATMOS}で設定した値を使用する。
 \\
 
 \noindent\textbf{\underline{\texttt{PARAM\_MKINIT\_REAL\_ATMOS}\textgt{に関する設定}}}
 
-密度の計算方法に関する設定は、\nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}で行う。
-デフォルトの設定では両方が\verb|.false.|であり、
+密度の計算法の設定は、\nmitem{USE_FILE_DENSITY}と\nmitem{USE_NONHYDRO_DENS_BOUNDARY}で行う。
+デフォルト設定では両方が\verb|.false.|であり、
 初期値・境界値の密度は、読み込んだ温度と比湿データから静水圧平衡 ($\frac{dp}{dz}=-\rho g$) を仮定して計算される。
 %（ここで見積った密度は、親モデルの密度とは必ずしも一致しない）。
 \nmitem{USE_FILE_DENSITY} = \verb|.true.|の場合、他の変数同様に、
@@ -137,8 +139,9 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 
 
 \nmitem{USE_SFC_DIAGNOSES}は親モデルの最下層高度よりも低い層における値の計算のためのスイッチである。
-\nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合, T2, RH2, U10, V10, PSFC といった地表面変数が使われるが、そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
-\nmitem{USE_DATA_UNDER_SFC}は入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
+\nmitem{USE_SFC_DIAGNOSES} = \verb|.true.|の場合、T2, RH2, U10, V10, PSFC といった地表面変数が使われる。
+そうでない場合には、等温位および静水圧平衡の仮定のもとで計算される。
+\nmitem{USE_DATA_UNDER_SFC}は、入力データ中の地表よりも低い層のデータを使うか無視するかを決めるのスイッチである。
 %地表よりも低いデータは、高い山岳域において、高い気圧面で現れることがある。
 \\
 
@@ -148,21 +151,31 @@ WRFデータ形式も使用でき、WRFによるモデル出力データを直�
 \nmitem{USE_FILE_LANDWATER}で行う。
 土壌水分データの与え方は、(1)親モデルの値など入力データとして与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.true.|)と、
 (2)領域全体で一定値を与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.false.|)の２種類ある。
-(1)の場合には、3次元の土壌水分データとして
-\verb|SMOISVC|か\verb|SMOISDS|のどちらかを用意する必要がある。
-体積含水率(\verb|SMOISVC|)は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)である。
-また、飽和度(\verb|SMOISDS|)は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
+(1)の場合には、3次元の土壌水分データとして、
+体積含水率(\verb|SMOISVC|)か飽和度(\verb|SMOISDS|)のどちらかを用意する必要がある。
+ここで、体積含水率は土の体積$V$の中に占める水の体積$V_w$の割合($V_w / V$)、
+飽和度は$V$の中に占める間隙の体積$V_v$に対する水の体積$V_w$の割合($V_w / V_v$)である。
 %
-(2)の場合には、以下の例のように、土壌空隙率($V_v / V$)に対する水が占める割合(飽和度)を
-\verb|INIT_LANDWATER_RATIO| で指定する。デフォルト値は 0.5 である。
-また、単位体積あたりの土壌の隙間の大きさ(空隙率)は土地利用に応じて変わる。
+(2)の場合には、以下の例のように、飽和度を\verb|INIT_LANDWATER_RATIO| で指定する。
+デフォルト値は 0.5 である。
+土壌の空隙率($V_v/V$)は、土地利用に応じて変わる。
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
-\verb| USE_FILE_LANDWATER   = .true. | & 土壌水分をファイルから読むかどうか \\
-\verb| INIT_LANDWATER_RATIO = 0.5    | & \verb|USE_FILE_LANDWATER=.false.|の場合の飽和度\\
-\verb|  .....略.....                 | & \\
+\verb| USE_FILE_LANDWATER   = .true. | & ; 土壌水分をファイルから読むかどうか \\
+\verb| INIT_LANDWATER_RATIO = 0.5    | & ; \verb|USE_FILE_LANDWATER=.false.|の場合の飽和度\\
+\verb|  .....略.....                 | &  \\
 \verb|/| & \\
 }
+
+初期値・境界値データの土壌温度・地表面気温の作成において、
+親モデルの地形との高度差に応じた補正を行うかは, \namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}で指定する. 
+親モデルの地形と\scalerm が作成する地形は一般には異なるため、親モデルの土壌温度・地表面気温をそのまま内挿して初期値・境界値データを作成した場合、
+高度差の分だけ不整合が生じる。
+\nmitem{ELEVATION_CORRECTION}を\verb|.true.|にした場合、初期値・境界値データの土壌温度・地表面気温は高度差に応じて補正される。
+例えば、\scalerm が作成した地形が親モデルの地形よりも$\Delta h$高い場合、
+土壌温度・地表面気温は$\Delta h\Gamma$（$\Gamma$は国際標準大気の温度減率：$\Gamma=6.5\times 10^{-3}$ [K/m]）の分だけ一様に減じられる。
+デフォルト設定は\nmitem{ELEVATION_CORRECTION} = \verb|.true.|である。
+
 
 %%%---------------------------------------------------------------------------------%%%%
 \subsubsection{SCALE形式データの入力} \label{sec:datainput_scale}
@@ -235,17 +248,6 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 \verb|/|\\
 }
 
-\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}は、初期値・境界値データの土壌温度・地表面気温の作成において、
-親モデルの地形との高度差に応じた補正を行うオプションである。
-親モデルの地形と\scalerm が作成する地形は一般には異なるため、親モデルの土壌温度・地表面気温をそのまま内挿して初期値・境界値データを作成した場合、
-高度差の分だけ不整合が生じる。
-\nmitem{ELEVATION_CORRECTION}を\verb|.true.|にした場合、初期値・境界値データの土壌温度・地表面気温は高度差に応じて補正される。
-例えば、\scalerm が作成した地形が親モデルの地形よりも$\Delta h$高い場合、
-土壌温度・地表面気温は$\Delta h\Gamma$（$\Gamma$は国際標準大気の温度減率：$\Gamma=6.5\times 10^{-3}$ [K/m]）の分だけ一様に減じられる。
-デフォルト設定は\nmitem{ELEVATION_CORRECTION} = \verb|.true.|である。
-
-
-
 \nmitem{FILETYPE_ORG}は\verb|"GrADS"|に設定する。
 \scalerm では、バイナリデータ({\grads}形式)のファイル名やデータ構造について、
 「ctl」ファイルの代わりに、ネームリストファイル\verb|namelist.grads_boundary**|で指定する。
@@ -304,17 +306,18 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 入力ファイルが複数あるとき、もしくは、\nmitem{BASENAME_ADD_NUM} = \verb|.true.|の場合には、
 「\verb|filename_XXXXX.grd|」と番号付けされたファイルを準備する。
 
-ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定することができる。
-例えば、ある層から上では、QVやRHのデータが利用できない場合がある。
+ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定する。
+例えば、ある層から上では、比湿(QV)や相対湿度(RH)のデータが利用できない場合がある。
 その場合には、データが存在する層数を\verb|nz|で指定する。
 
-\verb|nz|より上層でのQVの値は\namelist{PARAM_MKINIT_REAL_GrADS}の\nmitem{upper_qv_type}で指定される。
+\verb|nz|より上層でのQVの与え方は、\namelist{PARAM_MKINIT_REAL_GrADS}の\nmitem{upper_qv_type}で指定される。
 \nmitem{upper_qv_type}='\verb|ZERO|'の場合、QV=0と設定される。
-\nmitem{upper_qv_type}='\verb|COPY|'の場合、湿度の入力データが存在する最上層のRHを、データが存在しない上層にコピーする。
+\nmitem{upper_qv_type}='\verb|COPY|'の場合、湿度の入力データが存在する最上層のRHをデータの存在しない上層にコピーして、
+QV の値を決める. 
 デフォルトの設定は'\verb|ZERO|'である。
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS|  & \\
-\verb| upper_qv_type = "ZERO"|   & ; 上層でのQVの与え方\\
+\verb| upper_qv_type = "ZERO"|   & ; \verb|nz|より上層でのQVの与え方\\
                                  & ~~~("\verb|ZERO|", "\verb|COPY|")\\
 \verb|/|\\
 }
