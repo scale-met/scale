@@ -168,7 +168,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 
 
 鉛直格子点の位置は任意に設定できるが、変わった設定をすると計算不安定がしばしば生じる。
-これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に
+これを避けるために、ディレクトリ\texttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
 必要があれば参考として用いることができる。
 このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
@@ -240,8 +240,8 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 ナッジングの影響を受けない実際の対象領域(緩和領域を除いた範囲)は
 計算領域よりも狭くなることに注意が必要である。
 
-以下に２種類の設定例を示す。\\
-
+以下に２種類の設定例を示す。
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_NX = 30,   | & ; {\XDIR}（東西方向）の緩和領域の格子数\\
@@ -249,7 +249,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
  \verb|BUFFFACT  = 1.D0, | & ; 全方向の緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
 }
-
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_DZ  =   5000.D0, | & ; {\ZDIR}（モデル上端から下向き方向）の緩和領域の幅(参考値) [m]\\
@@ -500,47 +500,8 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 水平格子間隔は\namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}で指定される。
 一方、鉛直格子についてはそれぞれ個別の設定が必要である。
 
-\subsubsection{海洋モデルの鉛直格子設定}
-海洋モデルの鉛直格子数は、\namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}の\nmitem{OKMAX}で指定する。
-また、鉛直格子間隔は\namelist{PARAM_OCEAN_GRID_CARTESC}の\nmitem{ODZ}で指定する(単位は[m])。
-\editboxtwo{
-\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
-\verb| OKMAX = 1,|  & ; 鉛直層数 \\
-\verb|/|\\
-\\
-\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
-\verb| ODZ = 10.D0,| & ; 鉛直方向の格子間隔\\
-\verb|/|\\
-}
-\nmitem{ODZ}には\nmitem{OKMAX}で指定した格子数分の配列を指定する。
-配列の順序は、海表面から海中に向かう方向である。
+\scale ver.\version 時点では、多層の海洋モデルは未導入のため、
+海洋モデルの鉛直格子設定は使用されない。%第\ref{sec:basic_usel_ocean}節
+陸モデルの鉛直格子設定については、第\ref{sec:basic_usel_land}節を、
+都市モデルの鉛直格子設定については、第\ref{sec:basic_usel_urban}節を参照のこと。
 
-\subsubsection{陸モデルの鉛直格子設定}
-陸モデルの鉛直格子数は、\namelist{PARAM_LAND_GRID_CARTESC_INDEX}の\nmitem{LKMAX}で指定する。
-また、鉛直格子間隔は\namelist{PARAM_LAND_GRID_CARTESC}の\nmitem{LDZ}で指定する(単位は[m])。
-\editboxtwo{
-\verb|&PARAM_LAND_GRID_CARTESC_INDEX| & \\
-\verb| LKMAX = 7,|  & ; 鉛直層数 \\
-\verb|/|\\
-\\
-\verb|&PARAM_LAND_GRID_CARTESC| & \\
-\verb| LDZ = 0.05, 0.15, 0.30, 0.50, 1.00, 2.00, 4.00,| & ; 鉛直方向の格子間隔\\
-\verb|/|\\
-}
-\nmitem{LDZ}には\nmitem{LKMAX}で指定した格子数分の配列を指定する。
-配列の順序は、地表面から地中に向かう方向である。
-
-\subsubsection{都市モデルの鉛直格子設定}
-都市モデルの鉛直格子数は、\namelist{PARAM_URBAN_GRID_CARTESC_INDEX}の\nmitem{UKMAX}で指定する。
-また、鉛直格子間隔は\namelist{PARAM_URBAN_GRID_CARTESC}の\nmitem{UDZ}で指定する(単位は[m])。
-\editboxtwo{
-\verb|&PARAM_URBAN_GRID_CARTESC_INDEX| & \\
-\verb| UKMAX = 5,|  & ; 鉛直層数 \\
-\verb|/|\\
-\\
-\verb|&PARAM_URBAN_GRID_CARTESC| & \\
-\verb| UDZ = 0.01, 0.01, 0.03, 0.05, 0.10,| & ; 鉛直方向の格子間隔\\
-\verb|/|\\
-}
-\nmitem{UDZ}には\nmitem{UKMAX}で指定した格子数分の配列を指定する。
-配列の順序は、地表面から上空に向かう方向である。

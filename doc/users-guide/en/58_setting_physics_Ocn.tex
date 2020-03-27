@@ -86,8 +86,25 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 \end{center}
 \end{table}
 
+%-------------------------------------------------------------------------------
+%\subsubsection{Setting vertical grids for ocean model (Only for XXX scheme)}
+%-------------------------------------------------------------------------------
 
-\clearpage
+%The number of vertical layers for ocean model is specified by \nmitem{OKMAX} in \namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}.
+%The vertical grid intervals are specified by \nmitem{ODZ} in \namelist{PARAM_OCEAN_GRID_CARTESC}. The unit is [m].
+%\editboxtwo{
+%\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
+%\verb| OKMAX = 1,|  & ; number of vertical layers \\
+%\verb|/|\\
+%\\
+%\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
+%\verb| ODZ = 10.D0,| & ; grid interval along the vertical direction\\
+%\verb|/|\\
+%}
+%You can specify an array in \nmitem{ODZ} for the number of vertical layers specified by \nmitem{OKMAX}.
+%The order of the array is from the sea surface to the deep ocean.
+
+
 %-------------------------------------------------------------------------------
 \subsection{Subsurface ocean scheme}
 %-------------------------------------------------------------------------------

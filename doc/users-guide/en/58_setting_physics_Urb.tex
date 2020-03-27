@@ -7,7 +7,6 @@ The timing of updating (calling) the urban scheme is configured
 at \nmitem{TIME_DT_URBAN} and \nmitem{TIME_DT_URBAN_UNIT} in \namelist{PARAM_TIME}
 (Refer to Section \ref{sec:timeintiv} for the details).
 
-%\subsection{Flux in Atmosphere and Urban Area}
 %-------------------------------------------------------------------------------
 
 The urban scheme used is specified in \nmitem{URBAN_DYN_TYPE} in \namelist{PARAM_URBAN} in \verb|init.conf| and \verb|run.conf|, as follows:
@@ -52,8 +51,36 @@ Since the scheme considers the energy exchange between the top of urban canopy a
 the building height, i.e., \nmitem{ZR} in \namelist{PARAM_URBAN_DATA}, must be located at least the two meters lower than the face level of the 1st atmospheric layer.
 
 
+%-------------------------------------------------------------------------------
+\subsection{\texttt{KUSAKA01} urban scheme}
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsubsection{Settings of layers at facets of urban structures: roof, wall, and road}
+%-------------------------------------------------------------------------------
 
-\subsection{Settings of urban parameters for \texttt{KUSAKA01} scheme}
+\verb|KUSAKA01| considers two-dimentional symmetrical street canyons as urban geometry.
+The boundaries between facets of urban structures and atmosphere
+consist of roof and wall surfaces of a building and road surface.
+The temperature of these surfaces are calculated by heat diffusion.
+The number of layers used to calculate the heat diffusion is specified by \nmitem{UKMAX} in \namelist{PARAM_URBAN_GRID_CARTESC_INDEX}.
+The thickness of each layer is specified by \nmitem{UDZ}\\ in \namelist{PARAM_URBAN_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_URBAN_GRID_CARTESC_INDEX|      & \\
+\verb| UKMAX = 5,|                          & ; Number of layers at facets of urban structures\\
+\verb|/|\\
+\\
+\verb|&PARAM_URBAN_GRID_CARTESC|            & \\
+\verb| UDZ = 0.01, 0.01, 0.03, 0.05, 0.10,| & ; Thickness of each facet layers\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{UDZ} for the number of layers specified by \nmitem{UKMAX}.
+The order of the array is from the facet to inside of urban structures.
+The settings are applied to the surfaces of roof, wall, and road.
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Urban parameters}
+%-------------------------------------------------------------------------------
 
 There are many parameters characterizing urban morphology in the \verb|KUSAKA01| scheme.
 Regarding the available urban parameters,
@@ -97,10 +124,10 @@ The values of urban parameters used in a calculation are determined through the 
 
 Users need to prepare beforehand the gridded data for \\ \nmitem{URBAN_DYN_KUSAKA01_GRIDDED_(Z0M|AH|AHL)_IN_FILENAME}
 with the \scalenetcdf format according to the experimental settings.
-These \scalenetcdf data can be converted from the simple binary format data using \verb|scale_init|.
+These \scalenetcdf data can be converted from the simple binary format data using \verb|scale_init|.\\
 
 
-\subsubsection{How to prepare gridded urban data with \scalenetcdf}
+\noindent\textbf{\underline{\small{\texttt{How to prepare gridded urban data with \scalenetcdf}}}}
 
 \verb|scale_init| is used to prepare the gridded urban data; the detailed explanations are given in Section \ref{sec:userdata}.
 Here, a practical usage is demonstrated with examples of configuration file and namelist file.
