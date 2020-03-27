@@ -203,6 +203,8 @@ contains
     real(RP) :: dres   ! d(residual)/dTMPS
     real(RP) :: oldres ! residual in previous step
     real(RP) :: redf   ! reduced factor
+    real(RP) :: dts    ! temperature change
+    real(RP) :: olddts ! temperature change in previous step
 
     real(RP) :: dUstar      ! friction velocity difference               [m/s]
     real(RP) :: dTstar      ! friction potential temperature difference  [K]
@@ -250,7 +252,7 @@ contains
 #else
     !$omp default(shared) &
 #endif
-    !$omp private(qdry,Rtot,flx_qv,redf,res,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
+    !$omp private(qdry,Rtot,flx_qv,redf,res,dts,olddts,emis,LWD,LWU,SWD,SWU,dres,oldres,dQVS, &
     !$omp         QVsat,dQVsat,dUstar,dTstar,dQstar,dWstar,dFracU10,dFracT2,dFracQ2, &
     !$omp         Uabs,dUabs,dRLmo,Ra,dRa,MFLUX)
     do j = JS, JE
@@ -262,6 +264,7 @@ contains
 
           redf   = 1.0_RP
           oldres = huge(0.0_RP)
+          olddts = CPL_PHY_SFC_SKIN_dTS_max * dt
 
           ! modified Newton-Raphson method (Tomita 2009)
           do n = 1, CPL_PHY_SFC_SKIN_itr_max
@@ -340,10 +343,13 @@ contains
              endif
 
              ! estimate next surface temperature
-             TMPS1(i,j) = TMPS1(i,j) - redf * res / dres
+             dts = - redf * res / dres
+             dts = sign( min( abs(dts), abs(olddts) ), dts )
+             TMPS1(i,j) = TMPS1(i,j) + dts
 
              ! save residual in this step
              oldres = res
+             olddts = dts
           enddo
 
           ! update surface temperature with limitation
