@@ -1,3 +1,4 @@
+%====================================================================================
 \section{\SecInputDataSetting} \label{sec:adv_datainput}
 %====================================================================================
 
@@ -15,20 +16,20 @@
 \end{center}
 \end{table}
 
-プログラム\verb|scale-rm_init|は、ファイル\verb|init.conf|の設定に従って外部データを初期値・境界値データに変換する。
+プログラム\verb|scale-rm_init|は、設定ファイル\verb|init.conf|の設定に従って外部データを初期値・境界値データに変換する。
 \verb|scale-rm_init|は、表\ref{tab:inputdata_format}に示される様々な種類の外部データを扱える。
 入力データの形式は、\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の\nmitem{FILETYPE_ORG}で指定する。
 
-「SCALEデータ形式」は、主にオフライン・ネスティング実験で使用される。
-詳細については、第\ref{subsec:nest_offline}節を参照されたい。
+「SCALEデータ形式」は、主にオフライン・ネスティング実験(第\ref{subsec:nest_offline}節)で使用される。
+
 
 「バイナリ形式」は、Fortran が直接アクセスできる単精度浮動小数点数のバイナリ形式データである。
-詳細については、第\ref{sec:tutorial_real_data}節で説明する。
+具体的な実行例については、チュートリアル(第\ref{sec:tutorial_real_data}節)に記載がある。
 
 「WRFデータ形式」では、WRFによるモデル出力データを直接読み込める。
-ただし、そのファイルには、{\scalerm}の境界値データを作成するために必要な全てのデータを含まなければならない。
+ただし、そのファイルは、{\scalerm}の境界値データを作成するために必要な全てのデータを含んでいる必要がある。
 
-その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} に読み込ませられる。
+その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} で読み込むことができる。
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
 そのため、バージョン5.3以前で作成された初期値/境界値ファイルは本バージョン（{\scalelib}{\version})では使用できない。
 
@@ -46,7 +47,7 @@
 }
 初期値ファイルを作成する場合には、\nmitem{RESTART_OUTPUT}に\verb|.true.|を設定する。
 初期値ファイルのベース名は\nmitem{RESTART_OUT_BASENAME}で設定する。
-例えば\ref{sec:tutorial_real_intro}節に記述したチュートリアルでは、\nmitem{RESTART_OUT_BASENAME} = '\verb|init_d01|'を使用している。
+例えば\ref{sec:tutorial_real_intro}節に記述したチュートリアルでは、\nmitem{RESTART_OUT_BASENAME} = ``\verb|init_d01|''を使用している。
 これらの設定は、\scalerm の実行時にリスタートファイルを出力する際にも指定する(詳細は第\ref{sec:restart}章を参照)。
 生成される初期値ファイルやリスタートファイルは、同じ構造を持つ。
 
@@ -67,7 +68,7 @@
 \verb| USE_NONHYDRO_DENS_BOUNDARY = .false.,|                        & ; 境界値に静力学平衡を満たさない密度を使用するかどうか\\
 \verb| USE_SFC_DIAGNOSES          = .false.,|                        & ; 親モデルの地上診断変数を使用するかどうか\\
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; 親モデルの地面より下の値を使用するかどうか\\
-\verb| SAME_MP_TYPE               = .false.,|                        & ; (for SCALE形式) 雲微物理スキームは親モデルと同じかどうか\\
+\verb| SAME_MP_TYPE               = .false.,|                        & ; (For SCALE形式) 雲微物理スキームは親モデルと同じかどうか\\
 \verb| INTRP_TYPE                 = 'LINEAR',|                       & ; 水平内挿の種類 ("\verb|LINEAR|", "\verb|DIST-WEIGHT|") \\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
@@ -76,8 +77,8 @@
 \verb| FILETYPE_ORG               = '',|                             & ; 表\ref{tab:inputdata_format}から選択\\
 \verb| BASENAME_ORG               = '',|                             & ; 入力ファイルに関する情報\\
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
-\verb| INTRP_OCEAN_SFC_TEMP       = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
-\verb| INTRP_OCEAN_TEMP           = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| INTRP_OCEAN_SFC_TEMP       = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| INTRP_OCEAN_TEMP           = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
@@ -86,9 +87,9 @@
 \verb| BASENAME_ORG               = '',|                             & ; 入力ファイルに関する情報\\
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
 \verb| USE_FILE_LANDWATER         = .true.,|                         & ; 入力ファイルの土壌水分を使用するかどうか\\
-\verb| INTRP_LAND_TEMP            = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
-\verb| INTRP_LAND_WATER           = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
-\verb| INTRP_LAND_SFC_TEMP        = 'off',|                          & ; (for GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| INTRP_LAND_TEMP            = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| INTRP_LAND_WATER           = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| INTRP_LAND_SFC_TEMP        = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| ELEVATION_CORRECTION       = .true.,|                         & ; 親モデルの地形との高度差を補正するかどうか \\
 \verb|/| & \\
 }
@@ -100,6 +101,7 @@
 \nmitem{NUMBER_OF_TSTEPS}は各ファイル中に保存されているデータの時間ステップ数である。
 
 \nmitem{BOUNDARY_UPDATE_DT}は入力データの時間間隔である。
+出力される境界値データは入力データの時間間隔と同じである。
 \nmitem{BASENAME_BOUNDARY}は、出力される境界値ファイルのベース名である。
 \nmitem{BASENAME_BOUNDARY}を指定しなければ、境界値ファイルは出力されない。
 モデル積分を実行するためには、大気変数は少なくとも二時刻分の境界値データが必須である。
@@ -109,7 +111,7 @@
 空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
 ``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
-距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
+距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\\\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
 
 以上の設定は、\nmitem{BASENAME_BOUNDARY} を除き、\verb|ATMOS|と\verb|OCEAN|もしくは\verb|LAND|の間で共有できる。
 つまり、\namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)}でネームリストの項目を指定しなければ、
@@ -147,8 +149,7 @@
 
 \noindent\textbf{\underline{\texttt{PARAM\_MKINIT\_REAL\_LAND}\textgt{に関する設定}}}
 
-土壌水分の設定は、\verb|init.conf|の\namelist{PARAM_MKINIT_REAL_LAND}の
-\nmitem{USE_FILE_LANDWATER}で行う。
+土壌水分の設定は、\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{USE_FILE_LANDWATER}で行う。
 土壌水分データの与え方は、(1)親モデルの値など入力データとして与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.true.|)と、
 (2)領域全体で一定値を与える方法(\nmitem{USE_FILE_LANDWATER} = \verb|.false.|)の２種類ある。
 (1)の場合には、3次元の土壌水分データとして、
@@ -168,7 +169,7 @@
 }
 
 初期値・境界値データの土壌温度・地表面気温の作成において、
-親モデルの地形との高度差に応じた補正を行うかは, \namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}で指定する. 
+親モデルの地形との高度差に応じた補正を行うかは、\namelist{PARAM_MKINIT_REAL_LAND}の\nmitem{ELEVATION_CORRECTION}で指定する。
 親モデルの地形と\scalerm が作成する地形は一般には異なるため、親モデルの土壌温度・地表面気温をそのまま内挿して初期値・境界値データを作成した場合、
 高度差の分だけ不整合が生じる。
 \nmitem{ELEVATION_CORRECTION}を\verb|.true.|にした場合、初期値・境界値データの土壌温度・地表面気温は高度差に応じて補正される。
@@ -250,20 +251,20 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 
 \nmitem{FILETYPE_ORG}は\verb|"GrADS"|に設定する。
 \scalerm では、バイナリデータ({\grads}形式)のファイル名やデータ構造について、
-「ctl」ファイルの代わりに、ネームリストファイル\verb|namelist.grads_boundary**|で指定する。
-\nmitem{BASENAME_ORG}で指定するネームリストファイルは、予め用意しておく必要がある。
+「ctl」ファイルの代わりに、\nmitem{BASENAME_ORG}で指定するネームリストファイルで指定する。
+ネームリストファイルは、予め用意しておく必要がある。
 
 
 バイナリデータのファイル名やデータ構造の情報を与える
-ネームリストファイル(\verb|namelist.grads_boundary**|)の一例を下記に示す。
+ネームリストファイル(\verb|namelist.grads_boundary*|)の一例を下記に示す。
 \editbox{
 \verb|#| \\
 \verb|# Dimension    |  \\
 \verb|#|                \\
 \verb|&GrADS_DIMS|  \\
-\verb| nx     = 360,|~~~   ; default value of the number of grids in the x direction \\
-\verb| ny     = 181,|~~~   ; default value of the number of grids in the y direction \\
-\verb| nz     = 26, |~~~~~ ; default value of the number of layers in the z direction \\
+\verb| nx     = 360,|~~~   ; Default value of the number of grids in the x direction \\
+\verb| ny     = 181,|~~~   ; Default value of the number of grids in the y direction \\
+\verb| nz     = 26, |~~~~~ ; Default value of the number of layers in the z direction \\
 \verb|/|                \\
 \\
 \verb|#              |  \\
@@ -302,18 +303,18 @@ GrADS 形式データの\namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}の設定
 
 入力ファイルのベース名は、ネームリストファイル内の\verb|fname|で設定する。
 \verb|fname="filename"| と指定されている場合、
-入力ファイルが１つのときは、入力ファイルは「\verb|filename.grd|」という名前で準備する。
+入力ファイルが１つのとき(\nmitem{NUMBER_OF_FILES}=1)は、入力ファイルは「\verb|filename.grd|」という名前で準備する。
 入力ファイルが複数あるとき、もしくは、\nmitem{BASENAME_ADD_NUM} = \verb|.true.|の場合には、
 「\verb|filename_XXXXX.grd|」と番号付けされたファイルを準備する。
 
-ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}でその変数の格子数を設定する。
+ある変数の格子数がデフォルト値と異なる場合には、\namelist{GrADS_ITEM}の\verb|nx, ny, nz|でその変数の格子数を設定する。
 例えば、ある層から上では、比湿(QV)や相対湿度(RH)のデータが利用できない場合がある。
 その場合には、データが存在する層数を\verb|nz|で指定する。
 
 \verb|nz|より上層でのQVの与え方は、\namelist{PARAM_MKINIT_REAL_GrADS}の\nmitem{upper_qv_type}で指定される。
-\nmitem{upper_qv_type}='\verb|ZERO|'の場合、QV=0と設定される。
-\nmitem{upper_qv_type}='\verb|COPY|'の場合、湿度の入力データが存在する最上層のRHをデータの存在しない上層にコピーして、
-QV の値を決める. 
+\nmitem{upper_qv_type}=\verb|ZERO|の場合、QV=0と設定される。
+\nmitem{upper_qv_type}=\verb|COPY|の場合、湿度の入力データが存在する最上層のRHをデータの存在しない上層にコピーして、
+QV の値を決める。
 デフォルトの設定は'\verb|ZERO|'である。
 \editboxtwo{
 \verb|&PARAM_MKINIT_REAL_GrADS|  & \\

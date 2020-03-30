@@ -1,4 +1,6 @@
-\subsection{How to prepare user-defined data} \label{sec:userdata}
+%====================================================================================
+\section{How to prepare input data from user-defined data} \label{sec:userdata}
+%====================================================================================
 
 Some schemes requires other input data than initial and boundary data.
 In order to use these schemes, the data are necessary be prepared before the simulation.
@@ -56,7 +58,7 @@ See Section \ref{sec:datainput_grads} for the details for the interpolation.
 When the data type is \verb|GrADS| and the \nmitem{CNVUSE_OUT_VARNAME} is not set, \nmitem{CNVUSER_GrADS_VARNAME} is used as the output variable name.
 
 If \nmitem{CNVUSER_OUT_DTYPE} is \verb|DEFAULT|, it is the same as the data type used in the simulation;
-it is \verb|REAL8| as default, and \verb|REAL4| when \scalerm is compiled with \verb|SCALE_USE_SINGLEFP = "T"| (See Section \ref{sec:compile}).
+it is \verb|REAL8| as default, and \verb|REAL4| when \scalerm is compiled with the environment variable \verb|SCALE_USE_SINGLEFP = "T"| (See Section \ref{sec:compile}).
 
 The number of time steps contained in the user-defined data is specified by \nmitem{CNVUSER_NSTEPS}.
 The initial time of the time coordinate in the output file is specified by \nmitem{TIME_STARTDATE} in \namelist{PARAM_TIME} (See Section \ref{sec:timeintiv}), and the time interval in second is specified by \nmitem{CNVUSER_OUT_DT}.
