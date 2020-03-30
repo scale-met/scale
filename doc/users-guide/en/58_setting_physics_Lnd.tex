@@ -4,15 +4,14 @@
 Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of fluxes at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME} (Refer to Section \ref{sec:timeintiv} for the details).
 
 %-------------------------------------------------------------------------------
-\subsubsection{Land and Surface Scheme}
+\subsubsection{Land Scheme}
 %-------------------------------------------------------------------------------
-The land model scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured as in \nmitem{LAND_DYN_TYPE} and \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
-
+The land scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured by \nmitem{LAND_DYN_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
+%
 \editboxtwo{
 \verb|&PARAM_LAND                | & \\
 \verb| LAND_DYN_TYPE = "NONE",   | & ; Select the land type shown in Table \ref{tab:nml_land_dyn}\\
-\verb| LAND_SFC_TYPE = "SKIN",   | & ; Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
-                                   &  ~~~(Only for \verb| LAND_DYN_TYPE| = \verb|BUCKET|)\\
+\verb| LAND_SFC_TYPE = "SKIN",   | & ; (For \verb|BUCKET|) Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
 \verb|/                          | & \\
 }
 
@@ -30,18 +29,6 @@ The land model scheme that updates the state of land, e.g., land surface tempera
 \end{center}
 \end{table}
 
-\begin{table}[hbt]
-\begin{center}
-  \caption{List of land surface scheme types for \texttt{BUCKET} land scheme}
-  \label{tab:nml_land_sfc}
-  \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
-      \verb|SKIN|       & Determine surface temperature in the scheme \\
-      \verb|FIXED-TEMP| & Assume surface temperature is the same as uppermost land soil temperature \\
-    \hline
-  \end{tabularx}
-\end{center}
-\end{table}
 
 If the land type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{LAND_DYN_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
 \msgbox{
@@ -53,12 +40,6 @@ If \nmitem{LAND_DYN_TYPE} except \verb|"NONE"| or \verb|"OFF"| is specified,
 the input data of land use distribution and a parameter table including information such as roughness length and albedo for each land-use category are required.
 An example of the parameter table is provided
 in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
-
-%-------------------------------------------------------------------------------
-\subsubsection{Fluxes between atmosphere and land surface}
-%-------------------------------------------------------------------------------
-The surface fluxes between atmosphere and land surface is calculated in the scheme selected by \nmitem{LAND_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
-
 
 %-------------------------------------------------------------------------------
 \subsubsection{Setting vertical grids for land model}
@@ -79,13 +60,18 @@ You can specify an array in \nmitem{LDZ} for the number of vertical layers speci
 The order of the array is from the ground surface to the underground.
 
 
+%-------------------------------------------------------------------------------
+\subsubsection{Fluxes between atmosphere and land surface}
+%-------------------------------------------------------------------------------
+The surface fluxes between atmosphere and land surface is calculated in the scheme selected by \nmitem{LAND_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
+
 
 %-------------------------------------------------------------------------------
 \subsection{Fixed to initial condition}
 %-------------------------------------------------------------------------------
 
 If \nmitem{LAND_DYN_TYPE} is \verb|INIT|, the land condtion is fixed to the initial condition.
-In this case, the number of vertical layer must be 1.
+In this case, the number of vertical layer (\nmitem{LKMAX}) must be 1.
 The layer depth can be arbitrary as long as it is positive value.
 
 
@@ -93,6 +79,27 @@ The layer depth can be arbitrary as long as it is positive value.
 %-------------------------------------------------------------------------------
 \subsection{\texttt{BUCKET} land scheme}
 %-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\subsubsection{land surface skin temperature}
+%-------------------------------------------------------------------------------
+
+The definition of the land surface skin temperature is specified by \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND}.
+The default setting is \verb|SKIN|.
+%
+\begin{table}[hbt]
+\begin{center}
+  \caption{List of land surface scheme types for \texttt{BUCKET} land scheme}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
+      \verb|SKIN|       & Determine surface temperature in the scheme \\
+      \verb|FIXED-TEMP| & Assume surface temperature is the same as uppermost land soil temperature \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
 
 %-------------------------------------------------------------------------------
 \subsubsection{land nudging}

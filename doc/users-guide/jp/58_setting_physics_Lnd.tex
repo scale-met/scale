@@ -6,15 +6,15 @@
 (詳細については第\ref{sec:timeintiv}節を参照)。
 
 %-------------------------------------------------------------------------------
-\subsubsection{陸面スキームと表面スキーム}
+\subsubsection{陸面スキーム}
 %-------------------------------------------------------------------------------
 陸モデルでは、陸面温度と土壌温度、土壌水分量といった陸面の状態量の更新を行う。
-このスキームは、init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_SFC_TYPE}や\nmitem{LAND_SFC_TYPE}で設定する。
+このスキームは、init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_DYN_TYPE}で設定する。
 %
 \editboxtwo{
 \verb|&PARAM_LAND                | & \\
 \verb| LAND_DYN_TYPE = "NONE",   | & ; 表\ref{tab:nml_land_dyn}に示す陸の力学から選択 \\
-\verb| LAND_SFC_TYPE = "SKIN",   | & ; 表\ref{tab:nml_land_sfc}に示す陸面の種類から選択 (\verb|LAND_DYN_TYPE|="\verb|BUCKET|"の場合のみ)\\
+\verb| LAND_SFC_TYPE = "SKIN",   | & ; (\verb|BUCKET|の場合) 表\ref{tab:nml_land_sfc}に示す陸面の種類から選択\\
 \verb|/                          | & \\
 }
 
@@ -27,19 +27,6 @@
       \verb|NONE or OFF| & 陸面モデルを使用しない \\
       \verb|BUCKET|      & 熱拡散/バケツモデル \\
       \verb|INIT|        & 初期条件に固定 \\
-    \hline
-  \end{tabularx}
-\end{center}
-\end{table}
-
-\begin{table}[hbt]
-\begin{center}
-  \caption{\texttt{BUCKET}スキームにおける表面スキームの選択肢}
-  \label{tab:nml_land_sfc}
-  \begin{tabularx}{150mm}{lX} \hline
-    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
-      \verb|SKIN|       & スキームにより表面温度を決定する。 \\
-      \verb|FIXED-TEMP| & 表面温度が最上層の土壌温度と同じであると仮定する。 \\
     \hline
   \end{tabularx}
 \end{center}
@@ -62,14 +49,6 @@
 
 
 %-------------------------------------------------------------------------------
-\subsubsection{大気--陸面間のフラックス}
-%-------------------------------------------------------------------------------
-大気-陸間の表面フラックスは、\nmitem{LAND_SFC_TYPE}で選択したスキームによって計算される。
-この計算では、\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で指定したバルクスキーム
-(詳細は第\ref{sec:basic_usel_surface}節を参照)が用いられる。
-
-
-%-------------------------------------------------------------------------------
 \subsubsection{陸モデルの鉛直格子設定}
 %-------------------------------------------------------------------------------
 
@@ -89,17 +68,44 @@
 
 
 %-------------------------------------------------------------------------------
+\subsubsection{大気--陸面間のフラックス}
+%-------------------------------------------------------------------------------
+大気-陸間の表面フラックスは、\nmitem{LAND_SFC_TYPE}で選択したスキームによって計算される。
+この計算では、\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で指定したバルクスキーム
+(詳細は第\ref{sec:basic_usel_surface}節を参照)が用いられる。
+
+
+%-------------------------------------------------------------------------------
 \subsection{初期条件固定}
 %-------------------------------------------------------------------------------
 \nmitem{LAND_DYN_TYPE} が \verb|INIT| の場合、陸の状態は初期値のまま一定となる。
-この場合、鉛直層数は 1 でなければならない。
+この場合、鉛直層数(\nmitem{LKMAX})は 1 でなければならない。
 鉛直層の厚さは、正の値である限りどんな値でも良い。
-
 
 
 %-------------------------------------------------------------------------------
 \subsection{\texttt{BUCKET} 陸面スキーム}
 %-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsubsection{表面スキーム}
+%-------------------------------------------------------------------------------
+
+陸面の地表面温度の計算方法は\namelist{PARAM_LAND}の\nmitem{LAND_SFC_TYPE}で設定する。
+デフォルトの設定は\verb|SKIN|である。
+%
+\begin{table}[hbt]
+\begin{center}
+  \caption{\texttt{BUCKET}スキームにおける表面スキームの選択肢}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
+      \verb|SKIN|       & スキームにより表面温度を決定する。 \\
+      \verb|FIXED-TEMP| & 表面温度が最上層の土壌温度と同じであると仮定する。 \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
 
 %-------------------------------------------------------------------------------
 \subsubsection{陸面ナッジング}
