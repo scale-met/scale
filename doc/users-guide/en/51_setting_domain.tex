@@ -6,16 +6,15 @@ The calculation domain is determined by the horizontal grid spacing and the numb
 The parallelization is implemented by a 2D domain decomposition in the horizontal directions.
 
 Figure \ref{fig:domain} shows an example of this relationship.
-The numbers of grids are specified by \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
-The entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction.
-The \nmitem{PRC_NUM_X} and \nmitem{PRC_NUM_Y} are specified in \namelist{PARAM_PRC_CARTESC}.
+The total numbers of grids are specified by \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
+The entire domain is divided into \nmitem{PRC_NUM_X} along the X direction and \nmitem{PRC_NUM_Y} in the Y direction; the \nmitem{PRC_NUM_X} and \nmitem{PRC_NUM_Y} are specified in \namelist{PARAM_PRC_CARTESC}.
 The process number starts zero and is numbered in order from the bottom left to the top right (Arrow in Fig. \ref{fig:domain}).
 Each sub-domain is managed by an MPI process, each of which takes charge of a grid block of \nmitem{IMAX} $\times$ \nmitem{JMAX} $\times$ \nmitem{KMAX},
 where \nmitem{KMAX} is the number of grids along the vertical direction specified in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
 Care is taken to ensure that \nmitem{IMAX} and \nmitem{JMAX} must be identical for all MPI processes.
 Therefore, \nmitem{PRC_NUM_X} and \nmitem{PRC_NUM_Y} must be a divisor of \nmitem{IMAXG} and \nmitem{JMAXG}, respectively.
 
-Thus, the number of grids along each horizontal direction and that in the entire domain are summarized as
+The total number of grids along each horizontal direction and that in the entire domain are summarized as
 \begin{eqnarray}
   && \nmitemeq{IMAXG} = \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X}
   \label{eq:xgridnum}\\
@@ -27,7 +26,7 @@ Thus, the number of grids along each horizontal direction and that in the entire
           \times (\nmitemeq{JMAX} \times \nmitemeq{PRC_NUM_Y})
           \times (\nmitemeq{KMAX} ).
 \end{eqnarray}
-\nmitem{IMAX} and \nmitem{JMAX} are internally calculated when \nmitem{IMAXG} and \nmitem{JMAXG} are specified.
+When \nmitem{IMAXG} and \nmitem{JMAXG} are specified, \nmitem{IMAX} and \nmitem{JMAX} are internally calculated.
 Alternatively, user can specify \nmitem{IMAX} and \nmitem{JMAX} instead of \nmitem{IMAXG} and \nmitem{JMAXG}.
 In this case, \nmitem{IMAXG} and \nmitem{JMAXG} are internally calculated by using Eqs. (\ref{eq:xgridnum}) and (\ref{eq:ygridnum}), respectively.
 
@@ -39,7 +38,7 @@ The size of the entire domain is determined as follows:
  \verb|Domain length in the Y direction| &=& \nmitemeq{IMAXG} \times \nmitemeq{DY},
 \end{eqnarray}
 where \nmitem{DX, DY} is grid spacings specified in \namelist{PARAM_ATMOS_GRID_CARTESC} as described in subsection \ref{subsec:gridinterv}.
-If the horizontal resolution and domain size are set and the available number of MPI processes is given, the number of grids that are controlled by one MPI process can be determined as in the above relationship.
+
 
 In order to perform a horizontal-vertical two-dimensional experiment, set both the \nmitem{IMAXG} and \nmitem{PRC_NUM_X} to 1.
 In this case, the motion in the Y-Z section is calculated.
@@ -68,9 +67,9 @@ In the next subsections, the number of grids, the grid interval, and the configu
 The number of grids is specified in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX} in the configuration files.
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
-\verb| KMAX  = 97,|  & ; number of vertical layers \\
-\verb| IMAXG = 40,|  & ; number of grids along the {\XDIR} \\
-\verb| JMAXG = 25,|  & ; number of grids along the {\YDIR} \\
+\verb| KMAX  = 97,|  & ; Number of vertical layers \\
+\verb| IMAXG = 40,|  & ; Total number of grids along the {\XDIR} \\
+\verb| JMAXG = 25,|  & ; Total number of grids along the {\YDIR} \\
 \verb|/|\\
 }
 
@@ -83,9 +82,9 @@ When the grid intervals are configured uniformly along all directions, specify t
 The unit is [m].
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC  | & \\
-\verb| DX = 500.D0,| & ; grid interval along the {\XDIR} \\
-\verb| DY = 500.D0,| & ; grid interval along the {\YDIR} \\
-\verb| DZ = 500.D0,| & ; grid interval along the vertical (Z) direction\\
+\verb| DX = 500.D0,| & ; Grid interval along the {\XDIR} \\
+\verb| DY = 500.D0,| & ; Grid interval along the {\YDIR} \\
+\verb| DZ = 500.D0,| & ; Grid interval along the vertical (Z) direction\\
 \verb|/|\\
 }
 
@@ -98,9 +97,9 @@ Note that the number of elements specified in \nmitem{FZ(:)} should correspond t
 The following file for the ideal experiment is shown as an example:
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC|     & \\
-\verb| DX = 500.D0,|   & grid interval along the X direction (equidistant) [m]\\
-\verb| DY = 500.D0,|   & grid interval along the Y direction (equidistant) [m]\\
-\verb| FZ(:) = |       & location at face point along the Z direction [m] \\
+\verb| DX = 500.D0,|   & Grid interval along the X direction (equidistant) [m]\\
+\verb| DY = 500.D0,|   & Grid interval along the Y direction (equidistant) [m]\\
+\verb| FZ(:) = |       & Location at face point along the Z direction [m] \\
 \verb|     80.000000000000000D0      ,| & \\
 \verb|     168.00000190734863D0      ,| & \\
 \verb|     264.80000610351567D0      ,| & \\
@@ -160,9 +159,11 @@ If this condition is not satisfied,  the program is terminated immediately witho
 }
 
 Since the input and output files of \scalerm are divided process by process according to the MPI, the total number of files is changed according to the number of MPI processes.
-For example, the initial condition file made by a two-MPI parallel combination cannot be used for model execution by a four-MPI parallel.
-It is necessary to edit \namelist{PARAM_PRC_CARTESC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf| if the number of MPI processes is changed,
-and to conduct once again the processes of \verb|pp| and \verb|init|.
+For example, the initial and boundary files made by two-MPI processes cannot be used for model execution by four-MPI processes.
+If the number of MPI processes is changed, it is necessary
+to edit \namelist{PARAM_PRC_CARTESC} in \verb|pp.conf|, \verb|init.conf|, and \verb|run.conf|,
+and then conduct once again the processes of \verb|pp| and \verb|init|.
+As another way, the postprocess \sno is also available for redistribution (Please refer Sec.\ref{sec:sno}).
 
 
 %-----------------------------------------------------------------------
@@ -213,16 +214,16 @@ Nothing is affected in the bottom region.
 Note that the actual target region unaffected by the nudging (the region excluding the buffer regions) narrows compared to the calculation domain because the buffer region is placed on the inside of calculation domain.
 
 Two examples are as below.
-
+%
 \editboxtwo{
-\verb|&PARAM_ATMOS_GRID_CARTESC | & \\
- \verb|BUFFER_NX = 30,   | & ; The number of grid for the buffer region along the X (zonal) direction\\
- \verb|BUFFER_NY = 30,   | & ; The number of grid for the buffer region along the Y (meridional) direction\\
- \verb|BUFFFACT  = 1.D0, | & ; Stretched factor for grid intervals in the buffer region( default : 1.0 )\\
+\verb|&PARAM_ATMOS_GRID_CARTESC| & \\
+ \verb|BUFFER_NX = 30, | & ; The number of grid for the buffer region along the \XDIR \\
+ \verb|BUFFER_NY = 30, | & ; The number of grid for the buffer region along the \YDIR \\
+ \verb|BUFFFACT  = 1.D0, | & ; Stretched factor for grid intervals in the buffer region \\
 \verb|/|\\
 }
 \editboxtwo{
-\verb|&PARAM_ATMOS_GRID_CARTESC | & \\
+\verb|&PARAM_ATMOS_GRID_CARTESC| & \\
  \verb|BUFFER_DZ  = 5000.D0,   | & ; The width of the buffer region along the Z direction from the top of the model (a reference) [m]\\
  \verb|BUFFER_DX  = 300000.D0, | & ; The width of the buffer region along the X (zonal) direction ( a reference ) [m]\\
  \verb|BUFFER_DY  = 300000.D0, | & ; The width of the buffer region along the Y (meridional) direction ( a reference ) [m]\\
@@ -322,6 +323,10 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
   ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; Start time of the boundary data. Only for \verb|REAL| type. \\
   \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; Time interval of the boundary data. Only for \verb|REAL| type. \\
+  \\ ({\small\slshape continued on next page})
+}
+\editboxtwo{
+  ({\small\slshape continued from previous page}) \\ \\
   \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
   ~~\verb|                  = 'lerp_initpoint',| & ; Temporal interpolation type. \\
                                                  &  ~\verb|same_parent|: use the latest step value (no interpolation), \\
@@ -332,10 +337,6 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; Title for the output file. \\
   \verb| ATMOS_BOUNDARY_OUT_DTYPE = 'DEFAULT', | & ; Data type (\verb|REAL4| or \verb|REAL8|) for the output. \\
-  \\ ({\small\slshape continued on next page})
-}
-\editboxtwo{
-  ({\small\slshape continued from previous page}) \\ \\
   \verb| ATMOS_BOUNDARY_USE_DENS = .false.,    | & ; Switch of the nudging for the density. \\
   \verb| ATMOS_BOUNDARY_USE_VELZ = .false.,    | & ; Switch for the w. \\
   \verb| ATMOS_BOUNDARY_USE_VELX = .false.,    | & ; Switch for the u. \\

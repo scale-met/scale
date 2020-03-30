@@ -7,7 +7,7 @@
 この関係を図\ref{fig:domain}に示す。
 水平方向に2次元の領域分割を行うことで並列化がなされている。
 
-格子点数およびMPIプロセス数は、
+領域全体の総格子点数およびMPIプロセス数は、
 それぞれ\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG, JMAXG}、および
 \namelist{PARAM_PRC_CARTESC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}で設定する。
 図\ref{fig:domain}に示すように、計算領域全体は、
@@ -16,7 +16,7 @@
 分割された各領域は1つのMPIプロセスによって担当され、各MPIプロセスは\nmitem{IMAX} $\times$ \nmitem{JMAX} $\times$ \nmitem{KMAX}個の格子ブロックを受け持つ。
 ここで、\nmitem{KMAX}は鉛直方向の格子点数であり\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内で指定する。
 \nmitem{IMAX} および \nmitem{JMAX} はすべてのMPIプロセスで同一でなければならないことに注意する必要がある。
-したがって、各方向のプロセス数は、各方向の格子点数の約数である必要がある。
+したがって、各方向のプロセス数は、各方向の総格子点数の約数である必要がある。
 
 各方向の格子点と総格子点数をまとめると以下のようになる。
 \begin{eqnarray}
@@ -29,33 +29,32 @@
    \times (\nmitemeq{JMAX} \times \nmitemeq{PRC_NUM_Y})
    \times (\nmitemeq{KMAX} )  \nonumber
 \end{eqnarray}
-\nmitem{IMAG} および \nmitem{JMAXG} を設定した場合、\nmitem{IMAX} および \nmitem{JMAX} は内部で計算される。
-別の方法として、\nmitem{IMAXG} および \nmitem{JMAXG} の代わりに \nmitem{IMAX} および \nmitem{JMAX} を指定することもできる。
-この場合は、式(\ref{eq:xgridnum})および(\ref{eq:ygridnum})を使って、\nmitem{IMAXG} および \nmitem{JMAXG} が内部で計算される。
+\nmitem{IMAXG} および \nmitem{JMAXG} を設定した場合、\nmitem{IMAX} および \nmitem{JMAX} は内部で計算される。
+\nmitem{IMAXG} および \nmitem{JMAXG} の代わりに \nmitem{IMAX} および \nmitem{JMAX} を指定した場合、
+式(\ref{eq:xgridnum})および(\ref{eq:ygridnum})を使って、\nmitem{IMAXG} および \nmitem{JMAXG} が内部で計算される。confファイルには、どちらか一方を設定する。
 
 
 領域全体の大きさは、
 \begin{eqnarray}
-&& \rm{{\XDIR}の領域の長さ} = \rm{{\XDIR}の格子点数} \times \verb|DX| \nonumber\\
-&& \rm{{\YDIR}の領域の長さ} = \rm{{\YDIR}の格子点数} \times \verb|DY| \nonumber
+&& \rm{{\XDIR}の領域の長さ} = \verb|IMAXG| \times \verb|DX| \nonumber\\
+&& \rm{{\YDIR}の領域の長さ} = \verb|JMAXG| \times \verb|DY| \nonumber
 \end{eqnarray}
 である。ここで、第\ref{subsec:gridinterv}節で記述したように、
 \nmitem{DX, DY}は\namelist{PRAM_ATMOS_GRID_CARTESC}内で指定する。
-水平方向の解像度と領域の大きさを設定し、利用する MPI プロセス数を与えた場合は、
-1 つのMPIプロセスが受け持つ格子点数は上記の関係から決められる。
+
 
 水平ー鉛直の2次元実験を行うためには、\nmitem{IMAXG} および \nmitem{PRC_NUM_X} を 1 に設定する。
 この場合、Y-Z平面での運動が計算される。
 \nmitem{DX} の値はシミュレーション結果には影響しない。
 
 次の小節では、格子数、格子間隔、MPIプロセス数の設定をより詳しく説明する。
-\textcolor{blue}{これらの設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
+\textcolor{blue}{上記の設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
 ことに注意が必要である。
 
 \begin{figure}[h]
 \begin{center}
   \includegraphics[width=0.8\hsize]{./../../figure/domain_decomposition.pdf}\\
-  \caption{計算領域全体に対する、水平格子間隔(\nmitem{DX}, \nmitem{DY})、MPIプロセスあたりの格子数(\nmitem{IMAX}, \nmitem{JMAX})、格子数(\nmitem{IMAXG}, \nmitem{JMAXG})、MPIプロセス数(\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y})の関係。青色の領域は、1つのMPIプロセスが担当する領域に対応する。}
+  \caption{計算領域全体に対する、水平格子間隔(\nmitem{DX}, \nmitem{DY})、MPIプロセスあたりの格子数(\nmitem{IMAX}, \nmitem{JMAX})、総格子数(\nmitem{IMAXG}, \nmitem{JMAXG})、MPIプロセス数(\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y})の関係。青色の領域は、1つのMPIプロセスが担当する領域に対応する。}
   \label{fig:domain}
 \end{center}
 \end{figure}
@@ -142,7 +141,7 @@
 これを避けるために、ディレクトリ\texttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
 必要があれば参考として用いることができる。
-このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
+このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けるなどして利用可能である。
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso2}
@@ -155,7 +154,8 @@ MPIプロセス数は設定ファイルの\namelist{PARAM_PRC_CARTESC}内で指�
 \verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
 \verb|/|\\
 }
-MPIプロセス数は、\XDIR および \YDIR それぞれについて 格子点数 \nmitem{IMAXG}, \nmitem{JMAXG} の約数でなければならない。
+MPIプロセス数は、\XDIR および \YDIR それぞれについて
+総格子点数 \nmitem{IMAXG}, \nmitem{JMAXG} の約数でなければならない。
 そうでなければ、プログラムは以下のメッセージを出力して直ちに終了する。
 \msgbox{
   \verb|number of IMAXG should be divisible by PRC_NUM_X| \\
@@ -183,6 +183,8 @@ MPIプロセス数を変更する場合は、
 \verb|pp.conf|、\verb|init.conf|、\verb|run.conf| 内の
 \namelist{PARAM_PRC_CARTESC}を編集し、
 \verb|pp|、\verb|init| の過程を再度行う必要がある。
+もしくは、後処理ツール \sno を利用して、ファイルの再分割を行うことも可能である
+(第\ref{sec:sno}節参照)。
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecRayleighDampingSetting} \label{subsec:raydamp}
@@ -372,7 +374,8 @@ MPIプロセス数を変更する場合は、
 \end{table}
 
 
-以下は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータである.
+以下は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータである。
+%
 \editboxtwo{
   \verb|&PARAM_ATMOS_BOUNDARY | & \\
   \verb| ATMOS_BOUNDARY_TYPE = 'NONE',         | & ; 境界値データの種類。表\ref{tab:nml_atmos_boundary_type}を参照。 \\
@@ -382,10 +385,10 @@ MPIプロセス数を変更する場合は、
   \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
   ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界値データの開始時刻(\verb|REAL| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界値データの時間間隔(\verb|REAL| type の場合のみ) \\
-  \\ ({\small\slshape 次のページへ続く})
-}
-\editboxtwo{
-  ({\small\slshape 前のページからの続き}) \\ \\
+%    \\ ({\small\slshape 次のページへ続く})
+%}
+%\editboxtwo{
+%  ({\small\slshape 前のページからの続き}) \\ \\
   \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
   ~~\verb|                  = 'lerp_initpoint',| & ; 時間方向の補間の種類 \\
                                                  &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\

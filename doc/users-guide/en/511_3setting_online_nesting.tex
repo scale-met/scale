@@ -127,7 +127,7 @@ The calculation may sometimes abort, outputting the message below. This is the e
 
 As shown in Fig. \ref{fig_mpisplit}, no MPI process is shared between the multiple domains in the online nesting experiment. In other words, each MPI process takes charge of a part of a specific domain. Therefore, the user should determine how many MPI processes to allocate to each domain. When this allocation is not appropriate, a long waiting time is incurred. To avoid this situation, it is reasonable to allocate processes so that the magnitude of time integrations for each process is as similar as possible among processes\footnote{More accurately, floating-point operations should be estimated.}. Here, the magnitude of time integration, i.e., computational effort, is defined as the product of the number of grids and time steps.
 
-Let us consider $N$-domain nesting. The number of grids in the x, y, and z directions in n-th domain are denoted by
+Let us consider $N$-domain nesting. The total number of grids in the x, y, and z directions in n-th domain are denoted by
 \verb|IMAXG_n|, \verb|JMAXG_n|, and \verb|KMAX_n|, respectively.
 \verb|DT_n| is the time interval \nmitem{TIME_DT} in the n-th domain.
 Using the time-step of the outermost domain (n=1) \verb|DT_1| as a benchmark,
@@ -139,14 +139,14 @@ The calculation for the n-th domain is derived by multiplying the number of grid
 \begin{eqnarray}
  \verb|OPR_n| = \verb|IMAXG_n| \times \verb|JMAXG_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
-Therefore, the standard number of processes allocated to the n-th domain is estimated as
+Therefore, the standard number of processes allocated to the n-th domain (\verb|MPI_n|) is estimated as
 \begin{eqnarray}
- \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} },
+ \verb|MPI_n| = \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} },
 \end{eqnarray}
 where \verb|MPI_total| is the total number of MPI processes.
 
-The number of processes distributed along the x and y directions \nmitem{PRC_NUM_X, PRC_NUM_Y} can be arbitrarily decided.
-It is recommended to configure them so that the difference between $\nmitemeq{IMAX}(=\nmitemeq{IMAXG}/\nmitemeq{PRC_NUM_X})$ and $\nmitemeq{JMAX}(=\nmitemeq{JMAXG}/\nmitemeq{PRC_NUM_Y})$ is as small as possible.
+The number of processes that are distributed along the x and y directions \nmitem{PRC_NUM_X, PRC_NUM_Y} out of \verb|MPI_n| can be arbitrarily decided.
+It is recommended to configure them so that the difference between the number of grid along \XDIR ($\nmitemeq{IMAX}=\nmitemeq{IMAXG}/\nmitemeq{PRC_NUM_X}$) and that along \YDIR ($\nmitemeq{JMAX}=\nmitemeq{JMAXG}/\nmitemeq{PRC_NUM_Y}$) is as small as possible.
 This is because such a configuration can reduce the area of the halo.
 As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}.
 

@@ -17,10 +17,9 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 
 \verb|pp.d01.conf|のネームリストの中で、計算領域に関係する設定は \namelist{PARAM_PRC_CARTESC}、\\
 \namelist{PARAM_GRID_CARTESC_INDEX}、\namelist{PARAM_GRID_CARTESC}で行っている。
-1つのMPIプロセスあたりの格子点数は、\nmitem{IMAXG} = 90、\nmitem{JMAXG} = 90と指定されており、
-{\XDIR} 、{\YDIR}それぞれの総格子点数は 90である。
-{\XDIR} 、{\YDIR}ともに領域は2分割されており、総計として4つのMPIプロセスを使用する。
-各MPIプロセス内が担当する格子数は、{\XDIR} 、{\YDIR}それぞれ 45 ($=90 / 2$) である。
+領域全体の総格子点数は、{\XDIR} 、{\YDIR}それぞれ \nmitem{IMAXG} = 90、\nmitem{JMAXG} = 90である。
+{\XDIR} 、{\YDIR}ともに領域は2分割されているので、
+各MPIプロセスが担当する格子数は、{\XDIR} 、{\YDIR}それぞれ 45 ($=90 / 2$) である。
 各方向の格子幅は\namelist{PARAM_GRID_CARTESC}の\nmitem{DX, DY}において 20,000 m（20 km）と指定されている。
 したがって、計算領域の一辺の長さは 90 $\times$ 20 km であるので、
 計算領域は 1800 km $\times$ 1800 km の正方領域である。

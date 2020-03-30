@@ -42,8 +42,8 @@ MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nm
 \\
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAXG = 360,|} &  (オリジナル設定は \verb|IMAXG = 90|)\\
-\textcolor{red}{\verb| JMAXG = 360,|} &  (オリジナル設定は \verb|JMAXG = 90|)\\
+\verb| IMAXG = 90,| & \\
+\verb| JMAXG = 90,| & \\
 \verb|/| &\\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC| & \\
@@ -60,19 +60,17 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \end{eqnarray}
 
 これに加えて、力学変数の時間積分に対する時間刻み幅\nmitem{TIME_DT_ATMOS_DYN} と \\
-\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である（第\ref{sec:timeintiv}節を参照）。
-また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない。
+\nmitem{TIME_DT} の調整も必要である (第\ref{sec:timeintiv}節を参照)。
+また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない (第\ref{subsec:buffer}節を参照)。
 以下はその解答例であり、緩和領域を格子間隔の20倍に取った場合を示している。
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+%
+\editboxtwo{
 \verb|&PARAM_PRC_CARTESC|  & \\
 \verb| BUFFER_DX = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DX = 400000.D0,|) \\
 \verb| BUFFER_DY = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DY = 400000.D0,|) \\
 \verb|/| &\\
-\end{tabularx}
-}}}\\
+}
+
 
 
 \item {\bf 計算領域の位置を変更したい}\\
