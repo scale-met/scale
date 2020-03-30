@@ -86,8 +86,34 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 \end{center}
 \end{table}
 
+%-------------------------------------------------------------------------------
+\subsubsection{Setting vertical grids for ocean model}
+%-------------------------------------------------------------------------------
 
-\clearpage
+The number of vertical layers for ocean model is specified by \nmitem{OKMAX} in \namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}.
+The vertical grid intervals are specified by \nmitem{ODZ} in \namelist{PARAM_OCEAN_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
+\verb| OKMAX = 1,|  & ; number of vertical layers \\
+\verb|/|\\
+\\
+\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
+\verb| ODZ = 10.D0,| & ; grid interval along the vertical direction\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{ODZ} for the number of vertical layers specified by \nmitem{OKMAX}.
+The order of the array is from the sea surface to the deep ocean.
+
+
+%-------------------------------------------------------------------------------
+\subsection{Fixed to initial condition}
+%-------------------------------------------------------------------------------
+When \nmitem{OCEAN_DYN_TYPE} is \verb|INIT|, the ocean condition is fixed to the initial condition.
+In this case, the number of vertical layer must be 1.
+The layer depth can be arbitrary as long as it is positive value.
+
+
+
 %-------------------------------------------------------------------------------
 \subsection{Subsurface ocean scheme}
 %-------------------------------------------------------------------------------
@@ -95,20 +121,18 @@ The schemes of the ocean submodel is configured by the parameter \nmitem{OCEAN_D
 At a surface grid point whose ocean fraction exists (= land fraction is less than 1.0),
 the physical quantities must be calculated by the ocean submodel.
 The setting of land-ocean fraction is controlled by \namelist{PARAM_LANDUSE}.
-When \nmitem{OCEAN_DYN_TYPE} is set to \verb|"NONE"| or \verb|"OFF"| although the grid points with the ocean fraction exist, the following error message is displayed to the log file:
+When \nmitem{OCEAN_DYN_TYPE} is set to \verb|NONE| or \verb|OFF| although the grid points with the ocean fraction exist, the following error message is displayed to the log file:
 
 \msgbox{
 \verb|ERROR [CPL_vars_setup] Ocean fraction exists, but ocean component has not been called.|\\
 \verb| Please check this inconsistency. STOP.| \\
 }
 
-If \nmitem{OCEAN_DYN_TYPE} is set to \verb|"SLAB"|, the subsurface ocean is treated as a slab layer. The temperature of the slab layer changes over time by the heat flux from the surface. The depth of the slab layer, which controls the heat capacity of the slab ocean, can be specified \nmitem{OCEAN_DYN_SLAB_DEPTH} in \namelist{PARAM_OCEAN_DYN_SLAB}.
+If \nmitem{OCEAN_DYN_TYPE} is set to \verb|SLAB|, the subsurface ocean is treated as a slab layer.
+The temperature of the slab layer changes over time by the heat flux from the surface.
+The depth of the slab layer, which controls the heat capacity of the slab ocean, can be specified as the depth of the first ocean layer.
+Note that the number of ocean layer must be 1.
 
-\editboxtwo{
- \verb|&PARAM_OCEAN_DYN_SLAB            | & \\
- \verb| OCEAN_DYN_SLAB_DEPTH = 10.0_RP, | & ; Water depth of slab ocean [m] \\
- \verb|/                                | & \\
-}
 
 In the slab ocean model, you can apply a relaxation (i.e., nudging) for sea surface temperature (SST)
 by using external data.

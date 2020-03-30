@@ -168,7 +168,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 
 
 鉛直格子点の位置は任意に設定できるが、変わった設定をすると計算不安定がしばしば生じる。
-これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に
+これを避けるために、ディレクトリ\texttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
 必要があれば参考として用いることができる。
 このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
@@ -240,8 +240,8 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 ナッジングの影響を受けない実際の対象領域(緩和領域を除いた範囲)は
 計算領域よりも狭くなることに注意が必要である。
 
-以下に２種類の設定例を示す。\\
-
+以下に２種類の設定例を示す。
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_NX = 30,   | & ; {\XDIR}（東西方向）の緩和領域の格子数\\
@@ -249,7 +249,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
  \verb|BUFFFACT  = 1.D0, | & ; 全方向の緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
 }
-
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_DZ  =   5000.D0, | & ; {\ZDIR}（モデル上端から下向き方向）の緩和領域の幅(参考値) [m]\\
@@ -490,3 +490,17 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 
 
 上端境界の周辺における同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。
+
+%-----------------------------------------------------------------------
+\subsection{\SubsecGridOceanLandUrban} \label{subsec:gridolu}
+%-----------------------------------------------------------------------
+
+海洋/陸/都市モデルの水平格子は、大気モデルの設定と共通である。
+すなわち、水平格子数は\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}の\nmitem{IMAXG, JMAXG}で指定され、
+水平格子間隔は \\ \namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}で指定される。
+一方、鉛直格子についてはそれぞれ個別の設定が必要である。
+
+海洋モデルの鉛直格子設定については、第~\ref{sec:basic_usel_ocean}~節、
+陸モデルの鉛直格子設定については、第~\ref{sec:basic_usel_land}~節、
+都市モデルの鉛直格子設定については、第~\ref{sec:basic_usel_urban}~節を参照のこと。
+

@@ -403,7 +403,16 @@ To weaken the density nudging, set the time scale larger than \nmitem{ATMOS_BOUN
 The adjustment method in \scalerm is constructed under the assumption that the total mass change due to convergence of the mass flux at the lateral boundaries is much larger than that due to the physical processes, such as precipitation and surface latent heat flux.
 The validity of the assumption depends on target domain and situation.
 
-
-
-
 There exists a similar dumping method at near the top boundary, i.e., Rayleigh dumping. See Section \ref{subsec:raydamp}.
+
+%-----------------------------------------------------------------------
+\subsection{Setting vertical grids for ocean, land, and urban models} \label{subsec:gridolu}
+%-----------------------------------------------------------------------
+
+Settings for horizontal grids of ocean, land, and urban models are same as those for the atmospheric model.
+The numbers of the grids are specified by \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
+The horizontal grid intervals are specified by \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC}.
+On the other hand, settings for vertical grids should be specified for each model separately.
+
+Please see Sec. \ref{sec:basic_usel_ocean}, Sec. \ref{sec:basic_usel_land} and Sec. \ref{sec:basic_usel_urban}
+for vertical grid settings for ocean, land and urban models, respectively.
