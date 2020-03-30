@@ -1,105 +1,120 @@
 %-------------------------------------------------------------------------------
-\section{SCALE NetCDF Operator (\sno)} \label{sec:snoutil}
+\section{SCALE NetCDF Operator (\sno)} \label{sec:sno}
 %-------------------------------------------------------------------------------
 
-デフォルトでは、\scalerm の出力ファイル(\scalenetcdf ファイルと呼ぶ)は、
-複数のプロセスにより分割された水平領域に応じて分けられる。
-この方法は、モデル実行中におけるファイルI/Oのスループットの効率が良い。
-しかし、膨大なファイルを扱うことは困難でもある。
-ファイル数はプロセス数と共に増加する。
-また、MPI プロセス数を変えただけでも、次の実験のためにこれらのファイルを用いることはできない。
-さらに、多くの解析ツールや可視化ツールはこのような分散ファイルには対応していない。
-これらの問題に対する1つの解は出力ファイルの集約であり、
-Parallel \netcdf (PnetCDF) を利用できる(第\ref{subsec:single_io}節を参照)。
-別の解は、\sno という後処理ツールを使用することである。
-\sno は以下の特徴を持つ。
+\noindent {\Large\em NOTICE} \hrulefill
 
+\sno は、version 5.3以降の\scalelib で作成された\scalenetcdf のための後処理ツールである。
+それより古い \scalenetcdf ファイルでは、グローバル属性や軸データの属性に関する情報が不足しているために利用できない。net2g (第\ref{sec:net2g}章)は前のバージョンにも使用可能である。
+
+\hrulefill\\
+
+
+Parallel \netcdf (\pnetcdf) (第\ref{subsec:single_io}節) を使用している場合を除き、
+\scalerm の出力ファイル(\scalenetcdf ファイル)は、実行時の並列数に応じてプロセスごとに分割して出力される。
+プロセスごとのファイル出力は、ファイルI/Oのスループット効率が良いが、次の点で不利である。
+1) MPIプロセス数が多い場合、ファイル数が膨大となり、それらを扱うのが困難。
+2) 同じ実験設定でも、使用するMPIプロセス数が異なると、初期値・境界値・リスタート・ヒストリファイルを実験間で共有して使用することができない。
+3) 広く一般に提供されている多くの解析ツールや可視化ツールは、空間方向の分散ファイルに対応していない。
+
+これらの分割ファイルの扱いづらさを軽減し、補助するため、\sno は以下の機能を備えている。
+括弧内は、対応可能な\sno の出力データ形式を示す。
 \begin{itemize}
- \item 分割された複数のファイルを結合して、1個のファイルあるいは複数のファイルにする。
- \item 1個のファイルをあるいは複数のファイルを、複数のファイルに分割する。
- \item 単一の{\Netcdf}ファイルを{\grads}で読み込むためのコントロールファイル(*.ctl)を作成する。
- \item \grads 形式のファイルに変換する。
- \item 出力データを複数ステップに渡って平均する。
- \item 測地線(緯度経度)格子系へとリグリッドする。
+ \item 分割された複数のファイルを結合して、1個のファイルにまとめる (\scalenetcdf, \grads バイナリ)。
+ \item 1個のファイル、あるいは、複数のファイルを、別の分割数の複数ファイルに変換する (\scalenetcdf)。
+% \item 単一の{\Netcdf}ファイルを{\grads}で読み込むためのコントロールファイル(*.ctl)を作成する。
+ \item モデル面高度座標系を気圧面高度座標系へとリグリッドする (\scalenetcdf)。
+ \item モデル格子から測地線(緯度経度)格子系へとリグリッドする (\scalenetcdf)。
+ \item 出力データを複数ステップに渡って平均する (\scalenetcdf)。
 \end{itemize}
 
-\sno を用いることで、ファイルがハロの格子を持つかに関わらず、ヒストリデータ、地形データ、境界値データ、初期値/リスタートデータを操作できる。
 
-\subsubsection{制限}
+\subsection{基本的な使い方}
 
-\sno は、\scalelib version 5.3 以降によって作成された \scalenetcdf ファイルに対して利用できる。それより古い \scalenetcdf ファイルでは、グローバル属性や軸データの属性に関する情報が不足しているために利用できない。
-\sno は複数のプロセスを用いて実行できる。
-しかし、利用できるプロセスの最大数は \sno から出力されるファイルの数に制限される。例えば、数百個の \scalenetcdf ファイルを１個のファイルに変換したい場合には、その処理に使用できる MPI プロセス数は 1 つだけである。
-GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませることは難しい。
-そのため、各変数は個別の集約したファイルに出力される。
-
-複数ファイルの再編成は、依然として制限される。
-各ファイルは(ハロの格子を除いて)同じサイズの水平格子を持つ必要がある。
-設定の例を以下に記述する。
-
-\subsubsection{使い方}
-
-\sno の実行バイナリは \scalerm のメインプログラムと一緒にはコンパイルされない。
-\sno は、ディレクトリ\texttt{scale-{\version}/lib}に置かれる\scalelib ライブラリ(\verb|libscale.a|)を用いる。
-このライブラリは、\scalerm のコンパイル時に生成される。
-そのため、\scalerm のコンパイル後に以下のコマンドを実行することを推奨する。
-
-\begin{alltt}
-  $  cd scale-{\version}/scale-rm/util/sno
-  $  make
-\end{alltt}
-
-コンパイルが成功すれば、実行バイナリファイルがディレクトリ\texttt{scale-{\version}/bin}の下に作成される。
-\sno の実行例は以下である。
-
-\begin{alltt}
-  $  mpirun -n 2 ./sno sno.conf
-\end{alltt}
-
-この例では、  「mpirun」コマンドを用いて 2 つの MPI プロセスで{\sno}を実行している。
-最後の引数は設定ファイルであり、その名前は任意である。
-
-\subsection{設定例: 基本的な使い方}
-
-\subsubsection{共通設定}
-
-\sno は \scalerm のいくつかのコンポーネントを一緒に使用しており、
-以下のネームリストのパラメータを設定できる。
-
-\begin{itemize}
- \item \namelist{PARAM_IO}: ログファイル （第\ref{sec:log}節を参照)
- \item \namelist{PARAM_PROF}: パフォーマンス測定 （第\ref{subsec:prof}を参照)
- \item \namelist{PARAM_CONST}: 物理定数 (第\ref{subsec:const}を参照)
- \item \namelist{PARAM_CALENDAR}: カレンダー(第\ref{subsec:calendar}を参照)
-\end{itemize}
-
-\namelist{PARAM_IO}に対するオプションを指定しなければ、
-進捗状況を示すログはマスタープロセスの標準出力に出力される。
-
-\subsubsection{複数の \scalenetcdf ファイルを単一の NetCDF ファイルに変換する場合}
-
-\editbox{
-\verb|&PARAM_SNO                              | \\
-\verb| basename_in     = 'input/history_d02', | \\
-\verb| dirpath_out     = 'output',            | \\
-\verb| basename_out    = 'history_d02_new',   | \\
-\verb| output_gradsctl = .true.,              | \\
-\verb|/                                       | \\
+\sno 実行のための設定は、\namelist{PARAM_SNO}で行う。
+%
+\editboxtwo{
+\verb|&PARAM_SNO                  | & \\
+\verb| basename_in     = "",      | & ; 入力ファイルのパスとベース名 \\
+\verb| basename_out    = "",      | & ; (\scalenetcdf) 出力ファイルのベース名 \\
+\verb| nprocs_x_out    = 1,       | & ; (\scalenetcdf) 出力ファイルのx方向の分割数 \\
+\verb| nprocs_y_out    = 1,       | & ; (\scalenetcdf) 出力ファイルのy方向の分割数 \\
+\verb| output_single   = .false., | & ; (\scalenetcdf) 複数プロセス実行時、単一の\netcdf ファイルに出力するか?\\
+\verb| dirpath_out     = "",      | & ; (\grads)出力先のディレクトリパス \\
+\verb| output_grads    = .false., | & ; (\grads) grads 形式で出力するか? \\
+\verb| output_gradsctl = .false., | & ; 単一の\netcdf ファイルに対する grads のコントロールファイルを出力するか? \\
+\verb| vars            = "",      | & ; 処理を行う変数の名前 \\
+\verb| debug           = .false., | & ; デバッグのための詳細なログを出力するか? \\
+\verb|/                           | & \\
 }
 
+\nmitem{basename_in}は必須である。
+入力ファイルの総数や2次元トポロジー等情報は、1番目のファイル
+(この例では\verb|history_d02.pe000000.nc|)から読み込まれる。
+
+\nmitem{vars}は、指定しなければ、入力ファイル内全ての変数に対して処理が実行される。
+
+\nmitem{basename_out}は、出力形式が \scalenetcdf の場合の出力ファイルのベース名である。
+\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} は、出力ファイルの分割数を表す。
+デフォルト値は 1 であり、この場合、単一のファイルに結合されて出力される。
+SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{nprocs_x_out} x \nmitem{nprocs_y_out})と同じか、
+それ以下でなければならない。
+ただし、\nmitem{output_single}  = \verb|.true.| の場合には、
+\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} で設定されるMPIプロセス数によらず、
+単一のファイルに結合されて出力される。
+
+
+\nmitem{output_grads} = \verb|.true.|の場合、\grads で読み込み可能なバイナリ形式の
+単一ファイルとして出力される。
+このとき、実行プロセス数は１である必要がある。
+\nmitem{dirpath_out}が空であれば、出力先のパスはカレントディレクトリに設定される。
+%出力ファイル名は各変数の名前と同じであり、\nmitem{basename_out}は無視される。
+\nmitem{output_gradsctl} = \verb|.true.|の場合、
+\sno は{\grads}のためのコントロールファイルを出力する。
+ただし、このオプションは、
+\nmitem{nprocs_x_out} = 1, \nmitem{nprocs_y_out} = 1 の場合にのみ使用可能である。
+
+
+\sno は \namelist{PARAM_SNO}以外に、以下のネームリストが使用可能である。
+%
+\begin{itemize}
+ \item \namelist{PARAM_IO}: ログファイル (第\ref{sec:log}節を参照)
+ \item \namelist{PARAM_PROF}: パフォーマンス測定 (第\ref{subsec:prof}を参照)
+ \item \namelist{PARAM_CONST}: 物理定数 (第\ref{subsec:const}を参照)
+ \item \namelist{PARAM_CALENDAR}: カレンダー (第\ref{subsec:calendar}を参照)
+\end{itemize}
+
+
+
+\subsection{設定例: ファイルのデータ形式、及び、分割数の変換}
+
+\subsubsection{複数の \scalenetcdf ファイルを単一の NetCDF ファイルに変換する場合（単一実行プロセス）}
+%
+\editbox{
+\verb|&PARAM_SNO                                     | \\
+\verb| basename_in     = 'input/history_d02',        | \\
+\verb| basename_out    = 'output/history_d02_new',   | \\
+\verb| output_gradsctl = .true.,                     | \\
+\verb|/                                              | \\
+}
+%
 この例では、ディレクトリ\verb|./input|にある\verb|history_d02.pe######.nc|という名前のヒストリファイルを変換する。
 ここで、 \verb|######|は MPI のプロセス番号を表す。
-ファイルの総数や2次元トポロジー等の分割ファイルの情報は、1番目のファイル(この例では\verb|history_d02.pe000000.nc|)から読み込まれる。
+この例では、出力ファイルの分割数や変数に関するオプションは指定されていないので、
+出力ファイルは、全ての変数を含む単一ファイルとなる。
 変換されたファイルは、\verb|history_d02_new.pe######.nc|という名前で \verb|./output|ディレクトリの中に出力される。
-出力ファイル数や変数に関するオプションは、この例では指定されていない。
-この例では、入力ファイルは単一ファイルに結合され、全ての変数は維持される。
 
-\nmitem{output_gradsctl}を\verb|.true.|とした場合は、\sno は{\grads}のためのコントロールファイルを出力する。
-このファイルは、出力ファイルが1個の場合にのみ生成される。
-以下は、コントロールファイルに関する詳細の例である。
 
+\nmitem{output_gradsctl} = \verb|.true.|であるので、
+\sno は{\grads}のためのコントロールファイルを出力する。
+このオプションは、実行プロセス数が1つの場合にのみ有効である。
+%
+一般的に、単一の \netcdf ファイルは外部メタデータファイルが無くても{\grads}で読み込める。
+しかし、\grads のインターフェイスは制限的であり、関連する座標や地図投影を含む \scalenetcdf 形式を解釈できない。そのため、コントロールファイルが必要である。
+以下は、出力されるコントロールファイルの例である。
+%
 \msgbox{
-\verb|SET ^history_d02.pe000000.nc| \\
+\verb|SET ^history_d02_new.pe000000.nc| \\
 \verb|TITLE SCALE-RM data output| \\
 \verb|DTYPE netcdf| \\
 \verb|UNDEF -0.99999E+31| \\
@@ -119,30 +134,30 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 \verb|ENDVARS| \\
 }
 
-一般的に、単一の \netcdf ファイルは外部メタデータファイルが無くても{\grads}で読み込める。
-しかし、\grads のインターフェイスは制限的であり、関連する座標や地図投影を含む \scalenetcdf 形式を解釈できない。
-そのため、上記のコントロールファイルが必要である。
 
-\subsubsection{複数の \scalenetcdf ファイルを GrADS ファイルに変換する場合}
 
+\subsubsection{複数の \scalenetcdf ファイルを単一の NetCDF ファイルに変換する場合（複数実行プロセス）}
+%
 \editbox{
-\verb|&PARAM_SNO                                | \\
-\verb| basename_in  = 'input/history_d02',      | \\
-\verb| dirpath_out  = 'output',                 | \\
-\verb| output_grads = .true.,                   | \\
-\verb| vars         = "U", "PREC", "LAND_TEMP", | \\
-\verb|/                                         | \\
+\verb|&PARAM_SNO                               | \\
+\verb| basename_in     = 'input/history_d02',  | \\
+\verb| basename_out    = 'output/history_d02', | \\
+\verb| nprocs_x_out    = 4,                    | \\
+\verb| nprocs_y_out    = 6,                    | \\
+\verb| output_single   = .true.,               | \\
+\verb|/                                        | \\
 }
 
-\nmitem{output_grads}を\verb|.true.|とした場合は, \sno は \scalenetcdf 形式の代わりに \grads 形式のファイルを出力する。
-空間方向に関して全ての分割データは結合される。各変数は個々のファイルに出力される。各ファイルの名前は変数名と同じに設定される。
-変換されたファイルは、ディレクトリ\verb|./output|に出力される。
-ただし、\nmitem{basename_out}を指定した場合は、上記で指定した出力先のパスは設定されないことに注意が必要である。
-コントロールファイルもまた出力される。
-この例では、\nmitem{vars}で指定した変数のみが変換される。
+この例はMPIプロセスを24個用いて変換するが、\nmitem{output_single} = \verb|.true.|なので、出力は単一ファイルとなる。
+また、出力ファイルには全ての変数が含まれる。
+
+\nmitem{output_gradsctl}は無効なので、自動生成はできない。
+GrADS用のctlファイルを記述すれば、GrADSで読み込むことが可能になる。
+また、現時点で、この出力方法は周期境界を設定された実験でのhistoryファイルには対応していないことに注意すること。
+
 
 \subsubsection{複数の \scalenetcdf ファイルを複数の NetCDF ファイルに変換する場合}
-
+%
 \editbox{
 \verb|&PARAM_SNO                            | \\
 \verb| basename_in  = 'input/history_d02',  | \\
@@ -152,14 +167,20 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 \verb|/                                     | \\
 }
 
-この例では、入力ファイル数は 4 ([x,y]=[2,2])であり、
-各ファイルには x 方向と y 方向にそれぞれ(ハロを除いて)30個の格子点が含まれる。
-出力ファイル数は 24 ([x,y]=[4,6])である。
-上述したように、再分配後の各ファイルは同じ格子点数を持たなければならない。
-この場合、出力ファイルには x 方向に 15 個、y 方向に 10 個の格子点を含む。
-30x2=60 は 7 では割り切れないので、 \verb|nprocs_y_out|に 7 を設定することはできない。
+複数ファイルを再編成する場合、各出力ファイルは(ハロの格子を除いて)同じ格子数でなければならないという制限がある。
+これを満たすためには、\nmitem{nprocs_x_out}は、領域全体の{\XDIR} の格子数(\verb|IMAXG|)の
+約数でなければならない(第\ref{sec:domain}章参照)。\nmitem{nprocs_y_out}も同様である。
+\sno の実行時のMPIプロセス数は、変換したい分割数(\nmitem{nprocs_x_out} x \nmitem{nprocs_y_out}) を設定すること。
 
-\scalenetcdf ファイルのグローバル属性を確認することで、再分配に必要な情報が得られる。
+上記の例において、入力ファイル数は 4 ([x,y]=[2,2])、
+各ファイルには{\XDIR} と {\YDIR}にそれぞれ(ハロを除いて)30個の格子点が含まれるとする。
+つまり、領域全体の格子数は 60 x 60 である。
+%
+出力ファイル数は 24 ([x,y]=[4,6])が指定されているので、
+各出力ファイルには x 方向に 15 個、y 方向に 10 個の格子点を含むことになる。
+
+
+入力ファイルの格子数などの情報は、\scalenetcdf ファイルのグローバル属性を確認することで得られる。
 例えば、以下のように「ncdump」コマンドを用いればヘッダー情報を確認できる。
 
 \begin{alltt}
@@ -182,48 +203,43 @@ GrADS 形式では、異なる鉛直層を持つ複数の変数を含ませる�
 \verb|  ......                                           | \\
 }
 
-\verb|scale_cartesC_prc_num_x| と\verb|scale_cartesC_prc_num_y| はそれぞれ、二次元のファイルトポロジーにおけるx方向とy方向のサイズである。 また、\verb|scale_cartesC_prc_rank_x| と \verb|scale_cartesC_prc_rank_y| はそれぞれ、2次元マップにおける x 方向とy方向の位置である。このランク番号は0から始まる。
+\verb|scale_cartesC_prc_num_x| と\verb|scale_cartesC_prc_num_y| はそれぞれ、二次元のファイルトポロジーにおけるx方向とy方向のサイズである。
+また、\verb|scale_cartesC_prc_rank_x| と\\ \verb|scale_cartesC_prc_rank_y| はそれぞれ、2次元マップにおける x 方向とy方向の位置である。このランク番号は0から始まる。
 \verb|scale_atmos_grid_cartesC_index_imaxg| と \verb|scale_atmos_grid_cartesC_index_jmaxg| はそれぞれ、領域全体におけるx方向とy方向の格子数である。
 これらの格子点数にはハロ格子は考慮しない。
-したがって、x方向やy方向の分割数にはこれらの格子点数の約数を用いる。
+その他の属性情報については、第\ref{sec:global_attr}節の表\ref{table:netcdf_global_attrs}を参照いただきたい。
 
-\subsubsection{まとめ}
 
-ここでは、\namelist{PARAM_SNO}中のオプションの詳細を説明する。
-
-\editboxtwo{
-\verb|&PARAM_SNO                  | & \\
-\verb| basename_in     = "",      | & ; 入力ファイルのパスやベース名 \\
-\verb| dirpath_out     = "",      | & ; 出力先のパス \\
-\verb| basename_out    = "",      | & ; 出力ファイルのベース名 \\
-\verb| nprocs_x_out    = 1,       | & ; x方向の分割数 \\
-\verb| nprocs_y_out    = 1,       | & ; y方向の分割数 \\
-\verb| vars            = "",      | & ; 処理を行う変数の名前 \\
-\verb| output_grads    = .false., | & ; grads 形式で出力するか? \\
-\verb| output_gradsctl = .false., | & ; 単一の\netcdf ファイルに対する grads のコントロールファイルを出力するか? \\
-\verb| debug           = .false., | & ; デバッグのための詳細なログを出力するか? \\
-\verb|/                           | & \\
+\subsubsection{複数の \scalenetcdf ファイルを GrADS ファイルに変換する場合}
+%
+\editbox{
+\verb|&PARAM_SNO                                | \\
+\verb| basename_in  = 'input/history_d02',      | \\
+\verb| dirpath_out  = 'output',                 | \\
+\verb| output_grads = .true.,                   | \\
+\verb| vars         = "U", "PREC", "LAND_TEMP", | \\
+\verb|/                                         | \\
 }
 
-\nmitem{basename_in}は必須である。
-\nmitem{dirpath_out}が空であれば、出力先のパスはカレントディレクトリに設定される。
-\nmitem{basename_out}は\scalenetcdf ファイルに対して用いられる。
-\nmitem{output_grads} を\verb|.true.|にした場合は、出力ファイル名は各変数の名前と同じであり、\nmitem{basename_out}は無視される。
-
-\nmitem{nprocs_x_out} や \nmitem{nprocs_y_out} のデフォルト値は 1 である。
-これは複数のファイルが単一のファイルに結合されることを意味する。
-SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{nprocs_x_out} x \nmitem{nprocs_y_out})と同じか、それ以下でなければならないことに注意が必要である。
-
-\nmitem{vars}を指定しなければ、入力ファイル中の全ての変数が処理される。
+\nmitem{output_grads}を\verb|.true.|とした場合は、全ての分割データは結合され、単一のバイナリファイルが作成される。
+変換は、\nmitem{vars}で指定した変数について実施される。
+\grads 用のバイナリファイルは、異なる鉛直層を持つ複数の変数を含むことができない。
+そのため、各変数ごとに別々のファイルに出力される。
+出力ファイルの名前は変数名と同じに設定される。コントロールファイルもまた出力される。
+変換されたファイルの出力先ディレクトリは、\verb|./output|である。
+ただし、\nmitem{basename_out}を指定した場合は、上記で指定した出力先のパスは設定されないことに注意が必要である。
 
 
-\subsection{設定例: プラグインされている機能}
 
-\sno のいくつかの特徴は、プラグインとして与えられる。ファイルの出力や結合/分割を行う前に、
-時間平均や水平方向のリマッピング等の演算を適用できる。
 
-\subsubsection{月平均する場合}
+\subsection{設定例: プラグイン機能}
 
+ファイルの出力や結合/分割を行う前に、時間平均や水平・鉛直方向のリマッピング等の演算を適用できる。
+
+\subsubsection{時間平均する場合}
+
+時間平均のための設定は、\namelist{PARAM_SNOPLGIN_TIMEAVE}で行う。
+%
 \editbox{
 \verb|&PARAM_SNO                             | \\
 \verb| basename_in  = 'input/history_d02',   | \\
@@ -238,9 +254,8 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 \verb|/                                      | \\
 }
 
-この例では、入力ファイル数も4である。
-したがって、ファイル数は変換によって変わらない。
- \namelist{PARAM_SNOPLGIN_TIMEAVE}の\nmitem{SNOPLGIN_timeave_type}を \verb|'NUMBER'|に設定した場合は、データを時間軸方向に平均する。平均の間隔は\nmitem{SNOPLGIN_timeave_interval}で指定する。この場合は、4出力ステップごとに変数が平均される。
+
+\nmitem{SNOPLGIN_timeave_type}を \verb|'NUMBER'|に設定した場合は、データを時間軸方向に平均する。平均の間隔は\nmitem{SNOPLGIN_timeave_interval}で指定する。この場合は、4出力ステップごとに変数が平均される。出力ファイルは 2 x 2 に分割され、合計4ファイルである。
 
 他の例を以下に示す。
 
@@ -257,10 +272,13 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 
 この例では、ファイルの集約と時間平均の両方を行う。
 \nmitem{SNOPLGIN_timeave_type}として、\verb|'DAILY'|, \verb|'MONTHLY'|, \verb|'ANNUAL'|のいずれかを設定した場合は、対応して変数の日平均、月平均、年平均を\sno は試みる。データの日付や時刻はファイルから読み込まれる。
-シミュレーションで簡単な暦を用いた場合は、\sno の設定ファイルにも同様の\namelist{PARAM_CALENDAR}の設定を加える必要がある。
+シミュレーションで簡単な暦を用いた場合は、\sno の設定ファイルにも同様の\namelist{PARAM_CALENDAR}の設定を加える必要がある(第\ref{subsec:calendar}節参照)。
+
 
 \subsubsection{0.5 度間隔の格子にリグリッドする場合}
 
+データを等緯度経度格子にリマッピングするための設定は、\namelist{PARAM_SNOPLGIN_HGRIDOPE}で行う。
+%
 \editbox{
 \verb|&PARAM_SNO                               | \\
 \verb| basename_in  = 'input/history_d02',     | \\
@@ -278,11 +296,10 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 \verb|/                                        | \\
 }
 
-\namelist{PARAM_SNOPLGIN_HGRIDOPE}の\nmitem{SNOPLGIN_hgridope_type}を\verb|'LATLON'|に設定した場合は、緯度経度格子系への水平方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_hgridope_type}を\verb|'LATLON'|に設定した場合は、緯度経度格子系への水平方向のリマッピングが行われる。
 このプラグインの演算は、出力ファイルが単一である場合にのみ利用できる。
-\namelist{PARAM_SNOPLGIN_HGRIDOPE}の他のオプションでは、出力領域の境界や格子点数を設定する。
+その他の\namelist{PARAM_SNOPLGIN_HGRIDOPE}のオプションでは、出力領域の境界や格子点数を設定する。
 経度方向の格子点数 \verb|nlon|は、以下のように計算される。
-
 \begin{eqnarray}
   \nmitemeq{nlon} = \frac{\nmitemeq{SNOPLGIN_hgridope_lon_end} - \nmitemeq{SNOPLGIN_hgridope_lon_start} }{\nmitemeq{SNOPLGIN_hgridope_dlon}} \nonumber.
 \end{eqnarray}
@@ -292,3 +309,27 @@ SNO に与える MPI プロセス数は、出力ファイルの総数(= \nmitem{
 
 緯度-経度の領域は、シミュレーションで用いた領域よりも大きく取ることができる。
 リマッピングの過程で外挿は許されず、内挿値を持たない格子には欠損値が埋められる。
+
+
+\subsubsection{気圧高度座標への変換を行う場合}
+
+モデル面から等気圧面へ変換するための設定は、\namelist{PARAM_SNOPLGIN_VGRIDOPE}で行う。
+%
+\editbox{
+\verb|&PARAM_SNO                                               | \\
+\verb| basename_in  = 'input/history_d02',                     | \\
+\verb| basename_out = 'output/history_d02',                    | \\
+\verb|/                                                        | \\
+\verb|                                                         | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
+\verb| SNOPLGIN_vgridope_type     = 'PLEV',                    | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
+\verb| SNOPLGIN_vgridope_lev_data = 850.e+2, 500.e+2, 200.e+2, | \\
+\verb|/                                                        | \\
+}
+
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'PLEV'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
+同時に\nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で気圧高度座標の情報を与える。
+気圧高度座標の単位は $[Pa]$ で設定する。
+このプラグインの演算は、出力ファイルが複数であっても利用できる。
+ただし、気圧高度の情報を必要とするため、入力するファイルにモデル高度での気圧データ（\verb|PRES|）がなければならない。
