@@ -19,8 +19,8 @@ In Namelists in \verb|pp.d01.conf|, the parameters related to the domain are con
 \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}, and \namelist{PARAM_ATMOS_GRID_CATESC}.
 The domain is decomposed along each of the X and Y directions into two domains.
 Thus, four MPI processes are used.
-The number of grids per MPI process is \nmitem{IMAX = 45} and \nmitem{JMAX = 45}.
-Thus, the total number of grids is 90 ($= 2 \times 45$) along the X and Y directions.
+The total number of grids is \nmitem{IMAXG}=90 and \nmitem{JMAXG}=90 along the X and Y directions, respectively.
+Thus, the number of grids per MPI process is 45 ($= 90 / 2$).
 The grid spacings in each direction \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC} is 20,000 m (20 km).
 This means that the domain of calculation is an area of 1,800 km $\times$ 1,800 km because one side has length 90 $\times$ 20 km.
 \editbox{
@@ -32,9 +32,9 @@ This means that the domain of calculation is an area of 1,800 km $\times$ 1,800 
 \verb|/| \\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| \\
-\verb| KMAX = 36,| \\
-\verb| IMAX = 45,| \\
-\verb| JMAX = 45,| \\
+\verb| KMAX  = 36,| \\
+\verb| IMAXG = 90,| \\
+\verb| JMAXG = 90,| \\
 \verb|/| \\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC| \\
@@ -53,8 +53,8 @@ This means that the domain of calculation is an area of 1,800 km $\times$ 1,800 
 }
 
 \verb|scale-rm_pp| has a particular namelist of \namelist{PARAM_CONVERT}.
-If \nmitem{CONVERT_TOPO=.true.}, the altitudes are processed.
-If \nmitem{CONVERT_LANDUSE=.true.}, land-use classification data are processed.
+If \nmitem{CONVERT_TOPO}=\verb|.true.|, the altitudes are processed.
+If \nmitem{CONVERT_LANDUSE}=\verb|.true.|, land-use classification data are processed.
 \editbox{
 \verb|&PARAM_CONVERT| \\
 \verb|  CONVERT_TOPO    = .true.,| \\

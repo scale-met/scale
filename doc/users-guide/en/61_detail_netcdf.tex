@@ -29,7 +29,7 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
     scale\_cartesC\_prc\_rank\_[xy]           & Mapping index of the 2D decomposition      & Equal to \verb|PRC_2Drank(PRC_myrank, i)| variable in the model (i=1 for x and 2 for y)\\
     scale\_cartesC\_prc\_num\_[xy]            & Number of the 2D decomposition             & ~\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
     scale\_cartesC\_prc\_periodic\_[zxy]      & Whether the boundary condition is periodic & \verb|.false.| and \verb|.true.|\ They correspond to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model\\
-    scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & Number of the grids in the global domain               & ~\nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
+    scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & Number of the grids in the global domain               & ~\nmitem{IMAXG}, \nmitem{JMAXG} in the model \\
     scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & Number of the vertical layer for the atmospheric model & ~\nmitem{KMAX} in the model \\
     scale\_ocean\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & Number of the vertical layer for the ocean model       & ~\nmitem{OKMAX} in the model \\
     scale\_land\_grid\_cartesC\textbackslash \ ~~\_index\_kmax       & Number of the vertical layer for the land model        & ~\nmitem{LKMAX} in the model \\
@@ -39,8 +39,8 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
     time\_units & Unit of time & \\
     time\_start & Start time   & \\ \hline
     \multicolumn{3}{l}{Refer Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION},} \\
-    \multicolumn{3}{l}{Section \ref{sec:domain}       for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y},} \\
-    \multicolumn{3}{l}{\nmitem{KMAX, IMAX, JMAX}, and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.} \\ \hline
+    \multicolumn{3}{l}{Section \ref{sec:domain}       for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y} and} \\
+    \multicolumn{3}{l}{\nmitem{KMAX, IMAXG, JMAXG}, and Section \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.} \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
@@ -248,8 +248,8 @@ For the init/restart file, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \na
 \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS} 
 where \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
 For the topography and land use files, set \\ 
-\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPOGRAPHY}, 
-and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
+\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPOGRAPHY}, and \\
+\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
 
 \subsection{Restrictions with \Netcdf 3}

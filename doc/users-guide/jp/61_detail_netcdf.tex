@@ -25,7 +25,7 @@
       scale\_cartesC\_prc\_rank\_[xy]           & 二次元分割のマッピング番号      & モデルにおいて変数\verb|PRC_2Drank(PRC_myrank, i)|に等しい(x: i=1, y: i=2)\\
       scale\_cartesC\_prc\_num\_[xy]            & 二次元分割数            & モデルでは、~\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} \\
       scale\_cartesC\_prc\_periodic\_[zxy]      & 境界条件が周期的か? & \verb|.false.|or\verb|.true.|\ モデルでは\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} に対応 \\
-      scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & 領域全体の格子点数               & モデルにおいて、 ~\nmitem{IMAX}$\times$\nmitem{PRC_NUM_X}, \nmitem{JMAX}$\times$\nmitem{PRC_NUM_Y}  \\
+      scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & 領域全体の格子点数               & モデルにおいて、 ~\nmitem{IMAXG}, \nmitem{JMAXG} \\
       scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & 大気モデルの鉛直層数 & モデルでは~\nmitem{KMAX} \\
       scale\_ocean\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & 海洋モデルの鉛直層数       & モデルでは~\nmitem{OKMAX} \\
       scale\_land\_grid\_cartesC\textbackslash \ ~~\_index\_kmax       & 陸モデルの鉛直層数        & モデルでは~\nmitem{LKMAX}  \\
@@ -35,8 +35,8 @@
       time\_units & 時間の単位 & \\
       time\_start & 開始時刻   & \\ \hline
       \multicolumn{3}{l}{\nmitem{History_TITLE, History_SOURCE, History_INSTITUTION}は第\ref{sec:output}節を参照。} \\
-      \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAX, JMAX}は第\ref{sec:domain}節を参照。}  \\
-      \multicolumn{3}{l}{\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
+      \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAXG, JMAXG}は}  \\
+      \multicolumn{3}{l}{第\ref{sec:domain}節を参照。\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
     \end{tabularx}
   \end{center}
 \end{table}

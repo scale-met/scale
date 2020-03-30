@@ -13,6 +13,12 @@
 \verb| MONITOR_STEP_INTERVAL = 1,         | & ; モニター出力ステップ間隔 \\
 \verb|/                                   | & \\
 }
+%
+\editboxtwo{
+\verb|&MONITOR_ITEM   | & \\
+\verb| NAME = "ENGT", | & ; 変数名。 変数のリストは表\ref{tab:varlist_monitor_atmos}, \ref{tab:varlist_monitor_ocean}, \ref{tab:varlist_monitor_land}, \ref{tab:varlist_monitor_urban} に示される。 \\
+\verb|/               | & \\
+}
 
 モニターコンポーネントは、乾燥空気の質量・水蒸気・全エネルギー・表面での降水フラックス等の物理量の領域での合計値を出力する。
 これらの出力は、質量収支やエネルギー収支の確認に役立つ。
@@ -24,13 +30,37 @@
 \nmitem{MONITOR_GLOBAL_SUM} が \verb|.true.| の場合は、ファイル名は \nmitem{MONITOR_OUT_BASENAME}\verb|.peall| となり、\verb|.false.| の場合は \nmitem{MONITOR_OUT_BASENAME}\verb|.peXXXXXX| となる。
 ここで、\verb|XXXXXX| はプロセス番号である。
 
-モニター出力の時間間隔は、時間刻み幅($\Delta t$)の倍数として\nmitem{MONITOR_STEP_INTERVAL}に指定する。
+モニター出力の時間間隔は、時間刻み幅($\Delta t$)の倍数として\nmitem{MONITOR_STEP_INTERVAL}に指定する。\\
 
-\editboxtwo{
-\verb|&MONITOR_ITEM   | & \\
-\verb| NAME = "ENGT", | & ; 変数名。 変数のリストは表\ref{tab:varlist_monitor_atmos}, \ref{tab:varlist_monitor_ocean}, \ref{tab:varlist_monitor_land}, \ref{tab:varlist_monitor_urban} に示される。 \\
-\verb|/               | & \\
+
+例えば、 \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| および \nmitem{MONITOR_USEDEVATION}\verb|=.true.|と指定して、
+\namelist{MONITOR_ITEM}に以下の設定を付け加えたとする。
+%
+\editbox{
+\verb|&MONITOR_ITEM  NAME="DENS" /|\\
+\verb|&MONITOR_ITEM  NAME="QTOT" /|\\
+\verb|&MONITOR_ITEM  NAME="EVAP" /|\\
+\verb|&MONITOR_ITEM  NAME="PREC" /|\\
 }
+
+\noindent
+このとき、モニターファイルは以下のように出力される。
+%
+\msgbox{
+                   DENS            QTOT            EVAP            PREC\\
+STEP=      1 (MAIN)  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00\\
+STEP=     11 (MAIN) -2.27510244E+11  6.67446186E+11  9.39963392E+10  2.98914905E+11\\
+STEP=     21 (MAIN) -3.04179976E+11  1.16811060E+12  1.64602175E+11  7.56753096E+11\\
+STEP=     31 (MAIN) -7.55688670E+11  1.42784177E+12  2.25452889E+11  1.42932656E+12\\
+STEP=     41 (MAIN) -9.45082752E+11  1.56057082E+12  2.82959478E+11  2.19673659E+12\\
+STEP=     51 (MAIN) -1.02869018E+12  1.66179511E+12  3.45854371E+11  2.98295445E+12\\
+STEP=     61 (MAIN) -1.69997222E+12  1.74413176E+12  4.20139948E+11  3.78414734E+12\\
+STEP=     71 (MAIN) -1.72816474E+12  1.81512719E+12  5.04055360E+11  4.59740827E+12\\
+STEP=     81 (MAIN) -1.58692434E+12  1.88174470E+12  5.93665632E+11  5.41341475E+12\\
+STEP=     91 (MAIN) -1.71362764E+12  1.94867974E+12  6.86327009E+11  6.22069061E+12\\
+STEP=    101 (MAIN) -2.04231630E+12  1.99886166E+12  7.80859828E+11  7.03479603E+12\\
+}
+
 
 \begin{longtable}{|l|l|l|l|}
   \caption{モニターに出力可能な大気モデルの変数}
@@ -61,10 +91,12 @@
       \verb|ENGSFC_LH|    & 表面での潜熱フラックス                & J & テンデンシー \\
       \verb|ENGSFC_EVAP|  & 表面での潜熱フラックス                & J & テンデンシー \\
       \verb|ENGSFC_PREC|  & 表面での潜熱フラックス                & J & テンデンシー \\
-      \verb|ENGSFC_RD|    & 表面での正味の放射フラックス           & J & テンデンシー \\
-                          & (\verb|SFC_LW_up + SFC_SW_up - SFC_LW_dn - SFC_SW_dn|) & & \\
-      \verb|ENGTOM_RD|    & モデル上端での正味の放射フラックス      & J & テンデンシー \\
-                          & (\verb|TOM_LW_up + TOM_SW_up - TOM_LW_dn - TOM_SW_dn|) & & \\
+      \verb|ENGSFC_RD|    & 表面での正味の放射フラックス          & J & テンデンシー \\
+                          & (\verb|SFC_LW_up + SFC_SW_up|         & & \\
+                          & ~~~~~~~~~~ \verb|- SFC_LW_dn - SFC_SW_dn|)  & & \\
+      \verb|ENGTOM_RD|    & モデル上端での正味の放射フラックス    & J & テンデンシー \\
+                          & (\verb|TOM_LW_up + TOM_SW_up|         & & \\
+                          & ~~~~~~~~~~ \verb|- TOM_LW_dn - TOM_SW_dn|)  & & \\
       \verb|ENGSFC_LW_up| & 表面での上向き長波放射フラックス      & J & テンデンシー \\
       \verb|ENGSFC_LW_dn| & 表面での下向き長波放射フラックス      & J & テンデンシー \\
       \verb|ENGSFC_SW_up| & 表面での上向き短波放射フラックス      & J & テンデンシー \\
@@ -170,30 +202,3 @@
 \end{table}
 
 
-例えば、 \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| および \nmitem{MONITOR_USEDEVATION}\verb|=.true.|と指定して、
-\namelist{MONITOR_ITEM}に以下の設定を付け加えたとする。
-
-\editbox{
-\verb|&MONITOR_ITEM  NAME="DENS" /|\\
-\verb|&MONITOR_ITEM  NAME="QTOT" /|\\
-\verb|&MONITOR_ITEM  NAME="EVAP" /|\\
-\verb|&MONITOR_ITEM  NAME="PREC" /|\\
-}
-
-\noindent
-このとき、モニターファイルは以下のように出力される。
-
-\msgbox{
-                   DENS            QTOT            EVAP            PREC\\
-STEP=      1 (MAIN)  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00\\
-STEP=     11 (MAIN) -2.27510244E+11  6.67446186E+11  9.39963392E+10  2.98914905E+11\\
-STEP=     21 (MAIN) -3.04179976E+11  1.16811060E+12  1.64602175E+11  7.56753096E+11\\
-STEP=     31 (MAIN) -7.55688670E+11  1.42784177E+12  2.25452889E+11  1.42932656E+12\\
-STEP=     41 (MAIN) -9.45082752E+11  1.56057082E+12  2.82959478E+11  2.19673659E+12\\
-STEP=     51 (MAIN) -1.02869018E+12  1.66179511E+12  3.45854371E+11  2.98295445E+12\\
-STEP=     61 (MAIN) -1.69997222E+12  1.74413176E+12  4.20139948E+11  3.78414734E+12\\
-STEP=     71 (MAIN) -1.72816474E+12  1.81512719E+12  5.04055360E+11  4.59740827E+12\\
-STEP=     81 (MAIN) -1.58692434E+12  1.88174470E+12  5.93665632E+11  5.41341475E+12\\
-STEP=     91 (MAIN) -1.71362764E+12  1.94867974E+12  6.86327009E+11  6.22069061E+12\\
-STEP=    101 (MAIN) -2.04231630E+12  1.99886166E+12  7.80859828E+11  7.03479603E+12\\
-}
