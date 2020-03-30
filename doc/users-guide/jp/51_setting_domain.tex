@@ -496,12 +496,11 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 %-----------------------------------------------------------------------
 
 海洋/陸/都市モデルの水平格子は、大気モデルの設定と共通である。
-すなわち、MPIプロセス1つあたりの水平格子数は\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}の\nmitem{IMAX, JMAX}で指定され、
-水平格子間隔は\namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}で指定される。
+すなわち、水平格子数は\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}の\nmitem{IMAXG, JMAXG}で指定され、
+水平格子間隔は \\ \namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}で指定される。
 一方、鉛直格子についてはそれぞれ個別の設定が必要である。
 
-\scale ver.\version 時点では、多層の海洋モデルは未導入のため、
-海洋モデルの鉛直格子設定は使用されない。%第\ref{sec:basic_usel_ocean}節
-陸モデルの鉛直格子設定については、第\ref{sec:basic_usel_land}節を、
-都市モデルの鉛直格子設定については、第\ref{sec:basic_usel_urban}節を参照のこと。
+海洋モデルの鉛直格子設定については、第~\ref{sec:basic_usel_ocean}~節、
+陸モデルの鉛直格子設定については、第~\ref{sec:basic_usel_land}~節、
+都市モデルの鉛直格子設定については、第~\ref{sec:basic_usel_urban}~節を参照のこと。
 

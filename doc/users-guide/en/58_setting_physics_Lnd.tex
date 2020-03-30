@@ -61,9 +61,6 @@ The surface fluxes between atmosphere and land surface is calculated in the sche
 
 
 %-------------------------------------------------------------------------------
-\subsection{\texttt{BUCKET} land scheme}
-%-------------------------------------------------------------------------------
-%-------------------------------------------------------------------------------
 \subsubsection{Setting vertical grids for land model}
 %-------------------------------------------------------------------------------
 
@@ -82,11 +79,26 @@ You can specify an array in \nmitem{LDZ} for the number of vertical layers speci
 The order of the array is from the ground surface to the underground.
 
 
+
+%-------------------------------------------------------------------------------
+\subsection{Fixed to initial condition}
+%-------------------------------------------------------------------------------
+
+If \nmitem{LAND_DYN_TYPE} is \verb|INIT|, the land condtion is fixed to the initial condition.
+In this case, the number of vertical layer must be 1.
+The layer depth can be arbitrary as long as it is positive value.
+
+
+
+%-------------------------------------------------------------------------------
+\subsection{\texttt{BUCKET} land scheme}
+%-------------------------------------------------------------------------------
+
 %-------------------------------------------------------------------------------
 \subsubsection{land nudging}
 %-------------------------------------------------------------------------------
 
-If \nmitem{LAND_DYN_TYPE} = \verb|"BUCKET"|, you can apply relaxation (nudging) of land variables by using external data.
+If \nmitem{LAND_DYN_TYPE} is \verb|BUCKET|, you can apply relaxation (nudging) of land variables by using external data.
 The parameter of the nudging can be specified in \verb|run.conf|.
 
 \editboxtwo{

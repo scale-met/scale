@@ -89,22 +89,30 @@
 
 
 %-------------------------------------------------------------------------------
-%\subsubsection{海洋モデルの鉛直格子設定 (XXX スキームの場合のみ)}
+\subsubsection{海洋モデルの鉛直格子設定}
 %-------------------------------------------------------------------------------
 
-%海洋モデルの鉛直格子数は、\namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}の\nmitem{OKMAX}で指定する。
-%また、鉛直格子間隔は\namelist{PARAM_OCEAN_GRID_CARTESC}の\nmitem{ODZ}で指定する(単位は[m])。
-%\editboxtwo{
-%\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
-%\verb| OKMAX = 1,|  & ; 鉛直層数 \\
-%\verb|/|\\
-%\\
-%\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
-%\verb| ODZ = 10.D0,| & ; 鉛直方向の格子間隔\\
-%\verb|/|\\
-%}
-%\nmitem{ODZ}には\nmitem{OKMAX}で指定した格子数分の配列を指定する。
-%配列の順序は、海表面から海中に向かう方向である。
+海洋モデルの鉛直格子数は、\namelist{PARAM_OCEAN_GRID_CARTESC_INDEX}の\nmitem{OKMAX}で指定する。
+また、鉛直格子間隔は\namelist{PARAM_OCEAN_GRID_CARTESC}の\nmitem{ODZ}で指定する(単位は[m])。
+\editboxtwo{
+\verb|&PARAM_OCEAN_GRID_CARTESC_INDEX| & \\
+\verb| OKMAX = 1,|  & ; 鉛直層数 \\
+\verb|/|\\
+\\
+\verb|&PARAM_OCEAN_GRID_CARTESC| & \\
+\verb| ODZ = 10.D0,| & ; 鉛直方向の格子間隔\\
+\verb|/|\\
+}
+\nmitem{ODZ}には\nmitem{OKMAX}で指定した格子数分の配列を指定する。
+配列の順序は、海表面から海中に向かう方向である。
+
+
+%-------------------------------------------------------------------------------
+\subsection{初期条件固定}
+%-------------------------------------------------------------------------------
+\nmitem{OCEAN_DYN_TYPE} が \verb|INIT| の場合、海洋の状態は初期値のまま一定となる。
+この場合、鉛直層数は 1 でなければならない。
+鉛直層の厚さは、正の値である限りどんな値でも良い。
 
 
 %-------------------------------------------------------------------------------
@@ -124,13 +132,8 @@
 
 \nmitem{OCEAN_DYN_TYPE}を\verb|"SLAB"|と設定した場合は, 海洋表層は板海(slab ocean)として取り扱われる。
 板海の温度は、表面からの熱フラックスによって時間とともに変化する。
-熱容量を支配する板海の深さは、 \namelist{PARAM_OCEAN_DYN_SLAB}内の\nmitem{OCEAN_DYN_SLAB_DEPTH}で指定できる。
+熱容量を支配する板海の深さは、鉛直層第１層目の厚さとして指定する。
 
-\editboxtwo{
- \verb|&PARAM_OCEAN_DYN_SLAB            | & \\
- \verb| OCEAN_DYN_SLAB_DEPTH = 10.0_RP, | & ; 板海の深さ [m] \\
- \verb|/                                | & \\
-}
 
 板海モデルでは、外部データを用いることで海面温度を緩和(すなわちナッジング)させることができる。
 ナッジングのパラメータは\namelist{PARAM_OCEAN_DYN_SLAB}で指定する。

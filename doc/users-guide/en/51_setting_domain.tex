@@ -410,11 +410,9 @@ There exists a similar dumping method at near the top boundary, i.e., Rayleigh d
 %-----------------------------------------------------------------------
 
 Settings for horizontal grids of ocean, land, and urban models are same as those for the atmospheric model.
-The numbers of grids per MPI process are specified by \nmitem{IMAX, JMAX} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
+The numbers of the grids are specified by \nmitem{IMAXG, JMAXG} in \namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}.
 The horizontal grid intervals are specified by \nmitem{DX, DY} in \namelist{PARAM_ATMOS_GRID_CARTESC}.
 On the other hand, settings for vertical grids should be specified for each model separately.
 
-Since the multi-layer ocean model has not been installed in \scale ver.\version,
-the setting of vertical grids for ocean models is not used in a calculation. %Sec.\ref{sec:basic_usel_ocean}
-Please see Sec. \ref{sec:basic_usel_land} and Sec. \ref{sec:basic_usel_urban}
-for vertical grid settings for land models and urban models, respectively.
+Please see Sec. \ref{sec:basic_usel_ocean}, Sec. \ref{sec:basic_usel_land} and Sec. \ref{sec:basic_usel_urban}
+for vertical grid settings for ocean, land and urban models, respectively.
