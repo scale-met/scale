@@ -58,9 +58,9 @@ cat << EOF > param.region.conf
 #################################################
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
- KMAX = ${KMAX[$D]},
- IMAX = ${IMAX[$D]},
- JMAX = ${JMAX[$D]},
+ KMAX  = ${KMAX[$D]},
+ IMAXG = ${IMAXG[$D]},
+ JMAXG = ${JMAXG[$D]},
 /
 
 &PARAM_OCEAN_GRID_CARTESC_INDEX
