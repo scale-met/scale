@@ -100,6 +100,25 @@ The file \verb|init_LOG_d01.pe000000| is a log file.  The following message is o
 The file sizes of the boundary and initial data, \verb|boundary_d01.pe######.nc| and \\
 \verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 18.9 MB and 12.6 MB, respectively,  where \verb|######| represents the MPI process number.
 
+\subsection{Reducing memory usage in the high-performance computing}
+
+In SCALE, the master process only reads input data, and broadcasts the data to each node.
+This algorithm reduces file I/O and processes the input data fast.
+On the other hand, the algorithm may cause insufficient memory error when reading large input data.
+To avoid the error, you can choose the method that each node reads input data.
+
+\editboxtwo{
+\verb|&PARAM_MKINIT_REAL_ATMOS| & \\
+\verb| SERIAL_PROC_READ = .false.,| & {\small : does the master process only read input data?} \\
+\verb|/| \\
+\\
+}
+
+The default setting is .true., which means that the master process only reads input data.
+When setting .false., each node can access the input data and reduce memory usage.
+However, because the algorithm places a load on file I/O,
+the computational performance may deteriorate due to locking file access.
+
 \vspace{1cm}
 \noindent {\Large\em OPTION} \hrulefill \\
 When ``gpview'' is installed,  one can confirm whether the initial and boundary data have been created correctly  by the following command:
