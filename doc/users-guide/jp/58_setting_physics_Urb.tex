@@ -1,7 +1,7 @@
 \section{都市モデル} \label{sec:basic_usel_urban}
 %------------------------------------------------------
 都市スキームの目的は大気と都市面間のフラックスを計算することである。
-そのために、都市の表面温度や水分量などの都市面の状態量も計算する。
+そのために、都市の表面温度や水分量などの都市域内の状態量も計算する。
 都市スキームの更新（計算する時間間隔）は\namelist{PARAM_TIME}の
 \nmitem{TIME_DT_URBAN}と\nmitem{TIME_DT_URBAN_UNIT}で設定する
 (詳細は第\ref{sec:timeintiv}節を参照)。
@@ -10,7 +10,7 @@
 %-------------------------------------------------------------------------------
 使用する都市スキームは、
 init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設定する。
-
+%
 \editboxtwo{
 \verb|&PARAM_URBAN         | & \\
 \verb| URBAN_DYN_TYPE = "NONE", | & ; 表\ref{tab:nml_urban}から都市スキームを選択。\\
@@ -24,7 +24,7 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
   \begin{tabularx}{150mm}{llX} \hline
     \rowcolor[gray]{0.9}  スキーム名  & スキームの説明 &  参考文献 \\ \hline
       \verb|NONE または OFF|   & 都市モデルを利用しない                      \\
-      \verb|LAND|              & 都市域は陸モデルによって計算される            \\
+      \verb|LAND|              & 都市域は陸面モデルによって計算される        \\
       \verb|KUSAKA01|          & 単層キャノピーモデル  & \citet{kusaka_2001} \\
     \hline
   \end{tabularx}
@@ -42,7 +42,7 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
 }
 
 \nmitem{URBAN_DYN_TYPE}として\verb|LAND|を選択した場合は、
-表面フラックスや都市域の土壌変数を計算するために陸モデルが用いられる。
+表面フラックスや都市域の土壌変数を計算するために陸面モデルが用いられる。
 現在、陸面モデルはスラブモデルが実装されているので、\verb|LAND|は
 スラブモデルを選択していることと同等である。
 この場合、陸面モデルのためのパラメータテーブルに、
@@ -53,14 +53,40 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
 建物高さ(\nmitem{ZR} in \namelist{PARAM_URBAN_DATA})は、大気第１層のFace levelよりも2m以上、下に設定する必要がある。
 
 
+%-------------------------------------------------------------------------------
+\subsection{\texttt{KUSAKA01}スキーム}
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsubsection{構造物表面(屋根面・壁面・道路面)の層の設定}
+%-------------------------------------------------------------------------------
 
-\subsection{\texttt{KUSAKA01}スキームの都市パラメータに関する設定}
+\verb|KUSAKA01|は、都市形状として２次元の対称的なストリートキャニオンを考える。
+構造物と大気との境界面は、建物の屋根面と壁面、道路面の３つから構成される。
+これらの構造物面の温度は熱拡散によって計算される。
+この熱拡散を計算する際に使用する層数は、\namelist{PARAM_URBAN_GRID_CARTESC_INDEX}の\nmitem{UKMAX}で指定する。
+また、各層の層厚は\namelist{PARAM_URBAN_GRID_CARTESC}の\nmitem{UDZ}で指定する(単位は[m])。
+\editboxtwo{
+\verb|&PARAM_URBAN_GRID_CARTESC_INDEX| & \\
+\verb| UKMAX = 5,|                          & ; 人工構造物の表面に設定される層数 \\
+\verb|/|\\
+\\
+\verb|&PARAM_URBAN_GRID_CARTESC| & \\
+\verb| UDZ = 0.01, 0.01, 0.03, 0.05, 0.10,| & ; 各層の層厚\\
+\verb|/|\\
+}
+\nmitem{UDZ}には\nmitem{UKMAX}で指定した層数分の配列を指定する。
+配列の順序は、構造物表面から内部に向かう方向である。
+また、設定は、屋根面・壁面・道路面全てに適用される。
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{都市パラメータに関する設定}
+%-------------------------------------------------------------------------------
 
 \verb|KUSAKA01|には、都市形態を指定するパラメータが数多く存在する。
 設定可能な都市パラメータは、\namelist{PARAM_URBAN_DATA}を参照いただきたい
 （第\ref{sec:reference_manual}節のネームリストに記述のリンクから参照可能）。
-\nmitem{PARAM_URBAN_DATA} の設定例は、\verb|scale/scale-rm/test/data/urban/param.kusaka01.dat| に用意されている。
-
+\namelist{PARAM_URBAN_DATA} の設定例は、\verb|scale/scale-rm/test/data/urban/param.kusaka01.dat| に用意されている。
 
 
 都市パラメータの設定は、\namelist{PARAM_URBAN_DYN_KUSAKA01}で行う。
@@ -98,10 +124,11 @@ init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設
 \nmitem{URBAN_DYN_KUSAKA01_GRIDDED_(Z0M|AH|AHL)_IN_FILENAME} は
 予め、計算設定に応じた格子の値を\scalenetcdf 形式で用意しておく必要がある。
 このデータは、ユーザーが用意したバイナリー形式のデータから、
-\verb|scale_init|を使って変換することが可能である。
+\verb|scale_init|を使って変換することが可能である。\\
 
 
-\subsubsection{都市パラメータのためグリットデータの作成方法}
+\noindent\textbf{\underline{\small{\textgt{都市パラメータのためグリットデータの作成方法}}}}
+
 
 データの作成には、\verb|scale_init|を使用する。
 詳細な説明は、第\ref{sec:userdata}節を参照いただきたい。
