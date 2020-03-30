@@ -13,6 +13,12 @@ The default format of the monitor file is configured at \namelist{PARAM_MONITOR}
 \verb| MONITOR_STEP_INTERVAL = 1,         | & ; Step interval of monitor output \\
 \verb|/                                   | & \\
 }
+%
+\editboxtwo{
+\verb|&MONITOR_ITEM   | & \\
+\verb| NAME = "ENGT", | &  Variable name. List of variables is shown in Table \ref{tab:varlist_monitor_atmos}, \ref{tab:varlist_monitor_ocean}, \ref{tab:varlist_monitor_land}, and \ref{tab:varlist_monitor_urban} \\
+\verb|/               | & \\
+}
 
 Monitor component outputs domain total of physical quantity such as dry air mass, water vapor, total energy, surface precipitation flux, and so on.
 These output is useful to check mass and energy budget.
@@ -24,14 +30,36 @@ The monitor file is ASCII format, and the name of the file is set by \nmitem{MON
 It is \nmitem{MONITOR_OUT_BASENAME}\verb|.peall| if \nmitem{MONITOR_GLOBAL_SUM} is \verb|.true.|,\\
 nothewise it is \nmitem{MONITOR_OUT_BASENAME}\verb|.peXXXXXX|, where \verb|XXXXXX| is the process number.
 
-The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INTERVAL} as the multiple of time step ($\Delta t$).
+The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INTERVAL} as the multiple of time step ($\Delta t$).\\
 
 
-\editboxtwo{
-\verb|&MONITOR_ITEM   | & \\
-\verb| NAME = "ENGT", | &  Variable name. List of variables is shown in Table \ref{tab:varlist_monitor_atmos}, \ref{tab:varlist_monitor_ocean}, \ref{tab:varlist_monitor_land}, and \ref{tab:varlist_monitor_urban} \\
-\verb|/               | & \\
+For example, let the below setting for \namelist{MONITOR_ITEM} be added with \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| and \nmitem{MONITOR_USEDEVATION} \verb|= .true.|,
+%
+\editbox{
+\verb|&MONITOR_ITEM  NAME="DENS" /|\\
+\verb|&MONITOR_ITEM  NAME="QTOT" /|\\
+\verb|&MONITOR_ITEM  NAME="EVAP" /|\\
+\verb|&MONITOR_ITEM  NAME="PREC" /|\\
 }
+
+\noindent
+The monitor file is output as follows;
+%
+\msgbox{
+                   DENS            QTOT            EVAP            PREC\\
+STEP=      1 (MAIN)  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00\\
+STEP=     11 (MAIN) -2.27510244E+11  6.67446186E+11  9.39963392E+10  2.98914905E+11\\
+STEP=     21 (MAIN) -3.04179976E+11  1.16811060E+12  1.64602175E+11  7.56753096E+11\\
+STEP=     31 (MAIN) -7.55688670E+11  1.42784177E+12  2.25452889E+11  1.42932656E+12\\
+STEP=     41 (MAIN) -9.45082752E+11  1.56057082E+12  2.82959478E+11  2.19673659E+12\\
+STEP=     51 (MAIN) -1.02869018E+12  1.66179511E+12  3.45854371E+11  2.98295445E+12\\
+STEP=     61 (MAIN) -1.69997222E+12  1.74413176E+12  4.20139948E+11  3.78414734E+12\\
+STEP=     71 (MAIN) -1.72816474E+12  1.81512719E+12  5.04055360E+11  4.59740827E+12\\
+STEP=     81 (MAIN) -1.58692434E+12  1.88174470E+12  5.93665632E+11  5.41341475E+12\\
+STEP=     91 (MAIN) -1.71362764E+12  1.94867974E+12  6.86327009E+11  6.22069061E+12\\
+STEP=    101 (MAIN) -2.04231630E+12  1.99886166E+12  7.80859828E+11  7.03479603E+12\\
+}
+
 
 \begin{table}[h]
 \begin{center}
@@ -170,30 +198,3 @@ The time interval of monitor output is specified in the \nmitem{MONITOR_STEP_INT
 \end{center}
 \end{table}
 
-
-For example, let the below setting for \namelist{MONITOR_ITEM} be added with \nmitem{MONITOR_STEP_INTERVAL} \verb|= 10| and \nmitem{MONITOR_USEDEVATION} \verb|= .true.|,
-
-\editbox{
-\verb|&MONITOR_ITEM  NAME="DENS" /|\\
-\verb|&MONITOR_ITEM  NAME="QTOT" /|\\
-\verb|&MONITOR_ITEM  NAME="EVAP" /|\\
-\verb|&MONITOR_ITEM  NAME="PREC" /|\\
-}
-
-\noindent
-The monitor file is output as follows;
-
-\msgbox{
-                   DENS            QTOT            EVAP            PREC\\
-STEP=      1 (MAIN)  0.00000000E+00  0.00000000E+00  0.00000000E+00  0.00000000E+00\\
-STEP=     11 (MAIN) -2.27510244E+11  6.67446186E+11  9.39963392E+10  2.98914905E+11\\
-STEP=     21 (MAIN) -3.04179976E+11  1.16811060E+12  1.64602175E+11  7.56753096E+11\\
-STEP=     31 (MAIN) -7.55688670E+11  1.42784177E+12  2.25452889E+11  1.42932656E+12\\
-STEP=     41 (MAIN) -9.45082752E+11  1.56057082E+12  2.82959478E+11  2.19673659E+12\\
-STEP=     51 (MAIN) -1.02869018E+12  1.66179511E+12  3.45854371E+11  2.98295445E+12\\
-STEP=     61 (MAIN) -1.69997222E+12  1.74413176E+12  4.20139948E+11  3.78414734E+12\\
-STEP=     71 (MAIN) -1.72816474E+12  1.81512719E+12  5.04055360E+11  4.59740827E+12\\
-STEP=     81 (MAIN) -1.58692434E+12  1.88174470E+12  5.93665632E+11  5.41341475E+12\\
-STEP=     91 (MAIN) -1.71362764E+12  1.94867974E+12  6.86327009E+11  6.22069061E+12\\
-STEP=    101 (MAIN) -2.04231630E+12  1.99886166E+12  7.80859828E+11  7.03479603E+12\\
-}
