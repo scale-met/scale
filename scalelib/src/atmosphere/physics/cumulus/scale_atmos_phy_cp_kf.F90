@@ -2313,7 +2313,7 @@ contains
     real(RP) :: dpth                              !< pressure depth of cloud used check
     real(RP) :: cape_g                            !< new cape clculate after timestep
     real(RP) :: dcape                             !< deltacape compared 10% of original
-    real(RP) :: fxm(KA)                           !< flux factor
+    real(RP) :: fxm(KA)                           !< mass flux
     real(RP) :: f_cape ,f_capeold                 !< cape ratio new/old
     real(RP) :: stab                              !< 0.95 stablevariable
     real(RP) :: dtt_tmp
@@ -2331,12 +2331,12 @@ contains
     real(RP) :: absomgtc,absomg                   !< (temporaly vars)
     real(RP) :: f_dp                              !< (temporaly vars)
 
-    real(RP) :: theta_fxin(KA), theta_fxout(KA)   !< compensational subsidence flux form
-    real(RP) ::    qv_fxin(KA),    qv_fxout(KA)   !< compensational subsidence flux form
-    real(RP) ::    qc_fxin(KA),    qc_fxout(KA)   !< compensational subsidence flux form
-    real(RP) ::    qi_fxin(KA),    qi_fxout(KA)   !< compensational subsidence flux form
-    real(RP) ::    qr_fxin(KA),    qr_fxout(KA)   !< compensational subsidence flux form
-    real(RP) ::    qs_fxin(KA),    qs_fxout(KA)   !< compensational subsidence flux form
+    real(RP) :: theta_fx(KA)                      !< compensational subsidence flux form
+    real(RP) ::    qv_fx(KA)                      !< compensational subsidence flux form
+    real(RP) ::    qc_fx(KA)                      !< compensational subsidence flux form
+    real(RP) ::    qi_fx(KA)                      !< compensational subsidence flux form
+    real(RP) ::    qr_fx(KA)                      !< compensational subsidence flux form
+    real(RP) ::    qs_fx(KA)                      !< compensational subsidence flux form
     real(RP) ::     rainfb(KA),      snowfb(KA)   !< rain and snow fall
 
     real(RP) :: err                               !< error (tmp var)
@@ -2424,8 +2424,7 @@ contains
     end do
     temp_g(k_top+1:KE) = temp_bf(k_top+1:KE)
     qv_g(k_top+1:KE)   = qv(k_top+1:KE)
-    omg(:) = 0._RP ! initialize
-    fxm(:) = 0._RP ! initialize
+    omg(KS-1) = 0.0_RP
 
     ! main loop of compensation
 #ifdef QUICKDEBUG
@@ -2434,24 +2433,24 @@ contains
 #endif
     do ncount = 1,10 ! iteration
        dtt = timecp
-       do kk = KS,k_top
-          domg_dp(kk) = -(upent(kk) - downent(kk) - updet(kk) - downdet(kk))*emsd(kk)
-          if(kk > KS)then
-             omg(kk) = omg(kk-1) - deltap(kk-1)*domg_dp(kk-1)
-             absomg = abs(omg(kk))
-             absomgtc  = absomg*timecp
-             f_dp = 0.75_RP*deltap(kk-1)
-             if(absomgtc > f_dp)THEN
-                dtt_tmp = f_dp/absomg
-                dtt=min(dtt,dtt_tmp) ! it is use determin nstep
-             end if
+       do kk = KS, k_top-1
+          domg_dp(kk) = - ( upent(kk) - downent(kk) - updet(kk) - downdet(kk) ) * emsd(kk)
+          omg(kk) = omg(kk-1) - deltap(kk) * domg_dp(kk) ! downward positive
+          absomg = abs(omg(kk))
+          absomgtc  = absomg*timecp
+          f_dp = 0.75_RP*deltap(kk)
+          if(absomgtc > f_dp)THEN
+             dtt_tmp = f_dp/absomg
+             dtt=min(dtt,dtt_tmp) ! it is use determin nstep
           end if
        end do
        !! theta_nw and qv_nw has valus only in 1 to k_top
        do kk = KS, k_top
           theta_nw(kk) = theta(kk)
           qv_nw(kk)    = qv(kk)
-          fxm(kk)      = omg(kk)*deltax**2/GRAV ! fluxmass
+       end do
+       do kk = KS, k_top-1
+          fxm(kk) = - omg(kk) * deltax**2 / GRAV ! mass flux (upward positive)
        end do
        nstep  = nint(timecp/dtt + 1) ! how many time step forwad
        deltat = timecp/real(nstep,RP) ! deltat*nstep = timecp
@@ -2473,41 +2472,35 @@ contains
           !> tempolaly time forward start iteration
           !! assign theta and q variables at the top and bottom of each layer based
           !< on sign of omega
-          do kk = KS, k_top   ! initialize
-             theta_fxin(kk)  = 0._RP
-             theta_fxout(kk) = 0._RP
-             qv_fxin(kk)     = 0._RP
-             qv_fxout(kk)    = 0._RP
-          end do
-          do kk = KS+1,k_top ! calc flux variable
-             if(omg(kk) <= 0._RP) then
-                theta_fxin(kk)      = -fxm(kk)*theta_nw(kk-1)
-                qv_fxin(kk)         = -fxm(kk)*qv_nw(kk-1)
-                theta_fxout(kk - 1) = theta_fxout(kk-1) + theta_fxin(kk)
-                qv_fxout(kk - 1)    = qv_fxout(kk-1)    + qv_fxin(kk)
-             else
-                theta_fxout(kk)    = fxm(kk)*theta_nw(kk)
-                qv_fxout(kk)       = fxm(kk)*qv_nw(kk)
-                theta_fxin(kk - 1) = theta_fxin(kk-1) + theta_fxout(kk)
-                qv_fxin(kk - 1)    = qv_fxin(kk-1)    + qv_fxout(kk)
+          theta_fx(KS-1) = 0.0_RP
+          qv_fx   (KS-1) = 0.0_RP
+          do kk = KS, k_top-1 ! calc flux variable
+             if( omg(kk) <= 0.0_RP ) then ! upward
+                theta_fx(kk) = fxm(kk) * theta_nw(kk)
+                qv_fx   (kk) = fxm(kk) * qv_nw   (kk)
+             else ! downward
+                theta_fx(kk) = fxm(kk) * theta_nw(kk+1)
+                qv_fx   (kk) = fxm(kk) * qv_nw   (kk+1)
              end if
           end do
+          theta_fx(k_top) = 0.0_RP
+          qv_fx   (k_top) = 0.0_RP
           !< update the theta and qv variables at each level
           !< only theta and qv calc cape below and if cape > 10%of old cape then iterate
           do kk = KS, k_top
              theta_nw(kk) = theta_nw(kk) &
-                  + (theta_fxin(kk) - theta_fxout(kk)  &
-                  + updet(kk)*theta_u(kk) + downdet(kk)*theta_d(kk)  &
-                  - ( upent(kk) - downent(kk) )*theta(kk) ) *deltat*emsd(kk)
+                  + ( - ( theta_fx(kk) - theta_fx(kk-1) ) &
+                    + updet(kk)*theta_u(kk) + downdet(kk)*theta_d(kk)  &
+                    - ( upent(kk) - downent(kk) )*theta(kk) ) *deltat*emsd(kk)
              qv_nw(kk) = qv_nw(kk) &
-                  + (qv_fxin(kk) - qv_fxout(kk)  &
-                  + updet(kk)*qvdet(kk) + downdet(kk)*qv_d(kk)  &
-                  - ( upent(kk) - downent(kk) )*qv(kk) )*deltat*emsd(kk)
+                  + ( - ( qv_fx(kk) - qv_fx(kk-1) ) &
+                    + updet(kk)*qvdet(kk) + downdet(kk)*qv_d(kk)  &
+                    - ( upent(kk) - downent(kk) )*qv(kk) )*deltat*emsd(kk)
           end do
           if ( hist_flag ) then
              do kk = KS, k_top
                 hist_work(kk,i,j,I_HIST_QV_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QV_FC,I_convflag) &
-                     + ( qv_fxin(kk) - qv_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                     - ( qv_fx(kk) - qv_fx(kk-1) ) * emsd(kk) * RHOD(kk) / nstep
                 hist_work(kk,i,j,I_HIST_QV_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QV_UD,I_convflag) &
                      + updet(kk) * qvdet(kk) * emsd(kk) * RHOD(kk) / nstep
                 hist_work(kk,i,j,I_HIST_QV_UE,I_convflag) = hist_work(kk,i,j,I_HIST_QV_UE,I_convflag) &
@@ -2557,10 +2550,10 @@ contains
        end if
        ! calculate top layer omega and conpare determ omg
        topomg = (updet(k_top) - upent(k_top))*deltap(k_top)*emsd(k_top)
-       if( abs(topomg - omg(k_top)) > 1.e-3_RP) then ! not same omega velocity error
+       if( abs(topomg - omg(k_top-1)) > 1.e-3_RP) then ! not same omega velocity error
           istop = 1
           LOG_ERROR("CP_kf_compensational",*) "KF omega is not consistent",ncount
-          LOG_ERROR_CONT(*) "omega error",abs(topomg - omg(k_top)),k_top,topomg,omg(k_top)
+          LOG_ERROR_CONT(*) "omega error",abs(topomg - omg(k_top)),k_top,topomg,omg(k_top-1)
           call PRC_abort
        end if
        ! convert theta to T
@@ -2777,63 +2770,51 @@ contains
     end if
 
     do ntimecount = 1, nstep ! same as T, QV
-       do kk = KS, k_top     ! initialize
-          qc_fxin(kk)  = 0._RP
-          qc_fxout(kk) = 0._RP
-          qi_fxin(kk)  = 0._RP
-          qi_fxout(kk) = 0._RP
-          qr_fxin(kk)  = 0._RP
-          qr_fxout(kk) = 0._RP
-          qs_fxin(kk)  = 0._RP
-          qs_fxout(kk) = 0._RP
-       end do
-       do kk = KS+1,k_top ! calc flux variable
-          if(omg(kk) <= 0._RP) then
-             qc_fxin(kk) = -fxm(kk)*qc_nw(kk-1)
-             qi_fxin(kk) = -fxm(kk)*qi_nw(kk-1)
-             qr_fxin(kk) = -fxm(kk)*qr_nw(kk-1)
-             qs_fxin(kk) = -fxm(kk)*qs_nw(kk-1)
-             !
-             qc_fxout(kk-1) = qc_fxout(kk-1) + qc_fxin(kk)
-             qi_fxout(kk-1) = qi_fxout(kk-1) + qi_fxin(kk)
-             qr_fxout(kk-1) = qr_fxout(kk-1) + qr_fxin(kk)
-             qs_fxout(kk-1) = qs_fxout(kk-1) + qs_fxin(kk)
-          else
-             qc_fxout(kk) = fxm(kk)*qc_nw(kk)
-             qi_fxout(kk) = fxm(kk)*qi_nw(kk)
-             qr_fxout(kk) = fxm(kk)*qr_nw(kk)
-             qs_fxout(kk) = fxm(kk)*qs_nw(kk)
-             !
-             qc_fxin(kk-1) =  qc_fxin(kk-1) + qc_fxout(kk)
-             qi_fxin(kk-1) =  qi_fxin(kk-1) + qi_fxout(kk)
-             qr_fxin(kk-1) =  qr_fxin(kk-1) + qr_fxout(kk)
-             qs_fxin(kk-1) =  qs_fxin(kk-1) + qs_fxout(kk)
+       qc_fx(KS-1) = 0.0_RP
+       qi_fx(KS-1) = 0.0_RP
+       qr_fx(KS-1) = 0.0_RP
+       qs_fx(KS-1) = 0.0_RP
+       do kk = KS, k_top-1 ! calc flux variable
+          if( omg(kk) <= 0.0_RP ) then ! upward
+             qc_fx(kk) = fxm(kk) * qc_nw(kk)
+             qi_fx(kk) = fxm(kk) * qi_nw(kk)
+             qr_fx(kk) = fxm(kk) * qr_nw(kk)
+             qs_fx(kk) = fxm(kk) * qs_nw(kk)
+          else ! downward
+             qc_fx(kk) = fxm(kk) * qc_nw(kk+1)
+             qi_fx(kk) = fxm(kk) * qi_nw(kk+1)
+             qr_fx(kk) = fxm(kk) * qr_nw(kk+1)
+             qs_fx(kk) = fxm(kk) * qs_nw(kk+1)
           end if
        end do
+       qc_fx(k_top) = 0.0_RP
+       qi_fx(k_top) = 0.0_RP
+       qr_fx(k_top) = 0.0_RP
+       qs_fx(k_top) = 0.0_RP
 
        do kk = KS, k_top
-          qc_nw(kk) = qc_nw(kk) + (qc_fxin(kk) - qc_fxout(kk) + qcdet(kk) )*deltat*emsd(kk)
-          qi_nw(kk) = qi_nw(kk) + (qi_fxin(kk) - qi_fxout(kk) + qidet(kk) )*deltat*emsd(kk)
-          qr_nw(kk) = qr_nw(kk) + (qr_fxin(kk) - qr_fxout(kk) + rainfb(kk) )*deltat*emsd(kk)
-          qs_nw(kk) = qs_nw(kk) + (qs_fxin(kk) - qs_fxout(kk) + snowfb(kk) )*deltat*emsd(kk)
+          qc_nw(kk) = qc_nw(kk) + ( - ( qc_fx(kk) - qc_fx(kk-1) ) + qcdet(kk) )*deltat*emsd(kk)
+          qi_nw(kk) = qi_nw(kk) + ( - ( qi_fx(kk) - qi_fx(kk-1) ) + qidet(kk) )*deltat*emsd(kk)
+          qr_nw(kk) = qr_nw(kk) + ( - ( qr_fx(kk) - qr_fx(kk-1) ) + rainfb(kk) )*deltat*emsd(kk)
+          qs_nw(kk) = qs_nw(kk) + ( - ( qs_fx(kk) - qs_fx(kk-1) ) + snowfb(kk) )*deltat*emsd(kk)
        end do
 
        if ( hist_flag ) then
           do kk = KS, k_top
              hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) &
-                  + ( qc_fxin(kk) - qc_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                  - ( qc_fx(kk) - qc_fx(kk-1) ) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) &
                   + qcdet(kk) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QI_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QI_FC,I_convflag) &
-                  + ( qi_fxin(kk) - qi_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                  - ( qi_fx(kk) - qi_fx(kk-1) ) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QI_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QI_UD,I_convflag) &
                   + qidet(kk) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) &
-                  + ( qr_fxin(kk) - qr_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                  - ( qr_fx(kk) - qr_fx(kk-1) ) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) = hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) &
                   + rainfb(kk) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QS_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QS_FC,I_convflag) &
-                  + ( qs_fxin(kk) - qs_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                  - ( qs_fx(kk) - qs_fx(kk-1) ) * emsd(kk) * RHOD(kk) / nstep
              hist_work(kk,i,j,I_HIST_QS_SF,I_convflag) = hist_work(kk,i,j,I_HIST_QS_SF,I_convflag) &
                   + snowfb(kk) * emsd(kk) * RHOD(kk) / nstep
           end do
@@ -2864,13 +2845,13 @@ contains
        ! write error message
        ! moisture budget error
        istop = 1
-       LOG_ERROR("CP_kf_compensational",*) "@KF,MOISTURE"
+       LOG_ERROR("CP_kf_compensational",*) "@KF,MOISTURE i,j=",i,j
        LOG_ERROR_CONT(*) "--------------------------------------"
-       LOG_ERROR_CONT('("vert accum rho*qhyd : ",F20.12)') qhydr
-       LOG_ERROR_CONT('("vert accum rho*qv   : ",F20.12)') qvfnl-qinit
-       LOG_ERROR_CONT('("precipitation rate  : ",F20.12)') qpfnl
-       LOG_ERROR_CONT('("conserv qhyd + qv   : ",F20.12)') qhydr + qpfnl
-       LOG_ERROR_CONT('("conserv total       : ",F20.12)') qfinl-qinit
+       LOG_ERROR_CONT('("vert accum rho*qhyd : ",ES20.12)') qhydr
+       LOG_ERROR_CONT('("vert accum rho*qv   : ",ES20.12)') qvfnl-qinit
+       LOG_ERROR_CONT('("precipitation rate  : ",ES20.12)') qpfnl
+       LOG_ERROR_CONT('("conserv qhyd + qv   : ",ES20.12)') qhydr + qpfnl
+       LOG_ERROR_CONT('("conserv total       : ",ES20.12)') qfinl-qinit
        LOG_ERROR_CONT(*) "--------------------------------------"
        call PRC_abort
     end if
