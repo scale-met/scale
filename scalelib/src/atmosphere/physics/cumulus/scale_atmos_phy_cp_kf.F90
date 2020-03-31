@@ -144,6 +144,29 @@ module scale_atmos_phy_cp_kf
   real(RP), private, allocatable :: Z      (:,:,:)             !< centerlevel real height [m]
   real(RP), private, allocatable :: deltax (:,:)               !< delta x [m]
 
+  ! history
+  integer,  parameter            :: hist_vmax = 14
+  integer,  private              :: hist_id(hist_vmax,0:1)
+  logical,  private              :: hist_flag
+  integer,  parameter            :: I_HIST_QV_FC = 1
+  integer,  parameter            :: I_HIST_QV_UE = 2
+  integer,  parameter            :: I_HIST_QV_DE = 3
+  integer,  parameter            :: I_HIST_QV_UD = 4
+  integer,  parameter            :: I_HIST_QV_DD = 5
+  integer,  parameter            :: I_HIST_QV_NF = 6
+  integer,  parameter            :: I_HIST_QC_FC = 7
+  integer,  parameter            :: I_HIST_QC_UD = 8
+  integer,  parameter            :: I_HIST_QI_FC = 9
+  integer,  parameter            :: I_HIST_QI_UD = 10
+  integer,  parameter            :: I_HIST_QR_FC = 11
+  integer,  parameter            :: I_HIST_QR_RF = 12
+  integer,  parameter            :: I_HIST_QS_FC = 13
+  integer,  parameter            :: I_HIST_QS_SF = 14
+  integer,  parameter            :: I_HIST_D = 0 ! deep convection
+  integer,  parameter            :: I_HIST_S = 1 ! shallow convection
+
+  real(RP), private, allocatable :: hist_work(:,:,:,:,:)
+
   !------------------------------------------------------------------------------
 contains
   !------------------------------------------------------------------------------
@@ -157,6 +180,8 @@ contains
       WARMRAIN_in           )
     use scale_prc, only: &
        PRC_abort
+    use scale_file_history, only: &
+       FILE_HISTORY_reg
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -191,6 +216,7 @@ contains
        PARAM_ATMOS_PHY_CP_kf_LOG
 
     integer :: k, i, j
+    integer :: n
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -262,6 +288,126 @@ contains
     do i = IS, IE
        deltax(i,j) = sqrt( AREA(i,j) )
     end do
+    end do
+
+
+    ! history
+    hist_id(:,:) = -1
+    call FILE_HISTORY_reg( 'QV_t_KF_conv_DP',                                                &
+                           'QV tendency due to flux convergence (deep convection) in KF',    &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QV_FC,I_HIST_D)                                    )
+    call FILE_HISTORY_reg( 'QV_t_KF_conv_SH',                                                &
+                           'QV tendency due to flux convergence (shallow convection) in KF', &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QV_FC,I_HIST_S)                                    )
+    call FILE_HISTORY_reg( 'QV_t_KF_upent_DP',                                                     &
+                           'QV tendency due to entrainment of updraft (deep convection) in KF',    &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QV_UE,I_HIST_D)                                          )
+    call FILE_HISTORY_reg( 'QV_t_KF_upent_SH',                                                     &
+                           'QV tendency due to entrainment of updraft (shallow convection) in KF', &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QV_UE,I_HIST_S)                                          )
+    call FILE_HISTORY_reg( 'QV_t_KF_downent_DP',                                                  &
+                           'QV tendency due to entrainment of downdraft (deep convection) in KF', &
+                           'kg/m3/s',                                                             &
+                           hist_id(I_HIST_QV_DE,I_HIST_D)                                         )
+    call FILE_HISTORY_reg( 'QV_t_KF_updet_DP',                                                     &
+                           'QV tendency due to detrainment of updraft (deep convection) in KF',    &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QV_UD,I_HIST_D)                                          )
+    call FILE_HISTORY_reg( 'QV_t_KF_updet_SH',                                                     &
+                           'QV tendency due to detrainment of updraft (shallow convection) in KF', &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QV_UD,I_HIST_S)                                          )
+    call FILE_HISTORY_reg( 'QV_t_KF_downdet_DP',                                                  &
+                           'QV tendency due to detrainment of downdraft (deep convection) in KF', &
+                           'kg/m3/s',                                                             &
+                           hist_id(I_HIST_QV_DD,I_HIST_D)                                         )
+    call FILE_HISTORY_reg( 'QV_t_KF_negfix_DP',                                            &
+                           'QV tendency due to negative fixer (deep convection) in KF',    &
+                           'kg/m3/s',                                                      &
+                           hist_id(I_HIST_QV_NF,I_HIST_D)                                  )
+    call FILE_HISTORY_reg( 'QV_t_KF_negfix_SH',                                            &
+                           'QV tendency due to negative fixer (shallow convection) in KF', &
+                           'kg/m3/s',                                                      &
+                           hist_id(I_HIST_QV_NF,I_HIST_S)                                  )
+
+    call FILE_HISTORY_reg( 'QC_t_KF_conv_DP',                                                &
+                           'QC tendency due to flux convergence (deep convection) in KF',    &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QC_FC,I_HIST_D)                                    )
+    call FILE_HISTORY_reg( 'QC_t_KF_conv_SH',                                                &
+                           'QC tendency due to flux convergence (shallow convection) in KF', &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QC_FC,I_HIST_S)                                    )
+    call FILE_HISTORY_reg( 'QC_t_KF_updet_DP',                                                     &
+                           'QC tendency due to detrainment of updraft (deep convection) in KF',    &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QC_UD,I_HIST_D)                                          )
+    call FILE_HISTORY_reg( 'QC_t_KF_updet_SH',                                                     &
+                           'QC tendency due to detrainment of updraft (shallow convection) in KF', &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QC_UD,I_HIST_S)                                          )
+
+    call FILE_HISTORY_reg( 'QI_t_KF_conv_DP',                                                &
+                           'QI tendency due to flux convergence (deep convection) in KF',    &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QI_FC,I_HIST_D)                                    )
+    call FILE_HISTORY_reg( 'QI_t_KF_conv_SH',                                                &
+                           'QI tendency due to flux convergence (shallow convection) in KF', &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QI_FC,I_HIST_S)                                    )
+    call FILE_HISTORY_reg( 'QI_t_KF_updet_DP',                                                     &
+                           'QI tendency due to detrainment of updraft (deep convection) in KF',    &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QI_UD,I_HIST_D)                                          )
+    call FILE_HISTORY_reg( 'QI_t_KF_updet_SH',                                                     &
+                           'QI tendency due to detrainment of updraft (shallow convection) in KF', &
+                           'kg/m3/s',                                                              &
+                           hist_id(I_HIST_QI_UD,I_HIST_S)                                          )
+
+    call FILE_HISTORY_reg( 'QR_t_KF_conv_DP',                                                &
+                           'QR tendency due to flux convergence (deep convection) in KF',    &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QR_FC,I_HIST_D)                                    )
+    call FILE_HISTORY_reg( 'QR_t_KF_conv_SH',                                                &
+                           'QR tendency due to flux convergence (shallow convection) in KF', &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QR_FC,I_HIST_S)                                    )
+    call FILE_HISTORY_reg( 'QR_t_KF_rainfall_DP',                                     &
+                           'QR tendency due to rain fall (deep convection) in KF',    &
+                           'kg/m3/s',                                                 &
+                           hist_id(I_HIST_QR_RF,I_HIST_D)                             )
+    call FILE_HISTORY_reg( 'QR_t_KF_rainfall_SH',                                     &
+                           'QR tendency due to rain fall (shallow convection) in KF', &
+                           'kg/m3/s',                                                 &
+                           hist_id(I_HIST_QR_RF,I_HIST_S)                             )
+
+    call FILE_HISTORY_reg( 'QS_t_KF_conv_DP',                                                &
+                           'QS tendency due to flux convergence (deep convection) in KF',    &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QS_FC,I_HIST_D)                                    )
+    call FILE_HISTORY_reg( 'QS_t_KF_conv_SH',                                                &
+                           'QS tendency due to flux convergence (shallow convection) in KF', &
+                           'kg/m3/s',                                                        &
+                           hist_id(I_HIST_QS_FC,I_HIST_S)                                    )
+    call FILE_HISTORY_reg( 'QS_t_KF_snowfall_DP',                                     &
+                           'QS tendency due to snow fall (deep convection) in KF',    &
+                           'kg/m3/s',                                                 &
+                           hist_id(I_HIST_QS_SF,I_HIST_D)                             )
+    call FILE_HISTORY_reg( 'QS_t_KF_snowfall_SH',                                     &
+                           'QS tendency due to snow fall (shallow convection) in KF', &
+                           'kg/m3/s',                                                 &
+                           hist_id(I_HIST_QS_SF,I_HIST_S)                             )
+
+    do n = 1, HIST_vmax
+       if ( HIST_id(n,0) > 0 .or. HIST_id(n,1) > 0 ) then
+          allocate( HIST_work(KA,IA,JA,HIST_vmax,0:1) )
+          HIST_work(:,:,:,:,:) = 0.0_RP
+          exit
+       end if
     end do
 
     return
@@ -349,6 +495,8 @@ contains
        cldfrac_dp,     &
        cldfrac_sh      )
     use scale_file_history, only: &
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put, &
        FILE_HISTORY_in
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
@@ -472,6 +620,9 @@ contains
     real(RP) :: R_convflag(IA,JA)
 
     real(RP) :: KF_DTSEC
+
+    logical :: flag
+    integer :: n, m
     ! ------
 
     LOG_PROGRESS(*) 'atmosphere / physics / cumulus / KF'
@@ -480,6 +631,13 @@ contains
     KF_DTSEC = KF_DTSECD ! DP to RP
 
     call PROF_rapstart('CP_kf', 3)
+
+    do n = 1, hist_vmax
+       call FILE_HISTORY_query( hist_id(n,0), hist_flag )
+       if ( hist_flag ) exit
+       call FILE_HISTORY_query( hist_id(n,1), hist_flag )
+       if ( hist_flag ) exit
+    end do
 
     !$omp parallel do default(none) &
     !$omp private(RHOD,tempv,qv_d,qc,qi,PSAT,QSAT,QV,rh, &
@@ -495,7 +653,7 @@ contains
     !$omp        GRAV,PRE00,CP_VAPOR,CP_WATER,CP_ICE,WARMRAIN,KF_DTSEC,SHALLOWLIFETIME, &
     !$omp        KA,KS,KE,IS,IE,JS,JE, &
     !$omp        nca,cloudtop,cloudbase,SFLX_convrain,lifetime,deltaz,deltax,I_convflag, &
-    !$omp        cldfrac_sh,cldfrac_dp)
+    !$omp        cldfrac_sh,cldfrac_dp,hist_flag,hist_work)
     do j = JS, JE
     do i = IS, IE
 
@@ -595,6 +753,7 @@ contains
                qv_d(:), theta_d(:),                                          & ! [IN]
                cpr,                                                          & ! [IN]
                KF_DTSEC,                                                     & ! [IN]
+               RHOD(:), i, j,                                                & ! [IN]
                I_convflag(i,j), k_lcl,                                       & ! [INOUT]
                umf(:), upent(:), updet(:),                                   & ! [INOUT]
                qcdet(:), qidet(:), dmf(:), downent(:), downdet(:),           & ! [INOUT]
@@ -621,6 +780,13 @@ contains
           do iq = 1, N_HYD
              RHOQ_t_CP(KS:KE,i,j,iq) = 0.0_RP
           end do
+          if ( hist_flag ) then
+             do m = 0, 1
+             do n = 1, hist_vmax
+                hist_work(:,i,j,n,m) = 0.0_RP
+             end do
+             end do
+          end if
 
        else
 
@@ -707,9 +873,18 @@ contains
 
     call PROF_rapend('CP_kf', 3)
 
+    ! history
     call FILE_HISTORY_in( lifetime(:,:),   'KF_LIFETIME', 'lifetime of KF scheme', 's' )
     R_convflag(:,:) = real(I_convflag(:,:),RP)
     call FILE_HISTORY_in( R_convflag(:,:), 'KF_CONVFLAG', 'CONVECTION FLAG',       ''  )
+    do m = 0, 1
+    do n = 1, hist_vmax
+       call FILE_HISTORY_query( hist_id(n,m), flag )
+       if ( flag ) then
+          call FILE_HISTORY_put( hist_id(n,m), hist_work(:,:,:,n,m) )
+       end if
+    end do
+    end do
 
     return
   end subroutine ATMOS_PHY_CP_kf_tendency
@@ -2011,6 +2186,7 @@ contains
        qv_d, theta_d,                            &
        cpr,                                      &
        KF_DTSEC,                                 &
+       RHOD, i, j,                               &
        I_convflag, k_lcl_bf,                     &
        umf, upent, updet,                        &
        qcdet, qidet, dmf, downent, downdet,      &
@@ -2061,6 +2237,8 @@ contains
     real(RP), intent(in)    :: theta_d(KA)        !< potential temperature at downdraft
     real(RP), intent(in)    :: cpr                !< all precipitation  before consider cloud bottom evaporation
     real(RP), intent(in)    :: KF_DTSEC           !< time step
+    real(RP), intent(in)    :: RHOD(KA)
+    integer,  intent(in)    :: i, j
 
     integer,  intent(inout) :: I_convflag         !< intent inout
     integer,  intent(inout) :: k_lcl_bf           !< index at lcl
@@ -2142,7 +2320,6 @@ contains
     real(RP) :: dtt                               !< deltat of cumulus prameterization determined by layer depth/omega
     real(RP) :: deltat                            !< deltat of cumulus parameterization same as dtt but reduced
     real(RP) :: tma,tmb,tmm                       !< eff (temporaly vars)
-    real(RP) :: acoeff,bcoeff                     !< eff (temporaly vars)
     real(RP) :: evac                              !< shallow convection TKE factor (temporaly vars)
     real(RP) :: ainc,ainctmp, aincmx,aincold      !< factors ainctmp is tmpvariable; aincmx is max of ainc (temporaly vars)
     real(RP) :: omg(KA)                           !< pressure velocity (temporaly vars)
@@ -2171,6 +2348,8 @@ contains
     real(RP) :: cpm                               !< tempolaly variable
     real(RP) :: UMF_tmp                           !< tempolaly variable
     real(RP) :: xcldfrac                          !< tempolaly variable
+
+    integer :: m
     ! -----
 
     if(I_convflag == 2) return     ! noconvection
@@ -2276,6 +2455,20 @@ contains
        end do
        nstep  = nint(timecp/dtt + 1) ! how many time step forwad
        deltat = timecp/real(nstep,RP) ! deltat*nstep = timecp
+       if ( hist_flag ) then
+          do m = 0, 1
+          do kk = KS, k_top
+             hist_work(kk,i,j,I_HIST_QV_FC,m) = 0.0_RP
+             hist_work(kk,i,j,I_HIST_QV_UE,m) = 0.0_RP
+             hist_work(kk,i,j,I_HIST_QV_UD,m) = 0.0_RP
+          end do
+          end do
+          ! only for deep convection
+          do kk = KS, k_top
+             hist_work(kk,i,j,I_HIST_QV_DE,0) = 0.0_RP
+             hist_work(kk,i,j,I_HIST_QV_DD,0) = 0.0_RP
+          end do
+       end if
        do ntimecount = 1, nstep
           !> tempolaly time forward start iteration
           !! assign theta and q variables at the top and bottom of each layer based
@@ -2311,6 +2504,24 @@ contains
                   + updet(kk)*qvdet(kk) + downdet(kk)*qv_d(kk)  &
                   - ( upent(kk) - downent(kk) )*qv(kk) )*deltat*emsd(kk)
           end do
+          if ( hist_flag ) then
+             do kk = KS, k_top
+                hist_work(kk,i,j,I_HIST_QV_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QV_FC,I_convflag) &
+                     + ( qv_fxin(kk) - qv_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+                hist_work(kk,i,j,I_HIST_QV_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QV_UD,I_convflag) &
+                     + updet(kk) * qvdet(kk) * emsd(kk) * RHOD(kk) / nstep
+                hist_work(kk,i,j,I_HIST_QV_UE,I_convflag) = hist_work(kk,i,j,I_HIST_QV_UE,I_convflag) &
+                     - upent(kk) * qv(kk) * emsd(kk) * RHOD(kk) / nstep
+             end do
+             if ( I_convflag == 0 ) then ! only for deep convection
+                do kk = KS, k_top
+                   hist_work(kk,i,j,I_HIST_QV_DD,0) = hist_work(kk,i,j,I_HIST_QV_DD,0) &
+                        + downdet(kk) * qv_d(kk) * emsd(kk) * RHOD(kk) / nstep
+                   hist_work(kk,i,j,I_HIST_QV_DE,0) = hist_work(kk,i,j,I_HIST_QV_DE,0) &
+                        + downent(kk) * qv(kk) * emsd(kk) * RHOD(kk) / nstep
+                end do
+             end if
+          end if
        end do ! ntimecount
 
        do kk = KS, k_top
@@ -2318,34 +2529,32 @@ contains
           qv_g(kk)    = qv_nw(kk)
        end do
        !< Check to see if mixing ratio dips below zero anywere ; if so, borrow
-       !< moisture forom adjacent layers to bring it back up abobe zero
-       do kk = KS,k_top
-          if(qv_g(kk) < KF_EPS ) then ! negative moisture
-             if(kk == KS) then
-                LOG_ERROR("CP_kf_compensational",*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
-                call PRC_abort
-             end if
-             kkp1 = kk + 1
-             if(kk == k_top) then
-                kkp1 = k_lcl
-             end if
-             tma        = max(qv_g(kkp1)*ems(kkp1), KF_EPS)
-             tmb        = max(qv_g(kk-1)*ems(kk-1), KF_EPS)
-             !tmm        = (qv_g(kk) - 1.e-9_RP )*ems(kk)
-             tmm        = (qv_g(kk) - KF_EPS )*ems(kk)
-             bcoeff     = -tmm/((tma*tma)/tmb + tmb)
-             acoeff     = bcoeff*tma/tmb
-             tmb        = tmb*(1._RP - bcoeff)
-             tma        = tma*(1._RP - acoeff)
-             !qv_g(kk)   = 1.e-9_RP
+       !< moisture from adjacent layers to bring it back up above zero
+       if ( qv_g(k_top) < KF_EPS ) then
+          qv_g(k_top-1) = qv_g(k_top-1) + ( qv_g(k_top) - KF_EPS ) * ems(k_top) * emsd(k_top-1)
+          qv_g(k_top) = KF_EPS
+       end if
+       do kk = k_top-1, KS+1, -1
+          if( qv_g(kk) < KF_EPS ) then ! negative moisture
+             tma = qv_g(kk+1) * ems(kk+1)
+             tmb = max( qv_g(kk-1), KF_EPS ) * ems(kk-1)
+             tmm = ( qv_g(kk) - KF_EPS ) * ems(kk)
+             tma = tma * ( 1.0_RP + tmm / ( tma + tmb ) )
+             tma = max( tma, KF_EPS * ems(kk+1) )
+             qv_g(kk-1) = qv_g(kk-1) + ( qv_g(kk+1) * ems(kk+1) - tma + tmm ) * emsd(kk-1)
+             qv_g(kk+1) = tma * emsd(kk+1)
              qv_g(kk)   = KF_EPS
-             qv_g(kkp1) = tma*emsd(kkp1)
-             qv_g(kk-1) = tmb*emsd(kk-1)
           end if
        end do
-       do kk = KS,k_top
-          if ( qv_g(kk) < KF_EPS ) qv_g(kk) = KF_EPS
-       end do
+       if( qv_g(KS) < KF_EPS ) then
+          LOG_ERROR("CP_kf_compensational",*) "error qv<0 @ Kain-Fritsch cumulus parameterization"
+          call PRC_abort
+       end if
+       if ( hist_flag ) then
+          do kk = KS, k_top
+             hist_work(kk,i,j,I_HIST_QV_NF,I_convflag) = ( qv_g(kk) - qv_nw(kk) ) * RHOD(kk) / timecp
+          end do
+       end if
        ! calculate top layer omega and conpare determ omg
        topomg = (updet(k_top) - upent(k_top))*deltap(k_top)*emsd(k_top)
        if( abs(topomg - omg(k_top)) > 1.e-3_RP) then ! not same omega velocity error
@@ -2552,6 +2761,21 @@ contains
        snowfb(kk) = flux_qs(kk)*ainc*fbfrc*frc2
     end do
 
+    if ( hist_flag ) then
+       do m = 0, 1
+       do kk = KS, k_top
+          hist_work(kk,i,j,I_HIST_QC_FC,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QC_UD,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QI_FC,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QI_UD,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QR_FC,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QR_RF,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QS_FC,m) = 0.0_RP
+          hist_work(kk,i,j,I_HIST_QS_SF,m) = 0.0_RP
+       end do
+       end do
+    end if
+
     do ntimecount = 1, nstep ! same as T, QV
        do kk = KS, k_top     ! initialize
           qc_fxin(kk)  = 0._RP
@@ -2593,6 +2817,28 @@ contains
           qr_nw(kk) = qr_nw(kk) + (qr_fxin(kk) - qr_fxout(kk) + rainfb(kk) )*deltat*emsd(kk)
           qs_nw(kk) = qs_nw(kk) + (qs_fxin(kk) - qs_fxout(kk) + snowfb(kk) )*deltat*emsd(kk)
        end do
+
+       if ( hist_flag ) then
+          do kk = KS, k_top
+             hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) &
+                  + ( qc_fxin(kk) - qc_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) &
+                  + qcdet(kk) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QI_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QI_FC,I_convflag) &
+                  + ( qi_fxin(kk) - qi_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QI_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QI_UD,I_convflag) &
+                  + qidet(kk) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) &
+                  + ( qr_fxin(kk) - qr_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) = hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) &
+                  + rainfb(kk) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QS_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QS_FC,I_convflag) &
+                  + ( qs_fxin(kk) - qs_fxout(kk) ) * emsd(kk) * RHOD(kk) / nstep
+             hist_work(kk,i,j,I_HIST_QS_SF,I_convflag) = hist_work(kk,i,j,I_HIST_QS_SF,I_convflag) &
+                  + snowfb(kk) * emsd(kk) * RHOD(kk) / nstep
+          end do
+       end if
+
        ! in original qlg= qlpa but it is not nessesary
     end do
 
@@ -2647,6 +2893,15 @@ contains
           qi_nw(kk)  = 0._RP
           qs_nw(kk)  = 0._RP
        end do
+
+       if ( hist_flag ) then
+          do kk = KS, KE
+             hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QC_FC,I_convflag) + hist_work(kk,i,j,I_HIST_QI_FC,I_convflag)
+             hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) = hist_work(kk,i,j,I_HIST_QC_UD,I_convflag) + hist_work(kk,i,j,I_HIST_QI_UD,I_convflag)
+             hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) = hist_work(kk,i,j,I_HIST_QR_FC,I_convflag) + hist_work(kk,i,j,I_HIST_QS_FC,I_convflag)
+             hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) = hist_work(kk,i,j,I_HIST_QR_RF,I_convflag) + hist_work(kk,i,j,I_HIST_QS_SF,I_convflag)
+          end do
+       end if
 
        return
 !!$ elseif( ???? ) then
