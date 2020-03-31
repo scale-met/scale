@@ -80,7 +80,6 @@ contains
           warmrain = ( .not. ATMOS_HYDROMETEOR_ice_phase )
           call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                       ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_AREA, &
-                                      TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP,                      &
                                       warmrain                                                  )
        case default
           LOG_ERROR("ATMOS_PHY_CP_driver_setup",*) 'ATMOS_PHY_CP_TYPE (', trim(ATMOS_PHY_CP_TYPE), ') is invalid. Check!'

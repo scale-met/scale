@@ -124,8 +124,6 @@ module scale_atmos_phy_cp_kf
   real(RP), private              :: RATE            = 0.03_RP  !< ratio of cloud water and precipitation
                                                          !< (Ogura and Cho 1973)
   integer , private              :: TRIGGER         = 3        !< triger select will be modifid
-  logical , private              :: FLAG_QS         = .true.   !< FLAG_OS:  qs is allowed or not
-  logical , private              :: FLAG_QI         = .true.   !< FLAG_QI:  qi is allowe or not
   real(RP), private              :: DELCAPE         = 0.1_RP   !< cape decleace rate
   real(RP), private              :: DEEPLIFETIME    = 1800._RP !< minimum lifetimescale of deep convection
   real(RP), private              :: SHALLOWLIFETIME = 2400._RP !< shallow convection liftime
@@ -133,7 +131,6 @@ module scale_atmos_phy_cp_kf
   logical , private              :: WARMRAIN        = .false.  !< I_QI<1
   logical , private              :: KF_LOG          = .false.  !< KF infomation output to log file(not ERROR messeage)
   real(RP), private              :: kf_threshold    = 1.e-3_RP !< kessler type autoconversion rate
-  integer , private              :: stepkf                     !< triger select will be modifid
   integer , private              :: KF_prec         = 1        !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
   procedure(kf_precipitation), pointer,private :: CP_kf_precipitation => NULL()
 
@@ -175,9 +172,8 @@ contains
   !<
   subroutine ATMOS_PHY_CP_kf_setup ( &
       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-      CZ, AREA,             &
-      TIME_DTSEC, KF_DTSEC, &
-      WARMRAIN_in           )
+      CZ, AREA,   &
+      WARMRAIN_in )
     use scale_prc, only: &
        PRC_abort
     use scale_file_history, only: &
@@ -189,8 +185,6 @@ contains
 
     real(RP),         intent(in) :: CZ(KA,IA,JA)
     real(RP),         intent(in) :: AREA(IA,JA)
-    real(DP),         intent(in) :: TIME_DTSEC
-    real(DP),         intent(in) :: KF_DTSEC
     logical,          intent(in) :: WARMRAIN_in
 
     !< tunning parameters, original parameter set is from KF2004 and NO2007
@@ -477,7 +471,6 @@ contains
        JA, JS, JE,     &
        DENS,           &
        U, V,           &
-       RHOT,           &
        TEMP, PRES,     &
        QDRY, QV_in,    &
        Rtot, CPtot,    &
@@ -500,8 +493,6 @@ contains
        FILE_HISTORY_in
     use scale_const, only: &
        GRAV  => CONST_GRAV, &
-       R     => CONST_Rdry, &
-       Rvap  => CONST_Rvap, &
        PRE00 => CONST_PRE00
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -522,7 +513,6 @@ contains
     real(RP), intent(in)    :: DENS (KA,IA,JA)   !< Density [kg/m3]
     real(RP), intent(in)    :: U    (KA,IA,JA)   !< velocity u [m/s]
     real(RP), intent(in)    :: V    (KA,IA,JA)   !< velocity v [m/s]
-    real(RP), intent(in)    :: RHOT (KA,IA,JA)   !< DENS * POTT [K*kg/m3]
     real(RP), intent(in)    :: TEMP (KA,IA,JA)   !< temperature [K]
     real(RP), intent(in)    :: PRES (KA,IA,JA)   !< pressure of dry air [Pa]
     real(RP), intent(in)    :: QDRY (KA,IA,JA)   !< dry air [1]
@@ -1456,7 +1446,7 @@ contains
     use scale_precision
     use scale_const,only :&
          GRAV  => CONST_GRAV, &
-         R     => CONST_Rdry
+         Rdry  => CONST_Rdry
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
     integer,  intent(in) :: k_lcl               !< index of LCL layer
@@ -1562,7 +1552,7 @@ contains
     umfnewdold(:)    = 1._RP
     k_lclm1          = k_lcl - 1
     wtw              = w_lcl*w_lcl
-    denslcl          = pres_lcl/(R*tempv_lcl)
+    denslcl          = pres_lcl/(Rdry*tempv_lcl)
     umf(k_lclm1)     = denslcl*1.e-2_RP*deltax**2 ! (A0)
     umflcl           = umf(k_lclm1)
     umfold           = umflcl
@@ -1806,9 +1796,9 @@ contains
     use scale_const,only :&
          CP => CONST_CPdry    , &
          PRE00 => CONST_PRE00 , &
+         Rdry  => CONST_Rdry,   &
          EMELT => CONST_EMELT , &
-         GRAV  => CONST_GRAV  , &
-         R     => CONST_Rdry
+         GRAV  => CONST_GRAV
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     use scale_prc, only: &
@@ -1900,7 +1890,7 @@ contains
     ! if no convection
     if (I_convflag == 2) return ! if 3d, may be change
 
-    ! detremin
+    ! determine
     do kk = KS, KE
        if (pres(kk) >= pres(KS)*0.5_RP)   k_z5 = kk
     end do
@@ -1978,7 +1968,7 @@ contains
           theta_d(k_lfs) = temp_d(k_lfs)*exn(k_lfs)
           ! take a first guess at hte initial downdraft mass flux
           tempv_d(k_lfs) = temp_d(k_lfs)*(1._RP + 0.608_RP*qvs_tmp)
-          dens_d         = pres(k_lfs)/(R*tempv_d(k_lfs))
+          dens_d         = pres(k_lfs)/(Rdry*tempv_d(k_lfs))
           dmf(k_lfs)     = -(1._RP - pef)*1.e-2_RP*deltax**2*dens_d ! AU0 = 1.e-2*dx**2
           downent(k_lfs) = dmf(k_lfs)
           downdet(k_lfs) = 0._RP
@@ -2921,9 +2911,7 @@ contains
   !<
   subroutine CP_kf_calcexn( pres, qv, exn )
     use scale_const,only :&
-         CP_dry => CONST_CPdry , &
-         PRE00 => CONST_PRE00  , &
-         R_dry => CONST_Rdry
+         PRE00 => CONST_PRE00
     implicit none
     real(RP),intent(in)  :: pres
     real(RP),intent(in)  :: qv
@@ -2931,7 +2919,7 @@ contains
 
     exn = (PRE00/pres)**(0.2854_RP*(1._RP - 0.28_RP*qv ))
     ! qdry = 1.0_RP - qv
-    ! exn = (PRE00/pres)**( (qdry*R_dry + qv*R_vap) / (qdry*CP_dry + qv*CP_vap) )
+    ! exn = (PRE00/pres)**( (qdry*Rdry + qv*Rvap) / (qdry*CPdry + qv*CPvap) )
     return
   end subroutine CP_kf_calcexn
 
