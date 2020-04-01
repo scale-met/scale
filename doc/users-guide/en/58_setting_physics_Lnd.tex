@@ -100,6 +100,16 @@ The default setting is \verb|SKIN|.
 \end{center}
 \end{table}
 
+When \nmitem{LAND_SFC_TYPE} is \verb|SKIN|,
+the surface temperature is calculated by the heat-balance iteration
+between the surface temperature and head enegy fluxes based on Tomita (2009).
+This surface temperature is different from the sub-surface temperature at the 1st layer of land model.
+
+When \nmitem{LAND_SFC_TYPE} is \verb|FIXED-TEMP|,
+heat enegy fluxes are calculated by the given surface temperature.
+The residuals of heat balance are forced into the sub-surface heat flux of the land model.
+The surface temperature is the same as the sub-surface temperature at the 1st layer of land model
+which is determined by the land model physics.
 
 %-------------------------------------------------------------------------------
 \subsubsection{land nudging}
