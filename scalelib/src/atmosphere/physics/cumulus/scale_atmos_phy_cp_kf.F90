@@ -112,34 +112,36 @@ module scale_atmos_phy_cp_kf
   !< ALIQ saturrate watervapor (SVP1*1000; SVP1=0.6112)
   !< BLIQ is WRF SVP2 = 17.67
   !< DLIQ is WRF SVP3 = 29.65
-  real(RP), private, parameter   :: ALIQ   = 6.112e2_RP        !< Saturate pressure of water vapor [Pa]
-  real(RP), private, parameter   :: BLIQ   =   17.67_RP        !< emanuel 1994 (4.6.2) 17.67
-  real(RP), private, parameter   :: CLIQ   = BLIQ*TEM00        !< convert degree to kelvin @ dew point temperature
-  real(RP), private, parameter   :: DLIQ   =   29.65_RP        !< 273.15 - 243.5
+  real(RP), private, parameter   :: ALIQ   = 6.112e2_RP !< Saturate pressure of water vapor [Pa]
+  real(RP), private, parameter   :: BLIQ   =   17.67_RP !< emanuel 1994 (4.6.2) 17.67
+  real(RP), private, parameter   :: CLIQ   = BLIQ*TEM00 !< convert degree to kelvin @ dew point temperature
+  real(RP), private, parameter   :: DLIQ   =   29.65_RP !< 273.15 - 243.5
   real(RP), private, parameter   :: XLV0   =  3.15e6_RP
   real(RP), private, parameter   :: XLV1   =   2370._RP
-  real(RP), private, parameter   :: KF_EPS =  1.E-12_RP        !< epsiron in KF module
+  real(RP), private, parameter   :: KF_EPS =  1.E-12_RP !< epsiron in KF module
   !< Naming list tuning parameters
   !< RATE is used subroutine CP_kf_precipitation_OC1973
-  real(RP), private              :: RATE            = 0.03_RP  !< ratio of cloud water and precipitation
-                                                         !< (Ogura and Cho 1973)
-  integer , private              :: TRIGGER         = 3        !< triger select will be modifid
-  real(RP), private              :: DELCAPE         = 0.1_RP   !< cape decleace rate
-  real(RP), private              :: DEEPLIFETIME    = 1800._RP !< minimum lifetimescale of deep convection
-  real(RP), private              :: SHALLOWLIFETIME = 2400._RP !< shallow convection liftime
-  real(RP), private              :: DEPTH_USL       = 300._RP  !< depth of updraft source layer  [hPa]!!
-  logical , private              :: WARMRAIN        = .false.  !< I_QI<1
-  logical , private              :: KF_LOG          = .false.  !< KF infomation output to log file(not ERROR messeage)
-  real(RP), private              :: kf_threshold    = 1.e-3_RP !< kessler type autoconversion rate
-  integer , private              :: KF_prec         = 1        !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
+  real(RP), private              :: RATE            !< ratio of cloud water and precipitation
+                                                    !< (Ogura and Cho 1973)
+  integer , private              :: TRIGGER_type    !< triger select will be modifid
+  real(RP), private              :: DELCAPE         !< cape decleace rate
+  real(RP), private              :: DEEPLIFETIME    !< minimum lifetimescale of deep convection
+  real(RP), private              :: SHALLOWLIFETIME !< shallow convection liftime
+  real(RP), private              :: DEPTH_USL       !< depth of updraft source layer  [hPa]!!
+  logical , private              :: WARMRAIN        !< I_QI<1
+  logical , private              :: KF_LOG          !< KF infomation output to log file(not ERROR messeage)
+  real(RP), private              :: kf_threshold    !< kessler type autoconversion rate
+  integer , private              :: prec_type       !< precipitation select 1. Ogura and Cho (1973), 2. Kessler
+  logical,  private              :: DO_prec         !< enable precipitation
+
   procedure(kf_precipitation), pointer,private :: CP_kf_precipitation => NULL()
 
-  real(RP), private, allocatable :: lifetime  (:,:)            !< convectime lifetime [s]
-  integer , private, allocatable :: I_convflag(:,:)            !< convection type (0:deep 1:shallow 2: no convection)
+  real(RP), private, allocatable :: lifetime  (:,:) !< convectime lifetime [s]
+  integer , private, allocatable :: I_convflag(:,:) !< convection type (0:deep 1:shallow 2: no convection)
 
-  real(RP), private, allocatable :: deltaz (:,:,:)             !< height interval (center level) [m]
-  real(RP), private, allocatable :: Z      (:,:,:)             !< centerlevel real height [m]
-  real(RP), private, allocatable :: deltax (:,:)               !< delta x [m]
+  real(RP), private, allocatable :: deltaz (:,:,:)  !< height interval (center level) [m]
+  real(RP), private, allocatable :: Z      (:,:,:)  !< centerlevel real height [m]
+  real(RP), private, allocatable :: deltax (:,:)    !< delta x [m]
 
   ! history
   integer,  parameter            :: hist_vmax = 14
@@ -188,26 +190,28 @@ contains
     logical,          intent(in) :: WARMRAIN_in
 
     !< tunning parameters, original parameter set is from KF2004 and NO2007
-    integer  :: PARAM_ATMOS_PHY_CP_kf_trigger   = 1         !< trigger function type 1:KF2004 3:NO2007
-    integer  :: PARAM_ATMOS_PHY_CP_kf_prec      = 1         !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_rate      =   0.03_RP !< ratio of cloud water and precipitation (Ogura and Cho 1973)
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlcape    =    0.1_RP !< cape decleace rate
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800.0_RP !< minimum lifetime scale of deep convection [sec]
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_slifetime = 2400.0_RP !< lifetime of shallow convection [sec]
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300.0_RP !< depth of updraft source layer [hPa]
-    real(RP) :: PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3_RP  !< autoconversion rate for Kessler
-    logical  :: PARAM_ATMOS_PHY_CP_kf_LOG       = .false.   !< output log?
+    integer  :: ATMOS_PHY_CP_kf_trigger_type = 1         !< trigger function type 1:KF2004 3:NO2007
+    integer  :: ATMOS_PHY_CP_kf_prec_type    = 1         !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
+    real(RP) :: ATMOS_PHY_CP_kf_rate         =   0.03_RP !< ratio of cloud water and precipitation (Ogura and Cho 1973)
+    logical  :: ATMOS_PHY_CP_kf_do_prec      = .true.    !< whether enable precipitation
+    real(RP) :: ATMOS_PHY_CP_kf_dlcape       =    0.1_RP !< cape decleace rate
+    real(RP) :: ATMOS_PHY_CP_kf_dlifetime    = 1800.0_RP !< minimum lifetime scale of deep convection [sec]
+    real(RP) :: ATMOS_PHY_CP_kf_slifetime    = 2400.0_RP !< lifetime of shallow convection [sec]
+    real(RP) :: ATMOS_PHY_CP_kf_DEPTH_USL    =  300.0_RP !< depth of updraft source layer [hPa]
+    real(RP) :: ATMOS_PHY_CP_kf_thres        = 1.E-3_RP  !< autoconversion rate for Kessler
+    logical  :: ATMOS_PHY_CP_kf_LOG          = .false.   !< output log?
 
     namelist / PARAM_ATMOS_PHY_CP_KF / &
-       PARAM_ATMOS_PHY_CP_kf_rate,      &
-       PARAM_ATMOS_PHY_CP_kf_trigger,   &
-       PARAM_ATMOS_PHY_CP_kf_dlcape,    &
-       PARAM_ATMOS_PHY_CP_kf_dlifetime, &
-       PARAM_ATMOS_PHY_CP_kf_slifetime, &
-       PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, &
-       PARAM_ATMOS_PHY_CP_kf_prec,      &
-       PARAM_ATMOS_PHY_CP_kf_thres,     &
-       PARAM_ATMOS_PHY_CP_kf_LOG
+       ATMOS_PHY_CP_kf_rate,         &
+       ATMOS_PHY_CP_kf_trigger_type, &
+       ATMOS_PHY_CP_kf_dlcape,       &
+       ATMOS_PHY_CP_kf_dlifetime,    &
+       ATMOS_PHY_CP_kf_slifetime,    &
+       ATMOS_PHY_CP_kf_DEPTH_USL,    &
+       ATMOS_PHY_CP_kf_prec_type,    &
+       ATMOS_PHY_CP_kf_do_prec,      &
+       ATMOS_PHY_CP_kf_thres,        &
+       ATMOS_PHY_CP_kf_LOG
 
     integer :: k, i, j
     integer :: n
@@ -233,28 +237,30 @@ contains
 
     call CP_kf_lutab ! set up of KF look-up table
 
-    call CP_kf_param( PARAM_ATMOS_PHY_CP_kf_prec,      & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_rate,      & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_dlcape,    & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_dlifetime, & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_slifetime, & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_DEPTH_USL, & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_thres,     & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_LOG,       & ! [IN]
-                      PARAM_ATMOS_PHY_CP_kf_trigger    ) ! [INOUT]
+    call CP_kf_param( ATMOS_PHY_CP_kf_prec_type,   & ! [IN]
+                      ATMOS_PHY_CP_kf_rate,        & ! [IN]
+                      ATMOS_PHY_CP_kf_do_prec,     & ! [IN]
+                      ATMOS_PHY_CP_kf_dlcape,      & ! [IN]
+                      ATMOS_PHY_CP_kf_dlifetime,   & ! [IN]
+                      ATMOS_PHY_CP_kf_slifetime,   & ! [IN]
+                      ATMOS_PHY_CP_kf_DEPTH_USL,   & ! [IN]
+                      ATMOS_PHY_CP_kf_thres,       & ! [IN]
+                      ATMOS_PHY_CP_kf_LOG,         & ! [IN]
+                      ATMOS_PHY_CP_kf_trigger_type ) ! [IN]
 
     ! output parameter lists
     LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Ogura-Cho condense material convert rate        : ", PARAM_ATMOS_PHY_CP_kf_rate
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Trigger function type, 1:KF2004 3:NO2007        : ", PARAM_ATMOS_PHY_CP_kf_trigger
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "CAPE decrease rate                              : ", PARAM_ATMOS_PHY_CP_kf_dlcape
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Minimum lifetime scale of deep convection [sec] : ", PARAM_ATMOS_PHY_CP_kf_dlifetime
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Lifetime of shallow convection            [sec] : ", PARAM_ATMOS_PHY_CP_kf_slifetime
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Updraft souce layer depth                 [hPa] : ", PARAM_ATMOS_PHY_CP_kf_DEPTH_USL
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", PARAM_ATMOS_PHY_CP_kf_prec
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Kessler type precipitation's threshold          : ", PARAM_ATMOS_PHY_CP_kf_thres
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Ogura-Cho condense material convert rate        : ", ATMOS_PHY_CP_kf_rate
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Trigger function type, 1:KF2004 3:NO2007        : ", ATMOS_PHY_CP_kf_trigger_type
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "CAPE decrease rate                              : ", ATMOS_PHY_CP_kf_dlcape
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Minimum lifetime scale of deep convection [sec] : ", ATMOS_PHY_CP_kf_dlifetime
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Lifetime of shallow convection            [sec] : ", ATMOS_PHY_CP_kf_slifetime
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Updraft souce layer depth                 [hPa] : ", ATMOS_PHY_CP_kf_DEPTH_USL
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Precipitation type 1:Ogura-Cho(1973) 2:Kessler  : ", ATMOS_PHY_CP_kf_prec_type
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Kessler type precipitation's threshold          : ", ATMOS_PHY_CP_kf_thres
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Enable sedimentation (precipitation) ?          : ", ATMOS_PHY_CP_kf_do_prec
     LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Warm rain?                                      : ", WARMRAIN
-    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Output log?                                     : ", PARAM_ATMOS_PHY_CP_kf_LOG
+    LOG_INFO("ATMOS_PHY_CP_kf_setup",*) "Output log?                                     : ", ATMOS_PHY_CP_kf_LOG
 
     ! output variables
     allocate( lifetime  (IA,JA) )
@@ -412,52 +418,57 @@ contains
   !! set kf tuning parametres
   !<
   subroutine CP_kf_param(  & ! set kf tuning parametres
-       KF_prec_in,         &
+       prec_type_in,       &
        RATE_in,            &
+       DO_PREC_in,         &
        DELCAPE_in ,        &
        DEEPLIFETIME_in,    &
        SHALLOWLIFETIME_in, &
        DEPTH_USL_in,       &
        KF_threshold_in,    &
        KF_LOG_in,          &
-       TRIGGER_in          )
+       TRIGGER_type_in     )
     use scale_prc, only: &
          PRC_abort
     implicit none
-    integer,  intent(in)    :: KF_prec_in          !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
-    real(RP), intent(in)    :: RATE_in             !< ratio of cloud water and precipitation (Ogura and Cho 1973)
-    real(RP), intent(in)    :: DELCAPE_in          !< cape decleace rate
-    real(RP), intent(in)    :: DEEPLIFETIME_in     !< minimum lifetime scale of deep convection [sec]
-    real(RP), intent(in)    :: SHALLOWLIFETIME_in  !< lifetime of shallow convection [sec]
-    real(RP), intent(in)    :: DEPTH_USL_in        !< depth of updraft source layer [hPa]
-    real(RP), intent(in)    :: KF_threshold_in     !< autoconversion rate for Kessler
-    logical,  intent(in)    :: KF_LOG_in           !< output log?
-    integer,  intent(inout) :: TRIGGER_in          !< trigger function type 1:KF2004 3:NO2007
+    integer,  intent(in) :: prec_type_in        !< precipitation type 1:Ogura-Cho(1973) 2:Kessler
+    real(RP), intent(in) :: RATE_in             !< ratio of cloud water and precipitation (Ogura and Cho 1973)
+    logical,  intent(in) :: DO_PREC_in          !< enable precipitation
+    real(RP), intent(in) :: DELCAPE_in          !< cape decleace rate
+    real(RP), intent(in) :: DEEPLIFETIME_in     !< minimum lifetime scale of deep convection [sec]
+    real(RP), intent(in) :: SHALLOWLIFETIME_in  !< lifetime of shallow convection [sec]
+    real(RP), intent(in) :: DEPTH_USL_in        !< depth of updraft source layer [hPa]
+    real(RP), intent(in) :: KF_threshold_in     !< autoconversion rate for Kessler
+    logical,  intent(in) :: KF_LOG_in           !< output log?
+    integer,  intent(in) :: TRIGGER_type_in     !< trigger function type 1:KF2004 3:NO2007
     !
     RATE            = RATE_in
-    ! TRIGGER must be 1 or 3
-    if (TRIGGER_in /= 1 .and. TRIGGER_in /=3) then
-       LOG_INFO("CP_kf_param",*) "TRIGGER must be 1 or 3 but now :",TRIGGER_in
-       LOG_INFO("CP_kf_param",*) "CHAGNGE ",TRIGGER_in," to 3"
-       TRIGGER_in = 3
-    end if
-    TRIGGER         = TRIGGER_in
     DELCAPE         = DELCAPE_in
     DEEPLIFETIME    = DEEPLIFETIME_in
     SHALLOWLIFETIME = SHALLOWLIFETIME_in
     DEPTH_USL       = DEPTH_USL_in
-    KF_prec         = KF_prec_in
+    prec_type       = prec_type_in
+    do_prec         = DO_PREC_in
     KF_threshold    = KF_threshold_in
     KF_LOG          = KF_LOG_in
-    if (KF_prec == 1) then
-       CP_kf_precipitation => CP_kf_precipitation_OC1973 ! Ogura and Cho (1973)
-    elseif( KF_prec == 2) then
-       CP_kf_precipitation => CP_kf_precipitation_Kessler ! Kessler type
-    else
-       LOG_ERROR("CP_kf_param",*) 'KF namelist'
-       LOG_ERROR_CONT(*) 'KF_prec must be 1 or 2'
+    TRIGGER_type    = TRIGGER_type_in
+
+    if ( TRIGGER_type /= 1 .and. TRIGGER_type /=3 ) then
+       LOG_ERROR("CP_kf_param",*) "TRIGGER_type must be 1 or 3 but now : ",TRIGGER_type
        call PRC_abort
     end if
+
+    select case ( prec_type )
+    case (1)
+       CP_kf_precipitation => CP_kf_precipitation_OC1973 ! Ogura and Cho (1973)
+    case (2)
+       CP_kf_precipitation => CP_kf_precipitation_Kessler ! Kessler type
+    case default
+       LOG_ERROR("CP_kf_param",*) 'KF namelist'
+       LOG_ERROR_CONT(*) 'prec_type must be 1 or 2 : ', prec_type
+       call PRC_abort
+    end select
+
     return
   end subroutine CP_kf_param
 
@@ -495,6 +506,7 @@ contains
     use scale_const, only: &
        GRAV   => CONST_GRAV,  &
        PRE00  => CONST_PRE00, &
+       Rvap   => CONST_Rvap,  &
        EPSvap => CONST_EPSvap
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
@@ -981,7 +993,6 @@ contains
     integer  :: NNN           !< internal work
     integer  :: itr           !< loop counter
 
-    real(RP) :: fbfrc         !< precipitation to be feed back ( 0.0-> deep, or 1.0 ->shallow )
     real(RP) :: cloudhight    !< cloud depth (cloud top - cloud base)
     real(RP) :: qrout(KA)     !< rain
     real(RP) :: qsout(KA)     !< snow
@@ -1044,7 +1055,6 @@ contains
     end do
 
     ! main routine
-    fbfrc      = 0._RP    ! set inital 0
     dpthmin    = 50.e2_RP ! set initialy USL layer depth (50 hPa)
     I_convflag = 2        ! no convection set initialy
     NUCHM      = KS-1     ! initialize (used shallow convection check) !like "0"
@@ -1068,7 +1078,6 @@ contains
                 end if
              end do
              n_uslcheck = nuchm - 1
-             fbfrc      = 1._RP ! shallow convection is no precipitation
              cycle              ! usl ! recalc updraft for shallow convection
           else ! not shallow convection then
              I_convflag = 2 ! no convection
@@ -1172,8 +1181,8 @@ contains
        !! triggers will be make
        dtrh = 0._RP
        !! in WRF has 3 type of trigger function
-       if ( TRIGGER == 2 ) then ! new function none
-       else if ( TRIGGER == 3 ) then ! NO2007 trigger function
+       if ( TRIGGER_type == 2 ) then ! new function none
+       else if ( TRIGGER_type == 3 ) then ! NO2007 trigger function
           !...for ETA model, give parcel an extra temperature perturbation based
           !...the threshold RH for condensation (U00)...
           ! as described in Narita and Ohmori (2007), 12th Mesoscale Conf.
@@ -2359,8 +2368,11 @@ contains
 
     if(I_convflag == 2) return     ! noconvection
     k_lcl = k_lcl_bf
-    fbfrc = 0._RP
-    if(I_convflag == 1) fbfrc = 1._RP
+    if ( DO_PREC .and. I_convflag == 0 ) then ! deep convection
+       fbfrc = 0.0_RP
+    else
+       fbfrc = 1.0_RP
+    end if
     ! time scale of adjustment
     vconv = 0.5_RP*(wspd(1) + wspd(2)) ! k_lcl + k_z5
     timecp = deltax/vconv
