@@ -471,6 +471,7 @@ contains
        JA, JS, JE,     &
        DENS,           &
        U, V,           &
+       RHOT,           &
        TEMP, PRES,     &
        QDRY, QV_in,    &
        Rtot, CPtot,    &
@@ -492,8 +493,9 @@ contains
        FILE_HISTORY_put, &
        FILE_HISTORY_in
     use scale_const, only: &
-       GRAV  => CONST_GRAV, &
-       PRE00 => CONST_PRE00
+       GRAV   => CONST_GRAV,  &
+       PRE00  => CONST_PRE00, &
+       EPSvap => CONST_EPSvap
     use scale_atmos_hydrometeor, only: &
        CP_VAPOR, &
        CP_WATER, &
@@ -513,6 +515,7 @@ contains
     real(RP), intent(in)    :: DENS (KA,IA,JA)   !< Density [kg/m3]
     real(RP), intent(in)    :: U    (KA,IA,JA)   !< velocity u [m/s]
     real(RP), intent(in)    :: V    (KA,IA,JA)   !< velocity v [m/s]
+    real(RP), intent(in)    :: RHOT (KA,IA,JA)   !< potential temperature [K]
     real(RP), intent(in)    :: TEMP (KA,IA,JA)   !< temperature [K]
     real(RP), intent(in)    :: PRES (KA,IA,JA)   !< pressure of dry air [Pa]
     real(RP), intent(in)    :: QDRY (KA,IA,JA)   !< dry air [1]
@@ -640,7 +643,8 @@ contains
     !$omp         dQv,dQC,dQR,dQI,dQS) &
     !$omp shared(DENS,RHOT,U,V,QDRY,TEMP,PRES,QV_in,Rtot,CPtot,FZ,Z,w0avg, &
     !$omp        DENS_t_CP,RHOT_t_CP,RHOQV_t_CP,RHOQ_t_CP, &
-    !$omp        GRAV,PRE00,CP_VAPOR,CP_WATER,CP_ICE,WARMRAIN,KF_DTSEC,SHALLOWLIFETIME, &
+    !$omp        GRAV,PRE00,CP_VAPOR,CP_WATER,CP_ICE,EPSvap, &
+    !$omp        WARMRAIN,KF_DTSEC,SHALLOWLIFETIME, &
     !$omp        KA,KS,KE,IS,IE,JS,JE, &
     !$omp        nca,cloudtop,cloudbase,SFLX_convrain,lifetime,deltaz,deltax,I_convflag, &
     !$omp        cldfrac_sh,cldfrac_dp,hist_flag,hist_work)
@@ -663,7 +667,7 @@ contains
           !call SATURATION_psat_liq( PSAT, TEMP(k,i,j) )
           !QSAT(k) = 0.622_RP * PSAT / ( PRES(k,i,j) - ( 1.0_RP-0.622_RP ) * PSAT )
           PSAT    = ALIQ*EXP((BLIQ*TEMP(k,i,j)-CLIQ)/(TEMP(k,i,j)-DLIQ))
-          QSAT(K) = 0.622_RP * PSAT / ( PRES(k,i,j) - PSAT )
+          QSAT(K) = EPSvap * PSAT / ( PRES(k,i,j) - PSAT )
 
           ! calculate water vaper and relative humidity
           QV(k) = max( KF_EPS, min( QSAT(k), QV_in(k,i,j) / QDRY(k,i,j) ) ) ! compare QSAT and QV, guess lower limit
@@ -909,10 +913,11 @@ contains
        dpthmx,              &
        zlcl, zmix,          &
        umfnewdold           )
-    use scale_precision
     use scale_const,only :&
-         TEM00 => CONST_TEM00, &
-         GRAV  => CONST_GRAV
+         TEM00   => CONST_TEM00,  &
+         GRAV    => CONST_GRAV,   &
+         EPSvap  => CONST_EPSvap, &
+         EPSTvap => CONST_EPSTvap
     use scale_prc, only: &
          PRC_abort
     implicit none
@@ -1017,7 +1022,7 @@ contains
     ! -----
     pres300 = pres(KS) - DEPTH_USL*100._RP ! pressure @ surface - 300 mb. maybe 700mb or so default depth_usl is 300hPa
     do kk = KS, KE
-       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+       tempv(kk)   = temp(kk) * ( 1.0_RP + EPSTvap * qv(kk) ) ! vertual temperature
     end do
 
     ! search above 300 hPa index  to "k_llfc"
@@ -1116,7 +1121,7 @@ contains
        qv_mix   = qv_mix/dpthmx
        presmix  = presmix/dpthmx
        zmix     = zmix/dpthmx
-       emix     = qv_mix*presmix/(0.622_RP + qv_mix) ! water vapor pressure
+       emix     = qv_mix * presmix / ( EPSvap + qv_mix ) ! water vapor pressure
        ! calculate dewpoint and LCL temperature not use look up table
        ! LCL is Lifted condensation level
        ! this dewpoint formulation is Bolton's formuration (see Emanuel 1994 4.6.2)
@@ -1127,7 +1132,7 @@ contains
        temp_lcl = temp_dew - (0.212_RP + 1.571E-3_RP*(temp_dew - TEM00) &
             - 4.36E-4_RP*(temp_mix - TEM00))*(temp_mix - temp_dew) ! LCL temperature
        temp_lcl  = min(temp_lcl,temp_mix)
-       tempv_lcl = temp_lcl*(1._RP + 0.608_RP*qv_mix) ! LCL vertual temperature
+       tempv_lcl = temp_lcl * ( 1.0_RP + EPSTvap * qv_mix ) ! LCL vertual temperature
        zlcl      = zmix + (temp_lcl - temp_mix)/GdCP ! height of LCL
        ! index of z@lcl
        ! z(k_lclm1) < zlcl < z(k_lcl)
@@ -1144,7 +1149,7 @@ contains
        deltaz    = ( zlcl - z_kf(k_lclm1) )/( z_kf(k_lcl)- z_kf(k_lclm1 ) )
        temp_env  = temp(k_lclm1) + ( temp(k_lcl) - temp(k_lclm1) )*deltaz
        qvenv     = qv(k_lclm1) + ( qv(k_lcl) - qv(k_lclm1) )*deltaz
-       tempv_env = temp_env*( 1._RP + 0.608_RP*qvenv )
+       tempv_env = temp_env * ( 1.0_RP + EPSTvap * qvenv )
        ! w_cz set review Kain(2004) eq.2
        ! w_g set
        ! dtlcl setting
@@ -1443,10 +1448,10 @@ contains
        qvdet, qcdet, qidet,                  &
        cape,                                 &
        flux_qr, flux_qs                      )
-    use scale_precision
     use scale_const,only :&
-         GRAV  => CONST_GRAV, &
-         Rdry  => CONST_Rdry
+         GRAV    => CONST_GRAV, &
+         Rdry    => CONST_Rdry, &
+         EPSTvap => CONST_EPSTvap
     implicit none
     integer,  intent(in) :: KA, KS, KE          !< index
     integer,  intent(in) :: k_lcl               !< index of LCL layer
@@ -1546,7 +1551,7 @@ contains
     dilbe      = 0._RP
     cape       = 0._RP
     do kk = KS, KE
-       tempv(kk)   = temp(kk)*(1._RP + 0.608_RP*qv(kk)) ! vertual temperature
+       tempv(kk)   = temp(kk) *( 1.0_RP + EPSTvap * qv(kk) ) ! vertual temperature
     end do
     ! initial updraft mass flux
     umfnewdold(:)    = 1._RP
@@ -1612,7 +1617,7 @@ contains
           call CP_kf_dtfrznew( pres(kkp1), qfrz,                                  & ! [IN]
                                temp_u(kkp1), theta_eu(kkp1), qv_u(kkp1), qi(kkp1) ) ! [OUT]
        end if
-       tempv_u(kkp1) = temp_u(kkp1)*(1._RP + 0.608_RP*qv_u(kkp1)) ! updraft vertual temperature
+       tempv_u(kkp1) = temp_u(kkp1) * ( 1.0_RP + EPSTvap * qv_u(kkp1) ) ! updraft vertual temperature
        ! calc bouyancy term  for verticl velocity
        if (kk == k_lclm1) then !! lcl layer exist  between kk and kk+1 layer then use interporate value
           boeff  = (tempv_lcl + tempv_u(kkp1))/(tempv_env + tempv(kkp1)) - 1._RP
@@ -1646,7 +1651,7 @@ contains
        rei = umflcl*deltap(kkp1)*0.03_RP/radius !!# Kain 1990 eq.1 ;Kain 2004 eq.5
 
        ! calc cape
-       tempvq_u(kkp1) = temp_u(kkp1)*(1._RP + 0.608_RP*qv_u(kkp1) - qc(kkp1) - qi(kkp1))
+       tempvq_u(kkp1) = temp_u(kkp1) * ( 1.0_RP + EPSTvap * qv_u(kkp1) - qc(kkp1) - qi(kkp1) )
        if (kk == k_lclm1) then!! lcl layer exist  between kk and kk+1 then use interporate value
           dilbe = ((tempv_lcl + tempvq_u(kkp1))/(tempv_env + tempv(kkp1)) - 1._RP)*dztmp
        else
@@ -1678,7 +1683,7 @@ contains
                              qvtmp, qctmp, qitmp,   & ! [INOUT]
                              temptmp, qcnew, qinew  ) ! [OUT]
           ! qinew and qcnew is damy valuavle(not use )
-          temp_u95 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
+          temp_u95 = temptmp * ( 1.0_RP + EPSTvap * qvtmp - qctmp - qitmp )
           ! TU95 in old coad
           if ( temp_u95 > tempv(kkp1)) then ! few mix but bouyant then ! if95
              ee2        = 1._RP ! rate of entrain is 1 -> all entrain
@@ -1696,7 +1701,7 @@ contains
                                 qvtmp, qctmp, qitmp,   & ! [INOUT]
                                 temptmp, qcnew, qinew  ) ! [OUT]
              ! qinew and qcnew is damy valuavle(not use )
-             temp_u10 = temptmp*(1._RP + 0.608_RP*qvtmp - qctmp - qitmp)
+             temp_u10 = temptmp * (1.0 + EPSTvap * qvtmp - qctmp - qitmp )
              if (abs(temp_u10 - tempvq_u(kkp1)) < 1.e-3_RP ) then !if10%
                 ee2        = 1._RP ! all entrain
                 ud2        = 0._RP
@@ -1792,13 +1797,16 @@ contains
        theta_d, qv_d, prcp_flux, k_lfs,        &
        CPR,                                    &
        tder                                    )
-    use scale_precision
     use scale_const,only :&
-         CP => CONST_CPdry    , &
-         PRE00 => CONST_PRE00 , &
-         Rdry  => CONST_Rdry,   &
-         EMELT => CONST_EMELT , &
-         GRAV  => CONST_GRAV
+         PRE00   => CONST_PRE00,  &
+         GRAV    => CONST_GRAV,   &
+         Rdry    => CONST_Rdry,   &
+         Rvap    => CONST_Rvap,   &
+         CPdry   => CONST_CPdry,  &
+         CPvap   => CONST_CPvap,  &
+         EMELT   => CONST_EMELT , &
+         EPSvap  => CONST_EPSvap, &
+         EPSTvap => CONST_EPSTvap
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     use scale_prc, only: &
@@ -1967,7 +1975,7 @@ contains
           !!                0.28*qv_d(k_lfs)))
           theta_d(k_lfs) = temp_d(k_lfs)*exn(k_lfs)
           ! take a first guess at hte initial downdraft mass flux
-          tempv_d(k_lfs) = temp_d(k_lfs)*(1._RP + 0.608_RP*qvs_tmp)
+          tempv_d(k_lfs) = temp_d(k_lfs) * ( 1.0_RP + EPSTvap * qvs_tmp )
           dens_d         = pres(k_lfs)/(Rdry*tempv_d(k_lfs))
           dmf(k_lfs)     = -(1._RP - pef)*1.e-2_RP*deltax**2*dens_d ! AU0 = 1.e-2*dx**2
           downent(k_lfs) = dmf(k_lfs)
@@ -1999,7 +2007,7 @@ contains
           if (k_lc < k_ml ) then ! if below melt level layer then
              !             RLF is EMELT
              !             dtempmlt = RLF*prcpmlt/(CP*umf(k_lcl))
-             dtempmlt = EMELT*prcpmlt/(CP*umf(k_lcl))
+             dtempmlt = EMELT * prcpmlt / ( CPdry * umf(k_lcl) )
           else
              dtempmlt = 0._RP
           end if
@@ -2012,10 +2020,10 @@ contains
           ! call ATMOS_SATURATION_psat_liq(es,temp_d(k_dstart)) !saturation vapar pressure
           es = ALIQ*EXP((BLIQ*temp_d(k_dstart)-CLIQ)/(temp_d(k_dstart)-DLIQ))
 
-          qvs_tmp = 0.622_RP*es/(pres(k_dstart) - es )
+          qvs_tmp = EPSvap * es / ( pres(k_dstart) - es )
           ! Bolton 1980 pseudoequivalent potential temperature
-          theta_ed(k_dstart) = temp_d(k_dstart)*(PRE00/pres(k_dstart))**(0.2854_RP*(1._RP - 0.28_RP*qvs_tmp))*   &
-               &    exp((3374.6525_RP/temp_d(k_dstart)-2.5403_RP)*qvs_tmp*(1._RP + 0.81_RP*qvs_tmp))
+          theta_ed(k_dstart) = temp_d(k_dstart)*(PRE00/pres(k_dstart))**( ( Rdry + Rvap * qvs_tmp ) / ( CPdry + CPvap * qvs_tmp ) ) &
+               *    exp((3374.6525_RP/temp_d(k_dstart)-2.5403_RP)*qvs_tmp*(1._RP + 0.81_RP*qvs_tmp))
           k_ldt   = min(k_lfs-1, k_dstart-1)
           dpthdet = 0._RP
           do kk = k_ldt,KS,-1 ! start calc downdraft detrain layer index
@@ -2035,7 +2043,7 @@ contains
                 !
                 dssdt = (cliq - bliq*dliq)/((temp_d(kk) - dliq)*(temp_d(kk) - dliq))
                 RL    = XLV0 - XLV1*temp_d(kk)
-                dtmp  = RL*qvs_tmp*(1._RP - rhh )/(CP + RL*rhh*qvs_tmp*dssdt )
+                dtmp  = RL * qvs_tmp * ( 1.0_RP - rhh ) / ( CPdry + RL * rhh * qvs_tmp * dssdt )
                 T1rh  = temp_d(kk) + dtmp
 
                 !temporary: WRF TYPE equations are used to maintain consistency
@@ -2043,10 +2051,10 @@ contains
                 es = ALIQ*EXP((BLIQ*T1rh-CLIQ)/(T1rh-DLIQ))
 
                 es = RHH*es
-                qsrh = 0.622_RP*es/(pres(kk) - es)
+                qsrh = EPSvap * es / ( pres(kk) - es )
                 if(qsrh < qv_d(kk) ) then
                    qsrh = qv_d(kk)
-                   t1rh = temp_d(kk) + (qvs_tmp - qsrh)*RL/CP
+                   t1rh = temp_d(kk) + (qvs_tmp - qsrh) * RL / CPdry
                 end if
 
                 temp_d(kk) = t1rh
@@ -2055,7 +2063,7 @@ contains
                 !
              end if
              !
-             tempv_d(kk) = temp_d(kk)*( 1._RP + 0.608_RP*qvsd(kk) )
+             tempv_d(kk) = temp_d(kk) * ( 1.0_RP + EPSTvap * qvsd(kk) )
              if(tempv_d(kk) > tempv(kk) .or. kk == KS) then
                 k_ldb = kk
                 exit
@@ -2185,13 +2193,23 @@ contains
        temp_g, qv_g, qc_nw, qi_nw, qr_nw, qs_nw, &
        rainrate_cp, cldfrac_KF,                  &
        timecp, time_advec                        )
-    use scale_precision
     use scale_const,only :&
-         CP => CONST_CPdry    , &
-         PRE00 => CONST_PRE00 , &
-         GRAV  => CONST_GRAV  , &
-         EMELT => CONST_EMELT
-    use scale_atmos_saturation ,only :&
+         PRE00   => CONST_PRE00,  &
+         GRAV    => CONST_GRAV,   &
+         Rdry    => CONST_Rdry,   &
+         Rvap    => CONST_Rvap,   &
+         CPdry   => CONST_CPdry,  &
+         CPvap   => CONST_CPvap,  &
+         CVdry   => CONST_CVdry,  &
+         CVvap   => CONST_CVvap,  &
+         EMELT   => CONST_EMELT,  &
+         EPSvap  => CONST_EPSvap, &
+         EPSTvap => CONST_EPSTvap
+    use scale_atmos_hydrometeor, only: &
+         LHF,      &
+         CV_WATER, &
+         CV_ICE
+    use scale_atmos_saturation, only: &
          ATMOS_SATURATION_psat_liq
     use scale_prc, only: &
          PRC_abort
@@ -2551,7 +2569,7 @@ contains
           call CP_kf_calcexn( pres(kk), qv_g(kk), & ! [IN]
                               exn(kk)             ) ! [OUT]
           temp_g(kk)  = theta_g(kk)/exn(kk)
-          tempv_g(kk) = temp_g(kk)*(1._RP + 0.608_RP*qv_g(kk))
+          tempv_g(kk) = temp_g(kk) * ( 1.0_RP + EPSTvap * qv_g(kk) )
        end do
 
        !< compute new cloud and change in available bouyant energy(CAPE)
@@ -2573,27 +2591,27 @@ contains
        !< call ATMOS_SATURATION_psat_liq(es,temp_mix)
        es = ALIQ*EXP((BLIQ*temp_mix-CLIQ)/(temp_mix-DLIQ))
 
-       qvss = 0.622_RP*es/(presmix -es) ! saturate watervapor
+       qvss = EPSvap * es / (presmix -es) ! saturate watervapor
 
        ! Remove supersaturation for diagnostic purposes, if necessary..
        if (qv_mix > qvss) then ! saturate then
           RL       = XLV0 -XLV1*temp_mix
-          CPM      = CP*(1._RP + 0.887_RP*qv_mix)
+          CPM      = CPdry + ( CPvap - CPdry ) * qv_mix
           DSSDT    = qvss*(CLIQ-BLIQ*DLIQ)/( (temp_mix-DLIQ)**2)
           DQ       = (qv_mix -qvss)/(1._RP + RL*DSSDT/CPM)
-          temp_mix = temp_mix + RL/CP*DQ
+          temp_mix = temp_mix + RL / CPdry * DQ
           qv_mix   = qv_mix - DQ
           temp_lcl = temp_mix
        else ! same as detern trigger
           qv_mix   = max(qv_mix,0._RP)
-          emix     = qv_mix*presmix/(0.622_RP + qv_mix)
+          emix     = qv_mix * presmix / ( EPSvap + qv_mix )
           TLOG     = log(emix/ALIQ)
           ! dew point temperature Bolton(1980)
           TDPT     = (CLIQ - DLIQ*TLOG)/(BLIQ - TLOG)
           temp_lcl = TDPT - (0.212_RP + 1.571e-3_RP*(TDPT - TEM00) - 4.36e-4_RP*(temp_mix - TEM00))*(temp_mix - TDPT)
           temp_lcl = min(temp_lcl,temp_mix)
        end if
-       tempv_lcl = temp_lcl*(1._RP + 0.608_RP*qv_mix)
+       tempv_lcl = temp_lcl * ( 1.0_RP + EPSTvap * qv_mix )
        z_lcl     = zmix + (temp_lcl - temp_mix)/GdCP
        do kk = k_lc, KE
           k_lcl = kk
@@ -2605,10 +2623,10 @@ contains
        deltaz    = ( z_lcl - z_kf(k_lclm1) )/( z_kf(k_lcl)- z_kf(k_lclm1 ) )
        temp_env  = temp_g(k_lclm1) + ( temp_g(k_lcl) - temp_g(k_lclm1) )*deltaz
        qv_env    = qv_g(k_lclm1) + ( qv_g(k_lcl) - qv_g(k_lclm1) )*deltaz
-       tempv_env = temp_env*( 1._RP + 0.608_RP*qv_env )
+       tempv_env = temp_env * ( 1.0_RP + EPSTvap * qv_env )
        !!       pres_lcl=pres(k_lcl-1)+(pres(k_lcl-1)-pres(k_lcl-1))*deltaz
-       theta_eu(k_lclm1)=temp_mix*(PRE00/presmix)**(0.2854_RP*(1._RP - 0.28_RP*qv_mix))*   &
-            exp((3374.6525_RP/temp_lcl-2.5403_RP)*qv_mix*(1._RP + 0.81_RP*qv_mix))
+       theta_eu(k_lclm1)=temp_mix*(PRE00/presmix)**( ( Rdry + Rvap * qv_mix ) / ( CPdry + CPvap * qv_mix ) ) &
+            * exp((3374.6525_RP/temp_lcl-2.5403_RP)*qv_mix*(1._RP + 0.81_RP*qv_mix))
 
        ! COMPUTE ADJUSTED ABE(ABEG).(CAPE)
        cape_g = 0._RP !  cape "_g" add because
@@ -2618,7 +2636,7 @@ contains
           ! get temp_gu and qv_gu
           call CP_kf_tpmix2dd( pres(kkp1), theta_eu(kkp1), & ! [IN]
                                temp_gu(kkp1), qv_gu(kkp1)  ) ! [OUT]
-          tempvq_u(kkp1) = temp_gu(kkp1)*(1._RP + 0.608_RP*qv_gu(kkp1) - qc(kkp1)- qi(kkp1))
+          tempvq_u(kkp1) = temp_gu(kkp1) * ( 1.0_RP + EPSTvap * qv_gu(kkp1) - qc(kkp1)- qi(kkp1) )
           if(kk == k_lclm1) then !  interporate
              dzz = z_kf(k_lcl) - z_lcl
              dilbe = ((tempv_lcl + tempvq_u(kkp1))/(tempv_env + tempv_g(kkp1)) - 1._RP)*dzz
@@ -2857,7 +2875,7 @@ contains
        !...IF ICE PHASE IS NOT ALLOWED, MELT ALL FROZEN HYDROMETEORS...
        !!
        do kk = KS,KE
-          cpm        = CP*(1._RP + 0.887_RP*qv_g(kk))
+          cpm        = CPdry*(1._RP + 0.887_RP*qv_g(kk))
           temp_g(kk) = temp_g(kk) - (qi_nw(kk) + qs_nw(kk))*EMELT/CPM
           qc_nw(kk)  = qc_nw(kk) + qi_nw(kk)
           qr_nw(kk)  = qr_nw(kk) + qs_nw(kk)
@@ -2911,15 +2929,18 @@ contains
   !<
   subroutine CP_kf_calcexn( pres, qv, exn )
     use scale_const,only :&
-         PRE00 => CONST_PRE00
+         PRE00 => CONST_PRE00, &
+         Rdry  => CONST_Rdry,  &
+         Rvap  => CONST_Rvap,  &
+         CPdry => CONST_CPdry, &
+         CPvap => CONST_CPvap
     implicit none
     real(RP),intent(in)  :: pres
     real(RP),intent(in)  :: qv
     real(RP),intent(out) :: exn
 
-    exn = (PRE00/pres)**(0.2854_RP*(1._RP - 0.28_RP*qv ))
-    ! qdry = 1.0_RP - qv
-    ! exn = (PRE00/pres)**( (qdry*Rdry + qv*Rvap) / (qdry*CPdry + qv*CPvap) )
+    exn = (PRE00/pres)**( ( Rdry + Rvap * qv ) / ( CPdry + CPvap * qv ) )
+
     return
   end subroutine CP_kf_calcexn
 
@@ -2935,7 +2956,6 @@ contains
   subroutine CP_kf_precipitation_OC1973( &
        G, DZ, BOTERM, ENTERM,                          &
        WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT )
-    use scale_precision
     implicit none
     real(RP), intent(in)    :: G        !< gravity
     real(RP), intent(in)    :: DZ       !< delta height
@@ -3002,7 +3022,6 @@ contains
   subroutine CP_kf_precipitation_Kessler( &
        G, DZ, BOTERM, ENTERM,                          &
        WTW, QLIQ, QICE, QNEWLQ, QNEWIC, QLQOUT, QICOUT )
-    use scale_precision
     implicit none
     real(RP), intent(in)    :: G        !< gravity
     real(RP), intent(in)    :: DZ       !< delta height
@@ -3050,6 +3069,9 @@ contains
   !> CP_kf_TPMIX2
   !! calculate temperature of a lifting parcel
   subroutine CP_kf_tpmix2( p,thes,qu,qliq,qice,tu,qnewlq,qnewic )
+    use scale_const, only: &
+         CPdry => CONST_CPdry, &
+         CPvap => CONST_CPvap
     implicit none
     real(RP), intent(in)    :: P, THES
     real(RP), intent(inout) :: QU, QLIQ, QICE
@@ -3087,7 +3109,8 @@ contains
           QU=QS
        ELSE
           RLL=XLV0-XLV1*TEMP
-          CPP=1004.5_RP*(1._RP+0.89_RP*QU)
+          CPP = CPdry + ( CPvap - CPdry ) * QU
+!          CPP=1004.5_RP*(1._RP+0.89_RP*QU)
           IF(QTOT.LT.1.E-10_RP)THEN
              !< IF NO LIQUID WATER OR ICE IS AVAILABLE, TEMPERATURE IS GIVEN BY:
              TEMP=TEMP+RLL*(DQ/(1._RP+DQ))/CPP
@@ -3114,7 +3137,17 @@ contains
   !<
   subroutine CP_kf_dtfrznew( P, QFRZ, TU, THTEU, QU, QICE )
     use scale_const, &
-         PRE00 => CONST_PRE00
+         PRE00  => CONST_PRE00, &
+         TEM00  => CONST_TEM00, &
+         Rdry   => CONST_Rdry,  &
+         Rvap   => CONST_Rvap,  &
+         CPdry  => CONST_CPdry, &
+         CPvap  => CONST_CPvap, &
+         CL     => CONST_CL,    &
+         CI     => CONST_CI,    &
+         LHV0   => CONST_LHV0,  &
+         LHS0   => CONST_LHS0,  &
+         EPSvap => CONST_EPSvap
     use scale_atmos_saturation ,only :&
          ATMOS_SATURATION_psat_liq
     implicit none
@@ -3128,12 +3161,13 @@ contains
     !! FOR COLDER TEMPERATURES, FREEZE ALL LIQUID WATER.
     !! THERMODYNAMIC PROPERTIES ARE STILL CALCULATED WITH RESPECT TO LIQUID WATER
     !< TO ALLOW THE USE OF LOOKUP TABLE TO EXTRACT TMP FROM THETAE.
-    RLC=2.5E6_RP-2369.276_RP*(TU-273.16_RP)
+    RLC = LHV0 - ( CL - CPvap ) * ( TU - TEM00 )
     !      RLC=2.5E6_RP-2369.276_RP*(TU-273.15_RP)   ! 273.16 -> 273.15 ??
-    RLS=2833922._RP-259.532_RP*(TU-273.16_RP)
+    RLS = LHS0 - ( CI - CPvap ) * ( TU - TEM00 )
     !      RLS=2833922._RP-259.532_RP*(TU-273.15_RP) ! 273.16 -> 273.15 ??
-    RLF=RLS-RLC
-    CPP=1004.5_RP*(1._RP+0.89_RP*QU)
+    RLF = RLS - RLC
+    CPP = CPdry + ( CPvap - CPdry ) * QU
+    !CPP = 1004.5 * ( 1._RP+0.89_RP*QU )
 
     !<  A = D(es)/DT IS THAT CALCULATED FROM BUCK (1981) EMPERICAL FORMULAS
     !<  FOR SATURATION VAPOR PRESSURE...
@@ -3143,7 +3177,7 @@ contains
     ! temporary: WRF TYPE equations are used to maintain consistency
     ! call ATMOS_SATURATION_psat_liq(ES,TU) !saturation vapar pressure
     ES = ALIQ*EXP((BLIQ*TU-CLIQ)/(TU-DLIQ))
-    QS = ES*0.622_RP/(P-ES)
+    QS = ES * EPSvap / ( P - ES )
     !
     !> FREEZING WARMS THE AIR AND IT BECOMES UNSATURATED...ASSUME THAT SOME OF THE
     !! LIQUID WATER THAT IS AVAILABLE FOR FREEZING EVAPORATES TO MAINTAIN SATURA-
@@ -3153,8 +3187,7 @@ contains
     DQEVAP = min(QS-QU, QICE) ! [add] R.Yoshida (20170519) avoid to be negative QICE
     QICE = QICE-DQEVAP
     QU = QU+DQEVAP
-    PII=(PRE00/P)**(0.2854_RP*(1._RP-0.28_RP*QU))
-    !< Bolton 1980
+    PII=(PRE00/P)**( ( Rdry + Rvap * QU ) / ( CPdry + CPvap * QU ) )
     !< Emanuel 1994 132p eq(4.7.9) pseudoequivalent PT
     THTEU = TU*PII*EXP((3374.6525_RP/TU - 2.5403_RP)*QU*(1._RP + 0.81_RP*QU))
     !
@@ -3270,9 +3303,13 @@ contains
   !!         3114.834_RP, 0.278296_RP,1.0723E-3_RP /
   !<
   subroutine CP_kf_envirtht( P1, T1, Q1, THT1 )
-    use scale_precision
     use scale_const, only : &
-         P00 => CONST_PRE00
+         P00    => CONST_PRE00, &
+         Rdry   => CONST_Rdry,  &
+         Rvap   => CONST_Rvap,  &
+         CPdry  => CONST_CPdry, &
+         CPvap  => CONST_CPvap, &
+         EPSvap => CONST_EPSvap
     implicit none
     real(RP), intent(in)  :: P1, T1, Q1
     real(RP), intent(out) :: THT1
@@ -3280,7 +3317,7 @@ contains
     real(RP) :: EE,TLOG,TDPT,TSAT,THT
     real(RP),parameter :: C1=3374.6525_RP
     real(RP),parameter :: C2=2.5403_RP
-    EE=Q1*P1/(0.622_RP+Q1)
+    EE = Q1 * P1 / ( EPSvap + Q1 )
     !     TLOG=ALOG(EE/ALIQ)
     !< calculate LOG term using lookup table.
     !
@@ -3300,7 +3337,7 @@ contains
     TSAT=TDPT - (0.212_RP+1.571E-3_RP*(TDPT-TEM00)-4.36E-4_RP*(T1-TEM00))*(T1-TDPT)
     !      TSAT = 2840._RP/(3.5_RP - log(ee) -4.805_RP) +55
     !< Bolton(1980) emanuel 132p (4.7.9)
-    THT=T1*(P00/P1)**(0.2854_RP*(1._RP-0.28_RP*Q1))
+    THT=T1*(P00/P1)**( ( Rdry + Rvap * Q1 ) / ( CPdry + CPvap * Q1 ) )
     THT1=THT*EXP((C1/TSAT-C2)*Q1*(1._RP+0.81_RP*Q1))
     !
     return
@@ -3314,9 +3351,13 @@ contains
   !<
   subroutine CP_kf_lutab !(SVP1,SVP2,SVP3,SVPT0)
     use scale_const, only :&
-         CP => CONST_CPdry   , &
-         PRE00 => CONST_PRE00, &
-         GRAV  => CONST_GRAV
+         PRE00  => CONST_PRE00, &
+         GRAV   => CONST_GRAV,  &
+         Rdry   => CONST_Rdry,  &
+         Rvap   => CONST_Rvap,  &
+         CPdry  => CONST_CPdry, &
+         CPvap  => CONST_CPvap, &
+         EPSvap => CONST_EPSvap
     IMPLICIT NONE
     integer  :: KP, IT, ITCNT, I
     real(RP) :: DTH   =    1._RP
@@ -3351,8 +3392,8 @@ contains
     do kp=1,kfnp
        p=p+dpr
        es=aliq*exp((bliq*temp-cliq)/(temp-dliq))
-       qs=0.622_RP*es/(p-es)
-       pi=(PRE00/p)**(0.2854_RP*(1.0_RP-0.28_RP*qs))
+       qs = EPSvap * es / ( p - es )
+       pi = (PRE00/p)**( ( Rdry + Rvap * qs ) / ( CPdry + CPvap * qs ) )
        the0k(kp)=temp*pi*exp((3374.6525_RP/temp-2.5403_RP)*qs*        &
             (1._RP+0.81_RP*qs))
     enddo
@@ -3373,8 +3414,8 @@ contains
              tgues=ttab(it-1,kp)
           endif
           es=aliq*exp((bliq*tgues-cliq)/(tgues-dliq))
-          qs=0.622_RP*es/(p-es)
-          pi=(PRE00/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
+          qs = EPSvap * es / ( p - es )
+          pi = ( PRE00 / p )**( ( Rdry + Rvap * qs ) / ( CPdry + CPvap * qs ) )
           thgues=tgues*pi*exp((3374.6525_RP/tgues-2.5403_RP)*qs*      &
                (1._RP + 0.81_RP*qs))
           f0=thgues-thes
@@ -3384,8 +3425,8 @@ contains
           ! iteration loop
           do itcnt=1,11
              es=aliq*exp((bliq*t1-cliq)/(t1-dliq))
-             qs=0.622_RP*es/(p-es)
-             pi=(PRE00/p)**(0.2854_RP*(1._RP-0.28_RP*qs))
+             qs = EPSvap * es / ( p - es )
+             pi = ( PRE00 / p )**( ( Rdry + Rvap * qs ) / ( CPdry + CPvap * qs ) )
              thtgs=t1*pi*exp((3374.6525_RP/t1-2.5403_RP)*qs*(1._RP + 0.81_RP*qs))
              f1=thtgs-thes
              if(abs(f1).lt.toler)then
@@ -3413,7 +3454,7 @@ contains
        alu(i)=log(a1)
     enddo
     !GdCP is g/cp add for SCALE
-    GdCP = - GRAV/CP ! inital set
+    GdCP = - GRAV / CPdry ! inital set
     return
   end subroutine CP_kf_lutab
 
