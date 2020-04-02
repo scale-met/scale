@@ -93,23 +93,24 @@ The default setting is \verb|SKIN|.
   \label{tab:nml_land_sfc}
   \begin{tabularx}{150mm}{lX} \hline
     \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
-      \verb|SKIN|       & Determine surface temperature in the scheme \\
-      \verb|FIXED-TEMP| & Assume surface temperature is the same as uppermost land soil temperature \\
+      \verb|SKIN|       & Determine surface temperature at which energy fluxes balance \\
+      \verb|FIXED-TEMP| & Use the soil temperature at the uppermost land level as surface temperature \\
     \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
 When \nmitem{LAND_SFC_TYPE} is \verb|SKIN|,
-the surface temperature is calculated by the heat-balance iteration
-between the surface temperature and head enegy fluxes based on Tomita (2009).
-This surface temperature is different from the sub-surface temperature at the 1st layer of land model.
+the surface temperature is determined to ensure the energy fluxes balance at the ground surface based on Tomita (2009).
+In practice, the surface temperature is calculated by the iteration of heat-balance
+between the surface temperature and heat energy fluxes.
+This surface temperature is different from the soil temperature at the uppermost layer of a land model.
 
 When \nmitem{LAND_SFC_TYPE} is \verb|FIXED-TEMP|,
-heat enegy fluxes are calculated by the given surface temperature.
-The residuals of heat balance are forced into the sub-surface heat flux of the land model.
-The surface temperature is the same as the sub-surface temperature at the 1st layer of land model
-which is determined by the land model physics.
+the surface temperature is the same as the soil temperature at the uppermost layer of a land model;
+the soil temperature is determined by the land model physics.
+Heat energy fluxes are calculated by the given surface temperature.
+The residuals of heat balance are provided to the land model as ground heat flux.
 
 %-------------------------------------------------------------------------------
 \subsubsection{land nudging}
