@@ -66,6 +66,7 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; Switch to use values below the surface in parent model \\
 \verb| SAME_MP_TYPE               = .false.,|                        & ; (For SCALE format) Whether the microphysics scheme is same as that used in parent model \\
 \verb| INTRP_TYPE                 = 'LINEAR',|                       & ; Type of horizontal interpolation ("\verb|LINEAR|", "\verb|DIST-WEIGHT|") \\
+\verb| SERIAL_PROC_READ = .true.,|                                   & ; Whether only the master process read input data? \\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; Number of input files\\
@@ -75,6 +76,7 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
                                                                      & ~~~ (the specified value depends on \verb|FILETYPE_ORG|)\\
 \verb| INTRP_OCEAN_SFC_TEMP       = 'off',|                          & ; (For GrADS format) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_OCEAN_TEMP           = 'off',|                          & ; (For GrADS format) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| SERIAL_PROC_READ = .true.,|                                   & ; Whether only the master process read input data? \\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; Number of input files\\
@@ -87,6 +89,7 @@ The settings for input data and boundary files are specified by \namelist{PARAM_
 \verb| INTRP_LAND_WATER           = 'off',|                          & ; (For GrADS format) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_LAND_SFC_TEMP        = 'off',|                          & ; (For GrADS format) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| ELEVATION_CORRECTION       = .true.,|                         & ; Switch to correct the difference of topography elevation from parent model \\
+\verb| SERIAL_PROC_READ = .true.,|                                   & ; Whether only the master process read input data? \\
 \verb|/| & \\
 }
 
@@ -107,6 +110,13 @@ On the other hands, whether boundary data for variables of ocean and land is nec
 If ``\verb|LINEAR|'' is selected, the bi-linear interpolation is used.
 If ``\verb|DIST-WEIGHT|'' is selected, distance-weighted mean of the nearest $N$-neighbors is used.
 In the case of distance-weighted mean, the number of the neighbors is set by \nmitem{COMM_CARTESC_NEST_INTERP_LEVEL} in \namelist{PARAM_COMM_CARTESC_NEST}.
+
+
+In \scalerm, only the master process reads input data, and then broadcasts the data to each node.
+At this time, the algorithm may cause insufficient memory error when reading large input data, especially on a high-performance computing system.
+By setting \nmitem{SERIAL_PROC_READ} to \verb|.false.|, each node accesses by itself to only the data it needs, resulting in the reduction of memory usage.
+Note that, the computational performance may deteriorate due to locking file access because the algorithm places a load on file I/O.
+
 
 The above configurations except for \nmitem{BASENAME_BOUNDARY} can be shared among \verb|ATMOS| and \verb|OCEAN|(or \verb|LAND|); 
 namely, if the items of namelist are not specified in \namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)},
