@@ -77,7 +77,7 @@ module scale_atmos_phy_cp_kf
   private :: CP_kf_updraft
   private :: CP_kf_downdraft
   private :: CP_kf_compensational
-  private :: CP_kf_calcexn
+  private :: CP_kf_calciexn
   private :: CP_kf_precipitation_OC1973
   private :: CP_kf_precipitation_Kessler
   private :: CP_kf_tpmix2
@@ -1875,7 +1875,7 @@ contains
     real(RP) :: theta_ed(KA)                    !< downdraft equivalent theta
     real(RP) :: qvsd(KA)                        !< saturate watervapor in downdraft
     real(RP) :: qvs_tmp                         !< saturate qv temp
-    real(RP) :: exn(KA)                         !< exner function
+    real(RP) :: iexn(KA)                        !< inverse of exner function
     real(RP) :: f_dmf                           !< factor of dmf Kain(2004) eq.11
     real(RP) :: dtempmlt                        !< melting effect of temperatture
     real(RP) :: es                              !< saturate vapor pressure
@@ -1968,12 +1968,9 @@ contains
           ! find wet-bulb temperature and qv
           call CP_kf_tpmix2dd( pres(k_lfs), theta_ed(k_lfs), & ! [IN]
                                temp_d(k_lfs), qvs_tmp        ) ! [OUT]
-          call CP_kf_calcexn( pres(k_lfs), qvs_tmp, & ! [IN]
-                              exn(k_lfs)            ) ! [OUT]
-          !!          exn(kk) = (PRE00/pres(k_lfs))**(0.2854*(1._RP - 0.28_RP*qv_d(k_lfs)))
-          !!                theta_d(k_lfs) = temp_d(k_lfs)*(PRE00/pres(k_lfs))**(0.2854*(1._RP -
-          !!                0.28*qv_d(k_lfs)))
-          theta_d(k_lfs) = temp_d(k_lfs)*exn(k_lfs)
+          call CP_kf_calciexn( pres(k_lfs), qvs_tmp, & ! [IN]
+                               iexn(k_lfs)           ) ! [OUT]
+          theta_d(k_lfs) = temp_d(k_lfs) * iexn(k_lfs)
           ! take a first guess at hte initial downdraft mass flux
           tempv_d(k_lfs) = temp_d(k_lfs) * ( 1.0_RP + EPSTvap * qvs_tmp )
           dens_d         = pres(k_lfs)/(Rdry*tempv_d(k_lfs))
@@ -2078,9 +2075,9 @@ contains
                 dmf(kk)     = dmf(kkp1) + downdet(kk)
                 tder        = tder + (qvsd(kk) - qv_d(kk))*downdet(kk)
                 qv_d(kk)    = qvsd(kk)
-                call CP_kf_calcexn( pres(kk), qv_d(kk), & ! [IN]
-                                    exn(kk)             ) ! [OUT]
-                theta_d(kk) = temp_d(kk)*exn(kk)
+                call CP_kf_calciexn( pres(kk), qv_d(kk), & ! [IN]
+                                     iexn(kk)            ) ! [OUT]
+                theta_d(kk) = temp_d(kk)*iexn(kk)
              end do
           end if
        end if ! LFS>50mb
@@ -2296,7 +2293,7 @@ contains
     real(RP) :: theta_u(KA)                       !< theta in updraft
     real(RP) :: theta_eu(KA)                      !< equivalent PT updraft
     real(RP) :: theta_eg(KA)                      !< equivalent PT environment
-    real(RP) :: exn(KA)                           !< exner function
+    real(RP) :: iexn(KA)                          !< inverse of exner function
     real(RP) :: qv_env                            !< environment qv
     real(RP) :: qv_mix                            !< USL layer mean  qv
     real(RP) :: qv_gu(KA)                         !< updraft qv (used calc CAPE)
@@ -2423,12 +2420,12 @@ contains
     ! theta set up by Emanuel Atmospheric convection, 1994 111p
     ! original KF theta is calced  apploximatly.
     do kk = KS,k_top
-       call CP_kf_calcexn( pres(kk), qv(kk), & ! [IN]
-                           exn(kk)           ) ! [OUT]
-       theta(kk) = temp_bf(kk)*exn(kk)
-       call CP_kf_calcexn( pres(kk), qvdet(kk), & ! [IN]
-                           exn(kk)              ) ! [OUT]
-       theta_u(kk) = temp_u(kk)*exn(kk)
+       call CP_kf_calciexn( pres(kk), qv(kk), & ! [IN]
+                            iexn(kk)          ) ! [OUT]
+       theta(kk) = temp_bf(kk) * iexn(kk)
+       call CP_kf_calciexn( pres(kk), qvdet(kk), & ! [IN]
+                            iexn(kk)             ) ! [OUT]
+       theta_u(kk) = temp_u(kk) * iexn(kk)
     end do
     temp_g(k_top+1:KE) = temp_bf(k_top+1:KE)
     qv_g(k_top+1:KE)   = qv(k_top+1:KE)
@@ -2566,9 +2563,9 @@ contains
        end if
        ! convert theta to T
        do kk = KS,k_top
-          call CP_kf_calcexn( pres(kk), qv_g(kk), & ! [IN]
-                              exn(kk)             ) ! [OUT]
-          temp_g(kk)  = theta_g(kk)/exn(kk)
+          call CP_kf_calciexn( pres(kk), qv_g(kk), & ! [IN]
+                               iexn(kk)             ) ! [OUT]
+          temp_g(kk)  = theta_g(kk) / iexn(kk)
           tempv_g(kk) = temp_g(kk) * ( 1.0_RP + EPSTvap * qv_g(kk) )
        end do
 
@@ -2923,11 +2920,11 @@ contains
   end subroutine CP_kf_compensational
 
   !------------------------------------------------------------------------------
-  !> CP_kf_calcexn
-  !! calculate exner function for potential temperature(contain water vapor)
+  !> CP_kf_calciexn
+  !! calculate inverse of exner function for potential temperature(contain water vapor)
   !! Emanuel (1994) pp.111: check potential temperature definition
   !<
-  subroutine CP_kf_calcexn( pres, qv, exn )
+  subroutine CP_kf_calciexn( pres, qv, iexn )
     use scale_const,only :&
          PRE00 => CONST_PRE00, &
          Rdry  => CONST_Rdry,  &
@@ -2937,12 +2934,12 @@ contains
     implicit none
     real(RP),intent(in)  :: pres
     real(RP),intent(in)  :: qv
-    real(RP),intent(out) :: exn
+    real(RP),intent(out) :: iexn
 
-    exn = (PRE00/pres)**( ( Rdry + Rvap * qv ) / ( CPdry + CPvap * qv ) )
+    iexn = (PRE00/pres)**( ( Rdry + Rvap * qv ) / ( CPdry + CPvap * qv ) )
 
     return
-  end subroutine CP_kf_calcexn
+  end subroutine CP_kf_calciexn
 
   !------------------------------------------------------------------------------
   !> CP_kf_precipitation_OC1973
