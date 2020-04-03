@@ -70,6 +70,7 @@
 \verb| USE_DATA_UNDER_SFC         = .true.,|                         & ; 親モデルの地面より下の値を使用するかどうか\\
 \verb| SAME_MP_TYPE               = .false.,|                        & ; (For SCALE形式) 雲微物理スキームは親モデルと同じかどうか\\
 \verb| INTRP_TYPE                 = 'LINEAR',|                       & ; 水平内挿の種類 ("\verb|LINEAR|", "\verb|DIST-WEIGHT|") \\
+\verb| SERIAL_PROC_READ           = .true.,|                         & ; 入力データへのアクセスをマスタプロセスのみに制限するか\\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_OCEAN| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
@@ -79,6 +80,7 @@
                                                                      & ~~~ (指定方法は\verb|FILETYPE_ORG|に依存)\\
 \verb| INTRP_OCEAN_SFC_TEMP       = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_OCEAN_TEMP           = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
+\verb| SERIAL_PROC_READ           = .true.,|                         & ; 入力データへのアクセスをマスタプロセスのみに制限するか\\
 \verb|/| & \\
 \verb|&PARAM_MKINIT_REAL_LAND| & \\
 \verb| NUMBER_OF_FILES            = 1, |                             & ; 入力ファイルの数\\
@@ -91,6 +93,7 @@
 \verb| INTRP_LAND_WATER           = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| INTRP_LAND_SFC_TEMP        = 'off',|                          & ; (For GrADS形式) ("\verb|off|", "\verb|mask|", "\verb|fill|") \\
 \verb| ELEVATION_CORRECTION       = .true.,|                         & ; 親モデルの地形との高度差を補正するかどうか \\
+\verb| SERIAL_PROC_READ           = .true.,|                         & ; 入力データへのアクセスをマスタプロセスのみに制限するか\\
 \verb|/| & \\
 }
 
@@ -107,11 +110,18 @@
 モデル積分を実行するためには、大気変数は少なくとも二時刻分の境界値データが必須である。
 一方、海洋・陸面変数については、境界値データが必要かどうかは、実行時に使用するスキームに依存する。
 
-
 空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
 ``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
 距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\\\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
+
+
+\scalerm では、初期値・境界値データの読込はマスタープロセスのみが行い、broadcast通信によって各ノードに情報を伝播する。
+この時、特に大規模並列計算システムなどでは、読み込んだ入力データが大きいと、メモリ容量が足りなくなることがある。
+\nmitem{SERIAL_PROC_READ}に\verb|.false.|を設定することで、各ノードが自身に必要なデータだけを読み込むようになり、
+データ読み込み時のメモリ不足を解消することができる。
+ただしファイルIOが増大するため、システムによってはファイルアクセスをロックされる等、パフォーマンスの低下がありうることに注意が必要である。
+
 
 以上の設定は、\nmitem{BASENAME_BOUNDARY} を除き、\verb|ATMOS|と\verb|OCEAN|もしくは\verb|LAND|の間で共有できる。
 つまり、\namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)}でネームリストの項目を指定しなければ、
