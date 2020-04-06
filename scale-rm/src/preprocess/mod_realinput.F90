@@ -645,7 +645,7 @@ contains
 
     integer :: totaltimesteps = 1
     integer :: timelen
-    integer :: skip_steps
+    integer :: skip_steps, skip_steps_land
     integer :: ierr
 
     character(len=H_LONG) :: basename_out_mod
@@ -871,6 +871,8 @@ contains
        skip_steps = max(NUMBER_OF_SKIP_TSTEPS_OCEAN - ns + 1, 0)
        ns = max(ns, NUMBER_OF_SKIP_TSTEPS_OCEAN+1)
 
+       skip_steps_land = max(NUMBER_OF_SKIP_TSTEPS_LAND - ns + 1, 0)
+
        if ( multi_land ) then
           nsl = ns
           nel = ne
@@ -906,7 +908,7 @@ contains
                                 elevation_correction_ocean,              &
                                 multi_land, multi_ocean,                 &
                                 NUMBER_OF_TSTEPS_OCEAN,                  &
-                                NUMBER_OF_SKIP_TSTEPS_LAND, skip_steps,  &
+                                skip_steps_land, skip_steps,             &
                                 URBAN_do                                 )
 
        ! required one-step data only
@@ -3348,7 +3350,7 @@ contains
     real(RP) :: tdiff
 
     real(RP) :: one2d(IA,JA)
-    real(RP) :: one3d(KA,IA,JA)
+    real(RP) :: one3d(LKMAX,IA,JA)
 
     integer :: k, i, j, m, n
 
@@ -3778,11 +3780,20 @@ contains
           call replace_misval_const( strg(k,:,:), maskval_strg, lsmask_nest )
        enddo
 
+       !$omp parallel do collapse(3)
+       do j = 1, JA
+       do i = 1, IA
+       do k = 1, LKMAX
+          strg(k,i,j) = max( min( strg(k,i,j), 1.0_RP ), 0.0_RP )
+       end do
+       end do
+       end do
+
        if ( FILTER_NITER > 0 ) then
           !$omp parallel do collapse(3)
           do j = 1, JA
           do i = 1, IA
-          do k = 1, KA
+          do k = 1, LKMAX-1
              one3d(k,i,j) = 1.0_RP
           end do
           end do
