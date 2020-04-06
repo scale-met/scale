@@ -774,11 +774,10 @@ contains
     flx(KE) = 0.0_RP
 
     !--- momentum z (half level)
-    do k = KS, KE-2
-       flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k+1) / ( DENS(k+2) + DENS(k+1) )
+    do k = KS, KE-1
+       flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k) / ( DENS(k+1) + DENS(k) )
     enddo
-    flx(KE-1) = 0.0_RP
-    do k  = KS, KE-1
+    do k = KS, KE-1
        MOMZ_t(k) = - ( flx(k+1) - flx(k) ) * RFDZ(k)
     enddo
     MOMZ_t(KE) = 0.0_RP
