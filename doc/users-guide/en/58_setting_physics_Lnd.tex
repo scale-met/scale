@@ -101,13 +101,12 @@ The default setting is \verb|SKIN|.
 \end{table}
 
 When \nmitem{LAND_SFC_TYPE} is \verb|SKIN|,
-the surface temperature is determined to ensure the energy fluxes balance at the ground surface based on Tomita (2009).
-In practice, the surface temperature is calculated by the iteration of heat-balance
-between the surface temperature and heat energy fluxes.
+the surface temperature is determined so that the heat budget of the energy fluxes at the ground surface is balanced.
+In practice, the surface temperature is calculated iteratively to reduce residual from the heat balance based on \citet{tomita_2009}.
 This surface temperature is different from the soil temperature at the uppermost layer of a land model.
 
 When \nmitem{LAND_SFC_TYPE} is \verb|FIXED-TEMP|,
-the surface temperature is the same as the soil temperature at the uppermost layer of a land model;
+the surface temperature is assumed to be the same as the soil temperature at the uppermost layer of a land model;
 the soil temperature is determined by the land model physics.
 Heat energy fluxes are calculated by the given surface temperature.
 The residuals of heat balance are provided to the land model as ground heat flux.
