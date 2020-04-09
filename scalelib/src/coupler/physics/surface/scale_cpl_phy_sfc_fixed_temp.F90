@@ -230,10 +230,8 @@ contains
           ! diagnostic variables for neutral state
           U10(i,j) = UA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
           V10(i,j) = VA  (i,j) * log( 10.0_RP / Z0M(i,j) ) / log( Z1(i,j) / Z0M(i,j) )
-          T2 (i,j) = TMPS(i,j) + ( TMPA(i,j) - TMPS(i,j) ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0H(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0H(i,j) ) )
-          Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * ( log(  2.0_RP / Z0M(i,j) ) * log(  2.0_RP / Z0E(i,j) ) ) &
-                                                           / ( log( Z1(i,j) / Z0M(i,j) ) * log( Z1(i,j) / Z0E(i,j) ) )
+          T2 (i,j) = TMPS(i,j) + ( TMPA(i,j) - TMPS(i,j) ) * log( 2.0_RP / Z0H(i,j) ) / log( Z1(i,j) / Z0H(i,j) )
+          Q2 (i,j) = QVS       + (  QVA(i,j) - QVS       ) * log( 2.0_RP / Z0E(i,j) ) / log( Z1(i,j) / Z0E(i,j) )
 
        else ! not calculate surface flux
           ZMFLX(i,j) = 0.0_RP
