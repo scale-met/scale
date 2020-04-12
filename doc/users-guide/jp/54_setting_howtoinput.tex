@@ -113,7 +113,8 @@
 空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
 ``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
-距離重み付け平均の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\\\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
+``\verb|LINEAR|''は、2次元実験など、水平方向の格子数が1 (\nmitem{IMAXG}=1 もしくは \nmitem{JMAXG})の場合には使用できない。
+距離重み付け平均(``\verb|DIST-WEIGHT|'')の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
 
 
 \scalerm では、初期値・境界値データの読込はマスタープロセスのみが行い、broadcast通信によって各ノードに情報を伝播する。
