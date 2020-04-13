@@ -113,7 +113,7 @@
 空間補間の種類は、\nmitem{INTRP_TYPE}で設定する。
 ``\verb|LINEAR|''と ``\verb|DIST-WEIGHT|''が選択できる。
 ``\verb|LINEAR|''の場合は2次元線形補間が用いられ、``\verb|DIST-WEIGHT|''の場合は隣接$N$点の距離重み付け平均が用いられる。
-``\verb|LINEAR|''は、2次元実験など、水平方向の格子数が1 (\nmitem{IMAXG}=1 もしくは \nmitem{JMAXG})の場合には使用できない。
+``\verb|LINEAR|''は、2次元実験データや水平方向に１次元配列に格納された非構造格子データなど、水平方向のいずれかの格子点数が1 (\nmitem{IMAXG}=1 もしくは \nmitem{JMAXG}=1) の場合には使用できない。
 距離重み付け平均(``\verb|DIST-WEIGHT|'')の場合、隣接点の数は\namelist{PARAM_COMM_CARTESC_NEST}の\nmitem{COMM_CARTES_NEST_INTERP_LEVEL}で設定する。
 
 
