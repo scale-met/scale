@@ -36,12 +36,14 @@ module mod_admin_time
   real(DP), public :: TIME_DTSEC_LAND_RESTART   !< time interval of land restart       [sec]
   real(DP), public :: TIME_DTSEC_URBAN_RESTART  !< time interval of urban restart      [sec]
   real(DP), public :: TIME_DTSEC_RESUME         !< time interval for resume            [sec]
+  real(DP), public :: TIME_DTSEC_ATMOS_DA       !< time interval of atmosphere DA      [sec]
 
   integer,  public :: TIME_DSTEP_ATMOS_RESTART  !< interval of atmosphere restart [step]
   integer,  public :: TIME_DSTEP_OCEAN_RESTART  !< interval of ocean restart      [step]
   integer,  public :: TIME_DSTEP_LAND_RESTART   !< interval of land restart       [step]
   integer,  public :: TIME_DSTEP_URBAN_RESTART  !< interval of urban restart      [step]
   integer,  public :: TIME_DSTEP_RESUME         !< interval for resume            [step]
+  integer,  public :: TIME_DSTEP_ATMOS_DA  !< interval of atmosphere DA [step]
 
   logical,  public :: TIME_DOATMOS_step         !< execute atmosphere component in this step?
   logical,  public :: TIME_DOATMOS_DYN          !< execute dynamics in this step?
@@ -54,6 +56,7 @@ module mod_admin_time
   logical,  public :: TIME_DOATMOS_PHY_CH       !< execute physics  in this step? (chemistry   )
   logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics  in this step? (aerosol     )
   logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output in this step?
+  logical,  public :: TIME_DOATMOS_DA           !< execute DA in this step?
   logical,  public :: TIME_DOOCEAN_step         !< execute ocean      component      in this step?
   logical,  public :: TIME_DOOCEAN_restart      !< execute ocean      restart output in this step?
   logical,  public :: TIME_DOLAND_step          !< execute land       component      in this step?
@@ -100,6 +103,7 @@ module mod_admin_time
   integer,  private :: TIME_RES_URBAN         = 0
   integer,  private :: TIME_RES_URBAN_RESTART = 0
   integer,  private :: TIME_RES_RESUME
+  integer,  private :: TIME_RES_ATMOS_DA = 0
 
   real(DP), private :: TIME_WALLCLOCK_START             ! Start time of wall clock             [sec]
   real(DP), private :: TIME_WALLCLOCK_LIMIT   = -1.0_DP ! Elapse time limit of wall clock time [sec]
@@ -202,6 +206,8 @@ contains
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_RESTART        = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT   = ""
+    real(DP)               :: TIME_DT_ATMOS_DA             = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_DA_UNIT        = ""
 
     real(DP)               :: TIME_DT_OCEAN                = UNDEF8
     character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT           = ""
@@ -252,6 +258,8 @@ contains
        TIME_DT_ATMOS_PHY_AE_UNIT,    &
        TIME_DT_ATMOS_RESTART,        &
        TIME_DT_ATMOS_RESTART_UNIT,   &
+       TIME_DT_ATMOS_DA,             &
+       TIME_DT_ATMOS_DA_UNIT,        &
        TIME_DT_OCEAN,                &
        TIME_DT_OCEAN_UNIT,           &
        TIME_DT_OCEAN_RESTART,        &
@@ -407,6 +415,15 @@ contains
        if ( TIME_DT_ATMOS_RESTART_UNIT == '' ) then
           LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_RESTART_UNIT. TIME_DURATION_UNIT is used.'
           TIME_DT_ATMOS_RESTART_UNIT = TIME_DURATION_UNIT
+       endif
+       ! ATMOS DA
+       if ( TIME_DT_ATMOS_DA == UNDEF8 ) then
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_DA.      TIME_DT_ATMOS_RESTART is used.'
+          TIME_DT_ATMOS_DA = TIME_DT_ATMOS_RESTART
+       endif
+       if ( TIME_DT_ATMOS_DA_UNIT == '' ) then
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_DA_UNIT. TIME_DT_ATMOS_RESTART_UNIT is used.'
+          TIME_DT_ATMOS_DA_UNIT = TIME_DT_ATMOS_RESTART_UNIT
        endif
        ! OCEAN
        if ( TIME_DT_OCEAN == UNDEF8 ) then
@@ -578,6 +595,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DA,      TIME_DT_ATMOS_DA,      TIME_DT_ATMOS_DA_UNIT      )
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN_RESTART, TIME_DT_OCEAN_RESTART, TIME_DT_OCEAN_RESTART_UNIT )
        call CALENDAR_unit2sec( TIME_DTSEC_LAND,          TIME_DT_LAND,          TIME_DT_LAND_UNIT          )
@@ -599,6 +617,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_CH  = max( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_AE  = max( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_DA      = max( TIME_DTSEC_ATMOS_DA,      TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_OCEAN_RESTART = max( TIME_DTSEC_OCEAN_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_LAND          = max( TIME_DTSEC_LAND,          TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -620,6 +639,7 @@ contains
        TIME_DSTEP_LAND          = nint( TIME_DTSEC_LAND          / TIME_DTSEC )
        TIME_DSTEP_URBAN         = nint( TIME_DTSEC_URBAN         / TIME_DTSEC )
        TIME_DSTEP_ATMOS_RESTART = nint( TIME_DTSEC_ATMOS_RESTART / TIME_DTSEC )
+       TIME_DSTEP_ATMOS_DA      = nint( TIME_DTSEC_ATMOS_DA      / TIME_DTSEC )
        TIME_DSTEP_OCEAN_RESTART = nint( TIME_DTSEC_OCEAN_RESTART / TIME_DTSEC )
        TIME_DSTEP_LAND_RESTART  = nint( TIME_DTSEC_LAND_RESTART  / TIME_DTSEC )
        TIME_DSTEP_URBAN_RESTART = nint( TIME_DTSEC_URBAN_RESTART / TIME_DTSEC )
@@ -718,6 +738,11 @@ contains
                      TIME_DTSEC_RESUME, real(TIME_DSTEP_RESUME,kind=DP)*TIME_DTSEC
           call PRC_abort
        endif
+       if ( abs(TIME_DTSEC_ATMOS_DA-real(TIME_DSTEP_ATMOS_DA,kind=DP)*TIME_DTSEC) > eps ) then
+          LOG_ERROR("ADMIN_TIME_setup",*) 'delta t(ATMOS_DA) must be a multiple of delta t ', &
+                     TIME_DTSEC_ATMOS_DA, real(TIME_DSTEP_ATMOS_DA,kind=DP)*TIME_DTSEC
+          call PRC_abort
+       endif
 
        LOG_NEWLINE
        LOG_INFO("ADMIN_TIME_setup",*)                     'Time interval for each component (sec.)'
@@ -759,6 +784,8 @@ contains
                                        ' (step interval=', TIME_DSTEP_URBAN_RESTART, ')'
        LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Resume                      : ', TIME_DTSEC_RESUME, &
                                                           ' (step interval=', TIME_DSTEP_RESUME,        ')'
+       LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Atmospheric DA       : ', TIME_DTSEC_ATMOS_DA, &
+                                       ' (step interval=', TIME_DSTEP_ATMOS_DA, ')'
     else
        TIME_DTSEC = 1.0_RP
     endif
@@ -1047,11 +1074,13 @@ contains
     TIME_DOOCEAN_restart = .false.
     TIME_DOLAND_restart  = .false.
     TIME_DOURBAN_restart = .false.
+    TIME_DOATMOS_DA      = .false.
 
     TIME_RES_ATMOS_RESTART = TIME_RES_ATMOS_RESTART + 1
     TIME_RES_OCEAN_RESTART = TIME_RES_OCEAN_RESTART + 1
     TIME_RES_LAND_RESTART  = TIME_RES_LAND_RESTART  + 1
     TIME_RES_URBAN_RESTART = TIME_RES_URBAN_RESTART + 1
+    TIME_RES_ATMOS_DA = TIME_RES_ATMOS_DA + 1
 
     if ( TIME_RES_ATMOS_RESTART == TIME_DSTEP_ATMOS_RESTART ) then
        TIME_DOATMOS_restart   = .true.
@@ -1079,6 +1108,11 @@ contains
        TIME_RES_URBAN_RESTART = 0
     elseif( TIME_DOend .and. TIME_END_RESTART_OUT ) then
        TIME_DOURBAN_restart   = .true.
+    endif
+
+    if ( TIME_RES_ATMOS_DA == TIME_DSTEP_ATMOS_DA ) then
+       TIME_DOATMOS_DA   = .true.
+       TIME_RES_ATMOS_DA = 0
     endif
 
     return
