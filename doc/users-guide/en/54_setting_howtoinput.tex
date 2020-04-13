@@ -15,7 +15,7 @@
 \end{center}
 \end{table}
 
-The program \verb|scale-rm_init| converts external data into boundary and initial data by using the configure file \verb|init.conf|.
+The program \verb|scale-rm_init| converts external data into boundary and initial data by using the configuration file \verb|init.conf|.
 It can treat various types of external data as shown in Table \ref{tab:inputdata_format}.
 The format of input data is specified by \nmitem{FILETYPE_ORG} in \namelist{PARAM_MKINIT_REAL_(ATMOS|OCEAN|LAND)}.
 
@@ -105,9 +105,10 @@ For example, in the above case, the boundary file(s) are created only for the at
 In order to perform model integrations, the boundary data for atmospheric variables must have two time steps at least.  
 On the other hands, whether boundary data for variables of ocean and land is necessary depends on schemes employed in executing models. 
 
-\nmitem{INTRP_TYPE} is the type of horizontal interpolation.
-``\verb|LINEAR|'' and ``\verb|DIST-WEIGHT|'' are available for the type.
+\nmitem{INTRP_TYPE} is the type of horizontal interpolation;
+``\verb|LINEAR|'' and ``\verb|DIST-WEIGHT|'' are available.
 If ``\verb|LINEAR|'' is selected, the bi-linear interpolation is used.
+This type can not be used when the total number of horizontal gird cells in either the x- or y-direction is 1, i.e., \nmitem{IMAXG} = 1 or \nmitem{JMAXG} = 1, such as a case of 2-dimensional experiment or an unstructured grid data which is stored in one-dimensional array in the horizontal direction.
 If ``\verb|DIST-WEIGHT|'' is selected, distance-weighted mean of the nearest $N$-neighbors is used.
 In the case of distance-weighted mean, the number of the neighbors is set by \nmitem{COMM_CARTESC_NEST_INTERP_LEVEL} in \namelist{PARAM_COMM_CARTESC_NEST}.
 
@@ -118,7 +119,7 @@ By setting \nmitem{SERIAL_PROC_READ} to \verb|.false.|, each node accesses by it
 Note that, the computational performance may deteriorate due to locking file access because the algorithm places a load on file I/O.
 
 
-The above configurations except for \nmitem{BASENAME_BOUNDARY} can be shared among \verb|ATMOS| and \verb|OCEAN|(or \verb|LAND|); 
+The above configurations except for \nmitem{BASENAME_BOUNDARY} can be shared between \verb|ATMOS| and \verb|OCEAN| (or \verb|LAND|); 
 namely, if the items of namelist are not specified in \namelist{PARAM_MKINIT_REAL_(OCEAN|LAND)},
 the values same as that in \namelist{PARAM_MKINIT_REAL_ATMOS} are used.
 \\
