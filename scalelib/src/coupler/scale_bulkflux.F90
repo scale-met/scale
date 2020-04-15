@@ -106,8 +106,6 @@ module scale_bulkflux
   integer,  private :: BULKFLUX_itr_sa_max = 5  ! maximum iteration number for successive approximation
   integer,  private :: BULKFLUX_itr_nr_max = 10 ! maximum iteration number for Newton-Raphson method
 
-  real(RP), private :: BULKFLUX_err_min = 1.0E-4_RP ! minimum value of error
-
   real(RP), private :: BULKFLUX_WSCF ! empirical scaling factor of Wstar (Beljaars 1994)
 
   ! limiter
@@ -135,7 +133,6 @@ contains
        BULKFLUX_NK2018,     &
        BULKFLUX_itr_sa_max, &
        BULKFLUX_itr_nr_max, &
-       BULKFLUX_err_min,    &
        BULKFLUX_WSCF,       &
        BULKFLUX_Uabs_min,   &
        BULKFLUX_Wstar_min,  &
@@ -684,7 +681,7 @@ contains
 
     real(DP) :: Rtot, CPtot
     real(DP) :: TH1, TH0
-    real(DP) :: TV1, TV0, TVM
+    real(DP) :: TV1, TV0
     real(DP) :: sw
 
     real(DP) :: IL, IL2
@@ -714,7 +711,6 @@ contains
     TH0 = T0
     TV1 = TH1 * ( 1.0_DP + EPSTvap * Q1 )
     TV0 = TH0 * ( 1.0_DP + EPSTvap * Q0 )
-    TVM = ( TV1 + TV0 ) * 0.5_RP
 
     RzM = 1.0_DP - DP_Z0M / DP_Z1
     RzH = 1.0_DP - DP_Z0H / DP_Z1
@@ -725,21 +721,21 @@ contains
     log_Z1ovZ0H = log( DP_Z1 / DP_Z0H )
     log_Z1ovZ0E = log( DP_Z1 / DP_Z0E )
 
-    ! bulk Richardson number at initial step
-    RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TVM * UabsC**2 )
 
-    ! inversed Obukhov length at initial step
+    ! bulk Richardson number at initial step
+    RiB0 = GRAV * DP_Z1 * ( TV1 - TV0 ) / ( TV0 * UabsC**2 )
+
+    ! first guess of inversed Obukhov length under neutral condition
     IL = RiB0 / DP_Z1 * log_Z1ovZ0M**2 / log_Z1ovZ0H
 
     ! free convection velocity scale at initial step
     WstarC = BULKFLUX_Wstar_min
-    dWstar = BULKFLUX_Wstar_min
 
     ! Successive approximation
     do n = 1, BULKFLUX_itr_sa_max
 
        call calc_scales_B91W01( &
-            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
             log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
             DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
             RzM, RzH, RzE,                         & ! (in)
@@ -747,9 +743,8 @@ contains
             UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
        ! estimate the inversed Obukhov length
-       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
+       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TV0 )
     end do
-
 
     ! Newton-Raphson method
     do n = 1, BULKFLUX_itr_nr_max
@@ -757,7 +752,7 @@ contains
        dWstar = WstarC
 
        call calc_scales_B91W01( &
-            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
             log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
             DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
             RzM, RzH, RzE,                         & ! (in)
@@ -766,23 +761,23 @@ contains
 
        IL2 = sign( abs(IL) + dIL, IL )
        call calc_scales_B91W01( &
-            IL2, UabsC, TH1, TH0, Q1, Q0, PBL,     & ! (in)
-            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
-            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
-            RzM, RzH, RzE,                         & ! (in)
-            dWstar,                                & ! (inout)
-            dUstarC, dTstarC, dQstarC, dBFLX       ) ! (out)
+            IL2, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
+            log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E,  & ! (in)
+            DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,          & ! (in)
+            RzM, RzH, RzE,                          & ! (in)
+            dWstar,                                 & ! (inout)
+            dUstarC, dTstarC, dQstarC, dBFLX        ) ! (out)
 
-       res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
+       res = IL + KARMAN * GRAV * BFLX / ( UstarC**3 * TV0 )
 
        ! calculate d(residual)/dIL
-       dres = 1.0_DP + KARMAN * GRAV / ( TH0 * sign(dIL,IL) ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
+       dres = 1.0_DP + KARMAN * GRAV / ( TV0 * sign(dIL,IL) ) * ( dBFLX / dUstarC**3 - BFLX / UstarC**3 )
 
        ! stop iteration to prevent numerical error
-       if( abs( dres ) < EPS ) exit
+       if( abs( dres ) < 1E-20_RP ) exit
 
        ! convergence test with error levels
-       if( abs( res/dres ) < BULKFLUX_err_min ) exit
+       if( abs( res/dres ) < abs(IL * EPS) ) exit
 
        ! avoid sign changing
        if( IL * ( IL - res / dres ) < 0.0_RP ) then
@@ -795,10 +790,10 @@ contains
     end do
 
     ! Successive approximation after Newton-Raphson method
-    if( .NOT. abs( res/dres ) < BULKFLUX_err_min ) then
+    if( .NOT. abs( res/dres ) < abs(IL * EPS) ) then
 
        call calc_scales_B91W01( &
-            IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+            IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
             log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
             DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
             RzM, RzH, RzE,                         & ! (in)
@@ -806,14 +801,13 @@ contains
             UstarC, TstarC, QstarC, BFLX           ) ! (out)
 
        ! estimate the inversed Obukhov length
-       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TH0 )
+       IL = - KARMAN * GRAV * BFLX / ( UstarC**3 * TV0 )
     end if
-
 
     ! calculate Ustar, Tstar, and Qstar based on IL
 
     call calc_scales_B91W01( &
-         IL, UabsC, TH1, TH0, Q1, Q0, PBL,      & ! (in)
+         IL, UabsC, TH1, TH0, TV0, Q1, Q0, PBL, & ! (in)
          log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, & ! (in)
          DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         & ! (in)
          RzM, RzH, RzE,                         & ! (in)
@@ -837,7 +831,7 @@ contains
   end subroutine BULKFLUX_B91W01
 
   subroutine calc_scales_B91W01( &
-       IL, Uabs, TH1, TH0, Q1, Q0, PBL,       &
+       IL, Uabs, TH1, TH0, TV0, Q1, Q0, PBL,  &
        log_Z1ovZ0M, log_Z1ovZ0H, log_Z1ovZ0E, &
        DP_Z1, DP_Z0M, DP_Z0H, DP_Z0E,         &
        RzM, RzH, RzE,                         &
@@ -853,6 +847,7 @@ contains
     real(DP), intent(in) :: Uabs
     real(DP), intent(in) :: TH1
     real(DP), intent(in) :: TH0
+    real(DP), intent(in) :: TV0
     real(RP), intent(in) :: Q1
     real(RP), intent(in) :: Q0
     real(RP), intent(in) :: PBL
@@ -943,10 +938,10 @@ contains
     end if
 
     ! estimate buoyancy flux
-    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * TH0
+    BFLX = - Ustar * Tstar - EPSTvap * Ustar * Qstar * TV0
 
     ! update free convection velocity scale
-    tmp = PBL * GRAV / TH0 * BFLX
+    tmp = PBL * GRAV / TV0 * BFLX
     sw  = 0.5_DP + sign( 0.5_DP, tmp ) ! if tmp is plus, sw = 1
     Wstar = ( tmp * sw )**( 1.0_DP / 3.0_DP )
 
