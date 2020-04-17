@@ -58,92 +58,201 @@ contains
   !<
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_MP_negative_fixer( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, QHA, &
+       KA, KS, KE, IA, IS, IE, JA, JS, JE, QLA, QIA, &
        limit_negative, &
-       DENS, QV, QTRC )
+       DENS, TEMP,     &
+       CVtot, CPtot,   &
+       QV, QTRC,       &
+       RHOH,           &
+       DENS_diff,      &
+       ENGI_diff       )
     use scale_prc, only: &
-       PRC_myrank, &
        PRC_abort
+    use scale_const, only: &
+       CVdry => CONST_CVdry, &
+       CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_LHV, &
+       ATMOS_HYDROMETEOR_LHS, &
+       CV_VAPOR, &
+       CP_VAPOR, &
+       CV_WATER, &
+       CP_WATER, &
+       CV_ICE,   &
+       CP_ICE
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
     integer, intent(in) :: JA, JS, JE
-    integer, intent(in) :: QHA
+    integer, intent(in) :: QLA, QIA
 
     real(RP), intent(in)    :: limit_negative
 
-    real(RP), intent(inout) :: DENS(KA,IA,JA)
-    real(RP), intent(inout) :: QV  (KA,IA,JA)
-    real(RP), intent(inout) :: QTRC(KA,IA,JA,QHA)
+    real(RP), intent(inout) :: DENS (KA,IA,JA)
+    real(RP), intent(inout) :: TEMP (KA,IA,JA)
+    real(RP), intent(inout) :: CVtot(KA,IA,JA)
+    real(RP), intent(inout) :: CPtot(KA,IA,JA)
+    real(RP), intent(inout) :: QV   (KA,IA,JA)
+    real(RP), intent(inout) :: QTRC (KA,IA,JA,QLA+QIA)
 
-    real(RP) :: diffq
-    real(RP) :: diffq_check(KA,IA,JA)
+    real(RP), intent(out), optional :: RHOH     (KA,IA,JA)
+    real(RP), intent(out), optional :: DENS_diff(KA,IA,JA)
+    real(RP), intent(out), optional :: ENGI_diff(KA,IA,JA)
+
+    real(RP) :: LHV(KA)
+    real(RP) :: LHS(KA)
+    real(RP) :: eng  (KA)
+    real(RP) :: eng0 (KA)
+    real(RP) :: dens0(KA)
+    real(RP) :: diffq(KA)
     real(RP) :: diffq_min
+    real(RP) :: work
+
+    logical :: rhoh_out
+    logical :: dens_out
+    logical :: engi_out
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('MP_filter', 3)
 
+    rhoh_out = present( RHOH )
+    dens_out = present( DENS_diff )
+    engi_out = present( ENGI_diff )
+
+    diffq_min = 0.0_RP
+
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,k, &
-    !$omp         iq,diffq) &
-    !$omp shared(KS,KE,IS,IE,JS,JE,QHA, &
-    !$omp        QV,QTRC,DENS,diffq_check)
+    !$omp reduction(min:diffq_min) &
+    !$omp private(i,j,k,iq, &
+    !$omp         LHV,LHS,eng,eng0,dens0,diffq,work) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE,QLA,QIA, &
+    !$omp        CVdry,CPdry,CV_VAPOR,CP_VAPOR,CV_WATER,CP_WATER,CV_ICE,CP_ICE, &
+    !$omp        DENS,TEMP,CVtot,CPtot,QV,QTRC, &
+    !$omp        RHOH,DENS_diff,ENGI_diff,rhoh_out,dens_out,engi_out,limit_negative)
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
 
-       diffq = 0.0_RP
-       do iq = 1, QHA
-          ! total hydrometeor (before correction)
-          diffq = diffq + QTRC(k,i,j,iq)
-          ! remove negative value of hydrometeors (mass)
-          QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
+       diffq(:) = 0.0_RP
+
+       do k = KS, KE
+          eng(k) = CVtot(k,i,j) * TEMP(k,i,j)
+       end do
+
+       if ( rhoh_out ) then
+          do k = KS, KE
+             eng0(k) = eng(k)
+          end do
+       end if
+
+       if ( QLA > 0 ) then
+          call ATMOS_HYDROMETEOR_LHV( KA, KS, KE, TEMP(:,i,j), LHV(:) )
+
+          do iq = 1, QLA
+          do k = KS, KE
+             work = - min( QTRC(k,i,j,iq), 0.0_RP ) ! work is positive (vapor to liq)
+             if ( work > 0.0_RP ) then
+                eng  (k) = eng  (k) + work * LHV(k)
+                diffq(k) = diffq(k) - work
+                CVtot(k,i,j) = CVtot(k,i,j) + work * ( CV_WATER - CV_VAPOR )
+                CPtot(k,i,j) = CPtot(k,i,j) + work * ( CP_WATER - CP_VAPOR )
+                ! remove negative value of hydrometeors (mass)
+                QTRC(k,i,j,iq) = 0.0_RP
+             end if
+          enddo
+          enddo
+       end if
+
+       if ( QIA > 0 ) then
+          call ATMOS_HYDROMETEOR_LHS( KA, KS, KE, TEMP(:,i,j), LHS(:) )
+
+          do iq = QLA+1, QLA+QIA
+          do k = KS, KE
+             work = - min( QTRC(k,i,j,iq), 0.0_RP ) ! work is positive (vapor to ice)
+             if ( work > 0.0_RP ) then
+                eng  (k) = eng  (k) + work * LHS(k)
+                diffq(k) = diffq(k) - work
+                CVtot(k,i,j) = CVtot(k,i,j) + work * ( CV_ICE - CV_VAPOR )
+                CPtot(k,i,j) = CPtot(k,i,j) + work * ( CP_ICE - CP_VAPOR )
+                ! remove negative value of hydrometeors (mass)
+                QTRC(k,i,j,iq) = 0.0_RP
+             end if
+          enddo
+          enddo
+       end if
+
+
+       if ( abs(limit_negative) > 0.0_RP ) then
+          do k = KS, KE
+             if ( diffq(k) < - abs(limit_negative) ) then
+                diffq_min = min( diffq_min, diffq(k) )
+                LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found'
+                LOG_ERROR_CONT(*) 'value = ', diffq(k), ' at (', k, ',', i, ',', j, ')'
+             end if
+          end do
+       end if
+
+       do k = KS, KE
+          if ( diffq(k) < 0.0_RP ) then
+             ! Compensate for the lack of hydrometeors by the water vapor
+             QV(k,i,j) = QV(k,i,j) + diffq(k)
+          end if
+       end do
+
+       if ( rhoh_out ) then
+          do k = KS, KE
+             RHOH(k,i,j) = ( eng(k) - eng0(k) ) * DENS(k,i,j)
+          end do
+       end if
+
+
+       if ( dens_out ) then
+          do k = KS, KE
+             dens0(k) = DENS(k,i,j)
+          end do
+       end if
+       if ( engi_out ) then
+          do k = KS, KE
+             eng0(k) = eng(k) * DENS(k,i,j)
+          end do
+       end if
+
+       ! fix negative QV
+       do k = KS, KE
+          work = - min( QV(k,i,j), 0.0_RP )
+          if ( work > 0.0_RP ) then
+             QV(k,i,j) = 0.0_RP
+             DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP + work ) ! not to change mass of dry air
+             CVtot(k,i,j) = ( CVtot(k,i,j) + work * CV_VAPOR ) / ( 1.0_RP + work )
+             CPtot(k,i,j) = ( CPtot(k,i,j) + work * CP_VAPOR ) / ( 1.0_RP + work )
+             eng(k) = ( eng(k) + work * CV_VAPOR * TEMP(k,i,j) ) / ( 1.0_RP + work )
+          end if
        enddo
 
-       do iq = 1, QHA
-          ! difference between before and after correction
-          diffq = diffq - QTRC(k,i,j,iq)
-       enddo
+       do k = KS, KE
+          ! update
+          TEMP(k,i,j) = eng(k) / CVtot(k,i,j)
+       end do
 
-       ! Compensate for the lack of hydrometeors by the water vapor
-       QV(k,i,j) = QV(k,i,j) + diffq
-       diffq_check(k,i,j) = diffq
-
-       ! TODO: We have to consider energy conservation (but very small)
-
-       ! remove negative value of water vapor (mass)
-       diffq = QV(k,i,j)
-       QV(k,i,j) = max( QV(k,i,j), 0.0_RP )
-       diffq = diffq - QV(k,i,j)
-
-       ! Apply correction to total density
-       ! TODO: We have to consider energy conservation (but very small)
-       DENS(k,i,j) = DENS(k,i,j) * ( 1.0_RP - diffq ) ! diffq is negative
+       if ( dens_out ) then
+          do k = KS, KE
+             DENS_diff(k,i,j) = DENS(k,i,j) - dens0(k)
+          end do
+       end if
+       if ( engi_out ) then
+          do k = KS, KE
+             ENGI_diff(k,i,j) = eng(k) * DENS(k,i,j) - eng0(k)
+          end do
+       end if
 
     enddo
     enddo
-    enddo
 
-    diffq_min = minval( diffq_check(KS:KE,IS:IE,JS:JE) )
 
     if (       abs(limit_negative) > 0.0_RP         &
          .AND. abs(limit_negative) < abs(diffq_min) ) then
-       LOG_ERROR("ATMOS_PHY_MP_negative_fixer",*) 'large negative is found. rank = ', PRC_myrank
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS,  KE
-          if (     abs(limit_negative) < abs(diffq_check(k,i,j)) &
-              .OR. abs(QV(k,i,j)     ) < abs(diffq_check(k,i,j)) ) then
-             LOG_ERROR_CONT(*) 'k,i,j,value(QHYD,QV) = ', k, i, j, diffq_check(k,i,j), QV(k,i,j)
-          endif
-       enddo
-       enddo
-       enddo
-       LOG_ERROR_CONT(*) 'total negative hydrometeor < ', abs(limit_negative)
-
+       LOG_ERROR_CONT(*) 'maximum negative hydrometeor ', diffq_min, ' < ', - abs(limit_negative)
        call PRC_abort
     endif
 
@@ -653,11 +762,10 @@ contains
     flx(KE) = 0.0_RP
 
     !--- momentum z (half level)
-    do k = KS, KE-2
-       flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k+1) / ( DENS(k+2) + DENS(k+1) )
+    do k = KS, KE-1
+       flx(k) = ( mflx(k) + mflx(k-1) ) * MOMZ(k) / ( DENS(k+1) + DENS(k) )
     enddo
-    flx(KE-1) = 0.0_RP
-    do k  = KS, KE-1
+    do k = KS, KE-1
        MOMZ_t(k) = - ( flx(k+1) - flx(k) ) * RFDZ(k)
     enddo
     MOMZ_t(KE) = 0.0_RP
