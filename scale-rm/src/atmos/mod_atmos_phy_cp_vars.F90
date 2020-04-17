@@ -61,18 +61,19 @@ module mod_atmos_phy_cp_vars
   real(RP), public, allocatable :: ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) ! tendency rho*QHYD [kg/kg/s]
 
   ! only for K-F scheme
+  real(RP), public, allocatable :: ATMOS_PHY_CP_w0mean        (:,:,:) ! running mean vertical wind velocity [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_kf_nca        (:,:)   ! advection/cumulus convection timescale for KF[sec]
 
 
   ! diagnostic variables
   real(RP), public, allocatable :: ATMOS_PHY_CP_MFLX_cloudbase(:,:)   ! cloud base mass flux [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_rain     (:,:)   ! convective rain [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_snow     (:,:)   ! convective snow [kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_SFLX_ENGI     (:,:)   ! internal energy [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudtop      (:,:)   ! cloud top  height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cloudbase     (:,:)   ! cloud base height [m]
   real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_dp    (:,:,:) ! cloud fraction (deep    convection) (0-1)
   real(RP), public, allocatable :: ATMOS_PHY_CP_cldfrac_sh    (:,:,:) ! cloud fraction (shallow convection) (0-1)
-  real(RP), public, allocatable :: ATMOS_PHY_CP_w0mean        (:,:,:) ! running mean vertical wind velocity [m/s]
 
   !-----------------------------------------------------------------------------
   !
@@ -82,18 +83,9 @@ module mod_atmos_phy_cp_vars
   !
   !++ Private parameters & variables
   !
-  integer,                private, parameter :: VMAX = 1       !< number of the restart variables
-  integer,                private, parameter :: I_kf_nca         = 1
-
-
-  integer,                private, parameter :: I_MFLX_cloudbase = 1
-  integer,                private, parameter :: I_SFLX_convrain  = 2
-  integer,                private, parameter :: I_SFLX_ENGI      = 3
-  integer,                private, parameter :: I_cloudtop       = 4
-  integer,                private, parameter :: I_cloudbase      = 5
-  integer,                private, parameter :: I_cldfrac_dp     = 6
-  integer,                private, parameter :: I_cldfrac_sh     = 7
-  integer,                private, parameter :: I_w0mean         = 8
+  integer,                private, parameter :: VMAX = 2 !< number of the restart variables
+  integer,                private, parameter :: I_w0mean = 1
+  integer,                private, parameter :: I_kf_nca = 2
 
 
   character(len=H_SHORT), private            :: VAR_NAME(VMAX) !< name  of the variables
@@ -103,17 +95,21 @@ module mod_atmos_phy_cp_vars
   integer,                private            :: VAR_ID  (VMAX) !< ID    of the variables
   integer,                private            :: restart_fid = -1  ! file ID
 
-  data VAR_NAME / 'kf_nca'           /
+  data VAR_NAME / 'w0mean', &
+                  'kf_nca'  /
 
-  data VAR_DESC / 'advection/cumulus convection timescale for KF'  /
+  data VAR_DESC / 'running mean vertical velocity',                &
+                  'advection/cumulus convection timescale for KF'  /
 
-  data VAR_UNIT / 'sec'     /
+  data VAR_UNIT / 'm/s', &
+                  'sec'  /
 
-  data VAR_DIM  / 'XY'   /
+  data VAR_DIM  / 'ZXY',  &
+                  'XY'    /
 
 
   ! tendency names
-  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhot+qv+N_HYD
+  integer,                private              :: VMAX_t       !< number of the tendency variables dens+rhoh+qv+N_HYD
   integer,                private              :: I_cp_dens_t = 1
   integer,                private              :: I_cp_rhot_t = 2
   integer,                private              :: I_cp_qv_t   = 3
@@ -167,7 +163,9 @@ contains
     ATMOS_PHY_CP_RHOQV_t (:,:,:)   = 0.0_RP
     ATMOS_PHY_CP_RHOHYD_t(:,:,:,:) = 0.0_RP
 
+    allocate( ATMOS_PHY_CP_w0mean        (KA,IA,JA) )
     allocate( ATMOS_PHY_CP_kf_nca        (IA,JA)    )
+    ATMOS_PHY_CP_w0mean        (:,:,:) =    0.0_RP
     ATMOS_PHY_CP_kf_nca        (:,:)   = -100.0_RP
 
     ! for tendency restart
@@ -196,20 +194,20 @@ contains
 
     allocate( ATMOS_PHY_CP_MFLX_cloudbase(IA,JA)    )
     allocate( ATMOS_PHY_CP_SFLX_rain     (IA,JA)    )
+    allocate( ATMOS_PHY_CP_SFLX_snow     (IA,JA)    )
     allocate( ATMOS_PHY_CP_SFLX_ENGI     (IA,JA)    )
     allocate( ATMOS_PHY_CP_cloudtop      (IA,JA)    )
     allocate( ATMOS_PHY_CP_cloudbase     (IA,JA)    )
     allocate( ATMOS_PHY_CP_cldfrac_dp    (KA,IA,JA) )
     allocate( ATMOS_PHY_CP_cldfrac_sh    (KA,IA,JA) )
-    allocate( ATMOS_PHY_CP_w0mean        (KA,IA,JA) )
     ATMOS_PHY_CP_MFLX_cloudbase(:,:)   =    0.0_RP
     ATMOS_PHY_CP_SFLX_rain     (:,:)   =    0.0_RP
+    ATMOS_PHY_CP_SFLX_snow     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_SFLX_ENGI     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cloudtop      (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cloudbase     (:,:)   =    0.0_RP
     ATMOS_PHY_CP_cldfrac_dp    (:,:,:) =    0.0_RP
     ATMOS_PHY_CP_cldfrac_sh    (:,:,:) =    0.0_RP
-    ATMOS_PHY_CP_w0mean        (:,:,:) =    0.0_RP
 
 
     !--- read namelist
@@ -281,7 +279,8 @@ contains
        enddo
     end do
 
-    call COMM_vars8( ATMOS_PHY_CP_kf_nca(:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_CP_w0mean(:,:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_CP_kf_nca(:,:),   2 )
 
     ! tendency
     call COMM_vars8( ATMOS_PHY_CP_DENS_t (:,:,:), VMAX+1 )
@@ -291,7 +290,8 @@ contains
        call COMM_vars8( ATMOS_PHY_CP_RHOHYD_t(:,:,:,iq), VMAX+3+iq )
     enddo
 
-    call COMM_wait ( ATMOS_PHY_CP_kf_nca(:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_CP_w0mean(:,:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_CP_kf_nca(:,:),   2 )
 
     call COMM_wait ( ATMOS_PHY_CP_DENS_t (:,:,:), VMAX+1 )
     call COMM_wait ( ATMOS_PHY_CP_RHOT_t (:,:,:), VMAX+2 )
@@ -357,7 +357,9 @@ contains
        LOG_NEWLINE
        LOG_INFO("ATMOS_PHY_CP_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_CP) '
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'XY',  & ! [IN]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
+                               ATMOS_PHY_CP_w0mean(:,:,:)       ) ! [OUT]
+       call FILE_CARTESC_read( restart_fid, VAR_NAME(2), 'XY',  & ! [IN]
                                ATMOS_PHY_CP_kf_nca(:,:)         ) ! [OUT]
        ! tendency
        call FILE_CARTESC_read( restart_fid, VAR_t_NAME(1), 'ZXY', & ! [IN]
@@ -525,8 +527,10 @@ contains
 
        call ATMOS_PHY_CP_vars_check
 
-       call FILE_CARTESC_write( restart_fid, VAR_ID(1), ATMOS_PHY_CP_kf_nca(:,:), & ! [IN]
-                                VAR_NAME(1), 'XY' ) ! [IN]
+       call FILE_CARTESC_write( restart_fid, VAR_ID(1), ATMOS_PHY_CP_w0mean(:,:,:), & ! [IN]
+                                VAR_NAME(1), 'ZXY' ) ! [IN]
+       call FILE_CARTESC_write( restart_fid, VAR_ID(2), ATMOS_PHY_CP_kf_nca(:,:),   & ! [IN]
+                                VAR_NAME(2), 'XY'  ) ! [IN]
 
        ! tendency
        call FILE_CARTESC_write( restart_fid, VAR_t_ID(1), ATMOS_PHY_CP_DENS_t(:,:,:), & ! [IN]
@@ -560,9 +564,13 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_CP_w0mean(:,:,:),         & ! (in)
+                   -100.0_RP, 100.0_RP, VAR_NAME(1),   & ! (in)
+                   __FILE__, __LINE__                  ) ! (in)
     call VALCHECK( IA, IS, IE, JA, JS, JE, &
                    ATMOS_PHY_CP_kf_nca(:,:),           & ! (in)
-                   -100.0_RP, 1.0E5_RP, VAR_NAME(1),   & ! (in)
+                   -100.0_RP, 1.0E5_RP, VAR_NAME(2),   & ! (in)
                    __FILE__, __LINE__                  ) ! (in)
     call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                    ATMOS_PHY_CP_DENS_t(:,:,:),         & ! (in)
@@ -583,8 +591,12 @@ contains
                       __FILE__, __LINE__                     ) ! (in)
     end do
 
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_CP_w0mean        (:,:,:), VAR_NAME(1), & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),              & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL                   ) ! (in)
     call STATISTICS_total( IA, IS, IE, JA, JS, JE, &
-                           ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(1), & ! (in)
+                           ATMOS_PHY_CP_kf_nca        (:,:)  , VAR_NAME(2), & ! (in)
                            ATMOS_GRID_CARTESC_REAL_AREA(:,:),               & ! (in)
                            ATMOS_GRID_CARTESC_REAL_TOTAREA                  ) ! (in)
     ! tendency
