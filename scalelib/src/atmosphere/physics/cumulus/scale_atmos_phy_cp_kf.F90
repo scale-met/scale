@@ -1520,6 +1520,7 @@ contains
     real(RP) :: wu(KA)                          !< vertical velocity of updraft
     real(RP) :: qvtmp, qctmp, qitmp             !< temporaly qv
     real(RP) :: temp_u95, temp_u10              !< temporaly Temperature value use determin Mixed Fraction
+    real(RP) :: qold                            !< total q before entrainment/detrainment
     real(RP),parameter :: temp_frzT = 268.16_RP !< frozen temperature start frozen -5degC
     real(RP),parameter :: temp_frzB = 248.16_RP !< frozen temperature all frozen  -25degC
     ! -----
@@ -1748,13 +1749,14 @@ contains
           qcdet(kkp1)      = qc(kkp1)*updet(kkp1)
           qidet(kkp1)      = qi(kkp1)*updet(kkp1)
           qvdet(kkp1)      = qv_u(kkp1)
+          qold             = qv_u(kkp1) + qc(kkp1) + qi(kkp1) + qrout(kkp1) + qsout(kkp1)
           ! below layer updraft qv and entrain q /new updraft massflux
           qv_u(kkp1)       = ( umfold*qv_u(kkp1) + upent(kkp1)*qv(kkp1) ) / umfnew
-          theta_eu(kkp1)   = ( umfold*theta_eu(kkp1) + upent(kkp1)*theta_ee(kkp1) ) / umfnew
-          ! in WRF
-          ! PPTLIQ(KKP11)  = qlqout(KKP11)*UMF(KKP1)
           qc(kkp1)         = qc(kkp1)*umfold/umfnew
           qi(kkp1)         = qi(kkp1)*umfold/umfnew
+          theta_eu(kkp1)   = ( umfold * ( 1.0_RP + qold ) * theta_eu(kkp1) &
+                             + upent(kkp1) * ( 1.0_RP + qv(kkp1) ) * theta_ee(kkp1) &
+                             ) / ( umfnew * ( 1.0_RP + qv_u(kkp1) + qc(kkp1) + qi(kkp1) ) )
           ! flux_qr is ratio of generation of liquid fallout(RAIN)
           ! flux_qi is ratio of generation of ice fallout(SNOW)
           flux_qr(kkp1)    = qrout(kkp1)*umf(kk)
@@ -1886,6 +1888,7 @@ contains
     real(RP) :: total_snow                      !< snow
     logical  :: flag_rain                       !< rain: true, snow: false
     real(RP) :: tder                            !< temperature change from evap
+    real(RP) :: qvold                           !< downdraft qv before entrainment/detrainment
     ! -----
 
     wspd(:)    = 0._RP
@@ -2001,8 +2004,11 @@ contains
              downent(kk)  = downent(k_lfs)*ems(kk)/ems(k_lfs)
              downdet(kk)  = 0._RP
              dmf(kk)      = dmf(kkp1) + downent(kk)
-             theta_ed(kk) = ( theta_ed(kkp1)*dmf(kkp1) + theta_ee(kk)*downent(kk) )/dmf(kk)
-             qv_d(kk)     = ( qv_d(kkp1)*dmf(kkp1)  + qv(kk)*downent(kk) )/dmf(kk)
+             qvold        = qv_d(kk)
+             qv_d(kk)     = ( qv_d(kkp1)*dmf(kkp1) + qv(kk)*downent(kk) ) / dmf(kk)
+             theta_ed(kk) = ( theta_ed(kkp1) * dmf(kkp1) * ( 1.0_RP + qvold ) &
+                            + theta_ee(kk) * downent(kk) * ( 1.0_RP + qv(kk) ) &
+                            ) / ( dmf(kk) * ( 1.0_RP + qv_d(kk) ) )
              dpthtmp      = dpthtmp + deltap(kk)
              rhbar        = rhbar + rh(kk)*deltap(kk) ! rh average@ downdraft layer
           end do
@@ -2361,6 +2367,7 @@ contains
     real(RP) :: tma,tmb,tmm                       !< eff (temporaly vars)
     real(RP) :: evac                              !< shallow convection TKE factor (temporaly vars)
     real(RP) :: ainc,ainctmp, aincmx,aincold      !< factors ainctmp is tmpvariable; aincmx is max of ainc (temporaly vars)
+    real(RP) :: aincfin                           !< finl ainc factor
     real(RP) :: omg(KA)                           !< pressure velocity (temporaly vars)
     real(RP) :: topomg                            !< cloud top omg calc by updraft (temporaly vars)
     real(RP) :: fbfrc                             !< precpitation  to be fedback 0.0 -1.0 shallo-> 1.0(no rain) deep->0.0 (temporaly vars)
@@ -2386,6 +2393,8 @@ contains
     real(RP) :: cpm                               !< tempolaly variable
     real(RP) :: UMF_tmp                           !< tempolaly variable
     real(RP) :: xcldfrac                          !< tempolaly variable
+
+    real(RP) :: qvold                             !< qv before mixing
 
     integer :: m
     ! -----
@@ -2416,7 +2425,8 @@ contains
           aincmx = min(aincmx,ainctmp)
        end if
     end do
-    ainc = 1._RP
+    ainc    = 1.0_RP
+    aincfin = 1.0_RP
     if(aincmx < ainc ) ainc = aincmx
     ! for interpolation save original variable
     rain_flux2 = rain_flux
@@ -2451,6 +2461,7 @@ contains
           downent(kk) = downent2(kk)*ainc
           downdet(kk) = downdet2(kk)*ainc
        end do
+       aincfin = ainc
     end if
     ! theta set up by Emanuel Atmospheric convection, 1994 111p
     ! original KF theta is calced  apploximatly.
@@ -2518,26 +2529,28 @@ contains
           !< on sign of omega
           do kk = KS, k_top-1 ! calc flux variable
              if( omg(kk) <= 0.0_RP ) then ! upward
-                theta_fx(kk) = fxm(kk) * theta_nw(kk)
+                theta_fx(kk) = fxm(kk) * theta_nw(kk) * ( 1.0_RP + qv_nw(kk) )
                 qv_fx   (kk) = fxm(kk) * qv_nw   (kk)
              else ! downward
-                theta_fx(kk) = fxm(kk) * theta_nw(kk+1)
+                theta_fx(kk) = fxm(kk) * theta_nw(kk+1) * ( 1.0_RP + qv_nw(kk+1) )
                 qv_fx   (kk) = fxm(kk) * qv_nw   (kk+1)
              end if
           end do
-          theta_fx(k_top) = 0.0_RP
-          qv_fx   (k_top) = 0.0_RP
           !< update the theta and qv variables at each level
           !< only theta and qv calc cape below and if cape > 10%of old cape then iterate
           do kk = KS, k_top
-             theta_nw(kk) = theta_nw(kk) &
-                  + ( - ( theta_fx(kk) - theta_fx(kk-1) ) &
-                    + updet(kk)*theta_u(kk) + downdet(kk)*theta_d(kk)  &
-                    - ( upent(kk) - downent(kk) )*theta(kk) ) *deltat*emsd(kk)
+             qvold = qv_nw(kk)
              qv_nw(kk) = qv_nw(kk) &
                   + ( - ( qv_fx(kk) - qv_fx(kk-1) ) &
                     + updet(kk)*qvdet(kk) + downdet(kk)*qv_d(kk)  &
                     - ( upent(kk) - downent(kk) )*qv(kk) )*deltat*emsd(kk)
+             theta_nw(kk) = ( theta_nw(kk) * ( 1.0_RP + qvold + qc(kk) + qi(kk) ) &
+                            + ( - ( theta_fx(kk) - theta_fx(kk-1) ) &
+                              + updet(kk) * theta_u(kk) * ( 1.0_RP + qvdet(kk) ) &
+                              + downdet(kk) * theta_d(kk) * ( 1.0_RP + qv_d(kk) )  &
+                              - ( upent(kk) - downent(kk) ) * theta(kk) * ( 1.0_RP + qv(kk) ) &
+                              ) * deltat * emsd(kk) &
+                            ) / ( 1.0_RP + qv_nw(kk) + qc(kk) + qi(kk) )
           end do
           if ( hist_flag ) then
              do kk = KS, k_top
@@ -2752,6 +2765,7 @@ contains
              downent(kk) = downent2(kk)*ainc
              downdet(kk) = downdet2(kk)*ainc
           end do
+          aincfin = ainc
           ! go back up for another iteration
        end if
 
@@ -2777,10 +2791,10 @@ contains
 
     !> compute hydrometeor tendencies as is done for T,qv...
     do kk = KS,k_top
-       rainfb(kk) = flux_qr(kk)*ainc*fbfrc
+       rainfb(kk) = flux_qr(kk) * fbfrc * aincfin
     end do
     do kk = KS,k_top
-       snowfb(kk) = flux_qs(kk)*ainc*fbfrc
+       snowfb(kk) = flux_qs(kk) * fbfrc * aincfin
     end do
 
     ! no qc qi qr qs inputted in KF scheme
