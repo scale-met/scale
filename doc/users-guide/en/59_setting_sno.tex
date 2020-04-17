@@ -8,7 +8,7 @@
 \sno is not available for the older version's \scalenetcdf files because of the less information in the global attributes and the attributes of the axis data.
 net2g (Sec. \ref{sec:net2g}) can be used for the older version's \scalenetcdf files.
 
-\hrulefill\\
+\noindent \hrulefill\\
 
 
 Unless \nmitem{FILE_AGGREGATE}=\verb|.true.| in \namelist{PARAM_FILE} with the Parallel \netcdf (\pnetcdf) (Sec. \ref{subsec:single_io}),
@@ -33,7 +33,7 @@ The format in the parentheses indicates the supported format which \sno output.
 
 
 
-\subsubsection{Basic usage}
+\subsection{Basic usage}
 
 The settings for \sno are specified in \namelist{PARAM_SNO}.
 %
@@ -44,7 +44,9 @@ The settings for \sno are specified in \namelist{PARAM_SNO}.
 \verb| vars            = "",      | & ; Name of variables to be processed \\
 \verb| debug           = .false., | & ; Output verbose log for debugging? \\
 \verb| nprocs_x_out    = 1,       | & ; Decomposition number of files in x-direction \\
+                                    & ~~~If \verb|output_grads = true|, it must be set to 1. \\
 \verb| nprocs_y_out    = 1,       | & ; Decomposition number of files in y-direction \\
+                                    & ~~~If \verb|output_grads = true|, it must be set to 1. \\
 \verb| output_single   = .false., | & ; (\scalenetcdf) Whether output to a single \netcdf file when using multiple MPI processes? \\
 \verb| output_gradsctl = .false., | & ; (\scalenetcdf) Output a grads control file when outputting a single \netcdf file? \\
 \verb| dirpath_out     = "",      | & ; (\grads) Directory path of a output file \\
@@ -58,11 +60,13 @@ The information of the decomposed files, such as the total number of files and t
 If \nmitem{vars} is not specified, all of variables in the input file are processed.
 
 The default value of \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} is 1; it means that multiple files are combined to a single file.
-Note that, if \nmitem{output_single} = \verb|.true.|,
+If \nmitem{output_single} = \verb|.true.|,
 the input data is combined in a single file regardless of the settings of \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out}.
 
-The number of MPI processes to execute \sno must be a divisor of $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$, except for the total number is 1.
-When the number of output file is 1, the number of processes must not be larger than the total number of input files.
+%The number of MPI processes to execute \sno must be a divisor of $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$.
+%When \verb|output_single| = \verb|.true.|, the number of processes specified by \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must not be larger than the total number of input files.
+The number of MPI processes to execute \sno must be the same with $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$.
+When \verb|output_single| = \verb|.true.|, the number of processes specified by \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must not be a divisor of the decomposition number of input files in x- and y-directions, respectively.
 
 
 When the output format is \scalenetcdf, \nmitem{basename_out} is required.
@@ -72,6 +76,7 @@ Note that, this option is available when \nmitem{nprocs_x_out} and \nmitem{nproc
 
 If \nmitem{output_grads} is set to \verb|.true.|, data is output in a single file with binary format, which is readable by \grads.
 If \nmitem{dirpath_out} is empty, the directory path for output is set to the current directory.
+When the output format is \grads, \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must be 1.
 
 
 In addition to \namelist{PARAM_SNO}, \sno depends on the following namelist parameters:
@@ -145,9 +150,8 @@ The following is an example of the output control file.
 }
 
 This example outputs a single file containing all variables as well as the above example.
-
-In the other hand, in this example, multiple MPI processes up to 24 ($=4\times6$) can be used.
-Since neither \nmitem{nprocs_x_out} nor \nmitem{nprocs_y_out} is not 1, \grads control file cannot be output.
+In the other hand, in this example, the number of MPI processes must be set to 24 ($=4\times6$).
+Since \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} are not 1, \grads control file cannot be output.
 \grads can read the output file if you prepare the control file by yourself.
 Note that this conversion method is not supported for the history files from the experiment with the periodic boundary conditions.
 

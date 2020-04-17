@@ -7,7 +7,7 @@
 \sno は、version 5.3以降の\scalelib で作成された\scalenetcdf のための後処理ツールである。
 それより古い \scalenetcdf ファイルでは、グローバル属性や軸データの属性の情報が不足しているために利用できない。net2g (第\ref{sec:net2g}章)は前のバージョンにも使用可能である。
 
-\hrulefill\\
+\noindent \hrulefill\\
 
 
 Parallel \netcdf (\pnetcdf) (第\ref{subsec:single_io}節) を使用して
@@ -41,7 +41,9 @@ Parallel \netcdf (\pnetcdf) (第\ref{subsec:single_io}節) を使用して
 \verb| vars            = "",      | & ; 処理を行う変数の名前 \\
 \verb| debug           = .false., | & ; デバッグのための詳細なログを出力するか? \\
 \verb| nprocs_x_out    = 1,       | & ; 出力ファイルのx方向の分割数 \\
+                                    & ~~~\verb|output_grads = true|の時、値は1でなければいけない。 \\
 \verb| nprocs_y_out    = 1,       | & ; 出力ファイルのy方向の分割数 \\
+                                    & ~~~\verb|output_grads = true|の時、値は1でなければいけない。 \\
 \verb| output_single   = .false., | & ; (\scalenetcdf) 複数プロセス実行時、単一の\netcdf ファイルに出力するか?\\
 \verb| output_gradsctl = .false., | & ; (\scalenetcdf) 単一の\netcdf ファイルを出力する際、grads のコントロールファイルを出力するか? \\
 \verb| dirpath_out     = "",      | & ; (\grads)出力先のディレクトリパス \\
@@ -55,12 +57,14 @@ Parallel \netcdf (\pnetcdf) (第\ref{subsec:single_io}節) を使用して
 \nmitem{vars}は、指定しなければ、入力ファイル内全ての変数に対して処理が実行される。
 
 \nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} のデフォルト値は 1 であり、この場合、単一のファイルに結合されて出力される。
-ただし、\nmitem{output_single}  = \verb|.true.| の場合には、
+\nmitem{output_single}  = \verb|.true.| の場合には、
 \nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} の設定によらず、単一のファイルに結合されて出力される。
 
-SNO に与える MPI プロセス数は、出力ファイルの総数が 1 より大きい場合には、$\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$ の約数でなければならない。
-出力ファイルの総数が 1 の場合には、プロセス数は入力ファイル総数以下でなければならない。
-\proofcomment{要確認}
+%SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$ の約数でなければならない。
+%\verb|output_single| が \verb|.true.|の場合には、\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} で指定するプロセス数は入力ファイルの総数以下でなければならない。
+SNO に与える MPI プロセス数は、$\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$ と同じでなければならない。
+\verb|output_single| が \verb|.true.|の場合には、\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} で指定するプロセス数は、それぞれ、入力ファイルの \XDIR と\YDIR の分割数の約数でなければならない。
+\proofcomment{要確認、足立の方で少し修正しましたが、余計間違っているかもしれません}
 
 
 出力形式が \scalenetcdf の場合、\nmitem{basename_out} は必須である。
@@ -153,14 +157,13 @@ SNO に与える MPI プロセス数は、出力ファイルの総数が 1 よ�
 
 この例では、上の例と同じく出力は単一ファイルとなり、
 また、出力ファイルには全ての変数が含まれる。
-
-ただし、この例では MPIプロセスの数を 24 ($=4\times6$) まで取ることができる。
-\nmitem{nprocs_x_out} や \nmitem{nprocs_y_out} が 1 でないため、\grads コントロールファイルを出力することはできない。
+ただし、この例では MPIプロセスの数は 24 ($=4\times6$) とする必要がある。
+\nmitem{nprocs_x_out} と \nmitem{nprocs_y_out} が 1 でないため、\grads コントロールファイルを出力することはできない。
 自分でGrADS用のctlファイルを記述すれば、GrADSで読み込むことが可能になる。
 また、現時点で、この出力方法は周期境界を使用した実験のhistoryファイルには対応していないことに注意すること。
 
 
-\subsubsection{複数の \scalenetcdf ファイルから異なる分割数を持つ複数の \Netcdf ファイルへの変換}
+\subsubsection{複数の \scalenetcdf ファイルから異なる分割数を持つ複数の \scalenetcdf ファイルへの変換}
 %
 \editbox{
 \verb|&PARAM_SNO                            | \\
