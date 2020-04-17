@@ -854,14 +854,16 @@ contains
                               OCEAN_TEMP_t(:,:,:), 'OCEAN_TEMP_t',         &
                               OCEAN_GRID_CARTESC_REAL_VOL(:,:,:),          &
                               OCEAN_GRID_CARTESC_REAL_TOTVOL               )
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                &
-                              OCEAN_ICE_TEMP_t(:,:), 'OCEAN_ICE_TEMP_t',   &
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           &
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA              )
-       call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                &
-                              OCEAN_ICE_MASS_t(:,:), 'OCEAN_ICE_MASS_t',   &
-                              OCEAN_GRID_CARTESC_REAL_AREA(:,:),           &
-                              OCEAN_GRID_CARTESC_REAL_TOTAREA              )
+       if ( ICE_flag ) then
+          call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                &
+                                 OCEAN_ICE_TEMP_t(:,:), 'OCEAN_ICE_TEMP_t',   &
+                                 OCEAN_GRID_CARTESC_REAL_AREA(:,:),           &
+                                 OCEAN_GRID_CARTESC_REAL_TOTAREA              )
+          call STATISTICS_total( OIA, OIS, OIE, OJA, OJS, OJE,                &
+                                 OCEAN_ICE_MASS_t(:,:), 'OCEAN_ICE_MASS_t',   &
+                                 OCEAN_GRID_CARTESC_REAL_AREA(:,:),           &
+                                 OCEAN_GRID_CARTESC_REAL_TOTAREA              )
+       end if
     endif
 
     !########## Set Surface Boundary to coupler ##########
