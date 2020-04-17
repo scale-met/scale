@@ -44,15 +44,15 @@
 \verb|KF|では、以下のチューニングパラメータを設定できる。
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
-\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; トリガー関数の種類: 1=Kain, 3=Narita-Ohmori\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; CAPE の減率 \\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; 深い対流の生存時間のスケール[sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; 浅い対流の生存時間のスケール[sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; 上昇流の発生源となる層(updraft source layer)の探索開始時の深さ[hPa]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; 降水の種類: 1=Ogura-Cho, 2=Kessler\\
-\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ogura-Cho の降水関数における雲水と降水の比 \\
-\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Kessler の降水関数における Autoconversion の比 \\
-\verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; 警告メッセージを出力するか? \\
+\verb| ATMOS_PHY_CP_kf_trigger_type = 1,|     & ; トリガー関数の種類: 1=Kain, 3=Narita-Ohmori\\
+\verb| ATMOS_PHY_CP_kf_dlcape      = 0.1,|   & ; CAPE の減率 \\
+\verb| ATMOS_PHY_CP_kf_dlifetime   = 1800,|  & ; 深い対流の生存時間のスケール[sec]\\
+\verb| ATMOS_PHY_CP_kf_slifetime   = 2400,|  & ; 浅い対流の生存時間のスケール[sec]\\
+\verb| ATMOS_PHY_CP_kf_DEPTH_USL   =  300,|  & ; 上昇流の発生源となる層(updraft source layer)の探索開始時の深さ[hPa]\\
+\verb| ATMOS_PHY_CP_kf_prec_type   = 1,|     & ; 降水の種類: 1=Ogura-Cho, 2=Kessler\\
+\verb| ATMOS_PHY_CP_kf_rate        = 0.03, | & ; Ogura-Cho の降水関数における雲水と降水の比 \\
+\verb| ATMOS_PHY_CP_kf_thres       = 1.E-3,| & ; Kessler の降水関数における Autoconversion の比 \\
+\verb| ATMOS_PHY_CP_kf_LOG         = false,| & ; 警告メッセージを出力するか? \\
 \verb|/             | & \\
 }\\
 ユーザーはトリガー関数として以下の2つから選択できる。
@@ -60,16 +60,16 @@
 \item Kain タイプ \citet{kain_2004} \\
   \scalerm におけるデフォルト。
 \item Narita and Ohmori タイプ \citet{narita_2007} \\
-  日本域における KF 積雲パラメタリゼーションスキームに対するトリガー関数。
+  日本域でより適していると思われるトリガー関数。
 \end{enumerate}
 また、 降水関数は以下の2つから選択できる。
 \begin{enumerate}
 \item Ogura-Cho タイプ \citet{ogura_1973} \\
   \scalerm におけるデフォルト。この場合、
-  \nmitem{PARAM_ATMOS_PHY_CP_kf_rate}というチューニングパラメータをさらに設定できる。
+  \nmitem{ATMOS_PHY_CP_kf_rate}というチューニングパラメータをさらに設定できる。
 \item Kessler タイプ \citet{kessler_1969} \\
   Kessler type の簡単な降水関数。
-  この場合、 \nmitem{PARAM_ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
+  この場合、 \nmitem{ATMOS_PHY_CP_kf_thres}というチューニングパラメータをさらに設定できる。
 \end{enumerate}
 
 \namelist{PARAM_TIME}内の\nmitem{TIME_DT_ATMOS_PHY_CP}で指定する、
