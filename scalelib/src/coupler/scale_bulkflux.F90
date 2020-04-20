@@ -906,6 +906,9 @@ contains
     ! function
     real(DP) :: fm_unstable
 
+    ! Wilson (2001)
+    real(DP), parameter :: gamma = 3.6_DP
+
     ! works
     real(DP) :: R
     real(DP) :: r4R
@@ -915,10 +918,10 @@ contains
 
     if ( flag_W01 ) then
        ! Wilson (2001)
-       fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 3.6_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
+       fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
-       r4R = ( 1.0_DP - 16.0_DP * R )**0.25_DP
+       r4R = sqrt( sqrt( 1.0_DP - 16.0_DP * R ) )
        fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
     end if
 
@@ -938,8 +941,7 @@ contains
     real(DP) :: fmm_unstable
 
     ! Wilson (2001)
-    real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
-    real(DP), parameter :: gamma = 2.6_DP
+    real(DP), parameter :: gamma = 3.6_DP
 
     ! works
     real(DP) :: R
@@ -960,7 +962,6 @@ contains
                        + 1.5_DP / ( sqrt(gamma)**3 * R) * asinh( sqrt(gamma) * r3 ) &
                        + 1.5_DP * f / ( gamma * r3**2 ) &
                        - 1.0_DP
-          fmm_unstable = fmm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
        end if
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
@@ -993,6 +994,7 @@ contains
 
     ! Wilson (2001)
     real(DP), parameter :: Pt = 0.95_DP ! turbulent Prandtl number
+    real(DP), parameter :: gamma = 7.9_DP
 
     ! works
     real(DP) :: R
@@ -1002,7 +1004,7 @@ contains
 
     if ( flag_W01 ) then
        ! Wilson (2001)
-       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + 7.9_DP * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
+       fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
                    + log( Z ) * ( 1.0_DP - Pt )
     else
        ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
@@ -1206,7 +1208,7 @@ contains
                     * exp( -d*R ) &
 #endif
                   - 3.0_DP * sqrt( 1.0_DP + 2.0_DP*a*R/3.0_DP )**5 / ( 5.0_DP * a * R ) &
-                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R )&
+                  - b * ( c*d*R - c + 1.0_DP ) / ( d**2 * R ) &
                   + 0.6_RP / ( a * R ) + 1.0_DP
     end if
 

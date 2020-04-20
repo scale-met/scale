@@ -337,6 +337,7 @@ contains
     real(RP) :: sh    (KA) !> stability function for scalars for level 2.5
     real(RP) :: q     (KA) !> q
     real(RP) :: q2_2  (KA) !> q^2 for level 2
+    real(RP) :: ac    (KA) !> !> \alpha_c
 
     ! for level 3
     real(RP) :: tvsq  (KA) !> <\theta_v^2>
@@ -378,7 +379,7 @@ contains
     real(RP) :: tke_P
 
     real(RP) :: sf_t
-    real(RP) :: us, phi_h
+    real(RP) :: us, us3, zeta, phi_m, phi_h
 
     real(RP) :: f2h(KA,2)
     real(RP) :: z1
@@ -409,9 +410,9 @@ contains
     !$omp        mynn_level3, &
     !$omp        CZ,FZ,dt, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT) &
-    !$omp private(N2_new,sm,sh,q,q2_2,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
+    !$omp private(N2_new,sm,sh,q,q2_2,ac,SFLX_PT,TEML,RHONu,RHOKh,LHVL,CPtot,qlp, &
     !$omp         Q1,Qsl,dQsl,dtldz,dqwdz,sigma_s,RR,Rt,betat,betaq,aa,bb,cc, &
-    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,phi_h,us,f2h,z1,dummy, &
+    !$omp         a,b,c,d,ap,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us,us3,f2h,z1,dummy, &
     !$omp         tvsq,tsq,qsq,cov,tvsq25,tsq25,qsq25,cov25,tltv,qwtv,prod_t1,prod_q1,prod_c1, &
     !$omp         k,i,j)
     do j = JS, JE
@@ -421,8 +422,10 @@ contains
 
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * DENS(KS,i,j) * EXNER(KS,i,j) )
 
-       dudz2(KS,i,j) = ( ( U(KS+1,i,j) )**2 + ( V(KS+1,i,j) )**2 ) &
-                     / ( CZ(KS+1,i,j) - FZ(KS-1,i,j) )**2
+!       dudz2(KS,i,j) = ( ( U(KS+1,i,j) )**2 + ( V(KS+1,i,j) )**2 ) &
+!                     / ( CZ(KS+1,i,j) - FZ(KS-1,i,j) )**2
+       dudz2(KS,i,j) = ( ( U(KS+1,i,j) - U(KS,i,j) )**2 + ( V(KS+1,i,j) - V(KS,i,j) )**2 ) &
+                       / ( CZ(KS+1,i,j) - CZ(KS,i,j) )**2
        do k = KS+1, KE_PBL
           dudz2(k,i,j) = ( ( U(k+1,i,j) - U(k-1,i,j) )**2 + ( V(k+1,i,j) - V(k-1,i,j) )**2 ) &
                        / ( CZ(k+1,i,j) - CZ(k-1,i,j) )**2
@@ -460,21 +463,25 @@ contains
        ! length
        call get_length( &
             KA, KS, KE_PBL, &
-            POTT(:,i,j), q(:), n2_new(:), & ! (in)
-            SFLX_PT, l_mo(i,j),           & ! (in)
-            FZ(:,i,j),                    & ! (in)
-            l(:,i,j)                      ) ! (out)
+            POTT(KS,i,j), q(:), n2_new(:), & ! (in)
+            SFLX_PT, l_mo(i,j),            & ! (in)
+            FZ(:,i,j),                     & ! (in)
+            l(:,i,j)                       ) ! (out)
 
        call get_q2_level2( &
-            KA, KS, KE_PBL,                   & ! (in)
-            q2_2(:),                          & ! (out)
-            dudz2(:,i,j), Ri(:,i,j), l(:,i,j) ) ! (in)
+            KA, KS, KE_PBL, &
+            dudz2(:,i,j), Ri(:,i,j), l(:,i,j), & ! (in)
+            q2_2(:)                            ) ! (out)
+
+       do k = KS, KE_PBL
+          ac(k) = min( q(k) / sqrt(q2_2(k)), 1.0_RP )
+       end do
 
        call get_smsh( &
             KA, KS, KE_PBL,            & ! (in)
-            q(:), q2_2(:),             & ! (in)
+            q(:), ac(:),               & ! (in)
             l(:,i,j), n2_new(:),       & ! (in)
-            POTV(:,i,j), dudz2(:,i,j), & ! (in)
+            POTT(:,i,j), dudz2(:,i,j), & ! (in)
             tvsq(:), tvsq25(:),        & ! (in) ! dummy
             .false.,                   & ! (in)
             sm(:), sh(:)               ) ! (out)
@@ -498,7 +505,7 @@ contains
 
        do k = KS, KE_PBL
 
-          dQsl = ( Qsl(k) * LHVL(k) / ( Rvap * TEML(k) ) - Qsl(k) ) / TEML(k)
+          dQsl = Qsl(k) * LHVL(k) / ( Rvap * TEML(k)**2 )
           CPtot = Qdry(k,i,j) * CPdry + Qsl(k) * CPvap
           aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
           bb = EXNER(k,i,j) * dQsl
@@ -512,7 +519,7 @@ contains
              sigma_s = 0.5_RP * aa * sqrt( max( qsq(k) - 2.0_RP * bb * cov(k) + bb**2 * tsq(k), 1.0e-20_RP ) )
           else
              ! level 2.5
-             sigma_s = max( 0.5_RP * aa * l(k,i,j) * sqrt( B2 * sh(k) ) * abs( dqwdz(k) - bb * dtldz(k) ), &
+             sigma_s = max( 0.5_RP * aa * l(k,i,j) * sqrt( ac(k) * B2 * sh(k) ) * abs( dqwdz(k) - bb * dtldz(k) ), &
                           1.0e-10_RP )
           end if
 
@@ -542,17 +549,25 @@ contains
                 ! production at KS
                 ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
                 us = max(- l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j), 0.0_RP)**(1.0_RP/3.0_RP)
-                if ( l_mo(i,j) > 0 ) then
-                   phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
+                zeta = z1 / l_mo(i,j)
+                ! Businger et al. (1971)
+!!$                if ( zeta > 0 ) then
+!!$                   phi_h = 4.7_RP * z1 / l_mo(i,j) / 0.74_RP + 1.0_RP
+!!$                else
+!!$                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
+!!$                end if
+                ! Beljaars and Holtslag (1991)
+                if ( zeta > 0 ) then
+                   phi_h = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
                 else
-                   phi_h = 1.0_RP / sqrt( 1.0_RP - 9.0_RP * z1 / l_mo(i,j) )
+                   phi_h = 1.0_RP / sqrt( 1.0_RP - 16.0_RP * zeta )
                 end if
                 ! TSQ
-                prod_t1 = 2.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
+                prod_t1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * SFLX_PT**2
                 ! QSQ
-                prod_q1 = 2.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
+                prod_q1 = 1.0_RP / us * phi_h / ( KARMAN * z1 ) * ( SFLX_QV(i,j) / DENS(KS,i,j) )**2
                 ! COV
-                prod_c1 = 2.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
+                prod_c1 = 1.0_RP / us * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / DENS(KS,i,j)
                 tsq25 = prod_t1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                 qsq25 = prod_q1 * B2 * l(k,i,j) / q(k) * 0.5_RP
                 cov25 = prod_c1 * B2 * l(k,i,j) / q(k) * 0.5_RP
@@ -592,21 +607,25 @@ contains
        ! length
        call get_length( &
             KA, KS, KE_PBL, &
-            POTT(:,i,j), q(:), n2_new(:), & ! (in)
-            SFLX_PT, l_mo(i,j),           & ! (in)
-            FZ(:,i,j),                    & ! (in)
-            l(:,i,j)                      ) ! (out)
+            POTT(KS,i,j), q(:), n2_new(:), & ! (in)
+            SFLX_PT, l_mo(i,j),            & ! (in)
+            FZ(:,i,j),                     & ! (in)
+            l(:,i,j)                       ) ! (out)
 
        call get_q2_level2( &
-            KA, KS, KE_PBL,                   & ! (in)
-            q2_2(:),                          & ! (out)
-            dudz2(:,i,j), Ri(:,i,j), l(:,i,j) ) ! (in)
+            KA, KS, KE_PBL, &
+            dudz2(:,i,j), Ri(:,i,j), l(:,i,j), & ! (in)
+            q2_2(:)                            ) ! (out)
+
+       do k = KS, KE_PBL
+          ac(k) = min( q(k) / sqrt(q2_2(k)), 1.0_RP )
+       end do
 
        call get_smsh( &
             KA, KS, KE_PBL,            & ! (in)
-            q(:), q2_2(:),             & ! (in)
+            q(:), ac(:),               & ! (in)
             l(:,i,j), n2_new(:),       & ! (in)
-            POTV(:,i,j), dudz2(:,i,j), & ! (in)
+            POTT(:,i,j), dudz2(:,i,j), & ! (in)
             tvsq(:), tvsq25(:),        & ! (in)
             mynn_level3,               & ! (in)
             sm(:), sh(:)               ) ! (out)
@@ -743,15 +762,22 @@ contains
 
 
        ! dens * TKE
-       ! production at KS: 2.0 * us3 / ( KARMAN * z1 ) * ( phi_m(zeta) - zeta )
-       ! us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
-       if ( l_mo(i,j) > 0 ) then
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
-                       * ( ( 1.0_RP + 4.7_RP * z1 / l_mo(i,j) ) - z1 / l_mo(i,j) )
+       ! production at KS: us3 * phi_m(zeta) / ( KARMAN * z1 )
+       us3 = - l_mo(i,j) * KARMAN * GRAV * SFLX_PT / POTT(KS,i,j) ! u_*^3
+       zeta = z1 / l_mo(i,j)
+!!$       ! Businger et al. (1971)
+!!$       if ( zeta > 0 ) then
+!!$          phi_m = 4.7_RP * zeta + 1.0_RP
+!!$       else
+!!$          phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+!!$       end if
+       ! Beljaars and Holtslag (1991)
+       if ( zeta > 0 ) then
+          phi_m = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * zeta * exp(-0.35_RP*zeta) + zeta + 1.0_RP
        else
-          prod(KS,i,j) = - 2.0_RP * l_mo(i,j) * GRAV * SFLX_PT / POTT(KS,i,j) / z1 &
-                       * ( 1.0 / sqrt(sqrt( 1.0_RP - 15.0_RP * z1 / l_mo(i,j) )) - z1 / l_mo(i,j) )
+          phi_m = 1.0_RP / sqrt(sqrt(1.0_RP - 16.0_RP * zeta))
        end if
+       prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta )
        do k = KS+1, KE_PBL
 !       do k = KS, KE_PBL
           prod(k,i,j) = Nu(k,i,j) * dudz2(k,i,j) - Kh(k,i,j) * n2_new(k)
@@ -1013,7 +1039,7 @@ contains
     implicit none
     integer,  intent(in) :: KA, KS, KE_PBL
 
-    real(RP), intent(in) :: PT0(KA)
+    real(RP), intent(in) :: PT0
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
     real(RP), intent(in) :: SFLX_PT  !> surface temerture flux
@@ -1055,7 +1081,7 @@ contains
 
     rlm = 1.0_RP / l_mo
 
-    qc = ( GRAV / PT0(KS) * max(SFLX_PT,0.0_RP) * lt )**OneOverThree
+    qc = ( GRAV / PT0 * max(SFLX_PT,0.0_RP) * lt )**OneOverThree
 
     do k = KS, KE_PBL
        z = ( FZ(k)+FZ(k-1) )*0.5_RP - FZ(KS-1)
@@ -1083,16 +1109,16 @@ contains
 !OCL SERIAL
   subroutine get_q2_level2( &
        KA, KS, KE_PBL, &
-       q2_2,           &
-       dudz2, Ri, l    )
+       dudz2, Ri, l, &
+       q2_2          )
     implicit none
     integer,  intent(in)  :: KA, KS, KE_PBL
-
-    real(RP), intent(out) :: q2_2(KA)
 
     real(RP), intent(in)  :: dudz2(KA)
     real(RP), intent(in)  :: Ri(KA)
     real(RP), intent(in)  :: l(KA)
+
+    real(RP), intent(out) :: q2_2(KA)
 
     real(RP) :: rf   !> Rf
     real(RP) :: sm_2 !> sm for level 2
@@ -1118,9 +1144,9 @@ contains
 !OCL SERIAL
   subroutine get_smsh( &
        KA, KS, KE_PBL, &
-       q, q2_2,      &
+       q, ac,        &
        l, n2,        &
-       potv, dudz2,  &
+       pott, dudz2,  &
        tvsq, tvsq25, &
        mynn_level3,  &
        sm, sh        )
@@ -1131,10 +1157,10 @@ contains
     integer,  intent(in)  :: KA, KS, KE_PBL
 
     real(RP), intent(in)  :: q(KA)
-    real(RP), intent(in)  :: q2_2(KA)
+    real(RP), intent(in)  :: ac(KA)
     real(RP), intent(in)  :: l(KA)
     real(RP), intent(in)  :: n2(KA)
-    real(RP), intent(in)  :: potv(KA)
+    real(RP), intent(in)  :: pott(KA)
     real(RP), intent(in)  :: dudz2(KA)
     real(RP), intent(in)  :: tvsq(KA)
     real(RP), intent(in)  :: tvsq25(KA)
@@ -1145,7 +1171,6 @@ contains
 
 
     real(RP) :: l2q2 !> L^2/q^2
-    real(RP) :: ac   !> \alpha_c
     real(RP) :: ac2  !> \alpha_c^2
     real(RP) :: p1   !> \Phi_1
     real(RP) :: p2   !> \Phi_2
@@ -1168,8 +1193,7 @@ contains
     ! level 2.5
     do k = KS, KE_PBL
 
-       ac = min(q(k)/sqrt(q2_2(k)), 1.0_RP)
-       ac2 = ac**2
+       ac2 = ac(k)**2
        l2q2 = ( l(k) / max(q(k),EPS) )**2
 
        gh = - n2(k) * l2q2
@@ -1182,8 +1206,8 @@ contains
 
        rd25 = 1.0_RP / max( p2 * p4 + p5 * p3, EPS )
 
-       sm(k) = max( ac * A1 * ( p3 - 3.0_RP * C1 * p4 ) * rd25, 0.0_RP )
-       sh(k) = max( ac * A2 * ( p2 + 3.0_RP * C1 * p5 ) * rd25, 0.0_RP )
+       sm(k) = max( ac(k) * A1 * ( p3 - 3.0_RP * C1 * p4 ) * rd25, 0.0_RP )
+       sh(k) = max( ac(k) * A2 * ( p2 + 3.0_RP * C1 * p5 ) * rd25, 0.0_RP )
 
     end do
 
@@ -1192,8 +1216,7 @@ contains
 
        do k = KS, KE_PBL
 
-          ac = min(q(k)/sqrt(q2_2(k)), 1.0_RP)
-          ac2 = ac**2
+          ac2 = ac(k)**2
           l2q2 = ( l(k) / max(q(k),EPS) )**2
           ! restriction: L/q <= 1/N
           if ( n2(k) > 0 ) l2q2 = min( l2q2, 1.0_RP/n2(k) )
@@ -1215,13 +1238,13 @@ contains
 
           ew = ( 1.0_RP - C3 ) * ( p2 * ( p1 - p4 ) + p5 * ( p1 - p3 ) ) * rdp
           ew  = sign( max(abs(ew),EPS), ew )
-          fact = ( l2q2 * GRAV / ( l(k) * POTV(k) ) )**2 * ( tvsq(k) - tvsq25(k) ) / gh
+          fact = ( l2q2 * GRAV / ( l(k) * POTT(k) ) )**2 * ( tvsq(k) - tvsq25(k) ) / gh
           fact = fact * ew
           fact = min( max( fact, 0.12_RP - cw25 ), 0.76_RP - cw25 )
           fact = fact / ew
 
-          em = 3.0_RP * ac * A1 * ( 1.0_RP - C3 ) * ( p3 - p4 ) * rdp
-          eh = 3.0_RP * ac * A2 * ( 1.0_RP - C3 ) * ( p2 + p5 ) * rdp
+          em = 3.0_RP * ac(k) * A1 * ( 1.0_RP - C3 ) * ( p3 - p4 ) * rdp
+          eh = 3.0_RP * ac(k) * A2 * ( 1.0_RP - C3 ) * ( p2 + p5 ) * rdp
 
 
           sm(k) = sm(k) + em * fact
