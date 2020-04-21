@@ -138,7 +138,8 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o \
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o  \
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk11s8o.o \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
