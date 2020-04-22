@@ -20,8 +20,6 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
-  use scale_spnudge
-  use scale_dft
 
 #ifdef DEBUG
   use scale_debug, only: &
@@ -346,10 +344,6 @@ contains
     call MONITOR_put( MONIT_qflx_south, zero_y(:,:) )
     call MONITOR_put( MONIT_qflx_north, zero_y(:,:) )
 
-    ! setup for spectral nudging
-    call SPNUDGE_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE)
-    call DFT_setup(KA,KS,KE,IA,IS,IE,JA,JS,JE,max(SPNUDGE_uv_lm, SPNUDGE_pt_lm),max(SPNUDGE_uv_mm,SPNUDGE_pt_mm))
-
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
 
@@ -416,6 +410,24 @@ contains
        ATMOS_DYN_tinteg_short
     use scale_atmos_dyn_tinteg_tracer, only: &
        ATMOS_DYN_tinteg_tracer
+    use scale_spnudge, only: &
+       SPNUDGE_uv,         &
+       SPNUDGE_uv_divfree, &
+       SPNUDGE_pt,         &
+       SPNUDGE_qv,         &
+       SPNUDGE_u_alpha,    &
+       SPNUDGE_v_alpha,    &
+       SPNUDGE_pt_alpha,   &
+       SPNUDGE_qv_alpha,   &
+       SPNUDGE_uv_lm,      &
+       SPNUDGE_uv_mm,      &
+       SPNUDGE_pt_lm,      &
+       SPNUDGE_pt_mm,      &
+       SPNUDGE_qv_lm,      &
+       SPNUDGE_qv_mm
+    use scale_dft, only: &
+       DFT_g2g_divfree, &
+       DFT_g2g
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -741,10 +753,38 @@ contains
              enddo
              enddo
           else
+             if( iq == I_QV .and. SPNUDGE_qv ) then
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = diff(k,i,j)
+                enddo
+                enddo
+                enddo
+
+                call DFT_g2g(KA,KS,KE,IA,IS,IE,JA,JS,JE,SPNUDGE_qv_lm,SPNUDGE_qv_mm,diff2)
+
+             else
+
+                !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+                do j = JS, JE
+                do i = IS, IE
+                do k = KS, KE
+                   diff2(k,i,j) = 0
+                enddo
+                enddo
+                enddo
+
+             endif
+
              !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
              !$omp private(i,j,k,damp) &
              !$omp shared(JS,JE,IS,IE,KS,KE,iq,iqb) &
-             !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,BND_SMOOTHER_FACT,DENS00,TRACER_MASS,I_QV) &
+             !$omp shared(RHOQ_t,RHOQ_tp,DENS_tq,DAMP_alpha_QTRC,diff,diff2,BND_SMOOTHER_FACT,SPNUDGE_qv_alpha,DENS00,TRACER_MASS) &
              !$omp shared(damp_t_QTRC,do_put)
 !OCL XFILL
              do j = JS, JE
@@ -753,7 +793,8 @@ contains
                 damp = - DAMP_alpha_QTRC(k,i,j,iqb) &
                      * ( diff(k,i,j) & ! rayleigh damping
                        - ( diff(k,i-1,j) + diff(k,i+1,j) + diff(k,i,j-1) + diff(k,i,j+1) - diff(k,i,j)*4.0_RP ) &
-                       * 0.125_RP * BND_SMOOTHER_FACT ) ! horizontal smoother
+                       * 0.125_RP * BND_SMOOTHER_FACT ) & ! horizontal smoother
+                       - SPNUDGE_qv_alpha(k,i,j) * diff2(k,i,j)
                 damp = damp * DENS00(k,i,j)
                 if ( do_put ) damp_t_QTRC(k,i,j) = damp
                 RHOQ_t(k,i,j,iq) = RHOQ_tp(k,i,j,iq) + damp

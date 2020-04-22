@@ -120,6 +120,8 @@ contains
        ATMOS_DYN_tstep_large_setup
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_setup
+    use scale_spnudge, only: &
+       SPNUDGE_setup
     implicit none
 
     character(len=*),  intent(in)    :: DYN_Tinteg_Short_TYPE
@@ -197,6 +199,10 @@ contains
        call ATMOS_DYN_wdamp_setup( wdamp_coef(:),           & ! [INOUT]
                                    wdamp_tau, wdamp_height, & ! [IN]
                                    FZ(:)                    ) ! [IN]
+
+       ! setup for spectral nudging
+       call SPNUDGE_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE )
+
 
     else
 
