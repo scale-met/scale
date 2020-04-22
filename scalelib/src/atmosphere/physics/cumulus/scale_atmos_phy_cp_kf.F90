@@ -485,7 +485,6 @@ contains
        RHOT,           &
        TEMP, PRES,     &
        QDRY, QV_in,    &
-       CPtot, CVtot,   &
        w0avg,          &
        FZ,             &
        KF_DTSECD,      &
@@ -536,8 +535,6 @@ contains
     real(RP), intent(in)    :: PRES (KA,IA,JA)   !< pressure of dry air [Pa]
     real(RP), intent(in)    :: QDRY (KA,IA,JA)   !< dry air [1]
     real(RP), intent(in)    :: QV_in(KA,IA,JA)   !< specific humidity [kg/kg]
-    real(RP), intent(in)    :: CPtot(KA,IA,JA)   !< specific heat
-    real(RP), intent(in)    :: CVtot (KA,IA,JA)  !< specific heat
     real(RP), intent(in)    :: w0avg(KA,IA,JA)   !< running mean of vertical velocity [m/s]
     real(RP), intent(in)    :: FZ   (0:KA,IA,JA)
     real(DP), intent(in)    :: KF_DTSECD
@@ -653,7 +650,7 @@ contains
     !$omp         k_lcl,k_lc,k_lfs,k_pbl,k_top,k_let,k_ml, &
     !$omp         nic,deltap,cldfrac_KF,ems,emsd,wspd,dmf,downent,downdet, &
     !$omp         dQv,dQC,dQR,dQI,dQS) &
-    !$omp shared(DENS,RHOT,U,V,QDRY,TEMP,PRES,QV_in,CPtot,CVtot,FZ,Z,w0avg, &
+    !$omp shared(DENS,RHOT,U,V,QDRY,TEMP,PRES,QV_in,FZ,Z,w0avg, &
     !$omp        DENS_t,RHOT_t,RHOQV_t,RHOQ_t, &
     !$omp        GRAV,PRE00,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,EPSvap, &
     !$omp        WARMRAIN,KF_DTSEC,SHALLOWLIFETIME, &

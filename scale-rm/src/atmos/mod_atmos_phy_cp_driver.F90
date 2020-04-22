@@ -150,9 +150,7 @@ contains
        TEMP,              &
        PRES,              &
        QDRY,              &
-       QV,                &
-       CPtot,             &
-       CVtot
+       QV
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_cp_vars, only: &
@@ -196,7 +194,6 @@ contains
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
                                          RHOT(:,:,:), TEMP(:,:,:), PRES(:,:,:),    & ! [IN]
                                          QDRY(:,:,:), QV(:,:,:),                   & ! [IN]
-                                         CPtot(:,:,:), CVtot(:,:,:),               & ! [IN]
                                          w0mean(:,:,:),                            & ! [IN]
                                          FZ(:,:,:),                                & ! [IN]
                                          TIME_DTSEC_ATMOS_PHY_CP,                  & ! [IN]
@@ -252,7 +249,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_CP(k,i,j)
-       RHOT_t(k,i,j) = RHOT_T(k,i,j) + RHOT_t_CP(k,i,j)
+       RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_CP(k,i,j)
     enddo
     enddo
     enddo
