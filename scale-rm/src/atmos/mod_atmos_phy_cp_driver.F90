@@ -80,7 +80,6 @@ contains
           warmrain = ( .not. ATMOS_HYDROMETEOR_ice_phase )
           call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                       ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_AREA, &
-                                      TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP,                      &
                                       warmrain                                                  )
        case default
           LOG_ERROR("ATMOS_PHY_CP_driver_setup",*) 'ATMOS_PHY_CP_TYPE (', trim(ATMOS_PHY_CP_TYPE), ') is invalid. Check!'
@@ -97,6 +96,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver_calc_tendency( update_flag )
+    use scale_const, only: &
+       PRE00 => CONST_PRE00
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -149,9 +150,7 @@ contains
        TEMP,              &
        PRES,              &
        QDRY,              &
-       QV,                &
-       Rtot,              &
-       CPtot
+       QV
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_cp_vars, only: &
@@ -161,6 +160,7 @@ contains
        RHOHYD_t_CP    => ATMOS_PHY_CP_RHOHYD_t,       &
        MFLX_cloudbase => ATMOS_PHY_CP_MFLX_cloudbase, &
        SFLX_rain      => ATMOS_PHY_CP_SFLX_rain,      &  ! convective rain [kg/m2/s]
+       SFLX_snow      => ATMOS_PHY_CP_SFLX_snow,      &  ! convective snow [kg/m2/s]
        SFLX_ENGI      => ATMOS_PHY_CP_SFLX_ENGI,      &  ! internal energy flux [J/m2/s]
        cloudtop       => ATMOS_PHY_CP_cloudtop,       &  ! cloud top height [m]
        cloudbase      => ATMOS_PHY_CP_cloudbase,      &  ! cloud base height [m]
@@ -173,6 +173,8 @@ contains
     logical, intent(in) :: update_flag
 
     real(RP) :: RHOQ_t_CP(KA,IA,JA,QS_MP:QE_MP)
+
+    real(RP) :: SFLX_prec(IA,JA)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -192,23 +194,17 @@ contains
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
                                          RHOT(:,:,:), TEMP(:,:,:), PRES(:,:,:),    & ! [IN]
                                          QDRY(:,:,:), QV(:,:,:),                   & ! [IN]
-                                         Rtot(:,:,:), CPtot(:,:,:),                & ! [IN]
                                          w0mean(:,:,:),                            & ! [IN]
-                                         FZ,                                       & ! [IN]
+                                         FZ(:,:,:),                                & ! [IN]
                                          TIME_DTSEC_ATMOS_PHY_CP,                  & ! [IN]
                                          DENS_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOT_t_CP(:,:,:),                         & ! [INOUT]
                                          RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:),  & ! [INOUT]
                                          kf_nca(:,:),                              & ! [INOUT]
-                                         SFLX_rain(:,:),                           & ! [OUT]
+                                         SFLX_rain(:,:), SFLX_snow(:,:),           & ! [INOUT]
+                                         SFLX_ENGI(:,:),                           & ! [INOUT]
                                          cloudtop(:,:), cloudbase(:,:),            & ! [OUT]
                                          cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [OUT]
-          !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
-             SFLX_ENGI(i,j) = SFLX_rain(i,j) * TEMP(KS,i,j) * CV_WATER
-          end do
-          end do
 
        end select
 
@@ -221,9 +217,16 @@ contains
 
        ! diagnose tendency of number concentration
 
+       do j = JSB, JEB
+       do i = ISB, IEB
+          SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+       end do
+       end do
+
        call FILE_HISTORY_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', fill_halo=.true. )
-       call FILE_HISTORY_in( SFLX_rain     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_snow     (:,:),   'SNOW_CP',   'surface snow rate by CP',          'kg/m2/s', fill_halo=.true. )
+       call FILE_HISTORY_in( SFLX_prec     (:,:),   'PREC_CP',   'surface precipitation rate by CP', 'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( cloudtop      (:,:),   'CUMHGT',    'CP cloud top height',              'm',       fill_halo=.true. )
        call FILE_HISTORY_in( cloudbase     (:,:),   'CUBASE',    'CP cloud base height',             'm',       fill_halo=.true. )
        call FILE_HISTORY_in( cldfrac_dp    (:,:,:), 'CUMFRC_DP', 'CP cloud fraction (deep)',         '1',       fill_halo=.true. )

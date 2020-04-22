@@ -49,15 +49,15 @@ provided to double-moment micro-physics schemes.
 Following tuning parameters are available in \verb|KF|:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
-\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decrease rate\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; Lifetime scale of deep convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; Depth of updraft source layer at the beginning of search [hPa]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
-\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation function\\
-\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Autoconversion rate for Kessler precipitation function\\
-\verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; Output warning messages\\
+\verb| ATMOS_PHY_CP_kf_trigger_type = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
+\verb| ATMOS_PHY_CP_kf_dlcape       = 0.1,|   & ; Cape decrease rate\\
+\verb| ATMOS_PHY_CP_kf_dlifetime    = 1800,|  & ; Lifetime scale of deep convection [sec]\\
+\verb| ATMOS_PHY_CP_kf_slifetime    = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
+\verb| ATMOS_PHY_CP_kf_DEPTH_USL    =  300,|  & ; Depth of updraft source layer at the beginning of search [hPa]\\
+\verb| ATMOS_PHY_CP_kf_prec_type    = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
+\verb| ATMOS_PHY_CP_kf_rate         = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation function\\
+\verb| ATMOS_PHY_CP_kf_thres        = 1.E-3,| & ; Autoconversion rate for Kessler precipitation function\\
+\verb| ATMOS_PHY_CP_kf_LOG          = false,| & ; Output warning messages\\
 \verb|/             | & \\
 }\\
 Users can select trigger function from two options:
@@ -65,14 +65,14 @@ Users can select trigger function from two options:
 \item Kain Type \citet{kain_2004} \\
   Default trigger function in SCALE-RM.
 \item Narita and Ohmori Type \citet{narita_2007} \\
-  A trigger function for KF cumulus parameterization for Japan area.
+  A trigger function which seems to be more suitable for Japan area.
 \end{enumerate}
 Users can select precipitation function from two options:
 \begin{enumerate}
 \item Ogura-Cho Type \citet{ogura_1973} \\
-  Default precipitation function in SCALE-RM. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_rate} is available.
+  Default precipitation function in SCALE-RM. For this type, additional tuning parameter of \nmitem{ATMOS_PHY_CP_kf_rate} is available.
 \item Kessler Type \citet{kessler_1969} \\
-  Kessler type simple precipitation function. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_thres} is available.
+  Kessler type simple precipitation function. For this type, additional tuning parameter of \nmitem{ATMOS_PHY_CP_kf_thres} is available.
 \end{enumerate}
 
 The time interval of calling KF specified by \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also a tuning parameter, which is effective to the precipitation amount. As the first setting of \nmitem{TIME_DT_ATMOS_PHY_CP}, 300s is recommended.

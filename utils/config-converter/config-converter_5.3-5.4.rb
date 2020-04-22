@@ -147,6 +147,22 @@ EOF
   end
 
 
+  # KF
+  if /^&PARAM_ATMOS_PHY_CP_KF$/i =~ param_name
+    print param_name, "\n"
+    if param_items
+      param_items.each do |item|
+        item.sub!(/PARAM_/, "")
+        if /^(.+)(trigger|prec)(\s*=.+)$/ =~ item
+          item = "#{$1}#{$2}_type#{$3}"
+        end
+        print item, "\n"
+      end
+      print "/\n"
+    end
+    next
+  end
+
   # Others
   print param_name, "\n"
   if param_items

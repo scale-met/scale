@@ -2655,7 +2655,8 @@ contains
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain, &
+       SFLX_snow_CP => ATMOS_PHY_CP_SFLX_snow
     implicit none
 
     character(len=*), intent(in)  :: vname
@@ -2827,7 +2828,7 @@ contains
           do j = JS, JE
           do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
-             SNOW(i,j) = SFLX_snow_MP(i,j)
+             SNOW(i,j) = SFLX_snow_MP(i,j) + SFLX_snow_CP(i,j)
           enddo
           enddo
           DV_calculated(I_RAIN) = .true.
