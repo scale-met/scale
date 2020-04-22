@@ -27,7 +27,7 @@ The format in the parentheses indicates the supported format which \sno output.
  \item Convert a single file or multiple files into multiple files with different number of decomposition (\scalenetcdf).
 % \item Generate a control file (*.ctl) for reading a single \Netcdf file by \grads
  \item Regrid data from the model-level to the pressure-level coordinate (\scalenetcdf).
- \item Regrid data from the model grid to the geodesic (latitude-longitude) grid coordinate (\scalenetcdf).
+ \item Regrid data from the model grid to the geodesic (latitude-longitude) grid coordinate (NetCDF, but NOT \scalenetcdf !).
  \item Average history data over multiple steps (\scalenetcdf).
 \end{itemize}
 
@@ -48,33 +48,38 @@ The settings for \sno are specified in \namelist{PARAM_SNO}.
 \verb| nprocs_y_out    = 1,       | & ; Decomposition number of files in y-direction \\
                                     & ~~~If \verb|output_grads = true|, it must be set to 1. \\
 \verb| output_single   = .false., | & ; (\scalenetcdf) Whether output to a single \netcdf file when using multiple MPI processes? \\
-\verb| output_gradsctl = .false., | & ; (\scalenetcdf) Output a grads control file when outputting a single \netcdf file? \\
+%\verb| output_gradsctl = .false., | & ; (\scalenetcdf) Output a grads control file when outputting a single \netcdf file? \\
 \verb| dirpath_out     = "",      | & ; (\grads) Directory path of a output file \\
 \verb| output_grads    = .false., | & ; (\grads) Output with grads format? \\
 \verb|/                           | & \\
 }
 
 \nmitem{basename_in} is always required.
-The information of the decomposed files, such as the total number of files and the 2-D topology, is read from the first file (\verb|*.pe000000.nc|).
+The information of the decomposed files,
+such as the total number of files and the 2-D topology,
+is read from the first file (\verb|*.pe000000.nc|).
 
 If \nmitem{vars} is not specified, all of variables in the input file are processed.
 
-The default value of \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} is 1; it means that multiple files are combined to a single file.
+The default value of \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} is 1;
+it means that multiple files are combined to a single file.
 If \nmitem{output_single} = \verb|.true.|,
 the input data is combined in a single file regardless of the settings of \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out}.
 
 %The number of MPI processes to execute \sno must be a divisor of $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$.
 %When \verb|output_single| = \verb|.true.|, the number of processes specified by \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must not be larger than the total number of input files.
-The number of MPI processes to execute \sno must be the same with $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$.
-When \verb|output_single| = \verb|.true.|, the number of processes specified by \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must not be a divisor of the decomposition number of input files in x- and y-directions, respectively.
+The number of MPI processes to execute \sno must be the same with $\nmitemeq{nprocs_x_out} \times \nmitemeq{nprocs_y_out}$,
+and \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must be a divisor of the decomposition number
+of input files in x- and y-directions, respectively.
 
 
 When the output format is \scalenetcdf, \nmitem{basename_out} is required.
-If \nmitem{output_gradsctl} = \verb|.true.|, \sno outputs a control file for \grads.
-Note that, this option is available when \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} are 1.
+%If \nmitem{output_gradsctl} = \verb|.true.|, \sno outputs a control file for \grads.
+%Note that, this option is available when \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} are 1.
 
 
-If \nmitem{output_grads} is set to \verb|.true.|, data is output in a single file with binary format, which is readable by \grads.
+If \nmitem{output_grads} is set to \verb|.true.|, data is output in a single file with binary format,
+which is readable by \grads.
 If \nmitem{dirpath_out} is empty, the directory path for output is set to the current directory.
 When the output format is \grads, \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} must be 1.
 
@@ -98,20 +103,22 @@ In addition to \namelist{PARAM_SNO}, \sno depends on the following namelist para
 \verb|&PARAM_SNO                                    | \\
 \verb| basename_in     = 'input/history_d02',       | \\
 \verb| basename_out    = 'output/history_d02_new',  | \\
-\verb| output_gradsctl = .true.,                    | \\
+%\verb| output_gradsctl = .true.,                    | \\
 \verb|/                                             | \\
 }
 %
-This example converts history files named \verb|history_d02.pe######.nc| in the directory \verb|./input|, where \verb|######| represents the MPI process number.
+This example converts history files named \verb|history_d02.pe######.nc| in the directory \verb|./input|,
+where \verb|######| represents the MPI process number.
 Any options about the number of output file and variables are not specified in this example.
 Thus, all the variables in the input files are combined and output to a single file.
 The converted file is output to \verb|./output| directory with the new name \verb|history_d02_new.pe######.nc|.
 
-Since \nmitem{output_gradsctl} is \verb|.true.|, \sno outputs a control file for \grads.
-This option is valid only when the number of executive processes is one.
+%Since \nmitem{output_gradsctl} is \verb|.true.|, \sno outputs a control file for \grads.
+%This option is valid only when the number of executive processes is one.
 %
 Generally, a single \netcdf file is readable by \grads without any external metadata file.
-However, \grads interface is limited and cannot understand the \scalenetcdf format, which contains the associated coordinates and the map projections.
+However, \grads interface is limited and cannot understand the \scalenetcdf format,
+which contains the associated coordinates and the map projections.
 The control file is necessary for \grads to read \scalenetcdf file.
 The following is an example of the output control file.
 %
@@ -150,10 +157,10 @@ The following is an example of the output control file.
 }
 
 This example outputs a single file containing all variables as well as the above example.
-In the other hand, in this example, the number of MPI processes must be set to 24 ($=4\times6$).
-Since \nmitem{nprocs_x_out} and \nmitem{nprocs_y_out} are not 1, \grads control file cannot be output.
+On the other hand, in this example, the number of MPI processes must be set to 24 ($=4\times6$).
 \grads can read the output file if you prepare the control file by yourself.
-Note that this conversion method is not supported for the history files from the experiment with the periodic boundary conditions.
+Note that this conversion method is not supported for the history files from the experiment
+with the periodic boundary conditions.
 
 
 
@@ -169,11 +176,13 @@ Note that this conversion method is not supported for the history files from the
 }
 
 To output decomposed files, there is a restriction that each file must have the same number of grids (excluding the halo grid).
-To satisfy this restriction, \nmitem{nprocs_x_out} must be a divisor of the total grid number (\verb|IMAXG|) of the entire domain in {\XDIR} (see Sec. \ref{sec:domain}).
+To satisfy this restriction, \nmitem{nprocs_x_out} must be a divisor of the total grid number (\verb|IMAXG|)
+of the entire domain in {\XDIR} (see Sec. \ref{sec:domain}).
 \nmitem{nprocs_y_out} also has the same restriction as \nmitem{nprocs_x_out}.
 
 
-Let's assume that the number of input files is 4 ([x,y]=[2,2]) and each file has 30 grid cells both in x- and y-directions except for halo.
+Let's assume that the number of input files is 4 ([x,y]=[2,2])
+and each file has 30 grid cells both in x- and y-directions except for halo.
 That is, the number of total grid cells of the entire domain is 60 $\times$ 60.
 %
 Since the number of output file is 24 ([x,y]=[4,6]),
@@ -184,7 +193,7 @@ You can get information of the grid and decomposition in the input file by check
 For example, you can obtain the header information by using ``ncdump'' command as follows:
 
 \begin{alltt}
-  $  ncdump -h history_d02.pe000000.nc
+  \$  ncdump -h history_d02.pe000000.nc
 \end{alltt}
 
 You will find the global attributes at the end of dumped information.
@@ -203,10 +212,13 @@ You will find the global attributes at the end of dumped information.
 \verb|  ......                                           | \\
 }
 
-\verb|scale_cartesC_prc_num_x| and \verb|scale_cartesC_prc_num_y| are the sizes of x- and y-directions in the 2-D file topology, respectively.
-\verb|scale_cartesC_prc_rank_x| and \verb|scale_cartesC_prc_rank_y| are the x- and y-positions of this file in the 2-D map, respectively.
+\verb|scale_cartesC_prc_num_x| and \verb|scale_cartesC_prc_num_y|
+are the sizes of x- and y-directions in the 2-D file topology, respectively.
+\verb|scale_cartesC_prc_rank_x| and \verb|scale_cartesC_prc_rank_y|
+are the x- and y-positions of this file in the 2-D map, respectively.
 The rank number starts from 0.
-\verb|scale_atmos_grid_cartesC_index_imaxg| and \verb|scale_atmos_grid_cartesC_index_jmaxg| are the total number of grid cells in x- and y-directions, respectively.
+\verb|scale_atmos_grid_cartesC_index_imaxg| and \verb|scale_atmos_grid_cartesC_index_jmaxg|
+are the total number of grid cells in x- and y-directions, respectively.
 These numbers do not contain halo grid.
 For other attribute information, refer to the table \ref{table:netcdf_global_attrs} in Sec. \ref{sec:global_attr}.
 
@@ -224,20 +236,23 @@ For other attribute information, refer to the table \ref{table:netcdf_global_att
 \verb|/                                         | \\
 }
 
-If \nmitem{output_grads} is \verb|.true.|, all of the decomposed data is combined spatially and output into a single file of \grads binary format.
+If \nmitem{output_grads} is \verb|.true.|, all of the decomposed data is combined spatially
+and output into a single file of \grads binary format.
 The conversion is applied to the variables specified by \nmitem{vars}.
-Since the \grads format file cannot contain the variables with the different vertical layers, \sno outputs individual variables to a different file.
+Since the \grads format file cannot contain the variables with the different vertical layers,
+\sno outputs individual variables to a different file.
 The individual file is named as the variable name.
 The control files are also generated.
 The converted file is output to \verb|./output| directory.
-Note that the output path, i.e., \nmitem{dirpath_out}, will not be set if you specify \nmitem{basename_out}.
-
+Note that \nmitem{basename_out} is ignored in this conversion.
+Instead of \nmitem{basename_out}, you can use the output path, i.e., \nmitem{dirpath_out}.
 
 
 
 \subsection{Examples of configuration: plugin functions}
 
-You can apply the operators, such as time averaging or horizontal/vertical remapping, before outputting the combined/decomposed files.
+You can apply the operators, such as time averaging or horizontal/vertical remapping,
+before outputting the combined/decomposed files.
 
 \subsubsection{Temporally averaging}
 
@@ -277,9 +292,12 @@ The other example is as follows:
 }
 
 Both the file aggregation and the time averaging are applied in this example.\\
-When \nmitem{SNOPLGIN_timeave_type} is set to \verb|'DAILY'|, \verb|'MONTHLY'|, or \verb|'ANNUAL'|, \sno try to daily, monthly or annual average of the variables, respectively.
+When \nmitem{SNOPLGIN_timeave_type} is set to \verb|'DAILY'|, \verb|'MONTHLY'|, or \verb|'ANNUAL'|,
+\sno try to daily, monthly or annual average of the variables, respectively.
 The date and time of the data are read from the file.
-If you use different calendar from the default in the simulation, the same setting of \namelist{PARAM_CALENDAR} should be added to the configuration file of \sno (Please see Sec. \ref{subsec:calendar}).
+If you use different calendar from the default in the simulation,
+the same setting of \namelist{PARAM_CALENDAR} should be added to the configuration file of \sno
+(Please see Sec. \ref{subsec:calendar}).
 
 
 
@@ -304,12 +322,14 @@ The settings for regrid of data on the lat-lon coordinate are specified by \name
 \verb|/                                        | \\
 }
 
-When \nmitem{SNOPLGIN_hgridope_type} is set to \verb|'LATLON'|, horizontal remapping to the latitude-longitude grid system is applied.
+When \nmitem{SNOPLGIN_hgridope_type} is set to \verb|'LATLON'|,
+horizontal remapping to the latitude-longitude grid system is applied.
 This plugin operator can be available only when the output file is single.
-The other options in \namelist{PARAM_SNOPLGIN_HGRIDOPE} are used to set the domain boundary and grid interval of the output data.
+The other options in \namelist{PARAM_SNOPLGIN_HGRIDOPE}
+are used to set the domain boundary and grid interval of the output data.
 The size of longitude grid point \verb|nlon| is calculated as follows:
 \begin{eqnarray}
-  \nmitemeq{nlon} = \frac{\nmitemeq{SNOPLGIN_hgridope_lon_end} - \nmitemeq{SNOPLGIN_hgridope_lon_start} }{\nmitemeq{SNOPLGIN_hgridope_dlon}} \nonumber.
+  \nmitemeq{nlon} = \frac{\nmitemeq{SNOPLGIN_hgridope_lon_end} - \nmitemeq{SNOPLGIN_hgridope_lon_start} }{\nmitemeq{SNOPLGIN_hgridope_dlon}} + 1\nonumber.
 \end{eqnarray}
 \noindent
 The result of this calculation is rounded to an integer.
@@ -338,8 +358,10 @@ The settings for regrid of data on pressure-level coordinate are specified by \n
 \verb|/                                                        | \\
 }
 
-When \nmitem{SNOPLGIN_vgridope_type} in \namelist{PARAM_SNOPLGIN_VGRIDOPE} is set to \verb|'PLEV'|, vertical remapping to the pressure-coordinate system is applied.
-\nmitem{SNOPLGIN_vgridope_lev_num} is the number of vertical layers, and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the pressure levels at which you want to convert data.
+When \nmitem{SNOPLGIN_vgridope_type} in \namelist{PARAM_SNOPLGIN_VGRIDOPE}
+is set to \verb|'PLEV'|, vertical remapping to the pressure-coordinate system is applied.
+\nmitem{SNOPLGIN_vgridope_lev_num} is the number of vertical layers,
+and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the pressure levels at which you want to convert data.
 The unit of the pressure level is [Pa].
 Note that pressure data (\verb|PRES|) must be included in the input file.
 This plugin operator is available even when the output file is multiple.
