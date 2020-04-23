@@ -17,11 +17,10 @@ MPIライブラリを使用した並列実行バイナリは、
  $ cd scale-{\version}/scale-rm/util/netcdf2grads_h
  $ make -j 2
 \end{alltt}
-MPI ライブラリが無い場合に、逐次実行バイナリを生成するには、
+MPI ライブラリが無い場合に、逐次実行バイナリを生成するには、以下のコマンドによってコンパイルする。
 \begin{alltt}
  $ make -j 2 SCALE_DISABLE_MPI=T
 \end{alltt}
-のコマンドによってコンパイルする。
 「\verb|net2g|」という名前の実行ファイルが生成されていれば、コンパイルは成功である。
 作成した実行バイナリを消去する場合は、下記のコマンドを実行する。
 \begin{alltt}
@@ -29,29 +28,31 @@ MPI ライブラリが無い場合に、逐次実行バイナリを生成する�
 \end{alltt}
 
 
-
+%-------------------------------------------------------------------------------
 \section{\sno のコンパイル} \label{sec:compile_sno}
+%-------------------------------------------------------------------------------
 
 \sno は、\scalelib version 5.3以降に作成された\scalenetcdf のための後処理ツールである。
-チュートリアルでは使用しないが、net2g よりも処理スピードが速い特徴がある。
-一方で、現バージョンの \sno は機能が限られる。詳細は第\ref{sec:sno}章を参照されたい。
+現バージョンの \sno は net2g に比べて機能が限られるため、チュートリアルでは使用していないが、
+net2g よりも処理スピードが速い特徴がある。
+詳細は第\ref{sec:sno}章を参照されたい。
 
 \sno のコンパイルでは、\scalerm のコンパイル時に生成される\scalelib ライブラリ(\verb|libscale.a|)を用いる。
 このライブラリは、ディレクトリ\texttt{scale-{\version}/lib}に作成される。
 そのため、\scalerm のコンパイル後に以下のコマンドを実行する。
-
+%
 \begin{alltt}
   $  cd scale-{\version}/scale-rm/util/sno
   $  make
 \end{alltt}
 
 コンパイルが成功すれば、実行バイナリがディレクトリ\texttt{scale-{\version}/bin}の下に作成される。
-\sno の実行例は以下である。
-
+\sno は以下のように実行する。
+%
 \begin{alltt}
   $  mpirun -n 2 ./sno sno.conf
 \end{alltt}
-
+%
 この例では、「mpirun」コマンドを用いて 2 つの MPI プロセスで{\sno}を実行している。
 最後の引数は設定ファイルである。
 
