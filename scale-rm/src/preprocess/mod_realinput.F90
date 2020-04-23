@@ -535,20 +535,21 @@ contains
        URBAN_SFC_albedo
     implicit none
 
-    logical                  :: USE_FILE_LANDWATER                     = .true.    ! use land water data from files
-    real(RP)                 :: INIT_LANDWATER_RATIO(LANDUSE_PFT_nmax)             ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false."
-    real(RP)                 :: INIT_OCEAN_ALB_LW                      = 0.04_RP   ! initial LW albedo on the ocean
-    real(RP)                 :: INIT_OCEAN_ALB_SW                      = 0.10_RP   ! initial SW albedo on the ocean
-    real(RP)                 :: INIT_OCEAN_Z0W                         = 1.0E-3_RP ! initial surface roughness on the ocean
-    character(len=H_SHORT)   :: INTRP_LAND_TEMP                        = 'off'
-    character(len=H_SHORT)   :: INTRP_LAND_WATER                       = 'off'
-    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP                    = 'off'
-    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP                       = 'off'
-    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP                   = 'off'
-    integer                  :: INTRP_ITER_MAX                         = 100
-    character(len=H_SHORT)   :: SOILWATER_DS2VC                        = 'limit'
-    logical                  :: soilwater_DS2VC_flag                             ! true: 'critical', false: 'limit'
-    logical                  :: elevation_correction                   = .true.
+    logical                  :: USE_FILE_LANDWATER                          = .true.    ! use land water data from files
+    real(RP)                 :: INIT_LANDWATER_RATIO                        = 0.5_RP    ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false." (all PFT)
+    real(RP)                 :: INIT_LANDWATER_RATIO_EACH(LANDUSE_PFT_nmax)             ! Ratio of land water to storage is constant, if USE_FILE_LANDWATER is ".false." (each PFT)
+    real(RP)                 :: INIT_OCEAN_ALB_LW                           = 0.04_RP   ! initial LW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_ALB_SW                           = 0.10_RP   ! initial SW albedo on the ocean
+    real(RP)                 :: INIT_OCEAN_Z0W                              = 1.0E-3_RP ! initial surface roughness on the ocean
+    character(len=H_SHORT)   :: INTRP_LAND_TEMP                             = 'off'
+    character(len=H_SHORT)   :: INTRP_LAND_WATER                            = 'off'
+    character(len=H_SHORT)   :: INTRP_LAND_SFC_TEMP                         = 'off'
+    character(len=H_SHORT)   :: INTRP_OCEAN_TEMP                            = 'off'
+    character(len=H_SHORT)   :: INTRP_OCEAN_SFC_TEMP                        = 'off'
+    integer                  :: INTRP_ITER_MAX                              = 100
+    character(len=H_SHORT)   :: SOILWATER_DS2VC                             = 'limit'
+    logical                  :: soilwater_DS2VC_flag                                  ! true: 'critical', false: 'limit'
+    logical                  :: elevation_correction                        = .true.
     logical                  :: elevation_correction_land
     logical                  :: elevation_correction_ocean
 
@@ -565,6 +566,7 @@ contains
        BOUNDARY_UPDATE_DT,         &
        USE_FILE_LANDWATER,         &
        INIT_LANDWATER_RATIO,       &
+       INIT_LANDWATER_RATIO_EACH,  &
        INTRP_TYPE,                 &
        INTRP_LAND_TEMP,            &
        INTRP_LAND_WATER,           &
@@ -677,7 +679,7 @@ contains
     LOG_INFO('REALINPUT_surface',*) 'Setup LAND'
 
     ! LAND/URBAN
-    INIT_LANDWATER_RATIO(:) = 0.5_RP
+    INIT_LANDWATER_RATIO_EACH(:) = -1.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -705,6 +707,18 @@ contains
        BASENAME_LAND = trim(BASENAME_ORG)//"_00000"
     else
        BASENAME_LAND = trim(BASENAME_ORG)
+    endif
+
+    if( .NOT. USE_FILE_LANDWATER ) then
+       if( all( INIT_LANDWATER_RATIO_EACH(:) ) < 0.0_RP ) then
+          LOG_INFO("REALINPUT_surface",*) 'Applied INIT_LANDWATER_RATIO, instead of INIT_LANDWATER_RATIO_EACH.'
+          INIT_LANDWATER_RATIO_EACH(:) = INIT_LANDWATER_RATIO
+       else
+          if( any( INIT_LANDWATER_RATIO_EACH(:) ) < 0.0_RP ) then
+             LOG_ERROR("REALINPUT_surface",*) 'Insufficient elemtents of array (INIT_LANDWATER_RATIO_EACH):', INIT_LANDWATER_RATIO_EACH(:)
+             call PRC_abort
+          endif
+       endif
     endif
 
     select case( SOILWATER_DS2VC )
@@ -901,7 +915,7 @@ contains
                                 mdlid_land, mdlid_ocean,                 &
                                 ldims, odims,                            &
                                 USE_FILE_LANDWATER,                      &
-                                INIT_LANDWATER_RATIO(:),                 &
+                                INIT_LANDWATER_RATIO_EACH(:),            &
                                 INIT_OCEAN_ALB_LW, INIT_OCEAN_ALB_SW,    &
                                 INIT_OCEAN_Z0W,                          &
                                 INTRP_ITER_MAX,                          &
@@ -2654,7 +2668,7 @@ contains
        mdlid_land, mdlid_ocean,           &
        ldims, odims,                      &
        use_file_landwater,                &
-       init_landwater_ratio,              &
+       init_landwater_ratio_each,         &
        init_ocean_alb_lw,                 &
        init_ocean_alb_sw,                 &
        init_ocean_z0w,                    &
@@ -2723,9 +2737,9 @@ contains
     integer,          intent(in)  :: mdlid_ocean
     integer,          intent(in)  :: ldims(3)
     integer,          intent(in)  :: odims(2)
-    logical,          intent(in)  :: use_file_landwater                     ! use land water data from files
-    real(RP),         intent(in)  :: init_landwater_ratio(LANDUSE_PFT_nmax) ! Ratio of land water to storage is constant,
-                                                                            ! if use_file_landwater is ".false."
+    logical,          intent(in)  :: use_file_landwater                          ! use land water data from files
+    real(RP),         intent(in)  :: init_landwater_ratio_each(LANDUSE_PFT_nmax) ! Ratio of land water to storage is constant,
+                                                                                 ! if use_file_landwater is ".false." (each PFT)
     real(RP),         intent(in)  :: init_ocean_alb_lw
     real(RP),         intent(in)  :: init_ocean_alb_sw
     real(RP),         intent(in)  :: init_ocean_z0w
@@ -3048,7 +3062,7 @@ contains
                lz_org, llon_org, llat_org,      & ! (in)
                LCZ, CX, CY, LON, LAT,           & ! (in)
                maskval_tg, maskval_strg,        & ! (in)
-               init_landwater_ratio(:),         & ! (in)
+               init_landwater_ratio_each(:),    & ! (in)
                use_file_landwater,              & ! (in)
                use_waterratio,                  & ! (in)
                soilwater_ds2vc_flag,            & ! (in)
@@ -3258,7 +3272,7 @@ contains
        LCZ, CX, CY,                &
        LON, LAT,                   &
        maskval_tg, maskval_strg,   &
-       init_landwater_ratio,       &
+       init_landwater_ratio_each,  &
        use_file_landwater,         &
        use_waterratio,             &
        soilwater_ds2vc_flag,       &
@@ -3319,7 +3333,7 @@ contains
     real(RP), intent(in)    :: LAT(IA,JA)
     real(RP), intent(in)    :: maskval_tg
     real(RP), intent(in)    :: maskval_strg
-    real(RP), intent(in)    :: init_landwater_ratio(LANDUSE_PFT_nmax)
+    real(RP), intent(in)    :: init_landwater_ratio_each(LANDUSE_PFT_nmax)
     logical,  intent(in)    :: use_file_landwater
     logical,  intent(in)    :: use_waterratio
     logical,  intent(in)    :: soilwater_ds2vc_flag
@@ -3692,10 +3706,10 @@ contains
                 !$omp parallel do collapse(2)
                 do j = 1, jmax
                 do i = 1, imax
-                   work2(i,j) = init_landwater_ratio( LANDUSE_index_PFT(i,j,1) )
+                   work2(i,j) = init_landwater_ratio_each( LANDUSE_index_PFT(i,j,1) )
                 end do
                 end do
-                !replace missing value to init_landwater_ratio
+                !replace missing value to init_landwater_ratio_each
                 call replace_misval_map( work, work2, imax, jmax, "SMOISDS")
                 !$omp parallel do collapse(2)
                 do j = 1, jmax
@@ -3824,7 +3838,7 @@ contains
           !$omp parallel do collapse(2)
           do j = 1, JA
           do i = 1, IA
-             work(i,j) = init_landwater_ratio( LANDUSE_index_PFT(i,j,1) )
+             work(i,j) = init_landwater_ratio_each( LANDUSE_index_PFT(i,j,1) )
           end do
           end do
           ! conversion from water saturation [fraction] to volumetric water content [m3/m3]
