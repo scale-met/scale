@@ -104,11 +104,23 @@ contains
     use scale_atmos_dyn_tinteg_tracer_rk3, only: &
        ATMOS_DYN_Tinteg_tracer_rk3_setup, &
        ATMOS_DYN_Tinteg_tracer_rk3
+    use scale_atmos_dyn_tinteg_tracer_linrk, only: &
+       ATMOS_DYN_Tinteg_tracer_linrk_setup, &
+       ATMOS_DYN_Tinteg_tracer_linrk       
     implicit none
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_tracer_TYPE
+
+    character(len=H_SHORT) :: Tinteg_type
     !---------------------------------------------------------------------------
 
-    select case( ATMOS_DYN_Tinteg_tracer_TYPE )
+    
+    if (ATMOS_DYN_Tinteg_tracer_TYPE(1:5) == 'LINRK') then
+      Tinteg_type = 'LINRK'
+    else
+      Tinteg_type = ATMOS_DYN_Tinteg_tracer_TYPE
+   end if
+
+    select case( Tinteg_type )
     case( 'EULER' )
        call ATMOS_DYN_Tinteg_tracer_euler_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
@@ -117,6 +129,10 @@ contains
        call ATMOS_DYN_Tinteg_tracer_rk3_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_rk3
+    case( 'LINRK' )
+       call ATMOS_DYN_Tinteg_tracer_linrk_setup( &
+            ATMOS_DYN_Tinteg_tracer_TYPE )
+       ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_linrk       
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
