@@ -72,13 +72,16 @@ An criteria to determine the time step is described in Section \ref{sec:timeinti
     & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{3 stage and generraly 2nd-order Runge--Kutta scheme in \citet{Wicker_2002}} \\
     & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4 stage and 4th-order Runge--Kutta scheme} \\
     & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{7 stage and 6th-order Runge--Kutta scheme in Lawson (1967) (supported only for HEVE)} \\
+    & \multicolumn{1}{l}{\verb|RK11s8o|} & \multicolumn{2}{l}{11 stage and 8th-order Runge--Kutta scheme in Cooper and Verner (1972) (supported only for HEVE)} \\
     \hline
     \multicolumn{3}{l}{Spatial scheme} & Minimum number of halos\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central flux} & \multicolumn{1}{l}{1}\\
     & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4th-order central flux} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6th-order central flux} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|CD8|} & \multicolumn{1}{l}{8th-order central flux} & \multicolumn{1}{l}{3}\\
     & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3rd-order upwind flux} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5th-order upwind flux} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD7|} & \multicolumn{1}{l}{7th-order upwind flux} & \multicolumn{1}{l}{3}\\
     & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{l}{3rd-order upwind flux + \citet{Koren_1993}'s filter} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}

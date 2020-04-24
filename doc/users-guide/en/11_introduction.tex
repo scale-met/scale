@@ -131,8 +131,8 @@ in the current version of \scalerm are listed below\footnote{Refer to \citet{sca
  \item Governing equations: 3D fully compressible non-hydrostatic equations
  \item Spatial discretization: finite volume method
     \begin{itemize}
-      \item central advection schemes with 2nd-, 4th- and 6th-order accuracy
-      \item upwind advection schemes with 3rd- and 5th-order accuracy
+      \item central advection schemes with 2nd-, 4th-, 6th-order, and 8th-order accuracy
+      \item upwind advection schemes with 3rd- , 5th-order, and 7th-order accuracy
     \end{itemize}
  \item Time integration: selection from the ``fully explicit method'' (HEVE)
    or the ``horizontally explicit and vertically implicit methods'' (HEVI)
@@ -141,6 +141,7 @@ in the current version of \scalerm are listed below\footnote{Refer to \citet{sca
       \item Heun-type 3 stage Runge--Kutta scheme with 3rd order accuracy
       \item 4 stage Runge--Kutta scheme with 4th order accuracy
       \item 7 stage Runge--Kutta scheme with 6th order accuracy (supported only for HEVE)
+      \item 11 stage Runge--Kutta scheme with 8th order accuracy (supported only for HEVE)
     \end{itemize}
  \item Guarantee of non-negative value:
     \begin{itemize}
