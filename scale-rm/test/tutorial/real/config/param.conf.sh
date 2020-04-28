@@ -134,6 +134,10 @@ cat << EOF > param.physics.conf
  ATMOS_BOUNDARY_USE_QHYD       = ${ATMOS_BOUNDARY_USE_QHYD},
  ATMOS_BOUNDARY_LINEAR_H       = .false.,
  ATMOS_BOUNDARY_EXP_H          = 2.0,
+ ATMOS_GRID_NUDGING_uv         = .false.,
+ ATMOS_GRID_NUDGING_pt         = .false.,
+ ATMOS_GRID_NUDGING_qv         = .false.,
+ ATMOS_GRID_NUDGING_tau        = 864000.,
 /
 
 &PARAM_ATMOS_DYN
