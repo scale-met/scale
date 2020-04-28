@@ -467,7 +467,8 @@ contains
        TIME_DOATMOS_restart,  &
        TIME_DOLAND_restart,   &
        TIME_DOURBAN_restart,  &
-       TIME_DOOCEAN_restart
+       TIME_DOOCEAN_restart,  &
+       TIME_DOATMOS_DA
     use mod_atmos_vars, only: &
        ATMOS_RESTART_OUTPUT,         &
        ATMOS_vars_restart_create,    &
@@ -567,31 +568,31 @@ contains
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_create
        if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_create
        if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_create
-       if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_create
+       if( ATMOS_RESTART_OUTPUT .AND. ( TIME_DOATMOS_restart .OR. TIME_DOATMOS_DA ) ) call ATMOS_vars_restart_create
 
        ! define metadata (dimensions, variables, attributes) in netCDF file
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_def_var
        if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_def_var
        if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_def_var
-       if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_def_var
+       if( ATMOS_RESTART_OUTPUT .AND. ( TIME_DOATMOS_restart .OR. TIME_DOATMOS_DA ) ) call ATMOS_vars_restart_def_var
 
        ! exit define mode
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_enddef
        if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_enddef
        if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_enddef
-       if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_enddef
+       if( ATMOS_RESTART_OUTPUT .AND. ( TIME_DOATMOS_restart .OR. TIME_DOATMOS_DA ) ) call ATMOS_vars_restart_enddef
 
        ! write variabes to netCDF file
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_write
        if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_write
        if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_write
-       if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_write
+       if( ATMOS_RESTART_OUTPUT .AND. ( TIME_DOATMOS_restart .OR. TIME_DOATMOS_DA ) ) call ATMOS_vars_restart_write
 
        ! close the restart file
        if( OCEAN_RESTART_OUTPUT .AND. TIME_DOOCEAN_restart ) call OCEAN_vars_restart_close
        if(  LAND_RESTART_OUTPUT .AND. TIME_DOLAND_restart  ) call  LAND_vars_restart_close
        if( URBAN_RESTART_OUTPUT .AND. TIME_DOURBAN_restart ) call URBAN_vars_restart_close
-       if( ATMOS_RESTART_OUTPUT .AND. TIME_DOATMOS_restart ) call ATMOS_vars_restart_close
+       if( ATMOS_RESTART_OUTPUT .AND. ( TIME_DOATMOS_restart .OR. TIME_DOATMOS_DA ) ) call ATMOS_vars_restart_close
     enddo
 
     RESTART_OUT_BASENAME              = RESTART_OUT_BASENAME_ORIG
