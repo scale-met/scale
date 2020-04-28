@@ -430,6 +430,48 @@ contains
       ATMOS_DYN_FVM_fluxJ13_XVZ_cd6, &
       ATMOS_DYN_FVM_fluxJ23_XVZ_cd6
 
+   use scale_atmos_dyn_fvm_flux_ud7, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_ud7, &
+      ATMOS_DYN_FVM_fluxZ_XYZ_ud7, &
+      ATMOS_DYN_FVM_fluxX_XYZ_ud7, &
+      ATMOS_DYN_FVM_fluxY_XYZ_ud7, &
+      ATMOS_DYN_FVM_fluxZ_XYW_ud7, &
+      ATMOS_DYN_FVM_fluxX_XYW_ud7, &
+      ATMOS_DYN_FVM_fluxY_XYW_ud7, &
+      ATMOS_DYN_FVM_fluxJ13_XYW_ud7, &
+      ATMOS_DYN_FVM_fluxJ23_XYW_ud7, &
+      ATMOS_DYN_FVM_fluxZ_UYZ_ud7, &
+      ATMOS_DYN_FVM_fluxX_UYZ_ud7, &
+      ATMOS_DYN_FVM_fluxY_UYZ_ud7, &
+      ATMOS_DYN_FVM_fluxJ13_UYZ_ud7, &
+      ATMOS_DYN_FVM_fluxJ23_UYZ_ud7, &
+      ATMOS_DYN_FVM_fluxZ_XVZ_ud7, &
+      ATMOS_DYN_FVM_fluxX_XVZ_ud7, &
+      ATMOS_DYN_FVM_fluxY_XVZ_ud7, &
+      ATMOS_DYN_FVM_fluxJ13_XVZ_ud7, &
+      ATMOS_DYN_FVM_fluxJ23_XVZ_ud7
+
+   use scale_atmos_dyn_fvm_flux_cd8, only: &
+      ATMOS_DYN_FVM_flux_valueW_Z_cd8, &
+      ATMOS_DYN_FVM_fluxZ_XYZ_cd8, &
+      ATMOS_DYN_FVM_fluxX_XYZ_cd8, &
+      ATMOS_DYN_FVM_fluxY_XYZ_cd8, &
+      ATMOS_DYN_FVM_fluxZ_XYW_cd8, &
+      ATMOS_DYN_FVM_fluxX_XYW_cd8, &
+      ATMOS_DYN_FVM_fluxY_XYW_cd8, &
+      ATMOS_DYN_FVM_fluxJ13_XYW_cd8, &
+      ATMOS_DYN_FVM_fluxJ23_XYW_cd8, &
+      ATMOS_DYN_FVM_fluxZ_UYZ_cd8, &
+      ATMOS_DYN_FVM_fluxX_UYZ_cd8, &
+      ATMOS_DYN_FVM_fluxY_UYZ_cd8, &
+      ATMOS_DYN_FVM_fluxJ13_UYZ_cd8, &
+      ATMOS_DYN_FVM_fluxJ23_UYZ_cd8, &
+      ATMOS_DYN_FVM_fluxZ_XVZ_cd8, &
+      ATMOS_DYN_FVM_fluxX_XVZ_cd8, &
+      ATMOS_DYN_FVM_fluxY_XVZ_cd8, &
+      ATMOS_DYN_FVM_fluxJ13_XVZ_cd8, &
+      ATMOS_DYN_FVM_fluxJ23_XVZ_cd8
+
     implicit none
     character(len=*), intent(in) :: scheme
     character(len=*), intent(in) :: scheme_tracer
@@ -807,6 +849,112 @@ contains
       end if
 
 
+    case( "UD7" )
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud7 scheme is used for flux calculation'
+
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_ud7
+
+      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_ud7
+
+
+
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
+         call PRC_abort
+      end if
+      if ( JHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 4
+         call PRC_abort
+      end if
+
+
+    case( "CD8" )
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd8 scheme is used for flux calculation'
+
+      ATMOS_DYN_FVM_flux_valueW_Z => ATMOS_DYN_FVM_flux_valueW_Z_cd8
+
+      ATMOS_DYN_FVM_fluxZ_XYZ => ATMOS_DYN_FVM_fluxZ_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_XYZ => ATMOS_DYN_FVM_fluxX_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_XYZ => ATMOS_DYN_FVM_fluxY_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxZ_XYW => ATMOS_DYN_FVM_fluxZ_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxX_XYW => ATMOS_DYN_FVM_fluxX_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxY_XYW => ATMOS_DYN_FVM_fluxY_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_XYW => ATMOS_DYN_FVM_fluxJ13_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_XYW => ATMOS_DYN_FVM_fluxJ23_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxZ_UYZ => ATMOS_DYN_FVM_fluxZ_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_UYZ => ATMOS_DYN_FVM_fluxX_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_UYZ => ATMOS_DYN_FVM_fluxY_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ => ATMOS_DYN_FVM_fluxJ13_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ => ATMOS_DYN_FVM_fluxJ23_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxZ_XVZ => ATMOS_DYN_FVM_fluxZ_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_XVZ => ATMOS_DYN_FVM_fluxX_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_XVZ => ATMOS_DYN_FVM_fluxY_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ => ATMOS_DYN_FVM_fluxJ13_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ => ATMOS_DYN_FVM_fluxJ23_XVZ_cd8
+
+
+
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
+         call PRC_abort
+      end if
+      if ( JHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 4
+         call PRC_abort
+      end if
+
+
     case default
        LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'scheme is invalid: ', scheme
        call PRC_abort
@@ -1167,6 +1315,108 @@ contains
       end if
       if ( JHALO < 3 ) then
          LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 3
+         call PRC_abort
+      end if
+
+
+    case( "UD7" )
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the ud7 scheme is used for flux calculation of tracer'
+
+      ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_XYZ_tracer => ATMOS_DYN_FVM_fluxX_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_XYZ_tracer => ATMOS_DYN_FVM_fluxY_XYZ_ud7
+
+      ATMOS_DYN_FVM_fluxZ_XYW_tracer => ATMOS_DYN_FVM_fluxZ_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxX_XYW_tracer => ATMOS_DYN_FVM_fluxX_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxY_XYW_tracer => ATMOS_DYN_FVM_fluxY_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_XYW_tracer => ATMOS_DYN_FVM_fluxJ13_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_XYW_tracer => ATMOS_DYN_FVM_fluxJ23_XYW_ud7
+
+      ATMOS_DYN_FVM_fluxZ_UYZ_tracer => ATMOS_DYN_FVM_fluxZ_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_UYZ_tracer => ATMOS_DYN_FVM_fluxX_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_UYZ_tracer => ATMOS_DYN_FVM_fluxY_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ_tracer => ATMOS_DYN_FVM_fluxJ13_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ_tracer => ATMOS_DYN_FVM_fluxJ23_UYZ_ud7
+
+      ATMOS_DYN_FVM_fluxZ_XVZ_tracer => ATMOS_DYN_FVM_fluxZ_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxX_XVZ_tracer => ATMOS_DYN_FVM_fluxX_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxY_XVZ_tracer => ATMOS_DYN_FVM_fluxY_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_ud7
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_ud7
+
+
+
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
+         call PRC_abort
+      end if
+      if ( JHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 4
+         call PRC_abort
+      end if
+
+
+    case( "CD8" )
+      LOG_INFO("ATMOS_DYN_FVM_flux_setup",*) 'the cd8 scheme is used for flux calculation of tracer'
+
+      ATMOS_DYN_FVM_fluxZ_XYZ_tracer => ATMOS_DYN_FVM_fluxZ_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_XYZ_tracer => ATMOS_DYN_FVM_fluxX_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_XYZ_tracer => ATMOS_DYN_FVM_fluxY_XYZ_cd8
+
+      ATMOS_DYN_FVM_fluxZ_XYW_tracer => ATMOS_DYN_FVM_fluxZ_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxX_XYW_tracer => ATMOS_DYN_FVM_fluxX_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxY_XYW_tracer => ATMOS_DYN_FVM_fluxY_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_XYW_tracer => ATMOS_DYN_FVM_fluxJ13_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_XYW_tracer => ATMOS_DYN_FVM_fluxJ23_XYW_cd8
+
+      ATMOS_DYN_FVM_fluxZ_UYZ_tracer => ATMOS_DYN_FVM_fluxZ_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_UYZ_tracer => ATMOS_DYN_FVM_fluxX_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_UYZ_tracer => ATMOS_DYN_FVM_fluxY_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_UYZ_tracer => ATMOS_DYN_FVM_fluxJ13_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_UYZ_tracer => ATMOS_DYN_FVM_fluxJ23_UYZ_cd8
+
+      ATMOS_DYN_FVM_fluxZ_XVZ_tracer => ATMOS_DYN_FVM_fluxZ_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxX_XVZ_tracer => ATMOS_DYN_FVM_fluxX_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxY_XVZ_tracer => ATMOS_DYN_FVM_fluxY_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ13_XVZ_tracer => ATMOS_DYN_FVM_fluxJ13_XVZ_cd8
+
+      ATMOS_DYN_FVM_fluxJ23_XVZ_tracer => ATMOS_DYN_FVM_fluxJ23_XVZ_cd8
+
+
+
+      if ( ( .not. PRC_TwoD ) .and. IHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'IHALO must be >= ', 4
+         call PRC_abort
+      end if
+      if ( JHALO < 4 ) then
+         LOG_ERROR("ATMOS_DYN_FVM_flux_setup",*) 'JHALO must be >= ', 4
          call PRC_abort
       end if
 

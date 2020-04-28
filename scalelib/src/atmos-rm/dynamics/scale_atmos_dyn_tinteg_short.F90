@@ -141,7 +141,10 @@ contains
        ATMOS_DYN_Tinteg_short_rk4
     use scale_atmos_dyn_tinteg_short_rk7s6o, only: &
        ATMOS_DYN_Tinteg_short_rk7s6o_setup, &
-       ATMOS_DYN_Tinteg_short_rk7s6o    
+       ATMOS_DYN_Tinteg_short_rk7s6o
+    use scale_atmos_dyn_tinteg_short_rk11s8o, only: &
+       ATMOS_DYN_Tinteg_short_rk11s8o_setup, &
+       ATMOS_DYN_Tinteg_short_rk11s8o         
     implicit none
 
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
@@ -164,6 +167,13 @@ contains
        call ATMOS_DYN_Tinteg_short_rk7s6o_setup( &
               ATMOS_DYN_Tinteg_short_TYPE )
          ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk7s6o
+   case( 'RK11s8o', 'RK11s8oCooperVerner1972' )
+      if ( .not. (ATMOS_DYN_Tstep_short_TYPE == 'HEVE' .or. ATMOS_DYN_Tstep_short_TYPE == 'FVM-HEVE') ) then
+         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE is now supported only for 'HEVE',", ATMOS_DYN_Tinteg_short_TYPE
+      end if 
+      call ATMOS_DYN_Tinteg_short_rk11s8o_setup( &
+               ATMOS_DYN_Tinteg_short_TYPE )
+         ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk11s8o 
     case( 'OFF', 'NONE' )
        ! do nothing
     case default

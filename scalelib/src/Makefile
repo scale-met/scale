@@ -127,10 +127,12 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd2.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd4.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd6.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd8.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud1.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud7.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_rkcommon.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\
@@ -138,10 +140,12 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk4.o	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o \
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.o  \
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk11s8o.o \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_linrk.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_short.o	\
@@ -218,10 +222,12 @@ OBJS_FOR_DYN = \
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd2.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd4.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd6.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd8.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud1.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3Koren1993.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud5.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud7.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_rk3.o	\
@@ -232,6 +238,7 @@ OBJS_FOR_DYN = \
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.o	\
+	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_linrk.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_large.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_short.o	\
@@ -394,6 +401,10 @@ atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd4.F90 : scale_atmos_dyn_fvm_flux_ud
 atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud5.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb -T - $< > $@
 atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd6.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_ud7.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
+	fname=$@ erb -T - $< > $@
+atmos-rm/dynamics/scale_atmos_dyn_fvm_flux_cd8.F90 : scale_atmos_dyn_fvm_flux_udcd.F90.erb
 	fname=$@ erb -T - $< > $@
 
 $(BUILD_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.o: scale_atmos_dyn_tstep_large_fvm_heve.F90

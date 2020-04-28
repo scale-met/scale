@@ -528,13 +528,14 @@ contains
     implicit none
 
     ! Bubble
-    logical  :: BBL_eachnode = .false.  ! Arrange bubble at each node? [kg/kg]
-    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
-    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
-    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
-    real(RP) :: BBL_RZ       =  0.0_RP  ! bubble radius   [m]: z
-    real(RP) :: BBL_RX       =  0.0_RP  ! bubble radius   [m]: x
-    real(RP) :: BBL_RY       =  0.0_RP  ! bubble radius   [m]: y
+    logical  :: BBL_eachnode = .false.   ! Arrange bubble at each node? [kg/kg]
+    real(RP) :: BBL_CZ       =  2.E3_RP  ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP  ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP  ! center location [m]: y
+    real(RP) :: BBL_RZ       =  0.0_RP   ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  0.0_RP   ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  0.0_RP   ! bubble radius   [m]: y
+    character(len=H_SHORT) :: BBL_functype = 'COSBELL' ! COSBELL or GAUSSIAN
 
     namelist / PARAM_BUBBLE / &
        BBL_eachnode, &
@@ -543,7 +544,8 @@ contains
        BBL_CY,       &
        BBL_RZ,       &
        BBL_RX,       &
-       BBL_RY
+       BBL_RY,       &
+       BBL_functype
 
     real(RP) :: CZ_offset
     real(RP) :: CX_offset
@@ -606,8 +608,15 @@ contains
                        ( (CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
                        ( (CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
 
-          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
-
+          select case(BBL_functype)
+          case('COSBELL')
+             bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
+          case('GAUSSIAN')
+             bubble(k,i,j) = exp( -(distz+distx+disty) )
+          case default
+            LOG_ERROR("BUBBLE_setup",*) 'Not appropriate BBL_functype. Check!', trim(BBL_functype)
+            call PRC_abort                  
+          end select
        enddo
        enddo
        enddo
