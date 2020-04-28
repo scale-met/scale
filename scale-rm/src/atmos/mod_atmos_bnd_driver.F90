@@ -160,6 +160,11 @@ module mod_atmos_bnd_driver
   real(DP), private              :: ATMOS_BOUNDARY_UPDATE_DT    =  0.0_DP ! inteval time of boudary data update [s]
   integer,  private              :: UPDATE_NSTEP
 
+  logical,               private :: ATMOS_GRID_NUDGING_uv       = .false.  ! grid nudging
+  logical,               private :: ATMOS_GRID_NUDGING_pt       = .false.  ! grid nudging
+  logical,               private :: ATMOS_GRID_NUDGING_qv       = .false.  ! grid nudging
+  real(RP),              private :: ATMOS_GRID_NUDGING_tau                 ! Damping tau for grid nudging [s]
+
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_DENS(:,:,:,:)   ! reference DENS (with HALO)
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_VELZ(:,:,:,:)   ! reference VELZ (with HALO)
   real(RP),              private, allocatable :: ATMOS_BOUNDARY_ref_VELX(:,:,:,:)   ! reference VELX (with HALO)
@@ -285,7 +290,11 @@ contains
        ATMOS_BOUNDARY_LINEAR_V,       &
        ATMOS_BOUNDARY_LINEAR_H,       &
        ATMOS_BOUNDARY_EXP_H,          &
-       ATMOS_BOUNDARY_interp_TYPE
+       ATMOS_BOUNDARY_interp_TYPE,    &
+       ATMOS_GRID_NUDGING_uv,         &
+       ATMOS_GRID_NUDGING_pt,         &
+       ATMOS_GRID_NUDGING_qv,         &
+       ATMOS_GRID_NUDGING_tau
 
     integer :: k, i, j, iq
     integer :: ierr
@@ -301,6 +310,8 @@ contains
 
     ATMOS_BOUNDARY_IN_AGGREGATE  = FILE_AGGREGATE
     ATMOS_BOUNDARY_OUT_AGGREGATE = FILE_AGGREGATE
+
+    ATMOS_GRID_NUDGING_tau = 10.0_RP * 24.0_RP * 3600.0_RP   ! 10days [s]
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -548,6 +559,11 @@ contains
     if ( l_bnd ) then
        LOG_INFO_CONT(*) 'Lateral boundary interporation type            : ', trim(ATMOS_BOUNDARY_interp_TYPE)
     endif
+    LOG_NEWLINE
+    LOG_INFO_CONT(*) 'Is grid nudging used for VELX & VELY?          : ', ATMOS_GRID_NUDGING_uv
+    LOG_INFO_CONT(*) 'Is grid nudging used for POTT?                 : ', ATMOS_GRID_NUDGING_pt
+    LOG_INFO_CONT(*) 'Is grid nudging used for QV?                   : ', ATMOS_GRID_NUDGING_qv
+    LOG_INFO_CONT(*) 'Relaxation time for grid nudging               : ', ATMOS_GRID_NUDGING_tau
 
     LOG_INFO_CONT(*) 'Density adjustment                             : ', ATMOS_BOUNDARY_DENS_ADJUST
     if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
@@ -835,6 +851,8 @@ contains
     real(RP) :: alpha_zm, alpha_xm, alpha_ym
     real(RP) :: ee1, ee2
 
+    real(RP) :: alpha_nug ! grid nudging in inner domain
+
     integer :: i, j, k, iq
     !---------------------------------------------------------------------------
 
@@ -861,6 +879,12 @@ contains
        coef_y = 1.0_RP / ATMOS_BOUNDARY_tauy
     endif
 
+    if ( ATMOS_GRID_NUDGING_tau <= 0.0_RP ) then ! invalid tau
+       alpha_nug = 0.0_RP
+    else
+       alpha_nug = 1.0_RP / ATMOS_GRID_NUDGING_tau
+    endif
+
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KS,KE,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
     !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
@@ -874,6 +898,8 @@ contains
     !$omp shared(ATMOS_BOUNDARY_USE_QV,ATMOS_BOUNDARY_alpha_QTRC,ATMOS_BOUNDARY_ALPHAFACT_QTRC)          &
     !$omp shared(ATMOS_BOUNDARY_DENS_ADJUST,ATMOS_BOUNDARY_DENS_ADJUST_tau,ATMOS_BOUNDARY_UPDATE_DT) &
     !$omp shared(BND_QA,BND_IQ,I_QV) &
+    !$omp shared(ATMOS_GRID_NUDGING_uv,ATMOS_GRID_NUDGING_pt,ATMOS_GRID_NUDGING_qv) &
+    !$omp shared(alpha_nug) &
     !$omp private(i,j,k,iq) &
     !$omp private(ee1,ee2,alpha_z1,alpha_z2,alpha_x1,alpha_x2,alpha_y1,alpha_y2,alpha_zm,alpha_xm,alpha_ym)
     do j = 1, JA
@@ -1014,6 +1040,19 @@ contains
                 ATMOS_BOUNDARY_alpha_QTRC(k,i,j,iq) = max( alpha_z1, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_QTRC
              end if
           end do
+
+          ! internal grid nudging
+          if ( ATMOS_GRID_NUDGING_uv ) then
+             ATMOS_BOUNDARY_alpha_VELX(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELX(k,i,j), alpha_nug )
+             ATMOS_BOUNDARY_alpha_VELY(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELY(k,i,j), alpha_nug )
+          endif
+          if ( ATMOS_GRID_NUDGING_pt ) then
+             ATMOS_BOUNDARY_alpha_POTT(k,i,j)   = max( ATMOS_BOUNDARY_alpha_POTT(k,i,j), alpha_nug )
+          endif
+          if ( ATMOS_GRID_NUDGING_qv ) then
+             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1), alpha_nug )
+          endif
+
        end if
     enddo
     enddo
