@@ -120,105 +120,145 @@ contains
        call PRC_abort
     end if
 
+    if ( SPNUDGE_uv .or. SPNUDGE_pt .or. SPNUDGE_qv ) then
+       LOG_WARN("SPNUDGE_setup",*) 'Spectrul nudging is still experimental'
+    end if
+
     allocate( SPNUDGE_u_alpha(KA,IA,JA) )
     allocate( SPNUDGE_v_alpha(KA,IA,JA) )
     allocate( SPNUDGE_pt_alpha(KA,IA,JA) )
     allocate( SPNUDGE_qv_alpha(KA,IA,JA) )
 
-    if( SPNUDGE_uv_tau <= 0.0_RP ) then
-        uv_alpha = 0.0_RP
+    if ( SPNUDGE_uv .and. SPNUDGE_uv_tau > 0.0_RP ) then
+       uv_alpha = 1.0_RP / SPNUDGE_uv_tau
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          if ( REAL_CZUY(k,i,j) < SPNUDGE_level1 ) then
+             SPNUDGE_u_alpha(k,i,j) = 0.0_RP
+          elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level2 ) then
+             SPNUDGE_u_alpha(k,i,j) = ( REAL_CZUY(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * uv_alpha
+          elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level3 ) then
+             SPNUDGE_u_alpha(k,i,j) = uv_alpha
+          elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level4 ) then
+             SPNUDGE_u_alpha(k,i,j) = ( REAL_CZUY(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * uv_alpha
+          else
+             SPNUDGE_u_alpha(k,i,j) = 0.0_RP
+          endif
+       enddo
+       enddo
+       enddo
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          if ( REAL_CZXV(k,i,j) < SPNUDGE_level1 ) then
+             SPNUDGE_v_alpha(k,i,j) = 0.0_RP
+          elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level2 ) then
+             SPNUDGE_v_alpha(k,i,j) = ( REAL_CZXV(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * uv_alpha
+          elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level3 ) then
+             SPNUDGE_v_alpha(k,i,j) = uv_alpha
+          elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level4 ) then
+             SPNUDGE_v_alpha(k,i,j) = ( REAL_CZXV(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * uv_alpha
+          else
+             SPNUDGE_v_alpha(k,i,j) = 0.0_RP
+          endif
+       enddo
+       enddo
+       enddo
+
     else
-        uv_alpha = 1.0_RP / SPNUDGE_uv_tau
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          SPNUDGE_u_alpha(k,i,j) = 0.0_RP
+          SPNUDGE_v_alpha(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
+
     endif
 
-    if( SPNUDGE_pt_tau <= 0.0_RP ) then
-        pt_alpha = 0.0_RP
-    else
+    if ( SPNUDGE_pt .and. SPNUDGE_pt_tau > 0.0_RP ) then
         pt_alpha = 1.0_RP / SPNUDGE_pt_tau
+
+        !$omp parallel do
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           if ( REAL_CZ(k,i,j) < SPNUDGE_level1 ) then
+              SPNUDGE_pt_alpha(k,i,j) = 0.0_RP
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level2 ) then
+              SPNUDGE_pt_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * pt_alpha
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level3 ) then
+              SPNUDGE_pt_alpha(k,i,j) = pt_alpha
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level4 ) then
+              SPNUDGE_pt_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * pt_alpha
+           else
+              SPNUDGE_pt_alpha(k,i,j) = 0.0_RP
+           endif
+        enddo
+        enddo
+        enddo
+
+     else
+
+        !$omp parallel do
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           SPNUDGE_pt_alpha(k,i,j) = 0.0_RP
+        end do
+        end do
+        end do
+
     endif
 
-    if( SPNUDGE_qv_tau <= 0.0_RP ) then
-        qv_alpha = 0.0_RP
-    else
+    if ( SPNUDGE_qv .and. SPNUDGE_qv_tau > 0.0_RP ) then
         qv_alpha = 1.0_RP / SPNUDGE_qv_tau
-    endif
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( REAL_CZUY(k,i,j) < SPNUDGE_level1 ) then
-          SPNUDGE_u_alpha(k,i,j) = 0.0_RP
-       elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level2 ) then
-          SPNUDGE_u_alpha(k,i,j) = ( REAL_CZUY(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * uv_alpha
-       elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level3 ) then
-          SPNUDGE_u_alpha(k,i,j) = uv_alpha
-       elseif ( REAL_CZUY(k,i,j) < SPNUDGE_level4 ) then
-          SPNUDGE_u_alpha(k,i,j) = ( REAL_CZUY(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * uv_alpha
-       else
-          SPNUDGE_u_alpha(k,i,j) = 0.0_RP
-       endif
-    enddo
-    enddo
-    enddo
+        !$omp parallel do
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           if ( REAL_CZ(k,i,j) < SPNUDGE_level1 ) then
+              SPNUDGE_qv_alpha(k,i,j) = 0.0_RP
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level2 ) then
+              SPNUDGE_qv_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * qv_alpha
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level3 ) then
+              SPNUDGE_qv_alpha(k,i,j) = qv_alpha
+           elseif ( REAL_CZ(k,i,j) < SPNUDGE_level4 ) then
+              SPNUDGE_qv_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * qv_alpha
+           else
+              SPNUDGE_qv_alpha(k,i,j) = 0.0_RP
+           endif
+        enddo
+        enddo
+        enddo
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( REAL_CZXV(k,i,j) < SPNUDGE_level1 ) then
-          SPNUDGE_v_alpha(k,i,j) = 0.0_RP
-       elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level2 ) then
-          SPNUDGE_v_alpha(k,i,j) = ( REAL_CZXV(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * uv_alpha
-       elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level3 ) then
-          SPNUDGE_v_alpha(k,i,j) = uv_alpha
-       elseif ( REAL_CZXV(k,i,j) < SPNUDGE_level4 ) then
-          SPNUDGE_v_alpha(k,i,j) = ( REAL_CZXV(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * uv_alpha
-       else
-          SPNUDGE_v_alpha(k,i,j) = 0.0_RP
-       endif
-    enddo
-    enddo
-    enddo
+     else
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( REAL_CZ(k,i,j) < SPNUDGE_level1 ) then
-          SPNUDGE_pt_alpha(k,i,j) = 0.0_RP
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level2 ) then
-          SPNUDGE_pt_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * pt_alpha
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level3 ) then
-          SPNUDGE_pt_alpha(k,i,j) = pt_alpha
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level4 ) then
-          SPNUDGE_pt_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * pt_alpha
-       else
-          SPNUDGE_pt_alpha(k,i,j) = 0.0_RP
-       endif
-    enddo
-    enddo
-    enddo
+        !$omp parallel do
+        do j = JS, JE
+        do i = IS, IE
+        do k = KS, KE
+           SPNUDGE_qv_alpha(k,i,j) = 0.0_RP
+        end do
+        end do
+        end do
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       if ( REAL_CZ(k,i,j) < SPNUDGE_level1 ) then
-          SPNUDGE_qv_alpha(k,i,j) = 0.0_RP
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level2 ) then
-          SPNUDGE_qv_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level1 ) / ( SPNUDGE_level2 - SPNUDGE_level1 ) * qv_alpha
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level3 ) then
-          SPNUDGE_qv_alpha(k,i,j) = qv_alpha
-       elseif ( REAL_CZ(k,i,j) < SPNUDGE_level4 ) then
-          SPNUDGE_qv_alpha(k,i,j) = ( REAL_CZ(k,i,j) - SPNUDGE_level3 ) / ( SPNUDGE_level4 - SPNUDGE_level3 ) * qv_alpha
-       else
-          SPNUDGE_qv_alpha(k,i,j) = 0.0_RP
-       endif
-    enddo
-    enddo
-    enddo
+     end if
 
-    call DFT_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                    max( SPNUDGE_uv_lm, SPNUDGE_pt_lm, SPNUDGE_qv_lm ), &
-                    max( SPNUDGE_uv_mm, SPNUDGE_pt_mm, SPNUDGE_qv_mm ) )
+     call DFT_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                     max( SPNUDGE_uv_lm, SPNUDGE_pt_lm, SPNUDGE_qv_lm ), &
+                     max( SPNUDGE_uv_mm, SPNUDGE_pt_mm, SPNUDGE_qv_mm ) )
 
-  end subroutine SPNUDGE_setup
+     return
+   end subroutine SPNUDGE_setup
 
 end module scale_spnudge
