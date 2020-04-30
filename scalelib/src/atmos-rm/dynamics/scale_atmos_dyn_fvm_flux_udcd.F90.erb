@@ -84,6 +84,21 @@ def flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)
                      + F62 * ( val(#{idx2})+val(#{idxn1}) ) &
                      + F63 * ( val(#{idx3})+val(#{idxn2}) )"
 end
+def flux7(idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)
+                      "(     4.0_RP * val(#{idx3})   &
+                         -  38.0_RP * val(#{idx2})   &
+                         + 214.0_RP * val(#{idx1})   &
+                         + 319.0_RP * val(#{idx0})   &
+                         - 101.0_RP * val(#{idxn1})  &
+                         +  25.0_RP * val(#{idxn2})  &
+                         - 3.0_RP * val(#{idxn3}) ) / 420.0_RP"
+end
+def flux8(idx4,idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)
+                      "F81 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F82 * ( val(#{idx2})+val(#{idxn1}) ) &
+                     + F83 * ( val(#{idx3})+val(#{idxn2}) ) &
+                     + F84 * ( val(#{idx4})+val(#{idxn3}) )"
+end
 
 def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
   if dim==3
@@ -107,6 +122,12 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
   idx3 = idx.dup
   idx3[dir] = idx3[dir]+3
   idx3 = idx3.join(",")
+  idxn3 = idx.dup
+  idxn3[dir] = idxn3[dir]-3
+  idxn3 = idxn3.join(",")  
+  idx4 = idx.dup
+  idx4[dir] = idx4[dir]+4
+  idx4 = idx4.join(",")  
   if Array===order && order.max % 2 == 0
     order = order.min
   end
@@ -133,6 +154,10 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
        fu = flux4(idx2,idx1,idx0,idxn1)
     when 5
        fu = flux5(idx2,idx1,idx0,idxn1,idxn2)
+    when 6
+       fu = flux6(idx3,idx2,idx1,idx0,idxn1,idxn2) 
+    when 7
+       fu = flux7(idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)         
     else
        raise "invalid order: #{order}"
     end
@@ -155,6 +180,10 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
        fd = flux4(idx2,idx1,idx0,idxn1)
     when 5
        fd = flux5(idxn1,idx0,idx1,idx2,idx3)
+    when 6
+       fd = flux6(idx3,idx1,idx0,idxn1,idxn2,idxn3) 
+    when 7
+       fd = flux7(idxn2,idxn1,idx0,idx1,idx2,idx3,idx4)            
     else
        raise "invalid order: #{order}"
     end
@@ -189,6 +218,17 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
                        + F55 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
   when 6
                       "#{flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)}"
+  when 7
+                      "( F71 * ( val(#{idx4})+val(#{idxn3}) ) &
+                       + F72 * ( val(#{idx3})+val(#{idxn2}) ) &
+                       + F73 * ( val(#{idx2})+val(#{idxn1}) ) &
+                       + F74 * ( val(#{idx1})+val(#{idx0}) ) ) &
+                     - ( F71 * ( val(#{idx4})-val(#{idxn3}) ) &
+                       + F75 * ( val(#{idx3})-val(#{idxn2}) ) &
+                       + F76 * ( val(#{idx2})-val(#{idxn1}) ) &
+                       + F77 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
+  when 8
+                      "#{flux8(idx4,idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)}"                         
   else
     raise "invalid order: #{order}"
   end
@@ -345,6 +385,12 @@ module <%= modname %>
   real(RP), parameter :: F62 = -8.0_RP/60.0_RP
   real(RP), parameter :: F63 =  1.0_RP/60.0_RP
 <%   end %>
+<%   if order >= 8 %>
+  real(RP), parameter :: F81 =  533.0_RP/840.0_RP
+  real(RP), parameter :: F82 = -139.0_RP/840.0_RP
+  real(RP), parameter :: F83 =   29.0_RP/840.0_RP
+  real(RP), parameter :: F84 =   -3.0_RP/840.0_RP
+<%   end %>
 <% else %>
 <%   if order >= 3 %>
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -357,6 +403,15 @@ module <%= modname %>
   real(RP), parameter :: F53  = 37.0_RP/60.0_RP
   real(RP), parameter :: F54  = -5.0_RP/60.0_RP
   real(RP), parameter :: F55  = 10.0_RP/60.0_RP
+<%   end %>
+<%   if order >= 7 %>
+  real(RP), parameter :: F71  =   -3.0_RP/840.0_RP
+  real(RP), parameter :: F72  =   29.0_RP/840.0_RP
+  real(RP), parameter :: F73  = -139.0_RP/840.0_RP
+  real(RP), parameter :: F74  =  533.0_RP/840.0_RP
+  real(RP), parameter :: F75  =   21.0_RP/840.0_RP
+  real(RP), parameter :: F76  =  -63.0_RP/840.0_RP
+  real(RP), parameter :: F77  =  105.0_RP/840.0_RP
 <%   end %>
 <% end %>
 
