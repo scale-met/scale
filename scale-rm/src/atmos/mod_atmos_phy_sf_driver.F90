@@ -301,8 +301,9 @@ contains
 
           case ( 'CONST' )
 
+             SFC_TEMP(:,:) = ATM_TEMP(:,:)
              call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
-                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
+                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), SFC_TEMP(:,:), & ! [IN]
                                            Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
                                            SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
                                            SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
@@ -318,7 +319,7 @@ contains
 
           if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
-             SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * ATM_TEMP(:,:) + LHV )
+             SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * SFC_TEMP(:,:) + LHV )
           endif
 
        endif
@@ -334,7 +335,6 @@ contains
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
           RHOU_t_SF(i,j) = SFLX_MU(i,j) * rdz
           RHOV_t_SF(i,j) = SFLX_MV(i,j) * rdz
-          DENS_t_SF(i,j) = 0.0_RP
        enddo
        enddo
 
@@ -343,6 +343,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          DENS_t_SF(i,j) = 0.0_RP
           CP_t = 0.0_RP
           CV_t = 0.0_RP
           ENGI_t = SFLX_ENGI(i,j) * rdz

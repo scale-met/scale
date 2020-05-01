@@ -348,14 +348,6 @@ contains
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
 
-
-    call HYDROMETEOR_LHV( OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
-                          ATMOS_TEMP(:,:),              & ! [IN]
-                          LHV       (:,:)               ) ! [OUT]
-    call HYDROMETEOR_LHS( OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
-                          ATMOS_TEMP(:,:),              & ! [IN]
-                          LHS       (:,:)               ) ! [OUT]
-
     !$omp parallel do
     do j = OJS, OJE
     do i = OIS, OIE
@@ -477,6 +469,11 @@ contains
     ! tendency
     select case ( OCEAN_SFC_TYPE )
     case ( 'FIXED-TEMP' )
+
+       call HYDROMETEOR_LHV( OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
+                             OCEAN_SFC_TEMP(:,:), & ! [IN]
+                             LHV(:,:)             ) ! [OUT]
+
        call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
                                     OJA, OJS, OJE,              & ! [IN]
                                     ATMOS_TEMP       (:,:),     & ! [IN]
@@ -659,6 +656,10 @@ contains
           end if
           end do
           end do
+
+          call HYDROMETEOR_LHS( OIA, OIS, OIE, OJA, OJS, OJE, & ! [IN]
+                                OCEAN_ICE_TEMP(:,:), & ! [IN]
+                                LHS(:,:)             ) ! [OUT]
 
           call CPL_PHY_SFC_fixed_temp( OIA, OIS, OIE,              & ! [IN]
                                        OJA, OJS, OJE,              & ! [IN]

@@ -154,14 +154,14 @@ contains
 
     LOG_PROGRESS(*) 'atmosphere / physics / surface flux / bulk'
 
-    ! ToDo consider ATM_TEMP is appropriate
     call HYDROMETEOR_LHV( IA, IS, IE, JA, JS, JE, &
-                          ATM_TEMP(:,:), & ! [IN]
+                          SFC_TEMP(:,:), & ! [IN]
                           LHV(:,:)       ) ! [OUT]
 
     call SATURATION_psat_all( IA, IS, IE, JA, JS, JE, &
                               SFC_TEMP(:,:), & ! [IN]
                               SFC_PSAT(:,:)  ) ! [OUT]
+
     !$omp parallel do &
 #ifndef __GFORTRAN__
     !$omp default(none) &
