@@ -61,22 +61,61 @@ module scale_atmos_dyn_tinteg_short_rk11s8o
 
   !- coeffecients for 11 stage RK with 8th order accuracy by Cooper and Verner (1972) --------------
   real(RP), parameter :: sq = 21.0_RP**0.5
+  real(RP), parameter :: RC41 = 1.0_RP/7.0_RP
+  real(RP), parameter :: RC42 = (-7.0_RP+3.0_RP*sq)/98.0_RP
+  real(RP), parameter :: RC43 = (21.0_RP-5.0_RP*sq)/49.0_RP
+  real(RP), parameter :: RC51 = (11.0_RP-sq)/84.0_RP
+  real(RP), parameter :: RC53 = (18.0_RP-4.0_RP*sq)/63.0_RP
+  real(RP), parameter :: RC54 = (21.0_RP+sq)/252.0_RP
+  real(RP), parameter :: RC61 = (5.0_RP-sq)/48.0_RP
+  real(RP), parameter :: RC63 = (9.0_RP-sq)/36.0_RP
+  real(RP), parameter :: RC64 = (-231.0_RP-14.0_RP*sq)/360.0_RP
+  real(RP), parameter :: RC65 = (63.0_RP+7.0_RP*sq)/80.0_RP
+  real(RP), parameter :: RC71 = (10.0_RP+sq)/42.0_RP
+  real(RP), parameter :: RC73 = (-432.0_RP-92.0_RP*sq)/315.0_RP
+  real(RP), parameter :: RC74 = (633.0_RP+145.0_RP*sq)/90.0_RP
+  real(RP), parameter :: RC75 = (-504.0_RP-115.0_RP*sq)/70.0_RP
+  real(RP), parameter :: RC76 = (63.0_RP+13.0_RP*sq)/35.0_RP
+  real(RP), parameter :: RC81 = 1.0_RP/14.0_RP
+  real(RP), parameter :: RC85 = (14.0_RP+3.0_RP*sq)/126.0_RP
+  real(RP), parameter :: RC86 = (13.0_RP+3.0_RP*sq)/63.0_RP
+  real(RP), parameter :: RC87 = 1.0_RP/9.0_RP
+  real(RP), parameter :: RC91 = 1.0_RP/32.0_RP
+  real(RP), parameter :: RC95 = (91.0_RP+21.0_RP*sq)/576.0_RP
+  real(RP), parameter :: RC96 = 11.0_RP/72.0_RP
+  real(RP), parameter :: RC97 = (-385.0_RP+75.0_RP*sq)/1152.0_RP
+  real(RP), parameter :: RC98 = (63.0_RP-13.0_RP*sq)/128.0_RP
+  real(RP), parameter :: RC101 = 1.0_RP/14.0_RP
+  real(RP), parameter :: RC105 = 1.0_RP/9.0_RP
+  real(RP), parameter :: RC106 = (-733.0_RP+147.0_RP*sq)/2205.0_RP
+  real(RP), parameter :: RC107 = (515.0_RP-111.0_RP*sq)/504.0_RP
+  real(RP), parameter :: RC108 = (-51.0_RP+11.0_RP*sq)/56.0_RP
+  real(RP), parameter :: RC109 = (132.0_RP-28.0_RP*sq)/245.0_RP
+  real(RP), parameter :: RC115 = (-42.0_RP-7.0_RP*sq)/18.0_RP
+  real(RP), parameter :: RC116 = (-18.0_RP-28.0_RP*sq)/45.0_RP
+  real(RP), parameter :: RC117 = (-273.0_RP+53.0_RP*sq)/72.0_RP
+  real(RP), parameter :: RC118 = (301.0_RP-53.0_RP*sq)/72.0_RP
+  real(RP), parameter :: RC119 = (28.0_RP+28.0_RP*sq)/45.0_RP
+  real(RP), parameter :: RC1110 = (49.0_RP+7.0_RP*sq)/18.0_RP
+  real(RP), parameter :: ZERO = 0.0_RP
+
   real(RP), parameter, public :: RKCoef_a_11s8o_CooperVerner1972(11,11) = reshape( &
-  (/ 0.0_RP,  0.5_RP,  0.25_RP,               1.0_RP/7.0_RP,        (11.0_RP-sq)/84.0_RP,             (5.0_RP-sq)/48.0_RP,            (10.0_RP+sq)/42.0_RP,               1.0_RP/14.0_RP,                   1.0_RP/32.0_RP,                    1.0_RP/14.0_RP,                         0.0_RP,   &
-     0.0_RP,  0.0_RP,  0.25_RP, (-7.0_RP+3.0_RP*sq)/98.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                       0.0_RP,                           0.0_RP,                            0.0_RP,                         0.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP, (21.0_RP-5.0_RP*sq)/49.0_RP, (18.0_RP-4.0_RP*sq)/63.0_RP,             (9.0_RP-sq)/36.0_RP, (-432.0_RP-92.0_RP*sq)/315.0_RP,                       0.0_RP,                           0.0_RP,                            0.0_RP,                         0.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,       (21.0_RP+sq)/252.0_RP, (-231.0_RP-14.0_RP*sq)/360.0_RP,  (633.0_RP+145.0_RP*sq)/90.0_RP,                       0.0_RP,                           0.0_RP,                            0.0_RP,                         0.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,     (63.0_RP+7.0_RP*sq)/80.0_RP, (-504.0_RP-115.0_RP*sq)/70.0_RP, (14.0_RP+3.0_RP*sq)/126.0_RP,    (91.0_RP+21.0_RP*sq)/576.0_RP,                     1.0_RP/9.0_RP,   (-42.0_RP-7.0_RP*sq)/18.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,    (63.0_RP+13.0_RP*sq)/35.0_RP,  (13.0_RP+3.0_RP*sq)/63.0_RP,                  11.0_RP/72.0_RP, (-733.0_RP+147.0_RP*sq)/2205.0_RP,  (-18.0_RP-28.0_RP*sq)/45.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                1.0_RP/9.0_RP, (-385.0_RP+75.0_RP*sq)/1152.0_RP,   (515.0_RP-111.0_RP*sq)/504.0_RP, (-273.0_RP+53.0_RP*sq)/72.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                       0.0_RP,    (63.0_RP-13.0_RP*sq)/128.0_RP,     (-51.0_RP+11.0_RP*sq)/56.0_RP,  (301.0_RP-53.0_RP*sq)/72.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                       0.0_RP,                           0.0_RP,    (132.0_RP-28.0_RP*sq)/245.0_RP,   (28.0_RP+28.0_RP*sq)/45.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                       0.0_RP,                           0.0_RP,                            0.0_RP,    (49.0_RP+7.0_RP*sq)/18.0_RP,   &
-     0.0_RP,  0.0_RP,   0.0_RP,                      0.0_RP,                      0.0_RP,                          0.0_RP,                          0.0_RP,                       0.0_RP,                           0.0_RP,                            0.0_RP,                         0.0_RP/), &
+  (/ ZERO, 0.5_RP, 0.25_RP, RC41, RC51, RC61, RC71, RC81, RC91,  RC101,    ZERO,    &
+     ZERO,   ZERO, 0.25_RP, RC42, ZERO, ZERO, ZERO, ZERO, ZERO,   ZERO,    ZERO,    &
+     ZERO,   ZERO,    ZERO, RC43, RC53, RC63, RC73, ZERO, ZERO,   ZERO,    ZERO,    &
+     ZERO,   ZERO,    ZERO, ZERO, RC54, RC64, RC74, ZERO, ZERO,   ZERO,    ZERO,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, RC65, RC75, RC85, RC95,  RC105,   RC115,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, RC76, RC86, RC96,  RC106,   RC116,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, ZERO, RC87, RC97,  RC107,   RC117,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, RC98,  RC108,   RC118,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,  RC109,   RC119,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,   ZERO,  RC1110,    &
+     ZERO,   ZERO,    ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO,   ZERO,    ZERO /), &
      shape(RKCoef_a_11s8o_CooperVerner1972) )
 
   real(RP), parameter, public :: RKCoef_b_11s8o_CooperVerner1972(11) = &
-    (/ 0.05_RP, 0.0_RP, 0.0_RP,  0.0_RP, 0.0_RP, 0.0_RP, 0.0_RP, 49.0_RP/180.0_RP, 16.0_RP/45.0_RP, 49.0_RP/180.0_RP, 0.05_RP /)
+    (/ 0.05_RP, ZERO, ZERO, ZERO, ZERO, ZERO, ZERO, 49.0_RP/180.0_RP, 16.0_RP/45.0_RP, &
+                                                    49.0_RP/180.0_RP,         0.05_RP /)
  
   !-----------------------------------------------------------------------------  
   !
