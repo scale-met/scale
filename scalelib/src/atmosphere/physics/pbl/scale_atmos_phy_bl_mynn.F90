@@ -129,9 +129,10 @@ contains
   !> ATMOS_PHY_BL_MYNN_tracer_setup
   !! Tracer Setup
   !<
-  subroutine ATMOS_PHY_BL_MYNN_tracer_setup( )
+  subroutine ATMOS_PHY_BL_MYNN_tracer_setup
     use scale_prc, only: &
        PRC_abort
+    implicit none
 
     integer :: ierr
 
@@ -184,6 +185,7 @@ contains
   subroutine ATMOS_PHY_BL_MYNN_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        CZ, &
+       BULKFLUX_type, &
        TKE_MIN, PBL_MAX )
     use scale_prc, only: &
        PRC_abort
@@ -195,6 +197,8 @@ contains
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
     real(RP), intent(in) :: CZ (KA,IA,JA)
+
+    character(len=*), intent(in) :: BULKFLUX_type
 
     real(RP), intent(in), optional :: TKE_MIN
     real(RP), intent(in), optional :: PBL_MAX
@@ -254,6 +258,13 @@ contains
 
     initialize = ATMOS_PHY_BL_MYNN_init_TKE
 
+    select case ( BULKFLUX_type )
+    case ( "B91", "B91W01" )
+       ! do nothing
+    case default
+       ATMOS_PHY_BL_MYNN_similarity = .false.
+    end select
+
     return
   end subroutine ATMOS_PHY_BL_MYNN_setup
 
@@ -269,6 +280,7 @@ contains
        SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        us, RLmo,                           &
        CZ, FZ, dt_DP,                      &
+       BULKFLUX_type,                      &
        RHOU_t, RHOV_t, RHOT_t, RHOQV_t,    &
        RPROG_t,                            &
        Nu, Kh                              )
@@ -316,6 +328,8 @@ contains
     real(RP), intent(in)  :: CZ(  KA,IA,JA)
     real(RP), intent(in)  :: FZ(0:KA,IA,JA)
     real(DP), intent(in)  :: dt_DP
+
+    character(len=*), intent(in) :: BULKFLUX_type
 
     real(RP), intent(out) :: RHOU_t (KA,IA,JA) !> tendency of dens * u
     real(RP), intent(out) :: RHOV_t (KA,IA,JA) !> tendency of dens * v
@@ -433,6 +447,7 @@ contains
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,RLmo, &
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
+    !$omp        BULKFLUX_type, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
     !$omp private(N2_new,lq,sm25,smp,sh25,shpgh,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
     !$omp         SFLX_PT,SFLX_PTV,RHO,RHONu,RHOKh, &
@@ -556,32 +571,35 @@ contains
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
              zeta = z1 * RLmo(i,j)
 
-!!$             ! Businger et al. (1971)
-!!$             if ( zeta >= 0 ) then
-!!$                phi_m = 4.7_RP * zeta + 1.0_RP
-!!$                phi_h = 4.7_RP * zeta + 0.74_RP
-!!$             else
-!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-!!$                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
-!!$             end if
-
-             ! Beljaars and Holtslag (1991)
-             if ( zeta >= 0 ) then
-                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
-                phi_m = tmp * zeta + zeta + 1.0_RP
-                phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
-!!$             else
-!!$                tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
-!!$                phi_m = 1.0_RP / sqrt(tmp)
-!!$                phi_h = 1.0_RP / tmp
-             end if
-
-             ! Wilson (2001)
-             if ( zeta < 0 ) then
-                tmp = (-zeta)**(2.0_RP/3.0_RP)
-                phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
-                phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
-             end if
+             select case ( BULKFLUX_type )
+!!$             case ( 'B71' )
+!!$                ! Businger et al. (1971)
+!!$                if ( zeta >= 0 ) then
+!!$                   phi_m = 4.7_RP * zeta + 1.0_RP
+!!$                   phi_h = 4.7_RP * zeta + 0.74_RP
+!!$                else
+!!$                   phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+!!$                   phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
+!!$                end if
+             case ( 'B91', 'B91W01' )
+                ! Beljaars and Holtslag (1991)
+                if ( zeta >= 0 ) then
+                   tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
+                   phi_m = tmp * zeta + zeta + 1.0_RP
+                   phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
+                else
+                   if ( BULKFLUX_type == 'B91W01' ) then
+                      ! Wilson (2001)
+                      tmp = (-zeta)**(2.0_RP/3.0_RP)
+                      phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
+                      phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
+                   else
+                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+                      phi_m = 1.0_RP / sqrt(tmp)
+                      phi_h = 1.0_RP / tmp
+                   end if
+                end if
+             end select
 
           end if
 

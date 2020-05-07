@@ -102,6 +102,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     implicit none
     !---------------------------------------------------------------------------
 
@@ -113,7 +115,8 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               REAL_CZ ) ! (in)
+               REAL_CZ,      & ! (in)
+               BULKFLUX_type ) ! (in)
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
@@ -142,6 +145,8 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_atmos_hydrometeor, only: &
        I_QV
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -227,6 +232,7 @@ contains
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
                Ustar(:,:), RLmo(:,:),                                  & ! (in)
                CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
+               BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)

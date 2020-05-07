@@ -82,6 +82,8 @@ module scale_bulkflux
   !
   !++ Public parameters & variables
   !
+  character(len=H_SHORT), public :: BULKFLUX_type = 'B91W01' ! 'U95', 'B91', and 'B91W01'
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -98,8 +100,6 @@ module scale_bulkflux
   !++ Private parameters & variables
   !
   real(DP), parameter, private :: EPS = 1.E-16_DP
-
-  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B91', and 'B91W01'
 
   logical,  private :: BULKFLUX_NK2018 = .true. !> Nishizawa and Kitamura (2018)
 
