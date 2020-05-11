@@ -710,11 +710,11 @@ contains
     endif
 
     if( .NOT. USE_FILE_LANDWATER ) then
-       if( all( INIT_LANDWATER_RATIO_EACH(:) ) < 0.0_RP ) then
+       if( all( INIT_LANDWATER_RATIO_EACH(:) < 0.0_RP ) ) then
           LOG_INFO("REALINPUT_surface",*) 'Applied INIT_LANDWATER_RATIO, instead of INIT_LANDWATER_RATIO_EACH.'
           INIT_LANDWATER_RATIO_EACH(:) = INIT_LANDWATER_RATIO
        else
-          if( any( INIT_LANDWATER_RATIO_EACH(:) ) < 0.0_RP ) then
+          if( any( INIT_LANDWATER_RATIO_EACH(:) < 0.0_RP ) ) then
              LOG_ERROR("REALINPUT_surface",*) 'Insufficient elemtents of array (INIT_LANDWATER_RATIO_EACH):', INIT_LANDWATER_RATIO_EACH(:)
              call PRC_abort
           endif
