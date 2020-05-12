@@ -86,7 +86,7 @@ module scale_atmos_phy_rd_mstrnx
 
   integer,  private :: I_MPAE2RD      (RD_naero)   ! look-up table between input aerosol category and MSTRN particle type
   data I_MPAE2RD(1      :N_HYD     ) / 1, 1, 2, 2, 2, 2 /
-  data I_MPAE2RD(N_HYD+1:N_HYD+N_AE) / 1, 2, 3, 4, 5, 6, 7, 8, 9 /
+  data I_MPAE2RD(N_HYD+1:N_HYD+N_AE) / 3, 4, 5, 6, 7, 8, 9 /
 
   character(len=H_LONG), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
   character(len=H_LONG), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
