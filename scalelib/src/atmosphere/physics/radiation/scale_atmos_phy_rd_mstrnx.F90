@@ -331,13 +331,6 @@ contains
        I_MPAE2RD(12) =  8 ! aerosol type6 -> Sulfate
        I_MPAE2RD(13) =  9 ! aerosol type7 -> Sea salt
 
-       if ( ATMOS_PHY_RD_MSTRN_nradius_cloud < 0 ) then ! set default
-          ATMOS_PHY_RD_MSTRN_nradius_cloud = ATMOS_PHY_RD_MSTRN_nradius
-       endif
-       if ( ATMOS_PHY_RD_MSTRN_nradius_aero  < 0 ) then ! set default
-          ATMOS_PHY_RD_MSTRN_nradius_aero  = ATMOS_PHY_RD_MSTRN_nradius
-       endif
-
        ptype_nradius( 1) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
        ptype_nradius( 2) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
        ptype_nradius( 3) =  ATMOS_PHY_RD_MSTRN_nradius_aero
@@ -349,6 +342,7 @@ contains
        ptype_nradius( 9) =  ATMOS_PHY_RD_MSTRN_nradius_aero
 
     elseif( MSTRN_nptype == 12 ) then
+
        I_MPAE2RD( 1) =  1 ! cloud water Qc -> CLOUD
        I_MPAE2RD( 2) =  2 ! rain        Qr -> RAIN
        I_MPAE2RD( 3) =  3 ! cloud ice   Qi -> ICE
@@ -375,6 +369,7 @@ contains
        ptype_nradius(10) =  ATMOS_PHY_RD_MSTRN_nradius_aero
        ptype_nradius(11) =  ATMOS_PHY_RD_MSTRN_nradius_aero
        ptype_nradius(12) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+
     endif
 
     !--- setup MSTRN parameter
@@ -1059,11 +1054,11 @@ contains
 
     allocate( qmol    (                                MSTRN_nmoment,MSTRN_nband) )
     allocate( q       (-1:MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
-    do iptype = 1, nptype
+    do iptype = 1, MSTRN_nptype
        nradius = ptype_nradius(iptype)
 
-       q(-1:0     ,iptype,:,:) = 0.D0 ! dummy for NaN
-       q(nradius+1,iptype,:,:) = 0.D0 ! dummy for extrapolation
+       q(       -1:0              ,iptype,:,:) = 0.D0 ! dummy for NaN
+       q(nradius+1:MSTRN_nradius+1,iptype,:,:) = 0.D0 ! dummy for extrapolation
     enddo
 
 
@@ -1132,7 +1127,7 @@ contains
              ! for rayleigh scattering phase function
              read(fid,*) qmol(im,iw)
              ! for aerosol scattering phase function
-             do iptype = 1, nptype
+             do iptype = 1, MSTRN_nptype
                 nradius = ptype_nradius(iptype)
                 read(fid,*) q(1:nradius,iptype,im,iw)
              enddo
@@ -1171,7 +1166,7 @@ contains
           call PRC_abort
        endif
 
-       do iptype = 1, nptype
+       do iptype = 1, MSTRN_nptype
           read(fid,*) dummy
           read(fid,*) hygro_flag(iptype), nradius
 
