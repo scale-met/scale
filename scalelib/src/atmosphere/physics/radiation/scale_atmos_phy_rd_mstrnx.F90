@@ -84,9 +84,7 @@ module scale_atmos_phy_rd_mstrnx
   real(RP), private, allocatable :: RD_aerosol_radi(:,:) ! cloud/aerosol effective radius    [cm]
   real(RP), private, allocatable :: RD_cldfrac     (:)   ! cloud fraction    (0-1)
 
-  integer,  private :: I_MPAE2RD      (RD_naero)   ! look-up table between input aerosol category and MSTRN particle type
-  data I_MPAE2RD(1      :N_HYD     ) / 1, 1, 2, 2, 2, 2 /
-  data I_MPAE2RD(N_HYD+1:N_HYD+N_AE) / 3, 4, 5, 6, 7, 8, 9 /
+  integer,  private :: I_MPAE2RD(RD_naero) ! look-up table between input aerosol category and MSTRN particle type
 
   character(len=H_LONG), private :: MSTRN_GASPARA_INPUTFILE   = 'PARAG.29'     !< input file (gas parameter)
   character(len=H_LONG), private :: MSTRN_AEROPARA_INPUTFILE  = 'PARAPC.29'    !< input file (particle parameter)
@@ -192,6 +190,7 @@ module scale_atmos_phy_rd_mstrnx
   integer,  private, allocatable :: hygro_flag(:)       ! flag for hygroscopic enlargement
   real(RP), private, allocatable :: radmode   (:,:)     ! radius mode for hygroscopic parameter
 
+  integer,  private, allocatable :: ptype_nradius(:)    ! number limit of radius mode for cloud / aerosol particle type
 
 
   ! index for optical flag iflgb
@@ -246,6 +245,8 @@ contains
     integer               :: ATMOS_PHY_RD_MSTRN_nband
     integer               :: ATMOS_PHY_RD_MSTRN_nptype
     integer               :: ATMOS_PHY_RD_MSTRN_nradius
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius_cloud = -1
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius_aero  = -1
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_TOA,                   &
@@ -256,6 +257,8 @@ contains
        ATMOS_PHY_RD_MSTRN_nband,                 &
        ATMOS_PHY_RD_MSTRN_nptype,                &
        ATMOS_PHY_RD_MSTRN_nradius,               &
+       ATMOS_PHY_RD_MSTRN_nradius_cloud,         &
+       ATMOS_PHY_RD_MSTRN_nradius_aero,          &
        ATMOS_PHY_RD_MSTRN_ONLY_QCI,              &
        ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
 
@@ -295,7 +298,82 @@ contains
     MSTRN_HYGROPARA_INPUTFILE = ATMOS_PHY_RD_MSTRN_HYGROPARA_IN_FILENAME
     MSTRN_nband               = ATMOS_PHY_RD_MSTRN_nband
     MSTRN_nptype              = ATMOS_PHY_RD_MSTRN_nptype
-    MSTRN_nradius             = ATMOS_PHY_RD_MSTRN_nradius
+
+    if ( ATMOS_PHY_RD_MSTRN_nradius_cloud < 0 ) then ! set default
+       ATMOS_PHY_RD_MSTRN_nradius_cloud = ATMOS_PHY_RD_MSTRN_nradius
+    endif
+    if ( ATMOS_PHY_RD_MSTRN_nradius_aero  < 0 ) then ! set default
+       ATMOS_PHY_RD_MSTRN_nradius_aero  = ATMOS_PHY_RD_MSTRN_nradius
+    endif
+
+    MSTRN_nradius = max( ATMOS_PHY_RD_MSTRN_nradius,       &
+                         ATMOS_PHY_RD_MSTRN_nradius_cloud, &
+                         ATMOS_PHY_RD_MSTRN_nradius_aero   )
+
+    !--- setup MP/AE - RD(particle) coupling parameter
+    allocate( ptype_nradius(MSTRN_nptype) )
+
+    if ( MSTRN_nptype == 9 ) then
+
+       I_MPAE2RD( 1) =  1 ! cloud water Qc -> Water
+       I_MPAE2RD( 2) =  1 ! rain        Qr -> Water
+       I_MPAE2RD( 3) =  2 ! cloud ice   Qi -> Ice
+       I_MPAE2RD( 4) =  2 ! snow        Qs -> Ice
+       I_MPAE2RD( 5) =  2 ! graupel     Qg -> Ice
+       I_MPAE2RD( 6) =  2 ! hail        Qh -> Ice
+       I_MPAE2RD( 7) =  3 ! aerosol type1 -> Soil dust
+       I_MPAE2RD( 8) =  4 ! aerosol type2 -> Carbonacerous (BC/OC=0.3)
+       I_MPAE2RD( 9) =  5 ! aerosol type3 -> Carbonacerous (BC/OC=0.15)
+       I_MPAE2RD(10) =  6 ! aerosol type4 -> Carbonacerous (BC/OC=0.)
+       I_MPAE2RD(11) =  7 ! aerosol type5 -> Black carbon
+       I_MPAE2RD(12) =  8 ! aerosol type6 -> Sulfate
+       I_MPAE2RD(13) =  9 ! aerosol type7 -> Sea salt
+
+       if ( ATMOS_PHY_RD_MSTRN_nradius_cloud < 0 ) then ! set default
+          ATMOS_PHY_RD_MSTRN_nradius_cloud = ATMOS_PHY_RD_MSTRN_nradius
+       endif
+       if ( ATMOS_PHY_RD_MSTRN_nradius_aero  < 0 ) then ! set default
+          ATMOS_PHY_RD_MSTRN_nradius_aero  = ATMOS_PHY_RD_MSTRN_nradius
+       endif
+
+       ptype_nradius( 1) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 2) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 3) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 4) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 5) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 6) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 7) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 8) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 9) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+
+    elseif( MSTRN_nptype == 12 ) then
+       I_MPAE2RD( 1) =  1 ! cloud water Qc -> CLOUD
+       I_MPAE2RD( 2) =  2 ! rain        Qr -> RAIN
+       I_MPAE2RD( 3) =  3 ! cloud ice   Qi -> ICE
+       I_MPAE2RD( 4) =  4 ! snow        Qs -> SNOW
+       I_MPAE2RD( 5) =  5 ! graupel     Qg -> GRAUPEL
+       I_MPAE2RD( 6) =  5 ! hail        Qh -> GRAUPEL
+       I_MPAE2RD( 7) =  6 ! aerosol type1 -> Soil dust
+       I_MPAE2RD( 8) =  7 ! aerosol type2 -> Carbonacerous (BC/OC=0.3)
+       I_MPAE2RD( 9) =  8 ! aerosol type3 -> Carbonacerous (BC/OC=0.15)
+       I_MPAE2RD(10) =  9 ! aerosol type4 -> Carbonacerous (BC/OC=0.)
+       I_MPAE2RD(11) = 10 ! aerosol type5 -> Black carbon
+       I_MPAE2RD(12) = 11 ! aerosol type6 -> Sulfate
+       I_MPAE2RD(13) = 12 ! aerosol type7 -> Sea salt
+
+       ptype_nradius( 1) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 2) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 3) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 4) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 5) =  ATMOS_PHY_RD_MSTRN_nradius_cloud
+       ptype_nradius( 6) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 7) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 8) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius( 9) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius(10) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius(11) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+       ptype_nradius(12) =  ATMOS_PHY_RD_MSTRN_nradius_aero
+    endif
 
     !--- setup MSTRN parameter
     call RD_MSTRN_setup( ngas, & ! [OUT]
@@ -831,7 +909,7 @@ contains
 
     integer :: nband, nstream, nfitP, nfitT, nflag !< gas             parameters for check
     integer :: nsfc, nptype, nplkord, nfitPLK      !< aerosol/surface parameters for check
-    integer :: nradius                             !< hygroscopic     parameters for check
+    integer :: nradius
 
     character(len=H_LONG) :: dummy
 
@@ -973,8 +1051,13 @@ contains
 
     allocate( qmol    (                                MSTRN_nmoment,MSTRN_nband) )
     allocate( q       (-1:MSTRN_nradius+1,MSTRN_nptype,MSTRN_nmoment,MSTRN_nband) )
-    q(-1:0           ,:,:,:) = 0.D0 ! dummy for NaN
-    q(MSTRN_nradius+1,:,:,:) = 0.D0 ! dummy for extrapolation
+    do iptype = 1, nptype
+       nradius = ptype_nradius(iptype)
+
+       q(-1:0     ,iptype,:,:) = 0.D0 ! dummy for NaN
+       q(nradius+1,iptype,:,:) = 0.D0 ! dummy for extrapolation
+    enddo
+
 
     open( fid,                                     &
           file   = trim(MSTRN_AEROPARA_INPUTFILE), &
@@ -1042,7 +1125,8 @@ contains
              read(fid,*) qmol(im,iw)
              ! for aerosol scattering phase function
              do iptype = 1, nptype
-                read(fid,*) q(1:MSTRN_nradius,iptype,im,iw)
+                nradius = ptype_nradius(iptype)
+                read(fid,*) q(1:nradius,iptype,im,iw)
              enddo
           enddo
 
@@ -1083,12 +1167,12 @@ contains
           read(fid,*) dummy
           read(fid,*) hygro_flag(iptype), nradius
 
-          if ( nradius /= MSTRN_nradius ) then
-             LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nradius(given,file)=', MSTRN_nradius, nradius
+          if ( nradius /= ptype_nradius(iptype) ) then
+             LOG_ERROR("RD_MSTRN_setup",*) 'Inconsistent parameter value! nradius(given,file)=', ptype_nradius(iptype), nradius
              call PRC_abort
           endif
 
-          read(fid,*) radmode(iptype,:)
+          read(fid,*) radmode(iptype,1:nradius)
        enddo
 
     close(fid)
@@ -1116,7 +1200,7 @@ contains
 
     !$acc enter data &
     !$acc& pcopyin(wgtch, fitPLK, logfitP, logfitT, fitT) &
-    !$acc& pcopyin(radmode, ngasabs, igasabs) &
+    !$acc& pcopyin(radmode, ngasabs, igasabs, radmode, ptype_nradius) &
     !$acc& pcopyin(fsol, q, qmol, rayleigh, acfc_pow, nch, AKD, SKD) &
     !$acc& pcopyin(Wmns, Wpls, Wscale, W, M)
 
@@ -1245,7 +1329,7 @@ contains
     real(RP) :: valsum
     integer  :: chmax
     integer  :: ip, ir, irgn, irgn_alb
-    integer  :: igas, icfc, iaero, iptype
+    integer  :: igas, icfc, iaero, iptype, nradius
     integer  :: iw, ich, iplk, icloud, im
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -1260,7 +1344,7 @@ contains
 
     !$acc loop gang
     !$omp parallel do default(none) &
-    !$omp private(ip, ir, irgn, irgn_alb, iptype, valsum, chmax, A1, A2, A3, factPT, qv, length, gasno, zerosw, &
+    !$omp private(ip, ir, irgn, irgn_alb, iptype, nradius, valsum, chmax, A1, A2, A3, factPT, qv, length, gasno, zerosw, &
     !$omp         q_fit, dp_P, wl, beta, &
     !$omp         dz_std, logP, logT, indexP, factP, factT32, factT21, indexR, factR, tauGAS, &
     !$omp         tauPR, omgPR, optparam, bbar, bbarh, b_sfc, &
@@ -1270,7 +1354,7 @@ contains
     !$omp        rflux, rflux_sfc_dn, tauCLD_067u, emisCLD_105u, &
     !$omp        GRAV, Pstd, &
     !$omp        rd_kmax, IA, IS, IE, JA, JS, JE, ncfc, naero, hydro_str, hydro_end, aero_str, aero_end, &
-    !$omp        MSTRN_nradius, MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, &
+    !$omp        MSTRN_nband, RHO_std, logfitP, fitT, logfitT, fitPLK, ptype_nradius, &
     !$omp        nch, ngasabs, igasabs, radmode, waveh, iflgb, AKD, SKD, acfc_pow, rayleigh, qmol, q, fsol, fsol_tot, wgtch)
     do j = JS, JE
     !$acc loop gang vector &
@@ -1307,7 +1391,8 @@ contains
 
        !---< interpolation of mode radius & hygroscopic parameter (R-fitting) >---
        do iaero = 1, naero
-          iptype = aero2ptype(iaero)
+          iptype  = aero2ptype(iaero)
+          nradius = ptype_nradius(iptype)
 
           !$acc loop gang vector
           do k = 1, rd_kmax
@@ -1318,18 +1403,18 @@ contains
                 factR (k,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
                                 / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
 
-             elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,MSTRN_nradius) ) then ! extrapolation
+             elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,nradius) ) then ! extrapolation
                 ! [Note] Extrapolation sometimes makes unexpected value
                 ! optical thickness is set to zero. This treatment is Ad Hoc.
 
-                ir = MSTRN_nradius
+                ir = nradius
                 indexR(k,iaero) = ir
                 factR (k,iaero) = 1.0_RP
 
              else
                 indexR(k,iaero) = -1
                 !$acc loop seq
-                do ir = 1, MSTRN_nradius-1
+                do ir = 1, nradius-1
                    if (       aerosol_radi(k,i,j,iaero) <= radmode(iptype,ir+1) &
                         .AND. aerosol_radi(k,i,j,iaero) >  radmode(iptype,ir  ) ) then ! interpolation
 
