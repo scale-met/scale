@@ -161,6 +161,7 @@ module scale_atmos_phy_rd_mstrnx
 
   logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_QCI        = .false.
   logical,  private            :: ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD = .false.
+  logical,  private            :: ATMOS_PHY_RD_MSTRN_USE_AERO        = .false.
 
 
 
@@ -260,7 +261,8 @@ contains
        ATMOS_PHY_RD_MSTRN_nradius_cloud,         &
        ATMOS_PHY_RD_MSTRN_nradius_aero,          &
        ATMOS_PHY_RD_MSTRN_ONLY_QCI,              &
-       ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD
+       ATMOS_PHY_RD_MSTRN_ONLY_TROPOCLOUD,       &
+       ATMOS_PHY_RD_MSTRN_USE_AERO
 
     integer :: KMAX
     integer :: ngas, ncfc
@@ -444,8 +446,7 @@ contains
        temp_sfc, albedo_sfc,  &
        solins, cosSZA,        &
        CLDFRAC, MP_Re, MP_Qe, &
-!       AE_Re, AE_Qe,          &
-       AE_Re,                 &
+       AE_Re, AE_Qe,          &
        flux_rad,              &
        flux_rad_top,          &
        flux_rad_sfc_dn,       &
@@ -466,7 +467,8 @@ contains
        I_HI, &
        HYD_DENS
     use scale_atmos_aerosol, only: &
-       N_AE
+       N_AE, &
+       AE_DENS
     use scale_atmos_phy_rd_profile, only: &
        RD_PROFILE_read            => ATMOS_PHY_RD_PROFILE_read, &
        RD_PROFILE_use_climatology => ATMOS_PHY_RD_PROFILE_use_climatology
@@ -492,7 +494,7 @@ contains
     real(RP), intent(in)  :: MP_Re          (KA,IA,JA,N_HYD)
     real(RP), intent(in)  :: MP_Qe          (KA,IA,JA,N_HYD)
     real(RP), intent(in)  :: AE_Re          (KA,IA,JA,N_AE)
-!    real(RP), intent(in)  :: AE_Qe          (KA,IA,JA,N_AE)
+    real(RP), intent(in)  :: AE_Qe          (KA,IA,JA,N_AE)
     real(RP), intent(out) :: flux_rad       (KA,IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_top   (IA,JA,2,2,2)
     real(RP), intent(out) :: flux_rad_sfc_dn(IA,JA,N_RAD_DIR,N_RAD_RGN)
@@ -766,31 +768,37 @@ contains
 !OCL SERIAL
     do iaero = 1, N_AE
 
-!!$       do j = JS, JE
-!!$       do i = IS, IE
-!!$       do RD_k = RD_KADD+1, RD_KMAX
-!!$          k = KS + RD_KMAX - RD_k ! reverse axis
-!!$
-!!$          aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = max( AE_Qe(k,i,j,iaero), 0.0_RP ) &
-!!$                                                   / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
-!!$          aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = AE_Re(k,i,j,iaero)
-!!$       enddo
-!!$       enddo
-!!$       enddo
-
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,RD_k) &
-       !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
-       !$omp         IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
+       if ( ATMOS_PHY_RD_MSTRN_USE_AERO ) then
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(k,i,j,RD_k) &
+          !$omp shared (aerosol_conc_merge,aerosol_radi_merge,AE_Qe,RHO_std,AE_Re, &
+          !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
 !OCL PARALLEL
-       do j = JS, JE
-       do i = IS, IE
-       do RD_k = RD_KADD+1, RD_KMAX
-          aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_conc(RD_k,N_HYD+iaero)
-          aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_radi(RD_k,N_HYD+iaero)
-       enddo
-       enddo
-       enddo
+          do j = JS, JE
+          do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             k = KS + RD_KMAX - RD_k ! reverse axis
+             aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = max( AE_Qe(k,i,j,iaero), 0.0_RP ) &
+                                                      / AE_DENS(iaero) * RHO_std / PPM ! [PPM to standard air]
+             aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = AE_Re(k,i,j,iaero)
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+          !$omp private(i,j,RD_k) &
+          !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
+          !$omp         IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
+!OCL PARALLEL
+          do j = JS, JE
+          do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             aerosol_conc_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_conc(RD_k,N_HYD+iaero)
+             aerosol_radi_merge(RD_k,i,j,N_HYD+iaero) = RD_aerosol_radi(RD_k,N_HYD+iaero)
+          enddo
+          enddo
+          enddo
+       endif
 
     enddo
 
