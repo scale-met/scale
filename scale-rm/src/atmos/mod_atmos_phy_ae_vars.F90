@@ -463,12 +463,17 @@ contains
   subroutine ATMOS_PHY_AE_vars_get_diagnostic( &
        QTRC, RH, &
        Re, Qe   )
+    use scale_time, only: &
+       TIME_NOWDAYSEC
     use scale_tracer, only: &
        QA
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_effective_radius
+    use scale_atmos_phy_ae_offline, only: &
+       ATMOS_PHY_AE_offline_effective_radius, &
+       ATMOS_PHY_AE_offline_qtrc2qaero
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE
 
@@ -479,15 +484,22 @@ contains
 
     if ( present(Re) ) then
        if ( .not. DIAG_Re ) then
+
           select case ( ATMOS_PHY_AE_TYPE )
           case ( 'KAJINO13' )
              call ATMOS_PHY_AE_kajino13_effective_radius( &
                      KA, IA, JA, QA_AE, &
                      QTRC(:,:,:,QS_AE:QE_AE), RH(:,:,:), & ! [IN]
                      ATMOS_PHY_AE_Re(:,:,:,:)            ) ! [OUT]
+          case ( 'OFFLINE' )
+             call ATMOS_PHY_AE_offline_effective_radius( &
+                     KA, IA, JA,              &
+                     RH(:,:,:),               & ! [IN]
+                     ATMOS_PHY_AE_Re(:,:,:,:) ) ! [OUT]
           case default
              ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
           end select
+
           DIAG_Re = .true.
        end if
 !OCL XFILL
@@ -496,10 +508,17 @@ contains
 
     if ( present(Qe) ) then
        if ( .not. DIAG_Qe ) then
+
           select case ( ATMOS_PHY_AE_TYPE )
+          case ( 'OFFLINE' )
+             call ATMOS_PHY_AE_offline_qtrc2qaero( &
+                     KA, IA, JA,              &
+                     TIME_NOWDAYSEC,          &
+                     ATMOS_PHY_AE_Qe(:,:,:,:) ) ! [OUT]
           case default
              ATMOS_PHY_AE_Qe(:,:,:,:) = 0.0_RP
           end select
+
           DIAG_Qe = .true.
        end if
 !OCL XFILL
