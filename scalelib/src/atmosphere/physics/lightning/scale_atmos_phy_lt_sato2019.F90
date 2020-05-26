@@ -342,6 +342,8 @@ contains
     real(RP) :: neg_crg, pos_crg
     real(RP) :: frac, r_totalSarea(2)
     real(RP) :: dqneut(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real_tot(KA,IA,JA)
     logical  :: flg_chrged(QA_LT)
     real(RP) :: Emax, Emax_old
     logical  :: output_step
@@ -475,6 +477,7 @@ contains
          call COMM_wait ( d_QCRG(:,:,:),2 )
 
          dqneut(:,:,:,:) = 0.0_RP
+         dqneut_real(:,:,:,:) = 0.0_RP
          !-- Calculate neutralization of each hydrometeor or each category
          select case( NUTR_qhyd )
          case ( 'TOTAL' )
@@ -495,6 +498,7 @@ contains
                      dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
                                      * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
                      QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
+                     dqneut_real(k,i,j,n) = dqneut(k,i,j,n)
                   enddo
                endif
             enddo
@@ -560,9 +564,9 @@ contains
                         qcrg_before(n) = QTRC(k,i,j,n)
 
                         if( sw == 1.0_RP ) then
-                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
                         elseif( sw == 0.0_RP ) then
-                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
                         endif
 
                         int_sw = int( sw )   ! 0-> negative, 1-> positive
@@ -598,6 +602,11 @@ contains
                        QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                     enddo
                   endif
+
+                  do n = 1, QA_LT
+                     dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
+                  enddo
+
                endif
 
             enddo
@@ -613,8 +622,10 @@ contains
             ! calc total charge density
             do k = KS, KE
                QCRG(k,i,j) = 0.0_RP
+               dqneut_real_tot(k,i,j) = 0.0_RP
                do n = 1, QA_LT
                   QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
+                  dqneut_real_tot(k,i,j) = dqneut_real_tot(k,i,j) + dqneut_real(k,i,j,n)
                end do
                QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
             enddo
@@ -650,7 +661,9 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
-               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + d_QCRG(k,i,j)
+               do n = 1, QA_LT
+                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)
+               enddo
             end do
             end do
             end do
@@ -672,7 +685,7 @@ contains
             do i = IS, IE
             do k = KS, KE
                LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
-                                    + 0.5_RP + sign( 0.5_RP,-d_QCRG(k,i,j)-SMALL )
+                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
             end do
             end do
             end do
@@ -683,7 +696,7 @@ contains
             do i = IS, IE
             do k = KS, KE
                LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
-                                    + 0.5_RP + sign( 0.5_RP, d_QCRG(k,i,j)-SMALL )
+                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
             end do
             end do
             end do
@@ -740,10 +753,11 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
-               d_QCRG(k,i,j) = 0.0_RP
                do n = 1, QA_LT
-                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut(k,i,j,n)
+                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
+                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)
                enddo
+               d_QCRG(k,i,j) = 0.0_RP
             enddo
             enddo
             enddo
