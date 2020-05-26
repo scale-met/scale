@@ -164,6 +164,8 @@ contains
        URBAN_SFLX_MV,     &
        URBAN_SFLX_SH,     &
        URBAN_SFLX_LH,     &
+       URBAN_SFLX_SHEX,   &
+       URBAN_SFLX_QVEX,   &
        URBAN_SFLX_QTRC,   &
        URBAN_SFLX_GH,     &
        URBAN_Z0M,         &
@@ -224,6 +226,8 @@ contains
     real(RP) :: RAINR(UIA,UJA), RAINB(UIA,UJA), RAING(UIA,UJA), ROFF(UIA,UJA)
 
     real(RP) :: LHV(UIA,UJA) ! latent heat of vaporization [J/kg]
+
+    real(RP) :: URBAN_SFLX_LHEX(UIA,UJA)
 
     real(RP) :: LAT, LON ! [deg]
     integer  :: tloc     ! local time (1-24h)
@@ -354,7 +358,6 @@ contains
                                 ATMOS_SFLX_water(:,:), ATMOS_SFLX_ENGI(:,:),                 & ! [IN]
                                 URBAN_Z0M(:,:), URBAN_Z0H(:,:), URBAN_Z0E(:,:),              & ! [IN]
                                 URBAN_ZD(:,:),                                               & ! [IN]
-                                URBAN_AH(:,:), URBAN_AHL(:,:),                               & ! [IN]
                                 CDZ(:),                                                      & ! [IN]
                                 TanSL_X(:,:), TanSL_Y(:,:),                                  & ! [IN]
                                 LANDUSE_fact_urban(:,:),                                     & ! [IN]
@@ -370,6 +373,21 @@ contains
                                 URBAN_Wstar(:,:),                                            & ! [OUT]
                                 URBAN_RLmo(:,:),                                             & ! [OUT]
                                 URBAN_U10(:,:), URBAN_V10(:,:), URBAN_T2(:,:), URBAN_Q2(:,:) ) ! [OUT]
+
+       !-----------------------------------------------------------
+       ! anthropogenic heat fluxes
+       !-----------------------------------------------------------
+       !$omp parallel do
+       do j = UJS, UJE
+       do i = UIS, UIE
+       if ( exists_urban(i,j) ) then
+          URBAN_SFLX_SHEX(i,j) = URBAN_AH (i,j) / LANDUSE_fact_urban(i,j) ! Sensible heat flux [W/m2]
+          URBAN_SFLX_LHEX(i,j) = URBAN_AHL(i,j) / LANDUSE_fact_urban(i,j) ! Latent heat flux   [W/m2]
+          URBAN_SFLX_SH  (i,j) = URBAN_SFLX_SH(i,j) + URBAN_SFLX_SHEX(i,j)
+          URBAN_SFLX_LH  (i,j) = URBAN_SFLX_LH(i,j) + URBAN_SFLX_LHEX(i,j)
+       end if
+       end do
+       end do
 
 !OCL XFILL
        !$omp parallel do
@@ -408,7 +426,8 @@ contains
           do j = UJS, UJE
           do i = UIS, UIE
           if ( exists_urban(i,j) ) then
-             URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH(i,j) / LHV(i,j)
+             URBAN_SFLX_QTRC(i,j,I_QV) = URBAN_SFLX_LH  (i,j) / LHV(i,j)
+             URBAN_SFLX_QVEX(i,j)      = URBAN_SFLX_LHEX(i,j) / LHV(i,j)
           end if
           enddo
           enddo
@@ -675,6 +694,8 @@ contains
        URBAN_SFLX_MV,    &
        URBAN_SFLX_SH,    &
        URBAN_SFLX_LH,    &
+       URBAN_SFLX_SHEX,  &
+       URBAN_SFLX_QVEX,  &
        URBAN_SFLX_GH,    &
        URBAN_SFLX_QTRC,  &
        URBAN_Z0M,        &
@@ -707,6 +728,8 @@ contains
                         URBAN_SFLX_MV   (:,:),     & ! [IN]
                         URBAN_SFLX_SH   (:,:),     & ! [IN]
                         URBAN_SFLX_LH   (:,:),     & ! [IN]
+                        URBAN_SFLX_SHEX (:,:),     & ! [IN]
+                        URBAN_SFLX_QVEX (:,:),     & ! [IN]
                         URBAN_SFLX_GH   (:,:),     & ! [IN]
                         URBAN_SFLX_QTRC (:,:,:),   & ! [IN]
                         URBAN_U10       (:,:),     & ! [IN]

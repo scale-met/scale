@@ -512,6 +512,8 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_SHEX  => ATMOS_PHY_SF_SFLX_SHEX,  &
+       SFLX_QVEX  => ATMOS_PHY_SF_SFLX_QVEX,  &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
        SFLX_ENGI  => ATMOS_PHY_SF_SFLX_ENGI,  &
@@ -539,6 +541,8 @@ contains
                             SFLX_MV   (:,:),     & ! [OUT]
                             SFLX_SH   (:,:),     & ! [OUT]
                             SFLX_LH   (:,:),     & ! [OUT]
+                            SFLX_SHEX (:,:),     & ! [OUT]
+                            SFLX_QVEX (:,:),     & ! [OUT]
                             SFLX_GH   (:,:),     & ! [OUT]
                             SFLX_QTRC (:,:,:),   & ! [OUT]
                             SFLX_ENGI (:,:),     & ! [OUT]

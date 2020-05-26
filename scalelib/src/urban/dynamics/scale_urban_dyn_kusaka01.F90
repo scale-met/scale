@@ -360,7 +360,6 @@ contains
        RAIN, EFLX,                      &
        Z0M, Z0H, Z0E,                   &
        ZD,                              &
-       AH_URB_t, AHL_URB_t,             &
        CDZ,                             &
        TanSL_X, TanSL_Y,                &
        fact_urban,                      &
@@ -411,8 +410,6 @@ contains
     real(RP), intent(in) :: Z0H      (UIA,UJA)
     real(RP), intent(in) :: Z0E      (UIA,UJA)
     real(RP), intent(in) :: ZD       (UIA,UJA)
-    real(RP), intent(in) :: AH_URB_t (UIA,UJA)
-    real(RP), intent(in) :: AHL_URB_t (UIA,UJA)
     real(RP), intent(in) :: CDZ(UKA)
     real(RP), intent(in) :: TanSL_X(UIA,UJA)
     real(RP), intent(in) :: TanSL_Y(UIA,UJA)
@@ -600,13 +597,9 @@ contains
                       Z0M     (i,j),      & ! [IN]
                       Z0H     (i,j),      & ! [IN]
                       ZD      (i,j),      & ! [IN]
-                      AH_URB_t(i,j),      & ! [IN]
-                      AHL_URB_t(i,j),     & ! [IN]
                       DZR(:), DZG(:), DZB(:), & ! [IN]
-                      fact_urban(i,j),    & ! [IN]
                       dt,                 & ! [IN]
                       i, j                ) ! [IN]
-
 
        ! update
        TR_URB(i,j) = TR
@@ -761,10 +754,7 @@ contains
         Z0C,          & ! (in)
         Z0HC,         & ! (in)
         ZDC,          & ! (in)
-        AH_t,         & ! (in)
-        AHL_t,        & ! (in)
         DZR, DZB, DZG, & ! (in)
-        facturb,      & ! (in)
         dt,           & ! (in)
         i, j          ) ! (in)
     use scale_prc, only: &
@@ -815,12 +805,9 @@ contains
     real(RP), intent(in)    :: Z0C  ! Roughness length above canyon for momentum [m]
     real(RP), intent(in)    :: Z0HC ! Roughness length above canyon for heat [m]
     real(RP), intent(in)    :: ZDC  ! Displacement height                    [m]
-    real(RP), intent(in)    :: AH_t ! Anthropogenic sensible heat            [W/m2]
-    real(RP), intent(in)    :: AHL_t ! Anthropogenic latent heat             [W/m2]
     real(RP), intent(in)    :: DZR(UKA)
     real(RP), intent(in)    :: DZB(UKA)
     real(RP), intent(in)    :: DZG(UKA)
-    real(RP), intent(in)    :: facturb ! urban fraction                      [0-1]
     real(DP), intent(in)    :: dt
 
     !-- In/Out variables from/to Coupler to/from Urban
@@ -1546,21 +1533,6 @@ contains
                                     FracU10, FracT2, 1.0_RP ) ! [IN]
 
     Q2 = QC
-
-    !-----------------------------------------------------------
-    ! add anthropogenic heat fluxes
-    !-----------------------------------------------------------
-    ! In CPL_getSFC_ATM of mod_cpl_vars module, grid mean SH is calculated by
-    !
-    !   SFLX_SH  =   fact_ocean * OCN_SFLX_SH
-    !              + fact_land  * LND_SFLX_SH
-    !              + fact_urban * URB_SFLX_SH
-    !
-    ! AH_t and AHL_t is assumed to be AH flux from the grid cell
-    !
-
-    SH     = SH + AH_t  / facturb   ! Sensible heat flux          [W/m/m]
-    LH     = LH + AHL_t / facturb   ! Latent heat flux            [W/m/m]
 
     return
   end subroutine SLC_main

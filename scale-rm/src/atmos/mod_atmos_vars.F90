@@ -1092,6 +1092,7 @@ contains
           call ATMOS_vars_fillhalo
        end if
 
+       call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_check( force = .true. )
     else
        LOG_ERROR("ATMOS_vars_restart_read",*) 'invalid restart file ID for atmosphere. STOP!'
