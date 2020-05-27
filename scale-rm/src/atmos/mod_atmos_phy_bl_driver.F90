@@ -181,6 +181,8 @@ contains
        SFLX_Q   => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_QV  => ATMOS_PHY_SF_SFLX_QV,   &
        Ustar    => ATMOS_PHY_SF_Ustar,     &
+       Tstar    => ATMOS_PHY_SF_Tstar,     &
+       Qstar    => ATMOS_PHY_SF_Qstar,     &
        RLmo     => ATMOS_PHY_SF_RLmo
     implicit none
 
@@ -230,7 +232,7 @@ contains
                POTL(:,:,:), POTV(:,:,:),                               & ! (in)
                SFC_DENS(:,:),                                          & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
-               Ustar(:,:), RLmo(:,:),                                  & ! (in)
+               Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
                CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
                BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)

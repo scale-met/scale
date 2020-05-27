@@ -96,15 +96,15 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: initialize
 
   real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN   =  1.E-20_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX    =  1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN    = -1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX    =  1.E4_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN    = -1.E1_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX    =  1.E4_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX    =   700.0_RP ! ~ 0.23 * 3 km
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact   = 3.0_RP
-  logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE  = .false.
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX     =   700.0_RP ! ~ 0.23 * 3 km
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
+  logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3", level 3 is under experimental yet.
@@ -278,7 +278,7 @@ contains
        PRES, EXNER, N2,                    &
        QDRY, QV, Qw, POTL, POTV, SFC_DENS, &
        SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
-       us, RLmo,                           &
+       us, ts, qs, RLmo,                   &
        CZ, FZ, dt_DP,                      &
        BULKFLUX_type,                      &
        RHOU_t, RHOV_t, RHOT_t, RHOQV_t,    &
@@ -323,6 +323,8 @@ contains
     real(RP), intent(in) :: SFLX_SH (   IA,JA) !> surface sensible heat flux
     real(RP), intent(in) :: SFLX_QV (   IA,JA) !> surface sensible QV flux
     real(RP), intent(in) :: us      (   IA,JA) !> friction velocity
+    real(RP), intent(in) :: ts      (   IA,JA) !> temperature scale
+    real(RP), intent(in) :: qs      (   IA,JA) !> moisture scale
     real(RP), intent(in) :: RLmo    (   IA,JA) !> inverse of Monin-Obukhov length
 
     real(RP), intent(in)  :: CZ(  KA,IA,JA)
@@ -444,7 +446,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
-    !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,RLmo, &
+    !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
     !$omp        mynn_level3,initialize,nit, &
     !$omp        CZ,FZ,dt, &
     !$omp        BULKFLUX_type, &
@@ -569,7 +571,7 @@ contains
                                      betat(:), betaq(:)         ) ! (out)
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             zeta = z1 * RLmo(i,j)
+             zeta = min( max( z1 * RLmo(i,j), -5.0_RP ), 1.0_RP )
 
              select case ( BULKFLUX_type )
 !!$             case ( 'B71' )
@@ -953,12 +955,14 @@ contains
           if ( .not. mynn_level3 ) cycle
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
+             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z1 )
+             tmp = tmp * ( zeta / ( z1 * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
              ! TSQ
-             prod_t(KS) = 2.0_RP / us(i,j) * phi_h / ( KARMAN * z1 ) * SFLX_PT**2 / SFC_DENS(i,j)**2
+             prod_t(KS) = tmp * ts(i,j)**2
              ! QSQ
-             prod_q(KS) = 2.0_RP / us(i,j) * phi_h / ( KARMAN * z1 ) * SFLX_QV(i,j)**2 / SFC_DENS(i,j)**2
+             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
              ! COV
-             prod_c(KS) = 2.0_RP / us(i,j) * phi_h * ( KARMAN * z1 ) * SFLX_PT * SFLX_QV(i,j) / SFC_DENS(i,j)**2
+             prod_c(KS) = tmp * qs(i,j)**2
           end if
 
           ! dens * tsq
@@ -1292,7 +1296,7 @@ contains
             + min( ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP, ls_fact_max) )
 
        ! LB
-       sw = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
+       sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
        rn2sr = 1.0_RP / ( sqrt(n2(k)*sw) + 1.0_RP-sw)
        lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
            +  1.E10_RP * (1.0_RP-sw)
