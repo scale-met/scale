@@ -87,6 +87,9 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: AF12 !> A1 F1 / A2 F2
   real(RP), private, parameter :: PrN = 0.74_RP
 
+  real(RP), private, parameter :: zeta_min = -3.0_RP
+  real(RP), private, parameter :: zeta_max =  1.0_RP
+
   real(RP), private            :: SQRT_2PI
   real(RP), private            :: RSQRT_2PI
   real(RP), private            :: RSQRT_2
@@ -465,8 +468,6 @@ contains
 
        z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
 
-       SFLX_PT = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
-
        do k = KS, KE_PBL
           FDZ(k) = CZ(k+1,i,j) - CZ(k  ,i,j)
        end do
@@ -507,7 +508,6 @@ contains
 
        flx(KS-1  ) = 0.0_RP
        flx(KE_PBL) = 0.0_RP
-
 
        do it = 1, nit
 
@@ -571,7 +571,8 @@ contains
                                      betat(:), betaq(:)         ) ! (out)
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             zeta = min( max( z1 * RLmo(i,j), -5.0_RP ), 1.0_RP )
+
+             zeta = min( max( z1 * RLmo(i,j), zeta_min ), zeta_max )
 
              select case ( BULKFLUX_type )
 !!$             case ( 'B71' )
@@ -616,6 +617,7 @@ contains
           end do
 
           ! length
+          SFLX_PT  = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
           SFLX_PTV = GRAV / POTV(KS,i,j) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV(i,j) ) / SFC_DENS(i,j)
           call get_length( &
                KA, KS, KE_PBL, &
@@ -1287,12 +1289,12 @@ contains
 
     do k = KS, KE_PBL
        z = CZ(k) - FZ(KS-1)
-       zeta = z * RLmo
+       zeta = min( max( z * RLmo, zeta_min ), zeta_max )
 
        ! LS
        sw = sign(0.5_RP, zeta) + 0.5_RP ! 1 for zeta >= 0, 0 for zeta < 0
        ls = KARMAN * z &
-          * ( sw / (1.0_RP + 2.7_RP*min(zeta,1.0_RP)*sw ) &
+          * ( sw / (1.0_RP + 2.7_RP*zeta*sw ) &
             + min( ( (1.0_RP - 100.0_RP*zeta)*(1.0_RP-sw) )**0.2_RP, ls_fact_max) )
 
        ! LB
