@@ -286,7 +286,7 @@ contains
        BULKFLUX_type,                      &
        RHOU_t, RHOV_t, RHOT_t, RHOQV_t,    &
        RPROG_t,                            &
-       Nu, Kh                              )
+       Nu, Kh, Qlp, cldfrac, Zi            )
     use scale_const, only: &
        EPS     => CONST_EPS,    &
        GRAV    => CONST_GRAV,   &
@@ -341,8 +341,11 @@ contains
     real(RP), intent(out) :: RHOT_t (KA,IA,JA) !> tendency of dens * pt
     real(RP), intent(out) :: RHOQV_t(KA,IA,JA) !> tendency of dens * qv
     real(RP), intent(out) :: RPROG_t(KA,IA,JA,ATMOS_PHY_BL_MYNN_ntracer) !> tenddency of dens * prognostic variables (TKE, TSQ, QSQ, COV)
-    real(RP), intent(out) :: Nu    (KA,IA,JA) !> eddy viscosity coefficient @ half-level
-    real(RP), intent(out) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient @ half-level
+    real(RP), intent(out) :: Nu     (KA,IA,JA) !> eddy viscosity coefficient @ half-level
+    real(RP), intent(out) :: Kh     (KA,IA,JA) !> eddy diffusion coefficient @ half-level
+    real(RP), intent(out) :: Qlp    (KA,IA,JA) !> liquid-water content in partial condensation
+    real(RP), intent(out) :: cldfrac(KA,IA,JA) !> cloud fraction in partial condensation
+    real(RP), intent(out) :: Zi     (IA,JA)    !> depth of the boundary layer (not exact)
 
     real(RP) :: Ri   (KA,IA,JA) !> Richardson number
     real(RP) :: Pr   (KA,IA,JA) !> Plandtle number
@@ -420,6 +423,9 @@ contains
 
     real(RP) :: dt
 
+    real(RP) :: fmin
+    integer  :: kmin
+
     real(RP) :: tmp, sw
 
     integer :: k, i, j
@@ -447,7 +453,7 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
-    !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh, &
+    !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
     !$omp        mynn_level3,initialize,nit, &
@@ -461,6 +467,7 @@ contains
     !$omp         dummy, &
     !$omp         tsq,qsq,cov, &
     !$omp         prod_t,prod_q,prod_c,diss_p, &
+    !$omp         fmin,kmin, &
     !$omp         sw,tmp, &
     !$omp         k,i,j,it)
     do j = JS, JE
@@ -568,7 +575,8 @@ contains
                                      l(:,i,j), sh25(:), ac(:),  & ! (in)
                                      tsq(:), qsq(:), cov(:),    & ! (in)
                                      mynn_level3,               & ! (in)
-                                     betat(:), betaq(:)         ) ! (out)
+                                     betat(:), betaq(:),        & ! (out)
+                                     Qlp(:,i,j), cldfrac(:,i,j) ) ! (out)
 
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
 
@@ -767,6 +775,7 @@ contains
              do k = KE_PBL+1, KE
                 RHOU_t(k,i,j) = 0.0_RP
              end do
+             flxU(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxU(k,i,j) = flx(k) &
                             - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
@@ -802,6 +811,7 @@ contains
              do k = KE_PBL+1, KE
                 RHOV_t(k,i,j) = 0.0_RP
              end do
+             flxV(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxV(k,i,j) = flx(k) &
                             - RHONu(k) * ( phi_n(k+1) - phi_n(k) ) / FDZ(k)
@@ -848,6 +858,7 @@ contains
              do k = KE_PBL+1, KE
                 RHOT_t(k,i,j) = 0.0_RP
              end do
+             flxT(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxT(k,i,j) = flx(k) &
                             - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
@@ -855,6 +866,21 @@ contains
              do k = KE_PBL, KE
                 flxT(k,i,j) = 0.0_RP
              end do
+
+             kmin = KS-1
+             if ( flxT(KS,i,j) > 1E-4_RP ) then
+                fmin = flxT(KS,i,j) / rho_h(KS)
+                do k = KS+1, KE_PBL-2
+                   tmp = ( flxT(k-1,i,j) + flxT(k,i,j) + flxT(k+1,i,j) ) &
+                        / ( rho_h(k-1) + rho_h(k) + rho_h(k+1) ) ! running mean
+                   if ( fmin < 0.0_RP .and. tmp > fmin ) exit
+                   if ( tmp < fmin ) then
+                      fmin = tmp
+                      kmin = k
+                   end if
+                end do
+             end if
+             Zi(i,j) = FZ(kmin,i,j) - FZ(KS-1,i,j)
 
              ! dens * qv
 
@@ -882,6 +908,7 @@ contains
              do k = KE_PBL+1, KE
                 RHOQV_t(k,i,j) = 0.0_RP
              end do
+             flxQ(KS-1,i,j) = 0.0_RP
              do k = KS, KE_PBL-1
                 flxQ(k,i,j) = flx(k) &
                             - RHOKh(k) * ( phi_n(k+1) - phi_n(k) ) / CDZ(k)
@@ -1067,11 +1094,13 @@ contains
           Pr   (k,i,j) = 1.0_RP
        end do
        do k = KE_PBL+1, KE
-          Ri   (k,i,j) = UNDEF
-          prod (k,i,j) = UNDEF
-          diss (k,i,j) = UNDEF
-          dudz2(k,i,j) = UNDEF
-          l    (k,i,j) = UNDEF
+          Ri     (k,i,j) = UNDEF
+          prod   (k,i,j) = UNDEF
+          diss   (k,i,j) = UNDEF
+          dudz2  (k,i,j) = UNDEF
+          l      (k,i,j) = UNDEF
+          Qlp    (k,i,j) = UNDEF
+          cldfrac(k,i,j) = UNDEF
        end do
     end do
     end do
@@ -1255,8 +1284,8 @@ contains
     real(RP), parameter :: ls_fact_max = 2.0_RP
 
     real(RP) :: ls     !> L_S
-    real(RP) :: lt     !> L_T
     real(RP) :: lb     !> L_B
+    real(RP) :: lt     !> L_T
     real(RP) :: rlt    !> 1/L_T
 
     real(RP) :: qc     !> q_c
@@ -1300,7 +1329,7 @@ contains
        ! LB
        sw  = sign(0.5_RP, n2(k)-EPS) + 0.5_RP ! 1 for dptdz >0, 0 for dptdz <= 0
        rn2sr = 1.0_RP / ( sqrt(n2(k)*sw) + 1.0_RP-sw)
-       lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr/lt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
+       lb = (1.0_RP + 5.0_RP * sqrt(qc*rn2sr*rlt)) * q(k) * rn2sr * sw & ! qc=0 when RLmo > 0
            +  1.E10_RP * (1.0_RP-sw)
 
        ! L
@@ -1688,7 +1717,7 @@ contains
        dtldz, dqwdz, l, sh25, ac,         &
        tsq, qsq, cov,                     &
        mynn_level3,                       &
-       betat, betaq                       )
+       betat, betaq, Qlp, cldfrac         )
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
@@ -1716,8 +1745,10 @@ contains
     real(RP), intent(in)  :: cov  (KA)
     logical,  intent(in)  :: mynn_level3
 
-    real(RP), intent(out) :: betat(KA)
-    real(RP), intent(out) :: betaq(KA)
+    real(RP), intent(out) :: betat  (KA)
+    real(RP), intent(out) :: betaq  (KA)
+    real(RP), intent(out) :: Qlp    (KA)
+    real(RP), intent(out) :: cldfrac(KA)
 
     real(RP) :: TEML(KA)
     real(RP) :: Qsl (KA)
@@ -1726,8 +1757,8 @@ contains
     real(RP) :: CPtot
     real(RP) :: aa, bb, cc
     real(RP) :: sigma_s
-    real(RP) :: Q1, Qlp
-    real(RP) :: RR, Rt
+    real(RP) :: Q1
+    real(RP) :: Rt
 
     integer :: k
 
@@ -1761,24 +1792,23 @@ contains
        end if
 
        Q1 = aa * ( Qw(k) - Qsl(k) ) * 0.5_RP / sigma_s
-       RR = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
-       Qlp = min( max( 2.0_RP * sigma_s * ( RR * Q1 + rsqrt_2pi &
+       cldfrac(k) = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
+       Qlp(k) = min( max( 2.0_RP * sigma_s * ( cldfrac(k) * Q1 + rsqrt_2pi &
 #if defined(PGI) || defined(SX)
                * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) & ! apply exp limiter
 #else
                * exp(-0.5_RP*Q1**2) &
 #endif
                ), 0.0_RP ), Qw(k) * 0.5_RP )
-       cc = ( 1.0_RP + EPSTvap * Qw(k) - Qlp / EPSvap ) / EXNER(k) * LHVL(k) / CPtot &
+       cc = ( 1.0_RP + EPSTvap * Qw(k) - Qlp(k) / EPSvap ) / EXNER(k) * LHVL(k) / CPtot &
              - POTT(k) / EPSvap
-       Rt = min( max( RR - Qlp / (2.0_RP*sigma_s*sqrt_2pi) &
+       Rt = cldfrac(k) - Qlp(k) / (2.0_RP*sigma_s*sqrt_2pi) &
 #if defined(PGI) || defined(SX)
                * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) & ! apply exp limiter
 #else
-               * exp(-Q1**2 * 0.5_RP) &
+               * exp(-Q1**2 * 0.5_RP)
 #endif
-               , 0.0_RP ), 1.0_RP )
-       betat(k) = 1.0_RP + EPSTvap * Qw(k) - Qlp / EPSvap - Rt * aa * bb * cc
+       betat(k) = 1.0_RP + EPSTvap * Qw(k) - Qlp(k) / EPSvap - Rt * aa * bb * cc
        betaq(k) = EPSTvap * POTT(k) + Rt * aa * cc
 
     end do

@@ -42,6 +42,8 @@ module mod_atmos_phy_rd_driver
   !
   !++ Private parameters & variables
   !
+  logical, private :: RD_use_PBL_cloud = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -72,12 +74,28 @@ contains
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
+    
+    namelist / PARAM_ATMOS_PHY_RD / &
+         RD_use_PBL_cloud
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_rd ) then
+
+       !--- read namelist
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD,iostat=ierr)
+       if( ierr < 0 ) then !--- missing
+          LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'Not found namelist. Default used.'
+       elseif( ierr > 0 ) then !--- fatal error
+          LOG_ERROR("ATMOS_PHY_RD_driver_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD. Check!'
+          call PRC_abort
+       endif
+       LOG_NML(PARAM_ATMOS_PHY_RD)
 
        select case ( ATMOS_PHY_RD_TYPE )
        case ( "MSTRNX" )
@@ -113,6 +131,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_RD_driver_calc_tendency( update_flag )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
@@ -134,7 +154,9 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
-       N_HYD
+       N_HYD, &
+       I_HC, &
+       I_HI
     use scale_atmos_aerosol, only: &
        N_AE
     use mod_atmos_admin, only: &
@@ -175,6 +197,10 @@ contains
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_Zi,     &
+       ATMOS_PHY_BL_QL,     &
+       ATMOS_PHY_BL_cldfrac
     use mod_atmos_vars, only: &
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_mp_vars, only: &
@@ -238,6 +264,27 @@ contains
        call ATMOS_PHY_MP_vars_get_diagnostic( &
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
             CLDFRAC=CLDFRAC, Re=MP_Re, Qe=MP_Qe      ) ! [IN]
+
+       if ( RD_use_PBL_cloud ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( REAL_CZ(k,i,j) < ATMOS_PHY_BL_Zi(i,j) + REAL_FZ(KS-1,i,j) ) then
+                CLDFRAC(k,i,j) = ATMOS_PHY_BL_cldfrac(k,i,j)
+                if ( ATMOS_PHY_BL_cldfrac(k,i,j) > EPS ) then
+                   MP_Qe(k,i,j,I_HC) = ATMOS_PHY_BL_QL(k,i,j) / ATMOS_PHY_BL_cldfrac(k,i,j)
+                else
+                   MP_Qe(k,i,j,I_HC) = 0.0_RP
+                end if
+                MP_Qe(k,i,j,I_HI) = 0.0_RP
+                MP_Re(k,i,j,I_HC) = 8.0E-4
+             end if
+          end do
+          end do
+          end do
+          
+       end if
 
        call ATMOS_vars_get_diagnostic( "RH", RH )
        call ATMOS_PHY_AE_vars_get_diagnostic( &

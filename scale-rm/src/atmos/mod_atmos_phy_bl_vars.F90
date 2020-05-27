@@ -42,6 +42,9 @@ module mod_atmos_phy_bl_vars
 
   real(RP), public, allocatable :: ATMOS_PHY_BL_Zi    (:,:)     ! depth of the PBL
 
+  real(RP), public, allocatable :: ATMOS_PHY_BL_QL    (:,:,:)   ! liquid water content in partial condensation
+  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:)   ! cloud fraction in partial condensation
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -76,7 +79,12 @@ contains
     ATMOS_PHY_BL_RHOQ_t(:,:,:,:) = UNDEF
 
     allocate( ATMOS_PHY_BL_Zi(IA,JA) )
-    ATMOS_PHY_BL_Zi(:,:) = 100.0_RP ! tentative
+    ATMOS_PHY_BL_Zi(:,:) = UNDEF
+
+    allocate( ATMOS_PHY_BL_QL     (KA,IA,JA) )
+    allocate( ATMOS_PHY_BL_cldfrac(KA,IA,JA) )
+    ATMOS_PHY_BL_QL     (:,:,:) = UNDEF
+    ATMOS_PHY_BL_cldfrac(:,:,:) = UNDEF
 
     return
   end subroutine ATMOS_PHY_BL_vars_setup

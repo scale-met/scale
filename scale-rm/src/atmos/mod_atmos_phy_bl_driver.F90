@@ -172,7 +172,10 @@ contains
        RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
        RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
        RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
-       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t
+       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t, &
+       Zi        => ATMOS_PHY_BL_Zi,     &
+       QL        => ATMOS_PHY_BL_QL,     &
+       cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS,  &
        SFLX_MU  => ATMOS_PHY_SF_SFLX_MU,   &
@@ -237,7 +240,8 @@ contains
                BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)
+               Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
+               QL(:,:,:), cldfrac(:,:,:), Zi(:,:)                      ) ! (out)
           if ( I_QV <= 0 ) deallocate( RHOQV_T )
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
@@ -255,6 +259,11 @@ contains
 
        call FILE_HISTORY_in( Nu   (:,:,:),     'Nu_BL',     'eddy viscosity',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
        call FILE_HISTORY_in( Kh   (:,:,:),     'Kh_BL',     'eddy diffusion',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
+
+       call FILE_HISTORY_in( QL    (:,:,:),    'QL_BL',      'liquid water content in partial condensation', 'kg/kg', fill_halo=.true. )
+       call FILE_HISTORY_in( cldfrac(:,:,:),   'cldfrac_BL', 'cloud fraction in partial condensation',       '1',     fill_halo=.true. )
+
+       call FILE_HISTORY_in( Zi     (:,:),     'Zi_BL',      'depth of the boundary layer', 'm', fill_halo=.true. )
 
        call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
        call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
