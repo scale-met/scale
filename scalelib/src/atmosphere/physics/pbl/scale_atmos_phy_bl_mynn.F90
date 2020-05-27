@@ -94,11 +94,9 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: RSQRT_2PI
   real(RP), private            :: RSQRT_2
 
-  integer,  private            :: KE_PBL
-
   logical,  private            :: initialize
 
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX  = 1.E+10_RP !> maximum height of the PBL
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 4.E+3_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
@@ -111,6 +109,8 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3", level 3 is under experimental yet.
+
+  integer,  private, allocatable :: MYNN_KE_PBL(:,:)
 
   namelist / PARAM_ATMOS_PHY_BL_MYNN / &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
@@ -187,7 +187,7 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       CZ, &
+       CZ, FZ, &
        BULKFLUX_type, &
        TKE_MIN, PBL_MAX )
     use scale_prc, only: &
@@ -199,7 +199,8 @@ contains
     integer,  intent(in) :: KA, KS, KE
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
-    real(RP), intent(in) :: CZ (KA,IA,JA)
+    real(RP), intent(in) :: CZ(  KA,IA,JA)
+    real(RP), intent(in) :: FZ(0:KA,IA,JA)
 
     character(len=*), intent(in) :: BULKFLUX_type
 
@@ -245,11 +246,14 @@ contains
     RSQRT_2PI = 1.0_RP / SQRT_2PI
     RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
 
-    do k = KS, KE-1
+    allocate( MYNN_KE_PBL(IA,JA) )
+
+    MYNN_KE_PBL(:,:) = KS+1
+    do k = KS+2, KE-1
        do j = JS, JE
        do i = IS, IE
-          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) ) then
-             KE_PBL = k
+          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
+             MYNN_KE_PBL(i,j) = k
           end if
        end do
        end do
@@ -428,6 +432,7 @@ contains
 
     real(RP) :: tmp, sw
 
+    integer :: KE_PBL
     integer :: k, i, j
     integer :: nit, it
     !---------------------------------------------------------------------------
@@ -439,7 +444,7 @@ contains
     mynn_level3 = ( ATMOS_PHY_BL_MYNN_LEVEL == "3" )
 
     if ( initialize ) then
-       nit = KE_PBL - 1
+       nit = maxval( MYNN_KE_PBL(IS:IE,JS:JE) ) - 1
     else
        nit = 1
     end if
@@ -447,7 +452,7 @@ contains
 !OCL INDEPENDENT
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE, &
+    !$omp shared(KA,KS,MYNN_KE_PBL,KE,IS,IE,JS,JE, &
     !$omp        EPS,GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
@@ -469,9 +474,12 @@ contains
     !$omp         prod_t,prod_q,prod_c,diss_p, &
     !$omp         fmin,kmin, &
     !$omp         sw,tmp, &
-    !$omp         k,i,j,it)
+    !$omp         KE_PBL,k,i,j,it)
     do j = JS, JE
     do i = IS, IE
+
+       KE_PBL = MYNN_KE_PBL(i,j)
+
 
        z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
 
@@ -708,7 +716,7 @@ contains
              end do
 
              call get_gamma_implicit( &
-                  KA, KS, KE, &
+                  KA, KS, KE_PBL, &
                   i, j,       &
                   tsq(:), qsq(:), cov(:),          & ! (in)
                   dtldz(:), dqwdz(:), POTV(:,i,j), & ! (in)
@@ -943,9 +951,10 @@ contains
              prod(k,i,j) = 0.0_RP
           end do
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              d(k) = ( tke_p(k) * DENS(k,i,j) + dt * prod(k,i,j) * RHO(k) ) / RHO(k)
           end do
+          d(KE_PBL) = 0.0_RP
 
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
@@ -962,9 +971,11 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                phi_n(:)                ) ! (out)
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              phi_n(k) = max( phi_n(k), ATMOS_PHY_BL_MYNN_TKE_MIN )
           end do
+          phi_n(KE_PBL) = 0.0_RP
+
 
           if ( it == nit ) then
              do k = KS, KE_PBL
@@ -998,8 +1009,11 @@ contains
 
           do k = KS, KE_PBL
              diss_p(k) = dt * 2.0_RP * q(k) / ( B2 * l(k,i,j) )
+          end do
+          do k = KS, KE_PBL-1
              d(k) = ( tsq(k) * DENS(k,i,j) + dt * prod_t(k) * RHO(k) ) / RHO(k)
           end do
+          d(KE_PBL) = 0.0_RP
           c(KS) = 0.0_RP
           do k = KS, KE_PBL-1
              ap = - dt * RHONu(k) / FDZ(k)
@@ -1015,9 +1029,10 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                tsq(:)                  ) ! (out)
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              tsq(k) = max( tsq(k), 0.0_RP )
           end do
+          tsq(KE_PBL) = 0.0_RP
 
           if ( it == nit ) then
              do k = KS, KE_PBL
@@ -1031,9 +1046,10 @@ contains
 
           ! dens * qsq
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              d(k) = ( qsq(k) * DENS(k,i,j) + dt * prod_q(k) * RHO(k) ) / RHO(k)
           end do
+          d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
 
           call MATRIX_SOLVER_tridiagonal( &
@@ -1041,9 +1057,10 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                qsq(:)                  ) ! (out)
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              qsq(k) = max( qsq(k), 0.0_RP )
           end do
+          qsq(KE_PBL) = 0.0_RP
 
           if ( it == nit ) then
              do k = KS, KE_PBL
@@ -1057,9 +1074,10 @@ contains
 
           ! dens * cov
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              d(k) = ( cov(k) * DENS(k,i,j) + dt * prod_c(k) * RHO(k) ) / RHO(k)
           end do
+          d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
 
           call MATRIX_SOLVER_tridiagonal( &
@@ -1067,9 +1085,10 @@ contains
                a(:), b(:), c(:), d(:), & ! (in)
                cov(:)                  ) ! (out)
 
-          do k = KS, KE_PBL
+          do k = KS, KE_PBL-1
              cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k)*qsq(k)) ), cov(k) )
           end do
+          cov(KE_PBL) = 0.0_RP
 
           if ( it == nit ) then
              do k = KS, KE_PBL
@@ -1088,12 +1107,12 @@ contains
 
     do j = JS, JE
     do i = IS, IE
-       do k = KE_PBL, KE
+       do k = MYNN_KE_PBL(i,j), KE
           Nu   (k,i,j) = 0.0_RP
           Kh   (k,i,j) = 0.0_RP
           Pr   (k,i,j) = 1.0_RP
        end do
-       do k = KE_PBL+1, KE
+       do k = MYNN_KE_PBL(i,j)+1, KE
           Ri     (k,i,j) = UNDEF
           prod   (k,i,j) = UNDEF
           diss   (k,i,j) = UNDEF
@@ -1174,18 +1193,21 @@ contains
 
     real(RP) :: dt
 
+    integer :: KE_PBL
     integer :: k, i, j
 
     dt = real( DDT, kind=RP )
 
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KA,KS,KE_PBL,KE,IS,IE,JS,JE) &
+    !$omp shared(KA,KS,MYNN_KE_PBL,KE,IS,IE,JS,JE) &
     !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,MASS,CZ,FZ,DT,flx) &
     !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ,f2h) &
-    !$omp private(k,i,j)
+    !$omp private(KE_PBL,k,i,j)
     do j = JS, JE
     do i = IS, IE
+
+       KE_PBL = MYNN_KE_PBL(i,j)
 
        do k = KS, KE_PBL
           CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
@@ -1590,7 +1612,7 @@ contains
 
     ! calculate gamma by implicit scheme
 
-    do k = KS, KE_PBL
+    do k = KS, KE
 
        ! matrix coefficient
        f1 = f_gamma(k) * l(k) * q(k)

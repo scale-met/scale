@@ -96,7 +96,8 @@ contains
        CDX => ATMOS_GRID_CARTESC_CDX, &
        CDY => ATMOS_GRID_CARTESC_CDY
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
+       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
@@ -115,7 +116,7 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               REAL_CZ,      & ! (in)
+               CZ, FZ,       & ! (in)
                BULKFLUX_type ) ! (in)
        end select
     else
