@@ -994,16 +994,16 @@ contains
 
           if ( .not. mynn_level3 ) cycle
 
-          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z1 )
-             tmp = tmp * ( zeta / ( z1 * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
-             ! TSQ
-             prod_t(KS) = tmp * ts(i,j)**2
-             ! QSQ
-             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
-             ! COV
-             prod_c(KS) = tmp * qs(i,j)**2
-          end if
+!!$          if ( ATMOS_PHY_BL_MYNN_similarity ) then
+!!$             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z1 )
+!!$             tmp = tmp * ( zeta / ( z1 * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
+!!$             ! TSQ
+!!$             prod_t(KS) = tmp * ts(i,j)**2
+!!$             ! QSQ
+!!$             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
+!!$             ! COV
+!!$             prod_c(KS) = tmp * qs(i,j)**2
+!!$          end if
 
           ! dens * tsq
 
