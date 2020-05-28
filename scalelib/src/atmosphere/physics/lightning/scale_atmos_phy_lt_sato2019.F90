@@ -351,6 +351,7 @@ contains
     integer  :: i, j, k, m, n, countbin, ip
     real(RP) :: sw, zerosw, positive, negative
     integer  :: count_neut
+    logical  :: flg_add_output
 
     logical  :: HIST_sw(w_nmax)
     real(RP) :: w3d(KA,IA,JA)
@@ -655,63 +656,6 @@ contains
          end do
          end do
 
-         !--- Add Total number of charge neutralization and flash point
-         if ( HIST_id(I_Qneut) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               do n = 1, QA_LT
-                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)
-               enddo
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_FlashPoint) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
-            end do
-            end do
-            end do
-         end if
-
-         if ( HIST_id(I_PosFLASH) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
-                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_NegFLASH) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
-                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
-            end do
-            end do
-            end do
-         end if
-         if ( HIST_id(I_LTpath) > 0 ) then
-            !$omp parallel do
-            do j = JS, JE
-            do i = IS, IE
-            do k = KS, KE
-               LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
-            end do
-            end do
-            end do
-         end if
-
          call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                        IA, IS, IE,             &   ! [IN]
                                        JA, JS, JE,             &   ! [IN]
@@ -720,6 +664,7 @@ contains
                                        Emax,                   &   ! [OUT]
                                        flg_lt_neut             )   ! [OUT]
 
+         flg_add_output = .true.
          count_neut = count_neut + 1
 #ifdef DEBUG
          LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7,A,F15.7,1X,I0)')  &
@@ -749,13 +694,13 @@ contains
                    ' [kV/m] larger than previous one by neutralization, back to previous step, Finish', &
                    count_neut
             endif
+            flg_add_output = .false.
             !---- Back to Charge density as previous step
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
                do n = 1, QA_LT
                   QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
-                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)
                enddo
                d_QCRG(k,i,j) = 0.0_RP
             enddo
@@ -775,6 +720,65 @@ contains
                    '[kV/m] After neutralization, Finish', count_neut
             endif
          endif
+
+         !--- Add Total number of charge neutralization and flash point
+         if( flg_add_output ) then
+
+            if ( HIST_id(I_Qneut) > 0 ) then
+               !$omp parallel do
+               do j = JS, JE
+               do i = IS, IE
+               do k = KS, KE
+                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)
+               end do
+               end do
+               end do
+            end if
+            if ( HIST_id(I_FlashPoint) > 0 ) then
+               !$omp parallel do
+               do j = JS, JE
+               do i = IS, IE
+               do k = KS, KE
+                  fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
+               end do
+               end do
+               end do
+            end if
+
+            if ( HIST_id(I_PosFLASH) > 0 ) then
+               !$omp parallel do
+               do j = JS, JE
+               do i = IS, IE
+               do k = KS, KE
+                  LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
+                                       + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
+               end do
+               end do
+               end do
+            end if
+            if ( HIST_id(I_NegFLASH) > 0 ) then
+               !$omp parallel do
+               do j = JS, JE
+               do i = IS, IE
+               do k = KS, KE
+                  LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
+                                       + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
+               end do
+               end do
+               end do
+            end if
+            if ( HIST_id(I_LTpath) > 0 ) then
+               !$omp parallel do
+               do j = JS, JE
+               do i = IS, IE
+               do k = KS, KE
+                  LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
+               end do
+               end do
+               end do
+            end if
+
+            end if
 
        enddo
 
