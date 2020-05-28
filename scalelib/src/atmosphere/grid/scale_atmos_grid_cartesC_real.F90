@@ -552,6 +552,8 @@ contains
     enddo
 
     LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_Z",*) 'Minimum & maximum lowermost CZ'
+    LOG_INFO_CONT(*) '-> (',minval( ATMOS_GRID_CARTESC_REAL_CZ(KS,:,:) ),',',maxval( ATMOS_GRID_CARTESC_REAL_CZ(KS,:,:) ),')'
     LOG_INFO("ATMOS_GRID_CARTESC_REAL_calc_Z",*) 'Minimum & maximum aspect ratio'
     LOG_INFO_CONT(*) '-> (',ATMOS_GRID_CARTESC_REAL_ASPECT_MIN,',',ATMOS_GRID_CARTESC_REAL_ASPECT_MAX,')'
 

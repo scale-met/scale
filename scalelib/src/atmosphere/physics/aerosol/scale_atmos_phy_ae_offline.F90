@@ -242,7 +242,7 @@ contains
     implicit none
 
     integer,  intent(in)  :: KA, IA, JA
-    real(RP), intent(in)  :: RH(KA,IA,JA)      ! relative humidity (0-1)
+    real(RP), intent(in)  :: RH(KA,IA,JA)      ! relative humidity [%]
     real(RP), intent(out) :: Re(KA,IA,JA,N_AE) ! effective radius
 
     real(RP), parameter :: AE_Re(N_AE) = & ! aerosol radius [m]
@@ -261,7 +261,7 @@ contains
 
        if ( AE_Re(iaero) < 0.0_RP ) then ! hygroscopic particle : look-up table is based on the RH
 
-          Re(:,:,:,iaero) = RH(:,:,:)
+          Re(:,:,:,iaero) = RH(:,:,:) * 1.E-2_RP
 
        else                              ! non-hygroscopic particle : look-up table is the effective radius
 
