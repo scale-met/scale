@@ -125,9 +125,9 @@ contains
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
     use scale_atmos_grid_cartesC_real, only: &
-       LAT    => ATMOS_GRID_CARTESC_REAL_LAT, &
-       LON    => ATMOS_GRID_CARTESC_REAL_LON, &
-       height => ATMOS_GRID_CARTESC_REAL_CZ
+       LAT => ATMOS_GRID_CARTESC_REAL_LAT, &
+       LON => ATMOS_GRID_CARTESC_REAL_LON, &
+       CZ  => ATMOS_GRID_CARTESC_REAL_CZ
     use mod_cnv2d, only: &
        CNV2D_tile_init, &
        CNV2D_grads_init
@@ -348,7 +348,7 @@ contains
                                           LEV_org(:,:,:),   & ! [IN]
                                           CX(:),            & ! [IN]
                                           CY(:),            & ! [IN]
-                                          height(:,:,:),    & ! [IN]
+                                          CZ(:,:,:),        & ! [IN]
                                           idx_i(:,:,:),     & ! [OUT]
                                           idx_j(:,:,:),     & ! [OUT]
                                           hfact(:,:,:),     & ! [OUT]
@@ -367,7 +367,7 @@ contains
                                        LEV_org(:,:,:),       & ! [IN]
                                        LON(:,:),             & ! [IN]
                                        LAT(:,:),             & ! [IN]
-                                       height(:,:,:),        & ! [IN]
+                                       CZ(:,:,:),            & ! [IN]
                                        idx_i(:,:,:),         & ! [OUT]
                                        idx_j(:,:,:),         & ! [OUT]
                                        hfact(:,:,:),         & ! [OUT]
@@ -410,7 +410,7 @@ contains
        FILE_GrADS_varid, &
        FILE_GrADS_read
     use scale_atmos_grid_cartesC_real, only: &
-       height => ATMOS_GRID_CARTESC_REAL_CZ
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ
     use mod_cnv2d, only: &
        CNV2D_exec
     implicit none
@@ -507,7 +507,7 @@ contains
                                 idx_k(:,:,:,:,:),     & ! [IN]
                                 vfact(:,:,:,:),       & ! [IN]
                                 LEV_org(:,:,:),       & ! [IN]
-                                height(:,:,:),        & ! [IN]
+                                CZ(:,:,:),            & ! [IN]
                                 data_org(:,:,:),      & ! [IN]
                                 var_3D(:,:,:,1)       ) ! [OUT]
 
