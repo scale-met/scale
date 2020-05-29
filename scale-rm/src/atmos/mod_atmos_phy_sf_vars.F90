@@ -173,7 +173,9 @@ module mod_atmos_phy_sf_vars
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10_RP
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0        = 1E-4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0M       = 1E-4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0H       = 1E-5_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0E       = 1E-5_RP
 
   real(RP), allocatable, target :: ZERO(:,:)
 
@@ -203,7 +205,9 @@ contains
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,              &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW,         &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW,         &
-       ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0M,               &
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0H,               &
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0E
 
     integer :: ierr
     integer :: iv
@@ -211,6 +215,18 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Setup'
+
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("ATMOS_PHY_SF_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
+
 
     allocate( ATMOS_PHY_SF_DENS_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_MOMZ_t    (IA,JA)    )
@@ -237,9 +253,9 @@ contains
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
-    ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0M
+    ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0H
+    ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0E
 
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA) )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA) )
@@ -287,16 +303,6 @@ contains
     ATMOS_PHY_SF_Q2        (:,:)     = UNDEF
     ATMOS_PHY_SF_RLmo      (:,:)     = UNDEF
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_PHY_SF_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) '[ATMOS_PHY_SF] prognostic/diagnostic variables'
