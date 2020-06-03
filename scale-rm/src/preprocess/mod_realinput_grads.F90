@@ -129,7 +129,7 @@ module mod_realinput_grads
   integer :: outer_nx_sst = -1
   integer :: outer_ny_sst = -1
 
-  integer :: file_id
+  integer :: file_id_atm, file_id_ocn, file_id_lnd
 
   !-----------------------------------------------------------------------------
 contains
@@ -175,11 +175,11 @@ contains
        call PRC_abort
     endif
 
-    call FILE_GrADS_open( basename, & ! (in)
-                          file_id   ) ! (out)
+    call FILE_GrADS_open( basename,   & ! (in)
+                          file_id_atm ) ! (out)
 
-    call FILE_GrADS_get_shape( file_id, "U", & ! (in)
-                               shape(:)      ) ! (out)
+    call FILE_GrADS_get_shape( file_id_atm, "U", & ! (in)
+                               shape(:)          ) ! (out)
 
     ! full level
     dims(1) = shape(1) ! bottom_top
@@ -196,8 +196,8 @@ contains
     ! var_id < 0 : not exist
     do ielem = 1, num_item_list_atom
        item  = item_list_atom(ielem)
-       call FILE_GrADS_varid( file_id, item,  & ! (in)
-                              var_id(ielem,1) ) ! (out)
+       call FILE_GrADS_varid( file_id_atm, item, & ! (in)
+                              var_id(ielem,1)    ) ! (out)
     end do
 
     ! check necessary data
@@ -288,9 +288,9 @@ contains
        select case(item)
        case("lon")
 
-          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lon1d(:)                  ) ! (out)
+          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   lon1d(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -298,9 +298,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lon_org(:,:),             & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   lon_org(:,:),                 & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -311,9 +311,9 @@ contains
 
        case("lat")
 
-          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lat1d(:)                  ) ! (out)
+          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   lat1d(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -321,9 +321,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   lat_org(:,:),             & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   lat_org(:,:),                 & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, dims(3)
              do i = 1, dims(2)
@@ -457,23 +457,23 @@ contains
        select case(item)
        case("plev")
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item), shape(1), KA_org-2
              call PRC_abort
           endif
 
-          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
+          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
              pressure_coordinates = .true. ! use pressure coordinate in the input data
-             call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                        shape(:)                  ) ! (out)
+             call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                        shape(:)                      ) ! (out)
              if ( KA_org-2 .ne. shape(1) ) then
                 LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for plev! ',shape(1), KA_org-2
                 call PRC_abort
              endif
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(:,dummy,dummy)       ) ! (out)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(:,dummy,dummy)           ) ! (out)
              !$omp parallel do collapse(3)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -484,10 +484,10 @@ contains
              enddo
           else
              pressure_coordinates = .false.
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(:,:,:),              & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(:,:,:),                  & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(3)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -499,17 +499,17 @@ contains
           endif
        case('DENS')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:,:,:),              & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:,:,:),                  & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -521,17 +521,17 @@ contains
 
        case('U')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:,:,:),              & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:,:,:),                  & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -544,17 +544,17 @@ contains
 
        case('V')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:,:,:),              & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:,:,:),                  & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -567,17 +567,17 @@ contains
 
        case('W')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:,:,:),              & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:,:,:),                  & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -590,17 +590,17 @@ contains
 
        case('T')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:,:,:),              & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:,:,:),                  & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -612,22 +612,22 @@ contains
 
        case('HGT')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( KA_org-2 .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to the default nz for ',trim(item),'. nz:',shape(1),'> outer_nz:',KA_org-2
              call PRC_abort
           endif
 
-          if( FILE_GrADS_isOneD( file_id, var_id(ielem,1) ) ) then
-             call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                        shape(:)                  ) ! (out)
+          if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
+             call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                        shape(:)                      ) ! (out)
              if ( KA_org-2 .ne. shape(1) ) then
                 LOG_ERROR("ParentAtmosInputGrADS",*) 'lnum must be same as the nz for HGT! ',KA_org-2, shape(1)
                 call PRC_abort
              endif
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(:,dummy,dummy)       ) ! (out)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(:,dummy,dummy)           ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -639,10 +639,10 @@ contains
              enddo
           else
              pressure_coordinates = .false.
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(:,:,:),              & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(:,:,:),                  & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -656,13 +656,13 @@ contains
 
        case('QV')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -693,13 +693,13 @@ contains
 
        case('QC')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -713,13 +713,13 @@ contains
 
        case('QR')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -733,13 +733,13 @@ contains
 
        case('QI')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -753,13 +753,13 @@ contains
 
        case('QS')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -773,13 +773,13 @@ contains
 
        case('QG')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -793,13 +793,13 @@ contains
 
        case('RH')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(:shape(1),:,:),      & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(:shape(1),:,:),          & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -850,10 +850,10 @@ contains
 
        case('MSLP')
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),          & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(dummy,:,:),              & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -863,10 +863,10 @@ contains
 
        case('PSFC')
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),          & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(dummy,:,:),              & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -877,10 +877,10 @@ contains
        case('U10')
 
           if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),          & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(dummy,:,:),              & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -892,10 +892,10 @@ contains
        case('V10')
 
           if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),          & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(dummy,:,:),              & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -907,10 +907,10 @@ contains
        case('T2')
 
           if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),          & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(dummy,:,:),              & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -922,10 +922,10 @@ contains
        case('Q2')
 
           if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),          & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(dummy,:,:),              & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -937,10 +937,10 @@ contains
        case('RH2')
 
           if ( sfc_diagnoses ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                   work(dummy,:,:),          & ! (out)
-                                   step = nt,                & ! (in)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                   work(dummy,:,:),              & ! (out)
+                                   step = nt,                    & ! (in)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -962,9 +962,9 @@ contains
 
        case('topo')
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1), & ! (in)
-                                work(dummy,:,:),          & ! (out)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
+                                work(dummy,:,:),              & ! (out)
+                                postfix = basename_num        ) ! (in)
           !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -974,13 +974,13 @@ contains
 
        case('RN222')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,1), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_atm, var_id(ielem,1), & ! (in)
+                                     shape(:)                      ) ! (out)
 
-          call FILE_GrADS_read( file_id, var_id(ielem,1),    & ! (in)
-                                work(:shape(1),:,:),         & ! (out)
-                                step = nt,                   & ! (in)
-                                postfix = basename_num       ) ! (in)
+          call FILE_GrADS_read( file_id_atm, var_id(ielem,1),    & ! (in)
+                                work(:shape(1),:,:),             & ! (out)
+                                step = nt,                       & ! (in)
+                                postfix = basename_num           ) ! (in)
           !$omp parallel do collapse(3)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -1315,18 +1315,18 @@ contains
        call PRC_abort
     endif
 
-    call FILE_GrADS_open( basename, & ! (in)
-                          file_id   ) ! (out)
+    call FILE_GrADS_open( basename,   & ! (in)
+                          file_id_lnd ) ! (out)
 
-    call FILE_GrADS_get_shape( file_id, "STEMP", & ! (in)
-                               ldims(:)          ) ! (out)
+    call FILE_GrADS_get_shape( file_id_lnd, "STEMP", & ! (in)
+                               ldims(:)              ) ! (out)
 
 
     ! check existence
     do ielem = 1, num_item_list_land
        item  = item_list_land(ielem)
-       call FILE_GrADS_varid( file_id, item,  & ! (in)
-                              var_id(ielem,2) ) ! (out)
+       call FILE_GrADS_varid( file_id_lnd, item, & ! (in)
+                              var_id(ielem,2)    ) ! (out)
     end do
 
     ! check necessary data
@@ -1461,23 +1461,23 @@ contains
        select case(item)
        case("lsmask")
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                lmask_org(:,:),           & ! (out)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                lmask_org(:,:),               & ! (out)
+                                postfix = basename_num        ) ! (in)
 
        case("lon", "lon_sfc")
 
           if ( item == "lon" ) then
-             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                           shape(1:1)                ) ! (out)
+             if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
+                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                           shape(1:1)                    ) ! (out)
                 if ( ldims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
                    LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1)
                    call PRC_abort
                 end if
              else
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                           shape(1:2)                ) ! (out)
+                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                           shape(1:2)                    ) ! (out)
                 if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
                    LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lon" is different! ', ldims(2), shape(1), ldims(3), shape(2)
                    call PRC_abort
@@ -1485,9 +1485,9 @@ contains
              end if
           end if
 
-          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                   lon1D(:)                  ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
+             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                   lon1D(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, ldims(3)
              do i = 1, ldims(2)
@@ -1495,9 +1495,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                   llon_org(:,:),            & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                   llon_org(:,:),                & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, ldims(3)
              do i = 1, ldims(2)
@@ -1509,16 +1509,16 @@ contains
        case("lat", "lat_sfc")
 
           if ( item == "lat" ) then
-             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                           shape(1:1)                ) ! (out)
+             if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
+                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                           shape(1:1)                    ) ! (out)
                 if ( ldims(3).ne.shape(1) .and. shape(1).ne.-1 ) then
                    LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(3), shape(1)
                    call PRC_abort
                 end if
              else
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                           shape(1:2)                ) ! (out)
+                call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                           shape(1:2)                    ) ! (out)
                 if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
                    LOG_ERROR("ParentLandInputGrADS",*) 'dimension of "lat" is different! ', ldims(2), shape(1), ldims(3), shape(2)
                    call PRC_abort
@@ -1526,9 +1526,9 @@ contains
              end if
           end if
 
-          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,2) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                   lat1D(:)                  ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
+             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                   lat1D(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, ldims(3)
              do i = 1, ldims(2)
@@ -1536,9 +1536,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                   llat_org(:,:),            & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                   llat_org(:,:),                & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, ldims(3)
              do i = 1, ldims(2)
@@ -1549,69 +1549,69 @@ contains
 
        case("llev")
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                     shape(:)                      ) ! (out)
           if( ldims(1) .ne. shape(1) )then
              LOG_ERROR("ParentLandInputGrADS",*) '"nz" must be equal to nz of "STEMP" for llev. :', shape(1), ldims(1)
              call PRC_abort
           endif
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                lz_org(:)                 ) ! (out)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                lz_org(:)                     ) ! (out)
 
        case('STEMP')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( ldims(1) .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                tg_org(:,:,:),            & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                tg_org(:,:,:),                & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
 
        case('SMOISVC')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( ldims(1) .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                strg_org(:,:,:),          & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                strg_org(:,:,:),              & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
 
        case('SMOISDS')
 
-          call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                     shape(:)                  ) ! (out)
+          call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                     shape(:)                      ) ! (out)
           if ( ldims(1) .ne. shape(1) ) then
              LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
              call PRC_abort
           endif
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                smds_org(:,:,:),          & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                smds_org(:,:,:),              & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
 
        case('SKINT')
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                lst_org(:,:),             & ! (out)
-                                step = nt,                & ! (in)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                lst_org(:,:),                 & ! (out)
+                                step = nt,                    & ! (in)
+                                postfix = basename_num        ) ! (in)
 
        case('topo', 'topo_sfc')
 
           if ( item == "topo" ) then
-             call FILE_GrADS_get_shape( file_id, var_id(ielem,2), & ! (in)
-                                        shape(1:2)                ) ! (out)
+             call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
+                                        shape(1:2)                    ) ! (out)
              if ( ldims(2).ne.shape(1) .or. ldims(3).ne.shape(2) ) then
                 LOG_WARN("ParentLandInputGrADS",*) 'namelist of "topo_sfc" is not found in grads namelist!'
                 LOG_WARN_CONT(*) 'dimension of "topo" is different! ', ldims(2), shape(1), ldims(3), shape(2)
@@ -1619,9 +1619,9 @@ contains
              end if
           end if
 
-          call FILE_GrADS_read( file_id, var_id(ielem,2), & ! (in)
-                                topo_org(:,:),            & ! (out)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
+                                topo_org(:,:),                & ! (out)
+                                postfix = basename_num        ) ! (in)
 
        end select
     enddo loop_InputLandGrADS
@@ -1652,16 +1652,14 @@ contains
 
     LOG_INFO("ParentOceanSetupGrADS",*) 'Real Case/Ocean Input File Type: GrADS format'
 
-    !--- read namelist
+    call FILE_GrADS_open( basename,   & ! (in)
+                          file_id_ocn ) ! (out)
 
-    call FILE_GrADS_open( basename, & ! (in)
-                          file_id   ) ! (out)
-
-    call FILE_GrADS_varid( file_id, "SST", & ! (in)
-                           vid             ) ! (out)
+    call FILE_GrADS_varid( file_id_ocn, "SST", & ! (in)
+                           vid                 ) ! (out)
     if ( vid < 0 ) then
-       call FILE_GrADS_varid( file_id, "SKINT", & ! (in)
-                              vid               ) ! (out)
+       call FILE_GrADS_varid( file_id_ocn, "SKINT", & ! (in)
+                              vid                   ) ! (out)
     end if
 
     if ( vid < 0 ) then
@@ -1669,8 +1667,8 @@ contains
        call PRC_abort
     end if
 
-    call FILE_GrADS_get_shape( file_id, vid, & ! (in)
-                               odims(:)      ) ! (out)
+    call FILE_GrADS_get_shape( file_id_ocn, vid, & ! (in)
+                               odims(:)          ) ! (out)
 
 
     timelen = 0        ! will be replaced later
@@ -1679,8 +1677,8 @@ contains
     ! check existance
     do ielem = 1, num_item_list_ocean
        item  = item_list_ocean(ielem)
-       call FILE_GrADS_varid( file_id, item,  & ! (in)
-                              var_id(ielem,3) ) ! (out)
+       call FILE_GrADS_varid( file_id_ocn, item, & ! (in)
+                              var_id(ielem,3)    ) ! (out)
     end do
 
     ! check necessary datea
@@ -1811,31 +1809,31 @@ contains
        case("lsmask","lsmask_sst")
 
           if ( item == "lsmask" ) then
-             call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                        shape(:)                  ) ! (out)
+             call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                        shape(:)                      ) ! (out)
              if ( odims(1) .ne. shape(1) .or. odims(2) .ne. shape(2) ) then
                 LOG_WARN("ParentOceanInputGrADS",*) 'dimension of lsmask is different. not use'
                 cycle
              end if
           end if
 
-          call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                omask_org(:,:),           & ! (out)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                omask_org(:,:),               & ! (out)
+                                postfix = basename_num        ) ! (in)
 
        case("lon","lon_sfc","lon_sst")
 
           if ( item .ne. "lon_sst" ) then
-             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                           shape(1:1)                ) ! (out)
+             if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
+                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                           shape(1:1)                    ) ! (out)
                 if ( odims(1).ne.shape(1) .and. shape(1).ne.-1 ) then
                    LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(1), shape(1)
                    call PRC_abort
                 end if
              else
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                           shape(:)                  ) ! (out)
+                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                           shape(:)                      ) ! (out)
                 if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
                    LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
                    call PRC_abort
@@ -1843,9 +1841,9 @@ contains
              end if
           end if
 
-          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                   lon1D(:)                  ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
+             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                   lon1D(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, odims(2)
              do i = 1, odims(1)
@@ -1853,9 +1851,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                   olon_org(:,:),            & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                   olon_org(:,:),                & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, odims(2)
              do i = 1, odims(1)
@@ -1867,16 +1865,16 @@ contains
        case("lat","lat_sfc","lat_sst")
 
           if ( item .ne. "lat_sst" ) then
-             if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                           shape(1:1)                ) ! (out)
+             if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
+                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                           shape(1:1)                    ) ! (out)
                 if ( odims(2).ne.shape(1) .and. shape(1).ne.-1 ) then
                    LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different! ', odims(2), shape(1)
                    call PRC_abort
                 end if
              else
-                call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                           shape(:)                  ) ! (out)
+                call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                           shape(:)                      ) ! (out)
                 if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
                    LOG_ERROR("ParentOceanInputGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
                    call PRC_abort
@@ -1884,9 +1882,9 @@ contains
              end if
           end if
 
-          if ( FILE_GrADS_isOneD( file_id, var_id(ielem,3) ) ) then
-             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                   lat1D(:)                  ) ! (out)
+          if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
+             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                   lat1D(:)                      ) ! (out)
              !$omp parallel do collapse(2)
              do j = 1, odims(2)
              do i = 1, odims(1)
@@ -1894,9 +1892,9 @@ contains
              enddo
              enddo
           else
-             call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                   olat_org(:,:),            & ! (out)
-                                   postfix = basename_num    ) ! (in)
+             call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                   olat_org(:,:),                & ! (out)
+                                   postfix = basename_num        ) ! (in)
              !$omp parallel do collapse(2)
              do j = 1, odims(2)
              do i = 1, odims(1)
@@ -1908,17 +1906,17 @@ contains
        case("SKINT","SST")
 
           if ( item == "SKINT" ) then
-             call FILE_GrADS_get_shape( file_id, var_id(ielem,3), & ! (in)
-                                        shape(:)                  ) ! (out)
+             call FILE_GrADS_get_shape( file_id_ocn, var_id(ielem,3), & ! (in)
+                                        shape(:)                      ) ! (out)
              if ( odims(1).ne.shape(1) .or. odims(2).ne.shape(2) ) then
                 LOG_ERROR("ParentLandOceanGrADS",*) 'dimension of "',trim(item),'" is different', odims(1), shape(1), odims(2), shape(2)
                 call PRC_abort
              end if
           end if
 
-          call FILE_GrADS_read( file_id, var_id(ielem,3), & ! (in)
-                                sst_org(:,:),             & ! (out)
-                                postfix = basename_num    ) ! (in)
+          call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
+                                sst_org(:,:),                 & ! (out)
+                                postfix = basename_num        ) ! (in)
 
        end select
     enddo loop_InputOceanGrADS
