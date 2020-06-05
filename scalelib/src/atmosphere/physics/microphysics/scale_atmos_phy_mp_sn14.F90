@@ -3760,6 +3760,7 @@ contains
     real(RP) :: w1
 
     real(RP) :: sw, sw1, sw2
+    real(RP) :: alpha_lt
     !
     integer :: k, iqw
     !
@@ -3926,11 +3927,11 @@ contains
           Pcrg2(I_NGacNS2NG,k) = Pac(k,I_NGacNS2NG)*(1.0_RP-sw1) &
                                   / (rhoq(k,I_NS)+sw1)*rhoq_crg(I_QS,k)
           !--- Charge split by Snow-Graupel rebound--------------------------------
-          alpha = 5.0_RP * ( dq_xave(k,I_mp_QS) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
-          alpha = min( alpha, 10.0_RP )
+          alpha_lt = 5.0_RP * ( dq_xave(k,I_mp_QS) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
+          alpha_lt = min( alpha_lt, 10.0_RP )
           Pcrg2(I_CGNGacNS2NG,k)= 0.25_RP*pi*( 1.0_RP - E_stick(k) )*E_gs &
                                   * rhoq(k,I_NG)*rhoq(k,I_NS)*coef_acc_NSG &
-                                  * ( dqcrg(k)*alpha ) &
+                                  * ( dqcrg(k)*alpha_lt ) &
                                   * beta_crg(k)
        end if
 !!       !-----------------
@@ -3953,11 +3954,11 @@ contains
 !!         Pcrg2(I_NGacNI2NG,k) = Pac(k,I_NGacNI2NG)*(1.0_RP-sw1) &
 !!                                  / (rhoq(k,I_NI)+sw1)*rhoq_crg(I_QI,k)*flg_lt*flg_igcol
 !!       !--- Charge split by Ice-Graupel rebound--------------------------------
-!!         alpha = 5.0_RP * ( dq_xave(k,I_mp_QI) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
-!!         alpha = min( alpha, 10.0_RP )
+!!         alpha_lt = 5.0_RP * ( dq_xave(k,I_mp_QI) / d0_crg )**2 * vt_xave(k,I_mp_QG,2) / v0_crg
+!!         alpha_lt = min( alpha_lt, 10.0_RP )
 !!         Pcrg2(I_CGNGacNI2NG,k)= 0.25_RP*pi*( 1.0_RP - E_stick(k) )*E_gi &
 !!                                  * rhoq(k,I_NG)*rhoq(k,I_NI)*coef_acc_NIG &
-!!                                  * ( dqcrg(k)*alpha ) &
+!!                                  * ( dqcrg(k)*alpha_lt ) &
 !!                                  * beta_crg(k) * flg_lt * flg_igcol
 !!       end if
 !!       !  (end) Y.Sato added on 2018/8/31
@@ -4712,7 +4713,7 @@ contains
     !
     real(RP), intent(in)   :: dt           ! time step[s]
     real(RP), intent(in)   :: cz(KA)       ! altitude [m]
-    real(RP), intent(in)   :: fz(KA)       ! altitude difference [m]
+    real(RP), intent(in)   :: fz(0:KA)       ! altitude difference [m]
     real(RP), intent(in)   :: w (KA)       ! vertical velocity @ full level [m/s]
     real(RP), intent(in)   :: dTdt_rad(KA) ! temperture tendency by radiation[K/s]
     real(RP), intent(in)   :: rho (KA)     ! density[kg/m3]
