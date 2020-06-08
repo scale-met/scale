@@ -729,7 +729,7 @@ contains
                do j = JS, JE
                do i = IS, IE
                do k = KS, KE
-                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)
+                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP
                end do
                end do
                end do
