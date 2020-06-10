@@ -180,6 +180,8 @@ The following shows an example of namelist file, corresponding to ``ctl'' file o
 Although the initial time and the time interval in the output file are specified by \nmitem{TIME_STARTDATE} in \namelist{PARAM_TIME} and \nmitem{CNVUSER_OUT_DT}, respectively, as described in Sec. \ref{sec:userdata},
 the urban scheme ignores these settings when reading the data.
 That is, regardless of the time coordinate in the \scalenetcdf file,
-the gridded AH and AHL data are assumed to contain the data for 24 hours in the order from 1 to 24 UTC with the interval of one hour.
+the gridded AH and AHL data are assumed to contain the data for 24 hours in the order from 1 to 24 (local time: LT) with the interval of one hour.
+The local time here is defined by $UTC + \nmitem{MAPPROJECTION_basepoint_lon}/15.0$ using the longitude of the reference point.
+Note that the unit of the time axis of the AH and AHL data array may change in the next version or later.
 The Z0M data is read only the first data because Z0M is assumed to be unchanged during the simulation (namely, \nmitem{CNVUSER_NSTEPS}=1).
 The other settings are as described in Sec. \ref{sec:userdata}.
