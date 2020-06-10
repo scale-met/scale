@@ -87,8 +87,8 @@ module scale_mapprojection
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: MAPPROJECTION_basepoint_lon = 135.221_RP ! position of base point (domain center) in real world [deg]
-  real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point (domain center) in real world [deg]
+  real(RP), public :: MAPPROJECTION_basepoint_lon = 135.221_RP ! position of base point in real world [deg]
+  real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
 
   type, public :: mappinginfo
      character(len=H_SHORT) :: mapping_name
