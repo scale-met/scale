@@ -556,15 +556,15 @@ contains
     LOG_NEWLINE
     LOG_INFO('MONITOR_writeheader',*) 'Output item list '
     LOG_INFO_CONT(*) 'Number of monitor item :', MONITOR_nreqs
-    LOG_INFO_CONT('(2A)') 'NAME                   :description                                    ', &
-                          ':UNIT           :dimension_type'
-    LOG_INFO_CONT('(2A)') '=======================================================================', &
-                          '==============================='
+    LOG_INFO_CONT('(1x,2A)') 'NAME                   :description                                    ', &
+                             ':UNIT           :dimension_type'
+    LOG_INFO_CONT('(1x,2A)') '=======================================================================', &
+                             '==============================='
     do n = 1, MONITOR_nitems
-       LOG_INFO_CONT('(A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
+       LOG_INFO_CONT('(1x,A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
     enddo
-    LOG_INFO_CONT('(2A)') '=======================================================================', &
-                          '==============================='
+    LOG_INFO_CONT('(1x,2A)') '=======================================================================', &
+                             '==============================='
 
     if ( PRC_IsMaster ) then ! master node
        MONITOR_L = .true.

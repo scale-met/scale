@@ -242,8 +242,7 @@ contains
        call ATMOS_vars_get_diagnostic( "RH", RH )
        call ATMOS_PHY_AE_vars_get_diagnostic( &
             QTRC(:,:,:,:), RH(:,:,:), & ! [IN]
-            Re=AE_Re                  ) ! [IN]
-!            Re=AE_Re, Qe=AE_Qe      ) ! [IN]
+            Re=AE_Re, Qe=AE_Qe        ) ! [IN]
 
 
        select case ( ATMOS_PHY_RD_TYPE )
@@ -257,8 +256,7 @@ contains
                SFC_TEMP(:,:), SFC_albedo(:,:,:,:),               & ! [IN]
                solins(:,:), cosSZA(:,:),                         & ! [IN]
                CLDFRAC(:,:,:), MP_Re(:,:,:,:), MP_Qe(:,:,:,:),   & ! [IN]
-               AE_Re(:,:,:,:),                                   & ! [IN]
-!               AE_Re(:,:,:,:), AE_Qe(:,:,:,:),                   & ! [IN]
+               AE_Re(:,:,:,:), AE_Qe(:,:,:,:),                   & ! [IN]
                flux_rad(:,:,:,:,:,:),                            & ! [OUT]
                flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
                dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]

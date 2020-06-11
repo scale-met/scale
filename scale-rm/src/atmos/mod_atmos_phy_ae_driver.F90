@@ -80,6 +80,8 @@ contains
                               ATMOS_PHY_AE_kajino13_NAME(:), & ! [IN]
                               ATMOS_PHY_AE_kajino13_DESC(:), & ! [IN]
                               ATMOS_PHY_AE_kajino13_UNIT(:)  ) ! [IN]
+       case ( 'OFFLINE' )
+          LOG_INFO("ATMOS_PHY_AE_driver_tracer_setup",*) 'offline aerosol module has no tracers'
        case default
           LOG_ERROR("ATMOS_PHY_AE_driver_tracer_setup",*) 'invalid aerosol type(', ATMOS_PHY_AE_TYPE, '). CHECK!'
           call PRC_abort
@@ -104,6 +106,8 @@ contains
        ATMOS_sw_phy_ae
     use scale_atmos_phy_ae_kajino13, only: &
         ATMOS_PHY_AE_kajino13_setup
+    use scale_atmos_phy_ae_offline, only: &
+        ATMOS_PHY_AE_offline_setup
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -117,6 +121,8 @@ contains
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
           call ATMOS_PHY_AE_kajino13_setup
+       case ( 'OFFLINE' )
+          call ATMOS_PHY_AE_offline_setup
        case default
           LOG_ERROR("ATMOS_PHY_AE_driver_setup",*) 'invalid aerosol type(', ATMOS_PHY_AE_TYPE, '). CHECK!'
           call PRC_abort
@@ -144,11 +150,11 @@ contains
     implicit none
 
     if ( ATMOS_sw_phy_ae ) then
+
        select case ( ATMOS_PHY_AE_TYPE )
        case ( 'KAJINO13' )
           call ATMOS_PHY_AE_kajino13_negative_fixer( KA, KS, KE, IA, IS, IE, JA, JS, JE, QA_AE, &
                                                      QTRC(:,:,:,QS_AE:QE_AE) ) ! [INOUT]
-
        end select
 
     end if
@@ -164,7 +170,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_time, only: &
-       dt_AE => TIME_DTSEC_ATMOS_PHY_AE
+       dt_AE => TIME_DTSEC_ATMOS_PHY_AE, &
+       TIME_NOWDAYSEC
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -195,6 +202,8 @@ contains
        ATMOS_PHY_AE_TYPE
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_tendency
+    use scale_atmos_phy_ae_offline, only: &
+       ATMOS_PHY_AE_offline_tendency
     implicit none
 
     logical, intent(in) :: update_flag
@@ -235,6 +244,11 @@ contains
                                                RHOQ_t_AE(:,:,:,QS_AE:QE_AE), & ! [OUT]
                                                CN       (:,:,:),             & ! [OUT]
                                                CCN      (:,:,:)              ) ! [OUT]
+       case ( 'OFFLINE' )
+          call ATMOS_PHY_AE_offline_tendency ( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                               TIME_NOWDAYSEC,               & ! [IN]
+                                               CCN      (:,:,:)              ) ! [OUT]
+          CN(:,:,:) = 0.0_RP ! not supported
        end select
 
        CCN_t(:,:,:) = CCN(:,:,:) / dt_AE

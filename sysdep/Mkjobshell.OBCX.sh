@@ -87,7 +87,7 @@ cat << EOF1 > ./run.sh
 #PJM -L node=${NNODE}
 #PJM --mpi proc=${TPROC}
 #PJM --omp thread=1
-#PJM -L elapse=00:30:00
+#PJM -L elapse=01:00:00
 #PJM -N SCALE
 #PJM -X
 #PJM -j

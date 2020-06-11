@@ -715,6 +715,8 @@ contains
        ATMOS_PHY_AE_TYPE
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_mkinit
+    use scale_atmos_phy_ae_offline, only: &
+       ATMOS_PHY_AE_offline_mkinit
     use mod_atmos_phy_ae_vars, only: &
        QA_AE, &
        QS_AE, &
@@ -727,6 +729,8 @@ contains
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
 
+    real(RP) :: ccn_init = 50.E+6_RP ! initial cloud condensation nucrei [#/m3]
+
     real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
     real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
@@ -738,6 +742,7 @@ contains
     integer  :: n_kap_inp(3) = n_kap_def
 
     namelist / PARAM_AERO / &
+       ccn_init,  &
        m0_init,   &
        dg_init,   &
        sg_init,   &
@@ -750,40 +755,51 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) return
+    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
 
-    LOG_NEWLINE
-    LOG_INFO("AEROSOL_setup",*) 'Setup'
+       LOG_NEWLINE
+       LOG_INFO("AEROSOL_setup",*) 'Setup'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("AEROSOL_setup",*) 'Not found namelist. Default used!'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("AEROSOL_setup",*) 'Not appropriate names in namelist PARAM_AERO. Check!'
-       call PRC_abort
+       !--- read namelist
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
+       if( ierr < 0 ) then !--- missing
+          LOG_INFO("AEROSOL_setup",*) 'Not found namelist. Default used!'
+       elseif( ierr > 0 ) then !--- fatal error
+          LOG_ERROR("AEROSOL_setup",*) 'Not appropriate names in namelist PARAM_AERO. Check!'
+          call PRC_abort
+       endif
+       LOG_NML(PARAM_AERO)
+
+       select case ( ATMOS_PHY_AE_TYPE )
+       case ( 'KAJINO13' )
+          qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+          call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
+                                             QA_AE,                   & ! (in)
+                                             DENS(:,:,:),             & ! (in)
+                                             TEMP(:,:,:),             & ! (in)
+                                             PRES(:,:,:),             & ! (in)
+                                             QDRY(:,:,:),             & ! (in)
+                                             QV  (:,:,:),             & ! (in)
+                                             m0_init,                 & ! (in)
+                                             dg_init,                 & ! (in)
+                                             sg_init,                 & ! (in)
+                                             d_min_inp(:),            & ! (in)
+                                             d_max_inp(:),            & ! (in)
+                                             k_min_inp(:),            & ! (in)
+                                             k_max_inp(:),            & ! (in)
+                                             n_kap_inp(:),            & ! (in)
+                                             QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
+                                             CCN(:,:,:)               ) ! (out)
+       case ( 'OFFLINE' )
+          call ATMOS_PHY_AE_offline_mkinit ( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
+                                             ccn_init,                & ! (in)
+                                             CCN(:,:,:)               ) ! (out)
+       case default
+          CCN(:,:,:) = ccn_init
+       end select
+
     endif
-    LOG_NML(PARAM_AERO)
-
-    qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
-    call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
-                                       QA_AE,                   & ! (in)
-                                       DENS(:,:,:),             & ! (in)
-                                       TEMP(:,:,:),             & ! (in)
-                                       PRES(:,:,:),             & ! (in)
-                                       QDRY(:,:,:),             & ! (in)
-                                       QV  (:,:,:),             & ! (in)
-                                       m0_init,                 & ! (in)
-                                       dg_init,                 & ! (in)
-                                       sg_init,                 & ! (in)
-                                       d_min_inp(:),            & ! (in)
-                                       d_max_inp(:),            & ! (in)
-                                       k_min_inp(:),            & ! (in)
-                                       k_max_inp(:),            & ! (in)
-                                       n_kap_inp(:),            & ! (in)
-                                       QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
-                                       CCN(:,:,:)               ) ! (out)
 
     return
   end subroutine AEROSOL_setup

@@ -157,6 +157,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_tracer.o	\
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_kajino13.o	\
+	$(BUILD_DIR)/scale_atmos_phy_ae_offline.o	\
 	$(BUILD_DIR)/scale_atmos_phy_bl_mynn.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o	\
