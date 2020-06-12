@@ -351,7 +351,6 @@ contains
     integer  :: i, j, k, m, n, countbin, ip
     real(RP) :: sw, zerosw, positive, negative
     integer  :: count_neut
-    logical  :: flg_add_output
 
     logical  :: HIST_sw(w_nmax)
     real(RP) :: w3d(KA,IA,JA)
@@ -593,19 +592,23 @@ contains
                     lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
                     lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
                     do n = 1, QA_LT
-                       sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                       int_sw = int( sw )   ! 0-> negative, 1-> positive
-                       if( sum_crg(int_sw) /= 0.0_RP ) then
-                          crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
-                       else
-                          crg_rate(n) = 0.0_RP
+                       if ( flg_chrged(n) ) then
+                          sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                          int_sw = int( sw )   ! 0-> negative, 1-> positive
+                          if( sum_crg(int_sw) /= 0.0_RP ) then
+                             crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
+                          else
+                             crg_rate(n) = 0.0_RP
+                          endif
+                          QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                        endif
-                       QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                     enddo
                   endif
 
                   do n = 1, QA_LT
-                     dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
+                     if ( flg_chrged(n) ) then
+                        dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
+                     endif
                   enddo
 
                endif
@@ -656,6 +659,61 @@ contains
          end do
          end do
 
+         !--- Add Total number of charge neutralization and flash point
+         if ( HIST_id(I_Qneut) > 0 ) then
+            !$omp parallel do
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+                d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP ![fC/m3]->[nC/m3]
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_FlashPoint) > 0 ) then
+            !$omp parallel do
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
+            end do
+            end do
+            end do
+         end if
+
+         if ( HIST_id(I_PosFLASH) > 0 ) then
+            !$omp parallel do
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
+                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_NegFLASH) > 0 ) then
+            !$omp parallel do
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
+                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
+            end do
+            end do
+            end do
+         end if
+         if ( HIST_id(I_LTpath) > 0 ) then
+            !$omp parallel do
+            do j = JS, JE
+            do i = IS, IE
+            do k = KS, KE
+               LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
+            end do
+            end do
+            end do
+         end if
+
          call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                        IA, IS, IE,             &   ! [IN]
                                        JA, JS, JE,             &   ! [IN]
@@ -664,7 +722,6 @@ contains
                                        Emax,                   &   ! [OUT]
                                        flg_lt_neut             )   ! [OUT]
 
-         flg_add_output = .true.
          count_neut = count_neut + 1
 #ifdef DEBUG
          LOG_INFO("ATMOS_PHY_LT_sato2019_adjustment",'(A,F15.7,A,F15.7,1X,I0)')  &
@@ -694,7 +751,6 @@ contains
                    ' [kV/m] larger than previous one by neutralization, back to previous step, Finish', &
                    count_neut
             endif
-            flg_add_output = .false.
             !---- Back to Charge density as previous step
             do j = JS, JE
             do i = IS, IE
@@ -702,6 +758,7 @@ contains
                do n = 1, QA_LT
                   QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
                enddo
+               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)*1.E-6_RP
                d_QCRG(k,i,j) = 0.0_RP
             enddo
             enddo
@@ -720,65 +777,6 @@ contains
                    '[kV/m] After neutralization, Finish', count_neut
             endif
          endif
-
-         !--- Add Total number of charge neutralization and flash point
-         if( flg_add_output ) then
-
-            if ( HIST_id(I_Qneut) > 0 ) then
-               !$omp parallel do
-               do j = JS, JE
-               do i = IS, IE
-               do k = KS, KE
-                  d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP
-               end do
-               end do
-               end do
-            end if
-            if ( HIST_id(I_FlashPoint) > 0 ) then
-               !$omp parallel do
-               do j = JS, JE
-               do i = IS, IE
-               do k = KS, KE
-                  fls_int_p_tot(k,i,j) = fls_int_p_tot(k,i,j) + fls_int_p(k,i,j)
-               end do
-               end do
-               end do
-            end if
-
-            if ( HIST_id(I_PosFLASH) > 0 ) then
-               !$omp parallel do
-               do j = JS, JE
-               do i = IS, IE
-               do k = KS, KE
-                  LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
-                                       + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
-               end do
-               end do
-               end do
-            end if
-            if ( HIST_id(I_NegFLASH) > 0 ) then
-               !$omp parallel do
-               do j = JS, JE
-               do i = IS, IE
-               do k = KS, KE
-                  LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
-                                       + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
-               end do
-               end do
-               end do
-            end if
-            if ( HIST_id(I_LTpath) > 0 ) then
-               !$omp parallel do
-               do j = JS, JE
-               do i = IS, IE
-               do k = KS, KE
-                  LT_PATH_TOT(k,i,j,3) = LT_PATH_TOT(k,i,j,3) + LT_PATH(k,i,j)
-               end do
-               end do
-               end do
-            end if
-
-            end if
 
        enddo
 
@@ -1447,13 +1445,20 @@ contains
        swap => rn
        rn => r
        r => swap
+
+       if ( r0r == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,3e15.7)') "Inner product of r0 and r_itr is zero(Bi-CGSTAB) :", &
+                                                                iter, r0r, sqrt(error/norm), norm
+         exit
+       endif
+
     enddo
 
     if ( iter >= ITMAX ) then
        if( PRC_IsMaster ) then
-         write(*,*) 'xxx [atmos_phy_lt] Bi-CGSTAB'
-         write(*,*) 'xxx not converged', error, norm
-         write(*,*) 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', error, norm
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', epsilon, sqrt(error/norm)
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
          if( error /= error ) then
           write(*,*) 'xxx error or norm is NaN Stop!'
           call PRC_abort
