@@ -1161,7 +1161,7 @@ contains
     call COMM_wait ( E_pot_N, 3 )
 
     !--- calcuclate counter matrix
-    call solve_bicgstab( &
+    call ATMOS_PHY_LT_solve_bicgstab( &
        KA, KS, KE, & ! (in)
        IA, IS, IE, & ! (in)
        JA, JS, JE, & ! (in)
@@ -1217,7 +1217,7 @@ contains
     return
   end subroutine ATMOS_PHY_LT_electric_field
 
-  subroutine solve_bicgstab( &
+  subroutine ATMOS_PHY_LT_solve_bicgstab( &
        KA, KS, KE, & ! [IN]
        IA, IS, IE, & ! [IN]
        JA, JS, JE, & ! [IN]
@@ -1456,18 +1456,18 @@ contains
 
     if ( iter >= ITMAX ) then
        if( PRC_IsMaster ) then
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', error, norm
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', epsilon, sqrt(error/norm)
-         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,2e15.7)') 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
+         LOG_WARN("ATMOS_PHY_LT_solve_bicgstab",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', error, norm
+         LOG_WARN_CONT('(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', epsilon, sqrt(error/norm)
+         LOG_WARN_CONT('(a,1x,2e15.7)') 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
          if( error /= error ) then
-          write(*,*) 'xxx error or norm is NaN Stop!'
+          LOG_ERROR("ATMOS_PHY_LT_solve_bicgstab",*) 'xxx error or norm is NaN Stop!'
           call PRC_abort
          endif
        endif
     endif
 
     return
-  end subroutine solve_bicgstab
+  end subroutine ATMOS_PHY_LT_solve_bicgstab
 
   subroutine mul_matrix( KA,KS,KE, &
                          IA,IS,IE, &
