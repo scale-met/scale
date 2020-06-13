@@ -342,6 +342,8 @@ contains
     real(RP) :: neg_crg, pos_crg
     real(RP) :: frac, r_totalSarea(2)
     real(RP) :: dqneut(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real(KA,IA,JA,QA_LT)
+    real(RP) :: dqneut_real_tot(KA,IA,JA)
     logical  :: flg_chrged(QA_LT)
     real(RP) :: Emax, Emax_old
     logical  :: output_step
@@ -475,6 +477,7 @@ contains
          call COMM_wait ( d_QCRG(:,:,:),2 )
 
          dqneut(:,:,:,:) = 0.0_RP
+         dqneut_real(:,:,:,:) = 0.0_RP
          !-- Calculate neutralization of each hydrometeor or each category
          select case( NUTR_qhyd )
          case ( 'TOTAL' )
@@ -495,6 +498,7 @@ contains
                      dqneut(k,i,j,n) = d_QCRG(k,i,j)*1.0E+6_RP &
                                      * Sarea(k,i,j,n) * r_totalSarea(1) / DENS(k,i,j)
                      QTRC(k,i,j,n) = QTRC(k,i,j,n) + dqneut(k,i,j,n)
+                     dqneut_real(k,i,j,n) = dqneut(k,i,j,n)
                   enddo
                endif
             enddo
@@ -560,9 +564,9 @@ contains
                         qcrg_before(n) = QTRC(k,i,j,n)
 
                         if( sw == 1.0_RP ) then
-                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = max( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
                         elseif( sw == 0.0_RP ) then
-                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n)/DENS(k,i,j), 0.0_RP )  !--- limiter
+                          QTRC(k,i,j,n) = min( QTRC(k,i,j,n) + dqneut(k,i,j,n), 0.0_RP )  !--- limiter
                         endif
 
                         int_sw = int( sw )   ! 0-> negative, 1-> positive
@@ -588,16 +592,25 @@ contains
                     lack(0) = max( lack(0), 0.0_RP ) ! negative (Should be Positive)
                     lack(1) = min( lack(1), 0.0_RP ) ! positive (Should be Negative)
                     do n = 1, QA_LT
-                       sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
-                       int_sw = int( sw )   ! 0-> negative, 1-> positive
-                       if( sum_crg(int_sw) /= 0.0_RP ) then
-                          crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
-                       else
-                          crg_rate(n) = 0.0_RP
+                       if ( flg_chrged(n) ) then
+                          sw = 0.5_RP + sign( 0.5_RP, QTRC(k,i,j,n) )
+                          int_sw = int( sw )   ! 0-> negative, 1-> positive
+                          if( sum_crg(int_sw) /= 0.0_RP ) then
+                             crg_rate(n) = QTRC(k,i,j,n)/sum_crg(int_sw)
+                          else
+                             crg_rate(n) = 0.0_RP
+                          endif
+                          QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                        endif
-                       QTRC(k,i,j,n) = QTRC(k,i,j,n) + crg_rate(n) * lack(int_sw)
                     enddo
                   endif
+
+                  do n = 1, QA_LT
+                     if ( flg_chrged(n) ) then
+                        dqneut_real(k,i,j,n) = QTRC(k,i,j,n) - qcrg_before(n)
+                     endif
+                  enddo
+
                endif
 
             enddo
@@ -613,8 +626,10 @@ contains
             ! calc total charge density
             do k = KS, KE
                QCRG(k,i,j) = 0.0_RP
+               dqneut_real_tot(k,i,j) = 0.0_RP
                do n = 1, QA_LT
                   QCRG(k,i,j) = QCRG(k,i,j) + QTRC(k,i,j,n)
+                  dqneut_real_tot(k,i,j) = dqneut_real_tot(k,i,j) + dqneut_real(k,i,j,n)
                end do
                QCRG(k,i,j) = QCRG(k,i,j) * DENS(k,i,j) * 1.E-6_RP ![fC/kg] -> [nc/m3]
             enddo
@@ -650,7 +665,7 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
-               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + d_QCRG(k,i,j)
+                d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) + dqneut_real_tot(k,i,j)*1.E-6_RP ![fC/m3]->[nC/m3]
             end do
             end do
             end do
@@ -672,7 +687,7 @@ contains
             do i = IS, IE
             do k = KS, KE
                LT_PATH_TOT(k,i,j,1) = LT_PATH_TOT(k,i,j,1) &
-                                    + 0.5_RP + sign( 0.5_RP,-d_QCRG(k,i,j)-SMALL )
+                                    + 0.5_RP + sign( 0.5_RP,-dqneut_real_tot(k,i,j)-SMALL )
             end do
             end do
             end do
@@ -683,7 +698,7 @@ contains
             do i = IS, IE
             do k = KS, KE
                LT_PATH_TOT(k,i,j,2) = LT_PATH_TOT(k,i,j,2) &
-                                    + 0.5_RP + sign( 0.5_RP, d_QCRG(k,i,j)-SMALL )
+                                    + 0.5_RP + sign( 0.5_RP, dqneut_real_tot(k,i,j)-SMALL )
             end do
             end do
             end do
@@ -740,10 +755,11 @@ contains
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
-               d_QCRG(k,i,j) = 0.0_RP
                do n = 1, QA_LT
-                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut(k,i,j,n)
+                  QTRC(k,i,j,n) = QTRC(k,i,j,n) - dqneut_real(k,i,j,n)
                enddo
+               d_QCRG_TOT(k,i,j) = d_QCRG_TOT(k,i,j) - dqneut_real_tot(k,i,j)*1.E-6_RP
+               d_QCRG(k,i,j) = 0.0_RP
             enddo
             enddo
             enddo
@@ -1145,7 +1161,7 @@ contains
     call COMM_wait ( E_pot_N, 3 )
 
     !--- calcuclate counter matrix
-    call solve_bicgstab( &
+    call ATMOS_PHY_LT_solve_bicgstab( &
        KA, KS, KE, & ! (in)
        IA, IS, IE, & ! (in)
        JA, JS, JE, & ! (in)
@@ -1201,7 +1217,7 @@ contains
     return
   end subroutine ATMOS_PHY_LT_electric_field
 
-  subroutine solve_bicgstab( &
+  subroutine ATMOS_PHY_LT_solve_bicgstab( &
        KA, KS, KE, & ! [IN]
        IA, IS, IE, & ! [IN]
        JA, JS, JE, & ! [IN]
@@ -1429,22 +1445,29 @@ contains
        swap => rn
        rn => r
        r => swap
+
+       if ( r0r == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,i0,1x,3e15.7)') "Inner product of r0 and r_itr is zero(Bi-CGSTAB) :", &
+                                                                iter, r0r, sqrt(error/norm), norm
+         exit
+       endif
+
     enddo
 
     if ( iter >= ITMAX ) then
        if( PRC_IsMaster ) then
-         write(*,*) 'xxx [atmos_phy_lt] Bi-CGSTAB'
-         write(*,*) 'xxx not converged', error, norm
-         write(*,*) 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
+         LOG_WARN("ATMOS_PHY_LT_solve_bicgstab",'(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', error, norm
+         LOG_WARN_CONT('(a,1x,2e15.7)') 'Bi-CGSTAB not converged:', epsilon, sqrt(error/norm)
+         LOG_WARN_CONT('(a,1x,2e15.7)') 'xxx epsilon(set,last)=', epsilon, sqrt(error/norm)
          if( error /= error ) then
-          write(*,*) 'xxx error or norm is NaN Stop!'
+          LOG_ERROR("ATMOS_PHY_LT_solve_bicgstab",*) 'xxx error or norm is NaN Stop!'
           call PRC_abort
          endif
        endif
     endif
 
     return
-  end subroutine solve_bicgstab
+  end subroutine ATMOS_PHY_LT_solve_bicgstab
 
   subroutine mul_matrix( KA,KS,KE, &
                          IA,IS,IE, &
