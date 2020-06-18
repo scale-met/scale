@@ -272,22 +272,24 @@ OBJS_FOR_SDM = \
 	$(BUILD_DIR)/scale_rm_process.o
 
 all:
-	$(MAKE) makedir
+	$(MAKE) build
+	$(MAKE) install
+
+build:
 	@echo;echo "Entering scalelib..."; echo "Current version is " $(LIBVERSION)
+	mkdir -p $(BUILD_DIR)
 ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) checksdm
 	$(MAKE) overridesdm
 	$(MAKE) makesdm
 endif
-	$(MAKE) $(LIBDIR)/$(LIBNAME)
-	$(MAKE) modules
 	@echo "Complete making scalelib."
 
-makedir:
-	mkdir -p $(BUILD_DIR)
+install:
 	mkdir -p $(MODDIR)
 	mkdir -p $(LIBDIR)
-
+	$(MAKE) modules
+	$(MAKE) $(LIBDIR)/$(LIBNAME)
 
 info:
 	@$(MAKE) --no-print-directory envlog
