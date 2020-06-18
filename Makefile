@@ -1,45 +1,59 @@
-INSTALL=install
+SCALELIBDIR = scalelib/src
+SCALERMDIR  = scale-rm/src
+NET2GDIR    = scale-rm/util/netcdf2grads_h
+SNODIR      = scale-rm/util/sno
+SCALEGMDIR  = scale-gm/src
 
-all: build-rm build-net2g
+all: build
 
-install: install-rm install-net2g
+build:
+	$(MAKE) -C $(SCALELIBDIR) build
+	$(MAKE) -C $(SCALELIBDIR) install
+	$(MAKE) build-rm build-net2g build-sno build-gm
+
+install: install-rm install-net2g install-sno install-gm
 
 clean:
-	cd scale-rm/src && $(MAKE) clean allclean
-	cd scale-rm/util/netcdf2grads_h && $(MAKE) clean
-	cd scale-gm/src && $(MAKE) clean allclean
+	$(MAKE) -C $(SCALERMDIR) clean
+	$(MAKE) -C $(NET2GDIR) clean
+	$(MAKE) -C $(SNODIR) clean
+	$(MAKE) -C $(SCALEGMDIR) clean
+	$(MAKE) -C $(SCALELIBDIR) clean
+
+distclean:
+	$(MAKE) -C $(SCALERMDIR) distclean
+	$(MAKE) -C $(NET2GDIR) distclean
+	$(MAKE) -C $(SNODIR) distclean
+	$(MAKE) -C $(SCALEGMDIR) distclean
+	$(MAKE) -C $(SCALELIBDIR) distclean
+
+allclean:
+	$(MAKE) -C $(SCALERMDIR) allclean
+	$(MAKE) -C $(NET2GDIR) distclean
+	$(MAKE) -C $(SNODIR) distclean
+	$(MAKE) -C $(SCALEGMDIR) allclean
+	$(MAKE) -C $(SCALELIBDIR) allclean
 
 build-rm:
-	cd scale-rm/src && $(MAKE)
+	$(MAKE) -C $(SCALERMDIR) build
 
 build-net2g:
-	cd scale-rm/util/netcdf2grads_h && $(MAKE)
+	$(MAKE) -C $(NET2GDIR) build
+
+build-sno:
+	$(MAKE) -C $(SNODIR) build
 
 build-gm:
-	cd scale-gm/src && $(MAKE)
+	$(MAKE) -C $(SCALEGMDIR) build
 
-bin/scale-rm : build-rm
-bin/net2g : build-net2g
-bin/scale-gm : build-gm
+install-rm:
+	$(MAKE) -C $(SCALERMDIR) install
 
-install-rm: bin/scale-rm
-	$(INSTALL) -d $(PREFIX)/bin
-	$(INSTALL) bin/scale-rm $(PREFIX)/bin
-	$(INSTALL) bin/scale-rm_init $(PREFIX)/bin
-	$(INSTALL) bin/scale-rm_pp $(PREFIX)/bin
+install-net2g:
+	$(MAKE) -C $(NET2GDIR) install
 
-install-net2g: bin/net2g
-	$(INSTALL) bin/net2g $(PREFIX)/bin
+install-sno:
+	$(MAKE) -C $(SNODIR) install
 
-install-gm: bin/scale-gm
-	$(INSTALL) -d $(PREFIX)/bin
-	$(INSTALL) bin/scale-gm $(PREFIX)/bin
-	$(INSTALL) bin/gm_fio_cat $(PREFIX)/bin
-	$(INSTALL) bin/gm_fio_dump $(PREFIX)/bin
-	$(INSTALL) bin/gm_fio_ico2ll $(PREFIX)/bin
-	$(INSTALL) bin/gm_fio_sel $(PREFIX)/bin
-	$(INSTALL) bin/gm_mkhgrid $(PREFIX)/bin
-	$(INSTALL) bin/gm_mkllmap $(PREFIX)/bin
-	$(INSTALL) bin/gm_mkmnginfo $(PREFIX)/bin
-	$(INSTALL) bin/gm_mkrawgrid $(PREFIX)/bin
-	$(INSTALL) bin/gm_mkvlayer $(PREFIX)/bin
+install-gm:
+	$(MAKE) -C $(SCALEGMDIR) install
