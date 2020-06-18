@@ -30,18 +30,22 @@ OBJS = mod_sno_h.o     \
        mod_snoplugin_vgridope.o
 
 all:
-	$(MAKE) envlog
-	$(MAKE) makedir
-	$(MAKE) makebin
-	@echo "Complete making."
+	$(MAKE) build
+	$(MAKE) install
 
-makedir:
-	mkdir -p $(BINDIR)
+build:
 	mkdir -p $(BUILD_DIR)
+	$(MAKE) $(BUILD_DIR)/$(BINNAME)
 
-makebin: $(BINDIR)/$(BINNAME)
+install:
+	mkdir -p $(BINDIR)
+	$(INSTALL) $(BUILD_DIR)/$(BINNAME) $(BINDIR)/$(BINNAME)
 
-$(BINDIR)/$(BINNAME) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(OBJECT): $(MODS)
+	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+	@mv *.mod inc/; mv *.o inc/;
+
+$(BUILD_DIR)/$(BINNAME) : $(BUILD_DIR)/prg_$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(LIBS) $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
 $(BUILD_DIR)/prg_$(BINNAME).o : prg_$(BINNAME).F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
@@ -60,14 +64,11 @@ $(BUILD_DIR)/mod_snoplugin_vgridope.o : mod_snoplugin_vgridope.F90 $(BUILD_DIR)/
 
 
 
-allclean: distclean
+distclean: clean
 	rm -f $(BINDIR)/$(BINNAME)
 
-distclean: clean
-	rm -f $(BUILD_DIR)/$(BINNAME)
-
 clean:
-	rm -f $(BUILD_DIR)/*.*
+	rm -rf $(BUILD_DIR)
 
 
 
