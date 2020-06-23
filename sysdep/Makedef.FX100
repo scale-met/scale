@@ -7,8 +7,8 @@
 ##### Fortran setting
 #FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-FC  = mpifrt
-SFC = frt
+FC  = mpifrtpx
+SFC = frtpx
 MODDIROPT = -M
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
@@ -35,7 +35,7 @@ FFLAGS_DEBUG = -O0                                                       \
 ##### C setting
 #CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-CC = mpifcc
+CC = mpifccpx
 
 CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
 CFLAGS_DEBUG = -O0
