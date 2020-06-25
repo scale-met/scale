@@ -34,7 +34,9 @@ module mod_atmos_phy_bl_vars
   !
   integer,  public              :: QS, QE
 
-  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi(:,:,:)     ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi(:,:,:)        ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_QL(:,:,:,:)      ! cloud water
+  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:,:) ! cloud fraction
 
   !-----------------------------------------------------------------------------
   !
@@ -60,8 +62,12 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_BL_vars_setup",*) 'Setup'
 
-    allocate( ATMOS_PHY_BL_Zi(IA,JA,ADM_lall) )
-    ATMOS_PHY_BL_Zi(:,:,:) = 100.0_RP ! tentative
+    allocate( ATMOS_PHY_BL_Zi     (IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_BL_QL     (KA,IA,JA,ADM_lall) )
+    allocate( ATMOS_PHY_BL_cldfrac(KA,IA,JA,ADM_lall) )
+    ATMOS_PHY_BL_Zi     (:,:,:)   = UNDEF
+    ATMOS_PHY_BL_QL     (:,:,:,:) = UNDEF
+    ATMOS_PHY_BL_cldfrac(:,:,:,:) = UNDEF
 
     return
   end subroutine ATMOS_PHY_BL_vars_setup

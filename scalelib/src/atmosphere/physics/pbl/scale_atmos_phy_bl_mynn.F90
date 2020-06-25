@@ -110,8 +110,6 @@ module scale_atmos_phy_bl_mynn
 
   character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3", level 3 is under experimental yet.
 
-  integer,  private, allocatable :: MYNN_KE_PBL(:,:)
-
   namelist / PARAM_ATMOS_PHY_BL_MYNN / &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
        ATMOS_PHY_BL_MYNN_N2_MAX,   &
@@ -187,7 +185,6 @@ contains
   !<
   subroutine ATMOS_PHY_BL_MYNN_setup( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       CZ, FZ, &
        BULKFLUX_type, &
        TKE_MIN, PBL_MAX )
     use scale_prc, only: &
@@ -199,8 +196,6 @@ contains
     integer,  intent(in) :: KA, KS, KE
     integer,  intent(in) :: IA, IS, IE
     integer,  intent(in) :: JA, JS, JE
-    real(RP), intent(in) :: CZ(  KA,IA,JA)
-    real(RP), intent(in) :: FZ(0:KA,IA,JA)
 
     character(len=*), intent(in) :: BULKFLUX_type
 
@@ -245,19 +240,6 @@ contains
     SQRT_2PI  = sqrt( 2.0_RP * PI )
     RSQRT_2PI = 1.0_RP / SQRT_2PI
     RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
-
-    allocate( MYNN_KE_PBL(IA,JA) )
-
-    MYNN_KE_PBL(:,:) = KS+1
-    do k = KS+2, KE-1
-       do j = JS, JE
-       do i = IS, IE
-          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
-             MYNN_KE_PBL(i,j) = k
-          end if
-       end do
-       end do
-    end do
 
     if ( ATMOS_PHY_BL_MYNN_LEVEL == "3" ) then
        LOG_WARN("ATMOS_PHY_BL_MYNN_setup", *) "At this moment, level 3 is still experimental"
@@ -443,25 +425,21 @@ contains
 
     mynn_level3 = ( ATMOS_PHY_BL_MYNN_LEVEL == "3" )
 
-    if ( initialize ) then
-       nit = maxval( MYNN_KE_PBL(IS:IE,JS:JE) ) - 1
-    else
-       nit = 1
-    end if
 
 !OCL INDEPENDENT
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KA,KS,MYNN_KE_PBL,KE,IS,IE,JS,JE, &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
     !$omp        EPS,GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
+    !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
     !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
-    !$omp        mynn_level3,initialize,nit, &
+    !$omp        mynn_level3,initialize, &
     !$omp        CZ,FZ,dt, &
     !$omp        BULKFLUX_type, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
@@ -474,11 +452,24 @@ contains
     !$omp         prod_t,prod_q,prod_c,diss_p, &
     !$omp         fmin,kmin, &
     !$omp         sw,tmp, &
-    !$omp         KE_PBL,k,i,j,it)
+    !$omp         KE_PBL,k,i,j,it,nit)
     do j = JS, JE
     do i = IS, IE
 
-       KE_PBL = MYNN_KE_PBL(i,j)
+       KE_PBL = KS+1
+       do k = KS+2, KE-1
+          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
+             KE_PBL = k
+          else
+             exit
+          end if
+       end do
+
+       if ( initialize ) then
+          nit = KE_PBL - 1
+       else
+          nit = 1
+       end if
 
 
        z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
@@ -1101,18 +1092,12 @@ contains
 
        end do
 
-    end do
-    end do
-
-
-    do j = JS, JE
-    do i = IS, IE
-       do k = MYNN_KE_PBL(i,j), KE
+       do k = KE_PBL, KE
           Nu   (k,i,j) = 0.0_RP
           Kh   (k,i,j) = 0.0_RP
           Pr   (k,i,j) = 1.0_RP
        end do
-       do k = MYNN_KE_PBL(i,j)+1, KE
+       do k = KE_PBL+1, KE
           Ri     (k,i,j) = UNDEF
           prod   (k,i,j) = UNDEF
           diss   (k,i,j) = UNDEF
@@ -1121,6 +1106,7 @@ contains
           Qlp    (k,i,j) = UNDEF
           cldfrac(k,i,j) = UNDEF
        end do
+
     end do
     end do
 
@@ -1200,14 +1186,22 @@ contains
 
 !OCL INDEPENDENT
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KA,KS,MYNN_KE_PBL,KE,IS,IE,JS,JE) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
+    !$omp shared(ATMOS_PHY_BL_MYNN_PBL_MAX) &
     !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,MASS,CZ,FZ,DT,flx) &
     !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ,f2h) &
     !$omp private(KE_PBL,k,i,j)
     do j = JS, JE
     do i = IS, IE
 
-       KE_PBL = MYNN_KE_PBL(i,j)
+       KE_PBL = KS+1
+       do k = KS+2, KE-1
+          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
+             KE_PBL = k
+          else
+             exit
+          end if
+       end do
 
        do k = KS, KE_PBL
           CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)

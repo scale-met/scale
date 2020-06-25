@@ -91,13 +91,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
-    use scale_atmos_grid_cartesC, only: &
-       CDZ => ATMOS_GRID_CARTESC_CDZ, &
-       CDX => ATMOS_GRID_CARTESC_CDX, &
-       CDY => ATMOS_GRID_CARTESC_CDY
-    use scale_atmos_grid_cartesC_real, only: &
-       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
@@ -116,7 +109,6 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               CZ, FZ,       & ! (in)
                BULKFLUX_type ) ! (in)
        end select
     else
@@ -225,7 +217,7 @@ contains
           if ( I_QV > 0 ) then
              RHOQV_t => RHOQ_t_BL(:,:,:,I_QV)
           else
-             allocate( RHOQV_T(KA,IA,JA) )
+             allocate( RHOQV_t(KA,IA,JA) )
           end if
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -243,7 +235,7 @@ contains
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
                QL(:,:,:), cldfrac(:,:,:), Zi(:,:)                      ) ! (out)
-          if ( I_QV <= 0 ) deallocate( RHOQV_T )
+          if ( I_QV <= 0 ) deallocate( RHOQV_t )
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
