@@ -99,7 +99,7 @@ module scale_bulkflux
   !
   real(DP), parameter, private :: EPS = 1.E-16_DP
 
-  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B94', and 'B91W01'
+  character(len=H_SHORT), private :: BULKFLUX_type = 'B91W01' ! 'U95', 'B91', and 'B91W01'
 
   logical,  private :: BULKFLUX_NK2018 = .true. !> Nishizawa and Kitamura (2018)
 
@@ -171,11 +171,11 @@ contains
        LOG_INFO_CONT(*) '=> Uno et al.(1995)'
        BULKFLUX => BULKFLUX_U95
     case('B91W01')
-       LOG_INFO_CONT(*) '=> Beljaars (1991) and Wilson (2001)'
+       LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991) and Wilson (2001)'
        FLAG_W01 = .true.
        BULKFLUX => BULKFLUX_B91W01
-    case('B94')
-       LOG_INFO_CONT(*) '=> Beljaars (1994)'
+    case('B91')
+       LOG_INFO_CONT(*) '=> Beljaars and Holtslag (1991)'
        FLAG_W01 = .false.
        BULKFLUX => BULKFLUX_B91W01
     case default
@@ -615,10 +615,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !
-  ! refs. Beljaars (1991) and Wilson (2001)
-  !
-  ! If you want to run with the original Beljaars scheme (Beljaars and Holtslag 1994),
-  ! you should fix the stability functions (fm_unstable, fh_unstable, fm_stable, and fh_stable).
+  ! refs. Beljaars and Holtslag (1991) and Wilson (2001)
   !
   ! Iteration method: refs. JMA-NHM Description Note II, Mar 2008
   !
@@ -987,7 +984,7 @@ contains
        ! Wilson (2001)
        fm_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP )
     else
-       ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
+       ! Beljaars and Holtslag (1991), originally Paulson (1974) and Dyer (1974)
        r4R = sqrt( sqrt( 1.0_DP - 16.0_DP * R ) )
        fm_unstable = log( ( 1.0_DP + r4R )**2 * ( 1.0_DP + r4R * r4R ) * 0.125_DP ) - 2.0_DP * atan( r4R ) + PI * 0.5_DP
     end if
@@ -1030,7 +1027,7 @@ contains
                        - 1.0_DP
        end if
     else
-       ! Beljaars and Holtslag (1994), originally Paulson (1974) and Dyer (1974)
+       ! Beljaars and Holtslag (1991), originally Paulson (1974) and Dyer (1974)
        if ( R > -EPS ) then ! |R|<EPS, now R < 0
           fmm_unstable = - 2.0_DP * R
        else
@@ -1073,7 +1070,7 @@ contains
        fh_unstable = 3.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP + gamma * (-R)**(2.0_DP/3.0_DP) ) ) * 0.5_DP ) * PT &
                    + log( Z ) * ( 1.0_DP - Pt )
     else
-       ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
+       ! Beljaars and Holtslag (1991), originally Paulson (1974); Dyer (1974)
        fh_unstable = 2.0_DP * log( ( 1.0_DP + sqrt( 1.0_DP - 16.0_DP * R ) ) * 0.5_DP )
     end if
 
@@ -1115,7 +1112,7 @@ contains
           fhm_unstable = fhm_unstable * Pt + ( log( Z ) - 1.0_DP ) * ( 1.0_DP - Pt )
        end if
     else
-       ! Beljaars and Holtslag (1994), originally Paulson (1974); Dyer (1974)
+       ! Beljaars and Holtslag (1991), originally Paulson (1974); Dyer (1974)
        if ( R > -EPS ) then ! |R| < EPS, now R < 0
           fhm_unstable = - 4.0_DP * R
        else
