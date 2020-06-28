@@ -17,7 +17,7 @@ FFLAGS_CORE = -cpp                                                              
 
 FFLAGS_FAST  = -O3 $(FFLAGS_CORE)                                       \
                -funroll-loops -finline-functions -fprefetch-loop-arrays \
-               -mcmodel=large
+               -mcmodel=small
 
 FFLAGS_QUICKDEBUG = -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -g -fbacktrace
 
