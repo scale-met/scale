@@ -1,0 +1,84 @@
+################################################################################
+#
+# ------ For Linux64 & gnu fortran&C & openmpi -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpif90
+SFC = gfortran
+MODDIROPT = -J
+
+FFLAGS_CORE = -cpp                                                                          \
+              -std=f2003 -fall-intrinsics -pedantic-errors -fimplicit-none -fmodule-private \
+              -fconvert=big-endian -frecord-marker=4 -ffree-form -ffree-line-length-none
+
+FFLAGS_FAST  = -O3 $(FFLAGS_CORE)                                       \
+               -funroll-loops -finline-functions -fprefetch-loop-arrays \
+               -mcmodel=small
+
+FFLAGS_QUICKDEBUG = -ffpe-trap=invalid,zero,overflow -fbounds-check -finit-real=nan -g -fbacktrace
+
+FFLAGS_DYN   = $(FFLAGS)
+
+FFLAGS_DEBUG = -O0 $(FFLAGS_CORE)                                                                   \
+               -ffpe-trap=invalid,zero,overflow -fbounds-check                                      \
+               -finit-integer=-32768 -finit-real=nan -finit-logical=false -finit-character=9        \
+               -Wall -Wextra -Wcharacter-truncation -Wunderflow -Warray-temporaries -Wuninitialized \
+               -g -fbacktrace
+
+F77FLAGS = -ffixed-form -ffixed-line-length-132
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC  = mpicc
+
+CFLAGS_FAST  = -O3
+CFLAGS_DEBUG = -O0 -g
+
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -fopenmp
+
+SSE_FLAGS = -mtune=native
+#SSE_FLAGS = -mtune=native -mavx
+
+FFLAGS_SYSDEPEND = $(SSE_FLAGS)
+CFLAGS_SYSDEPEND = $(SSE_FLAGS)
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
+
+###### NetCDF library
+# Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
+# Or, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/ap/netcdf4-fortran/4.4.2/include -I/ap/HDF5/1.8.16/include -I/ap/netcdf4/4.3.3.1/include"
+# export SCALE_NETCDF_LIBS="-L/ap/netcdf4-fortran/4.4.2/lib -L/ap/HDF5/1.8.16/lib -L/ap/netcdf4/4.3.3.1/lib -lnetcdff -lnetcdf"
+
+###### Math library
+# Please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-L/ap/lapack/3.6.0/lib/ -llapack"
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = sh
