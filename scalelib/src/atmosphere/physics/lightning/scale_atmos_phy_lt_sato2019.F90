@@ -1368,6 +1368,10 @@ contains
        enddo
        enddo
        call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       if ( buf(1) == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(1) is zero(Bi-CGSTAB) skip:', buf(1), iter
+         exit
+       endif
        al = r0r / buf(1) ! (r0,r) / (r0,Mp)
 
        !$omp parallel do
@@ -1397,6 +1401,10 @@ contains
        enddo
        enddo
        call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
+       if ( buf(2) == 0.0_RP ) then
+         LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(2) is zero(Bi-CGSTAB) skip:', buf(2), iter
+         exit
+       endif
        w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
        !$omp parallel do
