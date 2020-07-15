@@ -1,0 +1,93 @@
+################################################################################
+#
+# ------ For FUGAKU -----
+#
+################################################################################
+
+##### Fortran setting
+#FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+FC  = mpifrtpx
+SFC = frtpx
+MODDIROPT = -M
+
+FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
+               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
+               -x-                                                       \
+               -Ksimd                                                    \
+               -Kauto,threadsafe
+
+# NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
+#       If you find the segmentation fault error, please check.
+
+FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=8,swp_strong
+
+FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
+
+FFLAGS_DYN   = $(FFLAGS) -Knoprefetch,loop_nofission,loop_nofusion,nounroll,parallel_strong -Ksimd=2 -x100
+
+FFLAGS_DEBUG = -O0                                                       \
+               -Nlst=i,lst=t -X03 -v03s -v03d -v03o -Ncompdisp -Koptmsg=1 -Cpp \
+               -Ec -Eg -Ha -He -Hf -Ho -Hs -Hu -Hx -Ncheck_global
+
+
+
+##### C setting
+#CFLAGS is set in Mkinclude. CFLAGS_DEBUG is used if SCALE_DEBUG=T
+
+CC = mpifccpx
+
+CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=all -Ksimd
+CFLAGS_DEBUG = -O0
+
+
+
+##### Special setting
+
+FFLAGS_OPENMP = -Kopenmp
+# enable + disable parallel
+# FFLAGS_OPENMP = -Kopenmp,noparallel
+
+### Performance monitor
+# disable
+#PERF_MONIT = -Nnofjprof -UFIPP -UFAPP -UFINEPA
+# fipp
+PERF_MONIT = -Nfjprof -DFIPP -UFAPP -UFINEPA
+# fapp
+#PERF_MONIT = -Nfjprof -UFIPP -DFAPP -UFINEPA
+# fine PA
+#PERF_MONIT = -Nfjprof -UFIPP -UFAPP -DFINEPA
+
+FFLAGS_SYSDEPEND = $(PERF_MONIT)
+CFLAGS_SYSDEPEND = $(PERF_MONIT)
+
+
+
+##### Linker setting
+
+LD      = $(FC)
+LDFLAGS = $(FFLAGS)
+
+
+
+################################################################################
+
+###### NetCDF library
+# if nc-config is not available, please set environment variable
+# example:
+# export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
+# export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
+
+###### Math library
+# Default settings
+SCALE_MATHLIB_LIBS ?=
+# Or, please set environment variable
+# example:
+# export SCALE_MATHLIB_LIBS="-SSL2"
+
+##### for frontend
+INSTALL = install
+AR      = ar
+ARFLAGS = r
+RANLIB  = ranlib
+JOBSUB  = pjsub
