@@ -84,8 +84,6 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
-#PJM -L rscunit=gwmpc
-#PJM -L rscgrp=batch
 #PJM -L node=${TPROC}
 #PJM -L elapse=12:00:00
 #PJM -j
