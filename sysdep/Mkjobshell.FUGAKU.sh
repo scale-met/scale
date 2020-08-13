@@ -84,8 +84,9 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
+#PJM -L rscgrp="eap-small"
 #PJM -L node=${TPROC}
-#PJM -L elapse=12:00:00
+#PJM -L elapse=01:00:00
 #PJM -j
 #PJM -s
 #
