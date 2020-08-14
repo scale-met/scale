@@ -78,6 +78,10 @@ LDFLAGS = $(FFLAGS)
 # example:
 # export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
 # export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
+SCALE_NETCDF_INCLUDE ?= -I$(shell spack location --install-dir netcdf-c%fj)/include
+SCALE_NETCDF_LIBS ?= -L$(shell spack location --install-dir netcdf-c%fj)/lib -L$(shell spack location --install-dir hdf5%fj+hl)/lib -lnetcdf -lhdf5_hl -lhdf5
+#SCALE_ENABLE_PNETCDF=T
+
 
 ###### Math library
 # Default settings

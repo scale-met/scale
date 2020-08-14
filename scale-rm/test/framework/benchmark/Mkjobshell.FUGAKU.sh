@@ -84,8 +84,7 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
-#PJM -L rscunit=gwmpc
-#PJM -L rscgrp=batch
+#PJM -L rscgrp="eap-small"
 #PJM -L node=${TPROC}
 #PJM -L elapse=12:00:00
 #PJM -j
@@ -96,8 +95,10 @@ export PARALLEL=8
 export OMP_NUM_THREADS=8
 export FORT90L=-Wl,-T
 
-/vol0001/apps/oss/spack/share/spack/setup-env.sh
-spack load netcdf-c
+. /vol0001/apps/oss/spack/share/spack/setup-env.sh
+spack load netcdf-c%fj
+spack load netcdf-fortran%fj
+#spack load parallel-netcdf%fj
 
 EOF1
 
