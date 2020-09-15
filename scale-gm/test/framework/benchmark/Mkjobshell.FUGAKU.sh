@@ -50,7 +50,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
-      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Srange -Ihwm -d prof ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+      RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Sregion -Icpupa -d prof ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
    done
 fi
 
@@ -85,15 +85,17 @@ cat << EOF1 > ./run.sh
 #
 ################################################################################
 #PJM -L rscgrp="eap-small"
-#PJM -L node=${TPROC}
-#PJM -L elapse=12:00:00
+#PJM -L node=$(((TPROC+3)/4))
+#PJM -L elapse=1:00:00
+#PJM --mpi "max-proc-per-node=4"
 #PJM -j
 #PJM -s
 #
 #
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export PARALLEL=12
+export OMP_NUM_THREADS=12
 export FORT90L=-Wl,-T
+export PLE_MPI_STD_EMPTYFILE=off
 
 . /vol0001/apps/oss/spack/share/spack/setup-env.sh
 spack load netcdf-c%fj

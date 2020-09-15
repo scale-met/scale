@@ -20,7 +20,7 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
 # NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
 #       If you find the segmentation fault error, please check.
 
-FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=8,swp_strong
+FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=12,swp_strong
 
 FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 
@@ -95,3 +95,8 @@ AR      = ar
 ARFLAGS = r
 RANLIB  = ranlib
 JOBSUB  = pjsub
+
+
+#### other parameters
+SCALE_ENABLE_OPENMP     ?= T
+SCALE_USE_AGGRESSIVEOPT ?= T

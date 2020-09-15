@@ -85,15 +85,17 @@ cat << EOF1 > ./run.sh
 #
 ################################################################################
 #PJM -L rscgrp="eap-small"
-#PJM -L node=${TPROC}
+#PJM -L node=$(((TPROC+3)/4))
 #PJM -L elapse=01:00:00
+#PJM --mpi "max-proc-per-node=4"
 #PJM -j
 #PJM -s
 #
 #
-export PARALLEL=8
-export OMP_NUM_THREADS=8
+export PARALLEL=12
+export OMP_NUM_THREADS=12
 export FORT90L=-Wl,-T
+export PLE_MPI_STD_EMPTYFILE=off
 
 . /vol0001/apps/oss/spack/share/spack/setup-env.sh
 spack load netcdf-c%fj
