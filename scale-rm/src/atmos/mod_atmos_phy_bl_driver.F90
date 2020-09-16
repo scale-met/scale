@@ -91,17 +91,13 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
-    use scale_atmos_grid_cartesC, only: &
-       CDZ => ATMOS_GRID_CARTESC_CDZ, &
-       CDX => ATMOS_GRID_CARTESC_CDX, &
-       CDY => ATMOS_GRID_CARTESC_CDY
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     implicit none
     !---------------------------------------------------------------------------
 
@@ -113,7 +109,7 @@ contains
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               REAL_CZ ) ! (in)
+               BULKFLUX_type ) ! (in)
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
@@ -140,6 +136,10 @@ contains
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
        ATMOS_GRID_CARTESC_REAL_VOL, &
        ATMOS_GRID_CARTESC_REAL_TOTVOL
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -165,29 +165,35 @@ contains
        RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
        RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
        RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
-       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t
+       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t, &
+       Zi        => ATMOS_PHY_BL_Zi,     &
+       QL        => ATMOS_PHY_BL_QL,     &
+       cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
-       SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
-       SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
-       SFLX_QV => ATMOS_PHY_SF_SFLX_QV, &
-       Ustar   => ATMOS_PHY_SF_Ustar, &
-       RLmo    => ATMOS_PHY_SF_RLmo
+       SFC_DENS => ATMOS_PHY_SF_SFC_DENS,  &
+       SFLX_MU  => ATMOS_PHY_SF_SFLX_MU,   &
+       SFLX_MV  => ATMOS_PHY_SF_SFLX_MV,   &
+       SFLX_SH  => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_Q   => ATMOS_PHY_SF_SFLX_QTRC, &
+       SFLX_QV  => ATMOS_PHY_SF_SFLX_QV,   &
+       Ustar    => ATMOS_PHY_SF_Ustar,     &
+       Tstar    => ATMOS_PHY_SF_Tstar,     &
+       Qstar    => ATMOS_PHY_SF_Qstar,     &
+       RLmo     => ATMOS_PHY_SF_RLmo
     implicit none
 
     logical, intent(in) :: update_flag
 
-    real(RP) :: Nu   (KA,IA,JA) !> eddy viscosity
-    real(RP) :: Nu_cg(KA,IA,JA) !> eddy viscosity for the countergradient
-    real(RP) :: Kh   (KA,IA,JA) !> eddy diffution
-    real(RP) :: Kh_cg(KA,IA,JA) !> eddy diffution for the countergradient
+    real(RP) :: Nu(KA,IA,JA) !> eddy viscosity
+    real(RP) :: Kh(KA,IA,JA) !> eddy diffution
 
     real(RP) :: QW(KA,IA,JA) !> total water
 
     real(RP) :: N2  (KA,IA,JA) !> static stability
     real(RP) :: POTL(KA,IA,JA) !> liquid water potential temperature
     real(RP) :: POTV(KA,IA,JA) !> virtual potential temperature
+
+    real(RP), pointer :: RHOQV_t(:,:,:)
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -208,6 +214,11 @@ contains
           end do
           end do
           end do
+          if ( I_QV > 0 ) then
+             RHOQV_t => RHOQ_t_BL(:,:,:,I_QV)
+          else
+             allocate( RHOQV_t(KA,IA,JA) )
+          end if
           call ATMOS_PHY_BL_MYNN_tendency( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
@@ -215,19 +226,23 @@ contains
                PRES(:,:,:), EXNER(:,:,:), N2(:,:,:),                   & ! (in)
                QDRY(:,:,:), QV(:,:,:), QW(:,:,:),                      & ! (in)
                POTL(:,:,:), POTV(:,:,:),                               & ! (in)
+               SFC_DENS(:,:),                                          & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
-               Ustar(:,:), RLmo(:,:),                                  & ! (in)
+               Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
                CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
-               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:),                     & ! (out)
-               RHOT_t_BL(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),               & ! (out)
-               Nu(:,:,:), Nu_cg(:,:,:), Kh(:,:,:), Kh_cg(:,:,:)        ) ! (out)
+               BULKFLUX_type,                                          & ! (in)
+               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
+               RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
+               Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
+               QL(:,:,:), cldfrac(:,:,:), Zi(:,:)                      ) ! (out)
+          if ( I_QV <= 0 ) deallocate( RHOQV_t )
           do iq = 1, QA
-             if ( ( .not. TRACER_ADVC(iq) ) .or. (iq>=QS .and. iq<=QE) ) cycle
+             if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
                   SFLX_Q(:,:,iq),              & ! (in)
-                  Kh(:,:,:), Kh_cg(:,:,:),     & ! (in)
+                  Kh(:,:,:),                   & ! (in)
                   TRACER_MASS(iq),             & ! (in)
                   CZ(:,:,:), FZ(:,:,:),        & ! (in)
                   dt_BL, TRACER_NAME(iq),      & ! (in)
@@ -236,9 +251,12 @@ contains
        end select
 
        call FILE_HISTORY_in( Nu   (:,:,:),     'Nu_BL',     'eddy viscosity',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
-       call FILE_HISTORY_in( Nu_cg(:,:,:),     'Nu_cg_BL',  'eddy viscosity for the countergradient', 'm2/s',      fill_halo=.true., dim_type="ZHXY" )
        call FILE_HISTORY_in( Kh   (:,:,:),     'Kh_BL',     'eddy diffusion',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
-       call FILE_HISTORY_in( Kh_cg(:,:,:),     'Kh_cg_BL',  'eddy diffusion for the countergradient', 'm2/s',      fill_halo=.true., dim_type="ZHXY" )
+
+       call FILE_HISTORY_in( QL    (:,:,:),    'QL_BL',      'liquid water content in partial condensation', 'kg/kg', fill_halo=.true. )
+       call FILE_HISTORY_in( cldfrac(:,:,:),   'cldfrac_BL', 'cloud fraction in partial condensation',       '1',     fill_halo=.true. )
+
+       call FILE_HISTORY_in( Zi     (:,:),     'Zi_BL',      'depth of the boundary layer', 'm', fill_halo=.true. )
 
        call FILE_HISTORY_in( RHOU_t_BL(:,:,:), 'RHOU_t_BL', 'MOMX tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
        call FILE_HISTORY_in( RHOV_t_BL(:,:,:), 'RHOV_t_BL', 'MOMY tendency (BL)',                     'kg/m2/s2',  fill_halo=.true. )
@@ -264,7 +282,7 @@ contains
                                  ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
                                  ATMOS_GRID_CARTESC_REAL_TOTVOL      )
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                  Nu(:,:,:),       'Nu_BL',          &
+                                 Nu(:,:,:),        'Nu_BL',          &
                                  ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), &
                                  ATMOS_GRID_CARTESC_REAL_TOTVOL      )
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &

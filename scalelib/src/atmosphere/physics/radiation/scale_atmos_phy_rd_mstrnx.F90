@@ -693,7 +693,8 @@ contains
        do RD_k = RD_KADD+1, RD_KMAX
           k = KS + RD_KMAX - RD_k ! reverse axis
 
-          cldfrac_merge(RD_k,i,j) = 0.5_RP + sign( 0.5_RP, cldfrac(k,i,j)-min_cldfrac )
+          cldfrac_merge(RD_k,i,j) = min( max( cldfrac(k,i,j), 0.0_RP ), 1.0_RP )
+!          cldfrac_merge(RD_k,i,j) = 0.5_RP + sign( 0.5_RP, cldfrac(k,i,j)-min_cldfrac )
        enddo
     enddo
     enddo

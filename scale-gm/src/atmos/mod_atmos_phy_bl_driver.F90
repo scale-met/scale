@@ -91,16 +91,14 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
-    use mod_atmos_vars, only: &
-         CZ
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     implicit none
-
-    real(RP) :: CZ2(KA,IA,JA)
 
     integer :: k, i, j, l
     !---------------------------------------------------------------------------
@@ -111,16 +109,9 @@ contains
     if ( ATMOS_sw_phy_bl ) then
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
-          do j = JS, JE
-          do i = IS, IE
-          do k = KS, KE
-             CZ2(k,i,j) = minval( CZ(k,i,j,:) )
-          end do
-          end do
-          end do
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-               CZ2(:,:,:) ) ! (in)
+               BULKFLUX_type ) ! (in)
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
@@ -141,6 +132,10 @@ contains
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_tendency, &
        ATMOS_PHY_BL_MYNN_tendency_tracer
+    use scale_atmos_hydrometeor, only: &
+       I_QV
+    use scale_bulkflux, only: &
+       BULKFLUX_type
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -167,24 +162,28 @@ contains
        QI,    &
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
-       QS, QE
+       QS, QE, &
+       Zi      => ATMOS_PHY_BL_Zi,     &
+       QL      => ATMOS_PHY_BL_QL,     &
+       cldfrac => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
-       SFLX_MU => ATMOS_PHY_SF_SFLX_MU, &
-       SFLX_MV => ATMOS_PHY_SF_SFLX_MV, &
-       SFLX_SH => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_Q  => ATMOS_PHY_SF_SFLX_QTRC, &
-       SFLX_QV => ATMOS_PHY_SF_SFLX_QV, &
-       Ustar   => ATMOS_PHY_SF_Ustar, &
-       RLmo    => ATMOS_PHY_SF_RLmo
+       SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
+       SFLX_MU  => ATMOS_PHY_SF_SFLX_MU, &
+       SFLX_MV  => ATMOS_PHY_SF_SFLX_MV, &
+       SFLX_SH  => ATMOS_PHY_SF_SFLX_SH, &
+       SFLX_Q   => ATMOS_PHY_SF_SFLX_QTRC, &
+       SFLX_QV  => ATMOS_PHY_SF_SFLX_QV, &
+       Ustar    => ATMOS_PHY_SF_Ustar, &
+       Tstar    => ATMOS_PHY_SF_Tstar, &
+       Qstar    => ATMOS_PHY_SF_Qstar, &
+       RLmo     => ATMOS_PHY_SF_RLmo
     use mod_atmos_vars, only: &
        CZ, &
        FZ
     implicit none
 
     real(RP) :: Nu   (KA,IA,JA,ADM_lall) !> eddy viscosity
-    real(RP) :: Nu_cg(KA,IA,JA,ADM_lall) !> eddy viscosity for the counter gradient
     real(RP) :: Kh   (KA,IA,JA,ADM_lall) !> eddy diffution
-    real(RP) :: Kh_cg(KA,IA,JA,ADM_lall) !> eddy diffution for the counter gradient
     real(RP) :: QW(KA,IA,JA)          !> total water
 
     real(RP) :: N2  (KA,IA,JA,ADM_lall) !> static stability
@@ -194,6 +193,7 @@ contains
     real(RP) :: RHOU_t(KA,IA,JA)
     real(RP) :: RHOV_t(KA,IA,JA)
     real(RP) :: RHOT_t(KA,IA,JA)
+    real(RP) :: RHOQV_t(KA,IA,JA)
     real(RP) :: RHOQ_t(KA,IA,JA,QA)
 
     integer  :: k, i, j, iq, l
@@ -220,12 +220,15 @@ contains
                PRES(:,:,:,l), EXNER(:,:,:,l), N2(:,:,:,l),                     & ! (in)
                QDRY(:,:,:,l), QV(:,:,:,l), QW(:,:,:),                          & ! (in)
                POTL(:,:,:,l), POTV(:,:,:,l),                                   & ! (in)
+               SFC_DENS(:,:,l),                                                & ! (in)
                SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), SFLX_QV(:,:,l), & ! (in)
-               Ustar(:,:,l), RLmo(:,:,l),                                      & ! (in)
+               Ustar(:,:,l), Tstar(:,:,l), Qstar(:,:,l), RLmo(:,:,l),          & ! (in)
                CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                                & ! (in)
-               RHOU_t(:,:,:), RHOV_t(:,:,:),                                   & ! (out)
-               RHOT_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                             & ! (out)
-               Nu(:,:,:,l), Nu_cg(:,:,:,l), Kh(:,:,:,l), Kh_cg(:,:,:,l)        ) ! (out)
+               BULKFLUX_type,                                                  & ! (in)
+               RHOU_t(:,:,:), RHOV_t(:,:,:), RHOT_t(:,:,:),                    & ! (out)
+               RHOQV_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                            & ! (out)
+               Nu(:,:,:,l), Kh(:,:,:,l),                                       & ! (out)
+               QL(:,:,:,l), cldfrac(:,:,:,l), Zi(:,:,l)                        ) ! (out)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -236,13 +239,22 @@ contains
           end do
           end do
           end do
+          if ( I_QV > 0 ) then
+             do j = JS, JE
+             do i = IS, IE
+             do k = KS, KE
+                RHOQ(k,i,j,I_QV,l) = RHOQ(k,i,j,I_QV,l) + RHOQV_t(k,i,j) * dt_BL
+             end do
+             end do
+             end do
+          end if
 
           do iq = 1, QA
-             if ( ( .not. TRACER_ADVC(iq) ) .or. (iq>=QS .and. iq<=QE) ) cycle
+             if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:,l), QTRC(:,:,:,iq,l), SFLX_Q(:,:,iq,l), &
-                  Kh(:,:,:,l), Kh_cg(:,:,:,l), TRACER_MASS(iq),      & ! (in)
+                  DENS(:,:,:,l), QTRC(:,:,:,iq,l), SFLX_Q(:,:,iq,l), & ! (in)
+                  Kh(:,:,:,l), TRACER_MASS(iq),                      & ! (in)
                   CZ(:,:,:,l), FZ(:,:,:,l),                          & ! (in)
                   dt_BL, TRACER_NAME(iq),                            & ! (in)
                   RHOQ_t(:,:,:,iq)                                   ) ! (out)

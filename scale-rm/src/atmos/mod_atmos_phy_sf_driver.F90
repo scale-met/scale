@@ -65,6 +65,8 @@ contains
        SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_SHEX => ATMOS_PHY_SF_SFLX_SHEX, &
+       SFLX_QVEX => ATMOS_PHY_SF_SFLX_QVEX, &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        Ustar     => ATMOS_PHY_SF_Ustar,     &
@@ -101,16 +103,18 @@ contains
 
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'this component is never called.'
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'surface fluxes are set to zero.'
-       SFLX_MW(:,:) = 0.0_RP
-       SFLX_MU(:,:) = 0.0_RP
-       SFLX_MV(:,:) = 0.0_RP
-       SFLX_SH(:,:) = 0.0_RP
-       SFLX_LH(:,:) = 0.0_RP
-       Ustar  (:,:) = 0.0_RP
-       Tstar  (:,:) = 0.0_RP
-       Qstar  (:,:) = 0.0_RP
-       Wstar  (:,:) = 0.0_RP
-       RLmo   (:,:) = 0.0_RP
+       SFLX_MW  (:,:) = 0.0_RP
+       SFLX_MU  (:,:) = 0.0_RP
+       SFLX_MV  (:,:) = 0.0_RP
+       SFLX_SH  (:,:) = 0.0_RP
+       SFLX_LH  (:,:) = 0.0_RP
+       SFLX_SHEX(:,:) = 0.0_RP
+       SFLX_QVEX(:,:) = 0.0_RP
+       Ustar    (:,:) = 0.0_RP
+       Tstar    (:,:) = 0.0_RP
+       Qstar    (:,:) = 0.0_RP
+       Wstar    (:,:) = 0.0_RP
+       RLmo     (:,:) = 0.0_RP
        LOG_INFO("ATMOS_PHY_SF_driver_setup",*) 'SFC_TEMP, SFC_albedo is set in ATMOS_PHY_SF_vars.'
 
     endif
@@ -196,6 +200,8 @@ contains
        SFLX_MV   => ATMOS_PHY_SF_SFLX_MV,   &
        SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
        SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_SHEX => ATMOS_PHY_SF_SFLX_SHEX, &
+       SFLX_QVEX => ATMOS_PHY_SF_SFLX_QVEX, &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC, &
        SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        Ustar     => ATMOS_PHY_SF_Ustar,     &
@@ -220,6 +226,7 @@ contains
     real(RP) :: ATM_TEMP(IA,JA)
     real(RP) :: ATM_PRES(IA,JA)
     real(RP) :: ATM_QV  (IA,JA)
+    real(RP) :: SFLX_SH2(IA,JA)
     real(RP) :: SFLX_QV (IA,JA)
     real(RP) :: CP_t, CV_t
     real(RP) :: ENGI_t
@@ -249,6 +256,13 @@ contains
 
        if ( CPL_sw ) then
 
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_SH2(i,j) = SFLX_SH(i,j) - SFLX_SHEX(i,j)
+          end do
+          end do
+
           if ( ATMOS_HYDROMETEOR_dry ) then
              !$omp parallel do
              do j = JS, JE
@@ -260,14 +274,14 @@ contains
              !$omp parallel do
              do j = JS, JE
              do i = IS, IE
-                SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV)
+                SFLX_QV(i,j) = SFLX_QTRC(i,j,I_QV) - SFLX_QVEX(i,j)
              end do
              end do
           end if
 
           call BULKFLUX_diagnose_scales( IA, IS, IE, JA, JS, JE, &
                                          SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),  & ! [IN]
-                                         SFLX_SH(:,:), SFLX_QV(:,:),                & ! [IN]
+                                         SFLX_SH2(:,:), SFLX_QV(:,:),               & ! [IN]
                                          SFC_DENS(:,:), SFC_TEMP(:,:), PBL_Zi(:,:), & ! [IN]
                                          Ustar(:,:), Tstar(:,:), Qstar(:,:),        & ! [OUT]
                                          Wstar(:,:), RLmo(:,:)                      ) ! [OUT]
@@ -301,8 +315,9 @@ contains
 
           case ( 'CONST' )
 
+             SFC_TEMP(:,:) = ATM_TEMP(:,:)
              call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
-                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), ATM_TEMP(:,:), & ! [IN]
+                                           ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), SFC_TEMP(:,:), & ! [IN]
                                            Z1(:,:), SFC_DENS(:,:),                            & ! [IN]
                                            SFLX_MW(:,:), SFLX_MU(:,:), SFLX_MV(:,:),          & ! [OUT]
                                            SFLX_SH(:,:), SFLX_LH(:,:), SFLX_QV(:,:),          & ! [OUT]
@@ -318,7 +333,7 @@ contains
 
           if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
              SFLX_QTRC(:,:,I_QV) = SFLX_QV(:,:)
-             SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * ATM_TEMP(:,:) + LHV )
+             SFLX_ENGI(:,:)      = SFLX_QV(:,:) * ( TRACER_CV(I_QV) * SFC_TEMP(:,:) + LHV )
           endif
 
        endif
@@ -334,7 +349,6 @@ contains
           MOMZ_t_SF(i,j) = SFLX_MW(i,j) / ( CZ(KS+1,i,j) - CZ(KS,i,j) )
           RHOU_t_SF(i,j) = SFLX_MU(i,j) * rdz
           RHOV_t_SF(i,j) = SFLX_MV(i,j) * rdz
-          DENS_t_SF(i,j) = 0.0_RP
        enddo
        enddo
 
@@ -343,6 +357,7 @@ contains
        do j = JS, JE
        do i = IS, IE
           rdz = 1.0_RP / ( FZ(KS,i,j) - FZ(KS-1,i,j) )
+          DENS_t_SF(i,j) = 0.0_RP
           CP_t = 0.0_RP
           CV_t = 0.0_RP
           ENGI_t = SFLX_ENGI(i,j) * rdz

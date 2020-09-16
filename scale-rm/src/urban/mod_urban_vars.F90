@@ -90,13 +90,15 @@ module mod_urban_vars
 
   real(RP), public, allocatable :: URBAN_ROFF (:,:)     ! urban runoff [mm/s=kg/m2/s]
 
-  real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)     ! urban grid average of w-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)     ! urban grid average of u-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)     ! urban grid average of v-momentum flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)     ! urban grid average of sensible heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)     ! urban grid average of latent heat flux [W/m2]
-  real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:)   ! urban grid average of water vapor flux [kg/m2/s]
-  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)     ! urban grid average of ground heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_MW   (:,:)   ! urban grid average of w-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MU   (:,:)   ! urban grid average of u-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_MV   (:,:)   ! urban grid average of v-momentum flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_SH   (:,:)   ! urban grid average of sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_LH   (:,:)   ! urban grid average of latent heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_SHEX(:,:)    ! urban grid average of extera sensible heat flux [W/m2]
+  real(RP), public, allocatable :: URBAN_SFLX_QVEX(:,:)    ! urban grid average of extera latent heat flux [kg/kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_QTRC (:,:,:) ! urban grid average of water vapor flux [kg/m2/s]
+  real(RP), public, allocatable :: URBAN_SFLX_GH   (:,:)   ! urban grid average of ground heat flux [W/m2]
 
   ! given 2D variables expressing urban morphology
   real(RP), public, allocatable :: URBAN_Z0M  (:,:) ! urban grid average of rougness length (momentum) [m]
@@ -389,6 +391,8 @@ contains
     allocate( URBAN_SFLX_MV   (UIA,UJA)                     )
     allocate( URBAN_SFLX_SH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_LH   (UIA,UJA)                     )
+    allocate( URBAN_SFLX_SHEX (UIA,UJA)                     )
+    allocate( URBAN_SFLX_QVEX (UIA,UJA)                     )
     allocate( URBAN_SFLX_GH   (UIA,UJA)                     )
     allocate( URBAN_SFLX_QTRC (UIA,UJA,QA)                  )
     URBAN_SFLX_MW   (:,:)     = UNDEF
@@ -396,6 +400,8 @@ contains
     URBAN_SFLX_MV   (:,:)     = UNDEF
     URBAN_SFLX_SH   (:,:)     = UNDEF
     URBAN_SFLX_LH   (:,:)     = UNDEF
+    URBAN_SFLX_SHEX (:,:)     = UNDEF
+    URBAN_SFLX_QVEX (:,:)     = UNDEF
     URBAN_SFLX_GH   (:,:)     = UNDEF
     URBAN_SFLX_QTRC (:,:,:)   = UNDEF
 
