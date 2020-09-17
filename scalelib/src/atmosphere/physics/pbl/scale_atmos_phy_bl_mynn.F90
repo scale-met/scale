@@ -1820,7 +1820,7 @@ contains
              - POTT(k) / EPSvap
        Rt = cldfrac(k) - Qlp(k) / (2.0_RP*sigma_s*sqrt_2pi) &
 #if defined(PGI) || defined(SX)
-               * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) & ! apply exp limiter
+               * exp( -min( Q1**2 * 0.5_RP, 1.E+3_RP ) ) ! apply exp limiter
 #else
                * exp(-Q1**2 * 0.5_RP)
 #endif
