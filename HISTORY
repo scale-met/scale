@@ -1,5 +1,35 @@
 = Release History
 
+== 2020-09-25 (5.4.0)
+* Changes
+  * Change the configuration parameters of the KUSAKA model
+  * Change the configuration parameters of the KF scheme
+  * Change the configuration parameters for the Coriolis parameter
+  * Change the configuration parameters for topography
+  * Change the configuration parameters for GrADS input
+  * Change the configuration parameter for the depth of the slab ocean
+* New features
+  * Add the SATO2019 lightning scheme (experimental)
+  * Add a grid and spectral nudging
+  * Add a seven-step RK scheme
+  * Add sysdep files for LinuxARM, FUGAKU, OBCX, and NIESSX computers
+  * Add the bi-linear interpolation to the real input and online nesting
+  * Support freezing of soil moisture
+  * Enable two-dimensional calculation
+  * Enable to output the Obukhov length and scales to history output
+  * Enable to use of all even orders for the numerical filter
+  * Enable to interpolate to the pressure coordinate in SNO
+  * Enable to use a different map projection than the parent domain for the SCALE offline nesting
+* Improvements:
+  * Change ocean and land calculations for better conservation of the total energy
+  * Change calculation of the hydrostatic pressure
+  * Change calculation of initial state in the real input
+* Bug fixes:
+  * Fix bug in the SUZUKI10 scheme
+  * Fix some bugs in SNO
+  * Fix some bugs in the KF scheme
+  * Fix some bugs in the NYNN scheme
+
 == 2020-04-17 (5.3.6)
 * Bug fixes:
   * Fix wrong calculation of T2 and Q2
