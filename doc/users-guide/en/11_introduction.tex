@@ -35,7 +35,7 @@ pre-processing, simulation, post-processing, and analysis.
 It has the following advantages:
 \begin{itemize}
 \item 
-\scalelib is provided as an open-source software under the `` BSD-2 license.''. It is free for use, modification, and redistribution, regardless of whether the user is a business or other enterprise.
+\scalelib is provided as an open-source software under the `` BSD-2 license''. It is free for use, modification, and redistribution, regardless of whether the user is a business or other enterprise.
 \item 
 \scalelib contains a regional model called the \scalerm ( SCALE-Regional Model ).
 \item 
@@ -43,7 +43,7 @@ It has the following advantages:
 \item 
 \scalelib provides a framework for physical processes that can be called not only by \scalerm, but also by other numerical models.
 \end{itemize}
-For the details of the license, the interested reader can refer to the file \texttt{scale-\version/LICENSE} under the main directory. This explanation of its use is also provided on the SCALE webpage (http://scale.aics.riken.jp/). 
+For the details of the license, the interested reader can refer to the file \texttt{scale-\version/LICENSE} under the main directory. This explanation of its use is also provided on the SCALE webpage (\scaleweb).
 
 In this section, the concept of \scalelib and its relations to actual models are explained. It can be skipped, as it is not related directly to its practical use.
 
@@ -52,7 +52,7 @@ In this section, the concept of \scalelib and its relations to actual models are
 
 \begin{figure}[htb]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/library.pdf}\\
+  \includegraphics[width=0.9\hsize]{./../../figure/library.pdf}\\
   \caption{Aims of \scalelib}
   \label{fig:scale}
 \end{center}
@@ -86,7 +86,7 @@ Users can select a scheme in every component according to simulations they want.
 
 \begin{figure}[hbt]
 \begin{center}
-  \includegraphics[width=0.9\hsize]{./figure/scale.pdf}\\
+  \includegraphics[width=0.9\hsize]{./../../figure/scale.pdf}\\
   \caption{Relationship between the library \scalelib and the model \scalerm}
   \label{fig:scale-rm}
 \end{center}
@@ -99,7 +99,7 @@ All schemes in all components of \scalelib are available in \scalerm.
 The components are categorized into three parts:
 framework, dynamical core, and physical processes.
 Components with various schemes already implemented
-in the current version of \scalerm are listed below\footnote{Refer to \citet{scale_2015},\citet{satoy_2015b}, and \citet{nishizawa_2015} for the details of the model structure and the descretization method.}.
+in the current version of \scalerm are listed below\footnote{Refer to \citet{scale_2015},\citet{satoy_2015b}, and \citet{nishizawa_2015} for the details of the model structure and the discretization method.}.
 
 \subsubsection{Framework}
 \begin{itemize}
@@ -129,24 +129,26 @@ in the current version of \scalerm are listed below\footnote{Refer to \citet{sca
 \subsubsection{Dynamical core}
 \begin{itemize}
  \item Governing equations: 3D fully compressible non-hydrostatic equations
- \item Spatial descretization: finite volume method
+ \item Spatial discretization: finite volume method
     \begin{itemize}
-      \item 2nd-, 4th-, and 6th-order central differences
-      \item 3rd- and 5th-order upwind differences
+      \item central advection schemes with 2nd, 4th, 6th, and 8th-order accuracy
+      \item upwind advection schemes with 3rd, 5th, and 7th-order accuracy
     \end{itemize}
- \item Time integration: selection from the ``fully explicit method'' 
-   or the ``horizontally explicit and vertically implicit methods''
+ \item Time integration: selection from the ``fully explicit method'' (HEVE)
+   or the ``horizontally explicit and vertically implicit methods'' (HEVI)
     \begin{itemize}
-      \item Heun-type 3rd-order Runge--Kutta scheme
-      \item \citet{Wicker_2002}'s 3-step Runge--Kutta scheme
-      \item 4th-order Runge--Kutta scheme
+      \item \citet{Wicker_2002}'s 3 stage Runge--Kutta scheme with generally 2nd order accuracy
+      \item Heun-type 3 stage Runge--Kutta scheme with 3rd order accuracy
+      \item 4 stage Runge--Kutta scheme with 4th order accuracy
+      \item 7 stage Runge--Kutta scheme with 6th order accuracy (supported only for HEVE)
+      \item 11 stage Runge--Kutta scheme with 8th order accuracy (supported only for HEVE)
     \end{itemize}
  \item Guarantee of non-negative value:
     \begin{itemize}
       \item Flux corrected transport method \citep{zalesak_1979}
-      \item \citet{Koren_1993}'s filter: available only with the use of the 3rd-order upwind scheme
+      \item \citet{Koren_1993}'s filter: available only with the use of the 3rd-order upwind advection scheme
     \end{itemize}
- \item Numerical filter: 4th-order hyper-viscosity and diffusion
+ \item Numerical filter: hyper-viscosity and diffusion with 2nd, 4th, 6th and 8th-order differential operators 
  \item Topography: expressed using terrain-following coordinates
 \end{itemize}
 

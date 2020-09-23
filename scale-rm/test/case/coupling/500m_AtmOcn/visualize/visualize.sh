@@ -8,10 +8,10 @@ while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
       echo ${line[1]} ${line[5]} ${line[6]}  ${line[7]}  ${line[8]}  ${line[9]}  >> energy.dat
-      echo ${line[1]} ${line[9]} ${line[10]} ${line[11]} ${line[12]} ${line[13]} >> energy_flx.dat
+      echo ${line[1]} ${line[9]} ${line[10]} ${line[11]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} >> energy_flx.dat
       echo ${line[1]} ${line[3]} ${line[4]}                                      >> mass.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt     || exit
 gnuplot < ./visualize/energy_flx.plt || exit

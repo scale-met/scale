@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{地形データの作成：pp} \label{sec:tutrial_real_pp}
+\section{地形データの作成：pp} \label{sec:tutorial_real_pp}
 %-------------------------------------------------------%
 
 ppディレクトリへ移動し、実験のための地形データを以下のように作成する。
@@ -17,10 +17,9 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 
 \verb|pp.d01.conf|のネームリストの中で、計算領域に関係する設定は \namelist{PARAM_PRC_CARTESC}、\\
 \namelist{PARAM_GRID_CARTESC_INDEX}、\namelist{PARAM_GRID_CARTESC}で行っている。
-{\XDIR} 、{\YDIR}ともに領域は2分割されており、
-総計として4つのMPIプロセスを使用する。
-1つのMPIプロセスあたりの格子点数は、\nmitem{IMAX = 45}、\nmitem{JMAX = 45}と指定されており、
-は{\XDIR} 、{\YDIR}それぞれの総格子点数は 90($=2 \times 45$)である。
+領域全体の総格子点数は、{\XDIR} 、{\YDIR}それぞれ \nmitem{IMAXG} = 90、\nmitem{JMAXG} = 90である。
+{\XDIR} 、{\YDIR}ともに領域は2分割されているので、
+各MPIプロセスが担当する格子数は、{\XDIR} 、{\YDIR}それぞれ 45 ($=90 / 2$) である。
 各方向の格子幅は\namelist{PARAM_GRID_CARTESC}の\nmitem{DX, DY}において 20,000 m（20 km）と指定されている。
 したがって、計算領域の一辺の長さは 90 $\times$ 20 km であるので、
 計算領域は 1800 km $\times$ 1800 km の正方領域である。
@@ -34,9 +33,9 @@ ppディレクトリの中には、\verb|pp.d01.conf|という名前の設定フ
 \verb|/| \\
  \\
 \verb|&PARAM_INDEX_GRID_CARTESC_INDEX| \\
-\verb| KMAX = 36,| \\
-\verb| IMAX = 45,| \\
-\verb| JMAX = 45,| \\
+\verb| KMAX  = 36,| \\
+\verb| IMAXG = 90,| \\
+\verb| JMAXG = 90,| \\
 \verb|/| \\
  \\
 \verb|&PARAM_GRID_CARTESC| \\
@@ -105,7 +104,7 @@ MPIプロセス数だけ生成される(今の場合4つずつ)。ここで、\v
  「gpview」がインストールされている場合は、次のコマンドによって
  地形データが正しく作成されているかを確認できる。
  \begin{verbatim}
-   $ gpview topo_d01.pe00000*@TOPO --aspect=1 --nocont
+   $ gpview topo_d01.pe00000*@topo --aspect=1 --nocont
    $ gpview landuse_d01.pe00000*@FRAC_LAND --aspect=1 --nocont
  \end{verbatim}
- 結果が正常であれば、図 \ref{fig:tutrial_real_domain}と同様の図が表示される。
+ 結果が正常であれば、図 \ref{fig:tutorial_real_domain}と同様の図が表示される。

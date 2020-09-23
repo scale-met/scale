@@ -82,7 +82,6 @@ contains
   subroutine ATMOS_DYN_tinteg_large_euler( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             &
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-       mflx_hi, tflx_hi,                                     &
        num_diff, num_diff_q,                                 &
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
        CORIOLI,                                              &
@@ -92,46 +91,26 @@ contains
        J13G, J23G, J33G, MAPF,                               &
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
        REF_dens, REF_pott, REF_qv, REF_pres,                 &
-       BND_W, BND_E, BND_S, BND_N,                           &
-       ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
-       BND_QA, BND_SMOOTHER_FACT,                            &
+       BND_W, BND_E, BND_S, BND_N, TwoD,                     &
+       ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+       ND_SFC_FACT, ND_USE_RS,                               &
+       BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
        DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
        DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
        DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
        DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
-       wdamp_coef,                                           &
-       divdmp_coef,                                          &
+       MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       &
+       wdamp_coef, divdmp_coef,                              &
        FLAG_TRACER_SPLIT_TEND,                               &
        FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
        FLAG_FCT_ALONG_STREAM,                                &
        USE_AVERAGE,                                          &
        I_QV,                                                 &
        DTL, DTS                                              )
-    use scale_const, only: &
-       Rdry   => CONST_Rdry, &
-       Rvap   => CONST_Rvap, &
-       CVdry  => CONST_CVdry
-    use scale_comm_cartesC, only: &
-       COMM_vars8, &
-       COMM_wait
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_numfilter_coef,   &
-       ATMOS_DYN_numfilter_coef_q, &
-       ATMOS_DYN_fct
-    use scale_atmos_dyn_fvm_flux_ud1, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxX_XYZ_ud1, &
-       ATMOS_DYN_FVM_fluxY_XYZ_ud1
-    use scale_atmos_dyn_fvm_flux, only: &
-       ATMOS_DYN_FVM_fluxZ_XYZ, &
-       ATMOS_DYN_FVM_fluxX_XYZ, &
-       ATMOS_DYN_FVM_fluxY_XYZ
+   
     use scale_atmos_dyn_tstep_large, only: &
        ATMOS_DYN_tstep_large
-#ifdef HIST_TEND
-    use scale_file_history, only: &
-       FILE_HISTORY_in
-#endif
+
     implicit none
 
     real(RP), intent(inout) :: DENS(KA,IA,JA)
@@ -148,9 +127,6 @@ contains
     real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
     real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
     real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
-
-    real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(out)   :: num_diff  (KA,IA,JA,5,3)
     real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
@@ -198,14 +174,16 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
 
     real(RP), intent(in)    :: ND_COEF
     real(RP), intent(in)    :: ND_COEF_Q
-    integer,  intent(in)    :: ND_ORDER
+    integer,  intent(in)    :: ND_LAPLACIAN_NUM
     real(RP), intent(in)    :: ND_SFC_FACT
     logical,  intent(in)    :: ND_USE_RS
 
     integer,  intent(in)    :: BND_QA
+    integer,  intent(in)    :: BND_IQ(QA)
     real(RP), intent(in)    :: BND_SMOOTHER_FACT
 
     real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
@@ -221,6 +199,8 @@ contains
     real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
     real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+    real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
+    real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
     real(RP), intent(in)    :: wdamp_coef(KA)
     real(RP), intent(in)    :: divdmp_coef
@@ -241,7 +221,6 @@ contains
     call ATMOS_DYN_tstep_large( &
          DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
-         mflx_hi, tflx_hi,                                     & ! (out)
          num_diff, num_diff_q,                                 & ! (out, work)
          QTRC,                                                 & ! (in)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, & ! (in)
@@ -252,15 +231,16 @@ contains
          J13G, J23G, J33G, MAPF,                               & ! (in)
          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,                 & ! (in)
-         BND_W, BND_E, BND_S, BND_N,                           & ! (in)
-         ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, & ! (in)
-         BND_QA, BND_SMOOTHER_FACT,                            & ! (in)
+         BND_W, BND_E, BND_S, BND_N, TwoD,                     & ! (in)
+         ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 & ! (in)
+         ND_SFC_FACT, ND_USE_RS,                               & ! (in)
+         BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    & ! (in)
          DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          & ! (in)
          DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          & ! (in)
          DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    & ! (in)
          DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    & ! (in)
-         wdamp_coef,                                           & ! (in)
-         divdmp_coef,                                          & ! (in)
+         MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       & ! (in)
+         wdamp_coef, divdmp_coef,                              & ! (in)
          FLAG_TRACER_SPLIT_TEND,                               & ! (in)
          FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       & ! (in)
          FLAG_FCT_ALONG_STREAM,                                & ! (in)

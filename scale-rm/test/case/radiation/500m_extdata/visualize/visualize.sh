@@ -2,21 +2,21 @@
 
 ### Energy & Mass balance ###
 echo "+visualize by gnuplot"
-rm -f energy.dat energy_sfc.dat energy_toa.dat
+rm -f energy.dat energy_sfc.dat energy_tom.dat
 
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
       echo ${line[1]} ${line[5]} ${line[6]}  ${line[7]}                          >> energy.dat
       echo ${line[1]} ${line[6]} ${line[8]}  ${line[9]}  ${line[10]} ${line[11]} >> energy_sfc.dat
-      echo ${line[1]} ${line[7]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} >> energy_toa.dat
+      echo ${line[1]} ${line[7]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} >> energy_tom.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt || exit
 gnuplot < ./visualize/energy_sfc.plt || exit
-gnuplot < ./visualize/energy_toa.plt || exit
-rm -f energy.dat energy_sfc.dat energy_toa.dat
+gnuplot < ./visualize/energy_tom.plt || exit
+rm -f energy.dat energy_sfc.dat energy_tom.dat
 
 
 

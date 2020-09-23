@@ -2,108 +2,259 @@
 {\bf \Large
 \begin{tabular}{ccc}
 \hline
-  Corresponding author & : & Tsuyoshi Yamaura\\
+  Corresponding author & :\\
+  Tsuyoshi Yamaura and Seiya Nishizawa\\
 \hline
 \end{tabular}
 }
 
 
-\subsection{Land physics: slab model}
+\subsection{Bucket model}
 
-The land slab model estimates the soil temperature and soil moisture tendencies using a multi-layered bucket model.
-The soil temperature tendency equation is estimated from the 1-D vertical diffusion equation as follows:
+The land bucket model estimates the soil temperature and soil moisture tendencies using a multi-layered bucket model.
+
+
+
+\subsubsection{Soil moisture equation}
+
+The conservation equations of the specific mass of the liquid and ice water (kg/m$^3$), $M_w$ and $M_i$, respectively, are
 \begin{align}
-  \frac{\partial T}{\partial t} = \frac{1}{\rho_{L}C_{L}} \left\{ \frac{\partial}{\partial z} \left( \kappa \frac{\partial T}{\partial z} \right) + Q \right\},
-  \label{eq:Tdt}
+  \frac{\partial M_w}{\partial t}
+  &= - \frac{\partial}{\partial z} \left( F_w + F_{rain} - F_{evap} \right)
+     - m_{frz} - m_{ro,w}, \label{eq:MwDt} \\
+  \frac{\partial M_i}{\partial t}
+  &= - \frac{\partial}{\partial z}\left( F_{snow} - F_{subl} \right) + m_{frz} - m_{ro,i}, \label{eq:MiDt}
 \end{align}
-where $T$ is the temperature (K), $\rho_{L}$ is the density (kg/m$^3$), $C_{L}$ is the heat capacity (J/K/kg), $\kappa$ is the thermal conductivity (J/K/m/s), and $Q$ is the external heat source (J/m$^3$/s) of the land layers.
-Eq. (\ref{eq:Tdt}) is discretized as
+where $\nu_w$ is the constant water diffusivity (m$^2$/s);
+$\rho_w$ and $\rho_i$ are the dencity of liquid and ice water (kg/m$^3$), respectively;
+$F_{rain}, F_{snow}, F_{evap}$ and $F_{subl}$ are the surface flux of rain, snow, evapolation, and sublimation (kg/m$^2$/s), respectively;
+$m_{frz}$ and $m_{ro}$ are the mass change by freezing and the runoff of the water from the system (kg/m$^3$/s), respectively.
+Note that the $F_{rain}$ and $F_{snow}$ are positive for the downward direction and the $F_{evap}$ and $F_{subl}$ are positive for the upward.
+$F_w$ is the vertical flux due to the diffusion, and
 \begin{align}
-  \frac{\Delta T_{k}}{\Delta t} &= \frac{\nu_{k}}{\Delta z_{k}} \left( \frac{T_{k+1}-T_{k}}{\Delta z_{k+\frac{1}{2}}} - \frac{T_{k}-T_{k-1}}{\Delta z_{k-\frac{1}{2}}} \right) + \frac{Q_{k}}{(\rho_{L}C_{L})_{k}}, \\
-                                &= \frac{ 2\nu_{k} }{ \Delta z_{k} (\Delta z_{k+1}+\Delta z_{k}) }(T_{k+1}-T_{k}) - \frac{ 2\nu_{k} }{ \Delta z_{k} (\Delta z_{k}+\Delta z_{k-1}) }(T_{k}-T_{k-1}) +\frac{Q_{k}}{(\rho_{L}C_{L})_{k}},
+  F_w &= - \rho_w \nu_w\frac{\partial W}{\partial z}.
+\end{align}
+$W$ and $I$ are the soil moisture content (m$^3$/m$^3$) of liquid and ice water, respectively, and are
+\begin{align}
+ W &= \frac{M_w}{\rho_w}, \\
+ I &= \frac{M_i}{\rho_i}.
+\end{align}
+
+
+
+The bucket model has the maximum soil mositure content $W_\mathrm{max}$, so if the moisture content is larger than the maximum, the moisuter runs off to the out of the system:
+\begin{align}
+ W + I \le W_\mathrm{max}.
+\end{align}
+Therefore, The amount of the runoff (kg/m$^3$) is estimated as
+\begin{align}
+ M_{ro} &= M_{ro,w} + M_{ro,i},
 \end{align}
 where
 \begin{align}
-  \nu_{k} &= \frac{\kappa}{(\rho_{L}C_{L})_{k}}, \\
-  (\rho_{L}C_{L})_{k} &= ( 1 - S_{max} ) C_{S} + S_{k} \rho_{W}C_{W},
+ M_{ro,w} &= \int_t^{t+ \Delta t} m_{ro,w} dt = \rho_w \min\{W_{ro},W\}, \\
+ M_{ro,i} &= \int_t^{t+ \Delta t} m_{ro,i} dt = \rho_i (W_{ro} - \min\{W_{ro},W\}),
 \end{align}
-and $S$ is the moisture content in the $k$-layer (m$^3$/m$^3$), $S_{max}$ is the maximum moisture content, $C_{S}$ and $C_{W}$ are the heat capacities of the soil and water (J/K/kg), respectively, and $\rho_{W}$ is the water density (kg/m$^3$).
-The $k$ represents the index of the layers, and $k = 1, \cdots, m$, where $m$ is the number of the layers.
-As consider the top and bottom boundary conditions, the soil temperature equations can be written as
-\begin{align}
-  \frac{\Delta T_{1}}{\Delta t} &=   \frac{G_{0} - Q_{melt}}{(\rho_{L}C_{L})_{1}\Delta z_{1}} + \frac{2\nu_{1}}{\Delta z_{1}(\Delta z_{2}+\Delta z_{1})} (T_{2}-T_{1}), \\
-  \frac{\Delta T_{k}}{\Delta t} &= - \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})} (T_{k}-T_{k-1}) + \frac{2\nu_{k}}{\Delta z_{k}(\Delta z_{k+1}+\Delta z_{k})} (T_{k+1}-T_{k}), \\
-  \frac{\Delta T_{m}}{\Delta t} &= - \frac{2\nu_{m}}{\Delta z_{m}(\Delta z_{m}+\Delta z_{m-1})} (T_{m}-T_{m-1}),
-\end{align}
-where $G_{0}$ is the downward ground heat flux between the land and atmosphere (J/m$^2$/s),
-$Q_{melt}$ is cooling by melting of the snow (J/m$^2$/s).
-We assume that the heat flux at the bottom surface of the lowermost layer is zero.
+and $W_{ro} = \max\{W + I - W_\mathrm{max}, 0\}$.
 
-We use an implicit scheme for time integration of the land slab model.
-Tendency equation cofficients are summarized as follows:
+  
+
+\subsubsection{Thermodynamical equation}
+
+The total internal energy is the sum of that of the soil, liquid water and ice water, $U_s, U_w$ and $U_i$, respectively:
 \begin{align}
-  a_{1} &= 0, \\
-  a_{k} &= - \frac{2\nu_{k}\Delta t}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})}, \\
-  b_{k} &= - \frac{2\nu_{k}\Delta t}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k+1})}, \\
-  b_{m} &= 0.
+ U &= U_s + U_w + U_i, \\
+ U_s &= C_s T, \\
+ U_w &= c_l T \rho_w W, \\
+ U_i &= ( c_i T - L_f ) \rho_i I,
 \end{align}
-The soil temperature tendency equations are then rewritten as
+where $T$ is the soil temperature (K).
+Note that, the temperature is
 \begin{align}
-  T_{1}^{t} &= T_{1}^{t-1} + \frac{(G_{0} - Q_{melt})\Delta t}{\rho_{L}C_{L}\Delta z_{1}} + b_{1} (T_{1}^{t}-T_{2}^{t}), \\
-  T_{k}^{t} &= T_{k}^{t-1} + a_{k} (T_{k}^{t}-T_{k-1}^{t}) + b_{k} (T_{k}^{t}-T_{k+1}^{t}), \\
-  T_{m}^{t} &= T_{m}^{t-1} + a_{m} (T_{m}^{t}-T_{m-1}^{t}).
+ T &= \frac{U + L_f \rho_i I }{C_L},
 \end{align}
-This simultaneous equation can be written using a matrix:
+where $C_L$ is the total heat capacity (J/K/m$^3$) and
+\begin{align}
+ C_L &= C_s + c_l \rho_w W + c_i \rho_i I.
+\end{align}
+
+
+The conservation equation of the total internal energy is
+\begin{align}
+ \frac{\partial U}{\partial t} &=
+ - \frac{\partial}{\partial z} \left[
+   - \kappa \frac{\partial T}{\partial z}
+   + c_l T F_w  + F_{surf} \right]  \nonumber \\ &
+ - c_l T M_{ro,w}
+ - ( c_i T - L_f ) M_{ro,i}, \label{eq:UDt}
+\end{align}
+where $\kappa$ is the thermal conductivity (J/K/m/s).
+$F_{surf}$ is the ground surface flux, and
+\begin{align}
+ F_{surf} &= G
+ + c_l T_{rain} F_{rain}
+ - c_l T_{evap} F_{evap} \nonumber \\&
+ + ( c_i T_{snow} - L_f ) F_{snow},
+ - ( c_i T_{subl} - L_f ) F_{subl},
+\end{align}
+where $G$ is the downward ground heat flux (J/m$^2$/s); and $T_{rain}, T_{evap}, T_{snow}$ and $T_{subl}$ are the temperature of the rain, evaporation water, snow, and sublimation ice, respectively.
+These ground surface fluxes are calculated in the surface scheme.
+
+
+The thermal conductivity depends on the moisture content, and Kondo and Saigusa 1994) gived it empirically as
+\begin{align}
+  \kappa &= \kappa_s + 0.5 W^\frac{1}{3},
+\end{align}
+where $\kappa_s$ is the thermal conductivity of the soil particle.
+
+
+
+\subsubsection{Phase change}
+The liquid water and ice water can exist instantenously only at the temperature $T_0$.
+If the internal energy is lower than $C_sT_0 + (c_i T_0 - L_f) M$, all the moisutre is ice, where $M$ is the total moisture $M=M_w+M_i$.
+On the other hand, the internal energy is larther than $C_sT_0 + c_lT_0M$, all the moisture is liquid.
+Otherwize,
+\begin{align}
+ M_i &= \frac{U - ( C_s + c_l M ) T_0}{ (c_i-c_l)T_0 - L_f}, \\
+ M_w &= M - M_i.
+\end{align}
+That is,
+\begin{align}
+ M_i &= \min\left\{ \max\left\{ \frac{U-(C_s+c_lM)T_0}{(c_i-c_l)T_0-L_f}, 0 \right\}, M \right\}, \\
+ M_w &= M - M_i.
+\end{align}
+
+
+\subsubsection{Temporal integration}
+Eqs. (\ref{eq:MwDt}, \ref{eq:MiDt} and \ref{eq:UDt}) are solved by a splitting method.
+In the first step, the moisture mass and internal energy changes are calculated without the diffusion, runoff, and phase change.
+In the second step, the phase change is calculated.
+In the third step, the moisture diffusion equation is solved.
+In the fouth step, the temperature diffusion is calculated with the thermal conductivity with the moisture content obtained in the second step.
+At the last step, the runoff is calculated.
+
+
+The followings are the summary of the sequence of calculation.
+Here, the superscript ``$n$'' indicates the quantites at the time step $n$, ``$n_1$'', ``$n_2$'', ``$n_3$'', ``$n_4$'', and ``$n+1$'' are those after calculation of the first, seccond, third, fourth, and the last steps, respectively.
+The vertical diffusion terms are calculated by the implicit scheme for numerical stability.
+
+\begin{description}
+
+\item[First step]
+
+\begin{align}
+ M^{n_1} &= \rho_w W^n + \rho_i I^n + \Delta t \frac{\partial}{\partial z}( F_{rain} + F_{snow} - F_{evap} - F_{subl} ), \\
+ U^{n_1} &= C_L^n T^n - L_f \rho_i I^n + \Delta t \frac{\partial F_{surf}}{\partial z},
+\end{align}
+where $M$ is the total moisture mass (kg/m$^3$) and $M = M_w + M_i$.
+
+
+\item[Second step]
+\begin{align}
+ M_i^{n_2} &= \min\left\{ \max\left\{ \frac{U^{n_1}-(C_s+c_lM^{n_1})T_0}{(c_i-c_l)T_0-L_f}, 0 \right\}, M^{n_1} \right\}, \\
+ M_w^{n_2} &= M^{n_1} - M_i^{n_2}, \\
+ W^{n_2} &= \frac{M_w^{n_2}}{\rho_w}, \\
+ I^{n_2} &= \frac{M_i^{n_2}}{\rho_i}, \\
+ T^{n_2} &= \frac{U^{n_1} + L_f M_i^{n_2}}{C_s + c_l M_w^{n_2} + c_i M_i^{n_2}}.
+\end{align}
+
+
+\item[Third step]
+\begin{align}
+ F_w &= - \rho_w\nu_w\frac{\partial W^{n_3}}{\partial z}, \\
+ W^{n_3} &= W^{n_2} - \frac{\Delta t}{\rho_w} \frac{\partial F_w}{\partial z}, \\
+ U^{n_3} &= U^{n_1} - \Delta t \frac{\partial c_l F_w T^{n_2}}{\partial z}, \\
+ C_L^{n_3} &= C_s + c_l \rho_w W^{n_3} + c_i M_i^{n_2}.
+\end{align}
+
+\item[Fourth step]
+\begin{align}
+ \kappa &= \kappa_s + 0.5 (W^{n_3})^\frac{1}{3}, \\
+ C_L^{n_3} T^{n+1} &= U^{n_3} + L_f M_i^{n_2}
+ - \Delta t \frac{\partial}{\partial z} \left( -\kappa \frac{\partial T^{n+1}}{\partial z} \right).
+\end{align}
+
+
+
+\item[Fifth step]
+\begin{align}
+ I^{n+1} &= \min\{ I^{n_2}, W_\mathrm{max} \}, \\
+ W^{n+1} &= \min\{ W_\mathrm{max} - I^{n+1}, W^{n_3} \}, \\
+ M_{ro,w} &= \rho_w ( W^{n+1} - W^{n_3} ), \\
+ M_{ro,i} &= \rho_i ( I^{n+1} - I^{n_2} )
+\end{align}
+
+\end{description}
+
+
+\subsubsection{Descretization}
+The moisture diffusion in the third step is solved as
+\begin{align}
+ W_1^{n_3} &= W_1^{n_2} + \frac{2\Delta t \nu_w }{\Delta z_1}\frac{W_2^{n_3} - W_1^{n_3}}{\Delta z_2 + \Delta z_1}, \\
+ W_k^{n_3} &= W_k^{n_2} + \frac{2\Delta t \nu_w }{\Delta z_k}\left( \frac{W_{k+1}^{n_3} - W_k^{n_3}}{\Delta z_{k+1}+\Delta z_k}  - \frac{W_k^{n_3} - W_{k-1}^{n_3}}{\Delta z_k+\Delta z_{k-1}} \right), \\
+ W_m^{n_3} &= W_m^{n_2} - \frac{2\Delta t \nu_w }{\Delta z_m}\left( \frac{W_m^{n_3} - W_{m-1}^{n_3}}{\Delta z_m+\Delta z_{m-1}} \right),
+\end{align}
+where the subscription $k$ represents that $W_k$ is the moisture content in the $k$-layer, and $k = 1, \cdots, m$, where $m$ is the number of the layers.
+This can be written in the matrix form as
 \begin{equation}
 \begin{pmatrix}
-  c_{1}  & b_{1}  &        &        &         &         &         \\
-  a_{2}  & c_{2}  & b_{2}  &        &         &         &         \\
-         & \ddots & \ddots & \ddots &         &         &         \\
-         &        & a_{k}  & c_{k}  & b_{k}   &         &         \\
-         &        &        & \ddots & \ddots  & \ddots  &         \\
-         &        &        &        & a_{m-1} & c_{m-1} & b_{m-1} \\
-         &        &        &        &         & a_{m}   & c_{m}   \\
+  c_1  & b_1    &        &        &        &         &         \\
+       & \ddots & \ddots & \ddots &        &         &         \\
+       &        & a_k    & c_k    & b_k    &         &         \\
+       &        &        & \ddots & \ddots & \ddots  &         \\
+       &        &        &        &        & a_m     & c_m     \\
 \end{pmatrix}
 \begin{pmatrix}
-  T_{1}^{t}   \\
-  T_{2}^{t}   \\
+  W_1^{n_1}   \\
   \vdots      \\
-  T_{k}^{t}   \\
+  W_k^{n_1}   \\
   \vdots      \\
-  T_{m-1}^{t} \\
-  T_{m}^{t}   \\
+  W_m^{n_1}   \\
 \end{pmatrix}
 =
 \begin{pmatrix}
-  T_{1}^{t-1} - \frac{(G_{0} - Q_{melt})\Delta t}{\rho_{L}C_{L}\Delta z_{1}} \\
-  T_{2}^{t-1}   \\
+  V_1 \\
   \vdots        \\
-  T_{k}^{t-1}   \\
+  V_k \\
   \vdots        \\
-  T_{m-1}^{t-1} \\
-  T_{m}^{t-1}   \\
+  V_m
 \end{pmatrix}
 ,
 \end{equation}
-where $c_{k} = 1 - a_{k} - b_{k}$.
+where
+\begin{align}
+ V_k &= W_k^{n_2}, \\
+ a_k &= - \frac{2\Delta t\nu_w}{\Delta z_k (\Delta z_k + \Delta z_{k-1})}, \\
+ b_k &= - \frac{2\Delta t\nu_w}{\Delta z_k (\Delta z_{k+1} + \Delta z_k)}, \\
+ c_k &= 1 - a_k - b_k.
+\end{align}
 This matrix can be solved by the Thomas algorithm (tridiagonal matrix algorithm).
 
-Soil moisture is estimated using a similar method.
-The soil moisture tendency equation is defined as a 1-D vertical diffusion equation as follows:
-\begin{align}
-  \frac{\partial W}{\partial t} = \frac{\partial}{\partial z} \left( \nu \frac{\partial W}{\partial z} \right),
-  \label{eq:Wdt}
-\end{align}
-where $W$ is the soil moisture (m$^3$/m$^3$) and $\nu$ is the constant water diffusivity (m$^2$/s).
-Eq. (\ref{eq:Wdt}) is discretized as follows:
-\begin{align}
-  \frac{\Delta W_{1}}{\Delta t} &= \frac{PE}{\rho_{W}\Delta z_{1}} + \frac{2\nu}{\Delta z_{1}(\Delta z_{2}+\Delta z_{1})} (W_{2}-W_{1}), \\
-  \frac{\Delta W_{k}}{\Delta t} &= - \frac{2\nu}{\Delta z_{k}(\Delta z_{k}+\Delta z_{k-1})} (W_{k}-W_{k-1}) + \frac{2\nu}{\Delta z_{k}(\Delta z_{k+1}+\Delta z_{k})} (W_{k+1}-W_{k}), \\
-  \frac{\Delta W_{m}}{\Delta t} &= - \frac{2\nu}{\Delta z_{m}(\Delta z_{m}+\Delta z_{m-1})} (W_{m}-W_{m-1}),
-\end{align}
-where $PE$ is the net downward water flux (kg/m$^2$/s) at the top surface calculated from the precipitation, i.e., rain and snow, and evaporation rates.
-As in the case of the soil temperature, the tendency equations can be solved using the Thomas algorithm.
 
-Each land grid has the limitation on the water storage.
-When water amount excesses the limitation, water overflows from each soil layer.
-The overflowed water is removed out from the system and stored in the RUNOFF variable.
+
+
+
+The thermodynamical diffusion in the fourth step is discretized as
+\begin{align}
+  \kappa_k &= \kappa_s + 0.5 (W^{n_3}_k)^\frac{1}{3}, \\
+%
+  (F_w)_{k+\frac{1}{2}} &= - 2\rho_w\nu_w\frac{W^{n_3}_{k+1}-W^{n_3}_k}{\Delta z_{k+1}+\Delta z_k}, \\
+%
+  (C_L^{n_3})_1 T^{n+1}_1 &= U^{n_3}_1 + L_f(M_i)^{n_2}_1
+  + \frac{\Delta t}{\Delta z_1} (\kappa_2+\kappa_1) \frac{T^{n+1}_2-T^{n+1}_1}{\Delta z_2+\Delta z_1}, \\
+%
+  (C_L^{n_3})_k T^{n+1}_k &= U^{n_3}_k + L_f(M_i)^{n_2}_k  \nonumber\\&
+  + \frac{\Delta t}{\Delta z_k} \left( (\kappa_{k+1}+\kappa_k) \frac{T^{n+1}_{k+1}-T^{n+1}_k}{\Delta z_{k+1}+\Delta z_k} - (\kappa_k+\kappa_{k-1}) \frac{T^{n+1}_k-T^{n+1}_{k-1}}{\Delta z_k+\Delta z_{k-1}} \right), \\
+%
+  (C_L^{n_3})_m T^{n+1}_m &= U^{n_3}_m + L_f(M_i)^{n_2}_m
+  - \frac{\Delta t}{\Delta z_m} (\kappa_m+\kappa_{m-1}) \frac{T^{n+1}_m-T^{n+1}_{m-1}}{\Delta z_m+\Delta z_{m-1}}.
+\end{align}
+
+As in the case of the soil moisture, the tendency equations can be solved using the Thomas algorithm.
+\begin{align}
+ V_k &= U^{n_3}_k + L_f (M_i)^{n_2}_k, \\
+ a_k &= - \frac{\Delta t (\kappa_k+\kappa_{k-1})}{\Delta z_k(\Delta z_k+\Delta_{k-1})}, \\
+ b_k &= - \frac{\Delta t (\kappa_{k+1}+\kappa_k)}{\Delta z_k(\Delta z_{k+1}+\Delta_k)}, \\
+ c_k &= (C_L^{n_1})_k - a_k - b_k.
+\end{align}
+

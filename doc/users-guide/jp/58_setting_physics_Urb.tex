@@ -1,0 +1,196 @@
+\section{都市モデル} \label{sec:basic_usel_urban}
+%------------------------------------------------------
+都市スキームの目的は大気と都市面間のフラックスを計算することである。
+そのために、都市の表面温度や水分量などの都市域内の状態量も計算する。
+都市スキームの更新（計算する時間間隔）は\namelist{PARAM_TIME}の
+\nmitem{TIME_DT_URBAN}と\nmitem{TIME_DT_URBAN_UNIT}で設定する
+(詳細は第\ref{sec:timeintiv}節を参照)。
+
+
+%-------------------------------------------------------------------------------
+使用する都市スキームは、
+init.confとrun.conf中の\namelist{PARAM_URBAN}の\nmitem{URBAN_DYN_TYPE}で設定する。
+%
+\editboxtwo{
+\verb|&PARAM_URBAN         | & \\
+\verb| URBAN_DYN_TYPE = "NONE", | & ; 表\ref{tab:nml_urban}から都市スキームを選択。\\
+\verb|/                    | & \\
+}
+
+\begin{table}[h]
+\begin{center}
+  \caption{都市スキームの選択肢}
+  \label{tab:nml_urban}
+  \begin{tabularx}{150mm}{llX} \hline
+    \rowcolor[gray]{0.9}  スキーム名  & スキームの説明 &  参考文献 \\ \hline
+      \verb|NONE または OFF|   & 都市モデルを利用しない                      \\
+      \verb|LAND|              & 都市域は陸面モデルによって計算される        \\
+      \verb|KUSAKA01|          & 単層キャノピーモデル  & \citet{kusaka_2001} \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+計算領域に都市の土地利用が含まれる場合は、
+\nmitem{URBAN_TYPE}に\verb|NONE|または\verb|OFF|を選択することはできない。
+もし\verb|NONE|や\verb|OFF|が選択された場合には、
+下記のメッセージをLOGファイルに出力して、実行は直ちに終了する。
+%
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Urban fraction exists, but urban component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+\nmitem{URBAN_DYN_TYPE}として\verb|LAND|を選択した場合は、
+表面フラックスや都市域の土壌変数を計算するために陸面モデルが用いられる。
+現在、陸面モデルはスラブモデルが実装されているので、\verb|LAND|は
+スラブモデルを選択していることと同等である。
+この場合、陸面モデルのためのパラメータテーブルに、
+都市域に対するパラメータを与える必要がある(第\ref{sec:basic_usel_land}節参照)。
+
+\verb|KUSAKA01|スキームは、単層キャノピーモデルである。
+都市キャノピー上端と大気との間のエネルギー交換をモデル化しているため、
+建物高さ(\nmitem{ZR} in \namelist{PARAM_URBAN_DATA})は、大気第１層のFace levelよりも2m以上、下に設定する必要がある。
+
+
+%-------------------------------------------------------------------------------
+\subsection{\texttt{KUSAKA01}スキーム}
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsubsection{構造物表面(屋根面・壁面・道路面)の層の設定}
+%-------------------------------------------------------------------------------
+
+\verb|KUSAKA01|は、都市形状として２次元の対称的なストリートキャニオンを考える。
+構造物と大気との境界面は、建物の屋根面と壁面、道路面の３つから構成される。
+これらの構造物面の温度は熱拡散によって計算される。
+この熱拡散を計算する際に使用する層数は、\namelist{PARAM_URBAN_GRID_CARTESC_INDEX}の\nmitem{UKMAX}で指定する。
+また、各層の層厚は\namelist{PARAM_URBAN_GRID_CARTESC}の\nmitem{UDZ}で指定する(単位は[m])。
+\editboxtwo{
+\verb|&PARAM_URBAN_GRID_CARTESC_INDEX| & \\
+\verb| UKMAX = 5,|                          & ; 人工構造物の表面に設定される層数 \\
+\verb|/|\\
+\\
+\verb|&PARAM_URBAN_GRID_CARTESC| & \\
+\verb| UDZ = 0.01, 0.01, 0.03, 0.05, 0.10,| & ; 各層の層厚\\
+\verb|/|\\
+}
+\nmitem{UDZ}には\nmitem{UKMAX}で指定した層数分の配列を指定する。
+配列の順序は、構造物表面から内部に向かう方向である。
+また、設定は、屋根面・壁面・道路面全てに適用される。
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{都市パラメータに関する設定}
+%-------------------------------------------------------------------------------
+
+\verb|KUSAKA01|には、都市形態を指定するパラメータが数多く存在する。
+設定可能な都市パラメータは、\namelist{PARAM_URBAN_DATA}を参照いただきたい
+（第\ref{sec:reference_manual}節のネームリストに記述のリンクから参照可能）。
+\namelist{PARAM_URBAN_DATA} の設定例は、\verb|scale/scale-rm/test/data/urban/param.kusaka01.dat| に用意されている。
+
+
+都市パラメータの設定は、\namelist{PARAM_URBAN_DYN_KUSAKA01}で行う。
+%
+\editboxtwo{
+\verb|&PARAM_URBAN_DYN_KUSAKA01                         | & \\
+\verb| DTS_MAX = 0.1,                                   | & ; 1step当たりの最大気温変化量\\
+                                                          & ~~\verb|  = DTS_MAX * DT [K/step]|\\
+\verb| BOUND   = 1,                                     | & ; 建物・屋根・道路最内層の計算条件\\
+                                                          & ~~\verb|  1: Zero-flux, 2: T=Const.| \\
+\verb| URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME       = "", | & ; 都市パラメータ用のテーブルファイル\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME = "", | & ; Z0mの２次元グリットデータファイル\\
+%\verb| URBAN_DYN_KUSAKA01_GRIDDED_Z0H_IN_FILENAME = "", | &  Z0hの２次元グリットデータファイル\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME  = "", | & ; AHの２次元グリットデータファイル\\
+\verb| URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME = "", | & ; AHLの２次元グリットデータファイル\\
+\verb|/                                                 | & \\
+}
+
+
+計算に使用する都市パラメータの値は、以下の３段階の手続きを経て決定される。
+\begin{enumerate}[1)]
+\item ソースコード内のデフォルト値が、全ての格子に適用される。
+\item \namelist{PARAM_URBAN_DYN_KUSAKA01}の\nmitem{URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME}に
+ファイルが指定されている場合は、
+そのファイル内の\namelist{PARAM_URBAN_DATA}で与えられる都市パラメータの値を読み込み、
+1)で設定したデフォルト値を置き換える。ここで読み込んだ値も、全ての格子に適用される。
+\item 運動量粗度(Z0m)、人工排熱の顕熱(AH)と潜熱(AHL)については、グリットデータが用意されている場合はそれらを読み込み、1)もしくは2)で設定された値を置き換える。
+つまり、Z0m, AH, AHL については、グリット毎に異なる値を設定することが可能である。
+これらのグリットデータファイルは、\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_Z0M_IN_FILENAME}、\\
+\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_AH_IN_FILENAME}、\\
+\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_AHL_IN_FILENAME}でそれぞれ指定する。
+\end{enumerate}
+
+
+\nmitem{URBAN_DYN_KUSAKA01_GRIDDED_(Z0M|AH|AHL)_IN_FILENAME} は
+予め、計算設定に応じた格子の値を\scalenetcdf 形式で用意しておく必要がある。
+このデータは、ユーザーが用意したバイナリー形式のデータから、
+\verb|scale_init|を使って変換することが可能である。\\
+
+
+\noindent\textbf{\underline{\small{\textgt{都市パラメータのためグリットデータの作成方法}}}}
+
+
+データの作成には、\verb|scale_init|を使用する。
+詳細な説明は、第\ref{sec:userdata}節を参照いただきたい。
+ここでは、confファイルなどでの具体的な設定例のみ示す。
+
+任意のバイナリー形式のデータから計算設定に応じた格子データを
+作成するには、\verb|init.conf| に\namelist{PARAM_CONVERT}と\namelist{PARAM_CNVUSER}を追加する。
+下記は、AHデータを作成する際の例である。
+
+\editboxtwo{
+\verb|&PARAM_CONVERT          | & \\
+\verb| CONVERT_USER = .true., | & \\
+\verb|/                       | & \\
+&  \\
+\verb|&PARAM_CNVUSER                                   | & \\
+\verb| CNVUSER_FILE_TYPE       = "GrADS",              | & \\
+\verb| CNVUSER_NSTEPS          =  24,                  | & ; Set 1 for Z0M and 24 for AH and AHL\\
+\verb| CNVUSER_GrADS_FILENAME  = "namelist.grads.ah",  | & \\
+\verb| CNVUSER_GrADS_VARNAME   = "AH",                 | & ; \nmitem{name} of \nmitem{GrADS_ITEM}\\
+\verb| CNVUSER_GrADS_LONNAME   = "lon",                | & ; \nmitem{name} of \nmitem{GrADS_ITEM}\\
+\verb| CNVUSER_GrADS_LATNAME   = "lat",                | & ; \nmitem{name} of \nmitem{GrADS_ITEM}\\
+\verb| CNVUSER_OUT_BASENAME    = "urb_ah.d01",         | & \\
+\verb| CNVUSER_OUT_VARNAME     = "URBAN_AH",           | & ; \verb|URBAN_AH|, \verb|URBAN_AHL|, or \verb|URBAN_Z0M|\\
+\multicolumn{2}{l}{\verb| CNVUSER_OUT_VARDESC     = "Anthropogenic sensible heat flux",  |}  \\
+\verb| CNVUSER_OUT_VARUNIT     = "W/m2",               | & ; 単位\\
+\verb| CNVUSER_OUT_DTYPE       = "REAL8"               | & \\
+\verb| CNVUSER_OUT_DT          = 3600D0,               | & \\
+\verb|/                                                | & \\
+}
+
+また、\grads の``ctl''に相当するネームリストファイルの例は下記の通りである。
+\editbox{
+\verb|#              | \\
+\verb|# Dimension    | \\
+\verb|#              | \\
+\verb|&GrADS_DIMS    | \\
+\verb| nx = 361,     | \\
+\verb| ny = 181,     | \\
+\verb| nz = 1,       | \\
+\verb|/              | \\
+\\
+\verb|#              | \\
+\verb|# Variables    | \\
+\verb|#              | \\
+\verb|&GrADS_ITEM  name='lon',   dtype='linear',  swpoint=0.0d0, dd=1.0d0 /     | \\
+\verb|&GrADS_ITEM  name='lat',   dtype='linear',  swpoint=-90.0d0, dd=1.0d0 /   | \\
+\verb|&GrADS_ITEM  name='AH',   dtype='map',     fname='urb_ah', startrec=1, totalrec=1,|  \textbackslash \\
+   ~~~~~~~~~ \verb|bintype='real4', yrev=.false., missval=-999.0E+0 /                    | \\
+}
+
+
+第\ref{sec:userdata}節に記載されているように、
+出力ファイル中の時刻座標の初期値は \namelist{PARAM_TIME} の\nmitem{TIME_STARTDATE} で指定し、
+時間間隔は \nmitem{CNVUSER_OUT_DT} で指定することになっているが、
+都市スキームでは、これらの情報を無視してデータを読み込む。
+%
+つまり、AHとAHLデータは、\scalenetcdf の時刻情報に関わらず、
+1時から24時(ローカルタイム: LT)までの24時間分のデータが１時間毎で用意されていることを仮定して読み込まれる。
+ここでのローカルタイムは、計算ドメインの基準経度から、$UTC + \nmitem{MAPPROJECTION_basepoint_lon}/15.0$によって定義される。
+ただし、AHとAHLデータ配列の時間軸の単位については、次バージョン以降に変更となる可能性があるので注意が必要である。
+Z0Mは時間変化を考慮しないので、データは１時刻分でよい (つまり、\nmitem{CNVUSER_NSTEPS}=1)。
+その他の項目については、第\ref{sec:userdata}節に記載の通りである。
+
+
+

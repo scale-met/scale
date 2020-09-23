@@ -17,6 +17,7 @@ module mod_atmos_phy_sf_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_tracer
   use scale_cpl_sfc_index
@@ -58,7 +59,6 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOU_t    (:,:)     ! tendency rho*U    [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOV_t    (:,:)     ! tendency rho*V    [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOH      (:,:)     ! diabatic heating  [J/m3/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_RHOT_t    (:,:)     ! tendency RHOT     [K  *kg/m3/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_RHOQ_t    (:,:,:)   ! tendency rho*QTRC [    kg/kg/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_TEMP  (:,:)     ! surface skin temperature             [K]
@@ -71,21 +71,31 @@ module mod_atmos_phy_sf_vars
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_DENS  (:,:)     ! surface atmosphere density  [kg/m3]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFC_PRES  (:,:)     ! surface atmosphere pressure [Pa]
 
+  real(RP), public, allocatable :: ATMOS_PHY_SF_PREC_MASS (:,:)     ! mass flux of the precipitation [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_PREC_ENGI (:,:)     ! internal energy flux of the precipitation [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MW   (:,:)     ! z-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MU   (:,:)     ! x-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_MV   (:,:)     ! y-momentum flux (area center) [m/s*kg/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SH   (:,:)     ! sensible heat flux [J/m2/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_LH   (:,:)     ! latent heat flux [J/m2/s]
-  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_SHEX (:,:)     ! extra sensible heat flux [J/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QVEX (:,:)     ! extra latent heat flux [kg/kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_GH   (:,:)     ! ground heat flux [J/m2/s] (downward)
   real(RP), public, allocatable, target :: ATMOS_PHY_SF_SFLX_QTRC (:,:,:) ! tracer mass flux [kg/m2/s]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_ENGI (:,:)     ! internal energy flux [J/m2/s]
   real(RP), public, pointer     :: ATMOS_PHY_SF_SFLX_QV   (:,:)
+
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Ustar     (:,:)     ! friction velocity         [m/2]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Tstar     (:,:)     ! temperature scale         [K]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Qstar     (:,:)     ! moisture scale            [kg/kg]
+  real(RP), public, allocatable :: ATMOS_PHY_SF_Wstar     (:,:)     ! convective velocity scale [m/s]
 
   real(RP), public, allocatable :: ATMOS_PHY_SF_U10       (:,:)     ! 10m x-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_V10       (:,:)     ! 10m y-wind [m/s]
   real(RP), public, allocatable :: ATMOS_PHY_SF_T2        (:,:)     ! 2m temperature [K]
   real(RP), public, allocatable :: ATMOS_PHY_SF_Q2        (:,:)     ! 2m specific humidity [kg/kg]
 
-  real(RP), public, allocatable :: ATMOS_PHY_SF_l_mo      (:,:)     ! monin-obukov length
+  real(RP), public, allocatable :: ATMOS_PHY_SF_RLmo      (:,:)      ! inverse of monin-obukhov length
 
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QEMIS(:,:,:) ! tracer emission   flux [kg/m2/s]
 !  real(RP), public, allocatable :: ATMOS_PHY_SF_SFLX_QDEP (:,:,:) ! tracer deposition flux [kg/m2/s]
@@ -149,7 +159,7 @@ module mod_atmos_phy_sf_vars
                   '', &
                   'surface_roughness_length_for_momentum_in_air', &
                   'surface_roughness_length_for_heat_in_air', &
-                  '' /
+                  ''  /
 
   data VAR_UNIT / 'K', &
                   '1', &
@@ -165,7 +175,9 @@ module mod_atmos_phy_sf_vars
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_TEMP      = 300.0_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW = 0.04_RP
   real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW = 0.10_RP
-  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0        = 1E-4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0M       = 1E-4_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0H       = 1E-5_RP
+  real(RP), private :: ATMOS_PHY_SF_DEFAULT_SFC_Z0E       = 1E-5_RP
 
   real(RP), allocatable, target :: ZERO(:,:)
 
@@ -195,7 +207,9 @@ contains
        ATMOS_PHY_SF_DEFAULT_SFC_TEMP,              &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo_LW,         &
        ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW,         &
-       ATMOS_PHY_SF_DEFAULT_SFC_Z0
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0M,               &
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0H,               &
+       ATMOS_PHY_SF_DEFAULT_SFC_Z0E
 
     integer :: ierr
     integer :: iv
@@ -204,18 +218,28 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Setup'
 
+    !--- read namelist
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_VARS,iostat=ierr)
+    if( ierr < 0 ) then !--- missing
+       LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Not found namelist. Default used.'
+    elseif( ierr > 0 ) then !--- fatal error
+       LOG_ERROR("ATMOS_PHY_SF_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
+       call PRC_abort
+    endif
+    LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
+
+
     allocate( ATMOS_PHY_SF_DENS_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_MOMZ_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOU_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOV_t    (IA,JA)    )
-    allocate( ATMOS_PHY_SF_RHOT_t    (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOH      (IA,JA)    )
     allocate( ATMOS_PHY_SF_RHOQ_t    (IA,JA,QA) )
     ATMOS_PHY_SF_DENS_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_MOMZ_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOU_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOV_t    (:,:)     = UNDEF
-    ATMOS_PHY_SF_RHOT_t    (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOH      (:,:)     = UNDEF
     ATMOS_PHY_SF_RHOQ_t    (:,:,:)   = UNDEF
 
@@ -231,51 +255,60 @@ contains
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
     ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS) = ATMOS_PHY_SF_DEFAULT_SFC_albedo_SW
-    ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
-    ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0
+    ATMOS_PHY_SF_SFC_Z0M (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0M
+    ATMOS_PHY_SF_SFC_Z0H (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0H
+    ATMOS_PHY_SF_SFC_Z0E (:,:) = ATMOS_PHY_SF_DEFAULT_SFC_Z0E
 
     allocate( ATMOS_PHY_SF_SFC_DENS  (IA,JA) )
     allocate( ATMOS_PHY_SF_SFC_PRES  (IA,JA) )
     ATMOS_PHY_SF_SFC_DENS  (:,:)     = UNDEF
     ATMOS_PHY_SF_SFC_PRES  (:,:)     = UNDEF
 
+    allocate( ATMOS_PHY_SF_PREC_MASS (IA,JA) )
+    allocate( ATMOS_PHY_SF_PREC_ENGI (IA,JA) )
+    ATMOS_PHY_SF_PREC_MASS(:,:)      = UNDEF
+    ATMOS_PHY_SF_PREC_ENGI(:,:)      = UNDEF
+
     allocate( ATMOS_PHY_SF_SFLX_MW   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_MU   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_MV   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_SH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_LH   (IA,JA) )
+    allocate( ATMOS_PHY_SF_SFLX_SHEX (IA,JA) )
+    allocate( ATMOS_PHY_SF_SFLX_QVEX (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_GH   (IA,JA) )
     allocate( ATMOS_PHY_SF_SFLX_QTRC (IA,JA,max(QA,1)) )
+    allocate( ATMOS_PHY_SF_SFLX_ENGI (IA,JA) )
     ATMOS_PHY_SF_SFLX_MW   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_MU   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_MV   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_SH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_LH   (:,:)     = UNDEF
+    ATMOS_PHY_SF_SFLX_SHEX (:,:)     = UNDEF
+    ATMOS_PHY_SF_SFLX_QVEX (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_GH   (:,:)     = UNDEF
     ATMOS_PHY_SF_SFLX_QTRC (:,:,:)   = UNDEF
+    ATMOS_PHY_SF_SFLX_ENGI (:,:)     = UNDEF
+
+    allocate( ATMOS_PHY_SF_Ustar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Tstar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Qstar     (IA,JA) )
+    allocate( ATMOS_PHY_SF_Wstar     (IA,JA) )
+    ATMOS_PHY_SF_Ustar     (:,:)     = UNDEF
+    ATMOS_PHY_SF_Tstar     (:,:)     = UNDEF
+    ATMOS_PHY_SF_Wstar     (:,:)     = UNDEF
 
     allocate( ATMOS_PHY_SF_U10       (IA,JA) )
     allocate( ATMOS_PHY_SF_V10       (IA,JA) )
     allocate( ATMOS_PHY_SF_T2        (IA,JA) )
     allocate( ATMOS_PHY_SF_Q2        (IA,JA) )
-    allocate( ATMOS_PHY_SF_l_mo      (IA,JA) )
+    allocate( ATMOS_PHY_SF_RLmo      (IA,JA) )
     ATMOS_PHY_SF_U10       (:,:)     = UNDEF
     ATMOS_PHY_SF_V10       (:,:)     = UNDEF
     ATMOS_PHY_SF_T2        (:,:)     = UNDEF
     ATMOS_PHY_SF_Q2        (:,:)     = UNDEF
-    ATMOS_PHY_SF_l_mo      (:,:)     = UNDEF
+    ATMOS_PHY_SF_RLmo      (:,:)     = UNDEF
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_SF_VARS,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("ATMOS_PHY_SF_vars_setup",*) 'Not found namelist. Default used.'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("ATMOS_PHY_SF_vars_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_SF_VARS. Check!'
-       call PRC_abort
-    endif
-    LOG_NML(PARAM_ATMOS_PHY_SF_VARS)
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_SF_vars_setup",*) '[ATMOS_PHY_SF] prognostic/diagnostic variables'
@@ -324,10 +357,10 @@ contains
     integer :: n ,idir, irgn
     !---------------------------------------------------------------------------
 
-    call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP(:,:), 1 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0M (:,:), 2 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0H (:,:), 3 )
-    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0E (:,:), 4 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_TEMP (:,:), 1 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
+    call COMM_vars8( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
 
     n = 4
     do irgn = I_R_IR, I_R_VIS
@@ -337,10 +370,10 @@ contains
     enddo
     enddo
 
-    call COMM_wait ( ATMOS_PHY_SF_SFC_TEMP(:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M (:,:), 2 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H (:,:), 3 )
-    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E (:,:), 4 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_TEMP (:,:), 1 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0M  (:,:), 2 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0H  (:,:), 3 )
+    call COMM_wait ( ATMOS_PHY_SF_SFC_Z0E  (:,:), 4 )
 
     n = 4
     do irgn = I_R_IR, I_R_VIS
@@ -431,7 +464,7 @@ contains
           call ATMOS_PHY_SF_vars_fillhalo
        end if
 
-       call ATMOS_PHY_SF_vars_checktotal
+       call ATMOS_PHY_SF_vars_check
 
     else
        LOG_INFO("ATMOS_PHY_SF_vars_restart_read",*) 'invalid restart file ID for ATMOS_PHY_SF.'
@@ -522,7 +555,7 @@ contains
 
     if ( restart_fid /= -1 ) then
 
-       do i = I_SFC_TEMP, I_SFC_Z0E
+       do i = 1, VMAX
           call FILE_CARTESC_def_var( restart_fid,                           & ! [IN]
                                      VAR_NAME(i), VAR_DESC(i), VAR_UNIT(i), & ! [IN]
                                      'XY', ATMOS_PHY_SF_RESTART_OUT_DTYPE,  & ! [IN]
@@ -547,7 +580,7 @@ contains
 
        call ATMOS_PHY_SF_vars_fillhalo
 
-       call ATMOS_PHY_SF_vars_checktotal
+       call ATMOS_PHY_SF_vars_check
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_TEMP),                  & ! [IN]
                                     ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
@@ -579,16 +612,14 @@ contains
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(I_SFC_Z0E),                   & ! [IN]
                                     ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
                                     VAR_NAME(I_SFC_Z0E), 'XY'                         ) ! [IN]
-
     endif
 
     return
   end subroutine ATMOS_PHY_SF_vars_restart_write
 
   !-----------------------------------------------------------------------------
-  subroutine ATMOS_PHY_SF_vars_checktotal
+  subroutine ATMOS_PHY_SF_vars_check
     use scale_statistics, only: &
-       STATISTICS_checktotal, &
        STATISTICS_total
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA, &
@@ -596,60 +627,99 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_TEMP),                             & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_IR_dir),                       & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_IR_dif),                       & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_NIR_dir),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_NIR_dif),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_VIS_dir),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
-                              VAR_NAME(I_SFC_ALB_VIS_dif),                      & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0M   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0M),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0H   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0H),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-       call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
-                              ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
-                              VAR_NAME(I_SFC_Z0E),                              & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
-                              ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
-    endif
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_TEMP(:,:),                       & ! (in)
+                   0.0_RP, 1.0E3_RP, VAR_NAME(I_SFC_TEMP),           & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_IR_dir),     & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_IR_dif),     & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_NIR_dir),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_NIR_dif),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_VIS_dir),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! (in)
+                   0.0_RP, 1.0E0_RP, VAR_NAME(I_SFC_ALB_VIS_dif),    & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0M(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0M),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0H(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0H),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+    call VALCHECK( IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_SF_SFC_Z0E(:,:),                        & ! (in)
+                   0.0_RP, 1.0E2_RP, VAR_NAME(I_SFC_Z0E),            & ! (in)
+                   __FILE__, __LINE__                                ) ! (in)
+
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_TEMP  (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_TEMP),                             & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_IR ), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_IR_dir),                       & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_IR ), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_IR_dif),                       & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_NIR), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_NIR_dir),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_NIR), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_NIR_dif),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_direct ,I_R_VIS), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_VIS_dir),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_albedo(:,:,I_R_diffuse,I_R_VIS), & ! [IN]
+                           VAR_NAME(I_SFC_ALB_VIS_dif),                      & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0M   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0M),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0H   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0H),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
+    call STATISTICS_total( IA, IS, IE, JA, JS, JE,                           & ! [IN]
+                           ATMOS_PHY_SF_SFC_Z0E   (:,:),                     & ! [IN]
+                           VAR_NAME(I_SFC_Z0E),                              & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_AREA(:,:),                & ! [IN]
+                           ATMOS_GRID_CARTESC_REAL_TOTAREA                   ) ! [IN]
 
     return
-  end subroutine ATMOS_PHY_SF_vars_checktotal
+  end subroutine ATMOS_PHY_SF_vars_check
 
 end module mod_atmos_phy_sf_vars

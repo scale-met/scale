@@ -58,9 +58,9 @@ cat << EOF > param.region.conf
 #################################################
 
 &PARAM_ATMOS_GRID_CARTESC_INDEX
- KMAX = ${KMAX[$D]},
- IMAX = ${IMAX[$D]},
- JMAX = ${JMAX[$D]},
+ KMAX  = ${KMAX[$D]},
+ IMAXG = ${IMAXG[$D]},
+ JMAXG = ${JMAXG[$D]},
 /
 
 &PARAM_OCEAN_GRID_CARTESC_INDEX
@@ -73,6 +73,10 @@ cat << EOF > param.region.conf
 
 &PARAM_URBAN_GRID_CARTESC_INDEX
  UKMAX = ${UKMAX},
+/
+
+&PARAM_OCEAN_GRID_CARTESC
+ ODZ = ${LIST_ODZ},
 /
 
 &PARAM_LAND_GRID_CARTESC
@@ -127,11 +131,13 @@ cat << EOF > param.physics.conf
  ATMOS_BOUNDARY_IN_BASENAME    = "${ATMOS_BOUNDARY_IN_BASENAME}",
  ATMOS_BOUNDARY_START_DATE     = ${ATMOS_BOUNDARY_START_DATE},
  ATMOS_BOUNDARY_UPDATE_DT      = ${ATMOS_BOUNDARY_UPDATE_DT},
- ATMOS_BOUNDARY_USE_DENS       = .true.,
  ATMOS_BOUNDARY_USE_QHYD       = ${ATMOS_BOUNDARY_USE_QHYD},
- ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0,
  ATMOS_BOUNDARY_LINEAR_H       = .false.,
  ATMOS_BOUNDARY_EXP_H          = 2.0,
+ ATMOS_GRID_NUDGING_uv         = .false.,
+ ATMOS_GRID_NUDGING_pt         = .false.,
+ ATMOS_GRID_NUDGING_qv         = .false.,
+ ATMOS_GRID_NUDGING_tau        = 864000.,
 /
 
 &PARAM_ATMOS_DYN
@@ -142,9 +148,12 @@ cat << EOF > param.physics.conf
  ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = "UD3KOREN1993",
  ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.0,
  ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.0,
- ATMOS_DYN_coriolis_type              = "SPHERE",
  ATMOS_DYN_FLAG_FCT_TRACER            = .false.,
  ATMOS_DYN_WDAMP_HEIGHT               = 15.D3,
+/
+
+&PARAM_CORIOLIS
+ CORIOLIS_type = "SPHERE",
 /
 
 &PARAM_ATMOS_PHY_RD_MSTRN
@@ -183,10 +192,6 @@ cat <<EOF >> param.physics.conf
  OCEAN_VARS_CHECKRANGE = .true.,
 /
 
-&PARAM_OCEAN_DYN_SLAB
- OCEAN_DYN_SLAB_DEPTH = 10.0,
-/
-
 #################################################
 #
 # model configuration: land
@@ -209,13 +214,11 @@ cat <<EOF >> param.physics.conf
 #################################################
 
 &PARAM_URBAN_VARS
-! URBAN_VARS_CHECKRANGE = .true.,
+ URBAN_VARS_CHECKRANGE = .true.,
 /
 
 &PARAM_URBAN_DYN_KUSAKA01
- STRGR = 0.0,
- STRGB = 0.0,
- STRGG = 0.0,
+ URBAN_DYN_KUSAKA01_PARAM_IN_FILENAME = 'param.kusaka01.dat',
 /
 EOF
 

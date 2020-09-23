@@ -32,8 +32,6 @@ module scale_ocean_dyn_slab
   !
   !++ Public parameters & variables
   !
-  real(RP), public :: OCEAN_DYN_SLAB_DEPTH = 10.0_RP !< water depth of slab ocean [m]
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -52,38 +50,45 @@ module scale_ocean_dyn_slab
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine OCEAN_DYN_SLAB_setup
+  subroutine OCEAN_DYN_SLAB_setup( DEPTH )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
-       DWATR => CONST_DWATR, &
-       CL    => CONST_CL
+       DWATR => CONST_DWATR
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER
     use scale_calendar, only: &
        CALENDAR_unit2sec
     use scale_file_external_input, only: &
-       FILE_EXTERNAL_INPUT_file_limit, &
        FILE_EXTERNAL_INPUT_regist
     implicit none
+    real(RP), intent(in) :: DEPTH
 
-    real(DP)               :: OCEAN_DYN_SLAB_nudging_tau                                      = 0.0_DP  ! Relaxation time
-    character(len=H_SHORT) :: OCEAN_DYN_SLAB_nudging_tau_unit                                 = "SEC"
-    character(len=H_LONG)  :: OCEAN_DYN_SLAB_nudging_basename(FILE_EXTERNAL_INPUT_file_limit) = ''
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_year                     = .false.
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_month                    = .false.
-    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_day                      = .false.
-    integer                :: OCEAN_DYN_SLAB_nudging_step_fixed                               = 0
-    real(RP)               :: OCEAN_DYN_SLAB_nudging_offset                                   = 0.0_RP
-    real(RP)               :: OCEAN_DYN_SLAB_nudging_defval                                  != UNDEF
-    logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates                        = .true.
-    integer                :: OCEAN_DYN_SLAB_nudging_step_limit                               = 0
+    real(DP)               :: OCEAN_DYN_SLAB_nudging_tau                   = 0.0_DP  ! Relaxation time
+    character(len=H_SHORT) :: OCEAN_DYN_SLAB_nudging_tau_unit              = "SEC"
+    character(len=H_LONG)  :: OCEAN_DYN_SLAB_nudging_basename              = ''
+    logical                :: OCEAN_DYN_SLAB_nudging_basename_add_num      = .false.
+    integer                :: OCEAN_DYN_SLAB_nudging_number_of_files       = 1
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_year  = .false.
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false.
+    logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false.
+    integer                :: OCEAN_DYN_SLAB_nudging_step_fixed            = 0
+    real(RP)               :: OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP
+    real(RP)               :: OCEAN_DYN_SLAB_nudging_defval                ! = UNDEF
+    logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.
+    integer                :: OCEAN_DYN_SLAB_nudging_step_limit            = 0
+
+    ! obsolete
+    real(RP)               :: OCEAN_DYN_SLAB_DEPTH = -1.0_RP
 
     namelist / PARAM_OCEAN_DYN_SLAB / &
-       OCEAN_DYN_SLAB_DEPTH,                         &
        OCEAN_DYN_SLAB_nudging,                       &
        OCEAN_DYN_SLAB_nudging_tau,                   &
        OCEAN_DYN_SLAB_nudging_tau_unit,              &
        OCEAN_DYN_SLAB_nudging_basename,              &
+       OCEAN_DYN_SLAB_nudging_basename_add_num,      &
+       OCEAN_DYN_SLAB_nudging_number_of_files,       &
        OCEAN_DYN_SLAB_nudging_enable_periodic_year,  &
        OCEAN_DYN_SLAB_nudging_enable_periodic_month, &
        OCEAN_DYN_SLAB_nudging_enable_periodic_day,   &
@@ -91,7 +96,8 @@ contains
        OCEAN_DYN_SLAB_nudging_offset,                &
        OCEAN_DYN_SLAB_nudging_defval,                &
        OCEAN_DYN_SLAB_nudging_check_coordinates,     &
-       OCEAN_DYN_SLAB_nudging_step_limit
+       OCEAN_DYN_SLAB_nudging_step_limit,            &
+       OCEAN_DYN_SLAB_DEPTH
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -112,10 +118,15 @@ contains
     endif
     LOG_NML(PARAM_OCEAN_DYN_SLAB)
 
-    OCEAN_DYN_SLAB_HeatCapacity = DWATR * CL * OCEAN_DYN_SLAB_DEPTH
+    if ( OCEAN_DYN_SLAB_DEPTH >= 0.0 ) then
+       LOG_ERROR("OCEAN_DYN_SLAB_setup",*) '"OCEAN_DYN_SLAB_DEPTH" is obsolete. USE "ODZ" of "PARAM_OCEAN_GRID_CARTESC"'
+       call PRC_abort
+    end if
+
+    OCEAN_DYN_SLAB_HeatCapacity = DWATR * CV_WATER * DEPTH
 
     LOG_NEWLINE
-    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Slab ocean depth [m]         : ', OCEAN_DYN_SLAB_DEPTH
+    LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Slab ocean depth [m]         : ', DEPTH
     LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Ocean heat capacity [J/K/m2] : ', OCEAN_DYN_SLAB_HeatCapacity
 
     if ( OCEAN_DYN_SLAB_nudging ) then
@@ -129,7 +140,7 @@ contains
           LOG_INFO("OCEAN_DYN_SLAB_setup",*) 'Tau=0 means that SST is completely replaced by the external data.'
        endif
 
-       if ( OCEAN_DYN_SLAB_nudging_basename(1) == '' ) then
+       if ( OCEAN_DYN_SLAB_nudging_basename == '' ) then
           LOG_ERROR("OCEAN_DYN_SLAB_setup",*) 'OCEAN_DYN_SLAB_nudging_basename is necessary !!'
           call PRC_abort
        endif
@@ -138,7 +149,9 @@ contains
     endif
 
     if ( OCEAN_DYN_SLAB_nudging ) then
-       call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_SLAB_nudging_basename(:),           & ! [IN]
+       call FILE_EXTERNAL_INPUT_regist( OCEAN_DYN_SLAB_nudging_basename,              & ! [IN]
+                                        OCEAN_DYN_SLAB_nudging_basename_add_num,      & ! [IN]
+                                        OCEAN_DYN_SLAB_nudging_number_of_files,       & ! [IN]
                                         'OCEAN_TEMP',                                 & ! [IN]
                                         'OXY',                                        & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_enable_periodic_year,  & ! [IN]
@@ -147,8 +160,9 @@ contains
                                         OCEAN_DYN_SLAB_nudging_step_fixed,            & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_offset,                & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_defval,                & ! [IN]
-                                        OCEAN_DYN_SLAB_nudging_check_coordinates,     & ! [IN]
-                                        OCEAN_DYN_SLAB_nudging_step_limit             ) ! [IN]
+                                        check_coordinates = OCEAN_DYN_SLAB_nudging_check_coordinates, & ! [IN]
+                                        step_limit        = OCEAN_DYN_SLAB_nudging_step_limit,        & ! [IN]
+                                        allow_missing     = ( .not. OCEAN_DYN_SLAB_offline_mode )     ) ! [IN]
     endif
 
     return
@@ -163,33 +177,38 @@ contains
        OCEAN_TEMP_t,     &
        OCEAN_SFLX_G,     &
        OCEAN_SFLX_water, &
-       OCEAN_SFLX_ice,   &
        calc_flag,        &
        dt, NOWDAYSEC,    &
-       OCEAN_TEMP        )
+       OCEAN_TEMP,       &
+       MASS_SUPL,        &
+       ENGI_SUPL         )
     use scale_prc, only: &
        PRC_abort
     use scale_const, only: &
-       EMELT => CONST_EMELT
+       UNDEF => CONST_UNDEF
     use scale_file_external_input, only: &
        FILE_EXTERNAL_INPUT_update
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER
     implicit none
 
     integer,  intent(in)    :: OKMAX, OKS, OKE
     integer,  intent(in)    :: OIA,   OIS, OIE
     integer,  intent(in)    :: OJA,   OJS, OJE
     real(RP), intent(in)    :: OCEAN_TEMP_t    (OKMAX,OIA,OJA) ! tendency of ocean temperature
-    real(RP), intent(in)    :: OCEAN_SFLX_G    (OIA,OJA)       ! heat         flux from surface to subsurface (open ocean/sea ice)
-    real(RP), intent(in)    :: OCEAN_SFLX_water(OIA,OJA)       ! liquid water flux from surface to subsurface (open ocean/sea ice)
-    real(RP), intent(in)    :: OCEAN_SFLX_ice  (OIA,OJA)       ! ice    water flux from surface to subsurface (open ocean/sea ice)
+    real(RP), intent(in)    :: OCEAN_SFLX_G    (OIA,OJA)       ! heat flux from surface to subsurface (open ocean/sea ice)
+    real(RP), intent(in)    :: OCEAN_SFLX_water(OIA,OJA)       ! mass flux from surface to subsurface (open ocean/sea ice)
     logical,  intent(in)    :: calc_flag       (OIA,OJA)       ! to decide calculate or not
     real(DP), intent(in)    :: dt
     real(DP), intent(in)    :: NOWDAYSEC
     real(RP), intent(inout) :: OCEAN_TEMP      (OKMAX,OIA,OJA)
+    real(RP), intent(out)   :: MASS_SUPL       (OIA,OJA)
+    real(RP), intent(out)   :: ENGI_SUPL       (OIA,OJA)
 
     real(RP) :: OCEAN_TEMP_t_ndg(OKMAX,OIA,OJA)
     real(RP) :: OCEAN_TEMP_ref  (OKMAX,OIA,OJA)
     real(RP) :: rtau
+    real(RP) :: dCP
 
     logical  :: error
     integer  :: k, i, j
@@ -201,47 +220,76 @@ contains
 
        call FILE_EXTERNAL_INPUT_update( 'OCEAN_TEMP', NOWDAYSEC, OCEAN_TEMP_ref(:,:,:), error )
 
+
        if ( error ) then
           LOG_ERROR("OCEAN_DYN_SLAB",*) 'Requested data is not found!'
           call PRC_abort
        endif
 
-       ! if OCEAN_DYN_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary
-       rtau = 1.0_RP / max(OCEAN_DYN_SLAB_nudging_tausec,dt)
+       if ( .not. OCEAN_DYN_SLAB_offline_mode ) then
 
+          ! if OCEAN_DYN_SLAB_nudging_tau < dt, Nudging acts as quasi-prescribed boundary
+          rtau = 1.0_RP / max(OCEAN_DYN_SLAB_nudging_tausec,dt)
+
+          !$omp parallel do
+          do j = OJS, OJE
+          do i = OIS, OIE
+          do k = OKS, OKE
+             if ( OCEAN_TEMP_ref(k,i,j) == UNDEF ) then
+                OCEAN_TEMP_t_ndg(k,i,j) = 0.0_RP
+             else
+                OCEAN_TEMP_t_ndg(k,i,j) = ( OCEAN_TEMP_ref(k,i,j) - OCEAN_TEMP(k,i,j) ) * rtau
+             end if
+          enddo
+          enddo
+          enddo
+
+       end if
+
+    else
+       !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
        do k = OKS, OKE
-          OCEAN_TEMP_t_ndg(k,i,j) = ( OCEAN_TEMP_ref(k,i,j) - OCEAN_TEMP(k,i,j) ) * rtau
-       enddo
-       enddo
-       enddo
-
-    else
-       OCEAN_TEMP_t_ndg(:,:,:) = 0.0_RP
+          OCEAN_TEMP_t_ndg(k,i,j) = 0.0_RP
+       end do
+       end do
+       end do
     endif
 
     if ( OCEAN_DYN_SLAB_offline_mode ) then
 
+       !$omp parallel do
        do j = OJS, OJE
        do i = OIS, OIE
           if ( calc_flag(i,j) ) then
              OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP_ref(OKS,i,j)
           endif
+          MASS_SUPL(i,j) = 0.0_RP
+          ENGI_SUPL(i,j) = 0.0_RP
        enddo
        enddo
 
     else
 
+       !$omp parallel do private(dCP)
        do j = OJS, OJE
        do i = OIS, OIE
           if ( calc_flag(i,j) ) then
              ! heat flux from atm/ice at uppermost ocean layer
-             OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP(OKS,i,j) + OCEAN_TEMP_t_ndg(OKS,i,j) * dt &
-                                 + ( OCEAN_SFLX_G(i,j) - OCEAN_SFLX_ice(i,j) * EMELT ) / OCEAN_DYN_SLAB_HeatCapacity * dt
+             dCP = CV_WATER * OCEAN_SFLX_water(i,j) * dt
+             OCEAN_TEMP(OKS,i,j) = OCEAN_TEMP(OKS,i,j) &
+                                 + ( OCEAN_SFLX_G(i,j) * dt - dCP * OCEAN_TEMP(OKS,i,j) ) &
+                                   / ( OCEAN_DYN_SLAB_HeatCapacity + dCP ) &
+                                 + OCEAN_TEMP_t_ndg(OKS,i,j) * dt
              do k = OKS+1, OKE
                 OCEAN_TEMP(k,i,j) = OCEAN_TEMP(k,i,j) + OCEAN_TEMP_t_ndg(k,i,j) * dt
              enddo
+             MASS_SUPL(i,j) = - OCEAN_SFLX_water(i,j)
+             ENGI_SUPL(i,j) = CV_WATER * MASS_SUPL(i,j) * OCEAN_TEMP(OKS,i,j)
+          else
+             MASS_SUPL(i,j) = 0.0_RP
+             ENGI_SUPL(i,j) = 0.0_RP
           endif
        enddo
        enddo

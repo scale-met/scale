@@ -26,6 +26,7 @@ module scale_land_grid_cartesC_real
   !++ Public procedure
   !
   public :: LAND_GRID_CARTESC_REAL_setup
+  public :: LAND_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
   !
@@ -49,21 +50,33 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup real grid
   subroutine LAND_GRID_CARTESC_REAL_setup
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_AREA, &
-       ATMOS_GRID_CARTESC_REAL_TOTAREA
-    use scale_land_grid_cartesC, only: &
-       LAND_GRID_CARTESC_CDZ
-    use scale_file_cartesC, only: &
-       FILE_CARTESC_set_coordinates_land
-
-    integer :: k, i, j
 
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( LAND_GRID_CARTESC_REAL_AREA(    LIA,LJA) )
     allocate( LAND_GRID_CARTESC_REAL_VOL (LKA,LIA,LJA) )
-    LAND_GRID_CARTESC_REAL_AREA(:,:) = ATMOS_GRID_CARTESC_REAL_AREA(:,:)
-    LAND_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA
+
+    return
+  end subroutine LAND_GRID_CARTESC_REAL_setup
+
+  subroutine LAND_GRID_CARTESC_REAL_set_areavol
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_AREA
+    use scale_land_grid_cartesC, only: &
+       LAND_GRID_CARTESC_CDZ
+    use scale_file_cartesC, only: &
+       FILE_CARTESC_set_coordinates_land
+    use scale_landuse, only: &
+       LANDUSE_fact_land
+
+    integer :: k, i, j
+
+    LAND_GRID_CARTESC_REAL_TOTAREA = 0.0_RP
+    do j = 1, LJA
+    do i = 1, LIA
+       LAND_GRID_CARTESC_REAL_AREA(i,j) = ATMOS_GRID_CARTESC_REAL_AREA(i,j) * LANDUSE_fact_land(i,j)
+       LAND_GRID_CARTESC_REAL_TOTAREA = LAND_GRID_CARTESC_REAL_TOTAREA + LAND_GRID_CARTESC_REAL_AREA(i,j)
+    end do
+    end do
 
     do j = 1,   LJA
     do i = 1,   LIA
@@ -85,5 +98,6 @@ contains
     call FILE_CARTESC_set_coordinates_land( LAND_GRID_CARTESC_REAL_VOL(:,:,:) ) ! [IN]
 
     return
-  end subroutine LAND_GRID_CARTESC_REAL_setup
+  end subroutine LAND_GRID_CARTESC_REAL_set_areavol
+
 end module scale_land_grid_cartesC_real

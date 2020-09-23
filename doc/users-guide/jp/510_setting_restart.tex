@@ -48,7 +48,7 @@
 出力されるリスタートファイルの名前は、\nmitem{RESTART_IN_BASENAME}で指定する。
 %
 \nmitem{RESTART_OUT_POSTFIX_TIMELABEL}は、\nmitem{RESTART_OUT_BASENAME}の後のファイル名に出力時の日時を自動的に追加するかを指定する。
-デフォルト設定は、\nmitem{RESTART_OUT_POSTFIX_TIMELABEL=.true.}である。
+デフォルト設定は、\nmitem{RESTART_OUT_POSTFIX_TIMELABEL} = \verb|.true.|である。
 
 リスタートファイルは、全てのシミュレーションに対する互換性はない。
 リスタートファイルに含まれる変数は、設定ファイルで選択したスキームによって異なる。
@@ -64,9 +64,9 @@
 %
 \nmitem{RESTART_IN_POSTFIX_TIMELABEL}は\nmitem{RESTART_OUT_POSTFIX_TIMELABEL}と同様であるが、\\
 \nmitem{RESTART_IN_BASENAME}に対する日時の付加を指定する。
-デフォルト設定では、\nmitem{RESTART_IN_POSTFIX_TIMELABEL = .false.}.である。\\
-上記の例において、\nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01_20070715-000000.000"| と設定することは、
-\nmitem{RESTART_IN_POSTFIX_TIMELABEL = .true.}として\nmitem{RESTART_IN_BASENAME} \verb|="restart1_d01"| と設定することと等価である。
+デフォルト設定では、\nmitem{RESTART_IN_POSTFIX_TIMELABEL} = \verb|.false.|である。\\
+上記の例において、\nmitem{RESTART_IN_BASENAME} = \verb|"restart1_d01_20070715-000000.000"| と設定することは、
+\nmitem{RESTART_IN_POSTFIX_TIMELABEL} = \verb|.true.|として\nmitem{RESTART_IN_BASENAME} = \verb|"restart1_d01"| と設定することと等価である。
 リスタート計算の開始日時や積分時間はそれぞれ、\nmitem{TIME_STARTDATE}と\nmitem{TIME_DURATION}で指定する。
 
 現実大気実験の場合は、初期値データに加えて\verb|scale-rm_init|で作成した境界値データが必要である。以下に例を示す。

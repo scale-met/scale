@@ -3,7 +3,7 @@
 !!
 !! @par Description
 !!          Temporal integration for tracer advection for Atmospheric process
-!!          three step Runge-Kutta scheme
+!!          three stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!
@@ -74,7 +74,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'RK3WS2002' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_rk3_setup",*) 'TINTEG_LARGE_TYPE is not RK3WS2002. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_rk3_setup",*) 'TINTEG_TRACER_TYPE is not RK3WS2002. Check!'
        call PRC_abort
     end if
 
@@ -91,12 +91,14 @@ contains
   !> RK3
   subroutine ATMOS_DYN_tinteg_tracer_rk3( &
        QTRC, & ! (out)
+       qflx, & ! (out)
        QTRC0, RHOQ_t, &! (in)
        DENS0, DENS, & ! (in)
        mflx_hi, num_diff, & ! (in)
        GSQRT, MAPF, & ! (in)
        CDZ, RCDZ, RCDX, RCDY, & ! (in)
        BND_W, BND_E, BND_S, BND_N, & ! (in)
+       TwoD, & ! (in)
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -109,6 +111,7 @@ contains
        ATMOS_DYN_Copy_Boundary_tracer
     implicit none
     real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+    real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
     real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
     real(RP), intent(in)    :: DENS0   (KA,IA,JA)
@@ -125,6 +128,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
     real(RP), intent(in)    :: dtl
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -138,7 +142,7 @@ contains
     !------------------------------------------------------------------------
 
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
        DENS_RK(k,i,j) = DENS0(k,i,j) &
                       + ( DENS(k,i,j) - DENS0(k,i,j) ) / 3.0_RP
@@ -149,24 +153,26 @@ contains
     dtrk = DTL / 3.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK1, & ! (out)
+         qflx, & ! (out)
          QTRC, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
-         dtrk, & ! (in)
+         TwoD, dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
 
-    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK1,                  & ! [INOUT]
-                                         QTRC0,                     & ! [IN]
-                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK1,                   & ! [INOUT]
+                                         QTRC0,                      & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N, & ! [IN]
+                                         TwoD                        ) ! [IN]
 
     call COMM_vars8( QTRC_RK1(:,:,:), I_COMM_RK1 )
     call COMM_wait ( QTRC_RK1(:,:,:), I_COMM_RK1, .false. )
 
 
     do j = JS-1, JE+1
-    do i = IS-1, IE+1
+    do i = max(IS-1,1), min(IE+1,IA)
     do k = KS, KE
        DENS_RK(k,i,j) = DENS0(k,i,j) &
                       + ( DENS(k,i,j) - DENS0(k,i,j) ) * 0.5_RP
@@ -177,17 +183,19 @@ contains
     dtrk = DTL / 2.0_RP
     call ATMOS_DYN_tstep_tracer( &
          QTRC_RK2, & ! (out)
+         qflx, & ! (out)
          QTRC_RK1, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS_RK, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
-         dtrk, & ! (in)
+         TwoD, dtrk, & ! (in)
          .false., FLAG_FCT_ALONG_STREAM ) ! (in)
 
-    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK2,                  & ! [INOUT]
-                                         QTRC0,                     & ! [IN]
-                                         BND_W, BND_E, BND_S, BND_N ) ! [IN]
+    call ATMOS_DYN_Copy_boundary_tracer( QTRC_RK2,                   & ! [INOUT]
+                                         QTRC0,                      & ! [IN]
+                                         BND_W, BND_E, BND_S, BND_N, & ! [IN]
+                                         TwoD                        ) ! [IN]
 
     call COMM_vars8( QTRC_RK2(:,:,:), I_COMM_RK2 )
     call COMM_wait ( QTRC_RK2(:,:,:), I_COMM_RK2, .false. )
@@ -196,11 +204,13 @@ contains
     dtrk = DTL
     call ATMOS_DYN_tstep_tracer( &
          QTRC, & ! (out)
+         qflx, & ! (out)
          QTRC_RK2, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
+         TwoD, & ! (in)
          dtrk, & ! (in)
          FLAG_FCT_TRACER, FLAG_FCT_ALONG_STREAM ) ! (in)
 

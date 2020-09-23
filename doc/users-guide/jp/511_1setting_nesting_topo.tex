@@ -28,7 +28,7 @@ USER.shに名前を変更して、「{\makeconftool}」を実行することで�
 
 \begin{figure}[htb]
 \begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/topo_copy.pdf}\\
+  \includegraphics[width=0.4\hsize]{./../../figure/topo_copy.pdf}\\
   \caption{地形コピー機能を適用したときの地形の水平分布。
 水色で塗られた最外にある格子は\texttt{HALO}領域であり、
 その格子数は水平移流スキームに依存する。
@@ -57,9 +57,9 @@ USER.shに名前を変更して、「{\makeconftool}」を実行することで�
 
 次に、地形コピー機能で親の地形を用いるために、
 子領域に対する\verb|pp.d02.conf|ファイルを以下のように編集する。
-ここでは、親領域の地形の出力データが\verb|topo_d01.pe***.nc|として保存されていると想定する。
+ここでは、親領域の地形の出力データが SCALE netCDF フォーマット で \verb|topo_d01.pe***.nc|として保存されていると想定する。その他のフォーマットとしては、GrADS および WRF-ARW がサポートされている（第\ref{sec:adv_datainput}節）。
 \editboxtwo{
-\verb|&PARAM_NEST| & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & 親領域のファイルのベース名 \\
 \verb| OFFLINE_PARENT_PRC_NUM_X  = 2,          | & 親領域の\verb|PRC_NUM_X| \\
 \verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,          | & 親領域の\verb|PRC_NUM_Y| \\
@@ -67,12 +67,13 @@ USER.shに名前を変更して、「{\makeconftool}」を実行することで�
 \verb|/| &\\
  & \\
 \verb|&PARAM_CNVTOPO|  &\\
-\verb|　 　 　〜　中略　〜| & \\
+\verb|    〜  中略  〜    | & \\
 \verb| CNVTOPO_copy_parent     = .true.,| & 地形コピー機能を適用するかどうか\\
 \verb|/| &\\
  & \\
 \verb|&PARAM_COPYTOPO| & \\
 \verb| COPYTOPO_IN_BASENAME   = "topo_d01",| & 親領域の地形データファイルのベース名 \\
+\verb| COPYTOPO_IN_FILETYPE   = "SCALE",   | & 親領域の地形データファイルのタイプ名 (SCALE, GrADS, or WRF-ARW) \\
 \verb| COPYTOPO_TRANSITION_DX = -1,        | & x方向の遷移域の幅 \\
 \verb| COPYTOPO_TRANSITION_DY = -1,        | & y方向の遷移域の幅 \\
 \verb| COPYTOPO_ENTIRE_REGION = .false.,|    & 子領域の全域に親領域の地形をコピーするかどうか\\

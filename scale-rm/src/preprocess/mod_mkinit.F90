@@ -188,6 +188,7 @@ module mod_mkinit
   real(RP), private, allocatable         :: nc      (:,:,:) ! cloud water number density [1/kg]
   real(RP), private, allocatable         :: velx    (:,:,:) ! velocity u [m/s]
   real(RP), private, allocatable         :: vely    (:,:,:) ! velocity v [m/s]
+  real(RP), private, allocatable         :: ptrc    (:,:,:) ! passive tracer
 
   real(RP), private, allocatable         :: pres_sfc(:,:) ! surface pressure [Pa]
   real(RP), private, allocatable         :: temp_sfc(:,:) ! surface temperature [K]
@@ -241,6 +242,7 @@ contains
     allocate( nc  (KA,IA,JA) )
     allocate( velx(KA,IA,JA) )
     allocate( vely(KA,IA,JA) )
+    allocate( ptrc(KA,IA,JA) )
 
     allocate( pres_sfc(IA,JA) )
     allocate( temp_sfc(IA,JA) )
@@ -343,10 +345,10 @@ contains
     use scale_const, only: &
        CONST_UNDEF8
     use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry, &
        N_HYD, &
        I_HC
     use mod_atmos_phy_mp_vars, only: &
-       QA_MP, &
        QS_MP, &
        QE_MP
     use mod_atmos_admin, only: &
@@ -360,6 +362,7 @@ contains
     real(RP) :: QNUM(KA,IA,JA,N_HYD)
 
     logical :: convert_qtrc
+    integer :: iq
     !---------------------------------------------------------------------------
 
     if ( MKINIT_TYPE == I_IGNORE ) then
@@ -391,6 +394,8 @@ contains
       nc    (:,:,:) = 0.0_RP
       qv_sfc(:,:) = 0.0_RP
       qc_sfc(:,:) = 0.0_RP
+
+      ptrc(:,:,:) = CONST_UNDEF8
 
 !OCL XFILL
       QTRC(:,:,:,:) = 0.0_RP
@@ -488,7 +493,8 @@ contains
 
       call SBMAERO_setup( convert_qtrc ) ! [INOUT]
 
-      if ( QA_MP > 0 .AND. convert_qtrc ) then
+      ! water content
+      if ( ( .not. ATMOS_HYDROMETEOR_dry ) .AND. convert_qtrc ) then
 !OCL XFILL
          QHYD(:,:,:,I_HC) = qc(:,:,:)
 !OCL XFILL
@@ -498,6 +504,10 @@ contains
                                              QTRC(:,:,:,QS_MP:QE_MP),  & ! [OUT]
                                              QNUM=QNUM(:,:,:,:)        ) ! [IN]
       end if
+
+      ! passive tracer
+      call TRACER_inq_id( "PTracer", iq)
+      if ( iq > 0 ) QTRC(:,:,:,iq) = ptrc(:,:,:)
 
       call PROF_rapend  ('_MkInit_main',3)
 
@@ -518,13 +528,14 @@ contains
     implicit none
 
     ! Bubble
-    logical  :: BBL_eachnode = .false.  ! Arrange bubble at each node? [kg/kg]
-    real(RP) :: BBL_CZ       =  2.E3_RP ! center location [m]: z
-    real(RP) :: BBL_CX       =  2.E3_RP ! center location [m]: x
-    real(RP) :: BBL_CY       =  2.E3_RP ! center location [m]: y
-    real(RP) :: BBL_RZ       =  0.0_RP  ! bubble radius   [m]: z
-    real(RP) :: BBL_RX       =  0.0_RP  ! bubble radius   [m]: x
-    real(RP) :: BBL_RY       =  0.0_RP  ! bubble radius   [m]: y
+    logical  :: BBL_eachnode = .false.   ! Arrange bubble at each node? [kg/kg]
+    real(RP) :: BBL_CZ       =  2.E3_RP  ! center location [m]: z
+    real(RP) :: BBL_CX       =  2.E3_RP  ! center location [m]: x
+    real(RP) :: BBL_CY       =  2.E3_RP  ! center location [m]: y
+    real(RP) :: BBL_RZ       =  0.0_RP   ! bubble radius   [m]: z
+    real(RP) :: BBL_RX       =  0.0_RP   ! bubble radius   [m]: x
+    real(RP) :: BBL_RY       =  0.0_RP   ! bubble radius   [m]: y
+    character(len=H_SHORT) :: BBL_functype = 'COSBELL' ! COSBELL or GAUSSIAN
 
     namelist / PARAM_BUBBLE / &
        BBL_eachnode, &
@@ -533,7 +544,8 @@ contains
        BBL_CY,       &
        BBL_RZ,       &
        BBL_RX,       &
-       BBL_RY
+       BBL_RY,       &
+       BBL_functype
 
     real(RP) :: CZ_offset
     real(RP) :: CX_offset
@@ -596,8 +608,15 @@ contains
                        ( (CY(j)-CY_offset-BBL_CY-Domain_RY)/BBL_RY )**2, &
                        ( (CY(j)-CY_offset-BBL_CY+Domain_RY)/BBL_RY )**2  )
 
-          bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
-
+          select case(BBL_functype)
+          case('COSBELL')
+             bubble(k,i,j) = cos( 0.5_RP*PI*sqrt( min(distz+distx+disty,1.0_RP) ) )**2
+          case('GAUSSIAN')
+             bubble(k,i,j) = exp( -(distz+distx+disty) )
+          case default
+            LOG_ERROR("BUBBLE_setup",*) 'Not appropriate BBL_functype. Check!', trim(BBL_functype)
+            call PRC_abort                  
+          end select
        enddo
        enddo
        enddo
@@ -696,6 +715,8 @@ contains
        ATMOS_PHY_AE_TYPE
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_mkinit
+    use scale_atmos_phy_ae_offline, only: &
+       ATMOS_PHY_AE_offline_mkinit
     use mod_atmos_phy_ae_vars, only: &
        QA_AE, &
        QS_AE, &
@@ -708,6 +729,8 @@ contains
     real(RP), parameter :: k_min_def = 0.e0_RP  ! lower bound of 1st kappa bin
     real(RP), parameter :: k_max_def = 1.e0_RP  ! upper bound of last kappa bin
 
+    real(RP) :: ccn_init = 50.E+6_RP ! initial cloud condensation nucrei [#/m3]
+
     real(RP) :: m0_init = 0.0_RP    ! initial total num. conc. of modes (Atk,Acm,Cor) [#/m3]
     real(RP) :: dg_init = 80.e-9_RP ! initial number equivalen diameters of modes     [m]
     real(RP) :: sg_init = 1.6_RP    ! initial standard deviation                      [-]
@@ -719,6 +742,7 @@ contains
     integer  :: n_kap_inp(3) = n_kap_def
 
     namelist / PARAM_AERO / &
+       ccn_init,  &
        m0_init,   &
        dg_init,   &
        sg_init,   &
@@ -731,40 +755,51 @@ contains
     integer  :: ierr
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_PHY_AE_TYPE /= 'KAJINO13' ) return
+    if ( ATMOS_PHY_AE_TYPE /= 'OFF' .AND. ATMOS_PHY_AE_TYPE /= 'NONE' ) then
 
-    LOG_NEWLINE
-    LOG_INFO("AEROSOL_setup",*) 'Setup'
+       LOG_NEWLINE
+       LOG_INFO("AEROSOL_setup",*) 'Setup'
 
-    !--- read namelist
-    rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
-    if( ierr < 0 ) then !--- missing
-       LOG_INFO("AEROSOL_setup",*) 'Not found namelist. Default used!'
-    elseif( ierr > 0 ) then !--- fatal error
-       LOG_ERROR("AEROSOL_setup",*) 'Not appropriate names in namelist PARAM_AERO. Check!'
-       call PRC_abort
+       !--- read namelist
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_AERO,iostat=ierr)
+       if( ierr < 0 ) then !--- missing
+          LOG_INFO("AEROSOL_setup",*) 'Not found namelist. Default used!'
+       elseif( ierr > 0 ) then !--- fatal error
+          LOG_ERROR("AEROSOL_setup",*) 'Not appropriate names in namelist PARAM_AERO. Check!'
+          call PRC_abort
+       endif
+       LOG_NML(PARAM_AERO)
+
+       select case ( ATMOS_PHY_AE_TYPE )
+       case ( 'KAJINO13' )
+          qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
+          call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
+                                             QA_AE,                   & ! (in)
+                                             DENS(:,:,:),             & ! (in)
+                                             TEMP(:,:,:),             & ! (in)
+                                             PRES(:,:,:),             & ! (in)
+                                             QDRY(:,:,:),             & ! (in)
+                                             QV  (:,:,:),             & ! (in)
+                                             m0_init,                 & ! (in)
+                                             dg_init,                 & ! (in)
+                                             sg_init,                 & ! (in)
+                                             d_min_inp(:),            & ! (in)
+                                             d_max_inp(:),            & ! (in)
+                                             k_min_inp(:),            & ! (in)
+                                             k_max_inp(:),            & ! (in)
+                                             n_kap_inp(:),            & ! (in)
+                                             QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
+                                             CCN(:,:,:)               ) ! (out)
+       case ( 'OFFLINE' )
+          call ATMOS_PHY_AE_offline_mkinit ( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
+                                             ccn_init,                & ! (in)
+                                             CCN(:,:,:)               ) ! (out)
+       case default
+          CCN(:,:,:) = ccn_init
+       end select
+
     endif
-    LOG_NML(PARAM_AERO)
-
-    qdry(:,:,:) = 1.0_RP - qv(:,:,:) - qc(:,:,:)
-    call ATMOS_PHY_AE_kajino13_mkinit( KA, KS, KE, IA, IS, IE, JA, JS, JE, & ! (in)
-                                       QA_AE,                   & ! (in)
-                                       DENS(:,:,:),             & ! (in)
-                                       TEMP(:,:,:),             & ! (in)
-                                       PRES(:,:,:),             & ! (in)
-                                       QDRY(:,:,:),             & ! (in)
-                                       QV  (:,:,:),             & ! (in)
-                                       m0_init,                 & ! (in)
-                                       dg_init,                 & ! (in)
-                                       sg_init,                 & ! (in)
-                                       d_min_inp(:),            & ! (in)
-                                       d_max_inp(:),            & ! (in)
-                                       k_min_inp(:),            & ! (in)
-                                       k_max_inp(:),            & ! (in)
-                                       n_kap_inp(:),            & ! (in)
-                                       QTRC(:,:,:,QS_AE:QE_AE), & ! (out)
-                                       CCN(:,:,:)               ) ! (out)
 
     return
   end subroutine AEROSOL_setup
@@ -846,15 +881,10 @@ contains
        SFLX_rain    => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow    => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
-       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
-       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
-       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
-       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
-       SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down
+       SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up, &
+       SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn, &
+       SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up, &
+       SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn
     implicit none
 
     ! Flux from Atmosphere
@@ -888,25 +918,13 @@ contains
 
     do j = JSB, JEB
     do i = ISB, IEB
-       SFLX_rain   (i,j) = FLX_rain
-       SFLX_snow   (i,j) = FLX_snow
+       SFLX_rain (i,j) = FLX_rain
+       SFLX_snow (i,j) = FLX_snow
 
-       SFLX_LW_up  (i,j) = 0.0_RP
-       SFLX_LW_dn  (i,j) = FLX_IR_dn
-       SFLX_SW_up  (i,j) = 0.0_RP
-       SFLX_SW_dn  (i,j) = FLX_NIR_dn + FLX_VIS_dn
-
-       TOAFLX_LW_up(i,j) = 0.0_RP
-       TOAFLX_LW_dn(i,j) = 0.0_RP
-       TOAFLX_SW_up(i,j) = 0.0_RP
-       TOAFLX_SW_dn(i,j) = 0.0_RP
-
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_IR)  = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_IR)  = FLX_IR_dn
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_NIR) = FLX_NIR_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_NIR) = 0.0_RP
-       SFLX_rad_dn (i,j,I_R_direct ,I_R_VIS) = FLX_VIS_dn
-       SFLX_rad_dn (i,j,I_R_diffuse,I_R_VIS) = 0.0_RP
+       SFLX_LW_up(i,j) = 0.0_RP
+       SFLX_LW_dn(i,j) = FLX_IR_dn
+       SFLX_SW_up(i,j) = 0.0_RP
+       SFLX_SW_dn(i,j) = FLX_NIR_dn + FLX_VIS_dn
     enddo
     enddo
 
@@ -919,12 +937,20 @@ contains
     use mod_land_vars, only: &
        LAND_TEMP,       &
        LAND_WATER,      &
+       LAND_ICE,        &
        LAND_SFC_TEMP,   &
-       LAND_SFC_albedo
+       LAND_SFC_albedo, &
+       SNOW_flag,     &
+       SNOW_SFC_TEMP, &
+       SNOW_SWE,      &
+       SNOW_Depth,    &
+       SNOW_Dzero,    &
+       SNOW_nosnowsec
     implicit none
 
     real(RP) :: LND_TEMP                ! land soil temperature      [K]
     real(RP) :: LND_WATER     = 0.15_RP ! land soil moisture         [m3/m3]
+    real(RP) :: LND_ICE       = 0.00_RP ! land soil ice              [m3/m3]
     real(RP) :: SFC_TEMP                ! land skin temperature      [K]
     real(RP) :: SFC_albedo_LW = 0.01_RP ! land surface albedo for LW (0-1)
     real(RP) :: SFC_albedo_SW = 0.20_RP ! land surface albedo for SW (0-1)
@@ -932,6 +958,7 @@ contains
     namelist / PARAM_MKINIT_LAND / &
        LND_TEMP,      &
        LND_WATER,     &
+       LND_ICE,       &
        SFC_TEMP,      &
        SFC_albedo_LW, &
        SFC_albedo_SW
@@ -955,11 +982,21 @@ contains
 
     LAND_TEMP      (:,:,:)         = LND_TEMP
     LAND_WATER     (:,:,:)         = LND_WATER
+    LAND_ICE       (:,:,:)         = LND_ICE
 
     LAND_SFC_TEMP  (:,:)           = SFC_TEMP
     LAND_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
     LAND_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
     LAND_SFC_albedo(:,:,:,I_R_VIS) = SFC_albedo_SW
+
+    if ( SNOW_flag ) then
+      !!!!! Tentative for snow model !!!!!
+       SNOW_SFC_TEMP (:,:) = 273.15_RP
+       SNOW_SWE      (:,:) = 0.0_RP
+       SNOW_Depth    (:,:) = 0.0_RP
+       SNOW_Dzero    (:,:) = 0.0_RP
+       SNOW_nosnowsec(:,:) = 0.0_RP
+    end if
 
     return
   end subroutine land_setup
@@ -968,6 +1005,7 @@ contains
   !> Ocean setup
   subroutine ocean_setup
     use mod_ocean_vars, only: &
+       ICE_flag,         &
        OCEAN_TEMP,       &
        OCEAN_SALT,       &
        OCEAN_UVEL,       &
@@ -1032,9 +1070,6 @@ contains
     OCEAN_UVEL      (:,:,:) = OCN_UVEL
     OCEAN_VVEL      (:,:,:) = OCN_VVEL
     OCEAN_OCN_Z0M   (:,:)   = SFC_Z0M
-    OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
-    OCEAN_ICE_MASS  (:,:)   = ICE_MASS
-
     OCEAN_SFC_TEMP  (:,:)           = SFC_TEMP
     OCEAN_SFC_albedo(:,:,:,I_R_IR)  = SFC_albedo_LW
     OCEAN_SFC_albedo(:,:,:,I_R_NIR) = SFC_albedo_SW
@@ -1042,6 +1077,11 @@ contains
     OCEAN_SFC_Z0M   (:,:)           = SFC_Z0M
     OCEAN_SFC_Z0H   (:,:)           = SFC_Z0H
     OCEAN_SFC_Z0E   (:,:)           = SFC_Z0E
+
+    if ( ICE_flag ) then
+       OCEAN_ICE_TEMP  (:,:)   = ICE_TEMP
+       OCEAN_ICE_MASS  (:,:)   = ICE_MASS
+    end if
 
     return
   end subroutine ocean_setup
@@ -1076,10 +1116,9 @@ contains
     real(RP) :: URB_ROOF_LAYER_TEMP           ! temperature in layer of roof          [K]
     real(RP) :: URB_BLDG_LAYER_TEMP           ! temperature in layer of building      [K]
     real(RP) :: URB_GRND_LAYER_TEMP           ! temperature in layer of ground        [K]
-    real(RP) :: URB_ROOF_RAIN       = 0.0_RP  ! temperature in layer of roof          [K]
-    real(RP) :: URB_BLDG_RAIN       = 0.0_RP  ! temperature in layer of building      [K]
-    real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [K]
-    real(RP) :: URB_RUNOFF          = 0.0_RP  ! temperature in layer of ground        [K]
+    real(RP) :: URB_ROOF_RAIN       = 0.0_RP  ! temperature in layer of roof          [kg/m2]
+    real(RP) :: URB_BLDG_RAIN       = 0.0_RP  ! temperature in layer of building      [kg/m2]
+    real(RP) :: URB_GRND_RAIN       = 0.0_RP  ! temperature in layer of ground        [kg/m2]
     real(RP) :: URB_SFC_TEMP                  ! Grid average of surface temperature   [K]
     real(RP) :: URB_ALB_LW          = 0.10_RP ! Grid average of surface albedo for LW (0-1)
     real(RP) :: URB_ALB_SW          = 0.20_RP ! Grid average of surface albedo for SW (0-1)
@@ -1097,7 +1136,6 @@ contains
        URB_ROOF_RAIN,       &
        URB_BLDG_RAIN,       &
        URB_GRND_RAIN,       &
-       URB_RUNOFF,          &
        URB_SFC_TEMP,        &
        URB_ALB_LW,          &
        URB_ALB_SW
@@ -1138,7 +1176,6 @@ contains
     URBAN_RAINR     (:,:)           = URB_ROOF_RAIN
     URBAN_RAINB     (:,:)           = URB_BLDG_RAIN
     URBAN_RAING     (:,:)           = URB_GRND_RAIN
-    URBAN_ROFF      (:,:)           = URB_RUNOFF
     URBAN_SFC_TEMP  (:,:)           = URB_SFC_TEMP
     URBAN_SFC_albedo(:,:,:,I_R_IR)  = URB_ALB_LW
     URBAN_SFC_albedo(:,:,:,I_R_NIR) = URB_ALB_SW
@@ -1432,7 +1469,7 @@ contains
 
     endif
 
-    ! make density & pressure profile in moist condition
+    ! make density & pressure profile in dry condition
     call HYDROSTATIC_buildrho( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                pott(:,:,:), qv(:,:,:), qc(:,:,:),                      & ! [IN]
                                pres_sfc(:,:), pott_sfc(:,:), qv_sfc(:,:), qc_sfc(:,:), & ! [IN]
@@ -1440,7 +1477,11 @@ contains
                                DENS(:,:,:), temp(:,:,:), pres(:,:,:), temp_sfc(:,:)    ) ! [OUT]
 
     if ( .not. ATMOS_HYDROMETEOR_dry ) then
-       ! calc QV from RH
+       
+       ! Calculate QV from RH. 
+       ! Note that the RH consequently obtained by following calculations is not precisely identical with the RH set by namelist, 
+       ! because the iteration is not performed in the calculation of qv and density is re-built after including moisture. 
+       
        call SATURATION_psat_all( IA, ISB, IEB, JA, JSB, JEB, &
                                  temp_sfc(:,:), & ! [IN]
                                  psat_sfc(:,:)  ) ! [OUT]
@@ -1453,10 +1494,10 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(i,j) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
+          qv_sfc(i,j) = max( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP  - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(i,j)
 
           do k = KS, KE
-             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
+             qv(k,i,j) = max( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat(k,i,j)
           enddo
        enddo
        enddo
@@ -1465,10 +1506,10 @@ contains
     call RANDOM_uniform(rndm) ! make random
     do j = JSB, JEB
     do i = ISB, IEB
-       pott_sfc(i,j) = pott_sfc(i,j) + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(i,j) = pott_sfc(i,j) + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = pott(k,i,j) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -1487,7 +1528,7 @@ contains
     do j = JSB, JEB
     do i = ISB, min(IEB,IA-1)
     do k = KS, KE
-       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_U ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
@@ -1497,7 +1538,7 @@ contains
     do j = JSB, min(JEB,JA-1)
     do i = ISB, IEB
     do k = KS, KE
-       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_V ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
@@ -1531,8 +1572,8 @@ contains
     real(RP)               :: ENV_U     =   0.0_RP ! velocity u of environment [m/s]
     real(RP)               :: ENV_V     =   0.0_RP ! velocity v of environment [m/s]
     ! Bubble
-    character(len=H_SHORT) :: SHAPE_NC  = 'BUBBLE' ! BUBBLE or RECT
-    real(RP)               :: BBL_NC    =   1.0_RP ! extremum of NC in bubble [kg/kg]
+    character(len=H_SHORT) :: SHAPE_PTracer = 'BUBBLE' ! BUBBLE or RECT
+    real(RP)               :: BBL_PTracer   = 1.0_RP   ! extremum of passive tracer in bubble [kg/kg]
 
     namelist / PARAM_MKINIT_TRACERBUBBLE / &
        SFC_THETA, &
@@ -1540,8 +1581,8 @@ contains
        ENV_THETA, &
        ENV_U,     &
        ENV_V,     &
-       SHAPE_NC,  &
-       BBL_NC
+       SHAPE_PTracer, &
+       BBL_PTracer
 
     real(RP), pointer :: shapeFac(:,:,:) => null()
 
@@ -1596,7 +1637,7 @@ contains
     enddo
 
     ! make tracer bubble
-    select case(SHAPE_NC)
+    select case(SHAPE_PTracer)
     case('BUBBLE')
        call BUBBLE_setup
        shapeFac => bubble
@@ -1604,14 +1645,14 @@ contains
        call RECT_setup
        shapeFac => rect
     case default
-       LOG_ERROR("MKINIT_tracerbubble",*) 'SHAPE_NC=', trim(SHAPE_NC), ' cannot be used on advect. Check!'
+       LOG_ERROR("MKINIT_tracerbubble",*) 'SHAPE_PTracer=', trim(SHAPE_PTracer), ' cannot be used on advect. Check!'
        call PRC_abort
     end select
 
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       nc(k,i,j) = BBL_NC * shapeFac(k,i,j)
+       ptrc(k,i,j) = BBL_PTracer * shapeFac(k,i,j)
     enddo
     enddo
     enddo
@@ -1944,7 +1985,7 @@ contains
 
        MOMX(k,i,j) = ( ENV_L1_U * ( 1.0_RP - fact )                 &
                      + ENV_L3_U * (          fact )                 &
-                     + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U &
+                     + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_U &
                      ) * DENS(k,i,j)
     enddo
     enddo
@@ -2041,10 +2082,10 @@ contains
        do j = JSB, JEB
        do i = ISB, IEB
           qsat_sfc(1,1) = EPSvap * psat_sfc(i,j) / ( pres_sfc(i,j) - ( 1.0_RP-EPSvap ) * psat_sfc(i,j) )
-          qv_sfc(i,j) = ( SFC_RH + rndm(KS-1,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
+          qv_sfc(i,j) = min( 0.0_RP, SFC_RH + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat_sfc(1,1)
 
           do k = KS, KE
-             qv(k,i,j) = ( ENV_RH + rndm(k,i,j) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
+             qv(k,i,j) = min( 0.0_RP, ENV_RH + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_RH ) * 1.E-2_RP * qsat(k,1,1)
           enddo
        enddo
        enddo
@@ -2054,10 +2095,10 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
        pres_sfc(i,j) = SFC_PRES
-       pott_sfc(i,j) = SFC_THETA + rndm(KS-1,i,j) * RANDOM_THETA
+       pott_sfc(i,j) = SFC_THETA + ( rndm(KS-1,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA
 
        do k = KS, KE
-          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + rndm(k,i,j) * RANDOM_THETA
+          pott(k,i,j) = ENV_THETA + ENV_TLAPS * CZ(k) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA
        enddo
     enddo
     enddo
@@ -2076,7 +2117,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_U ) &
+       MOMX(k,i,j) = ( ENV_U + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_U ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
     enddo
     enddo
@@ -2086,7 +2127,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) - 0.5_RP ) * 2.0_RP * RANDOM_V ) &
+       MOMY(k,i,j) = ( ENV_V + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_V ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
     enddo
     enddo
@@ -2186,8 +2227,8 @@ contains
     real(RP) :: ENV_U = 0.0_RP ! velocity u of environment [m/s]
     real(RP) :: ENV_V = 0.0_RP ! velocity v of environment [m/s]
 
-    real(RP) :: SCORER = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
-    real(RP) :: BBL_NC =   0.0_RP ! extremum of NC in bubble [kg/kg]
+    real(RP) :: SCORER      = 2.E-3_RP ! Scorer parameter (~=N/U) [1/m]
+    real(RP) :: BBL_PTracer =   0.0_RP ! extremum of passive tracer in bubble [kg/kg]
 
     namelist / PARAM_MKINIT_MOUNTAINWAVE / &
        SFC_THETA, &
@@ -2195,7 +2236,7 @@ contains
        ENV_U,     &
        ENV_V,     &
        SCORER,    &
-       BBL_NC
+       BBL_PTracer
 
     real(RP) :: Ustar2, N2
 
@@ -2260,11 +2301,11 @@ contains
     enddo
 
     ! optional : add tracer bubble
-    if ( BBL_NC > 0.0_RP ) then
+    if ( BBL_PTracer > 0.0_RP ) then
        do j = JSB, JEB
        do i = ISB, IEB
        do k = KS, KE
-          nc(k,i,j) = BBL_NC * bubble(k,i,j)
+          ptrc(k,i,j) = BBL_PTracer * bubble(k,i,j)
        enddo
        enddo
        enddo
@@ -2714,7 +2755,7 @@ contains
        MOMZ(k,i,j) = 0.0_RP
        MOMX(k,i,j) = ( VELX(k) - OFFSET_velx ) * RHO(k)
        MOMY(k,i,j) = ( VELY(k) - OFFSET_vely ) * RHO(k)
-       RHOT(k,i,j) = RHO(k) * ( POTT(k) + rndm(k,i,j) * RANDOM_THETA )
+       RHOT(k,i,j) = RHO(k) * ( POTT(k) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * RANDOM_THETA )
        qv  (k,i,j) = QV1D(k)
     enddo
     enddo
@@ -2887,6 +2928,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF01
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -2913,6 +2960,8 @@ contains
     real(RP) :: pi2
     real(RP) :: sint
     real(RP) :: GEOP_sw ! switch for geopotential energy correction
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3022,6 +3071,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3048,7 +3101,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMZ(k,i,j) = ( ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
        else
           MOMZ(k,i,j) = 0.0_RP
@@ -3062,7 +3115,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMX(k,i,j) = ( velx(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        else
           MOMX(k,i,j) = velx(k,i,j) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3076,7 +3129,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMY(k,i,j) = ( vely(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        else
           MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3090,7 +3143,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * DENS(k,i,j)
        else
           RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3116,6 +3169,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3139,6 +3198,7 @@ contains
     real(RP) :: fact
     real(RP) :: pi2
     real(RP) :: sint
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3237,6 +3297,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3263,7 +3327,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMZ(k,i,j) = ( 0.0_RP + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
        MOMZ(k,i,j) = 0.0_RP
@@ -3277,7 +3341,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMX(k,i,j) = ( velx(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
        MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3291,7 +3355,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMY(k,i,j) = ( vely(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3305,7 +3369,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3331,6 +3395,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for stratocumulus
   subroutine MKINIT_DYCOMS2_RF02_DNS
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3359,7 +3429,8 @@ contains
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
     real(RP) :: pi2
-    real(RP) :: RovCP
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3446,11 +3517,14 @@ contains
     call HYDROMETEOR_LHV( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           temp(:,:,:), LHV(:,:,:) )
 
-    RovCP = Rdry / CPdry
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       pott(k,i,j) = potl(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) * ( P00/pres(k,i,j) )**RovCP
+       temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3477,7 +3551,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMZ(k,i,j) = ( 0.0_RP + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMZ(k,i,j) = ( 0.0_RP + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
      else
        MOMZ(k,i,j) = 0.0_RP
@@ -3492,7 +3566,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMX(k,i,j) = ( velx(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMX(k,i,j) = ( velx(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
      else
        MOMX(k,i,j) = ( velx(k,i,j) ) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -3507,7 +3581,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then
-       MOMY(k,i,j) = ( vely(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       MOMY(k,i,j) = ( vely(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
      else
        MOMY(k,i,j) = vely(k,i,j) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -3521,7 +3595,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
      if( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then
-       RHOT(k,i,j) = ( pott(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP ) &
+       RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                    * DENS(k,i,j)
      else
        RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
@@ -3547,6 +3621,12 @@ contains
   !-----------------------------------------------------------------------------
   !> Make initial state for RICO inter comparison
   subroutine MKINIT_RICO
+    use scale_const, only: &
+       Rdry  => CONST_Rdry,  &
+       Rvap  => CONST_Rvap,  &
+       CPdry => CONST_CPdry, &
+       CPvap => CONST_CPvap, &
+       CL    => CONST_CL
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_dry
     implicit none
@@ -3563,6 +3643,8 @@ contains
     real(RP) :: potl(KA,IA,JA) ! liquid potential temperature
     real(RP) :: qall ! QV+QC
     real(RP) :: fact
+
+    real(RP) :: qdry, Rtot, CPtot
 
     integer :: ierr
     integer :: k, i, j
@@ -3656,6 +3738,10 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        temp(k,i,j) = temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j)
+       qdry = 1.0_RP - qv(k,i,j) - qc(k,i,j)
+       Rtot = Rdry * qdry + Rvap * qv(k,i,j)
+       CPtot = CPdry * qdry + CPvap * qv(k,i,j) + CL * qc(k,i,j)
+       pott(k,i,j) = ( temp(k,i,j) + LHV(k,i,j) / CPdry * qc(k,i,j) ) * ( P00 / pres(k,i,j) )**(Rtot/CPtot)
     enddo
     enddo
     enddo
@@ -3706,7 +3792,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+       RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
     enddo
     enddo
     enddo
@@ -3715,7 +3801,7 @@ contains
     do j = JSB, JEB
     do i = ISB, IEB
     do k = KS, KE
-       qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+       qv(k,i,j) = qv(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP_QV
     enddo
     enddo
     enddo
@@ -3915,7 +4001,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
-         RHOT(k,i,j) = ( pott(k,i,j)+2.0_RP*( rndm(k,i,j)-0.5_RP )*PERTURB_AMP_PT ) * DENS(k,i,j)
+         RHOT(k,i,j) = ( pott(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP_PT ) * DENS(k,i,j)
        else
          RHOT(k,i,j) = pott(k,i,j) * DENS(k,i,j)
        endif
@@ -3928,7 +4014,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if( CZ(k) <= 1600.0_RP ) then !--- lowest 40 model layer when dz=40m
-          qv(k,i,j) = qv(k,i,j) + 2.0_RP * ( rndm(k,i,j)-0.50_RP ) * PERTURB_AMP_QV
+          qv(k,i,j) = qv(k,i,j) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP_QV
        endif
     enddo
     enddo
@@ -4001,10 +4087,13 @@ contains
     use scale_landuse, only: &
        LANDUSE_frac_land, &
        LANDUSE_calc_fact, &
-       LANDUSE_fillhalo,  &
-       LANDUSE_write
+       LANDUSE_fillhalo
     use scale_atmos_grid_cartesC, only: &
        DOMAIN_CENTER_X => ATMOS_GRID_CARTESC_DOMAIN_CENTER_X
+    use scale_land_grid_cartesC_real, only: &
+       LAND_GRID_CARTESC_REAL_set_areavol
+    use scale_ocean_grid_cartesC_real, only: &
+       OCEAN_GRID_CARTESC_REAL_set_areavol
     implicit none
 
     real(RP) :: LAND_SIZE
@@ -4054,8 +4143,8 @@ contains
     call LANDUSE_fillhalo( FILL_BND=.true. )
     call LANDUSE_calc_fact
 
-    ! output landuse file
-    call LANDUSE_write
+    call LAND_GRID_CARTESC_REAL_set_areavol
+    call OCEAN_GRID_CARTESC_REAL_set_areavol
 
     return
   end subroutine MKINIT_seabreeze
@@ -4069,8 +4158,7 @@ contains
        LANDUSE_frac_land,  &
        LANDUSE_frac_urban, &
        LANDUSE_calc_fact,  &
-       LANDUSE_fillhalo,   &
-       LANDUSE_write
+       LANDUSE_fillhalo
     implicit none
 
     real(RP) :: dist
@@ -4107,9 +4195,6 @@ contains
     ! calculate landuse factors
     call LANDUSE_fillhalo( FILL_BND=.true. )
     call LANDUSE_calc_fact
-
-    ! output landuse file
-    call LANDUSE_write
 
     return
   end subroutine MKINIT_heatisland
@@ -4192,7 +4277,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMZ(k,i,j) = ( 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMZ(k,i,j) = ( ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k+1,i,j) + DENS(k,i,j) )
        else
           MOMZ(k,i,j) = 0.0_RP
@@ -4206,7 +4291,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMX(k,i,j) = ( velx(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMX(k,i,j) = ( velx(k) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
        else
           MOMX(k,i,j) = velx(k) * 0.5_RP * ( DENS(k,i+1,j) + DENS(k,i,j) )
@@ -4220,7 +4305,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 2 .AND. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          MOMY(k,i,j) = ( vely(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          MOMY(k,i,j) = ( vely(k) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
        else
           MOMY(k,i,j) = vely(k) * 0.5_RP * ( DENS(k,i,j+1) + DENS(k,i,j) )
@@ -4234,7 +4319,7 @@ contains
     do i = ISB, IEB
     do k = KS, KE
        if ( RANDOM_FLAG == 1 .and. k <= RANDOM_LIMIT ) then ! below initial cloud top
-          RHOT(k,i,j) = ( pott(k) + 2.0_RP * ( rndm(k,i,j)-0.5_RP ) * PERTURB_AMP ) &
+          RHOT(k,i,j) = ( pott(k) + ( rndm(k,i,j) * 2.0_RP - 1.0_RP ) * PERTURB_AMP ) &
                       * DENS(k,i,j)
        else
           RHOT(k,i,j) = pott(k) * DENS(k,i,j)

@@ -465,6 +465,7 @@ contains
     real(RP) :: CVtot_t(KA,IA,JA)
     real(RP) :: mflux (KA)
     real(RP) :: sflux (2)  !> 1: rain, 2: snow
+    real(RP) :: eflux
     real(RP) :: FLX_hydro(KA)
     real(RP) :: REFSTATE_dens(KA)
 
@@ -614,7 +615,7 @@ contains
           !$omp         FDZ,RFDZ,RCDZ, &
           !$omp         RHOU_t,RHOV_t,MOMZ_t, &
           !$omp         REFSTATE_dens, &
-          !$omp         vterm,mflux,sflux,FLX_hydro)
+          !$omp         vterm,mflux,sflux,eflux,FLX_hydro)
           do j = JS, JE
           do i = IS, IE
 
@@ -679,7 +680,7 @@ contains
                      DENS(:,i,j,l), RHOQ(:,i,j,:,l), & ! [INOUT]
                      CPtot(:,i,j,l), CVtot(:,i,j,l), & ! [INOUT]
                      RHOE(:,i,j,l),                  & ! [INOUT]
-                     mflux(:), sflux(:)              ) ! [OUT]
+                     mflux(:), sflux(:), eflux       ) ! [OUT]
 
                 do k = KS, KE
                    TEMP(k,i,j,l) = RHOE(k,i,j,l) / ( DENS(k,i,j,l) * CVtot(k,i,j,l) )

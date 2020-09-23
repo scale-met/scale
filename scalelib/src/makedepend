@@ -55,11 +55,11 @@ parse(deps, pros, srcdir)
 
 File.open( File.join(srcdir, "depend"), "w" ) do |file|
   deps.sort.each do |name, dep|
-    file.print "$(OBJ_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(DEPENDLIB)"
+    file.print "$(BUILD_DIR)/#{name}.o: #{dep[:dir]}/#{name}.F90 $(DEPENDLIB)"
 
     dep[:depends].sort.each do |mod|
       if pro = pros[mod]
-        file.print " $(OBJ_DIR)/#{pro[:file]}.o"
+        file.print " $(BUILD_DIR)/#{pro[:file]}.o"
       else
         $stderr.print "Module '#{mod}' is used in '#{name}', but it is not found.\n"
         raise "ERROR"
@@ -72,7 +72,7 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
 
   pros.keys.sort.map{|mod|
      mod = mod.downcase
-     mods.push "$(OBJ_DIR)/#{mod}.mod"
+     mods.push "$(BUILD_DIR)/#{mod}.mod"
   }
   file.print "MODS =\t\\\n\t", mods.join("\t\\\n\t"), "\n"
 end

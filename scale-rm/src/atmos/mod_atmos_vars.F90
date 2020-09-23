@@ -35,7 +35,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_restart_check
   public :: ATMOS_vars_history_setpres
   public :: ATMOS_vars_history
-  public :: ATMOS_vars_total
+  public :: ATMOS_vars_check
   public :: ATMOS_vars_calc_diagnostics
   public :: ATMOS_vars_get_diagnostic
   public :: ATMOS_vars_monitor
@@ -141,6 +141,8 @@ module mod_atmos_vars
   real(RP), public, allocatable, target :: CVtot(:,:,:) !> specific heat          [J/kg/K]
   real(RP), public, allocatable, target :: CPtot(:,:,:) !> specific heat          [J/kg/K]
 
+  real(RP), public, allocatable, target :: PREC     (:,:) !> total precipitation [kg/m2/s]
+  real(RP), public, allocatable         :: PREC_ENGI(:,:) !> internal energy of precipitation [J/m2]
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -194,7 +196,6 @@ module mod_atmos_vars
   real(RP), allocatable, target :: IWP  (:,:)   !> ice    water path  [g/m2]
   real(RP), allocatable, target :: PW   (:,:)   !> precipitable water [g/m2]
 
-  real(RP), allocatable, target :: PREC (:,:)   !> surface precipitation rate CP+MP(rain+snow) [kg/m2/s]
   real(RP), allocatable, target :: RAIN (:,:)   !> surface rain rate CP+MP [kg/m2/s]
   real(RP), allocatable, target :: SNOW (:,:)   !> surface snow rate CP+MP [kg/m2/s]
 
@@ -429,17 +430,19 @@ module mod_atmos_vars
   integer, private, parameter   :: IM_ENGFLXT      =  9
   integer, private, parameter   :: IM_ENGSFC_SH    = 10
   integer, private, parameter   :: IM_ENGSFC_LH    = 11
-  integer, private, parameter   :: IM_ENGSFC_RD    = 12
-  integer, private, parameter   :: IM_ENGTOA_RD    = 13
-  integer, private, parameter   :: IM_ENGSFC_LW_up = 14
-  integer, private, parameter   :: IM_ENGSFC_LW_dn = 15
-  integer, private, parameter   :: IM_ENGSFC_SW_up = 16
-  integer, private, parameter   :: IM_ENGSFC_SW_dn = 17
-  integer, private, parameter   :: IM_ENGTOA_LW_up = 18
-  integer, private, parameter   :: IM_ENGTOA_LW_dn = 19
-  integer, private, parameter   :: IM_ENGTOA_SW_up = 20
-  integer, private, parameter   :: IM_ENGTOA_SW_dn = 21
-  integer, private, parameter   :: DVM_nmax        = 21
+  integer, private, parameter   :: IM_ENGSFC_EVAP  = 12
+  integer, private, parameter   :: IM_ENGSFC_PREC  = 13
+  integer, private, parameter   :: IM_ENGSFC_RD    = 14
+  integer, private, parameter   :: IM_ENGTOM_RD    = 15
+  integer, private, parameter   :: IM_ENGSFC_LW_up = 16
+  integer, private, parameter   :: IM_ENGSFC_LW_dn = 17
+  integer, private, parameter   :: IM_ENGSFC_SW_up = 18
+  integer, private, parameter   :: IM_ENGSFC_SW_dn = 19
+  integer, private, parameter   :: IM_ENGTOM_LW_up = 20
+  integer, private, parameter   :: IM_ENGTOM_LW_dn = 21
+  integer, private, parameter   :: IM_ENGTOM_SW_up = 22
+  integer, private, parameter   :: IM_ENGTOM_SW_dn = 23
+  integer, private, parameter   :: DVM_nmax        = 23
   integer, private              :: DV_MONIT_id(DVM_nmax)
 
 
@@ -499,6 +502,8 @@ contains
        ATMOS_PHY_BL_vars_setup
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_setup
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_setup
     implicit none
 
     namelist / PARAM_ATMOS_VARS / &
@@ -593,6 +598,11 @@ contains
     CVtot(:,:,:) = UNDEF
     CPtot(:,:,:) = UNDEF
 
+    allocate( PREC     (IA,JA) )
+    allocate( PREC_ENGI(IA,JA) )
+    PREC     (:,:) = UNDEF
+    PREC_ENGI(:,:) = UNDEF
+
     ! obsolute
     allocate( MOMX_tp(KA,IA,JA)    )
     allocate( MOMY_tp(KA,IA,JA)    )
@@ -678,6 +688,7 @@ contains
     call ATMOS_PHY_TB_vars_setup
     call ATMOS_PHY_BL_vars_setup
     call ATMOS_PHY_CP_vars_setup
+    call ATMOS_PHY_LT_vars_setup
 
 
     ! water content
@@ -744,81 +755,87 @@ contains
     do iv = 1, PV_nmax
        call MONITOR_reg( PV_info(iv)%NAME, PV_info(iv)%DESC, trim(PV_info(iv)%UNIT)//"*m3", & ! (in)
                          PV_MONIT_id(iv),                                                   & ! (out)
-                         dim_type=PV_info(iv)%dim_type, isflux=.false.                      ) ! (in)
+                         dim_type=PV_info(iv)%dim_type, is_tendency=.false.                 ) ! (in)
     end do
     do iq = 1, QA
        call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq)//"*kg", & ! (in)
                          QP_MONIT_id(iq),                                          & ! (out)
-                         dim_type='ZXY', isflux=.false.                            ) ! (in)
+                         dim_type='ZXY', is_tendency=.false.                       ) ! (in)
     enddo
 
     call MONITOR_reg( 'QDRY',         'dry air mass',           'kg', & ! (in)
                       DV_MONIT_id(IM_QDRY),                           & ! (out)
-                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.             ) ! (in)
     call MONITOR_reg( 'QTOT',         'water mass',             'kg', & ! (in)
                       DV_MONIT_id(IM_QTOT),                           & ! (out)
-                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.             ) ! (in)
     call MONITOR_reg( 'EVAP',         'evaporation at the surface', 'kg', & ! (in)
                       DV_MONIT_id(IM_EVAP),                           & ! (out)
-                      dim_type='XY', isflux=.true.                    ) ! (in)
-    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+                      dim_type='XY', is_tendency=.true.               ) ! (in)
+    call MONITOR_reg( 'PREC',         'precipitation',          'kg', & ! (in)
                       DV_MONIT_id(IM_PREC),                           & ! (out)
-                      dim_type='XY', isflux=.true.                    ) ! (in)
+                      dim_type='XY', is_tendency=.true.               ) ! (in)
 
     call MONITOR_reg( 'ENGT',         'total     energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGT),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGP',         'potential energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGP),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGK',         'kinetic   energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGK),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGI',         'internal  energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGI),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
 
     call MONITOR_reg( 'ENGFLXT',      'total energy flux convergence', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
-    call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGSFC_SH',    'SFC sensible heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SH),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_LH',    'SFC latent   heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LH),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGSFC_EVAP',  'SFC internal energy flux of the evapolation', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_EVAP),                   & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGSFC_PREC',  'SFC internal energy flux of the precipitation', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGSFC_PREC),                   & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_RD',    'SFC net radiation flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_RD),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
-    call MONITOR_reg( 'ENGTOA_RD',    'TOA net radiation flux', 'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_RD),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGTOM_RD',    'TOM net radiation flux', 'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_RD),                     & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
     call MONITOR_reg( 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
-    call MONITOR_reg( 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_LW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
-    call MONITOR_reg( 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_LW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
-    call MONITOR_reg( 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_SW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
-    call MONITOR_reg( 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J', & ! (in)
-                      DV_MONIT_id(IM_ENGTOA_SW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+    call MONITOR_reg( 'ENGTOM_LW_up', 'TOM LW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_LW_up),                  & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGTOM_LW_dn', 'TOM LW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_LW_dn),                  & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGTOM_SW_up', 'TOM SW upward   flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_SW_up),                  & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
+    call MONITOR_reg( 'ENGTOM_SW_dn', 'TOM SW downward flux',   'J', & ! (in)
+                      DV_MONIT_id(IM_ENGTOM_SW_dn),                  & ! (out)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
     return
   end subroutine ATMOS_vars_setup
@@ -909,7 +926,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_open
     use mod_atmos_phy_mp_vars, only: &
@@ -926,6 +944,8 @@ contains
        ATMOS_PHY_TB_vars_restart_open
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_open
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_open
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -976,6 +996,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_open
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_open
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_open
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_open
 
     return
   end subroutine ATMOS_vars_restart_open
@@ -999,7 +1020,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
        ATMOS_DYN_vars_restart_read
     use mod_atmos_phy_mp_vars, only: &
@@ -1016,6 +1038,8 @@ contains
        ATMOS_PHY_TB_vars_restart_read
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_read
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_read
     use mod_cpl_admin, only: &
        CPL_sw
     implicit none
@@ -1045,7 +1069,6 @@ contains
 
        if ( FILE_get_AGGREGATE(restart_fid) ) then
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
-
           ! fill k halos
           do j  = 1, JA
           do i  = 1, IA
@@ -1059,13 +1082,18 @@ contains
              MOMX(KE+1:KA,  i,j) = MOMX(KE,i,j)
              MOMY(KE+1:KA,  i,j) = MOMY(KE,i,j)
              RHOT(KE+1:KA,  i,j) = RHOT(KE,i,j)
+             do iq = 1, QA
+                QTRC(   1:KS-1,i,j,iq) = QTRC(KS,i,j,iq)
+                QTRC(KE+1:KA  ,i,j,iq) = QTRC(KE,i,j,iq)
+             end do
           enddo
           enddo
        else
           call ATMOS_vars_fillhalo
        end if
 
-       call ATMOS_vars_total
+       call ATMOS_vars_calc_diagnostics
+       call ATMOS_vars_check( force = .true. )
     else
        LOG_ERROR("ATMOS_vars_restart_read",*) 'invalid restart file ID for atmosphere. STOP!'
        call PRC_abort
@@ -1088,6 +1116,7 @@ contains
     if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_read
     if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
     if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
+    if ( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_read
 
     return
   end subroutine ATMOS_vars_restart_read
@@ -1096,14 +1125,13 @@ contains
   !> Set pressure for history output
   subroutine ATMOS_vars_history_setpres
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_topography, only: &
-       TOPO_Zsfc
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use scale_file_history_cartesC, only: &
        FILE_HISTORY_CARTESC_set_pres
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP => ATMOS_PHY_SF_SFC_TEMP
     implicit none
 
     real(RP) :: SFC_DENS(IA,JA)
@@ -1111,9 +1139,10 @@ contains
     !---------------------------------------------------------------------------
 
     call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                          DENS_av(:,:,:), PRES(:,:,:),                  & ! [IN]
-                          REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                          SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
+                          DENS_av(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                          SFC_TEMP(:,:),                          & ! [IN]
+                          REAL_FZ(:,:,:),                         & ! [IN]
+                          SFC_DENS(:,:), SFC_PRES(:,:)            ) ! [OUT]
 
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
@@ -1278,15 +1307,6 @@ contains
 
     call PROF_rapstart('ATM_History', 1)
 
-    ! value check for prognostic variables
-    if ( ATMOS_VARS_CHECKRANGE ) then
-       call VALCHECK( DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
-       call VALCHECK( RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
-    endif
-
     ! history output of prognostic variables
     call FILE_HISTORY_put  ( PV_HIST_id(I_DENS), DENS(:,:,:) )
     call FILE_HISTORY_put  ( PV_HIST_id(I_MOMZ), MOMZ(:,:,:) )
@@ -1350,14 +1370,20 @@ contains
   end subroutine ATMOS_vars_history
 
   !-----------------------------------------------------------------------------
-  !> Budget monitor for atmosphere
-  subroutine ATMOS_vars_total
+  !> Check variables for atmosphere
+  subroutine ATMOS_vars_check( force )
+    use scale_prc, only: &
+       PRC_myrank, &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_const, only: &
        GRAV  => CONST_GRAV,  &
        CVdry => CONST_CVdry
     use scale_statistics, only: &
        STATISTICS_checktotal, &
-       STATISTICS_total
+       STATISTICS_total, &
+       STATISTICS_detail
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_VOL,       &
        ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
@@ -1367,13 +1393,73 @@ contains
        ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
        ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
        ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+    use mod_atmos_admin, only: &
+       ATMOS_DYN_TYPE
+    use scale_atmos_grid_cartesC, only: &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_real, only: &
+       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
+    use scale_time, only: &
+       TIME_DTSEC_ATMOS_DYN
     implicit none
+    logical, intent(in), optional :: force
 
     real(RP) :: RHOQ(KA,IA,JA)
-    integer  :: iq
+
+    real(RP)               :: WORK (KA,IA,JA,3)
+    character(len=H_SHORT) :: WNAME(3)
+    real(RP)               :: CFLMAX
+
+    integer  :: k, i, j, iq
+    logical  :: check
     !---------------------------------------------------------------------------
 
-    if ( STATISTICS_checktotal ) then
+    if ( present(force) ) then
+       check = force
+    else
+       check = ATMOS_VARS_CHECKRANGE
+    end if
+
+    ! value check for prognostic variables
+    if ( check ) then
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      DENS(:,:,:),    0.0_RP,    2.0_RP, PV_info(I_DENS)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMZ(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMZ)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMX(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMX)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      MOMY(:,:,:), -200.0_RP,  200.0_RP, PV_info(I_MOMY)%NAME, __FILE__, __LINE__ )
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      RHOT(:,:,:),    0.0_RP, 1000.0_RP, PV_info(I_RHOT)%NAME, __FILE__, __LINE__ )
+
+       !$omp parallel workshare
+!OCL XFILL
+       WORK(:,:,:,1) = W(:,:,:)
+!OCL XFILL
+       WORK(:,:,:,2) = U(:,:,:)
+!OCL XFILL
+       WORK(:,:,:,3) = V(:,:,:)
+       !$omp end parallel workshare
+
+       WNAME(1) = "W"
+       WNAME(2) = "U"
+       WNAME(3) = "V"
+
+       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                               WNAME(:), WORK(:,:,:,:)                )
+    endif
+
+    if ( present(force) ) then
+       check = force
+    else
+       check = STATISTICS_checktotal
+    end if
+
+    if ( check ) then
 
        call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                               DENS(:,:,:), PV_info(I_DENS)%NAME,    & ! (in)
@@ -1397,7 +1483,7 @@ contains
                               ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
 
        do iq = 1, QA
-          RHOQ(:,:,:) = DENS(:,:,:) * QTRC(:,:,:,iq)
+          RHOQ(KS:KE,IS:IE,JS:JE) = DENS(KS:KE,IS:IE,JS:JE) * QTRC(KS:KE,IS:IE,JS:JE,iq)
 
           call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                  RHOQ(:,:,:), TRACER_NAME(iq),       & ! (in)
@@ -1442,10 +1528,83 @@ contains
                               ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
                               ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
 
+    end if
+
+
+    ! CFL condition check
+    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
+         .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
+       !$omp parallel workshare
+!OCL XFILL
+       WORK(:,:,:,:) = 0.0_RP
+       !$omp end parallel workshare
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
+          WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
+                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
+       enddo
+       enddo
+       enddo
+       if ( PRC_TwoD ) then
+          !$omp parallel do
+          do j = JS, JE
+          do k = KS, KE
+             WORK(k,IS,j,2) = 0.0_RP
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
+                           * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
+          enddo
+          enddo
+          enddo
+       end if
+
+       CFLMAX = maxval( WORK(:,:,:,:) )
+
+       if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
+          LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
+          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
+          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
+
+          call PRC_abort
+       endif
+
+       if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_SOFT ) then
+          LOG_INFO("ATMOS_vars_check",*) "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          LOG_ERROR("ATMOS_vars_check",*)                     "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
+          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
+
+          WNAME(1) = "Courant num. Z"
+          WNAME(2) = "Courant num. X"
+          WNAME(3) = "Courant num. Y"
+          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
+                                  WNAME(:), WORK(:,:,:,:),               &
+                                  local=.true.                           )
+       endif
+
     endif
 
+
     return
-  end subroutine ATMOS_vars_total
+  end subroutine ATMOS_vars_check
 
   !-----------------------------------------------------------------------------
   !> Calc diagnostic variables
@@ -1530,12 +1689,15 @@ contains
        CVdry => CONST_CVdry
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_atmos_grid_cartesC, only: &
        RCDX => ATMOS_GRID_CARTESC_RCDX, &
        RCDY => ATMOS_GRID_CARTESC_RCDY
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       F2H     => ATMOS_GRID_CARTESC_REAL_F2H
     use scale_atmos_grid_cartesC_metric, only: &
        ROTC => ATMOS_GRID_CARTESC_METRIC_ROTC
     use scale_comm_cartesC, only: &
@@ -1766,14 +1928,14 @@ contains
     case ( 'QLIQ' )
        if ( .not. DV_calculated(I_QLIQ) ) then
           call allocate_3D( QLIQ )
+!OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k,iq) &
+          !$omp private(i,j,k) &
           !$omp shared(QLIQ,QC,QR) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
-!OCL XFILL
              QLIQ(k,i,j) = QC(k,i,j) + QR(k,i,j)
           enddo
           enddo
@@ -1787,7 +1949,7 @@ contains
           call allocate_3D( QICE )
 !OCL XFILL
           !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,k,iq) &
+          !$omp private(i,j,k) &
           !$omp shared(QICE,QI,QS,QG,QH) &
           !$omp shared(KS,KE,IA,JA)
           do j = 1, JA
@@ -1937,55 +2099,80 @@ contains
           call allocate_3D( VOR )
           !!!  to move to grid !!!
           ! at x, v, layer
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-!OCL XFILL
-          do j = 1, JA-1
-          do i = 2, IA
-          do k = KS, KE
-             UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i  ,j) + MOMX_av(k,i  ,j+1) &
-                                  + MOMX_av(k,i-1,j) + MOMX_av(k,i-1,j+1) ) &
-                       / ( DENS_av(k,i,j) + DENS_av(k,i,j+1) )
-          enddo
-          enddo
-          enddo
           ! at u, y, layer
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          if ( PRC_TwoD ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA
-          do i = 1, IA-1
-          do k = KS, KE
-             VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j  ) + MOMY_av(k,i+1,j  ) &
-                                  + MOMY_av(k,i,j-1) + MOMY_av(k,i+1,j-1) ) &
-                       / ( DENS_av(k,i,j) + DENS_av(k,i+1,j) )
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = 1, JA-1
+             do k = KS, KE
+                UH(k,IS,j) = ( MOMX_av(k,IS,j) + MOMX_av(k,IS,j+1) ) &
+                           / ( DENS_av(k,IS,j) + DENS_av(k,IS,j+1) )
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA-1
-          do i = 2, IA-1
-          do k = KS, KE
-             VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
-                        - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             VOR(k,1 ,j) = VOR(k,2   ,j)
-             VOR(k,IA,j) = VOR(k,IA-1,j)
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_
-          do i = 1, IA
-          do k = KS, KE
-             VOR(k,i,1 ) = VOR(k,i,2   )
-             VOR(k,i,JA) = VOR(k,i,JA-1)
-          enddo
-          enddo
+             do j = 2, JA-1
+             do k = KS, KE
+                VOR(k,IS,j) = - ( UH(k,IS,j) - UH(k,IS,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             !$omp parallel do private(k) OMP_SCHEDULE_
+             do k = KS, KE
+                VOR(k,IS,1 ) = VOR(k,IS,2   )
+                VOR(k,IS,JA) = VOR(k,IS,JA-1)
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 1, JA-1
+             do i = 2, IA
+             do k = KS, KE
+                UH(k,i,j) = 0.5_RP * ( MOMX_av(k,i  ,j) + MOMX_av(k,i  ,j+1) &
+                                     + MOMX_av(k,i-1,j) + MOMX_av(k,i-1,j+1) ) &
+                          / ( DENS_av(k,i,j) + DENS_av(k,i,j+1) )
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA
+             do i = 1, IA-1
+             do k = KS, KE
+                VH(k,i,j) = 0.5_RP * ( MOMY_av(k,i,j  ) + MOMY_av(k,i+1,j  ) &
+                                     + MOMY_av(k,i,j-1) + MOMY_av(k,i+1,j-1) ) &
+                          / ( DENS_av(k,i,j) + DENS_av(k,i+1,j) )
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA-1
+             do i = 2, IA-1
+             do k = KS, KE
+                VOR(k,i,j) = ( VH(k,i,j  ) - VH(k,i-1,j  ) ) * RCDX(i) &
+                           - ( UH(k,i  ,j) - UH(k,i  ,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VOR(k,1 ,j) = VOR(k,2   ,j)
+                VOR(k,IA,j) = VOR(k,IA-1,j)
+             enddo
+             enddo
+             !$omp parallel do private(i,k) OMP_SCHEDULE_
+             do i = 1, IA
+             do k = KS, KE
+                VOR(k,i,1 ) = VOR(k,i,2   )
+                VOR(k,i,JA) = VOR(k,i,JA-1)
+             enddo
+             enddo
+          end if
           DV_calculated(I_VOR) = .true.
        end if
+       call COMM_vars8( VOR(:,:,:), 1 )
+       call COMM_wait ( VOR(:,:,:), 1, .false. )
        var(KS:KE,:,:) = VOR(KS:KE,:,:)
 
     case ( 'DIV' )
@@ -2011,28 +2198,44 @@ contains
        if ( .not. DV_calculated(I_HDIV) ) then
           call allocate_3D( HDIV )
           !!!! to move to grid !!!!
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          if ( PRC_TwoD ) then
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
 !OCL XFILL
-          do j = 2, JA
-          do i = 2, IA
-          do k = KS, KE
-             HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
-                         + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
-          enddo
-          enddo
-          enddo
-          !$omp parallel do private(i,k) OMP_SCHEDULE_
-          do i = 1, IA
-          do k = KS, KE
-             HDIV(k,i,1) = HDIV(k,i,2)
-          enddo
-          enddo
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             HDIV(k,1,j) = HDIV(k,2,j)
-          enddo
-          enddo
+             do j = 2, JA
+             do k = KS, KE
+                HDIV(k,IS,j) = ( MOMY_av(k,IS,j) - MOMY_av(k  ,IS,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             !$omp parallel do private(k) OMP_SCHEDULE_
+             do k = KS, KE
+                HDIV(k,IS,1) = HDIV(k,IS,2)
+             enddo
+          else
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+!OCL XFILL
+             do j = 2, JA
+             do i = 2, IA
+             do k = KS, KE
+                HDIV(k,i,j) = ( MOMX_av(k,i,j) - MOMX_av(k  ,i-1,j  ) ) * RCDX(i) &
+                            + ( MOMY_av(k,i,j) - MOMY_av(k  ,i  ,j-1) ) * RCDY(j)
+             enddo
+             enddo
+             enddo
+             !$omp parallel do private(i,k) OMP_SCHEDULE_
+             do i = 1, IA
+             do k = KS, KE
+                HDIV(k,i,1) = HDIV(k,i,2)
+             enddo
+             enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                HDIV(k,1,j) = HDIV(k,2,j)
+             enddo
+             enddo
+          end if
+          call COMM_vars8( HDIV(:,:,:), 1 )
+          call COMM_wait ( HDIV(:,:,:), 1, .false. )
           DV_calculated(I_HDIV) = .true.
        end if
        var(KS:KE,:,:) = HDIV(KS:KE,:,:)
@@ -2058,9 +2261,10 @@ contains
           call allocate_3D( N2 )
           call ATMOS_DIAGNOSTIC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-               POTT(:,:,:), Rtot(:,:,:), & !(in)
-               REAL_CZ(:,:,:),           & !(in)
-               N2(:,:,:)                 ) ! (out)
+               POTT(:,:,:), Rtot(:,:,:),       & !(in)
+               REAL_CZ(:,:,:), REAL_FZ(:,:,:), & !(in)
+               F2H(:,:,:,:),                   & !(in)
+               N2(:,:,:)                       ) ! (out)
           DV_calculated(I_N2) = .true.
        end if
        var(KS:KE,:,:) = N2(KS:KE,:,:)
@@ -2128,9 +2332,6 @@ contains
     case ( 'ENGI' )
        if ( .not. DV_calculated(I_ENGI) ) then
           call allocate_3D( ENGI )
-          if ( moist ) then
-             call ATMOS_vars_get_diagnostic( 'QICE', WORK3D(:,:,:) )
-          end if
           !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
           do j = 1, JA
           do i = 1, IA
@@ -2138,13 +2339,8 @@ contains
              ENGI(k,i,j) = DENS_av(k,i,j) * QDRY(k,i,j) * TEMP(k,i,j) * CVdry
              do iq = 1, QA
                 ENGI(k,i,j) = ENGI(k,i,j) &
-                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * TEMP(k,i,j) * TRACER_CV(iq)
+                            + DENS_av(k,i,j) * QTRC_av(k,i,j,iq) * ( TEMP(k,i,j) * TRACER_CV(iq) + TRACER_ENGI0(iq) )
              enddo
-             if ( moist ) then
-                ENGI(k,i,j) = ENGI(k,i,j) &
-                     + DENS_av(k,i,j) * ( QV  (k,i,j) * LHVc & ! Latent Heat [vapor->liquid]
-                                        - QICE(k,i,j) * LHFc ) ! Latent Heat [ice->liquid]
-             end if
           end do
           end do
           end do
@@ -2346,24 +2542,34 @@ contains
     case ( 'VELX' )
        if ( .not. DV_calculated(I_VELX) ) then
           call allocate_3D( VELX )
+          if ( PRC_TwoD ) then
 !OCL XFILL
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-          do j = 1, JA
-          do i = 1, IA-1
-          do k = KS, KE
-             VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
-          enddo
-          enddo
-          enddo
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VELX(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
+             enddo
+             enddo
+          else
+             !OCL XFILL
+             !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+             do j = 1, JA
+             do i = 1, IA-1
+             do k = KS, KE
+                VELX(k,i,j) = MOMX(k,i,j) * 2.0_RP / ( DENS(k,i,j) + DENS(k,i+1,j) )
+             enddo
+             enddo
+             enddo
 !OCL XFILL
-          !$omp parallel do private(j,k) OMP_SCHEDULE_
-          do j = 1, JA
-          do k = KS, KE
-             VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
-          enddo
-          enddo
-          call COMM_vars8( VELX(:,:,:), 1 )
-          call COMM_wait ( VELX(:,:,:), 1, .false. )
+             !$omp parallel do private(j,k) OMP_SCHEDULE_
+             do j = 1, JA
+             do k = KS, KE
+                VELX(k,IA,j) = MOMX(k,IA,j) / DENS(k,IA,j)
+             enddo
+             enddo
+             call COMM_vars8( VELX(:,:,:), 1 )
+             call COMM_wait ( VELX(:,:,:), 1, .false. )
+          end if
           DV_calculated(I_VELX) = .true.
        end if
        var(KS:KE,:,:) = VELX(KS:KE,:,:)
@@ -2450,7 +2656,8 @@ contains
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
        SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain, &
+       SFLX_snow_CP => ATMOS_PHY_CP_SFLX_snow
     implicit none
 
     character(len=*), intent(in)  :: vname
@@ -2570,39 +2777,78 @@ contains
        end if
        select case ( vname )
        case ( 'CAPE' )
-          var(:,:) = CAPE(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = CAPE(i,j)
+          end do
+          end do
        case ( 'CIN' )
-          var(:,:) = CIN(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = CIN(i,j)
+          end do
+          end do
        case ( 'LCL' )
-          var(:,:) = LCL(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LCL(i,j)
+          end do
+          end do
        case ( 'LFC' )
-          var(:,:) = LFC(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LFC(i,j)
+          end do
+          end do
        case ( 'LNB' )
-          var(:,:) = LNB(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = LNB(i,j)
+          end do
+          end do
        end select
 
-    case ( 'PREC', 'RAIN', 'SNOW' )
-       if ( .not. DV_calculated(I_PREC) ) then
-          call allocate_2D( PREC )
+    case ( 'PREC' )
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = JS, JE
+       do i = IS, IE
+          var(i,j) = PREC(i,j)
+       end do
+       end do
+
+    case ( 'RAIN', 'SNOW' )
+       if ( .not. DV_calculated(I_RAIN) ) then
           call allocate_2D( RAIN )
           call allocate_2D( SNOW )
           !$omp parallel do private(i,j) OMP_SCHEDULE_
-          do j = 1, JA
-          do i = 1, IA
+          do j = JS, JE
+          do i = IS, IE
              RAIN(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
-             SNOW(i,j) = SFLX_snow_MP(i,j)
-             PREC(i,j) = RAIN(i,j) + SNOW(i,j)
+             SNOW(i,j) = SFLX_snow_MP(i,j) + SFLX_snow_CP(i,j)
           enddo
           enddo
-          DV_calculated(I_PREC) = .true.
+          DV_calculated(I_RAIN) = .true.
        end if
        select case (vname)
        case ( 'RAIN' )
-          var(:,:) = RAIN(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = RAIN(i,j)
+          end do
+          end do
        case ( 'SNOW' )
-          var(:,:) = SNOW(:,:)
-       case ( 'PREC' )
-          var(:,:) = PREC(:,:)
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JS, JE
+          do i = IS, IE
+             var(i,j) = SNOW(i,j)
+          end do
+          end do
        end select
 
     case default
@@ -2857,48 +3103,23 @@ contains
   !-----------------------------------------------------------------------------
   !> monitor output
   subroutine ATMOS_vars_monitor
-    use scale_prc, only: &
-       PRC_myrank, &
-       PRC_abort
-    use scale_const, only: &
-       GRAV  => CONST_GRAV,  &
-       CVdry => CONST_CVdry
-    use scale_atmos_grid_cartesC, only: &
-       RFDX => ATMOS_GRID_CARTESC_RFDX, &
-       RFDY => ATMOS_GRID_CARTESC_RFDY
-    use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ
-    use scale_atmos_grid_cartesC_metric, only: &
-       MAPF => ATMOS_GRID_CARTESC_METRIC_MAPF
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total,            &
-       STATISTICS_detail
     use scale_monitor, only: &
        MONITOR_put
-    use scale_time, only: &
-       TIME_DTSEC_ATMOS_DYN
-    use mod_atmos_admin, only: &
-       ATMOS_DYN_TYPE
     use scale_atmos_hydrometeor, only: &
        I_QV
-    use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
-    use mod_atmos_phy_mp_vars, only: &
-       SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_up   => ATMOS_PHY_RD_SFLX_LW_up,   &
        SFLX_LW_dn   => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFLX_SW_up   => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFLX_SW_dn   => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn
     use mod_atmos_phy_sf_vars, only: &
-       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH, &
-       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH, &
+       SFLX_SH   => ATMOS_PHY_SF_SFLX_SH,   &
+       SFLX_LH   => ATMOS_PHY_SF_SFLX_LH,   &
+       SFLX_ENGI => ATMOS_PHY_SF_SFLX_ENGI, &
        SFLX_QTRC => ATMOS_PHY_SF_SFLX_QTRC
     implicit none
 
@@ -2906,11 +3127,7 @@ contains
 
     real(RP) :: ENGFLXT    (IA,JA) ! total flux             [J/m2/s]
     real(RP) :: SFLX_RD_net(IA,JA) ! net SFC radiation flux [J/m2/s]
-    real(RP) :: TFLX_RD_net(IA,JA) ! net TOA radiation flux [J/m2/s]
-
-    real(RP)               :: WORK (KA,IA,JA,3)
-    character(len=H_SHORT) :: WNAME(3)
-    real(RP)               :: CFLMAX
+    real(RP) :: TFLX_RD_net(IA,JA) ! net TOM radiation flux [J/m2/s]
 
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
@@ -2971,8 +3188,7 @@ contains
 
     ! total precipitation
     if ( DV_MONIT_id(IM_PREC) > 0 ) then
-       call ATMOS_vars_get_diagnostic( 'PREC', WORK2D(:,:) )
-       call MONITOR_put( DV_MONIT_id(IM_PREC), WORK2D(:,:) )
+       call MONITOR_put( DV_MONIT_id(IM_PREC), PREC(:,:) )
     end if
 
 
@@ -2995,7 +3211,6 @@ contains
        call MONITOR_put( DV_MONIT_id(IM_ENGI), WORK3D(:,:,:) )
     end if
 
-
     ! radiation flux
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
@@ -3004,10 +3219,11 @@ contains
        SFLX_RD_net(i,j) = ( SFLX_LW_up(i,j) - SFLX_LW_dn(i,j) ) &
                         + ( SFLX_SW_up(i,j) - SFLX_SW_dn(i,j) )
 
-       TFLX_RD_net(i,j) = ( TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j) ) &
-                        + ( TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j) )
+       TFLX_RD_net(i,j) = ( TOMFLX_LW_up(i,j) - TOMFLX_LW_dn(i,j) ) &
+                        + ( TOMFLX_SW_up(i,j) - TOMFLX_SW_dn(i,j) )
 
-       ENGFLXT    (i,j) = SFLX_SH(i,j) + SFLX_LH(i,j) &
+       ENGFLXT    (i,j) = SFLX_SH(i,j) &
+                        + SFLX_ENGI(i,j) - PREC_ENGI(i,j) &
                         + SFLX_RD_net(i,j) - TFLX_RD_net(i,j)
     enddo
     enddo
@@ -3016,86 +3232,20 @@ contains
 
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SH),    SFLX_SH     (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LH),    SFLX_LH     (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_EVAP),  SFLX_ENGI   (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGSFC_PREC),  PREC_ENGI   (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_RD),    SFLX_RD_net (:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_RD),    TFLX_RD_net (:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_RD),    TFLX_RD_net (:,:) )
 
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_up), SFLX_LW_up  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_LW_dn), SFLX_LW_dn  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_up), SFLX_SW_up  (:,:) )
     call MONITOR_put( DV_MONIT_id(IM_ENGSFC_SW_dn), SFLX_SW_dn  (:,:) )
 
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_up), TOAFLX_LW_up(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_LW_dn), TOAFLX_LW_dn(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_up), TOAFLX_SW_up(:,:) )
-    call MONITOR_put( DV_MONIT_id(IM_ENGTOA_SW_dn), TOAFLX_SW_dn(:,:) )
-
-
-
-    if ( ATMOS_VARS_CHECKRANGE ) then
-!OCL XFILL
-       WORK(:,:,:,1) = W(:,:,:)
-!OCL XFILL
-       WORK(:,:,:,2) = U(:,:,:)
-!OCL XFILL
-       WORK(:,:,:,3) = V(:,:,:)
-
-       WNAME(1) = "W"
-       WNAME(2) = "U"
-       WNAME(3) = "V"
-
-       call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                               WNAME(:), WORK(:,:,:,:)                )
-    endif
-
-    if (       ( ATMOS_DYN_TYPE /= 'OFF' .AND. ATMOS_DYN_TYPE /= 'NONE' )                   &
-         .AND. ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .OR. ATMOS_VARS_CHECKCFL_HARD > 0.0_RP ) ) then
-!OCL XFILL
-       WORK(:,:,:,:) = 0.0_RP
-
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          WORK(k,i,j,1) = 0.5_RP * abs(MOMZ_av(k,i,j)) / ( DENS_av(k+1,i,j) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN / ( REAL_CZ(k+1,i,j) - REAL_CZ(k,i,j) )
-          WORK(k,i,j,2) = 0.5_RP * abs(MOMX_av(k,i,j)) / ( DENS_av(k,i+1,j) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDX(i) * MAPF(i,j,1,I_UY)
-          WORK(k,i,j,3) = 0.5_RP * abs(MOMY_av(k,i,j)) / ( DENS_av(k,i,j+1) + DENS_av(k,i,j) ) &
-                        * TIME_DTSEC_ATMOS_DYN * RFDY(j) * MAPF(i,j,2,I_XV)
-       enddo
-       enddo
-       enddo
-
-       CFLMAX = maxval( WORK(:,:,:,:) )
-
-       if ( ATMOS_VARS_CHECKCFL_HARD > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_HARD ) then
-          LOG_INFO("ATMOS_vars_monitor",*) "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR("ATMOS_vars_monitor",*)                     "Courant number =", CFLMAX, " exceeded the hard limit =", ATMOS_VARS_CHECKCFL_HARD
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-          LOG_ERROR_CONT(*)                     "Please set ATMOS_VARS_CHECKCFL_HARD in the namelist PARAM_ATMOS_VARS when you want to change the limit."
-
-          WNAME(1) = "Courant num. Z"
-          WNAME(2) = "Courant num. X"
-          WNAME(3) = "Courant num. Y"
-          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                                  WNAME(:), WORK(:,:,:,:),               &
-                                  local=.true.                           )
-
-          call PRC_abort
-       endif
-
-       if ( ATMOS_VARS_CHECKCFL_SOFT > 0.0_RP .AND. CFLMAX > ATMOS_VARS_CHECKCFL_SOFT ) then
-          LOG_INFO("ATMOS_vars_monitor",*) "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
-          LOG_ERROR("ATMOS_vars_monitor",*)                     "Courant number =", CFLMAX, " exceeded the soft limit =", ATMOS_VARS_CHECKCFL_SOFT
-          LOG_ERROR_CONT(*)                     "Rank =", PRC_myrank
-
-          WNAME(1) = "Courant num. Z"
-          WNAME(2) = "Courant num. X"
-          WNAME(3) = "Courant num. Y"
-          call STATISTICS_detail( KA, KS, KE, IA, IS, IE, JA, JS, JE, 3, &
-                                  WNAME(:), WORK(:,:,:,:),               &
-                                  local=.true.                           )
-       endif
-    endif
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_LW_up), TOMFLX_LW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_LW_dn), TOMFLX_LW_dn(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_up), TOMFLX_SW_up(:,:) )
+    call MONITOR_put( DV_MONIT_id(IM_ENGTOM_SW_dn), TOMFLX_SW_dn(:,:) )
 
     return
   end subroutine ATMOS_vars_monitor
@@ -3115,7 +3265,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3134,6 +3285,8 @@ contains
        ATMOS_PHY_TB_vars_restart_create
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_create
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_create
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3184,6 +3337,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_create
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_create
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_create
 
     return
   end subroutine ATMOS_vars_restart_create
@@ -3201,7 +3355,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3220,6 +3375,8 @@ contains
        ATMOS_PHY_TB_vars_restart_enddef
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_enddef
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_enddef
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3247,6 +3404,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_enddef
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_enddef
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_enddef
 
     return
   end subroutine ATMOS_vars_restart_enddef
@@ -3264,7 +3422,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3283,6 +3442,8 @@ contains
        ATMOS_PHY_TB_vars_restart_close
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_close
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_close
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3316,6 +3477,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_close
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_close
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_close
 
     return
   end subroutine ATMOS_vars_restart_close
@@ -3333,7 +3495,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3352,6 +3515,8 @@ contains
        ATMOS_PHY_TB_vars_restart_def_var
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_def_var
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_def_var
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3400,6 +3565,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_def_var
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_def_var
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_def_var
 
     return
   end subroutine ATMOS_vars_restart_def_var
@@ -3417,7 +3583,8 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
-       ATMOS_sw_phy_cp
+       ATMOS_sw_phy_cp,   &
+       ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_dyn_vars, only: &
@@ -3436,6 +3603,8 @@ contains
        ATMOS_PHY_TB_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_restart_write
 #ifdef SDM
     use scale_atmos_phy_mp_sdm, only: &
        sd_rest_flg_out, &
@@ -3456,7 +3625,7 @@ contains
 
        call ATMOS_vars_fillhalo
 
-       call ATMOS_vars_total
+       call ATMOS_vars_check( force = .true. )
 
        call FILE_CARTESC_write_var( restart_fid, PV_ID(I_DENS), DENS(:,:,:), PV_info(I_DENS)%NAME, 'ZXY'  ) ! [IN]
        call FILE_CARTESC_write_var( restart_fid, PV_ID(I_MOMZ), MOMZ(:,:,:), PV_info(I_MOMZ)%NAME, 'ZHXY' ) ! [IN]
@@ -3478,6 +3647,7 @@ contains
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_write
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
+    if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_write
 
     return
   end subroutine ATMOS_vars_restart_write

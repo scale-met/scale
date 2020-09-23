@@ -17,6 +17,7 @@ module mod_atmos_dyn_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_index
   use scale_tracer
@@ -238,12 +239,6 @@ contains
   subroutine ATMOS_DYN_vars_restart_read
     use scale_prc, only: &
        PRC_abort
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file, only: &
        FILE_get_AGGREGATE
     use scale_file_cartesC, only: &
@@ -280,14 +275,8 @@ contains
           call ATMOS_DYN_vars_fillhalo
        end if
 
-       if ( STATISTICS_checktotal ) then
-          do iv = 1, VA
-             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                    PROG(:,:,:,iv), VAR_NAME(iv),       & ! (in)
-                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
-                                    ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
-          enddo
-       endif
+       call ATMOS_DYN_vars_check
+
     else
        if ( VA > 0 ) then
           LOG_ERROR("ATMOS_DYN_vars_restart_read",*) 'invalid restart file ID for ATMOS_DYN.'
@@ -395,12 +384,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Write variables to restart file
   subroutine ATMOS_DYN_vars_restart_write
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
@@ -412,14 +395,7 @@ contains
 
        call ATMOS_DYN_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          do iv = 1, VA
-             call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                    PROG(:,:,:,iv), VAR_NAME(iv),       & ! (in)
-                                    ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
-                                    ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
-          enddo
-       endif
+       call ATMOS_DYN_vars_check
 
        do iv = 1, VA
           call FILE_CARTESC_write_var( restart_fid, VAR_ID(iv), PROG(:,:,:,iv), VAR_NAME(iv), 'ZXY' ) ! [IN]
@@ -429,5 +405,28 @@ contains
 
     return
   end subroutine ATMOS_DYN_vars_restart_write
+
+  subroutine ATMOS_DYN_vars_check
+    use scale_statistics, only: &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    implicit none
+    integer :: iv
+
+    do iv = 1, VA
+       call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                      PROG(:,:,:,iv),                      & ! (in)
+                      -1.0E20_RP, 1.0E20_RP, VAR_NAME(iv), & ! (in)
+                      __FILE__, __LINE__                   ) ! (in)
+       call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                              PROG(:,:,:,iv), VAR_NAME(iv),       & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_VOL(:,:,:), & ! (in)
+                              ATMOS_GRID_CARTESC_REAL_TOTVOL      ) ! (in)
+    enddo
+
+    return
+  end subroutine ATMOS_DYN_vars_check
 
 end module mod_atmos_dyn_vars

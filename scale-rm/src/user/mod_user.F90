@@ -276,7 +276,7 @@ contains
          OCEAN_SFLX_MV, &
          OCEAN_SFLX_SH, &
          OCEAN_SFLX_LH, &
-         OCEAN_SFLX_G,  &
+         OCEAN_SFLX_GH, &
          OCEAN_SFLX_QTRC
     implicit none
     !---------------------------------------------------------------------------
@@ -330,7 +330,7 @@ contains
          OCEAN_SFLX_MV, &
          OCEAN_SFLX_SH, &
          OCEAN_SFLX_LH, &
-         OCEAN_SFLX_G,  &
+         OCEAN_SFLX_GH, &
          OCEAN_SFLX_QTRC
     implicit none
     !---------------------------------------------------------------------------
@@ -508,7 +508,7 @@ contains
 
     if ( READ_OCEAN_SFLX_WH ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_WH', 'XY', & ! [IN]
-                               OCEAN_SFLX_G(:,:), step=1                        ) ! [OUT]
+                               OCEAN_SFLX_GH(:,:), step=1                        ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFLX_evap ) then

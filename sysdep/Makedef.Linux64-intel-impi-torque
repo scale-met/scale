@@ -16,7 +16,7 @@ FFLAGS_FAST  = -fpp -m64 -O3 -xHost -ip             \
                -fp-model source                     \
                -mcmodel=medium -heap-arrays
 
-FFLAGS_AGGRESSIVE = -ipo -no-prec-div
+FFLAGS_AGGRESSIVE = -ipo -no-prec-div -no-heap-arrays
 
 FFLAGS_QUICKDEBUG = -traceback -fpe0 -CB -CU
 

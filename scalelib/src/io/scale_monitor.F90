@@ -59,8 +59,9 @@ module scale_monitor
   integer                :: MONITOR_FID = -1                    !< fileID for monitor output file
 
   character(len=H_LONG)  :: MONITOR_OUT_BASENAME  = 'monitor' !< filename of monitor output
-  logical                :: MONITOR_USEDEVATION   = .true.    !< use deviation from first step?
+  logical                :: MONITOR_USEDEVIATION  = .true.    !< use deviation from first step?
   integer                :: MONITOR_STEP_INTERVAL = 1         !< step interval
+  logical                :: MONITOR_GLOBAL_SUM    = .true.    !< global or local sum
 
   real(DP)               :: MONITOR_dt
 
@@ -69,14 +70,14 @@ module scale_monitor
   character(len=H_SHORT) :: MONITOR_reqs(MONITOR_req_max) !< name of requested monitor item
 
   type item
-     character(len=H_SHORT) :: name   !< name
-     character(len=H_MID)   :: desc   !< description
-     character(len=H_SHORT) :: unit   !< unit
-     real(DP)               :: var    !< value
-     real(DP)               :: var0   !< value at first time
-     logical                :: first  !< first time?
-     logical                :: flux   !< integrate value?
-     integer                :: dimid  !< dimension type
+     character(len=H_SHORT) :: name     !< name
+     character(len=H_MID)   :: desc     !< description
+     character(len=H_SHORT) :: unit     !< unit
+     real(DP)               :: var      !< value
+     real(DP)               :: var0     !< value at first time
+     logical                :: first    !< first time?
+     logical                :: tendency !< integrate value?
+     integer                :: dimid    !< dimension type
   end type item
   integer                 :: MONITOR_nitems = 0 !< number of item to output
   type(item), allocatable :: MONITOR_items(:)
@@ -109,7 +110,8 @@ contains
 
     namelist / PARAM_MONITOR / &
        MONITOR_OUT_BASENAME, &
-       MONITOR_USEDEVATION,  &
+       MONITOR_USEDEVIATION, &
+       MONITOR_GLOBAL_SUM,   &
        MONITOR_STEP_INTERVAL
 
     character(len=H_SHORT) :: NAME  !> name of monitor item
@@ -154,7 +156,7 @@ contains
     else
        LOG_INFO('MONITOR_setup',*) 'Number of requested monitor item : ', MONITOR_nreqs
        LOG_INFO('MONITOR_setup',*) 'Monitor output interval   [step] : ', MONITOR_STEP_INTERVAL
-       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?   : ', MONITOR_USEDEVATION
+       LOG_INFO('MONITOR_setup',*) 'Use deviation from first step?   : ', MONITOR_USEDEVIATION
     endif
 
     allocate( MONITOR_items(MONITOR_nreqs) )
@@ -237,7 +239,7 @@ contains
        name, desc, unit, &
        itemid,           &
        ndims, dim_type,  &
-       isflux            )
+       is_tendency       )
     use scale_prc, only: &
        PRC_abort
     implicit none
@@ -248,9 +250,9 @@ contains
 
     integer, intent(out) :: itemid !< index number of the item
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate value?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate value?
 
     integer :: n, reqid, dimid
     !---------------------------------------------------------------------------
@@ -312,10 +314,10 @@ contains
           MONITOR_items(itemid)%var   = 0.0_DP
           MONITOR_items(itemid)%var0  = 0.0_DP
           MONITOR_items(itemid)%first = .true.
-          if ( present(isflux) ) then
-             MONITOR_items(itemid)%flux  = isflux
+          if ( present(is_tendency) ) then
+             MONITOR_items(itemid)%tendency = is_tendency
           else
-             MONITOR_items(itemid)%flux  = .false.
+             MONITOR_items(itemid)%tendency = .false.
           end if
 
           LOG_NEWLINE
@@ -324,7 +326,7 @@ contains
           LOG_INFO_CONT(*) 'Description     : ', trim(MONITOR_items(itemid)%desc)
           LOG_INFO_CONT(*) 'Unit            : ', trim(MONITOR_items(itemid)%unit)
           LOG_INFO_CONT(*) 'Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
-          LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%flux
+          LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%tendency
 
           return
        end if
@@ -357,18 +359,18 @@ contains
                            MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
                            var(:,:), MONITOR_items(itemid)%name,                          & ! (in)
                            MONITOR_dims(dimid)%area(:,:), MONITOR_dims(dimid)%total_area, & ! (in)
-                           log_suppress = .true.,                                         & ! (in)
+                           log_suppress = .true., global = MONITOR_GLOBAL_SUM,            & ! (in)
                            sum = total                                                    ) ! (out)
 
-    if ( MONITOR_items(itemid)%flux ) then
+    if ( MONITOR_items(itemid)%tendency ) then
        if ( MONITOR_items(itemid)%first ) then
-          MONITOR_items(itemid)%var = total * MONITOR_dt ! first put
+          MONITOR_items(itemid)%var = 0.0_RP
           MONITOR_items(itemid)%first = .false.
        else
           MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
-       if ( MONITOR_USEDEVATION ) then
+       if ( MONITOR_USEDEVIATION ) then
           if ( MONITOR_items(itemid)%first ) then
              MONITOR_items(itemid)%var  = 0.0_RP
              MONITOR_items(itemid)%var0 = total
@@ -410,10 +412,10 @@ contains
                            MONITOR_dims(dimid)%JA, MONITOR_dims(dimid)%JS, MONITOR_dims(dimid)%JE, &
                            var(:,:,:), MONITOR_items(itemid)%name,                              & ! (in)
                            MONITOR_dims(dimid)%volume(:,:,:), MONITOR_dims(dimid)%total_volume, & ! (in)
-                           log_suppress = .true.,                                               & ! (in)
+                           log_suppress = .true., global = MONITOR_GLOBAL_SUM,                  & ! (in)
                            sum = total                                                          ) ! (out)
 
-    if ( MONITOR_items(itemid)%flux ) then
+    if ( MONITOR_items(itemid)%tendency ) then
        if ( MONITOR_items(itemid)%first ) then
           MONITOR_items(itemid)%var   = total * MONITOR_dt ! first put
           MONITOR_items(itemid)%first = .false.
@@ -421,7 +423,7 @@ contains
           MONITOR_items(itemid)%var = MONITOR_items(itemid)%var + total * MONITOR_dt ! integrate by last put
        endif
     else
-       if ( MONITOR_USEDEVATION ) then
+       if ( MONITOR_USEDEVIATION ) then
           if ( MONITOR_items(itemid)%first ) then
              MONITOR_items(itemid)%var   = 0.0_RP
              MONITOR_items(itemid)%var0  = total
@@ -443,7 +445,7 @@ contains
       var,              &
       name, desc, unit, &
       ndims, dim_type,  &
-      isflux            )
+      is_tendency       )
     implicit none
 
     real(RP),         intent(in) :: var(:,:)   !< value
@@ -451,17 +453,17 @@ contains
     character(len=*), intent(in) :: desc       !< description
     character(len=*), intent(in) :: unit       !< unit
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate values?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONITOR_reg( name, desc, unit,               & ! (in)
+    call MONITOR_reg( name, desc, unit,             & ! (in)
                     itemid,                         & ! (out)
                     ndims=ndims, dim_type=dim_type, & ! (in)
-                    isflux=isflux                   ) ! (in)
+                    is_tendency=is_tendency         ) ! (in)
     call MONITOR_put( itemid, var(:,:) )
 
     return
@@ -473,7 +475,7 @@ contains
       var,              &
       name, desc, unit, &
       ndims, dim_type,  &
-      isflux            )
+      is_tendency       )
     implicit none
 
     real(RP),         intent(in) :: var(:,:,:) !< value
@@ -481,17 +483,17 @@ contains
     character(len=*), intent(in) :: desc       !< description
     character(len=*), intent(in) :: unit       !< unit
 
-    integer,          intent(in), optional :: ndims    !< # of dimension
-    character(len=*), intent(in), optional :: dim_type !< dimension type
-    logical,          intent(in), optional :: isflux   !< need to integrate values?
+    integer,          intent(in), optional :: ndims       !< # of dimension
+    character(len=*), intent(in), optional :: dim_type    !< dimension type
+    logical,          intent(in), optional :: is_tendency !< need to integrate values?
 
     integer :: itemid
     !---------------------------------------------------------------------------
 
-    call MONITOR_reg( name, desc, unit,               & ! (in)
+    call MONITOR_reg( name, desc, unit,             & ! (in)
                     itemid,                         & ! (out)
                     ndims=ndims, dim_type=dim_type, & ! (in)
-                    isflux=isflux                   ) ! (in)
+                    is_tendency=is_tendency         ) ! (in)
     call MONITOR_put( itemid, var(:,:,:) )
 
     return
@@ -556,27 +558,31 @@ contains
     LOG_NEWLINE
     LOG_INFO('MONITOR_writeheader',*) 'Output item list '
     LOG_INFO_CONT(*) 'Number of monitor item :', MONITOR_nreqs
-    LOG_INFO_CONT('(2A)') 'NAME                   :description                                    ', &
-                          ':UNIT           :dimension_type'
-    LOG_INFO_CONT('(2A)') '=======================================================================', &
-                          '==============================='
+    LOG_INFO_CONT('(1x,2A)') 'NAME                   :description                                    ', &
+                             ':UNIT           :dimension_type'
+    LOG_INFO_CONT('(1x,2A)') '=======================================================================', &
+                             '==============================='
     do n = 1, MONITOR_nitems
-       LOG_INFO_CONT('(A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
+       LOG_INFO_CONT('(1x,A24,A48,A16,A16)') MONITOR_items(n)%name, MONITOR_items(n)%desc, MONITOR_items(n)%unit, MONITOR_dims(MONITOR_items(n)%dimid)%name
     enddo
-    LOG_INFO_CONT('(2A)') '=======================================================================', &
-                          '==============================='
+    LOG_INFO_CONT('(1x,2A)') '=======================================================================', &
+                             '==============================='
 
     if ( PRC_IsMaster ) then ! master node
        MONITOR_L = .true.
     else
-       MONITOR_L = IO_LOG_ALLNODE
+       MONITOR_L = IO_LOG_ALLNODE .and. ( .not. MONITOR_GLOBAL_SUM )
     endif
 
     if ( MONITOR_L ) then
 
        !--- Open logfile
        MONITOR_FID = IO_get_available_fid()
-       call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+       if ( MONITOR_GLOBAL_SUM ) then
+          fname = trim(MONITOR_OUT_BASENAME) // '.peall'
+       else
+          call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+       end if
        open( unit   = MONITOR_FID,  &
              file   = trim(fname),  &
              form   = 'formatted',  &

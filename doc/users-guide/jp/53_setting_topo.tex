@@ -3,97 +3,196 @@
 
 \scalerm では地形を表現するために、地形に沿った座標系を採用している。
 この座標系では、最下層の格子の底面が標高に対して沿うように与えられる。
-許容される最大の地形傾斜角度$\theta_{\max}$ [radian]は、次の式で計算する。
-\[
-  \theta_{\max} = \arctan( \mathrm{RATIO} \times \mathrm{DZ}/\mathrm{DX} )
-\]
-ここで、$\mathrm{DZ}$と$\mathrm{DX}$はそれぞれ、鉛直方向と水平方向の格子間隔である。
-上記の計算式から分かるように、許容される最大傾斜角度は空間解像度に応じて変わる。
-$\mathrm{RATIO}$が1.0よりも大きければ地形はより細かく表現され、1.0よりも小さければ粗く表現される。
-$\mathrm{RATIO}$を非常に大きく設定した場合には、計算が途中で破綻する危険性が高くなることに注意が必要である。
-\scalerm では$\mathrm{RATIO}$のデフォルト値は1.0に設定している。
+いくつかの理想実験を除いて、\verb|scale-rm_init| や \verb|scale-rm| を実行する前に \scalelib フォーマットの地形データを準備しておく必要がある。
+\scalerm には外部標高データを当該フォーマットに変換する機能がある。
 
-\verb|scale-rm_pp|は、外部入力する標高データを{\scalelib}形式に変換するためのプログラムである。
-詳細な設定は、設定ファイル\verb|pp.conf|の\namelist{PARAM_CNVTOPO}の中で行う。
-以下に例を示す。\\
+\namelist{PARAM_CONVERT} の \nmitem{CONVERT_TOPO} を \verb|.true.| とすると、\verb|scale-rm_pp|は外部標高データを変換する。
+変換されたデータは \namelist{PARAM_TOPOGRAPHY} の \nmitem{TOPOGRAPHY_OUT_BASENAME} で指定したファイルに保存される。
+作成されたファイルを \verb|scale-rm_init| や \verb|scale-rm| で使用するには、\namelist{PARAM_TOPOGRAPHY} の \nmitem{TOPOGRAPHY_IN_BASENAME} に設定する。
+%
+\editboxtwo{
+\verb|&PARAM_CONVERT  | &\\
+\verb| CONVERT_TOPO    = .true.,|                  & ; 地形データの変換を実行するかどうか\\
+\verb|  ......                   |                 & \\
+\verb|/| & \\
+\verb|&PARAM_TOPOGRAPHY| & \\
+\verb| TOPOGRAPHY_IN_BASENAME   = ''             | & ; (入力時) 入力ファイルのベース名 \\
+\verb| TOPOGRAPHY_IN_VARNAME    = 'topo'         | & ; (入力時) 入力ファイルの地形データの変数名 \\
+\verb| TOPOGRAPHY_IN_AGGREGATE  = .false.        | & ; (入力時) PnetCDF を用いて単一ファイルから読むか \\
+\verb| TOPOGRAPHY_IN_CHECK_COORDINATES = .false. | & ; (入力時) データの座標が正しいことを確認するかどうか \\
+\verb| TOPOGRAPHY_OUT_BASENAME  = ''             | & ; (出力時) 出力ファイルのベース名 \\
+\verb| TOPOGRAPHY_OUT_AGGREGATE = .false.        | & ; (出力時) PnetCDF を用いて単一のファイルにまとめるか \\
+\verb| TOPOGRAPHY_OUT_DTYPE     = 'DEFAULT'      | & ; (出力時) 出力変数のデータ型 \\
+                                                   & ~~~ ("\verb|DEFAULT|","\verb|REAL4|","\verb|REAL8|") \\
+\verb|/| & \\
+}
 
+
+外部入力データなど変換に関する設定は、以下のように \namelist{PARAM_CNVTOPO} で行う。
+%
 \editboxtwo{
 \verb|&PARAM_CNVTOPO                               | & \\
-\verb|CNVTOPO_UseGTOPO30            = .true.,      | & ; GTOPO30 データセットを用いるか? \\
-\verb|CNVTOPO_UseDEM50M             = .false.,     | & ; DEM50M データセットを用いるか? \\
-\verb|CNVTOPO_UseUSERFILE           = .false.,     | & ; ユーザ定義のデータセットを用いるか? \\
-\verb|CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; 平滑化のためのフィルタの種類 (OFF,LAPLACIAN,GAUSSIAN) \\
-\verb|CNVTOPO_smooth_maxslope_ratio = 10.D0,       | & ; 許容する傾斜の$\mathrm{DZ}$/$\mathrm{DX}$に対する倍率 \\
-\verb|CNVTOPO_smooth_maxslope       = -1.D0,       | & ; 許容する傾斜角の最大値 [deg] \\
-\verb|CNVTOPO_smooth_local          = .true.,      | & ; 最大傾斜角度を超えた格子でのみ平滑化を続けるかどうか? \\
-\verb|CNVTOPO_smooth_itelim         = 10000,       | & ; 平滑化の繰り返し回数の制限値 \\
-\verb|CNVTOPO_smooth_hypdiff_niter  = 20,          | & ; 超粘性による平滑化の繰り返し回数 \\
-\verb|CNVTOPO_interp_level          = 5,           | & ; 補間に用いる近隣の格子点数 \\
-\verb|CNVTOPO_copy_parent           = .false.,     | & ; 子ドメインの緩和領域に親ドメインの地形をコピーするか? \\
+\verb| CNVTOPO_name                  = 'NONE',      | & ; '\verb|NONE|','\verb|GTOPO30|','\verb|DEM50M|','\verb|USERFILE|' \\
+\verb| CNVTOPO_UseGTOPO30            = .false.,     | & ; GTOPO30 データセットを用いるか? \\
+\verb| CNVTOPO_UseDEM50M             = .false.,     | & ; DEM50M データセットを用いるか? \\
+\verb| CNVTOPO_UseUSERFILE           = .false.,     | & ; ユーザ定義のデータセットを用いるか? \\
+\verb| CNVTOPO_smooth_type           = 'LAPLACIAN', | & ; 平滑化のためのフィルタの種類 \\
+                                                     & ~~~ ("\verb|OFF|", "\verb|LAPLACIAN|", "\verb|GAUSSIAN|") \\
+\verb| CNVTOPO_smooth_maxslope_ratio =  5.D0,       | & ; 許容する傾斜の$\Delta z / \Delta x$に対する倍率 \\
+\verb| CNVTOPO_smooth_maxslope       = -1.D0,       | & ; 許容する傾斜角の最大値 [deg] \\
+\verb| CNVTOPO_smooth_local          = .true.,      | & ; 最大傾斜角度を超えた格子でのみ平滑化を続けるかどうか? \\
+\verb| CNVTOPO_smooth_trim_ocean     = .true.       | & ; 海岸線を固定するか? \\
+\verb| CNVTOPO_smooth_itelim         = 10000,       | & ; 平滑化の繰り返し回数の制限値 \\
+\verb| CNVTOPO_smooth_hypdiff_niter  = 20,          | & ; 超粘性による平滑化の繰り返し回数 \\
+\verb| CNVTOPO_smooth_hypdiff_order  = 4,           | & ; 超粘性の次数 \\
+\verb| CNVTOPO_copy_parent           = .false.,     | & ; 子ドメインの緩和領域に親ドメインの地形をコピーするか? \\
 \verb|/                                            | \\
 }
 
-\scalerm では地形データの入力として、国土地理院が提供する
-GTOPO30 と DEM50M に対応している。
-プログラム\verb|scale-rm_pp|によってユーザが準備した地形データを変換できる(第\ref{subsec:topo_userfile}節を参照)。
-また、上記のデータセットを組み合わせることもできる。
-\nmitem{CNVTOPO_UseGTOPO30}と\nmitem{CNVTOPO_UseDEM50M}の両方を
-\verb|true|に設定した場合は、プログラムは以下のようにデータを作成する。
 
-\begin{itemize}
- \item GTOPO30 のデータセットを計算領域の格子点に内挿する。
- \item DEM50M が対象とする領域は、DEM50M のデータセットを用いて内挿し、上書きする。
+外部標高データとして、\scalerm は U.S. Geological Survey が提供する GTOPO30 および 国土地理院が提供する GEM50M をサポートしている。
+また、ユーザ定義データもサポートしている (詳細は \ref{subsec:topo_userfile}節参照のこと)。
+
+利用する外部データの種類は \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} もしくは \\ \nmitem{CNVTOPO_name} で設定する。
+\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} はそれぞれ \\ GTOPO30、DEM50M、ユーザ定義データを利用するかどうかのスイッチであり、これらのデフォルト値は \verb|.false.| である。
+それらのスイッチの代わりに \nmitem{CNVTOPO_name} を使って設定することもできる。
+その際、\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} は\nmitem{CNVTOPO_name} の値にしたがって、表\ref{tab:cvntopo_name}で示されている値に設定される。
+表\ref{tab:cvntopo_name} の$\ast$ 印は、
+ネームリストで指定された\nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定も有効であることを示している。
+
+また、複数のデータセットを組み合わせることも可能である。
+その場合、\nmitem{CNVTOPO_UseGTOPO30}、\nmitem{CNVTOPO_UseDEM50M}、\nmitem{CNVTOPO_UseUSERFILE} のうち、利用したいデータすべてに \verb|.true.| を設定する。
+
+\begin{table}[tbh]
+\begin{center}
+\caption{\nmitem{CNVTOPO_name} と \nmitem{CNVTOPO_(UseGTOPO30|UseDEM50M|UseUSERFILE)} の設定の関係。}
+\begin{tabularx}{150mm}{l|l|l|l} \hline
+  \rowcolor[gray]{0.9} \verb|CNVTOPO_name|   & \verb|CNVTOPO_UseGTOPO30| & \verb|CNVTOPO_UseDEM50M| & \verb|CNVTOPO_UseUSERFILE| \\ \hline
+                       \verb|NONE|           & $\ast$         & $\ast$         & $\ast$          \\ \hline
+                       \verb|GTOPO30|        & \verb|.true.|  & \verb|.false.| & \verb|.false.|  \\ \hline
+                       \verb|DEM50M|         & \verb|.false.| & \verb|.true.|  & \verb|.false.|  \\ \hline
+                       \verb|USERFILE|       & $\ast$         & $\ast$         & \verb|.true.|   \\ \hline
+\end{tabularx}
+\label{tab:cvntopo_name}
+\end{center}
+\end{table}
+
+
+
+プログラムは、上記の設定に従って、以下のステップでデータを作成する。
+\begin{enumerate}[1)]
+ \item すべての計算格子点に未定義値を設定する。
+ \item \nmitem{CNVTOPO_UseGTOPO30}=\verb|.true.|なら、GTOPO30 のデータセットを計算格子点に内挿する。
+ \item \nmitem{CNVTOPO_UseDEM50M}=\verb|.true.|なら、DEM50M のデータセットを計算格子に内挿し、欠損値でない格子点についてステップ2 のデータを上書きする。
+ \item \nmitem{CNVTOPO_UseUSERFILE}=\verb|.true.|なら、ユーザー定義データを計算格子に内挿し、欠損値でない格子点についてステップ3 のデータを上書きする。
+ \item 未定義値のままの格子点に 0 を設定する
  \item 平滑化を適用する。
-\end{itemize}
+\end{enumerate}
+GTOPO30 および DEM50M データの内挿には2次元線形補間が用いられ、ユーザ定義データには指定した補完法が用いられる (\ref{subsec:topo_userfile}節参照)。
 
-デフォルトでは、対象とする格子点の周辺にある、入力データの最寄りの5格子点が内挿に使われる。
-使用する格子点数は\nmitem{CNVTOPO_interp_level}によって決定される。
-地形のリグリッドにおいて、急な傾斜を含む標高を平滑化するためのフィルタとして、
-ラプラシアンフィルタとガウスシアンフィルタの2種類が存在する。
+GTOPO30データを使うためには、データが配置されているディレクトリおよびカタログファイルのパスを \namelist{PARAM_CNVTOPO_GTOPO30} のそれぞれ \nmitem{GTOPO30_IN_DIR} および \nmitem{GTOPO30_IN_CATALOGUE} で指定する必要がある。
+GTOPO30データが \ref{sec:tutorial_real_data}章で説明されている通りに保存されている場合には、これらの値はそれぞれ \verb|$SCALE_DB/topo/GTOPO30/Products| および \\ \verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| となる。
+ここで、\verb|$SCALE_DB| は実際のパスに展開すること。
+同様に、DEM50Mデータについては、\nmitem{DEM50M_IN_DIR} および \\ \nmitem{DEM50_IN_CATALOGUE} に設定し、それぞれ \verb|$SCALE_DB/topo/DEM50M/Products| および \\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| となる。
+ユーザ定義データの設定については \ref{subsec:topo_userfile}節で説明されている。
+
+
+\scale グリットに内挿後の地形データに含まれる急な傾斜を平滑化するためのフィルタとして、
+ラプラシアンフィルタとガウスシアンフィルタの2種類が用意されている。
 これは\nmitem{CNVTOPO_smooth_type}で選択することができ、
 デフォルトではラプラシアンフィルタが用いられる。
-平滑化の操作において、傾斜角が最大許容角度$\theta_{\max}$を下回るまで、選択されたフィルタが適用される。
-\nmitem{CNVTOPO_smooth_maxslope_ratio}を指定することによって、上記の$\mathrm{RATIO}$を直接設定できる。
-または、度数で最大傾斜角を決める\nmitem{CNVTOPO_smooth_maxslope}を用いることができる。
-平滑化の繰り返し回数の上限はデフォルトでは 10000 回であるが、\nmitem{CNVTOPO_smooth_itelim}を設定することで繰り返し回数を増やせる。
-\nmitem{CNVTOPO_smooth_local}を\verb|.true.|に設定した場合は, 繰り返されるフィルタ操作は平滑化が完了していない格子点でのみ続けられる。
+平滑化の操作において、斜面の傾斜角が最大許容角度 $\theta_{\max}$ を下回るまで、フィルタが適用される。
+地形最大許容傾斜角度 [radian] は、次の式で計算される。
+\begin{equation*}
+  \theta_{\max} = \arctan( \mathrm{RATIO} \times \Delta z / \Delta x ).
+\end{equation*}
+ここで、$\Delta z$ と $\Delta x$ はそれぞれ、最下層における鉛直方向と水平方向の格子間隔である。
+上記の計算式から分かるように、許容される最大傾斜角度は空間解像度に応じて変わる。
+$\mathrm{RATIO}$ が大きくなるに従って、地形がより細かくなる。
+一方で、$\mathrm{RATIO}$ を大きく設定した場合には、計算が途中で破綻する危険性が高くなることに注意が必要である。
+$\mathrm{RATIO}$ は \nmitem{CNVTOPO_smooth_maxslope_ratio} によって指定する。
+デフォルト値は 5.0 である。
+\nmitem{CNVTOPO_smooth_maxslope_ratio} の代わりに、\nmitem{CNVTOPO_smooth_maxslope}で最大傾斜角を度数で直接指定することも可能である。
+平滑化の繰り返し回数の上限はデフォルトでは 10000 回であるが、\nmitem{CNVTOPO_smooth_itelim}を設定することで繰り返し回数を増やすことができる。
+\nmitem{CNVTOPO_smooth_local}を\verb|.true.|に設定した場合は, 平滑化が完了していない格子点でのみフィルタ操作が繰り返し行われる。
 
-小さな空間スケールのノイズを取り除くために、付加的な超粘性を地形に適用する。
-シミュレーションにおける数値的なノイズを減らすために、このフィルタリングを行うことを推奨する。
-\nmitem{CNVTOPO_smooth_hypdiff_niter}に負の値を設定した場合は、このフィルタは適用されない。
+\nmitem{CNVTOPO_smooth_hypdiff_(niter|order)}は、小さな空間スケールのノイズを取り除くための付加的な超粘性フィルタを適用するための設定である。
+計算実行時における数値的なノイズを減らすために、このフィルタリングを適用することを推奨する。
+\nmitem{CNVTOPO_smooth_hypdiff_order} は超粘性の次数である。
+超粘性フィルタは、\nmitem{CNVTOPO_smooth_hypdiff_niter} で設定した回数だけ繰り返し適用される。
+\nmitem{CNVTOPO_smooth_hypdiff_niter}に負の値を設定した場合は、超粘性フィルタは適用されない。
 
-\nmitem{CNVTOPO_copy_parent}は、ネスティング計算のための設定項目である。
-一般的に、子ドメインは親ドメインよりも空間解像度が高いために、子ドメインの方が地形がより細かく表現される。
-このとき、子ドメインの緩和領域における大気データと親ドメインにおける大気データの間の不整合によって、問題がしばしば起きる。
-この問題を回避するために、\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすれば親ドメインの地形を子ドメインの緩和領域にコピーできる。
+平滑化や超粘性フィルターをかけると、海岸線がなまり、海岸線付近の海面高度が0より高くなる。
+\nmitem{CNVTOPO_smooth_trim_ocean} を \verb|.true.| に設定すると、フィルター操作のたびに海岸線に沿って地形が切り取られ、海岸線が固定される。
+この際には土壌の総量が保存しないことに注意が必要である。
+
+\nmitem{CNVTOPO_copy_parent}は、ネスティング計算のための設定である。
+一般的に、子ドメインは親ドメインよりも空間解像度が高いため、子ドメインの方が地形がより細かく表現される。
+このとき、子ドメインの緩和領域における大気データと親ドメインデータから作成した境界値データの間の不整合によって、問題が生じることがある。
+この問題を回避するために、\nmitem{CNVTOPO_copy_parent}を\verb|.true.|とすることで子ドメインの緩和領域における地形を親ドメインと同一にすることができる。
 親ドメインが存在しない場合は\nmitem{CNVTOPO_copy_parent}を\verb|.false.|に設定しなければならない。
 \nmitem{CNVTOPO_copy_parent}を利用する場合の設定は、第\ref{subsec:nest_topo}節で詳しく説明する。
 
 
-\section{ユーザー定義の地形の準備} \label{subsec:topo_userfile}
+\subsection{ユーザー定義の地形の準備} \label{subsec:topo_userfile}
 
-\nmitem{CNVTOPO_UseUSERFILE}を\verb|.true.|に設定した場合は、プログラム\verb|scale-rm_pp|は \\
-\namelist{PARAM_CNVTOPO_USERFILE}で指定したファイルの変換を試みる.
-以下はその設定例である。
-
+\nmitem{CNVTOPO_UseUSERFILE}が\verb|.true.|の場合は、プログラム\verb|scale-rm_pp|は \\
+\namelist{PARAM_CNVTOPO_USERFILE}で指定したユーザー定義ファイルから \scale の地形データを作成する。
+入力データは、``GrADS'' と ``TILE'' をサポートしており、\nmitem{USERFILE_TYPE}で指定する。
+それぞれのファイル形式や設定等に関する詳細は、第\ref{sec:userdata}節の記載とも共通するので参照いただきたい。
+\namelist{PARAM_CNVTOPO_USERFILE} で設定可能な変数は次の通りである。
 \editboxtwo{
-\verb|&PARAM_CNVTOPO_USERFILE                        | & \\
-\verb|USERFILE_IN_DIR       = "./input_topo",        | & ; 入力ファイルがあるディレクトリのパス \\
-\verb|USERFILE_IN_FILENAME  = "GTOPO30_e100n40.grd", | & ; 入力ファイルの名前 \\
-\verb|USERFILE_DLAT         = 0.0083333333333333D0,  | & ; 格子間隔 (緯度,degree) \\
-\verb|USERFILE_DLON         = 0.0083333333333333D0,  | & ; 格子間隔 (経度,degree) \\
-\verb|USERFILE_IN_DATATYPE  = "INT2",                | & ; データの種類 (INT2,INT4,REAL4,REAL8) \\
-\verb|USERFILE_LATORDER_N2S = .true.,                | & ; データは緯度方向に関して北から南へと格納されているか? \\
-\verb|USERFILE_LAT_START    = -10.D0,                | & ; 格子点の開始位置 (緯度,degree) \\
-\verb|USERFILE_LAT_END      =  40.D0,                | & ; 格子点の終了位置 (緯度,degree) \\
-\verb|USERFILE_LON_START    = 100.D0,                | & ; 格子点の開始位置 (経度,degree) \\
-\verb|USERFILE_LON_END      = 140.D0,                | & ; 格子点の終了位置 (経度,degree) \\
-\verb|/                                              | \\
+\verb|&PARAM_CNVTOPO_USERFILE              | & \\
+\verb| USERFILE_TYPE           = '',       | & ; "GrADS" or "TILE" \\
+\verb| USERFILE_DTYPE          = 'REAL4',  | & ; (for TILE) 入力データの種類タイプ\\
+                                             &   ~~~ ("\verb|INT2|", "\verb|INT4|", "\verb|REAL4|", "\verb|REAL8|") \\
+\verb| USERFILE_DLAT           = -1.0,     | & ; (for TILE) タイルデータの緯度間隔 (度) \\
+\verb| USERFILE_DLON           = -1.0,     | & ; (for TILE) タイルデータの経度間隔 (度) \\
+\verb| USERFILE_CATALOGUE      = '',       | & ; (for TILE) カタログファイルの名前 \\
+\verb| USERFILE_DIR            = '.',      | & ; (for TILE) タイルデータとカタログファイルがあるディレクトリパス \\
+\verb| USERFILE_yrevers        = .false.,  | & ; (for TILE) データが北から南に向かって格納されている場合は \verb|.true.| \\
+\verb| USERFILE_MINVAL         = 0.0,      | & ; (for TILE) \verb|MINVAL| 以下のデータは欠測値として扱う \\
+\verb| USERFILE_GrADS_FILENAME = '',       | & ; (for GrADS) \grads データ用のネームリストファイル名 \\
+\verb| USERFILE_GrADS_VARNAME  = 'topo',   | & ; (for GrADS) ネームリスト中の変数名 \\
+\verb| USERFILE_GrADS_LATNAME  = 'lat',    | & ; (for GrADS) ネームリスト中の緯度の名前 \\
+\verb| USERFILE_GrADS_LONNAME  = 'lon',    | & ; (for GrADS) ネームリスト中の経度の名前 \\
+\verb| USERFILE_INTERP_TYPE    = 'LINEAR', | & ; (for GrADS) 水平内挿の種類 \\
+\verb| USERFILE_INTERP_LEVEL   = 5,        | & ; (for GrADS) 内挿のレベル   \\
+\verb|/                                    | \\
 }
 
-この例では、\verb|GTOPO30_e100n40.grd|という名前のデータファイルが、ティレクトリ\verb|./input_topo|に存在する。
-データは、北緯40度から南緯10度、東経100度から東経140度までを対象としている。
-格子間隔は緯度経度ともに 30 秒角である。
-よって、このデータは緯度方向に6000点、経度方向に4800点を含む。
-値は2バイトの整数で格納されている。
-ユーザー定義の地形データは、 \verb|USERFILE_IN_DATATYPE|を除いて{\grads}(direct access)形式と同様な単純なバイナリでなければならない。
+
+読み込まれたデータは計算格子へ補完される。
+補完法は \nmitem{USERFILE_INTERP_TYPE} で指定する。
+サポートされているのは \verb|LINEAR| と \verb|DIST-WEIGHT| である。
+詳細については 第\ref{sec:datainput_grads}章を参照のこと。
+\verb|DIST-WEIGHT| を指定した場合に用いられる隣接点の数は \nmitem{USERFILE_INTERP_LEVEL} で指定する。
+
+
+
+``GrADS''タイプを指定した場合、別途入力ファイルのデータ構造を記述するネームリストファイルが必要となる。
+このネームリストファイルは\nmitem{USERFILE_GrADS_FILENAME}で指定する。
+ネームリストファイルの詳細については、第\ref{sec:datainput_grads}節を参照のこと。
+デフォルトでは、地形、緯度、経度データの変数名のデフォルト値はそれぞれ``topo'', ``lat'', ``lon''であるが、
+異なる場合には、それぞれ\nmitem{USERFILE_GrADS_VARNAME}、\nmitem{USERFILE_GrADS_LATNAME}、\nmitem{USERFILE_GrADS_LONNAME}で指定する。
+
+
+``TILE''タイプを指定した場合、\nmitem{USERFILE_CATALOGUE} で指定するカタログファイルが必要である。
+カタログファイルには、それぞれのタイルデータファイルの名前およびそれぞれがカバーする領域についての情報を記述する。
+カタログファイルのサンプルとして、\\ \verb|$SCALE_DB/topo/DEM50M/Products/DEM50M_catalogue.txt| と\\
+\verb|$SCALE_DB/topo/GTOPO30/Products/GTOPO30_catalogue.txt| が参考になる。
+
+以下は``TILE'' データ用の \namelist{PARAM_CNVTOPO_USERFILE} の設定例である。
+この例では、\verb|catalogue.txt|という名前のカタログファイルが、ティレクトリ\verb|./input_topo|に存在し、
+データは2バイトの整数で格納されている。
+\editboxtwo{
+\verb|&PARAM_CNVTOPO_USERFILE                     | & \\
+\verb| USERFILE_CATALOGUE  = "catalogue.txt",      | & ; カタログファイルの名前 \\
+\verb| USERFILE_DIR        = "./input_topo",       | & ; 入力ファイルがあるディレクトリのパス \\
+\verb| USERFILE_DLAT       = 0.0083333333333333D0, | & ; 格子間隔 (緯度, degree) \\
+\verb| USERFILE_DLON       = 0.0083333333333333D0, | & ; 格子間隔 (経度, degree) \\
+\verb| USERFILE_DTYPE      = "INT2",               | & ; データの種類 (INT2, INT4, REAL4, REAL8) \\
+\verb| USERFILE_yrevers    = .true.,               | & ; データは北から南へと格納されているか? \\
+\verb|/                                           | \\
+}
+

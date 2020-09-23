@@ -10,10 +10,10 @@ The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \name
 }
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of cumulus parameterization}
+  \caption{List of cumulus parameterization types}
   \label{tab:nml_atm_cp}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  Value & Description of scheme & Reference\\ \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme & Reference\\ \hline
       \verb|OFF|  & No use of the cumulus parameterization &  \\
       \verb|KF|   & Kain-Fritsch convective parameterization & \citet{kain_1990,kain_2004} \\
     \hline
@@ -22,57 +22,57 @@ The cumulus parameterization is specified in \nmitem{ATMOS_PHY_CP_TYPE} in \name
 \end{table}
 
 In this version of \scalerm, only \verb|KF| is supported for cumulus parameterization. \verb|KF| is a mass flux conservation type of cumulus parameterization scheme, representing one convection in the sub-grid scale.
-The cumulus paramterization is recommended to be used when grid spacing is more than about 5 km to avoid calculation of unnatual strong deep convections.
-The cumulus parameterization and cloud micro-physics individually output 
-precipitation named \verb|RAIN_CP| and \verb|RAIN_MP|, respectively. 
-\verb|RAIN| and \verb|PREC| are the sum of precipitation 
-from cumulus parameterization and cloud micro-physics schemes 
+The cumulus parameterization is recommended to be used when grid spacing is more than about 5 km to avoid calculation of unnatural strong deep convections.
+The cumulus parameterization and cloud micro-physics individually output
+precipitation named \verb|RAIN_CP| and \verb|RAIN_MP|, respectively.
+\verb|RAIN| and \verb|PREC| are the sum of precipitation
+from cumulus parameterization and cloud micro-physics schemes
 (i.e., \verb|RAIN| = \verb|RAIN_CP| + \verb|RAIN_MP|
 and \verb|PREC| = \verb|RAIN_CP| + \verb|RAIN_MP|).
 %%%
 Note that \verb|KF| calculates changes in the water vapor and
 hydrometeors such as cloud water and cloud ice in the atmosphere.
-The changes in hydrometeors is calculated futher in micro physics schemes.
+The changes in hydrometeors is calculated further in micro physics schemes.
 The number concentration of cloud water, ice, and so on
 is not considered in \verb|KF|.
-Therefore, 
-the changes in the number concentration 
+Therefore,
+the changes in the number concentration
 associated with the changes in hydrometeors in \verb|KF|
-is estimated by a prescribed fuction
+is estimated by a prescribed function
 and then
 provided to double-moment micro-physics schemes.
 
 
 
-\subsubsection{Configuration for \texttt{Kain-Fritsch}}
+\subsubsection{Configuration for \texttt{Kain-Fritsch} scheme}
 
 Following tuning parameters are available in \verb|KF|:
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_CP_KF  | & \\
-\verb| PARAM_ATMOS_PHY_CP_kf_trigger   = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlcape    = 0.1,|   & ; Cape decleace rate\\
-\verb| PARAM_ATMOS_PHY_CP_kf_dlifetime = 1800,|  & ; Lifetime scale of deep convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_slifetime = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_DEPTH_USL =  300,|  & ; Depth of updraft source layer [hPa]\\
-\verb| PARAM_ATMOS_PHY_CP_kf_prec      = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
-\verb| PARAM_ATMOS_PHY_CP_kf_rate      = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation fuction\\
-\verb| PARAM_ATMOS_PHY_CP_kf_thres     = 1.E-3,| & ; Autoconversion rate for Kessler precipitation fuction\\
-\verb| PARAM_ATMOS_PHY_CP_kf_LOG       = false,| & ; Output warning messages\\
+\verb| ATMOS_PHY_CP_kf_trigger_type = 1,|     & ; Trigger function type: 1=Kain, 3=Narita-Ohmori\\
+\verb| ATMOS_PHY_CP_kf_dlcape       = 0.1,|   & ; Cape decrease rate\\
+\verb| ATMOS_PHY_CP_kf_dlifetime    = 1800,|  & ; Lifetime scale of deep convection [sec]\\
+\verb| ATMOS_PHY_CP_kf_slifetime    = 2400,|  & ; Lifetime scale of shallow convection [sec]\\
+\verb| ATMOS_PHY_CP_kf_DEPTH_USL    =  300,|  & ; Depth of updraft source layer at the beginning of search [hPa]\\
+\verb| ATMOS_PHY_CP_kf_prec_type    = 1,|     & ; Precipitation type: 1=Ogura-Cho, 2=Kessler\\
+\verb| ATMOS_PHY_CP_kf_rate         = 0.03, | & ; Ratio of cloud water and precipitation for Ogura-Cho precipitation function\\
+\verb| ATMOS_PHY_CP_kf_thres        = 1.E-3,| & ; Autoconversion rate for Kessler precipitation function\\
+\verb| ATMOS_PHY_CP_kf_LOG          = false,| & ; Output warning messages\\
 \verb|/             | & \\
 }\\
-Users can select trigger fuction from two options:
+Users can select trigger function from two options:
 \begin{enumerate}
 \item Kain Type \citet{kain_2004} \\
-  Default trigger fuction in SCALE-RM.
+  Default trigger function in SCALE-RM.
 \item Narita and Ohmori Type \citet{narita_2007} \\
-  A trigger fuction for KF cumulus parameterization for Japan area. 
+  A trigger function which seems to be more suitable for Japan area.
 \end{enumerate}
-Users can select precipitation fuction from two options:
+Users can select precipitation function from two options:
 \begin{enumerate}
 \item Ogura-Cho Type \citet{ogura_1973} \\
-  Default precipitation fuction in SCALE-RM. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_rate} is available.
+  Default precipitation function in SCALE-RM. For this type, additional tuning parameter of \nmitem{ATMOS_PHY_CP_kf_rate} is available.
 \item Kessler Type \citet{kessler_1969} \\
-  Kessler type simple precipitation fuction. For this type, additional tuning parameter of \nmitem{PARAM_ATMOS_PHY_CP_kf_thres} is available.
+  Kessler type simple precipitation function. For this type, additional tuning parameter of \nmitem{ATMOS_PHY_CP_kf_thres} is available.
 \end{enumerate}
 
 The time interval of calling KF specified by \nmitem{TIME_DT_ATMOS_PHY_CP} in \namelist{PARAM_TIME} is also a tuning parameter, which is effective to the precipitation amount. As the first setting of \nmitem{TIME_DT_ATMOS_PHY_CP}, 300s is recommended.

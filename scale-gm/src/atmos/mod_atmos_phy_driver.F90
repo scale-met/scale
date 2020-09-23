@@ -102,8 +102,6 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine atmos_phy_driver
-    use mod_runconf, only: &
-       ATMOS_PHY_TYPE
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics_fromIcoGrid, &
        ATMOS_vars_calc_diagnostics, &

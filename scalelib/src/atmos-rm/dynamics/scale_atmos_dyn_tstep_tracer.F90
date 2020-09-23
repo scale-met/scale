@@ -33,11 +33,13 @@ module scale_atmos_dyn_tstep_tracer
      !> calculation values at next temporal step
      subroutine step( &
           QTRCo, & ! (out)
+          qflx, & ! (out)
           QTRC, QTRC0, RHOQ_t, &! (in)
           DENS00, DENS, & ! (in)
           mflx_hi, num_diff, & ! (in)
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
+          TwoD, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -45,6 +47,7 @@ module scale_atmos_dyn_tstep_tracer
        use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: QTRCo   (KA,IA,JA)
+       real(RP), intent(out) :: qflx    (KA,IA,JA,3)
        real(RP), intent(in)  :: QTRC    (KA,IA,JA)
        real(RP), intent(in)  :: QTRC0   (KA,IA,JA)
        real(RP), intent(in)  :: RHOQ_t  (KA,IA,JA)
@@ -58,6 +61,7 @@ module scale_atmos_dyn_tstep_tracer
        real(RP), intent(in)  :: RCDZ(KA)
        real(RP), intent(in)  :: RCDX(IA)
        real(RP), intent(in)  :: RCDY(JA)
+       logical , intent(in)  :: TwoD
        real(RP), intent(in)  :: dtl
        logical,  intent(in)  :: FLAG_FCT_TRACER
        logical,  intent(in)  :: FLAG_FCT_ALONG_STREAM

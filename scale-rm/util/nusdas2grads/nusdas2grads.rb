@@ -113,10 +113,7 @@ alpha = - alpha if latrad[0,0] < 0.0 # southern hemisphere
 sin_alpha = sin(alpha).reshape!(nlon,nlat,1)
 cos_alpha = cos(alpha).reshape!(nlon,nlat,1)
 
-exer = file_air.var("PAIRF")[xrange,yrange,zrange,validtime,0].to_type(NArray::SFLOAT)
 P00 = meta[:subc]["ZHYB"][:presrf]
-pbar = P00 * exer**(CP/R)
-pbar = pbar.to_type(NArray::SFLOAT)
 
 
 # open variables
@@ -134,6 +131,7 @@ gqs     = file_air.var("QS")
 gqg     = file_air.var("QG")
 gslp    = file_air.var("PSEAsrf")
 gptsfc  = file_air.var("PTGRDsrf")
+gexner  = file_air.var("PAIRF")
 
 #  land data
 begin
@@ -150,7 +148,7 @@ nlon_land, nlat_land = lon_land.shape
 nl = gtg.dim("plane").val.length
 
 
-time = grhog2.dim("basetime").val.to_type(NArray::SFLOAT)[trange] / (24*60)
+time = grhog2.dim("basetime").val[trange].to_type(NArray::SFLOAT) / (24*60)
 ntime = time.length
 
 lsmask = gkind[true,true,0]
@@ -266,7 +264,7 @@ unless skip_data
       # remove metrics and density
       u = ru_fl * mapf / rhog2
       v = rv_fl * mapf / rhog2
-      # rho = rhog2 / g2
+      rho = rhog2 / g2
       pdev = pdevg2 / g2
 
       # rotation
@@ -274,6 +272,9 @@ unless skip_data
       vlat = - u * sin_alpha + v * cos_alpha
 
       # total pressure
+      exner = gexner[xrange,yrange,zrange,validtime,n].to_type(NArray::SFLOAT)
+      pbar = P00 * exner**(CP/R)
+      pbar = pbar.to_type(NArray::SFLOAT)
       pres = pbar + pdev
 
       # temperature
@@ -317,6 +318,7 @@ unless skip_data
       ofile.write qi.to_s
       ofile.write qs.to_s
       ofile.write qg.to_s
+      ofile.write rho.to_s
 
 
       # write land variables
@@ -339,8 +341,8 @@ exit if debug
 llev = [0.02, 0.115, 0.39]
 
 vars_air = [
-    ["long", 1, "longitude [degree]"],
-    ["lati", 1, "latitude [degree]"],
+    ["lon", 1, "longitude [degree]"],
+    ["lat", 1, "latitude [degree]"],
     ["plev", nlev, "pressure level [Pa]"],
     ["MSLP", 1, "mean sea level Pressure [Pa]"],
     ["PSFC", 1, "surface Pressure [Pa]"],
@@ -348,7 +350,7 @@ vars_air = [
     ["V10", 1, "10 m above ground V-Component of Wind [m/s]"],
     ["T2", 1, "2 m above ground Temperature [K]"],
     ["Q2", 1, "2 m above ground Specific Humidity [kg/kg]"],
-    ["TOPO", 1, "topographic elevation [m]"],
+    ["topo", 1, "topographic elevation [m]"],
     ["HGT", nlev, "Altitude [m]"],
     ["U", nlev, "U-Component of Wind [m/s]"],
     ["V", nlev, "V-Component of Wind [m/s]"],
@@ -359,11 +361,12 @@ vars_air = [
     ["QI",nlev, "Ice clowd water [kg/kg]"],
     ["QS",nlev, "Snow [kg/kg]"],
     ["QG",nlev, "Groupel [kg/kg]"],
+    ["DENS",nlev, "Density [kg/m3]"],
 ]
 
 vars_land = [
-    ["long_sfc", 1, "longitude [degree]"],
-    ["lati_sfc", 1, "latitude [degree]"],
+    ["lon_sfc", 1, "longitude [degree]"],
+    ["lat_sfc", 1, "latitude [degree]"],
     ["lsmask", 1, "land mask [1]"],
     ["SKINT", 1, "skin Temperature [K]"],
     ["SST", 1, "sea surface Temperature [K]"],
@@ -375,13 +378,10 @@ File.open(grads_namelist, "w") do |file|
 #
 # Dimension
 #
-&nml_grads_grid
- outer_nx     = #{nlon},
- outer_ny     = #{nlat},
- outer_nz     = #{nlev},
- outer_nl     = #{nl},
- outer_nx_sfc = #{nlon_land},
- outer_ny_sfc = #{nlat_land},
+&GrADS_DIMS
+ nx = #{nlon},
+ ny = #{nlat},
+ nz = #{nlev},
 /
 
 #
@@ -389,24 +389,30 @@ File.open(grads_namelist, "w") do |file|
 #
   EOL
 
-  trec = nlev * 6 + 8
+  trec = 0
+  vars_air.each do |v,n,desc|
+    trec += n
+  end
   i = 1
   vars_air.each do |v,n,desc|
     file.print <<-EOL
-&grdvar item='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}', startrec=#{"%3d"%i}, totalrec=#{trec} /
+&GrADS_ITEM name='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}', startrec=#{"%3d"%i}, totalrec=#{trec} /
     EOL
     i = i + n
   end
 
   file.print <<-EOL
-&grdvar item='llev',    dtype='levels', lnum=3, lvars=#{llev.join(", ")}, /
+&GrADS_ITEM name='llev',    dtype='levels', lnum=3, lvars=#{llev.join(", ")}, /
   EOL
 
-  trec = nl + 5
+  trec = 0
+  vars_land.each do |v,n,desc|
+    trec += n
+  end
   i = 1
   vars_land.each do |v,n,desc|
     file.print <<-EOL
-&grdvar item='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}land', startrec=#{"%1d"%i}, totalrec=#{trec} /
+&GrADS_ITEM name='#{"%-9s"%(v+"',")} dtype='map', fname='#{basename_out}land', nx=#{nlon_land}, ny=#{nlat_land}#{n>1 ? ", nz="+n.to_s : ""}, startrec=#{"%1d"%i}, totalrec=#{trec} /
     EOL
     i = i + n
   end

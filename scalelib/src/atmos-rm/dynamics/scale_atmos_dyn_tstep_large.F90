@@ -34,7 +34,6 @@ module scale_atmos_dyn_tstep_large
      subroutine large( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG,             &
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, &
-          mflx_hi, tflx_hi,                                     &
           num_diff, num_diff_q,                                 &
           QTRC0,                                                &
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, RHOQ_tp, &
@@ -45,15 +44,16 @@ module scale_atmos_dyn_tstep_large
           J13G, J23G, J33G, MAPF,                               &
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                          &
           REF_dens, REF_pott, REF_qv, REF_pres,                 &
-          BND_W, BND_E, BND_S, BND_N,                           &
-          ND_COEF, ND_COEF_Q, ND_ORDER, ND_SFC_FACT, ND_USE_RS, &
-          BND_QA, BND_SMOOTHER_FACT,                            &
+          BND_W, BND_E, BND_S, BND_N, TwoD,                     &
+          ND_COEF, ND_COEF_Q, ND_LAPLACIAN_NUM,                 &
+          ND_SFC_FACT, ND_USE_RS,                               &
+          BND_QA, BND_IQ, BND_SMOOTHER_FACT,                    &
           DAMP_DENS,       DAMP_VELZ,       DAMP_VELX,          &
           DAMP_VELY,       DAMP_POTT,       DAMP_QTRC,          &
           DAMP_alpha_DENS, DAMP_alpha_VELZ, DAMP_alpha_VELX,    &
           DAMP_alpha_VELY, DAMP_alpha_POTT, DAMP_alpha_QTRC,    &
-          wdamp_coef,                                           &
-          divdmp_coef,                                          &
+          MFLUX_OFFSET_X, MFLUX_OFFSET_Y,                       &
+          wdamp_coef, divdmp_coef,                              &
           FLAG_TRACER_SPLIT_TEND,                               &
           FLAG_FCT_MOMENTUM, FLAG_FCT_T, FLAG_FCT_TRACER,       &
           FLAG_FCT_ALONG_STREAM,                                &
@@ -78,9 +78,6 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(inout) :: MOMY_av(KA,IA,JA)
        real(RP), intent(inout) :: RHOT_av(KA,IA,JA)
        real(RP), intent(inout) :: QTRC_av(KA,IA,JA,QA)
-
-       real(RP), intent(out)   :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
        real(RP), intent(out)   :: num_diff(KA,IA,JA,5,3)
        real(RP), intent(out)   :: num_diff_q(KA,IA,JA,3)
@@ -130,14 +127,16 @@ module scale_atmos_dyn_tstep_large
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
 
        real(RP), intent(in)    :: ND_COEF
        real(RP), intent(in)    :: ND_COEF_Q
-       integer,  intent(in)    :: ND_ORDER
+       integer,  intent(in)    :: ND_LAPLACIAN_NUM
        real(RP), intent(in)    :: ND_SFC_FACT
        logical,  intent(in)    :: ND_USE_RS
 
        integer,  intent(in)    :: BND_QA
+       integer,  intent(in)    :: BND_IQ(QA)
        real(RP), intent(in)    :: BND_SMOOTHER_FACT
 
        real(RP), intent(in)    :: DAMP_DENS(KA,IA,JA)
@@ -153,6 +152,8 @@ module scale_atmos_dyn_tstep_large
        real(RP), intent(in)    :: DAMP_alpha_VELY(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_alpha_POTT(KA,IA,JA)
        real(RP), intent(in)    :: DAMP_alpha_QTRC(KA,IA,JA,BND_QA)
+       real(RP), intent(in)    :: MFLUX_OFFSET_X(KA,JA,2)
+       real(RP), intent(in)    :: MFLUX_OFFSET_Y(KA,IA,2)
 
        real(RP), intent(in)    :: wdamp_coef(KA)
        real(RP), intent(in)    :: divdmp_coef
@@ -196,8 +197,7 @@ contains
   !> Register
   subroutine ATMOS_DYN_Tstep_large_setup( &
        Tstep_large_type, &
-       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-       mflx_hi )
+       DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
     use scale_precision
     use scale_atmos_grid_cartesC_index
     use scale_index
@@ -215,15 +215,13 @@ contains
     real(RP), intent(inout) :: RHOT(KA,IA,JA)
     real(RP), intent(inout) :: QTRC(KA,IA,JA,QA)
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
-    real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
 
     !---------------------------------------------------------------------------
 
     select case( Tstep_large_type )
     case( 'FVM-HEVE' )
        call ATMOS_DYN_Tstep_large_fvm_heve_setup( &
-            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG, &
-            mflx_hi )
+            DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, PROG )
        ATMOS_DYN_Tstep_large => ATMOS_DYN_Tstep_large_fvm_heve
     case default
        LOG_ERROR("ATMOS_DYN_Tstep_large_setup",*) 'ATMOS_DYN_Tstep_large_type is invalid: ', Tstep_large_type

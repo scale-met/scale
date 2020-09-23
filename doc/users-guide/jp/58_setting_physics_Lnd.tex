@@ -1,0 +1,157 @@
+%-------------------------------------------------------------------------------
+\section{陸モデル} \label{sec:basic_usel_land}
+%-------------------------------------------------------------------------------
+海面過程と同様に陸面過程も、陸面の状態量の更新と大気ー陸面間のフラックス計算の２つに大別される。
+これらの過程が呼び出される時間間隔はどちらも\namelist{PARAM_TIME}で設定する
+(詳細については第\ref{sec:timeintiv}節を参照)。
+
+%-------------------------------------------------------------------------------
+\subsubsection{陸面スキーム}
+%-------------------------------------------------------------------------------
+陸モデルでは、陸面温度と土壌温度、土壌水分量といった陸面の状態量の更新を行う。
+このスキームは、init.confとrun.conf中の\namelist{PARAM_LAND}の\nmitem{LAND_DYN_TYPE}で設定する。
+%
+\editboxtwo{
+\verb|&PARAM_LAND                | & \\
+\verb| LAND_DYN_TYPE = "NONE",   | & ; 表\ref{tab:nml_land_dyn}に示す陸の力学から選択 \\
+\verb| LAND_SFC_TYPE = "SKIN",   | & ; (\verb|BUCKET|の場合) 表\ref{tab:nml_land_sfc}に示す陸面の種類から選択\\
+\verb|/                          | & \\
+}
+
+\begin{table}[hbt]
+\begin{center}
+  \caption{陸面スキームの選択肢}
+  \label{tab:nml_land_dyn}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
+      \verb|NONE or OFF| & 陸面モデルを使用しない \\
+      \verb|BUCKET|      & 熱拡散/バケツモデル \\
+      \verb|INIT|        & 初期条件に固定 \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+\namelist{PARAM LANDUSE}で入力・設定された土地利用分布に陸面が含まれる場合は、
+\nmitem{LAND_TYPE}に"\verb|NONE|"または"\verb|OFF|"を選択できない。この条件を満たさない場合は、
+下記のメッセージをLOGファイルに出力して、プログラムは計算を行わずに直ちに終了する。
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Land fraction exists, but land component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+\nmitem{LAND_DYN_TYPE}に対して"\verb|NONE|", "\verb|OFF|"以外を指定した場合は、
+土地利用分布の入力データや各土地利用における粗度長やアルベドなどの情報を含む
+パラメータテーブルが必要である。
+パラメータテーブルの例は、
+\verb|scale-rm/test/data/land/param.bucket.conf|に用意してある.
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{陸モデルの鉛直格子設定}
+%-------------------------------------------------------------------------------
+
+陸モデルの鉛直格子数は、\namelist{PARAM_LAND_GRID_CARTESC_INDEX}の\nmitem{LKMAX}で指定する。
+また、鉛直格子間隔は\namelist{PARAM_LAND_GRID_CARTESC}の\nmitem{LDZ}で指定する(単位は[m])。
+\editboxtwo{
+\verb|&PARAM_LAND_GRID_CARTESC_INDEX| & \\
+\verb| LKMAX = 7,|  & ; 鉛直層数 \\
+\verb|/|\\
+\\
+\verb|&PARAM_LAND_GRID_CARTESC| & \\
+\verb| LDZ = 0.05, 0.15, 0.30, 0.50, 1.00, 2.00, 4.00,| & ; 鉛直方向の格子間隔\\
+\verb|/|\\
+}
+\nmitem{LDZ}には\nmitem{LKMAX}で指定した格子数分の配列を指定する。
+配列の順序は、地表面から地中に向かう方向である。
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{大気--陸面間のフラックス}
+%-------------------------------------------------------------------------------
+大気-陸間の表面フラックスは、\nmitem{LAND_SFC_TYPE}で選択したスキームによって計算される。
+この計算では、\namelist{PARAM_BULKFLUX}の\nmitem{BULKFLUX_TYPE}で指定したバルクスキーム
+(詳細は第\ref{sec:basic_usel_surface}節を参照)が用いられる。
+
+
+%-------------------------------------------------------------------------------
+\subsection{初期条件固定}
+%-------------------------------------------------------------------------------
+\nmitem{LAND_DYN_TYPE} が \verb|INIT| の場合、陸の状態は初期値のまま一定となる。
+この場合、鉛直層数(\nmitem{LKMAX})は 1 でなければならない。
+鉛直層の厚さは、正の値である限りどんな値でも良い。
+
+
+%-------------------------------------------------------------------------------
+\subsection{\texttt{BUCKET} 陸面スキーム}
+%-------------------------------------------------------------------------------
+%-------------------------------------------------------------------------------
+\subsubsection{表面スキーム}
+%-------------------------------------------------------------------------------
+
+陸面の地表面温度の計算方法は\namelist{PARAM_LAND}の\nmitem{LAND_SFC_TYPE}で設定する。
+デフォルトの設定は\verb|SKIN|である。
+%
+\begin{table}[hbt]
+\begin{center}
+  \caption{\texttt{BUCKET}スキームにおける表面スキームの選択肢}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  スキーム名 & スキームの説明 \\ \hline
+      \verb|SKIN|       & 地表面熱収支がバランスするように表面温度を決定する \\
+      \verb|FIXED-TEMP| & 陸モデルの最上層の土壌温度を表面温度とする \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+\nmitem{LAND_SFC_TYPE} が \verb|SKIN| の場合、
+地表面でのエネルギーフラックスの熱収支がバランスするように表面温度を決める。
+具体的には、\citet{tomita_2009} に基づき、熱収支の残差が小さくなるように反復計算によって求める。
+この表面温度は、陸モデルの最上層の土壌温度とは異なる。
+
+
+\nmitem{LAND_SFC_TYPE} が \verb|FIXED-TEMP| の場合、
+表面温度は陸モデルの最上層の土壌温度と同値であり、この土壌温度は陸モデルによって計算される。
+予め与えられた表面温度で熱エネルギーフラックスを決定する。
+熱収支の残差は地中熱フラックスとして、陸モデルに与えられる。
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{陸面ナッジング}
+%-------------------------------------------------------------------------------
+
+\nmitem{LAND_DYN_TYPE}を\verb|"BUCKET"|とした場合は,
+外部データを用いて陸の変数を緩和させることができる(ナッジング)。
+ナッジングのパラメータは\verb|run.conf|で指定できる。
+
+\editboxtwo{
+ \verb|&PARAM_LAND_DYN_BUCKET                                    | & \\
+ \verb| LAND_DYN_BUCKET_nudging                       = .false., | & ; 陸の変数に対してナッジングを行うか? \\
+ \verb| LAND_DYN_BUCKET_nudging_tau                   = 0.0_DP,  | & ; ナッジングにおける緩和の時定数 \\
+ \verb| LAND_DYN_BUCKET_nudging_tau_unit              = "SEC",   | & ; 緩和の時定数の単位 \\
+ \verb| LAND_DYN_BUCKET_nudging_basename              = "",      | & ; 入力データのベース名 \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_year  = .false., | & ; 年周期データか? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_month = .false., | & ; 月周期データか? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false., | & ; 日年周期データか? \\
+ \verb| LAND_DYN_BUCKET_nudging_step_fixed            = 0,       | & ; データの特定のステップ数を用いるか? \\
+ \verb| LAND_DYN_BUCKET_nudging_offset                = 0.0_RP,  | & ; 変数のオフセット値 \\
+ \verb| LAND_DYN_BUCKET_nudging_defval                = UNDEF,   | & ; 変数のデフォルト値 \\
+ \verb| LAND_DYN_BUCKET_nudging_check_coordinates     = .true.,  | & ; 変数の座標を確認するか？ \\
+ \verb| LAND_DYN_BUCKET_nudging_step_limit            = 0,       | & ; データを読み込む時間ステップ数の最大値 \\
+ \verb|/                                                        | & \\
+}
+
+\nmitem{LAND_DYN_BUCKET_nudging_tau}が0である場合は,
+陸面温度の値は外部ファイルによって完全に置き換わる。
+\nmitem{LAND_DYN_BUCKET_nudging_step_fixed}が1以下であば、
+現時刻における値は外部データを時間内挿することで計算される。
+\nmitem{LAND_DYN_BUCKET_nudging_step_fixed}に特定のステップを指定した場合は、
+そのステップのデータが時間内挿することなく常に用いられる。
+\nmitem{LAND_DYN_BUCKET_nudging_step_limit}に0よりも大きい値を設定した場合は、
+その制限を超える時間ステップのデータを読み込まず、最後に読み込んだデータをナッジングに用いる。
+この制限は、\nmitem{LAND_DYN_BUCKET_nudging_step_limit}が0の場合には設定されない。
+
+
+

@@ -125,11 +125,13 @@ contains
        var, varname, &
        area, total,  &
        log_suppress, &
+       global,       &
        mean, sum     )
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS, &
        UNDEF => CONST_UNDEF
     implicit none
 
@@ -142,6 +144,7 @@ contains
     real(RP),         intent(in) :: total       !< total area
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
+    logical,  intent(in),  optional :: global       !< global or local sum
     real(RP), intent(out), optional :: mean !< area-weighted mean
     real(DP), intent(out), optional :: sum  !< domain sum
 
@@ -149,7 +152,7 @@ contains
     real(DP) :: sendbuf(2), recvbuf(2)
     real(DP) :: sum_, mean_
 
-    logical :: suppress_
+    logical :: suppress_, global_
     integer :: ierr
     integer :: i, j
     !---------------------------------------------------------------------------
@@ -175,7 +178,13 @@ contains
        suppress_ = .false.
     end if
 
-    if ( STATISTICS_use_globalcomm ) then
+    if ( present(global) ) then
+       global_ = global
+    else
+       global_ = STATISTICS_use_globalcomm
+    end if
+
+    if ( global_ ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
        sendbuf(2) = total
@@ -188,16 +197,26 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       sum_  = recvbuf(1)
-       mean_ = recvbuf(1) / recvbuf(2)
+       if ( recvbuf(2) < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = recvbuf(1)
+          mean_ = recvbuf(1) / recvbuf(2)
+       end if
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
           LOG_INFO("STATISTICS_total_2D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       sum_ = statval
-       mean_ = statval / total
+       if ( total < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = statval
+          mean_ = statval / total
+       end if
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
@@ -219,11 +238,13 @@ contains
        var, varname, &
        vol, total,   &
        log_suppress, &
+       global,       &
        mean, sum     )
     use scale_prc, only: &
        PRC_myrank, &
        PRC_abort
     use scale_const, only: &
+       EPS   => CONST_EPS , &
        UNDEF => CONST_UNDEF
     implicit none
 
@@ -237,6 +258,7 @@ contains
     real(RP),         intent(in) :: total         !< total volume
 
     logical,  intent(in),  optional :: log_suppress !< suppress log output
+    logical,  intent(in),  optional :: global       !< global or local sum
     real(RP), intent(out), optional :: mean !< volume/area-weighted total
     real(DP), intent(out), optional :: sum  !< domain sum
 
@@ -244,19 +266,24 @@ contains
     real(DP) :: sendbuf(2), recvbuf(2)
     real(DP) :: mean_, sum_
 
-    logical :: suppress_
+    logical :: suppress_, global_
+
+    real(DP) :: work
     integer :: ierr
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
     statval = 0.0_DP
     if ( var(KS,IS,JS) /= UNDEF ) then
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2) reduction(+:statval)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          statval = statval + var(k,i,j) * vol(k,i,j)
-       enddo
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(+:statval) &
+       !$omp private(work)
+       do j = JE, JS, -1
+       do i = IE, IS, -1
+          work = 0.0_RP
+          do k = KE, KS, -1
+             work = work + var(k,i,j) * vol(k,i,j)
+          enddo
+          statval = statval + work
        enddo
        enddo
     end if
@@ -272,7 +299,13 @@ contains
        suppress_ = .false.
     end if
 
-    if ( STATISTICS_use_globalcomm ) then
+    if ( present(global) ) then
+       global_ = global
+    else
+       global_ = STATISTICS_use_globalcomm
+    end if
+
+    if ( global_ ) then
        call PROF_rapstart('COMM_Allreduce', 2)
        sendbuf(1) = statval
        sendbuf(2) = total
@@ -285,16 +318,26 @@ contains
                            ierr                    )
        call PROF_rapend  ('COMM_Allreduce', 2)
 
-       sum_  = recvbuf(1)
-       mean_ = recvbuf(1) / recvbuf(2)
+       if ( recvbuf(2) < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = recvbuf(1)
+          mean_ = recvbuf(1) / recvbuf(2)
+       end if
        ! statistics over the all node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
           LOG_INFO("STATISTICS_total_3D",'(1x,A,A24,A,ES24.17)') &
                      '[', trim(varname), '] MEAN(global) = ', mean_
        endif
     else
-       sum_  = statval
-       mean_ = statval / total
+       if ( total < EPS ) then
+          sum_  = UNDEF
+          mean_ = UNDEF
+       else
+          sum_  = statval
+          mean_ = statval / total
+       end if
 
        ! statistics on each node
        if ( .not. suppress_ ) then ! if varname is empty, suppress output
@@ -331,6 +374,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = 0.0_DP
+!    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF ) then
@@ -382,6 +426,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:,:) = 0.0_DP
+!    !$omp parallel do reduction(+:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -446,6 +491,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval = HUGE
+    !$omp parallel do reduction(min:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) < statval ) then
@@ -498,6 +544,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = HUGE
+!    !$omp parallel do reduction(min:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -561,6 +608,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval = - HUGE
+    !$omp parallel do reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
        if ( var(i,j) /= UNDEF .and. var(i,j) > statval ) then
@@ -613,6 +661,7 @@ contains
     !---------------------------------------------------------------------------
 
     statval(:) = - HUGE
+!    !$omp parallel do reduction(max:statval)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

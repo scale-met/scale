@@ -81,6 +81,8 @@ module mod_prgvar
   character(len=H_SHORT), private :: input_io_mode  = 'ADVANCED'
   character(len=H_SHORT), private :: output_io_mode = 'ADVANCED'
   logical,                private :: allow_missingq = .false.
+  integer,                private :: input_step      = 0 ! 0 for last restart_step
+  integer,                private :: output_interval = 0 ! 0 for last step only
 
   !-----------------------------------------------------------------------------
 contains
@@ -105,7 +107,9 @@ contains
        restart_layername, &
        input_io_mode,     &
        output_io_mode,    &
-       allow_missingq
+       allow_missingq,    &
+       output_interval,   &
+       input_step
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -743,12 +747,12 @@ contains
 
        do nq = 1, DIAG_vmax0
           call FIO_input( DIAG_var(:,:,:,nq),basename,DIAG_name(nq), &
-                          layername,1,ADM_kall,1                     )
+                          layername,1,ADM_kall,input_step            )
        enddo
 
        do nq = 1, TRC_vmax_input
           call FIO_input( DIAG_var(:,:,:,DIAG_vmax0+nq),basename,TRACER_name(nq), &
-                          layername,1,ADM_kall,1,                              &
+                          layername,1,ADM_kall,input_step,                        &
                           allow_missingq=allow_missingq                        )
        enddo
 
@@ -832,13 +836,14 @@ contains
   end subroutine restart_input
 
   !-----------------------------------------------------------------------------
-  subroutine restart_output( basename )
+  subroutine restart_output( basename, step )
     use mod_io_param, only: &
        IO_REAL8
     use mod_fio, only: &
        FIO_output
     use mod_time, only : &
-       TIME_CTIME
+       TIME_CTIME, &
+       TIME_LSTEP_MAX
     use mod_gm_statistics, only: &
        GTL_max, &
        GTL_min
@@ -849,6 +854,7 @@ contains
     implicit none
 
     character(len=*), intent(in) :: basename
+    integer,          intent(in) :: step
 
     character(len=H_MID)   :: desc = 'INITIAL/RESTART_data_of_prognostic_variables'
 
@@ -871,58 +877,76 @@ contains
     character(len=H_SHORT) :: WUNIT = 'kg/kg'
 
     real(RP) :: val_max, val_min
-    logical  :: nonzero
+    logical  :: nonzero, flag_restart_output
 
-    integer  :: nq
+    integer  :: nq, restart_step
     !---------------------------------------------------------------------------
+    if (step == TIME_LSTEP_MAX) then !Judge output restart file or not.
+      flag_restart_output = .true.
+    elseif (output_interval == 0) then
+      flag_restart_output = .false.
+    elseif (mod(step, output_interval) == 0) then
+      flag_restart_output = .true.
+    else
+      flag_restart_output = .false.
+    endif
+    
+    if (flag_restart_output) then
+      if (step == TIME_LSTEP_MAX) then
+        restart_step = 0 ! 0 is for the last step for convenience of restarting from the last step.
+      else
+        restart_step = step/output_interval
+      endif
 
-    call cnvvar_prg2diag( PRG_var (:,:,:,:), PRG_var_pl (:,:,:,:), & ! [IN]
-                          DIAG_var(:,:,:,:), DIAG_var_pl(:,:,:,:)  ) ! [OUT]
+      call cnvvar_prg2diag( PRG_var (:,:,:,:), PRG_var_pl (:,:,:,:), & ! [IN]
+                            DIAG_var(:,:,:,:), DIAG_var_pl(:,:,:,:)  ) ! [OUT]
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '====== data range check : prognostic variables ======'
-    do nq = 1, DIAG_vmax0
-       val_max = GTL_max( DIAG_var   (:,:,:,nq),       &
-                          DIAG_var_pl(:,:,:,nq),       &
-                          ADM_kall, ADM_kmin, ADM_kmax )
-       val_min = GTL_min( DIAG_var   (:,:,:,nq),       &
-                          DIAG_var_pl(:,:,:,nq),       &
-                          ADM_kall, ADM_kmin, ADM_kmax )
+      if( IO_L ) write(IO_FID_LOG,*)
+      if( IO_L ) write(IO_FID_LOG,*) '====== data range check : prognostic variables ======'
+      do nq = 1, DIAG_vmax0
+         val_max = GTL_max( DIAG_var   (:,:,:,nq),       &
+                            DIAG_var_pl(:,:,:,nq),       &
+                            ADM_kall, ADM_kmin, ADM_kmax )
+         val_min = GTL_min( DIAG_var   (:,:,:,nq),       &
+                            DIAG_var_pl(:,:,:,nq),       &
+                            ADM_kall, ADM_kmin, ADM_kmax )
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
-    enddo
+         if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', DIAG_name(nq), ': max=', val_max, ', min=', val_min
+      enddo
+      
+      do nq = 1, QA
+        val_max = GTL_max( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
+                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
+                           ADM_kall, ADM_kmin, ADM_kmax      )
 
-    do nq = 1, QA
-       val_max = GTL_max( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
-                          DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
-                          ADM_kall, ADM_kmin, ADM_kmax      )
+        if ( val_max <= 0.0_RP ) then
+            nonzero = .false.
+        else
+            nonzero = .true.
+        endif
 
-       if ( val_max <= 0.0_RP ) then
-          nonzero = .false.
-       else
-          nonzero = .true.
-       endif
+        val_min = GTL_min( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
+                           DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
+                           ADM_kall, ADM_kmin, ADM_kmax, nonzero)
 
-       val_min = GTL_min( DIAG_var   (:,:,:,DIAG_vmax0+nq), &
-                          DIAG_var_pl(:,:,:,DIAG_vmax0+nq), &
-                          ADM_kall, ADM_kmin, ADM_kmax, nonzero)
+        if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRACER_name(nq),  ': max=', val_max, ', min=', val_min
+      enddo
 
-       if( IO_L ) write(IO_FID_LOG,'(1x,A,A16,2(A,1PE24.17))') '--- ', TRACER_name(nq),  ': max=', val_max, ', min=', val_min
-    enddo
+      if ( output_io_mode == 'ADVANCED' ) then
 
-    if ( output_io_mode == 'ADVANCED' ) then
+        do nq = 1, DIAG_vmax0
+            call FIO_output( DIAG_var(:,:,:,nq), basename, desc, '', DIAG_name(nq), DLABEL(nq), '', DUNIT(nq), & ! [IN]
+                            IO_REAL8, layername, 1, ADM_kall, restart_step, TIME_CTIME, TIME_CTIME             ) ! [IN]
+        enddo
 
-       do nq = 1, DIAG_vmax0
-          call FIO_output( DIAG_var(:,:,:,nq), basename, desc, '', DIAG_name(nq), DLABEL(nq), '', DUNIT(nq), & ! [IN]
-                           IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                       ) ! [IN]
-       enddo
+        do nq = 1, QA
+            call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRACER_name(nq), TRACER_desc(nq), '', WUNIT, & ! [IN]
+                             IO_REAL8, layername, 1, ADM_kall, restart_step, TIME_CTIME, TIME_CTIME                          ) ! [IN]
+        enddo
 
-       do nq = 1, QA
-          call FIO_output( DIAG_var(:,:,:,DIAG_vmax0+nq), basename, desc, '', TRACER_name(nq), TRACER_desc(nq), '', WUNIT, & ! [IN]
-                           IO_REAL8, layername, 1, ADM_kall, 1, TIME_CTIME, TIME_CTIME                             ) ! [IN]
-       enddo
-
-    endif !--- io_mode
+      endif !--- io_mode
+    
+    endif !---flag_restart_output
 
     return
   end subroutine restart_output

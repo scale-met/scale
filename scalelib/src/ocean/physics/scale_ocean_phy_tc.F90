@@ -80,6 +80,7 @@ contains
        OJA, OJS, OJE, &
        ICE_MASS,      &
        ICE_FRAC,      &
+       mask,          &
        TC_dz          )
     use scale_const, only: &
        EPS => CONST_EPS
@@ -91,19 +92,23 @@ contains
     integer,  intent(in)  :: OJA, OJS, OJE
     real(RP), intent(in)  :: ICE_MASS(OIA,OJA) ! sea ice amount               [kg/m2]
     real(RP), intent(in)  :: ICE_FRAC(OIA,OJA) ! sea ice area fraction        [1]
+    logical,  intent(in)  :: mask    (OIA,OJA)
     real(RP), intent(out) :: TC_dz   (OIA,OJA) ! thermal conductivity / depth [J/m2/s/K]
 
     real(RP) :: ice_depth
     integer  :: i, j
     !---------------------------------------------------------------------------
 
+    !$omp parallel do private(ice_depth)
     do j = OJS, OJE
     do i = OIS, OIE
-       ice_depth  = ICE_MASS(i,j) / OCEAN_PHY_ICE_density / max(ICE_FRAC(i,j),EPS)
+       if ( mask(i,j) ) then
+          ice_depth  = ICE_MASS(i,j) / OCEAN_PHY_ICE_density / max(ICE_FRAC(i,j),EPS)
 
-       TC_dz(i,j) = OCEAN_PHY_thermalcond_seaice / max(ice_depth*0.5_RP,EPS) ! at the middle point of the layer
+          TC_dz(i,j) = OCEAN_PHY_thermalcond_seaice / max(ice_depth*0.5_RP,EPS) ! at the middle point of the layer
 
-       TC_dz(i,j) = min( TC_dz(i,j), OCEAN_PHY_thermalcond_max )
+          TC_dz(i,j) = min( TC_dz(i,j), OCEAN_PHY_thermalcond_max )
+       end if
     enddo
     enddo
 

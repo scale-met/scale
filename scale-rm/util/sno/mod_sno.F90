@@ -27,7 +27,7 @@ module mod_sno
   !
   public :: SNO_proc_alloc
   public :: SNO_file_getinfo
-  public :: SNO_calc_localsize
+  public :: SNO_calc_domainsize
   public :: SNO_read_bcast_1d
   public :: SNO_read_bcast_2d
   public :: SNO_read_map_1d
@@ -99,23 +99,26 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNO_file_getinfo( &
-       ismaster,     &
-       basename,     &
-       vars,         &
-       nprocs_x_out, &
-       nprocs_y_out, &
-       nprocs_x_in,  &
-       nprocs_y_in,  &
-       ngrids_x,     &
-       ngrids_y,     &
-       nhalos_x,     &
-       nhalos_y,     &
-       hinfo,        &
-       naxis,        &
-       axisname,     &
-       nvars,        &
-       varname,      &
-       debug         )
+       ismaster,        &
+       basename,        &
+       vars,            &
+       nprocs_x_out,    &
+       nprocs_y_out,    &
+       nprocs_x_in,     &
+       nprocs_y_in,     &
+       ngrids_z,        &
+       ngrids_x,        &
+       ngrids_y,        &
+       nhalos_z,        &
+       nhalos_x,        &
+       nhalos_y,        &
+       hinfo,           &
+       naxis,           &
+       axisname,        &
+       nvars,           &
+       varname,         &
+       plugin_hgridope, &
+       debug            )
     use mpi
     use scale_file_h, only: &
        FILE_FREAD
@@ -145,8 +148,10 @@ contains
     integer,                intent(in)  :: nprocs_y_out             ! y length of 2D processor topology (output)
     integer,                intent(out) :: nprocs_x_in              ! x length of 2D processor topology (input)
     integer,                intent(out) :: nprocs_y_in              ! y length of 2D processor topology (input)
+    integer,                intent(out) :: ngrids_z                 ! size of z-axis grids              (global,sometimes including halo)
     integer,                intent(out) :: ngrids_x                 ! size of x-axis grids              (global,sometimes including halo)
     integer,                intent(out) :: ngrids_y                 ! size of y-axis grids              (global,sometimes including halo)
+    integer,                intent(out) :: nhalos_z                 ! size of z-axis halo grids         (global,sometimes have a size)
     integer,                intent(out) :: nhalos_x                 ! size of x-axis halo grids         (global,sometimes have a size)
     integer,                intent(out) :: nhalos_y                 ! size of y-axis halo grids         (global,sometimes have a size)
     type(commoninfo),       intent(out) :: hinfo                    ! common information                (input)
@@ -154,6 +159,7 @@ contains
     character(len=H_SHORT), intent(out) :: axisname(item_limit)     ! name   of axis variables          (input)
     integer,                intent(out) :: nvars                    ! number of variables               (input)
     character(len=H_SHORT), intent(out) :: varname (item_limit)     ! name   of variables               (input)
+    logical,                intent(in)  :: plugin_hgridope          ! if true, some 2d axis var. is treated as normal var.
     logical,                intent(in)  :: debug
 
     integer                :: procsize(2)                   ! total process size        (x:y)
@@ -165,6 +171,7 @@ contains
 
     integer :: nprocs_in       ! number of peXXXXXX files           (input)
 
+    integer :: ngrids_z_nohalo ! number of z-axis grids             (global,without halo)
     integer :: ngrids_x_nohalo ! number of x-axis grids             (global,without halo)
     integer :: ngrids_y_nohalo ! number of y-axis grids             (global,without halo)
     integer :: ngrids          ! number of        grids             (global)
@@ -281,13 +288,16 @@ contains
     LOG_INFO("SNO_file_getinfo",*) 'Process info '
     LOG_INFO_CONT(*)               '# of PEs (input  file)        : ', nprocs_in, '(', nprocs_x_in, 'x', nprocs_y_in, ')'
 
-    !--- horizontal grid management
+    !--- grid management
 
+    ngrids_z        = hinfo%gridsize(1)
     ngrids_x        = hinfo%xatt_size_global(1)
     ngrids_y        = hinfo%yatt_size_global(1)
+    nhalos_z        = hinfo%halosize(1)         ! assume both side have same number
     nhalos_x        = hinfo%xatt_halo_global(1) ! assume both side have same number
     nhalos_y        = hinfo%yatt_halo_global(1) ! assume both side have same number
 
+    ngrids_z_nohalo = ngrids_z - 2*nhalos_z
     ngrids_x_nohalo = ngrids_x - 2*nhalos_x
     ngrids_y_nohalo = ngrids_y - 2*nhalos_y
 
@@ -308,6 +318,10 @@ contains
     LOG_INFO_CONT(*)               '# of grids per output file without halo : ', ngrids_out, '(', ngrids_x_out   , 'x', ngrids_y_out   , ')'
     LOG_INFO_CONT(*)               '# of halo grids (x-axis,one side)       : ', nhalos_x
     LOG_INFO_CONT(*)               '# of halo grids (y-axis,one side)       : ', nhalos_y
+    LOG_NEWLINE
+    LOG_INFO("SNO_file_getinfo",*) 'Grid info (vertical) '
+    LOG_INFO_CONT(*)               '# of vertical grids        without halo : ', ngrids_z_nohalo
+    LOG_INFO_CONT(*)               '# of halo grids (z-axis,one side)       : ', nhalos_z
 
     if ( mod(ngrids_x_nohalo,nprocs_x_out) /= 0 ) then
        LOG_ERROR("SNO_file_getinfo",*) 'The allowable case is that # of the total x-grids is divisible with # of the x-PEs for the output. Stop'
@@ -354,13 +368,13 @@ contains
 
        select case(varname_file(n))
        case('z','zh','oz','ozh','lz','lzh','uz','uzh','pressure',                                                            &
-            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds',                               &
+            'z_bnds','zh_bnds','oz_bnds','ozh_bnds','lz_bnds','lzh_bnds','uz_bnds','uzh_bnds','pressure_bnds',               &
             'CZ','FZ','CDZ','FDZ','CBFZ','FBFZ','OCZ','OFZ','OCDZ','LCZ','LFZ','LCDZ','UCZ','UFZ','UCDZ',                    &
             'x','xh','y','yh',                                                                                               &
             'x_bnds','xh_bnds','y_bnds','yh_bnds',                                                                           &
             'CX','CY','FX','FY','CDX','CDY','FDX','FDY','CBFX','CBFY','FBFX','FBFY',                                         &
             'CXG','CYG','FXG','FYG','CDXG','CDYG','FDXG','FDYG','CBFXG','CBFYG','FBFXG','FBFYG',                             &
-            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv','topo','lsmask',                               &
+            'lon','lon_uy','lon_xv','lon_uv','lat','lat_uy','lat_xv','lat_uv',                               &
             'cell_area','cell_area_uy','cell_area_xv',                                                                       &
             'cell_area_zuy_x','cell_area_zxv_y','cell_area_wuy_x','cell_area_wxv_y',                                         &
             'cell_area_zxy_x','cell_area_zuv_y','cell_area_zuv_x','cell_area_zxy_y',                                         &
@@ -372,7 +386,7 @@ contains
             'height','height_wxy','height_xyw','height_uyz','height_xvz','height_uvz','height_uyw','height_xvw','height_uvw' )
           naxis           = naxis + 1
           axisname(naxis) = varname_file(n)
-       case('time','time_bnds','grid','grid_ocean','grid_land','grid_urban','grid_pressure','grid_z','grid_model','grid_model_global')
+       case('grid','grid_ocean','grid_land','grid_urban','grid_pressure','grid_z','grid_model','grid_model_global')
           ! do nothing
        case('lambert_conformal_conic')
           if ( ismaster ) then
@@ -426,24 +440,50 @@ contains
              call FILE_get_attribute( fid, varname_file(n), "longitude_of_central_meridian", &
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
-       case default
-          if ( nvars_req == 0 ) then
-             nvars           = nvars + 1
-             varname (nvars) = varname_file(n)
-          else
-             do nn = 1, nvars_req
-                if ( varname_file(n) == vars(nn) ) then
-                   if ( exist(nn) ) then
-                      LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), &
-                                                     ' is requested two times. check namelist!'
-                      call PRC_abort
-                   endif
+       case('topo','lsmask')
+          if ( plugin_hgridope ) then ! treat as normal variable
+             if ( nvars_req == 0 ) then
+                nvars          = nvars + 1
+                varname(nvars) = varname_file(n)
+             else
+                do nn = 1, nvars_req
+                   if ( varname_file(n) == vars(nn) ) then
+                      if ( exist(nn) ) then
+                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), ' is requested two times. check namelist!'
+                         call PRC_abort
+                      endif
 
-                   nvars          = nvars + 1
-                   varname(nvars) = varname_file(n)
-                   exist(nn)      = .true.
-                endif
-             enddo
+                      nvars          = nvars + 1
+                      varname(nvars) = varname_file(n)
+                      exist(nn)      = .true.
+                   endif
+                enddo
+             endif
+          else ! treat as axis variable
+             naxis           = naxis + 1
+             axisname(naxis) = varname_file(n)
+          endif
+       case default
+          if ( index( varname_file(n), 'time' ) > 0 ) then
+             ! do nothing
+          else
+             if ( nvars_req == 0 ) then
+                nvars          = nvars + 1
+                varname(nvars) = varname_file(n)
+             else
+                do nn = 1, nvars_req
+                   if ( varname_file(n) == vars(nn) ) then
+                      if ( exist(nn) ) then
+                         LOG_ERROR("SNO_file_getinfo",*) 'variable ', trim(vars(nn)), ' is requested two times. check namelist!'
+                         call PRC_abort
+                      endif
+
+                      nvars          = nvars + 1
+                      varname(nvars) = varname_file(n)
+                      exist(nn)      = .true.
+                   endif
+                enddo
+             endif
           endif
        end select
 
@@ -484,7 +524,7 @@ contains
   end subroutine SNO_file_getinfo
 
   !-----------------------------------------------------------------------------
-  subroutine SNO_calc_localsize( &
+  subroutine SNO_calc_domainsize( &
        nprocs_x,       &
        nprocs_y,       &
        px,             &
@@ -536,7 +576,7 @@ contains
     endif
 
     return
-  end subroutine SNO_calc_localsize
+  end subroutine SNO_calc_domainsize
 
   !-----------------------------------------------------------------------------
   subroutine SNO_read_bcast_1d( &
@@ -547,6 +587,11 @@ contains
        varsize,   &
        var        )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -589,7 +634,11 @@ contains
 
           call FILE_read( basename, varname, tmp_SP(:), rankid=nowrank )
 
-          var(:) = real(tmp_SP(:),kind=RP)
+          where( abs( tmp_SP(:) - UNDEF4 ) > EPS )
+             var(:) = real(tmp_SP(:),kind=RP)
+          elsewhere
+             var(:) = UNDEF
+          endwhere
 
           deallocate( tmp_SP )
        endif
@@ -601,7 +650,11 @@ contains
 
           call FILE_read( basename, varname, tmp_DP(:), rankid=nowrank )
 
-          var(:) = real(tmp_DP(:),kind=RP)
+          where( abs( tmp_DP(:) - UNDEF8 ) > EPS )
+             var(:) = real(tmp_DP(:),kind=RP)
+          elsewhere
+             var(:) = UNDEF
+          endwhere
 
           deallocate( tmp_DP )
        endif
@@ -627,6 +680,11 @@ contains
        gout1,    &
        localmap, &
        var       )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -664,7 +722,11 @@ contains
           if ( localmap(i,I_map_p) == nowrank ) then
              ii = int(localmap(i,I_map_i))
 
-             var(i) = real(tmp_SP(ii),kind=RP)
+             if ( abs( tmp_SP(ii) - UNDEF4 ) > EPS ) then
+                var(i) = real(tmp_SP(ii),kind=RP)
+             else
+                var(i) = UNDEF
+             endif
           endif
        enddo
 
@@ -676,7 +738,11 @@ contains
           if ( localmap(i,I_map_p) == nowrank ) then
              ii = int(localmap(i,I_map_i))
 
-             var(i) = real(tmp_DP(ii),kind=RP)
+             if ( abs( tmp_DP(ii) - UNDEF8 ) > EPS ) then
+                var(i) = real(tmp_DP(ii),kind=RP)
+             else
+                var(i) = UNDEF
+             endif
           endif
        enddo
 
@@ -698,6 +764,11 @@ contains
        varsize2,  &
        var        )
     use mpi
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -741,9 +812,14 @@ contains
 
           call FILE_read( basename, varname, tmp_SP(:,:), rankid=nowrank )
 
-          var(:,:) = real(tmp_SP(:,:),kind=RP)
+          where( abs( tmp_SP(:,:) - UNDEF4 ) > EPS )
+             var(:,:) = real(tmp_SP(:,:),kind=RP)
+          elsewhere
+             var(:,:) = UNDEF
+          endwhere
 
           deallocate( tmp_SP )
+
        endif
 
     elseif( datatype == FILE_REAL8 ) then
@@ -753,9 +829,14 @@ contains
 
           call FILE_read( basename, varname, tmp_DP(:,:), rankid=nowrank )
 
-          var(:,:) = real(tmp_DP(:,:),kind=RP)
+          where( abs( tmp_DP(:,:) - UNDEF8 ) > EPS )
+             var(:,:) = real(tmp_DP(:,:),kind=RP)
+          elsewhere
+             var(:,:) = UNDEF
+          endwhere
 
           deallocate( tmp_DP )
+
        endif
 
     else
@@ -781,6 +862,11 @@ contains
        gout2,    &
        localmap, &
        var       )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -823,7 +909,11 @@ contains
              ii = int(localmap(i,j,I_map_i))
              jj = int(localmap(i,j,I_map_j))
 
-             var(i,j) = real(tmp_SP(ii,jj),kind=RP)
+             if ( abs( tmp_SP(ii,jj) - UNDEF4 ) > EPS ) then
+                var(i,j) = real(tmp_SP(ii,jj),kind=RP)
+             else
+                var(i,j) = UNDEF
+             endif
           endif
        enddo
        enddo
@@ -838,7 +928,11 @@ contains
              ii = int(localmap(i,j,I_map_i))
              jj = int(localmap(i,j,I_map_j))
 
-             var(i,j) = real(tmp_DP(ii,jj),kind=RP)
+             if ( abs( tmp_DP(ii,jj) - UNDEF8 ) > EPS ) then
+                var(i,j) = real(tmp_DP(ii,jj),kind=RP)
+             else
+                var(i,j) = UNDEF
+             endif
           endif
        enddo
        enddo
@@ -867,6 +961,11 @@ contains
        gout3,     &
        localmap,  &
        var        )
+    use scale_const, only: &
+       UNDEF4 => CONST_UNDEF4, &
+       UNDEF8 => CONST_UNDEF8, &
+       UNDEF  => CONST_UNDEF,  &
+       EPS    => CONST_EPS
     use scale_file_h, only: &
        FILE_REAL4, &
        FILE_REAL8, &
@@ -920,7 +1019,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_SP(ii,jj,k),kind=RP)
+                   if ( abs( tmp_SP(ii,jj,k) - UNDEF4 ) > EPS ) then
+                      var(k,i,j) = real(tmp_SP(ii,jj,k),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -933,7 +1036,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_SP(k,ii,jj),kind=RP)
+                   if ( abs( tmp_SP(k,ii,jj) - UNDEF4 ) > EPS ) then
+                      var(k,i,j) = real(tmp_SP(k,ii,jj),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -960,7 +1067,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_DP(ii,jj,k),kind=RP)
+                   if ( abs( tmp_DP(ii,jj,k) - UNDEF8 ) > EPS ) then
+                      var(k,i,j) = real(tmp_DP(ii,jj,k),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -973,7 +1084,11 @@ contains
                 jj = int(localmap(i,j,I_map_j))
 
                 do k = 1, gout1
-                   var(k,i,j) = real(tmp_DP(k,ii,jj),kind=RP)
+                   if ( abs( tmp_DP(k,ii,jj) - UNDEF8 ) > EPS ) then
+                      var(k,i,j) = real(tmp_DP(k,ii,jj),kind=RP)
+                   else
+                      var(k,i,j) = UNDEF
+                   endif
                 enddo
              endif
           enddo
@@ -999,7 +1114,6 @@ contains
        nhalos_x,     &
        nhalos_y,     &
        hinfo,        &
-       dinfo,        &
        debug         )
     use scale_prc, only: &
        PRC_abort
@@ -1012,8 +1126,7 @@ contains
        ATMOS_GRID_CARTESC_NAME
     use scale_file_cartesC, only: &
        FILE_CARTESC_put_globalAttributes, &
-       axisattinfo, &
-       mappinginfo
+       axisattinfo
     use mod_sno_h, only: &
        commoninfo, &
        iteminfo
@@ -1026,11 +1139,9 @@ contains
     integer,          intent(in)  :: nhalos_x                              ! number of x-axis halo grids        (global domain)
     integer,          intent(in)  :: nhalos_y                              ! number of y-axis halo grids        (global domain)
     type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
-    type(iteminfo),   intent(in)  :: dinfo                                 ! variable information               (input)
     logical,          intent(in)  :: debug
 
     type(axisattinfo) :: ainfo(4)
-    type(mappinginfo) :: minfo
 
     integer :: rankidx(2) ! my rank in 2D process topology (x:y)
     integer :: IMAX, JMAX
@@ -1108,15 +1219,6 @@ contains
 !        endif
     endif
 
-    minfo%mapping_name                             = hinfo%minfo_mapping_name
-    minfo%false_easting                        (:) = hinfo%minfo_false_easting                        (:)
-    minfo%false_northing                       (:) = hinfo%minfo_false_northing                       (:)
-    minfo%longitude_of_central_meridian        (:) = hinfo%minfo_longitude_of_central_meridian        (:)
-    minfo%longitude_of_projection_origin       (:) = hinfo%minfo_longitude_of_projection_origin       (:)
-    minfo%latitude_of_projection_origin        (:) = hinfo%minfo_latitude_of_projection_origin        (:)
-    minfo%straight_vertical_longitude_from_pole(:) = hinfo%minfo_straight_vertical_longitude_from_pole(:)
-    minfo%standard_parallel                    (:) = hinfo%minfo_standard_parallel                    (:)
-
     call FILE_set_attribute( fid, "x" , "size_global" , ainfo(1)%size_global (:) )
     call FILE_set_attribute( fid, "x" , "start_global", ainfo(1)%start_global(:) )
     call FILE_set_attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
@@ -1141,68 +1243,68 @@ contains
     call FILE_set_attribute( fid, "yh", "halo_local"  , ainfo(4)%halo_local  (:) )
     call FILE_set_attribute( fid, "yh", "periodic"    , ainfo(4)%periodic        )
 
-    if ( minfo%mapping_name /= "" ) then
+    if ( hinfo%minfo_mapping_name /= "" ) then
        call FILE_set_attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
        call FILE_set_attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
        call FILE_set_attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
        call FILE_set_attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FILE_add_associatedVariable( fid, minfo%mapping_name )
-       call FILE_set_attribute( fid, minfo%mapping_name, "grid_mapping_name",  minfo%mapping_name )
+       call FILE_add_associatedVariable( fid, hinfo%minfo_mapping_name )
+       call FILE_set_attribute( fid, hinfo%minfo_mapping_name, "grid_mapping_name",  hinfo%minfo_mapping_name )
 
-       if ( minfo%false_easting(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                   & ! [IN]
-                                   minfo%mapping_name,    & ! [IN]
-                                   "false_easting",       & ! [IN]
-                                   minfo%false_easting(:) ) ! [IN]
+       if ( hinfo%minfo_false_easting(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                         & ! [IN]
+                                   hinfo%minfo_mapping_name,    & ! [IN]
+                                   "false_easting",             & ! [IN]
+                                   hinfo%minfo_false_easting(:) ) ! [IN]
        endif
 
-       if ( minfo%false_northing(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                    & ! [IN]
-                                   minfo%mapping_name,     & ! [IN]
-                                   "false_northing",       & ! [IN]
-                                   minfo%false_northing(:) ) ! [IN]
+       if ( hinfo%minfo_false_northing(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                          & ! [IN]
+                                   hinfo%minfo_mapping_name,     & ! [IN]
+                                   "false_northing",             & ! [IN]
+                                   hinfo%minfo_false_northing(:) ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                   & ! [IN]
-                                   minfo%mapping_name,                    & ! [IN]
-                                   "longitude_of_central_meridian",       & ! [IN]
-                                   minfo%longitude_of_central_meridian(:) ) ! [IN]
+       if ( hinfo%minfo_longitude_of_central_meridian(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                         & ! [IN]
+                                   hinfo%minfo_mapping_name,                    & ! [IN]
+                                   "longitude_of_central_meridian",             & ! [IN]
+                                   hinfo%minfo_longitude_of_central_meridian(:) ) ! [IN]
        endif
 
-       if ( minfo%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                    & ! [IN]
-                                   minfo%mapping_name,                     & ! [IN]
-                                   "longitude_of_projection_origin",       & ! [IN]
-                                   minfo%longitude_of_projection_origin(:) ) ! [IN]
+       if ( hinfo%minfo_longitude_of_projection_origin(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                          & ! [IN]
+                                   hinfo%minfo_mapping_name,                     & ! [IN]
+                                   "longitude_of_projection_origin",             & ! [IN]
+                                   hinfo%minfo_longitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( minfo%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                   & ! [IN]
-                                   minfo%mapping_name,                    & ! [IN]
-                                   "latitude_of_projection_origin",       & ! [IN]
-                                   minfo%latitude_of_projection_origin(:) ) ! [IN]
+       if ( hinfo%minfo_latitude_of_projection_origin(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                         & ! [IN]
+                                   hinfo%minfo_mapping_name,                    & ! [IN]
+                                   "latitude_of_projection_origin",             & ! [IN]
+                                   hinfo%minfo_latitude_of_projection_origin(:) ) ! [IN]
        endif
 
-       if ( minfo%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_set_attribute( fid,                                           & ! [IN]
-                                   minfo%mapping_name,                            & ! [IN]
-                                   "straight_vertical_longitude_from_pole",       & ! [IN]
-                                   minfo%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       if ( hinfo%minfo_straight_vertical_longitude_from_pole(1) /= UNDEF ) then
+          call FILE_set_attribute( fid,                                                 & ! [IN]
+                                   hinfo%minfo_mapping_name,                            & ! [IN]
+                                   "straight_vertical_longitude_from_pole",             & ! [IN]
+                                   hinfo%minfo_straight_vertical_longitude_from_pole(:) ) ! [IN]
        endif
 
-       if ( minfo%standard_parallel(1) /= UNDEF ) then
-          if ( minfo%standard_parallel(2) /= UNDEF ) then
-             call FILE_set_attribute( fid,                         & ! [IN]
-                                      minfo%mapping_name,          & ! [IN]
-                                      "standard_parallel",         & ! [IN]
-                                      minfo%standard_parallel(1:2) ) ! [IN]
+       if ( hinfo%minfo_standard_parallel(1) /= UNDEF ) then
+          if ( hinfo%minfo_standard_parallel(2) /= UNDEF ) then
+             call FILE_set_attribute( fid,                               & ! [IN]
+                                      hinfo%minfo_mapping_name,          & ! [IN]
+                                      "standard_parallel",               & ! [IN]
+                                      hinfo%minfo_standard_parallel(1:2) ) ! [IN]
           else
-             call FILE_set_attribute( fid,                         & ! [IN]
-                                      minfo%mapping_name,          & ! [IN]
-                                      "standard_parallel",         & ! [IN]
-                                      minfo%standard_parallel(1:1) ) ! [IN]
+             call FILE_set_attribute( fid,                               & ! [IN]
+                                      hinfo%minfo_mapping_name,          & ! [IN]
+                                      "standard_parallel",               & ! [IN]
+                                      hinfo%minfo_standard_parallel(1:1) ) ! [IN]
           endif
        endif
     endif

@@ -17,6 +17,7 @@ module mod_atmos_phy_ch_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   use scale_tracer
   !-----------------------------------------------------------------------------
@@ -113,8 +114,8 @@ contains
     allocate( ATMOS_PHY_CH_RHOQ_t(KA,IA,JA,QS_CH:QE_CH) )
     ATMOS_PHY_CH_RHOQ_t(:,:,:,:) = UNDEF
 
-    allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
-    ATMOS_PHY_CH_O3(:,:,:) = UNDEF
+!!$    allocate( ATMOS_PHY_CH_O3(KA,IA,JA) )
+!!$    ATMOS_PHY_CH_O3(:,:,:) = UNDEF
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -167,15 +168,15 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    do j  = JS, JE
-    do i  = IS, IE
-       ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
-       ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
-    enddo
-    enddo
-
-    call COMM_vars8( ATMOS_PHY_CH_O3(:,:,:), 1 )
-    call COMM_wait ( ATMOS_PHY_CH_O3(:,:,:), 1 )
+!!$    do j  = JS, JE
+!!$    do i  = IS, IE
+!!$       ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
+!!$       ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
+!!$    enddo
+!!$    enddo
+!!$
+!!$    call COMM_vars8( ATMOS_PHY_CH_O3(:,:,:), 1 )
+!!$    call COMM_wait ( ATMOS_PHY_CH_O3(:,:,:), 1 )
 
     return
   end subroutine ATMOS_PHY_CH_vars_fillhalo
@@ -218,17 +219,11 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_CH_vars_restart_read
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
     use scale_file, only: &
        FILE_get_aggregate
     use scale_file_cartesC, only: &
        FILE_CARTESC_read, &
        FILE_CARTESC_flush
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
     integer  :: i, j
@@ -238,29 +233,25 @@ contains
        LOG_NEWLINE
        LOG_INFO("ATMOS_PHY_CH_vars_restart_read",*) 'Read from restart file (ATMOS_PHY_CH) '
 
-       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
-                               ATMOS_PHY_CH_O3(:,:,:)           ) ! [OUT]
+!!$       call FILE_CARTESC_read( restart_fid, VAR_NAME(1), 'ZXY', & ! [IN]
+!!$                               ATMOS_PHY_CH_O3(:,:,:)           ) ! [OUT]
+!!$
+!!$       if ( FILE_get_aggregate( restart_fid) ) then
+!!$          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+!!$
+!!$          ! fill K halos
+!!$          do j  = 1, JA
+!!$          do i  = 1, IA
+!!$             ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
+!!$             ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
+!!$          enddo
+!!$          enddo
+!!$       else
+!!$          call ATMOS_PHY_CH_vars_fillhalo
+!!$       end if
 
-       if ( FILE_get_aggregate( restart_fid) ) then
-          call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
+       call ATMOS_PHY_CH_vars_check
 
-          ! fill K halos
-          do j  = 1, JA
-          do i  = 1, IA
-             ATMOS_PHY_CH_O3(   1:KS-1,i,j) = ATMOS_PHY_CH_O3(KS,i,j)
-             ATMOS_PHY_CH_O3(KE+1:KA,  i,j) = ATMOS_PHY_CH_O3(KE,i,j)
-          enddo
-          enddo
-       else
-          call ATMOS_PHY_CH_vars_fillhalo
-       end if
-
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
-       end if
     else
        LOG_INFO("ATMOS_PHY_CH_vars_restart_read",*) 'invalid restart file for ATMOS_PHY_CH.'
     endif
@@ -348,8 +339,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
-       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_CH_RESTART_OUT_DTYPE, &
-                                  VAR_ID(1) )
+!!$       call FILE_CARTESC_def_var( restart_fid, VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), 'ZXY', ATMOS_PHY_CH_RESTART_OUT_DTYPE, &
+!!$                                  VAR_ID(1) )
     endif
 
     return
@@ -358,14 +349,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_CH_vars_restart_write
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     implicit none
 
     !---------------------------------------------------------------------------
@@ -374,18 +359,36 @@ contains
 
        call ATMOS_PHY_CH_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1), & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
-       end if
+       call ATMOS_PHY_CH_vars_check
 
-       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
+!!$       call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
 
     endif
 
     return
   end subroutine ATMOS_PHY_CH_vars_restart_write
+
+
+  subroutine ATMOS_PHY_CH_vars_check
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    implicit none
+
+!!$    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!!$                   ATMOS_PHY_CH_O3(:,:,:),        & ! (in)
+!!$                   0.0_RP, 1.0E3_RP, VAR_NAME(1), & ! (in)
+!!$                   __FILE__, __LINE__             ) ! (in)
+!!$
+!!$    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+!!$                           ATMOS_PHY_CH_O3(:,:,:), VAR_NAME(1), & ! (in)
+!!$                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),  & ! (in)
+!!$                           ATMOS_GRID_CARTESC_REAL_TOTVOL       ) ! (in)
+
+    return
+  end subroutine ATMOS_PHY_CH_vars_check
 
 end module mod_atmos_phy_ch_vars

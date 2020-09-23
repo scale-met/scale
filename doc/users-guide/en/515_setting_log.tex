@@ -19,7 +19,7 @@ Users can modify the settings of log file outputs by editing configuration files
 \verb|/                               | & \\
 }
 
-The name of the log file is controled by \nmitem{IO_LOG_BASENAME} in \namelist{PARAM_IO}.
+The name of the log file is controlled by \nmitem{IO_LOG_BASENAME} in \namelist{PARAM_IO}.
 In the case of above default setting, the name of log file for the master process is "\verb|LOG.pe000000|".
 \nmitem{IO_LOG_ALLNODE} controls whether to output log files for all processes or not.
 When \nmitem{IO_LOG_ALLNODE} is \verb|.true.|, log files for all processes will be created, otherwise the log file is output only from master process, namely rank 0.
@@ -28,14 +28,14 @@ If \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|, no log files are created an
 Only the information about elapsed time is sent to the standard output (STDOUT), even if \nmitem{IO_LOG_SUPPRESS} is set to \verb|.true.|.
 
 The NAMELIST parameters are output unless \nmitem{IO_LOG_NML_SUPPRESS} is set to \verb|.true.|.
-The paremeters are output to the log file as default.
+The parameters are output to the log file as default.
 They can be output different file by setting \nmitem{IO_NML_FILENAME}.
 Note that the file specified by \nmitem{IO_NML_FILENAME} can be used as input configuration file for later runs.
 
-The time step infomation is output to the log file.
+The time step information is output to the log file.
 Details of the information is explained in the next section.
 If \nmitem{IO_STEP_TO_STDOUT} is set as $>0$, the time step information is output to the STDOUT, too.
-All the time step infomation is output to the log file. For the STDOUT, the step interval of output is specified by the number of \nmitem{IO_STEP_TO_STDOUT}.
+All the time step information is output to the log file. For the STDOUT, the step interval of output is specified by the number of \nmitem{IO_STEP_TO_STDOUT}.
 
 
 

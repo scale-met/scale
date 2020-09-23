@@ -4,21 +4,21 @@
 \author{\Large Team SCALE\\ UGC working group}
 \date{\today}
 
-
 \usepackage[dvipdfmx]{graphicx, color}
 \usepackage[dvipdfmx]{hyperref}
 \usepackage{amsmath}
 \usepackage{ascmac}
 \usepackage{alltt}
-\usepackage[round]{natbib}
-\usepackage{tabularx}
 \usepackage{color}
 \usepackage{colortbl}
+\usepackage{comment}
+\usepackage{enumerate}
 \usepackage{fancybox}
-\usepackage{url}
+\usepackage[round]{natbib}
 \usepackage{longtable}
 \usepackage{pxjahyper}
-\usepackage{comment}
+\usepackage{tabularx}
+\usepackage{url}
 \hypersetup{% options for hyperref
  bookmarksopen=true,
  bookmarksnumbered=true,
@@ -47,10 +47,10 @@
 
 
 \begin{document}
-\CenterWallPaper{1.0}{figure/title_wallpaper.pdf}
+\CenterWallPaper{1.0}{../../figure/title_wallpaper.pdf}
 \maketitle
 \ClearWallPaper
-\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.pdf}
+\ULCornerWallPaper{.1}{../../figure/scale_logo_final_ULWB.pdf}
 \tableofcontents
 
 %-----------------------------------------------------------------------
@@ -69,8 +69,8 @@
  \input{21_install_prep}
  \chapter{\scalelib のコンパイル}
  \input{22_install_compile}
- \chapter{後処理ツール(net2g)のコンパイル}
- \input{23_install_net2g}
+ \chapter{後処理ツールのコンパイル}
+ \input{23_install_postp}
 
 \part{\scalerm のチュートリアル}
 \chapter{動作確認と基本操作について} \label{chap:tutorial_ideal}
@@ -100,8 +100,11 @@
 
 \part{各種設定} \label{part:basic_usel}
 
- \chapter{前処理}
+\chapter{前処理}
+  \input{53_setting_topo}
   \input{54_setting_howtoinput}
+  \clearpage
+  \input{setting_userdata}
 
  \chapter{\scalerm のフレームワーク}
    \input{513_setting_makeconf}
@@ -110,7 +113,6 @@
   \input{51_setting_domain}
   \clearpage
   \input{52_setting_mapproj}
-  \input{53_setting_topo}
   \clearpage
   \input{55_setting_time}
   \input{56_setting_history}
@@ -133,11 +135,14 @@
  \input{58_setting_physics_bl}
  \input{58_setting_physics_rd}
  \input{58_setting_physics_sf}
- \input{58_setting_physics_OcnLndUrb}
+ \input{58_setting_physics_Ocn}
+ \input{58_setting_physics_Lnd}
+ \input{58_setting_physics_Urb}
 
  \chapter{共通の設定}
  \input{515_setting_log}
  \input{56_setting_monitor}
+ \clearpage
  \input{516_setting_common}
 
 
@@ -162,7 +167,7 @@
  \input{63_setting_bulkjob}
 
 \bibliographystyle{plainnat}
-\bibliography{reference}
+\bibliography{../../reference}
 
 \begin{appendix}
 %\chapter{ライブラリ環境のインストール} \label{achap:env_setting}

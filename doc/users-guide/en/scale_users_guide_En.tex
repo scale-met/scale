@@ -9,14 +9,15 @@
 \usepackage{amsmath}
 \usepackage{ascmac}
 \usepackage{alltt}
-\usepackage[round]{natbib}
-\usepackage{tabularx}
 \usepackage{color}
 \usepackage{colortbl}
+\usepackage{enumerate}
 \usepackage{fancybox}
-\usepackage{url}
+\usepackage[round]{natbib}
 \usepackage{longtable}
 %\usepackage{pxjahyper}
+\usepackage{tabularx}
+\usepackage{url}
 \usepackage{here}
 \hypersetup{% options for hyperref
  bookmarksopen=false,
@@ -49,10 +50,10 @@
 
 
 \begin{document}
-\CenterWallPaper{1.0}{figure/title_wallpaper.pdf}
+\CenterWallPaper{1.0}{../../figure/title_wallpaper.pdf}
 \maketitle
 \ClearWallPaper
-\ULCornerWallPaper{.1}{figure/scale_logo_final_ULWB.pdf}
+\ULCornerWallPaper{.1}{../../figure/scale_logo_final_ULWB.pdf}
 \tableofcontents
 
 %-----------------------------------------------------------------------
@@ -71,8 +72,8 @@
  \input{21_install_prep}       % \section{Necessary system environment} \label{sec:req_env}
  \chapter{Compile of \scalelib}
  \input{22_install_compile}       % \section{Necessary system environment} \label{sec:req_env}
- \chapter{Compile of post-processing tool (net2g)}
- \input{23_install_net2g}
+ \chapter{Compile of post-processing tool}
+ \input{23_install_postp}
 
 
 \part{Tutorial for \scalerm}
@@ -105,8 +106,12 @@
 
 \part{Various settings} \label{part:basic_usel}
 
- \chapter{Pre-processing}
+\chapter{Pre-processing}
+ \input{53_setting_topo}
+ \clearpage
  \input{54_setting_howtoinput}
+ \clearpage
+ \input{setting_userdata}
 
  \chapter{Framework for \scalerm}
  \input{513_setting_makeconf}
@@ -115,7 +120,6 @@
  \input{51_setting_domain}
  \clearpage
  \input{52_setting_mapproj}
- \input{53_setting_topo}
  \clearpage
  \input{55_setting_time}
  \input{56_setting_history}
@@ -141,11 +145,14 @@
  \input{58_setting_physics_bl}
  \input{58_setting_physics_rd}
  \input{58_setting_physics_sf}
- \input{58_setting_physics_OcnLndUrb}
+ \input{58_setting_physics_Ocn}
+ \input{58_setting_physics_Lnd}
+ \input{58_setting_physics_Urb}
 
  \chapter{Common settings}
  \input{515_setting_log}
  \input{56_setting_monitor}
+ \clearpage
  \input{516_setting_common}
 
  \chapter{Post-processing} \label{sec:basic_usel_post}
@@ -169,7 +176,7 @@
  \input{63_setting_bulkjob}
 
 \bibliographystyle{plainnat}
-\bibliography{reference}
+\bibliography{../../reference}
 
 \begin{appendix}
 \part{Appendix}

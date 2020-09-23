@@ -17,6 +17,7 @@ module mod_atmos_phy_ae_vars
   use scale_precision
   use scale_io
   use scale_prof
+  use scale_debug
   use scale_atmos_grid_cartesC_index
   !-----------------------------------------------------------------------------
   implicit none
@@ -96,7 +97,9 @@ module mod_atmos_phy_ae_vars
 
   ! for history
   integer, private,allocatable :: HIST_Re_id(:)
+  integer, private,allocatable :: HIST_Qe_id(:)
   logical, private             :: HIST_Re
+  logical, private             :: HIST_Qe
 
   !-----------------------------------------------------------------------------
 contains
@@ -200,6 +203,13 @@ contains
        if ( HIST_Re_id(iv) > 0 ) HIST_Re = .true.
     end do
 
+    HIST_Qe = .false.
+    allocate( HIST_Qe_id(N_AE) )
+    do iv = 1, N_AE
+       call FILE_HISTORY_reg( 'Qe_'//trim(AE_NAME(iv)), 'mass mixing ratio of '//trim(AE_DESC(iv)), 'kg/kg', HIST_Qe_id(iv), fill_halo=.true., dim_type='ZXY' )
+       if ( HIST_Qe_id(iv) > 0 ) HIST_Qe = .true.
+    end do
+
     return
   end subroutine ATMOS_PHY_AE_vars_setup
 
@@ -265,12 +275,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Read restart
   subroutine ATMOS_PHY_AE_vars_restart_read
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file, only: &
        FILE_get_aggregate
     use scale_file_cartesC, only: &
@@ -302,12 +306,8 @@ contains
           call ATMOS_PHY_AE_vars_fillhalo
        end if
 
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
-       end if
+       call ATMOS_PHY_AE_vars_check
+
     else
        LOG_INFO("ATMOS_PHY_AE_vars_restart_read",*) 'invlaid restart file ID for ATMOS_PHY_AE.'
     endif
@@ -405,12 +405,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Write restart
   subroutine ATMOS_PHY_AE_vars_restart_write
-    use scale_statistics, only: &
-       STATISTICS_checktotal, &
-       STATISTICS_total
-    use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_VOL, &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_file_cartesC, only: &
        FILE_CARTESC_write_var
     implicit none
@@ -420,12 +414,7 @@ contains
 
        call ATMOS_PHY_AE_vars_fillhalo
 
-       if ( STATISTICS_checktotal ) then
-          call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                 ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
-                                 ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
-                                 ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
-       end if
+       call ATMOS_PHY_AE_vars_check
 
        call FILE_CARTESC_write_var( restart_fid, VAR_ID(1), ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), 'ZXY' ) ! [IN]
 
@@ -458,18 +447,33 @@ contains
        end do
     end if
 
+    if ( HIST_Qe ) then
+       call ATMOS_PHY_AE_vars_get_diagnostic( &
+            QTRC(:,:,:,:), RH(:,:,:), & ! [IN]
+            Qe=WORK(:,:,:,:)          ) ! [OUT]
+       do iv = 1, N_AE
+          if ( HIST_Qe_id(iv) > 0 ) &
+               call FILE_HISTORY_put( HIST_Qe_id(iv), WORK(:,:,:,iv) )
+       end do
+    end if
+
     return
   end subroutine ATMOS_PHY_AE_vars_history
 
   subroutine ATMOS_PHY_AE_vars_get_diagnostic( &
        QTRC, RH, &
        Re, Qe   )
+    use scale_time, only: &
+       TIME_NOWDAYSEC
     use scale_tracer, only: &
        QA
     use scale_atmos_aerosol, only: &
        N_AE
     use scale_atmos_phy_ae_kajino13, only: &
        ATMOS_PHY_AE_kajino13_effective_radius
+    use scale_atmos_phy_ae_offline, only: &
+       ATMOS_PHY_AE_offline_effective_radius, &
+       ATMOS_PHY_AE_offline_qtrc2qaero
     use mod_atmos_admin, only: &
        ATMOS_PHY_AE_TYPE
 
@@ -480,15 +484,22 @@ contains
 
     if ( present(Re) ) then
        if ( .not. DIAG_Re ) then
+
           select case ( ATMOS_PHY_AE_TYPE )
           case ( 'KAJINO13' )
              call ATMOS_PHY_AE_kajino13_effective_radius( &
                      KA, IA, JA, QA_AE, &
                      QTRC(:,:,:,QS_AE:QE_AE), RH(:,:,:), & ! [IN]
                      ATMOS_PHY_AE_Re(:,:,:,:)            ) ! [OUT]
+          case ( 'OFFLINE' )
+             call ATMOS_PHY_AE_offline_effective_radius( &
+                     KA, IA, JA,              &
+                     RH(:,:,:),               & ! [IN]
+                     ATMOS_PHY_AE_Re(:,:,:,:) ) ! [OUT]
           case default
              ATMOS_PHY_AE_Re(:,:,:,:) = 0.0_RP
           end select
+
           DIAG_Re = .true.
        end if
 !OCL XFILL
@@ -497,10 +508,17 @@ contains
 
     if ( present(Qe) ) then
        if ( .not. DIAG_Qe ) then
+
           select case ( ATMOS_PHY_AE_TYPE )
+          case ( 'OFFLINE' )
+             call ATMOS_PHY_AE_offline_qtrc2qaero( &
+                     KA, IA, JA,              &
+                     TIME_NOWDAYSEC,          &
+                     ATMOS_PHY_AE_Qe(:,:,:,:) ) ! [OUT]
           case default
              ATMOS_PHY_AE_Qe(:,:,:,:) = 0.0_RP
           end select
+
           DIAG_Qe = .true.
        end if
 !OCL XFILL
@@ -516,5 +534,27 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_vars_reset_diagnostics
+
+  subroutine ATMOS_PHY_AE_vars_check
+    use scale_statistics, only: &
+       STATISTICS_checktotal, &
+       STATISTICS_total
+    use scale_atmos_grid_cartesC_real, only: &
+       ATMOS_GRID_CARTESC_REAL_VOL, &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL
+    implicit none
+
+    call VALCHECK( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                   ATMOS_PHY_AE_CCN(:,:,:),        & ! (in)
+                   0.0_RP, 1.0E12_RP, VAR_NAME(1), & ! (in)
+                   __FILE__, __LINE__              ) ! (in)
+
+    call STATISTICS_total( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                           ATMOS_PHY_AE_CCN(:,:,:), VAR_NAME(1), &
+                           ATMOS_GRID_CARTESC_REAL_VOL(:,:,:),   & ! (in)
+                           ATMOS_GRID_CARTESC_REAL_TOTVOL        ) ! (in)
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_check
 
 end module mod_atmos_phy_ae_vars

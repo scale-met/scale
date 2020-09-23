@@ -57,6 +57,7 @@ program fio_ico2ll
   !--- NAMELIST
   integer                :: glevel              = -1
   integer                :: rlevel              = -1
+  integer                :: ndmd                = 10
   integer                :: npe                 = -1
   character(len=H_LONG)  :: layerfile_dir       = ''
   character(len=H_LONG)  :: llmap_base          = ''
@@ -71,6 +72,7 @@ program fio_ico2ll
   logical                :: use_NearestNeighbor = .false.
   logical                :: output_grads        = .true.
   logical                :: output_netcdf       = .false.
+  integer                :: netcdf_comp_level   = 1         ! netcdf deflate (compression) level. 0: no-compression, 1: normal, 2-9: higher
   logical                :: datainfo_nodep_pe   = .true.    ! <- can be .true. if data header do not depend on pe.
   character(len=H_SHORT) :: selectvar(max_nvar) = ''
   integer                :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
@@ -81,6 +83,7 @@ program fio_ico2ll
   namelist /PARAM_ICO2LL/ &
      glevel,              &
      rlevel,              &
+     ndmd,                &
      npe,                 &
      layerfile_dir,       &
      llmap_base,          &
@@ -95,6 +98,7 @@ program fio_ico2ll
      use_NearestNeighbor, &
      output_grads,        &
      output_netcdf,       &
+     netcdf_comp_level,   &
      datainfo_nodep_pe,   &
      selectvar,           &
      nlim_llgrid,         &
@@ -265,7 +269,7 @@ program fio_ico2ll
   !#########################################################
 
   PALL_global   = npe
-  PRC_RGN_total = 10 * (4**rlevel)
+  PRC_RGN_total = ndmd * (4**rlevel)
   PRC_RGN_local = PRC_RGN_total / PALL_global
 
   if ( mod( PALL_global, nprocs) /= 0 ) then
@@ -278,6 +282,7 @@ program fio_ico2ll
   allocate( PRC_RGN_lp2r    (PRC_RGN_local,0:PALL_global-1) )
 
   call PRC_ICOA_RGN_generate( rlevel,                  & ! [IN]
+                              ndmd,                    & ! [IN]
                               PALL_global,             & ! [IN]
                               PRC_RGN_total,           & ! [IN]
                               PRC_RGN_local,           & ! [IN]
@@ -811,7 +816,8 @@ program fio_ico2ll
                                        var_name    = trim(var_name_nc),          & ! [IN]
                                        var_desc    = trim(var_desc_nc),          & ! [IN]
                                        var_units   = trim(var_unit_nc),          & ! [IN]
-                                       var_missing = CONST_UNDEF4                 ) ! [IN]
+                                       var_missing = CONST_UNDEF4,               & ! [IN]
+                                       netcdf_comp_level = netcdf_comp_level    )  ! [IN]
 
            deallocate(lon_tmp)
            call PROF_rapend  ('+FILE O NETCDF')
@@ -1399,7 +1405,7 @@ contains
        var_name_nc = "Q2"
        var_desc_nc = "Chlorine gas mixing ratio"
        var_unit_nc = "kg/kg"
-    case( 'PRCP', 'prcp' )
+    case( 'PREC', 'prec' )
        var_name_nc = "PRECL"
        var_desc_nc = "Large-scale precipitation rate"
        var_unit_nc = "m/s"

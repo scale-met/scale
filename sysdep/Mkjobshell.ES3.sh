@@ -81,9 +81,9 @@ cat << EOF3 > ./run.sh
 ################################################################################
 #PBS -T mpisx
 #PBS -q S
-#PBS -l cpunum_job=1
-#PBS -l cputim_job=01:00:00
-#PBS -l memsz_job=80gb
+#PBS -b ${TPROC}
+#PBS -l elapstim_req=01:00:00
+#PBS -l memsz_job=40gb
 
 #PBS -v F_RECLUNIT=byte
 #PBS -v F_ERRCNT=0
@@ -92,7 +92,7 @@ cat << EOF3 > ./run.sh
 #PBS -v MPIPROGINF=ALL_DETAIL
 #PBS -v F_SETBUF=102400
 
-cd ${RUNDIR}
+cd `pwd`
 EOF3
 
 # link to file or directory
@@ -112,10 +112,10 @@ if [ ${ndata} -gt 0 ]; then
       fi
 
       if [ -f ${src} ]; then
-         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         echo "ln -sf ${src} ./${dst}" >> ./run.sh
       elif [ -d ${src} ]; then
          echo "rm -f          ./${dst}" >> ./run.sh
-         echo "ln -svf ${src} ./${dst}" >> ./run.sh
+         echo "ln -sf ${src} ./${dst}" >> ./run.sh
       else
          echo "datafile does not found! : ${src}"
          exit 1
@@ -142,7 +142,7 @@ if [ ${ndata} -gt 0 ]; then
          dst=${triple[2]}.pe${PE}${nc}
 
          if [ -f ${src} ]; then
-            echo "ln -svf ${src} ./${dst}" >> ./run.sh
+            echo "ln -sf ${src} ./${dst}" >> ./run.sh
          else
             echo "datafile does not found! : ${src}"
             exit 1

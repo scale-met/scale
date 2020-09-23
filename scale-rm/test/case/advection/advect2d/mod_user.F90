@@ -82,7 +82,7 @@ module mod_user
   real(RP),               private, save :: Lx
   real(RP),               private, save :: Ly
 
-  integer, private :: I_NC
+  integer, private :: I_TRACER
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -90,26 +90,14 @@ contains
   subroutine USER_tracer_setup
     use scale_tracer, only: &
          TRACER_regist
-    use mod_atmos_phy_mp_vars, only: &
-         QA_MP, &
-         QS_MP, &
-         QE_MP
-    use mod_atmos_phy_mp_driver, only: &
-         ATMOS_PHY_MP_USER_qhyd2qtrc
     implicit none
     !---------------------------------------------------------------------------
 
-    call TRACER_REGIST( QS_MP,                & ! [OUT]
+    call TRACER_REGIST( I_TRACER,             & ! [OUT]
                         1,                    & ! [IN]
-                        (/'NC'/),             & ! [IN]
+                        (/'PTracer'/),        & ! [IN]
                         (/'Passive tracer'/), & ! [IN]
                         (/'1'/)               ) ! [IN]
-
-    QA_MP = 1
-    QE_MP = QS_MP
-    I_NC = QA_MP
-
-    ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
     return
   end subroutine USER_tracer_setup
@@ -172,8 +160,8 @@ contains
        do k = KS, KE
           x_ = CX(i)
           y_ = CY(j)
-          QTRC(k,i,j,I_NC) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
-                           * cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
+          QTRC(k,i,j,I_TRACER) = cos( WaveNumCOS * 2.0_RP * PI / Lx *  x_ )  &
+                               * cos( WaveNumCOS * 2.0_RP * PI / Lx *  y_ )
 
        enddo
        enddo
@@ -261,45 +249,19 @@ contains
        enddo
        enddo
 
-       l2_error = calc_l2error( QTRC(:,:,:,I_NC), ExactSol )
-       linf_error = calc_linferror( QTRC(:,:,:,I_NC), ExactSol )
+       l2_error = calc_l2error( QTRC(:,:,:,I_TRACER), ExactSol )
+       linf_error = calc_linferror( QTRC(:,:,:,I_TRACER), ExactSol )
        if ( mod(NOWDAYSEC, 10.0_RP) == 0 ) then
           LOG_WARN("USER_update",*) "t=", NOWDAYSEC, "l2=", l2_error, "linf=", linf_error
        end if
        call FILE_HISTORY_in( l2_error, 'l2error', 'l2error', '1' )
        call FILE_HISTORY_in( linf_error, 'linferror', 'linferror', '1' )
-!       call FILE_HISTORY_in( (QTRC(:,:,:,I_NC) - ExactSol)**2, 'NC_diff', 'NC_diff', '1' )
+       call FILE_HISTORY_in( (QTRC(:,:,:,I_TRACER) - ExactSol)**2, 'PTracer_diff', 'PTracer_diff', '1' )
 
        return
     end if
 
   end subroutine USER_update
-
-  subroutine USER_qhyd2qtrc( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       QV, QHYD, &
-       QTRC, &
-       QNUM  )
-    use scale_atmos_hydrometeor, only: &
-         N_HYD, &
-         I_HC
-    use mod_atmos_phy_mp_vars, only: &
-         QA_MP
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP), intent(in) :: QV   (KA,IA,JA)
-    real(RP), intent(in) :: QHYD(KA,IA,JA,N_HYD)
-
-    real(RP), intent(out) :: QTRC(KA,IA,JA,QA_MP)
-
-    real(RP), intent(in), optional :: QNUM(KA,IA,JA,N_HYD)
-
-    QTRC(:,:,:,1) = QNUM(:,:,:,I_HC)
-
-    return
-  end subroutine USER_qhyd2qtrc
 
   !--------------------------------------------------------------------------------------
 

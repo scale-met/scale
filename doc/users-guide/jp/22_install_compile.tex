@@ -2,7 +2,7 @@
 %  File 21_install.tex
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{ダウンロードと環境設定} \label{sec:scale_compile}
+\section{ダウンロードと環境設定} \label{sec:download}
 %====================================================================================
 
 以下の説明で使用する環境は次のとおりである。
@@ -15,7 +15,7 @@
 
 \subsubsection{ソースコードの入手} \label{subsec:get_source_code}
 %-----------------------------------------------------------------------------------
-最新のリリース版ソースコードは、\url{http://scale.aics.riken.jp/ja/download/index.html}から取得できる。
+最新のリリース版ソースコードは、\url{https://scale.riken.jp/ja/download/index.html}から取得できる。
 ソースコードのtarballファイルを展開すると、\texttt{scale-{\version}/} というディレクトリができる。
 \begin{alltt}
  $ tar -zxvf scale-{\version}.tar.gz
@@ -41,8 +41,7 @@
  Linux OS x86-64 & icc/ifort & intelMPI & Makedef.Linux64-intel-impi \\ \cline{2-4}
                  & icc/ifort    & SGI-MPT & Makedef.Linux64-intel-mpt \\ \hline
  macOS           & gcc/gfortran & openMPI & Makedef.MacOSX-gnu-ompi \\ \hline
- スーパーコンピュータ「京」 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.K \\ \hline
- Fujitsu PRIME-HPC FX10 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX10 \\ \hline
+ Fujitsu PRIME-HPC FX100 & fccpx/frtpx & mpiccpx/mpifrtpx & Makedef.FX100 \\ \hline
 \end{tabularx}
 \label{tab:makedef}
 \end{center}
@@ -62,11 +61,11 @@
 \begin{verbatim}
  $ export SCALE_NETCDF_INCLUDE="-I/opt/netcdf/include"
  $ export SCALE_NETCDF_LIBS= \
-        "-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -hdf5_hl -lhdf5 -lm -lz"
+        "-L/opt/hdf5/lib64 -L/opt/netcdf/lib64 -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lm -lz"
 \end{verbatim}
 
 
-\section{コンパイル} %\label{subsec:compile}
+\section{コンパイル} \label{sec:compile}
 %-----------------------------------------------------------------------------------
 
 \subsubsection{\scalerm のコンパイル}
@@ -143,7 +142,7 @@
  SCALE\_USE\_FIXEDINDEX   & 格子サイズをコンパイル時に固定して最適化促進  \\ \hline
  SCALE\_ENABLE\_OPENMP    & OpenMP機能を有効にする  \\ \hline
  SCALE\_ENABLE\_OPENACC   & OpenACC機能を有効にする  \\ \hline
- SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（京・FXのみ）  \\ \hline
+ SCALE\_USE\_AGRESSIVEOPT & 副作用が出る可能のある強い最適化まで行う（FXのみ）  \\ \hline
  SCALE\_DISABLE\_INTELVEC & ベクトル化オプションの抑制（インテルコンパイラのみ）  \\ \hline
  SCALE\_NETCDF\_INCLUDE   & NetCDFライブラリのincludeディレクトリパス  \\ \hline
  SCALE\_NETCDF\_LIBS      & NetCDFライブラリのディレクトリパスとライブラリ指定  \\ \hline

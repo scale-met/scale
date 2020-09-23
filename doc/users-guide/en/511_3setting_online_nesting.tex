@@ -12,8 +12,8 @@ In the online nesting experiment in \scalerm, the time integrations of multiple 
 
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/mpisplit_nesting.pdf}\\
-  \caption{ MPI process distribution in the online nesting experiment. In this example,   13 processes were launched at the beginning. These processes were distributed appropriately;     4-MPI parallel for $2 \times 2$ in Domain 1 and 9-MPI parallel for $3 \times 3$ in Domain 2 were executed.     MPI communication flowed from Domain 1 to Domain 2.
+  \includegraphics[width=0.8\hsize]{./../../figure/mpisplit_nesting.pdf}\\
+  \caption{ MPI process distribution in the online nesting experiment. In this example, 13 processes were launched at the beginning. These processes were distributed appropriately; 4-MPI parallel for $2 \times 2$ in Domain 1 and 9-MPI parallel for $3 \times 3$ in Domain 2 were executed. MPI communication flowed from Domain 1 to Domain 2.
   }
   \label{fig_mpisplit}
 \end{center}
@@ -27,26 +27,28 @@ The below explanation assumes that the generations of the topography/land-use da
 
 
 \subsubsection{Configurations for Online Nesting}
-In the configuration files \verb|run.***.conf| for the parent and child domains, some nesting settings are added to \namelist{PARAM_NEST}:
+In the configuration files \verb|run.***.conf| for the parent and child domains, some nesting settings are added to \namelist{PARAM_COMM_CARTESC_NEST}:
 
 \noindent {\rm --- Configuration in \verb|run.d01.conf| ---}\\
 \editboxtwo{
-\verb|&PARAM_NEST|                          & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 1,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .true., | & \\
 \verb| ONLINE_IAM_DAUGHTER      = .false.,| & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
+\verb| ONLINE_USE_VELZ          = .false.,| & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
 ~\\
 \noindent {\rm --- Configuration in \verb|run.d02.conf| ---}\\
 \editboxtwo{
-\verb|&PARAM_NEST| & \\
+\verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| ONLINE_DOMAIN_NUM        = 2,      | & The domain ID, which is enumerated from the outermost one as 1.\\
 \verb| ONLINE_IAM_PARENT        = .false.,| & \\
 \verb| ONLINE_IAM_DAUGHTER      = .true., | & \\
-\verb| ONLINE_BOUNDARY_USE_QHYD = .true., | & \\
+\verb| ONLINE_BOUNDARY_USE_QHYD = .false.,| & \\
+\verb| ONLINE_USE_VELZ          = .false.,| & \\
 \verb| ONLINE_AGGRESSIVE_COMM   = .true., | & \\
 \verb|/| \\
 }
@@ -74,9 +76,12 @@ Table \ref{tab:triple_nested} gives the configuration for an $N$-domain nesting 
 \end{table}
 
 
-\nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation is used for the boundary condition. When the boundary condition is generated from external input data, water condensations are not usually employed. However, in the nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because there is often no difference in physical schemes between the two domains.
-%, and the resolution of both are similar.
-The delay in the generation of clouds and rain, as influence on the target domain, is expected to be suppressed by this remedy.
+\nmitem{ONLINE_BOUNDARY_USE_QHYD} specifies whether water condensation (hydrometeors) is used for the boundary condition.
+When the boundary condition is generated from external input data, water condensations are not usually employed.
+However, in the \scalerm nesting experiment, water condensation calculated in the parent domain can be used for the boundary condition of the child domain because the two domains usually use the same physical schemes.
+By receving hydrometeors' condition at the lateral boundary,
+the delay in the generation of clouds and rain near the inflow boundary of the nested domain is expected to be suppressed.
+\nmitem{ONLINE_USE_VELZ} specifies whether vertical velocity is used for the boundary condition in the child domain.
 
 \subsubsection{Configuration of Launcher}
 \label{subsubsec:launch}
@@ -120,10 +125,10 @@ The calculation may sometimes abort, outputting the message below. This is the e
 \subsubsection{Guideline for Distribution of MPI Processes}
 %-------------------------------------------------------------------------
 
-As shown in Fig. \ref{fig_mpisplit}, no MPI process is shared between the multiple domains in the online nesting experiment. In other words, each MPI process takes charge of a part of a specific domain. Therefore, the user should determine how many MPI processes to allocate to each domain. When this allocation is not appropriate, a long waiting time is incurred. To avoid this situation, it is reasonable to allocate processes such the magnitude of time integrations for each process is as similar in value as is possible among processes\footnote{More accurately, floating-point operations should be estimated.}. Here, the magnitude of time integration, i.e., computational effort, is defined as the product of the number of grids and time steps.
+As shown in Fig. \ref{fig_mpisplit}, no MPI process is shared between the multiple domains in the online nesting experiment. In other words, each MPI process takes charge of a part of a specific domain. Therefore, the user should determine how many MPI processes to allocate to each domain. When this allocation is not appropriate, a long waiting time is incurred. To avoid this situation, it is reasonable to allocate processes so that the magnitude of time integrations for each process is as similar as possible among processes\footnote{More accurately, floating-point operations should be estimated.}. Here, the magnitude of time integration, i.e., computational effort, is defined as the product of the number of grids and time steps.
 
-Let us consider $N$-domain nesting. The number of grids in the x, y, and z directions in n-th domain are denoted by
-\verb|IMAX_n|, \verb|JMAX_n|, and \verb|KMAX_n|, respectively.
+Let us consider $N$-domain nesting. The total number of grids in the x, y, and z directions in n-th domain are denoted by
+\verb|IMAXG_n|, \verb|JMAXG_n|, and \verb|KMAX_n|, respectively.
 \verb|DT_n| is the time interval \nmitem{TIME_DT} in the n-th domain.
 Using the time-step of the outermost domain (n=1) \verb|DT_1| as a benchmark,
 the necessary number of time steps in the n-th domain is estimated as:
@@ -132,17 +137,19 @@ the necessary number of time steps in the n-th domain is estimated as:
 \end{eqnarray}
 The calculation for the n-th domain is derived by multiplying the number of grids as
 \begin{eqnarray}
- \verb|OPR_n| = \verb|IMAX_n| \times \verb|JMAX_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
+ \verb|OPR_n| = \verb|IMAXG_n| \times \verb|JMAXG_n| \times \verb|KMAX_n| \times \verb|TSTEP_n| \nonumber
 \end{eqnarray}
-The standard number of processes allocated to the n-th domain is estimated as
+Therefore, the standard number of processes allocated to the n-th domain (\verb|MPI_n|) is estimated as
 \begin{eqnarray}
- \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} },
+ \verb|MPI_n| = \verb|MPI_total| \times \frac{ \texttt{OPR\_n} }{ \sum_{m=1}^N \texttt{OPR\_m} },
 \end{eqnarray}
 where \verb|MPI_total| is the total number of MPI processes.
 
-The number of processes distributed along the x and y directions \nmitem{PRC_NUM_X, PRC_NUM_Y} can be arbitrarily decided.
-It is recommended to configure them so that the difference between \verb|IMAX| and \verb|JMAX| is as small as possible. This is because such a configuration can reduce the area of the halo. As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism,  e.g., in the K computer, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}. 
+The number of processes that are distributed along the x and y directions \nmitem{PRC_NUM_X, PRC_NUM_Y} out of \verb|MPI_n| can be arbitrarily decided.
+It is recommended to configure them so that the difference between the number of grid along \XDIR ($\nmitemeq{IMAX}=\nmitemeq{IMAXG}/\nmitemeq{PRC_NUM_X}$) and that along \YDIR ($\nmitemeq{JMAX}=\nmitemeq{JMAXG}/\nmitemeq{PRC_NUM_Y}$) is as small as possible.
+This is because such a configuration can reduce the area of the halo.
+As a result, high computational performance can be obtained\footnote{Note that in case of hybrid parallelization used together with thread parallelism, it is necessary to take a larger number of grids along the y-axis than the x-axis to minimize computational imbalance between threads.}.
 
 
-In the above explanation, only the number of grids and time steps are considered. However, in actual calculations such as nesting simulation in real atmospheric experiment, the time interval for each physical process, and intra-domain and inter-domain communications affect the elapsed time. In the online nesting configuration, the calculation in the innermost domain is largest in general.  In case of large-scale computations, long integration and many ensemble simulations, it is recommended to tune for the distribution of processes following the above rough estimation.
+In the above explanation, only the number of grids and time steps are considered. However, in actual calculations such as nesting simulation in real atmospheric experiment, the time interval for each physical process, and intra-domain and inter-domain communications affect the elapsed time. In the online nesting configuration, because the calculation in the innermost domain is largest in general, it is reasonable to distribute MPI processes so that waiting time caused by MPI communications is minimized in the innermost domain.  In case of large-scale computations, long integration and many ensemble simulations, it is recommended to tune for the distribution of processes following the above rough estimation.
 

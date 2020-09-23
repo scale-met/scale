@@ -23,7 +23,7 @@
 #define ALREADY_EXISTED_CODE 2
 
 /* limit of files */
-#define FILE_MAX 512
+#define FILE_MAX 2048
 /* limit of variables */
 #define VAR_MAX 40960
 /* limit of dimensions */

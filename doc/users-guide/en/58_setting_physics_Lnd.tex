@@ -1,0 +1,145 @@
+%-------------------------------------------------------------------------------
+\section{Land Model} \label{sec:basic_usel_land}
+%-------------------------------------------------------------------------------
+Similar to the ocean model, the land model consists of two main parts, i.e., an update of the state of the land surface, and calculation of fluxes at the interface of atmosphere and land. The timing of the calling of these scheme is configured in \namelist{PARAM_TIME} (Refer to Section \ref{sec:timeintiv} for the details).
+
+%-------------------------------------------------------------------------------
+\subsubsection{Land Scheme}
+%-------------------------------------------------------------------------------
+The land scheme that updates the state of land, e.g., land surface temperature, soil temperature, and soil moisture, is configured by \nmitem{LAND_DYN_TYPE} in \namelist{PARAM_LAND} in the files \verb|init.conf| and \verb|run.conf|:
+%
+\editboxtwo{
+\verb|&PARAM_LAND                | & \\
+\verb| LAND_DYN_TYPE = "NONE",   | & ; Select the land type shown in Table \ref{tab:nml_land_dyn}\\
+\verb| LAND_SFC_TYPE = "SKIN",   | & ; (For \verb|BUCKET|) Select the land surface type shown in Table \ref{tab:nml_land_sfc}\\
+\verb|/                          | & \\
+}
+
+\begin{table}[hbt]
+\begin{center}
+  \caption{List of land scheme types}
+  \label{tab:nml_land_dyn}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
+      \verb|NONE or OFF| & Do not use land model \\
+      \verb|BUCKET|      & Heat diffusion/bucket model \\
+      \verb|INIT|        & Fixed to the initial condition \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+
+If the land type is included in the land use setup by \namelist{PARAM_LANDUSE}, neither \verb|NONE| nor \verb|OFF| can be given to \nmitem{LAND_DYN_TYPE}. If this condition is not satisfied, the program immediately terminates without computation, outputting the following message to the LOG file:
+\msgbox{
+\verb|ERROR [CPL_vars_setup] Land fraction exists, but land component has not been called.|\\
+\verb| Please check this inconsistency. STOP.| \\
+}
+
+If \nmitem{LAND_DYN_TYPE} except \verb|"NONE"| or \verb|"OFF"| is specified,
+the input data of land use distribution and a parameter table including information such as roughness length and albedo for each land-use category are required.
+An example of the parameter table is provided
+in the file \verb|scale-rm/test/data/land/param.bucket.conf|.\\
+
+%-------------------------------------------------------------------------------
+\subsubsection{Setting vertical grids for land model}
+%-------------------------------------------------------------------------------
+
+The number of vertical layers for land model is specified by \nmitem{LKMAX} in \namelist{PARAM_LAND_GRID_CARTESC_INDEX}.
+The vertical grid intervals are specified by \nmitem{LDZ} in \namelist{PARAM_LAND_GRID_CARTESC}. The unit is [m].
+\editboxtwo{
+\verb|&PARAM_LAND_GRID_CARTESC_INDEX| & \\
+\verb| LKMAX = 7,|  & ; number of vertical layers \\
+\verb|/|\\
+\\
+\verb|&PARAM_LAND_GRID_CARTESC| & \\
+\verb| LDZ = 0.05, 0.15, 0.30, 0.50, 1.00, 2.00, 4.00,| & ; grid interval along the vertical direction\\
+\verb|/|\\
+}
+You can specify an array in \nmitem{LDZ} for the number of vertical layers specified by \nmitem{LKMAX}.
+The order of the array is from the ground surface to the underground.
+
+
+%-------------------------------------------------------------------------------
+\subsubsection{Fluxes between atmosphere and land surface}
+%-------------------------------------------------------------------------------
+The surface fluxes between atmosphere and land surface is calculated in the scheme selected by \nmitem{LAND_SFC_TYPE}. The bulk scheme specified in \nmitem{BULKFLUX_TYPE} in \namelist{PARAM_BULKFLUX} is used for this calculation. Refer to Section \ref{sec:basic_usel_surface} for more detail of bulk scheme.
+
+
+%-------------------------------------------------------------------------------
+\subsection{Fixed to initial condition}
+%-------------------------------------------------------------------------------
+
+If \nmitem{LAND_DYN_TYPE} is \verb|INIT|, the land condtion is fixed to the initial condition.
+In this case, the number of vertical layer (\nmitem{LKMAX}) must be 1.
+The layer depth can be arbitrary as long as it is positive value.
+
+
+
+%-------------------------------------------------------------------------------
+\subsection{\texttt{BUCKET} land scheme}
+%-------------------------------------------------------------------------------
+
+%-------------------------------------------------------------------------------
+\subsubsection{land surface skin temperature}
+%-------------------------------------------------------------------------------
+
+The definition of the land surface skin temperature is specified by \nmitem{LAND_SFC_TYPE} in \namelist{PARAM_LAND}.
+The default setting is \verb|SKIN|.
+%
+\begin{table}[hbt]
+\begin{center}
+  \caption{List of land surface scheme types for \texttt{BUCKET} land scheme}
+  \label{tab:nml_land_sfc}
+  \begin{tabularx}{150mm}{lX} \hline
+    \rowcolor[gray]{0.9}  Schemes & Description of scheme \\ \hline
+      \verb|SKIN|       & Determine surface temperature at which energy fluxes balance \\
+      \verb|FIXED-TEMP| & Use the soil temperature at the uppermost land level as surface temperature \\
+    \hline
+  \end{tabularx}
+\end{center}
+\end{table}
+
+When \nmitem{LAND_SFC_TYPE} is \verb|SKIN|,
+the surface temperature is determined so that the heat budget of the energy fluxes at the ground surface is balanced.
+In practice, the surface temperature is calculated iteratively to reduce residual from the heat balance based on \citet{tomita_2009}.
+This surface temperature is different from the soil temperature at the uppermost layer of a land model.
+
+When \nmitem{LAND_SFC_TYPE} is \verb|FIXED-TEMP|,
+the surface temperature is assumed to be the same as the soil temperature at the uppermost layer of a land model;
+the soil temperature is determined by the land model physics.
+Heat energy fluxes are calculated by the given surface temperature.
+The residuals of heat balance are provided to the land model as ground heat flux.
+
+%-------------------------------------------------------------------------------
+\subsubsection{land nudging}
+%-------------------------------------------------------------------------------
+
+If \nmitem{LAND_DYN_TYPE} is \verb|BUCKET|, you can apply relaxation (nudging) of land variables by using external data.
+The parameter of the nudging can be specified in \verb|run.conf|.
+
+\editboxtwo{
+ \verb|&PARAM_LAND_DYN_BUCKET                                    | & \\
+ \verb| LAND_DYN_BUCKET_nudging                       = .false., | & ; use nudging for land variables? \\
+ \verb| LAND_DYN_BUCKET_nudging_tau                   = 0.0_DP,  | & ; relaxation time for nudging \\
+ \verb| LAND_DYN_BUCKET_nudging_tau_unit              = "SEC",   | & ; relaxation time unit \\
+ \verb| LAND_DYN_BUCKET_nudging_basename              = "",      | & ; base name of input data \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_year  = .false., | & ; annually cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_month = .false., | & ; monthly cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false., | & ; dayly cyclic data? \\
+ \verb| LAND_DYN_BUCKET_nudging_step_fixed            = 0,       | & ; Option for using specific step number of the data \\
+ \verb| LAND_DYN_BUCKET_nudging_offset                = 0.0_RP,  | & ; offset value of the variables \\
+ \verb| LAND_DYN_BUCKET_nudging_defval                = UNDEF,   | & ; default value of the variables \\
+ \verb| LAND_DYN_BUCKET_nudging_check_coordinates     = .true.,  | & ; check coordinate of variables \\
+ \verb| LAND_DYN_BUCKET_nudging_step_limit            = 0,       | & ; maximum limit of the time steps of the data \\
+ \verb|/                                                        | & \\
+}
+
+When \nmitem{LAND_DYN_BUCKET_nudging_tau} is 0, the value of land variables is totally replaced by the external file. This configuration is the same as \nmitem{LAND_TYPE} = \verb|"FILE"| in the old version.
+%
+When \nmitem{LAND_DYN_BUCKET_nudging_step_fixed} is less than 1, the certain time of the input data is used and temporal interpolation is applied to calculate the value of current time. When the specific step number is set for \nmitem{LAND_DYN_BUCKET_nudging_step_fixed}, the data of that step is always used without interpolation.
+%
+When the number larger than 0 is set to \nmitem{LAND_DYN_BUCKET_nudging_step_limit}, The data at the time step exceed this limit would not be read. When \nmitem{LAND_DYN_BUCKET_nudging_step_limit} is 0, no limit is set.
+
+
+

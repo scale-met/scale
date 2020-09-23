@@ -75,33 +75,41 @@ contains
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_setup
     use scale_atmos_grid_cartesC_index, only: &
-       ATMOS_GRID_CARTESC_INDEX_setup
+       ATMOS_GRID_CARTESC_INDEX_setup, &
+       IA, JA
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_setup, &
-       DX, &
-       DY
+       DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
+       CY => ATMOS_GRID_CARTESC_CY, &
+       DX, DY
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_setup
+       ATMOS_GRID_CARTESC_REAL_setup,        &
+       ATMOS_GRID_CARTESC_REAL_calc_areavol, &
+       REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
-       ATMOS_GRID_CARTESC_METRIC_setup
+       ATMOS_GRID_CARTESC_METRIC_setup, &
+       ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_ocean_grid_cartesC_index, only: &
        OCEAN_GRID_CARTESC_INDEX_setup
     use scale_ocean_grid_cartesC, only: &
        OCEAN_GRID_CARTESC_setup
     use scale_ocean_grid_cartesC_real, only: &
-       OCEAN_GRID_CARTESC_REAL_setup
+       OCEAN_GRID_CARTESC_REAL_setup, &
+       OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
     use scale_land_grid_cartesC, only: &
        LAND_GRID_CARTESC_setup
     use scale_land_grid_cartesC_real, only: &
-       LAND_GRID_CARTESC_REAL_setup
+       LAND_GRID_CARTESC_REAL_setup, &
+       LAND_GRID_CARTESC_REAL_set_areavol
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
     use scale_urban_grid_cartesC, only: &
        URBAN_GRID_CARTESC_setup
     use scale_urban_grid_cartesC_real, only: &
-       URBAN_GRID_CARTESC_REAL_setup
+       URBAN_GRID_CARTESC_REAL_setup, &
+       URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
        FILE_CARTESC_cleanup
@@ -111,16 +119,20 @@ contains
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_setup
     use scale_topography, only: &
-       TOPO_setup
+       TOPOGRAPHY_setup, &
+       TOPOGRAPHY_write
     use scale_landuse, only: &
-       LANDUSE_setup
+       LANDUSE_setup, &
+       LANDUSE_write
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_time, only: &
-       TIME_NOWDATE, &
-       TIME_NOWMS,   &
-       TIME_NOWSTEP, &
+       TIME_NOWDATE,   &
+       TIME_NOWSUBSEC, &
+       TIME_NOWSTEP,   &
        TIME_DTSEC
+    use scale_coriolis, only: &
+       CORIOLIS_setup
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -142,7 +154,6 @@ contains
     use scale_monitor, only: &
        MONITOR_write, &
        MONITOR_finalize
-
     use mod_atmos_driver, only: &
        ATMOS_driver_tracer_setup
     use mod_admin_versioncheck, only: &
@@ -166,9 +177,12 @@ contains
        ATMOS_do,          &
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
-       ATMOS_vars_setup,       &
-       ATMOS_RESTART_CHECK,    &
-       ATMOS_vars_restart_check
+       ATMOS_vars_setup,           &
+       ATMOS_RESTART_CHECK,        &
+       ATMOS_vars_restart_check,   &
+       ATMOS_vars_history_setpres, &
+       ATMOS_vars_history,         &
+       ATMOS_vars_monitor
     use mod_atmos_driver, only: &
        ATMOS_driver_setup,                    &
        ATMOS_driver_calc_tendency,            &
@@ -181,7 +195,9 @@ contains
        OCEAN_admin_setup, &
        OCEAN_do
     use mod_ocean_vars, only: &
-       OCEAN_vars_setup
+       OCEAN_vars_setup,   &
+       OCEAN_vars_history, &
+       OCEAN_vars_monitor
     use mod_ocean_driver, only: &
        OCEAN_driver_setup,         &
        OCEAN_driver_calc_tendency, &
@@ -190,7 +206,9 @@ contains
        LAND_admin_setup, &
        LAND_do
     use mod_land_vars, only: &
-       LAND_vars_setup
+       LAND_vars_setup,   &
+       LAND_vars_history, &
+       LAND_vars_monitor
     use mod_land_driver, only: &
        LAND_driver_setup,         &
        LAND_driver_calc_tendency, &
@@ -200,7 +218,9 @@ contains
        URBAN_do,          &
        URBAN_land
     use mod_urban_vars, only: &
-       URBAN_vars_setup
+       URBAN_vars_setup,   &
+       URBAN_vars_history, &
+       URBAN_vars_monitor
     use mod_urban_driver, only: &
        URBAN_driver_setup,         &
        URBAN_driver_calc_tendency, &
@@ -310,7 +330,7 @@ contains
     call COMM_setup
 
     ! setup topography
-    call TOPO_setup
+    call TOPOGRAPHY_setup
     ! setup land use category index/fraction
     call LANDUSE_setup( OCEAN_do, (.not. URBAN_land), LAKE_do )
 
@@ -319,10 +339,20 @@ contains
        call ATMOS_GRID_CARTESC_REAL_setup
        ! setup grid transfer metrics (uses in ATMOS_dynamics)
        call ATMOS_GRID_CARTESC_METRIC_setup
+       call ATMOS_GRID_CARTESC_REAL_calc_areavol( ATMOS_GRID_CARTESC_METRIC_MAPF(:,:,:,:) )
     endif
-    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_setup
-    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_setup
-    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_setup
+    if ( OCEAN_do ) then
+       call OCEAN_GRID_CARTESC_REAL_setup
+       call OCEAN_GRID_CARTESC_REAL_set_areavol
+    end if
+    if ( LAND_do  ) then
+       call LAND_GRID_CARTESC_REAL_setup
+       call LAND_GRID_CARTESC_REAL_set_areavol
+    end if
+    if ( URBAN_do ) then
+       call URBAN_GRID_CARTESC_REAL_setup
+       call URBAN_GRID_CARTESC_REAL_set_areavol
+    end if
 
     ! setup restart
     call ADMIN_restart_setup
@@ -339,6 +369,9 @@ contains
 
     ! setup nesting grid
     call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
+
+    ! setup coriolis parameter
+    call CORIOLIS_setup( IA, JA, REAL_LAT(:,:), CY(:), DOMAIN_CENTER_Y )
 
     ! setup common tools
     call ATMOS_HYDROSTATIC_setup
@@ -361,6 +394,10 @@ contains
     if ( URBAN_do ) call URBAN_driver_setup
 
     call USER_setup
+
+    ! output
+    call TOPOGRAPHY_write
+    call LANDUSE_write
 
     call PROF_rapend('Initialize', 0)
 
@@ -397,17 +434,22 @@ contains
 
       ! time advance
       call ADMIN_TIME_advance
-      call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWMS, TIME_NOWSTEP )
+      call FILE_HISTORY_set_nowdate( TIME_NOWDATE, TIME_NOWSUBSEC, TIME_NOWSTEP )
 
       ! change to next state
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update( TIME_DOend )
                                              call USER_update
-      ! restart output
+      ! restart & monitor output
+      if ( OCEAN_do ) call OCEAN_vars_monitor
+      if ( LAND_do  ) call LAND_vars_monitor
+      if ( URBAN_do ) call URBAN_vars_monitor
+      if ( ATMOS_do ) call ATMOS_vars_monitor
       call ADMIN_restart_write
       call ADMIN_restart_write_additional
+      call MONITOR_write('MAIN', TIME_NOWSTEP)
 
       ! calc tendencies and diagnostices
       if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency( force = .false. )
@@ -417,8 +459,14 @@ contains
       if( CPL_sw   .AND. TIME_DOATMOS_step ) call ATMOS_driver_calc_tendency_from_sflux( force = .false. )
                                              call USER_calc_tendency
 
-      ! history&monitor file output
-      call MONITOR_write('MAIN', TIME_NOWSTEP)
+      ! history file output
+      !   Set hydrostatic pressure coordinate
+      if ( ATMOS_do ) call ATMOS_vars_history_setpres
+      if ( ATMOS_do ) call ATMOS_vars_history
+      if ( OCEAN_do ) call OCEAN_vars_history
+      if ( LAND_do  ) call LAND_vars_history
+      if ( URBAN_do ) call URBAN_vars_history
+
       call FILE_HISTORY_write
 
       if( TIME_DOend ) exit
@@ -532,21 +580,24 @@ contains
        OCEAN_driver_calc_tendency, &
        OCEAN_SURFACE_SET
     use mod_ocean_vars, only: &
-       OCEAN_vars_history
+       OCEAN_vars_history, &
+       OCEAN_vars_monitor
     use mod_land_admin, only: &
        LAND_do
     use mod_land_driver, only: &
        LAND_driver_calc_tendency, &
        LAND_SURFACE_SET
     use mod_land_vars, only: &
-       LAND_vars_history
+       LAND_vars_history, &
+       LAND_vars_monitor
     use mod_urban_admin, only: &
        URBAN_do
     use mod_urban_driver, only: &
        URBAN_driver_calc_tendency, &
        URBAN_SURFACE_SET
     use mod_urban_vars, only: &
-       URBAN_vars_history
+       URBAN_vars_history, &
+       URBAN_vars_monitor
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_user, only: &
@@ -590,7 +641,10 @@ contains
     if( LAND_do  ) call LAND_vars_history
     if( URBAN_do ) call URBAN_vars_history
 
-    call ATMOS_vars_monitor
+    if( ATMOS_do ) call ATMOS_vars_monitor
+    if( OCEAN_do ) call OCEAN_vars_monitor
+    if( LAND_do  ) call LAND_vars_monitor
+    if( URBAN_do ) call URBAN_vars_monitor
 
     return
   end subroutine restart_read

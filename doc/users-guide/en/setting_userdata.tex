@@ -1,0 +1,110 @@
+%====================================================================================
+\section{How to prepare input data from user-defined data} \label{sec:userdata}
+%====================================================================================
+
+Some schemes requires other input data than initial and boundary data.
+In order to use these schemes, the data are necessary be prepared before the simulation.
+The input data must be \scalenetcdf file and have the grid information according to the experimental settings.
+To prepare the input data, \scalerm provide a system to convert user-defined data to a \scalenetcdf file.
+When \nmitem{CNVERT_USER} = \verb|.true.| in \namelist{PARAM_CONVERT}, the data conversion can be executed by \verb|scale-rm_init|.
+The supported formats of the user-defined data are shown in Table \ref{tab:userdata_type}.
+Since only one variable can be converted in a single execution, the execution must be repeated as for the number of the user-defined variables to be converted.
+At this moment, the conversion is available only for spatially two dimensional data.
+
+
+\begin{table}[tbh]
+\begin{center}
+\caption{Types of user-defined data supported in \scalelib}
+\begin{tabularx}{150mm}{l|X} \hline
+ \rowcolor[gray]{0.9} Data type & Description \\ \hline
+ \verb|GrADS| & \grads binary data.    \\ \hline
+ \verb|TILE|  & horizontally decomposed tiled binary data. \\ \hline
+\end{tabularx}
+\label{tab:userdata_type}
+\end{center}
+\end{table}
+
+
+The configurations for the user-defined data are specified in \namelist{PARAM_CNVUSER} as follows:
+\editboxtwo{
+\verb|&PARAM_CNVUSER| & \\
+\verb| CNVUSER_FILE_TYPE = '',        | & ; Type of the user-defined data. See Table \ref{tab:userdata_type}. \\
+\verb| CNVUSER_INTERP_TYPE = 'LINEAR',| & ; Type for the horizontal interpolation. \\
+\verb| CNVUSER_INTERP_LEVEL = 5,      | & ; Level of the interpolation. \\
+\verb| CNVUSER_OUT_TITLE = 'SCALE-RM 2D Boundary',| & ; Title in the output file. \\
+\verb| CNVUSER_OUT_VARNAME = '',      | & ; Variable name in the output file. \\
+\verb| CNVUSER_OUT_VARDESC = '',      | & ; Description of the output variable. \\
+\verb| CNVUSER_OUT_VARUNIT = '',      | & ; Unit of the output variable. \\
+\verb| CNVUSER_OUT_DTYPE 'DEFAULT',   | & ; Data type of the output variable (DEFAULT,INT2,INT4,REAL4,REAL8). \\
+\verb| CNVUSER_NSTEPS = 10,           | & ; The number of time steps in the data. \\
+\verb| CNVUSER_OUT_DT = -1.0D0,       | & ; Time interval in second of the output variable. \\
+\verb| CNVUSER_GrADS_FILENAME = '',   | & ; Name of the namelist for the \grads data. \\
+\verb| CNVUSER_GrADS_VARNAME = '',    | & ; Name of the target variable in the namelist. \\
+\verb| CNVUSER_GrADS_LATNAME = 'lat', | & ; Name of latitude in the namelist. \\
+\verb| CNVUSER_GrADS_LONNAME = 'lon', | & ; Name of longitude in the namelist. \\
+\verb| CNVUSER_TILE_DIR = '',         | & ; Directory name where the catalogue and tiled data files exist. \\
+\verb| CNVUSER_TILE_CATALOGUE = '',   | & ; Name of the catalogue file. \\
+\verb| CNVUSER_TILE_DLAT = 1.0D0,     | & ; Latitude interval in the tiled data. \\
+\verb| CNVUSER_TILE_DLON = 1.0D0,     | & ; Longitude interval in the tiled data. \\
+\verb| CNVUSER_TILE_DTYPE = 'REAL4',  | & ; Data type of the tiled data (INT2,INT4,REAL4,REAL8). \\
+\verb|/|\\
+}
+
+The type and level for the horizontal interpolation is specified by \nmitem{CNVUSER_INTERP_TYPE} and \nmitem{CNVUSER_INTERP_LEVEL}, respectively.
+See Section \ref{sec:datainput_grads} for the details for the interpolation.
+
+\nmitem{CNVUSE_OUT_TITLE}, \nmitem{CNVUSE_OUT_VARNAME}, \nmitem{CNVUSE_OUT_VARDESC}, and \\
+\nmitem{CNVUSE_OUT_VARUNIT} are settings for the title, variable name, variable description, and variable unit in the output file, respectively.
+When the data type is \verb|GrADS| and the \nmitem{CNVUSE_OUT_VARNAME} is not set, \nmitem{CNVUSER_GrADS_VARNAME} is used as the output variable name.
+
+If \nmitem{CNVUSER_OUT_DTYPE} is \verb|DEFAULT|, it is the same as the data type used in the simulation;
+it is \verb|REAL8| as default, and \verb|REAL4| when \scalerm is compiled with the environment variable \verb|SCALE_USE_SINGLEFP = "T"| (See Section \ref{sec:compile}).
+
+The number of time steps contained in the user-defined data is specified by \nmitem{CNVUSER_NSTEPS}.
+The initial time of the time coordinate in the output file is specified by \nmitem{TIME_STARTDATE} in \namelist{PARAM_TIME} (See Section \ref{sec:timeintiv}), and the time interval in second is specified by \nmitem{CNVUSER_OUT_DT}.
+
+
+
+For the \verb|GrADS| type, another namelist file which contains structure of input file is necessary.
+\nmitem{USERFILE_GrADS_FILENAME} is used to set the namelist file.
+See Section \ref{sec:datainput_grads} for the details of the namelist file.
+As the default, the variable name for latitude, and longitude are \verb|lat|, and \verb|lon|, respectively.
+If the name is different from the default value, it can be specified with \nmitem{CNVUSER_GrADS_LATNAME}, and \nmitem{CNVUSER_GrADS_LONNAME}, respectively.
+Two samples to convert \verb|GrADS|-type use-defined data are provided at \verb|scale/scale-rm/test/framework/cnvuser|
+The following is an example of the namelist file.
+\editbox{
+\verb|#| \\
+\verb|# Dimension| \\
+\verb|#| \\
+\verb|&GrADS_DIMS| \\
+\verb| nx = 361,| \\
+\verb| ny = 181,| \\
+\verb| nz =   1,| \\
+\verb|/| \\
+\verb|#| \\
+\verb|# Variables | \\
+\verb|#| \\
+\verb|&GrADS_ITEM name='lon', dtype='linear', swpoint=0.0D0, dd=1.0D0 /| \\
+\verb|&GrADS_ITEM name='lat', dtype='linear', swpoint=-90.0D0, dd=1.0D0 /| \\
+\verb|&GrADS_ITEM name='var', dtype='map', fname='fname_in', startrec=1, totalrec=1,| \textbackslash \ \\
+~~~~~~~~~~~~~ \verb|bintype='int1', yrev=.true. /| \\
+}
+
+
+
+The \verb|TILE|-type data means the horizontally decomposed tiled data.
+The individual tiled data should a direct access binary file.
+The binary data type is specified by \nmitem{CNVUSER_TILE_DTYPE}.
+The data must be structured on a latitude-longitude grid with equal intervals, specified by \nmitem{CNVUSER_TILE_DLAT} and \nmitem{CNVUSER_TILE_DLON} for latitude and longitude, respectively.
+A catalogue file is required; the catalogue contains information of the name of individual tiled data files and the area which the tiled data covers.
+The name of the catalogue file is specified by \nmitem{CNVUSER_TILE_CATALOGUE}.
+The catalogue and tiled data files are located at the directory specified by \nmitem{CNVUSER_TILE_DIR}.
+Each line of the catalogue file describes the serial number, the southernmost and the northernmost latitudes, the westernmost and the easternmost longitudes, and the name of the tiled data.
+The following is an example of the catalogue file for the global data decomposed into total 4 (2 x 2) files.
+\editboxtwo{
+\verb|001 -90.0  0.0 -180.0   0.0 TILE_sw.grd| & ; latitude: -90--0, longitude: -180--0, name: \verb|TILE_sw.grd| \\
+\verb|002 -90.0  0.0    0.0 180.0 TILE_se.grd| & ; latitude: -90--0, longitude: 0--180,  name: \verb|TILE_se.grd| \\
+\verb|003   0.0 90.0 -180.0   0.0 TILE_nw.grd| & ; latitude: 0--90,  longitude: -180--0, name: \verb|TILE_nw.grd| \\
+\verb|004   0.0 00.0    0.0 180.0 TILE_ne.grd| & ; latitude: 0--90,  longitude: 0--180,  name: \verb|TILE_ne.grd| \\
+}
+

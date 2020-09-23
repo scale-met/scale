@@ -688,9 +688,9 @@ contains
        commoninfo, &
        axisinfo
     use mod_sno, only: &
-       SNO_calc_localsize, &
-       SNO_read_map_1d,    &
-       SNO_read_map_2d,    &
+       SNO_calc_domainsize, &
+       SNO_read_map_1d,     &
+       SNO_read_map_2d,     &
        SNO_read_map_3d
     implicit none
 
@@ -743,13 +743,13 @@ contains
        do px = 1, nprocs_x_in
           p = (py-1) * nprocs_x_in + px - 1
 
-          call SNO_calc_localsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
-                                   px,           py,          & ! [IN]
-                                   ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
-                                   nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
-                                   hinfo,                     & ! [IN] from SNO_file_getinfo
-                                   ngrids_x_in,  ngrids_y_in, & ! [OUT]
-                                   ngrids_xh_in, ngrids_yh_in ) ! [OUT]
+          call SNO_calc_domainsize( nprocs_x_in,  nprocs_y_in, & ! [IN] from namelist
+                                    px,           py,          & ! [IN]
+                                    ngrids_x,     ngrids_y,    & ! [IN] from SNO_file_getinfo
+                                    nhalos_x,     nhalos_y,    & ! [IN] from SNO_file_getinfo
+                                    hinfo,                     & ! [IN] from SNO_file_getinfo
+                                    ngrids_x_in,  ngrids_y_in, & ! [OUT]
+                                    ngrids_xh_in, ngrids_yh_in ) ! [OUT]
 
           staggered_x_in  = 0
           staggered_y_in  = 0
@@ -1559,8 +1559,11 @@ contains
     type(axisinfo),   intent(in)    :: ainfo(naxis)             ! axis information                   (input)
     logical,          intent(in)    :: debug
 
+    real(RP), allocatable :: AXIS_3d(:,:,:)
+
     integer, parameter :: start(3) = 1
-    integer  :: n
+    integer  :: i, j, k, n
+    integer  :: gout1, gout2, gout3
     !---------------------------------------------------------------------------
 
     if ( debug ) then
@@ -1583,10 +1586,37 @@ contains
 
        elseif( ainfo(n)%dim_rank == 3 ) then
 
-          call FILE_write_associatedCoordinate( fid,                     & ! [IN]
-                                                ainfo(n)%varname,        & ! [IN]
-                                                ainfo(n)%AXIS_3d(:,:,:), & ! [IN]
-                                                start(1:3)               ) ! [IN]
+          gout1 = size(ainfo(n)%AXIS_3d(:,:,:),1)
+          gout2 = size(ainfo(n)%AXIS_3d(:,:,:),2)
+          gout3 = size(ainfo(n)%AXIS_3d(:,:,:),3)
+
+          if ( ainfo(n)%transpose ) then
+             allocate( AXIS_3d(gout2,gout3,gout1) )
+             do k = 1, gout1
+             do j = 1, gout3
+             do i = 1, gout2
+                AXIS_3d(i,j,k) = ainfo(n)%AXIS_3d(k,i,j)
+             enddo
+             enddo
+             enddo
+
+             call FILE_write_associatedCoordinate( fid,              & ! [IN]
+                                                   ainfo(n)%varname, & ! [IN]
+                                                   AXIS_3d(:,:,:),   & ! [IN]
+                                                   start(1:3)        ) ! [IN]
+
+             deallocate( AXIS_3d )
+          else
+             allocate( AXIS_3d(gout1,gout2,gout3) )
+             AXIS_3d(:,:,:) = ainfo(n)%AXIS_3d(:,:,:)
+
+             call FILE_write_associatedCoordinate( fid,              & ! [IN]
+                                                   ainfo(n)%varname, & ! [IN]
+                                                   AXIS_3d(:,:,:),   & ! [IN]
+                                                   start(1:3)        ) ! [IN]
+
+             deallocate( AXIS_3d )
+          endif
 
        endif
     enddo

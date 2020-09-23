@@ -45,7 +45,8 @@ module scale_file_h
   integer, public, parameter :: FILE_RANK_MAX = RANK_MAX
 
   !--- missing value
-  real(DP), public, parameter :: FILE_RMISS = RMISS
+#define DBL(v) v
+  real(DP), public, parameter :: FILE_RMISS = DBL(RMISS)_DP
 
   !--- struct for data infomation
   type, public :: datainfo

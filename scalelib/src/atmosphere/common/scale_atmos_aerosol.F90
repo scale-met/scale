@@ -30,33 +30,34 @@ module scale_atmos_aerosol
   !
   !++ Public parameters & variables
   !
-  integer, public, parameter :: N_AE = 9
-  integer, public, parameter :: I_AD  = 1 !< dust-like
-  integer, public, parameter :: I_ASO = 2 !< soot
-  integer, public, parameter :: I_AVA = 3 !< volcanic ash
-  integer, public, parameter :: I_AS  = 4 !< sulfate (H2SO4)
-  integer, public, parameter :: I_AR  = 5 !< rural
-  integer, public, parameter :: I_ASS = 6 !< sea salt
-  integer, public, parameter :: I_AU  = 7 !< urban
-  integer, public, parameter :: I_AT  = 8 !< tropo
-  integer, public, parameter :: I_AOC = 9 !< yellow dust
+  integer, public, parameter :: N_AE  = 7
+  integer, public, parameter :: I_A01 = 1 ! Soil dust
+  integer, public, parameter :: I_A02 = 2 ! Carbonacerous (BC/OC=0.3)
+  integer, public, parameter :: I_A03 = 3 ! Carbonacerous (BC/OC=0.15)
+  integer, public, parameter :: I_A04 = 4 ! Carbonacerous (BC/OC=0.)
+  integer, public, parameter :: I_A05 = 5 ! Black carbon
+  integer, public, parameter :: I_A06 = 6 ! Sulfate
+  integer, public, parameter :: I_A07 = 7 ! Sea salt
 
   character(len=H_SHORT), public, parameter :: AE_NAME(N_AE) = &
-       (/ "AD ", "ASO", "AVA", "AS ", "AR ", "ASS", "AU ", "AT ", "AOC" /)
+       (/ "A01", "A02", "A03", "A04", "A05", "A06", "A07" /)
   character(len=H_MID),   public, parameter :: AE_DESC(N_AE) = &
-       (/ "dust-like      ", &
-          "soot           ", &
-          "volcanic ash   ", &
-          "sulfate (H2SO4)", &
-          "rural          ", &
-          "sea salt       ", &
-          "urban          ", &
-          "tropo          ", &
-          "yellow dust    " /)
+       (/ "Soil dust                 ", &  ! Soil dust
+          "Carbonacerous (BC/OC=0.3) ", &  ! Carbonacerous (BC/OC=0.3)
+          "Carbonacerous (BC/OC=0.15)", &  ! Carbonacerous (BC/OC=0.15)
+          "Carbonacerous (BC/OC=0.)  ", &  ! Carbonacerous (BC/OC=0.)
+          "Black carbon              ", &  ! Black carbon
+          "Sulfate                   ", &  ! Sulfate
+          "Sea salt                  "  /) ! Sea salt
 
-  real(RP), parameter, private :: rhod_ae = 1.83_RP ! particle density [g/cm3] sulfate assumed
-  real(RP), parameter, public :: AE_DENS(N_AE) = (/ rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae, rhod_ae /)
-
+  real(RP), public, parameter :: AE_DENS(N_AE) = & ! aerosol density [kg/m3]
+       (/ 2.50E+3_RP, &  ! Soil dust
+          1.43E+3_RP, &  ! Carbonacerous (BC/OC=0.3)
+          1.46E+3_RP, &  ! Carbonacerous (BC/OC=0.15)
+          1.50E+3_RP, &  ! Carbonacerous (BC/OC=0.)
+          1.25E+3_RP, &  ! Black carbon
+          1.77E+3_RP, &  ! Sulfate
+          2.20E+3_RP  /) ! Sea salt
 
   !-----------------------------------------------------------------------------
   !

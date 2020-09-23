@@ -42,6 +42,8 @@ module mod_atmos_phy_rd_driver
   !
   !++ Private parameters & variables
   !
+  logical, private :: RD_use_PBL_cloud = .false.
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -64,20 +66,36 @@ contains
        SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
     implicit none
+    
+    namelist / PARAM_ATMOS_PHY_RD / &
+         RD_use_PBL_cloud
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'Setup'
 
     if ( ATMOS_sw_phy_rd ) then
+
+       !--- read namelist
+       rewind(IO_FID_CONF)
+       read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD,iostat=ierr)
+       if( ierr < 0 ) then !--- missing
+          LOG_INFO("ATMOS_PHY_RD_driver_setup",*) 'Not found namelist. Default used.'
+       elseif( ierr > 0 ) then !--- fatal error
+          LOG_ERROR("ATMOS_PHY_RD_driver_setup",*) 'Not appropriate names in namelist PARAM_ATMOS_PHY_RD. Check!'
+          call PRC_abort
+       endif
+       LOG_NML(PARAM_ATMOS_PHY_RD)
 
        select case ( ATMOS_PHY_RD_TYPE )
        case ( "MSTRNX" )
@@ -97,10 +115,10 @@ contains
        SFCFLX_LW_dn(:,:)     = 0.0_RP
        SFCFLX_SW_up(:,:)     = 0.0_RP
        SFCFLX_SW_dn(:,:)     = 0.0_RP
-       TOAFLX_LW_up(:,:)     = 0.0_RP
-       TOAFLX_LW_dn(:,:)     = 0.0_RP
-       TOAFLX_SW_up(:,:)     = 0.0_RP
-       TOAFLX_SW_dn(:,:)     = 0.0_RP
+       TOMFLX_LW_up(:,:)     = 0.0_RP
+       TOMFLX_LW_dn(:,:)     = 0.0_RP
+       TOMFLX_SW_up(:,:)     = 0.0_RP
+       TOMFLX_SW_dn(:,:)     = 0.0_RP
        SFLX_rad_dn (:,:,:,:) = 0.0_RP
        solins      (:,:)     = 0.0_RP
        cosSZA      (:,:)     = 0.0_RP
@@ -113,6 +131,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_RD_driver_calc_tendency( update_flag )
+    use scale_const, only: &
+       EPS => CONST_EPS
     use scale_atmos_grid_cartesC_real, only: &
        REAL_CZ  => ATMOS_GRID_CARTESC_REAL_CZ,  &
        REAL_FZ  => ATMOS_GRID_CARTESC_REAL_FZ,  &
@@ -134,7 +154,9 @@ contains
     use scale_file_history, only: &
        FILE_HISTORY_in
     use scale_atmos_hydrometeor, only: &
-       N_HYD
+       N_HYD, &
+       I_HC, &
+       I_HI
     use scale_atmos_aerosol, only: &
        N_AE
     use mod_atmos_admin, only: &
@@ -168,13 +190,17 @@ contains
        SFCFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn,   &
        SFCFLX_SW_up => ATMOS_PHY_RD_SFLX_SW_up,   &
        SFCFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn,   &
-       TOAFLX_LW_up => ATMOS_PHY_RD_TOAFLX_LW_up, &
-       TOAFLX_LW_dn => ATMOS_PHY_RD_TOAFLX_LW_dn, &
-       TOAFLX_SW_up => ATMOS_PHY_RD_TOAFLX_SW_up, &
-       TOAFLX_SW_dn => ATMOS_PHY_RD_TOAFLX_SW_dn, &
+       TOMFLX_LW_up => ATMOS_PHY_RD_TOMFLX_LW_up, &
+       TOMFLX_LW_dn => ATMOS_PHY_RD_TOMFLX_LW_dn, &
+       TOMFLX_SW_up => ATMOS_PHY_RD_TOMFLX_SW_up, &
+       TOMFLX_SW_dn => ATMOS_PHY_RD_TOMFLX_SW_dn, &
        SFLX_rad_dn  => ATMOS_PHY_RD_SFLX_down,    &
        solins       => ATMOS_PHY_RD_solins,       &
        cosSZA       => ATMOS_PHY_RD_cosSZA
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_Zi,     &
+       ATMOS_PHY_BL_QL,     &
+       ATMOS_PHY_BL_cldfrac
     use mod_atmos_vars, only: &
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_mp_vars, only: &
@@ -195,8 +221,14 @@ contains
     real(RP) :: flux_up     (KA,IA,JA,2)
     real(RP) :: flux_dn     (KA,IA,JA,2)
     real(RP) :: flux_net    (KA,IA,JA,2)
-    real(RP) :: flux_net_toa(   IA,JA,2)
     real(RP) :: flux_net_sfc(   IA,JA,2)
+    real(RP) :: flux_net_toa(   IA,JA,2)
+    real(RP) :: flux_net_tom(   IA,JA,2)
+
+    real(RP) :: TOAFLX_LW_up(IA,JA)
+    real(RP) :: TOAFLX_LW_dn(IA,JA)
+    real(RP) :: TOAFLX_SW_up(IA,JA)
+    real(RP) :: TOAFLX_SW_dn(IA,JA)
 
     real(RP) :: SFCFLX_LW_up_c(IA,JA)
     real(RP) :: SFCFLX_LW_dn_c(IA,JA)
@@ -206,6 +238,10 @@ contains
     real(RP) :: TOAFLX_LW_dn_c(IA,JA)
     real(RP) :: TOAFLX_SW_up_c(IA,JA)
     real(RP) :: TOAFLX_SW_dn_c(IA,JA)
+    real(RP) :: TOMFLX_LW_up_c(IA,JA)
+    real(RP) :: TOMFLX_LW_dn_c(IA,JA)
+    real(RP) :: TOMFLX_SW_up_c(IA,JA)
+    real(RP) :: TOMFLX_SW_dn_c(IA,JA)
 
     real(RP) :: CLDFRAC(KA,IA,JA)
     real(RP) :: MP_Re  (KA,IA,JA,N_HYD)
@@ -229,11 +265,31 @@ contains
             DENS(:,:,:), TEMP(:,:,:), QTRC(:,:,:,:), & ! [IN]
             CLDFRAC=CLDFRAC, Re=MP_Re, Qe=MP_Qe      ) ! [IN]
 
+       if ( RD_use_PBL_cloud ) then
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             if ( REAL_CZ(k,i,j) < ATMOS_PHY_BL_Zi(i,j) + REAL_FZ(KS-1,i,j) ) then
+                CLDFRAC(k,i,j) = ATMOS_PHY_BL_cldfrac(k,i,j)
+                if ( ATMOS_PHY_BL_cldfrac(k,i,j) > EPS ) then
+                   MP_Qe(k,i,j,I_HC) = ATMOS_PHY_BL_QL(k,i,j) / ATMOS_PHY_BL_cldfrac(k,i,j)
+                else
+                   MP_Qe(k,i,j,I_HC) = 0.0_RP
+                end if
+                MP_Qe(k,i,j,I_HI) = 0.0_RP
+                MP_Re(k,i,j,I_HC) = 8.0E-4
+             end if
+          end do
+          end do
+          end do
+          
+       end if
+
        call ATMOS_vars_get_diagnostic( "RH", RH )
        call ATMOS_PHY_AE_vars_get_diagnostic( &
             QTRC(:,:,:,:), RH(:,:,:), & ! [IN]
-            Re=AE_Re                  ) ! [IN]
-!            Re=AE_Re, Qe=AE_Qe      ) ! [IN]
+            Re=AE_Re, Qe=AE_Qe        ) ! [IN]
 
 
        select case ( ATMOS_PHY_RD_TYPE )
@@ -247,8 +303,7 @@ contains
                SFC_TEMP(:,:), SFC_albedo(:,:,:,:),               & ! [IN]
                solins(:,:), cosSZA(:,:),                         & ! [IN]
                CLDFRAC(:,:,:), MP_Re(:,:,:,:), MP_Qe(:,:,:,:),   & ! [IN]
-               AE_Re(:,:,:,:),                                   & ! [IN]
-!               AE_Re(:,:,:,:), AE_Qe(:,:,:,:),                   & ! [IN]
+               AE_Re(:,:,:,:), AE_Qe(:,:,:,:),                   & ! [IN]
                flux_rad(:,:,:,:,:,:),                            & ! [OUT]
                flux_rad_top(:,:,:,:,:), SFLX_rad_dn(:,:,:,:),    & ! [OUT]
                dtau_s = dtau_s(:,:,:), dem_s = dem_s(:,:,:)      ) ! [OUT]
@@ -268,6 +323,7 @@ contains
        end select
 
 
+       ! surface
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -287,6 +343,7 @@ contains
        enddo
        enddo
 
+       ! top of the atmosphere
 !OCL XFILL
        do j = JS, JE
        do i = IS, IE
@@ -303,6 +360,26 @@ contains
 
           flux_net_toa(i,j,I_LW) = TOAFLX_LW_up(i,j) - TOAFLX_LW_dn(i,j)
           flux_net_toa(i,j,I_SW) = TOAFLX_SW_up(i,j) - TOAFLX_SW_dn(i,j)
+       enddo
+       enddo
+
+       ! top of the model
+!OCL XFILL
+       do j = JS, JE
+       do i = IS, IE
+          ! for clear-sky
+          TOMFLX_LW_up_c(i,j)    = flux_rad(KE,i,j,I_LW,I_up,1)
+          TOMFLX_LW_dn_c(i,j)    = flux_rad(KE,i,j,I_LW,I_dn,1)
+          TOMFLX_SW_up_c(i,j)    = flux_rad(KE,i,j,I_SW,I_up,1)
+          TOMFLX_SW_dn_c(i,j)    = flux_rad(KE,i,j,I_SW,I_dn,1)
+          ! for all-sky
+          TOMFLX_LW_up  (i,j)    = flux_rad(KE,i,j,I_LW,I_up,2)
+          TOMFLX_LW_dn  (i,j)    = flux_rad(KE,i,j,I_LW,I_dn,2)
+          TOMFLX_SW_up  (i,j)    = flux_rad(KE,i,j,I_SW,I_up,2)
+          TOMFLX_SW_dn  (i,j)    = flux_rad(KE,i,j,I_SW,I_dn,2)
+
+          flux_net_tom(i,j,I_LW) = TOMFLX_LW_up(i,j) - TOMFLX_LW_dn(i,j)
+          flux_net_tom(i,j,I_SW) = TOMFLX_SW_up(i,j) - TOMFLX_SW_dn(i,j)
        enddo
        enddo
 
@@ -361,6 +438,19 @@ contains
 
        call FILE_HISTORY_in( flux_net_toa  (:,:,I_LW), 'TOAFLX_LW_net',  'TOA net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net_toa  (:,:,I_SW), 'TOAFLX_SW_net',  'TOA net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( TOMFLX_LW_up_c(:,:),      'TOMFLX_LW_up_c', 'TOM upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_LW_dn_c(:,:),      'TOMFLX_LW_dn_c', 'TOM downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_up_c(:,:),      'TOMFLX_SW_up_c', 'TOM upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_dn_c(:,:),      'TOMFLX_SW_dn_c', 'TOM downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( TOMFLX_LW_up  (:,:),      'TOMFLX_LW_up',   'TOM upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_LW_dn  (:,:),      'TOMFLX_LW_dn',   'TOM downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_up  (:,:),      'TOMFLX_SW_up',   'TOM upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( TOMFLX_SW_dn  (:,:),      'TOMFLX_SW_dn',   'TOM downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
+
+       call FILE_HISTORY_in( flux_net_tom  (:,:,I_LW), 'TOMFLX_LW_net',  'TOM net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
+       call FILE_HISTORY_in( flux_net_tom  (:,:,I_SW), 'TOMFLX_SW_net',  'TOM net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
        call FILE_HISTORY_in( flux_net_sfc(:,:,I_LW),   'SLR',          'SFC net longwave  radiation flux',  'W/m2', fill_halo=.true. )
        call FILE_HISTORY_in( flux_net_sfc(:,:,I_SW),   'SSR',          'SFC net shortwave radiation flux',  'W/m2', fill_halo=.true. )

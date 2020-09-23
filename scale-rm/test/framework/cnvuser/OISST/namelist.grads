@@ -1,0 +1,15 @@
+#
+# Dimension
+#
+&GrADS_DIMS
+ nx = 360,
+ ny = 180,
+ nz = 1,
+/
+
+#
+# Variables
+#
+&GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.5d0, dd=1.0d0 /
+&GrADS_ITEM  name='lat',     dtype='linear',  swpoint=-89.5d0, dd=1.0d0 /
+&GrADS_ITEM  name='sst',    dtype='map',     fname='input_sst/sst.wkmean.1990-present', startrec=1, totalrec=1, bintype='real4', yrev=.false., missval=9.999E+20 /

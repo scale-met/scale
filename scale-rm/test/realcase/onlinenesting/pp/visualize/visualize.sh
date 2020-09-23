@@ -7,8 +7,14 @@ rm -f dcl.pdf
 for domain in d01 d02
 do
 
+# metrics
+gpview topo_${domain}.pe\*.nc@lat  --nocont --aspect=1 --wsn 2 || exit
+convert -density 150 -rotate 90 +antialias dcl.pdf lat_${domain}.png
+gpview topo_${domain}.pe\*.nc@lon  --nocont --aspect=1 --wsn 2 || exit
+convert -density 150 -rotate 90 +antialias dcl.pdf lon_${domain}.png
+
 # boundary conditions
-gpview topo_${domain}.pe\*.nc@TOPO --nocont --aspect=1 --wsn 2 --srange=10: || exit
+gpview topo_${domain}.pe\*.nc@topo --nocont --aspect=1 --wsn 2 --srange=10: || exit
 convert -density 150 -rotate 90 +antialias dcl.pdf topo_${domain}.png
 
 gpview landuse_${domain}.pe\*.nc@FRAC_LAND  --nocont --aspect=1 --range=0:1 --wsn 2 || exit

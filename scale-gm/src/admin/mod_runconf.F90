@@ -42,7 +42,6 @@ module mod_runconf
   logical,                public :: THUBURN_LIM        = .true.  ! [add] 20130613 R.Yoshida
 
   !--- Physics
-  character(len=H_SHORT), public :: ATMOS_PHY_TYPE               = 'NONE'
   character(len=H_SHORT), public :: ROUGHNESS_SEA_TYPE = 'DEFAULT'
   character(len=H_SHORT), public :: AF_TYPE            = 'NONE'
 
@@ -122,7 +121,6 @@ contains
        NDIFF_LOCATION,     &
        FLAG_NUDGING,       &
        THUBURN_LIM,        & ! R.Yoshida 13/06/13 [add]
-       ATMOS_PHY_TYPE,     &
        ROUGHNESS_SEA_TYPE, &
        AF_TYPE,            &
        OUT_FILE_TYPE

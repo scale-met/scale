@@ -132,17 +132,19 @@ contains
 
   subroutine LAND_PHY_SNOW_KY90( &
        LIA, LIS, LIE, LJA, LJS, LJE, &
-       SFLX_rain, SFLX_snow,   & ! [IN]
+       SFLX_water, SFLX_ENGI,  & ! [IN]
        PRSA, TA, QA,           & ! [IN]
        WA, UA, VA,             & ! [IN]
        DENS,                   & ! [IN]
        SFLX_RAD_dn,            & ! [IN]
-       LANDUSE_fact_land, dt,  & ! [IN]
+       exists_land, dt,        & ! [IN]
        TSNOW, SWE,             & ! [INOUT]
        SDepth, SDzero,         & ! [INOUT]
        nosnowsec,              & ! [INOUT]
        Salbedo,                & ! [OUT]
-       SFLX_SH, SFLX_LH,       & ! [OUT]
+       SFLX_SH,                & ! [OUT]
+       SFLX_LH, SFLX_QV,       & ! [OUT]
+       SFLX_QV_ENGI,           & ! [OUT]
        SFLX_GH, SNOW_LAND_GH,  & ! [OUT]
        SNOW_LAND_Water,        & ! [OUT]
        SNOW_frac               ) ! [OUT]
@@ -153,6 +155,7 @@ contains
     use scale_atmos_saturation, only:  &
        qsatf => ATMOS_SATURATION_psat_all  ! better to  change name from qsatf to qsat
     use scale_const, only:   &
+       EPS   => CONST_EPS,   &
        T0    => CONST_TEM00, &
        I_SW  => CONST_I_SW,  &
        I_LW  => CONST_I_LW,  &
@@ -162,8 +165,8 @@ contains
     integer, intent(in) :: LJA, LJS, LJE
 
     ! input data
-    real(RP), intent(in)      :: SFLX_rain (LIA,LJA)
-    real(RP), intent(in)      :: SFLX_snow (LIA,LJA)
+    real(RP), intent(in)      :: SFLX_water(LIA,LJA)
+    real(RP), intent(in)      :: SFLX_ENGI (LIA,LJA)
     real(RP), intent(in)      :: PRSA      (LIA,LJA)
     real(RP), intent(in)      :: TA        (LIA,LJA)
     real(RP), intent(in)      :: WA        (LIA,LJA)
@@ -173,7 +176,7 @@ contains
     real(RP), intent(in)      :: DENS      (LIA,LJA)
     real(RP), intent(in)      :: SFLX_RAD_dn(LIA,LJA,N_RAD_DIR,N_RAD_RGN)
     real(DP), intent(in)      :: dt                     ! dt of land
-    real(RP), intent(in)      :: LANDUSE_fact_land(LIA,LJA)
+    logical,  intent(in)      :: exists_land(LIA,LJA)
 
     ! prognostic variables
     real(RP), intent(inout)   :: TSNOW          (LIA,LJA)   ! snow temperature        [K]
@@ -186,6 +189,8 @@ contains
     real(RP), intent(out)     :: Salbedo        (LIA,LJA,2) ! snow albedo             [-]
     real(RP), intent(out)     :: SFLX_SH        (LIA,LJA) ! sensible heat flux between atmos and snow [W/m2]
     real(RP), intent(out)     :: SFLX_LH        (LIA,LJA) ! latente  heat flux between atmos and snow [W/m2]
+    real(RP), intent(out)     :: SFLX_QV        (LIA,LJA) ! evaporation due to LH          [kg/m2/s]
+    real(RP), intent(out)     :: SFLX_QV_ENGI   (LIA,LJA) ! internal energy of evaporation [J/m2/s]
     real(RP), intent(out)     :: SFLX_GH        (LIA,LJA) ! whole snowpack Ground flux   [W/m2]
     real(RP), intent(out)     :: SNOW_LAND_GH   (LIA,LJA) ! heat flux from snow to land  [W/m2]
     real(RP), intent(out)     :: SNOW_LAND_water(LIA,LJA) ! water flux from snow to land [W/m2]
@@ -195,7 +200,6 @@ contains
     real(RP)                  :: QFUSION   (LIA,LJA)
     real(RP)                  :: MELT      (LIA,LJA)
     real(RP)                  :: SWEMELT   (LIA,LJA)
-    real(RP)                  :: SFLX_evap      (LIA,LJA) ! evaporation due to LH        [kg/m2/s]
 
     ! works
     real(RP)                  :: TSNOW1           ! updated snow surface temperature [K]
@@ -210,6 +214,8 @@ contains
     real(RP)                  :: qdry, psat
     real(RP)                  :: SFLX_SW_dn, SFLX_LW_dn
 
+    real(RP)                  :: w
+
     integer :: k, i, j
     !---------------------------------------------------------------------------
     LOG_PROGRESS(*) 'Land / physics / snow / KY90'
@@ -217,11 +223,10 @@ contains
     do j = LJS, LJE
     do i = LIS, LIE
 
-    if( ( LANDUSE_fact_land(i,j) > 0.0_RP    ) .and.    &
-        ( SWE(i,j)>0. .or. SFLX_snow(i,j)>0. ) )then
+    if( ( exists_land(i,j) ) .and. &
+        ( SWE(i,j)>0. .or. SFLX_water(i,j)>0. ) )then
 
-       Uabs = max( sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 ), Uabs_min )
-       !Uabs = sqrt( UA(i,j)**2 + VA(i,j)**2 + WA(i,j)**2 )
+       Uabs = sqrt( WA(i,j)**2 + UA(i,j)**2 + VA(i,j)**2 )
 
        !qdry = 1.0_RP - QA(i,j)
        !call qsatf(  TA(i,j), PRSA(i,j), qdry, & ![IN]
@@ -254,13 +259,15 @@ contains
                             SFLX_SH     (i,j),      & ! [OUT]
                             SFLX_LH     (i,j),      & ! [OUT]
                             SFLX_GH     (i,j),      & ! [OUT]
-                            SFLX_evap   (i,j),      & ! [OUT]
+                            SFLX_QV     (i,j),      & ! [OUT]
+                            SFLX_QV_ENGI(i,j),      & ! [OUT]
                             QCC         (i,j),      & ! [OUT]
                             QFUSION     (i,j),      & ! [OUT]
                             MELT        (i,j),      & ! [OUT]
                             SWEMELT     (i,j),      & ! [OUT]
                             SNOW_LAND_GH(i,j),      & ! [OUT]
-                            SFLX_snow   (i,j),      & ! [IN]     ! [kg/m2/s]
+                            SFLX_water  (i,j),      & ! [IN]     ! [kg/m2/s]
+                            SFLX_ENGI   (i,j),      & ! [IN]
                             TA          (i,j),      & ! [IN]
                             Uabs,                   & ! [IN]
                             RH,                     & ! [IN]
@@ -270,8 +277,8 @@ contains
                             dt                      )
 
 
-       SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt               ! [J/m2] -> [J/m2/s]
-       SNOW_LAND_Water(i,j) = SFLX_rain(i,j) + SWEMELT(i,j) / dt   ! [kg/m2] -> [kg/m2/s]
+       SNOW_LAND_GH   (i,j) = SNOW_LAND_GH(i,j) / dt ! [J/m2] -> [J/m2/s]
+       SNOW_LAND_Water(i,j) = SWEMELT(i,j) / dt      ! [kg/m2] -> [kg/m2/s]
 
        if ( SWE1 <= 0. .and. SWE(i,j) <= 0. ) then  ! no accumulated snow during the time step
           SNOW_frac      (i,j) = 0.0_RP
@@ -290,7 +297,7 @@ contains
 
     else
 
-       SNOW_LAND_Water(i,j)   = SFLX_rain(i,j)
+       SNOW_LAND_Water(i,j)   = SFLX_water(i,j)
        SNOW_frac      (i,j)   = 0.0_RP
 
        TSNOW          (i,j)   = T0     !!!
@@ -301,7 +308,7 @@ contains
        SFLX_SH        (i,j)   = 0.0_RP
        SFLX_LH        (i,j)   = 0.0_RP
        SFLX_GH        (i,j)   = 0.0_RP
-       SFLX_evap      (i,j)   = 0.0_RP
+       SFLX_QV        (i,j)   = 0.0_RP
        QCC            (i,j)   = 0.0_RP
        QFUSION        (i,j)   = 0.0_RP
        MELT           (i,j)   = 0.0_RP
@@ -310,10 +317,10 @@ contains
 
     endif
 
-    call FILE_HISTORY_in( QCC     (:,:), 'SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( QFUSION (:,:), 'SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( MELT    (:,:), 'SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )
-    call FILE_HISTORY_in( SWEMELT (:,:), 'SNOW_SWEMELT',    'Equivalent water of melt snow',              'kg/m2', dim_type='XY' )
+    call FILE_HISTORY_in( QCC     (:,:), 'LAND_SNOW_QCC',        'Heat used for changing temperature profile', 'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( QFUSION (:,:), 'LAND_SNOW_QFUSION',    'Heat used for phase change of snow',         'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( MELT    (:,:), 'LAND_SNOW_MELT',       'Heat used for snow melt',                    'J/m2',  dim_type='XY' )
+    call FILE_HISTORY_in( SWEMELT (:,:), 'LAND_SNOW_SWEMELT',    'Equivalent water of melt snow',              'kg/m2', dim_type='XY' )
 
     end do
     end do
@@ -336,12 +343,14 @@ contains
        LATENTFLUX,            & ! [OUT]
        GFLUX,                 & ! [OUT]
        EvapFLX,               & ! [OUT]
+       Evap_ENGI,             & ! [OUT]
        QCC,                   & ! [OUT]
        QFUSION,               & ! [OUT]
        MELT,                  & ! [OUT]
        SWEMELT,               & ! [OUT]
        Gflux2land,            & ! [OUT]
        SFLX_SNOW,             & ! [IN]
+       SFLX_ENGI,             & ! [IN]
        TA,                    & ! [IN]
        UA,                    & ! [IN]
        RH,                    & ! [IN]
@@ -351,6 +360,9 @@ contains
        time                   ) ! [IN]
     use scale_const, only:   &
        T0    => CONST_TEM00
+    use scale_atmos_hydrometeor, only: &
+       CV_ICE, &
+       LHF
 
     implicit none
     ! prognostic variables
@@ -368,6 +380,7 @@ contains
     real(RP), intent(out)      :: LATENTFLUX    ! LATENTFLUX = whole snow Latent heat flux [W/m2]
     real(RP), intent(out)      :: GFLUX         ! GFLUX = whole snow Ground flux           [W/m2]
     real(RP), intent(out)      :: EvapFLX       ! Evapolation due to LATENTFLUX            [kg/m2/s]
+    real(RP), intent(out)      :: Evap_ENGI     ! internal energy flux of evapolation
 
     real(RP), intent(out)      :: QCC           ! QCC = heat used for change snow condition to isothermal [J m^-2]
     real(RP), intent(out)      :: QFUSION       ! QFUSION = heat used for change snow condition to melt point [J m^-2]
@@ -378,6 +391,7 @@ contains
 
     ! input data
     real(RP), intent(in)       :: SFLX_SNOW
+    real(RP), intent(in)       :: SFLX_ENGI
     real(RP), intent(in)       :: TA
     real(RP), intent(in)       :: UA
     real(RP), intent(in)       :: RH
@@ -461,6 +475,9 @@ contains
 
    ! SWE change due to latent heat flux
    EvapFLX = LATENTFLUX / LV                 ! [kg/m2/s] positive => snow decrease
+
+   Evap_ENGI = EvapFLX * ( CV_ICE * TSNOW0 - LHF ) ! internal energy of evapolated water
+   GFLUX = GFLUX + SFLX_ENGI - Evap_ENGI           ! add internal energy of precipitation and evapolation
 
    SWE0        = SWE0    - EvapFLX * time    ! [kg/m2]
    DELTADEPTH  = (EvapFLX * time) /RHOSNOW

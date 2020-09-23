@@ -55,6 +55,7 @@ module scale_file
   public :: FILE_set_attribute
   public :: FILE_add_associatedVariable
   public :: FILE_enddef
+  public :: FILE_redef
   public :: FILE_flush
   public :: FILE_close
   public :: FILE_close_all
@@ -147,20 +148,29 @@ module scale_file
   interface FILE_get_attribute
      module procedure FILE_get_attribute_text_fname
      module procedure FILE_get_attribute_logical_fname
+     module procedure FILE_get_attribute_int_fname_ary
      module procedure FILE_get_attribute_int_fname
+     module procedure FILE_get_attribute_float_fname_ary
      module procedure FILE_get_attribute_float_fname
+     module procedure FILE_get_attribute_double_fname_ary
      module procedure FILE_get_attribute_double_fname
      module procedure FILE_get_attribute_text_fid
      module procedure FILE_get_attribute_logical_fid
+     module procedure FILE_get_attribute_int_fid_ary
      module procedure FILE_get_attribute_int_fid
+     module procedure FILE_get_attribute_float_fid_ary
      module procedure FILE_get_attribute_float_fid
+     module procedure FILE_get_attribute_double_fid_ary
      module procedure FILE_get_attribute_double_fid
   end interface FILE_get_attribute
   interface FILE_set_attribute
      module procedure FILE_set_attribute_text
      module procedure FILE_set_attribute_logical
+     module procedure FILE_set_attribute_int_ary
      module procedure FILE_set_attribute_int
+     module procedure FILE_set_attribute_float_ary
      module procedure FILE_set_attribute_float
+     module procedure FILE_set_attribute_double_ary
      module procedure FILE_set_attribute_double
   end interface FILE_set_attribute
 
@@ -184,6 +194,7 @@ module scale_file
      character(len=FILE_HLONG) :: name
      integer                   :: fid
      logical                   :: aggregate
+     integer                   :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
   integer    :: FILE_nfiles = 0
@@ -1758,7 +1769,7 @@ contains
   end subroutine FILE_get_attribute_logical_fname
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_get_attribute_int_fid( &
+  subroutine FILE_get_attribute_int_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1800,8 +1811,30 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_int_fid_ary
+  subroutine FILE_get_attribute_int_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    integer,          intent(out) :: val
+    logical, intent(out), optional :: existed
+    integer :: ary(1)
+
+    call FILE_get_attribute_int_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_int_fid
-  subroutine FILE_get_attribute_int_fname( &
+  subroutine FILE_get_attribute_int_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1828,16 +1861,41 @@ contains
          aggregate=aggregate, &
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_int_fid( &
+    call FILE_get_attribute_int_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
 
     return
+  end subroutine FILE_get_attribute_int_fname_ary
+  subroutine FILE_get_attribute_int_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer, intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    integer :: ary(1)
+
+    call FILE_get_attribute_int_fname_ary( &
+         basename, vname, key,      &
+         ary(:),                    &
+         single, aggregate, rankid, &
+         existed                    )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_int_fname
   !-----------------------------------------------------------------------------
 
-  subroutine FILE_get_attribute_float_fid( &
+  subroutine FILE_get_attribute_float_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1879,8 +1937,30 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_float_fid_ary
+  subroutine FILE_get_attribute_float_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(SP),    intent(out) :: val
+    logical, intent(out), optional :: existed
+    real(SP) :: ary(1)
+
+    call FILE_get_attribute_float_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_float_fid
-  subroutine FILE_get_attribute_float_fname( &
+  subroutine FILE_get_attribute_float_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1907,14 +1987,39 @@ contains
          aggregate=aggregate, & ! (in)
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_float_fid( &
+    call FILE_get_attribute_float_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
 
     return
+  end subroutine FILE_get_attribute_float_fname_ary
+  subroutine FILE_get_attribute_float_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(SP), intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    real(SP) :: ary(1)
+
+    call FILE_get_attribute_float_fname_ary( &
+      basename, vname, key,      &
+      ary(:),                    &
+      single, aggregate, rankid, &
+      existed                    )
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_float_fname
-  subroutine FILE_get_attribute_double_fid( &
+  subroutine FILE_get_attribute_double_fid_ary( &
        fid, vname, key, &
        val,             &
        existed          )
@@ -1956,8 +2061,30 @@ contains
     end if
 
     return
+  end subroutine FILE_get_attribute_double_fid_ary
+  subroutine FILE_get_attribute_double_fid( &
+       fid, vname, key, &
+       val,             &
+       existed          )
+    integer,          intent(in ) :: fid
+    character(len=*), intent(in ) :: vname
+    character(len=*), intent(in ) :: key
+    real(DP),    intent(out) :: val
+    logical, intent(out), optional :: existed
+    real(DP) :: ary(1)
+
+    call FILE_get_attribute_double_fid_ary( &
+       fid, vname, key, &
+       ary(:),          &
+       existed          )
+    if ( present(existed) ) then
+       if ( .not. existed ) return
+    end if
+    val = ary(1)
+
+    return
   end subroutine FILE_get_attribute_double_fid
-  subroutine FILE_get_attribute_double_fname( &
+  subroutine FILE_get_attribute_double_fname_ary( &
       basename, vname, key,      &
       val,                       &
       single, aggregate, rankid, &
@@ -1984,10 +2111,35 @@ contains
          aggregate=aggregate, & ! (in)
          rankid=rankid        ) ! (in)
 
-    call FILE_get_attribute_double_fid( &
+    call FILE_get_attribute_double_fid_ary( &
          fid, vname, key, & ! (in)
          val,             & ! (out)
          existed          ) ! (out)
+
+    return
+  end subroutine FILE_get_attribute_double_fname_ary
+  subroutine FILE_get_attribute_double_fname( &
+      basename, vname, key,      &
+      val,                       &
+      single, aggregate, rankid, &
+      existed                    )
+    implicit none
+    character(len=*), intent(in) :: basename
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(DP), intent(out) :: val
+    logical, intent(in), optional :: single
+    logical, intent(in), optional :: aggregate
+    integer, intent(in), optional :: rankid
+    logical, intent(out), optional :: existed
+    real(DP) :: ary(1)
+
+    call FILE_get_attribute_double_fname_ary( &
+      basename, vname, key,      &
+      ary(:),                    &
+      single, aggregate, rankid, &
+      existed                    )
+    val = ary(1)
 
     return
   end subroutine FILE_get_attribute_double_fname
@@ -2049,7 +2201,7 @@ contains
   end subroutine FILE_set_attribute_logical
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_int( &
+  subroutine FILE_set_attribute_int_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2076,10 +2228,27 @@ contains
     end if
 
     return
+  end subroutine FILE_set_attribute_int_ary
+
+  subroutine FILE_set_attribute_int( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    integer,          intent(in) :: val
+
+    integer :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_int_ary( fid, vname, &
+                                     key, ary(:) )
+
+    return
   end subroutine FILE_set_attribute_int
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_float( &
+  subroutine FILE_set_attribute_float_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2106,9 +2275,26 @@ contains
     end if
 
     return
+  end subroutine FILE_set_attribute_float_ary
+
+  subroutine FILE_set_attribute_float( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(SP),    intent(in) :: val
+
+    real(SP) :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_float_ary( fid, vname, &
+                                           key, ary(:) )
+
+    return
   end subroutine FILE_set_attribute_float
   !-----------------------------------------------------------------------------
-  subroutine FILE_set_attribute_double( &
+  subroutine FILE_set_attribute_double_ary( &
      fid, vname, &
      key, val    )
     integer,          intent(in) :: fid
@@ -2133,6 +2319,23 @@ contains
        LOG_ERROR("FILE_set_attribute_double",*) 'failed to set double attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
     end if
+
+    return
+  end subroutine FILE_set_attribute_double_ary
+
+  subroutine FILE_set_attribute_double( &
+     fid, vname, &
+     key, val    )
+    integer,          intent(in) :: fid
+    character(len=*), intent(in) :: vname
+    character(len=*), intent(in) :: key
+    real(DP),    intent(in) :: val
+
+    real(DP) :: ary(1)
+
+    ary(1) = val
+    call FILE_set_attribute_double_ary( fid, vname, &
+                                           key, ary(:) )
 
     return
   end subroutine FILE_set_attribute_double
@@ -3134,7 +3337,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_1D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_1D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3243,7 +3446,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 1
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_1D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_1D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3352,7 +3555,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_2D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_2D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3461,7 +3664,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 2
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_2D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_2D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3570,7 +3773,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_3D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_3D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3679,7 +3882,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 3
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_3D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_3D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3788,7 +3991,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realSP_4D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realSP_4D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3897,7 +4100,7 @@ contains
        dim_size(:) = shape(var)
        do n = 1, 4
           if ( dinfo%dim_size(n) /= dim_size(n) ) then
-             LOG_ERROR("FILE_read_var_realDP_4D",*) 'shape is different: ', varname, n, dinfo%dim_size(n), dim_size(n)
+             LOG_ERROR("FILE_read_var_realDP_4D",*) 'shape is different: ', trim(varname), n, dinfo%dim_size(n), dim_size(n)
              call PRC_abort
           end if
        end do
@@ -3936,7 +4139,7 @@ contains
     integer :: start_(1)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -3981,12 +4184,7 @@ contains
             error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4012,7 +4210,7 @@ contains
     integer :: start_(1)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4057,12 +4255,7 @@ contains
             error                                                       ) ! (out)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4084,7 +4277,7 @@ contains
     integer :: start_(2)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4110,12 +4303,7 @@ contains
             2, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4137,7 +4325,7 @@ contains
     integer :: start_(2)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4163,12 +4351,7 @@ contains
             2, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4190,7 +4373,7 @@ contains
     integer :: start_(3)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4216,12 +4399,7 @@ contains
             3, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4243,7 +4421,7 @@ contains
     integer :: start_(3)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4269,12 +4447,7 @@ contains
             3, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4296,7 +4469,7 @@ contains
     integer :: start_(4)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4322,12 +4495,7 @@ contains
             4, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4349,7 +4517,7 @@ contains
     integer :: start_(4)
 
     integer :: fid
-    integer :: error, n
+    integer :: error
 
     intrinsic shape
     !---------------------------------------------------------------------------
@@ -4375,12 +4543,7 @@ contains
             4, start_, shape(var),                                 & ! (in)
             error                                                       ) ! (out)
     if ( error /= FILE_SUCCESS_CODE ) then
-       do n = 1, FILE_nvars
-          if ( FILE_vars(n)%vid == vid ) then
-             LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(n)%name)
-             exit
-          end if
-       enddo
+       LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
     end if
 
@@ -4416,6 +4579,34 @@ contains
   end subroutine FILE_enddef
 
   !-----------------------------------------------------------------------------
+  ! enter netCDF define mode and enter data mode
+  subroutine FILE_redef( fid )
+    implicit none
+
+    integer, intent(in) :: fid
+
+    integer :: error
+    !---------------------------------------------------------------------------
+
+    if ( .not. FILE_opened(fid) ) return
+
+    call file_redef_c( FILE_files(fid)%fid, error )
+
+    if ( error == FILE_SUCCESS_CODE ) then
+
+       LOG_NEWLINE
+       LOG_INFO("FILE_redef",'(1x,A,I3.3,2A)') &
+            'Enter to define mode : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+
+    else
+       LOG_ERROR("FILE_redef",*) 'failed to enter to define mode'
+       call PRC_abort
+    end if
+
+    return
+  end subroutine FILE_redef
+
+  !-----------------------------------------------------------------------------
   ! This subroutine is used when PnetCDF I/O method is enabled
   subroutine FILE_attach_buffer( &
        fid,       &
@@ -4430,18 +4621,23 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
+    if ( FILE_files(fid)%buffer_size > 0 ) then
+       call FILE_detach_buffer(fid)
+    end if
+
     call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
 
-    if ( error == FILE_SUCCESS_CODE ) then
-
-       LOG_NEWLINE
-       LOG_INFO("FILE_attach_buffer",'(1x,A,I3.3,3A,I10)') &
-            'Attach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
-            ', size = ', buf_amount
-    else
+    if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_attach_buffer",*) 'failed to attach buffer in PnetCDF'
        call PRC_abort
     end if
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_attach_buffer",'(1x,A,I3.3,3A,I10)') &
+            'Attach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name), &
+            ', size = ', buf_amount
+
+    FILE_files(fid)%buffer_size = buf_amount
 
     return
   end subroutine FILE_attach_buffer
@@ -4460,18 +4656,20 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
+    if ( FILE_files(fid)%buffer_size < 0 ) return ! not attached
+
     call file_detach_buffer_c( FILE_files(fid)%fid, error )
 
-    if ( error == FILE_SUCCESS_CODE ) then
-
-       LOG_NEWLINE
-       LOG_INFO("FILE_detach_buffer",'(1x,A,I3.3,2A)') &
-            'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
-
-    else
+    if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_detach_buffer",*) 'failed to detach buffer in PnetCDF'
        call PRC_abort
     end if
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_detach_buffer",'(1x,A,I3.3,2A)') &
+            'Detach buffer : No.', fid, ', name = ', trim(FILE_files(fid)%name)
+
+    FILE_files(fid)%buffer_size = -1
 
     return
   end subroutine FILE_detach_buffer
@@ -4507,12 +4705,12 @@ contains
   end subroutine FILE_flush
 
   !-----------------------------------------------------------------------------
-  subroutine FILE_close( fid, skip_abort )
+  subroutine FILE_close( fid, abort )
     implicit none
     integer, intent(in) :: fid
-    logical, intent(in), optional :: skip_abort
+    logical, intent(in), optional :: abort !> true when this is called in the abort process
 
-    logical :: skip_abort_
+    logical :: abort_
     integer :: error
     integer :: n
     !---------------------------------------------------------------------------
@@ -4521,13 +4719,13 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    if ( present(skip_abort) ) then
-       skip_abort_ = skip_abort
+    if ( present(abort) ) then
+       abort_ = abort
     else
-       skip_abort_ = .false.
+       abort_ = .false.
     end if
 
-    call file_close_c( FILE_files(fid)%fid, error )
+    call file_close_c( FILE_files(fid)%fid, abort_, error )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4537,12 +4735,13 @@ contains
 
     elseif( error /= FILE_ALREADY_CLOSED_CODE ) then
        LOG_ERROR("FILE_close",*) 'failed to close file'
-       if ( .not. skip_abort_ ) call PRC_abort
+       if ( .not. abort_ ) call PRC_abort
     end if
 
     FILE_files(fid)%fid = -1
     FILE_files(fid)%name = ''
     FILE_files(fid)%aggregate = .false.
+    FILE_files(fid)%buffer_size = -1
 
     do n = 1, FILE_nvars
        if ( FILE_vars(n)%fid == fid ) then
@@ -4721,6 +4920,7 @@ contains
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
+    FILE_files(fid)%buffer_size = -1
 
     LOG_NEWLINE
     LOG_INFO("FILE_get_fid",'(1x,A,A6,A,I3.3,2A)') &

@@ -69,7 +69,8 @@ module mod_user
   real(RP), private, save :: POOL_DIST = 15.e3_RP
   integer,  private, save :: POOL_NUM  = 4
 
-  integer,  private, save :: USER_LS_FLG = 0 !-- 0->no force, 1->TWPICE
+! integer,  private, save :: USER_LS_FLG = 0 !-- 0->no force, 1->TWPICE
+  integer,  private, save :: USER_LS_FLG = 1 !-- 0->no force, 1->TWPICE
   real(RP), private, save :: corioli
 
   real(RP), private, save :: CNST_SST = 302.15_RP
@@ -395,7 +396,8 @@ contains
              do j = JJS, JJE
              do i = IIS, IIE
                 MOMX_tp(KE,i,j) = MOMX_tp(KE,i,j) &
-                     + 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+!                    + 0.5_RP * ( DENS(k,i+1,j)+DENS(k,i,j) ) &
+                     + 0.5_RP * ( DENS(KE,i+1,j)+DENS(KE,i,j) ) &
                      *  ( - CORIOLI * V_GEOS(KE) &
                           + CORIOLI * 0.25_RP &
                           * ( VELY(KE,i,j)+VELY(KE,i+1,j)+VELY(KE,i,j-1)+VELY(KE,i+1,j-1) ) &

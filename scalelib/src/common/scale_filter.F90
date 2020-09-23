@@ -82,23 +82,6 @@ contains
        call PRC_abort
     end if
 
-    if ( IS < 2 ) then
-       LOG_ERROR("FILTER_hyperdiff_2D", *) "IS must be >= 2"
-       call PRC_abort
-    end if
-    if ( IE > IA-1  ) then
-       LOG_ERROR("FILTER_hyperdiff_2D", *) "IS must be <= IA-1"
-       call PRC_abort
-    end if
-    if ( JS < 2 ) then
-       LOG_ERROR("FILTER_hyperdiff_2D", *) "JS must be >= 2"
-       call PRC_abort
-    end if
-    if ( JE > JA-1  ) then
-       LOG_ERROR("FILTER_hyperdiff_2D", *) "JS must be <= JA-1"
-       call PRC_abort
-    end if
-
 
     limiter = present( limiter_sign )
 
@@ -106,7 +89,7 @@ contains
     do ite = 1, nite
 
        call COMM_vars8( data(:,:), 1 )
-       call COMM_wait ( data(:,:), 1, .true. )
+       call COMM_wait ( data(:,:), 1, .false. )
 
        !$omp parallel do
        do j = 1, JA
@@ -119,15 +102,71 @@ contains
        p2 => work1
        do n = 1, order
           !$omp parallel do
-          do j = JS, JE
-          do i = IS, IE
+          do j = max(JS,2), min(JE,JA-1)
+          do i = max(IS,2), min(IE,IA-1)
              p2(i,j) = ( - p1(i+1,j) + p1(i,j)*2.0_RP - p1(i-1,j) &
                          - p1(i,j+1) + p1(i,j)*2.0_RP - p1(i,j-1) ) / 8.0_RP
           end do
           end do
+          if ( JS == 1 ) then
+             do i = max(IS,2), min(IE,IA-1)
+                p2(i,JS) = ( - p1(i+1,JS) + p1(i,JS)*2.0_RP - p1(i-1,JS) &
+                             - p1(i,JS+1) + p1(i,JS)                     ) / 6.0_RP
+             end do
+          else
+             do i = max(IS,2), min(IE,IA-1)
+                p2(i,JS-1) = p2(i,JS)
+             end do
+          end if
+          if ( JE == JA ) then
+             do i = max(IS,2), min(IE,IA-1)
+                p2(i,JE) = ( - p1(i+1,JE) + p1(i,JE)*2.0_RP - p1(i-1,JE) &
+                                          + p1(i,JE)        - p1(i,JE-1) ) / 6.0_RP
+             end do
+          else
+             do i = max(IS,2), min(IE,IA-1)
+                p2(i,JE+1) = p2(i,JE)
+             end do
+          end if
+          if ( IS == 1 ) then
+             do j = max(JS,2), min(JE,JA-1)
+                p2(IS,j) = ( - p1(IS+1,j) + p1(IS,j)                     &
+                             - p1(IS,j+1) + p1(IS,j)*2.0_RP - p1(IS,j-1) ) / 6.0_RP
+             end do
+             if ( JS == 1 ) then
+                p2(IS,JS) = ( - p1(IS+1,JS) + p1(IS,JS)               &
+                              - p1(IS,JS+1) + p1(IS,JS)               ) / 4.0_RP
+             end if
+             if ( JE == JA ) then
+                p2(IS,JE) = ( - p1(IS+1,JE) + p1(IS,JE)               &
+                                            + p1(IS,JE) - p1(IS,JE-1) ) / 4.0_RP
+             end if
+          else
+             do j = max(JS-1,1), min(JE+1,JA)
+                p2(IS-1,j) = p2(IS,j)
+             end do
+          end if
+          if ( IE == IA ) then
+             do j = max(JS,2), min(JE,JA-1)
+                p2(IE,j) = (              + p1(IE,j)        - p1(IE-1,j) &
+                             - p1(IE,j+1) + p1(IE,j)*2.0_RP - p1(IE,j-1) ) / 6.0_RP
+             end do
+             if ( JS == 1 ) then
+                p2(IE,JS) = (               + p1(IE,JS) - p1(IE-1,JS) &
+                              - p1(IE,JS+1) + p1(IE,JS)               ) / 4.0_RP
+             end if
+             if ( JE == JA ) then
+                p2(IE,JE) = (               + p1(IE,JE) - p1(IE-1,JE) &
+                                            + p1(IE,JE) - p1(IE,JE-1) ) / 4.0_RP
+             end if
+          else
+             do j = max(JS-1,1), min(JE+1,JA)
+                p2(IE+1,j) = p2(IE,j)
+             end do
+          end if
 
           call COMM_vars8( p2(:,:), 1 )
-          call COMM_wait ( p2(:,:), 1, .true. )
+          call COMM_wait ( p2(:,:), 1, .false. )
 
           if ( mod(n,2) == 0 ) then
              p1 => work2

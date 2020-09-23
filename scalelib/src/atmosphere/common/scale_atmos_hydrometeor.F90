@@ -254,6 +254,7 @@ contains
     real(RP) :: CV   (1+NL+NI)
     real(RP) :: CP   (1+NL+NI)
     real(RP) :: R    (1+NL+NI)
+    real(RP) :: EI0  (1+NL+NI)
     logical  :: MASS (1+NL+NI)
     logical  :: ADVC_(1+NL+NI)
 
@@ -272,24 +273,27 @@ contains
 
     ! vapor
     NQ = NQ + 1
-    CV(NQ) = CV_VAPOR
-    CP(NQ) = CP_VAPOR
-    R (NQ) = Rvap
+    CV (NQ) = CV_VAPOR
+    CP (NQ) = CP_VAPOR
+    R  (NQ) = Rvap
+    EI0(NQ) = LHV
 
     ! liquid
     do n = 1, NL
        NQ = NQ + 1
-       CV(NQ) = CV_WATER
-       CP(NQ) = CP_WATER
-       R (NQ) = 0.0_RP
+       CV (NQ) = CV_WATER
+       CP (NQ) = CP_WATER
+       R  (NQ) = 0.0_RP
+       EI0(NQ) = 0.0_RP
     end do
 
     ! ice
     do n = 1, NI
        NQ = NQ + 1
-       CV(NQ) = CV_ICE
-       CP(NQ) = CP_ICE
-       R (NQ) = 0.0_RP
+       CV (NQ) = CV_ICE
+       CP (NQ) = CP_ICE
+       R  (NQ) = 0.0_RP
+       EI0(NQ) =  - LHF
     end do
 
     ! NQ = 1 + NL + NI,   vapor + liqid + ice
@@ -304,13 +308,13 @@ contains
        MASS(n) = .true.
     end do
 
-    call TRACER_regist( Q0,         & ! [OUT]
-                        NQ,         & ! [IN]
-                        NAME,       & ! [IN]
-                        DESC,       & ! [IN]
-                        UNIT,       & ! [IN]
-                        CV, CP, R,  & ! [IN], optional
-                        ADVC_, MASS ) ! [IN], optional
+    call TRACER_regist( Q0,             & ! [OUT]
+                        NQ,             & ! [IN]
+                        NAME,           & ! [IN]
+                        DESC,           & ! [IN]
+                        UNIT,           & ! [IN]
+                        CV, CP, R, EI0, & ! [IN], optional
+                        ADVC_, MASS     ) ! [IN], optional
 
     I_QV = Q0
 

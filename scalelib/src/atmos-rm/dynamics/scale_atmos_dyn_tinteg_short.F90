@@ -32,7 +32,7 @@ module scale_atmos_dyn_tinteg_short
   abstract interface
      subroutine short( &
           DENS, MOMZ, MOMX, MOMY, RHOT, PROG,       & ! (inout)
-          mflx_hi, tflx_hi,                         & ! (inout)
+          mflx_hi, tflx_hi,                         & ! (inout, out)
           DENS_t, MOMZ_t, MOMX_t, MOMY_t, RHOT_t,   & ! (in)
           DPRES0, CVtot, CORIOLI,                   & ! (in)
           num_diff, wdamp_coef, divdmp_coef, DDIV,  & ! (in)
@@ -42,7 +42,7 @@ module scale_atmos_dyn_tinteg_short
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,       & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,       & ! (in)
           REF_pres, REF_dens,                       & ! (in)
-          BND_W, BND_E, BND_S, BND_N,               & ! (in)
+          BND_W, BND_E, BND_S, BND_N, TwoD,         & ! (in)
           dt                                        ) ! (in)
        use scale_precision
        use scale_atmos_grid_cartesC_index
@@ -55,7 +55,7 @@ module scale_atmos_dyn_tinteg_short
        real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
        real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-       real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+       real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
        real(RP), intent(in)    :: DENS_t(KA,IA,JA)
        real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
@@ -101,6 +101,7 @@ module scale_atmos_dyn_tinteg_short
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
 
        real(RP), intent(in)    :: dt
      end subroutine short
@@ -125,7 +126,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Register
   subroutine ATMOS_DYN_Tinteg_short_setup( &
-       ATMOS_DYN_Tinteg_short_TYPE )
+       ATMOS_DYN_Tinteg_short_TYPE, ATMOS_DYN_Tstep_short_TYPE )
 
     use scale_precision
     use scale_atmos_grid_cartesC_index
@@ -138,9 +139,16 @@ contains
     use scale_atmos_dyn_tinteg_short_rk4, only: &
        ATMOS_DYN_Tinteg_short_rk4_setup, &
        ATMOS_DYN_Tinteg_short_rk4
+    use scale_atmos_dyn_tinteg_short_rk7s6o, only: &
+       ATMOS_DYN_Tinteg_short_rk7s6o_setup, &
+       ATMOS_DYN_Tinteg_short_rk7s6o
+    use scale_atmos_dyn_tinteg_short_rk11s8o, only: &
+       ATMOS_DYN_Tinteg_short_rk11s8o_setup, &
+       ATMOS_DYN_Tinteg_short_rk11s8o         
     implicit none
 
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_short_TYPE
+    character(len=*), intent(in)  :: ATMOS_DYN_Tstep_short_TYPE
     !---------------------------------------------------------------------------
 
     select case( ATMOS_DYN_Tinteg_short_TYPE )
@@ -152,6 +160,20 @@ contains
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
+    case( 'RK7s6o', 'RK7s6oLawson1967', 'RK7s6oButcher1964' )
+       if ( .not. (ATMOS_DYN_Tstep_short_TYPE == 'HEVE' .or. ATMOS_DYN_Tstep_short_TYPE == 'FVM-HEVE') ) then
+         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE is now supported only for 'HEVE',", ATMOS_DYN_Tinteg_short_TYPE
+       end if 
+       call ATMOS_DYN_Tinteg_short_rk7s6o_setup( &
+              ATMOS_DYN_Tinteg_short_TYPE )
+         ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk7s6o
+   case( 'RK11s8o', 'RK11s8oCooperVerner1972' )
+      if ( .not. (ATMOS_DYN_Tstep_short_TYPE == 'HEVE' .or. ATMOS_DYN_Tstep_short_TYPE == 'FVM-HEVE') ) then
+         LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE is now supported only for 'HEVE',", ATMOS_DYN_Tinteg_short_TYPE
+      end if 
+      call ATMOS_DYN_Tinteg_short_rk11s8o_setup( &
+               ATMOS_DYN_Tinteg_short_TYPE )
+         ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk11s8o 
     case( 'OFF', 'NONE' )
        ! do nothing
     case default

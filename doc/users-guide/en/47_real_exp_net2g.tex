@@ -15,7 +15,7 @@ First, move to the directory \verb|net2g|:
     net2g.2D.d01.conf
     net2g.3D.d01.conf
 \end{verbatim}
-There are some configuration files and a binary file in this directory.  The binary file is linked to the executable file compiled in Section \ref{sec:source_net2g}. As an example,  a procedure to convert the 2D variables MSLP and PREC to \grads format is explained here. We also explain how to extract the 3D variables, zonal wind (Umet) and meridional wind (Vmet), at 850 hPa, 500 hPa, and 200 hPa, and convert them into \grads format.  The configuration files for 2D and 3D variables  are prepared as files \verb|net2g.3D.d01.conf| and \verb|net2g.2D.d01.conf|, respectively.
+There are some configuration files and a binary file in this directory.  The binary file is linked to the executable file compiled in Section \ref{sec:compile_net2g}. As an example,  a procedure to convert the 2D variables MSLP and PREC to \grads format is explained here. We also explain how to extract the 3D variables, zonal wind (Umet) and meridional wind (Vmet), at 850 hPa, 500 hPa, and 200 hPa, and convert them into \grads format.  The configuration files for 2D and 3D variables  are prepared as files \verb|net2g.3D.d01.conf| and \verb|net2g.2D.d01.conf|, respectively.
  
 When \verb|net2g| is executed, the number of processes needs to be a divisor of the number of the processes used for the simulation. 
 The number of processes is four here. Since \verb|net2g| cannot simultaneously convert 2D and 3D variables , they must be converted separately as follows:
@@ -64,17 +64,17 @@ If the calculation are successful, the same figures as Figs. \ref{fig:real_mslp}
 
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=0.55\hsize]{./figure/real_mslp.pdf}\\
+  \includegraphics[width=0.55\hsize]{./../../figure/real_mslp.pdf}\\
   \caption{Sea-level pressure after 6 hours}
   \label{fig:real_mslp}
 \end{center}
 \begin{center}
-  \includegraphics[width=0.55\hsize]{./figure/real_prec.pdf}\\
+  \includegraphics[width=0.55\hsize]{./../../figure/real_prec.pdf}\\
   \caption{Precipitation flux after 6 hours}
   \label{fig:real_prec}
 \end{center}
 \begin{center}
-  \includegraphics[width=0.55\hsize]{./figure/real_wind.pdf}\\
+  \includegraphics[width=0.55\hsize]{./../../figure/real_wind.pdf}\\
   \caption{Wind velocity after 6 hours}
   \label{fig:real_wind}
 \end{center}

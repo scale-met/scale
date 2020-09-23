@@ -7,22 +7,25 @@
 ##### Fortran setting
 #FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
-FC  = sxmpif90
+FC  = sxmpif03
 SFC = frtpx
 MODDIROPT = -to
 
 FFLAGS_FAST  = -C hopt                    \
-               -Ep -f2003 -dW             \
-               -Wf"-L fmtlist transform"  \
-               -Wf"-pvctl chgpwr fullmsg"
+               -Ep -free -extend_source   \
+               -R fmtlist transform       \
+               -pvctl chgpwr fullmsg      \
+               -size_t64
 
 FFLAGS_DYN   = $(FFLAGS)
 
-FFLAGS_DEBUG = -C vsafe                      \
-               -Ep -f2003 -dW                \
+FFLAGS_DEBUG = -C vsafe -eC                  \
+               -Ep -free -extend_source      \
+               -Wf"-M noflunf"               \
                -Wf"-L fmtlist transform"     \
                -Wf"-pvctl fullmsg"           \
-               -Wf"-init heap=nan stack=nan"
+               -Wf"-init heap=nan stack=nan" \
+               -size_t64
 
 
 
@@ -31,8 +34,8 @@ FFLAGS_DEBUG = -C vsafe                      \
 
 CC = sxmpic++
 
-CFLAGS_FAST  = -C vsafe
-CFLAGS_DEBUG = $(CFLAGS_FAST)
+CFLAGS_FAST  = -size_t64
+CFLAGS_DEBUG = -g -size_t64 -traceback -mask flovf -mask flunf -mask inv -mask zdiv -mask inexact -mask fxovf
 
 
 

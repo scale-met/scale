@@ -61,9 +61,10 @@ if [ ${NUM_DOMAIN} -ne ${#TIME_DT_URBAN[*]} ];        then echo "Error: Wrong ar
 if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_X[*]} ]; then echo "Error: Wrong array size (PRC_NUM_X)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#PRC_NUM_Y[*]} ]; then echo "Error: Wrong array size (PRC_NUM_Y)."; exit 1; fi
 if [ ${NUM_DOMAIN} -ne ${#KMAX[*]} ];      then echo "Error: Wrong array size (KMAX).";      exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#IMAX[*]} ];      then echo "Error: Wrong array size (IMAX).";      exit 1; fi
-if [ ${NUM_DOMAIN} -ne ${#JMAX[*]} ];      then echo "Error: Wrong array size (JMAX).";      exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#IMAXG[*]} ];     then echo "Error: Wrong array size (IMAXG).";     exit 1; fi
+if [ ${NUM_DOMAIN} -ne ${#JMAXG[*]} ];     then echo "Error: Wrong array size (JMAXG).";     exit 1; fi
 
+if [ ${OKMAX} -ne ${#ODZ[*]} ]; then echo "Error: Wrong array size (ODZ)."; exit 1; fi
 if [ ${LKMAX} -ne ${#LDZ[*]} ]; then echo "Error: Wrong array size (LDZ)."; exit 1; fi
 if [ ${UKMAX} -ne ${#UDZ[*]} ]; then echo "Error: Wrong array size (UDZ)."; exit 1; fi
 
@@ -181,6 +182,7 @@ eval 'STARTDATE[6]=`printf "%03d" ${STARTDATE[6]}`'
 
 INITTIME="${STARTDATE[0]}${STARTDATE[1]}${STARTDATE[2]}-${STARTDATE[3]}${STARTDATE[4]}${STARTDATE[5]}.${STARTDATE[6]}"
 
+IFS="," eval 'LIST_ODZ="${ODZ[*]}"'
 IFS="," eval 'LIST_LDZ="${LDZ[*]}"'
 IFS="," eval 'LIST_UDZ="${UDZ[*]}"'
 
@@ -211,7 +213,7 @@ do
   # set filenames for each domain
   PP_IO_LOG_BASENAME="pp_LOG_d${FNUM}"
   DOMAIN_CATALOGUE_FNAME="latlon_domain_catalogue_d${FNUM}.txt"
-  TOPO_OUT_BASENAME="topo_d${FNUM}"
+  TOPOGRAPHY_OUT_BASENAME="topo_d${FNUM}"
   COPYTOPO_IN_BASENAME="topo_d${PFNUM}"
   LANDUSE_OUT_BASENAME="landuse_d${FNUM}"
   LATLON_CATALOGUE_FNAME="latlon_domain_catalogue_d${PFNUM}.txt"
@@ -222,13 +224,13 @@ do
   LANDUSE_IN_DIR="${LANDUSEDIR}/${LANDUSETYPE[$D]}/Products"
   LANDUSE_IN_CATALOGUE="${LANDUSETYPE[$D]}_catalogue.txt"
 
-  INIT_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
+  INIT_TOPOGRAPHY_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
   INIT_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
   INIT_IO_LOG_BASENAME="init_LOG_d${FNUM}"
   INIT_RESTART_OUT_BASENAME="init_d${FNUM}"
   BASENAME_BOUNDARY="boundary_d${FNUM}"
 
-  RUN_TOPO_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
+  RUN_TOPOGRAPHY_IN_BASENAME="${PPDIR}/topo_d${FNUM}"
   RUN_LANDUSE_IN_BASENAME="${PPDIR}/landuse_d${FNUM}"
   RUN_IO_LOG_BASENAME="LOG_d${FNUM}"
   RUN_RESTART_IN_BASENAME="${INITDIR}/${INIT_BASENAME}_d${FNUM}_${INITTIME}"

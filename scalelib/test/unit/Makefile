@@ -22,7 +22,7 @@ VPATH = $(BUILD_DIR)
 
 BINNAME = unit
 
-LIBS = $(LIBDIR)/libscale.a $(LIBDIR)/libdcutils.a
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a $(LIBDIR)/libdcutils.a
 
 OBJS = \
 	test_comm.o             \
@@ -41,7 +41,7 @@ makedir:
 
 makelib:
 	$(MAKE) -C $(DCUTILSDIR)
-	$(MAKE) -C $(SCALELIBDIR)/src BUILD_DIR=$(BUILD_DIR)
+	$(MAKE) -C $(SCALELIBDIR)/src
 
 makebin: $(BINDIR)/$(BINNAME)
 

@@ -52,6 +52,9 @@ module mod_realinput_scale
   real(RP), private, allocatable :: read3DL(:,:,:)
   real(RP), private, allocatable :: read3DO(:,:,:)
 
+  ! mapping info
+  real(RP), private, allocatable :: rotc_cos(:,:), rotc_sin(:,:)
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -83,6 +86,8 @@ contains
     allocate( read2D(        PARENT_IMAX(handle),PARENT_JMAX(handle)) )
     allocate( read3D(dims(1),PARENT_IMAX(handle),PARENT_JMAX(handle)) )
 
+    allocate( rotc_cos(dims(2),dims(3)), rotc_sin(dims(2),dims(3)) )
+
     return
   end subroutine ParentAtmosSetupSCALE
 
@@ -95,15 +100,23 @@ contains
        dims          )
     use scale_const, only: &
        D2R => CONST_D2R
+    use scale_prc, only: &
+       PRC_abort
     use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,                                     &
        PARENT_JMAX,                                     &
        NEST_TILE_NUM_X => COMM_CARTESC_NEST_TILE_NUM_X, &
        NEST_TILE_ID    => COMM_CARTESC_NEST_TILE_ID
     use scale_file, only: &
-       FILE_open
+       FILE_open, &
+       FILE_get_attribute
     use scale_file_CARTESC, only: &
        FILE_CARTESC_read
+    use scale_mapprojection, only: &
+       mappinginfo, &
+       mappingparam, &
+       MAPPROJECTION_get_param, &
+       MAPPROJECTION_rotcoef
     implicit none
 
     real(RP),         intent(out) :: lon_org(:,:)
@@ -112,6 +125,11 @@ contains
     character(len=*), intent(in)  :: basename_org
     integer,          intent(in)  :: dims(6)
 
+    ! mapping information
+    character(len=H_SHORT) :: vname
+    type(mappinginfo)  :: mapping_info
+    type(mappingparam) :: mapping_param
+
     integer :: rank
     integer :: xloc, yloc
     integer :: xs, xe, ys, ye
@@ -119,7 +137,7 @@ contains
     logical :: existed
 
     integer :: fid
-    integer :: i
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     do i = 1, size( NEST_TILE_ID(:) )
@@ -150,29 +168,71 @@ contains
        call FILE_CARTESC_read( fid, "topo", read2D(:,:), existed=existed )
        cz_org(2,xs:xe,ys:ye) = read2D(:,:)
 
+       if ( i == 1 ) then
+          call FILE_get_attribute( fid, "DENS", "grid_mapping", vname, existed=existed )
+          if ( existed ) then
+             call FILE_get_attribute( fid, vname, "grid_mapping_name", mapping_info%mapping_name )
+             call FILE_get_attribute( fid, vname, "false_easting", mapping_info%false_easting, existed=existed )
+             call FILE_get_attribute( fid, vname, "false_northing", mapping_info%false_northing, existed=existed )
+             call FILE_get_attribute( fid, vname, "longitude_of_central_meridian", mapping_info%longitude_of_central_meridian, existed=existed )
+             call FILE_get_attribute( fid, vname, "longitude_of_projection_origin", mapping_info%longitude_of_projection_origin, existed=existed )
+             call FILE_get_attribute( fid, vname, "latitude_of_projection_origin", mapping_info%latitude_of_projection_origin, existed=existed )
+             call FILE_get_attribute( fid, vname, "straight_vertical_longitude_from_pole", mapping_info%straight_vertical_longitude_from_pole, existed=existed )
+             call FILE_get_attribute( fid, vname, "standard_parallel", mapping_info%standard_parallel(:), existed=existed )
+             if ( .not. existed ) then
+                call FILE_get_attribute( fid, vname, "standard_parallel", mapping_info%standard_parallel(1), existed=existed )
+             end if
+             call FILE_get_attribute( fid, vname, "rotation", mapping_info%rotation, existed=existed )
+             if ( .not. existed ) mapping_info%rotation = 0.0_DP
+          else
+             mapping_info%mapping_name = ""
+          end if
+       end if
+
     end do
 
     cz_org(1,:,:) = 0.0_RP
+
+    if ( mapping_info%mapping_name .ne. "" ) then
+       call MAPPROJECTION_get_param( mapping_info, & ! (in)
+                                     mapping_param ) ! (out)
+       call MAPPROJECTION_rotcoef( dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                   lon_org(:,:), lat_org(:,:),  & ! (in)
+                                   mapping_info%mapping_name,   & ! (in)
+                                   mapping_param,               & ! (in)
+                                   rotc_cos(:,:), rotc_sin(:,:) ) ! (out)
+    else
+!OCL XFILL
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          rotc_cos(i,j) = 1.0_RP
+          rotc_sin(i,j) = 0.0_RP
+       end do
+       end do
+    end if
 
     return
   end subroutine ParentAtmosOpenSCALE
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosInputSCALE( &
-       velz_org,     &
-       velx_org,     &
-       vely_org,     &
-       pres_org,     &
-       dens_org,     &
-       pott_org,     &
-       qv_org,       &
-       qtrc_org,     &
-       cz_org,       &
-       basename_org, &
-       same_mptype,  &
-       dims,         &
-       it            )
+       velz_org,      &
+       velx_org,      &
+       vely_org,      &
+       pres_org,      &
+       dens_org,      &
+       pott_org,      &
+       qv_org,        &
+       qtrc_org,      &
+       cz_org,        &
+       basename_org,  &
+       sfc_diagnoses, &
+       same_mptype,   &
+       dims,          &
+       it             )
     use scale_const, only: &
+       UNDEF => CONST_UNDEF, &
        P00   => CONST_PRE00, &
        CPdry => CONST_CPdry, &
        Rdry  => CONST_Rdry,  &
@@ -195,8 +255,6 @@ contains
     use scale_atmos_thermodyn, only: &
        THERMODYN_specific_heat  => ATMOS_THERMODYN_specific_heat, &
        THERMODYN_rhot2temp_pres => ATMOS_THERMODYN_rhot2temp_pres
-    use scale_atmos_hydrostatic, only: &
-       HYDROSTATIC_buildrho_real => ATMOS_HYDROSTATIC_buildrho_real
     use scale_atmos_hydrometeor, only: &
        N_HYD,    &
        HYD_NAME, &
@@ -219,6 +277,7 @@ contains
     real(RP),         intent(out) :: qtrc_org(:,:,:,:)
     real(RP),         intent(in)  :: cz_org  (:,:,:)
     character(len=*), intent(in)  :: basename_org
+    logical,          intent(in)  :: sfc_diagnoses
     logical,          intent(in)  :: same_mptype
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
@@ -236,6 +295,8 @@ contains
     real(RP) :: CPtot   (dims(1)+2)
     real(RP) :: temp_org(dims(1)+2)
     real(RP) :: dz
+
+    real(RP) :: u, v
 
     integer  :: xs, xe
     integer  :: ys, ye
@@ -267,13 +328,19 @@ contains
                        fid,                           & ! (out)
                        aggregate=.false., rankid=rank ) ! (in)
 
-       call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
+       if ( sfc_diagnoses ) then
+          call FILE_CARTESC_read( fid, "T2", read2D(:,:), step=it, existed=existed_t2 )
+          if ( existed_t2 ) then
 !OCL XFILL
-       if ( existed_t2 ) tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+             tsfc_org(xs:xe,ys:ye) = read2D(:,:)
+          end if
 
-       call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
+          call FILE_CARTESC_read( fid, "MSLP", read2D(:,:), step=it, existed=existed_mslp )
+          if ( existed_mslp ) then
 !OCL XFILL
-       if ( existed_mslp ) pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+             pres_org(1,xs:xe,ys:ye) = read2D(:,:)
+          end if
+       end if
 
        call FILE_CARTESC_read( fid, "DENS", read3D(:,:,:), step=it )
 !OCL XFILL
@@ -296,11 +363,6 @@ contains
 !OCL XFILL
        rhot_org(3:dims(1)+2,xs:xe,ys:ye) = read3D(:,:,:)
 
-!OCL XFILL
-       do iq = 1, N_HYD
-          qhyd_org(:,xs:xe,ys:ye,iq) = 0.0_RP
-          qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
-       end do
 
        if ( same_mptype ) then
 
@@ -315,6 +377,12 @@ contains
           enddo
 
        else
+
+!OCL XFILL
+          do iq = 1, N_HYD
+             qhyd_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+             qnum_org(:,xs:xe,ys:ye,iq) = 0.0_RP
+          end do
 
           call FILE_CARTESC_read( fid, "QV", read3D(:,:,:), step=it, existed=existed )
           if ( existed ) then
@@ -397,8 +465,13 @@ contains
        velx_org(k,1,j) = momx_org(k,1,j) / dens_org(k,1,j)
     end do
     end do
+    if ( sfc_diagnoses ) then
 !OCL XFILL
-    velx_org(1:2,:,:) = 0.0_RP
+       velx_org(1:2,:,:) = 0.0_RP
+    else
+!OCL XFILL
+       velx_org(1:2,:,:) = UNDEF
+    end if
 
     ! convert from momentum to velocity
 !OCL XFILL
@@ -415,12 +488,40 @@ contains
        vely_org(k,i,1) = momy_org(k,i,1) / dens_org(k,i,1)
     end do
     end do
+    if ( sfc_diagnoses ) then
 !OCL XFILL
-    vely_org(1:2,:,:) = 0.0_RP
+       vely_org(1:2,:,:) = 0.0_RP
+    else
+!OCL XFILL
+       vely_org(1:2,:,:) = UNDEF
+    end if
 
 
-    !!! must be rotate !!!
+    ! rotation
+    !$omp parallel do &
+    !$omp private(u,v)
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+    do k = 1, dims(1)+2
+       u = velx_org(k,i,j)
+       v = vely_org(k,i,j)
+       if ( u .ne. UNDEF .and. v .ne.UNDEF ) then
+          velx_org(k,i,j) = u * rotc_cos(i,j) - v * rotc_sin(i,j)
+          vely_org(k,i,j) = u * rotc_sin(i,j) + v * rotc_cos(i,j)
+       else
+          velx_org(k,i,j) = UNDEF
+          vely_org(k,i,j) = UNDEF
+       end if
+    end do
+    end do
+    end do
 
+
+    do iq = 1, size(qtrc_org,4)
+       if ( iq >= QS_MP .and. iq <= QE_MP ) cycle
+!OCL XFILL
+       qtrc_org(:,:,:,iq) = 0.0_RP
+    end do
 
     if ( QA_MP > 0 .AND. .NOT. same_mptype ) then
        call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
@@ -431,52 +532,55 @@ contains
 
     !$omp parallel do default(none) &
     !$omp private(dz,temp_org,qdry,rtot,cvtot,cptot) &
-    !$omp shared(dims,QA,LAPS,P00,Rdry,CPdry,GRAV,TRACER_MASS,TRACER_R,TRACER_CV,TRACER_CP, &
+    !$omp shared(dims,QA,UNDEF,LAPS,P00,Rdry,CPdry,GRAV,TRACER_MASS,TRACER_R,TRACER_CV,TRACER_CP, &
     !$omp        dens_org,rhot_org,qtrc_org,pres_org,pott_org,tsfc_org,cz_org, &
-    !$omp        existed_t2,existed_mslp)
+    !$omp        existed_t2,existed_mslp,sfc_diagnoses)
     do j = 1, dims(3)
     do i = 1, dims(2)
 
        ! diagnose temp and pres
-       do k = 3, dims(1)+2
+       call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA,                             & ! [IN]
+                                     qtrc_org(:,i,j,:),                                       & ! [IN]
+                                     TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
+                                     qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
 
-          call THERMODYN_specific_heat( dims(1)+2, 3, dims(1)+2, QA,                             & ! [IN]
-                                        qtrc_org(:,i,j,:),                                       & ! [IN]
-                                        TRACER_MASS(:), TRACER_R(:), TRACER_CV(:), TRACER_CP(:), & ! [IN]
-                                        qdry(:), Rtot(:), CVtot(:), CPtot(:)                     ) ! [OUT]
-
-          call THERMODYN_rhot2temp_pres( dims(1)+2, 3, dims(1)+2,                              & ! [IN]
-                                         dens_org(:,i,j), rhot_org(:,i,j), Rtot, CVtot, CPtot, & ! [IN]
-                                         temp_org(:), pres_org(:,i,j)                          ) ! [OUT]
-
-       end do
+       call THERMODYN_rhot2temp_pres( dims(1), 1, dims(1),                                       & ! [IN]
+                                      dens_org(3:dims(1)+2,i,j), rhot_org(3:dims(1)+2,i,j),      & ! [IN]
+                                      Rtot(3:dims(1)+2), CVtot(3:dims(1)+2), CPtot(3:dims(1)+2), & ! [IN]
+                                      temp_org(3:dims(1)+2), pres_org(3:dims(1)+2,i,j)           ) ! [OUT]
 
 !OCL XFILL
        do k = 3, dims(1)+2
           pott_org(k,i,j) = rhot_org(k,i,j) / dens_org(k,i,j)
        end do
 
-       ! at the surface
-       dz = cz_org(3,i,j) - cz_org(2,i,j)
+       if ( sfc_diagnoses ) then
+          ! at the surface
+          dz = cz_org(3,i,j) - cz_org(2,i,j)
 
-       if ( .not. existed_t2 ) then
-          tsfc_org(i,j) = temp_org(3) + LAPS * dz
-       end if
-       dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
-                       / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
-       pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
-       pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
+          if ( .not. existed_t2 ) then
+             tsfc_org(i,j) = temp_org(3) + LAPS * dz
+          end if
+          dens_org(2,i,j) = ( pres_org(3,i,j) + GRAV * dens_org(3,i,j) * dz * 0.5_RP ) &
+                          / ( Rdry * tsfc_org(i,j) - GRAV * dz * 0.5_RP )
+          pres_org(2,i,j) = dens_org(2,i,j) * Rdry * tsfc_org(i,j)
+          pott_org(2,i,j) = tsfc_org(i,j) * ( P00 / pres_org(2,i,j) )**(Rdry/CPdry)
 
-       ! at the sea-level
-       temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
-       if ( .not. existed_mslp ) then
-          dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
-                          / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
-          pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
-          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          ! at the sea-level
+          temp_org(1) = tsfc_org(i,j) + LAPS * cz_org(2,i,j)
+          if ( existed_mslp ) then
+             pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+             dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+          else
+             dens_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens_org(2,i,j) * cz_org(2,i,j) * 0.5_RP ) &
+                             / ( Rdry * temp_org(1) - GRAV * cz_org(2,i,j) * 0.5_RP )
+             pres_org(1,i,j) = dens_org(1,i,j) * Rdry * temp_org(1)
+             pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
+          end if
        else
-          pott_org(1,i,j) = temp_org(1) * ( P00 / pres_org(1,i,j) )**(Rdry/CPdry)
-          dens_org(1,i,j) = pres_org(1,i,j) / ( Rdry * temp_org(1) )
+          dens_org(1:2,i,j) = UNDEF
+          pres_org(1:2,i,j) = UNDEF
+          pott_org(1:2,i,j) = UNDEF
        end if
 
     end do
@@ -674,11 +778,10 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanOpenSCALE( &
-       olon_org,       &
-       olat_org,       &
-       omask_org,      &
-       basename_ocean, &
-       odims           )
+       olon_org,      &
+       olat_org,      &
+       omask_org,     &
+       basename_ocean )
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_comm_cartesC_nest, only: &
@@ -696,7 +799,6 @@ contains
     real(RP),         intent(out) :: olat_org (:,:)
     real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
-    integer,          intent(in)  :: odims(2)
 
     integer :: rank
     integer :: xloc, yloc
@@ -744,7 +846,6 @@ contains
        z0w_org,        &
        omask_org,      &
        basename_ocean, &
-       odims,          &
        it              )
     use scale_comm_cartesC_nest, only: &
        PARENT_IMAX,                                     &
@@ -764,7 +865,6 @@ contains
     real(RP),         intent(out) :: z0w_org  (:,:)
     real(RP),         intent(out) :: omask_org(:,:)
     character(len=*), intent(in)  :: basename_ocean
-    integer,          intent(in)  :: odims(2)
     integer,          intent(in)  :: it
 
     integer :: rank

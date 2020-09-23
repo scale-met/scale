@@ -55,6 +55,8 @@ contains
        W,    &
        U,    &
        V     )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -93,24 +95,43 @@ contains
     enddo
     enddo
     enddo
+    if ( PRC_TwoD ) then
 !OCL XFILL
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,momws)
-    do j = max(2,JS), JE
-    do i = max(2,IS), IE
-       ! at KS+1/2
-       momws = MOMZ(KS,i,j) &
-             + ( J13G(KS,i,j,I_XYW) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) + MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j) ) &
-             + J23G(KS,i,j,I_XYW) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) + MOMY(KS+1,i,j) + MOMY(KS+1,i,j-1) ) ) &
-             * 0.25_RP / GSQRT(KS,i,j,I_XYW)
-       ! at KS
-       ! momws at the surface is assumed to be zero
-       W(KS,i,j) = momws * 0.5_RP &
-                 - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) ) &
-                 + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) ) &
-                 * 0.5_RP / ( DENS(KS,i,j) * GSQRT(KS,i,j,I_XYZ) )
-    enddo
-    enddo
+       !$omp parallel do OMP_SCHEDULE_ &
+       !$omp private(j,momws)
+       do j = max(2,JS), JE
+          ! at KS+1/2
+          momws = MOMZ(KS,IS,j) &
+                + J23G(KS,IS,j,I_XYW) * ( MOMY(KS,IS,j) + MOMY(KS,IS,j-1) + MOMY(KS+1,IS,j) + MOMY(KS+1,IS,j-1) ) &
+                * 0.25_RP / GSQRT(KS,IS,j,I_XYW)
+          ! at KS
+          ! momws at the surface is assumed to be zero
+          W(KS,IS,j) = ( momws * 0.5_RP                                            &
+                       - J23G(KS,IS,j,I_XYZ) * ( MOMY(KS,IS,j) + MOMY(KS,IS,j-1) ) &
+                         * 0.5_RP / GSQRT(KS,IS,j,I_XYZ)                           &
+                      ) / DENS(KS,IS,j)
+       enddo
+    else
+!OCL XFILL
+       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+       !$omp private(i,j,momws)
+       do j = max(2,JS), JE
+       do i = max(2,IS), IE
+          ! at KS+1/2
+          momws = MOMZ(KS,i,j) &
+                + ( J13G(KS,i,j,I_XYW) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) + MOMX(KS+1,i,j) + MOMX(KS+1,i-1,j) ) &
+                + J23G(KS,i,j,I_XYW) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) + MOMY(KS+1,i,j) + MOMY(KS+1,i,j-1) ) ) &
+                * 0.25_RP / GSQRT(KS,i,j,I_XYW)
+          ! at KS
+          ! momws at the surface is assumed to be zero
+          W(KS,i,j) = ( momws * 0.5_RP                                               &
+                       - ( J13G(KS,i,j,I_XYZ) * ( MOMX(KS,i,j) + MOMX(KS,i-1,j) )    &
+                         + J23G(KS,i,j,I_XYZ) * ( MOMY(KS,i,j) + MOMY(KS,i,j-1) ) )  &
+                         * 0.5_RP / GSQRT(KS,i,j,I_XYZ)                              &
+                      ) / DENS(KS,i,j)
+       enddo
+       enddo
+    end if
 !OCL XFILL
     !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
@@ -119,22 +140,32 @@ contains
     enddo
     enddo
 
+    if ( PRC_TwoD ) then
 !OCL XFILL
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do i = max(2,IS), IE
-    do k = KS, KE
-       U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
-    enddo
-    enddo
-    enddo
+       !$omp parallel do private(j,k) OMP_SCHEDULE_
+       do j = JS, JE
+       do k = KS, KE
+          U(k,IS,j) = MOMX(k,IS,j) / DENS(k,IS,j)
+       enddo
+       enddo
+    else
 !OCL XFILL
-    !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JS, JE
-    do k = KS, KE
-       U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
-    enddo
-    enddo
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = max(2,IS), IE
+       do k = KS, KE
+          U(k,i,j) = 0.5_RP * ( MOMX(k,i-1,j)+MOMX(k,i,j) ) / DENS(k,i,j)
+       enddo
+       enddo
+       enddo
+!OCL XFILL
+       !$omp parallel do private(j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do k = KS, KE
+          U(k,1,j) = MOMX(k,1,j) / DENS(k,1,j)
+       enddo
+       enddo
+    end if
 
    !OCL XFILL
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)

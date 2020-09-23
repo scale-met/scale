@@ -55,6 +55,7 @@ module mod_admin_time
   logical,  public :: TIME_DOATMOS_PHY_BL       !< execute physics  in this step? (boudary layer  )
   logical,  public :: TIME_DOATMOS_PHY_CH       !< execute physics  in this step? (chemistry   )
   logical,  public :: TIME_DOATMOS_PHY_AE       !< execute physics  in this step? (aerosol     )
+  logical,  public :: TIME_DOATMOS_PHY_LT       !< execute physics  in this step? (lightning   )
   logical,  public :: TIME_DOATMOS_restart      !< execute atmosphere restart output in this step?
   logical,  public :: TIME_DOATMOS_DA           !< execute DA in this step?
   logical,  public :: TIME_DOOCEAN_step         !< execute ocean      component      in this step?
@@ -78,11 +79,12 @@ module mod_admin_time
   !
   integer,  private :: TIME_STARTDATE(6) = (/ -999, 1, 1, 0, 0, 0 /)
   real(DP), private :: TIME_STARTMS      = 0.0_DP !< [millisec]
+  real(DP), private :: TIME_STARTSUBSEC
   integer,  private :: TIME_STARTDAY
   real(DP), private :: TIME_STARTSEC
 
   integer,  private :: TIME_ENDDATE(6)
-  real(DP), private :: TIME_ENDMS
+  real(DP), private :: TIME_ENDSUBSEC
   integer,  private :: TIME_ENDDAY
   real(DP), private :: TIME_ENDSEC
 
@@ -95,6 +97,7 @@ module mod_admin_time
   integer,  private :: TIME_RES_ATMOS_PHY_BL  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_CH  = 0
   integer,  private :: TIME_RES_ATMOS_PHY_AE  = 0
+  integer,  private :: TIME_RES_ATMOS_PHY_LT  = 0
   integer,  private :: TIME_RES_ATMOS_RESTART = 0
   integer,  private :: TIME_RES_OCEAN         = 0
   integer,  private :: TIME_RES_OCEAN_RESTART = 0
@@ -139,7 +142,7 @@ contains
     use scale_time, only: &
        TIME_DTSEC,                 &
        TIME_NOWDATE,               &
-       TIME_NOWMS,                 &
+       TIME_NOWSUBSEC,             &
        TIME_NOWDAY,                &
        TIME_NOWSEC,                &
        TIME_NOWDAYSEC,             &
@@ -155,6 +158,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_BL,    &
        TIME_DTSEC_ATMOS_PHY_CH,    &
        TIME_DTSEC_ATMOS_PHY_AE,    &
+       TIME_DTSEC_ATMOS_PHY_LT,    &
        TIME_DTSEC_OCEAN,           &
        TIME_DTSEC_LAND,            &
        TIME_DTSEC_URBAN,           &
@@ -168,6 +172,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_BL,    &
        TIME_DSTEP_ATMOS_PHY_CH,    &
        TIME_DSTEP_ATMOS_PHY_AE,    &
+       TIME_DSTEP_ATMOS_PHY_LT,    &
        TIME_DSTEP_OCEAN,           &
        TIME_DSTEP_LAND,            &
        TIME_DSTEP_URBAN,           &
@@ -204,6 +209,8 @@ contains
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_PHY_AE         = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT    = ""
+    real(DP)               :: TIME_DT_ATMOS_PHY_LT         = UNDEF8
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_LT_UNIT    = ""
     real(DP)               :: TIME_DT_ATMOS_RESTART        = UNDEF8
     character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT   = ""
     real(DP)               :: TIME_DT_ATMOS_DA             = UNDEF8
@@ -256,6 +263,8 @@ contains
        TIME_DT_ATMOS_PHY_CH_UNIT,    &
        TIME_DT_ATMOS_PHY_AE,         &
        TIME_DT_ATMOS_PHY_AE_UNIT,    &
+       TIME_DT_ATMOS_PHY_LT,         &
+       TIME_DT_ATMOS_PHY_LT_UNIT,    &
        TIME_DT_ATMOS_RESTART,        &
        TIME_DT_ATMOS_RESTART_UNIT,   &
        TIME_DT_ATMOS_DA,             &
@@ -407,6 +416,15 @@ contains
           LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_AE_UNIT.  TIME_DT_UNIT is used.'
           TIME_DT_ATMOS_PHY_AE_UNIT = TIME_DT_UNIT
        endif
+       ! PHY_LT
+       if ( TIME_DT_ATMOS_PHY_LT == UNDEF8 ) then
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_LT.       TIME_DT is used.'
+          TIME_DT_ATMOS_PHY_LT = TIME_DT
+       endif
+       if ( TIME_DT_ATMOS_PHY_LT_UNIT == '' ) then
+          LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_PHY_LT_UNIT.  TIME_DT_UNIT is used.'
+          TIME_DT_ATMOS_PHY_LT_UNIT = TIME_DT_UNIT
+       endif
        ! ATMOS RESTART
        if ( TIME_DT_ATMOS_RESTART == UNDEF8 ) then
           LOG_INFO_CONT(*) 'Not found TIME_DT_ATMOS_RESTART.      TIME_DURATION is used.'
@@ -511,17 +529,17 @@ contains
 
           call CALENDAR_adjust_daysec( dateday, datesec )
 
-          call CALENDAR_daysec2date( TIME_STARTDATE, & ! [OUT]
-                                     TIME_STARTMS,   & ! [OUT]
-                                     dateday,        & ! [IN]
-                                     datesec,        & ! [IN]
-                                     0               ) ! [IN]
+          call CALENDAR_daysec2date( TIME_STARTDATE,   & ! [OUT]
+                                     TIME_STARTSUBSEC, & ! [OUT]
+                                     dateday,          & ! [IN]
+                                     datesec,          & ! [IN]
+                                     0                 ) ! [IN]
        else
-          TIME_STARTDATE = (/ 0, 1, 1, 0, 0, 0 /)
-          TIME_STARTMS = 0.0_DP
+          TIME_STARTDATE   = (/ 0, 1, 1, 0, 0, 0 /)
+          TIME_STARTSUBSEC = 0.0_DP
        endif
     else
-       TIME_STARTMS = TIME_STARTMS * 1.E-3_DP
+       TIME_STARTSUBSEC = TIME_STARTMS * 1.E-3_DP
     endif
 
     TIME_OFFSET_YEAR = TIME_STARTDATE(1)
@@ -529,17 +547,17 @@ contains
     call CALENDAR_date2daysec( TIME_STARTDAY,     & ! [OUT]
                                TIME_STARTSEC,     & ! [OUT]
                                TIME_STARTDATE(:), & ! [IN]
-                               TIME_STARTMS,      & ! [IN]
+                               TIME_STARTSUBSEC,  & ! [IN]
                                TIME_OFFSET_YEAR   ) ! [IN]
 
     call CALENDAR_date2char( startchardate,     & ! [OUT]
                              TIME_STARTDATE(:), & ! [IN]
-                             TIME_STARTMS       ) ! [IN]
+                             TIME_STARTSUBSEC   ) ! [IN]
 
     TIME_STARTDAYSEC  = CALENDAR_combine_daysec( TIME_STARTDAY, TIME_STARTSEC )
 
     TIME_NOWDATE(:)   = TIME_STARTDATE(:)
-    TIME_NOWMS        = TIME_STARTMS
+    TIME_NOWSUBSEC    = TIME_STARTSUBSEC
     TIME_NOWDAY       = TIME_STARTDAY
     TIME_NOWSEC       = TIME_STARTSEC
     TIME_NOWDAYSEC    = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
@@ -556,14 +574,14 @@ contains
     call CALENDAR_adjust_daysec( TIME_ENDDAY, TIME_ENDSEC ) ! [INOUT]
 
     call CALENDAR_daysec2date( TIME_ENDDATE(:), & ! [OUT]
-                               TIME_ENDMS,      & ! [OUT]
+                               TIME_ENDSUBSEC,  & ! [OUT]
                                TIME_ENDDAY,     & ! [IN]
                                TIME_ENDSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
 
     call CALENDAR_date2char( endchardate,     & ! [OUT]
                              TIME_ENDDATE(:), & ! [IN]
-                             TIME_ENDMS       ) ! [IN]
+                             TIME_ENDSUBSEC   ) ! [IN]
 
     LOG_NEWLINE
     LOG_INFO("ADMIN_TIME_setup",*) 'Global date / time setting '
@@ -594,6 +612,7 @@ contains
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_BL,  TIME_DT_ATMOS_PHY_BL,  TIME_DT_ATMOS_PHY_BL_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH,  TIME_DT_ATMOS_PHY_CH_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE,  TIME_DT_ATMOS_PHY_AE_UNIT  )
+       call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_PHY_LT,  TIME_DT_ATMOS_PHY_LT,  TIME_DT_ATMOS_PHY_LT_UNIT  )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_RESTART, TIME_DT_ATMOS_RESTART, TIME_DT_ATMOS_RESTART_UNIT )
        call CALENDAR_unit2sec( TIME_DTSEC_ATMOS_DA,      TIME_DT_ATMOS_DA,      TIME_DT_ATMOS_DA_UNIT      )
        call CALENDAR_unit2sec( TIME_DTSEC_OCEAN,         TIME_DT_OCEAN,         TIME_DT_OCEAN_UNIT         )
@@ -616,6 +635,7 @@ contains
        TIME_DTSEC_ATMOS_PHY_BL  = max( TIME_DTSEC_ATMOS_PHY_BL,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_CH  = max( TIME_DTSEC_ATMOS_PHY_CH,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_PHY_AE  = max( TIME_DTSEC_ATMOS_PHY_AE,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
+       TIME_DTSEC_ATMOS_PHY_LT  = max( TIME_DTSEC_ATMOS_PHY_LT,  TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_RESTART = max( TIME_DTSEC_ATMOS_RESTART, TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_ATMOS_DA      = max( TIME_DTSEC_ATMOS_DA,      TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
        TIME_DTSEC_OCEAN         = max( TIME_DTSEC_OCEAN,         TIME_DTSEC_ATMOS_DYN*TIME_NSTEP_ATMOS_DYN )
@@ -635,6 +655,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_BL  = nint( TIME_DTSEC_ATMOS_PHY_BL  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_CH  = nint( TIME_DTSEC_ATMOS_PHY_CH  / TIME_DTSEC )
        TIME_DSTEP_ATMOS_PHY_AE  = nint( TIME_DTSEC_ATMOS_PHY_AE  / TIME_DTSEC )
+       TIME_DSTEP_ATMOS_PHY_LT  = nint( TIME_DTSEC_ATMOS_PHY_LT  / TIME_DTSEC )
        TIME_DSTEP_OCEAN         = nint( TIME_DTSEC_OCEAN         / TIME_DTSEC )
        TIME_DSTEP_LAND          = nint( TIME_DTSEC_LAND          / TIME_DTSEC )
        TIME_DSTEP_URBAN         = nint( TIME_DTSEC_URBAN         / TIME_DTSEC )
@@ -691,6 +712,11 @@ contains
        if ( abs(TIME_DTSEC_ATMOS_PHY_AE-real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC) > eps ) then
           LOG_ERROR("ADMIN_TIME_setup",*) 'delta t(ATMOS_PHY_AE) must be a multiple of delta t ', &
                      TIME_DTSEC_ATMOS_PHY_AE, real(TIME_DSTEP_ATMOS_PHY_AE,kind=DP)*TIME_DTSEC
+          call PRC_abort
+       endif
+       if ( abs(TIME_DTSEC_ATMOS_PHY_LT-real(TIME_DSTEP_ATMOS_PHY_LT,kind=DP)*TIME_DTSEC) > eps ) then
+          LOG_ERROR("ADMIN_TIME_setup",*) 'delta t(ATMOS_PHY_LT) must be a multiple of delta t ', &
+                     TIME_DTSEC_ATMOS_PHY_LT, real(TIME_DSTEP_ATMOS_PHY_LT,kind=DP)*TIME_DTSEC
           call PRC_abort
        endif
        if ( abs(TIME_DTSEC_OCEAN-real(TIME_DSTEP_OCEAN,kind=DP)*TIME_DTSEC) > eps ) then
@@ -766,6 +792,8 @@ contains
                                        ' (step interval=', TIME_DSTEP_ATMOS_PHY_CH, ')'
        LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Physics, Aerosol            : ', TIME_DTSEC_ATMOS_PHY_AE, &
                                        ' (step interval=', TIME_DSTEP_ATMOS_PHY_AE, ')'
+       LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Physics, Lightning          : ', TIME_DTSEC_ATMOS_PHY_LT, &
+                                       ' (step interval=', TIME_DSTEP_ATMOS_PHY_LT, ')'
        LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Ocean                       : ', TIME_DTSEC_OCEAN, &
                                        ' (step interval=', TIME_DSTEP_OCEAN,        ')'
        LOG_INFO_CONT('(1x,A,F10.3,A,I8,A)') 'Land                        : ', TIME_DTSEC_LAND, &
@@ -808,6 +836,7 @@ contains
                                             TIME_DTSEC_ATMOS_PHY_BL,                   &
                                             TIME_DTSEC_ATMOS_PHY_CH,                   &
                                             TIME_DTSEC_ATMOS_PHY_AE,                   &
+                                            TIME_DTSEC_ATMOS_PHY_LT,                   &
                                             TIME_DTSEC_OCEAN,                          &
                                             TIME_DTSEC_LAND,                           &
                                             TIME_DTSEC_URBAN                           )
@@ -831,7 +860,7 @@ contains
     endif
 
     if ( debug ) then
-       LOG_INFO("ADMIN_TIME_setup",*) TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+       LOG_INFO("ADMIN_TIME_setup",*) TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWSUBSEC
      endif
 
     return
@@ -847,7 +876,7 @@ contains
        CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE,            &
-       TIME_NOWMS,              &
+       TIME_NOWSUBSEC,          &
        TIME_NOWSTEP,            &
        TIME_NSTEP,              &
        TIME_DSTEP_ATMOS_DYN,    &
@@ -859,6 +888,7 @@ contains
        TIME_DSTEP_ATMOS_PHY_BL, &
        TIME_DSTEP_ATMOS_PHY_CH, &
        TIME_DSTEP_ATMOS_PHY_AE, &
+       TIME_DSTEP_ATMOS_PHY_LT, &
        TIME_DSTEP_OCEAN,        &
        TIME_DSTEP_LAND,         &
        TIME_DSTEP_URBAN
@@ -879,6 +909,7 @@ contains
     TIME_DOATMOS_PHY_BL   = .false.
     TIME_DOATMOS_PHY_CH   = .false.
     TIME_DOATMOS_PHY_AE   = .false.
+    TIME_DOATMOS_PHY_LT   = .false.
     TIME_DOOCEAN_step     = .false.
     TIME_DOLAND_step      = .false.
     TIME_DOURBAN_step     = .false.
@@ -893,6 +924,7 @@ contains
     TIME_RES_ATMOS_PHY_BL = TIME_RES_ATMOS_PHY_BL + 1
     TIME_RES_ATMOS_PHY_CH = TIME_RES_ATMOS_PHY_CH + 1
     TIME_RES_ATMOS_PHY_AE = TIME_RES_ATMOS_PHY_AE + 1
+    TIME_RES_ATMOS_PHY_LT = TIME_RES_ATMOS_PHY_LT + 1
     TIME_RES_OCEAN        = TIME_RES_OCEAN        + 1
     TIME_RES_LAND         = TIME_RES_LAND         + 1
     TIME_RES_URBAN        = TIME_RES_URBAN        + 1
@@ -943,6 +975,11 @@ contains
        TIME_DOATMOS_PHY_AE   = .true.
        TIME_RES_ATMOS_PHY_AE = 0
     endif
+    if ( TIME_RES_ATMOS_PHY_LT == TIME_DSTEP_ATMOS_PHY_LT ) then
+       TIME_DOATMOS_step     = .true.
+       TIME_DOATMOS_PHY_LT   = .true.
+       TIME_RES_ATMOS_PHY_LT = 0
+    endif
 
     if ( TIME_RES_OCEAN  == TIME_DSTEP_OCEAN  ) then
        TIME_DOOCEAN_step     = .true.
@@ -968,7 +1005,7 @@ contains
 
     call CALENDAR_date2char( nowchardate,     & ! [OUT]
                              TIME_NOWDATE(:), & ! [IN]
-                             TIME_NOWMS       ) ! [IN]
+                             TIME_NOWSUBSEC   ) ! [IN]
 
     WALLCLOCK_elapse = PRC_MPItime() - TIME_WALLCLOCK_START
 
@@ -1007,7 +1044,7 @@ contains
     use scale_time, only: &
        TIME_DTSEC,                &
        TIME_NOWDATE,              &
-       TIME_NOWMS,                &
+       TIME_NOWSUBSEC,            &
        TIME_NOWDAY,               &
        TIME_NOWSEC,               &
        TIME_NOWDAYSEC,            &
@@ -1031,7 +1068,7 @@ contains
     call CALENDAR_adjust_daysec( TIME_NOWDAY, TIME_NOWSEC ) ! [INOUT]
 
     call CALENDAR_daysec2date( TIME_NOWDATE(:), & ! [OUT]
-                               TIME_NOWMS,      & ! [OUT]
+                               TIME_NOWSUBSEC,  & ! [OUT]
                                TIME_NOWDAY,     & ! [IN]
                                TIME_NOWSEC,     & ! [IN]
                                TIME_OFFSET_YEAR ) ! [IN]
@@ -1039,7 +1076,7 @@ contains
     TIME_NOWDAYSEC = CALENDAR_combine_daysec( TIME_NOWDAY, TIME_NOWSEC )
 
     if ( debug ) then
-       LOG_INFO("ADMIN_TIME_advance",*) TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWMS
+       LOG_INFO("ADMIN_TIME_advance",*) TIME_NOWDAY, TIME_NOWSEC, TIME_NOWDATE(:), TIME_NOWSUBSEC
     endif
 
     if ( TIME_NOWSTEP > TIME_NSTEP ) then

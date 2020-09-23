@@ -111,8 +111,9 @@ module mod_atmos_vars
 
 
   ! tentative
-  real(RP), public, allocatable :: CZ(:,:,:,:)
-  real(RP), public, allocatable :: FZ(:,:,:,:)
+  real(RP), public, allocatable :: CZ (:,:,:,:)
+  real(RP), public, allocatable :: FZ (:,:,:,:)
+  real(RP), public, allocatable :: F2H(:,:,:,:,:)
 
   real(RP), public, allocatable :: LON(:,:,:)
   real(RP), public, allocatable :: LAT(:,:,:)
@@ -470,6 +471,8 @@ contains
        ATMOS_VARS_CHECKCFL_SOFT,            &
        ATMOS_VARS_CHECKCFL_HARD
 
+    real(RP) :: dz1, dz2
+
     integer :: ierr
     integer :: k, i, j, l, ij
     integer :: iv, iq
@@ -628,8 +631,9 @@ contains
 
     ! tentative
 
-    allocate( CZ(  KA,IA,JA,ADM_lall) )
-    allocate( FZ(0:KA,IA,JA,ADM_lall) )
+    allocate( CZ (  KA,IA,JA,ADM_lall) )
+    allocate( FZ (0:KA,IA,JA,ADM_lall) )
+    allocate( F2H(  KA,2,IA,JA,ADM_lall) )
     do l = 1, ADM_lall
     do j = 1, JA
     do i = 1, IA
@@ -641,6 +645,16 @@ contains
           FZ(k,i,j,l) = GRD_vz(ij,k+1,l,GRD_ZH)
        end do
        FZ(KA,i,j,l) = FZ(KA-1,i,j,l) + ( FZ(KA-1,i,j,l) - FZ(KA-2,i,j,l) )
+       do k = KS, KE-1
+          dz1 = FZ(k+1,i,j,l) - FZ(k  ,i,j,l)
+          dz2 = FZ(k  ,i,j,l) - FZ(k-1,i,j,l)
+          F2H(k,1,i,j,l) = dz2 / ( dz1 + dz2 )
+          F2H(k,2,i,j,l) = dz1 / ( dz1 + dz2 )
+       end do
+       F2H(1:KS-1,1,i,j,l) = 0.5_RP
+       F2H(1:KS-1,2,i,j,l) = 0.5_RP
+       F2H(KE:KA ,1,i,j,l) = 0.5_RP
+       F2H(KE:KA ,2,i,j,l) = 0.5_RP
     end do
     end do
     end do
@@ -699,76 +713,76 @@ contains
     do iq = 1, QA
        call MONITOR_reg( TRACER_NAME(iq), TRACER_DESC(iq), TRACER_UNIT(iq), & ! (in)
                          QP_MONIT_id(iq),                                   & ! (out)
-                         dim_type='ZXY', isflux=.false.                     ) ! (in)
+                         dim_type='ZXY', is_tendency=.false.                 ) ! (in)
     enddo
 
     call MONITOR_reg( 'QDRY',         'dry air mass',           'kg', & ! (in)
                       DV_MONIT_id(IM_QDRY),                           & ! (out)
-                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.             ) ! (in)
     call MONITOR_reg( 'QTOT',         'water mass',             'kg', & ! (in)
                       DV_MONIT_id(IM_QTOT),                           & ! (out)
-                      dim_type='ZXY', isflux=.false.                  ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.             ) ! (in)
     call MONITOR_reg( 'EVAP',         'evaporation',            'kg', & ! (in)
                       DV_MONIT_id(IM_EVAP),                           & ! (out)
-                      dim_type='XY', isflux=.true.                    ) ! (in)
-    call MONITOR_reg( 'PRCP',         'precipitation',          'kg', & ! (in)
+                      dim_type='XY', is_tendency=.true.               ) ! (in)
+    call MONITOR_reg( 'PREC',         'precipitation',          'kg', & ! (in)
                       DV_MONIT_id(IM_PREC),                           & ! (out)
-                      dim_type='XY', isflux=.true.                    ) ! (in)
+                      dim_type='XY', is_tendency=.true.               ) ! (in)
 
     call MONITOR_reg( 'ENGT',         'total     energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGT),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGP',         'potential energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGP),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGK',         'kinetic   energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGK),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
     call MONITOR_reg( 'ENGI',         'internal  energy',       'J', & ! (in)
                       DV_MONIT_id(IM_ENGI),                          & ! (out)
-                      dim_type='ZXY', isflux=.false.                 ) ! (in)
+                      dim_type='ZXY', is_tendency=.false.            ) ! (in)
 
     call MONITOR_reg( 'ENGFLXT',      'total energy flux',      'J', & ! (in)
                       DV_MONIT_id(IM_ENGFLXT),                       & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_SH',    'SFC specific heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SH),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_LH',    'SFC latent   heat flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LH),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_RD',    'SFC net radiation flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_RD),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGTOA_RD',    'TOA net radiation flux', 'J', & ! (in)
                       DV_MONIT_id(IM_ENGTOA_RD),                     & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
     call MONITOR_reg( 'ENGSFC_LW_up', 'SFC LW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_LW_dn', 'SFC LW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_LW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_SW_up', 'SFC SW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGSFC_SW_dn', 'SFC SW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGSFC_SW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
     call MONITOR_reg( 'ENGTOA_LW_up', 'TOA LW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGTOA_LW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGTOA_LW_dn', 'TOA LW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGTOA_LW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGTOA_SW_up', 'TOA SW upward   flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGTOA_SW_up),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
     call MONITOR_reg( 'ENGTOA_SW_dn', 'TOA SW downward flux',   'J', & ! (in)
                       DV_MONIT_id(IM_ENGTOA_SW_dn),                  & ! (out)
-                      dim_type='XY', isflux=.true.                   ) ! (in)
+                      dim_type='XY', is_tendency=.true.              ) ! (in)
 
     return
   end subroutine ATMOS_vars_setup
@@ -1717,9 +1731,9 @@ contains
           do l = 1, ADM_lall
           call ATMOS_DIAGNOSTIC_get_n2( &
                KA, KS, KE, IA, 1, IA, JA, 1, JA, &
-               POTT(:,:,:,l), Rtot(:,:,:,l), & !(in)
-               CZ(:,:,:,l),                  & !(in)
-               N2(:,:,:,l)                   ) ! (out)
+               POTT(:,:,:,l), Rtot(:,:,:,l),             & !(in)
+               CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l), & !(in)
+               N2(:,:,:,l)                               ) ! (out)
        enddo
           DV_calclated(I_N2) = .true.
        end if

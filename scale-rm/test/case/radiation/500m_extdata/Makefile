@@ -27,14 +27,14 @@ DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29      PARAG.29    ] \
                 [${TESTDIR}/data/rad/MIPAS/equ.atm equ.atm     ] \
                 [${TESTDIR}/data/rad/MIPAS/sum.atm sum.atm     ] \
                 [${TESTDIR}/data/rad/MIPAS/win.atm win.atm     ] "
-DATDISTS    = " [${TPROC} ../500m/rad_offline_19000321-000000.000 rad_offline_19000321-000000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-033000.000 rad_offline_19000321-033000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-063000.000 rad_offline_19000321-063000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-093000.000 rad_offline_19000321-093000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-123000.000 rad_offline_19000321-123000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-153000.000 rad_offline_19000321-153000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-183000.000 rad_offline_19000321-183000.000] \
-                [${TPROC} ../500m/rad_offline_19000321-213000.000 rad_offline_19000321-213000.000] "
+DATDISTS    = " [${TPROC} ../500m/rad_offline_19000321-000000.000 rad_offline_00000] \
+                [${TPROC} ../500m/rad_offline_19000321-033000.000 rad_offline_00001] \
+                [${TPROC} ../500m/rad_offline_19000321-063000.000 rad_offline_00002] \
+                [${TPROC} ../500m/rad_offline_19000321-093000.000 rad_offline_00003] \
+                [${TPROC} ../500m/rad_offline_19000321-123000.000 rad_offline_00004] \
+                [${TPROC} ../500m/rad_offline_19000321-153000.000 rad_offline_00005] \
+                [${TPROC} ../500m/rad_offline_19000321-183000.000 rad_offline_00006] \
+                [${TPROC} ../500m/rad_offline_19000321-213000.000 rad_offline_00007] "
 
 
 

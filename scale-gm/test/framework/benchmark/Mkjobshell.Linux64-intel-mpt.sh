@@ -79,7 +79,7 @@ cat << EOF1 > ./run.sh
 # ------ For Linux64 & intel fortran&C & sgi mpt -----
 #
 ################################################################################
-export FORT_FMT_RECL=400
+export FORT_FMT_RECL=500
 
 
 EOF1

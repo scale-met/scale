@@ -1,0 +1,11 @@
+#
+# Urban parameter
+#
+#   This file is used in the version 5.4.x or later
+#
+
+&PARAM_URBAN_DATA
+ STRGR = 0.0,
+ STRGB = 0.0,
+ STRGG = 0.0,
+/

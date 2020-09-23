@@ -53,7 +53,7 @@
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} コンパイラ名 & \\ \hline
  GNU (gcc/gfortran)    & 4.3以前は非対応。4.4.xではコンパイル時にWarningが出ることがある。 \\ \hline
- Intel (icc/ifort)     & 2013年以降のバージョンを推奨。 \\ \hline
+ Intel (icc/ifort)     & 15.0.0 以降に対応。 \\ \hline
  PGI (gcc/pgfortran)   & 17.1 は確認済み              \\ \hline
 \end{tabularx}
 \label{tab:compatible_compiler}
@@ -70,10 +70,7 @@
 {\netcdf}4 が推奨されるが、{\netcdf}3 も利用できる。
 {\netcdf}3 を用いる場合は、いくつか制限が発生することに注意が必要である(第\ref{sec:netcdf}節を参照)。
 Linux や Mac 用に配布された NetCDF のバイナリパッケージも使用することができる。
-また、「京」には、既にこれらの{\netcdf}ライブラリがインストールされている。
-詳細は「京」のポータルサイトにある「R-CCS ソフトウエア」の記述や
-リンク先(\url{https://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf/})
-を参照されたい。
+
 
 MPI 1.0/2.0 プロトコルに対応した MPI ライブラリを必要とする。
 対応確認済みの MPI ライブラリについては、表\ref{tab:compatible_mpi}を参照のこと。
@@ -84,7 +81,7 @@ MPI 1.0/2.0 プロトコルに対応した MPI ライブラリを必要とする
 \begin{tabularx}{150mm}{|l|X|X|} \hline
  \rowcolor[gray]{0.9} MPIライブラリ名 & \\ \hline
  openMPI   & 1.7.2 以降に対応。 \\ \hline
- Intel MPI & 2013 年以降のバージョンに対応。 \\ \hline
+ Intel MPI & 5.0 以降に対応。 \\ \hline
  SGI MPT   & 2.09 以降に対応。 \\ \hline
 \end{tabularx}
 \label{tab:compatible_mpi}
@@ -111,7 +108,7 @@ MPI 1.0/2.0 プロトコルに対応した MPI ライブラリを必要とする
     \item URL: \url{http://cola.gmu.edu/grads/}
     \item 特徴: 非常によく使われている描画ツールであるが、 \scalelib によって生成された {\netcdf}形式の分割ファイルを
     直接読み込めない。\scalelib が出力したファイルを {\grads} から読み込める単一のファイルに結合するためには、後処理ツール \verb|netcdf2grads| (net2g)が必要である。
-    net2g のインストール方法は第\ref{sec:source_net2g}章、使用方法の詳細は第 3、4 部および
+    net2g のインストール方法は第\ref{sec:compile_net2g}章、使用方法の詳細は第 3、4 部および
     第\ref{sec:net2g}章を参照されたい。
  \end{itemize}
   %%
