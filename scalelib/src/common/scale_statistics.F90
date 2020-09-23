@@ -275,7 +275,7 @@ contains
 
     statval = 0.0_DP
     if ( var(KS,IS,JS) /= UNDEF ) then
-       !$omp parallel do OMP_SCHEDULE_ collapse(2) reduction(+:statval) &
+       !$omp parallel do OMP_SCHEDULE_ reduction(+:statval) &
        !$omp private(work)
        do j = JE, JS, -1
        do i = IE, IS, -1
