@@ -10,7 +10,7 @@ do
       echo ${line[1]} ${line[5]} ${line[6]} ${line[7]} ${line[8]} >> energy.dat
       echo ${line[1]} ${line[3]} ${line[4]}                       >> mass.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt || exit
 gnuplot < ./visualize/mass.plt   || exit
@@ -43,8 +43,9 @@ do
    let i="${i} + 1"
 done
 
-var__set=(PT U V W QV TKE_MYNN Nu_BL Pr_MYNN Ri_MYNN)
-rangeset=(275:310 -1:7 -13:0 -5e-4:5e-4 1e-4:3e-3 0:2 0:150 0:10 -20:20)
+var__set=(PT U V W QV TKE_MYNN TSQ_MYNN QSQ_MYNN COV_MYNN Nu_BL Kh_BL Pr_MYNN Ri_MYNN L_mix_MYNN TKE_prod_MYNN TKE_diss_MYNN)
+zcordset=(z  z z z z  z        z        z        z        zh    zh    zh      z       z          z             z            )
+rangeset=(275:310 -1:7 -13:0 -5e-4:5e-4 1e-4:3e-3 0:2 0:1 0:5e-7 -2e-5:2e-5 0:150 0:150 0:10 -20:20 0:100 -2e-3:1e-2 -1e-2:0)
 time_set=
 
 i=0
@@ -57,7 +58,7 @@ do
    fi
 
    # hovmoller diagram
-   gpview history.pe\*.nc@${var},x=0,y=0,z=0:3400 --nocont ${range} --wsn 2 --exch || exit
+   gpview history.pe\*.nc@${var},x=0,y=0,${zcordset[$i]}=0:3400 --nocont ${range} --wsn 2 --exch || exit
    convert -density 150 -rotate 90 +antialias dcl.pdf hov_${var}.png
    rm -f dcl.pdf
 

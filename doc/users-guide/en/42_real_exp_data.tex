@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{Preparations for input data (boundary data)} \label{sec:tutrial_real_data}
+\section{Preparations for input data (boundary data)} \label{sec:tutorial_real_data}
 %-------------------------------------------------------%
 
 When a realistic atmospheric experiment is conducted, boundary data need to be provided to \scalerm. Table \ref{tab:real_bnd} shows the items for external input data to create boundary data. The variables denoted by {\color{blue}blue character} in this table  are always needed, whereas the others (black character) are optional.
@@ -13,7 +13,7 @@ When a realistic atmospheric experiment is conducted, boundary data need to be p
     & \multicolumn{2}{l}{\color{blue}{Altitude data}}\\
     & \multicolumn{2}{l}{\color{blue}{Land-use classification data}}\\ \hline
     \rowcolor[gray]{0.9}
-    \multicolumn{3}{l}{data to craete the initial and boundary data for \scalerm (in general, GCM data)}\\ \hline
+    \multicolumn{3}{l}{data to create the initial and boundary data for \scalerm (in general, GCM data)}\\ \hline
     &  \multicolumn{2}{l}{\color{blue}{Information for latitude and longitude of the parent model}}\\
     &  \multicolumn{2}{l}{--- 3D atmospheric data ---}\\
     &  & \multicolumn{1}{l}{\color{blue}{zonal and meridional winds, temperature, specific humidity (relative humidity),}} \\
@@ -43,7 +43,7 @@ and land-use classification data from the GLCCv2 are provided in \scalerm.
 These files have already been formatted for \scalerm.
 \begin{enumerate}
 \item Downloading database\\
-Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{http://scale.aics.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
+Obtain the data for altitude and land-use classification formatted for \scalerm  from \url{https://scale.riken.jp/download/scale_database.tar.gz}, and extract them to any directory:
 \begin{verbatim}
   $ tar -zxvf scale_database.tar.gz
   $ ls
@@ -76,7 +76,7 @@ The initial and boundary data are readable
 when they are converted into four-byte binary (\grads form. Hereinafter, it is denoted by ``binary data.'').
 The users prepare the ``binary'' data by themselves as mentioned above.
 However,
-the programs to prepare the ``binary'' data are provided in the directory \\
+the programs to prepare the ``binary'' data are provided in the directory
 \verb|${Tutorial_DIR}/real/tools/| for the execution of this tutorial.
 A procedure is explained below.
 Note that it is assumed that the installation

@@ -128,6 +128,7 @@ contains
     !$omp private(i,j,k,iq, &
     !$omp         LHV,LHS,eng,eng0,dens0,diffq,work) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE,QLA,QIA, &
+    !$omp        IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID, &
     !$omp        CVdry,CPdry,CV_VAPOR,CP_VAPOR,CV_WATER,CP_WATER,CV_ICE,CP_ICE, &
     !$omp        DENS,TEMP,CVtot,CPtot,QV,QTRC, &
     !$omp        RHOH,DENS_diff,ENGI_diff,rhoh_out,dens_out,engi_out,limit_negative)
@@ -323,9 +324,10 @@ contains
     if ( flag_liquid ) then ! warm rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp shared(KS,KE,IS,IE,JS,JE, &
-       !$omp        CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
-       !$omp        DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
+       !$omp shared (IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
+       !$omp shared (KS,KE,IS,IE,JS,JE, &
+       !$omp         CP_VAPOR,CP_WATER,CV_VAPOR,CV_WATER,LHV,LHF, &
+       !$omp         DENS,QV,QC,TEMP,CPtot,CVtot,RHOE_d,error) &
        !$omp private(i,j,k, &
        !$omp         QV1,QC1,Emoist,converged)
        do j = JS, JE
@@ -363,6 +365,7 @@ contains
     else ! cold rain
 
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp shared (IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &
        !$omp shared (KS,KE,IS,IE,JS,JE, &
        !$omp         CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF, &
        !$omp         DENS,QV,QC,QI,TEMP,CPtot,CVtot,RHOE_d,error) &
@@ -416,7 +419,7 @@ contains
        TEMP, vterm, FDZ, RCDZ, dt,     &
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
-       mflx, sflx                      )
+       mflx, sflx, esflx               )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -443,6 +446,7 @@ contains
 
     real(RP), intent(out)   :: mflx (KA)
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
+    real(RP), intent(out)   :: esflx
 
     real(RP) :: vtermh(KA)
     real(RP) :: qflx  (KA)
@@ -460,6 +464,7 @@ contains
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
+    esflx   = 0.0_RP
     qflx(KE) = 0.0_RP
     eflx(KE) = 0.0_RP
 
@@ -514,6 +519,8 @@ contains
           eflx(k) = qflx(k) * TEMP(k+1) * CV &
                   + qflx(k) * FDZ(k) * GRAV               ! potential energy
        end do
+       esflx = esflx + eflx(KS-1)
+
        !--- update internal energy
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
@@ -536,7 +543,7 @@ contains
        TEMP, vterm, FZ, FDZ, RCDZ, dt, &
        i, j,                           &
        DENS, RHOQ, CPtot, CVtot, RHOE, &
-       mflx, sflx                      )
+       mflx, sflx, esflx               )
     use scale_const, only: &
        GRAV  => CONST_GRAV
     use scale_atmos_hydrometeor, only: &
@@ -564,6 +571,7 @@ contains
 
     real(RP), intent(out)   :: mflx (KA)
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
+    real(RP), intent(out)   :: esflx
 
     real(RP) :: qflx(KA)
     real(RP) :: eflx(KA)
@@ -590,7 +598,6 @@ contains
 
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
-    qflx(:) = 0.0_RP
     eflx(:) = 0.0_RP
 
     do k = KS, KE
@@ -606,6 +613,9 @@ contains
     end do
 
     do iq = 1, QHA
+
+       qflx(:) = 0.0_RP
+
        do k = KS, KE-1
           vtermh(k) = ( CDZ(k) * vterm(k+1,iq) + CDZ(k+1) * vterm(k,iq) ) * rfdz2(k)
        enddo
@@ -647,6 +657,7 @@ contains
              if (       Z_src >  FZ(k  ) &
                   .AND. Z_src <= FZ(k+1) ) then
                 k_src(k_dst) = k
+                exit
              endif
           enddo
           if ( Z_src > FZ(KE) ) k_src(k_dst) = KE
@@ -679,7 +690,7 @@ contains
              eflx(k_dst) = eflx(k_dst) -flx * TEMP(k_src(k_dst)+1) * CV ! internal energy flux
           end if
 
-          eflx(k_dst) = eflx(k_dst) + qflx(k) * FDZ(k_dst) * GRAV ! potential energy
+          eflx(k_dst) = eflx(k_dst) + qflx(k_dst) * FDZ(k_dst) * GRAV ! potential energy
        enddo
 
 !        LOG_INFO_CONT(*) "flux", iq
@@ -722,6 +733,7 @@ contains
        do k = KS, KE
           RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
        end do
+       esflx = eflx(KS-1)
 
     end do
 

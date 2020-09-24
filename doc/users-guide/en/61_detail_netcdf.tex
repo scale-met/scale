@@ -1,4 +1,6 @@
+%-------------------------------------------------------------------------------
 \section{What is \scalenetcdf File?} \label{sec:netcdf}
+%-------------------------------------------------------------------------------
 
 In this section, \scalenetcdf file, which \scalelib directly reads from and writes in, is explained.
 \scalelib employs \netcdf (network Common Data Format) as data file format.
@@ -6,11 +8,11 @@ In this section, \scalenetcdf file, which \scalelib directly reads from and writ
 and it enables us to generate files with self-describing and machine-independent data format;
 for example, the former has a merit to describe variables along with their axis variables in a file and
 the latter has a merit to treat data without worry which endian is used.
-Based on the above virtue, \scalelib has particular conversion ( \scalenetcdf convention ).
+Based on the above virtue, \scalelib has particular convention ( \scalenetcdf convention ).
 It is mostly following the CF conventions \\ (\url{http://cfconventions.org}).
 
 
-\subsection{Global Attributes}
+\subsection{Global Attributes} \label{sec:global_attr}
 \scalenetcdf file contains information about data contained in the file,
 such as those with regards to spatial decomposition as ``Global Attributes'' (Table \ref{table:netcdf_global_attrs}).
 
@@ -22,14 +24,14 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
     Name        & Description                 & Remarks \\ \hline \hline
     title       & Brief description of data   & Value of \nmitem{FILE_History_TITLE} in \namelist{PARAM_FILE_HISTORY} \\
     source      & Name of the source software & Value of \nmitem{FILE_History_SOURCE} in \namelist{PARAM_FILE_HISTORY} for history files and \nmitem{H_SOURCE} in \namelist{PARAM_IO} for other files\\
-    institution & Data author                 & Value of \nmitem{FILE_History_INSTITUTION} in \namelist{PARAM_FILE_HISTORY} for history files and \nmitem{H_INSTITUTE} for other files\\
+    institution & Data author                 & Value of \nmitem{FILE_History_INSTITUTION} in \namelist{PARAM_FILE_HISTORY} for history files and \nmitem{H_INSTITUTE} in \namelist{PARAM_IO} for other files\\
     rankid      & Rank id of MPI process      & \verb|PRC_myrank| in the model \\
     Conventions & CF convention version       & ``CF-1.6'' for version 5.3 \\
     grid\_name  & Grid type                   & ``cartesC'' for \scalerm \\
     scale\_cartesC\_prc\_rank\_[xy]           & Mapping index of the 2D decomposition      & Equal to \verb|PRC_2Drank(PRC_myrank, i)| variable in the model (i=1 for x and 2 for y)\\
     scale\_cartesC\_prc\_num\_[xy]            & Number of the 2D decomposition             & ~\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} in the model \\
     scale\_cartesC\_prc\_periodic\_[zxy]      & Whether the boundary condition is periodic & \verb|.false.| and \verb|.true.|\ They correspond to \nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} in the model\\
-    scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & Number of the grids in the global domain               & ~\nmitem{IMAX} $\times$ \nmitem{PRC_NUM_X}, \nmitem{JMAX} $\times$ \nmitem{PRC_NUM_Y} in the model \\
+    scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & Number of the grids in the global domain               & ~\nmitem{IMAXG}, \nmitem{JMAXG} in the model \\
     scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & Number of the vertical layer for the atmospheric model & ~\nmitem{KMAX} in the model \\
     scale\_ocean\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & Number of the vertical layer for the ocean model       & ~\nmitem{OKMAX} in the model \\
     scale\_land\_grid\_cartesC\textbackslash \ ~~\_index\_kmax       & Number of the vertical layer for the land model        & ~\nmitem{LKMAX} in the model \\
@@ -39,8 +41,8 @@ such as those with regards to spatial decomposition as ``Global Attributes'' (Ta
     time\_units & Unit of time & \\
     time\_start & Start time   & \\ \hline
     \multicolumn{3}{l}{Refer Section \ref{sec:output} for \nmitem{History_TITLE, History_SOURCE, History_INSTITUTION},} \\
-    \multicolumn{3}{l}{Section \ref{sec:domain}       for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y},} \\
-    \multicolumn{3}{l}{\nmitem{KMAX, IMAX, JMAX}, and \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.} \\ \hline
+    \multicolumn{3}{l}{Section \ref{sec:domain}       for \nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y} and} \\
+    \multicolumn{3}{l}{\nmitem{KMAX, IMAXG, JMAXG}, and Section \ref{subsec:calendar} for \nmitem{PARAM_CALENDAR}.} \\ \hline
   \end{tabularx}
 \end{center}
 \end{table}
@@ -65,7 +67,6 @@ On the other hand,
 for the history data file, 
 the halo data is contained 
 only when the lateral boundary conditions are not periodic
-(\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} = .false. in \namelist{PARAM_PRC_CARTESC})
 and \nmitem{FILE_HISTORY_CARTESC_BOUNDARY}=.true. \\
 in \namelist{PARAM_FILE_HISTORY_CARTESC},
 otherwise it is not. Refer Section \ref{sec:output} for detail.
@@ -97,7 +98,7 @@ The ``cell\_measures'' attribute of each variables specifies the corresponding a
 
 The map projection data is contained as a non-dimensional variable whose name is specified by ``grid\_mapping'' attribute of the variables.
 
-The information of relationship the staggered grids, an attribute and a non-dimensional variable are contained as follows SGRID conventions (\url{https://github.com/sgrid/sgrid}).
+The information of relationship with the staggered grids is contained as an attribute and a non-dimensional variable, based on SGRID conventions (\url{https://github.com/sgrid/sgrid}).
 The non-dimensional variable's name is specified by the ``grid'' attribute of each variable.
 
 In the file, there are also the surface elevation data and land mask data as ``topo'' and ``lsmask'', respectively.
@@ -115,7 +116,7 @@ In the file, there are also the surface elevation data and land mask data as ``t
   \endfoot
   \multicolumn{2}{l}{Coordinate variables}\\ \hline
 name & description \\ \hline \hline
-\multicolumn{2}{c}{Common : Horizontal axis \& time}\\ \hline
+\multicolumn{2}{c}{Horizontal axis \& time axis: Common}\\ \hline
 x        & full level position in x-direction of the data in the file \\
 x\_bnds  & full level cell boundary in x-direction of the data in the file \\
 xh       & half level position in x-direction of the data in the file \\
@@ -147,7 +148,7 @@ CZ  & full level grid position in z-direction (inc. halo grids) \\
 FZ  & half level grid position in z-direction (inc. halo grids) \\
 CDZ & full level grid spacing  in z-direction (inc. halo grids) \\
 FDZ & half level grid spacing  in z-direction (inc. halo grids) \\ \hline
-\multicolumn{2}{c}{Vertical axis : Land}\\ \hline
+\multicolumn{2}{c}{Vertical axis : Ocean}\\ \hline
 oz        & full level position in z-direction of the ocean data in the file \\
 oz\_bnds  & full level cell boundary in z-direction of the ocean data in the file \\
 ozh       & half level position in z-direction of the ocean data in the file \\
@@ -212,15 +213,15 @@ height\_uvw & height at (zh, yh, xh) in history file or at (yh, xh, zh) in resta
 
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./figure/horizontal-coordinate-final2.png}\\
+  \includegraphics[width=1.0\hsize]{./../../figure/horizontal-coordinate-final2.png}\\
   \caption{Horizontal coordinate in {\scalenetcdf} file}
   \label{fig:netcdfhorizontalcoordinate}
 \end{center}
 \end{figure}
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./figure/vertical_coordinate_final2.png}\\
-  \caption{Horizontal coordinate in {\scalenetcdf} file}
+  \includegraphics[width=1.0\hsize]{./../../figure/vertical_coordinate_final2.png}\\
+  \caption{Vertical coordinate in {\scalenetcdf} file}
   \label{fig:netcdfverticalcoordinate}
 \end{center}
 \end{figure}
@@ -239,16 +240,18 @@ See also Table \ref{table:netcdf_axes}.
 
 
 \subsection{Single File I/O} \label{subsec:single_io}
-As default, all the data files are output by each process, namely separate file I/O.
-If \scalerm is compiled with pnetCDF (environmental variable SCALE\_ENABLE\_PNETCDF=T),
-the data from all processes can be combined into a single file (See Section \ref{subsec:environment}).
-To do this, set \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE}) \verb|.true.|. The all the data files become single file.
-In stead, you can switch on/off of the single I/O for individual file types, i.e., history, init/restart, topography, and land use files.
-Set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY} for the history file.
-For init/restart files, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART},\\
-or \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS}.
-Here, \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
-For topography and land use files, set \nmitem{TOPO_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPO} and \nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
+As default, all the data files are output by each process, namely file I/O is separated.
+If you compile \scalerm with pnetCDF by specifying an environmental variable as SCALE\_ENABLE\_PNETCDF=T,
+the data from all processes can be combined into a single file (see Section \ref{subsec:environment}).
+To do this, \nmitem{FILE_AGGREGATE} in \namelist{PARAM_FILE} should be set to \verb|.true.|.
+Instead, you can switch on/off of the single I/O for individual file types: history, init/restart, topography, and land use files. 
+For the history file, set \nmitem{FILE_HISTORY_AGGREGATE}=.true. in \namelist{PARAM_FILE_HISTORY}.
+For the init/restart file, set \nmitem{RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_RESTART}, or \\ 
+\nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_(MODELNAME)_VARS} 
+where \verb|(MODELNAME)| is ``ATMOS'', ``OCEAN'', ``LAND'', or ``URBAN''.
+For the topography and land use files, set \\ 
+\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_TOPOGRAPHY}, and \\
+\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}=.true. in \namelist{PARAM_LANDUSE}, respectively.
 
 
 \subsection{Restrictions with \Netcdf 3}

@@ -1,20 +1,32 @@
 #ifndef SCALE_LOG_H
 #define SCALE_LOG_H
 
+#ifdef PGI
+
 #define LOG_ERROR(subroutine_name,format) \
-  write(*,'(3A)',advance='no') "ERROR [",subroutine_name,"]"; \
+  write(*,'(5A)') "ERROR  [",subroutine_name,"] on rank ",IO_UNIVERSALRANK,": "; \
   write(*,format)
+
+#else
+
+#define LOG_ERROR(subroutine_name,format) \
+  write(*,'(10A)') "ERROR  [",subroutine_name,"] universal=",IO_UNIVERSALRANK,", local=",IO_LOCALRANK,", jobID=",IO_JOBID,", domain=",IO_DOMAINID; \
+  write(*,'(3A)',advance='no') "on rank ",IO_UNIVERSALRANK,": "; \
+  write(*,format)
+
+#endif
+
 #define LOG_ERROR_CONT(format) \
-  write(*,'(5x)',advance='no'); \
+  write(*,'(3A)',advance='no') "on rank ",IO_UNIVERSALRANK,": "; \
   write(*,format)
 
 
 #define LOG_WARN(subroutine_name,format) \
-  if (IO_L) write(IO_FID_LOG,'(3A)',advance='no') "WARN  [",subroutine_name,"]"; \
-  if (IO_L) write(IO_FID_LOG,format)
+  if (IO_L) write(*,'(3A)',advance='no') "WARN  [",subroutine_name,"]"; \
+  if (IO_L) write(*,format)
 #define LOG_WARN_CONT(format) \
-  if (IO_L) write(IO_FID_LOG,'(5x)',advance='no'); \
-  if (IO_L) write(IO_FID_LOG,format)
+  if (IO_L) write(*,'(5x)',advance='no'); \
+  if (IO_L) write(*,format)
 
 
 #define LOG_INFO(subroutine_name,format) \

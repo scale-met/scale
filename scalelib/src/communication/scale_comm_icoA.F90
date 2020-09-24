@@ -268,6 +268,7 @@ contains
        PRC_RGN_l2r,      &
        PRC_RGN_edge_tab, &
        PRC_RGN_vert_num, &
+       PRC_RGN_vert_pl,  &
        PRC_RGN_vert_tab, &
        I_prc,            &
        I_RGNID,          &
@@ -279,7 +280,9 @@ contains
        I_W,              &
        I_N,              &
        I_E,              &
-       I_S
+       I_S,              &
+       I_NPL,            &
+       I_SPL
     implicit none
 
     integer  :: ginnar
@@ -516,7 +519,7 @@ contains
        endif
 
        ! North Vertex
-       if ( PRC_RGN_vert_num(I_N,rgnid) == 4 ) then
+       if ( PRC_RGN_vert_num(I_N,rgnid) == 4 .AND. ( .NOT. PRC_RGN_vert_pl(I_NPL,rgnid) ) ) then
           rgnid_rmt = PRC_RGN_vert_tab(I_RGNID,I_N,rgnid,3)
           prc_rmt   = PRC_RGN_r2lp(I_prc,rgnid_rmt)
 
@@ -588,7 +591,7 @@ contains
        endif
 
        ! South Vertex
-       if ( PRC_RGN_vert_num(I_S,rgnid) == 4 ) then
+       if ( PRC_RGN_vert_num(I_S,rgnid) == 4 .AND. ( .NOT. PRC_RGN_vert_pl(I_SPL,rgnid) ) ) then
           rgnid_rmt = PRC_RGN_vert_tab(I_RGNID,I_S,rgnid,3)
           prc_rmt   = PRC_RGN_r2lp(I_prc,rgnid_rmt)
 
@@ -978,7 +981,7 @@ contains
     use scale_prc_icoA, only: &
        PRC_have_pl,         &
        PRC_RGN_local,       &
-       PRC_RGN_vert_num,    &
+       PRC_RGN_vert_pl,     &
        PRC_RGN_vert_tab_pl, &
        PRC_RGN_lp2r,        &
        PRC_RGN_r2lp,        &
@@ -995,7 +998,7 @@ contains
 
     integer  :: prc, prc_rmt
     integer  :: rgnid, rgnid_rmt
-    integer  :: check_vert_num
+    logical  :: check_vert_pl
     integer  :: pl_to
 
     integer  :: irank, ipos
@@ -1051,20 +1054,20 @@ contains
           prc_rmt   = PRC_RGN_r2p_pl(rgnid_rmt)
 
           if ( rgnid_rmt == I_NPL ) then
-             check_vert_num = PRC_RGN_vert_num(I_N,rgnid)
+             check_vert_pl = PRC_RGN_vert_pl(I_NPL,rgnid)
              i_from = ADM_gmin
              j_from = ADM_gmax
              i_to   = ADM_gmin
              j_to   = ADM_gmax + 1
           elseif( rgnid_rmt == I_SPL ) then
-             check_vert_num = PRC_RGN_vert_num(I_S,rgnid)
+             check_vert_pl = PRC_RGN_vert_pl(I_SPL,rgnid)
              i_from = ADM_gmax
              j_from = ADM_gmin
              i_to   = ADM_gmax + 1
              j_to   = ADM_gmin
           endif
 
-          if ( check_vert_num == ADM_vlink ) then
+          if ( check_vert_pl ) then
 
              ! search destination in the pole halo
              do v = 1, ADM_vlink
@@ -1438,11 +1441,14 @@ contains
     use scale_prc_icoA, only: &
        PRC_RGN_local,    &
        PRC_RGN_vert_num, &
+       PRC_RGN_vert_pl,  &
        PRC_RGN_lp2r,     &
        PRC_RGN_l2r,      &
        I_W,              &
        I_N,              &
-       I_S
+       I_S,              &
+       I_NPL,            &
+       I_SPL
     implicit none
 
     integer  :: rgnid
@@ -1478,7 +1484,7 @@ contains
           Singular_list(I_l_to     ,ipos) = l
        endif
 
-       if ( PRC_RGN_vert_num(I_N,rgnid) /= 4 ) then
+       if ( PRC_RGN_vert_num(I_N,rgnid) /= 4 .OR. PRC_RGN_vert_pl(I_NPL,rgnid) ) then
           Singular_info(I_size) = Singular_info(I_size) + 1
           ipos                  = Singular_info(I_size)
 
@@ -1493,7 +1499,7 @@ contains
           Singular_list(I_l_to     ,ipos) = l
        endif
 
-       if ( PRC_RGN_vert_num(I_S,rgnid) /= 4 ) then
+       if ( PRC_RGN_vert_num(I_S,rgnid) /= 4 .OR. PRC_RGN_vert_pl(I_SPL,rgnid) ) then
           Singular_info(I_size) = Singular_info(I_size) + 1
           ipos                  = Singular_info(I_size)
 
@@ -3123,10 +3129,12 @@ contains
        PRC_MPIfinish
     use scale_prc_icoA, only: &
        PRC_RGN_l2r,      &
-       PRC_RGN_vert_num, &
+       PRC_RGN_vert_pl,  &
        PRC_RGN_have_sgp, &
        I_N,              &
-       I_S
+       I_S,              &
+       I_NPL,            &
+       I_SPL
     implicit none
 
     real(RP) :: var   (ADM_gall   ,ADM_kall,ADM_lall   ,4)
@@ -3352,7 +3360,7 @@ contains
        rgnid = PRC_RGN_l2r(l)
        prc   = PRC_myrank
 
-       if ( PRC_RGN_vert_num(I_N,rgnid) == ADM_vlink ) then
+       if ( PRC_RGN_vert_pl(I_NPL,rgnid) ) then
           do k = ADM_kmin, ADM_kmax
              j  = ADM_gmax+1
              i  = ADM_gmin
@@ -3365,7 +3373,7 @@ contains
           enddo
        endif
 
-       if ( PRC_RGN_vert_num(I_S,rgnid) == ADM_vlink ) then
+       if ( PRC_RGN_vert_pl(I_SPL,rgnid) ) then
           do k = ADM_kmin, ADM_kmax
              j  = ADM_gmin
              i  = ADM_gmax+1

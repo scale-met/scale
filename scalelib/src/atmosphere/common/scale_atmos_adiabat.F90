@@ -171,7 +171,7 @@ contains
     endif
 
     if ( kLFC >= Kstr .AND. kLNB > Kstr ) then
-       do k = kLFC, kLNB
+       do k = kLFC+1, kLNB
           CAPE = CAPE + BUOY_pf(k-1) * ( FZ(k)-FZ(k-1) )
        enddo
     endif
@@ -342,7 +342,7 @@ contains
     integer :: k
     !---------------------------------------------------------------------------
 
-    do k = 1, Kstr
+    do k = KS, Kstr
        DENS_p1D(k) = DENS(k)
        TEMP_p1D(k) = TEMP(k)
        QV_p1D  (k) = QV  (k)

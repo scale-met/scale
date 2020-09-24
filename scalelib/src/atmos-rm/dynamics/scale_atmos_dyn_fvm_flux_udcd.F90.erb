@@ -84,6 +84,21 @@ def flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)
                      + F62 * ( val(#{idx2})+val(#{idxn1}) ) &
                      + F63 * ( val(#{idx3})+val(#{idxn2}) )"
 end
+def flux7(idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)
+                      "(     4.0_RP * val(#{idx3})   &
+                         -  38.0_RP * val(#{idx2})   &
+                         + 214.0_RP * val(#{idx1})   &
+                         + 319.0_RP * val(#{idx0})   &
+                         - 101.0_RP * val(#{idxn1})  &
+                         +  25.0_RP * val(#{idxn2})  &
+                         - 3.0_RP * val(#{idxn3}) ) / 420.0_RP"
+end
+def flux8(idx4,idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)
+                      "F81 * ( val(#{idx1})+val(#{idx0}) ) &
+                     + F82 * ( val(#{idx2})+val(#{idxn1}) ) &
+                     + F83 * ( val(#{idx3})+val(#{idxn2}) ) &
+                     + F84 * ( val(#{idx4})+val(#{idxn3}) )"
+end
 
 def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
   if dim==3
@@ -107,6 +122,12 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
   idx3 = idx.dup
   idx3[dir] = idx3[dir]+3
   idx3 = idx3.join(",")
+  idxn3 = idx.dup
+  idxn3[dir] = idxn3[dir]-3
+  idxn3 = idxn3.join(",")  
+  idx4 = idx.dup
+  idx4[dir] = idx4[dir]+4
+  idx4 = idx4.join(",")  
   if Array===order && order.max % 2 == 0
     order = order.min
   end
@@ -133,6 +154,10 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
        fu = flux4(idx2,idx1,idx0,idxn1)
     when 5
        fu = flux5(idx2,idx1,idx0,idxn1,idxn2)
+    when 6
+       fu = flux6(idx3,idx2,idx1,idx0,idxn1,idxn2) 
+    when 7
+       fu = flux7(idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)         
     else
        raise "invalid order: #{order}"
     end
@@ -155,6 +180,10 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
        fd = flux4(idx2,idx1,idx0,idxn1)
     when 5
        fd = flux5(idxn1,idx0,idx1,idx2,idx3)
+    when 6
+       fd = flux6(idx3,idx1,idx0,idxn1,idxn2,idxn3) 
+    when 7
+       fd = flux7(idxn2,idxn1,idx0,idx1,idx2,idx3,idx4)            
     else
        raise "invalid order: #{order}"
     end
@@ -189,6 +218,17 @@ def flux(vel, order, dir, k="k", i="i", j="j", dim=3)
                        + F55 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
   when 6
                       "#{flux6(idx3,idx2,idx1,idx0,idxn1,idxn2)}"
+  when 7
+                      "( F71 * ( val(#{idx4})+val(#{idxn3}) ) &
+                       + F72 * ( val(#{idx3})+val(#{idxn2}) ) &
+                       + F73 * ( val(#{idx2})+val(#{idxn1}) ) &
+                       + F74 * ( val(#{idx1})+val(#{idx0}) ) ) &
+                     - ( F71 * ( val(#{idx4})-val(#{idxn3}) ) &
+                       + F75 * ( val(#{idx3})-val(#{idxn2}) ) &
+                       + F76 * ( val(#{idx2})-val(#{idxn1}) ) &
+                       + F77 * ( val(#{idx1})-val(#{idx0}) ) ) * sign(1.0_RP,#{vel})"
+  when 8
+                      "#{flux8(idx4,idx3,idx2,idx1,idx0,idxn1,idxn2,idxn3)}"                         
   else
     raise "invalid order: #{order}"
   end
@@ -345,6 +385,12 @@ module <%= modname %>
   real(RP), parameter :: F62 = -8.0_RP/60.0_RP
   real(RP), parameter :: F63 =  1.0_RP/60.0_RP
 <%   end %>
+<%   if order >= 8 %>
+  real(RP), parameter :: F81 =  533.0_RP/840.0_RP
+  real(RP), parameter :: F82 = -139.0_RP/840.0_RP
+  real(RP), parameter :: F83 =   29.0_RP/840.0_RP
+  real(RP), parameter :: F84 =   -3.0_RP/840.0_RP
+<%   end %>
 <% else %>
 <%   if order >= 3 %>
   real(RP), parameter :: F31  = -1.0_RP/12.0_RP
@@ -357,6 +403,15 @@ module <%= modname %>
   real(RP), parameter :: F53  = 37.0_RP/60.0_RP
   real(RP), parameter :: F54  = -5.0_RP/60.0_RP
   real(RP), parameter :: F55  = 10.0_RP/60.0_RP
+<%   end %>
+<%   if order >= 7 %>
+  real(RP), parameter :: F71  =   -3.0_RP/840.0_RP
+  real(RP), parameter :: F72  =   29.0_RP/840.0_RP
+  real(RP), parameter :: F73  = -139.0_RP/840.0_RP
+  real(RP), parameter :: F74  =  533.0_RP/840.0_RP
+  real(RP), parameter :: F75  =   21.0_RP/840.0_RP
+  real(RP), parameter :: F76  =  -63.0_RP/840.0_RP
+  real(RP), parameter :: F77  =  105.0_RP/840.0_RP
 <%   end %>
 <% end %>
 
@@ -435,9 +490,10 @@ contains
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff)
+    !$omp parallel default(none) private(i,j,k, vel)                    &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
+    
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-(nh+1)%>
@@ -454,13 +510,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mflx,val,flux,GSQRT,num_diff,EPS)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -485,6 +540,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
+    
+    !$omp end parallel    
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -575,9 +633,10 @@ contains
 
     ! note than z-index is added by -1
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS)
+    !$omp parallel default(none) private(i,j,k,vel)  &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,FDZ,dtrk)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh+1%>, KE<%=-[nh,1].max%>
@@ -596,13 +655,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff,FDZ,dtrk)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -636,6 +694,9 @@ contains
        flux(KE  ,i,j) = 0.0_RP ! k = KE+1
     enddo
     enddo
+    !$omp end do nowait
+    
+    !$omp end parallel
 
     return
   end subroutine ATMOS_DYN_FVM_fluxZ_XYW_<%=@scheme%>
@@ -651,7 +712,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, <%=dir%>G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -663,15 +724,17 @@ contains
     real(RP), intent(in)  :: <%=dir%>G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=[nh,2].max%>, KE<%=-[nh,1].max%>
@@ -683,10 +746,9 @@ contains
     enddo
     enddo
     enddo
-
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF)
+    !$omp end do nowait
+    
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS.
@@ -719,6 +781,9 @@ contains
        flux(KE-1,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
+    
+    !$omp end parallel
 
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_XYW_<%=@scheme%>
@@ -736,7 +801,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -748,16 +813,18 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff) &
     !$omp shared(CDZ)
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS<%=-j%>, JJE
     do i = IIS<%=-i%>, IIE
     do k = KS, KE-1
@@ -776,18 +843,20 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KE,flux)
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS<%=-j%>, JJE
     do i = IIS<%=-i%>, IIE
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
+    
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -808,7 +877,7 @@ contains
        mom, val, DENS,    &
        GSQRT, J33G,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -820,16 +889,74 @@ contains
     real(RP), intent(in)  :: J33G
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                           &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,J33G,GSQRT,num_diff) &
-    !$omp shared(CDZ)
+    !$omp shared(CDZ,TwoD)
+
+<% if i==1 %>
+    if ( TwoD ) then
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+    do k = KS<%=nh%>, KE<%=-nh-1%>
+#ifdef DEBUG
+       call CHECK( __LINE__, mom(k,i,j) )
+<% (nh+1).times do |k| %>
+       call CHECK( __LINE__, val(k<%=-k%>,i,j) )
+       call CHECK( __LINE__, val(k<%=k+1%>,i,j) )
+<% end %>
+#endif
+       i = IIS
+       vel = <%= interp("mom", "XYW", "XYW") %> &
+           / <%= interp("DENS", "XYZ", "XYW") %>
+       flux(k,i,j) = J33G * vel &
+                   * ( <%= flux("vel", order, 0) %> ) <%= num_diff() %>
+    enddo
+    enddo
+    !$omp end do nowait
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+#ifdef DEBUG
+<% nh.times do |k| %>
+       call CHECK( __LINE__, mom(KS<%=k%>,i  ,j) )
+       call CHECK( __LINE__, val(KS<%=k*2+1%>,i,j) )
+       call CHECK( __LINE__, val(KS<%=k*2%>,i,j) )
+<% end %>
+#endif
+       i = IIS
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP
+<% nh.times do |k| %>
+       vel = <%= interp("mom", "XYW", "XYW", "KS"+k) %> &
+           / <%= interp("DENS", "XYZ", "XYW", "KS"+k) %>
+       flux(KS<%=k%>,i,j) = J33G * vel &
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> ) <%= num_diff("KS"+k) %>
+       vel = <%= interp("mom", "XYW", "XYW", "KE"-(k+1)) %> &
+           / <%= interp("DENS", "XYZ", "XYW", "KE"-(k+1)) %>
+       flux(KE<%=-k-1%>,i,j) = J33G * vel &
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1)) %> ) <%= num_diff("KE"-(k+1)) %>
+<% end %>
+       flux(KE,i,j) = 0.0_RP
+    enddo
+    !$omp end do nowait
+
+    else
+
+<% end %>
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-nh-1%>
@@ -848,13 +975,12 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,flux,J33G,GSQRT,num_diff,DENS,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
 #ifdef DEBUG
@@ -882,6 +1008,12 @@ contains
        flux(KE,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
+<% if i==1 %>
+    end if    
+<% end %>
+
+    !$omp end parallel
 #ifdef DEBUG
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -899,7 +1031,7 @@ contains
        flux,              &
        mom, val, DENS,    &
        GSQRT, <%=dir%>G, MAPF, &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -911,16 +1043,60 @@ contains
     real(RP), intent(in)  :: <%=dir%>G    (KA,IA,JA)
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
+    !$omp parallel default(none) private(i,j,k,vel)                      &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp shared(GSQRT,CDZ,TwoD)
+  
+<% if i==1 && im==1 %>
+    if ( TwoD ) then
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+    do k = KS<%=nh%>, KE<%=-nh-1%>
+       i = IIS
+       vel = <%= interp("mom", xyz, "XYW") %> &
+           / <%= interp("DENS", "XYZ", "XYW") %>
+       vel = vel * <%=dir%>G(k,i,j)
+       flux(k,i,j) = vel * ( <%= flux("vel", order, 0) %> )
+    enddo
+    enddo
+    !$omp end do nowait
+
+    !$omp do OMP_SCHEDULE_
+    do j = JJS, JJE
+       i = IIS
+       ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
+       ! The flux at KS-1 can be non-zero.
+       ! To reduce calculations, all the fluxes are set to zero.
+       flux(KS-1,i,j) = 0.0_RP
+<% nh.times do |k| %>
+       vel = <%= interp("mom", xyz, "XYW", "KS"+k) %> &
+           / <%= interp("DENS", "XYZ", "XYW", "KS"+k) %>
+       vel = vel * <%=dir%>G(KS<%=k%>,i,j)
+       flux(KS<%=k%>,i,j) = vel / MAPF(i,j,<%=im%>) &
+                   * ( <%= flux("vel", [[order-(nh-k)*2,[order,2].min].max,[order-(nh-k-1)*2,[order,2].min].max], 0, "KS"+k) %> )
+
+       vel = <%= interp("mom", xyz, "XYW", "KE"-(k+1)) %> &
+           / <%= interp("DENS", "XYZ", "XYW", "KE"-(k+1)) %>
+       vel = vel * <%=dir%>G(KE<%=-k-1%>,i,j)
+       flux(KE<%=-k-1%>,i,j) = vel / MAPF(i,j,<%=im%>) &
+                   * ( <%= flux("vel", [[order-(nh-k-1)*2,[order,2].min].max,[order-(nh-k)*2,[order,2].min].max], 0, "KE"-(k+1)) %> )
+<% end %>
+       flux(KE  ,i,j) = 0.0_RP
+    enddo
+    !$omp end do nowait
+
+    else
+<% end %>
+
+    !$omp do OMP_SCHEDULE_ collapse(2)
     do j = JJS, JJE
     do i = IIS, IIE
     do k = KS<%=nh%>, KE<%=-nh-1%>
@@ -932,11 +1108,9 @@ contains
     enddo
     enddo
     enddo
+    !$omp end do nowait
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(vel) &
-    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,<%=dir%>G,MAPF) &
-    !$omp shared(GSQRT,CDZ)
+    !$omp do OMP_SCHEDULE_ collapse(2) 
     do j = JJS, JJE
     do i = IIS, IIE
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
@@ -959,7 +1133,13 @@ contains
        flux(KE  ,i,j) = 0.0_RP
     enddo
     enddo
+    !$omp end do nowait
+    
+<% if i==1 && im==1 %>
+    end if
+<% end %>
 
+    !$omp end parallel
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>
 <% end # J13 J23 loop %>
@@ -975,7 +1155,7 @@ contains
        mom, val, DENS,    &
        GSQRT, MAPF,       &
        num_diff,          &
-       CDZ,               &
+       CDZ, TwoD,         &
        IIS, IIE, JJS, JJE )
     implicit none
 
@@ -987,6 +1167,7 @@ contains
     real(RP), intent(in)  :: MAPF    (   IA,JA,2)
     real(RP), intent(in)  :: num_diff(KA,IA,JA)
     real(RP), intent(in)  :: CDZ     (KA)
+    logical,  intent(in)  :: TwoD
     integer,  intent(in)  :: IIS, IIE, JJS, JJE
 
     real(RP) :: vel
@@ -1015,6 +1196,36 @@ contains
      dst = dst[1..1]=="Y" ? dst[0..0]+"V" : dst[0..0]+"Y"
    end
 %>
+
+<% if i==1 && jj==1 %>
+    if ( TwoD ) then
+
+    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
+    !$omp private(vel) &
+    !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff,TwoD)
+    do j = JJS<%=-jj+jo%>, JJE<%=jo%>
+    do k = KS, KE
+       i = IIS
+#ifdef DEBUG
+       call CHECK( __LINE__, mom(k,i  ,j) )
+<% (nh+1).times do |n| %>
+       call CHECK( __LINE__, val(k,i<%=-n*ii-io%>,j<%=-n*jj-jo%>) )
+       call CHECK( __LINE__, val(k,i<%=(n+1)*ii-io%>,j<%=(n+1)*jj-jo%>) )
+<% end %>
+#endif
+       vel = <%= interp("mom", dir=="X" ? "UYZ" : "XVZ", "XVZ") %> &
+           / <%= interp("DENS", "XYZ", "XVZ") %>
+       flux(k,i<%=-io%>,j<%=-jo%>) = GSQRT(k,i,j) / MAPF(i,j,<%=ii*2+jj%>) * vel &
+                   * ( <%= flux("vel", order, ii+jj*2, "k", "i"-io, "j"-jo) %> ) <%= num_diff() %>
+    enddo
+    enddo
+#ifdef DEBUG
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+    else
+
+<% end %>
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
     !$omp private(vel) &
     !$omp shared(JJS,JJE,IIS,IIE,KS,KE,mom,val,DENS,flux,GSQRT,MAPF,num_diff)
@@ -1040,6 +1251,10 @@ contains
     k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
+<% if i==1 && jj==1 %>
+    end if
+<% end %>
+
     return
   end subroutine ATMOS_DYN_FVM_flux<%=dir%>_<%=uv%>Z_<%=@scheme%>
 <% end %>
@@ -1058,7 +1273,7 @@ contains
     real(RP), intent(in)  :: v1
     real(RP), intent(in)  :: v2
     real(RP), intent(in)  :: v3
-
+    
     real(RP) :: r2
     real(RP) :: zerosw1, zerosw2
     !---------------------------------------------------------------------------

@@ -42,6 +42,11 @@ module mod_atmos_phy_tb_driver
   !
   !++ Private parameters & variables
   !
+  integer, private :: monit_west
+  integer, private :: monit_east
+  integer, private :: monit_south
+  integer, private :: monit_north
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -105,12 +110,16 @@ contains
        ATMOS_PHY_TB_dns_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_TB_TYPE, &
-       ATMOS_sw_phy_tb
+       ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl
     use mod_atmos_phy_tb_vars, only: &
        MOMZ_t_TB => ATMOS_PHY_TB_MOMZ_t
+    use scale_monitor, only: &
+       MONITOR_reg
     implicit none
 
     integer :: i, j
+    logical :: horizontal = .false.
     !---------------------------------------------------------------------------
 
     if ( .not. ATMOS_sw_phy_tb ) return
@@ -130,12 +139,29 @@ contains
     ! setup library component
     select case( ATMOS_PHY_TB_TYPE )
     case( 'SMAGORINSKY' )
-       call ATMOS_PHY_TB_smg_setup( REAL_FZ, REAL_CZ, CDX, CDY, MAPF(:,:,:,I_XY) ) ! [IN]
+       if ( ATMOS_sw_phy_bl ) horizontal = .true.
+       call ATMOS_PHY_TB_smg_setup( REAL_FZ, REAL_CZ, CDX, CDY, MAPF(:,:,:,I_XY), horizontal ) ! [IN]
     case( 'D1980' )
        call ATMOS_PHY_TB_d1980_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
     case( 'DNS' )
        call ATMOS_PHY_TB_dns_setup( CDZ, CDX, CDY, REAL_CZ ) ! [IN]
     end select
+
+
+    ! monitor
+    call MONITOR_reg( "QTOTFLX_TB_WEST",  "water mass flux at the western boundary",  "kg", & ! [IN]
+                      monit_west,                                                           & ! [OUT]
+                      dim_type="ZY-W", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_EAST",  "water mass flux at the eastern boundary",  "kg", & ! [IN]
+                      monit_east,                                                           & ! [OUT]
+                      dim_type="ZY-E", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_SOUTH", "water mass flux at the southern boundary", "kg", & ! [IN]
+                      monit_south,                                                          & ! [OUT]
+                      dim_type="ZX-S", is_tendency=.true.                                   ) ! [IN]
+    call MONITOR_reg( "QTOTFLX_TB_NORTH", "water mass flux at the northern boundary", "kg", & ! [IN]
+                      monit_north,                                                          & ! [OUT]
+                      dim_type="ZX-N", is_tendency=.true.                                   ) ! [IN]
+
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
@@ -143,6 +169,11 @@ contains
   !-----------------------------------------------------------------------------
   !> calclate tendency
   subroutine ATMOS_PHY_TB_driver_calc_tendency( update_flag )
+    use scale_prc_cartesC, only: &
+       PRC_HAS_W, &
+       PRC_HAS_E, &
+       PRC_HAS_S, &
+       PRC_HAS_N
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -172,6 +203,8 @@ contains
        MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_file_history, only: &
        FILE_HISTORY_in
+    use scale_monitor, only: &
+       MONITOR_put
     use scale_time, only: &
        dt_TB => TIME_DTSEC_ATMOS_PHY_TB
     use scale_atmos_phy_tb_smg, only: &
@@ -232,6 +265,10 @@ contains
     real(RP) :: N2(KA,IA,JA)
 
     real(RP) :: tend(KA,IA,JA)
+
+    ! for monitor
+    real(RP) :: qflx_x(KA,JA)
+    real(RP) :: qflx_y(KA,IA)
 
     integer  :: JJS, JJE
     integer  :: IIS, IIE
@@ -475,7 +512,7 @@ contains
     enddo
     enddo
 
-    do iq = 1,  QA
+    do iq = 1, QA
 
        if ( .not. ( iq == I_TKE .or. TRACER_ADVC(iq) ) ) cycle
 
@@ -489,6 +526,67 @@ contains
       enddo
 
     enddo
+
+    if ( monit_west > 0 ) then
+       qflx_x(:,:) = 0.0_RP
+       if ( .not. PRC_HAS_W ) then
+          do iq = 1, QA
+             if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                do j = JS, JE
+                do k = KS, KE
+                   qflx_x(k,j) = qflx_x(k,j) + QFLX_RHOQ(k,IS-1,j,XDIR,iq)
+                end do
+                end do
+             end if
+          end do
+       end if
+       call MONITOR_put( monit_west, qflx_x(:,:) )
+    end if
+    if ( monit_east > 0 ) then
+       qflx_x(:,:) = 0.0_RP
+       if ( .not. PRC_HAS_E ) then
+          do iq = 1, QA
+             if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                do j = JS, JE
+                do k = KS, KE
+                   qflx_x(k,j) = qflx_x(k,j) + QFLX_RHOQ(k,IE,j,XDIR,iq)
+                end do
+                end do
+             end if
+          end do
+       end if
+       call MONITOR_put( monit_east, qflx_x(:,:) )
+    end if
+    if ( monit_south > 0 ) then
+       qflx_y(:,:) = 0.0_RP
+       if ( .not. PRC_HAS_S ) then
+          do iq = 1, QA
+             if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                do i = IS, IE
+                do k = KS, KE
+                   qflx_y(k,i) = qflx_y(k,i) + QFLX_RHOQ(k,i,JS-1,YDIR,iq)
+                end do
+                end do
+             end if
+          end do
+       end if
+       call MONITOR_put( monit_south, qflx_y(:,:) )
+    end if
+    if ( monit_north > 0 ) then
+       qflx_y(:,:) = 0.0_RP
+       if ( .not. PRC_HAS_N ) then
+          do iq = 1, QA
+             if ( TRACER_ADVC(iq) .and. TRACER_MASS(iq) == 1.0_RP ) then
+                do i = IS, IE
+                do k = KS, KE
+                   qflx_y(k,i) = qflx_y(k,i) + QFLX_RHOQ(k,i,JE,YDIR,iq)
+                end do
+                end do
+             end if
+          end do
+       end if
+       call MONITOR_put( monit_north, qflx_y(:,:) )
+    end if
 
     return
   end subroutine ATMOS_PHY_TB_driver_calc_tendency

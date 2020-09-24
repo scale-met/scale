@@ -54,7 +54,6 @@ module mod_cnvlanduse
   real(RP), private :: DOMAIN_LATS, DOMAIN_LATE
   real(RP), private :: DOMAIN_LONS, DOMAIN_LONE
   real(RP), private :: DOMAIN_DLAT
-  real(RP), private, allocatable :: DOMAIN_DXY(:,:)
 
   real(RP), private, parameter :: d_large = 1e20_RP
   !-----------------------------------------------------------------------------
@@ -159,13 +158,11 @@ contains
        LANDUSE_frac_PFT,   &
        LANDUSE_index_PFT,  &
        LANDUSE_calc_fact,  &
-       LANDUSE_fillhalo,   &
-       LANDUSE_write
+       LANDUSE_fillhalo
     use scale_atmos_grid_cartesC_real, only: &
        LATXV => ATMOS_GRID_CARTESC_REAL_LATXV, &
        LONUY => ATMOS_GRID_CARTESC_REAL_LONUY, &
-       DLAT  => ATMOS_GRID_CARTESC_REAL_DLAT,  &
-       AREA  => ATMOS_GRID_CARTESC_REAL_AREA
+       DLAT  => ATMOS_GRID_CARTESC_REAL_DLAT
     implicit none
 
     real(RP) :: PFT_weight(-2:LANDUSE_PFT_nmax,IA,JA)
@@ -189,13 +186,6 @@ contains
        DOMAIN_LONS = minval( LONUY(:,:) )
        DOMAIN_LONE = maxval( LONUY(:,:) )
        DOMAIN_DLAT = maxval( DLAT(:,:) )
-
-       allocate( DOMAIN_DXY(IA,JA) )
-       do j = 1, JA
-       do i = 1, IA
-          DOMAIN_DXY(i,j) = sqrt( AREA(i,j) )
-       end do
-       end do
 
        LOG_INFO("CNVLANDUSE",*) 'Domain Information'
        LOG_INFO_CONT(*) 'Domain (LAT)    :', DOMAIN_LATS/D2R, DOMAIN_LATE/D2R
@@ -222,8 +212,6 @@ contains
           call CNVLANDUSE_JIBIS( PFT_weight(:,:,:) ) ! [INOUT]
        endif
 
-       deallocate( DOMAIN_DXY )
-
        !$omp parallel do &
        !$omp private(lake_wgt,ocean_wgt,urban_wgt,land_wgt,allsum,zerosw,PFT_idx)
        do j = JS, JE
@@ -245,23 +233,23 @@ contains
           ! land fraction : total - ocean / total
           allsum = lake_wgt + ocean_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_land (i,j) = ( allsum-ocean_wgt ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_land (i,j) = min( ( allsum-ocean_wgt ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! lake fraction : lake / ( lake + urban + land )
           allsum = lake_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_lake (i,j) = lake_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_lake (i,j) = min( lake_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! urban fraction : urban / ( urban + land )
           allsum = urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_urban(i,j) = urban_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_urban(i,j) = min( urban_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! PFT fraction : PFT / sum( PFT(1:mosaic) )
           allsum = sum( PFT_weight(LANDUSE_PFT_nmax-LANDUSE_PFT_mosaic+1:,i,j) )
           if ( allsum > EPS ) then
              do p = 1, LANDUSE_PFT_mosaic
-                LANDUSE_frac_PFT (i,j,p) = PFT_weight(LANDUSE_PFT_nmax-p+1,i,j) / allsum
+                LANDUSE_frac_PFT (i,j,p) = min( PFT_weight(LANDUSE_PFT_nmax-p+1,i,j) / allsum, 1.0_RP )
                 LANDUSE_index_PFT(i,j,p) = PFT_idx(LANDUSE_PFT_nmax-p+1)
              enddo
              ! if no second PFT, set to same as PFT1
@@ -299,9 +287,6 @@ contains
 
        LOG_PROGRESS(*) 'end   convert landuse data'
 
-       ! output landuse file
-       call LANDUSE_write
-
     endif
 
     return
@@ -321,7 +306,8 @@ contains
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
@@ -385,6 +371,7 @@ contains
 
     integer,  allocatable :: LANDUSE(:,:)
     real(RP), allocatable :: LATH(:,:), LONH(:,:)
+    real(RP), allocatable :: LATH_1d(:), LONH_1d(:)
     real(RP), allocatable :: XH(:,:), YH(:,:)
     integer               :: nLONH, nLATH
 
@@ -398,6 +385,7 @@ contains
     real(RP) :: limit
 
     integer :: ish, ieh, jsh, jeh
+    logical :: zonal, pole
     integer :: lu
     integer :: ierr
     integer :: i, j, ii, jj, p
@@ -429,13 +417,20 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     allocate( LANDUSE(nLONH,nLATH) )
     allocate( LATH   (nLONH,nLATH) )
     allocate( LONH   (nLONH,nLATH) )
+    allocate( LATH_1d(nLATH)       )
+    allocate( LONH_1d(nLONH)       )
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  GLCCv2_IN_DIR,                                  & ! [IN]
@@ -446,7 +441,15 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "INT1",                                         & ! [IN]
-                                 LANDUSE(:,:), LATH(:,:), LONH(:,:)              ) ! [OUT]
+                                 LANDUSE(:,:)                                    ) ! [OUT]
+
+    !$omp parallel do collapse(2)
+    do j = 1, nLATH
+    do i = 1, nLONH
+       LATH(i,j) = LATH_1d(j)
+       LONH(i,j) = LONH_1d(i)
+    end do
+    end do
 
     call MAPPROJECTION_lonlat2xy( nLONH, 1, nLONH, nLATH, 1, nLATH, &
                                   LONH(:,:), LATH(:,:), & ! [IN]
@@ -513,7 +516,8 @@ contains
        CX => ATMOS_GRID_CARTESC_CX, &
        CY => ATMOS_GRID_CARTESC_CY
     use scale_file_tiledata, only: &
-       FILE_TILEDATA_get_info, &
+       FILE_TILEDATA_get_info,   &
+       FILE_TILEDATA_get_latlon, &
        FILE_TILEDATA_get_data
     use scale_mapprojection, only: &
        MAPPROJECTION_lonlat2xy
@@ -535,9 +539,8 @@ contains
     real(RP), parameter :: LU100M_DLAT = 5.0_RP / 60.0_RP / 100.0_RP
     real(RP), parameter :: LU100M_DLON = 7.5_RP / 60.0_RP / 100.0_RP
 
-    integer  :: lookuptable(0:16)
-    data lookuptable / -1, & ! -999 missing      -> -1 Sea Surface
-                       10, & !  1 paddy          -> 10 Paddy
+    integer  :: lookuptable(1:16)
+    data lookuptable / 10, & !  1 paddy          -> 10 Paddy
                         9, & !  2 cropland       ->  9 Mixed Cropland and Pasture
                         1, & !  3 UNDEF          ->  1 Dessert
                         1, & !  4 UNDEF          ->  1 Dessert
@@ -570,6 +573,8 @@ contains
     integer,  allocatable :: LANDUSE(:,:)
     real(RP), allocatable :: LATH   (:,:)
     real(RP), allocatable :: LONH   (:,:)
+    real(RP), allocatable :: LATH_1d(:)
+    real(RP), allocatable :: LONH_1d(:)
     real(RP), allocatable :: XH(:,:), YH(:,:)
     integer               :: nLONH, nLATH
 
@@ -583,6 +588,7 @@ contains
     real(RP) :: limit
 
     integer :: ish, ieh, jsh, jeh
+    logical :: zonal, pole
     integer :: lu
     integer :: ierr
     integer :: i, j, ii, jj, p
@@ -614,15 +620,22 @@ contains
                                  TILE_nmax,                                          & ! [OUT]
                                  TILE_fname(:), TILE_hit(:),                         & ! [OUT]
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:),     & ! [OUT]
-                                 nLATH, nLONH, jsh, jeh, ish, ieh                    ) ! [OUT]
+                                 nLATH, nLONH, jsh, jeh, ish, ieh, zonal, pole       ) ! [OUT]
 
     if ( .not. any(TILE_hit(1:TILE_nmax) ) ) return
 
     allocate( LANDUSE(nLONH,nLATH) )
     allocate( LATH   (nLONH,nLATH) )
     allocate( LONH   (nLONH,nLATH) )
+    allocate( LATH_1d(nLATH)       )
+    allocate( LONH_1d(nLONH)       )
     allocate( YH     (nLONH,nLATH) )
     allocate( XH     (nLONH,nLATH) )
+
+    call FILE_TILEDATA_get_latlon( nLATH, nLONH,          & ! [IN]
+                                   jsh, ish,              & ! [IN]
+                                   TILE_DLAT, TILE_DLON,  & ! [IN]
+                                   LATH_1d(:), LONH_1d(:) ) ! [OUT]
 
     call FILE_TILEDATA_get_data( nLATH, nLONH,                                   & ! [IN]
                                  LU100M_IN_DIR,                                  & ! [IN]
@@ -633,8 +646,16 @@ contains
                                  TILE_JS(:), TILE_JE(:), TILE_IS(:), TILE_IE(:), & ! [IN]
                                  jsh, jeh, ish, ieh,                             & ! [IN]
                                  "REAL4",                                        & ! [IN]
-                                 LANDUSE(:,:), LATH(:,:), LONH(:,:),             & ! [OUT]
-                                 min_value = -999                                ) ! [IN]
+                                 LANDUSE(:,:),                                   & ! [OUT]
+                                 min_value = 1                                   ) ! [IN]
+
+    !$omp parallel do collapse(2)
+    do j = 1, nLATH
+    do i = 1, nLONH
+       LATH(i,j) = LATH_1d(j)
+       LONH(i,j) = LONH_1d(i)
+    end do
+    end do
 
     call MAPPROJECTION_lonlat2xy( nLONH, 1, nLONH, nLATH, 1, nLATH, &
                                   LONH(:,:), LATH(:,:), & ! [IN]
@@ -657,7 +678,8 @@ contains
                 no_hit_x = .false.
                 lu = LANDUSE(ii,jj)
                 if ( lu /= UNDEF2 ) then
-                   p = lookuptable( max(0,lu) ) ! -999 to 0
+                   if ( .not. hit ) PFT_weight(:,i,j) = 0.0_RP
+                   p = lookuptable(lu)
                    PFT_weight(p,i,j) = PFT_weight(p,i,j) + 1.0_RP
                    hit = .true.
                    cycle
@@ -665,7 +687,7 @@ contains
              end if
              d = ( XH(ii,jj)-CX(i) )**2 + ( YH(ii,jj)-CY(j) )**2
              lu = LANDUSE(ii,jj)
-             if ( d < dmin .and. lu /= UNDEF2 ) then
+             if ( d < dmin ) then
                 dmin = d
                 min_i = ii
                 min_j = jj
@@ -676,7 +698,8 @@ contains
        if ( ( .not. hit ) .and. dmin < limit ) then
           lu = LANDUSE(min_i,min_j)
           if ( lu /= UNDEF2 ) then
-             p = lookuptable( max(0,lu) ) ! -999 to 0
+             PFT_weight(:,i,j) = 0.0_RP
+             p = lookuptable(lu)
              PFT_weight(p,i,j) = 1.0_RP
           end if
        end if

@@ -33,12 +33,14 @@ module scale_atmos_dyn_tinteg_tracer
   abstract interface
      subroutine tinteg( &
           QTRC, & ! (out)
+          qflx, & ! (out)
           QTRC0, RHOQ_t, &! (in)
           DENS0, DENS, & ! (in)
           mflx_hi, num_diff, & ! (in)
           GSQRT, MAPF, & ! (in)
           CDZ, RCDZ, RCDX, RCDY, & ! (in)
           BND_W, BND_E, BND_S, BND_N, & ! (in)
+          TwoD, & ! (in)
           dtl, & ! (in)
           FLAG_FCT_TRACER, & ! (in)
           FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -46,6 +48,7 @@ module scale_atmos_dyn_tinteg_tracer
        use scale_atmos_grid_cartesC_index
        use scale_index
        real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+       real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
        real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
        real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
        real(RP), intent(in)    :: DENS0   (KA,IA,JA)
@@ -62,6 +65,7 @@ module scale_atmos_dyn_tinteg_tracer
        logical,  intent(in)    :: BND_E
        logical,  intent(in)    :: BND_S
        logical,  intent(in)    :: BND_N
+       logical,  intent(in)    :: TwoD
        real(RP), intent(in)    :: dtl
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -100,11 +104,23 @@ contains
     use scale_atmos_dyn_tinteg_tracer_rk3, only: &
        ATMOS_DYN_Tinteg_tracer_rk3_setup, &
        ATMOS_DYN_Tinteg_tracer_rk3
+    use scale_atmos_dyn_tinteg_tracer_linrk, only: &
+       ATMOS_DYN_Tinteg_tracer_linrk_setup, &
+       ATMOS_DYN_Tinteg_tracer_linrk       
     implicit none
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_tracer_TYPE
+
+    character(len=H_SHORT) :: Tinteg_type
     !---------------------------------------------------------------------------
 
-    select case( ATMOS_DYN_Tinteg_tracer_TYPE )
+    
+    if (ATMOS_DYN_Tinteg_tracer_TYPE(1:5) == 'LINRK') then
+      Tinteg_type = 'LINRK'
+    else
+      Tinteg_type = ATMOS_DYN_Tinteg_tracer_TYPE
+   end if
+
+    select case( Tinteg_type )
     case( 'EULER' )
        call ATMOS_DYN_Tinteg_tracer_euler_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
@@ -113,6 +129,10 @@ contains
        call ATMOS_DYN_Tinteg_tracer_rk3_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_rk3
+    case( 'LINRK' )
+       call ATMOS_DYN_Tinteg_tracer_linrk_setup( &
+            ATMOS_DYN_Tinteg_tracer_TYPE )
+       ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_linrk       
     case( 'OFF', 'NONE' )
        ! do nothing
     case default

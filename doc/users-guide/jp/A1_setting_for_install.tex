@@ -612,31 +612,6 @@ Mac OS Xを用いて\scalerm プログラムを実行すると、実行時に
 
 
 
-\section{インストール方法 (スーパーコンピュータ「京」 編)} \label{chap:install_supercom}
-%==========================================================================================
-
-以下の説明で使用した環境は次のとおりである。
-\begin{itemize}
-\item 計算機: スーパーコンピュータ「京」
-\item 言語環境: K-1.2.0-22
-\end{itemize}
-
-\subsubsection{ライブラリについて}
-スーパーコンピュータ「京」では、SCALEのコンパイルに
-必要なライブラリがAICSソフトウェアとして準備されている。
-詳細は、京ポータルサイトの「AICSソフトウェア等」の項目、もしくは下記のWebページを参照のこと。\\
-\noindent \url{http://www-sys-aics.riken.jp/releasedsoftware/ksoftware/pnetcdf.html}
-
-一般に、スーパーコンピュータ「京」におけるSCALEのコンパイルには、\\
-\noindent "\verb|/opt/aics/netcdf/k-serial-noszip/|"下にあるHDF5、NetCDFライブラリを用いる。
-コンパイラやMPIライブラリについてもスーパーコンピュータ「京」専用のコンパイラとライブラリを用いるため、
-特別にライブラリ環境を準備する必要はない。
-
-\noindent {\small ＊コンパイル時に参照するライブラリのPATHは、
-SCALEコンパイル時に使用する"Makedef.K"に記述されているため、
-環境変数について特に設定する必要はない。}
-
-
 \section{描画ツールのインストール} \label{chap:install_drawtool}
 \label{sec:env_vis_tools}
 %==========================================================================================

@@ -59,11 +59,12 @@ TIME_DT_URBAN=(        "450.0" "150.0" ) # required parameters for each domain -
 PRC_NUM_X=( 2 4 ) # required parameters for each domain
 PRC_NUM_Y=( 2 4 ) # required parameters for each domain
 
-KMAX=( 36 60 ) # required parameters for each domain
-IMAX=( 45 32 ) # required parameters for each domain
-JMAX=( 45 32 ) # required parameters for each domain
+KMAX=(  36  60 ) # required parameters for each domain
+IMAXG=( 90 128 ) # required parameters for each domain
+JMAXG=( 90 128 ) # required parameters for each domain
 
 OKMAX=1
+ODZ=( "10.0" ) # required parameters for OKMAX
 
 LKMAX=7
 LDZ=( "0.05" "0.15" "0.30" "0.50" "1.00" "2.00" "4.00" ) # required parameters for LKMAX
@@ -98,7 +99,7 @@ DEF_Z=(
           23019.2383, 24019.2383, 25019.2383, 26019.2383, 27019.2383,"
 ) # required num. of parameters for each domain
 
-BUFFER_DZ=( "5000.0"   "5000.0"   ) # required parameters for each domain
+BUFFER_DZ=( "0.0"      "0.0"      ) # required parameters for each domain
 BUFFER_DX=( "400000.0" "140000.0" ) # required parameters for each domain
 BUFFER_DY=( "400000.0" "140000.0" ) # required parameters for each domain
 

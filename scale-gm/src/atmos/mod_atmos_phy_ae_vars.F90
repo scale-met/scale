@@ -93,7 +93,9 @@ module mod_atmos_phy_ae_vars
 
   ! for history
   integer, private,allocatable :: HIST_Re_id(:)
+  integer, private,allocatable :: HIST_Qe_id(:)
   logical, private             :: HIST_Re
+  logical, private             :: HIST_Qe
 
   !-----------------------------------------------------------------------------
 contains
@@ -191,6 +193,13 @@ contains
        if ( HIST_Re_id(iv) > 0 ) HIST_Re = .true.
     end do
 
+    HIST_Qe = .false.
+    allocate( HIST_Qe_id(N_AE) )
+    do iv = 1, N_AE
+       call FILE_HISTORY_reg( 'Qe_'//trim(AE_NAME(iv)), 'mass mixing ratio of '//trim(AE_DESC(iv)), 'kg/kg', HIST_Qe_id(iv), fill_halo=.true., dim_type='ZXY' )
+       if ( HIST_Qe_id(iv) > 0 ) HIST_Qe = .true.
+    end do
+
     return
   end subroutine ATMOS_PHY_AE_vars_setup
 
@@ -271,6 +280,16 @@ contains
        do iv = 1, N_AE
           if ( HIST_Re_id(iv) > 0 ) &
                call FILE_HISTORY_put( HIST_Re_id(iv), WORK(:,:,:,:,iv) )
+       end do
+    end if
+
+    if ( HIST_Qe ) then
+       call ATMOS_PHY_AE_vars_get_diagnostic( &
+            QTRC(:,:,:,:,:), RH(:,:,:,:), & ! [IN]
+            Qe=WORK(:,:,:,:,:)          ) ! [OUT]
+       do iv = 1, N_AE
+          if ( HIST_Qe_id(iv) > 0 ) &
+               call FILE_HISTORY_put( HIST_Qe_id(iv), WORK(:,:,:,:,iv) )
        end do
     end if
 

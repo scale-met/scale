@@ -759,7 +759,7 @@ contains
        PRC_RGN_vlink,    &
        PRC_RGN_total,    &
        PRC_RGN_local,    &
-       PRC_RGN_vert_num, &
+       PRC_RGN_vert_pl,  &
        PRC_RGN_vert_tab, &
        PRC_RGN_l2r,      &
        PRC_RGN_r2lp,     &
@@ -806,7 +806,7 @@ contains
 
     ! find region which has the north pole
     do l = PRC_RGN_total, 1, -1
-       if ( PRC_RGN_vert_num(I_N,l) == PRC_RGN_vlink ) then
+       if ( PRC_RGN_vert_pl(I_NPL,l) ) then
           do n = 1, PRC_RGN_vlink
              nn = n + 1
              if( nn > ADM_vlink ) nn = 1
@@ -870,7 +870,7 @@ contains
 
     ! find region which has the south pole
     do l = PRC_RGN_total, 1, -1
-       if ( PRC_RGN_vert_num(I_S,l) == PRC_RGN_vlink ) then
+       if ( PRC_RGN_vert_pl(I_SPL,l) ) then
           do n = 1, PRC_RGN_vlink
              rgntab(n) = PRC_RGN_vert_tab(I_RGNID,I_S,l,n)
              prctab(n) = PRC_RGN_r2lp(I_prc,rgntab(n))

@@ -113,6 +113,7 @@ contains
   !> time step
   subroutine ATMOS_PHY_SF_driver_step
     use scale_const, only: &
+       UNDEF  => CONST_UNDEF,  &
        EPS    => CONST_EPS,    &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN, &
@@ -146,8 +147,7 @@ contains
        QV,   &
        CZ,   &
        FZ,   &
-       Z1,   &
-       TOPO_Zsfc
+       Z1
     use mod_atmos_phy_rd_vars, only: &
        SFLX_LW_dn => ATMOS_PHY_RD_SFLX_LW_dn, &
        SFLX_SW_dn => ATMOS_PHY_RD_SFLX_SW_dn
@@ -165,13 +165,16 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
-       SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
        Q2         => ATMOS_PHY_SF_Q2,         &
-       l_mo       => ATMOS_PHY_SF_l_mo
+       Ustar      => ATMOS_PHY_SF_Ustar,      &
+       Tstar      => ATMOS_PHY_SF_Tstar,      &
+       Qstar      => ATMOS_PHY_SF_Qstar,      &
+       Wstar      => ATMOS_PHY_SF_Wstar,      &
+       RLmo       => ATMOS_PHY_SF_RLmo
     use mod_cpl_admin, only: &
        CPL_sw
     use mod_atmos_admin, only: &
@@ -187,8 +190,6 @@ contains
     real(RP) :: ATM_QV  (IA,JA,ADM_lall)
     real(RP) :: SFLX_QV (IA,JA,ADM_lall)
 
-    real(RP) :: us, SFLX_PT
-
     real(RP) :: work, dz
 
     integer :: i, j, iq, l
@@ -198,9 +199,10 @@ contains
 
        ! update surface density, surface pressure
        call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                             DENS(:,:,:,l), PRES(:,:,:,l),             & ! [IN]
-                             CZ(:,:,:,l), TOPO_Zsfc(:,:,l), Z1(:,:,l), & ! [IN]
-                             SFC_DENS(:,:,l), SFC_PRES(:,:,l)          ) ! [OUT]
+                             DENS(:,:,:,l), PRES(:,:,:,l), QV(:,:,:,l), & ! [IN]
+                             SFC_TEMP(:,:,l),                           & ! [IN]
+                             FZ(:,:,:,l),                               & ! [IN]
+                             SFC_DENS(:,:,l), SFC_PRES(:,:,l)           ) ! [OUT]
 
     end do
 
@@ -233,6 +235,8 @@ contains
                   PBL_Zi(:,:,l), Z1(:,:,l),                          & ! [IN]
                   SFLX_MW(:,:,l), SFLX_MU(:,:,l), SFLX_MV(:,:,l),    & ! [OUT]
                   SFLX_SH(:,:,l), SFLX_LH(:,:,l), SFLX_QV(:,:,l),    & ! [OUT]
+                  Ustar(:,:,l), Tstar(:,:,l), Qstar(:,:,l),          & ! [OUT]
+                  Wstar(:,:,l), RLmo(:,:,l),                         & ! [OUT]
                   U10(:,:,l), V10(:,:,l), T2(:,:,l), Q2(:,:,l)       ) ! [OUT]
           end do
 
@@ -246,6 +250,11 @@ contains
                   SFLX_MW(:,:,l), SFLX_MU(:,:,l), SFLX_MV(:,:,l),            & ! [OUT]
                   SFLX_SH(:,:,l), SFLX_LH(:,:,l), SFLX_QV(:,:,l),            & ! [OUT]
                   U10(:,:,l), V10(:,:,l)                                     ) ! [OUT]
+             Ustar(:,:,l) = UNDEF
+             Tstar(:,:,l) = UNDEF
+             Qstar(:,:,l) = UNDEF
+             Wstar(:,:,l) = UNDEF
+             RLmo (:,:,l) = UNDEF
              T2(:,:,l) = ATM_TEMP(:,:,l)
              Q2(:,:,l) = ATM_QV(:,:,l)
 
@@ -260,19 +269,6 @@ contains
     endif
 
     do l = 1, ADM_lall
-
-       ! temtative
-       !$omp parallel do private(us,sflx_pt)
-       do j = JS, JE
-       do i = IS, IE
-          us = max( 1.E-6_RP, &
-                    sqrt( sqrt( SFLX_MU(i,j,l)**2 + SFLX_MV(i,j,l)**2 ) / DENS(KS,i,j,l) ) ) ! frictional velocity
-          SFLX_PT = SFLX_SH(i,j,l) / ( CPdry * DENS(KS,i,j,l) ) &
-                  * POTT(KS,i,j,l) / TEMP(KS,i,j,l)
-          SFLX_PT = sign( max(abs(SFLX_PT), EPS), SFLX_PT )
-          l_mo(i,j,l) = - us**3 * POTT(KS,i,j,l) / ( KARMAN * GRAV * SFLX_PT )
-       end do
-       end do
 
        !$omp parallel do private(dz)
 !OCL XFILL

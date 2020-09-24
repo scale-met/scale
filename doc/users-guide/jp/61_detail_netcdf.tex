@@ -1,4 +1,7 @@
+%-------------------------------------------------------------------------------
 \section{\scalenetcdf ファイルとは?} \label{sec:netcdf}
+%-------------------------------------------------------------------------------
+
 本節では、{\scalelib}が直接読み書きする{\scalenetcdf}ファイルについて説明する。
 \scalelib では、データファイルの形式として{\netcdf}(network Common Data Format)を採用している。
 \Netcdf は Unidata (\url{http://www.unidata.ucar.edu}) が開発を行っているソフトウェアであり、自己記述的で計算機に依存しないデータ形式のファイルを生成することを可能にする。
@@ -7,7 +10,7 @@
 \scalelib では、上記の利点に基づいてある規約(\scalenetcdf convention )を定めている。
 この規約は、CF convection (\url{http://cfconventions.org})におおよそ従っている。
 
-\subsection{グローバル属性}
+\subsection{グローバル属性} \label{sec:global_attr}
 \scalenetcdf ファイルには、ファイルに含まれるデータの情報(空間分割に関する情報等)がグローバル属性(global attribute)として格納されている(表\ref{table:netcdf_global_attrs})。
 
 \begin{table}
@@ -25,7 +28,7 @@
       scale\_cartesC\_prc\_rank\_[xy]           & 二次元分割のマッピング番号      & モデルにおいて変数\verb|PRC_2Drank(PRC_myrank, i)|に等しい(x: i=1, y: i=2)\\
       scale\_cartesC\_prc\_num\_[xy]            & 二次元分割数            & モデルでは、~\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y} \\
       scale\_cartesC\_prc\_periodic\_[zxy]      & 境界条件が周期的か? & \verb|.false.|or\verb|.true.|\ モデルでは\nmitem{PRC_PERIODIC_X}, \nmitem{PRC_PERIODIC_Y} に対応 \\
-      scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & 領域全体の格子点数               & モデルにおいて、 ~\nmitem{IMAX}$\times$\nmitem{PRC_NUM_X}, \nmitem{JMAX}$\times$\nmitem{PRC_NUM_Y}  \\
+      scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_[ij]maxg  & 領域全体の格子点数               & モデルにおいて、 ~\nmitem{IMAXG}, \nmitem{JMAXG} \\
       scale\_atmos\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & 大気モデルの鉛直層数 & モデルでは~\nmitem{KMAX} \\
       scale\_ocean\_grid\_cartesC\textbackslash \ ~~\_index\_kmax      & 海洋モデルの鉛直層数       & モデルでは~\nmitem{OKMAX} \\
       scale\_land\_grid\_cartesC\textbackslash \ ~~\_index\_kmax       & 陸モデルの鉛直層数        & モデルでは~\nmitem{LKMAX}  \\
@@ -35,8 +38,8 @@
       time\_units & 時間の単位 & \\
       time\_start & 開始時刻   & \\ \hline
       \multicolumn{3}{l}{\nmitem{History_TITLE, History_SOURCE, History_INSTITUTION}は第\ref{sec:output}節を参照。} \\
-      \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAX, JMAX}は第\ref{sec:domain}節を参照。}  \\
-      \multicolumn{3}{l}{\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
+      \multicolumn{3}{l}{\nmitem{PRC_NUM_X, PRC_NUM_Y, PRC_PERIODIC_X, PRC_PERIODIC_Y}、\nmitem{KMAX, IMAXG, JMAXG}は}  \\
+      \multicolumn{3}{l}{第\ref{sec:domain}節を参照。\nmitem{PARAM_CALENDAR}は第\ref{subsec:calendar}節を参照。} \\ \hline
     \end{tabularx}
   \end{center}
 \end{table}
@@ -192,14 +195,14 @@ height\_uvw & ヒストリファイル中の(zh,yh,xh) orリスタート/初期�
 
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./figure/horizontal-coordinate-final2.png}\\
+  \includegraphics[width=1.0\hsize]{./../../figure/horizontal-coordinate-final2.png}\\
   \caption{{\scalenetcdf}ファイルにおける水平座標}
   \label{fig:netcdfhorizontalcoordinate}
 \end{center}
 \end{figure}
 \begin{figure}[tbh]
 \begin{center}
-  \includegraphics[width=1.0\hsize]{./figure/vertical_coordinate_final2.png}\\
+  \includegraphics[width=1.0\hsize]{./../../figure/vertical_coordinate_final2.png}\\
   \caption{{\scalenetcdf}ファイルにおける鉛直座標}
   \label{fig:netcdfverticalcoordinate}
 \end{center}
@@ -222,7 +225,7 @@ pnetCDF を使用するように \scalerm をコンパルした場合(環境変�
 初期値/リスタートファイルについては、\namelist{PARAM_RESTART}の\nmitem{RESTART_(IN|OUT)_AGGREGATE}、または\namelist{PARAM_(MODELNAME)_VARS}の
 \nmitem{(MODELNAME)_RESTART_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
 ただし、\verb|(MODELNAME)|には「ATMOS」、「OCEAN」、「LAND」、「URBAN」が入る。
-地形ファイルや土地利用区分ファイルについてはそれぞれ、\namelist{PARAM_TOPO}の\nmitem{TOPO_(IN|OUT)_AGGREGATE}や\namelist{PARAM_LANDUSE}の\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
+地形ファイルや土地利用区分ファイルについてはそれぞれ、\namelist{PARAM_TOPOGRAPHY}の\\\nmitem{TOPOGRAPHY_(IN|OUT)_AGGREGATE}や\namelist{PARAM_LANDUSE}の\nmitem{LANDUSE_(IN|OUT)_AGGREGATE}を\verb|.true.|にすれば良い。
 
 \subsection{\Netcdf 3 に伴う制限}
 {\netcdf} version 3 と共に\scale をコンパイルした場合は、次の制限が存在する。

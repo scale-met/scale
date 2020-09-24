@@ -6,9 +6,6 @@
 !!
 !! @author Team SCALE
 !!
-!! @par History
-!! @li      2012-03-28 (H.Yashiro)  [new]
-!!
 !<
 #include "scalelib.h"
 module scale_random
@@ -28,6 +25,18 @@ module scale_random
   public :: RANDOM_setup
   public :: RANDOM_uniform
   public :: RANDOM_normal
+
+  interface RANDOM_uniform
+     module procedure RANDOM_uniform_1D
+     module procedure RANDOM_uniform_2D
+     module procedure RANDOM_uniform_3D
+  end interface
+
+  interface RANDOM_normal
+     module procedure RANDOM_normal_1D
+     module procedure RANDOM_normal_2D
+     module procedure RANDOM_normal_3D
+  end interface RANDOM_normal
 
   !-----------------------------------------------------------------------------
   !
@@ -135,21 +144,68 @@ contains
   end subroutine RANDOM_reset
 
   !-----------------------------------------------------------------------------
-  !> Get uniform random number
-  subroutine RANDOM_uniform( var )
+  !> Get uniform random number ( 1D )
+  subroutine RANDOM_uniform_1D( var )
     implicit none
+    real(RP), intent(out) :: var(:)
+    !---------------------------------------------------------------------------
 
+    call random_number(var)
+
+    return
+  end subroutine RANDOM_uniform_1D
+
+  !-----------------------------------------------------------------------------
+  !> Get uniform random number ( 2D )
+  subroutine RANDOM_uniform_2D( var )
+    implicit none
+    real(RP), intent(out) :: var(:,:)
+    !---------------------------------------------------------------------------
+
+    call random_number(var)
+
+    return
+  end subroutine RANDOM_uniform_2D
+
+  !-----------------------------------------------------------------------------
+  !> Get uniform random number ( 3D )
+  subroutine RANDOM_uniform_3D( var )
+    implicit none
     real(RP), intent(out) :: var(:,:,:)
     !---------------------------------------------------------------------------
 
     call random_number(var)
 
     return
-  end subroutine RANDOM_uniform
+  end subroutine RANDOM_uniform_3D
 
   !-----------------------------------------------------------------------------
-  !> Get normal random number
-  subroutine RANDOM_normal( var )
+  !> Get normal random number (1D)
+  subroutine RANDOM_normal_1D( var )
+    implicit none
+    real(RP), intent(out) :: var(:)
+    integer :: n
+
+    n = size(var)
+    call get_normal( n, var(:) )
+
+    return
+  end subroutine RANDOM_normal_1D
+
+  !> Get normal random number (2D)
+  subroutine RANDOM_normal_2D( var )
+    implicit none
+    real(RP), intent(out) :: var(:,:)
+    integer :: n
+
+    n = size(var)
+    call get_normal( n, var(:,:) )
+
+    return
+  end subroutine RANDOM_normal_2D
+
+  !> Get normal random number (3D)
+  subroutine RANDOM_normal_3D( var )
     implicit none
     real(RP), intent(out) :: var(:,:,:)
     integer :: n
@@ -158,7 +214,7 @@ contains
     call get_normal( n, var(:,:,:) )
 
     return
-  end subroutine RANDOM_normal
+  end subroutine RANDOM_normal_3D
 
   ! private
 
@@ -180,13 +236,13 @@ contains
     !$omp parallel do &
     !$omp private(fact,theta)
     do i = 1, n/2
-       fact = sqrt(-2.0_RP * log( rnd(i*2-1) ) )
+       fact = sqrt(-2.0_RP * log( 1.0_RP - rnd(i*2-1) ) ) ! 0 <= rnd < 1
        theta = 2.0_RP * PI * rnd(i*2)
        var(i*2-1) = fact * cos(theta)
        var(i*2  ) = fact * sin(theta)
     end do
     if ( mod(n,2) == 1 ) then
-       fact = sqrt(-2.0_RP * log( rnd(n) ) )
+       fact = sqrt(-2.0_RP * log( 1.0_RP - rnd(n) ) )
        theta = 2.0_RP * PI * rnd(n+1)
        var(n) = fact * cos(theta)
     end if

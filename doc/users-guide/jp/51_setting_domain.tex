@@ -7,92 +7,68 @@
 この関係を図\ref{fig:domain}に示す。
 水平方向に2次元の領域分割を行うことで並列化がなされている。
 
-格子点数およびMPIプロセス数は、
-\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX, JMAX}、\\
+領域全体の総格子点数およびMPIプロセス数は、
+それぞれ\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG, JMAXG}、および
 \namelist{PARAM_PRC_CARTESC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}で設定する。
 図\ref{fig:domain}に示すように、計算領域全体は、
 \XDIR に\nmitem{PRC_NUM_X}個、\YDIR に\nmitem{PRC_NUM_Y}個に分割される。
 プロセス数はゼロから始まり、左下から右上の順で番号付けされる(図\ref{fig:domain}における矢印)。
-分割された各領域は1つのMPIプロセスによって担当され、各MPIプロセスは\nmitem{IMAX, JMAX, KMAX}個の格子ブロックを受け持つ。
-ここで注意すべきことは、「指定する格子点数は各プロセスが受け持つ値」であり、計算領域全体の格子点数ではないことである。
-別の言い方をすれば、計算領域全体は、水平格子間隔、格子点数、MPIプロセス数に依存する。
+分割された各領域は1つのMPIプロセスによって担当され、各MPIプロセスは\nmitem{IMAX} $\times$ \nmitem{JMAX} $\times$ \nmitem{KMAX}個の格子ブロックを受け持つ。
+ここで、\nmitem{KMAX}は鉛直方向の格子点数であり\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内で指定する。
+\nmitem{IMAX} および \nmitem{JMAX} はすべてのMPIプロセスで同一でなければならないことに注意する必要がある。
+したがって、各方向のプロセス数は、各方向の総格子点数の約数である必要がある。
 
-したがって、各方向の格子点と総格子点数は、以下のように計算される。
+各方向の格子点と総格子点数をまとめると以下のようになる。
 \begin{eqnarray}
-&& {\rm 領域内{\XDIR} の格子数} = \verb|IMAX| \times \verb|PRC_NUM_X|
+&& \nmitemeq{IMAXG} = \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X}
    \label{eq:xgridnum}\\
-&& {\rm 領域内{\YDIR}の格子数} = \verb|JMAX| \times \verb|PRC_NUM_Y|
+&& \nmitemeq{JMAXG} = \nmitemeq{JMAX} \times \nmitemeq{PRC_NUM_Y}
    \label{eq:ygridnum}\\
-&& {\rm 領域内の総格子数} = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right)
-   \times (\verb|JMAX| \times \verb|PRC_NUM_Y|)
-   \times (\verb|KMAX| )  \nonumber
+&& {\rm 領域内の総格子数} = \nmitemeq{IMAXG} \times \nmitemeq{JMAXG} \times \nmitemeq{KMAX} \nonumber\\
+&& ~~~~~~~~~~ = \left(\nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X}\right)
+   \times (\nmitemeq{JMAX} \times \nmitemeq{PRC_NUM_Y})
+   \times (\nmitemeq{KMAX} )  \nonumber
 \end{eqnarray}
-ここで、\nmitem{KMAX}は鉛直方向の格子点数であり、
-\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内で指定する。
+\nmitem{IMAXG} および \nmitem{JMAXG} を設定した場合、\nmitem{IMAX} および \nmitem{JMAX} は内部で計算される。
+\nmitem{IMAXG} および \nmitem{JMAXG} の代わりに \nmitem{IMAX} および \nmitem{JMAX} を指定した場合、
+式(\ref{eq:xgridnum})および(\ref{eq:ygridnum})を使って、\nmitem{IMAXG} および \nmitem{JMAXG} が内部で計算される。confファイルには、どちらか一方を設定する。
 
-また、領域全体の大きさは、式(\ref{eq:xgridnum}、\ref{eq:ygridnum})を使って、
+
+領域全体の大きさは、
 \begin{eqnarray}
-&& \rm{{\XDIR}の領域の長さ} = \rm{{\XDIR}の格子点数} \times \verb|DX| \nonumber\\
-&& \rm{{\YDIR}の領域の長さ} = \rm{{\YDIR}の格子点数} \times \verb|DY| \nonumber
+&& \rm{{\XDIR}の領域の長さ} = \verb|IMAXG| \times \verb|DX| \nonumber\\
+&& \rm{{\YDIR}の領域の長さ} = \verb|JMAXG| \times \verb|DY| \nonumber
 \end{eqnarray}
-と決定される。ここで、第\ref{subsec:gridinterv}節で記述したように、
+である。ここで、第\ref{subsec:gridinterv}節で記述したように、
 \nmitem{DX, DY}は\namelist{PRAM_ATMOS_GRID_CARTESC}内で指定する。
-水平方向の解像度と領域の大きさを設定し、利用する MPI プロセス数を与えた場合は、
-1 つのMPIプロセスが受け持つ格子点数は上記の関係から決められる。
 
-次の小節では、MPIプロセス数、格子数、格子間隔の設定をより詳しく説明する。
-\textcolor{blue}{これらの設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
+
+水平ー鉛直の2次元実験を行うためには、\nmitem{IMAXG} および \nmitem{PRC_NUM_X} を 1 に設定する。
+この場合、Y-Z平面での運動が計算される。
+\nmitem{DX} の値はシミュレーション結果には影響しない。
+
+次の小節では、格子数、格子間隔、MPIプロセス数の設定をより詳しく説明する。
+\textcolor{blue}{上記の設定は\texttt{pp.conf}、\texttt{init.conf}、\texttt{run.conf}の設定ファイル間で一致させなければならない}
 ことに注意が必要である。
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/domain_decomposition_v2.png}\\
-  \caption{計算領域全体に対する、水平格子間隔(\texttt{DX}, \texttt{DY})、MPIプロセスあたりの格子数(\texttt{IMAX}, \texttt{JMAX})、MPIプロセス数(\texttt{PRC\_NUM\_X}, \texttt{PRC\_NUM\_Y})の関係。水色の領域は、1つのMPIプロセスが担当する領域に対応する。}
+  \includegraphics[width=0.8\hsize]{./../../figure/domain_decomposition.pdf}\\
+  \caption{計算領域全体に対する、水平格子間隔(\nmitem{DX}, \nmitem{DY})、MPIプロセスあたりの格子数(\nmitem{IMAX}, \nmitem{JMAX})、総格子数(\nmitem{IMAXG}, \nmitem{JMAXG})、MPIプロセス数(\nmitem{PRC_NUM_X}, \nmitem{PRC_NUM_Y})の関係。青色の領域は、1つのMPIプロセスが担当する領域に対応する。}
   \label{fig:domain}
 \end{center}
 \end{figure}
-
-%-----------------------------------------------------------------------
-\subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso2}
-%-----------------------------------------------------------------------
-
-MPIプロセス数は設定ファイルの\namelist{PARAM_PRC_CARTESC}内で指定する。
-\scalerm の入出力ファイルはMPIプロセス毎に分割されているため、
-分割ファイルの総数はMPIプロセス数によって変化する。
-例えば、2-MPI並列用に作成した初期値ファイルは、
-4-MPI並列のモデル実行には使用できない。
-MPIプロセス数を変更する場合は、
-\verb|pp.conf|、\verb|init.conf|、\verb|run.conf| 内の
-\namelist{PARAM_PRC_CARTESC}を編集し、
-\verb|pp|、\verb|init| の過程を再度行う必要がある。
-\editboxtwo{
-\verb|&PARAM_PRC| & \\
-\verb| PRC_NUM_X       = 2,| & ; {\XDIR}（東西方向）のMPI並列分割数 \\
-\verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
-\verb|/|\\
-}
-
-MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  によって与えられる。
-上記の例では、\XDIR に領域を2分割し、\YDIR には領域を分割しないので、
-2-MPI 並列ということになる。
-ジョブを投げる際のMPIコマンドに指定するMPIプロセス数として、この総プロセス数を与える必要がある。
-この条件を満たさない場合には、プログラムは計算を行わずに直ちに終了し、
-下記のメッセージが標準出力に出力される。
-\msgbox{
-\verb|xxx total number of node does not match that requested. Check!| \\
-}
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecGridNumSettng} \label{subsec:relation_dom_reso3}
 %-----------------------------------------------------------------------
 
 格子数は、設定ファイル(\verb|***.conf|)の\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}で指定する。
-指定する水平格子数は、１つのMPIプロセス当たりの値であることに注意が必要である。
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
-\verb| KMAX = 97,|  & ; 鉛直層数 \\
-\verb| IMAX = 20,|  & ; プロセスあたりの{\XDIR}の格子点数 \\
-\verb| JMAX = 25,|  & ; プロセスあたりの{\YDIR}の格子点数 \\
+\verb| KMAX  = 97,|  & ; 鉛直層数 \\
+\verb| IMAXG = 40,|  & ; {\XDIR}の格子点数 \\
+\verb| JMAXG = 25,|  & ; {\YDIR}の格子点数 \\
 \verb|/|\\
 }
 
@@ -107,19 +83,18 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 東西、南北、鉛直方向の格子間隔を指定する(単位は[m])。
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC| & \\
-\verb| DX = 500.D0,| & ; {\XDIR}（東西方向）の格子間隔\\
-\verb| DY = 500.D0,| & ; {\YDIR}（南北方向）の格子間隔\\
+\verb| DX = 500.D0,| & ; {\XDIR} の格子間隔\\
+\verb| DY = 500.D0,| & ; {\YDIR} の格子間隔\\
 \verb| DZ = 500.D0,| & ; {\ZDIR}（鉛直方向）の格子間隔\\
 \verb|/|\\
 }
 
-以下の囲みに、等間隔でない格子系を指定する方法を示す。
-モデルはローレンツ格子を採用しており、
+鉛直方向に対しては、任意の等間隔でない格子を指定することができる。
+モデルは C 格子系を採用しており、
 速度ベクトルと他のスカラー量に対する定義点は半格子分ズレている。
 ここでは、スカラー量の位置をセンターポイントと呼び、
 それから半格子ズレた位置をフェイスポイントと呼ぶ。
-鉛直格子点の位置を直接指定する場合は、
-\namelist{PARAM_ATMOS_GRID_CARTESC}内の\nmitem{FZ(:)}に配列として与えればよい
+鉛直格子点のフェイスポイントを\namelist{PARAM_ATMOS_GRID_CARTESC}内の\nmitem{FZ(:)}に配列として与えることができる
 \footnote{この場合には、シミュレーションで用いられたものと同じ浮動小数点の精度を用いることが望ましい。
 デフォルトでは、モデルは倍精度の浮動小数点を使用するとしてコンパイルされる。
 }。
@@ -132,17 +107,17 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 \verb| DX = 500.D0,|   & {\XDIR} の格子間隔(等間隔) [m]\\
 \verb| DY = 500.D0,|   & {\YDIR}の格子間隔(等間隔) [m]\\
 \verb| FZ(:) = |       & {\ZDIR}のフェイスポイントの位置 [m] \\
-\verb| 　  80.000000000000000      ,| & \\
-\verb| 　  168.00000190734863      ,| & \\
-\verb| 　  264.80000610351567      ,| & \\
+\verb| 　  80.000000000000000D0      ,| & \\
+\verb| 　  168.00000190734863D0      ,| & \\
+\verb| 　  264.80000610351567D0      ,| & \\
 \verb|　 　 　〜　中略　〜|           & \\
-\verb| 　  14910.428862936289      ,| & \\
-\verb| 　  15517.262523292475      ,| & \\
-\verb| 　  16215.121232702089      ,| & \\
-\verb| 　  17017.658748523147      ,| & \\
-\verb| 　  17940.576891717363      ,| & \\
-\verb| 　  19001.932756390710      ,| & \\
-\verb| 　  20222.492000765058      ,| & \\
+\verb| 　  14910.428862936289D0      ,| & \\
+\verb| 　  15517.262523292475D0      ,| & \\
+\verb| 　  16215.121232702089D0      ,| & \\
+\verb| 　  17017.658748523147D0      ,| & \\
+\verb| 　  17940.576891717363D0      ,| & \\
+\verb| 　  19001.932756390710D0      ,| & \\
+\verb| 　  20222.492000765058D0      ,| & \\
 \verb| BUFFER_DZ = 5000.D0,|          & 第\ref{subsec:buffer}節参照\\
 \verb| BUFFFACT  =   1.0D0,|          & 第\ref{subsec:buffer}節参照\\
 \verb|/|\\
@@ -150,7 +125,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 
 \begin{figure}[tb]
 \begin{center}
-  \includegraphics[width=0.4\hsize]{./figure/verticalface.pdf}\\
+  \includegraphics[width=0.4\hsize]{./../../figure/verticalface.pdf}\\
   \caption{\scalerm におけるフェイスポイントの定義点。
   \namelist{PARAM_ATMOS_GRID_CARTESC}で\nmitem{FZ}を指定する時は、
   $k=1$での値として第1層目上端の高さを与える。$k=1$での値は地表面の高さでないことに注意が必要である。}
@@ -158,15 +133,58 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 \end{center}
 \end{figure}
 
-上記の設定は、標高 0 m の場所で処理される。
+上記の設定は、標高 0 m の場所での値として扱われる。
 地形が存在する場所での鉛直格子点の位置は、地形に沿った座標系によって適切に取り扱われる。
 
 
 鉛直格子点の位置は任意に設定できるが、変わった設定をすると計算不安定がしばしば生じる。
-これを避けるために、ディレクトリtexttt{scale-\version/scale-rm/util/makevgrid/}の中に
+これを避けるために、ディレクトリ\texttt{scale-\version/scale-rm/util/makevgrid/}の中に
 \verb|make_vgrid.f90|というFortranプログラムと幾つかのネームリストの例を用意している。
 必要があれば参考として用いることができる。
-このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けると良いだろう。
+このツールは\nmitem{FZ(:)}の値を直接出力するので、コピーして設定ファイルに貼り付けるなどして利用可能である。
+
+%-----------------------------------------------------------------------
+\subsection{\SubsecMPIProcess} \label{subsec:relation_dom_reso2}
+%-----------------------------------------------------------------------
+
+MPIプロセス数は設定ファイルの\namelist{PARAM_PRC_CARTESC}内で指定する。
+\editboxtwo{
+\verb|&PARAM_PRC| & \\
+\verb| PRC_NUM_X       = 2,| & ; {\XDIR}（東西方向）のMPI並列分割数 \\
+\verb| PRC_NUM_Y       = 1,| & ; {\YDIR}（南北方向）のMPI並列分割数 \\
+\verb|/|\\
+}
+MPIプロセス数は、\XDIR および \YDIR それぞれについて
+総格子点数 \nmitem{IMAXG}, \nmitem{JMAXG} の約数でなければならない。
+そうでなければ、プログラムは以下のメッセージを出力して直ちに終了する。
+\msgbox{
+  \verb|number of IMAXG should be divisible by PRC_NUM_X| \\
+}
+or
+\msgbox{
+  \verb|number of JMAXG should be divisible by PRC_NUM_Y| \\
+}.
+
+MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  によって与えられる。
+上記の例では、\XDIR に領域を2分割し、\YDIR には領域を分割しないので、
+2-MPI 並列ということになる。
+ジョブを投げる際のMPIコマンドに指定するMPIプロセス数として、この総プロセス数を与える必要がある。
+この条件を満たさない場合には、プログラムは計算を行わずに直ちに終了し、
+下記のメッセージが標準出力に出力される。
+\msgbox{
+\verb|xxx total number of node does not match that requested. Check!| \\
+}
+
+\scalerm の入出力ファイルはMPIプロセス毎に分割されているため、
+分割ファイルの総数はMPIプロセス数によって変化する。
+例えば、2-MPI並列用に作成した初期値ファイルは、
+4-MPI並列のモデル実行には使用できない。
+MPIプロセス数を変更する場合は、
+\verb|pp.conf|、\verb|init.conf|、\verb|run.conf| 内の
+\namelist{PARAM_PRC_CARTESC}を編集し、
+\verb|pp|、\verb|init| の過程を再度行う必要がある。
+もしくは、後処理ツール \sno を利用して、ファイルの再分割を行うことも可能である
+(第\ref{sec:sno}節参照)。
 
 %-----------------------------------------------------------------------
 \subsection{\SubsecRayleighDampingSetting} \label{subsec:raydamp}
@@ -235,8 +253,8 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 ナッジングの影響を受けない実際の対象領域(緩和領域を除いた範囲)は
 計算領域よりも狭くなることに注意が必要である。
 
-以下に２種類の設定例を示す。\\
-
+以下に２種類の設定例を示す。
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_NX = 30,   | & ; {\XDIR}（東西方向）の緩和領域の格子数\\
@@ -244,7 +262,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
  \verb|BUFFFACT  = 1.D0, | & ; 全方向の緩和領域内の格子間隔に対するストレッチ係数(デフォルトは1.0)\\
 \verb|/|\\
 }
-
+%
 \editboxtwo{
 \verb|&PARAM_ATMOS_GRID_CARTESC | & \\
  \verb|BUFFER_DZ  =   5000.D0, | & ; {\ZDIR}（モデル上端から下向き方向）の緩和領域の幅(参考値) [m]\\
@@ -267,7 +285,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 は \nmitem{BUFFER_DX} と一致するとは限らないことに注意が必要である。
 最後に、緩和領域を除いた計算領域の大きさは、
 \[
-\nmitemeq{DX} \times ( \nmitemeq{IMAX} \times \nmitemeq{PRC_NUM_X} - 2 \times \verb|ibuff| )
+\nmitemeq{DX} \times ( \nmitemeq{IMAXG} - 2 \times \verb|ibuff| )
 \]
 と表現される。
 {\YDIR}、{\ZDIR}についても同様に設定されるが、
@@ -281,7 +299,7 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.8\hsize]{./figure/buffer_xz.pdf}\\
+  \includegraphics[width=0.8\hsize]{./../../figure/buffer_xz.pdf}\\
   \caption{全計算領域内での緩和領域の配置：斜線部分が緩和領域を意味する。
   図はXZ断面を示しているが、YZ断面についても同様である。}
   \label{fig:buff_xz}
@@ -356,7 +374,8 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
 \end{table}
 
 
-以下は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータである.
+以下は、\namelist{PARAM_ATMOS_BOUNDARY}内のパラメータである。
+%
 \editboxtwo{
   \verb|&PARAM_ATMOS_BOUNDARY | & \\
   \verb| ATMOS_BOUNDARY_TYPE = 'NONE',         | & ; 境界値データの種類。表\ref{tab:nml_atmos_boundary_type}を参照。 \\
@@ -366,6 +385,10 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
   ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界値データの開始時刻(\verb|REAL| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界値データの時間間隔(\verb|REAL| type の場合のみ) \\
+%    \\ ({\small\slshape 次のページへ続く})
+%}
+%\editboxtwo{
+%  ({\small\slshape 前のページからの続き}) \\ \\
   \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
   ~~\verb|                  = 'lerp_initpoint',| & ; 時間方向の補間の種類 \\
                                                  &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\
@@ -380,19 +403,19 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_USE_VELZ = .false.,    | & ; wに対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_VELX = .false.,    | & ; uに対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_VELY = .false.,    | & ; vに対するナッジングのスイッチ. \\
-  \verb| ATMOS_BOUNDARY_USE_POTT = .false.,    | & ; $\theta$に対するナッジングのスイッチ. \\
+  \verb| ATMOS_BOUNDARY_USE_PT = .false.,      | & ; $\theta$に対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_QV = .false.,      | & ; 水蒸気に対するナッジングのスイッチ. \\
   \verb| ATMOS_BOUNDARY_USE_QHYD = .false.,    | & ; 水物質に対するナッジングのスイッチ. \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELZ =   0.0D0,  | & ; wの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELX =   0.0D0,  | & ; uの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_VELY =   0.0D0,  | & ; vの値 (\verb|CONST| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_VALUE_POTT = 300.0D0,  | & ; $\theta$の値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELZ = 0.0D0,    | & ; wの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELX = 0.0D0,    | & ; uの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_VELY = 0.0D0,    | & ; vの値 (\verb|CONST| type の場合のみ) \\
+  \verb| ATMOS_BOUNDARY_VALUE_PT = 300.0D0,    | & ; $\theta$の値 (\verb|CONST| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_VALUE_QTRC =   0.0D0,  | & ; 水蒸気の値 (\verb|CONST| type の場合のみ) \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_DENS = 1.0D0,| & ; 密度に対する$1/\tau$の係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; wに対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELX = 1.0D0,| & ; uに対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_VELZ = 1.0D0,| & ; vに対する係数. \\
-  \verb| ATMOS_BOUNDARY_ALPHAFACT_POTT = 1.0D0,| & ; $\theta$に対する係数. \\
+  \verb| ATMOS_BOUNDARY_ALPHAFACT_PT = 1.0D0,  | & ; $\theta$に対する係数. \\
   \verb| ATMOS_BOUNDARY_ALPHAFACT_QTRC = 1.0D0,| & ; 水蒸気に対する係数. \\
   \verb| ATMOS_BOUNDARY_SMOOTHER_FACT = 0.2D0, | & ; 点ごとの差に対する水平方向の平滑化の係数. \\
   \verb| ATMOS_BOUNDARY_FRACZ = 1.0D0,         | & ; z方向の緩和領域に対するナッジング領域の割合. \\
@@ -404,6 +427,9 @@ MPI プロセスの総数は、\verb|PRC_NUM_X| $\times$ \verb|PRC_NUM_Y|  に�
   \verb| ATMOS_BOUNDARY_LINEAR_V = .false.,    | & ; z方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければサイン型の分布.\\
   \verb| ATMOS_BOUNDARY_LINEAR_H = .false.,    | & ; x, y 方向に関するナッジングの時定数分布の種類. \verb|.true.|であれば線形分布、そうでなければ指数関数分布. \\
   \verb| ATMOS_BOUNDARY_EXP_H = 2.0D0,         | & ; 指数関数分布の場合における指数の係数. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST = .true.,  | & ; 質量フラックス調整に対するスイッチ. \\
+  \verb| ATMOS_BOUNDARY_DENS_ADJUST_TAU | \textbackslash \\
+  ~~\verb|     = -1.0D0,                       | & ; 質量フラックス調整が有効な場合の密度ナッジングの時定数 (秒). \\
 }
 
 ナッジングによる時間変化率は、
@@ -444,16 +470,51 @@ $\alpha$は3方向に対する係数$\alpha_x, \alpha_y,\alpha_z$の最大値で
 $\alpha_y$は$\alpha_x$と同様の方法によって導かれる。
 
 $\tau$は境界($d=0$)での緩和時間であり、計算された値と境界値の差はこの時間スケールで$1/e$倍となる。
-他方、式\ref{eq:nudging}の右辺2項目によって、$\Delta \phi$の two-grid スケールの成分は$\tau/\nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$の時間で$1/e$倍となる。
+他方、式\ref{eq:nudging}の右辺2項目によって、$\Delta \phi$の two-grid スケールの成分は\\ $\tau/\nmitemeq{ATMOS_BOUNDARY_SMOOTHER_FACT}$の時間で$1/e$倍となる。
 $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 \nmitem{TIME_DT}については第\ref{sec:timeintiv}節を参照されたい。
 
 
-\namelist{PARAM_ATMOS_BOUNDARY}内の\nmitem{ATMOS_BOUNDARY_TYPE}が\verb|REAL|であれば、
-水平速度・温位・水蒸気に対する側面境界でのナッジングが強制的に適用される。
-この場合は、\nmitem{ATMOS_BOUNDARY_USE_VELX}, \nmitem{ATMOS_BOUNDARY_USE_VELY},
-\nmitem{ATMOS_BOUNDARY_USE_POTT}, \nmitem{ATMOS_BOUNDARY_USE_QV} といったスイッチは、上端境界に対してのみ使われる。
-オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域で計算が行われるときには、
-境界の種類として\verb|REAL|を用いて上記と同様の設定が適用される。
+\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_TYPE}が ``\verb|REAL|'' の時、\\
+\nmitem{ATMOS_BOUNDARY_USE_{VELX,VELY,PT,QV,DENS}}の設定に関わらず、
+水平速度・温位・水蒸気・密度に対する上部および側面境界でのナッジングが適用される。
+加えて \nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD} が \verb|.true.| の場合、それぞれ鉛直速度および水凝結物に対するナッジングが適用される。
+オンライン・ネスティング(第\ref{subsec:nest_online}節を参照)の子領域として
+計算が行われる場合、
+境界での親データの扱いは、上記の``\verb|REAL|''と同様の設定が適用される。
+ただし、\nmitem{ATMOS_BOUNDARY_USE_VELZ} と \nmitem{ATMOS_BOUNDARY_USE_QHYD}の代わりに、
+\namelist{PARAM_COMM_CARTESC_NEST} の \nmitem{ONLINE_USE_VELZ} および \nmitem{ONLINE_BOUNDAYR_USE_QHYD} で指定する。
+
+
+密度のナッジングは、側面境界値に対する計算領域での質量バイアスを軽減するために有用である。
+一方で、密度ナッジングの適用は、緩和領域での気圧傾度力を減少させる。
+この結果、特に流出域において、気圧傾度力によって境界値情報をドメイン内部に伝える効果も弱まる。
+この効果（気圧傾度）を維持したまま、質量バイアスを軽減させる方法として、
+側面境界における質量フラックスの調整が可能である。これを適用することで、密度ナッジングを弱くすることができる。
+%
+\nmitem{ATMOS_BOUNDARY_DENS_ADJUST} を \verb|.true.| とすると、
+親モデルと\scale の計算領域の間の全領域総質量の差が小さくなるように、側面境界質量フラックスが調整される。
+例えば、シミュレーションにおける全質量が親モデルの質量に比べて小さい場合は、西境界における $\rho u$ および南境界における $\rho v$ を増加、東境界における $\rho u$ および北境界における $\rho v$ を減少させることで、全質量収束を増加させる。
+側面質量フラックス調整は、境界の種類として\verb|REAL|を用いた場合およびオンライン・ネスティングの子領域においてのみ利用可能である。
+質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DEN_ADJUST_TAU} で設定する。
+負の値が設定された場合は、内部で $\nmitemeq{ATMOS_BOUNDARY_UPDATE_DT} / 6.0$ と設定される。
+密度ナッジングを弱めるためには、この時定数を \nmitem{ATMOS_BOUNDARY_TAUX} や \nmitem{ATMOS_BOUNDARY_TAUY} よりも大きな値に設定する。
+\scalerm における質量フラックス調整方法は、側面境界における質量フラックスによる全質量変化が、降水や地表面潜熱フラックス等の物理過程による質量変化に比べて十分大きいという仮定のもとで作られている。
+この仮定が妥当であるかどうかは、対象とするドメインや状況による。
+
 
 上端境界の周辺における同様な減衰のさせ方として、レイリー摩擦が存在する(第 \ref{subsec:raydamp}節を参照)。
+
+%-----------------------------------------------------------------------
+\subsection{\SubsecGridOceanLandUrban} \label{subsec:gridolu}
+%-----------------------------------------------------------------------
+
+海洋/陸/都市モデルの水平格子は、大気モデルの設定と共通である。
+すなわち、水平格子数は\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}の\nmitem{IMAXG, JMAXG}で指定され、
+水平格子間隔は \\ \namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}で指定される。
+一方、鉛直格子についてはそれぞれ個別の設定が必要である。
+
+海洋モデルの鉛直格子設定については、第~\ref{sec:basic_usel_ocean}~節、
+陸モデルの鉛直格子設定については、第~\ref{sec:basic_usel_land}~節、
+都市モデルの鉛直格子設定については、第~\ref{sec:basic_usel_urban}~節を参照のこと。
+

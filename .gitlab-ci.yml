@@ -1,0 +1,150 @@
+before_script:
+  - apt-get update -qq
+  - export SCALE_SYS=Linux64-gnu-ompi
+
+stages:
+  - build
+  - test
+  - doc
+
+
+# BUILD
+
+normal:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - cd scale-rm/src
+    - make -j 4
+    - make -j 4 SCALE_USE_SINGLEFP=T
+#    - make -j 4 SCALE_QUICKDEBUT=T
+    - cd ../util/sno
+    - make -j 4
+    - cd ../../../scale-gm/src
+    - make -j 4
+    - make -j 4 SCALE_USE_SINGLEFP=T
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - scalelib/src/**/*
+      - scale-rm/src/**/*
+      - scale-gm/src/**/*
+
+openmp:
+  stage: build
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+    - cd scale-rm/src
+    - make -j 4 SCALE_ENABLE_OPENMP=T
+    - cd ../../scale-gm/src
+    - make -j 4 SCALE_ENABLE_OPENMP=T
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - scalelib/src/**/*
+      - scale-rm/src/**/*
+      - scale-gm/src/**/*
+
+
+#debug-gm:
+#  stage: build
+#  script:
+#    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev libnetcdff-dev
+#    - cd scale-gm/src
+#    - make -j 4 SCALE_QUICKDEBUT=T
+#    - make -j 4 SCALE_DEBUT=T
+#  only:
+#    refs:
+#      - merge_requests
+#    changes:
+#      - scalelib/src/**/*
+#      - scale-rm/src/**/*
+#      - scale-gm/src/**/*
+
+
+# TEST
+
+lib-unit:
+  stage: test
+  script:
+    - apt-get install -y -qq libopenmpi-dev gfortran libnetcdf-dev
+    - cd scalelib/test/unit
+    - make makedir
+    - make makelib
+    - make makebin
+    - mpirun --allow-run-as-root --oversubscribe -n 4 ./unit run.conf
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - scalelib/**/*
+      - scale-rm/**/*
+      - scale-gm/**/*
+
+
+# DOC
+
+ug-en:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra
+    - cd doc/users-guide/en
+    - make
+  artifacts:
+    paths:
+      - doc/users-guide/en/scale_users_guide_En.pdf
+    expire_in: 1 mos
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - doc/users-guide/en/*
+
+ug-jp:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-latex-recommended texlive-latex-extra
+    - cd doc/users-guide/jp
+    - make
+  artifacts:
+    paths:
+      - doc/users-guide/jp/scale_users_guide.pdf
+    expire_in: 1 mos
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - doc/users-guide/jp/*
+
+description:
+  stage: doc
+  script:
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-science
+    - cd doc/descriptions
+    - make
+  artifacts:
+    paths:
+      - doc/descriptions/scale_rm_description.pdf
+    expire_in: 1 mos
+  only:
+    refs:
+      - merge_requests
+    changes:
+      - doc/users-guide/descriptions/*
+
+
+reference:
+  stage: doc
+  script:
+    - apt-get install -y -qq doxygen graphviz
+    - apt-get install -y -qq texlive-latex-base texlive-lang-japanese texlive-fonts-extra
+    - cd doc/reference
+    - make
+  artifacts:
+    paths:
+      - doc/reference/latex/refman.pdf
+      - doc/reference/html/
+    expire_in: 1 mos
+  when: manual

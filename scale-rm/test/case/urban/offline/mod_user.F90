@@ -139,6 +139,8 @@ contains
        PRE00 => CONST_PRE00, &
        Rdry  => CONST_Rdry,  &    ! specific gas constant (dry air)
        CPdry => CONST_CPdry       ! specific heat (dry air,constant pressure) [J/kg/K]
+    use scale_atmos_hydrometeor, only: &
+       CV_WATER
     use scale_time, only:   &
        dt_URB => TIME_DTSEC_URBAN    !< time interval of urban step  [sec]
     use scale_file_history, only: &
@@ -155,8 +157,8 @@ contains
        RHOS  => URB_ATM_SFC_DENS,    &
        PRSS  => URB_ATM_SFC_PRES,    &
        RWD   => URB_ATM_SFLX_rad_dn, &
-       RAIN  => URB_ATM_SFLX_rain,   &
-       SNOW  => URB_ATM_SFLX_snow
+       PREC  => URB_ATM_SFLX_water,  &
+       ENGI  => URB_ATM_SFLX_ENGI
     use mod_urban_vars, only: &
        URBAN_TR,         &
        URBAN_TB,         &
@@ -200,8 +202,7 @@ contains
        PRSA(:,:)        =          100000.0_RP
        PRSS(:,:)        = 102400.6750905938_RP
        QVA (:,:)        = 1.612903266525567E-02_RP
-       RAIN(:,:)        =   5.0_RP / 3600.0_RP
-       SNOW(:,:)        =               0.0_RP
+       PREC(:,:)        =   5.0_RP / 3600.0_RP
 
        URBAN_ROFF(:,:)   = 0.0_RP
 
@@ -244,6 +245,8 @@ contains
 
        RHOS(:,:) = PRSS(:,:) / ( Rdry * TMPA(:,:) )
 
+       ENGI(:,:) = PREC(:,:) * CV_WATER * TMPA(:,:)
+
        LWD (:,:) = RWD(:,:,I_R_direct ,I_R_IR) + RWD(:,:,I_R_direct ,I_R_VIS)
        SWD (:,:) = RWD(:,:,I_R_diffuse,I_R_IR) + RWD(:,:,I_R_diffuse,I_R_VIS)
 
@@ -252,7 +255,7 @@ contains
        call FILE_HISTORY_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
        call FILE_HISTORY_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
        call FILE_HISTORY_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
-       WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
+       WORK(:,:) = PREC(:,:) * dt_URB
        call FILE_HISTORY_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif

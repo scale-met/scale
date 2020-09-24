@@ -71,6 +71,8 @@ module test_atmos_dyn
   real(RP), allocatable :: RHOT_o(:,:,:)
   real(RP), allocatable :: QTRC_o(:,:,:,:)
 
+  real(RP), allocatable :: CORIOLIS(:,:)
+
   real(RP), allocatable :: REF_dens(:,:,:)
   real(RP), allocatable :: REF_pott(:,:,:)
   real(RP), allocatable :: REF_qv  (:,:,:)
@@ -78,6 +80,8 @@ module test_atmos_dyn
 
   real(RP), allocatable :: DAMP_var(:,:,:,:)
   real(RP), allocatable :: DAMP_alpha(:,:,:,:)
+  real(RP), allocatable :: MFLUX_OFFSET_X(:,:,:)
+  real(RP), allocatable :: MFLUX_OFFSET_Y(:,:,:)
 
   real(RP), allocatable :: PHI(:,:,:)
   real(RP), allocatable :: GSQRT(:,:,:,:)
@@ -92,6 +96,7 @@ module test_atmos_dyn
   real(RP), allocatable :: AQ_MASS(:)
 
   integer  :: BND_QA
+  integer, allocatable  :: BND_IQ(:)
   real(RP) :: BND_SMOOTHER_FACT
 
   integer  :: nd_order
@@ -187,6 +192,8 @@ contains
   allocate( RHOT_o(KA,IA,JA) )
   allocate( QTRC_o(KA,IA,JA,QA) )
 
+  allocate( CORIOLIS(IA,JA) )
+
   allocate( REF_dens(KA,IA,JA) )
   allocate( REF_pott(KA,IA,JA) )
   allocate( REF_qv  (KA,IA,JA) )
@@ -194,6 +201,8 @@ contains
 
   allocate( DAMP_var(KA,IA,JA,5+QA) )
   allocate( DAMP_alpha(KA,IA,JA,5+QA) )
+  allocate( MFLUX_OFFSET_X(KA,JA,2) )
+  allocate( MFLUX_OFFSET_Y(KA,IA,2) )
 
   allocate( PHI(KA,IA,JA) )
   allocate( GSQRT(KA,IA,JA,7) )
@@ -211,10 +220,14 @@ contains
 
   allocate( PROG(KA,IA,JA,1) )
 
+  allocate( BND_IQ(QA) )
   BND_QA            = 0
+  BND_IQ(:)         = -1 ! dummy
   BND_SMOOTHER_FACT = 0.2_RP
 
   ZERO(:,:,:) = 0.0_RP
+
+  CORIOLIS(:,:) = 0.0_RP
 
   nd_order = 2
   nd_coef = 0.01_RP
@@ -244,14 +257,13 @@ contains
        DYN_Tinteg_Large_TYPE,              & ! (in)
        DYN_Tstep_Tracer_TYPE,              & ! (in)
        DYN_Tstep_Large_TYPE,               & ! (in)
+       DYN_TYPE,                           & ! (in)
        DYN_FVM_FLUX_TYPE,                  & ! (in)
        DYN_FVM_FLUX_TYPE_TRACER,           & ! (in)
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC, & ! (in)
        PROG,                               & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,       & ! (in)
-       wdamp_tau, wdamp_height, FZ,        & ! (in)
-       'PLANE', 0.0_RP, 0.0_RP,            & ! (in)
-       DOMAIN_CENTER_Y, CY, lat            ) ! (in)
+       wdamp_tau, wdamp_height, FZ         ) ! (in)
 
   do k = KS+1, KE
      if ( CBFZ(k) > 0.0_RP ) then
@@ -341,22 +353,27 @@ subroutine test_undef
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   do i = 1, 2
      call ATMOS_DYN( &
           DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
           PROG,                                        & ! (inout)
           DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
           DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+          CORIOLIS,                                    & ! (in)
           CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
           PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
           AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
           REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
           nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-          BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
+          BND_QA, BND_IQ, BND_SMOOTHER_FACT,                  & ! (in)
           DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
           DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
           DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+          MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
           divdmp_coef,                                 & ! (in)
           flag_tracer_split_tend,                      & ! (in)
           flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -399,21 +416,26 @@ subroutine test_const
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call ATMOS_DYN( &
        DENS, MOMZ, MOMX, MOMY, RHOT, QTRC,          & ! (inout)
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
+       BND_QA, BND_IQ, BND_SMOOTHER_FACT,                  & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -482,6 +504,9 @@ subroutine test_conserve
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -507,16 +532,18 @@ subroutine test_conserve
          PROG,                                        & ! (inout)
          DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (inout)
          DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+         CORIOLIS,                                    & ! (in)
          CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
          RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
          PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
          AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
          REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
          nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-         BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
+         BND_QA, BND_IQ, BND_SMOOTHER_FACT,                  & ! (in)
          DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
          DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
          DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+         MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
          divdmp_coef,                                 & ! (in)
          flag_tracer_split_tend,                      & ! (in)
          flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -615,6 +642,9 @@ subroutine test_cwc
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -638,16 +668,18 @@ subroutine test_cwc
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        nd_coef, nd_coef, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
+       BND_QA, BND_IQ, BND_SMOOTHER_FACT,                  & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)
@@ -707,6 +739,9 @@ subroutine test_fctminmax
   DAMP_var  (:,:,:,:) = -9.999E30_RP
   DAMP_alpha(:,:,:,:) = 0.0_RP
 
+  MFLUX_OFFSET_X(:,:,:) = 0.0_RP
+  MFLUX_OFFSET_Y(:,:,:) = 0.0_RP
+
   call COMM_vars8( DENS(:,:,:), 1 )
   call COMM_vars8( MOMZ(:,:,:), 2 )
   call COMM_vars8( MOMX(:,:,:), 3 )
@@ -730,16 +765,18 @@ subroutine test_fctminmax
        PROG,                                        & ! (inout)
        DENS_av, MOMZ_av, MOMX_av, MOMY_av, RHOT_av, QTRC_av, & ! (out)
        DENS_tp, MOMZ_tp, MOMX_tp, MOMY_tp, RHOT_tp, QTRC_tp, & ! (in)
+       CORIOLIS,                                    & ! (in)
        CDZ, CDX, CDY, FDZ, FDX, FDY,                & ! (in)
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          & ! (in)
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          & ! (in)
        AQ_R, AQ_CV, AQ_CP, AQ_MASS,                 & ! (in)
        REF_dens, REF_pott, REF_qv, REF_pres,        & ! (in)
        0.0_RP, 0.0_RP, nd_order, nd_sfc_fact, nd_use_rs, & ! (in)
-       BND_QA, BND_SMOOTHER_FACT,                   & ! (in)
+       BND_QA, BND_IQ, BND_SMOOTHER_FACT,                & ! (in)
        DAMP_var(:,:,:,1), DAMP_var(:,:,:,2), DAMP_var(:,:,:,3), DAMP_var(:,:,:,4), DAMP_var(:,:,:,5), DAMP_var(:,:,:,6:6+QA-1), & ! (in)
        DAMP_alpha(:,:,:,1), DAMP_alpha(:,:,:,2), DAMP_alpha(:,:,:,3), DAMP_alpha(:,:,:,4), DAMP_alpha(:,:,:,5), & ! (in)
        DAMP_alpha(:,:,:,6:6+QA-1),                  & ! (in)
+       MFLUX_OFFSET_X(:,:,:), MFLUX_OFFSET_Y(:,:,:), & ! (in)
        divdmp_coef,                                 & ! (in)
        flag_tracer_split_tend,                      & ! (in)
        flag_fct_momentum, flag_fct_t, flag_fct_tracer, & ! (in)

@@ -44,48 +44,52 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
  \verb|&PARAM_ATMOS_DYN  | & \\
  \verb|ATMOS_DYN_TINTEG_SHORT_TYPE          = RK4,|          & ; 表\ref{tab:nml_atm_dyn}の時間スキームより選択\\
  \verb|ATMOS_DYN_TINTEG_TRACER_TYPE         = RK3WS2002,|    & ; 時間積分スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 表\ref{tab:nml_atm_dyn}の空間差分スキームより選択\\
- \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間差分スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TYPE              = UD3,|          & ; 表\ref{tab:nml_atm_dyn}の空間スキームより選択\\
+ \verb|ATMOS_DYN_FVM_FLUX_TRACER_TYPE       = UD3KOREN1993,| & ; 空間スキームより選択\\
  \verb|ATMOS_DYN_FLAG_FCT_TRACER            = .false.,|      & ; FCTスキームを利用するかどうか\\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 0.D0, |        & \\
  \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
- \verb|ATMOS_DYN_enable_coriolis            = .true.,|       & \\
  \verb|ATMOS_DYN_wdamp_height               = 15.D3,|        & ;スポンジ層の下端高度\\
                                                              &  (レイリー摩擦用)\\
 \verb|/             | & \\
 }
 
-表\ref{tab:nml_atm_dyn}に、時間積分・空間差分スキームの他のオプションを示す。
+表\ref{tab:nml_atm_dyn}に、時間スキームや空間スキームの他のオプションを示す。
 時間刻み幅は、選択するスキームに応じて数値安定性を考慮して設定すべきである。
-時間ステップを決定する基準は、第\ref{sec:timeintiv}節に記述する。
+時間刻み幅を決定する基準は、第\ref{sec:timeintiv}節に記述する。
 
 \begin{table}[h]
 \begin{center}
-  \caption{時間積分・空間差分スキームの設定}
+  \caption{時間スキーム・空間スキームの設定}
   \label{tab:nml_atm_dyn}
   \begin{tabularx}{150mm}{llXX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{設定名} & \multicolumn{1}{l}{スキーム名} & \\ \hline
     \multicolumn{3}{l}{時間積分スキーム} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{3次3段ルンゲ・クッタスキーム(Heun)} \\
-    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) 3段ルンゲ・クッタスキーム} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4次4段ルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun 型の3段3次精度のルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{Wicker and Skamarock (2002) の3段(一般には)2次精度のルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4段4次精度のルンゲ・クッタスキーム} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{Lawson (1967) の7段6次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
+    & \multicolumn{1}{l}{\verb|RK11s8o|} & \multicolumn{2}{l}{Cooper and Verner (1972) の11段8次精度ルンゲ・クッタスキーム(HEVE でのみ利用可)} \\
     \hline
     \multicolumn{3}{l}{空間差分スキーム} & 最小のハロ格子数\\ \hline
-    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次中央差分} & \multicolumn{1}{l}{1}\\
-    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次中央差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次中央差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次風上差分} & \multicolumn{1}{l}{2}\\
-    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次風上差分} & \multicolumn{1}{l}{3}\\
-    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次風上差分 + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2次精度の中心系フラックス} & \multicolumn{1}{l}{1}\\
+    & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4次精度の中心系フラックス} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6次精度の中心系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|CD8|} & \multicolumn{1}{l}{8次精度の中心系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3|} & \multicolumn{1}{l}{3次精度の風上系フラックス} & \multicolumn{1}{l}{2}\\
+    & \multicolumn{1}{l}{\verb|UD5|} & \multicolumn{1}{l}{5次精度の風上系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD7|} & \multicolumn{1}{l}{7次精度の風上系フラックス} & \multicolumn{1}{l}{3}\\
+    & \multicolumn{1}{l}{\verb|UD3KOREN1993|} & \multicolumn{1}{X}{3次精度の風上系フラックス + Koren(1993)フィルター} & \multicolumn{1}{l}{2}\\
 \hline
   \end{tabularx}
 \end{center}
 \end{table}
 
-\scalerm において、力学の予報変数に対する移流スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}で指定)のデフォルト設定は4次中央差分（\verb|CD4|)である。
+\scalerm において、力学の予報変数に対する移流スキーム(\nmitem{ATMOS_DYN_FVM_FLUX_TYPE}で指定)のデフォルト設定は、
+4次精度の中心系フラックス(\verb|CD4|)である。
 地形の起伏が大きい計算で\verb|CD4|を用いると、格子スケールの偽の鉛直流が山頂周辺でしばしば確認される。
 この格子スケールの流れは、\verb|UD3|を使用することで緩和される。
-そのため、地形の起伏が大きい実験では\verb|UD3| を使用することを推奨する。
+そのため、地形の起伏が大きい実験では\verb|UD3|を使用することを推奨する。
 
 \subsection{数値拡散}
 
@@ -95,14 +99,14 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 これらの設定例を以下に示す。
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_ORDER       = 1,    |        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF        = 1.D-4,|        & \\
- \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER = 0.D0, |        & \\
- \verb|ATMOS_DYN_DIVDMP_COEF                = 0.D0, |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2,    |        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF          = 1.D-4,|        & \\
+ \verb|ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER   = 0.D0, |        & \\
+ \verb|ATMOS_DYN_DIVDMP_COEF                  = 0.D0, |        & \\
 \verb|/                  | & \\
 }
 
-超粘性の微分階数は\nmitem{ATMOS_DYN_NUMERICAL_DIFF_ORDER}の4倍である。
+超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
 超粘性に対する無次元の係数である。
 この係数の値が大きいほど減衰は強く、
@@ -147,50 +151,49 @@ x方向やy方向に対するハロの格子点数はそれぞれ、
 デフォルトではコリオリパラメータはゼロであるので、実験においてコリオリ力を導入するには
 (いくつかの)パラメータを設定する必要がある。
 コリオリパラメータの設定には2種類あり、$f$-面/$\beta$-面および球面である。
-この種類は\namelist{PARAM_ATMOS_DYN}の\nmitem{ATMOS_DYN_coriolis_type}で指定できる。
+この種類は\namelist{PARAM_CORIOLIS}の\nmitem{CORIOLIS_type}で指定できる。
 
 \subsubsection{$f$-面/$\beta$-面}
-\nmitem{ATMOS_DYN_coriolis_type}を「PLANE」に設定した場合は、
+\nmitem{CORIOLIS_type}を``PLANE''に設定した場合は、
 コリオリパラメータ $f$ は $f=f_0 + \beta (y-y_0)$と計算される。
 デフォルトでは$f_0=0$および$\beta=0$あり、コリオリ力は考慮されない。
 
 $\beta=0$とした平面は$f$-面と呼ばれ, そうでない場合は$\beta$-面と呼ばれる.
-$f_0, \beta, y_0$は、\namelist{PARAM_ATMOS_DYN}のパラメータによって
+$f_0, \beta, y_0$は, \namelist{PARAM_CORIOLIS}のパラメータによって
 次のように設定する。
 \editbox{
-  \verb|&PARAM_ATMOS_DYN| \\
-  \verb| ATMOS_DYN_coriolis_type = 'PLANE',|  \\
-  \verb| ATMOS_DYN_coriolis_f0   = 1.0D-5, | ! $f_0$ \\
-  \verb| ATMOS_DYN_coriolis_beta = 0.0D0,  | ! $\beta$ \\
-  \verb| ATMOS_DYN_coriolis_y0   = 0.0D0,  | ! $y_0$ \\
-  \verb| : | \\
+  \verb|&PARAM_CORIOLIS| \\
+  \verb| CORIOLIS_type = 'PLANE',|  \\
+  \verb| CORIOLIS_f0   = 1.0D-5, | ! $f_0$ \\
+  \verb| CORIOLIS_beta = 0.0D0,  | ! $\beta$ \\
+  \verb| CORIOLIS_y0   = 0.0D0,  | ! $y_0$ \\
   \verb|/| \\
 }
 
-\nmitem{ATMOS_DYN_coriolis_f0}, \nmitem{ATMOS_DYN_coriolis_beta}のデフォルト値はともにゼロであり、
-\nmitem{ATMOS_DYN_coriolis_y0}のデフォルト値は領域中心の$y$である。
+\nmitem{CORIOLIS_f0}, \nmitem{CORIOLIS_beta}のデフォルト値はともにゼロであり、
+\nmitem{CORIOLIS_y0}のデフォルト値は領域中心の$y$である。
 
 地衡風に伴うコリオリ力と地衡風バランスにある圧力勾配力を加えたい場合は、
-ユーザー定義ファイル\verb|mod_user.f90|を修正する必要がある(第\ref{sec:mod_user}節を参照)。
+ユーザー定義ファイル\verb|mod_user.f90|を修正する必要がある(第\ref{sec:mod_user}節を参照)。\\
 \verb|scale-rm/test/case/inertial_oscillation/20km|のテストケースは、
 地衡風の圧力勾配力を入れた$f$-面での実験例である。
 
 \subsubsection{球面}
 球面において、コリオリパラメータは$f = 2\Omega \sin(\phi)$のように緯度に依存する。
 ここで、$\Omega$は球の角速度、$\phi$は緯度である。
-この場合、\nmitem{ATMOS_DYN_coriolis_type}は``SPHERE''に設定する必要がある。
+この場合、\nmitem{CORIOLIS_type}は``SPHERE''に設定する必要がある。
 球の角速度は\namelist{PARAM_CONST}のパラメータ\nmitem{CONST_OHM}で設定する(第\ref{subsec:const}節を参照)。
 各格子点の緯度は、第\ref{subsec:adv_mapproj}節で説明した地図投影法に応じて決定される。
 
 
-\subsection{コリオリ力に伴う側面境界条件の注意点}
+\subsubsection{コリオリ力に伴う側面境界条件の注意点}
 
-全ての設定($f$-面、$\beta$-面、球面)においてx方向の側面境界は周期境界にすることができる。
-また、$f$-面ではy方向の側面境界も周期境界にすることができる。
-一方で、$\beta$-面や球面においてコリオリパラメータは南北の境界で異なる値を持つために、
-y方向の側面境界に対して周期境界条件を用いることはできない。
+地衡風が存在する場合は、その垂直方向には風の場が周期的でないため、周期境界条件を適用することはできない。
+$f$-面では地衡風が存在しない場合には両方向に周期境界条件を適用することができる。
+一方で、$\beta$-面や球面においてコリオリパラメータは南北の境界で異なる値を持つために、y方向の側面境界に対して周期境界条件を用いることはできない。
+子午面方向の地衡風が存在しない場合は、全ての設定($f$-面、$\beta$-面、球面)においてx方向の側面境界は周期境界にすることができる。
 
-南北境界におけるナッジング型の側面境界条件は、$f$-面や$\beta$-面による実験で用いられるだろう。
+$f$-面や$\beta$-面による実験においては、南北境界側面境界条件としてナッジング型境界を用いることができる。
+ナッジングを行う境界の詳細は、第\ref{subsec:buffer}節を参照されたい。\\
 \verb|scale-rm/test/case/rossby_wave/beta-plane|のテストケースは、
 ナッジングを行う南北境界を適用した$\beta$-面上での実験例である。
-ナッジングを行う境界の詳細は、第\ref{subsec:buffer}節を参照されたい。

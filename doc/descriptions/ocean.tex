@@ -11,26 +11,152 @@
 \subsection{Ocean physics: slab model}
 
 The ocean slab model estimates sea temperature tendencies using a single-layered model.
-The temperature tendency equation is estimated from simple heat equation, as follows:
+The governing equations of the internal energy $E$ (J/m$^2$) and mass of ocean $M$ (kg/m$^2$) are
 \begin{align}
-  \frac{\partial T}{\partial t} = \frac{1}{\rho_{w}c_{l}D} \left( G_{w} + Q \right),
-  \label{eq:Ocean-Tdt}
+  \frac{\partial E}{\partial t} &= G + e_{prec} - e_{evap} + Q_{ext}, \label{eq:Ocean-Tdt} \\
+  \frac{\partial M}{\partial t} &= F_{prec} - F_{evap},
 \end{align}
 where
-$T$ is the sea temperature (K),
-$\rho_{w}$ is the water density (kg/m$^3$),
-$D$ is the water depth of the slab model,
-$c_l$ is the heat capacity of water (J/kg),
-$G_{w}$ is the downward heat flux between the sea surface and atmosphere(J/m$^2$/s),
-and $Q$ is external heat source (J/m$^2$/s).
-The $Q$ contains the negative heat for the melting of the snow precipitation.
+$G$ is the downward surface heat flux (J/m$^2$/s);
+$e_{prec}$ and $e_{evap}$ are the downward surface internal energy flux (J/m$^2$/s) of the precipitation and evaporation, respectively;
+$Q_{ext}$ is external heat source (J/m$^2$/s);
+and $F_{prec}$ and $F_{evap}$ are the surface mass flux (kg/m$^2$/s) of the precipitation and evaporation, respectively.
+
+The internal energy E (J/m$^2$) is
+\begin{align}
+ E = c_l M T,
+\end{align}
+where $M$ and $T$ are total mass of water (kg/m$^2$) and temperature, and
+$c_l$ is the specific heat capacity of water (J/K/kg),
+
+
+The surface preciptaion flux is
+\begin{align}
+ F_{prec} &= F_{rain} + F_{snow},
+\end{align}
+where $F_{rain}$ and $F_{snow}$ are the surface flux of rain and snow, respectively.
+The internal energy fluxes are
+\begin{align}
+ e_{prec} &= c_lT_{rain}F_{rain} + ( c_iT_{snow} - L_f ) F_{snow}, \\
+ e_{evap} &= c_lT_{evap}F_{evap},
+\end{align}
+where $c_i$ is the specific heat capacity of ice (J/K/kg);
+$T_{rain}, T_{snow}$ and $T_{evap}$ are the temperature of rain, snow, and evaporated water, respectively;
+Note that the fluxes of the rain and snow are positive for the downward direction and that of the evapolation is positive for the upward.
+These ground surface fluxes are calculated in the surface scheme.
+
+
+In the calculation of change of temperature, the mass change is taken into the account.
+However, the mass change is ignored after the calculation and then $M = \rho_w D$,
+where
+$\rho_w$ is the water density (kg/m$^3$),
+and $D$ is the water depth of the slab model.
 
 Eq. (\ref{eq:Ocean-Tdt}) is discretized as follows:
 \begin{align}
-  \frac{\Delta T}{\Delta t} = \frac{1}{C_{w}} \left( G_{w} + Q \right),
+  T^{n+1}
+ &= \frac{ C_w T^n + \Delta t ( G + e_{prec} - e_{evap} + Q_{ext} ) }{ C_w + \Delta t c_l ( F_{prec} - F_{evap} ) }, \nonumber\\
+ &= T^n + \Delta t \frac{ G + e_{prec} - e_{evap} + Q_{ext} - c_l ( F_{prec} - F_{evap} ) T^n }{ C_w + \Delta t c_l ( F_{prec} - F_{evap} ) },
 \end{align}
 where
-$C_{w}$ is the heat capacity of the slab layer (J/K/m$^2$).
+$C_w$ is the heat capacity of the slab layer (J/K/m$^2$) and $C_w = \rho_w c_l D$.
+
+Note that the internal energy is not conserved, since the mass change is ignored.
+
+
+\subsection{Sea ice}
+\subsubsection{Governing equation}
+The equations of budget of the mass (kg/m$^2$) and internal energy (J/m$^2$) in the ocean and sea ice are
+\begin{align}
+ \frac{\partial M_i}{\partial t} &= f_i ( F_{prec}- F_{subl} ) - m_{mlt} + m_{frz}, \\
+ \frac{\partial E_i}{\partial t} &= f_i ( G_i - G_{oi} + e_{prec} - e_{subl} ) - c_lT_0m_{mlt} + ( c_iT_0 - L_f ) m_{frz}, \\
+ \frac{\partial M}{\partial t} &= (1-f_i) ( F_{prec} - F_{evap} ) + m_{mlt} - m_{frz}, \\
+ \frac{\partial E}{\partial t} &= (1-f_i) ( G_o + e_{prec} - e_{evap} ) + f_i G_{oi} + c_lT_0m_{mlt} - ( c_iT_0 - L_f )m_{frz},
+\end{align}
+where
+$f_i$ is the fraction of the sea ice;
+$m_{mlt}$ and $m_{frz}$ are the mass change (kg/m$^2$/s) by melting of ice and freezing of sea water;
+and $G_i, G_o$ and $G_{oi}$ are the heat flux (J/m$^2$/s) at the ice-atmosphere, ocean-atmosphere, and ice-ocean surfaces, respectively;
+$F_{subl}$ is the upward mass flux due to the sublimation of ice (kg/m$^2$/s);
+and $e_{subl}$ is the upward internal energy flux at the surface (J/m$^2$/s) of the sublimated ice as
+\begin{align}
+ e_{subl} &= (c_iT_{subl}-L_f)F_{subl}.
+\end{align}
+
+As noted in the previous section, the mass change in the sea water is ignored after the calculation of change in the ocean temperature.
+
+The $G_{oi}$ is estimated by the diffusion equation
+\begin{align}
+ G_{oi} &= \nu_i \frac{T_i - T}{D_i/2}, \\
+ D_i &= \frac{M_i}{\rho_i f_i},
+\end{align}
+where $T_i$ is the temperature of the sea ice;
+$\nu_i$ and $D_i$ are the thermal conductivity of ice (J/K/m$^3$/s) and depth of the sea ice (m).
+
+The fraction is estimated as
+\begin{align}
+ f_i &= \sqrt{ \frac{M_i}{M_c} },
+\end{align}
+where $M_c$ is the critical ice mass (kg/m$^2$).
+
+The amount of the melting during a time step is estimated to  satisfy the conservation of mass and internal energy of the sea ice as
+\begin{align}
+ M_{mlt} &= \int_t^{t+\Delta t} m_{mlt} dt \nonumber\\
+ &= \min\left\{ \max\left\{ \frac{ c_i(T_i-T_0) }{ (c_w-c_i) T_0 + L_f } M_i, 0\right\}, M_i\right\}.
+\end{align}
+
+The amount of the freezing is estimated to satisfy the conservation of mass and internal energy of the ocean as
+\begin{align}
+ M_{frz} &= \int_t^{t+\Delta t} m_{frz} dt \nonumber\\
+ &= \min\left\{ \max\left\{ \frac{ c_l \rho_w D ( T_0 - T ) }{ (c_l - c_i)T_0 + L_f }, 0\right\}, \rho_w D\right\},
+\end{align}
+where $T_0$ is the freezing tempearture.
+
+
+\subsubsection{Time integration}
+The governing equation is solved by a spliting method.
+In the first step, the mass and internal energy budgets of the ice without the phase change is solved.
+In the second step, the melting of sea ice is estimated by the mass and internal energy conservation.
+In the next step, then the temperature change of ocean is calculated in the ocean scheme.
+In the last step, the freezing ocean water is estimated and the mass and temperature of ice and ocean is updated.
+
+The followings are the summary of the sequence of calculation.
+Here, the superscript ``$n$'' indicates the quantites at the time step $n$, and ``$n_1$'', ``$n_2$'', ``$n_3$'', and ``$n+1$'' are those after calculation of the first, seccond, third and the last step, respectively.
+
+
+\begin{description}
+
+\item[First step]
+\begin{align}
+ \Delta M_i^{n_1} &= \Delta t f_i^n ( F_{prec} - F_{subl} ), \\
+ \Delta E_i^{n_1} &= \Delta t f_i ( G_i - G_{oi} + e_{prec} - e_{subl} ), \\
+ M_i^{n_1} &= M_i^n + \Delta M_i^{n_1}, \\
+ T_i^{n_1} &= T_i^n + \frac{ \Delta E_i^{n_1} - ( c_iT_i^n - L_f ) \Delta M_i^{n_1} }{c_i M_i^{n_1}}.
+\end{align}
+
+\item[Second step]
+\begin{align}
+ M_{mlt} &= \min\left\{ \max\left\{ \frac{ c_i(T_i^{n_1}-T_0)M_i^{n_1} }{ (c_w-c_i) T_0 + L_f }, 0\right\}, M_i^{n_1}\right\}, \\
+ M_i^{n_2} &= M_i^{n_1} - M_{mlt}, \\
+ T_i^{n_2} &= T_i^{n_1} + \frac{ - c_l T_0  + ( c_iT_i^{n_1} - L_f )}{c_i M_i^{n_2}}M_{mlt}.
+\end{align}
+
+\item[Third step] (Ocean model)
+\begin{align}
+ \Delta E^{n_3} &= \Delta t \{ (1-f_i)(G_o + e_{prec} - e_{evap}) + f_i G_{oi} \} + c_l T_0 M_{mlt}, \\
+ \Delta M^{n_3} &= \Delta t (1-f_i)(F_{prec}-F_{evap}) + M_{mlt}, \\
+ T^{n_3} &= T^n + \frac{ \Delta E^{n_3} - c_l T^n \Delta M^{n_3} }{c_l \{\rho_w D + \Delta M^{n_3} \}}.
+\end{align}
+
+\item[Forth step]
+\begin{align}
+ M_{frz} &= \min\left\{ \max\left\{ \frac{ c_l \rho_w D ( T_0 - T^{n_3} ) }{ (c_l - c_i)T_0 + L_f }, 0\right\}, \rho_w D\right\}, \\
+ M_i^{n+1} &= M_i^{n_2} + M_{frz}, \\
+ T_i^{n+1} &= T_i^{n_3} + ( T_0 - T_i^{n_3} ) \frac{M_{frz}}{M_i^{n+1}}, \\
+ T^{n+1} &= T^{n_3} + \frac{ - ( c_i T_0 - L_f ) + c_l T^{n_3} }{c_l (\rho_w D - M_{frz}) } M_{frz}.
+\end{align}
+
+\end{description}
 
 \subsection{Sea surface albedo}
 \subsubsection{Nakajima et al. (2000) model}

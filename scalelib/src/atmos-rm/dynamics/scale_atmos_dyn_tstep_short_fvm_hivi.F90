@@ -174,7 +174,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,          &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,          &
        REF_dens, REF_rhot,                          &
-       BND_W, BND_E, BND_S, BND_N,                  &
+       BND_W, BND_E, BND_S, BND_N, TwoD,            &
        dtrk, last                                   )
     use scale_atmos_grid_cartesC_index
     use scale_const, only: &
@@ -183,8 +183,8 @@ contains
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
-    use scale_atmos_dyn_common, only: &
-       ATMOS_DYN_fct
+    use scale_atmos_dyn_fvm_fct, only: &
+       ATMOS_DYN_FVM_fct
     use scale_atmos_dyn_fvm_flux, only: &
        ATMOS_DYN_FVM_flux_valueW_Z, &
        ATMOS_DYN_FVM_fluxZ_XYZ,     &
@@ -241,7 +241,7 @@ contains
 
     real(RP), intent(in) :: DPRES0(KA,IA,JA)
     real(RP), intent(in) :: RT2P(KA,IA,JA)
-    real(RP), intent(in) :: CORIOLI(1,IA,JA)
+    real(RP), intent(in) :: CORIOLI(IA,JA)
     real(RP), intent(in) :: num_diff(KA,IA,JA,5,3)
     real(RP), intent(in) :: wdamp_coef(KA)
     real(RP), intent(in) :: divdmp_coef
@@ -275,6 +275,7 @@ contains
     logical,  intent(in)  :: BND_E
     logical,  intent(in)  :: BND_S
     logical,  intent(in)  :: BND_N
+    logical,  intent(in)  :: TwoD
 
     real(RP), intent(in)  :: dtrk
     logical,  intent(in)  :: last
@@ -319,11 +320,6 @@ contains
     DPRES(:,:,:) = UNDEF
     POTT(:,:,:) = UNDEF
 
-    mflx_hi(:,:,:,:) = UNDEF
-    mflx_hi(KS-1,:,:,ZDIR) = 0.0_RP
-
-    qflx_hi(:,:,:,:) = UNDEF
-    tflx_hi(:,:,:,:) = UNDEF
     qflx_J13(:,:,:)  = UNDEF
     qflx_J23(:,:,:)  = UNDEF
     mflx_hi2(:,:,:,:) = UNDEF
@@ -364,7 +360,7 @@ contains
 
        !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JJS-1, JJE+1
-       do i = IIS-1, IIE+1
+       do i = max(IIS-1,1), min(IIE+1,IA)
           do k = KS, KE
 #ifdef DEBUG
              call CHECK( __LINE__, DPRES0(k,i,j) )
@@ -426,30 +422,51 @@ contains
        !##### continuity equation #####
 
        ! at (x, y, w)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS-1, IIE
-       do k = KS, KE-1
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, MOMX(k+1,i  ,j) )
-          call CHECK( __LINE__, MOMX(k+1,i-1,j) )
-          call CHECK( __LINE__, MOMX(k  ,i  ,j) )
-          call CHECK( __LINE__, MOMX(k  ,i+1,j) )
-          call CHECK( __LINE__, MOMY(k+1,i,j) )
-          call CHECK( __LINE__, MOMY(k+1,i,j-1) )
-          call CHECK( __LINE__, MOMY(k  ,i,j) )
-          call CHECK( __LINE__, MOMY(k  ,i,j-1) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
-          call CHECK( __LINE__, GSQRT(k,i,j,I_XYW) )
+             call CHECK( __LINE__, MOMX(k+1,IS,j) )
+             call CHECK( __LINE__, MOMX(k  ,IS,j) )
+             call CHECK( __LINE__, MOMY(k+1,IS,j) )
+             call CHECK( __LINE__, MOMY(k+1,IS,j-1) )
+             call CHECK( __LINE__, MOMY(k  ,IS,j) )
+             call CHECK( __LINE__, MOMY(k  ,IS,j-1) )
+             call CHECK( __LINE__, num_diff(k,IS,j,I_DENS,ZDIR) )
+             call CHECK( __LINE__, GSQRT(k,IS,j,I_XYW) )
 #endif
-          mflx_hi2(k,i,j,ZDIR) = J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
+             mflx_hi2(k,IS,j,ZDIR) = J23G(k,IS,j,I_XYW) * 0.25_RP * ( MOMY(k+1,IS,j)+MOMY(k+1,IS,j-1) &
+                                                                    + MOMY(k  ,IS,j)+MOMY(k  ,IS,j-1) ) &
+                                  + GSQRT(k,IS,j,I_XYW) * num_diff(k,IS,j,I_DENS,ZDIR)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS-1, IIE
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, MOMX(k+1,i  ,j) )
+             call CHECK( __LINE__, MOMX(k+1,i-1,j) )
+             call CHECK( __LINE__, MOMX(k  ,i  ,j) )
+             call CHECK( __LINE__, MOMX(k  ,i+1,j) )
+             call CHECK( __LINE__, MOMY(k+1,i,j) )
+             call CHECK( __LINE__, MOMY(k+1,i,j-1) )
+             call CHECK( __LINE__, MOMY(k  ,i,j) )
+             call CHECK( __LINE__, MOMY(k  ,i,j-1) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_DENS,ZDIR) )
+             call CHECK( __LINE__, GSQRT(k,i,j,I_XYW) )
+#endif
+             mflx_hi2(k,i,j,ZDIR) = J13G(k,i,j,I_XYW) * 0.25_RP * ( MOMX(k+1,i,j)+MOMX(k+1,i-1,j) &
                                                                + MOMX(k  ,i,j)+MOMX(k  ,i-1,j) ) &
-                               + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
+                                  + J23G(k,i,j,I_XYW) * 0.25_RP * ( MOMY(k+1,i,j)+MOMY(k+1,i,j-1) &
                                                                + MOMY(k  ,i,j)+MOMY(k  ,i,j-1) ) &
-                               + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
-       enddo
-       enddo
-       enddo
+                                  + GSQRT(k,i,j,I_XYW) * num_diff(k,i,j,I_DENS,ZDIR)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -463,18 +480,20 @@ contains
        enddo
 
        ! at (u, y, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
+       if ( .not. TwoD ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS  , JJE
+          do i = IIS-1, IIE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
+             call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_DENS,XDIR) )
 #endif
-          mflx_hi2(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_DENS,XDIR)
-       enddo
-       enddo
-       enddo
+             mflx_hi2(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) * num_diff(k,i,j,I_DENS,XDIR)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -505,22 +524,24 @@ contains
             num_diff(:,:,:,I_MOMZ,ZDIR), & ! (in)
             CDZ, FDZ, dtrk, &
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XYW( qflx_J13, & ! (out)
             MOMX, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J13G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, &
+            CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_XYW( qflx_J23, & ! (out)
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), J23G(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
-            CDZ, &
+            CDZ, TwoD, &
             IIS, IIE, JJS, JJE ) ! (in)
 
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYW( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
             num_diff(:,:,:,I_MOMZ,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, v, w)
@@ -528,43 +549,71 @@ contains
             MOMY, MOMZ, DENS, & ! (in)
             GSQRT(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
             num_diff(:,:,:,I_MOMZ,YDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        !--- update momentum(z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE-1
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE-1
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi (k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_J13(k  ,i  ,j  )      )
-          call CHECK( __LINE__, qflx_J13(k-1,i  ,j  )      )
-          call CHECK( __LINE__, qflx_J23(k  ,i  ,j  )      )
-          call CHECK( __LINE__, qflx_J23(k-1,i  ,j  )      )
-          call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi (k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi (k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DDIV(k  ,i,j) )
-          call CHECK( __LINE__, DDIV(k+1,i,j) )
-          call CHECK( __LINE__, MOMZ0(k,i,j) )
-          call CHECK( __LINE__, MOMZ_t(k,i,j) )
+             call CHECK( __LINE__, qflx_hi (k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi (k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_J23(k  ,IS,j  )      )
+             call CHECK( __LINE__, qflx_J23(k-1,IS,j  )      )
+             call CHECK( __LINE__, qflx_hi (k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi (k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k  ,IS,j) )
+             call CHECK( __LINE__, DDIV(k+1,IS,j) )
+             call CHECK( __LINE__, MOMZ0(k,IS,j) )
+             call CHECK( __LINE__, MOMZ_t(k,IS,j) )
 #endif
-          Sw(k,i,j) = &
-               - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                   + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                   + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k) &
-                 + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                 + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                 ) / GSQRT(k,i,j,I_XYW) &
-               - wdamp_coef(k) * MOMZ0(k,i,j) & ! Rayleigh damping
-               + divdmp_coef * rdt  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
-               + MOMZ_t(k,i,j)
-       enddo
-       enddo
-       enddo
+             Sw(k,IS,j) = &
+                  - ( ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                      + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j  )      ) * RFDZ(k) &
+                    + ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,iS,j-1,YDIR) ) * RCDY(j) &
+                    ) / GSQRT(k,IS,j,I_XYW) &
+                  - wdamp_coef(k) * MOMZ0(k,IS,j) & ! Rayleigh damping
+                  + divdmp_coef * rdt  * ( DDIV(k+1,IS,j)-DDIV(k,IS,j) ) * FDZ(k) & ! divergence damping
+                  + MOMZ_t(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE-1
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi (k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_J13(k  ,i  ,j  )      )
+             call CHECK( __LINE__, qflx_J13(k-1,i  ,j  )      )
+             call CHECK( __LINE__, qflx_J23(k  ,i  ,j  )      )
+             call CHECK( __LINE__, qflx_J23(k-1,i  ,j  )      )
+             call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi (k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi (k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi (k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DDIV(k  ,i,j) )
+             call CHECK( __LINE__, DDIV(k+1,i,j) )
+             call CHECK( __LINE__, MOMZ0(k,i,j) )
+             call CHECK( __LINE__, MOMZ_t(k,i,j) )
+#endif
+             Sw(k,i,j) = &
+                  - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RFDZ(k) &
+                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                    ) / GSQRT(k,i,j,I_XYW) &
+                  - wdamp_coef(k) * MOMZ0(k,i,j) & ! Rayleigh damping
+                  + divdmp_coef * rdt  * ( DDIV(k+1,i,j)-DDIV(k,i,j) ) * FDZ(k) & ! divergence damping
+                  + MOMZ_t(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -587,26 +636,28 @@ contains
             MOMZ, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYW), J33G, & ! (in)
             num_diff(:,:,:,I_MOMX,ZDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_UYZ( qflx_J13, & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J13G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_UYZ( qflx_J23, & ! (out)
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UYZ), J23G(:,:,:,I_UYW), MAPF(:,:,:,I_UY), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, y, z)
        ! note that x-index is added by -1
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_UYZ( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             num_diff(:,:,:,I_MOMX,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, v, z)
@@ -614,52 +665,77 @@ contains
             MOMY, MOMX, DENS, & ! (in)
             GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), & ! (in)
             num_diff(:,:,:,I_MOMX,YDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DPRES(k+1,i+1,j) )
-          call CHECK( __LINE__, DPRES(k+1,i  ,j) )
-          call CHECK( __LINE__, DPRES(k-1,i+1,j) )
-          call CHECK( __LINE__, DPRES(k-1,i  ,j) )
-          call CHECK( __LINE__, CORIOLI(1,i  ,j) )
-          call CHECK( __LINE__, CORIOLI(1,i+1,j) )
-          call CHECK( __LINE__, MOMY(k,i  ,j  ) )
-          call CHECK( __LINE__, MOMY(k,i+1,j  ) )
-          call CHECK( __LINE__, MOMY(k,i  ,j-1) )
-          call CHECK( __LINE__, MOMY(k,i+1,j-1) )
-          call CHECK( __LINE__, DDIV(k,i+1,j) )
-          call CHECK( __LINE__, DDIV(k,i  ,j) )
-          call CHECK( __LINE__, MOMX0(k,i,j) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, CORIOLI(IS,j) )
+             call CHECK( __LINE__, MOMY(k,IS,j  ) )
+             call CHECK( __LINE__, MOMY(k,IS,j-1) )
+             call CHECK( __LINE__, MOMX0(k,IS,j) )
 #endif
-          Su(k,i,j) = ( &
-               - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                   + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j) &
-                   + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j)        ) * RCDZ(k) &
-                 + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
-                 + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-               - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
-                 - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
-                 * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &
-               ) / GSQRT(k,i,j,I_UYZ) &
-               + 0.125_RP * ( CORIOLI(1,i,j)+CORIOLI(1,i+1,j) ) &
-                          * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
-               + divdmp_coef * rdt * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
-               + MOMX_t(k,i,j)
-       enddo
-       enddo
-       enddo
+             Su(k,IS,j) = ( &
+                  - ( ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                      + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j)        ) * RCDZ(k) &
+                    + ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,IS,j-1,YDIR) ) * RCDY(j) ) &
+                  ) / GSQRT(k,IS,j,I_UYZ) &
+                  + 0.5_RP * CORIOLI(IS,j) * ( MOMY(k,IS,j)+MOMY(k,IS,j-1) ) & ! coriolis force
+                  + MOMX_t(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DPRES(k+1,i+1,j) )
+             call CHECK( __LINE__, DPRES(k+1,i  ,j) )
+             call CHECK( __LINE__, DPRES(k-1,i+1,j) )
+             call CHECK( __LINE__, DPRES(k-1,i  ,j) )
+             call CHECK( __LINE__, CORIOLI(i  ,j) )
+             call CHECK( __LINE__, CORIOLI(i+1,j) )
+             call CHECK( __LINE__, MOMY(k,i  ,j  ) )
+             call CHECK( __LINE__, MOMY(k,i+1,j  ) )
+             call CHECK( __LINE__, MOMY(k,i  ,j-1) )
+             call CHECK( __LINE__, MOMY(k,i+1,j-1) )
+             call CHECK( __LINE__, DDIV(k,i+1,j) )
+             call CHECK( __LINE__, DDIV(k,i  ,j) )
+             call CHECK( __LINE__, MOMX0(k,i,j) )
+#endif
+             Su(k,i,j) = ( &
+                  - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                      + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j) &
+                      + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j)        ) * RCDZ(k) &
+                    + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RFDX(i) &
+                    + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                  - ( J13G(k+1,i,j,I_UYZ) * ( DPRES(k+1,i+1,j)+DPRES(k+1,i,j) ) &
+                    - J13G(k-1,i,j,I_UYZ) * ( DPRES(k-1,i+1,j)+DPRES(k-1,i,j) ) ) &
+                    * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) &
+                  ) / GSQRT(k,i,j,I_UYZ) &
+                  + 0.125_RP * ( CORIOLI(i,j)+CORIOLI(i+1,j) ) &
+                             * ( MOMY(k,i,j)+MOMY(k,i+1,j)+MOMY(k,i,j-1)+MOMY(k,i+1,j-1) ) & ! coriolis force
+                  + divdmp_coef * rdt * ( DDIV(k,i+1,j)-DDIV(k,i,j) ) * FDX(i) & ! divergence damping
+                  + MOMX_t(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -671,25 +747,27 @@ contains
             MOMZ, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVW), J33G, & ! (in)
             num_diff(:,:,:,I_MOMY,ZDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxJ13_XVZ( qflx_J13, & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J13G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
        call ATMOS_DYN_FVM_fluxJ23_XVZ( qflx_J23, & ! (out)
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XVZ), J23G(:,:,:,I_XVW), MAPF(:,:,:,I_XV), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, v, z)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XVZ( qflx_hi(:,:,:,XDIR), & ! (out)
             MOMX, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_UVZ), MAPF(:,:,:,I_UV), & ! (in)
             num_diff(:,:,:,I_MOMY,XDIR), & ! (in)
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (x, y, z)
@@ -698,52 +776,89 @@ contains
             MOMY, MOMY, DENS, & ! (in)
             GSQRT(:,:,:,I_XYZ), MAPF(:,:,:,I_XY), & ! (in)
             num_diff(:,:,:,I_MOMY,YDIR), & ! (in
-            CDZ, & ! (in)
+            CDZ, TwoD, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
        !--- update momentum(y)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DPRES(k+1,i,j  ) )
-          call CHECK( __LINE__, DPRES(k+1,i,j+1) )
-          call CHECK( __LINE__, DPRES(k-1,i,j  ) )
-          call CHECK( __LINE__, DPRES(k-1,i,j+1) )
-          call CHECK( __LINE__, CORIOLI(1,i,j  ) )
-          call CHECK( __LINE__, CORIOLI(1,i,j+1) )
-          call CHECK( __LINE__, MOMX(k,i  ,j  ) )
-          call CHECK( __LINE__, MOMX(k,i  ,j+1) )
-          call CHECK( __LINE__, MOMX(k,i-1,j  ) )
-          call CHECK( __LINE__, MOMX(k,i-1,j+1) )
-          call CHECK( __LINE__, DDIV(k,i,j+1) )
-          call CHECK( __LINE__, DDIV(k,i,j  ) )
-          call CHECK( __LINE__, MOMY_t(k,i,j) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DPRES(k+1,IS,j  ) )
+             call CHECK( __LINE__, DPRES(k+1,IS,j+1) )
+             call CHECK( __LINE__, DPRES(k-1,IS,j  ) )
+             call CHECK( __LINE__, DPRES(k-1,IS,j+1) )
+             call CHECK( __LINE__, CORIOLI(IS,j  ) )
+             call CHECK( __LINE__, CORIOLI(IS,j+1) )
+             call CHECK( __LINE__, MOMX(k,IS,j  ) )
+             call CHECK( __LINE__, MOMX(k,IS,j+1) )
+             call CHECK( __LINE__, DDIV(k,IS,j+1) )
+             call CHECK( __LINE__, DDIV(k,IS,j  ) )
+             call CHECK( __LINE__, MOMY_t(k,IS,j) )
 #endif
-          Sv(k,i,j) = &
-               ( - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
-                     + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
-                     + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
-                   + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                   + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
-                 - ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
-                   - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
-                   * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & ! pressure gradient force
-               ) / GSQRT(k,i,j,I_XVZ) &
-               - 0.125_RP * ( CORIOLI(1,i  ,j+1)+CORIOLI(1,i  ,j) ) &
-                          * ( MOMX(k,i,j+1)+MOMX(k,i,j)+MOMX(k,i-1,j+1)+MOMX(k,i-1,j) ) & ! coriolis force
-               + divdmp_coef * rdt * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
-               + MOMY_t(k,i,j)
-       enddo
-       enddo
-       enddo
+             Sv(k,IS,j) = &
+                  ( - ( ( qflx_hi (k,IS,j,ZDIR) - qflx_hi (k-1,IS,j  ,ZDIR) &
+                        + qflx_J23(k,IS,j)      - qflx_J23(k-1,IS,j  )      ) * RCDZ(k) &
+                      + ( qflx_hi (k,IS,j,YDIR) - qflx_hi (k  ,IS,j-1,YDIR) ) * RFDY(j) ) &
+                    - ( J23G(k+1,IS,j,I_XVZ) * ( DPRES(k+1,IS,j+1)+DPRES(k+1,IS,j) ) &
+                      - J23G(k-1,IS,j,I_XVZ) * ( DPRES(k-1,IS,j+1)+DPRES(k-1,IS,j) ) ) &
+                      * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & ! pressure gradient force
+                  ) / GSQRT(k,IS,j,I_XVZ) &
+                  - 0.25_RP * ( CORIOLI(IS,j+1)+CORIOLI(IS,j) ) &
+                             * ( MOMX(k,IS,j+1)+MOMX(k,IS,j) ) & ! coriolis force
+                  + divdmp_coef * rdt * ( DDIV(k,IS,j+1)-DDIV(k,IS,j) ) * FDY(j) & ! divergence damping
+                  + MOMY_t(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, qflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DPRES(k+1,i,j  ) )
+             call CHECK( __LINE__, DPRES(k+1,i,j+1) )
+             call CHECK( __LINE__, DPRES(k-1,i,j  ) )
+             call CHECK( __LINE__, DPRES(k-1,i,j+1) )
+             call CHECK( __LINE__, CORIOLI(i,j  ) )
+             call CHECK( __LINE__, CORIOLI(i,j+1) )
+             call CHECK( __LINE__, MOMX(k,i  ,j  ) )
+             call CHECK( __LINE__, MOMX(k,i  ,j+1) )
+             call CHECK( __LINE__, MOMX(k,i-1,j  ) )
+             call CHECK( __LINE__, MOMX(k,i-1,j+1) )
+             call CHECK( __LINE__, DDIV(k,i,j+1) )
+             call CHECK( __LINE__, DDIV(k,i,j  ) )
+             call CHECK( __LINE__, MOMY_t(k,i,j) )
+#endif
+             Sv(k,i,j) = &
+                  ( - ( ( qflx_hi (k,i,j,ZDIR) - qflx_hi (k-1,i  ,j  ,ZDIR) &
+                        + qflx_J13(k,i,j)      - qflx_J13(k-1,i  ,j  ) &
+                        + qflx_J23(k,i,j)      - qflx_J23(k-1,i  ,j  )      ) * RCDZ(k) &
+                      + ( qflx_hi (k,i,j,XDIR) - qflx_hi (k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                      + ( qflx_hi (k,i,j,YDIR) - qflx_hi (k  ,i  ,j-1,YDIR) ) * RFDY(j) ) &
+                    - ( J23G(k+1,i,j,I_XVZ) * ( DPRES(k+1,i,j+1)+DPRES(k+1,i,j) ) &
+                      - J23G(k-1,i,j,I_XVZ) * ( DPRES(k-1,i,j+1)+DPRES(k-1,i,j) ) ) &
+                      * 0.5_RP / ( FDZ(k+1)+FDZ(k) ) & ! pressure gradient force
+                  ) / GSQRT(k,i,j,I_XVZ) &
+                  - 0.125_RP * ( CORIOLI(i  ,j+1)+CORIOLI(i  ,j) ) &
+                             * ( MOMX(k,i,j+1)+MOMX(k,i,j)+MOMX(k,i-1,j+1)+MOMX(k,i-1,j) ) & ! coriolis force
+                  + divdmp_coef * rdt * ( DDIV(k,i,j+1)-DDIV(k,i,j) ) * FDY(j) & ! divergence damping
+                  + MOMY_t(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -759,6 +874,7 @@ contains
             IIS, IIE, JJS, JJE ) ! (in)
 
        ! at (u, y, z)
+       if ( .not. TwoD ) &
        call ATMOS_DYN_FVM_fluxX_XYZ( tflx_hi(:,:,:,XDIR), & ! (out)
             mflx_hi2(:,:,:,XDIR), POTT, GSQRT(:,:,:,I_UYZ), & ! (in)
             num_diff(:,:,:,I_RHOT,XDIR), & ! (in)
@@ -772,28 +888,48 @@ contains
             CDZ, & ! (in)
             IIS, IIE, JJS, JJE ) ! (in)
 
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, RHOT_t(k,i,j) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, RHOT_t(k,IS,j) )
 #endif
-          St(k,i,j) = &
-               - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                 + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                 + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
-                 ) / GSQRT(k,i,j,I_XYZ) &
-               + RHOT_t(k,i,j)
-       enddo
-       enddo
-       enddo
+             St(k,IS,j) = &
+                  - ( ( tflx_hi(k,IS,j,ZDIR) - tflx_hi(k-1,IS,j  ,ZDIR) ) * RCDZ(k) &
+                    + ( tflx_hi(k,IS,j,YDIR) - tflx_hi(k  ,IS,j-1,YDIR) ) * RCDY(j) &
+                    ) / GSQRT(k,IS,j,I_XYZ) &
+                  + RHOT_t(k,IS,j)
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, tflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, RHOT_t(k,i,j) )
+#endif
+             St(k,i,j) = &
+                  - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                    + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                    + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) &
+                    ) / GSQRT(k,i,j,I_XYZ) &
+                  + RHOT_t(k,i,j)
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -817,6 +953,284 @@ contains
     JJE = JJS+JBLOCK-1
     do IIS = IS, IE, IBLOCK
     IIE = IIS+IBLOCK-1
+
+       if ( TwoD ) then
+
+       i = IS
+       ! r = b - M x0
+       do j = JJS, JJE
+       do k = KS+2, KE-2
+#ifdef DEBUG
+          call CHECK( __LINE__, MOMZ(k-1,i,j) )
+          call CHECK( __LINE__, MOMZ(k  ,i,j) )
+          call CHECK( __LINE__, MOMX(k,i  ,j) )
+          call CHECK( __LINE__, MOMY(k,i,j-1) )
+          call CHECK( __LINE__, MOMY(k,i,j  ) )
+          call CHECK( __LINE__, POTT(k-2,i,j) )
+          call CHECK( __LINE__, POTT(k-1,i,j) )
+          call CHECK( __LINE__, POTT(k  ,i,j) )
+          call CHECK( __LINE__, POTT(k+1,i,j) )
+          call CHECK( __LINE__, POTT(k+2,i,j) )
+          call CHECK( __LINE__, POTT(k,i  ,j) )
+          call CHECK( __LINE__, POTT(k,i,j-2) )
+          call CHECK( __LINE__, POTT(k,i,j-1) )
+          call CHECK( __LINE__, POTT(k,i,j  ) )
+          call CHECK( __LINE__, POTT(k,i,j+1) )
+          call CHECK( __LINE__, POTT(k,i,j+2) )
+          call CHECK( __LINE__, Sw(k-1,i,j) )
+          call CHECK( __LINE__, Sw(k  ,i,j) )
+          call CHECK( __LINE__, Su(k,i-1,j) )
+          call CHECK( __LINE__, Su(k,i  ,j) )
+          call CHECK( __LINE__, Sv(k,i,j-1) )
+          call CHECK( __LINE__, Sv(k,i,j  ) )
+          call CHECK( __LINE__, GSQRT(k,i ,j,I_UYZ) )
+          call CHECK( __LINE__, GSQRT(k,i,j-1,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(k,i,j  ,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(k,i,j,I_XYZ) )
+          call CHECK( __LINE__, St(k,i,j) )
+          call CHECK( __LINE__, DPRES(k-1,i,j) )
+          call CHECK( __LINE__, DPRES(k  ,i,j) )
+          call CHECK( __LINE__, DPRES(k+1,i,j) )
+          call CHECK( __LINE__, RT2P(k-1,i,j) )
+          call CHECK( __LINE__, RT2P(k  ,i,j) )
+          call CHECK( __LINE__, RT2P(k+1,i,j) )
+          call CHECK( __LINE__, RHOT(k-1,i,j) )
+          call CHECK( __LINE__, RHOT(k+1,i,j) )
+          call CHECK( __LINE__, DDENS(k-1,i,j) )
+          call CHECK( __LINE__, DDENS(k+1,i,j) )
+#endif
+          B(k,i,j) = ( &
+               ( J33G * ( MOMZ(k  ,i,j) + dtrk*Sw(k  ,i,j) ) &
+                 * ( FACT_N*(POTT(k+1,i,j)+POTT(k  ,i,j)) &
+                   + FACT_F*(POTT(k+2,i,j)+POTT(k-1,i,j)) ) &
+               - J33G * ( MOMZ(k-1,i,j) + dtrk*Sw(k-1,i,j) ) &
+                 * ( FACT_N*(POTT(k  ,i,j)+POTT(k-1,i,j)) &
+                   + FACT_F*(POTT(k+1,i,j)+POTT(k-2,i,j)) ) ) * RCDZ(k) &
+             + ( GSQRT(k,i,j  ,I_XVZ) * ( MOMY(k,i,j  ) + dtrk*Sv(k,i,j  ) ) &
+                 * ( FACT_N*(POTT(k,i,j+1)+POTT(k,i,j  )) &
+                   + FACT_F*(POTT(k,i,j+2)+POTT(k,i,j-1)) ) &
+               - GSQRT(k,i,j-1,I_XVZ) * ( MOMY(k,i,j-1) + dtrk*Sv(k,i,j-1) ) &
+                 * ( FACT_N*(POTT(k,i,j  )+POTT(k,i,j-1)) &
+                   + FACT_F*(POTT(k,i,j+1)+POTT(k,i,j-2)) ) ) * RCDY(j) &
+             + GSQRT(k,i,j,I_XYZ) * ( St(k,i,j) - DPRES(k,i,j) * RCs2T(k,i,j) * rdt ) &
+             ) * rdt &
+             + GRAV * J33G * ( ( DPRES(k+1,i,j)*RCs2T(k+1,i,j) &
+                               - DPRES(k-1,i,j)*RCs2T(k-1,i,j) ) &
+                             - ( RHOT(k+1,i,j)*DDENS(k+1,i,j)/DENS(k+1,i,j) &
+                               - RHOT(k-1,i,j)*DDENS(k-1,i,j)/DENS(k-1,i,j) ) &
+                             ) / ( FDZ(k) + FDZ(k-1) )
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+       do j = JJS, JJE
+       do i = IIS, IIE
+#ifdef DEBUG
+          call CHECK( __LINE__, MOMZ(KS,i,j) )
+          call CHECK( __LINE__, MOMX(KS,i,j) )
+          call CHECK( __LINE__, MOMY(KS,i,j) )
+          call CHECK( __LINE__, Sw(KS,i,j) )
+          call CHECK( __LINE__, Su(KS,i-1,j) )
+          call CHECK( __LINE__, Su(KS,i  ,j) )
+          call CHECK( __LINE__, Sv(KS,i,j-1) )
+          call CHECK( __LINE__, Sv(KS,i,j  ) )
+          call CHECK( __LINE__, St(KS,i,j) )
+          call CHECK( __LINE__, POTT(KS  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j) )
+          call CHECK( __LINE__, POTT(KS,i  ,j) )
+          call CHECK( __LINE__, POTT(KS,i,j-2) )
+          call CHECK( __LINE__, POTT(KS,i,j-1) )
+          call CHECK( __LINE__, POTT(KS,i,j  ) )
+          call CHECK( __LINE__, POTT(KS,i,j+1) )
+          call CHECK( __LINE__, POTT(KS,i,j+2) )
+          call CHECK( __LINE__, GSQRT(KS,i,j,I_UYZ) )
+          call CHECK( __LINE__, GSQRT(KS,i,j,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KS,i,j,I_XYZ) )
+          call CHECK( __LINE__, DPRES(KS  ,i,j) )
+          call CHECK( __LINE__, DPRES(KS+1,i,j) )
+          call CHECK( __LINE__, RT2P(KS  ,i,j) )
+          call CHECK( __LINE__, RT2P(KS+1,i,j) )
+          call CHECK( __LINE__, RHOT(KS+1,i,j) )
+          call CHECK( __LINE__, DDENS(KS+1,i,j) )
+#endif
+          B(KS,i,j) = ( &
+               ( J33G * ( MOMZ(KS  ,i,j) + dtrk*Sw(KS  ,i,j) ) &
+                 * 0.5_RP*(POTT(KS+1,i,j)+POTT(KS  ,i,j)) ) * RCDZ(KS) &
+             + ( GSQRT(KS,i,j  ,I_XVZ) * ( MOMY(KS,i,j  ) + dtrk*Sv(KS,i,j  ) ) &
+                 * ( FACT_N*(POTT(KS,i,j+1)+POTT(KS,i,j  )) &
+                   + FACT_F*(POTT(KS,i,j+2)+POTT(KS,i,j-1)) ) &
+               - GSQRT(KS,i,j-1,I_XVZ) * ( MOMY(KS,i,j-1) + dtrk*Sv(KS,i,j-1) ) &
+                 * ( FACT_N*(POTT(KS,i,j  )+POTT(KS,i,j-1)) &
+                   + FACT_F*(POTT(KS,i,j+1)+POTT(KS,i,j-2)) ) ) * RCDY(j) &
+             + GSQRT(KS,i,j,I_XYZ) * ( St(KS,i,j) - DPRES(KS,i,j) * RCs2T(KS,i,j) * rdt ) &
+             ) * rdt &
+             + GRAV * J33G * 0.5_RP * ( ( DPRES(KS,i,j)+DPRES(KS+1,i,j) ) * RCs2T(KS,i,j) &
+                                      - ( DDENS(KS,i,j)+DDENS(KS+1,i,j) ) * POTT(KS,i,j) ) * RCDZ(KS)
+#ifdef DEBUG
+          call CHECK( __LINE__, MOMZ(KS  ,i,j) )
+          call CHECK( __LINE__, MOMZ(KS+1,i,j) )
+          call CHECK( __LINE__, MOMX(KS+1,i,j) )
+          call CHECK( __LINE__, MOMY(KS+1,i,j-1) )
+          call CHECK( __LINE__, MOMY(KS+1,i,j  ) )
+          call CHECK( __LINE__, POTT(KS  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1+1,i,j) )
+          call CHECK( __LINE__, POTT(KS+1+2,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j-2) )
+          call CHECK( __LINE__, POTT(KS+1,i,j-1) )
+          call CHECK( __LINE__, POTT(KS+1,i,j  ) )
+          call CHECK( __LINE__, POTT(KS+1,i,j+1) )
+          call CHECK( __LINE__, POTT(KS+1,i,j+2) )
+          call CHECK( __LINE__, Sw(KS  ,i,j) )
+          call CHECK( __LINE__, Sw(KS+1,i,j) )
+          call CHECK( __LINE__, Su(KS+1,i,j) )
+          call CHECK( __LINE__, Sv(KS+1,i,j-1) )
+          call CHECK( __LINE__, Sv(KS+1,i,j  ) )
+          call CHECK( __LINE__, GSQRT(KS+1,i,j,I_UYZ) )
+          call CHECK( __LINE__, GSQRT(KS+1,i,j-1,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KS+1,i,j  ,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KS+1,i,j,I_XYZ) )
+          call CHECK( __LINE__, St(KS+1,i,j) )
+          call CHECK( __LINE__, DPRES(KS  ,i,j) )
+          call CHECK( __LINE__, DPRES(KS+1,i,j) )
+          call CHECK( __LINE__, DPRES(KS+2,i,j) )
+          call CHECK( __LINE__, RT2P(KS  ,i,j) )
+          call CHECK( __LINE__, RT2P(KS+1,i,j) )
+          call CHECK( __LINE__, RT2P(KS+2,i,j) )
+          call CHECK( __LINE__, RHOT(KS  ,i,j) )
+          call CHECK( __LINE__, RHOT(KS+2,i,j) )
+          call CHECK( __LINE__, DDENS(KS  ,i,j) )
+          call CHECK( __LINE__, DDENS(KS+2,i,j) )
+#endif
+          B(KS+1,i,j) = ( &
+               ( J33G * ( MOMZ(KS+1,i,j) + dtrk*Sw(KS+1,i,j) ) &
+                 * ( FACT_N*(POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
+                   + FACT_F*(POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) &
+               - J33G * ( MOMZ(KS+1-1,i,j) + dtrk*Sw(KS+1-1,i,j) ) &
+                 * ( 0.5_RP*(POTT(KS+1,i,j)+POTT(KS,i,j)) ) ) * RCDZ(KS+1) &
+             + ( GSQRT(KS+1,i,j  ,I_XVZ) * ( MOMY(KS+1,i,j  ) + dtrk*Sv(KS+1,i,j  ) ) &
+                 * ( FACT_N*(POTT(KS+1,i,j+1)+POTT(KS+1,i,j  )) &
+                   + FACT_F*(POTT(KS+1,i,j+2)+POTT(KS+1,i,j-1)) ) &
+               - GSQRT(KS+1,i,j-1,I_XVZ) * ( MOMY(KS+1,i,j-1) + dtrk*Sv(KS+1,i,j-1) ) &
+                 * ( FACT_N*(POTT(KS+1,i,j  )+POTT(KS+1,i,j-1)) &
+                   + FACT_F*(POTT(KS+1,i,j+1)+POTT(KS+1,i,j-2)) ) ) * RCDY(j) &
+             + GSQRT(KS+1,i,j,I_XYZ) * ( St(KS+1,i,j) - DPRES(KS+1,i,j) * RCs2T(KS+1,i,j) * rdt ) &
+             ) * rdt &
+             + GRAV * J33G * ( ( DPRES(KS+2,i,j)*RCs2T(KS+2,i,j) &
+                               - DPRES(KS  ,i,j)*RCs2T(KS  ,i,j) ) &
+                             - ( RHOT(KS+2,i,j)*DDENS(KS+2,i,j)/DENS(KS+2,i,j) &
+                               - RHOT(KS  ,i,j)*DDENS(KS  ,i,j)/DENS(KS  ,i,j) ) &
+                             ) / ( FDZ(KS+1) + FDZ(KS) )
+#ifdef DEBUG
+          call CHECK( __LINE__, MOMZ(KE-2,i,j) )
+          call CHECK( __LINE__, MOMZ(KE-1,i,j) )
+          call CHECK( __LINE__, MOMX(KE-1,i,j) )
+          call CHECK( __LINE__, MOMY(KE-1,i,j-1) )
+          call CHECK( __LINE__, MOMY(KE-1,i,j  ) )
+          call CHECK( __LINE__, POTT(KE-3,i,j) )
+          call CHECK( __LINE__, POTT(KE-2,i,j) )
+          call CHECK( __LINE__, POTT(KE-1,i,j) )
+          call CHECK( __LINE__, POTT(KE  ,i,j) )
+          call CHECK( __LINE__, POTT(KE-1,i  ,j) )
+          call CHECK( __LINE__, POTT(KE-1,i,j-2) )
+          call CHECK( __LINE__, POTT(KE-1,i,j-1) )
+          call CHECK( __LINE__, POTT(KE-1,i,j  ) )
+          call CHECK( __LINE__, POTT(KE-1,i,j+1) )
+          call CHECK( __LINE__, POTT(KE-1,i,j+2) )
+          call CHECK( __LINE__, Sw(KE-2,i,j) )
+          call CHECK( __LINE__, Sw(KE-1,i,j) )
+          call CHECK( __LINE__, Su(KE-1,i,j) )
+          call CHECK( __LINE__, Sv(KE-1,i,j-1) )
+          call CHECK( __LINE__, Sv(KE-1,i,j  ) )
+          call CHECK( __LINE__, GSQRT(KE-1,i,j,I_UYZ) )
+          call CHECK( __LINE__, GSQRT(KE-1,i,j-1,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KE-1,i,j  ,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KE-1,i,j,I_XYZ) )
+          call CHECK( __LINE__, St(KE-1,i,j) )
+          call CHECK( __LINE__, DPRES(KE-2,i,j) )
+          call CHECK( __LINE__, DPRES(KE-1,i,j) )
+          call CHECK( __LINE__, DPRES(KE  ,i,j) )
+          call CHECK( __LINE__, RT2P(KE-2,i,j) )
+          call CHECK( __LINE__, RT2P(KE-1,i,j) )
+          call CHECK( __LINE__, RT2P(KE  ,i,j) )
+          call CHECK( __LINE__, RHOT(KE-2,i,j) )
+          call CHECK( __LINE__, RHOT(KE,i,j) )
+          call CHECK( __LINE__, DDENS(KE-2,i,j) )
+          call CHECK( __LINE__, DDENS(KE,i,j) )
+#endif
+          B(KE-1,i,j) = ( &
+               ( J33G * ( MOMZ(KE-1,i,j) + dtrk*Sw(KE-1,i,j) ) &
+                 * ( 0.5_RP*(POTT(KE  ,i,j)+POTT(KE-1,i,j)) ) &
+               - J33G * ( MOMZ(KE-2,i,j) + dtrk*Sw(KE-2,i,j) ) &
+                 * ( FACT_N*(POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
+                   + FACT_F*(POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) ) * RCDZ(KE-1) &
+             + ( GSQRT(KE-1,i,j  ,I_XVZ) * ( MOMY(KE-1,i,j  ) + dtrk*Sv(KE-1,i,j  ) ) &
+                 * ( FACT_N*(POTT(KE-1,i,j+1)+POTT(KE-1,i,j  )) &
+                   + FACT_F*(POTT(KE-1,i,j+2)+POTT(KE-1,i,j-1)) ) &
+               - GSQRT(KE-1,i,j-1,I_XVZ) * ( MOMY(KE-1,i,j-1) + dtrk*Sv(KE-1,i,j-1) ) &
+                 * ( FACT_N*(POTT(KE-1,i,j  )+POTT(KE-1,i,j-1)) &
+                   + FACT_F*(POTT(KE-1,i,j+1)+POTT(KE-1,i,j-2)) ) ) * RCDY(j) &
+             + GSQRT(KE-1,i,j,I_XYZ) * ( St(KE-1,i,j) - DPRES(KE-1,i,j) * RCs2T(KE-1,i,j) * rdt ) &
+             ) * rdt &
+             + GRAV * J33G * ( ( DPRES(KE  ,i,j)*RCs2T(KE  ,i,j) &
+                               - DPRES(KE-2,i,j)*RCs2T(KE-2,i,j) ) &
+                             - ( RHOT(KE  ,i,j)*DDENS(KE  ,i,j)/DENS(KE  ,i,j) &
+                               - RHOT(KE-2,i,j)*DDENS(KE-2,i,j)/DENS(KE-2,i,j) )&
+                             ) / ( FDZ(KE-1) + FDZ(KE-1-1) )
+#ifdef DEBUG
+          call CHECK( __LINE__, MOMZ(KE-1,i,j) )
+          call CHECK( __LINE__, MOMX(KE,i,j) )
+          call CHECK( __LINE__, MOMY(KE,i,j-1) )
+          call CHECK( __LINE__, MOMY(KE,i,j  ) )
+          call CHECK( __LINE__, Sw(KE-1,i,j) )
+          call CHECK( __LINE__, Su(KE,i,j) )
+          call CHECK( __LINE__, Sv(KE,i,j-1) )
+          call CHECK( __LINE__, Sv(KE,i,j  ) )
+          call CHECK( __LINE__, POTT(KE-1,i,j) )
+          call CHECK( __LINE__, POTT(KE  ,i,j) )
+          call CHECK( __LINE__, POTT(KE,i,j) )
+          call CHECK( __LINE__, POTT(KE,i,j-2) )
+          call CHECK( __LINE__, POTT(KE,i,j-1) )
+          call CHECK( __LINE__, POTT(KE,i,j  ) )
+          call CHECK( __LINE__, POTT(KE,i,j+1) )
+          call CHECK( __LINE__, POTT(KE,i,j+2) )
+          call CHECK( __LINE__, GSQRT(KE,i,j,I_UYZ) )
+          call CHECK( __LINE__, GSQRT(KE,i,j-1,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KE,i,j  ,I_XVZ) )
+          call CHECK( __LINE__, GSQRT(KE,i,j,I_XYZ) )
+          call CHECK( __LINE__, St(KE,i,j) )
+          call CHECK( __LINE__, DPRES(KE-1,i,j) )
+          call CHECK( __LINE__, DPRES(KE  ,i,j) )
+          call CHECK( __LINE__, RT2P(KE-1,i,j) )
+          call CHECK( __LINE__, RT2P(KE  ,i,j) )
+          call CHECK( __LINE__, RHOT(KE-1,i,j) )
+          call CHECK( __LINE__, DDENS(KE-1,i,j) )
+#endif
+          B(KE,i,j) = ( &
+               ( &
+               - J33G * ( MOMZ(KE-1,i,j) + dtrk*Sw(KE-1,i,j) ) &
+                 * 0.5_RP*(POTT(KE  ,i,j)+POTT(KE-1,i,j)) ) * RCDZ(KE) &
+             + ( GSQRT(KE,i,j  ,I_XVZ) * ( MOMY(KE,i,j  ) + dtrk*Sv(KE,i,j  ) ) &
+                 * ( FACT_N*(POTT(KE,i,j+1)+POTT(KE,i,j  )) &
+                   + FACT_F*(POTT(KE,i,j+2)+POTT(KE,i,j-1)) ) &
+               - GSQRT(KE,i,j-1,I_XVZ) * ( MOMY(KE,i,j-1) + dtrk*Sv(KE,i,j-1) ) &
+                 * ( FACT_N*(POTT(KE,i,j  )+POTT(KE,i,j-1)) &
+                   + FACT_F*(POTT(KE,i,j+1)+POTT(KE,i,j-2)) ) ) * RCDY(j) &
+             + GSQRT(KE,i,j,I_XYZ) * ( St(KE,i,j) - DPRES(KE,i,j) * RCs2T(KE,i,j) * rdt ) &
+             ) * rdt &
+             + GRAV * J33G * 0.5_RP * ( - ( DPRES(KE,i,j)+DPRES(KE-1,i,j) ) * RCs2T(KE,i,j) &
+                                        + ( DDENS(KE,i,j)+DDENS(KE-1,i,j) ) * POTT(KE,i,j) ) * RCDZ(KE)
+       enddo
+       enddo
+#ifdef DEBUG
+       k = IUNDEF; i = IUNDEF; j = IUNDEF
+#endif
+
+      else
+
+
        ! r = b - M x0
        do j = JJS, JJE
        do i = IIS, IIE
@@ -1152,13 +1566,16 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-       call make_matrix( &
+      end if
+
+      call make_matrix( &
             M, & ! (inout)
             POTT, RCs2T, GRAV, &
             GSQRT, J33G, &
             RCDZ, RFDZ, RCDX, RFDX, RCDY,RFDY, FDZ, &
             rdt, &
             FACT_N, FACT_F, &
+            TwoD, &
             I_XYZ, I_XYW, &
             IIS, IIE, JJS, JJE )
 
@@ -1168,13 +1585,14 @@ contains
     call solve_bicgstab( &
        DPRES_N, & ! (out)
        DPRES, & ! (in)
-       M, B   ) ! (in)
+       M, B,  & ! (in)
+       TwoD   ) ! (in)
 
     call COMM_vars8( DPRES_N, 1 )
     call COMM_wait ( DPRES_N, 1 )
 
 #ifdef DEBUG
-    call check_solver( DPRES_N, M, B )
+    call check_solver( DPRES_N, M, B, TwoD )
 #endif
 
 #else
@@ -1239,30 +1657,45 @@ contains
        !##### momentum equation (x) #####
 
        !--- update momentum(x)
-       !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k,duvw) OMP_SCHEDULE_
+          do j = JJS  , JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, DPRES_N(k,i+1,j) )
-          call CHECK( __LINE__, DPRES_N(k,i  ,j) )
-          call CHECK( __LINE__, GSQRT(k,i+1,j,I_XYZ) )
-          call CHECK( __LINE__, GSQRT(k,i  ,j,I_XYZ) )
-          call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
-          call CHECK( __LINE__, Su(k,i,j) )
-          call CHECK( __LINE__, MOMX0(k,i,j) )
+             call CHECK( __LINE__, Su(k,IS,j) )
+             call CHECK( __LINE__, MOMX0(k,IS,j) )
 #endif
-          duvw = dtrk * ( ( &
-                 - ( GSQRT(k,i+1,j,I_XYZ) * DPRES_N(k,i+1,j) &
-                   - GSQRT(k,i  ,j,I_XYZ) * DPRES_N(k,i  ,j) ) * RFDX(i) &  ! pressure gradient force
-                   ) / GSQRT(k,i,j,I_UYZ) &
-                 + Su(k,i,j) )
+             duvw = dtrk * Su(k,IS,j)
 
-          MOMX_RK(k,i,j) = MOMX0(k,i,j) + duvw
-          mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) * ( MOMX(k,i,j) + duvw )
-       enddo
-       enddo
-       enddo
+             MOMX_RK(k,IS,j) = MOMX0(k,IS,j) + duvw
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k,duvw) OMP_SCHEDULE_ collapse(2)
+          do j = JJS  , JJE
+          do i = IIS-1, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, DPRES_N(k,i+1,j) )
+             call CHECK( __LINE__, DPRES_N(k,i  ,j) )
+             call CHECK( __LINE__, GSQRT(k,i+1,j,I_XYZ) )
+             call CHECK( __LINE__, GSQRT(k,i  ,j,I_XYZ) )
+             call CHECK( __LINE__, GSQRT(k,i,j,I_UYZ) )
+             call CHECK( __LINE__, Su(k,i,j) )
+             call CHECK( __LINE__, MOMX0(k,i,j) )
+#endif
+             duvw = dtrk * ( ( &
+                    - ( GSQRT(k,i+1,j,I_XYZ) * DPRES_N(k,i+1,j) &
+                      - GSQRT(k,i  ,j,I_XYZ) * DPRES_N(k,i  ,j) ) * RFDX(i) &  ! pressure gradient force
+                      ) / GSQRT(k,i,j,I_UYZ) &
+                    + Su(k,i,j) )
+
+             MOMX_RK(k,i,j) = MOMX0(k,i,j) + duvw
+             mflx_hi(k,i,j,XDIR) = GSQRT(k,i,j,I_UYZ) * ( MOMX(k,i,j) + duvw )
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1335,24 +1768,26 @@ contains
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
        ! at (u, y, z)
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS,   JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
+       if ( .not. TwoD ) then
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS,   JJE
+          do i = IIS-1, IIE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
-          call CHECK( __LINE__, POTT(k,i-1,j) )
-          call CHECK( __LINE__, POTT(k,i  ,j) )
-          call CHECK( __LINE__, POTT(k,i+1,j) )
-          call CHECK( __LINE__, POTT(k,i+1,j) )
-          call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
+             call CHECK( __LINE__, mflx_hi(k,i,j,XDIR) )
+             call CHECK( __LINE__, POTT(k,i-1,j) )
+             call CHECK( __LINE__, POTT(k,i  ,j) )
+             call CHECK( __LINE__, POTT(k,i+1,j) )
+             call CHECK( __LINE__, POTT(k,i+1,j) )
+             call CHECK( __LINE__, num_diff(k,i,j,I_RHOT,XDIR) )
 #endif
-          tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
-                                * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
-                                  + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) )
-       enddo
-       enddo
-       enddo
+             tflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) &
+                                   * ( FACT_N * ( POTT(k,i+1,j)+POTT(k,i  ,j) ) &
+                                     + FACT_F * ( POTT(k,i+2,j)+POTT(k,i-1,j) ) )
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1380,22 +1815,37 @@ contains
 #endif
 
        ! rho*theta
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
-          RHOT_RK(k,i,j) = RHOT0(k,i,j) &
-               + dtrk * ( - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
-                            + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
-                            + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
-                            / GSQRT(k,i,j,I_XYZ) &
-                          + St(k,i,j) )
-       enddo
-       enddo
-       enddo
+       if ( TwoD ) then
+          !$omp parallel do
+          do j = JJS, JJE
+          do k = KS, KE
+             RHOT_RK(k,IS,j) = RHOT0(k,IS,j) &
+                  + dtrk * ( - ( ( tflx_hi(k,IS,j,ZDIR) - tflx_hi(k-1,IS,j  ,ZDIR) ) * RCDZ(k) &
+                               + ( tflx_hi(k,IS,j,YDIR) - tflx_hi(k  ,IS,j-1,YDIR) ) * RCDY(j) ) &
+                               / GSQRT(k,IS,j,I_XYZ) &
+                             + St(k,IS,j) )
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+             RHOT_RK(k,i,j) = RHOT0(k,i,j) &
+                  + dtrk * ( - ( ( tflx_hi(k,i,j,ZDIR) - tflx_hi(k-1,i  ,j  ,ZDIR) ) * RCDZ(k) &
+                               + ( tflx_hi(k,i,j,XDIR) - tflx_hi(k  ,i-1,j  ,XDIR) ) * RCDX(i) &
+                               + ( tflx_hi(k,i,j,YDIR) - tflx_hi(k  ,i  ,j-1,YDIR) ) * RCDY(j) ) &
+                               / GSQRT(k,i,j,I_XYZ) &
+                             + St(k,i,j) )
+          enddo
+          enddo
+          enddo
+       end if
 
        !##### continuous equation #####
 
        ! total momentum flux
+       !$omp parallel do
        do j = JJS, JJE
        do i = IIS, IIE
        do k = KS, KE-1
@@ -1403,13 +1853,17 @@ contains
        enddo
        enddo
        enddo
-       do j = JJS  , JJE
-       do i = IIS-1, IIE
-       do k = KS, KE
-          mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + mflx_hi2(k,i,j,XDIR)
-       enddo
-       enddo
-       enddo
+       if ( .not. TwoD ) then
+          !$omp parallel do
+          do j = JJS  , JJE
+          do i = IIS-1, IIE
+          do k = KS, KE
+             mflx_hi(k,i,j,XDIR) = mflx_hi(k,i,j,XDIR) + mflx_hi2(k,i,j,XDIR)
+          enddo
+          enddo
+          enddo
+       end if
+       !$omp parallel do
        do j = JJS-1, JJE
        do i = IIS  , IIE
        do k = KS, KE
@@ -1419,27 +1873,50 @@ contains
        enddo
 
        !--- update density
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-       do j = JJS, JJE
-       do i = IIS, IIE
-       do k = KS, KE
+       if ( TwoD ) then
+          !$omp parallel do private(j,k) OMP_SCHEDULE_
+          do j = JJS, JJE
+          do k = KS, KE
 #ifdef DEBUG
-          call CHECK( __LINE__, DENS0(k,i,j) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,XDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i-1,j  ,XDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,YDIR) )
-          call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
-          call CHECK( __LINE__, DENS_t(k,i,j) )
+             call CHECK( __LINE__, DENS0(k,IS,j) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k-1,IS,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j  ,YDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,IS,j-1,YDIR) )
+             call CHECK( __LINE__, DENS_t(k,IS,j) )
 #endif
-          DENS_RK(k,i,j) = DENS0(k,i,j) &
-               + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
-                            + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
-                            + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
-                            / GSQRT(k,i,j,I_XYZ) & ! divergence
-                          + DENS_t(k,i,j) )
-       enddo
-       enddo
-       enddo
+             DENS_RK(k,IS,j) = DENS0(k,IS,j) &
+                  + dtrk * ( - ( ( mflx_hi(k,IS,j,ZDIR)-mflx_hi(k-1,IS,j,  ZDIR) ) * RCDZ(k) &
+                               + ( mflx_hi(k,IS,j,YDIR)-mflx_hi(k  ,IS,j-1,YDIR) ) * RCDY(j) ) &
+                               / GSQRT(k,IS,j,I_XYZ) & ! divergence
+                             + DENS_t(k,IS,j) )
+          enddo
+          enddo
+       else
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JJS, JJE
+          do i = IIS, IIE
+          do k = KS, KE
+#ifdef DEBUG
+             call CHECK( __LINE__, DENS0(k,i,j) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k-1,i  ,j  ,ZDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,XDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i-1,j  ,XDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j  ,YDIR) )
+             call CHECK( __LINE__, mflx_hi(k  ,i  ,j-1,YDIR) )
+             call CHECK( __LINE__, DENS_t(k,i,j) )
+#endif
+             DENS_RK(k,i,j) = DENS0(k,i,j) &
+                  + dtrk * ( - ( ( mflx_hi(k,i,j,ZDIR)-mflx_hi(k-1,i  ,j,  ZDIR) ) * RCDZ(k) &
+                               + ( mflx_hi(k,i,j,XDIR)-mflx_hi(k  ,i-1,j,  XDIR) ) * RCDX(i) &
+                               + ( mflx_hi(k,i,j,YDIR)-mflx_hi(k  ,i,  j-1,YDIR) ) * RCDY(j) ) &
+                               / GSQRT(k,i,j,I_XYZ) & ! divergence
+                             + DENS_t(k,i,j) )
+          enddo
+          enddo
+          enddo
+       end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -1461,7 +1938,8 @@ contains
   subroutine solve_bicgstab( &
        DPRES_N, &
        DPRES, &
-       M, B )
+       M, B, &
+       TwoD )
     use scale_prc, only: &
        PRC_abort
     use scale_comm_cartesC, only: &
@@ -1473,6 +1951,7 @@ contains
     real(RP), intent(in)  :: DPRES(KA,IA,JA)
     real(RP), intent(in)  :: M(7,KA,IA,JA)
     real(RP), intent(in)  :: B(KA,IA,JA)
+    logical,  intent(in)  :: TwoD
 
     real(RP) :: r0(KA,IA,JA)
 
@@ -1512,7 +1991,7 @@ contains
     r  => v0
     rn => v1
 
-    call mul_matrix( v1, M, DPRES ) ! v1 = M x0
+    call mul_matrix( v1, M, DPRES, TwoD ) ! v1 = M x0
 
     norm = 0.0_RP
     r0r  = 0.0_RP
@@ -1628,7 +2107,7 @@ contains
 
        call COMM_vars8( p, 1 )
        call COMM_wait ( p, 1 )
-       call mul_matrix( Mp, M, p )
+       call mul_matrix( Mp, M, p, TwoD )
 
        iprod(1) = 0.0_RP
        do j = JS, JE
@@ -1665,7 +2144,7 @@ contains
 
        call COMM_vars8( s, 1 )
        call COMM_wait ( s, 1 )
-       call mul_matrix( Ms, M, s )
+       call mul_matrix( Ms, M, s, TwoD )
        iprod(1) = 0.0_RP
        iprod(2) = 0.0_RP
        do j = JS, JE
@@ -1786,6 +2265,7 @@ contains
        RCDZ, RFDZ, RCDX, RFDX, RCDY, RFDY, FDZ, &
        rdt, &
        FACT_N, FACT_F, &
+       TwoD, &
        I_XYZ, I_XYW, &
        IIS, IIE, JJS, JJE )
     implicit none
@@ -1805,6 +2285,7 @@ contains
     real(RP), intent(in) :: rdt
     real(RP), intent(in) :: FACT_N
     real(RP), intent(in) :: FACT_F
+    logical, intent(in) :: TwoD
     integer, intent(in) :: I_XYZ
     integer, intent(in) :: I_XYW
     integer, intent(in) :: IIS
@@ -1814,9 +2295,212 @@ contains
 
     integer :: k, i, j
 
-    do j = JJS, JJE
-    do i = IIS, IIE
-    do k = KS+2, KE-2
+    if ( TwoD ) then
+       i = IS
+       !$omp parallel do
+       do j = JJS, JJE
+       do k = KS+2, KE-2
+#ifdef DEBUG
+          call CHECK( __LINE__, POTT(k-2,i,j) )
+          call CHECK( __LINE__, POTT(k-1,i,j) )
+          call CHECK( __LINE__, POTT(k  ,i,j) )
+          call CHECK( __LINE__, POTT(k+1,i,j) )
+          call CHECK( __LINE__, POTT(k+2,i,j) )
+          call CHECK( __LINE__, POTT(k,i  ,j) )
+          call CHECK( __LINE__, POTT(k,i,j-2) )
+          call CHECK( __LINE__, POTT(k,i,j-1) )
+          call CHECK( __LINE__, POTT(k,i,j  ) )
+          call CHECK( __LINE__, POTT(k,i,j+1) )
+          call CHECK( __LINE__, POTT(k,i,j+2) )
+          call CHECK( __LINE__, G(k-1,i,j,I_XYW) )
+          call CHECK( __LINE__, G(k+1,i,j,I_XYW) )
+          call CHECK( __LINE__, G(k,i,j,I_XYZ) )
+          call CHECK( __LINE__, RCs2T(k-1,i,j) )
+          call CHECK( __LINE__, RCs2T(k  ,i,j) )
+          call CHECK( __LINE__, RCs2T(k+1,i,j) )
+#endif
+          ! k,i,j
+          M(1,k,i,j) = &
+              - ( ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
+                  + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) * RFDZ(k  ) / G(k  ,i,j,I_XYW) &
+                + ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
+                  + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) * RFDZ(k-1) / G(k-1,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(k) &
+              - ( ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
+                  + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
+                  + FACT_F * (POTT(k,i,j-1)+POTT(k,i,j-2)) ) * RFDY(j-1) &
+                ) * G(k,i,j,I_XYZ) * RFDY(j) &
+              - G(k,i,j,I_XYZ) * RCs2T(k,i,j) * rdt * rdt
+          ! k-1
+          M(2,k,i,j) = J33G * J33G / G(k-1,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
+                       + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) &
+                     * RFDZ(k-1) * RCDZ(k) &
+                     - GRAV * J33G * RCs2T(k-1,i,j) / ( FDZ(k)+FDZ(k-1) )
+          ! k+1
+          M(3,k,i,j) = J33G * J33G / G(k+1,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
+                       + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) &
+                     * RFDZ(k  ) * RCDZ(k) &
+                     + GRAV * J33G * RCs2T(k+1,i,j) / ( FDZ(k)+FDZ(k-1) )
+       enddo
+       enddo
+
+       !$omp parallel do
+       do j = JJS, JJE
+#ifdef DEBUG
+          call CHECK( __LINE__, POTT(KS  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j) )
+          call CHECK( __LINE__, POTT(KS,i  ,j) )
+          call CHECK( __LINE__, POTT(KS,i,j-2) )
+          call CHECK( __LINE__, POTT(KS,i,j-1) )
+          call CHECK( __LINE__, POTT(KS,i,j  ) )
+          call CHECK( __LINE__, POTT(KS,i,j+1) )
+          call CHECK( __LINE__, POTT(KS,i,j+2) )
+          call CHECK( __LINE__, G(KS,i,j,I_XYZ) )
+          call CHECK( __LINE__, RCs2T(KS,i,j) )
+          call CHECK( __LINE__, POTT(KS  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j) )
+          call CHECK( __LINE__, G(KS+1,i,j,I_XYW) )
+          call CHECK( __LINE__, RCs2T(KS+1,i,j) )
+#endif
+          ! k,i,j
+          M(1,KS,i,j) = &
+               - ( 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) * RFDZ(KS  ) &
+                 ) * J33G * J33G / G(KS  ,i,j,I_XYW) * RFDZ(KS) &
+               - ( ( FACT_N * (POTT(KS,i,j+1)+POTT(KS,i,j  )) &
+                   + FACT_F * (POTT(KS,i,j+2)+POTT(KS,i,j-1)) ) * RFDY(j  ) &
+                 + ( FACT_N * (POTT(KS,i,j  )+POTT(KS,i,j-1)) &
+                   + FACT_F * (POTT(KS,i,j-1)+POTT(KS,i,j-2)) ) * RFDY(j-1) &
+                 ) * G(KS,i,j,I_XYZ) * RFDY(j) &
+               - G(KS,i,j,I_XYZ) * RCs2T(KS,i,j) * rdt * rdt &
+               + GRAV * J33G * 0.5_RP * RCs2T(KS,i,j) * RCDZ(KS)
+          ! k+1
+          M(3,KS,i,j) = J33G * J33G / G(KS+1,i,j,I_XYW) &
+                      * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
+                      * RFDZ(KS  ) * RCDZ(KS) &
+                      + GRAV * J33G * 0.5_RP * RCs2T(KS+1,i,j) * RCDZ(KS)
+#ifdef DEBUG
+          call CHECK( __LINE__, POTT(KS  ,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j) )
+          call CHECK( __LINE__, POTT(KS+2,i,j) )
+          call CHECK( __LINE__, POTT(KS+3,i,j) )
+          call CHECK( __LINE__, POTT(KS+1,i  ,j) )
+          call CHECK( __LINE__, POTT(KS+1,i,j-2) )
+          call CHECK( __LINE__, POTT(KS+1,i,j-1) )
+          call CHECK( __LINE__, POTT(KS+1,i,j  ) )
+          call CHECK( __LINE__, POTT(KS+1,i,j+1) )
+          call CHECK( __LINE__, POTT(KS+1,i,j+2) )
+          call CHECK( __LINE__, G(KS  ,i,j,I_XYW) )
+          call CHECK( __LINE__, G(KS+2,i,j,I_XYW) )
+          call CHECK( __LINE__, G(KS+1,i,j,I_XYZ) )
+          call CHECK( __LINE__, RCs2T(KS  ,i,j) )
+          call CHECK( __LINE__, RCs2T(KS+1  ,i,j) )
+          call CHECK( __LINE__, RCs2T(KS+2,i,j) )
+#endif
+          ! k,i,j
+          M(1,KS+1,i,j) = &
+              - ( ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
+                  + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) * RFDZ(KS+1) / G(KS+1,i,j,I_XYW) &
+                +   0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j))   * RFDZ(KS  ) / G(KS  ,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KS+1) &
+              - ( ( FACT_N * (POTT(KS+1,i,j+1)+POTT(KS+1,i,j  )) &
+                  + FACT_F * (POTT(KS+1,i,j+2)+POTT(KS+1,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KS+1,i,j  )+POTT(KS+1,i,j-1)) &
+                  + FACT_F * (POTT(KS+1,i,j-1)+POTT(KS+1,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KS+1,i,j,I_XYZ) * RFDY(j) &
+              - G(KS+1,i,j,I_XYZ) * RCs2T(KS+1,i,j) * rdt * rdt
+          ! k-1
+          M(2,KS+1,i,j) = J33G * J33G / G(KS,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
+                     * RFDZ(KS  ) * RCDZ(KS+1) &
+                     - GRAV * J33G * RCs2T(KS  ,i,j) / ( FDZ(KS+1)+FDZ(KS) )
+          ! k+1
+          M(3,KS+1,i,j) = J33G * J33G / G(KS+2,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
+                       + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) &
+                     * RFDZ(KS+1) * RCDZ(KS+1) &
+                     + GRAV * J33G * RCs2T(KS+2,i,j) / ( FDZ(KS+1)+FDZ(KS) )
+#ifdef DEBUG
+          call CHECK( __LINE__, POTT(KE-3,i,j) )
+          call CHECK( __LINE__, POTT(KE-2,i,j) )
+          call CHECK( __LINE__, POTT(KE-1,i,j) )
+          call CHECK( __LINE__, POTT(KE  ,i,j) )
+          call CHECK( __LINE__, POTT(KE-1,i  ,j) )
+          call CHECK( __LINE__, POTT(KE-1,i,j-2) )
+          call CHECK( __LINE__, POTT(KE-1,i,j-1) )
+          call CHECK( __LINE__, POTT(KE-1,i,j  ) )
+          call CHECK( __LINE__, POTT(KE-1,i,j+1) )
+          call CHECK( __LINE__, POTT(KE-1,i,j+2) )
+          call CHECK( __LINE__, G(KE-2,i,j,I_XYW) )
+          call CHECK( __LINE__, G(KE  ,i,j,I_XYW) )
+          call CHECK( __LINE__, G(KE-1,i,j,I_XYZ) )
+          call CHECK( __LINE__, RCs2T(KE-2,i,j) )
+          call CHECK( __LINE__, RCs2T(KE-1,i,j) )
+          call CHECK( __LINE__, RCs2T(KE  ,i,j) )
+#endif
+          ! k,i,j
+          M(1,KE-1,i,j) = &
+              - (   0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j))   * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
+                + ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
+                  + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) * RFDZ(KE-2) / G(KE-2,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KE-1) &
+              - ( ( FACT_N * (POTT(KE-1,i,j+1)+POTT(KE-1,i,j  )) &
+                  + FACT_F * (POTT(KE-1,i,j+2)+POTT(KE-1,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KE-1,i,j  )+POTT(KE-1,i,j-1)) &
+                  + FACT_F * (POTT(KE-1,i,j-1)+POTT(KE-1,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KE-1,i,j,I_XYZ) * RFDY(j) &
+              - G(KE-1,i,j,I_XYZ) * RCs2T(KE-1,i,j) * rdt * rdt
+          ! k-1
+          M(2,KE-1,i,j) = J33G * J33G / G(KE-2,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
+                       + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) &
+                     * RFDZ(KE-2) * RCDZ(KE-1) &
+                     - GRAV * J33G * RCs2T(KE-2,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
+          ! k+1
+          M(3,KE-1,i,j) = J33G * J33G / G(KE  ,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
+                     * RFDZ(KE-1) * RCDZ(KE-1) &
+                     + GRAV * J33G * RCs2T(KE  ,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
+#ifdef DEBUG
+          call CHECK( __LINE__, POTT(KE-1,i,j) )
+          call CHECK( __LINE__, POTT(KE  ,i,j) )
+          call CHECK( __LINE__, POTT(KE,i  ,j) )
+          call CHECK( __LINE__, POTT(KE,i,j-2) )
+          call CHECK( __LINE__, POTT(KE,i,j-1) )
+          call CHECK( __LINE__, POTT(KE,i,j  ) )
+          call CHECK( __LINE__, POTT(KE,i,j+1) )
+          call CHECK( __LINE__, POTT(KE,i,j+2) )
+          call CHECK( __LINE__, G(KE-1,i,j,I_XYW) )
+          call CHECK( __LINE__, G(KE,i,j,I_XYZ) )
+          call CHECK( __LINE__, RCs2T(KE-1,i,j) )
+          call CHECK( __LINE__, RCs2T(KE,i,j) )
+#endif
+          ! k,i,j
+          M(1,KE,i,j) = &
+              - ( &
+                + 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KE) &
+              - ( ( FACT_N * (POTT(KE,i,j+1)+POTT(KE,i,j  )) &
+                  + FACT_F * (POTT(KE,i,j+2)+POTT(KE,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KE,i,j  )+POTT(KE,i,j-1)) &
+                  + FACT_F * (POTT(KE,i,j-1)+POTT(KE,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KE,i,j,I_XYZ) * RFDY(j) &
+              - G(KE,i,j,I_XYZ) * RCs2T(KE,i,j) * rdt * rdt &
+              - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
+          ! k-1
+          M(2,KE,i,j) = J33G * J33G / G(KE-1,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
+                     * RFDZ(KE-1) * RCDZ(KE) &
+                     - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
+       enddo
+
+    else
+       !$omp parallel do
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS+2, KE-2
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(k-2,i,j) )
           call CHECK( __LINE__, POTT(k-1,i,j) )
@@ -1840,44 +2524,43 @@ contains
           call CHECK( __LINE__, RCs2T(k  ,i,j) )
           call CHECK( __LINE__, RCs2T(k+1,i,j) )
 #endif
-       ! k,i,j
-       M(1,k,i,j) = &
-           - ( ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
-               + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) * RFDZ(k  ) / G(k  ,i,j,I_XYW) &
-             + ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
-               + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) * RFDZ(k-1) / G(k-1,i,j,I_XYW) &
-              ) * J33G * J33G * RFDZ(k) &
-           - ( ( FACT_N * (POTT(k,i+1,j)+POTT(k,i  ,j)) &
-               + FACT_F * (POTT(k,i+2,j)+POTT(k,i-1,j)) ) * RFDX(i  ) &
-             + ( FACT_N * (POTT(k,i  ,j)+POTT(k,i-1,j)) &
-               + FACT_F * (POTT(k,i+1,j)+POTT(k,i-2,j)) ) * RFDX(i-1) &
-             ) * G(k,i,j,I_XYZ) * RFDX(i) &
-           - ( ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
-               + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) * RFDY(j  ) &
-             + ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
-               + FACT_F * (POTT(k,i,j-1)+POTT(k,i,j-2)) ) * RFDY(j-1) &
-             ) * G(k,i,j,I_XYZ) * RFDY(j) &
-           - G(k,i,j,I_XYZ) * RCs2T(k,i,j) * rdt * rdt
-       ! k-1
-       M(2,k,i,j) = J33G * J33G / G(k-1,i,j,I_XYW) &
-                  * ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
-                    + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) &
-                  * RFDZ(k-1) * RCDZ(k) &
-                  - GRAV * J33G * RCs2T(k-1,i,j) / ( FDZ(k)+FDZ(k-1) )
-       ! k+1
-       M(3,k,i,j) = J33G * J33G / G(k+1,i,j,I_XYW) &
-                  * ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
-                    + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) &
-                  * RFDZ(k  ) * RCDZ(k) &
-                  + GRAV * J33G * RCs2T(k+1,i,j) / ( FDZ(k)+FDZ(k-1) )
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-    do j = JJS, JJE
-    do i = IIS, IIE
+          ! k,i,j
+          M(1,k,i,j) = &
+              - ( ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
+                  + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) * RFDZ(k  ) / G(k  ,i,j,I_XYW) &
+                + ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
+                  + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) * RFDZ(k-1) / G(k-1,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(k) &
+              - ( ( FACT_N * (POTT(k,i+1,j)+POTT(k,i  ,j)) &
+                  + FACT_F * (POTT(k,i+2,j)+POTT(k,i-1,j)) ) * RFDX(i  ) &
+                + ( FACT_N * (POTT(k,i  ,j)+POTT(k,i-1,j)) &
+                  + FACT_F * (POTT(k,i+1,j)+POTT(k,i-2,j)) ) * RFDX(i-1) &
+                ) * G(k,i,j,I_XYZ) * RFDX(i) &
+              - ( ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
+                  + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
+                  + FACT_F * (POTT(k,i,j-1)+POTT(k,i,j-2)) ) * RFDY(j-1) &
+                ) * G(k,i,j,I_XYZ) * RFDY(j) &
+              - G(k,i,j,I_XYZ) * RCs2T(k,i,j) * rdt * rdt
+          ! k-1
+          M(2,k,i,j) = J33G * J33G / G(k-1,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(k  ,i,j)+POTT(k-1,i,j)) &
+                       + FACT_F * (POTT(k+1,i,j)+POTT(k-2,i,j)) ) &
+                     * RFDZ(k-1) * RCDZ(k) &
+                     - GRAV * J33G * RCs2T(k-1,i,j) / ( FDZ(k)+FDZ(k-1) )
+          ! k+1
+          M(3,k,i,j) = J33G * J33G / G(k+1,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(k+1,i,j)+POTT(k  ,i,j)) &
+                       + FACT_F * (POTT(k+2,i,j)+POTT(k-1,i,j)) ) &
+                     * RFDZ(k  ) * RCDZ(k) &
+                     + GRAV * J33G * RCs2T(k+1,i,j) / ( FDZ(k)+FDZ(k-1) )
+       enddo
+       enddo
+       enddo
+
+       !$omp parallel do
+       do j = JJS, JJE
+       do i = IIS, IIE
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(KS  ,i,j) )
           call CHECK( __LINE__, POTT(KS+1,i,j) )
@@ -1898,27 +2581,27 @@ contains
           call CHECK( __LINE__, G(KS+1,i,j,I_XYW) )
           call CHECK( __LINE__, RCs2T(KS+1,i,j) )
 #endif
-       ! k,i,j
-       M(1,KS,i,j) = &
-            - ( 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) * RFDZ(KS  ) &
-              ) * J33G * J33G / G(KS  ,i,j,I_XYW) * RFDZ(KS) &
-            - ( ( FACT_N * (POTT(KS,i+1,j)+POTT(KS,i  ,j)) &
-                + FACT_F * (POTT(KS,i+2,j)+POTT(KS,i-1,j)) ) * RFDX(i  ) &
-              + ( FACT_N * (POTT(KS,i  ,j)+POTT(KS,i-1,j)) &
-                + FACT_F * (POTT(KS,i+1,j)+POTT(KS,i-2,j)) ) * RFDX(i-1) &
-              ) * G(KS,i,j,I_XYZ) * RFDX(i) &
-            - ( ( FACT_N * (POTT(KS,i,j+1)+POTT(KS,i,j  )) &
-                + FACT_F * (POTT(KS,i,j+2)+POTT(KS,i,j-1)) ) * RFDY(j  ) &
-              + ( FACT_N * (POTT(KS,i,j  )+POTT(KS,i,j-1)) &
-                + FACT_F * (POTT(KS,i,j-1)+POTT(KS,i,j-2)) ) * RFDY(j-1) &
-              ) * G(KS,i,j,I_XYZ) * RFDY(j) &
-            - G(KS,i,j,I_XYZ) * RCs2T(KS,i,j) * rdt * rdt &
-            + GRAV * J33G * 0.5_RP * RCs2T(KS,i,j) * RCDZ(KS)
-       ! k+1
-       M(3,KS,i,j) = J33G * J33G / G(KS+1,i,j,I_XYW) &
-                   * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
-                   * RFDZ(KS  ) * RCDZ(KS) &
-                   + GRAV * J33G * 0.5_RP * RCs2T(KS+1,i,j) * RCDZ(KS)
+          ! k,i,j
+          M(1,KS,i,j) = &
+               - ( 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) * RFDZ(KS  ) &
+                 ) * J33G * J33G / G(KS  ,i,j,I_XYW) * RFDZ(KS) &
+               - ( ( FACT_N * (POTT(KS,i+1,j)+POTT(KS,i  ,j)) &
+                   + FACT_F * (POTT(KS,i+2,j)+POTT(KS,i-1,j)) ) * RFDX(i  ) &
+                 + ( FACT_N * (POTT(KS,i  ,j)+POTT(KS,i-1,j)) &
+                   + FACT_F * (POTT(KS,i+1,j)+POTT(KS,i-2,j)) ) * RFDX(i-1) &
+                 ) * G(KS,i,j,I_XYZ) * RFDX(i) &
+               - ( ( FACT_N * (POTT(KS,i,j+1)+POTT(KS,i,j  )) &
+                   + FACT_F * (POTT(KS,i,j+2)+POTT(KS,i,j-1)) ) * RFDY(j  ) &
+                 + ( FACT_N * (POTT(KS,i,j  )+POTT(KS,i,j-1)) &
+                   + FACT_F * (POTT(KS,i,j-1)+POTT(KS,i,j-2)) ) * RFDY(j-1) &
+                 ) * G(KS,i,j,I_XYZ) * RFDY(j) &
+               - G(KS,i,j,I_XYZ) * RCs2T(KS,i,j) * rdt * rdt &
+               + GRAV * J33G * 0.5_RP * RCs2T(KS,i,j) * RCDZ(KS)
+          ! k+1
+          M(3,KS,i,j) = J33G * J33G / G(KS+1,i,j,I_XYW) &
+                      * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
+                      * RFDZ(KS  ) * RCDZ(KS) &
+                      + GRAV * J33G * 0.5_RP * RCs2T(KS+1,i,j) * RCDZ(KS)
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(KS  ,i,j) )
           call CHECK( __LINE__, POTT(KS+1,i,j) )
@@ -1941,34 +2624,34 @@ contains
           call CHECK( __LINE__, RCs2T(KS+1  ,i,j) )
           call CHECK( __LINE__, RCs2T(KS+2,i,j) )
 #endif
-       ! k,i,j
-       M(1,KS+1,i,j) = &
-           - ( ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
-               + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) * RFDZ(KS+1) / G(KS+1,i,j,I_XYW) &
-             +   0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j))   * RFDZ(KS  ) / G(KS  ,i,j,I_XYW) &
-              ) * J33G * J33G * RFDZ(KS+1) &
-           - ( ( FACT_N * (POTT(KS+1,i+1,j)+POTT(KS+1,i  ,j)) &
-               + FACT_F * (POTT(KS+1,i+2,j)+POTT(KS+1,i-1,j)) ) * RFDX(i  ) &
-             + ( FACT_N * (POTT(KS+1,i  ,j)+POTT(KS+1,i-1,j)) &
-               + FACT_F * (POTT(KS+1,i+1,j)+POTT(KS+1,i-2,j)) ) * RFDX(i-1) &
-             ) * G(KS+1,i,j,I_XYZ) * RFDX(i) &
-           - ( ( FACT_N * (POTT(KS+1,i,j+1)+POTT(KS+1,i,j  )) &
-               + FACT_F * (POTT(KS+1,i,j+2)+POTT(KS+1,i,j-1)) ) * RFDY(j  ) &
-             + ( FACT_N * (POTT(KS+1,i,j  )+POTT(KS+1,i,j-1)) &
-               + FACT_F * (POTT(KS+1,i,j-1)+POTT(KS+1,i,j-2)) ) * RFDY(j-1) &
-             ) * G(KS+1,i,j,I_XYZ) * RFDY(j) &
-           - G(KS+1,i,j,I_XYZ) * RCs2T(KS+1,i,j) * rdt * rdt
-       ! k-1
-       M(2,KS+1,i,j) = J33G * J33G / G(KS,i,j,I_XYW) &
-                  * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
-                  * RFDZ(KS  ) * RCDZ(KS+1) &
-                  - GRAV * J33G * RCs2T(KS  ,i,j) / ( FDZ(KS+1)+FDZ(KS) )
-       ! k+1
-       M(3,KS+1,i,j) = J33G * J33G / G(KS+2,i,j,I_XYW) &
-                  * ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
-                    + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) &
-                  * RFDZ(KS+1) * RCDZ(KS+1) &
-                  + GRAV * J33G * RCs2T(KS+2,i,j) / ( FDZ(KS+1)+FDZ(KS) )
+          ! k,i,j
+          M(1,KS+1,i,j) = &
+              - ( ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
+                  + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) * RFDZ(KS+1) / G(KS+1,i,j,I_XYW) &
+                +   0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j))   * RFDZ(KS  ) / G(KS  ,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KS+1) &
+              - ( ( FACT_N * (POTT(KS+1,i+1,j)+POTT(KS+1,i  ,j)) &
+                  + FACT_F * (POTT(KS+1,i+2,j)+POTT(KS+1,i-1,j)) ) * RFDX(i  ) &
+                + ( FACT_N * (POTT(KS+1,i  ,j)+POTT(KS+1,i-1,j)) &
+                  + FACT_F * (POTT(KS+1,i+1,j)+POTT(KS+1,i-2,j)) ) * RFDX(i-1) &
+                ) * G(KS+1,i,j,I_XYZ) * RFDX(i) &
+              - ( ( FACT_N * (POTT(KS+1,i,j+1)+POTT(KS+1,i,j  )) &
+                  + FACT_F * (POTT(KS+1,i,j+2)+POTT(KS+1,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KS+1,i,j  )+POTT(KS+1,i,j-1)) &
+                  + FACT_F * (POTT(KS+1,i,j-1)+POTT(KS+1,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KS+1,i,j,I_XYZ) * RFDY(j) &
+              - G(KS+1,i,j,I_XYZ) * RCs2T(KS+1,i,j) * rdt * rdt
+          ! k-1
+          M(2,KS+1,i,j) = J33G * J33G / G(KS,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KS+1,i,j)+POTT(KS  ,i,j)) &
+                     * RFDZ(KS  ) * RCDZ(KS+1) &
+                     - GRAV * J33G * RCs2T(KS  ,i,j) / ( FDZ(KS+1)+FDZ(KS) )
+          ! k+1
+          M(3,KS+1,i,j) = J33G * J33G / G(KS+2,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(KS+2,i,j)+POTT(KS+1,i,j)) &
+                       + FACT_F * (POTT(KS+3,i,j)+POTT(KS  ,i,j)) ) &
+                     * RFDZ(KS+1) * RCDZ(KS+1) &
+                     + GRAV * J33G * RCs2T(KS+2,i,j) / ( FDZ(KS+1)+FDZ(KS) )
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(KE-3,i,j) )
           call CHECK( __LINE__, POTT(KE-2,i,j) )
@@ -1991,34 +2674,34 @@ contains
           call CHECK( __LINE__, RCs2T(KE-1,i,j) )
           call CHECK( __LINE__, RCs2T(KE  ,i,j) )
 #endif
-       ! k,i,j
-       M(1,KE-1,i,j) = &
-           - (   0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j))   * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
-             + ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
-               + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) * RFDZ(KE-2) / G(KE-2,i,j,I_XYW) &
-              ) * J33G * J33G * RFDZ(KE-1) &
-           - ( ( FACT_N * (POTT(KE-1,i+1,j)+POTT(KE-1,i  ,j)) &
-               + FACT_F * (POTT(KE-1,i+2,j)+POTT(KE-1,i-1,j)) ) * RFDX(i  ) &
-             + ( FACT_N * (POTT(KE-1,i  ,j)+POTT(KE-1,i-1,j)) &
-               + FACT_F * (POTT(KE-1,i+1,j)+POTT(KE-1,i-2,j)) ) * RFDX(i-1) &
-             ) * G(KE-1,i,j,I_XYZ) * RFDX(i) &
-           - ( ( FACT_N * (POTT(KE-1,i,j+1)+POTT(KE-1,i,j  )) &
-               + FACT_F * (POTT(KE-1,i,j+2)+POTT(KE-1,i,j-1)) ) * RFDY(j  ) &
-             + ( FACT_N * (POTT(KE-1,i,j  )+POTT(KE-1,i,j-1)) &
-               + FACT_F * (POTT(KE-1,i,j-1)+POTT(KE-1,i,j-2)) ) * RFDY(j-1) &
-             ) * G(KE-1,i,j,I_XYZ) * RFDY(j) &
-           - G(KE-1,i,j,I_XYZ) * RCs2T(KE-1,i,j) * rdt * rdt
-       ! k-1
-       M(2,KE-1,i,j) = J33G * J33G / G(KE-2,i,j,I_XYW) &
-                  * ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
-                    + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) &
-                  * RFDZ(KE-2) * RCDZ(KE-1) &
-                  - GRAV * J33G * RCs2T(KE-2,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
-       ! k+1
-       M(3,KE-1,i,j) = J33G * J33G / G(KE  ,i,j,I_XYW) &
-                  * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
-                  * RFDZ(KE-1) * RCDZ(KE-1) &
-                  + GRAV * J33G * RCs2T(KE  ,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
+          ! k,i,j
+          M(1,KE-1,i,j) = &
+              - (   0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j))   * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
+                + ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
+                  + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) * RFDZ(KE-2) / G(KE-2,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KE-1) &
+              - ( ( FACT_N * (POTT(KE-1,i+1,j)+POTT(KE-1,i  ,j)) &
+                  + FACT_F * (POTT(KE-1,i+2,j)+POTT(KE-1,i-1,j)) ) * RFDX(i  ) &
+                + ( FACT_N * (POTT(KE-1,i  ,j)+POTT(KE-1,i-1,j)) &
+                  + FACT_F * (POTT(KE-1,i+1,j)+POTT(KE-1,i-2,j)) ) * RFDX(i-1) &
+                ) * G(KE-1,i,j,I_XYZ) * RFDX(i) &
+              - ( ( FACT_N * (POTT(KE-1,i,j+1)+POTT(KE-1,i,j  )) &
+                  + FACT_F * (POTT(KE-1,i,j+2)+POTT(KE-1,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KE-1,i,j  )+POTT(KE-1,i,j-1)) &
+                  + FACT_F * (POTT(KE-1,i,j-1)+POTT(KE-1,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KE-1,i,j,I_XYZ) * RFDY(j) &
+              - G(KE-1,i,j,I_XYZ) * RCs2T(KE-1,i,j) * rdt * rdt
+          ! k-1
+          M(2,KE-1,i,j) = J33G * J33G / G(KE-2,i,j,I_XYW) &
+                     * ( FACT_N * (POTT(KE-1,i,j)+POTT(KE-2,i,j)) &
+                       + FACT_F * (POTT(KE  ,i,j)+POTT(KE-3,i,j)) ) &
+                     * RFDZ(KE-2) * RCDZ(KE-1) &
+                     - GRAV * J33G * RCs2T(KE-2,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
+          ! k+1
+          M(3,KE-1,i,j) = J33G * J33G / G(KE  ,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
+                     * RFDZ(KE-1) * RCDZ(KE-1) &
+                     + GRAV * J33G * RCs2T(KE  ,i,j) / ( FDZ(KE-1)+FDZ(KE-2) )
 #ifdef DEBUG
           call CHECK( __LINE__, POTT(KE-1,i,j) )
           call CHECK( __LINE__, POTT(KE  ,i,j) )
@@ -2037,37 +2720,72 @@ contains
           call CHECK( __LINE__, RCs2T(KE-1,i,j) )
           call CHECK( __LINE__, RCs2T(KE,i,j) )
 #endif
-       ! k,i,j
-       M(1,KE,i,j) = &
-           - ( &
-             + 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
-              ) * J33G * J33G * RFDZ(KE) &
-           - ( ( FACT_N * (POTT(KE,i+1,j)+POTT(KE,i  ,j)) &
-               + FACT_F * (POTT(KE,i+2,j)+POTT(KE,i-1,j)) ) * RFDX(i  ) &
-             + ( FACT_N * (POTT(KE,i  ,j)+POTT(KE,i-1,j)) &
-               + FACT_F * (POTT(KE,i+1,j)+POTT(KE,i-2,j)) ) * RFDX(i-1) &
-             ) * G(KE,i,j,I_XYZ) * RFDX(i) &
-           - ( ( FACT_N * (POTT(KE,i,j+1)+POTT(KE,i,j  )) &
-               + FACT_F * (POTT(KE,i,j+2)+POTT(KE,i,j-1)) ) * RFDY(j  ) &
-             + ( FACT_N * (POTT(KE,i,j  )+POTT(KE,i,j-1)) &
-               + FACT_F * (POTT(KE,i,j-1)+POTT(KE,i,j-2)) ) * RFDY(j-1) &
-             ) * G(KE,i,j,I_XYZ) * RFDY(j) &
-           - G(KE,i,j,I_XYZ) * RCs2T(KE,i,j) * rdt * rdt &
-           - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
-       ! k-1
-       M(2,KE,i,j) = J33G * J33G / G(KE-1,i,j,I_XYW) &
-                  * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
-                  * RFDZ(KE-1) * RCDZ(KE) &
-                  - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
-    enddo
-    enddo
+          ! k,i,j
+          M(1,KE,i,j) = &
+              - ( &
+                + 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) * RFDZ(KE-1) / G(KE-1,i,j,I_XYW) &
+                 ) * J33G * J33G * RFDZ(KE) &
+              - ( ( FACT_N * (POTT(KE,i+1,j)+POTT(KE,i  ,j)) &
+                  + FACT_F * (POTT(KE,i+2,j)+POTT(KE,i-1,j)) ) * RFDX(i  ) &
+                + ( FACT_N * (POTT(KE,i  ,j)+POTT(KE,i-1,j)) &
+                  + FACT_F * (POTT(KE,i+1,j)+POTT(KE,i-2,j)) ) * RFDX(i-1) &
+                ) * G(KE,i,j,I_XYZ) * RFDX(i) &
+              - ( ( FACT_N * (POTT(KE,i,j+1)+POTT(KE,i,j  )) &
+                  + FACT_F * (POTT(KE,i,j+2)+POTT(KE,i,j-1)) ) * RFDY(j  ) &
+                + ( FACT_N * (POTT(KE,i,j  )+POTT(KE,i,j-1)) &
+                  + FACT_F * (POTT(KE,i,j-1)+POTT(KE,i,j-2)) ) * RFDY(j-1) &
+                ) * G(KE,i,j,I_XYZ) * RFDY(j) &
+              - G(KE,i,j,I_XYZ) * RCs2T(KE,i,j) * rdt * rdt &
+              - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
+          ! k-1
+          M(2,KE,i,j) = J33G * J33G / G(KE-1,i,j,I_XYW) &
+                     * 0.5_RP * (POTT(KE  ,i,j)+POTT(KE-1,i,j)) &
+                     * RFDZ(KE-1) * RCDZ(KE) &
+                     - GRAV * J33G * 0.5_RP * RCs2T(KE,i,j) * RCDZ(KE)
+       enddo
+       enddo
+
+    end if
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
-    do j = JJS, JJE
-    do i = IIS, IIE
-    do k = KS, KE
+    if ( TwoD ) then
+       i = IS
+       !$omp parallel do
+       do j = JJS, JJE
+       do k = KS, KE
+#ifdef DEBUG
+          call CHECK( __LINE__, G(k,i,j-1,I_XYZ) )
+          call CHECK( __LINE__, G(k,i,j+1,I_XYZ) )
+          call CHECK( __LINE__, POTT(k,i  ,j  ) )
+          call CHECK( __LINE__, POTT(k,i  ,j-2) )
+          call CHECK( __LINE__, POTT(k,i  ,j-1) )
+          call CHECK( __LINE__, POTT(k,i  ,j  ) )
+          call CHECK( __LINE__, POTT(k,i  ,j+1) )
+          call CHECK( __LINE__, POTT(k,i  ,j+2) )
+#endif
+          ! i-1
+          !M(4,k,i,j) = 0.0_RP
+          ! i+1
+          !M(5,k,i,j) = 0.0_RP
+          ! j-1
+          M(6,k,i,j) = G(k,i,j-1,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
+                       + FACT_F * (POTT(k,i,j+1)+POTT(k,i,j-2)) ) &
+                     * RFDY(j-1) * RCDY(j)
+          ! j+1
+          M(7,k,i,j) = G(k,i,j+1,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
+                       + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) &
+                     * RFDY(j  ) * RCDY(j)
+       enddo
+       enddo
+    else
+       !$omp parallel do
+       do j = JJS, JJE
+       do i = IIS, IIE
+       do k = KS, KE
 #ifdef DEBUG
           call CHECK( __LINE__, G(k,i-1,j,I_XYZ) )
           call CHECK( __LINE__, G(k,i+1,j,I_XYZ) )
@@ -2084,29 +2802,30 @@ contains
           call CHECK( __LINE__, POTT(k,i  ,j+1) )
           call CHECK( __LINE__, POTT(k,i  ,j+2) )
 #endif
-       ! i-1
-       M(4,k,i,j) = G(k,i-1,j,I_XYZ) &
-                  * ( FACT_N * (POTT(k,i  ,j)+POTT(k,i-1,j)) &
-                    + FACT_F * (POTT(k,i+1,j)+POTT(k,i-2,j)) ) &
-                  * RFDX(i-1) * RCDX(i)
-       ! i+1
-       M(5,k,i,j) = G(k,i+1,j,I_XYZ) &
-                  * ( FACT_N * (POTT(k,i+1,j)+POTT(k,i  ,j)) &
-                    + FACT_F * (POTT(k,i+2,j)+POTT(k,i-1,j)) ) &
-                  * RFDX(i  ) * RCDX(i)
-       ! j-1
-       M(6,k,i,j) = G(k,i,j-1,I_XYZ) &
-                  * ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
-                    + FACT_F * (POTT(k,i,j+1)+POTT(k,i,j-2)) ) &
-                  * RFDY(j-1) * RCDY(j)
-       ! j+1
-       M(7,k,i,j) = G(k,i,j+1,I_XYZ) &
-                  * ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
-                    + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) &
-                  * RFDY(j  ) * RCDY(j)
-    enddo
-    enddo
-    enddo
+          ! i-1
+          M(4,k,i,j) = G(k,i-1,j,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i  ,j)+POTT(k,i-1,j)) &
+                       + FACT_F * (POTT(k,i+1,j)+POTT(k,i-2,j)) ) &
+                     * RFDX(i-1) * RCDX(i)
+          ! i+1
+          M(5,k,i,j) = G(k,i+1,j,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i+1,j)+POTT(k,i  ,j)) &
+                       + FACT_F * (POTT(k,i+2,j)+POTT(k,i-1,j)) ) &
+                     * RFDX(i  ) * RCDX(i)
+          ! j-1
+          M(6,k,i,j) = G(k,i,j-1,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i,j  )+POTT(k,i,j-1)) &
+                       + FACT_F * (POTT(k,i,j+1)+POTT(k,i,j-2)) ) &
+                     * RFDY(j-1) * RCDY(j)
+          ! j+1
+          M(7,k,i,j) = G(k,i,j+1,I_XYZ) &
+                     * ( FACT_N * (POTT(k,i,j+1)+POTT(k,i,j  )) &
+                       + FACT_F * (POTT(k,i,j+2)+POTT(k,i,j-1)) ) &
+                     * RFDY(j  ) * RCDY(j)
+       enddo
+       enddo
+       enddo
+    end if
 #ifdef DEBUG
        k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
@@ -2114,11 +2833,12 @@ contains
     return
   end subroutine make_matrix
 
-  subroutine mul_matrix(V, M, C)
+  subroutine mul_matrix(V, M, C, TwoD)
     implicit none
     real(RP), intent(out) :: V(KA,IA,JA)
     real(RP), intent(in)  :: M(7,KA,IA,JA)
     real(RP), intent(in)  :: C(KA,IA,JA)
+    logical,  intent(in)  :: TwoD
 
     integer :: k, i, j
 
@@ -2126,9 +2846,67 @@ contains
     V(:,:,:) = UNDEF
 #endif
 
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS+1, KE-1
+    if ( TwoD ) then
+       i = IS
+       !$omp parallel do
+       do j = JS, JE
+       do k = KS+1, KE-1
+#ifdef DEBUG
+          call CHECK( __LINE__, M(1,k,i,j) )
+          call CHECK( __LINE__, M(2,k,i,j) )
+          call CHECK( __LINE__, M(3,k,i,j) )
+          call CHECK( __LINE__, M(6,k,i,j) )
+          call CHECK( __LINE__, M(7,k,i,j) )
+          call CHECK( __LINE__, C(k  ,i  ,j  ) )
+          call CHECK( __LINE__, C(k-1,i  ,j  ) )
+          call CHECK( __LINE__, C(k+1,i  ,j  ) )
+          call CHECK( __LINE__, C(k  ,i  ,j-1) )
+          call CHECK( __LINE__, C(k  ,i  ,j+1) )
+#endif
+          V(k,i,j) = M(1,k,i,j) * C(k  ,i  ,j  ) &
+                   + M(2,k,i,j) * C(k-1,i  ,j  ) &
+                   + M(3,k,i,j) * C(k+1,i  ,j  ) &
+                   + M(6,k,i,j) * C(k  ,i  ,j-1) &
+                   + M(7,k,i,j) * C(k  ,i  ,j+1)
+       enddo
+       enddo
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+#ifdef DEBUG
+          call CHECK( __LINE__, M(1,KS,i,j) )
+          call CHECK( __LINE__, M(3,KS,i,j) )
+          call CHECK( __LINE__, M(6,KS,i,j) )
+          call CHECK( __LINE__, M(7,KS,i,j) )
+          call CHECK( __LINE__, C(KS  ,i  ,j  ) )
+          call CHECK( __LINE__, C(KS+1,i  ,j  ) )
+          call CHECK( __LINE__, C(KS  ,i  ,j-1) )
+          call CHECK( __LINE__, C(KS  ,i  ,j+1) )
+          call CHECK( __LINE__, M(1,KE,i,j) )
+          call CHECK( __LINE__, M(2,KE,i,j) )
+          call CHECK( __LINE__, M(6,KE,i,j) )
+          call CHECK( __LINE__, M(7,KE,i,j) )
+          call CHECK( __LINE__, C(KE  ,i  ,j  ) )
+          call CHECK( __LINE__, C(KE-1,i  ,j  ) )
+          call CHECK( __LINE__, C(KE  ,i  ,j-1) )
+          call CHECK( __LINE__, C(KE  ,i  ,j+1) )
+#endif
+          V(KS,i,j) = M(1,KS,i,j) * C(KS  ,i  ,j  ) &
+                    + M(3,KS,i,j) * C(KS+1,i  ,j  ) &
+                    + M(6,KS,i,j) * C(KS  ,i  ,j-1) &
+                    + M(7,KS,i,j) * C(KS  ,i  ,j+1)
+          V(KE,i,j) = M(1,KE,i,j) * C(KE  ,i  ,j  ) &
+                    + M(2,KE,i,j) * C(KE-1,i  ,j  ) &
+                    + M(6,KE,i,j) * C(KE  ,i  ,j-1) &
+                    + M(7,KE,i,j) * C(KE  ,i  ,j+1)
+       enddo
+       enddo
+
+    else
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS+1, KE-1
 #ifdef DEBUG
           call CHECK( __LINE__, M(1,k,i,j) )
           call CHECK( __LINE__, M(2,k,i,j) )
@@ -2145,21 +2923,20 @@ contains
           call CHECK( __LINE__, C(k  ,i  ,j-1) )
           call CHECK( __LINE__, C(k  ,i  ,j+1) )
 #endif
-       V(k,i,j) = M(1,k,i,j) * C(k  ,i  ,j  ) &
-                + M(2,k,i,j) * C(k-1,i  ,j  ) &
-                + M(3,k,i,j) * C(k+1,i  ,j  ) &
-                + M(4,k,i,j) * C(k  ,i-1,j  ) &
-                + M(5,k,i,j) * C(k  ,i+1,j  ) &
-                + M(6,k,i,j) * C(k  ,i  ,j-1) &
-                + M(7,k,i,j) * C(k  ,i  ,j+1)
-    enddo
-    enddo
-    enddo
-#ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
-#endif
-    do j = JS, JE
-    do i = IS, IE
+          V(k,i,j) = M(1,k,i,j) * C(k  ,i  ,j  ) &
+                   + M(2,k,i,j) * C(k-1,i  ,j  ) &
+                   + M(3,k,i,j) * C(k+1,i  ,j  ) &
+                   + M(4,k,i,j) * C(k  ,i-1,j  ) &
+                   + M(5,k,i,j) * C(k  ,i+1,j  ) &
+                   + M(6,k,i,j) * C(k  ,i  ,j-1) &
+                   + M(7,k,i,j) * C(k  ,i  ,j+1)
+       enddo
+       enddo
+       enddo
+
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
 #ifdef DEBUG
           call CHECK( __LINE__, M(1,KS,i,j) )
           call CHECK( __LINE__, M(3,KS,i,j) )
@@ -2186,22 +2963,24 @@ contains
           call CHECK( __LINE__, C(KE  ,i  ,j-1) )
           call CHECK( __LINE__, C(KE  ,i  ,j+1) )
 #endif
-       V(KS,i,j) = M(1,KS,i,j) * C(KS  ,i  ,j  ) &
-                 + M(3,KS,i,j) * C(KS+1,i  ,j  ) &
-                 + M(4,KS,i,j) * C(KS  ,i-1,j  ) &
-                 + M(5,KS,i,j) * C(KS  ,i+1,j  ) &
-                 + M(6,KS,i,j) * C(KS  ,i  ,j-1) &
-                 + M(7,KS,i,j) * C(KS  ,i  ,j+1)
-       V(KE,i,j) = M(1,KE,i,j) * C(KE  ,i  ,j  ) &
-                 + M(2,KE,i,j) * C(KE-1,i  ,j  ) &
-                 + M(4,KE,i,j) * C(KE  ,i-1,j  ) &
-                 + M(5,KE,i,j) * C(KE  ,i+1,j  ) &
-                 + M(6,KE,i,j) * C(KE  ,i  ,j-1) &
-                 + M(7,KE,i,j) * C(KE  ,i  ,j+1)
-    enddo
-    enddo
+          V(KS,i,j) = M(1,KS,i,j) * C(KS  ,i  ,j  ) &
+                    + M(3,KS,i,j) * C(KS+1,i  ,j  ) &
+                    + M(4,KS,i,j) * C(KS  ,i-1,j  ) &
+                    + M(5,KS,i,j) * C(KS  ,i+1,j  ) &
+                    + M(6,KS,i,j) * C(KS  ,i  ,j-1) &
+                    + M(7,KS,i,j) * C(KS  ,i  ,j+1)
+          V(KE,i,j) = M(1,KE,i,j) * C(KE  ,i  ,j  ) &
+                    + M(2,KE,i,j) * C(KE-1,i  ,j  ) &
+                    + M(4,KE,i,j) * C(KE  ,i-1,j  ) &
+                    + M(5,KE,i,j) * C(KE  ,i+1,j  ) &
+                    + M(6,KE,i,j) * C(KE  ,i  ,j-1) &
+                    + M(7,KE,i,j) * C(KE  ,i  ,j+1)
+       enddo
+       enddo
+
+    end if
 #ifdef DEBUG
-       k = IUNDEF; i = IUNDEF; j = IUNDEF
+    k = IUNDEF; i = IUNDEF; j = IUNDEF
 #endif
 
     return
@@ -2214,18 +2993,19 @@ contains
 
 #ifdef DEBUG
   subroutine check_solver( &
-       DPRES, M, B )
+       DPRES, M, B, TwoD )
     use scale_prc, only: &
        PRC_abort
     real(RP), intent(in) :: DPRES(KA,IA,JA)
     real(RP), intent(in) :: M(7,KA,IA,JA)
     real(RP), intent(in) :: B(KA,IA,JA)
+    logical,  intent(in) :: TwoD
 
     real(RP) :: B2(KA,IA,JA)
     integer :: k, i, j
     real(RP) :: err
 
-    call mul_matrix(B2, M, DPRES)
+    call mul_matrix(B2, M, DPRES, TwoD)
 
     do j = JS, JE
     do i = IS, IE

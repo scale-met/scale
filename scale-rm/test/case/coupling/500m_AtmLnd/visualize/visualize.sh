@@ -2,21 +2,23 @@
 
 ### Energy & Mass balance ###
 echo "+visualize by gnuplot"
-rm -f energy.dat energy_flx.dat mass.dat
+rm -f energy.dat energy_flx.dat mass.dat energy_land.dat
 
 while read -a line
 do
    if [ ${line[0]} == "STEP=" ]; then
-      echo ${line[1]} ${line[5]} ${line[6]}  ${line[7]}  ${line[8]}  ${line[9]}  >> energy.dat
-      echo ${line[1]} ${line[9]} ${line[10]} ${line[11]} ${line[12]} ${line[13]} >> energy_flx.dat
-      echo ${line[1]} ${line[3]} ${line[4]}                                      >> mass.dat
+      echo ${line[1]} ${line[7]} ${line[8]}  ${line[9]}  ${line[10]}  ${line[11]}  >> energy.dat
+      echo ${line[1]} ${line[11]} ${line[12]} ${line[13]} ${line[14]} ${line[15]} ${line[16]} ${line[17]} >> energy_flx.dat
+      echo ${line[1]} ${line[3]} ${line[4]} ${line[5]} ${line[6]} ${line[18]} ${line[19]} ${line[20]} ${line[21]} ${line[22]} >> mass.dat
+      echo ${line[1]} ${line[23]} ${line[24]} ${line[25]} ${line[26]} ${line[27]} >> energy_land.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
-gnuplot < ./visualize/energy.plt     || exit
-gnuplot < ./visualize/energy_flx.plt || exit
-gnuplot < ./visualize/mass.plt       || exit
-rm -f energy.dat energy_flx.dat mass.dat
+gnuplot < ./visualize/energy.plt      || exit
+gnuplot < ./visualize/energy_flx.plt  || exit
+gnuplot < ./visualize/mass.plt        || exit
+gnuplot < ./visualize/energy_land.plt || exit
+rm -f energy.dat energy_flx.dat mass.dat energy_land.dat
 
 
 

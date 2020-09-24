@@ -31,6 +31,7 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
+  public :: IO_set_universalrank
   public :: IO_get_available_fid
   public :: IO_make_idstr
   public :: IO_ARG_getfname
@@ -65,6 +66,11 @@ module scale_io
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
+  character(len=6),      public            :: IO_UNIVERSALRANK       = "UNKNWN"!< universal rank    for error log
+  character(len=6),      public            :: IO_JOBID            = "UNKNWN"!< bulk job id       for error log
+  character(len=6),      public            :: IO_DOMAINID         = "UNKNWN"!< nesting domain id for error log
+  character(len=6),      public            :: IO_LOCALRANK        = "UNKNWN"!< local     rank    for error log
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -73,8 +79,8 @@ module scale_io
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: IO_MINFID    = 10 !< minimum available fid
-  integer, private, parameter :: IO_MAXFID    = 99 !< maximum available fid
+  integer, private, parameter :: IO_MINFID    =  10 !< minimum available fid
+  integer, private, parameter :: IO_MAXFID    = 256 !< maximum available fid
 
   !-----------------------------------------------------------------------------
 contains
@@ -303,6 +309,8 @@ contains
        endif
     endif
 
+    write(IO_LOCALRANK,'(I6.6)') myrank
+
     return
   end subroutine IO_LOG_setup
 
@@ -321,7 +329,32 @@ contains
        if ( .NOT. i_opened ) return
     enddo
 
+    if ( fid >= IO_MAXFID ) then ! reach limit
+       LOG_ERROR("IO_get_available_fid",*) 'Used I/O unit number reached to the limit! STOP'
+       stop 1
+    endif
+
   end function IO_get_available_fid
+
+  !-----------------------------------------------------------------------------
+  !> Put for error log
+  subroutine IO_set_universalrank( &
+       myrank,  &
+       jobid,   &
+       domainid )
+    implicit none
+
+    integer, intent(in) :: myrank   !< my rank ID (universal)
+    integer, intent(in) :: jobid    !< bulk job ID
+    integer, intent(in) :: domainid !< nesting domain ID
+    !---------------------------------------------------------------------------
+
+    write(IO_UNIVERSALRANK,'(I6.6)') myrank
+    write(IO_JOBID        ,'(I6.6)') jobid
+    write(IO_DOMAINID     ,'(I6.6)') domainid
+
+    return
+  end subroutine IO_set_universalrank
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename

@@ -19,7 +19,7 @@
 
 \begin{figure}[t]
 \begin{center}
-  \includegraphics[width=0.6\hsize]{./figure/bulkjob_directory_structure.pdf}\\
+  \includegraphics[width=0.6\hsize]{./../../figure/bulkjob_directory_structure.pdf}\\
   \caption{バルクジョブ機能を使って\texttt{scale-rm}を実行する場合のディレクトリ構造. 「0000」や「0001」といった数字は、ジョブ番号に対応するディレクトリ(ジョブディレクトリと呼ぶ)の名前である。各ジョブディレクトリの中には、サブジョブの実行に必要な全設定ファイルが用意されていなければならない。}
   \label{fig_bulkjob}
 \end{center}
@@ -90,8 +90,8 @@ FPM ツールの現版では、単一領域に対してのみ使用でき、オ�
 \verb| RESTART_IN_BASENAME  = "../init/0000/init_d01_00013046400.000",| \\
 \verb|/| \\
  \\
-\verb|&PARAM_TOPO| \\
-\verb| TOPO_IN_BASENAME = "../pp/0000/topo_d01",| \\
+\verb|&PARAM_TOPOGRAPHY| \\
+\verb| TOPOGRAPHY_IN_BASENAME = "../pp/0000/topo_d01",| \\
 \verb|/| \\
  \\
 \verb|&PARAM_LANDUSE| \\

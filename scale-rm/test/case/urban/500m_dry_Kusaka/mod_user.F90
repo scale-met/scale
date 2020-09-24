@@ -160,8 +160,8 @@ contains
        RHOS  => URB_ATM_SFC_DENS,    &
        PRSS  => URB_ATM_SFC_PRES,    &
        RWD   => URB_ATM_SFLX_rad_dn, &
-       RAIN  => URB_ATM_SFLX_rain,   &
-       SNOW  => URB_ATM_SFLX_snow
+       PREC  => URB_ATM_SFLX_water,  &
+       ENGI  => URB_ATM_SFLX_ENGI
     implicit none
 
     real(RP) :: SW  (0:24)
@@ -275,8 +275,8 @@ contains
        PRSA(:,:)        = 100000.0_RP
        PRSS(:,:)        = 100120.0_RP
        QVA (:,:)        =    0.015_RP
-       RAIN(:,:)        =      0.0_RP
-       SNOW(:,:)        =      0.0_RP
+       PREC(:,:)        =      0.0_RP
+       ENGI(:,:)        =      0.0_RP
 
        do j = 1, JA
        do i = 1, IA
@@ -315,7 +315,7 @@ contains
        call FILE_HISTORY_in( UA  (:,:), 'UA_urb',   'Wind speed',                   'm/s'   )
        call FILE_HISTORY_in( SWD (:,:), 'SWD_urb',  'Downward shortwave radiation', 'W/m2'  )
        call FILE_HISTORY_in( LWD (:,:), 'LWD_urb',  'Downward longwave  radiation', 'W/m2'  )
-       WORK(:,:) = ( RAIN(:,:) + SNOW(:,:) ) * dt_URB
+       WORK(:,:) = PREC(:,:) * dt_URB
        call FILE_HISTORY_in( WORK(:,:), 'RAIN_urb', 'Precipitation',                'kg/m2' )
 
     endif

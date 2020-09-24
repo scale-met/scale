@@ -2,17 +2,27 @@
 #
 #  This is converter from NCEP-FNL grib1/grib2 to GrADS format for SCALE.
 #
+#-------------------------------------------------------------------------------
+enum=$#
+if [ ${enum} -lt 2 ] ; then
+cat <<EOF
+#
 #  The way to execute the shell is as follows.
-#     $ sh convert_FNL-grib2grads.sh ${START_DATE} ${END_DATE} ${RDIR} ${WDIR}
+#     \$ sh convert_FNL-grib2grads.sh \${START_DATE} \${END_DATE} \${RDIR} \${WDIR}
 #
-#  The program reads original data in ${RDIR} and then output to ${WDIR}.
+#  The program reads original data in \${RDIR} and then output to \${WDIR}.
 #
-#  GRIB1 structure: ${RDIR}/grib1/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib1
-#  GRIB2 structure: ${RDIR}/grib2/${YEAR}/fnl_${YYYY}${MM}${DD}_${HH}_00.grib2
+#  GRIB1 structure: \${RDIR}/grib1/\${YEAR}/fnl_\${YYYY}\${MM}\${DD}_\${HH}_00.grib1
+#  GRIB2 structure: \${RDIR}/grib2/\${YEAR}/fnl_\${YYYY}\${MM}\${DD}_\${HH}_00.grib2
 #
 #  Date format: YYYYMMDDHH
 #
-#-------------------------------------------------------------------------------
+#  Ex.
+#   \$ sh convert_FNL-grib2grads.sh 2007071418 2007071500 FNL_input FNL_output
+#
+EOF
+exit
+fi
 
 # convert date-time string to total seconds from 1/1/1 (Fairfield formula)
 total_sec ()

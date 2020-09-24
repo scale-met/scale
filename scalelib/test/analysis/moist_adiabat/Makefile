@@ -14,7 +14,7 @@ include $(TOPDIR)/Mkinclude
 
 BINNAME = moist_adiabat
 
-LIBS = $(LIBDIR)/libscale.a
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
 OBJS =
 

@@ -3,10 +3,17 @@
 !!
 !! @par Description
 !!          Temporal integration in Dynamical core for Atmospheric process
-!!          four step Runge-Kutta scheme
+!!          four stage Runge-Kutta scheme
 !!
 !! @author Team SCALE
 !!
+!! This module provides a 4th order and 4 stage classical runge=kutta method which is widely used. 
+!!   y_n+1 = y_n + (k1 + 2*k2 + 2*k3 + k4)/6
+!!  where
+!!   k1 = h f(xn,yn), 
+!!   k2 = h f(xn +  h/2, yn + k1/2), 
+!!   k3 = h f(xn +  h/2, yn + k2/2), 
+!!   k4 = h f(xn +  h  , yn + k3  ). 
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -50,19 +57,19 @@ module scale_atmos_dyn_tinteg_short_rk4
   !
   !++ Private parameters & variables
   !
-  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (+1/4 step)
+  real(RP), private, allocatable :: DENS_RK1(:,:,:) ! prognostic variables (registers for stage2)
   real(RP), private, allocatable :: MOMZ_RK1(:,:,:)
   real(RP), private, allocatable :: MOMX_RK1(:,:,:)
   real(RP), private, allocatable :: MOMY_RK1(:,:,:)
   real(RP), private, allocatable :: RHOT_RK1(:,:,:)
   real(RP), private, allocatable :: PROG_RK1(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (+2/4 step)
+  real(RP), private, allocatable :: DENS_RK2(:,:,:) ! prognostic variables (registers for stage3)
   real(RP), private, allocatable :: MOMZ_RK2(:,:,:)
   real(RP), private, allocatable :: MOMX_RK2(:,:,:)
   real(RP), private, allocatable :: MOMY_RK2(:,:,:)
   real(RP), private, allocatable :: RHOT_RK2(:,:,:)
   real(RP), private, allocatable :: PROG_RK2(:,:,:,:)
-  real(RP), private, allocatable :: DENS_RK3(:,:,:) ! prognostic variables (+3/4 step)
+  real(RP), private, allocatable :: DENS_RK3(:,:,:) ! prognostic variables (registers for stage4)
   real(RP), private, allocatable :: MOMZ_RK3(:,:,:)
   real(RP), private, allocatable :: MOMX_RK3(:,:,:)
   real(RP), private, allocatable :: MOMY_RK3(:,:,:)
@@ -208,7 +215,7 @@ contains
        RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,      &
        PHI, GSQRT, J13G, J23G, J33G, MAPF,      &
        REF_pres, REF_dens,                      &
-       BND_W, BND_E, BND_S, BND_N,              &
+       BND_W, BND_E, BND_S, BND_N, TwoD,        &
        dt                                       )
     use scale_comm_cartesC, only: &
        COMM_vars8, &
@@ -227,7 +234,7 @@ contains
     real(RP), intent(inout) :: PROG(KA,IA,JA,VA)
 
     real(RP), intent(inout) :: mflx_hi(KA,IA,JA,3)
-    real(RP), intent(inout) :: tflx_hi(KA,IA,JA,3)
+    real(RP), intent(out)   :: tflx_hi(KA,IA,JA,3)
 
     real(RP), intent(in)    :: DENS_t(KA,IA,JA)
     real(RP), intent(in)    :: MOMZ_t(KA,IA,JA)
@@ -272,6 +279,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
 
     real(RP), intent(in)    :: dt
 
@@ -336,14 +344,14 @@ contains
 !OCL XFILL
     if ( VA > 0 ) PROG0 = PROG
 
-    if ( BND_W ) then
+    if ( BND_W .and. (.not. TwoD) ) then
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IS-1,j,2,:) = mflx_hi(k,IS-1,j,2)
        end do
        end do
     end if
-    if ( BND_E ) then
+    if ( BND_E .and. (.not. TwoD) ) then
        do j = JS, JE
        do k = KS, KE
           mflx_hi_RK(k,IE,j,2,:) = mflx_hi(k,IE,j,2)
@@ -379,7 +387,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [OUT]
                           PROG_RK1,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,1), tflx_hi_RK(:,:,:,:,1),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -392,7 +400,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
@@ -402,7 +410,7 @@ contains
                                   PROG_RK1,                                         & ! [INOUT]
                                   DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                                   PROG0,                                            & ! [IN]
-                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD                  ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4_BND",3)
 
@@ -432,7 +440,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [OUT]
                           PROG_RK2,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,2), tflx_hi_RK(:,:,:,:,2),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,2), tflx_hi_RK(:,:,:,:,2),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK1, MOMZ_RK1, MOMX_RK1, MOMY_RK1, RHOT_RK1, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -445,7 +453,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
@@ -455,7 +463,7 @@ contains
                                   PROG_RK2,                                         & ! [INOUT]
                                   DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                                   PROG0,                                            & ! [IN]
-                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD                  ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4_BND",3)
 
@@ -485,7 +493,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3, & ! [OUT]
                           PROG_RK3,                                         & ! [OUT]
-                          mflx_hi_RK(:,:,:,:,3), tflx_hi_RK(:,:,:,:,3),     & ! [INOUT]
+                          mflx_hi_RK(:,:,:,:,3), tflx_hi_RK(:,:,:,:,3),     & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK2, MOMZ_RK2, MOMX_RK2, MOMY_RK2, RHOT_RK2, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -498,7 +506,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .false.                                     ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4",3)
@@ -508,7 +516,7 @@ contains
                                   PROG_RK3,                                         & ! [INOUT]
                                   DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                                   PROG0,                                            & ! [IN]
-                                  BND_W, BND_E, BND_S, BND_N                        ) ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD                  ) ! [IN]
 
     call PROF_rapend  ("DYN_RK4_BND",3)
 
@@ -538,7 +546,7 @@ contains
 
     call ATMOS_DYN_tstep( DENS,     MOMZ,     MOMX,     MOMY,     RHOT,     & ! [OUT]
                           PROG,                                             & ! [OUT]
-                          mflx_hi,  tflx_hi,                                & ! [INOUT]
+                          mflx_hi,  tflx_hi,                                & ! [INOUT,OUT]
                           DENS0,    MOMZ0,    MOMX0,    MOMY0,    RHOT0,    & ! [IN]
                           DENS_RK3, MOMZ_RK3, MOMX_RK3, MOMY_RK3, RHOT_RK3, & ! [IN]
                           DENS_t,   MOMZ_t,   MOMX_t,   MOMY_t,   RHOT_t,   & ! [IN]
@@ -551,7 +559,7 @@ contains
                           RCDZ, RCDX, RCDY, RFDZ, RFDX, RFDY,               & ! [IN]
                           PHI, GSQRT, J13G, J23G, J33G, MAPF,               & ! [IN]
                           REF_pres, REF_dens,                               & ! [IN]
-                          BND_W, BND_E, BND_S, BND_N,                       & ! [IN]
+                          BND_W, BND_E, BND_S, BND_N, TwoD,                 & ! [IN]
                           dtrk, .true.                                      ) ! [IN]
 
     !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &

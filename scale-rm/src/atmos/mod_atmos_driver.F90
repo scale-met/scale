@@ -52,7 +52,13 @@ contains
   !> Tracer setup
   subroutine ATMOS_driver_tracer_setup
     use mod_atmos_phy_mp_driver, only: &
-       ATMOS_PHY_MP_driver_tracer_setup
+       ATMOS_PHY_MP_driver_tracer_setup, &
+       ATMOS_PHY_MP_USER_qhyd2qtrc,      &
+       ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
+    use mod_atmos_phy_mp_vars, only: &
+       QA_MP, &
+       QS_MP, &
+       QE_MP
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_tracer_setup
     use mod_atmos_phy_ch_driver, only: &
@@ -61,17 +67,40 @@ contains
        ATMOS_PHY_TB_driver_tracer_setup
     use mod_atmos_phy_bl_driver, only: &
        ATMOS_PHY_BL_driver_tracer_setup
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_regist, &
+       ATMOS_HYDROMETEOR_dry
+    use mod_atmos_admin, only: &
+       ATMOS_USE_QV
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_tracer_setup
     implicit none
+
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("ATMOS_driver_tracer_setup",*) 'Setup'
+
 
     call ATMOS_PHY_MP_driver_tracer_setup
     call ATMOS_PHY_CH_driver_tracer_setup
     call ATMOS_PHY_AE_driver_tracer_setup
     call ATMOS_PHY_TB_driver_tracer_setup
     call ATMOS_PHY_BL_driver_tracer_setup
+    call ATMOS_PHY_LT_driver_tracer_setup
+
+    if ( ATMOS_HYDROMETEOR_dry .and. ATMOS_USE_QV ) then
+       LOG_INFO("ATMOS_driver_tracer_setup",*) 'Regist QV'
+       call ATMOS_HYDROMETEOR_regist( 0, 0,                                    & ! (in)
+            (/'QV'/),                                                          & ! (in)
+            (/'Ratio of Water Vapor mass to total mass (Specific humidity)'/), & ! (in)
+            (/'kg/kg'/),                                                       & ! (in)
+            QS_MP                                                              ) ! (out)
+       QA_MP = 1
+       QE_MP = QS_MP
+       ATMOS_PHY_MP_USER_qhyd2qtrc => ATMOS_PHY_MP_driver_qhyd2qtrc_onlyqv
+
+    end if
 
     return
   end subroutine ATMOS_driver_tracer_setup
@@ -109,6 +138,8 @@ contains
        ATMOS_PHY_BL_driver_setup
     use mod_atmos_phy_cp_driver, only: &
        ATMOS_PHY_CP_driver_setup
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_setup
     use scale_atmos_grid_cartesC, only: &
        CZ => ATMOS_GRID_CARTESC_CZ, &
        FZ => ATMOS_GRID_CARTESC_FZ
@@ -142,6 +173,7 @@ contains
 
     ! setup each components
     call ATMOS_DYN_driver_setup
+    call ATMOS_PHY_LT_driver_setup
     call ATMOS_PHY_MP_driver_setup
     call ATMOS_PHY_AE_driver_setup
     call ATMOS_PHY_CH_driver_setup
@@ -194,7 +226,8 @@ contains
        do_phy_sf => TIME_DOATMOS_PHY_SF, &
        do_phy_tb => TIME_DOATMOS_PHY_TB, &
        do_phy_bl => TIME_DOATMOS_PHY_BL, &
-       do_phy_cp => TIME_DOATMOS_PHY_CP
+       do_phy_cp => TIME_DOATMOS_PHY_CP, &
+       do_phy_lt => TIME_DOATMOS_PHY_LT
     use mod_atmos_admin, only: &
        ATMOS_sw_phy_mp, &
        ATMOS_sw_phy_ae, &
@@ -336,11 +369,13 @@ contains
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
-  subroutine ATMOS_driver_update
+  subroutine ATMOS_driver_update( &
+       last_step )
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
-       ATMOS_sw_phy_ae
+       ATMOS_sw_phy_ae, &
+       ATMOS_sw_phy_lt
     use mod_admin_time, only: &
        do_dyn    => TIME_DOATMOS_DYN,    &
        do_phy_mp => TIME_DOATMOS_PHY_MP, &
@@ -349,10 +384,7 @@ contains
        ATMOS_REFSTATE_UPDATE_FLAG, &
        ATMOS_REFSTATE_update
     use mod_atmos_vars, only: &
-       ATMOS_vars_history,         &
        ATMOS_vars_calc_diagnostics,&
-       ATMOS_vars_history_setpres, &
-       ATMOS_vars_monitor,         &
        DENS,                       &
        TEMP,                       &
        PRES,                       &
@@ -367,6 +399,8 @@ contains
        ATMOS_PHY_MP_driver_adjustment
     use mod_atmos_phy_ae_driver, only: &
        ATMOS_PHY_AE_driver_adjustment
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_adjustment
     use scale_atmos_grid_cartesC, only: &
        CZ   => ATMOS_GRID_CARTESC_CZ,  &
        FZ   => ATMOS_GRID_CARTESC_FZ,  &
@@ -380,6 +414,8 @@ contains
     use scale_time, only: &
        TIME_NOWDAYSEC
     implicit none
+
+    logical, intent(in) :: last_step
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
@@ -392,7 +428,7 @@ contains
     !########## Lateral/Top Boundary Condition ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Boundary', 2)
-       call ATMOS_BOUNDARY_driver_update
+       call ATMOS_BOUNDARY_driver_update( last_step )
        call PROF_rapend  ('ATM_Boundary', 2)
     endif
 
@@ -402,19 +438,26 @@ contains
 
     !########## Adjustment ##########
     ! Microphysics
-    if ( ATMOS_sw_phy_mp .and. do_phy_mp ) then
+    if ( ATMOS_sw_phy_mp ) then
        call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver_adjustment
        call PROF_rapend  ('ATM_Microphysics', 1)
        call ATMOS_vars_calc_diagnostics
     endif
     ! Aerosol
-    if ( ATMOS_sw_phy_ae .and. do_phy_ae ) then
+    if ( ATMOS_sw_phy_ae ) then
        call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver_adjustment
        call PROF_rapend  ('ATM_Aerosol', 1)
        call ATMOS_vars_calc_diagnostics
     endif
+    ! Lightning
+    if ( ATMOS_sw_phy_lt ) then
+       call PROF_rapstart('ATM_Lightning', 1)
+       call ATMOS_PHY_LT_driver_adjustment
+       call PROF_rapend  ('ATM_Lightning', 1)
+       ! calc_diagnostics is not necessary
+    end if
 
 
     !########## Reference State ###########
@@ -428,14 +471,6 @@ contains
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
 
-
-    !########## Set hydrostatic pressure coordinate ##########
-    call ATMOS_vars_history_setpres
-
-
-    !########## History & Monitor ##########
-    call ATMOS_vars_history
-    call ATMOS_vars_monitor
 
     return
   end subroutine ATMOS_driver_update
@@ -477,8 +512,11 @@ contains
        SFLX_MV    => ATMOS_PHY_SF_SFLX_MV,    &
        SFLX_SH    => ATMOS_PHY_SF_SFLX_SH,    &
        SFLX_LH    => ATMOS_PHY_SF_SFLX_LH,    &
+       SFLX_SHEX  => ATMOS_PHY_SF_SFLX_SHEX,  &
+       SFLX_QVEX  => ATMOS_PHY_SF_SFLX_QVEX,  &
        SFLX_GH    => ATMOS_PHY_SF_SFLX_GH,    &
        SFLX_QTRC  => ATMOS_PHY_SF_SFLX_QTRC,  &
+       SFLX_ENGI  => ATMOS_PHY_SF_SFLX_ENGI,  &
        U10        => ATMOS_PHY_SF_U10,        &
        V10        => ATMOS_PHY_SF_V10,        &
        T2         => ATMOS_PHY_SF_T2,         &
@@ -503,8 +541,11 @@ contains
                             SFLX_MV   (:,:),     & ! [OUT]
                             SFLX_SH   (:,:),     & ! [OUT]
                             SFLX_LH   (:,:),     & ! [OUT]
+                            SFLX_SHEX (:,:),     & ! [OUT]
+                            SFLX_QVEX (:,:),     & ! [OUT]
                             SFLX_GH   (:,:),     & ! [OUT]
                             SFLX_QTRC (:,:,:),   & ! [OUT]
+                            SFLX_ENGI (:,:),     & ! [OUT]
                             U10       (:,:),     & ! [OUT]
                             V10       (:,:),     & ! [OUT]
                             T2        (:,:),     & ! [OUT]
@@ -520,25 +561,28 @@ contains
   !> Set surface boundary condition
   subroutine ATMOS_SURFACE_SET( countup )
     use scale_atmos_grid_cartesC_real, only: &
-       REAL_CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
-       REAL_Z1 => ATMOS_GRID_CARTESC_REAL_Z1
-    use scale_topography, only: &
-       TOPO_Zsfc
+       REAL_FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_bottom, only: &
        BOTTOM_estimate => ATMOS_BOTTOM_estimate
     use mod_atmos_vars, only: &
        DENS, &
-       QTRC, &
+       QV,   &
        TEMP, &
        PRES, &
        W,    &
        U,    &
-       V
+       V,    &
+       PREC, &
+       PREC_ENGI
+    use mod_atmos_phy_sf_vars, only: &
+       SFC_TEMP  => ATMOS_PHY_SF_SFC_TEMP
     use mod_atmos_phy_mp_vars, only: &
        SFLX_rain_MP => ATMOS_PHY_MP_SFLX_rain, &
-       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow
+       SFLX_snow_MP => ATMOS_PHY_MP_SFLX_snow, &
+       SFLX_ENGI_MP => ATMOS_PHY_MP_SFLX_ENGI
     use mod_atmos_phy_cp_vars, only: &
-       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain
+       SFLX_rain_CP => ATMOS_PHY_CP_SFLX_rain, &
+       SFLX_ENGI_CP => ATMOS_PHY_CP_SFLX_ENGI
     use mod_atmos_phy_rd_vars, only: &
        SFLX_rad_dn => ATMOS_PHY_RD_SFLX_down, &
        cosSZA      => ATMOS_PHY_RD_cosSZA
@@ -557,45 +601,44 @@ contains
     real(RP) :: SFC_DENS(IA,JA)
     real(RP) :: SFC_PRES(IA,JA)
 
-    real(RP) :: SFLX_rain(IA,JA)
-    real(RP) :: SFLX_snow(IA,JA)
-
     integer  :: i,j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('ATM_SfcExch', 2)
 
+    ! sum of rainfall from mp and cp
+    !$omp parallel do private(i,j) OMP_SCHEDULE_
+    do j = JSB, JEB
+    do i = ISB, IEB
+       PREC     (i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
+       PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
+    enddo
+    enddo
+
     if ( CPL_sw ) then
-       ! sum of rainfall from mp and cp
-       !$omp parallel do private(i,j) OMP_SCHEDULE_
-       do j = 1, JA
-       do i = 1, IA
-          SFLX_rain(i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j)
-          SFLX_snow(i,j) = SFLX_snow_MP(i,j)
-       enddo
-       enddo
 
        ! planetary boundary layer
        call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
-                             DENS(:,:,:), PRES(:,:,:),                     & ! [IN]
-                             REAL_CZ(:,:,:), TOPO_Zsfc(:,:), REAL_Z1(:,:), & ! [IN]
-                             SFC_DENS(:,:), SFC_PRES(:,:)                  ) ! [OUT]
+                             DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
+                             SFC_TEMP(:,:),                       & ! [IN]
+                             REAL_FZ(:,:,:),                      & ! [IN]
+                             SFC_DENS(:,:), SFC_PRES(:,:)         ) ! [OUT]
 
-       call CPL_putATM( TEMP       (KS,:,:),   & ! [IN]
-                        PRES       (KS,:,:),   & ! [IN]
-                        W          (KS,:,:),   & ! [IN]
-                        U          (KS,:,:),   & ! [IN]
-                        V          (KS,:,:),   & ! [IN]
-                        DENS       (KS,:,:),   & ! [IN]
-                        QTRC       (KS,:,:,:), & ! [IN]
-                        ATM_PBL    (:,:),      & ! [IN]
-                        SFC_DENS   (:,:),      & ! [IN]
-                        SFC_PRES   (:,:),      & ! [IN]
-                        SFLX_rad_dn(:,:,:,:),  & ! [IN]
-                        cosSZA     (:,:),      & ! [IN]
-                        SFLX_rain  (:,:),      & ! [IN]
-                        SFLX_snow  (:,:),      & ! [IN]
-                        countup                ) ! [IN]
+       call CPL_putATM( TEMP       (KS,:,:),  & ! [IN]
+                        PRES       (KS,:,:),  & ! [IN]
+                        W          (KS,:,:),  & ! [IN]
+                        U          (KS,:,:),  & ! [IN]
+                        V          (KS,:,:),  & ! [IN]
+                        DENS       (KS,:,:),  & ! [IN]
+                        QV         (KS,:,:),  & ! [IN]
+                        ATM_PBL    (:,:),     & ! [IN]
+                        SFC_DENS   (:,:),     & ! [IN]
+                        SFC_PRES   (:,:),     & ! [IN]
+                        SFLX_rad_dn(:,:,:,:), & ! [IN]
+                        cosSZA     (:,:),     & ! [IN]
+                        PREC       (:,:),     & ! [IN]
+                        PREC_ENGI  (:,:),     & ! [IN]
+                        countup               ) ! [IN]
     endif
 
     call PROF_rapend  ('ATM_SfcExch', 2)

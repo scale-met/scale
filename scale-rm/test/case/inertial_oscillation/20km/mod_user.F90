@@ -101,8 +101,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate tendency
   subroutine USER_calc_tendency
-    use scale_atmos_dyn, only: &
-       CORIOLIS
+    use scale_coriolis, only: &
+       CORIOLIS_f
     use mod_atmos_vars, only: &
        DENS,    &
        RHOU_tp, &
@@ -117,8 +117,8 @@ contains
 
        ! geostrophic forcing
        do k = KS, KE
-          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS(i,j) * Vg * DENS(k,i,j)
-          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) + CORIOLIS(i,j) * Ug * DENS(k,i,j)
+          RHOU_tp(k,i,j) = RHOU_tp(k,i,j) - CORIOLIS_f(i,j) * Vg * DENS(k,i,j)
+          RHOV_tp(k,i,j) = RHOV_tp(k,i,j) + CORIOLIS_f(i,j) * Ug * DENS(k,i,j)
        end do
 
     end do

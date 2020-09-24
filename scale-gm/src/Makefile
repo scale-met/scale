@@ -5,8 +5,7 @@
 ################################################################################
 
 TOPDIR     = $(abspath ../..)
-BUILD_DIR  = ./.libs
-SYSDEP_DIR = ../../sysdep
+SYSDEP_DIR = $(abspath ../../sysdep)
 
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
@@ -22,17 +21,17 @@ PPNAME7  = gm_fio_cat
 PPNAME8  = gm_fio_sel
 PPNAME9  = gm_fio_ico2ll
 
-BINS = $(BINDIR)/$(BINNAME) \
-       $(BINDIR)/$(PPNAME1) \
-       $(BINDIR)/$(PPNAME2) \
-       $(BINDIR)/$(PPNAME3) \
-       $(BINDIR)/$(PPNAME4) \
-       $(BINDIR)/$(PPNAME5) \
-       $(BINDIR)/$(PPNAME6) \
-       $(BINDIR)/$(PPNAME7) \
-       $(BINDIR)/$(PPNAME8) \
-       $(BINDIR)/$(PPNAME9)
-LIBS = $(LIBDIR)/libscale.a
+BINS = $(BINDIR)/$(BINNAME)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME1)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME2)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME3)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME4)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME5)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME6)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME7)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME8)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME9)$(POSTFIX)
+LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
   DEPENDLIB = $(LIBS)
@@ -139,43 +138,72 @@ OBJS =	\
 	mod_netcdf.o
 
 all:
-	$(MAKE) envlog
-	$(MAKE) makedir
-	$(MAKE) -C $(SCALELIBDIR)/src
+	$(MAKE) build
+	$(MAKE) install
+
+build:
+	$(MAKE) info
+	$(MAKE) makelib
 	@echo;echo "Entering scale-gm...";echo "Current version is " $(VERSION)
-	$(MAKE) makebin
+	mkdir -p $(BUILD_DIR)
+	$(MAKE) $(subst $(BINDIR),$(BUILD_DIR),$(BINS))
 	@echo "Complete making scale-gm."
 
-makedir:
+install:
 	mkdir -p $(BINDIR)
-	mkdir -p $(LIBDIR)
-	mkdir -p $(BUILD_DIR)
+	$(MAKE) $(BINS)
 
-$(LIBDIR)/libscale.a:
+makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
-makebin: $(BINS)
+info:
+	@$(MAKE) -C $(SCALELIBDIR)/src --no-print-directory info
+	@echo
+	@echo "SCALE-GM"
+	@$(MAKE) --no-print-directory conflog
 
-$(BINDIR)/$(BINNAME) : $(BUILD_DIR)/scale-gm.o       $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(BINNAME)$(POSTFIX) : $(BUILD_DIR)/scale-gm.o       $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME1) : $(BUILD_DIR)/prg_mkmnginfo.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME1)$(POSTFIX) : $(BUILD_DIR)/prg_mkmnginfo.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME2) : $(BUILD_DIR)/prg_mkrawgrid.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME2)$(POSTFIX) : $(BUILD_DIR)/prg_mkrawgrid.o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME3) : $(BUILD_DIR)/prg_mkhgrid.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME3)$(POSTFIX) : $(BUILD_DIR)/prg_mkhgrid.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME4) : $(BUILD_DIR)/prg_mkvlayer.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME4)$(POSTFIX) : $(BUILD_DIR)/prg_mkvlayer.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME5) : $(BUILD_DIR)/prg_mkllmap.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME5)$(POSTFIX) : $(BUILD_DIR)/prg_mkllmap.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME6) : $(BUILD_DIR)/prg_fio_dump.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME6)$(POSTFIX) : $(BUILD_DIR)/prg_fio_dump.o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME7) : $(BUILD_DIR)/prg_fio_cat.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME7)$(POSTFIX) : $(BUILD_DIR)/prg_fio_cat.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME8) : $(BUILD_DIR)/prg_fio_sel.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME8)$(POSTFIX) : $(BUILD_DIR)/prg_fio_sel.o    $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
-$(BINDIR)/$(PPNAME9) : $(BUILD_DIR)/prg_fio_ico2ll.o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+$(BUILD_DIR)/$(PPNAME9)$(POSTFIX) : $(BUILD_DIR)/prg_fio_ico2ll.o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
+
+$(BINDIR)/$(BINNAME)$(POSTFIX) : $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME1)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME1)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME2)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME2)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME3)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME3)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME4)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME4)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME5)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME5)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME6)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME6)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME7)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME7)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME8)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME8)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME9)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME9)$(POSTFIX)
+	install $< $@
+
 
 $(BUILD_DIR)/scale-gm.o       : scale-gm.F90       $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 $(BUILD_DIR)/prg_mkmnginfo.o  : prg_mkmnginfo.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
@@ -192,31 +220,34 @@ $(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.F90 $(patsubst %,$(BUILD_DIR)/%,$
 
 allclean: distclean
 	$(MAKE) -C $(SCALELIBDIR)/src allclean
-	rm -f $(BINDIR)/$(BINNAME)
-	rm -f $(BINDIR)/$(PPNAME1)
-	rm -f $(BINDIR)/$(PPNAME2)
-	rm -f $(BINDIR)/$(PPNAME3)
-	rm -f $(BINDIR)/$(PPNAME4)
-	rm -f $(BINDIR)/$(PPNAME5)
-	rm -f $(BINDIR)/$(PPNAME6)
-	rm -f $(BINDIR)/$(PPNAME7)
-	rm -f $(BINDIR)/$(PPNAME8)
-	rm -f $(BINDIR)/$(PPNAME9)
+	rm -f $(BINDIR)/$(BINNAME)*
+	rm -f $(BINDIR)/$(PPNAME1)*
+	rm -f $(BINDIR)/$(PPNAME2)*
+	rm -f $(BINDIR)/$(PPNAME3)*
+	rm -f $(BINDIR)/$(PPNAME4)*
+	rm -f $(BINDIR)/$(PPNAME5)*
+	rm -f $(BINDIR)/$(PPNAME6)*
+	rm -f $(BINDIR)/$(PPNAME7)*
+	rm -f $(BINDIR)/$(PPNAME8)*
+	rm -f $(BINDIR)/$(PPNAME9)*
+
 
 distclean: clean
-	rm -f $(BUILD_DIR)/$(BINNAME)
-	rm -f $(BUILD_DIR)/$(PPNAME1)
-	rm -f $(BUILD_DIR)/$(PPNAME2)
-	rm -f $(BUILD_DIR)/$(PPNAME3)
-	rm -f $(BUILD_DIR)/$(PPNAME4)
-	rm -f $(BUILD_DIR)/$(PPNAME5)
-	rm -f $(BUILD_DIR)/$(PPNAME6)
-	rm -f $(BUILD_DIR)/$(PPNAME7)
-	rm -f $(BUILD_DIR)/$(PPNAME8)
-	rm -f $(BUILD_DIR)/$(PPNAME9)
+	rm -f $(BINDIR)/$(BINNAME)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME1)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME2)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME3)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME4)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME5)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME6)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME7)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME8)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME9)$(POSTFIX)
+	rm -rf ./libs*
 
 clean:
-	rm -f $(BUILD_DIR)/*.*
+	rm -rf $(BUILD_DIR)
+	rm -f *.o *.mod *.lst *~
 
 dependency:
 	./makedepend .

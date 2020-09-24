@@ -137,18 +137,22 @@ module scale_atmos_saturation
 
   interface ATMOS_SATURATION_dqs_dtem_dens_liq
      module procedure ATMOS_SATURATION_dqs_dtem_dens_liq_0D
+     module procedure ATMOS_SATURATION_dqs_dtem_dens_liq_1D
      module procedure ATMOS_SATURATION_dqs_dtem_dens_liq_3D
   end interface ATMOS_SATURATION_dqs_dtem_dens_liq
   interface ATMOS_SATURATION_dqs_dtem_dens_ice
      module procedure ATMOS_SATURATION_dqs_dtem_dens_ice_0D
+     module procedure ATMOS_SATURATION_dqs_dtem_dens_ice_1D
      module procedure ATMOS_SATURATION_dqs_dtem_dens_ice_3D
   end interface ATMOS_SATURATION_dqs_dtem_dens_ice
   interface ATMOS_SATURATION_dqs_dtem_dpre_liq
      module procedure ATMOS_SATURATION_dqs_dtem_dpre_liq_0D
+     module procedure ATMOS_SATURATION_dqs_dtem_dpre_liq_1D
      module procedure ATMOS_SATURATION_dqs_dtem_dpre_liq_3D
   end interface ATMOS_SATURATION_dqs_dtem_dpre_liq
   interface ATMOS_SATURATION_dqs_dtem_dpre_ice
      module procedure ATMOS_SATURATION_dqs_dtem_dpre_ice_0D
+     module procedure ATMOS_SATURATION_dqs_dtem_dpre_ice_1D
      module procedure ATMOS_SATURATION_dqs_dtem_dpre_ice_3D
   end interface ATMOS_SATURATION_dqs_dtem_dpre_ice
 
@@ -1344,6 +1348,31 @@ contains
   end subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_0D
 
   !-----------------------------------------------------------------------------
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_1D( &
+       KA, KS, KE, &
+       temp, dens, &
+       dqsdtem     )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp   (KA) !< temperature           [K]
+    real(RP), intent(in)  :: dens   (KA) !< temperature           [K]
+
+    real(RP), intent(out) :: dqsdtem(KA) !< (d qsw/d T)_{rho}
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_SATURATION_dqs_dtem_dens_liq_0D( temp(k), dens(k), & ! [IN]
+                                                   dqsdtem(k)            ) ! [OUT]
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_1D
+
+  !-----------------------------------------------------------------------------
   ! (d qsw/d T)_{rho}: partial difference of qsat_water at constant density
   subroutine ATMOS_SATURATION_dqs_dtem_dens_liq_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -1407,6 +1436,31 @@ contains
 
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dens_ice_0D
+
+  !-----------------------------------------------------------------------------
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_dqs_dtem_dens_ice_1D( &
+       KA, KS, KE, &
+       temp, dens, &
+       dqsdtem     )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp   (KA)
+    real(RP), intent(in)  :: dens   (KA)
+
+    real(RP), intent(out) :: dqsdtem(KA)
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_SATURATION_dqs_dtem_dens_ice_0D( temp(k), dens(k), & ! [IN]
+                                                   dqsdtem(k)        ) ! [OUT]
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dqs_dtem_dens_ice_1D
 
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{rho}: partial difference of qsat_ice at constant density
@@ -1526,6 +1580,33 @@ contains
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_0D
 
   !-----------------------------------------------------------------------------
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_1D( &
+       KA, KS, KE, &
+       temp, pres, qdry,  &
+       dqsat_dT, dqsat_dP )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp   (KA)
+    real(RP), intent(in)  :: pres   (KA)
+    real(RP), intent(in)  :: qdry   (KA)
+
+    real(RP), intent(out) :: dqsat_dT(KA)
+    real(RP), intent(out) :: dqsat_dP(KA)
+
+    integer  :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_SATURATION_dqs_dtem_dpre_liq_0D( temp(k), pres(k), qdry(k), & ! [IN]
+                                                   dqsat_dT(k), dqsat_dP(k)   ) ! [OUT]
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_1D
+
+  !-----------------------------------------------------------------------------
   ! (d qs/d T)_{p} and (d qs/d p)_{T}
   subroutine ATMOS_SATURATION_dqs_dtem_dpre_liq_3D( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
@@ -1599,6 +1680,33 @@ contains
                                                qsat              ) ! [OUT]
     return
   end subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_0D
+
+  !-----------------------------------------------------------------------------
+!OCL SERIAL
+  subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_1D( &
+       KA, KS, KE, &
+       temp, pres, qdry,  &
+       dqsat_dT, dqsat_dP )
+    implicit none
+    integer, intent(in) :: KA, KS, KE
+
+    real(RP), intent(in)  :: temp   (KA)
+    real(RP), intent(in)  :: pres   (KA)
+    real(RP), intent(in)  :: qdry   (KA)
+
+    real(RP), intent(out) :: dqsat_dT(KA)
+    real(RP), intent(out) :: dqsat_dP(KA)
+
+    integer :: k
+    !---------------------------------------------------------------------------
+
+    do k = KS, KE
+       call ATMOS_SATURATION_dqs_dtem_dpre_ice( temp(k), pres(k), qdry(k), & ! [IN]
+                                                dqsat_dT(k), dqsat_dP(k)   ) ! [OUT]
+    enddo
+
+    return
+  end subroutine ATMOS_SATURATION_dqs_dtem_dpre_ice_1D
 
   !-----------------------------------------------------------------------------
   ! (d qsi/d T)_{p} and (d qs/d p)_{T}

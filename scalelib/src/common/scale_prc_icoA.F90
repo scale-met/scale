@@ -63,9 +63,9 @@ module scale_prc_icoA
   integer,  public, parameter   :: I_SPL = 2                    !< south pole
 
   ! main parameter
-  integer,  public              :: PRC_RGN_level   = -1         !< region division level
-  integer,  public              :: PRC_RGN_DMD     = 10         !< number of diamonds
-  integer,  public              :: PRC_RGN_vlink   = 5          !< maximum number of vertex linkage, ICO:5
+  integer,  public              :: PRC_RGN_level    = -1        !< region division level
+  integer,  public              :: PRC_RGN_ndiamond = 10        !< number of diamonds
+  integer,  public              :: PRC_RGN_vlink    = 5         !< maximum number of vertex linkage, ICO:5
 
   ! region
   integer,  public              :: PRC_RGN_total                !< number of regular region (global total)
@@ -77,6 +77,7 @@ module scale_prc_icoA
   integer,  public, allocatable :: PRC_RGN_edge_tab   (:,:,:)   !< region link information (for 4 edges)
 
   integer,  public, allocatable :: PRC_RGN_vert_num   (:,:)     !< number of region around the vertex (4 vertexes)
+  logical,  public, allocatable :: PRC_RGN_vert_pl    (:,:)     !< the northern/southern vertex is around the pole point?
   integer,  public, allocatable :: PRC_RGN_vert_tab   (:,:,:,:) !< region link information (for 4 vertexes)
   integer,  public, allocatable :: PRC_RGN_vert_tab_pl(:,:,:)   !< region link information (for 4 vertexes)
 
@@ -136,7 +137,8 @@ contains
     implicit none
 
     namelist / PARAM_PRC_ICOA / &
-       PRC_RGN_level, &
+       PRC_RGN_level,    &
+       PRC_RGN_ndiamond, &
        debug
 
     integer :: l, rgnid
@@ -184,7 +186,15 @@ contains
        call PRC_abort
     endif
 
-    PRC_RGN_total = 2**PRC_RGN_level * 2**PRC_RGN_level * PRC_RGN_DMD
+    if (      PRC_RGN_ndiamond == 10 &
+         .OR. PRC_RGN_ndiamond == 12 ) then
+       PRC_RGN_vlink = PRC_RGN_ndiamond / 2
+    else
+       LOG_ERROR("PRC_ICOA_setup",*) 'PRC_RGN_ndiamond is not appropriate :', PRC_RGN_ndiamond
+       call PRC_abort
+    endif
+
+    PRC_RGN_total = 2**PRC_RGN_level * 2**PRC_RGN_level * PRC_RGN_ndiamond
     PRC_RGN_local = PRC_RGN_total / PRC_nprocs
 
     if ( mod(PRC_RGN_total,PRC_nprocs) /= 0 ) then
@@ -268,6 +278,7 @@ contains
        LOG_INFO("PRC_ICOA_RGN_setup",*) 'input file is not specified.'
 
        call PRC_ICOA_RGN_generate( PRC_RGN_level,           & ! [IN]
+                                   PRC_RGN_ndiamond,        & ! [IN]
                                    PRC_nprocs,              & ! [IN]
                                    PRC_RGN_total,           & ! [IN]
                                    PRC_RGN_local,           & ! [IN]
@@ -301,27 +312,29 @@ contains
 
     !--- region connection chains around the diamond vertexes
     allocate( PRC_RGN_vert_num   (I_W:I_S,PRC_RGN_total) )
+    allocate( PRC_RGN_vert_pl    (PRC_RGN_total_pl,PRC_RGN_total) )
     allocate( PRC_RGN_vert_tab   (I_RGNID:I_DIR,I_W:I_S,PRC_RGN_total   ,PRC_RGN_vlink) )
     allocate( PRC_RGN_vert_tab_pl(I_RGNID:I_DIR,        PRC_RGN_total_pl,PRC_RGN_vlink) )
 
     call PRC_ICOA_RGN_vertex_walkaround( PRC_RGN_total,             & ! [IN]
-                                    PRC_RGN_total_pl,          & ! [IN]
-                                    PRC_RGN_vlink,             & ! [IN]
-                                    PRC_RGN_edge_tab(:,:,:),   & ! [IN]
-                                    PRC_RGN_vert_num(:,:),     & ! [OUT]
-                                    PRC_RGN_vert_tab(:,:,:,:), & ! [OUT]
-                                    PRC_RGN_vert_tab_pl(:,:,:) ) ! [OUT]
+                                         PRC_RGN_total_pl,          & ! [IN]
+                                         PRC_RGN_vlink,             & ! [IN]
+                                         PRC_RGN_edge_tab(:,:,:),   & ! [IN]
+                                         PRC_RGN_vert_num(:,:),     & ! [OUT]
+                                         PRC_RGN_vert_pl(:,:),      & ! [OUT]
+                                         PRC_RGN_vert_tab(:,:,:,:), & ! [OUT]
+                                         PRC_RGN_vert_tab_pl(:,:,:) ) ! [OUT]
 
     !--- tables for pole
     do r = 1, PRC_RGN_total
-       if ( PRC_RGN_vert_num(I_N,r) == PRC_RGN_vlink ) then
+       if ( PRC_RGN_vert_pl(I_NPL,r) ) then
           PRC_RGN_rgn4pl(I_NPL) = r
           exit
        endif
     enddo
 
     do r = 1, PRC_RGN_total
-       if ( PRC_RGN_vert_num(I_S,r) == PRC_RGN_vlink ) then
+       if ( PRC_RGN_vert_pl(I_SPL,r) ) then
           PRC_RGN_rgn4pl(I_SPL) = r
           exit
        endif
@@ -556,6 +569,7 @@ contains
   !> Generate region management info
   Subroutine PRC_ICOA_RGN_generate( &
        rlevel,   &
+       ndmd,     &
        pall,     &
        rall,     &
        lall,     &
@@ -566,15 +580,15 @@ contains
     implicit none
 
     integer, intent(in)  :: rlevel              !< region division level
+    integer, intent(in)  :: ndmd                !< number of diamonds
     integer, intent(in)  :: pall                !< number of process        (global total)
     integer, intent(in)  :: rall                !< number of regular region (global total)
     integer, intent(in)  :: lall                !< number of regular region (local)
     integer, intent(out) :: edge_tab(2,4,rall)  !< region link information (for 4 edges)
     integer, intent(out) :: lp2r(lall,0:pall-1) !< l,prc => region
 
-    integer, parameter :: nmax_dmd = 10
-    integer            :: dmd_data(4,nmax_dmd)
-    integer            :: rall_1d, rall_1dmd
+    integer :: dmd_data(4,ndmd)
+    integer :: rall_1d, rall_1dmd
 
     integer :: d_nb, i_nb, j_nb, rgnid_nb, direction
     integer :: d, i, j, rgnid
@@ -582,31 +596,47 @@ contains
     !---------------------------------------------------------------------------
 
     LOG_INFO("PRC_ICOA_RGN_generate",*) 'generate region management information file'
-    LOG_INFO_CONT(*)                    'Topology: icosahedral'
 
-    dmd_data(:, 1) = (/  6, 5, 2,10 /)
-    dmd_data(:, 2) = (/ 10, 1, 3, 9 /)
-    dmd_data(:, 3) = (/  9, 2, 4, 8 /)
-    dmd_data(:, 4) = (/  8, 3, 5, 7 /)
-    dmd_data(:, 5) = (/  7, 4, 1, 6 /)
-    dmd_data(:, 6) = (/  7, 5, 1,10 /)
-    dmd_data(:, 7) = (/  8, 4, 5, 6 /)
-    dmd_data(:, 8) = (/  9, 3, 4, 7 /)
-    dmd_data(:, 9) = (/ 10, 2, 3, 8 /)
-    dmd_data(:,10) = (/  6, 1, 2, 9 /)
+    if    ( ndmd == 10 ) then
+       LOG_INFO_CONT(*) 'Topology: icosahedral'
+       dmd_data(:, 1) = (/  6, 5, 2,10 /)
+       dmd_data(:, 2) = (/ 10, 1, 3, 9 /)
+       dmd_data(:, 3) = (/  9, 2, 4, 8 /)
+       dmd_data(:, 4) = (/  8, 3, 5, 7 /)
+       dmd_data(:, 5) = (/  7, 4, 1, 6 /)
+       dmd_data(:, 6) = (/  7, 5, 1,10 /)
+       dmd_data(:, 7) = (/  8, 4, 5, 6 /)
+       dmd_data(:, 8) = (/  9, 3, 4, 7 /)
+       dmd_data(:, 9) = (/ 10, 2, 3, 8 /)
+       dmd_data(:,10) = (/  6, 1, 2, 9 /)
+    elseif( ndmd == 12 ) then
+       LOG_INFO_CONT(*) 'Topology: icosatetrahedral'
+       dmd_data(:, 1) = (/  7, 6, 2,12 /)
+       dmd_data(:, 2) = (/ 12, 1, 3,11 /)
+       dmd_data(:, 3) = (/ 11, 2, 4,10 /)
+       dmd_data(:, 4) = (/ 10, 3, 5, 9 /)
+       dmd_data(:, 5) = (/  9, 4, 6, 8 /)
+       dmd_data(:, 6) = (/  8, 5, 1, 7 /)
+       dmd_data(:, 7) = (/  8, 6, 1,12 /)
+       dmd_data(:, 8) = (/  9, 5, 6, 7 /)
+       dmd_data(:, 9) = (/ 10, 4, 5, 8 /)
+       dmd_data(:,10) = (/ 11, 3, 4, 9 /)
+       dmd_data(:,11) = (/ 12, 2, 3,10 /)
+       dmd_data(:,12) = (/  7, 1, 2,11 /)
+    endif
 
     rall_1d   = 2**rlevel
     rall_1dmd = rall_1d*rall_1d
 
     !--- make region link table
-    do d = 1, nmax_dmd
+    do d = 1, ndmd
     do i = 1, rall_1d
     do j = 1, rall_1d
        rgnid = (d-1)*rall_1dmd + (j-1)*rall_1d + i
 
        !--- I_SW
        if ( j == 1 ) then
-          if ( d <= 5 ) then
+          if ( d <= ndmd / 2 ) then
              i_nb = i
              j_nb = rall_1d
              d_nb = dmd_data(I_SW,d)
@@ -630,7 +660,7 @@ contains
 
        !--- I_NW
        if ( i == 1 ) then
-          if ( d <= 5 ) then
+          if ( d <= ndmd / 2 ) then
              i_nb = rall_1d+1-j
              j_nb = rall_1d
              d_nb = dmd_data(I_NW,d)
@@ -654,7 +684,7 @@ contains
 
        !--- I_NE
        if ( j == rall_1d ) then
-          if ( d <= 5 ) then
+          if ( d <= ndmd / 2 ) then
              i_nb = 1
              j_nb = rall_1d+1-i
              d_nb = dmd_data(I_NE,d)
@@ -678,7 +708,7 @@ contains
 
        !--- I_SE
        if ( i == rall_1d ) then
-          if ( d <= 5 ) then
+          if ( d <= ndmd / 2 ) then
              i_nb = 1
              j_nb = j
              d_nb = dmd_data(I_SE,d)
@@ -726,6 +756,7 @@ contains
        vlink,      &
        edge_tab,   &
        vert_num,   &
+       vert_pl,    &
        vert_tab,   &
        vert_tab_pl )
     implicit none
@@ -736,11 +767,13 @@ contains
     integer, intent(in)  :: edge_tab(2,4,rall)
 
     integer, intent(out) :: vert_num   (4,rall)
+    logical, intent(out) :: vert_pl    (rall_pl,rall)
     integer, intent(out) :: vert_tab   (2,4,rall   ,vlink)
     integer, intent(out) :: vert_tab_pl(2  ,rall_pl,vlink)
 
     integer  :: rgnid, dir
     integer  :: rgnid_next, dir_next
+    logical  :: IsAroundPole
 
     integer  :: r, d, v
     !---------------------------------------------------------------------------
@@ -783,10 +816,36 @@ contains
     enddo
     enddo
 
-    vert_tab_pl(:,:,:) = -1
+    vert_pl    (:,:)   = .false.
 
     do r = 1, rall
        if ( vert_num(I_N,r) == vlink ) then
+          IsAroundPole = .true.
+          do v = 1, vlink
+             if( vert_tab(I_DIR,I_N,r,v) /= I_N ) IsAroundPole = .false.
+          enddo
+
+          if ( IsAroundPole ) then
+             vert_pl(I_NPL,r) = .true.
+          endif
+       endif
+
+       if ( vert_num(I_S,r) == vlink ) then
+          IsAroundPole = .true.
+          do v = 1, vlink
+             if( vert_tab(I_DIR,I_S,r,v) /= I_S ) IsAroundPole = .false.
+          enddo
+
+          if ( IsAroundPole ) then
+             vert_pl(I_SPL,r) = .true.
+          endif
+       endif
+    enddo
+
+    vert_tab_pl(:,:,:) = -1
+
+    do r = 1, rall
+       if ( vert_pl(I_NPL,r) ) then
           do v = 1, vlink
              vert_tab_pl(I_RGNID,I_NPL,v) = vert_tab(I_RGNID,I_N,r,v)
              vert_tab_pl(I_DIR,  I_NPL,v) = vert_tab(I_DIR,  I_N,r,v)
@@ -796,7 +855,7 @@ contains
     enddo
 
     do r = 1, rall
-       if ( vert_num(I_S,r) == vlink ) then
+       if ( vert_pl(I_SPL,r) ) then
           do v = 1, vlink
              vert_tab_pl(I_RGNID,I_SPL,v) = vert_tab(I_RGNID,I_S,r,v)
              vert_tab_pl(I_DIR,  I_SPL,v) = vert_tab(I_DIR,  I_S,r,v)
@@ -822,13 +881,17 @@ contains
 
     LOG_NEWLINE
     LOG_INFO("PRC_ICOA_RGN_setup",'(1x,A)') 'Region management information'
-    LOG_INFO_CONT('(1x,A,A)' )              'Grid sysytem                      : Icosahedral'
-    LOG_INFO_CONT('(1x,A,I7)')              'number of diamond                 : ', PRC_RGN_DMD
+    if ( PRC_RGN_ndiamond == 10 ) then
+       LOG_INFO_CONT('(1x,A,A)' )           'Grid sysytem                      : Icosahedral'
+    elseif( PRC_RGN_ndiamond == 12 ) then
+       LOG_INFO_CONT('(1x,A,A)' )           'Grid sysytem                      : Icosatetrahedral'
+    endif
+    LOG_INFO_CONT('(1x,A,I7)')              'number of diamond                 : ', PRC_RGN_ndiamond
     LOG_INFO_CONT('(1x,A,I7)')              'maximum number of vertex linkage  : ', PRC_RGN_vlink
     LOG_NEWLINE
     LOG_INFO_CONT('(1x,A,I7)')              'Region division level (RL)        : ', PRC_RGN_level
     LOG_INFO_CONT('(1x,A,I7,3(A,I4),A)')    'Total number of regular region    : ', PRC_RGN_total, &
-                                            ' (', 2**PRC_RGN_level, ' x', 2**PRC_RGN_level, ' x', PRC_RGN_DMD, ' )'
+                                            ' (', 2**PRC_RGN_level, ' x', 2**PRC_RGN_level, ' x', PRC_RGN_ndiamond, ' )'
     LOG_INFO_CONT('(1x,A,I7)')              '#  of region per process          : ', PRC_RGN_local
     LOG_INFO_CONT('(1x,A)'   )              'ID of region in my process        : '
     LOG_INFO_CONT(*)                        PRC_RGN_lp2r(:,PRC_myrank)

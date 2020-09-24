@@ -166,13 +166,15 @@ contains
        lat_org,       &
        cz_org,        &
        basename,      &
+       sfc_diagnoses, &
        dims,          &
-       it             ) ! (in)
+       it             )
     use scale_const, only: &
-       D2R => CONST_D2R, &
-       LAPS => CONST_LAPS, &
-       Rdry => CONST_Rdry, &
-       GRAV => CONST_GRAV
+       UNDEF => CONST_UNDEF, &
+       D2R   => CONST_D2R, &
+       LAPS  => CONST_LAPS, &
+       Rdry  => CONST_Rdry, &
+       GRAV  => CONST_GRAV
     use scale_file, only: &
        FILE_open, &
        FILE_read
@@ -197,6 +199,7 @@ contains
     real(RP),         intent(out) :: lat_org(:,:)
     real(RP),         intent(out) :: cz_org(:,:,:)
     character(len=*), intent(in)  :: basename
+    logical,          intent(in)  :: sfc_diagnoses
     integer,          intent(in)  :: dims(6)
     integer,          intent(in)  :: it
 
@@ -213,6 +216,7 @@ contains
     real(RP) :: velxs_org(dims(5),dims(3),dims(1))
     real(RP) :: velys_org(dims(2),dims(6),dims(1))
 
+    real(RP) :: dz
     real(RP) :: dens
     real(RP) :: qtot
 
@@ -250,6 +254,7 @@ contains
     call FILE_read( fid, "HGT", topo_org(:,:), step=it )
 
     call FILE_read( fid, "PH", read_xyw(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(4)
@@ -259,6 +264,7 @@ contains
     end do
 
     call FILE_read( fid, "PHB", read_xyw(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(4)
@@ -268,6 +274,7 @@ contains
     end do
 
     call FILE_read( fid, "P", read_xyz(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -277,6 +284,7 @@ contains
     end do
 
     call FILE_read( fid, "PB", read_xyz(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -293,6 +301,7 @@ contains
 
 
     ! from half level to full level
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 1, dims(1)
@@ -312,17 +321,19 @@ contains
                                  BASENAME,               & ! (in)
                                  dims(1)+2, dims(2), dims(3) ) ! (in)
 
-    qhyd_org(:,:,:,:) = 0.0_RP
-
-    call FILE_read( fid, "Q2", read_xy(:,:), step=it )
+    !$omp parallel do collapse(4)
+    do iq = 1, N_HYD
     do j = 1, dims(3)
     do i = 1, dims(2)
-       qv_org(1,i,j) = read_xy(i,j)
-       qv_org(2,i,j) = read_xy(i,j)
+    do k = 1, dims(1)+2
+       qhyd_org(k,i,j,iq) = 0.0_RP
+    end do
+    end do
     end do
     end do
 
     call FILE_read( fid, "QVAPOR", read_xyz(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -331,8 +342,27 @@ contains
     end do
     end do
 
+    if ( sfc_diagnoses ) then
+       call FILE_read( fid, "Q2", read_xy(:,:), step=it )
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          qv_org(1,i,j) = read_xy(i,j)
+          qv_org(2,i,j) = read_xy(i,j)
+       end do
+       end do
+    else
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          qv_org(1:2,i,j) = UNDEF
+       end do
+       end do
+    end if
+
 
     call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -342,6 +372,7 @@ contains
     end do
 
     call FILE_read( fid, "QRAIN", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -351,6 +382,7 @@ contains
     end do
 
     call FILE_read( fid, "QICE", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -360,6 +392,7 @@ contains
     end do
 
     call FILE_read( fid, "QSNOW", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -369,6 +402,7 @@ contains
     end do
 
     call FILE_read( fid, "QGRAUP", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -379,22 +413,32 @@ contains
 
 
     ! convert mixing ratio to specific ratio
+    !$omp parallel do &
+    !$omp private(qtot)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qtot = qv_org(k,i,j)
-       do iq = 1, N_HYD
-          qtot = qtot + qhyd_org(k,i,j,iq)
-       end do
-       qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
-       do iq = 1, N_HYD
-          qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
-       end do
+       if ( k<3 .and. .not. sfc_diagnoses ) then
+          qv_org(k,i,j) = UNDEF
+          do iq = 1, N_HYD
+             qhyd_org(k,i,j,iq) = UNDEF
+          end do
+       else
+          qtot = qv_org(k,i,j)
+          do iq = 1, N_HYD
+             qtot = qtot + qhyd_org(k,i,j,iq)
+          end do
+          qv_org(k,i,j) = qv_org(k,i,j) / ( 1.0_RP + qtot )
+          do iq = 1, N_HYD
+             qhyd_org(k,i,j,iq) = qhyd_org(k,i,j,iq) / ( 1.0_RP + qtot )
+          end do
+       end if
     end do
     end do
     end do
 
     call FILE_read( fid, "NC", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -404,6 +448,7 @@ contains
     end do
 
     call FILE_read( fid, "NR", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -413,6 +458,7 @@ contains
     end do
 
     call FILE_read( fid, "NI", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -422,6 +468,7 @@ contains
     end do
 
     call FILE_read( fid, "NS", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -431,6 +478,7 @@ contains
     end do
 
     call FILE_read( fid, "NG", read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -439,12 +487,18 @@ contains
     end do
     end do
 
+    !$omp parallel do collapse(4)
     do iq = 1, N_HYD
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)+2
-       qhyd_org(k,i,j,iq) = max( qhyd_org(k,i,j,iq), 0.0_RP )
-       qnum_org(k,i,j,iq) = max( qnum_org(k,i,j,iq), 0.0_RP )
+       if ( k<3 .and. .not. sfc_diagnoses ) then
+          qhyd_org(k,i,j,iq) = UNDEF
+          qnum_org(k,i,j,iq) = UNDEF
+       else
+          qhyd_org(k,i,j,iq) = max( qhyd_org(k,i,j,iq), 0.0_RP )
+          qnum_org(k,i,j,iq) = max( qnum_org(k,i,j,iq), 0.0_RP )
+       end if
     end do
     end do
     end do
@@ -452,6 +506,7 @@ contains
 
 
     call FILE_read( fid, varname_T, read_xyz(:,:,:), step=it, allow_missing=.true. )
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -459,35 +514,33 @@ contains
     end do
     end do
     end do
-    call FILE_read( fid, "T2", read_xy(:,:), step=it, allow_missing=.true. )
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       temp_org(2,i,j) = read_xy(i,j)
-    end do
-    end do
-
-    call FILE_read( fid, "PSFC", read_xy(:,:), step=it, allow_missing=.true. )
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       pres_org(2,i,j) = read_xy(i,j)
-    end do
-    end do
-
-    do j = 1, dims(3)
-    do i = 1, dims(2)
-       do k = 3, dims(1)+2
-          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
-          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
+    if ( sfc_diagnoses ) then
+       call FILE_read( fid, "T2", read_xy(:,:), step=it, allow_missing=.false. )
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          temp_org(2,i,j) = read_xy(i,j)
        end do
-       pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
-       temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
-       dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
-       pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
-                       / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
-                       * Rdry * temp_org(1,i,j)
-    end do
-    end do
+       end do
 
+       call FILE_read( fid, "PSFC", read_xy(:,:), step=it, allow_missing=.false. )
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          pres_org(2,i,j) = read_xy(i,j)
+       end do
+       end do
+    else
+       !$omp parallel do
+       do j = 1, dims(3)
+       do i = 1, dims(2)
+          temp_org(2,i,j) = UNDEF
+          pres_org(2,i,j) = UNDEF
+       end do
+       end do
+    end if
+
+    !$omp parallel do
     do j = 1, dims(3)
     do i = 1, dims(2)
        ! convert to geopotential height to use as real height in WRF
@@ -500,6 +553,29 @@ contains
        end do
        cz_org(2,i,j) = topo_org(i,j)
        cz_org(1,i,j) = 0.0_RP
+    end do
+    end do
+
+    !$omp parallel do &
+    !$omp private(dens)
+    do j = 1, dims(3)
+    do i = 1, dims(2)
+       do k = 3, dims(1)+2
+          pres_org(k,i,j) = p_org(k-2,i,j) + pb_org(k-2,i,j)
+          temp_org(k,i,j) = pott_org(k,i,j) * ( pres_org(k,i,j) / p0 )**RCP
+       end do
+       if ( sfc_diagnoses ) then
+          pott_org(2,i,j) = temp_org(2,i,j) * ( p0/pres_org(2,i,j) )**RCP
+          temp_org(1,i,j) = temp_org(2,i,j) + LAPS * topo_org(i,j)
+          dens = pres_org(2,i,j) / ( Rdry * temp_org(2,i,j) )
+          pres_org(1,i,j) = ( pres_org(2,i,j) + GRAV * dens * cz_org(2,i,j) * 0.5_RP ) &
+                          / ( Rdry * temp_org(1,i,j) - GRAV * cz_org(2,i,j) * 0.5_RP ) &
+                          * Rdry * temp_org(1,i,j)
+       else
+          pott_org(2,i,j) = UNDEF
+          temp_org(1,i,j) = UNDEF
+          pres_org(1,i,j) = UNDEF
+       end if
     end do
     end do
 
@@ -636,10 +712,20 @@ contains
     call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
     call FILE_read( fid, "XLAT", llat_org(:,:), step=it )
-    llat_org(:,:) = llat_org(:,:) * D2R
+    !$omp parallel do
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       llat_org(i,j) = llat_org(i,j) * D2R
+    end do
+    end do
 
     call FILE_read( fid, "XLONG", llon_org(:,:), step=it )
-    llon_org(:,:) = llon_org(:,:) * D2R
+    !$omp parallel do
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       llon_org(i,j) = llon_org(i,j) * D2R
+    end do
+    end do
 
     call FILE_read( fid, "HGT", topo_org(:,:), step=it )
 
@@ -652,6 +738,7 @@ contains
 
     ! soil temperature [K]
     call FILE_read( fid, "TSLB", read_xyl(:,:,:), step=it )
+    !$omp parallel do
     do j = 1, ldims(3)
     do i = 1, ldims(2)
     do k = 1, ldims(1)
@@ -663,6 +750,7 @@ contains
     ! soil liquid water [m3 m-3] (no wrfout-default)
     if( use_file_landwater ) then
        call FILE_read( fid, "SH2O", read_xyl(:,:,:), step=it, allow_missing=.true., missing_value=UNDEF )
+       !$omp parallel do
        do j = 1, ldims(3)
        do i = 1, ldims(2)
        do k = 1, ldims(1)
@@ -674,6 +762,7 @@ contains
 
 !    ! surface runoff [mm]
 !    call FILE_read( fid, "SFROFF", org_3D(:,:), step=it )
+!    !$omp parallel do
 !    do j = 1, ldims(3)
 !    do i = 1, ldims(2)
 !       org_3D(k,i,j) = org_3D(i,j,k) * 1000.0_RP * dwatr
@@ -684,28 +773,45 @@ contains
     ! SURFACE SKIN TEMPERATURE [K]
     call FILE_read( fid, "TSK", lst_org(:,:), step=it )
 
-    ust_org(:,:) = lst_org(:,:)
+    !$omp parallel do
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       ust_org(i,j) = lst_org(i,j)
+    end do
+    end do
 
     ! ALBEDO [-]
     call FILE_read( fid, "ALBEDO", albg_org(:,:,I_R_direct ,I_R_VIS), step=it )
-    albg_org(:,:,I_R_direct ,I_R_NIR) = albg_org(:,:,I_R_direct ,I_R_VIS)
-    albg_org(:,:,I_R_diffuse,I_R_NIR) = albg_org(:,:,I_R_direct ,I_R_VIS)
-    albg_org(:,:,I_R_diffuse,I_R_VIS) = albg_org(:,:,I_R_direct ,I_R_VIS)
+    !$omp parallel do
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       albg_org(i,j,I_R_direct ,I_R_NIR) = albg_org(i,j,I_R_direct ,I_R_VIS)
+       albg_org(i,j,I_R_diffuse,I_R_NIR) = albg_org(i,j,I_R_direct ,I_R_VIS)
+       albg_org(i,j,I_R_diffuse,I_R_VIS) = albg_org(i,j,I_R_direct ,I_R_VIS)
+    end do
+    end do
 
     ! SURFACE EMISSIVITY [-]
     call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
+    !$omp parallel do
     do j = 1, ldims(3)
     do i = 1, ldims(2)
        albg_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - read_xy(i,j)
     end do
     end do
-    albg_org(:,:,I_R_direct,I_R_IR) = albg_org(:,:,I_R_diffuse,I_R_IR)
+    !$omp parallel do
+    do j = 1, ldims(3)
+    do i = 1, ldims(2)
+       albg_org(i,j,I_R_direct,I_R_IR) = albg_org(i,j,I_R_diffuse,I_R_IR)
+    end do
+    end do
 
 !    ! SNOW WATER EQUIVALENT [kg m-2] (no wrfout-default)
 !    call FILE_read( fid, "SNOW", snowq_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
 
 !    ! AVERAGE SNOW TEMPERATURE [C] (no wrfout-default)
 !    call FILE_read( fid, "TSNAV", snowt_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
+!    !$omp parallel do
 !    do j = 1, ldims(3)
 !    do i = 1, ldims(2)
 !       if ( snowt_org(k,i,j) /= UNDEF ) snowt_org(k,i,j) = snowt_org(i,j,k) + TEM00
@@ -821,10 +927,20 @@ contains
     call FILE_open( basename, fid, rankid=myrank, single=.true., postfix="" )
 
     call FILE_read( fid, "XLAT", olat_org(:,:), step=it )
-    olat_org(:,:) = olat_org(:,:) * D2R
+    !$omp parallel do
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       olat_org(i,j) = olat_org(i,j) * D2R
+    end do
+    end do
 
     call FILE_read( fid, "XLONG", olon_org(:,:), step=it )
-    olon_org(:,:) = olon_org(:,:) * D2R
+    !$omp parallel do
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       olon_org(i,j) = olon_org(i,j) * D2R
+    end do
+    end do
 
 
     ! land mask (1:land, 0:water)
@@ -832,23 +948,38 @@ contains
 
     ! SEA SURFACE TEMPERATURE [K]
     call FILE_read( fid, "SST", sst_org(:,:), step=it )
-
-    tw_org(:,:) = sst_org(:,:)
+    !$omp parallel do
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       tw_org(i,j) = sst_org(i,j)
+    end do
+    end do
 
     ! ALBEDO [-]
     call FILE_read( fid, "ALBEDO", albw_org(:,:,I_R_direct ,I_R_VIS), step=it )
-    albw_org(:,:,I_R_direct ,I_R_NIR) = albw_org(:,:,I_R_direct ,I_R_VIS)
-    albw_org(:,:,I_R_diffuse,I_R_NIR) = albw_org(:,:,I_R_direct ,I_R_VIS)
-    albw_org(:,:,I_R_diffuse,I_R_VIS) = albw_org(:,:,I_R_direct ,I_R_VIS)
+    !$omp parallel do
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       albw_org(i,j,I_R_direct ,I_R_NIR) = albw_org(i,j,I_R_direct ,I_R_VIS)
+       albw_org(i,j,I_R_diffuse,I_R_NIR) = albw_org(i,j,I_R_direct ,I_R_VIS)
+       albw_org(i,j,I_R_diffuse,I_R_VIS) = albw_org(i,j,I_R_direct ,I_R_VIS)
+    end do
+    end do
 
     ! SURFACE EMISSIVITY [-]
     call FILE_read( fid, "EMISS", read_xy(:,:), step=it )
+    !$omp parallel do
     do j = 1, odims(2)
     do i = 1, odims(1)
        albw_org(i,j,I_R_diffuse,I_R_IR) = 1.0_RP - read_xy(i,j)
     enddo
     enddo
-    albw_org(:,:,I_R_direct,I_R_IR) = albw_org(:,:,I_R_diffuse,I_R_IR)
+    !$omp parallel do
+    do j = 1, odims(2)
+    do i = 1, odims(1)
+       albw_org(i,j,I_R_direct,I_R_IR) = albw_org(i,j,I_R_diffuse,I_R_IR)
+    end do
+    end do
 
     ! TIME-VARYING ROUGHNESS LENGTH [m] (no wrfout-default)
     call FILE_read( fid, "ZNT", z0w_org(:,:), step=it, allow_missing=.true., missing_value=UNDEF )
@@ -918,8 +1049,15 @@ contains
 
     ! No need to rotate
     if ( map_proj .ge. 3 ) then
-       u_latlon(:,:,:) = u_on_map(:,:,:)
-       v_latlon(:,:,:) = v_on_map(:,:,:)
+       !$omp parallel do
+       do j = 1, J1
+       do i = 1, I1
+       do k = 1, K1
+          u_latlon(k,i,j) = u_on_map(k,i,j)
+          v_latlon(k,i,j) = v_on_map(k,i,j)
+       end do
+       end do
+       end do
 
        return
     endif
@@ -937,6 +1075,8 @@ contains
        endif
     endif
 
+    !$omp parallel do &
+    !$omp private(diff,alpha)
     do j = 1, J1
     do i = 1, I1
        diff = xlon(i,j) - stand_lon
@@ -952,6 +1092,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do
     do j = 1, J1
     do i = 1, I1
     do k = 1, K1

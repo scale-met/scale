@@ -10,7 +10,7 @@ do
       echo ${line[1]} ${line[6]} ${line[7]} ${line[8]} ${line[9]} >> energy.dat
       echo ${line[1]} ${line[4]} ${line[5]} ${line[3]}            >> mass.dat
    fi
-done < monitor.pe000000
+done < monitor.peall
 
 gnuplot < ./visualize/energy.plt || exit
 gnuplot < ./visualize/mass.plt   || exit
@@ -22,7 +22,7 @@ rm -f energy.dat mass.dat
 echo "+visualize by gpview"
 rm -f dcl.pdf
 
-var__set=(NC)
+var__set=(PTracer)
 rangeset=(0:1)
 time_set=(00000 00300 00600 00900)
 

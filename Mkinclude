@@ -4,8 +4,49 @@
 # Backward compatibility of SCALE environments for ver < 5.1
 include $(TOPDIR)/utils/make/Make_compatibility
 
-OBJ_DIR   = ./.libs
 INST_DIR  = $(TOPDIR)
+
+DCUTILSDIR  = $(TOPDIR)/dc_utils
+SCALELIBDIR = $(TOPDIR)/scalelib
+SCALERMDIR  = $(TOPDIR)/scale-rm
+SCALEGMDIR  = $(TOPDIR)/scale-gm
+
+ifeq ($(SCALE_DEBUG),T)
+   FFLAGS = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND) -DDEBUG -DQUICKDEBUG
+   CFLAGS = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
+   POSTFIX = _debug
+else
+   FFLAGS = $(FFLAGS_FAST)  $(FFLAGS_SYSDEPEND)
+   CFLAGS = $(CFLAGS_FAST)  $(CFLAGS_SYSDEPEND)
+   ifeq ($(SCALE_USE_AGGRESSIVEOPT),T)
+      FFLAGS += $(FFLAGS_AGGRESSIVE)
+      CFLAGS += $(CFLAGS_AGGRESSIVE)
+   endif
+   ifeq ($(SCALE_QUICKDEBUG),T)
+      FFLAGS += $(FFLAGS_QUICKDEBUG) -DQUICKDEBUG
+      POSTFIX = _quickdebug
+   else
+      POSTFIX =
+   endif
+endif
+
+ifeq ($(findstring undefined, $(origin BUILD_DIR) $(BUILD_DIR)), undefined)
+   BUILD_DIR = $(abspath ./.libs$(POSTFIX))
+endif
+
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   FFLAGS += -DSINGLE
+   POSTFIX := $(POSTFIX)_single
+endif
+
+ifeq ($(SCALE_ENABLE_OPENMP),T)
+   FFLAGS += $(FFLAGS_OPENMP)
+endif
+
+ifeq ($(SCALE_ENABLE_OPENACC),T)
+   FFLAGS += $(FFLAGS_OPENACC)
+endif
+
 
 ifeq ($(origin BINDIR),undefined)
    BINDIR = $(INST_DIR)/bin
@@ -16,44 +57,10 @@ ifeq ($(origin LIBDIR),undefined)
 endif
 
 ifeq ($(origin MODDIR),undefined)
-   MODDIR = $(INST_DIR)/include
+   MODDIR = $(INST_DIR)/include$(POSTFIX)
 endif
 
-DCUTILSDIR  = $(TOPDIR)/dc_utils
-SCALELIBDIR = $(TOPDIR)/scalelib
-SCALERMDIR  = $(TOPDIR)/scale-rm
-SCALEGMDIR  = $(TOPDIR)/scale-gm
 
-ifeq ($(SCALE_DEBUG),T)
-   FFLAGS = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND) -DDEBUG
-   CFLAGS = $(CFLAGS_DEBUG) $(CFLAGS_SYSDEPEND)
-else
-   FFLAGS = $(FFLAGS_FAST)  $(FFLAGS_SYSDEPEND)
-   CFLAGS = $(CFLAGS_FAST)  $(CFLAGS_SYSDEPEND)
-   ifeq ($(SCALE_USE_AGGRESSIVEOPT),T)
-      FFLAGS += $(FFLAGS_AGGRESSIVE)
-      CFLAGS += $(CFLAGS_AGGRESSIVE)
-   endif
-   ifeq ($(SCALE_QUICKDEBUG),T)
-      FFLAGS += $(FFLAGS_QUICKDEBUG) -DQUICKDEBUG
-   endif
-endif
-
-ifeq ($(SCALE_USE_SINGLEFP),T)
-   FFLAGS += -DSINGLE
-endif
-
-ifeq ($(SCALE_USE_MASSCHECK),T)
-   FFLAGS += -DCHECK_MASS
-endif
-
-ifeq ($(SCALE_ENABLE_OPENMP),T)
-   FFLAGS += $(FFLAGS_OPENMP)
-endif
-
-ifeq ($(SCALE_ENABLE_OPENACC),T)
-   FFLAGS += $(FFLAGS_OPENACC)
-endif
 
 # NetCDF library setting
 # library location are inquired in order of: environment variable->Makedef.XXX->here

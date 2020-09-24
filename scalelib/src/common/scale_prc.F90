@@ -34,7 +34,8 @@ module scale_prc
   public :: PRC_SINGLECOM_setup
   public :: PRC_abort
   public :: PRC_MPIfinish
-  public :: PRC_MPIsplit
+  public :: PRC_MPIsplit_bulk
+  public :: PRC_MPIsplit_nest
 
   public :: PRC_MPIbarrier
   public :: PRC_MPItime
@@ -62,9 +63,9 @@ module scale_prc
   !                                     |
   !                            PRC_GLOBAL_COMM_WORLD --split--> PRC_LOCAL_COMM_WORLD
   !-----------------------------------------------------------------------------
-  integer, public, parameter :: PRC_masterrank      = 0    !< master process in each communicator
-  integer, public, parameter :: PRC_DOMAIN_nlim = 10000    !< max depth of domains
-  integer, public, parameter :: PRC_COMM_NULL = MPI_COMM_NULL
+  integer, public, parameter :: PRC_masterrank  = 0             !< master process in each communicator
+  integer, public, parameter :: PRC_DOMAIN_nlim = 10000         !< max depth of domains
+  integer, public, parameter :: PRC_COMM_NULL   = MPI_COMM_NULL
 
   ! universal world
   integer, public :: PRC_UNIVERSAL_COMM_WORLD = -1      !< original communicator
@@ -81,7 +82,7 @@ module scale_prc
   logical, public :: PRC_GLOBAL_IsMaster      = .false. !< master process in global communicator?
 
   integer, public :: PRC_GLOBAL_domainID      = 0       !< my domain ID   in global communicator
-  integer, public :: PRC_GLOBAL_ROOT(PRC_DOMAIN_nlim+1) !< root processes in global members
+  integer, public :: PRC_GLOBAL_ROOT(PRC_DOMAIN_nlim)   !< root processes in global members
 
   ! local world
   integer, public :: PRC_LOCAL_COMM_WORLD     = -1      !< local communicator
@@ -142,12 +143,14 @@ contains
   subroutine PRC_UNIVERSAL_setup( &
        comm,    &
        nprocs,  &
+       myrank,  &
        ismaster )
     implicit none
 
     integer, intent(in)  :: comm     ! communicator
     integer, intent(out) :: nprocs   ! number of procs in this communicator
-    logical, intent(out) :: ismaster ! master process in this communicator?
+    integer, intent(out) :: myrank   ! myrank          in this communicator
+    logical, intent(out) :: ismaster ! master process  in this communicator?
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -164,6 +167,7 @@ contains
     endif
 
     nprocs   = PRC_UNIVERSAL_nprocs
+    myrank   = PRC_UNIVERSAL_myrank
     ismaster = PRC_UNIVERSAL_IsMaster
 
 
@@ -400,365 +404,394 @@ contains
   end subroutine PRC_MPIfinish
 
   !-----------------------------------------------------------------------------
-  !> MPI Communicator Split
-  subroutine PRC_MPIsplit( &
-      ORG_COMM,         & ! [in ]
-      NUM_DOMAIN,       & ! [in ]
-      PRC_DOMAINS,      & ! [in ]
-      CONF_FILES,       & ! [in ]
-      LOG_SPLIT,        & ! [in ]
-      bulk_split,       & ! [in ]
-      color_reorder,    & ! [in ]
-      INTRA_COMM,       & ! [out]
-      inter_parent,     & ! [out]
-      inter_child,      & ! [out]
-      fname_local       ) ! [out]
+  !> MPI Communicator Split (bulk job)
+  subroutine PRC_MPIsplit_bulk( &
+      ORG_COMM_WORLD, &
+      NUM_BULKJOB,    &
+      PRC_BULKJOB,    &
+      debug,          &
+      SUB_COMM_WORLD, &
+      ID_BULKJOB      )
     implicit none
 
-    integer,               intent(in)  :: ORG_COMM
-    integer,               intent(in)  :: NUM_DOMAIN
-    integer,               intent(in)  :: PRC_DOMAINS(:)
-    character(len=*),      intent(in)  :: CONF_FILES(:)
-    logical,               intent(in)  :: LOG_SPLIT
-    logical,               intent(in)  :: bulk_split
-    logical,               intent(in)  :: color_reorder
-    integer,               intent(out) :: intra_comm
-    integer,               intent(out) :: inter_parent
-    integer,               intent(out) :: inter_child
-    character(len=H_LONG), intent(out) :: fname_local
+    integer, intent(in)  :: ORG_COMM_WORLD ! communicator (original group)
+    integer, intent(in)  :: NUM_BULKJOB    ! number of bulk jobs
+    integer, intent(in)  :: PRC_BULKJOB(:) ! number of ranks in subgroup communicator
+    logical, intent(in)  :: debug          ! log-output for mpi splitting?
+    integer, intent(out) :: SUB_COMM_WORLD ! communicator (new subgroup)
+    integer, intent(out) :: ID_BULKJOB     ! bulk job id
 
-    integer :: PARENT_COL(PRC_DOMAIN_nlim)        ! parent color number
-    integer :: CHILD_COL(PRC_DOMAIN_nlim)         ! child  color number
-    integer :: PRC_ROOT(0:PRC_DOMAIN_nlim)        ! root process in the color
-    integer, allocatable :: COLOR_LIST(:)   ! member list in each color
-    integer, allocatable :: KEY_LIST(:)     ! local process number in each color
+    integer :: ORG_myrank ! my rank         in the original communicator
+    integer :: ORG_nrank  ! number of ranks in the original communicator
+    integer :: sum_nrank
 
-    integer :: total_nmax
-    integer :: ORG_myrank  ! my rank number in the original communicator
-    integer :: ORG_nmax    ! total rank number in the original communicator
+    integer, allocatable  :: prc2color (:)                 ! color id      for each process
+    integer, allocatable  :: prc2key   (:)                 ! local rank id for each process
+    integer               :: COL_domain(0:PRC_DOMAIN_nlim) ! domain id    of this color
+    integer               :: COL_master(0:PRC_DOMAIN_nlim) ! master rank  of this color
+    integer               :: COL_parent(0:PRC_DOMAIN_nlim) ! parent color of this color
+    integer               :: COL_child (0:PRC_DOMAIN_nlim) ! child  color of this color
 
-    logical :: do_create_p(PRC_DOMAIN_nlim)
-    logical :: do_create_c(PRC_DOMAIN_nlim)
-    logical :: reordering
+    logical :: color_reorder = .false. ! dummy
 
-    character(len=H_LONG) :: COL_FILE(0:PRC_DOMAIN_nlim)
-    character(len=4)      :: col_num
-
-    integer :: i, ii
+    integer :: i, color
     integer :: itag, ierr
     !---------------------------------------------------------------------------
 
-    INTRA_COMM   = ORG_COMM
-    inter_parent = MPI_COMM_NULL
-    inter_child  = MPI_COMM_NULL
-    fname_local  = CONF_FILES(1)
 
-    if ( NUM_DOMAIN > 1 ) then ! multi domain run
-       call MPI_COMM_RANK(ORG_COMM,ORG_myrank,ierr)
-       call MPI_COMM_SIZE(ORG_COMM,ORG_nmax,  ierr)
-       allocate( COLOR_LIST(0:ORG_nmax-1) )
-       allocate( KEY_LIST  (0:ORG_nmax-1) )
+    if ( NUM_BULKJOB == 1 ) then ! single domain run
 
-       total_nmax = 0
-       do i = 1, NUM_DOMAIN
-          total_nmax = total_nmax + PRC_DOMAINS(i)
-       enddo
-       if ( total_nmax /= ORG_nmax ) then
-          if( PRC_UNIVERSAL_IsMaster ) then
+       SUB_COMM_WORLD      = ORG_COMM_WORLD
+       ID_BULKJOB          = 0
+       PRC_UNIVERSAL_jobID = 0
+
+    elseif( NUM_BULKJOB > 1 ) then ! multi domain run
+
+       call MPI_COMM_RANK(ORG_COMM_WORLD,ORG_myrank,ierr)
+       call MPI_COMM_SIZE(ORG_COMM_WORLD,ORG_nrank ,ierr)
+
+       sum_nrank = sum(PRC_BULKJOB(1:NUM_BULKJOB))
+
+       if ( sum_nrank /= ORG_nrank ) then
+          if ( PRC_UNIVERSAL_IsMaster ) then
              LOG_ERROR("PRC_MPIsplit",*) "MPI PROCESS NUMBER is INCONSISTENT"
-             LOG_ERROR_CONT(*) " REQUESTED NPROCS = ", total_nmax, "  LAUNCHED NPROCS = ", ORG_nmax
-          end if
+             LOG_ERROR_CONT(*)           " REQUESTED NPROCS = ", sum_nrank, "  LAUNCHED NPROCS = ", ORG_nrank
+          endif
           call PRC_abort
        endif
 
-       reordering = color_reorder
-       if ( bulk_split ) then
-          reordering = .false.
-       endif
-       call PRC_MPIcoloring( ORG_COMM,    & ! [IN]
-                             NUM_DOMAIN,  & ! [IN]
-                             PRC_DOMAINS, & ! [IN]
-                             CONF_FILES,  & ! [IN]
-                             reordering,  & ! [IN]
-                             LOG_SPLIT,   & ! [IN]
-                             COLOR_LIST,  & ! [OUT]
-                             PRC_ROOT,    & ! [OUT]
-                             KEY_LIST,    & ! [OUT]
-                             PARENT_COL,  & ! [OUT]
-                             CHILD_COL,   & ! [OUT]
-                             COL_FILE     ) ! [OUT]
+       allocate( prc2color(0:ORG_nrank-1) )
+       allocate( prc2key  (0:ORG_nrank-1) )
 
-       if ( bulk_split ) then
-          ii = 1
-          do i=0, PRC_DOMAIN_nlim
-             PRC_GLOBAL_ROOT(ii) = PRC_ROOT(i)
-             ii = ii + 1
-          enddo
-       endif
+       call PRC_MPIcoloring( ORG_COMM_WORLD, & ! [IN]
+                             ORG_nrank,      & ! [IN]
+                             NUM_BULKJOB,    & ! [IN]
+                             PRC_BULKJOB(:), & ! [IN]
+                             color_reorder,  & ! [IN]
+                             .true.,         & ! [IN]
+                             debug,          & ! [IN]
+                             prc2color (:),  & ! [OUT]
+                             prc2key   (:),  & ! [OUT]
+                             COL_domain(:),  & ! [OUT]
+                             COL_master(:),  & ! [OUT]
+                             COL_parent(:),  & ! [OUT]
+                             COL_child (:)   ) ! [OUT]
 
        ! split comm_world
-       call MPI_COMM_SPLIT(ORG_COMM,               &
-                           COLOR_LIST(ORG_myrank), &
-                           KEY_LIST(ORG_myrank),   &
-                           INTRA_COMM, ierr)
-       if ( bulk_split ) then
-          write(col_num,'(I4.4)') COLOR_LIST(ORG_myrank)
-          fname_local = col_num
-          PRC_UNIVERSAL_jobID  = COLOR_LIST(ORG_myrank)
-       else
-          fname_local = COL_FILE(COLOR_LIST(ORG_myrank))
-       endif
+       call MPI_COMM_SPLIT( ORG_COMM_WORLD,        & ! [IN]
+                            prc2color(ORG_myrank), & ! [IN]
+                            prc2key  (ORG_myrank), & ! [IN]
+                            SUB_COMM_WORLD,        & ! [OUT]
+                            ierr                   ) ! [OUT]
 
-       ! set parent-child relationship
-       do_create_p(:) = .false.
-       do_create_c(:) = .false.
-       if ( .NOT. bulk_split ) then
-          if ( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if ( PRC_UNIVERSAL_IsMaster ) write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information"
-          do i = 1, NUM_DOMAIN-1
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I2.2)')  "Relationship No. ", i
-             if ( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2))') "Parent color = ", PARENT_COL(i), &
-                                                                   " <=> child color = ", CHILD_COL (i)
-             if ( COLOR_LIST(ORG_myrank) == PARENT_COL(i) ) then
-                do_create_p(i) = .true.
-             elseif ( COLOR_LIST(ORG_myrank) == CHILD_COL(i) ) then
-                do_create_c(i) = .true.
-             endif
-          enddo
-       endif
+       do i = 1, NUM_BULKJOB
+          color = i-1
+          PRC_GLOBAL_ROOT(i) = COL_master(color)
+       enddo
 
-       ! create inter-commnunicator
-       inter_parent = MPI_COMM_NULL
-       inter_child  = MPI_COMM_NULL
-       if ( .NOT. bulk_split ) then
-          do i = 1, NUM_DOMAIN-1
-             itag = i*100
-             if    ( do_create_p(i) ) then ! as a parent
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,          &
-                                           ORG_COMM,   PRC_ROOT(CHILD_COL(i)),  &
-                                           itag, inter_child,  ierr             )
-             elseif( do_create_c(i) ) then ! as a child
-                call MPI_INTERCOMM_CREATE( INTRA_COMM, PRC_masterrank,          &
-                                           ORG_COMM,   PRC_ROOT(PARENT_COL(i)), &
-                                           itag, inter_parent, ierr             )
-             endif
-             call MPI_BARRIER(ORG_COMM, ierr)
-          enddo
-       endif
+       ID_BULKJOB          = prc2color(ORG_myrank) ! color = bulk id
+       PRC_UNIVERSAL_jobID = prc2color(ORG_myrank) ! color = bulk id
 
-       deallocate( COLOR_LIST, KEY_LIST )
+       deallocate( prc2color )
+       deallocate( prc2key   )
 
-    elseif ( NUM_DOMAIN == 1 ) then ! single domain run
-       ! if ( PRC_UNIVERSAL_IsMaster ) write (*,*) "INFO [PRC_MPIsplit] a single communicator"
     else
        if ( PRC_UNIVERSAL_IsMaster ) then
-          write(*,*)"ERROR [RPC_MPIsplit] REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
-       end if
+          LOG_ERROR("PRC_MPIsplit",*) "REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       endif
        call PRC_abort
     endif
 
     return
-  end subroutine PRC_MPIsplit
+  end subroutine PRC_MPIsplit_bulk
+
+  !-----------------------------------------------------------------------------
+  !> MPI Communicator Split (nesting)
+  subroutine PRC_MPIsplit_nest( &
+      ORG_COMM_WORLD,   &
+      NUM_DOMAIN,       &
+      PRC_DOMAIN,       &
+      debug,            &
+      color_reorder,    &
+      SUB_COMM_WORLD,   &
+      ID_DOMAIN,        &
+      INTERCOMM_parent, &
+      INTERCOMM_child   )
+    implicit none
+
+    integer,               intent(in)  :: ORG_COMM_WORLD   ! communicator (original group)
+    integer,               intent(in)  :: NUM_DOMAIN       ! number of bulk jobs
+    integer,               intent(in)  :: PRC_DOMAIN(:)    ! number of ranks in subgroup communicator
+    logical,               intent(in)  :: debug            ! log-output for mpi splitting?
+    logical,               intent(in)  :: color_reorder    ! reorder
+    integer,               intent(out) :: SUB_COMM_WORLD   ! communicator (new subgroup)
+    integer,               intent(out) :: ID_DOMAIN        ! domain id
+    integer,               intent(out) :: INTERCOMM_parent ! communicator between this rank and parent domain
+    integer,               intent(out) :: INTERCOMM_child  ! communicator between this rank and child  domain
+
+    integer :: ORG_myrank ! my rank         in the original communicator
+    integer :: ORG_nrank  ! number of ranks in the original communicator
+    integer :: sum_nrank
+
+    integer, allocatable  :: prc2color (:)                 ! color id      for each process
+    integer, allocatable  :: prc2key   (:)                 ! local rank id for each process
+    integer               :: COL_domain(0:PRC_DOMAIN_nlim) ! domain id    of this color
+    integer               :: COL_master(0:PRC_DOMAIN_nlim) ! master rank  of this color
+    integer               :: COL_parent(0:PRC_DOMAIN_nlim) ! parent color of this color
+    integer               :: COL_child (0:PRC_DOMAIN_nlim) ! child  color of this color
+
+    integer :: i, color
+    integer :: itag, ierr
+    !---------------------------------------------------------------------------
+
+    INTERCOMM_parent = MPI_COMM_NULL
+    INTERCOMM_child  = MPI_COMM_NULL
+
+    if ( NUM_DOMAIN == 1 ) then ! single domain run
+
+       SUB_COMM_WORLD      = ORG_COMM_WORLD
+       ID_DOMAIN           = 1
+       PRC_GLOBAL_domainID = 1
+
+    elseif( NUM_DOMAIN > 1 ) then ! multi domain run
+
+       call MPI_COMM_RANK(ORG_COMM_WORLD,ORG_myrank,ierr)
+       call MPI_COMM_SIZE(ORG_COMM_WORLD,ORG_nrank ,ierr)
+
+       sum_nrank = sum(PRC_DOMAIN(1:NUM_DOMAIN))
+
+       if ( sum_nrank /= ORG_nrank ) then
+          if ( PRC_UNIVERSAL_IsMaster ) then
+             LOG_ERROR("PRC_MPIsplit",*) "MPI PROCESS NUMBER is INCONSISTENT"
+             LOG_ERROR_CONT(*)           " REQUESTED NPROCS = ", sum_nrank, "  LAUNCHED NPROCS = ", ORG_nrank
+          endif
+          call PRC_abort
+       endif
+
+       allocate( prc2color(0:ORG_nrank-1) )
+       allocate( prc2key  (0:ORG_nrank-1) )
+
+       call PRC_MPIcoloring( ORG_COMM_WORLD, & ! [IN]
+                             ORG_nrank,      & ! [IN]
+                             NUM_DOMAIN,     & ! [IN]
+                             PRC_DOMAIN(:),  & ! [IN]
+                             color_reorder,  & ! [IN]
+                             .false.,        & ! [IN]
+                             debug,          & ! [IN]
+                             prc2color (:),  & ! [OUT]
+                             prc2key   (:),  & ! [OUT]
+                             COL_domain(:),  & ! [OUT]
+                             COL_master(:),  & ! [OUT]
+                             COL_parent(:),  & ! [OUT]
+                             COL_child (:)   ) ! [OUT]
+
+       ! split comm_world
+       call MPI_COMM_SPLIT( ORG_COMM_WORLD,        & ! [IN]
+                            prc2color(ORG_myrank), & ! [IN]
+                            prc2key  (ORG_myrank), & ! [IN]
+                            SUB_COMM_WORLD,        & ! [OUT]
+                            ierr                   ) ! [OUT]
+
+       ID_DOMAIN           = COL_domain(prc2color(ORG_myrank)) ! color /= domain id
+       PRC_GLOBAL_domainID = COL_domain(prc2color(ORG_myrank)) ! color /= domain id
+
+       if ( PRC_UNIVERSAL_IsMaster ) then
+          write(*,*)
+          write(*,*) "INFO [PRC_MPIsplit] Inter-domain relationship information"
+          do i = 1, NUM_DOMAIN
+             color = i-1
+             if ( COL_parent(color) >= 0 ) then
+                write(*,'(5x,A,I2.2)')          "Relationship No.", i
+                write(*,'(5x,A,I2.2,A,A,I2.2)') "Parent color: ", COL_parent(color), " <=> ", &
+                                                "Child  color: ", color
+             endif
+          enddo
+       endif
+
+       ! create inter-communicator
+       do i = 1, NUM_DOMAIN
+          color = i-1
+          if ( COL_parent(color) >= 0 ) then
+             itag  = i*100
+
+             if    ( prc2color(ORG_myrank) == COL_parent(color) ) then ! as a parent
+
+                call MPI_INTERCOMM_CREATE( SUB_COMM_WORLD, PRC_masterrank,    &
+                                           ORG_COMM_WORLD, COL_master(color), &
+                                           itag, INTERCOMM_child, ierr        )
+
+             elseif( prc2color(ORG_myrank) == color ) then ! as a child
+
+                call MPI_INTERCOMM_CREATE( SUB_COMM_WORLD, PRC_masterrank,                &
+                                           ORG_COMM_WORLD, COL_master(COL_parent(color)), &
+                                           itag, INTERCOMM_parent, ierr                   )
+
+             endif
+
+             call MPI_BARRIER(ORG_COMM_WORLD,ierr)
+          endif
+       enddo
+
+       deallocate( prc2color )
+       deallocate( prc2key   )
+
+    else
+       if ( PRC_UNIVERSAL_IsMaster ) then
+          write(*,*)"ERROR [RPC_MPIsplit] REQUESTED DOMAIN NUMBER IS NOT ACCEPTABLE"
+       endif
+       call PRC_abort
+    endif
+
+    return
+  end subroutine PRC_MPIsplit_nest
 
   !-----------------------------------------------------------------------------
   !> Set color and keys for COMM_SPLIT
   subroutine PRC_MPIcoloring( &
-      ORG_COMM,        & ! [in ]
-      NUM_DOMAIN,      & ! [in ]
-      PRC_DOMAINS,     & ! [in ]
-      CONF_FILES,      & ! [in ]
-      color_reorder,   & ! [in ]
-      LOG_SPLIT,       & ! [in ]
-      COLOR_LIST,      & ! [out]
-      PRC_ROOT,        & ! [out]
-      KEY_LIST,        & ! [out]
-      PARENT_COL,      & ! [out]
-      CHILD_COL,       & ! [out]
-      COL_FILE         ) ! [out]
+      ORG_COMM_WORLD, &
+      ORG_nrank,      &
+      NUM_SUBGROUP,   &
+      PRC_SUBGROUP,   &
+      color_reorder,  &
+      bulkjob,        &
+      debug,          &
+      prc2color,      &
+      prc2key,        &
+      COL_domain,     &
+      COL_master,     &
+      COL_parent,     &
+      COL_child       )
     implicit none
 
-    integer,               intent(in)  :: ORG_COMM
-    integer,               intent(in)  :: NUM_DOMAIN
-    integer,               intent(in)  :: PRC_DOMAINS(:)
-    character(len=*),      intent(in)  :: CONF_FILES(:)
-    logical,               intent(in)  :: color_reorder
-    logical,               intent(in)  :: LOG_SPLIT
-    integer,               intent(out) :: COLOR_LIST(:)             ! member list in each color
-    integer,               intent(out) :: PRC_ROOT(0:PRC_DOMAIN_nlim)     ! root process in each color
-    integer,               intent(out) :: KEY_LIST(:)               ! local process number in each color
-    integer,               intent(out) :: PARENT_COL(:)             ! parent color number
-    integer,               intent(out) :: CHILD_COL(:)              ! child  color number
-    character(len=H_LONG), intent(out) :: COL_FILE(0:PRC_DOMAIN_nlim) ! conf file in each color
+    integer, intent(in)  :: ORG_COMM_WORLD
+    integer, intent(in)  :: ORG_nrank
+    integer, intent(in)  :: NUM_SUBGROUP
+    integer, intent(in)  :: PRC_SUBGROUP(:)
+    logical, intent(in)  :: color_reorder
+    logical, intent(in)  :: bulkjob
+    logical, intent(in)  :: debug
+    integer, intent(out) :: prc2color (0:ORG_nrank-1)     ! color id      for each process
+    integer, intent(out) :: prc2key   (0:ORG_nrank-1)     ! local rank id for each process
+    integer, intent(out) :: COL_domain(0:PRC_DOMAIN_nlim) ! domain id    of the color
+    integer, intent(out) :: COL_master(0:PRC_DOMAIN_nlim) ! master rank  of the color
+    integer, intent(out) :: COL_parent(0:PRC_DOMAIN_nlim) ! parent color of the color
+    integer, intent(out) :: COL_child (0:PRC_DOMAIN_nlim) ! child  color of the color
 
-    integer               :: touch         (  PRC_DOMAIN_nlim)
-    integer               :: PRC_ORDER     (  PRC_DOMAIN_nlim) ! reordered number of process
-    integer               :: ORDER2DOM     (  PRC_DOMAIN_nlim) ! get domain number by order number
-    integer               :: DOM2ORDER     (  PRC_DOMAIN_nlim) ! get order number by domain number
-    integer               :: DOM2COL       (  PRC_DOMAIN_nlim) ! get color number by domain number
-    integer               :: COL2DOM       (0:PRC_DOMAIN_nlim) ! get domain number by color number
+    integer :: PRC_REORDER(  NUM_SUBGROUP)   ! reordered  number of process
+    integer :: DOM2COL    (  NUM_SUBGROUP)   ! get color  number by domain number
+    integer :: COL2DOM    (0:NUM_SUBGROUP-1) ! get domain number by color  number
+    logical :: touch      (0:NUM_SUBGROUP-1)
 
-    integer               :: RO_PRC_DOMAINS(  PRC_DOMAIN_nlim) ! reordered values
-    integer               :: RO_DOM2COL    (  PRC_DOMAIN_nlim) ! reordered values
-    integer               :: RO_PARENT_COL (  PRC_DOMAIN_nlim) ! reordered values
-    integer               :: RO_CHILD_COL  (  PRC_DOMAIN_nlim) ! reordered values
-    character(len=H_LONG) :: RO_CONF_FILES (  PRC_DOMAIN_nlim) ! reordered values
-
-    integer :: ORG_nmax   ! parent domain number
     integer :: id_parent  ! parent domain number
-    integer :: id_child   ! child domain number
-    integer :: dnum, nprc, order, key
-    integer :: i, j
+    integer :: id_child   ! child  domain number
+    integer :: nprc, key
+    integer :: i, domain, color, p
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    ORDER2DOM     (:) = -1
-    DOM2ORDER     (:) = -1
-    RO_PRC_DOMAINS(:) = -1
-    RO_DOM2COL    (:) = -1
-    RO_CONF_FILES (:) = ""
-    RO_PARENT_COL (:) = -1
-    RO_CHILD_COL  (:) = -1
+    if ( color_reorder .AND. .NOT. bulkjob ) then ! with reordering of colors
 
-    call MPI_COMM_SIZE(ORG_COMM,ORG_nmax, ierr)
+       PRC_REORDER(1:NUM_SUBGROUP) = PRC_SUBGROUP(1:NUM_SUBGROUP)
+       call PRC_sort_ascd( PRC_REORDER(1:NUM_SUBGROUP), 1, NUM_SUBGROUP )
 
-    if ( color_reorder ) then
-       !--- make color order
-       !    domain num is counted from 1
-       !    color num  is counted from 0
-       touch    (:) = -1
-       PRC_ORDER(:) = PRC_DOMAINS(:)
-
-       call PRC_sort_ascd( PRC_ORDER(1:NUM_DOMAIN), 1, NUM_DOMAIN )
-
-       do i = 1, NUM_DOMAIN
-       do j = NUM_DOMAIN, 1, -1
-          if ( PRC_DOMAINS(i) == PRC_ORDER(j) .AND. touch(j) < 0 ) then
-             DOM2COL(i  ) = j-1 ! domain_num --> color_num
-             COL2DOM(j-1) = i   ! color_num  --> domain_num
-             touch  (j  ) = 1
+       touch(:) = .false.
+       do domain = 1, NUM_SUBGROUP
+       do i      = NUM_SUBGROUP, 1, -1
+          color = i-1 ! counted from 0
+          if ( PRC_SUBGROUP(domain) == PRC_REORDER(i) .AND. ( .NOT. touch(color) ) ) then
+             DOM2COL(domain) = color  ! domain_num -> color_num
+             COL2DOM(color)  = domain ! color_num  -> domain_num
+             touch  (color)  = .true.
              exit
           endif
-       enddo
-       enddo
+       enddo ! order(=color+1) loop
+       enddo ! domain loop
 
-       PARENT_COL(:) = -1
-       CHILD_COL (:) = -1
-       do i = 1, NUM_DOMAIN
-          id_parent = i - 1
-          id_child  = i + 1
+    else ! without reordering of colors
 
-          if ( 1 <= id_parent .AND. id_parent <= NUM_DOMAIN ) then
-             PARENT_COL(i) = DOM2COL(id_parent)
-          endif
-          if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
-             CHILD_COL (i) = DOM2COL(id_child)
-          endif
-
-          if ( PRC_UNIVERSAL_IsMaster .AND. LOG_SPLIT ) then
-             write(*,'(1x,A,I2,1x,A,I2,2(2x,A,I2))') &
-             "DOMAIN: ", i, "MY_COL: ", DOM2COL(i), "PARENT: COL= ", PARENT_COL(i), "CHILD: COL= ", CHILD_COL(i)
-          endif
-       enddo
-
-       !--- reorder following color order
-       do i = 1, NUM_DOMAIN
-          dnum = COL2DOM(i-1)
-
-          ORDER2DOM     (i)    = dnum
-          DOM2ORDER     (dnum) = i
-          RO_PRC_DOMAINS(i)    = PRC_DOMAINS(dnum)
-          RO_DOM2COL    (dnum) = DOM2COL    (dnum)
-          RO_CONF_FILES (i)    = CONF_FILES (dnum)
-          RO_PARENT_COL (i)    = PARENT_COL (dnum)
-          RO_CHILD_COL  (i)    = CHILD_COL  (dnum)
-       enddo
-
-       !--- set relationship by ordering of relationship number
-       PARENT_COL(:) = -1
-       CHILD_COL (:) = -1
-       do i = 1, NUM_DOMAIN-1
-          PARENT_COL(i) = RO_PARENT_COL(DOM2ORDER(i+1)) ! from child to parent
-          CHILD_COL (i) = RO_CHILD_COL (DOM2ORDER(i)  ) ! from parent to child
-       enddo
-
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-       if( PRC_UNIVERSAL_IsMaster ) write(*,*) 'INFO [PRC_MPIcoloring] Domain information (with reordering)'
-       do i = 1, NUM_DOMAIN
-          if( PRC_UNIVERSAL_IsMaster ) write(*,*)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,2(A,I2.2))') "Order No. ",i," -> Domain No. ", ORDER2DOM(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Number of process      = ", RO_PRC_DOMAINS(i)
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')      "Color of this   domain = ", RO_DOM2COL(ORDER2DOM(i))
-          if ( RO_PARENT_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of parent domain = ", RO_PARENT_COL(i)
-          else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of parent domain = no parent"
-          endif
-          if ( RO_CHILD_COL(i) >= 0 ) then
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,I5)')   "Color of child  domain = ", RO_CHILD_COL(i)
-          else
-             if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A)'   )   "Color of child  domain = no child"
-          endif
-          if( PRC_UNIVERSAL_IsMaster ) write(*,'(5x,A,A)')       "Name of config file    = ", trim(RO_CONF_FILES(i))
-       enddo
-
-       do i = 1, NUM_DOMAIN
-          COL_FILE(i-1) = RO_CONF_FILES(i) ! final copy
-       enddo
-
-    else !--- without reordering of colors
-
-       do i = 1, NUM_DOMAIN
-          ORDER2DOM     (i) = i
-          RO_PRC_DOMAINS(i) = PRC_DOMAINS(i)
-          RO_DOM2COL    (i) = i-1
-          RO_CONF_FILES (i) = CONF_FILES(i)
-       enddo
-
-       do i = 1, NUM_DOMAIN
-          id_parent = i - 1
-          id_child  = i + 1
-
-          if ( 1 <= id_parent .AND. id_parent <= NUM_DOMAIN ) then
-             RO_PARENT_COL(i) = RO_DOM2COL(id_parent)
-          endif
-          if ( 1 <= id_child  .AND. id_child  <= NUM_DOMAIN ) then
-             RO_CHILD_COL (i) = RO_DOM2COL(id_child)
-          endif
-       enddo
-
-       ! make relationship
-       do i = 1, NUM_DOMAIN-1
-          PARENT_COL(i) = RO_PARENT_COL(i+1) ! from child to parent
-          CHILD_COL (i) = RO_CHILD_COL (i  ) ! from parent to child
-       enddo
+       do domain = 1, NUM_SUBGROUP
+          color = domain-1 ! counted from 0
+          DOM2COL(domain) = color  ! domain_num -> color_num
+          COL2DOM(color)  = domain ! color_num  -> domain_num
+       enddo ! domain loop
 
     endif
 
+    ! make relationship
+    COL_parent(:) = -1
+    COL_child (:) = -1
+    if ( .NOT. bulkjob ) then
+       do i = 1, NUM_SUBGROUP
+          id_parent = i - 1
+          id_child  = i + 1
+
+          if ( id_parent >= 1 .AND. id_parent <= NUM_SUBGROUP ) then
+             COL_parent(DOM2COL(i)) = DOM2COL(id_parent)
+          endif
+          if ( id_child  >= 1 .AND. id_child  <= NUM_SUBGROUP ) then
+             COL_child (DOM2COL(i)) = DOM2COL(id_child)
+          endif
+
+          if ( debug .AND. PRC_UNIVERSAL_IsMaster ) then
+             write(*,'(4(A,I2))') &
+             "DOMAIN: ", i, ", MY COL: ", DOM2COL(i), ", PARENT COL:", COL_parent(i), ", CHILD COL:", COL_child(i)
+          endif
+       enddo ! domain loop
+    endif
+
+    if ( PRC_UNIVERSAL_IsMaster ) then
+       write(*,*)
+       write(*,*)           'INFO [PRC_MPIcoloring] Domain information'
+       write(*,'(5x,A,L2)')      'Reordering? : ', color_reorder
+       do i = 1, NUM_SUBGROUP
+          color  = i-1
+          domain = COL2DOM(color)
+          write(*,*)
+          write(*,'(5x,2(A,I2.2))') "Order No. ", i, " -> Domain No. ", domain
+          write(*,'(5x,A,I5)')      "Number of process      = ", PRC_SUBGROUP(domain)
+          write(*,'(5x,A,I5)')      "Color of this   domain = ", color
+          if ( COL_parent(color) >= 0 ) then
+             write(*,'(5x,A,I5)')   "Color of parent domain = ", COL_parent(color)
+          else
+             write(*,'(5x,A)'   )   "Color of parent domain = no parent"
+          endif
+          if ( COL_child(color) >= 0 ) then
+             write(*,'(5x,A,I5)')   "Color of child  domain = ", COL_child(color)
+          else
+             write(*,'(5x,A)'   )   "Color of child  domain = no child"
+          endif
+       enddo ! order(=color+1) loop
+    endif
+
     ! make a process table
-    order = 1
-    key   = 0
-    nprc  = RO_PRC_DOMAINS(order)
-    PRC_ROOT(:) = -999
+    color  = 0
+    key    = 0
+    domain = COL2DOM(color)
+    nprc   = PRC_SUBGROUP(domain)
+    COL_master(:) = -999
 
-    do i = 0, ORG_nmax-1
-       COLOR_LIST(i+1) = RO_DOM2COL(ORDER2DOM(order))
-       KEY_LIST  (i+1) = key
+    do p = 0, ORG_nrank-1
+       prc2color(p) = color
+       prc2key  (p) = key
 
-       if ( key == 0 ) then
-          PRC_ROOT(COLOR_LIST(i+1)) = i
-          COL_FILE(COLOR_LIST(i+1)) = RO_CONF_FILES(order)
+       if ( key == 0 ) then ! master rank
+          COL_domain(color) = domain
+          COL_master(color) = p
        endif
 
-       if ( LOG_SPLIT .AND. PRC_UNIVERSAL_IsMaster ) then
+       if ( debug .AND. PRC_UNIVERSAL_IsMaster ) then
           write(*,'(5x,4(A,I5))') &
-          "PE:", i, " COLOR:", COLOR_LIST(i+1), " KEY:", KEY_LIST(i+1), " PRC_ROOT:", PRC_ROOT(COLOR_LIST(i+1))
+          "PE:", p, " COLOR:", prc2color(p), " KEY:", prc2key(p), " COL_master:", COL_master(color)
        endif
 
        key = key + 1
        if ( key >= nprc ) then
-          order = order + 1
+          color = color + 1
           key   = 0
-          nprc  = RO_PRC_DOMAINS(order)
+          if ( color < NUM_SUBGROUP ) then ! ignore last
+             domain = COL2DOM(color)
+             nprc   = PRC_SUBGROUP(domain)
+          endif
        endif
     enddo
 

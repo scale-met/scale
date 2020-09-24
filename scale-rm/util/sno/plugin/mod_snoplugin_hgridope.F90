@@ -60,11 +60,14 @@ module mod_snoplugin_hgridope
   integer,                private              :: SNOPLGIN_hgridope_nintrp      = 5       ! number of interpolation point
   integer,                private              :: SNOPLGIN_hgridope_weight      = 2       ! weighting factor for interpolation
 
-  logical,                private              :: SNOPLGIN_hgridope_outorigdata = .false. ! output original (non-averaged) data ?
-
   integer,                private              :: naxis_ll
   type(axisinfo),         private              :: ainfo_ll(8)
   type(iteminfo),         private              :: dinfo_ll
+
+  real(RP),               private              :: lon_rng
+  real(RP),               private              :: lat_rng
+  integer,                private              :: lon_num
+  integer,                private              :: lat_num
 
   integer,                private              :: imax_ref
   integer,                private              :: jmax_ref
@@ -80,6 +83,7 @@ contains
   subroutine SNOPLGIN_hgridope_setup( &
        nprocs_x_out,    &
        nprocs_y_out,    &
+       output_single,   &
        output_grads,    &
        output_gradsctl, &
        enable_plugin,   &
@@ -90,6 +94,7 @@ contains
 
     integer, intent(in)    :: nprocs_x_out             ! x length of 2D processor topology (output)
     integer, intent(in)    :: nprocs_y_out             ! y length of 2D processor topology (output)
+    logical, intent(in)    :: output_single            ! output single file when using MPI?
     logical, intent(in)    :: output_grads
     logical, intent(in)    :: output_gradsctl
     logical, intent(out)   :: enable_plugin
@@ -104,8 +109,7 @@ contains
        SNOPLGIN_hgridope_lon_end,   &
        SNOPLGIN_hgridope_dlon,      &
        SNOPLGIN_hgridope_nintrp,    &
-       SNOPLGIN_hgridope_weight,    &
-       SNOPLGIN_hgridope_outorigdata
+       SNOPLGIN_hgridope_weight
 
     integer  :: ierr
     !---------------------------------------------------------------------------
@@ -168,6 +172,24 @@ contains
           call PRC_abort
        endif
 
+       lon_rng = SNOPLGIN_hgridope_lon_end - SNOPLGIN_hgridope_lon_start
+       lon_num = int( lon_rng / SNOPLGIN_hgridope_dlon / nprocs_x_out )
+
+       if ( mod( int( lon_rng / SNOPLGIN_hgridope_dlon ), nprocs_x_out ) /= 0 ) then
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the number of x-process should be able to divide longitudinal size.', &
+                                                 nprocs_x_out, int( lon_rng / SNOPLGIN_hgridope_dlon )
+          call PRC_abort
+       endif
+
+       lat_rng = SNOPLGIN_hgridope_lat_end - SNOPLGIN_hgridope_lat_start 
+       lat_num = int( lat_rng / SNOPLGIN_hgridope_dlat / nprocs_y_out )
+
+       if ( mod( int( lat_rng / SNOPLGIN_hgridope_dlat ), nprocs_y_out ) /= 0 ) then
+          LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the number of y-process should be able to divide latitudinal size.', &
+                                                 nprocs_y_out, int( lat_rng / SNOPLGIN_hgridope_dlat )
+          call PRC_abort
+       endif
+
     case default
        LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'the name of SNOPLGIN_hgridope_type is not appropriate : ', trim(SNOPLGIN_hgridope_type)
        LOG_ERROR_CONT(*) 'you can choose OFF,NUMBER,DAILY,MONTHLY,ANNUAL'
@@ -182,14 +204,14 @@ contains
           LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'This plugin ignores control file. please turn off output_gradsctl.'
           call PRC_abort
        else
-          if ( nprocs_x_out * nprocs_y_out /= 1 ) then
+          if ( .NOT. output_single .AND. nprocs_x_out * nprocs_y_out /= 1 ) then
              LOG_ERROR("SNOPLGIN_hgridope_setup",*) 'To use this plugin, the number of output file must be 1.'
              call PRC_abort
           endif
        endif
 
-       LOG_INFO("SNOPLGIN_hgridope_setup",*) 'output original (non-averaged) data? : ', SNOPLGIN_hgridope_outorigdata
-       do_output = SNOPLGIN_hgridope_outorigdata
+       ! do not output original data
+       do_output = .false.
     endif
 
     return
@@ -197,11 +219,18 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_hgridope_setcoef( &
-       ngrids_x_out, &
-       ngrids_y_out, &
-       naxis,        &
-       ainfo,        &
-       debug         )
+       ismaster,      &
+       output_single, &
+       nprocs_x_out,  &
+       nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       nowrank_x,     &
+       nowrank_y,     &
+       hinfo,         &
+       naxis,         &
+       ainfo,         &
+       debug          )
     use scale_file_h, only: &
        FILE_REAL8
     use scale_const, only: &
@@ -211,14 +240,24 @@ contains
        INTERP_setup,   &
        INTERP_factor2d
     use mod_sno_h, only: &
+       commoninfo, &
        axisinfo
+    use mod_sno_comm, only: &
+       SNO_comm_globalaxis
     implicit none
 
-    integer,        intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
-    integer,        intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
-    integer,        intent(in)  :: naxis                                 ! number of axis variables           (input)
-    type(axisinfo), intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
-    logical,        intent(in)  :: debug
+    logical,          intent(in)  :: ismaster                              ! master process?                    (execution)
+    logical,          intent(in)  :: output_single                         ! output single file when using MPI?
+    integer,          intent(in)  :: nprocs_x_out                          ! x length of 2D processor topology (output)
+    integer,          intent(in)  :: nprocs_y_out                          ! y length of 2D processor topology (output)
+    integer,          intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: nowrank_x                             ! current process number at x-axis
+    integer,          intent(in)  :: nowrank_y                             ! current process number at y-axis
+    type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
+    integer,          intent(in)  :: naxis                                 ! number of axis variables           (input)
+    type(axisinfo),   intent(in)  :: ainfo   (naxis)                       ! axis information                   (input)
+    logical,          intent(in)  :: debug
 
     real(RP), allocatable :: lon_ref(:,:) ! [rad]
     real(RP), allocatable :: lat_ref(:,:) ! [rad]
@@ -227,6 +266,8 @@ contains
 
     real(RP) :: dxy, dx, dy ! [m]
     real(RP) :: clat        ! [rad]
+
+    type(axisinfo), allocatable :: ainfo_out(:)
 
     integer  :: i, j, n
     !---------------------------------------------------------------------------
@@ -244,11 +285,20 @@ contains
     ainfo_ll(1)%dim_name(1) = 'lon'
     ainfo_ll(1)%transpose   = .false.
     ainfo_ll(1)%regrid      = .false.
+    ainfo_ll(1)%has_bounds  = .false.
+    ainfo_ll(1)%is_bounds   = .false.
 
-    ainfo_ll(1)%dim_size(1) = int( ( SNOPLGIN_hgridope_lon_end - SNOPLGIN_hgridope_lon_start ) / SNOPLGIN_hgridope_dlon )
-    allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
-
-    ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start
+    if ( nowrank_x == 1 ) then
+       ainfo_ll(1)%dim_size(1) = lon_num + 1
+       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
+       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start &
+                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+    else
+       ainfo_ll(1)%dim_size(1) = lon_num
+       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
+       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start + SNOPLGIN_hgridope_dlon &
+                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+    endif
     do i = 2, ainfo_ll(1)%dim_size(1)
        ainfo_ll(1)%AXIS_1d(i) = ainfo_ll(1)%AXIS_1d(i-1) + SNOPLGIN_hgridope_dlon
     enddo
@@ -261,11 +311,20 @@ contains
     ainfo_ll(2)%dim_name(1) = 'lat'
     ainfo_ll(2)%transpose   = .false.
     ainfo_ll(2)%regrid      = .false.
+    ainfo_ll(2)%has_bounds  = .false.
+    ainfo_ll(2)%is_bounds   = .false.
 
-    ainfo_ll(2)%dim_size(1) = int( ( SNOPLGIN_hgridope_lat_end - SNOPLGIN_hgridope_lat_start ) / SNOPLGIN_hgridope_dlat )
-    allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
-
-    ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start
+    if ( nowrank_y == 1 ) then
+       ainfo_ll(2)%dim_size(1) = lat_num + 1
+       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
+       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start &
+                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+    else
+       ainfo_ll(2)%dim_size(1) = lat_num
+       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
+       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start + SNOPLGIN_hgridope_dlat &
+                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+    endif
     do j = 2, ainfo_ll(2)%dim_size(1)
        ainfo_ll(2)%AXIS_1d(j) = ainfo_ll(2)%AXIS_1d(j-1) + SNOPLGIN_hgridope_dlat
     enddo
@@ -296,13 +355,13 @@ contains
 
     dx  = SNOPLGIN_hgridope_dlon * CONST_D2R * CONST_RADIUS * cos(clat)
     dy  = SNOPLGIN_hgridope_dlat * CONST_D2R * CONST_RADIUS * cos(clat)
-    dxy = sqrt( dx*dx + dy*dy )
+    dxy = sqrt( dx*dx + dy*dy ) * 10.0_RP
 
     call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
                        search_limit = dxy        ) ! [IN]
 
-    imax_ref = ngrids_x_out
-    jmax_ref = ngrids_y_out
+    imax_ref = ngrids_x_out * nprocs_x_out
+    jmax_ref = ngrids_y_out * nprocs_y_out
     imax_new = ainfo_ll(1)%dim_size(1)
     jmax_new = ainfo_ll(2)%dim_size(1)
 
@@ -315,11 +374,26 @@ contains
     allocate( idx_j(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
     allocate( hfact(imax_new,jmax_new,SNOPLGIN_hgridope_nintrp) )
 
+    allocate( ainfo_out(naxis) )
+
+    if ( output_single ) then
+       call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                                 nprocs_x_out,  & ! [IN]
+                                 nprocs_y_out,  & ! [IN]
+                                 hinfo,         & ! [IN]
+                                 naxis,         & ! [IN]
+                                 ainfo    (:),  & ! [IN]
+                                 ainfo_out(:),  & ! [OUT]
+                                 bcast = .true. ) ! [IN]
+    else
+       ainfo_out(:) = ainfo(:)
+    endif
+
     do n = 1, naxis
-       if    ( ainfo(n)%varname == 'lon' ) then
-          lon_ref(:,:) = ainfo(n)%AXIS_2d(:,:) * CONST_D2R
-       elseif( ainfo(n)%varname == 'lat' ) then
-          lat_ref(:,:) = ainfo(n)%AXIS_2d(:,:) * CONST_D2R
+       if    ( ainfo_out(n)%varname == 'lon' ) then
+          lon_ref(:,:) = ainfo_out(n)%AXIS_2d(:,:) * CONST_D2R
+       elseif( ainfo_out(n)%varname == 'lat' ) then
+          lat_ref(:,:) = ainfo_out(n)%AXIS_2d(:,:) * CONST_D2R
        endif
     enddo
 
@@ -330,16 +404,13 @@ contains
     enddo
     enddo
 
-    call INTERP_factor2d( SNOPLGIN_hgridope_nintrp, & ! [IN]
-                          imax_ref, jmax_ref,       & ! [IN]
-                          lon_ref(:,:),             & ! [IN]
-                          lat_ref(:,:),             & ! [IN]
-                          imax_new, jmax_new,       & ! [IN]
-                          lon_new(:,:),             & ! [IN]
-                          lat_new(:,:),             & ! [IN]
-                          idx_i  (:,:,:),           & ! [OUT]
-                          idx_j  (:,:,:),           & ! [OUT]
-                          hfact  (:,:,:)            ) ! [OUT]
+    call INTERP_factor2d( SNOPLGIN_hgridope_nintrp,   & ! [IN]
+                          imax_ref, jmax_ref,         & ! [IN]
+                          imax_new, jmax_new,         & ! [IN]
+                          lon_ref(:,:), lat_ref(:,:), & ! [IN]
+                          lon_new(:,:), lat_new(:,:), & ! [IN]
+                          idx_i(:,:,:), idx_j(:,:,:), & ! [OUT]
+                          hfact(:,:,:)                ) ! [OUT]
 
     deallocate( lon_ref )
     deallocate( lat_ref )
@@ -360,7 +431,7 @@ contains
     type(iteminfo), intent(in)  :: dinfo ! variable information               (input)
     logical,        intent(in)  :: debug
 
-    integer  :: gout1
+    integer  :: kmax
     !---------------------------------------------------------------------------
 
     if ( debug ) then
@@ -378,9 +449,13 @@ contains
 
     elseif( dinfo%dim_rank == 3 ) then
 
-       gout1 = size(dinfo%VAR_3d(:,:,:),1)
+       if ( dinfo%transpose ) then
+          kmax = dinfo%dim_size(3)
+       else
+          kmax = dinfo%dim_size(1)
+       endif
+       allocate( dinfo_ll%VAR_3d(kmax,imax_new,jmax_new) )
 
-       allocate( dinfo_ll%VAR_3d(gout1,imax_new,jmax_new) )
        dinfo_ll%VAR_3d(:,:,:) = 0.0_RP
 
     endif
@@ -411,9 +486,12 @@ contains
 
   !-----------------------------------------------------------------------------
   subroutine SNOPLGIN_hgridope_llinterp( &
+       ismaster,      &
        dirpath,       &
        basename,      &
+       output_single, &
        output_grads,  &
+       update_axis,   &
        nowrank,       &
        nowstep,       &
        nprocs_x_out,  &
@@ -430,11 +508,16 @@ contains
        iteminfo
     use mod_sno_vars, only: &
        SNO_vars_write
+    use mod_sno_comm, only: &
+       SNO_comm_globalvars
     implicit none
 
+    logical,          intent(in)    :: ismaster                              ! master process?                    (execution)
     character(len=*), intent(in)    :: dirpath                               ! directory path                     (output)
     character(len=*), intent(in)    :: basename                              ! basename of file                   (output)
+    logical,          intent(in)    :: output_single                         ! output single file when using MPI?
     logical,          intent(in)    :: output_grads
+    logical,          intent(in)    :: update_axis
     integer,          intent(in)    :: nowrank                               ! current rank                       (output)
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
@@ -445,7 +528,7 @@ contains
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     logical,          intent(in)    :: debug
 
-    integer  :: gout1
+    type(iteminfo) :: dinfo_out
 
     logical  :: do_output, finalize, add_rm_attr
     integer  :: k, t
@@ -479,41 +562,63 @@ contains
        dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_size(2) = jmax_new
 
+       if ( output_single ) then
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out,     & ! [OUT]
+                                    bcast = .true. ) ! [IN]
+       else
+          dinfo_out = dinfo
+       endif
+
        call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                              imax_ref, jmax_ref,        & ! [IN]
                              imax_new, jmax_new,        & ! [IN]
-                             idx_i          (:,:,:),    & ! [IN]
-                             idx_j          (:,:,:),    & ! [IN]
-                             hfact          (:,:,:),    & ! [IN]
-                             dinfo%VAR_2d   (:,:),      & ! [IN]
-                             dinfo_ll%VAR_2d(:,:)       ) ! [OUT]
+                             idx_i           (:,:,:),   & ! [IN]
+                             idx_j           (:,:,:),   & ! [IN]
+                             hfact           (:,:,:),   & ! [IN]
+                             dinfo_out%VAR_2d(:,:),     & ! [IN]
+                             dinfo_ll%VAR_2d (:,:)      ) ! [OUT]
 
        do_output = .true.
 
     elseif( dinfo%dim_rank == 3 ) then
 
-       gout1 = size(dinfo%VAR_3d(:,:,:),1)
-
        dinfo_ll%dim_name(1) = "lon"
+       dinfo_ll%dim_size(1) = imax_new
        dinfo_ll%dim_name(2) = "lat"
+       dinfo_ll%dim_size(2) = jmax_new
+
        if ( dinfo%transpose ) then
           dinfo_ll%dim_name(3) = dinfo%dim_name(3)
+          dinfo_ll%dim_size(3) = dinfo%dim_size(3)
        else
           dinfo_ll%dim_name(3) = dinfo%dim_name(1)
+          dinfo_ll%dim_size(3) = dinfo%dim_size(1)
        endif
-       dinfo_ll%dim_size(1) = imax_new
-       dinfo_ll%dim_size(2) = jmax_new
-       dinfo_ll%dim_size(3) = gout1
 
-       do k = 1, gout1
+       if ( output_single ) then
+          call SNO_comm_globalvars( ismaster,      & ! [IN]
+                                    nprocs_x_out,  & ! [IN]
+                                    nprocs_y_out,  & ! [IN]
+                                    dinfo,         & ! [IN]
+                                    dinfo_out,     & ! [OUT]
+                                    bcast = .true. ) ! [IN]
+       else
+          dinfo_out = dinfo
+       endif
+
+       do k = 1, dinfo_ll%dim_size(3)
           call INTERP_interp2d( SNOPLGIN_hgridope_nintrp,  & ! [IN]
                                 imax_ref, jmax_ref,        & ! [IN]
                                 imax_new, jmax_new,        & ! [IN]
-                                idx_i          (:,:,:),    & ! [IN]
-                                idx_j          (:,:,:),    & ! [IN]
-                                hfact          (:,:,:),    & ! [IN]
-                                dinfo%VAR_3d   (k,:,:),    & ! [IN]
-                                dinfo_ll%VAR_3d(k,:,:)     ) ! [OUT]
+                                idx_i           (:,:,:),   & ! [IN]
+                                idx_j           (:,:,:),   & ! [IN]
+                                hfact           (:,:,:),   & ! [IN]
+                                dinfo_out%VAR_3d(k,:,:),   & ! [IN]
+                                dinfo_ll%VAR_3d (k,:,:)    ) ! [OUT]
        enddo
 
        do_output = .true.
@@ -525,9 +630,12 @@ contains
        finalize    = ( nowstep == dinfo_ll%step_nmax )
        add_rm_attr = .false.
 
-       call SNO_vars_write( dirpath,                    & ! [IN] from namelist
+       call SNO_vars_write( ismaster,                   & ! [IN] from MPI
+                            dirpath,                    & ! [IN] from namelist
                             basename,                   & ! [IN] from namelist
+                            output_single,              & ! [IN] from namelist
                             output_grads,               & ! [IN] from namelist
+                            update_axis,                & ! [IN]
                             nowrank,                    & ! [IN]
                             nowstep,                    & ! [IN]
                             finalize,                   & ! [IN]

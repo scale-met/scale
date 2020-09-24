@@ -68,7 +68,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( tinteg_type /= 'EULER' ) then
-       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_LARGE_TYPE is not EULER. Check!'
+       LOG_ERROR("ATMOS_DYN_Tinteg_tracer_euler_setup",*) 'TINTEG_TRACER_TYPE is not EULER. Check!'
        call PRC_abort
     end if
 
@@ -79,12 +79,14 @@ contains
   !> EULER
   subroutine ATMOS_DYN_tinteg_tracer_euler( &
        QTRC, & ! (out)
+       qflx, & ! (out)
        QTRC0, RHOQ_t, &! (in)
        DENS0, DENS, & ! (in)
        mflx_hi, num_diff, & ! (in)
        GSQRT, MAPF, & ! (in)
        CDZ, RCDZ, RCDX, RCDY, & ! (in)
        BND_W, BND_E, BND_S, BND_N, & ! (in)
+       TwoD, & ! (in)
        dtl, & ! (in)
        FLAG_FCT_TRACER, & ! (in)
        FLAG_FCT_ALONG_STREAM ) ! (in)
@@ -95,6 +97,7 @@ contains
        ATMOS_DYN_tstep_tracer
     implicit none
     real(RP), intent(inout) :: QTRC    (KA,IA,JA)
+    real(RP), intent(out)   :: qflx    (KA,IA,JA,3)
     real(RP), intent(in)    :: QTRC0   (KA,IA,JA)
     real(RP), intent(in)    :: RHOQ_t  (KA,IA,JA)
     real(RP), intent(in)    :: DENS0   (KA,IA,JA)
@@ -111,6 +114,7 @@ contains
     logical,  intent(in)    :: BND_E
     logical,  intent(in)    :: BND_S
     logical,  intent(in)    :: BND_N
+    logical,  intent(in)    :: TwoD
     real(RP), intent(in)    :: dtl
     logical,  intent(in)    :: FLAG_FCT_TRACER
     logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
@@ -121,11 +125,13 @@ contains
 
     call ATMOS_DYN_tstep_tracer( &
          QTRC, & ! (out)
+         qflx, & ! (out)
          QTRC, QTRC0, RHOQ_t, &! (in)
          DENS0, DENS, & ! (in)
          mflx_hi, num_diff, & ! (in)
          GSQRT, MAPF, & ! (in)
          CDZ, RCDZ, RCDX, RCDY, & ! (in)
+         TwoD, & ! (in)
          dtl, & ! (in)
          FLAG_FCT_TRACER, FLAG_FCT_ALONG_STREAM ) ! (in)
 

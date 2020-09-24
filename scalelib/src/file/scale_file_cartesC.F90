@@ -32,6 +32,7 @@ module scale_file_cartesC
   public :: FILE_CARTESC_setup
   public :: FILE_CARTESC_cleanup
   public :: FILE_CARTESC_set_coordinates_atmos
+  public :: FILE_CARTESC_set_areavol_atmos
   public :: FILE_CARTESC_set_coordinates_ocean
   public :: FILE_CARTESC_set_coordinates_land
   public :: FILE_CARTESC_set_coordinates_urban
@@ -100,17 +101,6 @@ module scale_file_cartesC
     logical :: periodic
   end type axisattinfo
 
-  type, public :: mappinginfo
-    character(len=H_SHORT) :: mapping_name
-    real(DP)               :: false_easting                        (1)
-    real(DP)               :: false_northing                       (1)
-    real(DP)               :: longitude_of_central_meridian        (1)
-    real(DP)               :: longitude_of_projection_origin       (1)
-    real(DP)               :: latitude_of_projection_origin        (1)
-    real(DP)               :: straight_vertical_longitude_from_pole(1)
-    real(DP)               :: standard_parallel                    (2)
-  end type mappinginfo
-
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -139,11 +129,10 @@ module scale_file_cartesC
      character(len=H_SHORT) :: location
      character(len=H_SHORT) :: grid
   end type dims
-  integer, parameter :: FILE_CARTESC_ndims = 40
+  integer, parameter :: FILE_CARTESC_ndims = 44
   type(dims) :: FILE_CARTESC_dims(FILE_CARTESC_ndims)
 
   type(axisattinfo) :: FILE_CARTESC_AXIS_info(4) ! x, xh, y, yh
-  type(mappinginfo) :: FILE_CARTESC_MAPPING_info
 
 
   real(RP), private, allocatable :: AXIS_HGT   (:,:,:)
@@ -188,13 +177,13 @@ module scale_file_cartesC
   integer(8), private :: write_buf_amount (0:FILE_FILE_MAX-1)          ! sum of write buffer amounts
 
   ! global star and count
-  integer,  private :: startXY   (3), countXY   (3)
-  integer,  private :: startZX   (2), countZX   (2)
-  integer,  private :: startZXY  (4), countZXY  (4)
-  integer,  private :: startZHXY (4), countZHXY (4)
-  integer,  private :: startOCEAN(3), countOCEAN(3)
-  integer,  private :: startLAND (3), countLAND (3)
-  integer,  private :: startURBAN(3), countURBAN(3)
+  integer,  private, target :: startXY   (3), countXY   (3)
+  integer,  private, target :: startZX   (2), countZX   (2)
+  integer,  private, target :: startZXY  (4), countZXY  (4)
+  integer,  private, target :: startZHXY (4), countZHXY (4)
+  integer,  private, target :: startOCEAN(4), countOCEAN(4)
+  integer,  private, target :: startLAND (4), countLAND (4)
+  integer,  private, target :: startURBAN(4), countURBAN(4)
   ! local start and end
   integer,  private :: ISB2, IEB2, JSB2, JEB2 !> for FILE_AGGREGATE
 
@@ -463,13 +452,7 @@ contains
        CZ, FZ,                       &
        LON, LONUY, LONXV, LONUV,     &
        LAT, LATUY, LATXV, LATUV,     &
-       TOPO, LSMASK,                 &
-       AREA,   AREAZUY_X, AREAZXV_Y, &
-               AREAWUY_X, AREAWXV_Y, &
-       AREAUY, AREAZXY_X, AREAZUV_Y, &
-       AREAXV, AREAZUV_X, AREAZXY_Y, &
-       VOL, VOLWXY, VOLZUY, VOLZXV   )
-
+       TOPO, LSMASK                 )
     use scale_const, only: &
        D2R => CONST_D2R
     implicit none
@@ -486,21 +469,6 @@ contains
     real(RP), intent(in) :: LATUV(0:IA,0:JA)
     real(RP), intent(in) :: TOPO  (  IA,  JA)
     real(RP), intent(in) :: LSMASK(  IA,  JA)
-    real(RP), intent(in) :: AREA     (     IA,JA)
-    real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
-    real(RP), intent(in) :: AREAWUY_X(0:KA,IA,JA)
-    real(RP), intent(in) :: AREAWXV_Y(0:KA,IA,JA)
-    real(RP), intent(in) :: AREAUY   (     IA,JA)
-    real(RP), intent(in) :: AREAZXY_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZUV_Y(  KA,IA,JA)
-    real(RP), intent(in) :: AREAXV   (     IA,JA)
-    real(RP), intent(in) :: AREAZUV_X(  KA,IA,JA)
-    real(RP), intent(in) :: AREAZXY_Y(  KA,IA,JA)
-    real(RP), intent(in) :: VOL   (  KA,IA,JA)
-    real(RP), intent(in) :: VOLWXY(0:KA,IA,JA)
-    real(RP), intent(in) :: VOLZUY(  KA,IA,JA)
-    real(RP), intent(in) :: VOLZXV(  KA,IA,JA)
     !---------------------------------------------------------------------------
 
     AXIS_HGT   (:,:,:) = CZ(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -518,11 +486,43 @@ contains
     AXIS_TOPO  (:,:) = TOPO  (ISB2:IEB2,JSB2:JEB2)
     AXIS_LSMASK(:,:) = LSMASK(ISB2:IEB2,JSB2:JEB2)
 
+    set_coordinates = .true.
+
+    return
+  end subroutine FILE_CARTESC_set_coordinates_atmos
+
+  !-----------------------------------------------------------------------------
+  !> set area and volume
+  subroutine FILE_CARTESC_set_areavol_atmos( &
+       AREA,   AREAZUY_X, AREAZXV_Y, &
+               AREAWUY_X, AREAWXV_Y, &
+       AREAUY, AREAZXY_X, AREAZUV_Y, &
+       AREAXV, AREAZUV_X, AREAZXY_Y, &
+       VOL, VOLWXY, VOLZUY, VOLZXV   )
+    use scale_const, only: &
+       D2R => CONST_D2R
+    implicit none
+    real(RP), intent(in) :: AREA     (     IA,JA)
+    real(RP), intent(in) :: AREAZUY_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZXV_Y(  KA,IA,JA)
+    real(RP), intent(in) :: AREAWUY_X(0:KA,IA,JA)
+    real(RP), intent(in) :: AREAWXV_Y(0:KA,IA,JA)
+    real(RP), intent(in) :: AREAUY   (     IA,JA)
+    real(RP), intent(in) :: AREAZXY_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZUV_Y(  KA,IA,JA)
+    real(RP), intent(in) :: AREAXV   (     IA,JA)
+    real(RP), intent(in) :: AREAZUV_X(  KA,IA,JA)
+    real(RP), intent(in) :: AREAZXY_Y(  KA,IA,JA)
+    real(RP), intent(in) :: VOL   (  KA,IA,JA)
+    real(RP), intent(in) :: VOLWXY(0:KA,IA,JA)
+    real(RP), intent(in) :: VOLZUY(  KA,IA,JA)
+    real(RP), intent(in) :: VOLZXV(  KA,IA,JA)
+
     AXIS_AREA     (:,:)   = AREA     (        ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZUY_X(:,:,:) = AREAZUY_X(KS  :KE,ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZXV_Y(:,:,:) = AREAZXV_Y(KS  :KE,ISB2:IEB2,JSB2:JEB2)
-    AXIS_AREAWUY_X(:,:,:) = AREAZUY_X(KS-1:KE,ISB2:IEB2,JSB2:JEB2)
-    AXIS_AREAWXV_Y(:,:,:) = AREAZXV_Y(KS-1:KE,ISB2:IEB2,JSB2:JEB2)
+    AXIS_AREAWUY_X(:,:,:) = AREAWUY_X(KS-1:KE,ISB2:IEB2,JSB2:JEB2)
+    AXIS_AREAWXV_Y(:,:,:) = AREAWXV_Y(KS-1:KE,ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAUY   (:,:)   = AREAUY   (        ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZXY_X(:,:,:) = AREAZXY_X(KS  :KE,ISB2:IEB2,JSB2:JEB2)
     AXIS_AREAZUV_Y(:,:,:) = AREAZUV_Y(KS  :KE,ISB2:IEB2,JSB2:JEB2)
@@ -535,10 +535,8 @@ contains
     AXIS_VOLZUY(:,:,:) = VOLZUY(KS  :KE,ISB2:IEB2,JSB2:JEB2)
     AXIS_VOLZXV(:,:,:) = VOLZXV(KS  :KE,ISB2:IEB2,JSB2:JEB2)
 
-    set_coordinates = .true.
-
     return
-  end subroutine FILE_CARTESC_set_coordinates_atmos
+  end subroutine FILE_CARTESC_set_areavol_atmos
 
   !-----------------------------------------------------------------------------
   !> set volume for ocean
@@ -794,8 +792,8 @@ contains
        PRC_myrank, &
        PRC_abort
     use scale_time, only: &
-       NOWDATE => TIME_NOWDATE, &
-       NOWMS   => TIME_NOWMS
+       NOWDATE   => TIME_NOWDATE, &
+       NOWSUBSEC => TIME_NOWSUBSEC
     use scale_prc_cartesC, only: &
        PRC_2Drank,     &
        PRC_NUM_X,      &
@@ -825,6 +823,7 @@ contains
     logical                :: fileexisted
     logical                :: aggregate_
     logical                :: single_
+    integer                :: date_(6)
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('FILE_O_NetCDF', 2)
@@ -858,10 +857,12 @@ contains
 
     ! create a netCDF file if not already existed. Otherwise, open it.
     if ( present(date) ) then
-       call FILE_get_CFtunits( date(:), tunits )
-       call CALENDAR_get_name( calendar )
-    else if ( NOWDATE(1) > 0 ) then
-       call FILE_get_CFtunits( NOWDATE(:), tunits )
+       date_(:) = date(:)
+    else
+       date_(:) = NOWDATE(:)
+    end if
+    if ( date_(1) > 0 ) then
+       call FILE_get_CFtunits( date_(:), tunits )
        call CALENDAR_get_name( calendar )
     else
        tunits = 'seconds'
@@ -917,7 +918,7 @@ contains
        if ( present( subsec ) ) then
           subsec_ = subsec
        else
-          subsec_= NOWMS
+          subsec_= NOWSUBSEC
        end if
 
        call FILE_CARTESC_put_globalAttributes( fid,                            & ! [IN]
@@ -1061,7 +1062,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate          )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
@@ -1069,19 +1072,21 @@ contains
 
     real(RP),         intent(out) :: var(:)   !< value of the variable
 
-    integer,          intent(in), optional  :: step     !< step number
+    integer,          intent(in), optional :: step     !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate ) ! [IN]
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_1D( fid, varname, dim_type, & ! [IN]
-                                   var(:),                 & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_1D( fid, varname, dim_type,     & ! [IN]
+                                   var(:),                     & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1094,7 +1099,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate    )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename !< basename of the file
     character(len=*), intent(in)  :: varname  !< name of the variable
@@ -1104,17 +1111,19 @@ contains
 
     integer,          intent(in), optional :: step     !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate ) ! [IN]
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_2D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:),               & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_2D( fid, varname, dim_type,     & ! [IN]
+                                   var(:,:),                   & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1127,7 +1136,9 @@ contains
        basename, varname, &
        dim_type,          &
        var,               &
-       step, aggregate    )
+       step,              &
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename   !< basename of the file
     character(len=*), intent(in)  :: varname    !< name of the variable
@@ -1137,17 +1148,19 @@ contains
 
     integer,          intent(in), optional :: step       !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate )
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_3D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:,:),             & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_3D( fid, varname, dim_type,     & ! [IN]
+                                   var(:,:,:),                 & ! [OUT]
+                                   step=step,                  & ! [IN]
+                                   allow_missing=allow_missing ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1158,29 +1171,31 @@ contains
   !> Read 4D data from file
   subroutine FILE_CARTESC_read_4D( &
        basename, varname, &
-       dim_type,          &
+       dim_type, step,    &
        var,               &
-       step, aggregate    )
+       aggregate,         &
+       allow_missing      )
     implicit none
     character(len=*), intent(in)  :: basename     !< basename of the file
     character(len=*), intent(in)  :: varname      !< name of the variable
     character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
-    integer,          intent(in), optional :: step         !< step number
     logical,          intent(in), optional :: aggregate
+    logical,          intent(in), optional :: allow_missing
 
     integer :: fid
     !---------------------------------------------------------------------------
 
-    call FILE_CARTESC_open( basename, & ! [IN]
-                            fid,      & ! [OUT]
-                            aggregate )
+    call FILE_CARTESC_open( basename,           & ! [IN]
+                            fid,                & ! [OUT]
+                            aggregate=aggregate ) ! [IN]
 
-    call FILE_CARTESC_read_var_4D( fid, varname, dim_type, & ! [IN]
-                                   var(:,:,:,:),           & ! [OUT]
-                                   step=step               ) ! [IN]
+    call FILE_CARTESC_read_var_4D( fid, varname, dim_type, step, & ! [IN]
+                                   var(:,:,:,:),                 & ! [OUT]
+                                   allow_missing=allow_missing   ) ! [IN]
 
     call FILE_CARTESC_close( fid )
 
@@ -1193,7 +1208,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1212,7 +1228,9 @@ contains
     real(RP),         intent(out) :: var(:)   !< value of the variable
 
     integer,          intent(in), optional :: step     !< step number
+    logical,          intent(in), optional :: allow_missing
 
+    integer :: vsize
     integer :: dim1_S, dim1_E
     integer :: start(1)   ! start offset of globale variable
     integer :: count(1)   ! request length to the global variable
@@ -1227,75 +1245,92 @@ contains
     if ( FILE_get_aggregate(fid) ) then
        ! read data and halos into the local buffer
        if    ( dim_type == 'Z' ) then
+          vsize = KA
+          dim1_S = KS
+          dim1_E = KE
           start(1) = 1
-          count(1) = KMAX
-          call FILE_Read( fid, varname,                                      & ! (in)
-               var(KS:KE),                                                   & ! (out)
-               step=step, ntypes=KMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'OZ' ) then
+          vsize = OKA
+          dim1_S = OKS
+          dim1_E = OKE
           start(1) = 1
-          count(1) = OKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(OKS:OKE),                                                  & ! (out)
-               step=step, ntypes=OKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'LZ' ) then
+          vsize = LKA
+          dim1_S = LKS
+          dim1_E = LKE
           start(1) = 1
-          count(1) = LKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(LKS:LKE),                                                  & ! (out)
-               step=step, ntypes=LKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'UZ' ) then
+          vsize = UKA
+          dim1_S = UKS
+          dim1_E = UKE
           start(1) = 1
-          count(1) = UKMAX
-          call FILE_Read( fid, varname,                                       & ! (in)
-               var(UKS:UKE),                                                  & ! (out)
-               step=step, ntypes=UKMAX, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'X' .OR. dim_type == 'CX' ) then
+          vsize = IA
+          dim1_S = 1
+          dim1_E = IA
           start(1) = IS_inG - IHALO
-          count(1) = IA
-          call FILE_Read( fid, varname,                                    & ! (in)
-               var(:),                                                     & ! (out)
-               step=step, ntypes=IA, dtype=etype, start=start, count=count ) ! (in)
        elseif( dim_type == 'Y' .OR. dim_type == 'CY' ) then
+          vsize = JA
+          dim1_S = 1
+          dim1_E = JA
           start(1) = JS_inG - JHALO
-          count(1) = JA
-          call FILE_Read( fid, varname,                                    & ! (in)
-               var(:),                                                     & ! (out)
-               step=step, ntypes=JA, dtype=etype, start=start, count=count ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'Z' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-       elseif( dim_type == 'OZ' ) then
-          dim1_S   = 1
-          dim1_E   = OKMAX
-       elseif( dim_type == 'LZ' ) then
-          dim1_S   = 1
-          dim1_E   = LKMAX
-       elseif( dim_type == 'UZ' ) then
-          dim1_S   = 1
-          dim1_E   = UKMAX
-       elseif( dim_type == 'X' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-       elseif( dim_type == 'CX' ) then
-          dim1_S   = 1
-          dim1_E   = IA
-       elseif( dim_type == 'Y' ) then
-          dim1_S   = JSB
-          dim1_E   = JEB
-       elseif( dim_type == 'CY' ) then
-          dim1_S   = 1
-          dim1_E   = JA
        else
           LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       count(1) = dim1_E - dim1_S + 1
+       call FILE_Read( fid, varname,                               & ! (in)
+            var(dim1_S:dim1_E),                                    & ! (out)
+            step=step, allow_missing=allow_missing,                & ! (in)
+            ntypes=count(1), dtype=etype, start=start, count=count ) ! (in)
+
+    else
+       if    ( dim_type == 'Z' ) then
+          vsize = KA
+          dim1_S = KS
+          dim1_E = KE
+       elseif( dim_type == 'OZ' ) then
+          vsize = OKA
+          dim1_S = OKS
+          dim1_E = OKE
+       elseif( dim_type == 'LZ' ) then
+          vsize = LKA
+          dim1_S = LKS
+          dim1_E = LKE
+       elseif( dim_type == 'UZ' ) then
+          vsize = UKA
+          dim1_S = UKS
+          dim1_E = UKE
+       elseif( dim_type == 'X' ) then
+          vsize = IA
+          dim1_S = ISB
+          dim1_E = IEB
+       elseif( dim_type == 'CX' ) then
+          vsize = IA
+          dim1_S = 1
+          dim1_E = IA
+       elseif( dim_type == 'Y' ) then
+          vsize = JA
+          dim1_S = JSB
+          dim1_E = JEB
+       elseif( dim_type == 'CY' ) then
+          vsize = JA
+          dim1_S = 1
+          dim1_E = JA
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_1D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E), step=step )
     endif
 
@@ -1310,7 +1345,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1325,7 +1361,11 @@ contains
     real(RP),         intent(out) :: var(:,:) !< value of the variable
 
     integer,          intent(in), optional :: step     !< step number
+    logical,          intent(in), optional :: allow_missing
 
+    integer :: vsize
+    integer :: ntypes, dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     !---------------------------------------------------------------------------
@@ -1337,37 +1377,59 @@ contains
     LOG_INFO("FILE_CARTESC_read_var_2D",'(1x,2A)') 'Read from file (2D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
+
        ! read data and halos into the local buffer
        if    ( dim_type == 'XY' ) then
-          call FILE_Read( fid, varname,                                           & ! (in)
-               var(:,:),                                                          & ! (out)
-               step=step, ntypes=IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+          vsize = IA * JA
+          ntypes = IA * JA
+          dtype = etype
+          start => startXY
+          count => countXY
        elseif( dim_type == 'ZX' ) then
           ! Because KHALO is not saved in files, we use centerTypeZX, an MPI
           ! derived datatype to describe the layout of local read buffer
-          call FILE_Read( fid, varname,                                              & ! (in)
-               var(:,:),                                                             & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZX, start=startZX, count=countZX ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if    ( dim_type == 'XY' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-       elseif( dim_type == 'ZX' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
+          vsize = KA * IA
+          ntypes = 1
+          dtype = centerTypeZX
+          start => startZX
+          count => countZX
        else
           LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       call FILE_Read( fid, varname,                             & ! (in)
+            var(:,:),                                            & ! (out)
+            step=step, allow_missing=allow_missing,              & ! (in)
+            ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+
+       if    ( dim_type == 'XY' ) then
+          vsize = IA * JA
+          dim1_S = ISB
+          dim1_E = IEB
+          dim2_S = JSB
+          dim2_E = JEB
+       elseif( dim_type == 'ZX' ) then
+          vsize = KA * IA
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_2D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
        call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E), step=step )
     endif
 
@@ -1382,7 +1444,8 @@ contains
        fid, varname, &
        dim_type,     &
        var,          &
-       step          )
+       step,         &
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1400,7 +1463,11 @@ contains
     real(RP),         intent(out) :: var(:,:,:) !< value of the variable
 
     integer,          intent(in), optional :: step       !< step number
+    logical,          intent(in), optional :: allow_missing
 
+    integer :: vsize
+    integer :: ntypes, dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
@@ -1413,92 +1480,134 @@ contains
     LOG_INFO("FILE_CARTESC_read_var_3D",'(1x,2A)') 'Read from file (3D), name : ', trim(varname)
 
     if ( FILE_get_AGGREGATE(fid) ) then
+
        ! read data and halos into the local buffer
        ! Because KHALO is not saved in files, we use mpi derived datatypes to
        ! describe the layout of local read buffer
        if(      dim_type == 'ZXY'  &
            .or. dim_type == 'ZXHY' &
            .or. dim_type == 'ZXYH' ) then
-          call FILE_Read( fid, varname,                                                 & ! (in)
-               var(:,:,:),                                                              & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+          vsize = KA * IA * JA
+          ntypes = 1
+          dtype = centerTypeZXY
+          start => startZXY
+          count => countZXY
        elseif( dim_type == 'ZHXY' ) then
-          call FILE_Read( fid, varname,                                                    & ! (in)
-               var(:,:,:),                                                                 & ! (out)
-               step=step, ntypes=1, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
+          vsize = KA * IA * JA
+          ntypes = 1
+          dtype = centerTypeZHXY
+          start => startZHXY
+          count => countZHXY
        elseif( dim_type == 'XYT' ) then
+          if ( .not. present(step) ) then
+             LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'step is necessary for "XYT"'
+             call PRC_abort
+          end if
+          vsize = IA * JA * step
+          ntypes = IA * JA * step
+          dtype = etype
           startXY(3) = 1
           countXY(3) = step
-          call FILE_Read( fid, varname,                                                & ! (in)
-               var(:,:,:),                                                             & ! (out)
-               step=step, ntypes=step*IA*JA, dtype=etype, start=startXY, count=countXY ) ! (in)
+          start => startXY
+          count => countXY
        elseif( dim_type == 'OXY' ) then
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:),                                                                    & ! (out)
-               step=step, ntypes=1, dtype=centerTypeOCEAN, start=startOCEAN, count=countOCEAN ) ! (in)
+          vsize = OKA * OIA * OJA
+          ntypes = 1
+          dtype = centerTypeOCEAN
+          start => startOCEAN
+          count => countOCEAN
        elseif( dim_type == 'LXY' ) then
-          call FILE_Read( fid, varname,                                                      & ! (in)
-               var(:,:,:),                                                                   & ! (out)
-               step=step, ntypes=1, dtype=centerTypeLAND, start=startLAND, count=countLAND ) ! (in)
+          vsize = LKA * LIA * LJA
+          ntypes = 1
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
        elseif( dim_type == 'UXY' ) then
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:),                                                                    & ! (out)
-               step=step, ntypes=1, dtype=centerTypeURBAN, start=startURBAN, count=countURBAN ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if(      dim_type == 'ZXY'  &
-           .or. dim_type == 'ZXHY' &
-           .or. dim_type == 'ZXYH' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'ZHXY' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'XYT' ) then
-          dim1_S   = ISB
-          dim1_E   = IEB
-          dim2_S   = JSB
-          dim2_E   = JEB
-          dim3_S   = 1
-          dim3_E   = step
-       elseif( dim_type == 'OXY' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'LXY' ) then
-          dim1_S   = LKS
-          dim1_E   = LKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-       elseif( dim_type == 'UXY' ) then
-          dim1_S   = UKS
-          dim1_E   = UKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
+          vsize = UKA * UIA * UJA
+          ntypes = 1
+          dtype = centerTypeURBAN
+          start => startURBAN
+          count => countURBAN
        else
           LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
-       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), step=step )
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       call FILE_Read( fid, varname,                             & ! (in)
+            var(:,:,:),                                          & ! (out)
+            step=step, allow_missing=allow_missing,              & ! (in)
+            ntypes=ntypes, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+       if(      dim_type == 'ZXY'  &
+           .or. dim_type == 'ZXHY' &
+           .or. dim_type == 'ZXYH' ) then
+          vsize = KA * IA * JA
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'ZHXY' ) then
+          vsize = KA * IA * JA
+          dim1_S = KS-1
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'XYT' ) then
+          if ( .not. present(step) ) then
+             LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'step is necessary for "XYT"'
+             call PRC_abort
+          end if
+          vsize = IA * JA * step
+          dim1_S = ISB
+          dim1_E = IEB
+          dim2_S = JSB
+          dim2_E = JEB
+          dim3_S = 1
+          dim3_E = step
+       elseif( dim_type == 'OXY' ) then
+          vsize = OKA * OIA * OJA
+          dim1_S = OKS
+          dim1_E = OKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'LXY' ) then
+          vsize = LKA * LIA * LJA
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif( dim_type == 'UXY' ) then
+          vsize = UKA * UIA * UJA
+          dim1_S = UKS
+          dim1_E = UKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_3D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       call FILE_Read( fid, varname, var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E), &
+                       step=step, allow_missing=allow_missing                        )
 
     endif
 
@@ -1512,8 +1621,9 @@ contains
   subroutine FILE_CARTESC_read_var_4D( &
        fid, varname, &
        dim_type,     &
+       step,         &
        var,          &
-       step          )
+       allow_missing )
     use scale_file, only: &
        FILE_get_AGGREGATE, &
        FILE_opened, &
@@ -1527,11 +1637,15 @@ contains
     integer,          intent(in)  :: fid          !< file ID
     character(len=*), intent(in)  :: varname      !< name of the variable
     character(len=*), intent(in)  :: dim_type     !< dimension type (Z/X/Y/Time)
+    integer,          intent(in)  :: step         !< step number
 
     real(RP),         intent(out) :: var(:,:,:,:) !< value of the variable
 
-    integer,          intent(in), optional :: step         !< step number
+    logical,          intent(in), optional :: allow_missing
 
+    integer :: vsize
+    integer :: dtype
+    integer, pointer :: start(:), count(:)
     integer :: dim1_S, dim1_E
     integer :: dim2_S, dim2_E
     integer :: dim3_S, dim3_E
@@ -1549,59 +1663,107 @@ contains
        if (      dim_type == 'ZXYT'  &
             .or. dim_type == 'ZXHYT' &
             .or. dim_type == 'ZXYHT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( fid, varname,                                                    & ! (in)
-               var(:,:,:,:),                                                               & ! (out)
-               step=step, ntypes=step, dtype=centerTypeZXY, start=startZXY, count=countZXY ) ! (in)
+          vsize = KA * IA * JA * step
+          dtype = centerTypeZXY
+          start => startZXY
+          count => countZXY
        elseif ( dim_type == 'ZHXYT' ) then
-          startZXY(4) = 1
-          countZXY(4) = step
-          call FILE_Read( fid, varname,                                                       & ! (in)
-               var(:,:,:,:),                                                                  & ! (out)
-               step=step, ntypes=step, dtype=centerTypeZHXY, start=startZHXY, count=countZHXY ) ! (in)
-       else
-          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
-          call PRC_abort
-       endif
-    else
-       if (      dim_type == 'ZXYT'  &
-            .or. dim_type == 'ZXHYT' &
-            .or. dim_type == 'ZXYHT' ) then
-          dim1_S   = KS
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
-       elseif ( dim_type == 'ZHXYT' ) then
-          dim1_S   = KS-1
-          dim1_E   = KE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
+          vsize = KA * IA * JA * step
+          dtype = centerTypeZHXY
+          start => startZHXY
+          count => countZHXY
        elseif ( dim_type == 'OXYT' ) then
-          dim1_S   = OKS
-          dim1_E   = OKE
-          dim2_S   = ISB
-          dim2_E   = IEB
-          dim3_S   = JSB
-          dim3_E   = JEB
-          dim4_S   = 1
-          dim4_E   = step
+          vsize = OKA * OIA * OJA * step
+          dtype = centerTypeOCEAN
+          start => startOCEAN
+          count => countOCEAN
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dtype = centerTypeLAND
+          start => startLAND
+          count => countLAND
+       elseif ( dim_type == 'UXYT' ) then
+          vsize = UKA * UIA * UJA * step
+          dtype = centerTypeURBAN
+          start => startURBAN
+          count => countURBAN
        else
           LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
           call PRC_abort
        endif
 
-       call FILE_Read( fid, varname,                                      & ! (in)
-            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E), & ! (out)
-            step=step                                                     ) ! (in)
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       start(4) = 1
+       count(4) = step
+       call FILE_Read( fid, varname,                           & ! (in)
+            var(:,:,:,:),                                      & ! (out)
+            allow_missing=allow_missing,                       & ! (in)
+            ntypes=step, dtype=dtype, start=start, count=count ) ! (in)
+
+    else
+       if (      dim_type == 'ZXYT'  &
+            .or. dim_type == 'ZXHYT' &
+            .or. dim_type == 'ZXYHT' ) then
+          vsize = KA * IA * JA * step
+          dim1_S = KS
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'ZHXYT' ) then
+          vsize = KA * IA * JA * step
+          dim1_S = KS-1
+          dim1_E = KE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'OXYT' ) then
+          vsize = OKA * OIA * OJA * step
+          dim1_S = OKS
+          dim1_E = OKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'LXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       elseif ( dim_type == 'OXYT' ) then
+          vsize = LKA * LIA * LJA * step
+          dim1_S = LKS
+          dim1_E = LKE
+          dim2_S = ISB
+          dim2_E = IEB
+          dim3_S = JSB
+          dim3_E = JEB
+       else
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'unsupported dimension type. Check! dim_type:', trim(dim_type), ', item:',trim(varname)
+          call PRC_abort
+       endif
+
+       if ( size(var) .ne. vsize ) then
+          LOG_ERROR("FILE_CARTESC_read_var_4D",*) 'size of var is invalid: ', trim(varname), size(var), vsize
+          call PRC_abort
+       end if
+       dim4_S   = 1
+       dim4_E   = step
+       call FILE_Read( fid, varname,                                     & ! (in)
+            var(dim1_S:dim1_E,dim2_S:dim2_E,dim3_S:dim3_E,dim4_S:dim4_E) ) ! (out)
     endif
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
@@ -1684,6 +1846,7 @@ contains
     count(:) = (/nx,ny/)
 
     call FILE_read( fid, varname, var(:,:), step=step, start=start(:), count=count(:) )
+    call FILE_CARTESC_flush( fid )
 
     call PROF_rapend  ('FILE_I_NetCDF', 2)
 
@@ -1772,6 +1935,7 @@ contains
        end if
        count(:) = (/nz,nx,ny/)
        call FILE_read( fid, varname, var(:,:,:), step=step, start=start(:), count=count(:) )
+       call FILE_CARTESC_flush( fid )
     else if ( dnames(1)(1:1)=="x" .and. dnames(2)(1:1)=="y" .and. ( dnames(3)(1:1)=="z" .or. dnames(3)(2:2)=="z" ) ) then
        allocate( buf(nx,ny,nz) )
        if ( nx==dims(1) .and. ny==dims(2) .and. nz==dims(3) ) then
@@ -1792,6 +1956,8 @@ contains
        end if
        count(:) = (/nx,ny,nz/)
        call FILE_read( fid, varname, buf(:,:,:), step=step, start=start(:), count=count(:) )
+       call FILE_CARTESC_flush( fid )
+
        !$omp parallel do
        do j = 1, ny
        do i = 1, nx
@@ -2188,8 +2354,10 @@ contains
        FILE_Set_Attribute,            &
        FILE_Def_AssociatedCoordinate, &
        FILE_Add_AssociatedVariable
-    use scale_const, &
+    use scale_const, only: &
        UNDEF => CONST_UNDEF
+    use scale_mapprojection, only: &
+       MAPPROJECTION_mappinginfo
     implicit none
 
     integer, intent(in) :: fid
@@ -2324,8 +2492,10 @@ contains
     axisname(1:2) = (/'xh','yh'/)
     call FILE_Def_AssociatedCoordinate( fid, 'lat_uv', 'latitude (half level uv)',  'degrees_north', axisname(1:2), dtype )
 
-    axisname(1:2) = (/'x ','y '/)
-    call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    if ( hasZ ) then
+       axisname(1:2) = (/'x ','y '/)
+       call FILE_Def_AssociatedCoordinate( fid, 'topo' ,  'topography',                 'm',            axisname(1:2), dtype )
+    end if
     axisname(1:2) = (/'x ','y '/)
     call FILE_Def_AssociatedCoordinate( fid, 'lsmask', 'fraction for land-sea mask', '1',            axisname(1:2), dtype )
 
@@ -2478,70 +2648,78 @@ contains
 
     ! map projection info
 
-    if ( FILE_CARTESC_mapping_info%mapping_name /= "" ) then
+    if ( MAPPROJECTION_mappinginfo%mapping_name /= "" ) then
        call FILE_Set_Attribute( fid, "x" , "standard_name", "projection_x_coordinate" )
        call FILE_Set_Attribute( fid, "xh", "standard_name", "projection_x_coordinate" )
        call FILE_Set_Attribute( fid, "y" , "standard_name", "projection_y_coordinate" )
        call FILE_Set_Attribute( fid, "yh", "standard_name", "projection_y_coordinate" )
 
-       call FILE_Add_AssociatedVariable( fid, FILE_CARTESC_mapping_info%mapping_name )
-       call FILE_Set_Attribute( fid, FILE_CARTESC_mapping_info%mapping_name, "grid_mapping_name",  FILE_CARTESC_mapping_info%mapping_name )
+       call FILE_Add_AssociatedVariable( fid, MAPPROJECTION_mappinginfo%mapping_name )
+       call FILE_Set_Attribute( fid, MAPPROJECTION_mappinginfo%mapping_name, "grid_mapping_name",  MAPPROJECTION_mappinginfo%mapping_name )
 
-       if ( FILE_CARTESC_mapping_info%false_easting(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,    & ! [IN]
-                                   "false_easting",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%false_easting(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%false_easting /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name, & ! [IN]
+                                   "false_easting",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%false_easting ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%false_northing(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                        & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,     & ! [IN]
-                                   "false_northing",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%false_northing(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%false_northing /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                     & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,  & ! [IN]
+                                   "false_northing",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%false_northing ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%longitude_of_central_meridian(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                    & ! [IN]
-                                   "longitude_of_central_meridian",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%longitude_of_central_meridian(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%longitude_of_central_meridian /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                 & ! [IN]
+                                   "longitude_of_central_meridian",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%longitude_of_central_meridian ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%longitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                        & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                     & ! [IN]
-                                   "longitude_of_projection_origin",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%longitude_of_projection_origin(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%longitude_of_projection_origin /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                     & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                  & ! [IN]
+                                   "longitude_of_projection_origin",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%longitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%latitude_of_projection_origin(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                       & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                    & ! [IN]
-                                   "latitude_of_projection_origin",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%latitude_of_projection_origin(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%latitude_of_projection_origin /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                 & ! [IN]
+                                   "latitude_of_projection_origin",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%latitude_of_projection_origin ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(1) /= UNDEF ) then
-          call FILE_Set_Attribute( fid,                                                               & ! [IN]
-                                   FILE_CARTESC_mapping_info%mapping_name,                            & ! [IN]
-                                   "straight_vertical_longitude_from_pole",                           & ! [IN]
-                                   FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(:) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                                            & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name,                         & ! [IN]
+                                   "straight_vertical_longitude_from_pole",                        & ! [IN]
+                                   MAPPROJECTION_mappinginfo%straight_vertical_longitude_from_pole ) ! [IN]
        endif
 
-       if ( FILE_CARTESC_mapping_info%standard_parallel(1) /= UNDEF ) then
-          if ( FILE_CARTESC_mapping_info%standard_parallel(2) /= UNDEF ) then
-             call FILE_Set_Attribute( fid,                                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%mapping_name,          & ! [IN]
-                                      "standard_parallel",                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%standard_parallel(1:2) ) ! [IN]
+       if ( MAPPROJECTION_mappinginfo%standard_parallel(1) /= UNDEF ) then
+          if ( MAPPROJECTION_mappinginfo%standard_parallel(2) /= UNDEF ) then
+             call FILE_Set_Attribute( fid,                                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%mapping_name,        & ! [IN]
+                                      "standard_parallel",                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%standard_parallel(:) ) ! [IN]
           else
-             call FILE_Set_Attribute( fid,                                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%mapping_name,          & ! [IN]
-                                      "standard_parallel",                             & ! [IN]
-                                      FILE_CARTESC_mapping_info%standard_parallel(1:1) ) ! [IN]
+             call FILE_Set_Attribute( fid,                                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%mapping_name,        & ! [IN]
+                                      "standard_parallel",                           & ! [IN]
+                                      MAPPROJECTION_mappinginfo%standard_parallel(1) ) ! [IN]
           endif
        endif
+
+       if ( MAPPROJECTION_mappinginfo%rotation /= UNDEF ) then
+          call FILE_Set_Attribute( fid,                                    & ! [IN]
+                                   MAPPROJECTION_mappinginfo%mapping_name, & ! [IN]
+                                   "rotation",                             & ! [IN]
+                                   MAPPROJECTION_mappinginfo%rotation      ) ! [IN]
+       endif
+
     endif
 
     ! cell measures
@@ -3013,7 +3191,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(:,:), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(:,:), start(2:3) )
 
-       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (:,:), start(2:3) )
+       end if
        call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(:,:), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (:,:), start(2:3) )
@@ -3063,7 +3243,9 @@ contains
        call FILE_Write_AssociatedCoordinate( fid, 'lat_xv', AXIS_LATXV(XSB:XEB,YSB:YEB), start(2:3) )
        call FILE_Write_AssociatedCoordinate( fid, 'lat_uv', AXIS_LATUV(XSB:XEB,YSB:YEB), start(2:3) )
 
-       call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       if ( haszcoord ) then
+          call FILE_Write_AssociatedCoordinate( fid, 'topo',   AXIS_TOPO  (XSB:XEB,YSB:YEB), start(2:3) )
+       end if
        call FILE_Write_AssociatedCoordinate( fid, 'lsmask', AXIS_LSMASK(XSB:XEB,YSB:YEB), start(2:3) )
 
        call FILE_Write_AssociatedCoordinate( fid, 'cell_area',    AXIS_AREA  (XSB:XEB,YSB:YEB), start(2:3) )
@@ -3124,8 +3306,10 @@ contains
        FILE_Set_Attribute
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
+       MAPPROJECTION_mappinginfo
     implicit none
 
     integer,          intent(in)  :: fid      !< file ID
@@ -3144,6 +3328,8 @@ contains
 
     character(len=H_MID)   :: standard_name_
     character(len=H_SHORT) :: cell_measures_
+
+    character(len=H_SHORT) :: dimtype
 
     integer :: dtype, elm_size, ndims
     integer :: dimid, n
@@ -3172,15 +3358,34 @@ contains
        endif
     endif
 
+    if ( PRC_TwoD ) then
+       select case( dim_type )
+       case ( "UY" )
+          dimtype = "XY"
+       case ( "UV" )
+          dimtype = "XV"
+       case ( "ZXHY" )
+          dimtype = "ZXY"
+       case ( "ZXHYH")
+          dimtype = "ZXYH"
+       case ( "ZHXHY" )
+          dimtype = "ZHXY"
+       case default
+          dimtype = dim_type
+       end select
+    else
+       dimtype = dim_type
+    end if
+
     dimid = -1
     do n = 1, FILE_CARTESC_ndims
-       if ( FILE_CARTESC_dims(n)%name == dim_type ) then
+       if ( FILE_CARTESC_dims(n)%name == dimtype ) then
           dimid = n
           exit
        end if
     end do
-    if ( dimid < -1 ) then
-       LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dim_type)
+    if ( dimid <= -1 ) then
+       LOG_ERROR("FILE_CARTESC_def_var",*) 'dim_type is not supported: ', trim(dimtype)
        call PRC_abort
     end if
 
@@ -3214,27 +3419,27 @@ contains
        select case ( cell_measures )
        case ( "area" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_z" )
           if ( FILE_CARTESC_dims(dimid)%area == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_z is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_z is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_x" )
           if ( FILE_CARTESC_dims(dimid)%area_x == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_x is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_x is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "area_y" )
           if ( FILE_CARTESC_dims(dimid)%area_y == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_y is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'area_y is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case ( "volume" )
           if ( FILE_CARTESC_dims(dimid)%volume == "" ) then
-             LOG_ERROR("FILE_CARTESC_def_var",*) 'volume is not supported for ', trim(dim_type), ' as cell_measures'
+             LOG_ERROR("FILE_CARTESC_def_var",*) 'volume is not supported for ', trim(dimtype), ' as cell_measures'
              call PRC_abort
           end if
        case default
@@ -3261,8 +3466,8 @@ contains
     end select
 
     ! mapping
-    if ( FILE_CARTESC_dims(dimid)%mapping .and. FILE_CARTESC_mapping_info%mapping_name /= "" ) then
-       call FILE_Set_Attribute( fid, varname, "grid_mapping", FILE_CARTESC_mapping_info%mapping_name )
+    if ( FILE_CARTESC_dims(dimid)%mapping .and. MAPPROJECTION_mappinginfo%mapping_name /= "" ) then
+       call FILE_Set_Attribute( fid, varname, "grid_mapping", MAPPROJECTION_mappinginfo%mapping_name )
     end if
 
     ! SGRID
@@ -3556,13 +3761,16 @@ contains
     start(2) = ISGA
     start(3) = JSGA
 
-    if (      dim_type == 'ZXY'  &
-         .OR. dim_type == 'ZXHY' &
-         .OR. dim_type == 'ZXYH' ) then
+    if (      dim_type == 'ZXY'   &
+         .OR. dim_type == 'ZXHY'  &
+         .OR. dim_type == 'ZXYH'  &
+         .OR. dim_type == 'ZXHYH' ) then
        dim1_max = KMAX
        dim1_S   = KS
        dim1_E   = KE
-    elseif ( dim_type == 'ZHXY' ) then
+    elseif (  dim_type == 'ZHXY'  &
+         .OR. dim_type == 'ZHXHY' &
+         .OR. dim_type == 'ZHXYH' ) then
        dim1_max = KMAX+1
        dim1_S   = KS-1
        dim1_E   = KE
@@ -4253,8 +4461,6 @@ contains
        PRC_HAS_E,      &
        PRC_HAS_S,      &
        PRC_HAS_N
-    use scale_mapprojection, only: &
-       MAPPROJECTION_get_attributes
     implicit none
     !---------------------------------------------------------------------------
 
@@ -4290,6 +4496,12 @@ contains
     call set_dimension( 'ZXHYH', 3, (/ 'z ', 'xh', 'yh' /), KA*IA*JA,     .true., &
                                              area_x='cell_area_zuv_x', area_y='cell_area_zuv_y', &
                                                   location='node'                                )
+    call set_dimension( 'ZHXHY', 3, (/ 'zh', 'xh', 'y ' /), (KA+1)*IA*JA, .true., &
+                                             area_x='cell_area_wuy_x',                           &
+                                                  location='edge1'                               )
+    call set_dimension( 'ZHXYH', 3, (/ 'zh', 'x ', 'yh' /), (KA+1)*IA*JA, .true., &
+                                                                       area_y='cell_area_wxv_y', &
+                                                  location='edge2'                               )
 
     if ( OKMAX > 0 ) then
        call set_dimension( 'OXY',  3, (/ 'oz',  'x ',  'y '  /), OKMAX*IA*JA,     .true., area='cell_area', volume='cell_volume_oxy', location='face', grid='ocean' )
@@ -4367,19 +4579,6 @@ contains
     FILE_CARTESC_AXIS_info(4) = FILE_CARTESC_AXIS_info(3)
 
 
-    ! Mapping information
-
-
-    call MAPPROJECTION_get_attributes( FILE_CARTESC_mapping_info%mapping_name,                             & ! [OUT]
-                                       FILE_CARTESC_mapping_info%false_easting                        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%false_northing                       (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%longitude_of_central_meridian        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%longitude_of_projection_origin       (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%latitude_of_projection_origin        (1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%straight_vertical_longitude_from_pole(1), & ! [OUT]
-                                       FILE_CARTESC_mapping_info%standard_parallel                    (:)  ) ! [OUT]
-
-
     return
   end subroutine set_dimension_informations
 
@@ -4405,7 +4604,7 @@ contains
     do n = 1, 2
        dimid = dimid + 1
        if ( dimid > FILE_CARTESC_ndims ) then
-          LOG_ERROR("set_dimension",*) 'number of dimensions exceeds the limit'
+          LOG_ERROR("set_dimension",*) 'number of dimensions exceeds the limit', dimid, FILE_CARTESC_ndims
           call PRC_abort
        end if
 
@@ -4576,7 +4775,7 @@ contains
     ! for dim_type == 'ZX'
     startZX(1)  = KHALO+1
     startZX(2)  = IS_inG - IHALO
-    countZX(1)  = KHALO
+    countZX(1)  = KMAX
     countZX(2)  = IA
     ! construct MPI subarray data type
     sizes(1)    = KA

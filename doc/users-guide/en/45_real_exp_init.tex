@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{Creating the initial and boundary data: init} \label{sec:tutrial_real_init}
+\section{Creating the initial and boundary data: init} \label{sec:tutorial_real_init}
 %-------------------------------------------------------%
 
 Move to the directory \verb|init| and create the initial and boundary data for the \scalerm simulation as follows:
@@ -17,8 +17,8 @@ The file \verb|init.launch.conf| also exists but is not used here.
 It is necessary to edit the file \verb|init.d01.conf| according to such experimental settings as \verb|pp.d01.conf|. \verb|init.d01.conf| has been already edited for this tutorial experiment as shown in Table \ref{tab:grids}.  To create the initial and boundary data,  the topographical data generated in the previous section is used. This is set in \verb|init.d01.conf| to refer the relative path as follows:
 
 \editbox{
-\verb|&PARAM_TOPO| \\
-\verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
+\verb|&PARAM_TOPOGRAPHY| \\
+\verb|   TOPOGRAPHY_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
  \\
 \verb|&PARAM_LANDUSE| \\
@@ -55,7 +55,7 @@ In particular,  the contents of \namelist{PARAM_MKINIT_REAL_ATMOS}, \namelist{PA
 The file format of the meteorological field data is specified in \nmitem{FILETYPE_ORG}. In this case, it is given as ``\grads'' to read data in \grads format. Refer to Section \ref{sec:adv_datainput} for the details of the input file.
 
 
-Link the input data (FNL) that are converted into binary form in Section \ref{sec:tutrial_real_data} to the current working directory. A shell script for this appropriate linkage is prepared as \verb|"gradsinput-link_FNL.sh"| in the directory \verb|${Tutorial_DIR}/real/data|:
+Link the input data (FNL) that are converted into binary form in Section \ref{sec:tutorial_real_data} to the current working directory. A shell script for this appropriate linkage is prepared as \verb|"gradsinput-link_FNL.sh"| in the directory \verb|${Tutorial_DIR}/real/data|:
 \begin{verbatim}
   $ cp ../../data/gradsinput-link_FNL.sh ./
   $ sh gradsinput-link_FNL.sh
@@ -98,9 +98,30 @@ The file \verb|init_LOG_d01.pe000000| is a log file.  The following message is o
  +++++ MPI is peacefully finalized\\
 }
 The file sizes of the boundary and initial data, \verb|boundary_d01.pe######.nc| and \\
-\verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 18.9 MB and 12.6 MB, respectively,  where \verb|######| represents the MPI process number.
+\verb|init_d01_20070714-180000.000.pe######.nc|, are approximately 18.9 MB and 12.6 MB, respectively,  where \verb|######| represents the MPI process number.\\
 
-\vspace{1cm}
+\vspace{0.8cm}
+\noindent {\Large\em NOTICE}: {\large Reduction of memory usage when reading input data} \hrulefill
+
+In \scalerm, only the master process reads input data and broadcasts the data to each node.
+This algorithm can reduce file I/O and process the input data fast.
+On the other hand, the algorithm may cause insufficient memory error when reading large input data, especially on a high-performance computing system.
+To avoid the error, you can choose the method that each node reads input data by itself.
+%
+\editboxtwo{
+\verb|&PARAM_MKINIT_REAL_ATMOS| & \\
+\verb| SERIAL_PROC_READ = .false.,| & {\small : Does only the master process read input data?} \\
+\verb|/| \\
+}
+%
+The default setting is \verb|.true.|, which means that the master process only reads input data.
+When setting \verb|.false.|, each node accesses to only the data it needs, resulting in the reduction of memory usage.
+However, because the algorithm places a load on file I/O,
+the computational performance may deteriorate due to locking file access.
+
+\noindent \hrulefill\\
+
+\vspace{0.8cm}
 \noindent {\Large\em OPTION} \hrulefill \\
 When ``gpview'' is installed,  one can confirm whether the initial and boundary data have been created correctly  by the following command:
 \begin{verbatim}
@@ -113,7 +134,7 @@ If the same figure as Fig. \ref{fig:init} is found, it is successfully concluded
 
 \begin{figure}[h]
 \begin{center}
-  \includegraphics[width=0.6\hsize]{./figure/real_init_qv-momxy.pdf}\\
+  \includegraphics[width=0.6\hsize]{./../../figure/real_init_qv-momxy.pdf}\\
   \caption{Initial field at z=1500m for the tutorial experiment.
     The color indicates specific humidity and the vector horizontal momentum flux.}
   \label{fig:init}

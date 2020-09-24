@@ -4,19 +4,18 @@
 \section*{回答}
 \begin{enumerate}
 \item {\bf 計算領域は変えず、MPI並列数を変更したい}\\
-\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX, JMAX}、\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}を変更する。
+\namelist{PARAM_PRC}内の\nmitem{PRC_NUM_X, PRC_NUM_Y}を変更する。
 下記3つの式を満たしていれば正解である。
 \begin{eqnarray}
-&& MPI並列数 = (\verb|PRC_NUM_X|) \times (\verb|PRC_NUM_Y|) = 6 \nonumber\\
-&& X方向の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 90 \nonumber\\
-&& Y方向の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 90 \nonumber
+&& MPI並列数 = \nmitemeq{PRC_NUM_X} \times \nmitemeq{PRC_NUM_Y} = 6 \nonumber\\
+&& \nmitemeq{IMAXG} \bmod \nmitemeq{PRC_NUM_X} = 0 \nonumber\\
+&& \nmitemeq{JMAXG} \bmod \nmitemeq{PRC_NUM_Y} = 0 \nonumber
 \end{eqnarray}
 
 
 \item {\bf MPI並列数は変えず、計算領域を変更したい}\\
-MPIプロセスあたりの格子数を$n$倍にすれば、
-領域全体の格子数も$n$倍となる。
-したがって、\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX, JMAX}のみ変更すれば良い。
+格子数を$n$倍にすれば、領域サイズも$n$倍となる。
+したがって、\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG, JMAXG}のみ変更すれば良い。
 赤字の部分がデフォルトからの変更点である。\\
 
 \noindent {\small {\gt
@@ -24,15 +23,15 @@ MPIプロセスあたりの格子数を$n$倍にすれば、
 \begin{tabularx}{150mm}{ll}
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 60,|}  & (オリジナル設定は \verb|IMAX = 45|)\\
-\textcolor{red}{\verb| JMAX = 30,|}  & (オリジナル設定は \verb|JMAX = 45|)\\
+\textcolor{red}{\verb| IMAXG = 120,|}  & (オリジナル設定は \verb|IMAXG = 90|)\\
+\textcolor{red}{\verb| JMAXG =  60,|}  & (オリジナル設定は \verb|JMAXG = 90|)\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
 
 \item {\bf 計算領域は変えず、水平格子間隔を変更したい}\\
 MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nmitem{DX, DY}と、\\
-\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAX,JMAX}を変更する。
+\namelist{PARAM_ATMOS_GRID_CARTESC_INDEX}内の\nmitem{IMAXG,JMAXG}を変更する。
 
 \noindent {\small {\gt
 \ovalbox{
@@ -43,8 +42,8 @@ MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nm
 \\
 \verb|&PARAM_ATMOS_GRID_CARTESC_INDEX| & \\
 \verb| KMAX = 36,|  & \\
-\textcolor{red}{\verb| IMAX = 180,|} &  (オリジナル設定は \verb|IMAX = 45|)\\
-\textcolor{red}{\verb| JMAX = 180,|} &  (オリジナル設定は \verb|JMAX = 45|)\\
+\verb| IMAXG = 90,| & \\
+\verb| JMAXG = 90,| & \\
 \verb|/| &\\
  \\
 \verb|&PARAM_ATMOS_GRID_CARTESC| & \\
@@ -56,24 +55,22 @@ MPI並列数を変えない場合は、\namelist{PARAM_ATMOS_GRID_CARTESC}の\nm
 
 MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の設定において、下記の関係を満たしていれば正解である。
 \begin{eqnarray}
-&& {\XDIR} の格子数 = \left(\verb|IMAX| \times \verb|PRC_NUM_X|\right) = 360 \\\nonumber
-&& {\YDIR}の格子数 = \left(\verb|JMAX| \times \verb|PRC_NUM_Y|\right) = 360 \nonumber
+&& \nmitemeq{IMAXG} \bmod \nmitemeq{PRC_NUM_X} = 0 \nonumber\\
+&& \nmitemeq{JMAXG} \bmod \nmitemeq{PRC_NUM_Y} = 0 \nonumber
 \end{eqnarray}
 
 これに加えて、力学変数の時間積分に対する時間刻み幅\nmitem{TIME_DT_ATMOS_DYN} と \\
-\nmitem{ATMOS_DYN_TINTEG_SHORT_TYPE} の調整も必要である（第\ref{sec:timeintiv}節を参照）。
-また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない。
+\nmitem{TIME_DT} の調整も必要である (第\ref{sec:timeintiv}節を参照)。
+また、緩和領域も格子間隔の20倍から40倍となるように設定しなければならない (第\ref{subsec:buffer}節を参照)。
 以下はその解答例であり、緩和領域を格子間隔の20倍に取った場合を示している。
-
-\noindent {\small {\gt
-\ovalbox{
-\begin{tabularx}{150mm}{ll}
+%
+\editboxtwo{
 \verb|&PARAM_PRC_CARTESC|  & \\
 \verb| BUFFER_DX = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DX = 400000.D0,|) \\
 \verb| BUFFER_DY = 100000.D0, | & (オリジナル設定は\verb|BUFFER_DY = 400000.D0,|) \\
 \verb|/| &\\
-\end{tabularx}
-}}}\\
+}
+
 
 
 \item {\bf 計算領域の位置を変更したい}\\

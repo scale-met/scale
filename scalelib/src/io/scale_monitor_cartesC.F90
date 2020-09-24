@@ -49,24 +49,30 @@ contains
   subroutine MONITOR_CARTESC_setup( &
        dt, &
        ATMOS_do, OCEAN_do, LAND_do, URBAN_do )
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     use scale_monitor, only: &
        MONITOR_setup, &
        MONITOR_set_dim
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_AREA,      &
-       ATMOS_GRID_CARTESC_REAL_TOTAREA,   &
-       ATMOS_GRID_CARTESC_REAL_AREAUY,    &
-       ATMOS_GRID_CARTESC_REAL_TOTAREAUY, &
-       ATMOS_GRID_CARTESC_REAL_AREAXV,    &
-       ATMOS_GRID_CARTESC_REAL_TOTAREAXV, &
-       ATMOS_GRID_CARTESC_REAL_VOL,       &
-       ATMOS_GRID_CARTESC_REAL_TOTVOL,    &
-       ATMOS_GRID_CARTESC_REAL_VOLWXY,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY, &
-       ATMOS_GRID_CARTESC_REAL_VOLZUY,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY, &
-       ATMOS_GRID_CARTESC_REAL_VOLZXV,    &
-       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV
+       ATMOS_GRID_CARTESC_REAL_AREA,         &
+       ATMOS_GRID_CARTESC_REAL_TOTAREA,      &
+       ATMOS_GRID_CARTESC_REAL_AREAUY,       &
+       ATMOS_GRID_CARTESC_REAL_TOTAREAUY,    &
+       ATMOS_GRID_CARTESC_REAL_AREAXV,       &
+       ATMOS_GRID_CARTESC_REAL_TOTAREAXV,    &
+       ATMOS_GRID_CARTESC_REAL_VOL,          &
+       ATMOS_GRID_CARTESC_REAL_TOTVOL,       &
+       ATMOS_GRID_CARTESC_REAL_VOLWXY,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLWXY,    &
+       ATMOS_GRID_CARTESC_REAL_VOLZUY,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZUY,    &
+       ATMOS_GRID_CARTESC_REAL_VOLZXV,       &
+       ATMOS_GRID_CARTESC_REAL_TOTVOLZXV,    &
+       ATMOS_GRID_CARTESC_REAL_AREAZUY_X,    &
+       ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X, &
+       ATMOS_GRID_CARTESC_REAL_AREAZXV_Y,    &
+       ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y
     use scale_ocean_grid_cartesC_real, only: &
        OCEAN_GRID_CARTESC_REAL_AREA,    &
        OCEAN_GRID_CARTESC_REAL_TOTAREA, &
@@ -124,6 +130,29 @@ contains
                              "XY", 2, &
                              ATMOS_GRID_CARTESC_REAL_AREA(:,:), &
                              ATMOS_GRID_CARTESC_REAL_TOTAREA    )
+       if ( PRC_TwoD ) then
+          call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
+                                "ZY-W", 2, &
+                                ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IS,:), &
+                                ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IS)   )
+       else
+          call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
+                                "ZY-W", 2, &
+                                ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IS-1,:), &
+                                ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IS-1)   )
+       end if
+       call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, JA, JS, JE, &
+                             "ZY-E", 2, &
+                             ATMOS_GRID_CARTESC_REAL_AREAZUY_X(:,IE,:), &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X(IE)    )
+       call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, IA, IS, IE, &
+                             "ZX-S", 2, &
+                             ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(:,:,JS-1), &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y(JS-1)   )
+       call MONITOR_set_dim( KA, KS, KE, KA, KS, KE, IA, IS, IE, &
+                             "ZX-N", 2, &
+                             ATMOS_GRID_CARTESC_REAL_AREAZXV_Y(:,:,JE), &
+                             ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y(JE)   )
     end if
 
     ! ocean

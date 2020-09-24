@@ -33,16 +33,18 @@ MODS=mod_net2g_vars.o     \
 ## make rules
 
 all:
-	$(MAKE) makedir
-	$(MAKE) main
+	$(MAKE) build
+	$(MAKE) install
 
-makedir:
+build: $(OBJECT)
+
+install:
 	mkdir -p $(BINDIR)
-
-main: prg_netcdf2grads_h.o
-	$(FC) $(FFLAGS) -o $(OBJECT) $(MODS) $(LIBS)
-	@mv *.mod inc/; mv *.o inc/;
 	$(INSTALL) $(OBJECT) $(BINDIR)/$(OBJECT)
+
+$(OBJECT): $(MODS)
+	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+	@mv *.mod inc/; mv *.o inc/;
 
 #f90.o:
 mod_net2g_vars.o: src/mod_net2g_vars.F90
@@ -67,4 +69,8 @@ prg_netcdf2grads_h.o: src/prg_netcdf2grads_h.F90 mod_net2g_vars.o mod_net2g_erro
 
 clean:
 	rm -f *.o *.mod inc/*.o inc/*.mod *.lst $(OBJECT)
+
+distclean: clean
+	rm -f $(BINDIR)/$(OBJECT)
+
 ##----------------------------------------------------------

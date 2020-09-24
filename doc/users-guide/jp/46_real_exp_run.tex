@@ -1,5 +1,5 @@
 %-------------------------------------------------------%
-\section{シミュレーションの実行：run} \label{sec:tutrial_real_run}
+\section{シミュレーションの実行：run} \label{sec:tutorial_real_run}
 %-------------------------------------------------------%
 \subsubsection{run.confの準備}
 \verb|run|ディレクトリへ移動する。
@@ -13,8 +13,8 @@
 モデル本体の実行には、事前に作成した地形データや初期値/境界値データを使用する。
 これらのファイルの指定は、\verb|run.d01.conf|における下記の部分で設定している。
 \editbox{
-\verb|&PARAM_TOPO| \\
-\verb|   TOPO_IN_BASENAME = "../pp/topo_d01",| \\
+\verb|&PARAM_TOPOGRAPHY| \\
+\verb|   TOPOGRAPHY_IN_BASENAME = "../pp/topo_d01",| \\
 \verb|/| \\
  \\
 \verb|&PARAM_LANDUSE| \\

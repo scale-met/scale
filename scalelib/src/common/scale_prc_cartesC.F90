@@ -52,6 +52,8 @@ module scale_prc_cartesC
   logical, public              :: PRC_PERIODIC_X   = .true.  !< periodic condition or not (X)?
   logical, public              :: PRC_PERIODIC_Y   = .true.  !< periodic condition or not (Y)?
 
+  logical, public              :: PRC_TwoD         = .false. !< 2D experiment
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure

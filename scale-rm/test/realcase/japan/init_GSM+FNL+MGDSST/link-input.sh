@@ -39,13 +39,8 @@ do
    year_dir=`date -u -d "@${usec}" +%Y`
    date_now=`date -u -d "@${usec}" +%Y%m%d%H`
 
-   if [ "${SCALE_SYS}" == "Kmicro" ]; then
-      cp -vf  ${indir_GSM}/${year_dir}/GANALjp_${date_now}.grd     ./GSMjp_${FN}.grd
-      cp -vf  ${indir_FNL}/${year_dir}/FNL4GANALjp_${date_now}.grd ./FNL_${FN}.grd
-   else
-      ln -svf ${indir_GSM}/${year_dir}/GANALjp_${date_now}.grd     ./GSMjp_${FN}.grd
-      ln -svf ${indir_FNL}/${year_dir}/FNL4GANALjp_${date_now}.grd ./FNL_${FN}.grd
-   fi
+   ln -svf ${indir_GSM}/${year_dir}/GANALjp_${date_now}.grd     ./GSMjp_${FN}.grd
+   ln -svf ${indir_FNL}/${year_dir}/FNL4GANALjp_${date_now}.grd ./FNL_${FN}.grd
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"
@@ -66,11 +61,7 @@ do
    year_dir=`date -u -d "@${usec}" +%Y`
    date_now=`date -u -d "@${usec}" +%Y%m%d`
 
-   if [ "${SCALE_SYS}" == "Kmicro" ]; then
-      cp -vf  ${indir_MGD}/${year_dir}/mgdsst_${date_now}.grd ./MGDSST_${FN}.grd
-   else
-      ln -svf ${indir_MGD}/${year_dir}/mgdsst_${date_now}.grd ./MGDSST_${FN}.grd
-   fi
+   ln -svf ${indir_MGD}/${year_dir}/mgdsst_${date_now}.grd ./MGDSST_${FN}.grd
 
    let fnum="${fnum}+1"
    let usec="${usec}+${dt}"

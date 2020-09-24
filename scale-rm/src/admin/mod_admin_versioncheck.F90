@@ -48,6 +48,7 @@ contains
 
     logical :: dummy
 
+    ! 5.2 to 5.3
     namelist / PARAM_TIME /                  dummy
     namelist / PARAM_PRC /                   dummy
     namelist / PARAM_COMM /                  dummy
@@ -101,6 +102,11 @@ contains
     namelist / PARAM_SBMAERO /               dummy
     namelist / PARAM_MKINIT_INTERPORATION /  dummy
 
+
+    ! 5.3 to 5.4
+    namelist / PARAM_TOPO /                  dummy
+
+
     logical :: stop4error
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -109,6 +115,9 @@ contains
     LOG_INFO("ADMIN_versioncheck",*) 'Check version'
 
     stop4error = .false.
+
+
+    ! 5.2 to 5.3
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_PRC,iostat=ierr)
@@ -438,12 +447,27 @@ contains
        stop4error = .true.
     endif
 
+
+
+    ! 5.3 to 5.4
+
+    rewind(IO_FID_CONF)
+    read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
+    if ( ierr >= 0 ) then !--- exists
+       LOG_WARN("ADMIN_versioncheck",*) 'Obsolete namelist PARAM_TOPO is found.'
+       stop4error = .true.
+    endif
+
+
+
+
     if ( stop4error ) then !--- exists
        LOG_ERROR("ADMIN_versioncheck",*) 'Obsolete namelist found. Check the log file.'
        call PRC_abort
     else
        LOG_INFO("ADMIN_versioncheck",*) 'Obsolete namelists were not found. OK.'
     endif
+
 
     return
   end subroutine ADMIN_versioncheck

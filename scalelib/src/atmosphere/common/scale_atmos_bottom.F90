@@ -44,11 +44,14 @@ contains
   !> Calc bottom boundary of atmosphere (just above surface)
   subroutine ATMOS_BOTTOM_estimate( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, PRES,        &
-       CZ, Zsfc, Z1,      &
+       DENS, PRES, QV, &
+       SFC_TEMP,       &
+       FZ,             &
        SFC_DENS, SFC_PRES )
     use scale_const, only: &
-       GRAV  => CONST_GRAV
+       GRAV    => CONST_GRAV, &
+       Rdry    => CONST_Rdry, &
+       EPSTvap => CONST_EPSTvap
     implicit none
     integer, intent(in) :: KA, KS, KE
     integer, intent(in) :: IA, IS, IE
@@ -56,31 +59,41 @@ contains
 
     real(RP), intent(in)  :: DENS    (KA,IA,JA)
     real(RP), intent(in)  :: PRES    (KA,IA,JA)
-    real(RP), intent(in)  :: CZ      (KA,IA,JA)
-    real(RP), intent(in)  :: Zsfc    (IA,JA)
-    real(RP), intent(in)  :: Z1      (IA,JA)
+    real(RP), intent(in)  :: QV      (KA,IA,JA)
+    real(RP), intent(in)  :: SFC_TEMP(IA,JA)
+    real(RP), intent(in)  :: FZ      (0:KA,IA,JA)
     real(RP), intent(out) :: SFC_DENS(IA,JA)
     real(RP), intent(out) :: SFC_PRES(IA,JA)
+
+    real(RP) :: Rtot
+    real(RP) :: dz1, dz2
+    real(RP) :: F2H1, F2H2
+    real(RP) :: LogP1, LogP2
+    real(RP) :: PRESH
 
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    ! estimate surface density (extrapolation)
-    !$omp parallel do OMP_SCHEDULE_
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private (Rtot,dz1,dz2,F2H1,F2H2,LogP1,LogP2,PRESH)
     do j = JS, JE
     do i = IS, IE
-       SFC_DENS(i,j) = lagrange_interp( Zsfc(i,j),         & ! [IN]
-                                        CZ  (KS:KS+2,i,j), & ! [IN]
-                                        DENS(KS:KS+2,i,j)  ) ! [IN]
-    enddo
-    enddo
+       ! interpolate half-level pressure
+       dz1 = FZ(KS+1,i,j) - FZ(KS,i,j)
+       dz2 = FZ(KS,i,j) - FZ(KS-1,i,j)
 
-    ! estimate surface pressure (hydrostatic balance)
-    !$omp parallel do OMP_SCHEDULE_
-    do j = JS, JE
-    do i = IS, IE
-       SFC_PRES(i,j) = PRES(KS,i,j) &
-                     + 0.5_RP * ( SFC_DENS(i,j) + DENS(KS,i,j) ) * GRAV * Z1(i,j)
+       F2H1 = dz2 / ( dz1 + dz2 )
+       F2H2 = dz1 / ( dz1 + dz2 )
+
+       LogP1 = log( PRES(KS+1,i,j) )
+       LogP2 = log( PRES(KS,i,j) )
+
+       PRESH = exp( F2H1 * LogP1 + F2H2 * LogP2 )
+
+       Rtot = Rdry * ( 1.0_RP + EPSTvap * QV(KS,i,j) )
+       ! ( PRESH - SFC_PRES ) / dz2 = - GRAV * DENS(KS)
+       SFC_PRES(i,j) = PRESH + GRAV * DENS(KS,i,j) * dz2
+       SFC_DENS(i,j) = SFC_PRES(i,j) / ( Rtot * SFC_TEMP(i,j) )
     enddo
     enddo
 

@@ -33,12 +33,12 @@ program unit
                                  (/'QV','QC'/), (/'QV','QC'/), (/"kg/kg","kg/kg"/), &
                                  q0 )
 
+  ! setup mpi communication
+  call COMM_setup
+
   ! setup horizontal/veritical grid system
   call ATMOS_GRID_CARTESC_allocate
   call ATMOS_GRID_CARTESC_generate( DZ=500.0_RP, DX=500.0_RP, DY=500.0_RP )
-
-  ! setup mpi communication
-  call COMM_setup
 
   write(*,*) "test_comm"
   call test_comm_run

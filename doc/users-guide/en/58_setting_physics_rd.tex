@@ -10,11 +10,11 @@ The radiation scheme is specified in \nmitem{ATMOS_PHY_RD_TYPE} in \namelist{PAR
 
 \begin{table}[h]
 \begin{center}
-  \caption{Choices of radiation scheme}
+  \caption{List of radiation scheme types}
   \label{tab:nml_atm_rd}
   \begin{tabularx}{150mm}{lXX} \hline
-    \rowcolor[gray]{0.9}  Value & Explanation of scheme & Reference\\ \hline
-      \verb|OFF| or \verb|NONE| & Do not calculate the radiation scheme & \\
+    \rowcolor[gray]{0.9}  Schemes & Explanation of scheme & Reference\\ \hline
+      \verb|OFF| or \verb|NONE| & Do not calculate the radiation process & \\
       \verb|OFFLINE|      & Use prescribed radiative data given from a file & \\
       \verb|MSTRNX|       & mstrnX (A k-distribution-based broadband radiation transfer model) & \citet{sekiguchi_2008} \\
 %      \verb|WRF|          & mstrnX(Long wave) + Dudhia (shortwave) & \citet{dudhia_1989} \\
@@ -98,7 +98,7 @@ When \nmitem{ATMOS_SOLARINS_fixedlatlon} is \verb|.true.|,
 the solar insolation is calculated using same longitude and latitude
 specified at \\
 \nmitem{ATMOS_SOLARINS_lon, ATMOS_SOLARINS_lat} over the whole domain.
-the default values of them are \nmitem{MAPPROJECTION_basepoint_lon, MAPPROJECTION_basepoint_lat},
+The default values of them are \nmitem{MAPPROJECTION_basepoint_lon, MAPPROJECTION_basepoint_lat},
 which are set in \namelist{PARAM_MAPPROJECTION}.
 Refer to Section \ref{subsec:adv_mapproj} for the explanation of \namelist{PARAM_MAPPROJECTION}.
 %
@@ -106,7 +106,7 @@ When \nmitem{ATMOS_SOLARINS_fixeddate} is \verb|.true.|,
 the solar insolation is calculated according to date and time (Y,M,D,H,M,S) specified at \nmitem{ATMOS_SOLARINS_date}.
 The date and time are not fixed if the negative values are specified.
 For example, when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
-The date is fixed to March 21, 1950 (the vernal equinox)
+the date is fixed to March 21, 1950 (the vernal equinox)
 and diurnal variations of the solar insolation are considered in the simulation.
 %
 When \nmitem{ATMOS_SOLARINS_set_ve} is \verb|.true.|,
@@ -191,7 +191,7 @@ The example of configuration of putting five files above to the current director
 \verb|/| & \\
 }\\
 
-Gases considered in radiation calculation are water vapor($H_{2}O$), carbon dioxide($CO_{2}$), ozone($O_{3}$), Nauru's oxide($N_{2}O$), carbon monoxide($CO$), methane($CH_{4}$), oxigen($O_{2}$), and chlorofluorocarbons($CFCs$). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
+Gases considered in radiation calculation are water vapor(H$_{2}$O), carbon dioxide(CO$_{2}$), ozone(O$_{3}$), Nauru's oxide(N$_{2}O$), carbon monoxide(CO), methane(CH$_{4}$), oxigen(O$_{2}$), and chlorofluorocarbons(CFCs). These concentrations are able to be set to zero in \namelist{PARAM_ATMOS_PHY_RD_PROFILE}.
 
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
@@ -218,7 +218,7 @@ and to specify the file and directory names in \nmitem{ATMOS_PHY_RD_PROFILE_USER
 \editboxtwo{
 \verb|&PARAM_ATMOS_PHY_RD_PROFILE | & \\
 \verb| ATMOS_PHY_RD_PROFILE_use_climatology  = .false. | & Whether climatologies of CIRA86 and MIPAS2001 are used \\
-\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME = ""      | & User-defined file in the case of not using climatorogies (ASCII format)\\
+\verb| ATMOS_PHY_RD_PROFILE_USER_IN_FILENAME = ""      | & User-defined file in the case of not using climatologies (ASCII format)\\
 \verb|/| & \\
 }\\
 

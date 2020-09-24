@@ -117,6 +117,8 @@ contains
   subroutine numfilter_setup
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_icoA, only: &
+       PRC_RGN_ndiamond
     use scale_const, only: &
        PI     => CONST_PI,    &
        RADIUS => CONST_RADIUS
@@ -203,7 +205,7 @@ contains
     if( IO_NML ) write(IO_FID_NML,nml=NUMFILTERPARAM)
 
     global_area = 4.0_RP * PI * RADIUS * RADIUS
-    global_grid = 10.0_RP * 4.0_RP**ADM_GLEVEL
+    global_grid = real(PRC_RGN_ndiamond,kind=RP) * 4.0_RP**ADM_GLEVEL
     AREA_ave = global_area / global_grid
 
 
