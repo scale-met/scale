@@ -259,7 +259,11 @@ contains
        if( ierr /= 0 ) exit
 
        nmls(file_id)%vars(n)%name    = upcase(name)
-       nmls(file_id)%vars(n)%fname   = trim(dirname) // fname
+       if ( fname(1:1) == "/" ) then
+          nmls(file_id)%vars(n)%fname = fname
+       else
+          nmls(file_id)%vars(n)%fname = trim(dirname) // fname
+       end if
        nmls(file_id)%vars(n)%dtype   = dtype
        nmls(file_id)%vars(n)%swpoint = swpoint
        nmls(file_id)%vars(n)%dd      = dd
