@@ -3,7 +3,7 @@ SCALE
 
 SCALE (Scalable Computing for Advanced Library and Environment), which stands for Scalable Computing for Advanced Library and Environment, is a basic library for weather and climate model of the earth and planets aimed to be widely used in various models.
 The SCALE library is developed with co-design by researchers of computational science and computer science.
-(http://scale.aics.riken.jp/)
+(https://scale.riken.jp/)
 
 
 Contributing
@@ -25,7 +25,6 @@ Build
 
 - build the execution binary files in the directory of the test cases of scale-rm
  e.g.,
- % cd rootdir/scale-rm/src/
  % make
 
 - generate the initial files and run the integration
@@ -48,10 +47,9 @@ Switch options will be activated only when the value is "T"
 * SCALE_DEBUG           : Activate debug option
 * SCALE_QUICKDEBUG      : Activate quick debug option (fast optimization option + fp trap)
 * SCALE_USE_SINGLEFP    : Use single floating-point precision
-* SCALE_USE_FIXEDINDEX  : Use fixed size for spatial grid dimension
 * SCALE_ENABLE_OPENMP   : Enable to use OpenMP
 * SCALE_ENABLE_OPENACC  : Enable to use OpenACC
-* SCALE_USE_AGRESSIVEOPT: Use agressive options of optimization for K/FX
+* SCALE_USE_AGRESSIVEOPT: Use agressive options of optimization for some compilers
 * SCALE_DISABLE_INTELVEC: Disable to use vectorization for intel compiler
 * SCALE_ENABLE_PNETCDF  : Enable to use parallel NetCDF
 * SCALE_COMPAT_NETCDF3  : Keep compatibility with NetCDF3
@@ -61,6 +59,5 @@ Switch options will be activated only when the value is "T"
 * SCALE_IGNORE_SRCDEP   : Ignore source dependency at the compilation
 * SCALE_ENABLE_SDM      : Enable to use Super Droplet Model
 
-If you want to use SCALE_USE_FIXEDINDEX, inc_index.h is required. (see scalelib/include/inc_index.h.sample）
 If you want to use SCALE_ENABLE_MATHLIB, please set SCALE_MATHLIB_LIBS for MATH library path.
 If you want to use SCALE_ENABLE_PAPI, please set SCALE_PAPI_INCLUDE and SCALE_PAPI_LIBS for PAPI library path.

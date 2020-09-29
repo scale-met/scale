@@ -233,23 +233,23 @@ contains
           ! land fraction : total - ocean / total
           allsum = lake_wgt + ocean_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_land (i,j) = ( allsum-ocean_wgt ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_land (i,j) = min( ( allsum-ocean_wgt ) * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! lake fraction : lake / ( lake + urban + land )
           allsum = lake_wgt + urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_lake (i,j) = lake_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_lake (i,j) = min( lake_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! urban fraction : urban / ( urban + land )
           allsum = urban_wgt + land_wgt
           zerosw = 0.5_RP - sign( 0.5_RP, allsum-EPS )
-          LANDUSE_frac_urban(i,j) = urban_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw )
+          LANDUSE_frac_urban(i,j) = min( urban_wgt * ( 1.0_RP-zerosw ) / ( allsum-zerosw ), 1.0_RP )
 
           ! PFT fraction : PFT / sum( PFT(1:mosaic) )
           allsum = sum( PFT_weight(LANDUSE_PFT_nmax-LANDUSE_PFT_mosaic+1:,i,j) )
           if ( allsum > EPS ) then
              do p = 1, LANDUSE_PFT_mosaic
-                LANDUSE_frac_PFT (i,j,p) = PFT_weight(LANDUSE_PFT_nmax-p+1,i,j) / allsum
+                LANDUSE_frac_PFT (i,j,p) = min( PFT_weight(LANDUSE_PFT_nmax-p+1,i,j) / allsum, 1.0_RP )
                 LANDUSE_index_PFT(i,j,p) = PFT_idx(LANDUSE_PFT_nmax-p+1)
              enddo
              ! if no second PFT, set to same as PFT1
