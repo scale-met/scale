@@ -1576,29 +1576,49 @@ contains
 
           call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
                                      shape(:)                      ) ! (out)
-          if ( ldims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
+          if ( ldims(1) < shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be <= nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
              call PRC_abort
           endif
 
           call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                strg_org(:,:,:),              & ! (out)
+                                strg_org(:shape(1),:,:),      & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
+          if ( shape(1) < ldims(1) ) then
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+             do k = shape(1)+1, ldims(1)
+                strg_org(k,i,j) = strg_org(shape(1),i,j)
+             end do
+             end do
+             end do
+          end if
 
        case('SMOISDS')
 
           call FILE_GrADS_get_shape( file_id_lnd, var_id(ielem,2), & ! (in)
                                      shape(:)                      ) ! (out)
-          if ( ldims(1) .ne. shape(1) ) then
-             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be equal to nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
+          if ( ldims(1) < shape(1) ) then
+             LOG_ERROR("ParentAtmosInputGrADS",*) '"nz" must be <= nz of "STEMP" for ',trim(item),'. :', shape(1), ldims(1)
              call PRC_abort
           endif
 
           call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
-                                smds_org(:,:,:),              & ! (out)
+                                smds_org(:shape(1),:,:),      & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
+          if ( shape(1) < ldims(1) ) then
+             !$omp parallel do collapse(2)
+             do j = 1, ldims(3)
+             do i = 1, ldims(2)
+             do k = shape(1)+1, ldims(1)
+                smds_org(k,i,j) = smds_org(shape(1),i,j)
+             end do
+             end do
+             end do
+          end if
 
        case('SKINT')
 
