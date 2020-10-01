@@ -1255,8 +1255,7 @@ contains
        end do
 
        do k = KS, KE_PBL-1
-          flx(k,i,j) = flx(k,i,j) &
-                     - RHOKh(k) * ( QTRC_n(k+1) - QTRC_n(k) ) / FDZ(k)
+          flx(k,i,j) = - RHOKh(k) * ( QTRC_n(k+1) - QTRC_n(k) ) / FDZ(k)
        end do
 
     end do
