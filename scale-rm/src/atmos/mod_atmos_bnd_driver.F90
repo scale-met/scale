@@ -990,7 +990,7 @@ contains
                .or. ( .not. do_daughter_process .and. ATMOS_BOUNDARY_USE_VELZ ) ) then
              ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
           else
-             ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
+             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = 0.0_RP
           end if
           if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_zm, alpha_xm, alpha_ym )
