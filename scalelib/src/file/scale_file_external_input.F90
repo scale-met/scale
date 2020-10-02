@@ -185,7 +185,6 @@ module scale_file_external_input
      real(DP), allocatable              :: time(:)                   !< time of each step [sec]
      logical                            :: fixed_step                !< fix step position?
      integer                            :: flag_periodic             !< treat as periodic data? (0:no 1:yearly 2:monthly 3:daily)
-     real(RP)                           :: offset                    !< offset value (default is set to 0)
      integer                            :: data_step_prev            !< step position to read, previous from current
      integer                            :: data_step_next            !< step position to read, next     to   current
      integer                            :: data_step_offset          !< offset of step position for each file
@@ -222,7 +221,6 @@ contains
     logical                :: enable_periodic_year  ! treat as yearly               periodic data?
     logical                :: enable_periodic_month ! treat as yearly,monthly       periodic data?
     logical                :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP)               :: offset
     real(RP)               :: defval
     logical                :: check_coordinates
     logical                :: file_aggregate
@@ -239,7 +237,6 @@ contains
        enable_periodic_year,  &
        enable_periodic_month, &
        enable_periodic_day,   &
-       offset,                &
        defval,                &
        check_coordinates,     &
        file_aggregate,        &
@@ -266,7 +263,6 @@ contains
        enable_periodic_year  = .false.
        enable_periodic_month = .false.
        enable_periodic_day   = .false.
-       offset                = 0.0_RP
        defval                = UNDEF
        check_coordinates     = .false.
        file_aggregate        = FILE_AGGREGATE_default
@@ -291,7 +287,6 @@ contains
                                         enable_periodic_month,                 & ! [IN]
                                         enable_periodic_day,                   & ! [IN]
                                         step_fixed,                            & ! [IN]
-                                        offset,                                & ! [IN]
                                         defval,                                & ! [IN]
                                         check_coordinates = check_coordinates, & ! [IN]
                                         aggregate         = file_aggregate,    & ! [IN]
@@ -314,7 +309,6 @@ contains
        enable_periodic_month, &
        enable_periodic_day,   &
        step_fixed,            &
-       offset,                &
        defval,                &
        check_coordinates,     &
        aggregate,             &
@@ -357,7 +351,6 @@ contains
     logical,          intent(in)  :: enable_periodic_year  ! treat as yearly               periodic data?
     logical,          intent(in)  :: enable_periodic_month ! treat as yearly,monthly       periodic data?
     logical,          intent(in)  :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP),         intent(in)  :: offset
     real(RP),         intent(in)  :: defval
 
     logical,          intent(in),  optional :: check_coordinates
@@ -623,7 +616,6 @@ contains
 
 
     FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,:) = defval
-    FILE_EXTERNAL_INPUT_item(nid)%offset         = offset
 
     allocate( FILE_EXTERNAL_INPUT_item(nid)%time(step_limit_) )
     FILE_EXTERNAL_INPUT_item(nid)%time(:) = 0.0_DP

@@ -60,7 +60,6 @@ contains
     logical                :: OCEAN_DYN_OFFLINE_enable_periodic_month = .false.
     logical                :: OCEAN_DYN_OFFLINE_enable_periodic_day   = .false.
     integer                :: OCEAN_DYN_OFFLINE_step_fixed            = 0
-    real(RP)               :: OCEAN_DYN_OFFLINE_offset                = 0.0_RP
     real(RP)               :: OCEAN_DYN_OFFLINE_defval               != UNDEF
     logical                :: OCEAN_DYN_OFFLINE_check_coordinates     = .true.
     integer                :: OCEAN_DYN_OFFLINE_step_limit            = 0
@@ -73,7 +72,6 @@ contains
        OCEAN_DYN_OFFLINE_enable_periodic_month, &
        OCEAN_DYN_OFFLINE_enable_periodic_day,   &
        OCEAN_DYN_OFFLINE_step_fixed,            &
-       OCEAN_DYN_OFFLINE_offset,                &
        OCEAN_DYN_OFFLINE_defval,                &
        OCEAN_DYN_OFFLINE_check_coordinates,     &
        OCEAN_DYN_OFFLINE_step_limit
@@ -113,7 +111,6 @@ contains
                                      OCEAN_DYN_OFFLINE_enable_periodic_month, & ! [IN]
                                      OCEAN_DYN_OFFLINE_enable_periodic_day,   & ! [IN]
                                      OCEAN_DYN_OFFLINE_step_fixed,            & ! [IN]
-                                     OCEAN_DYN_OFFLINE_offset,                & ! [IN]
                                      OCEAN_DYN_OFFLINE_defval,                & ! [IN]
                                      check_coordinates = OCEAN_DYN_OFFLINE_check_coordinates, & ! [IN]
                                      step_limit        = OCEAN_DYN_OFFLINE_step_limit         ) ! [IN]
