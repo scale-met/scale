@@ -1,6 +1,6 @@
 = Release History
 
-== 2020-09-24 (5.4.0)
+== 2020-09-25 (5.4.0)
 * Changes
   * Change the configuration parameters of the KUSAKA model
   * Change the configuration parameters of the KF scheme
