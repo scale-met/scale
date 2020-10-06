@@ -61,13 +61,11 @@ module mod_user
   logical, private :: READ_LAND_SFC_ALB_NIR_dif = .false.
   logical, private :: READ_LAND_SFC_ALB_VIS_dir = .false.
   logical, private :: READ_LAND_SFC_ALB_VIS_dif = .false.
-  logical, private :: READ_LAND_SFLX_MW = .false.
-  logical, private :: READ_LAND_SFLX_MU = .false.
-  logical, private :: READ_LAND_SFLX_MV = .false.
-  logical, private :: READ_LAND_SFLX_SH = .false.
-  logical, private :: READ_LAND_SFLX_LH = .false.
-  logical, private :: READ_LAND_SFLX_GH = .false.
-  logical, private :: READ_LAND_SFLX_evap = .false.
+  logical, private :: READ_LAND_SNOW_SFC_TEMP = .false.
+  logical, private :: READ_LAND_SNOW_SWE = .false.
+  logical, private :: READ_LAND_SNOW_Depth = .false.
+  logical, private :: READ_LAND_SNOW_Dzero = .false.
+  logical, private :: READ_LAND_SNOW_nosnowsec = .false.
   character(len=H_LONG), private :: OCEAN_RESTART_IN_BASENAME = ''
   logical, private :: READ_OCEAN_TEMP = .false.
   logical, private :: READ_OCEAN_SFC_TEMP = .false.
@@ -80,13 +78,8 @@ module mod_user
   logical, private :: READ_OCEAN_SFC_Z0M = .false.
   logical, private :: READ_OCEAN_SFC_Z0H = .false.
   logical, private :: READ_OCEAN_SFC_Z0E = .false.
-  logical, private :: READ_OCEAN_SFLX_MW = .false.
-  logical, private :: READ_OCEAN_SFLX_MU = .false.
-  logical, private :: READ_OCEAN_SFLX_MV = .false.
-  logical, private :: READ_OCEAN_SFLX_SH = .false.
-  logical, private :: READ_OCEAN_SFLX_LH = .false.
-  logical, private :: READ_OCEAN_SFLX_WH = .false.
-  logical, private :: READ_OCEAN_SFLX_evap = .false.
+  logical, private :: READ_OCEAN_ICE_TEMP = .false.
+  logical, private :: READ_OCEAN_ICE_MASS = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -143,13 +136,11 @@ contains
        READ_LAND_SFC_ALB_NIR_dif, &
        READ_LAND_SFC_ALB_VIS_dir, &
        READ_LAND_SFC_ALB_VIS_dif, &
-       READ_LAND_SFLX_MW, &
-       READ_LAND_SFLX_MU, &
-       READ_LAND_SFLX_MV, &
-       READ_LAND_SFLX_SH, &
-       READ_LAND_SFLX_LH, &
-       READ_LAND_SFLX_GH, &
-       READ_LAND_SFLX_evap, &
+       READ_LAND_SNOW_SFC_TEMP,   &
+       READ_LAND_SNOW_SWE,        &
+       READ_LAND_SNOW_Depth,      &
+       READ_LAND_SNOW_Dzero,      &
+       READ_LAND_SNOW_nosnowsec,  &
        OCEAN_RESTART_IN_BASENAME, &
        READ_OCEAN_TEMP, &
        READ_OCEAN_SFC_TEMP, &
@@ -162,13 +153,8 @@ contains
        READ_OCEAN_SFC_Z0M, &
        READ_OCEAN_SFC_Z0H, &
        READ_OCEAN_SFC_Z0E, &
-       READ_OCEAN_SFLX_MW, &
-       READ_OCEAN_SFLX_MU, &
-       READ_OCEAN_SFLX_MV, &
-       READ_OCEAN_SFLX_SH, &
-       READ_OCEAN_SFLX_LH, &
-       READ_OCEAN_SFLX_WH, &
-       READ_OCEAN_SFLX_evap
+       READ_OCEAN_ICE_TEMP, &
+       READ_OCEAN_ICE_MASS
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -204,13 +190,11 @@ contains
        READ_LAND_SFC_ALB_NIR_dif = .false.
        READ_LAND_SFC_ALB_VIS_dir = .false.
        READ_LAND_SFC_ALB_VIS_dif = .false.
-       READ_LAND_SFLX_MW = .false.
-       READ_LAND_SFLX_MU = .false.
-       READ_LAND_SFLX_MV = .false.
-       READ_LAND_SFLX_SH = .false.
-       READ_LAND_SFLX_LH = .false.
-       READ_LAND_SFLX_GH = .false.
-       READ_LAND_SFLX_evap = .false.
+       READ_LAND_SNOW_SFC_TEMP = .false.
+       READ_LAND_SNOW_SWE = .false.
+       READ_LAND_SNOW_Depth = .false.
+       READ_LAND_SNOW_Dzero = .false.
+       READ_LAND_SNOW_nosnowsec = .false.
     end if
 
     if ( OCEAN_do .and. OCEAN_RESTART_IN_BASENAME /= '' ) then
@@ -229,13 +213,8 @@ contains
        READ_OCEAN_SFC_Z0M = .false.
        READ_OCEAN_SFC_Z0H = .false.
        READ_OCEAN_SFC_Z0E = .false.
-       READ_OCEAN_SFLX_MW = .false.
-       READ_OCEAN_SFLX_MU = .false.
-       READ_OCEAN_SFLX_MV = .false.
-       READ_OCEAN_SFLX_SH = .false.
-       READ_OCEAN_SFLX_LH = .false.
-       READ_OCEAN_SFLX_WH = .false.
-       READ_OCEAN_SFLX_evap = .false.
+       READ_OCEAN_ICE_TEMP = .false.
+       READ_OCEAN_ICE_MASS = .false.
     end if
 
     LOG_NEWLINE
@@ -257,12 +236,6 @@ contains
          LAND_WATER, &
          LAND_SFC_TEMP, &
          LAND_SFC_albedo, &
-         LAND_SFLX_MW, &
-         LAND_SFLX_MU, &
-         LAND_SFLX_MV, &
-         LAND_SFLX_SH, &
-         LAND_SFLX_LH, &
-         LAND_SFLX_GH, &
          LAND_SFLX_QTRC
     use mod_ocean_vars, only: &
          OCEAN_TEMP, &
@@ -307,31 +280,26 @@ contains
     use scale_file_cartesC, only: &
          FILE_CARTESC_read
     use mod_land_vars, only: &
-         LAND_TEMP, &
-         LAND_WATER, &
-         LAND_SFC_TEMP, &
+         LAND_TEMP,       &
+         LAND_WATER,      &
+         LAND_SFC_TEMP,   &
          LAND_SFC_albedo, &
-         LAND_SFLX_MW, &
-         LAND_SFLX_MU, &
-         LAND_SFLX_MV, &
-         LAND_SFLX_SH, &
-         LAND_SFLX_LH, &
-         LAND_SFLX_GH, &
-         LAND_SFLX_QTRC
+         SNOW_SFC_TEMP,   &
+         SNOW_SWE,        &
+         SNOW_Depth,      &
+         SNOW_Dzero,      &
+         SNOW_nosnowsec,  &
+         SNOW_flag
     use mod_ocean_vars, only: &
-         OCEAN_TEMP, &
-         OCEAN_SFC_TEMP, &
+         OCEAN_TEMP,       &
+         OCEAN_SFC_TEMP,   &
          OCEAN_SFC_albedo, &
-         OCEAN_SFC_Z0M, &
-         OCEAN_SFC_Z0H, &
-         OCEAN_SFC_Z0E, &
-         OCEAN_SFLX_MW, &
-         OCEAN_SFLX_MU, &
-         OCEAN_SFLX_MV, &
-         OCEAN_SFLX_SH, &
-         OCEAN_SFLX_LH, &
-         OCEAN_SFLX_GH, &
-         OCEAN_SFLX_QTRC
+         OCEAN_SFC_Z0M,    &
+         OCEAN_SFC_Z0H,    &
+         OCEAN_SFC_Z0E,    &
+         OCEAN_ICE_TEMP,   &
+         OCEAN_ICE_MASS,   &
+         ICE_flag
     implicit none
     !---------------------------------------------------------------------------
 
@@ -342,83 +310,78 @@ contains
 
     if ( READ_LAND_TEMP ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_TEMP', 'LXY', & ! [IN]
-                               LAND_TEMP(:,:,:), step=1                      ) ! [OUT]
+                               LAND_TEMP(:,:,:)                              ) ! [OUT]
     end if
 
     if ( READ_LAND_WATER ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_WATER', 'LXY', & ! [IN]
-                               LAND_WATER(:,:,:), step=1                      ) ! [OUT]
+       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_WATER', 'LXY',   & ! [IN]
+                               LAND_WATER(:,:,:)                                ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_TEMP ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_TEMP', 'XY', & ! [IN]
-                               LAND_SFC_TEMP(:,:), step=1                       ) ! [OUT]
+                               LAND_SFC_TEMP(:,:)                               ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_IR_dir ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_IR_dir', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_direct, I_R_IR), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_direct, I_R_IR)                ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_IR_dif ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_IR_dif', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_IR), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_IR)               ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_NIR_dir ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_NIR_dir', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_direct, I_R_NIR), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_direct, I_R_NIR)                ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_NIR_dif ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_NIR_dif', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_NIR), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_NIR)               ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_VIS_dir ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_VIS_dir', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_direct, I_R_VIS), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_direct, I_R_VIS)                ) ! [OUT]
     end if
 
     if ( READ_LAND_SFC_ALB_VIS_dif ) then
        call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFC_ALB_VIS_dif', 'XY', & ! [IN]
-                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_VIS), step=1        ) ! [OUT]
+                               LAND_SFC_albedo(:,:,I_R_diffuse, I_R_VIS)               ) ! [OUT]
     end if
 
-    if ( READ_LAND_SFLX_MW ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MW', 'XY', & ! [IN]
-                               LAND_SFLX_MW(:,:), step=1                       ) ! [OUT]
+    if ( SNOW_flag ) then
+       if ( READ_LAND_SNOW_SFC_TEMP ) then
+         call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SNOW_SFC_TEMP',  'XY', & ! [OUT]
+                                 SNOW_SFC_TEMP(:,:) )  ! [IN]
+       end if
+
+       if ( READ_LAND_SNOW_SWE ) then
+         call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SNOW_SWE',       'XY', & ! [OUT]
+                                 SNOW_SWE(:,:) )       ! [IN]
+       end if
+
+
+       if ( READ_LAND_SNOW_Depth ) then
+         call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SNOW_Depth',     'XY', & ! [OUT]
+                                 SNOW_Depth(:,:) )     ! [IN]
+       end if
+
+       if ( READ_LAND_SNOW_Dzero ) then
+         call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SNOW_Dzero',     'XY', & ! [OUT]
+                                 SNOW_Dzero(:,:) )     ! [IN]
+       end if
+
+       if ( READ_LAND_SNOW_nosnowsec ) then
+         call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SNOW_nosnowsec', 'XY', & ! [OUT]
+                                 SNOW_nosnowsec(:,:) ) ! [IN]
+       end if
+
     end if
 
-    if ( READ_LAND_SFLX_MU ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MU', 'XY', & ! [IN]
-                               LAND_SFLX_MU(:,:), step=1                       ) ! [OUT]
-    end if
-
-    if ( READ_LAND_SFLX_MV ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_MV', 'XY', & ! [IN]
-                               LAND_SFLX_MV(:,:), step=1                       ) ! [OUT]
-    end if
-
-    if ( READ_LAND_SFLX_SH ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_SH', 'XY', & ! [IN]
-                               LAND_SFLX_SH(:,:), step=1                       ) ! [OUT]
-    end if
-
-    if ( READ_LAND_SFLX_LH ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_LH', 'XY', & ! [IN]
-                               LAND_SFLX_LH(:,:), step=1                       ) ! [OUT]
-    end if
-
-    if ( READ_LAND_SFLX_GH ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_GH', 'XY', & ! [IN]
-                               LAND_SFLX_GH(:,:), step=1                       ) ! [OUT]
-    end if
-
-    if ( READ_LAND_SFLX_evap ) then
-       call FILE_CARTESC_read( LAND_RESTART_IN_BASENAME, 'LAND_SFLX_evap', 'XY', & ! [IN]
-                               LAND_SFLX_QTRC(:,:,I_QV), step=1                  ) ! [OUT]
-    endif
 
     !---------------------------------------------------------------------------
 
@@ -427,94 +390,71 @@ contains
 
     if ( READ_OCEAN_TEMP ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_TEMP', 'OXY', & ! [IN]
-                               OCEAN_TEMP(:,:,:), step=1                       ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_TEMP ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_TEMP', 'XY', & ! [IN]
-                               OCEAN_SFC_TEMP(:,:), step=1                        ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_IR_dir ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_IR_dir', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_IR), step=1         ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_IR_dif ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_IR_dif', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_IR), step=1         ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_NIR_dir ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_NIR_dir', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_NIR), step=1         ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_NIR_dif ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_NIR_dif', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_NIR), step=1         ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_VIS_dir ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_VIS_dir', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_VIS), step=1         ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFC_ALB_VIS_dif ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_VIS_dif', 'XY', & ! [IN]
-                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_VIS), step=1         ) ! [OUT]
+                               OCEAN_TEMP(:,:,:)                               ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_Z0M ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0M', 'XY', & ! [IN]
-                               OCEAN_SFC_Z0M(:,:), step=1                        ) ! [OUT]
+                               OCEAN_SFC_Z0M(:,:)                                ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_TEMP ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_TEMP', 'XY', & ! [IN]
+                               OCEAN_SFC_TEMP(:,:)                                ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_IR_dir ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_IR_dir', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_IR)                 ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_IR_dif ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_IR_dif', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_IR)                ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_NIR_dir ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_NIR_dir', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_NIR)                 ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_NIR_dif ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_NIR_dif', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_NIR)                ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_VIS_dir ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_VIS_dir', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_direct, I_R_VIS)                 ) ! [OUT]
+    endif
+
+    if ( READ_OCEAN_SFC_ALB_VIS_dif ) then
+       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_ALB_VIS_dif', 'XY', & ! [IN]
+                               OCEAN_SFC_albedo(:,:,I_R_diffuse, I_R_VIS)                ) ! [OUT]
     endif
 
     if ( READ_OCEAN_SFC_Z0H ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0H', 'XY', & ! [IN]
-                               OCEAN_SFC_Z0H(:,:), step=1                        ) ! [OUT]
+                               OCEAN_SFC_Z0H(:,:)                                ) ! [OUT]
     endif
-
 
     if ( READ_OCEAN_SFC_Z0E ) then
        call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFC_Z0E', 'XY', & ! [IN]
-                               OCEAN_SFC_Z0E(:,:), step=1                        ) ! [OUT]
+                               OCEAN_SFC_Z0E(:,:)                                ) ! [OUT]
     endif
 
-    if ( READ_OCEAN_SFLX_MW ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MW', 'XY', & ! [IN]
-                               OCEAN_SFLX_MW(:,:), step=1                        ) ! [OUT]
-    endif
+    if ( ICE_flag ) then
+       if ( READ_OCEAN_ICE_TEMP ) then
+          call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_ICE_TEMP', 'XY',  & ! [IN]
+                                  OCEAN_ICE_TEMP(:,:) ) ! [OUT]
+       endif
 
-    if ( READ_OCEAN_SFLX_MU ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MU', 'XY', & ! [IN]
-                               OCEAN_SFLX_MU(:,:), step=1                        ) ! [OUT]
-    endif
+       if ( READ_OCEAN_ICE_MASS ) then
+          call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_ICE_MASS', 'XY',  & ! [IN]
+                                  OCEAN_ICE_MASS(:,:) ) ! [OUT]
+       endif
+    end if
 
-    if ( READ_OCEAN_SFLX_MV ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_MV', 'XY', & ! [IN]
-                               OCEAN_SFLX_MV(:,:), step=1                        ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFLX_SH ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_SH', 'XY', & ! [IN]
-                               OCEAN_SFLX_SH(:,:), step=1                        ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFLX_LH ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_LH', 'XY', & ! [IN]
-                               OCEAN_SFLX_LH(:,:), step=1                        ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFLX_WH ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_WH', 'XY', & ! [IN]
-                               OCEAN_SFLX_GH(:,:), step=1                        ) ! [OUT]
-    endif
-
-    if ( READ_OCEAN_SFLX_evap ) then
-       call FILE_CARTESC_read( OCEAN_RESTART_IN_BASENAME, 'OCEAN_SFLX_evap', 'XY', & ! [IN]
-                               OCEAN_SFLX_QTRC(:,:,I_QV), step=1                   ) ! [OUT]
-    endif
 
     LOG_NEWLINE
     LOG_INFO("USER_resume",*) 'Finish user_resume'
