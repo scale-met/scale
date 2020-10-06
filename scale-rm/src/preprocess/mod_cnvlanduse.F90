@@ -686,7 +686,6 @@ contains
                 end if
              end if
              d = ( XH(ii,jj)-CX(i) )**2 + ( YH(ii,jj)-CY(j) )**2
-             lu = LANDUSE(ii,jj)
              if ( d < dmin ) then
                 dmin = d
                 min_i = ii
