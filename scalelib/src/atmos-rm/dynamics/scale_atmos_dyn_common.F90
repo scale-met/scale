@@ -507,7 +507,6 @@ contains
   subroutine ATMOS_DYN_prep_pres_linearization( &
    DPRES, RT2P, REF_rhot,                            & ! (out)
    RHOT, QTRC, REF_pres, AQ_R, AQ_CV, AQ_CP, AQ_MASS ) ! (in)
-   
    use scale_const, only: &
       P0     => CONST_PRE00, &
       Rdry   => CONST_Rdry,  &

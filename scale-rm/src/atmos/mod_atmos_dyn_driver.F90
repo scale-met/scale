@@ -401,7 +401,7 @@ contains
                        ATMOS_REFSTATE_pres,                                  & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_coef,                        & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER,                 & ! [IN]
-                       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM,                    & ! [IN]
+                       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM,               & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_sfc_fact,                    & ! [IN]
                        ATMOS_DYN_NUMERICAL_DIFF_use_refstate,                & ! [IN]
                        BND_QA, BND_IQ, ATMOS_BOUNDARY_SMOOTHER_FACT,         & ! [IN]

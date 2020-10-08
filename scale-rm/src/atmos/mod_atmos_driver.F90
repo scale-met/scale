@@ -369,8 +369,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> advance atmospheric state
-  subroutine ATMOS_driver_update( &
-       last_step )
+  subroutine ATMOS_driver_update
     use mod_atmos_admin, only: &
        ATMOS_sw_dyn,    &
        ATMOS_sw_phy_mp, &
@@ -414,25 +413,25 @@ contains
        REAL_PHI => ATMOS_GRID_CARTESC_REAL_PHI, &
        AREA     => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_time, only: &
-       TIME_NOWDAYSEC
+       TIME_NOWDAYSEC, &
+       TIME_DTSEC
     implicit none
 
-    logical, intent(in) :: last_step
     !---------------------------------------------------------------------------
 
     !########## Dynamics ##########
     if ( ATMOS_sw_dyn ) then
+       if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+          call PROF_rapstart('ATM_Boundary', 2)
+          call ATMOS_BOUNDARY_driver_update( TIME_NOWDAYSEC - TIME_DTSEC * 0.5_DP )
+          call PROF_rapend  ('ATM_Boundary', 2)
+          call ATMOS_vars_fillhalo
+       endif
        call PROF_rapstart('ATM_Dynamics', 1)
        call ATMOS_DYN_driver( do_dyn )
        call PROF_rapend  ('ATM_Dynamics', 1)
     endif
 
-    !########## Lateral/Top Boundary Condition ###########
-    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       call PROF_rapstart('ATM_Boundary', 2)
-       call ATMOS_BOUNDARY_driver_update( last_step )
-       call PROF_rapend  ('ATM_Boundary', 2)
-    endif
 
     !########## Calculate diagnostic variables ##########
     call ATMOS_vars_calc_diagnostics
@@ -464,6 +463,17 @@ contains
        ! calc_diagnostics is not necessary
     end if
 
+
+    !########## Lateral/Top Boundary Condition ###########
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Boundary', 2)
+       call ATMOS_BOUNDARY_driver_update( TIME_NOWDAYSEC )
+       call PROF_rapend  ('ATM_Boundary', 2)
+       call ATMOS_vars_fillhalo
+       call ATMOS_vars_calc_diagnostics
+    endif
+
+
     !########## Send Lateral/Top Boundary Condition (Online nesting) ###########
     if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Boundary', 2)
@@ -482,7 +492,6 @@ contains
                                    TIME_NOWDAYSEC                                                 ) ! [IN]
        call PROF_rapend  ('ATM_Refstate', 2)
     endif
-
 
     return
   end subroutine ATMOS_driver_update
