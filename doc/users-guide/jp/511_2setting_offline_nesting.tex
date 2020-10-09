@@ -175,17 +175,6 @@
 \subsubsection{子領域の時間積分}
 初期値/境界値データの作成が終わったら、\verb|scale-rm| を実行して子領域の時間積分を行う。
 これは、通常の現実大気実験と同じである。
-1点だけ注意すべき点として、
-\verb|run.d02.conf|の\namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_UPDATE_DT}が
-親領域のヒストリデータの出力間隔と同じであるかを確認すること。
-現在のバージョンでは、これらの時間間隔に不整合がある場合でも警告やエラーメッセージが発せられないまま、
-計算が進むことに注意が必要である。
-\editbox{
-\verb|&PARAM_ATMOS_BOUNDARY| \\
-\verb|　 　 　〜　中略　〜|\\
-\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 900.D0,|} \\
-\verb|/| \\
-}
 
 多段のオフライン・ネスティング実験を行う場合は、以上の方法を繰り返せばよい。
 つまり、子領域における上記の時間積分の結果を親領域の結果とみなして、

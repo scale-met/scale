@@ -176,11 +176,7 @@ If the execution is aborted with the message like the following, it means that t
 
 \subsubsection{Time Integration in Child Domain}
 
-Following the generation of the initial and boundary conditions, compute the time integration in the child domain by \verb|scale-rm|. This is same as in the usual atmospheric experiment. Before this, confirm that \nmitem{ATMOS_BOUNDARY_UPDATE_DT}  of \namelist{PARAM_ATMOS_BOUNDARY} in the file \runconf is the same as the time interval of the output of history data for the parent domain. Note that the calculation continues without any message even if these time intervals are inconsistent in the current version.
-\editbox{
-\verb|&PARAM_ATMOS_BOUNDARY| \\
-\textcolor{blue}{\verb| ATMOS_BOUNDARY_UPDATE_DT  = 900.D0,|} \\
-\verb|/| \\
-}
+Following the generation of the initial and boundary conditions, compute the time integration in the child domain by \verb|scale-rm|.
+This is same as in the usual atmospheric experiment.
 
 If an experiment involving multiple offline nestings is performed, the above procedure is repeated; the results of the above time integration for the child domain are regarded as those for the parent domain, and the initial and boundary data are generated for further inner domain calculations. 
