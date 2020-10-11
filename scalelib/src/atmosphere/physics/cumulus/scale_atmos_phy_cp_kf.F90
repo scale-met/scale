@@ -545,13 +545,13 @@ contains
     real(RP), intent(inout) :: RHOQ_t (KA,IA,JA,N_HYD) !< tendency rho*QTRC [kg/kg/s]
     real(RP), intent(inout) :: nca    (IA,JA)          !< convection active time [sec]
 
-    real(RP), intent(out)   :: SFLX_rain(IA,JA)        !< convective rain rate [kg/m2/s]
-    real(RP), intent(out)   :: SFLX_snow(IA,JA)        !< convective snow rate [kg/m2/s]
-    real(RP), intent(out)   :: SFLX_engi(IA,JA)        !< precipitation internal energy [J/m2/s]
-    real(RP), intent(out)   :: cloudtop     (IA,JA)    !< cloud top height  [m]
-    real(RP), intent(out)   :: cloudbase    (IA,JA)    !< cloud base height [m]
-    real(RP), intent(out)   :: cldfrac_dp   (KA,IA,JA) !< cloud fraction (deep convection)
-    real(RP), intent(out)   :: cldfrac_sh   (KA,IA,JA) !< cloud fraction (shallow convection)
+    real(RP), intent(inout) :: SFLX_rain(IA,JA)        !< convective rain rate [kg/m2/s]
+    real(RP), intent(inout) :: SFLX_snow(IA,JA)        !< convective snow rate [kg/m2/s]
+    real(RP), intent(inout) :: SFLX_engi(IA,JA)        !< precipitation internal energy [J/m2/s]
+    real(RP), intent(inout) :: cloudtop     (IA,JA)    !< cloud top height  [m]
+    real(RP), intent(inout) :: cloudbase    (IA,JA)    !< cloud base height [m]
+    real(RP), intent(inout) :: cldfrac_dp   (KA,IA,JA) !< cloud fraction (deep convection)
+    real(RP), intent(inout) :: cldfrac_sh   (KA,IA,JA) !< cloud fraction (shallow convection)
 
     integer  :: k, i, j, iq             !< loop index
     integer  :: nic                     !< rate of timestep (time_advec/KF_DTSEC)
@@ -1899,6 +1899,7 @@ contains
     snow_flux  = 0._RP
     total_rain = 0._RP
     total_snow = 0._RP
+    prec_engi  = 0._RP
     k_lfs      = 0
 
     ! if no convection
@@ -2395,6 +2396,11 @@ contains
 
     integer :: m
     ! -----
+
+
+    sflx_rain = 0.0_RP
+    sflx_snow = 0.0_RP
+    sflx_engi = 0.0_RP
 
     if(I_convflag == 2) return     ! noconvection
     k_lcl = k_lcl_bf

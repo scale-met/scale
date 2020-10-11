@@ -600,11 +600,13 @@ contains
                 else
                    if ( BULKFLUX_type == 'B91W01' ) then
                       ! Wilson (2001)
-                      tmp = (-zeta)**(2.0_RP/3.0_RP)
+!                      tmp = (-zeta)**(2.0_RP/3.0_RP)
+                      tmp = abs(zeta)**(2.0_RP/3.0_RP)
                       phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
                       phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
                    else
-                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+!                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+                      tmp = sqrt( 1.0_RP + 16.0_RP * abs(zeta) )
                       phi_m = 1.0_RP / sqrt(tmp)
                       phi_h = 1.0_RP / tmp
                    end if
@@ -766,7 +768,7 @@ contains
                   dummy(:)                ) ! (out)
 !                  phi_n(:)                ) ! (out)
 
-             phi_n(:) = dummy(:)
+             phi_n(KS:KE_PBL) = dummy(KS:KE_PBL)
              RHOU_t(KS,i,j) = ( phi_n(KS) * RHO(KS) - U(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
              do k = KS+1, KE_PBL
                 RHOU_t(k,i,j) = ( phi_n(k) - U(k,i,j) ) * RHO(k) / dt

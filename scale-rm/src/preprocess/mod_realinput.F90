@@ -2725,19 +2725,19 @@ contains
          ParentLandInputGrADS
     implicit none
 
-    real(RP),         intent(out) :: tg  (:,:,:,:)
-    real(RP),         intent(out) :: strg(:,:,:,:)
-    real(RP),         intent(out) :: lst (:,:,:)
-    real(RP),         intent(out) :: albg(:,:,:,:,:)
-    real(RP),         intent(out) :: tc_urb(IA,JA)
-    real(RP),         intent(out) :: qc_urb(IA,JA)
-    real(RP),         intent(out) :: uc_urb(IA,JA)
-    real(RP),         intent(out) :: ust   (IA,JA)
-    real(RP),         intent(out) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
-    real(RP),         intent(out) :: tw  (:,:,:)
-    real(RP),         intent(out) :: sst (:,:,:)
-    real(RP),         intent(out) :: albw(:,:,:,:,:)
-    real(RP),         intent(out) :: z0w (:,:,:)
+    real(RP),         intent(inout) :: tg  (:,:,:,:)
+    real(RP),         intent(inout) :: strg(:,:,:,:)
+    real(RP),         intent(inout) :: lst (:,:,:)
+    real(RP),         intent(inout) :: albg(:,:,:,:,:)
+    real(RP),         intent(inout) :: tc_urb(IA,JA)
+    real(RP),         intent(inout) :: qc_urb(IA,JA)
+    real(RP),         intent(inout) :: uc_urb(IA,JA)
+    real(RP),         intent(inout) :: ust   (IA,JA)
+    real(RP),         intent(inout) :: albu  (IA,JA,N_RAD_DIR,N_RAD_RGN)
+    real(RP),         intent(inout) :: tw  (:,:,:)
+    real(RP),         intent(out)   :: sst (:,:,:)
+    real(RP),         intent(out)   :: albw(:,:,:,:,:)
+    real(RP),         intent(out)   :: z0w (:,:,:)
     character(len=*), intent(in)  :: basename_land
     character(len=*), intent(in)  :: basename_ocean
     integer,          intent(in)  :: mdlid_land

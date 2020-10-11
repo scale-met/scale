@@ -213,8 +213,6 @@ contains
        PRC_2Drank, &
        PRC_NUM_X, &
        PRC_NUM_Y
-    use scale_const, only: &
-       EPS => CONST_EPS
     use scale_file, only: &
        FILE_setup
     implicit none
@@ -232,7 +230,7 @@ contains
     LOG_NEWLINE
     LOG_INFO("FILE_CARTESC_setup",*) 'Setup'
 
-    FILE_CARTESC_datacheck_criteria = EPS * 10.0_RP
+    FILE_CARTESC_datacheck_criteria = 0.1_RP**(RP)
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -3660,7 +3658,11 @@ contains
 
     if ( exec ) then
        if ( fill_halo_ ) then ! fill halo cells with RMISS
-          varhalo(:,:) = var(:,:)
+          do j = JS, JE
+          do i = IS, IE
+             varhalo(i,j) = var(i,j)
+          end do
+          end do
 
           ! W halo
           do j = 1, JA
@@ -3804,36 +3806,43 @@ contains
     endif
 
     if ( fill_halo_ ) then
-       varhalo(:,:,:) = var(:,:,:)
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = 1, dim1_max
+          varhalo(k,i,j) = var(k,i,j)
+       enddo
+       enddo
+       enddo
 
        ! W halo
-       do k = 1, dim1_max
        do j = 1, JA
        do i = 1, IS-1
+       do k = 1, dim1_max
           varhalo(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! E halo
-       do k = 1, dim1_max
        do j = 1, JA
        do i = IE+1, IA
+       do k = 1, dim1_max
           varhalo(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! S halo
-       do k = 1, dim1_max
        do j = 1, JS-1
        do i = 1, IA
+       do k = 1, dim1_max
           varhalo(k,i,j) = RMISS
        enddo
        enddo
        enddo
        ! N halo
-       do k = 1, dim1_max
        do j = JE+1, JA
        do i = 1, IA
+       do k = 1, dim1_max
           varhalo(k,i,j) = RMISS
        enddo
        enddo
@@ -3945,7 +3954,11 @@ contains
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
-          varhalo(:,:) = var(:,:,timetarg)
+          do j = JS, JE
+          do i = IS, IE
+             varhalo(i,j) = var(i,j,timetarg)
+          end do
+          end do
 
           ! W halo
           do j = 1, JA
@@ -3982,7 +3995,11 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
-             varhalo(:,:) = var(:,:,n)
+             do j = JS, JE
+             do i = IS, IE
+                varhalo(i,j) = var(i,j,n)
+             end do
+             end do
 
              ! W halo
              do j = 1, JA
@@ -4155,36 +4172,42 @@ contains
        nowtime = timeofs_ + (timetarg-1) * time_interval
 
        if ( fill_halo_ ) then
-          varhalo(:,:,:) = var(:,:,:,timetarg)
+          do j = JS, JE
+          do i = IS, IE
+          do k = 1, dim1_max
+             varhalo(k,i,j) = var(k,i,j,timetarg)
+          end do
+          end do
+          end do
 
           ! W halo
-          do k = 1, dim1_max
           do j = 1, JA
           do i = 1, IS-1
+          do k = 1, dim1_max
              varhalo(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! E halo
-          do k = 1, dim1_max
           do j = 1, JA
           do i = IE+1, IA
+          do k = 1, dim1_max
              varhalo(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! S halo
-          do k = 1, dim1_max
           do j = 1, JS-1
           do i = 1, IA
+          do k = 1, dim1_max
              varhalo(k,i,j) = RMISS
           enddo
           enddo
           enddo
           ! N halo
-          do k = 1, dim1_max
           do j = JE+1, JA
           do i = 1, IA
+          do k = 1, dim1_max
              varhalo(k,i,j) = RMISS
           enddo
           enddo
@@ -4200,36 +4223,42 @@ contains
        nowtime = timeofs_
        do n = 1, step
           if ( fill_halo_ ) then
-             varhalo(:,:,:) = var(:,:,:,n)
+             do j = JS, JE
+             do i = IS, IE
+             do k = 1, dim1_max
+                varhalo(k,i,j) = var(k,i,j,n)
+             end do
+             end do
+             end do
 
              ! W halo
-             do k = 1, dim1_max
              do j = 1, JA
              do i = 1, IS-1
+             do k = 1, dim1_max
                 varhalo(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! E halo
-             do k = 1, dim1_max
              do j = 1, JA
              do i = IE+1, IA
+             do k = 1, dim1_max
                 varhalo(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! S halo
-             do k = 1, dim1_max
              do j = 1, JS-1
              do i = 1, IA
+             do k = 1, dim1_max
                 varhalo(k,i,j) = RMISS
              enddo
              enddo
              enddo
              ! N halo
-             do k = 1, dim1_max
              do j = JE+1, JA
              do i = 1, IA
+             do k = 1, dim1_max
                 varhalo(k,i,j) = RMISS
              enddo
              enddo
