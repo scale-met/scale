@@ -926,6 +926,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
@@ -942,6 +943,8 @@ contains
        ATMOS_PHY_SF_vars_restart_open
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_open
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_open
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_open
     use mod_atmos_phy_lt_vars, only: &
@@ -995,6 +998,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_open
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_open
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_open
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_open
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_open
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_open
 
@@ -1020,6 +1024,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_atmos_dyn_vars, only: &
@@ -1036,6 +1041,8 @@ contains
        ATMOS_PHY_SF_vars_restart_read
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_read
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_read
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_read
     use mod_atmos_phy_lt_vars, only: &
@@ -1115,6 +1122,7 @@ contains
     if ( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_read
     if ( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_read
     if ( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_read
+    if ( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_read
     if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
     if ( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_read
 
@@ -3265,6 +3273,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
@@ -3283,6 +3292,8 @@ contains
        ATMOS_PHY_SF_vars_restart_create
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_create
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_create
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_create
     use mod_atmos_phy_lt_vars, only: &
@@ -3336,6 +3347,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_create
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_create
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_create
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_create
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_create
 
@@ -3355,6 +3367,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
@@ -3373,6 +3386,8 @@ contains
        ATMOS_PHY_SF_vars_restart_enddef
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_enddef
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_enddef
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_enddef
     use mod_atmos_phy_lt_vars, only: &
@@ -3403,6 +3418,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_enddef
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_enddef
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_enddef
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_enddef
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_enddef
 
@@ -3422,6 +3438,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
@@ -3440,6 +3457,8 @@ contains
        ATMOS_PHY_SF_vars_restart_close
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_close
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_close
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_close
     use mod_atmos_phy_lt_vars, only: &
@@ -3476,6 +3495,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_close
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_close
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_close
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_close
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_close
 
@@ -3495,6 +3515,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
@@ -3513,6 +3534,8 @@ contains
        ATMOS_PHY_SF_vars_restart_def_var
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_def_var
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_def_var
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_def_var
     use mod_atmos_phy_lt_vars, only: &
@@ -3564,6 +3587,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_def_var
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_def_var
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_def_var
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_def_var
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_def_var
 
@@ -3583,6 +3607,7 @@ contains
        ATMOS_sw_phy_rd,   &
        ATMOS_sw_phy_sf,   &
        ATMOS_sw_phy_tb,   &
+       ATMOS_sw_phy_bl,   &
        ATMOS_sw_phy_cp,   &
        ATMOS_sw_phy_lt
     use mod_cpl_admin, only: &
@@ -3601,6 +3626,8 @@ contains
        ATMOS_PHY_SF_vars_restart_write
     use mod_atmos_phy_tb_vars, only: &
        ATMOS_PHY_TB_vars_restart_write
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_restart_write
     use mod_atmos_phy_cp_vars, only: &
        ATMOS_PHY_CP_vars_restart_write
     use mod_atmos_phy_lt_vars, only: &
@@ -3646,6 +3673,7 @@ contains
     if( ATMOS_sw_phy_rd ) call ATMOS_PHY_RD_vars_restart_write
     if( ATMOS_sw_phy_sf .and. (.not. CPL_sw) ) call ATMOS_PHY_SF_vars_restart_write
     if( ATMOS_sw_phy_tb ) call ATMOS_PHY_TB_vars_restart_write
+    if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_write
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_write
 
