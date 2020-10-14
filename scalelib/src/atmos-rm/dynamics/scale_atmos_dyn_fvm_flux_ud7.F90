@@ -631,10 +631,19 @@ contains
     do i = IIS, IIE
 #ifdef DEBUG
 
-       call CHECK( __LINE__, val(KS  ,i,j) )
+       call CHECK( __LINE__, val(KS,i,j) )
        call CHECK( __LINE__, val(KS+1,i,j) )
+       call CHECK( __LINE__, val(KS+2,i,j) )
+       call CHECK( __LINE__, val(KS+3,i,j) )
+       call CHECK( __LINE__, val(KS+4,i,j) )
+       call CHECK( __LINE__, val(KS+5,i,j) )
+       call CHECK( __LINE__, val(KS+6,i,j) )
 
 
+       call CHECK( __LINE__, val(KE-6,i,j) )
+       call CHECK( __LINE__, val(KE-5,i,j) )
+       call CHECK( __LINE__, val(KE-4,i,j) )
+       call CHECK( __LINE__, val(KE-3,i,j) )
        call CHECK( __LINE__, val(KE-2,i,j) )
        call CHECK( __LINE__, val(KE-1,i,j) )
 
@@ -689,6 +698,26 @@ contains
                    + GSQRT(KS+3,i,j) * num_diff(KS+3,i,j) ! k = KS+3
 
 
+
+       vel = ( 0.5_RP * ( mom(KE-3,i,j) &
+                        + mom(KE-2,i,j) ) ) &
+           / DENS(KE-1,i,j)
+       flux(KE-3,i,j) = J33G * vel &
+                   * ( (     4.0_RP * val(KE,i,j)   &
+                         -  38.0_RP * val(KE-1,i,j)   &
+                         + 214.0_RP * val(KE-2,i,j)   &
+                         + 319.0_RP * val(KE-3,i,j)   &
+                         - 101.0_RP * val(KE-4,i,j)  &
+                         +  25.0_RP * val(KE-5,i,j)  &
+                         - 3.0_RP * val(KE-6,i,j) ) / 420.0_RP &
+                     * ( 0.5_RP + sign(0.5_RP,vel) ) &
+                + ( -  3.0_RP * val(KE-4,i,j)  &
+                         + 27.0_RP * val(KE-3,i,j)  &
+                         + 47.0_RP * val(KE-2,i,j)  &
+                         - 13.0_RP * val(KE-1,i,j) &
+                         + 2.0_RP * val(KE,i,j) ) / 60.0_RP &
+                     * ( 0.5_RP - sign(0.5_RP,vel) ) ) &
+                   + GSQRT(KE-2,i,j) * num_diff(KE-2,i,j) ! k = KE-2
 
        vel = ( 0.5_RP * ( mom(KE-2,i,j) &
                         + mom(KE-1,i,j) ) ) &

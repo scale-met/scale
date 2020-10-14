@@ -466,10 +466,13 @@ contains
     do i = IIS, IIE
 #ifdef DEBUG
 
-       call CHECK( __LINE__, val(KS  ,i,j) )
+       call CHECK( __LINE__, val(KS,i,j) )
        call CHECK( __LINE__, val(KS+1,i,j) )
+       call CHECK( __LINE__, val(KS+2,i,j) )
+       call CHECK( __LINE__, val(KS+3,i,j) )
 
 
+       call CHECK( __LINE__, val(KE-3,i,j) )
        call CHECK( __LINE__, val(KE-2,i,j) )
        call CHECK( __LINE__, val(KE-1,i,j) )
 
