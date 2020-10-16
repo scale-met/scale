@@ -62,6 +62,8 @@ contains
   !> Setup
   subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup( &
        tinteg_type )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
     use scale_prc, only: &
        PRC_abort
     use scale_comm_cartesC, only: &
@@ -80,6 +82,8 @@ contains
 
     allocate( QTRC_RK1(KA,IA,JA) )
     allocate( QTRC_RK2(KA,IA,JA) )
+    QTRC_RK1(:,:,:) = UNDEF
+    QTRC_RK2(:,:,:) = UNDEF
 
     call COMM_vars8_init( 'QTRC_RK1', QTRC_RK1, I_COMM_RK1 )
     call COMM_vars8_init( 'QTRC_RK2', QTRC_RK2, I_COMM_RK2 )

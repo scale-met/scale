@@ -270,7 +270,21 @@ contains
     integer :: iq
     !---------------------------------------------------------------------------
 
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+       ATMOS_PHY_CP_w0mean (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean (KS,i,j)
+       ATMOS_PHY_CP_w0mean (KE+1:KA  ,i,j) = ATMOS_PHY_CP_w0mean (KE,i,j)
+       ATMOS_PHY_CP_DENS_t (   1:KS-1,i,j) = ATMOS_PHY_CP_DENS_t (KS,i,j)
+       ATMOS_PHY_CP_DENS_t (KE+1:KA  ,i,j) = ATMOS_PHY_CP_DENS_t (KE,i,j)
+       ATMOS_PHY_CP_RHOT_t (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOT_t (KS,i,j)
+       ATMOS_PHY_CP_RHOT_t (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOT_t (KE,i,j)
+       ATMOS_PHY_CP_RHOQV_t(   1:KS-1,i,j) = ATMOS_PHY_CP_RHOQV_t(KS,i,j)
+       ATMOS_PHY_CP_RHOQV_t(KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t(KE,i,j)
+    end do
+    end do
     do iq = 1, N_HYD
+       !$omp parallel do
        do j = JS, JE
        do i = IS, IE
           ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)
@@ -377,7 +391,21 @@ contains
           call FILE_CARTESC_flush( restart_fid ) ! X/Y halos have been read from file
 
           ! fill K halos
+          !$omp parallel do
+          do j  = 1, JA
+          do i  = 1, IA
+             ATMOS_PHY_CP_w0mean (   1:KS-1,i,j) = ATMOS_PHY_CP_w0mean (KS,i,j)
+             ATMOS_PHY_CP_w0mean (KE+1:KA  ,i,j) = ATMOS_PHY_CP_w0mean (KE,i,j)
+             ATMOS_PHY_CP_DENS_t (   1:KS-1,i,j) = ATMOS_PHY_CP_DENS_t (KS,i,j)
+             ATMOS_PHY_CP_DENS_t (KE+1:KA  ,i,j) = ATMOS_PHY_CP_DENS_t (KE,i,j)
+             ATMOS_PHY_CP_RHOT_t (   1:KS-1,i,j) = ATMOS_PHY_CP_RHOT_t (KS,i,j)
+             ATMOS_PHY_CP_RHOT_t (KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOT_t (KE,i,j)
+             ATMOS_PHY_CP_RHOQV_t(   1:KS-1,i,j) = ATMOS_PHY_CP_RHOQV_t(KS,i,j)
+             ATMOS_PHY_CP_RHOQV_t(KE+1:KA  ,i,j) = ATMOS_PHY_CP_RHOQV_t(KE,i,j)
+          end do
+          end do
           do iq = 1, N_HYD
+             !$omp parallel do
              do j  = 1, JA
              do i  = 1, IA
                 ATMOS_PHY_CP_RHOHYD_t(   1:KS-1,i,j,iq) = ATMOS_PHY_CP_RHOHYD_t(KS,i,j,iq)

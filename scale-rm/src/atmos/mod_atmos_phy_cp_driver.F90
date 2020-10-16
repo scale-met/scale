@@ -203,22 +203,24 @@ contains
                                          kf_nca(:,:),                              & ! [INOUT]
                                          SFLX_rain(:,:), SFLX_snow(:,:),           & ! [INOUT]
                                          SFLX_ENGI(:,:),                           & ! [INOUT]
-                                         cloudtop(:,:), cloudbase(:,:),            & ! [OUT]
-                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [OUT]
+                                         cloudtop(:,:), cloudbase(:,:),            & ! [INOUT]
+                                         cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [INOUT]
 
        end select
 
 !OCL XFILL
-       do j  = JSB, JEB
-       do i  = ISB, IEB
+       !$omp parallel do
+       do j  = JS, JE
+       do i  = IS, IE
           MFLX_cloudbase(i,j) = 0.0_RP
        enddo
        enddo
 
        ! diagnose tendency of number concentration
 
-       do j = JSB, JEB
-       do i = ISB, IEB
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
           SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
        end do
        end do

@@ -96,6 +96,8 @@ contains
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_Zi
     use scale_bulkflux, only: &
        BULKFLUX_type
     implicit none
@@ -113,6 +115,7 @@ contains
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
+       ATMOS_PHY_BL_Zi(:,:) = 0.0_RP
     endif
 
     return

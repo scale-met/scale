@@ -608,8 +608,8 @@ contains
 
     ! sum of rainfall from mp and cp
     !$omp parallel do private(i,j) OMP_SCHEDULE_
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        PREC     (i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
        PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
     enddo
@@ -618,7 +618,7 @@ contains
     if ( CPL_sw ) then
 
        ! planetary boundary layer
-       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
                              REAL_FZ(:,:,:),                      & ! [IN]
