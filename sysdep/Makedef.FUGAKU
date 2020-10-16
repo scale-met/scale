@@ -12,15 +12,13 @@ SFC = frtpx
 MODDIROPT = -M
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
-               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
+               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp             \
                -x-                                                       \
                -Ksimd                                                    \
-               -Kauto,threadsafe
+               -Kauto,threadsafe                                         \
+               -Nfjomplib
 
-# NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
-#       If you find the segmentation fault error, please check.
-
-FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=12,swp_strong
+FFLAGS_AGGRESSIVE = -Kinstance=12,swp_weak
 
 FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 
