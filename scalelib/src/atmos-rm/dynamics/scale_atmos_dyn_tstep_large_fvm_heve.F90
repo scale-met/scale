@@ -597,8 +597,6 @@ contains
     integer  :: i, j, k, iq, iqb, step
     integer  :: iv
     integer  :: n
-
-
     !---------------------------------------------------------------------------
 
     call PROF_rapstart("DYN_Large_Preparation", 2)
