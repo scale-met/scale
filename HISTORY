@@ -1,5 +1,15 @@
 = Release History
 
+== 2020-10-22 (5.4.1)
+* Bug fixes:
+  * Fix incorrect changes in surface temperature when ATMOS_PHY_SF_TYPE is CONST.
+  * Fix a problem with different results in restart runs
+  * Fix a bug in SNO
+  * Fix a bug in the UD7 and CD8 flux schemes
+  * Fix undefined references
+* Changes
+  * Change some options for the FUGAKU supercomputer
+
 == 2020-09-25 (5.4.0)
 * Changes
   * Change the configuration parameters of the KUSAKA model
