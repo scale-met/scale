@@ -1550,7 +1550,6 @@ contains
        TwoD,              &
        nd_laplacian_num,  &
        KO, IO, JO, KEE    )
-   
     use scale_prc, only: PRC_abort
     use scale_comm_cartesC, only: &
        COMM_vars8, &

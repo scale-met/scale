@@ -867,10 +867,10 @@ contains
        end if
     endif
 
+    call PROF_rapend  ('OCN_CalcTend', 1)
+
     !########## Set Surface Boundary to coupler ##########
     call OCEAN_SURFACE_SET( countup=.true. )
-
-    call PROF_rapend  ('OCN_CalcTend', 1)
 
     return
   end subroutine OCEAN_driver_calc_tendency

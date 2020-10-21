@@ -1129,6 +1129,7 @@ contains
        hgt,           &
        val_ref,       &
        val,           &
+       spline,        &
        logwgt         )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
@@ -1145,8 +1146,10 @@ contains
 
     real(RP), intent(out)        :: val    (KA)     ! value  (target)
 
+    logical,  intent(in), optional :: spline !> use spline interpolation?
     logical,  intent(in), optional :: logwgt !> use logarithmic weighted interpolation?
 
+    logical :: spline_
     logical :: logwgt_
 
     real(RP), pointer :: work(:)
@@ -1161,6 +1164,11 @@ contains
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('INTERP_interp',3)
+
+    spline_ = INTERP_use_spline_vert
+    if ( present(spline) ) then
+       spline_ = spline
+    end if
 
     logwgt_ = .false.
     if ( present(logwgt) ) then
@@ -1182,6 +1190,7 @@ contains
 
     call spline_coef( KA_ref, KS_ref, KE_ref, &
                       hgt_ref(:), work(:), & ! (in)
+                      spline_,             & ! (in)
                       kmax,                & ! (out)
                       idx(:), idx_r(:),    & ! (out)
                       U(:), FDZ(:)         ) ! (out)
@@ -1307,7 +1316,8 @@ contains
        hgt,                     &
        val_ref,                 &
        val,                     &
-       logwgt, threshold_undef, &
+       spline, logwgt,          &
+       threshold_undef,         &
        wsum, val2               )
     use scale_const, only: &
        UNDEF => CONST_UNDEF, &
@@ -1332,12 +1342,14 @@ contains
 
     real(RP), intent(out)        :: val    (KA,IA,JA)             ! value (target)
 
+    logical,  intent(in), optional :: spline          !> use spline interpolation?
     logical,  intent(in), optional :: logwgt          !> use logarithmic weighted interpolation?
     real(RP), intent(in), optional :: threshold_undef !> return UNDEF if sum of the weight factor is undef the shreshold
     real(RP), intent(out), optional :: wsum(KA,IA,JA)
     real(RP), intent(out), optional :: val2(KA,IA,JA)
 
     real(RP) :: th_undef
+    logical  :: spline_
     logical  :: logwgt_
 
     real(RP), pointer :: work(:,:,:)
@@ -1368,6 +1380,11 @@ contains
     end if
     th_undef = min( max( th_undef, EPS * 2.0_RP ), 1.0_RP - EPS * 2.0_RP )
 
+
+    spline_ = INTERP_use_spline_vert
+    if ( present(spline) ) then
+       spline_ = spline
+    end if
 
     logwgt_ = .false.
     if ( present(logwgt) ) then
@@ -1423,6 +1440,7 @@ contains
     do i = imin, imax
        call spline_coef( KA_ref, KS_ref, KE_ref, &
                          hgt_ref(:,i,j), work(:,i,j), & ! (in)
+                         spline_,                     & ! (in)
                          kmax(i,j),                   & ! (out)
                          idx(:,i,j), idx_r(:,i,j),    & ! (out)
                          U(:,i,j), FDZ(:,i,j)         ) ! (out)
@@ -2136,6 +2154,7 @@ contains
   subroutine spline_coef( &
        KA_ref, KS_ref, KE_ref, &
        hgt_ref, val_ref, &
+       spline,           &
        kmax,             &
        idx, idx_r,       &
        U, FDZ            )
@@ -2149,6 +2168,7 @@ contains
 
     real(RP), intent(in) :: hgt_ref(KA_ref)
     real(RP), intent(in) :: val_ref(KA_ref)
+    logical,  intent(in) :: spline
 
     integer,  intent(out) :: kmax
     integer,  intent(out) :: idx  (KA_ref)
@@ -2161,7 +2181,7 @@ contains
     real(RP) :: dz
     integer  :: k
 
-    if ( INTERP_use_spline_vert ) then
+    if ( spline ) then
 
        do k = KS_ref, KE_ref-1
           if ( abs( val_ref(k) - UNDEF ) > EPS ) then

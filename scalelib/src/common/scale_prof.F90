@@ -197,9 +197,6 @@ contains
 #ifdef FAPP
     call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
 #endif
-#ifdef FINEPA
-    call START_COLLECTION( rapname )
-#endif
 
     return
   end subroutine PROF_rapstart
@@ -237,14 +234,11 @@ contains
 
     if( level_ > PROF_rap_level ) return
 
-    if(PROF_mpi_barrier) call PRC_MPIbarrier
-
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
-#ifdef FINEPA
-    call STOP_COLLECTION( rapname )
-#endif
+    if(PROF_mpi_barrier) call PRC_MPIbarrier
+
 #ifdef FAPP
     call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
 #endif

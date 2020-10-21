@@ -339,6 +339,8 @@ contains
     select case( info%mapping_name )
     case( "" )
        call MAPPROJECTION_get_param_None
+
+       param%basepoint_lon = info%longitude_of_projection_origin * D2R
     case( "lambert_conformal_conic" )
        call MAPPROJECTION_get_param_LambertConformal( info, & ! (in)
                                                       param ) ! (out)

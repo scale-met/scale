@@ -1193,19 +1193,23 @@ contains
        I_TKE
     use mod_atmos_phy_bl_vars, only: &
        QS_BL => QS, &
-       QE_BL => QE
+       QE_BL => QE, &
+       Zi    => ATMOS_PHY_BL_Zi
     implicit none
 
     real(RP) :: TKE_CONST
+    real(RP) :: Zi_CONST
 
     namelist / PARAM_MKINIT_TKE / &
-       TKE_CONST
+       TKE_CONST, &
+       Zi_CONST
 
     integer :: k, i, j
     integer :: ierr
     !---------------------------------------------------------------------------
 
     TKE_CONST = EPS
+    Zi_CONST = 100.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1237,6 +1241,12 @@ contains
        enddo
        enddo
     end if
+
+    do j = 1, JA
+    do i = 1, IA
+       Zi(i,j) = Zi_CONST
+    end do
+    end do
 
     return
   end subroutine tke_setup

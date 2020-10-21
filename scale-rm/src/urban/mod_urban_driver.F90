@@ -440,10 +440,6 @@ contains
        call ATMOS_PHY_CH_driver_URBAN_flux( URBAN_SFLX_QTRC(:,:,:) ) ! [INOUT]
     endif
 
-    !########## Set Surface Boundary to coupler ##########
-    call URBAN_SURFACE_SET( countup=.true. )
-
-
     call FILE_HISTORY_in( URBAN_TR_t(:,:), 'URBAN_TR_t', 'tendency of URBAN_TR', 'K/s',     dim_type='XY' )
     call FILE_HISTORY_in( URBAN_TB_t(:,:), 'URBAN_TB_t', 'tendency of URBAN_TB', 'K/s',     dim_type='XY' )
     call FILE_HISTORY_in( URBAN_TG_t(:,:), 'URBAN_TG_t', 'tendency of URBAN_TG', 'K/s',     dim_type='XY' )
@@ -520,6 +516,9 @@ contains
 
 
     call PROF_rapend  ('URB_CalcTend', 1)
+
+    !########## Set Surface Boundary to coupler ##########
+    call URBAN_SURFACE_SET( countup=.true. )
 
     return
   end subroutine URBAN_driver_calc_tendency
