@@ -33,6 +33,7 @@ module mod_atmos_bnd_driver
   public :: ATMOS_BOUNDARY_driver_set
   public :: ATMOS_BOUNDARY_driver_finalize
   public :: ATMOS_BOUNDARY_driver_update
+  public :: ATMOS_BOUNDARY_driver_send
 
   !-----------------------------------------------------------------------------
   !
@@ -990,7 +991,7 @@ contains
                .or. ( .not. do_daughter_process .and. ATMOS_BOUNDARY_USE_VELZ ) ) then
              ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = max( alpha_z2, alpha_x1, alpha_y1 ) * ATMOS_BOUNDARY_ALPHAFACT_VELZ
           else
-             ATMOS_BOUNDARY_alpha_VELZ(:,:,:) = 0.0_RP
+             ATMOS_BOUNDARY_alpha_VELZ(k,i,j) = 0.0_RP
           end if
           if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
              ATMOS_BOUNDARY_alpha_DENS(k,i,j) = max( alpha_zm, alpha_xm, alpha_ym )
@@ -1736,29 +1737,12 @@ contains
     use scale_comm_cartesC_nest, only: &
        ONLINE_USE_VELZ,       &
        COMM_CARTESC_NEST_test
-    use mod_atmos_vars, only: &
-       DENS, &
-       MOMZ, &
-       MOMX, &
-       MOMY, &
-       RHOT, &
-       QTRC, &
-       QV,   &
-       Qe
-    use mod_atmos_phy_mp_vars, only: &
-       QS_MP, &
-       QE_MP
     implicit none
 
     logical, intent(in) :: last_step
 
     integer :: handle
     !---------------------------------------------------------------------------
-
-    if ( do_parent_process ) then !online [parent]
-       ! should be called every time step
-       call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC(:,:,:,QS_MP:QE_MP), QV, Qe )
-    endif
 
     if ( l_bnd ) then
 
@@ -1807,10 +1791,6 @@ contains
                       ATMOS_BOUNDARY_QTRC )
 
     ! To be enable to do asynchronous communicaton
-    if ( do_parent_process ) then !online [parent]
-       handle = 1
-       call COMM_CARTESC_NEST_test( handle )
-    endif
     if ( do_daughter_process ) then !online [daughter]
        handle = 2
        call COMM_CARTESC_NEST_test( handle )
@@ -1818,6 +1798,40 @@ contains
 
     return
   end subroutine ATMOS_BOUNDARY_driver_update
+
+  !-----------------------------------------------------------------------------
+  !> Send data to child domain
+  subroutine ATMOS_BOUNDARY_driver_send
+    use scale_comm_cartesC_nest, only: &
+       COMM_CARTESC_NEST_test
+    use mod_atmos_vars, only: &
+       DENS, &
+       MOMZ, &
+       MOMX, &
+       MOMY, &
+       RHOT, &
+       QTRC, &
+       QV,   &
+       Qe
+    use mod_atmos_phy_mp_vars, only: &
+       QS_MP, &
+       QE_MP
+    implicit none
+
+    integer :: handle
+    !---------------------------------------------------------------------------
+
+    if ( do_parent_process ) then !online [parent]
+       ! should be called every time step
+       call ATMOS_BOUNDARY_update_online_parent( DENS,MOMZ,MOMX,MOMY,RHOT,QTRC(:,:,:,QS_MP:QE_MP), QV, Qe )
+
+       ! To be enable to do asynchronous communicaton
+       handle = 1
+       call COMM_CARTESC_NEST_test( handle )
+    endif
+
+    return
+  end subroutine ATMOS_BOUNDARY_driver_send
 
   !-----------------------------------------------------------------------------
   !> Update reference boundary from file

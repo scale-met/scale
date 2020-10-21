@@ -681,10 +681,10 @@ contains
        call ATMOS_PHY_CH_driver_LAND_flux( LAND_SFLX_QTRC(:,:,:) ) ! [INOUT]
     endif
 
+    call PROF_rapend  ('LND_CalcTend', 1)
+
     !########## Set Surface Boundary to coupler ##########
     call LAND_SURFACE_SET( countup=.true. )
-
-    call PROF_rapend  ('LND_CalcTend', 1)
 
     return
   end subroutine LAND_driver_calc_tendency

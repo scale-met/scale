@@ -2488,8 +2488,9 @@ contains
     integer :: zs, ze
 
     integer :: ig, rq, yp
-    logical :: no_zstag    = .true.
-    logical :: logarithmic = .false.
+    logical :: no_zstag
+    logical :: spline
+    logical :: logarithmic
 
     integer :: ierr
     integer :: i, j
@@ -2498,8 +2499,12 @@ contains
     if( .NOT. USE_NESTING ) return
 
     logarithmic = .false.
+    spline = .false.
     if ( present(flag_dens) ) then
-       if( flag_dens ) logarithmic = .true.
+       if( flag_dens ) then
+          logarithmic = .true.
+          spline = .true.
+       end if
     endif
 
     if    ( id_stag == I_SCLR ) then
@@ -2603,6 +2608,7 @@ contains
                                 REAL_CZ      (:,:,:),        & ! [IN]
                                 buffer_ref_3D(:,:,:),        & ! [IN]
                                 dvar         (:,:,:),        & ! [OUT]
+                                spline = spline,             & ! [IN, optional]
                                 logwgt = logarithmic         ) ! [IN, optional]
 
        else
@@ -2626,6 +2632,7 @@ contains
                                 REAL_FZ      (1:,:,:),       & ! [IN]
                                 buffer_ref_3D(:,:,:),        & ! [IN]
                                 dvar         (:,:,:),        & ! [OUT]
+                                spline = spline,             & ! [IN, optional]
                                 logwgt = logarithmic         ) ! [IN, optional]
        endif
 

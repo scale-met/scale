@@ -385,6 +385,7 @@ contains
        ATMOS_REFSTATE_update
     use mod_atmos_vars, only: &
        ATMOS_vars_calc_diagnostics,&
+       ATMOS_vars_fillhalo,        &
        DENS,                       &
        TEMP,                       &
        PRES,                       &
@@ -392,6 +393,7 @@ contains
        QV
     use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_driver_update, &
+       ATMOS_BOUNDARY_driver_send,   &
        ATMOS_BOUNDARY_UPDATE_FLAG
     use mod_atmos_dyn_driver, only: &
        ATMOS_DYN_driver
@@ -442,6 +444,7 @@ contains
        call PROF_rapstart('ATM_Microphysics', 1)
        call ATMOS_PHY_MP_driver_adjustment
        call PROF_rapend  ('ATM_Microphysics', 1)
+       call ATMOS_vars_fillhalo
        call ATMOS_vars_calc_diagnostics
     endif
     ! Aerosol
@@ -449,6 +452,7 @@ contains
        call PROF_rapstart('ATM_Aerosol', 1)
        call ATMOS_PHY_AE_driver_adjustment
        call PROF_rapend  ('ATM_Aerosol', 1)
+       call ATMOS_vars_fillhalo
        call ATMOS_vars_calc_diagnostics
     endif
     ! Lightning
@@ -456,14 +460,22 @@ contains
        call PROF_rapstart('ATM_Lightning', 1)
        call ATMOS_PHY_LT_driver_adjustment
        call PROF_rapend  ('ATM_Lightning', 1)
+       call ATMOS_vars_fillhalo
        ! calc_diagnostics is not necessary
     end if
+
+    !########## Send Lateral/Top Boundary Condition (Online nesting) ###########
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       call PROF_rapstart('ATM_Boundary', 2)
+       call ATMOS_BOUNDARY_driver_send
+       call PROF_rapend  ('ATM_Boundary', 2)
+    endif
 
 
     !########## Reference State ###########
     if ( ATMOS_REFSTATE_UPDATE_FLAG ) then
        call PROF_rapstart('ATM_Refstate', 2)
-       call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
@@ -608,8 +620,8 @@ contains
 
     ! sum of rainfall from mp and cp
     !$omp parallel do private(i,j) OMP_SCHEDULE_
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
        PREC     (i,j) = SFLX_rain_MP(i,j) + SFLX_rain_CP(i,j) + SFLX_snow_MP(i,j)
        PREC_ENGI(i,j) = SFLX_ENGI_MP(i,j) + SFLX_ENGI_CP(i,j)
     enddo
@@ -618,7 +630,7 @@ contains
     if ( CPL_sw ) then
 
        ! planetary boundary layer
-       call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call BOTTOM_estimate( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                              DENS(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                              SFC_TEMP(:,:),                       & ! [IN]
                              REAL_FZ(:,:,:),                      & ! [IN]

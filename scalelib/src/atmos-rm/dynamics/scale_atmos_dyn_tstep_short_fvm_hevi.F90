@@ -12,9 +12,6 @@
 #ifdef PROFILE_FAPP
 #define PROFILE_START(name) call fapp_start(name, 1, 1)
 #define PROFILE_STOP(name)  call fapp_stop (name, 1, 1)
-#elif defined(PROFILE_FINEPA)
-#define PROFILE_START(name) call start_collection(name)
-#define PROFILE_STOP(name)  call stop_collection (name)
 #else
 #define PROFILE_START(name)
 #define PROFILE_STOP(name)
@@ -799,7 +796,7 @@ contains
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,A,B,C,F1,F2,F3,PT,pg,advcv) &
+       !$omp private(i,j,k,A,B,C,F1,F2,F3,PT,pg,advcv) &
 #ifdef HIST_TEND
        !$omp shared(lhist,pg_t,advcv_t) &
 #endif

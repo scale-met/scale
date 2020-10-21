@@ -12,15 +12,13 @@ SFC = frtpx
 MODDIROPT = -M
 
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
-               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp                   \
+               -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp             \
                -x-                                                       \
                -Ksimd                                                    \
-               -Kauto,threadsafe
+               -Kauto,threadsafe                                         \
+               -Nfjomplib
 
-# NOTE: -Kauto, -Kthreadsafe, -Kautoobjstack, -Ktemparraystack depends on the stacksize.
-#       If you find the segmentation fault error, please check.
-
-FFLAGS_AGGRESSIVE = -Kautoobjstack,temparraystack,instance=12,swp_strong
+FFLAGS_AGGRESSIVE = -Kinstance=12,swp_strong
 
 FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 
@@ -50,13 +48,11 @@ FFLAGS_OPENMP = -Kopenmp
 
 ### Performance monitor
 # disable
-#PERF_MONIT = -Nnofjprof -UFIPP -UFAPP -UFINEPA
+#PERF_MONIT = -Nnofjprof -UFIPP -UFAPP
 # fipp
-PERF_MONIT = -Nfjprof -DFIPP -UFAPP -UFINEPA
+PERF_MONIT = -Nfjprof -DFIPP -UFAPP
 # fapp
-#PERF_MONIT = -Nfjprof -UFIPP -DFAPP -UFINEPA
-# fine PA
-#PERF_MONIT = -Nfjprof -UFIPP -UFAPP -DFINEPA
+#PERF_MONIT = -Nfjprof -UFIPP -DFAPP
 
 FFLAGS_SYSDEPEND = $(PERF_MONIT)
 CFLAGS_SYSDEPEND = $(PERF_MONIT)

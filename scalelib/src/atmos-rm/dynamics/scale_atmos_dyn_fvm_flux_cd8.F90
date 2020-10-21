@@ -525,10 +525,17 @@ contains
     do i = IIS, IIE
 #ifdef DEBUG
 
-       call CHECK( __LINE__, val(KS  ,i,j) )
+       call CHECK( __LINE__, val(KS,i,j) )
        call CHECK( __LINE__, val(KS+1,i,j) )
+       call CHECK( __LINE__, val(KS+2,i,j) )
+       call CHECK( __LINE__, val(KS+3,i,j) )
+       call CHECK( __LINE__, val(KS+4,i,j) )
+       call CHECK( __LINE__, val(KS+5,i,j) )
 
 
+       call CHECK( __LINE__, val(KE-5,i,j) )
+       call CHECK( __LINE__, val(KE-4,i,j) )
+       call CHECK( __LINE__, val(KE-3,i,j) )
        call CHECK( __LINE__, val(KE-2,i,j) )
        call CHECK( __LINE__, val(KE-1,i,j) )
 
@@ -563,6 +570,15 @@ contains
                    + GSQRT(KS+3,i,j) * num_diff(KS+3,i,j) ! k = KS+3
 
 
+
+       vel = ( 0.5_RP * ( mom(KE-3,i,j) &
+                        + mom(KE-2,i,j) ) ) &
+           / DENS(KE-1,i,j)
+       flux(KE-3,i,j) = J33G * vel &
+                   * ( F61 * ( val(KE-2,i,j)+val(KE-3,i,j) ) &
+                     + F62 * ( val(KE-1,i,j)+val(KE-4,i,j) ) &
+                     + F63 * ( val(KE,i,j)+val(KE-5,i,j) ) ) &
+                   + GSQRT(KE-2,i,j) * num_diff(KE-2,i,j) ! k = KE-2
 
        vel = ( 0.5_RP * ( mom(KE-2,i,j) &
                         + mom(KE-1,i,j) ) ) &

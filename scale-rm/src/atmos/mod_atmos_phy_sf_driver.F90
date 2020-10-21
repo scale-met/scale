@@ -315,7 +315,6 @@ contains
 
           case ( 'CONST' )
 
-             SFC_TEMP(:,:) = ATM_TEMP(:,:)
              call ATMOS_PHY_SF_const_flux( IA, IS, IE, JA, JS, JE,                            & ! [IN]
                                            ATM_W(:,:), ATM_U(:,:), ATM_V(:,:), SFC_TEMP(:,:), & ! [IN]
                                            Z1(:,:), SFC_DENS(:,:),                            & ! [IN]

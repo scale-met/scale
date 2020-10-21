@@ -84,6 +84,7 @@ contains
        mask,         &
        Z0M, Z0H, Z0E )
     use scale_const, only: &
+       UNDEF  => CONST_UNDEF,  &
        GRAV   => CONST_GRAV,   &
        KARMAN => CONST_KARMAN
     use scale_ocean_phy_roughness, only: &
@@ -114,7 +115,7 @@ contains
 
     !$omp parallel do default(none) OMP_SCHEDULE_ &
     !$omp shared(OJS,OJE,OIS,OIE, &
-    !$omp        GRAV, &
+    !$omp        GRAV,UNDEF, &
     !$omp        OCEAN_PHY_ROUGHNESS_Z0M_min,OCEAN_PHY_ROUGHNESS_Z0H_min,OCEAN_PHY_ROUGHNESS_Z0E_min, &
     !$omp        OCEAN_PHY_ROUGHNESS_Ustar_min,OCEAN_PHY_ROUGHNESS_visck,OCEAN_PHY_ROUGHNESS_moon07_itelim, &
     !$omp        Z0M,Z0H,Z0E,Uabs,Z1,mask) &
@@ -148,6 +149,9 @@ contains
           Z0H(i,j) = max( Z0H(i,j), OCEAN_PHY_ROUGHNESS_Z0H_min )
           Z0E(i,j) = max( Z0E(i,j), OCEAN_PHY_ROUGHNESS_Z0E_min )
 
+       else
+          Z0H(i,j) = UNDEF
+          Z0E(i,j) = UNDEF
        end if
     enddo
     enddo

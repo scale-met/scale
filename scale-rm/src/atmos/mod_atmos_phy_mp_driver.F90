@@ -505,8 +505,8 @@ contains
        !$omp parallel private(Rtot)
 
        !$omp do
-       do j = 1, JA
-       do i = 1, IA
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           Rtot = CPtot(k,i,j) - CVtot(k,i,j)
           RHOT(k,i,j) = PRE00 / Rtot * ( DENS(k,i,j) * TEMP(k,i,j) * Rtot / PRE00 )**( CVtot(k,i,j) / CPtot(k,i,j) )
@@ -518,8 +518,8 @@ contains
        ! for non-mass tracers, such as number density
        do iq = QHE+1, QA_MP
        !$omp do
-       do j = 1, JA
-       do i = 1, IA
+       do j = JS, JE
+       do i = IS, IE
        do k = KS, KE
           QTRC(k,i,j,iq) = max( QTRC(k,i,j,iq), 0.0_RP )
        end do
