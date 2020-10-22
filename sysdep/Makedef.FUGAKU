@@ -14,7 +14,7 @@ MODDIROPT = -M
 FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Nlst=i,lst=t -X03 -Ncompdisp -Koptmsg=1 -Cpp             \
                -x-                                                       \
-               -Ksimd                                                    \
+               -Ksimd,loop_fission                                       \
                -Kauto,threadsafe                                         \
                -Nfjomplib
 
