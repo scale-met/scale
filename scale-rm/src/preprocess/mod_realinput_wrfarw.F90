@@ -254,7 +254,7 @@ contains
     call FILE_read( fid, "HGT", topo_org(:,:), step=it )
 
     call FILE_read( fid, "PH", read_xyw(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(4)
@@ -264,7 +264,7 @@ contains
     end do
 
     call FILE_read( fid, "PHB", read_xyw(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(4)
@@ -274,7 +274,7 @@ contains
     end do
 
     call FILE_read( fid, "P", read_xyz(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -284,7 +284,7 @@ contains
     end do
 
     call FILE_read( fid, "PB", read_xyz(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -301,7 +301,7 @@ contains
 
 
     ! from half level to full level
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
        do k = 1, dims(1)
@@ -321,7 +321,7 @@ contains
                                  BASENAME,               & ! (in)
                                  dims(1)+2, dims(2), dims(3) ) ! (in)
 
-    !$omp parallel do collapse(4)
+    !$omp parallel do collapse(3)
     do iq = 1, N_HYD
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -333,7 +333,7 @@ contains
     end do
 
     call FILE_read( fid, "QVAPOR", read_xyz(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -362,7 +362,7 @@ contains
 
 
     call FILE_read( fid, "QCLOUD", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -372,7 +372,7 @@ contains
     end do
 
     call FILE_read( fid, "QRAIN", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -382,7 +382,7 @@ contains
     end do
 
     call FILE_read( fid, "QICE", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -392,7 +392,7 @@ contains
     end do
 
     call FILE_read( fid, "QSNOW", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -402,7 +402,7 @@ contains
     end do
 
     call FILE_read( fid, "QGRAUP", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -413,7 +413,7 @@ contains
 
 
     ! convert mixing ratio to specific ratio
-    !$omp parallel do &
+    !$omp parallel do collapse(2) &
     !$omp private(qtot)
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -438,7 +438,7 @@ contains
     end do
 
     call FILE_read( fid, "NC", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -448,7 +448,7 @@ contains
     end do
 
     call FILE_read( fid, "NR", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -458,7 +458,7 @@ contains
     end do
 
     call FILE_read( fid, "NI", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -468,7 +468,7 @@ contains
     end do
 
     call FILE_read( fid, "NS", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -478,7 +478,7 @@ contains
     end do
 
     call FILE_read( fid, "NG", read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -487,7 +487,7 @@ contains
     end do
     end do
 
-    !$omp parallel do collapse(4)
+    !$omp parallel do collapse(3)
     do iq = 1, N_HYD
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -506,7 +506,7 @@ contains
 
 
     call FILE_read( fid, varname_T, read_xyz(:,:,:), step=it, allow_missing=.true. )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, dims(3)
     do i = 1, dims(2)
     do k = 1, dims(1)
@@ -556,7 +556,7 @@ contains
     end do
     end do
 
-    !$omp parallel do &
+    !$omp parallel do collapse(2) &
     !$omp private(dens)
     do j = 1, dims(3)
     do i = 1, dims(2)
@@ -738,7 +738,7 @@ contains
 
     ! soil temperature [K]
     call FILE_read( fid, "TSLB", read_xyl(:,:,:), step=it )
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, ldims(3)
     do i = 1, ldims(2)
     do k = 1, ldims(1)
@@ -750,7 +750,7 @@ contains
     ! soil liquid water [m3 m-3] (no wrfout-default)
     if( use_file_landwater ) then
        call FILE_read( fid, "SH2O", read_xyl(:,:,:), step=it, allow_missing=.true., missing_value=UNDEF )
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = 1, ldims(3)
        do i = 1, ldims(2)
        do k = 1, ldims(1)
@@ -1049,7 +1049,7 @@ contains
 
     ! No need to rotate
     if ( map_proj .ge. 3 ) then
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = 1, J1
        do i = 1, I1
        do k = 1, K1
@@ -1092,7 +1092,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, J1
     do i = 1, I1
     do k = 1, K1

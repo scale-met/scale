@@ -316,9 +316,10 @@ contains
     enddo
     enddo
 
+    !$omp parallel private(iq,i,j,k)
     do iq = 1,  QA
        if ( .not. TRACER_ADVC(iq) ) cycle
-       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+       !$omp do OMP_SCHEDULE_ collapse(2)
        do j  = JS, JE
        do i  = IS, IE
        do k  = KS, KE
@@ -326,7 +327,9 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
     enddo
+    !$omp end parallel
 
     return
   end subroutine ATMOS_PHY_BL_driver_calc_tendency

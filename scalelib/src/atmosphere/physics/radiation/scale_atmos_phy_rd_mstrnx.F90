@@ -632,21 +632,22 @@ contains
     enddo
 
 !OCL XFILL
-!OCL SERIAL
-    do v = 1,  MSTRN_ngas
-!OCL PARALLEL
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,RD_k) &
+    !$omp parallel default(none) &
+    !$omp private(v,i,j,RD_k) &
     !$omp shared (gas_merge,RD_gas, &
-    !$omp         IS,IE,JS,JE,RD_KMAX,v)
-    do j = JS, JE
-    do i = IS, IE
+    !$omp         IS,IE,JS,JE,RD_KMAX)
+    do v = 1,  MSTRN_ngas
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
        do RD_k = 1, RD_KMAX
           gas_merge(RD_k,i,j,v) = RD_gas(RD_k,v)
        enddo
+       enddo
+       enddo
+       !$omp end do nowait
     enddo
-    enddo
-    enddo
+    !$omp end parallel
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(k,i,j,RD_k, &
@@ -664,21 +665,22 @@ contains
     enddo
 
 !OCL XFILL
-!OCL SERIAL
-    do v = 1,  MSTRN_ncfc
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,RD_k) &
+    !$omp parallel default(none) &
+    !$omp private(v,i,j,RD_k) &
     !$omp shared (cfc_merge,RD_cfc, &
-    !$omp         IS,IE,JS,JE,RD_KMAX,v)
-!OCL PARALLEL
-    do j = JS, JE
-    do i = IS, IE
+    !$omp         IS,IE,JS,JE,RD_KMAX)
+    do v = 1,  MSTRN_ncfc
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
        do RD_k = 1, RD_KMAX
           cfc_merge(RD_k,i,j,v) = RD_cfc(RD_k,v)
        enddo
+       enddo
+       enddo
+       !$omp end do nowait
     enddo
-    enddo
-    enddo
+    !$omp end parallel
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp private(k,i,j,RD_k) &
@@ -700,57 +702,66 @@ contains
     enddo
 
 !OCL XFILL
-!OCL SERIAL
-    do v = 1,  RD_naero
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j,RD_k) &
+    !$omp parallel default(none) &
+    !$omp private(v,i,j,RD_k) &
     !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
-    !$omp         IS,IE,JS,JE,RD_KADD,v)
-!OCL PARALLEL
-    do j = JS, JE
-    do i = IS, IE
-    do RD_k = 1, RD_KADD
-       aerosol_conc_merge(RD_k,i,j,v) = RD_aerosol_conc(RD_k,v)
-       aerosol_radi_merge(RD_k,i,j,v) = RD_aerosol_radi(RD_k,v)
+    !$omp         IS,IE,JS,JE,RD_KADD)
+    do v = 1,  RD_naero
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do RD_k = 1, RD_KADD
+          aerosol_conc_merge(RD_k,i,j,v) = RD_aerosol_conc(RD_k,v)
+          aerosol_radi_merge(RD_k,i,j,v) = RD_aerosol_radi(RD_k,v)
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
     enddo
-    enddo
-    enddo
-    enddo
+    !$omp end parallel
 
-!OCL SERIAL
+    !$omp parallel default(none) &
+    !$omp private(ihydro,k,i,j,RD_k) &
+    !$omp shared (aerosol_conc_merge,tropopause,MP_Qe,HYD_DENS,RHO_std, &
+    !$omp         ATMOS_PHY_RD_MSTRN_ONLY_QCI, &
+    !$omp         KS,KE,IS,IE,JS,JE,RD_KMAX,RD_KADD)
     do ihydro = 1, N_HYD
        if ( ATMOS_PHY_RD_MSTRN_ONLY_QCI .and. &
             ( ihydro /= I_HC .and. ihydro /= I_HI ) ) then
 !OCL XFILL
-          aerosol_conc_merge(:,:,:,ihydro) = 0.0_RP
-          cycle
-       end if
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(k,i,j,RD_k) &
-       !$omp shared (aerosol_conc_merge,tropopause,MP_Qe,HYD_DENS,RHO_std, &
-       !$omp         KS,KE,IS,IE,JS,JE,RD_KMAX,RD_KADD,ihydro)
-!OCL PARALLEL
-       do j = JS, JE
-       do i = IS, IE
-          do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
-             aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+          do RD_k = RD_KADD+1, RD_KMAX
+             aerosol_conc_merge(:,:,:,ihydro) = 0.0_RP
           end do
-          do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
-             k = KS + RD_KMAX - RD_k ! reverse axis
-             aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
-                                                 / HYD_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
+          end do
+          end do
+          !$omp end do nowait
+       else
+          !$omp do OMP_SCHEDULE_ collapse(2)
+          do j = JS, JE
+          do i = IS, IE
+             do RD_k = RD_KADD+1, RD_KADD+1 + KE - tropopause(i,j)
+                aerosol_conc_merge(RD_k,i,j,ihydro) = 0.0_RP
+             end do
+             do RD_k = RD_KADD+1 + KE - tropopause(i,j) + 1, RD_KMAX
+                k = KS + RD_KMAX - RD_k ! reverse axis
+                aerosol_conc_merge(RD_k,i,j,ihydro) = max( MP_Qe(k,i,j,ihydro), 0.0_RP ) &
+                                                    / HYD_DENS(ihydro) * RHO_std / PPM ! [PPM to standard air]
+             enddo
           enddo
-       enddo
-       enddo
+          enddo
+          !$omp end do nowait
+       end if
     enddo
+    !$omp end parallel
 
-!OCL SERIAL
-    do ihydro = 1, N_HYD
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(k,i,j,RD_k) &
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(3) &
+    !$omp private(ihydro,k,i,j,RD_k) &
     !$omp shared (aerosol_radi_merge,MP_Re, &
-    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,ihydro)
-!OCL PARALLEL
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+    do ihydro = 1, N_HYD
     do j = JS, JE
     do i = IS, IE
     do RD_k = RD_KADD+1, RD_KMAX
@@ -761,15 +772,16 @@ contains
     enddo
     enddo
 
-!OCL SERIAL
+    !$omp parallel default(none) &
+    !$omp private(iaero,k,i,j,RD_k) &
+    !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
+    !$omp         ATMOS_PHY_RD_MSTRN_USE_AERO, &
+    !$omp         AE_Qe,RHO_std,AE_Re, &
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
     do iaero = 1, N_AE
 
        if ( ATMOS_PHY_RD_MSTRN_USE_AERO ) then
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(k,i,j,RD_k) &
-          !$omp shared (aerosol_conc_merge,aerosol_radi_merge,AE_Qe,RHO_std,AE_Re, &
-          !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
-!OCL PARALLEL
+          !$omp do OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -780,12 +792,9 @@ contains
           enddo
           enddo
           enddo
+          !$omp end do nowait
        else
-          !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-          !$omp private(i,j,RD_k) &
-          !$omp shared (aerosol_conc_merge,RD_aerosol_conc,aerosol_radi_merge,RD_aerosol_radi, &
-          !$omp         IS,IE,JS,JE,RD_KMAX,RD_KADD,iaero)
-!OCL PARALLEL
+          !$omp do OMP_SCHEDULE_ collapse(2)
           do j = JS, JE
           do i = IS, IE
           do RD_k = RD_KADD+1, RD_KMAX
@@ -794,9 +803,11 @@ contains
           enddo
           enddo
           enddo
+          !$omp end do nowait
        endif
 
     enddo
+    !$omp end parallel
 
     call PROF_rapend  ('RD_Profile', 3)
     call PROF_rapstart('RD_MSTRN_DTRN3', 3)
@@ -820,44 +831,46 @@ contains
     call PROF_rapend  ('RD_MSTRN_DTRN3', 3)
 
     ! return to grid coordinate of model domain
-!OCL SERIAL
-    do ic = 1, 2
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(k,i,j,RD_k) &
+    !$omp parallel default(none) &
+    !$omp private(ic,k,i,j,RD_k) &
     !$omp shared (flux_rad,flux_rad_merge, &
-    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD,ic)
-!OCL PARALLEL
-    do j  = JS, JE
-    do i  = IS, IE
-    do RD_k = RD_KADD+1, RD_KMAX+1
-       k = KS + RD_KMAX - RD_k ! reverse axis
+    !$omp         KS,IS,IE,JS,JE,RD_KMAX,RD_KADD)
+    do ic = 1, 2
+       !$omp do OMP_SCHEDULE_ collapse(2)
+       do j  = JS, JE
+       do i  = IS, IE
+       do RD_k = RD_KADD+1, RD_KMAX+1
+          k = KS + RD_KMAX - RD_k ! reverse axis
 
-       flux_rad(k,i,j,I_LW,I_up,ic) = flux_rad_merge(RD_k,i,j,I_LW,I_up,ic)
-       flux_rad(k,i,j,I_LW,I_dn,ic) = flux_rad_merge(RD_k,i,j,I_LW,I_dn,ic)
-       flux_rad(k,i,j,I_SW,I_up,ic) = flux_rad_merge(RD_k,i,j,I_SW,I_up,ic)
-       flux_rad(k,i,j,I_SW,I_dn,ic) = flux_rad_merge(RD_k,i,j,I_SW,I_dn,ic)
+          flux_rad(k,i,j,I_LW,I_up,ic) = flux_rad_merge(RD_k,i,j,I_LW,I_up,ic)
+          flux_rad(k,i,j,I_LW,I_dn,ic) = flux_rad_merge(RD_k,i,j,I_LW,I_dn,ic)
+          flux_rad(k,i,j,I_SW,I_up,ic) = flux_rad_merge(RD_k,i,j,I_SW,I_up,ic)
+          flux_rad(k,i,j,I_SW,I_dn,ic) = flux_rad_merge(RD_k,i,j,I_SW,I_dn,ic)
+       enddo
+       enddo
+       enddo
+       !$omp end do nowait
     enddo
-    enddo
-    enddo
-    enddo
+    !$omp end parallel
 
 !OCL XFILL
-!OCL SERIAL
-    do ic = 1, 2
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j) &
+    !$omp parallel default(none) &
+    !$omp private(ic,i,j) &
     !$omp shared (flux_rad_top,flux_rad_merge, &
-    !$omp         IS,IE,JS,JE,ic)
-!OCL PARALLEL
-    do j  = JS, JE
-    do i  = IS, IE
-       flux_rad_top(i,j,I_LW,I_up,ic) = flux_rad_merge(1,i,j,I_LW,I_up,ic)
-       flux_rad_top(i,j,I_LW,I_dn,ic) = flux_rad_merge(1,i,j,I_LW,I_dn,ic)
-       flux_rad_top(i,j,I_SW,I_up,ic) = flux_rad_merge(1,i,j,I_SW,I_up,ic)
-       flux_rad_top(i,j,I_SW,I_dn,ic) = flux_rad_merge(1,i,j,I_SW,I_dn,ic)
+    !$omp         IS,IE,JS,JE)
+    do ic = 1, 2
+       !$omp do OMP_SCHEDULE_
+       do j  = JS, JE
+       do i  = IS, IE
+          flux_rad_top(i,j,I_LW,I_up,ic) = flux_rad_merge(1,i,j,I_LW,I_up,ic)
+          flux_rad_top(i,j,I_LW,I_dn,ic) = flux_rad_merge(1,i,j,I_LW,I_dn,ic)
+          flux_rad_top(i,j,I_SW,I_up,ic) = flux_rad_merge(1,i,j,I_SW,I_up,ic)
+          flux_rad_top(i,j,I_SW,I_dn,ic) = flux_rad_merge(1,i,j,I_SW,I_dn,ic)
+       enddo
+       enddo
+       !$omp end do nowait
     enddo
-    enddo
-    enddo
+    !$omp end parallel
 
     if ( present( dtau_s ) ) then
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &

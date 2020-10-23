@@ -282,7 +282,7 @@ contains
 
     !########## reset tendencies ##########
 !OCL XFILL
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = LJS, LJE
     do i = LIS, LIE
     do k = LKS, LKE
@@ -292,9 +292,10 @@ contains
     enddo
     enddo
     enddo
+
 !OCL XFILL
+    !$omp parallel do collapse(2)
     do iq = 1, QA
-    !$omp parallel do
     do j  = LJS, LJE
     do i  = LIS, LIE
        LAND_SFLX_QTRC(i,j,iq) = 0.0_RP
@@ -355,7 +356,7 @@ contains
                                    SNOW_frac           (:,:)                         ) ! [OUT]
 
 !OCL XFILL
-          !$omp parallel do
+          !$omp parallel do schedule(dynamic)
           do j = LJS, LJE
           do i = LIS, LIE
           if ( exists_land(i,j) ) then
@@ -429,7 +430,7 @@ contains
 
 
 !OCL XFILL
-    !$omp parallel do &
+    !$omp parallel do schedule(dynamic) &
     !$omp private(total)
     do j = LJS, LJE
     do i = LIS, LIE
@@ -460,7 +461,7 @@ contains
     !> all land area without snow model or no snow area with snow model
 
 
-    !$omp parallel do
+    !$omp parallel do schedule(dynamic)
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -477,7 +478,7 @@ contains
     select case ( LAND_SFC_TYPE )
     case ( 'SKIN' )
 !OCL XFILL
-       !$omp parallel do
+       !$omp parallel do schedule(dynamic)
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -518,7 +519,7 @@ contains
 
     case ( 'FIXED-TEMP' )
 !OCL XFILL
-       !$omp parallel do
+       !$omp parallel do schedule(dynamic)
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -527,7 +528,7 @@ contains
        end do
        end do
 !OCL XFILL
-       !$omp parallel do
+       !$omp parallel do schedule(dynamic)
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -565,7 +566,7 @@ contains
                                     LAND_T2(:,:), LAND_Q2(:,:)                               ) ! [OUT]
     end select
 
-    !$omp parallel do
+    !$omp parallel do schedule(dynamic)
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -580,7 +581,7 @@ contains
 
     ! LAND_SFLX_* are positive for downward
 !OCL XFILL
-    !$omp parallel do
+    !$omp parallel do schedule(dynamic)
     do j = LJS, LJE
     do i = LIS, LIE
     if ( exists_land(i,j) ) then
@@ -605,7 +606,7 @@ contains
 
        ! marge land surface and snow surface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !OCL XFILL
-       !$omp parallel do
+       !$omp parallel do schedule(dynamic)
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -665,7 +666,7 @@ contains
     end if
 
     if ( .NOT. ATMOS_HYDROMETEOR_dry ) then
-       !$omp parallel do
+       !$omp parallel do schedule(dynamic)
        do j = LJS, LJE
        do i = LIS, LIE
        if ( exists_land(i,j) ) then
@@ -758,7 +759,7 @@ contains
     end select
 
     !########## Negative Fixer ##########
-    !$omp parallel do
+    !$omp parallel do schedule(dynamic)
     do j = LJS, LJE
     do i = LIS, LIE
        if ( exists_land(i,j) ) then

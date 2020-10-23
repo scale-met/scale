@@ -512,6 +512,8 @@ contains
     DZB(:) = CDZ(:)
     DZG(:) = CDZ(:)
 
+    !$omp parallel do schedule(dynamic) collapse(2) &
+    !$omp private(w,Uabs,TR,TB,TG,TC,QC,UC,TRL,TBL,TGL,RAINR,RAINB,RAING,ALBD_LW,ALBD_SW,QVsat,Ra,FracU10,FracT2,FracQ2,MFLUX)
     do j = UJS, UJE
     do i = UIS, UIE
 
@@ -697,6 +699,7 @@ contains
   end subroutine URBAN_DYN_kusaka01
 
   !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine SLC_main( &
        UKA, UKS, UKE, UIA, UIS, UIE, UJA, UJS, UJE, &
         TRL,          & ! (inout)
@@ -1621,6 +1624,7 @@ contains
   !  B1:    Stanton number
   !  PSIM:  = PSIX of LSM
   !  PSIH:  = PSIT of LSM
+!OCL SERIAL
   subroutine mos(XXX,CH,CD,B1,RIB,Z,Z0,UA,TA,TSF,RHO)
     use scale_const, only: &
        EPS   => CONST_EPS, &
@@ -1710,6 +1714,7 @@ contains
   end subroutine mos
 
   !-------------------------------------------------------------------
+!OCL SERIAL
   subroutine multi_layer(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND)
   !
   !  calculate temperature in roof/building/road
@@ -1778,6 +1783,7 @@ contains
   end subroutine multi_layer
 
   !-------------------------------------------------------------------
+!OCL SERIAL
   subroutine multi_layer2(KM,BOUND,G0,CAP,AKS,TSL,DZ,DELT,TSLEND,CAP1,AKS1)
   !
   !  calculate temperature in roof/building/road

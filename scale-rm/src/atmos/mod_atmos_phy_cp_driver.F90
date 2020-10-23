@@ -260,8 +260,8 @@ contains
                                         RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:), & ! [IN]
                                         RHOQ_t_CP(:,:,:,QS_MP:QE_MP)             ) ! [OUT]
 
+    !$omp parallel do private(iq,i,j,k) OMP_SCHEDULE_ collapse(3)
     do iq = QS_MP, QE_MP
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
     do j  = JS, JE
     do i  = IS, IE
     do k  = KS, KE

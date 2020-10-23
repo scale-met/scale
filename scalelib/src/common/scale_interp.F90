@@ -357,7 +357,7 @@ contains
 
     call PROF_rapstart('INTERP_fact',3)
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp parallel do schedule(dynamic) collapse(2) &
     !$omp private(f1,f2)
     do j = 1, JA
     do i = 1, IA
@@ -1399,7 +1399,7 @@ contains
     jmin = JA_ref
     imax = 1
     jmax = 1
-    !$omp parallel do OMP_SCHEDULE_ collapse(3) &
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
     !$omp reduction(min: imin,jmin) &
     !$omp reduction(max: imax,jmax)
     do n = 1, npoints
