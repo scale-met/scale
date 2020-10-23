@@ -654,7 +654,8 @@ contains
     call COMM_vars8( ATMOS_GRID_CARTESC_REAL_AREAUY(:,:), 3 )
     call COMM_vars8(                         AREAUV(:,:), 4 )
 
-    !$omp parallel do
+    !$omp parallel do &
+    !$omp reduction(+:ATMOS_GRID_CARTESC_REAL_TOTAREA,ATMOS_GRID_CARTESC_REAL_TOTAREAXV,ATMOS_GRID_CARTESC_REAL_TOTAREAUY)
     do j = JS, JE
     do i = IS, IE
        ATMOS_GRID_CARTESC_REAL_TOTAREA   = ATMOS_GRID_CARTESC_REAL_TOTAREA   + ATMOS_GRID_CARTESC_REAL_AREA  (i,j)
@@ -753,7 +754,8 @@ contains
        end do
     end if
 
-    !$omp parallel do
+    !$omp parallel do &
+    !$omp reduction(+:ATMOS_GRID_CARTESC_REAL_TOTVOL,ATMOS_GRID_CARTESC_REAL_TOTVOLZXV,ATMOS_GRID_CARTESC_REAL_TOTVOLWXY,ATMOS_GRID_CARTESC_REAL_TOTVOLZUY)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

@@ -2360,13 +2360,19 @@ contains
     !$omp          ii_dqi,ii_dni,is_dqi,is_dni,ss_dns,gs_dqs,gs_dns,gg_dng, &
     !$omp          clp_dqc,clp_dnc,clm_dqc,clm_dnc,clp_dqr,clp_dnr,clm_dqr,clm_dnr, &
     !$omp          clp_dqi,clp_dni,clm_dqi,clm_dni,clp_dqs,clp_dns,clm_dqs,clm_dns,clp_dqg,clp_dng,clm_dqg,clm_dng, &
+    !$omp          drhoqcrg_c,drhoqcrg_r,drhoqcrg_i,drhoqcrg_s,drhoqcrg_g, &
+    !$omp          crg_split_s,crg_split_g,crg_split_i,wrm_dnc_crg,wrm_dnr_crg, &
+    !$omp          gc_dnc_crg,sc_dnc_crg,ic_dnc_crg,rg_dng_crg,rg_dnr_crg,rs_dnr_crg,rs_dns_crg,ri_dnr_crg,ri_dni_crg, &
+    !$omp          ii_dni_crg,is_dni_crg,ss_dns_crg,gs_dns_crg,gi_dni_crg,gg_dng_crg, &
+    !$omp          clp_dnc_crg,clm_dnc_crg,clp_dnr_crg,clm_dnr_crg,clp_dni_crg,clm_dni_crg,clp_dns_crg,clm_dns_crg,clp_dng_crg,clm_dng_crg, &
+    !$omp          pco_dni_crg,pco_dns_crg,pco_dng_crg,eml_dnc_crg,eml_dnr_crg,eml_dni_crg,eml_dns_crg,eml_dng_crg,spl_dni_crg,spl_dns_crg,spl_dng_crg, &
     !$omp          fac1,fac3,fac4,fac6,fac7,fac9,fac10, &
     !$omp          pco_dqi,pco_dni,pco_dqs,pco_dns,pco_dqg,pco_dng, &
     !$omp          eml_dqc,eml_dnc,eml_dqr,eml_dnr,eml_dqi,eml_dni,eml_dqs,eml_dns,eml_dqg,eml_dng, &
     !$omp          spl_dqi,spl_dni,spl_dqg,spl_dqs, &
     !$omp          dTdt_equiv_d,sl_PLCdep,sl_PLRdep,sl_PNRdep,qke_d, &
     !$omp          dqv,dql,dqi,dcv,dcp, &
-    !$omp          di2l,dtem,fact,sw )
+    !$omp          di2l,dtem,fact,sw,sw1,sw2)
     do j = JS, JE
     do i = IS, IE
 

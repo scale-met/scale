@@ -213,7 +213,8 @@ contains
 
     !-----< U10, V10 >-----
 
-    !$omp parallel do
+    !$omp parallel do &
+    !$omp private(R10)
     do j = JS, JE
     do i = IS, IE
        R10 = 10.0_RP / ATM_Z1(i,j)
