@@ -16,7 +16,8 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -x-                                                       \
                -Ksimd,loop_fission                                       \
                -Kauto,threadsafe                                         \
-               -Nfjomplib
+               -Nfjomplib                                                \
+               -DVECTLEN=${VECTLEN} -DCACHELINESIZE=${CACHELINESIZE}
 
 FFLAGS_AGGRESSIVE = -Kinstance=12,swp_strong
 
@@ -39,6 +40,13 @@ CFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,region_extension,restp=al
 CFLAGS_DEBUG = -O0
 
 
+##### Vector length
+ifeq ($(SCALE_USE_SINGLEFP),T)
+   VECTLEN = 16
+else
+   VECTLEN = 8
+endif
+CACHELINESIZE = 256
 
 ##### Special setting
 
