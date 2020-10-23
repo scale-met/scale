@@ -506,8 +506,10 @@ contains
     real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
     !---------------------------------------------------------------------------
 
-    psat = PSAT0 * ( temp * RTEM00 )**CPovR_liq             &
-                 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+!    psat = PSAT0 * ( temp * RTEM00 )**CPovR_liq             &
+!                 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+    psat = PSAT0 * exp( log( temp * RTEM00 ) * CPovR_liq    &
+                      + LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
 
     return
   end subroutine ATMOS_SATURATION_psat_liq_0D
@@ -610,8 +612,10 @@ contains
     real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
     !---------------------------------------------------------------------------
 
-    psat = PSAT0 * ( temp * RTEM00 )**CPovR_ice             &
-                 * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
+!    psat = PSAT0 * ( temp * RTEM00 )**CPovR_ice             &
+!                 * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
+    psat = PSAT0 * exp( log( temp * RTEM00 ) * CPovR_ice    &
+                      + LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
 
     return
   end subroutine ATMOS_SATURATION_psat_ice_0D
