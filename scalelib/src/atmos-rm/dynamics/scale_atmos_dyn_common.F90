@@ -528,11 +528,11 @@ contains
 
    integer :: i, j, k
    integer :: iq    
-   real(RP) :: QDRY  ! dry air
-   real(RP) :: Rtot  ! total R
-   real(RP) :: CVtot ! total CV
-   real(RP) :: CPtot ! total CP
-   real(RP) :: PRES  ! pressure
+   real(RP) :: QDRY (KA) ! dry air
+   real(RP) :: Rtot (KA) ! total R
+   real(RP) :: CVtot(KA) ! total CV
+   real(RP) :: CPtot(KA) ! total CP
+   real(RP) :: PRES      ! pressure
 
 #ifdef DRY
    real(RP) :: CPovCV
@@ -556,26 +556,27 @@ contains
    do j = 1, JA
    do i = 1, IA
       do k = KS, KE
-#ifdef DRY
-        PRES = P0 * ( Rdry * RHOT(k,i,j) / P0 )**CPovCV
-        RT2P(k,i,j) = CPovCV * PRES / RHOT(k,i,j)
-#else
-        Rtot  = 0.0_RP
-        CVtot = 0.0_RP
-        CPtot = 0.0_RP
-        QDRY  = 1.0_RP
-        do iq = 1, QA
-           Rtot  = Rtot + AQ_R(iq) * QTRC(k,i,j,iq)
-           CVtot = CVtot + AQ_CV(iq) * QTRC(k,i,j,iq)
-           CPtot = CPtot + AQ_CP(iq) * QTRC(k,i,j,iq)
-           QDRY  = QDRY  - QTRC(k,i,j,iq) * AQ_MASS(iq)
-        enddo
-        Rtot  = Rtot  + Rdry  * QDRY
-        CVtot = CVtot + CVdry * QDRY
-        CPtot = CPtot + CPdry * QDRY
-        PRES = P0 * ( Rtot * RHOT(k,i,j) / P0 )**( CPtot / CVtot )
-        RT2P(k,i,j) = CPtot / CVtot * PRES / RHOT(k,i,j)
-#endif
+         Rtot (k) = 0.0_RP
+         CVtot(k) = 0.0_RP
+         CPtot(k) = 0.0_RP
+         QDRY (k) = 1.0_RP
+      end do
+      do iq = 1, QA
+         do k = KS, KE
+            Rtot (k) = Rtot (k) + AQ_R (iq) * QTRC(k,i,j,iq)
+            CVtot(k) = CVtot(k) + AQ_CV(iq) * QTRC(k,i,j,iq)
+            CPtot(k) = CPtot(k) + AQ_CP(iq) * QTRC(k,i,j,iq)
+            QDRY (k) = QDRY (k) - QTRC(k,i,j,iq) * AQ_MASS(iq)
+         enddo
+      end do
+      do k = KS, KE
+         Rtot (k) = Rtot (k) + Rdry  * QDRY(k)
+         CVtot(k) = CVtot(k) + CVdry * QDRY(k)
+         CPtot(k) = CPtot(k) + CPdry * QDRY(k)
+      end do
+      do k = KS, KE
+        PRES = P0 * ( Rtot(k) * RHOT(k,i,j) / P0 )**( CPtot(k) / CVtot(k) )
+        RT2P(k,i,j) = CPtot(k) / CVtot(k) * PRES / RHOT(k,i,j)
         DPRES(k,i,j) = PRES - REF_pres(k,i,j)
         REF_rhot(k,i,j) = RHOT(k,i,j)
       end do
