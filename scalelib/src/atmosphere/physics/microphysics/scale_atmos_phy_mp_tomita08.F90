@@ -342,6 +342,7 @@ module scale_atmos_phy_mp_tomita08
 
   real(RP), private, allocatable :: w3d(:,:,:,:) !< for history output
   integer,  private              :: HIST_id(w_nmax)
+  integer,  private              :: HIST_Pcsat, HIST_Pisat
 
   !-----------------------------------------------------------------------------
 contains
@@ -537,6 +538,8 @@ contains
        call FILE_HISTORY_reg( w_name(ip), 'individual tendency term in tomita08', 'kg/kg/s', & ! [IN]
                               hist_id(ip)                                                    ) ! [OUT]
     end do
+    call FILE_HISTORY_reg( 'Pcsat', 'QC production term by satulation adjustment', 'kg/kg/s', HIST_Pcsat )
+    call FILE_HISTORY_reg( 'Pisat', 'QI production term by satulation adjustment', 'kg/kg/s', HIST_Pisat )
 
 
     if( present(flg_lt) ) then
@@ -589,7 +592,8 @@ contains
        DWATR => CONST_DWATR, &
        PI    => CONST_PI
     use scale_file_history, only: &
-       FILE_HISTORY_in
+       FILE_HISTORY_query, &
+       FILE_HISTORY_put
     use scale_atmos_phy_mp_common, only: &
        MP_saturation_adjustment => ATMOS_PHY_MP_saturation_adjustment
     implicit none
@@ -623,6 +627,7 @@ contains
 
     real(RP) :: QC_t_sat(KA,IA,JA)
     real(RP) :: QI_t_sat(KA,IA,JA)
+    logical  :: hist_flag
 
     integer  :: k, i, j
     !---------------------------------------------------------------------------
@@ -644,6 +649,7 @@ contains
          QTRC_crg(:,:,:,:)                     ) ! [INOUT:Optional]
 
     ! save value before saturation adjustment
+    !$omp parallel do collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -663,6 +669,7 @@ contains
          CPtot(:,:,:), CVtot(:,:,:),         & ! [INOUT]
          RHOE_d_sat(:,:,:)                   ) ! [OUT]
 
+    !$omp parallel do collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -670,32 +677,38 @@ contains
     enddo
     enddo
     enddo
+
+    !$omp parallel do collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
        QC_t_sat(k,i,j) = ( QTRC(k,i,j,I_QC) - QC_t_sat(k,i,j) ) / dt
-    enddo
-    enddo
-    enddo
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       QI_t_sat(k,i,j) = ( QTRC(k,i,j,I_QI) - QI_t_sat(k,i,j) ) / dt
-    enddo
-    enddo
-    enddo
-
-    call FILE_HISTORY_in( QC_t_sat(:,:,:), 'Pcsat', 'QC production term by satadjust', 'kg/kg/s' )
-    call FILE_HISTORY_in( QI_t_sat(:,:,:), 'Pisat', 'QI production term by satadjust', 'kg/kg/s' )
-
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
        EVAPORATE(k,i,j) = max( -QC_t_sat(k,i,j), 0.0_RP ) & ! if negative, condensation
                         * DENS(k,i,j) / (4.0_RP/3.0_RP*PI*DWATR*re_qc**3) ! mass -> number (assuming constant particle radius as re_qc)
+
     enddo
     enddo
     enddo
+
+    call FILE_HISTORY_query( HIST_Pcsat, hist_flag )
+    if ( hist_flag ) then
+       call FILE_HISTORY_put( HIST_Pcsat, QC_t_sat(:,:,:) )
+    end if
+
+
+    call FILE_HISTORY_query( HIST_Pisat, hist_flag )
+    if ( hist_flag ) then
+       !$omp parallel do collapse(2)
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          QI_t_sat(k,i,j) = ( QTRC(k,i,j,I_QI) - QI_t_sat(k,i,j) ) / dt
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_Pisat, QI_t_sat(:,:,:) )
+    end if
+
 
     !##### END MP Main #####
 
@@ -872,7 +885,10 @@ contains
        flg_lt_l = .false.
     end if
     if( flg_lt_l ) then
+!OCL ZFILL
+       !$omp parallel workshare
        QSPLT_in(:,:,:,:) = 0.0_RP
+       !$omp end parallel workshare
        call ATMOS_PHY_MP_tomita08_effective_radius( &
        KA, KS, KE, IA, IS, IE, JA, JS, JE, &
        DENS0, TEMP0, QTRC0, &
@@ -2130,12 +2146,12 @@ contains
           nm = 2.0_RP
           loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-          MOMs_0bs = exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw )
+          MOMs_0bs = exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw )
           ! Bs(=2) + Ds(=0.25) moment
           nm = 2.25_RP
           loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
           b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
-          RMOMs_Vt(k) = exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( MOMs_0bs + zerosw )
+          RMOMs_Vt(k) = exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( MOMs_0bs + zerosw )
        end do
     else
        ! slope parameter lambda (Snow)
@@ -2439,7 +2455,7 @@ contains
                 loga_  = coef_at(1) + nm * ( coef_at(2) + nm * ( coef_at(3) + nm * coef_at(4) ) )
                    b_  = coef_bt(1) + nm * ( coef_bt(2) + nm * ( coef_bt(3) + nm * coef_bt(4) ) )
 
-                Re(k,i,j,I_HS) = 0.5_RP * exp(ln10*loga_) * exp(log(Xs2+zerosw)*b_) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm
+                Re(k,i,j,I_HS) = 0.5_RP * exp( ln10 * loga_ + log(Xs2+zerosw) * b_ ) * ( 1.0_RP-zerosw ) / ( Xs2+zerosw ) * um2cm
              end do
           else
              do k = KS, KE
