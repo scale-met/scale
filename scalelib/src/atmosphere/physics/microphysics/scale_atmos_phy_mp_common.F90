@@ -448,7 +448,6 @@ contains
     real(RP), intent(out)   :: sflx (2) !> 1: rain, 2: snow
     real(RP), intent(out)   :: esflx
 
-    real(RP) :: vtermh(KA)
     real(RP) :: qflx  (KA)
     real(RP) :: eflx  (KA)
     real(RP) :: RHOCP (KA)
@@ -462,30 +461,29 @@ contains
     ! tracer/energy transport by falldown
     ! 1st order upwind, forward euler, velocity is always negative
 
+!OCL ZFILL
     mflx(:) = 0.0_RP
     sflx(:) = 0.0_RP
     esflx   = 0.0_RP
     qflx(KE) = 0.0_RP
     eflx(KE) = 0.0_RP
 
+!OCL ZFILL
     do k = KS, KE
        RHOCP(k) = CPtot(k) * DENS(k)
        RHOCV(k) = CVtot(k) * DENS(k)
     end do
 
     do iq = 1, QHA
-       do k = KS, KE-1
-          vtermh(k) = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) )
-       enddo
-       vtermh(KS-1) = vterm(KS,iq)
 
        !--- mass flux for each tracer, upwind with vel < 0
-       do k = KS-1, KE-1
-          qflx(k) = vtermh(k) * RHOQ(k+1,iq)
+       qflx(KS-1) = vterm(KS,iq) * RHOQ(KS,iq)
+       do k = KS, KE-1
+          qflx(k)  = 0.5_RP * ( vterm(k+1,iq) + vterm(k,iq) ) * RHOQ(k+1,iq)
        enddo
 
        !--- update falling tracer
-       do k  = KS, KE
+       do k = KS, KE
           rhoq(k,iq) = rhoq(k,iq) - dt * ( qflx(k) - qflx(k-1) ) * RCDZ(k)
        enddo ! falling (water mass & number) tracer
 
@@ -517,7 +515,7 @@ contains
        ! internal energy flux
        do k = KS-1, KE-1
           eflx(k) = qflx(k) * TEMP(k+1) * CV &
-                  + qflx(k) * FDZ(k) * GRAV               ! potential energy
+                  + qflx(k) * FDZ(k) * GRAV    ! potential energy
        end do
        esflx = esflx + eflx(KS-1)
 
@@ -528,6 +526,7 @@ contains
 
     end do
 
+!OCL ZFILL
     do k = KS, KE
        CPtot(k) = RHOCP(k) / DENS(k)
        CVtot(k) = RHOCV(k) / DENS(k)
