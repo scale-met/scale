@@ -298,8 +298,6 @@ contains
     POTT(:,:,:) = UNDEF
     DPRES(:,:,:) = UNDEF
 
-    PT(:,:) = UNDEF
-
     qflx_hi (:,:,:,:) = UNDEF
     qflx_J13(:,:,:)   = UNDEF
     qflx_J23(:,:,:)   = UNDEF
@@ -804,6 +802,9 @@ contains
 #ifdef DEBUG
        !$omp shared(RHOT) &
 #endif
+#if defined DEBUG || defined QUICKDEBUG
+       !$omp shared(UNDEF) &
+#endif
        !$omp shared(JJS,JJE,IIS,IIE,KS,KE) &
        !$omp shared(mflx_hi,tflx_hi,MOMZ_RK,MOMZ0) &
        !$omp shared(DENS_RK,RHOT_RK,DENS0,RHOT0,DENS,MOMZ,POTT,DPRES) &
@@ -816,6 +817,15 @@ contains
 #endif
        do j = JJS, JJE
        do ii = IIS, IIE, LSIZE
+
+#if defined DEBUG || defined QUICKDEBUG
+    PT(:,:) = UNDEF
+    C (:,:) = UNDEF
+
+    F1(:,:) = UNDEF
+    F2(:,:) = UNDEF
+    F3(:,:) = 0.0_RP
+#endif
 
           do l = 1, LSIZE
              i = ii + l - 1

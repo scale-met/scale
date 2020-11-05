@@ -105,9 +105,6 @@ module scale_urban_dyn_kusaka01
   real(RP), private :: ZDC_TBL                 ! Displacement height [m]
   real(RP), private :: SVF                     ! Sky view factor [-]
 
-  real(RP), private :: XXXR    = 0.0_RP        ! Monin-Obkhov length for roof [-]
-  real(RP), private :: XXXC    = 0.0_RP        ! Monin-Obkhov length for canopy [-]
-
   ! history
   integer, private :: I_SHR, I_SHB, I_SHG
   integer, private :: I_LHR, I_LHB, I_LHG
@@ -923,6 +920,9 @@ contains
     real(RP) :: G0RP,G0BP,G0GP
 
     real(RP) :: XXX, XXX2, XXX10
+    real(RP) :: XXXR ! Monin-Obkhov length for roof [-]
+    real(RP) :: XXXC ! Monin-Obkhov length for canopy [-]
+
     real(RP) :: THA,THC,THS,THS1,THS2
     real(RP) :: RovCP
     real(RP) :: EXN  ! exner function at the surface
@@ -1640,6 +1640,7 @@ contains
     integer, parameter      :: NEWT_END = 10
 
     real(RP)                :: lnZ
+    real(RP)                :: sqX, sqX0
 
     lnZ = log( (Z+Z0)/Z0 )
 
@@ -1650,26 +1651,30 @@ contains
       do NEWT = 1, NEWT_END
 
         if( XXX >= 0.0_RP ) XXX = -1.0e-3_RP
+!        if( XXX >= -1.0e-3_RP ) XXX = -1.0e-3_RP
 
         XXX0  = XXX * Z0/(Z+Z0)
 
-        X     = (1.0_RP-16.0_RP*XXX)**0.25
-        X0    = (1.0_RP-16.0_RP*XXX0)**0.25
+        sqX   = sqrt( 1.0_RP - 16.0_RP * XXX  )
+        sqX0  = sqrt( 1.0_RP - 16.0_RP * XXX0 )
+
+        X     = sqrt( sqX )
+        X0    = sqrt( sqX0 )
 
         PSIM  = lnZ &
-              - log( (X+1.0_RP)**2 * (X**2+1.0_RP) ) &
+              - log( (X+1.0_RP)**2 * (sqX  + 1.0_RP) ) &
               + 2.0_RP * atan(X) &
-              + log( (X+1.0_RP)**2 * (X0**2+1.0_RP) ) &
+              + log( (X+1.0_RP)**2 * (sqX0 + 1.0_RP) ) &
               - 2.0_RP * atan(X0)
-        FAIH  = 1.0_RP / sqrt( 1.0_RP - 16.0_RP*XXX )
+        FAIH  = 1.0_RP / sqX
         PSIH  = lnZ + 0.4_RP*B1 &
-              - 2.0_RP * log( sqrt( 1.0_RP - 16.0_RP*XXX ) + 1.0_RP ) &
-              + 2.0_RP * log( sqrt( 1.0_RP - 16.0_RP*XXX0 ) + 1.0_RP )
+              - 2.0_RP * log( sqX  + 1.0_RP ) &
+              + 2.0_RP * log( sqX0 + 1.0_RP )
 
-        DPSIM = ( 1.0_RP - 16.0_RP*XXX )**(-0.25) / XXX &
-              - ( 1.0_RP - 16.0_RP*XXX0 )**(-0.25) / XXX
-        DPSIH = 1.0_RP / sqrt( 1.0_RP - 16.0_RP*XXX ) / XXX &
-              - 1.0_RP / sqrt( 1.0_RP - 16.0_RP*XXX0 ) / XXX
+        DPSIM = 1.0_RP / ( X  * XXX ) &
+              - 1.0_RP / ( X0 * XXX )
+        DPSIH = 1.0_RP / ( sqX  * XXX ) &
+              - 1.0_RP / ( sqX0 * XXX )
 
         F     = RIB * PSIM**2 / PSIH - XXX
 
