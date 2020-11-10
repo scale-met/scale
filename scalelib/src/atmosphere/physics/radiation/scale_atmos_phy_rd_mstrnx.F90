@@ -1303,7 +1303,7 @@ contains
     ! for optical thickness by particles
     real(RP) :: tauPR   (rd_kmax,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
     real(RP) :: omgPR   (rd_kmax,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
-    real(RP) :: optparam(rd_kmax,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
+    real(DP) :: optparam(rd_kmax,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
     real(RP) :: q_fit, dp_P
 
     ! for planck functions
