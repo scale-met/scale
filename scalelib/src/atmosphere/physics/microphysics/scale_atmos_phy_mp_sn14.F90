@@ -993,7 +993,8 @@ contains
        QTRC,     &
        QNUM      )
     use scale_const, only: &
-       PI => CONST_PI
+       PI    => CONST_PI, &
+       UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC,  &
@@ -1079,6 +1080,9 @@ contains
     end do
     end do
 
+
+    piov6 = PI / 6.0_RP
+
     if ( present(QNUM) ) then
 
 !OCL XFILL
@@ -1086,7 +1090,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NC) = QNUM(k,i,j,I_HC)
+          if ( QNUM(k,i,j,I_HC) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NC) = QNUM(k,i,j,I_HC)
+          else
+             QTRC(k,i,j,I_mp_NC) = QTRC(k,i,j,I_mp_QC) / ( (piov6*RHOw) * Dc**b )
+          end if
        end do
        end do
        end do
@@ -1096,7 +1104,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NR) = QNUM(k,i,j,I_HR)
+          if ( QNUM(k,i,j,I_HR) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NR) = QNUM(k,i,j,I_HR)
+          else
+             QTRC(k,i,j,I_mp_NR) = QTRC(k,i,j,I_mp_QR) / ( (piov6*RHOw) * Dr**b )
+          end if
        end do
        end do
        end do
@@ -1106,7 +1118,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NI) = QNUM(k,i,j,I_HI)
+          if ( QNUM(k,i,j,I_HI) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NI) = QNUM(k,i,j,I_HI)
+          else
+             QTRC(k,i,j,I_mp_NI) = QTRC(k,i,j,I_mp_QI) / ( (piov6*RHOf) * Di**b )
+          end if
        end do
        end do
        end do
@@ -1116,7 +1132,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NS) = QNUM(k,i,j,I_HS)
+          if ( QNUM(k,i,j,I_HS) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NS) = QNUM(k,i,j,I_HS)
+          else
+             QTRC(k,i,j,I_mp_NS) = QTRC(k,i,j,I_mp_QS) / ( (piov6*RHOf) * Ds**b )
+          end if
        end do
        end do
        end do
@@ -1126,13 +1146,20 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG) + QNUM(k,i,j,I_HH)
+          if ( QNUM(k,i,j,I_HG) .ne. UNDEF ) then
+             if ( QNUM(k,i,j,I_HH) .ne. UNDEF ) then
+                QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG) + QNUM(k,i,j,I_HH)
+             else
+                QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG)
+             end if
+          else
+             QTRC(k,i,j,I_mp_NG) = QTRC(k,i,j,I_mp_QG) / ( (piov6*RHOg) * Dg**b )
+          end if
        end do
        end do
        end do
 
     else
-       piov6 = PI / 6.0_RP
 
 !OCL XFILL
        !$omp parallel do
