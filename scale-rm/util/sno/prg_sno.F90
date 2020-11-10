@@ -99,6 +99,7 @@ program sno
   logical                 :: output_single    = .false.  ! output single file when using MPI?
   logical                 :: output_grads     = .false.  ! output grads fortmat file?
   logical                 :: output_gradsctl  = .false.  ! output grads control file for reading single NetCDF file?
+  logical                 :: isnormalvar      = .true.   ! if true, some 2d axis var. is treated as normal var.
   logical                 :: debug            = .false.
 
   namelist / PARAM_SNO / &
@@ -111,6 +112,7 @@ program sno
        output_single,   &
        output_grads,    &
        output_gradsctl, &
+       isnormalvar,     &
        debug
 
   ! MPI parameters
@@ -258,7 +260,7 @@ program sno
                          axisname(:),                  & ! [OUT]
                          nvars,                        & ! [OUT]
                          varname(:),                   & ! [OUT]
-                         plugin_hgridope,              & ! [IN]
+                         isnormalvar,                  & ! [IN]
                          debug                         ) ! [IN]
 
   ! in->out mapping table (global)
