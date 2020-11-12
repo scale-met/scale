@@ -2049,7 +2049,8 @@ contains
 
     ! working
     real(RP) :: QSUM
-    real(RP) :: CVtot0
+    real(RP) :: TEMP0, QV0, QC0
+    real(RP) :: CPtot0, CVtot0
     real(RP) :: qsat
     real(RP) :: Emoist ! moist internal energy
 
@@ -2065,23 +2066,35 @@ contains
     integer  :: ite
     !---------------------------------------------------------------------------
 
+    TEMP0 = TEMP
+    CPtot0 = CPtot
+    CVtot0 = CVtot
+    QV0 = QV
+    QC0 = QC
     QSUM = QV + QC
 
+    ! Check if saturation condition would not be met after evaporating all cloud water and ice virtually.
+    QV = QSUM
+    QC = 0.0_RP
+    CPtot = CPtot0 + QC0 * ( CP_VAPOR - CP_WATER )
+    CVtot = CVtot0 + QC0 * ( CV_VAPOR - CV_WATER )
+    TEMP = ( Emoist0 - LHV * QV ) / CVtot
+    
     call ATMOS_SATURATION_dens2qsat_liq( temp, DENS, & ! [IN]
                                          qsat        ) ! [OUT]
 
     if ( QSUM <= qsat ) then
-       QV = QSUM
-       CPtot = CPtot + QC * ( CP_VAPOR - CP_WATER )
-       CVtot = CVtot + QC * ( CV_VAPOR - CV_WATER )
-       QC = 0.0_RP
-       TEMP = ( Emoist0 - LHV * QV ) / CVtot
        converged = .true.
        return
     end if
 
-    CVtot0 = CVtot
-
+    ! Iteration
+    QV = QV0
+    QC = QC0
+    TEMP = TEMP0
+    CPtot = CPtot0
+    CVtot = CVtot0
+    
     converged = .false.
     do ite = 1, itelim
 
@@ -2158,7 +2171,7 @@ contains
     real(RP) :: QSUM
     real(RP) :: TEMP0
     real(RP) :: QV0, QC0, QI0
-    real(RP) :: CVtot0
+    real(RP) :: CPtot0, CVtot0
     real(RP) :: alpha
     real(RP) :: qsat
     real(RP) :: Emoist ! moist internal energy
@@ -2177,26 +2190,37 @@ contains
     !---------------------------------------------------------------------------
 
     TEMP0  = TEMP
+    CPtot0 = CPtot
     CVtot0 = CVtot
     QV0    = QV
     QC0    = QC
     QI0    = QI
     QSUM   = QV + QC + QI
 
+    ! Check if saturation condition would not be met after evaporating all cloud water and ice virtually.
+    QV = QSUM
+    QC = 0.0_RP
+    QI = 0.0_RP    
+    CPtot = CPtot0 + QC0 * ( CP_VAPOR - CP_WATER ) + QI0 * ( CP_VAPOR - CP_ICE )
+    CVtot = CVtot0 + QC0 * ( CV_VAPOR - CV_WATER ) + QI0 * ( CV_VAPOR - CV_ICE )
+    TEMP = ( Emoist0 - LHV * QV ) / CVtot
+    
     call ATMOS_SATURATION_dens2qsat_all( TEMP, DENS, & ! [IN]
                                          qsat        ) ! [OUT]
 
     if ( QSUM <= qsat ) then
-       QV = QSUM
-       CPtot = CPtot + QC * ( CP_VAPOR - CP_WATER ) + QI * ( CP_VAPOR - CP_ICE )
-       CVtot = CVtot + QC * ( CV_VAPOR - CV_WATER ) + QI * ( CV_VAPOR - CV_ICE )
-       QC = 0.0_RP
-       QI = 0.0_RP
-       TEMP = ( Emoist0 - LHV * QV ) / CVtot
        converged = .true.
        return
     end if
 
+    ! Iteration
+    QV = QV0
+    QC = QC0
+    QI = QI0
+    TEMP = TEMP0
+    CPtot = CPtot0
+    CVtot = CVtot0
+    
     converged = .false.
     do ite = 1, itelim
 
