@@ -286,8 +286,13 @@ contains
     enddo
     enddo
 
+    !$omp workshare
+!OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_DLON(:,:) = 0.0_RP
+!OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_DLAT(:,:) = 0.0_RP
+    !$omp end workshare
+
     !$omp parallel do
     do j = JS, JE
     do i = IS, IE
@@ -379,7 +384,7 @@ contains
        LANDUSE_frac_land
     implicit none
 
-    real(RP) :: Htop
+    real(DP) :: Htop
     real(RP) :: Zs
     real(RP) :: DFZ
 
@@ -390,6 +395,7 @@ contains
 
     Htop = ATMOS_GRID_CARTESC_FZ(KE) - ATMOS_GRID_CARTESC_FZ(KS-1)
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
     do i = 1, IA
        Zs = Zsfc(i,j)
@@ -399,6 +405,7 @@ contains
     enddo
     enddo
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) ) * 0.5_RP
@@ -407,6 +414,7 @@ contains
        enddo
     enddo
     enddo
+    !$omp parallel do private(zs)
     do j = 1, JA
        Zs = Zsfc(IA,j)
        do k = 1, KA
@@ -414,6 +422,7 @@ contains
        enddo
     enddo
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
     do i = 1, IA
        Zs = ( Zsfc(i,j) + Zsfc(i,j+1) ) * 0.5_RP
@@ -429,6 +438,7 @@ contains
        enddo
     enddo
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) + Zsfc(i,j+1) + Zsfc(i+1,j+1) ) * 0.25_RP
@@ -437,6 +447,7 @@ contains
        enddo
     enddo
     enddo
+    !$omp parallel do private(zs)
     do j = 1, JA-1
        Zs = ( Zsfc(IA,j) + Zsfc(IA,j+1) ) * 0.5_RP
        do k = 1, KA
@@ -455,6 +466,7 @@ contains
     enddo
 
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
     do i = 1, IA
        Zs = Zsfc(i,j)
@@ -464,6 +476,7 @@ contains
     end do
     end do
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) ) * 0.5_RP
@@ -472,6 +485,7 @@ contains
        end do
     end do
     end do
+    !$omp parallel do private(zs)
     do j = 1, JA
        Zs = Zsfc(IA,j)
        do k = 0, KA
@@ -479,6 +493,7 @@ contains
        end do
     end do
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
     do i = 1, IA
        Zs = ( Zsfc(i,j) + Zsfc(i,j+1) ) * 0.5_RP
@@ -487,6 +502,7 @@ contains
        enddo
     enddo
     enddo
+    !$omp parallel do private(zs)
     do i = 1, IA
        Zs = Zsfc(i,JA)
        do k = 0, KA
@@ -494,6 +510,7 @@ contains
        enddo
     enddo
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA-1
     do i = 1, IA-1
        Zs = ( Zsfc(i,j) + Zsfc(i+1,j) + Zsfc(i,j+1) + Zsfc(i+1,j+1) ) * 0.25_RP
@@ -502,12 +519,14 @@ contains
        enddo
     enddo
     enddo
+    !$omp parallel do private(zs)
     do j = 1, JA-1
        Zs = ( Zsfc(IA,j) + Zsfc(IA,j+1) ) * 0.5_RP
        do k = 0, KA
           ATMOS_GRID_CARTESC_REAL_FZUV(k,IA,j) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
        enddo
     enddo
+    !$omp parallel do private(zs)
     do i = 1, IA-1
        Zs = ( Zsfc(i,JA) + Zsfc(i+1,JA) ) * 0.5_RP
        do k = 0, KA
@@ -519,6 +538,7 @@ contains
        ATMOS_GRID_CARTESC_REAL_FZUV(k,IA,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
     enddo
 
+    !$omp parallel do private(zs) collapse(2)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE-1
@@ -535,12 +555,18 @@ contains
     end do
 
 
+    !$omp workshare
+!OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_Z1(:,:) = ATMOS_GRID_CARTESC_REAL_CZ(KS,:,:) - Zsfc(:,:)
 
+!OCL ZFILL
     ATMOS_GRID_CARTESC_REAL_PHI(:,:,:) = GRAV * ATMOS_GRID_CARTESC_REAL_CZ(:,:,:)
+    !$omp end workshare
 
     ATMOS_GRID_CARTESC_REAL_ASPECT_MAX = -1.E+30_RP
     ATMOS_GRID_CARTESC_REAL_ASPECT_MIN =  1.E+30_RP
+
+    !$omp parallel do private(dfz) collapse(2)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -704,7 +730,7 @@ contains
     call COMM_wait(                         AREAUV(:,:), 4 )
 
 
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1,  JA
     do i = IS, IE
     do k = KS, KE
@@ -712,7 +738,7 @@ contains
     end do
     end do
     end do
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = JS, JE
     do i = 1,  IA
     do k = KS, KE
