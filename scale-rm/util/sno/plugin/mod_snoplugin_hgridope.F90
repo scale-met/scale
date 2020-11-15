@@ -264,8 +264,11 @@ contains
     real(RP), allocatable :: lon_new(:,:) ! [rad]
     real(RP), allocatable :: lat_new(:,:) ! [rad]
 
-    real(RP) :: dxy, dx, dy ! [m]
-    real(RP) :: clat        ! [rad]
+    real(RP) :: dx_ref, dy_ref   ! [m]
+    real(RP) :: dx_new, dy_new   ! [m]
+    real(RP) :: dx_coef, dy_coef
+    real(RP) :: dxy              ! [m]
+    real(RP) :: clat             ! [rad]
 
     type(axisinfo), allocatable :: ainfo_out(:)
 
@@ -350,16 +353,6 @@ contains
        end select
     enddo
 
-    ! set remapping coefficient
-    clat = ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)/2) * CONST_D2R
-
-    dx  = SNOPLGIN_hgridope_dlon * CONST_D2R * CONST_RADIUS * cos(clat)
-    dy  = SNOPLGIN_hgridope_dlat * CONST_D2R * CONST_RADIUS * cos(clat)
-    dxy = sqrt( dx*dx + dy*dy ) * 10.0_RP
-
-    call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
-                       search_limit = dxy        ) ! [IN]
-
     imax_ref = ngrids_x_out * nprocs_x_out
     jmax_ref = ngrids_y_out * nprocs_y_out
     imax_new = ainfo_ll(1)%dim_size(1)
@@ -403,6 +396,24 @@ contains
        lat_new(i,j) = ainfo_ll(2)%AXIS_1d(j) * CONST_D2R
     enddo
     enddo
+
+    ! set remapping coefficient
+    clat = ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)/2) * CONST_D2R
+
+    dx_ref = ( maxval( lon_ref(:,:) ) - minval( lon_ref(:,:) ) ) / imax_ref * CONST_RADIUS * cos(clat)
+    dy_ref = ( maxval( lat_ref(:,:) ) - minval( lat_ref(:,:) ) ) / jmax_ref * CONST_RADIUS * cos(clat)
+    dx_new = SNOPLGIN_hgridope_dlon * CONST_D2R * CONST_RADIUS * cos(clat)
+    dy_new = SNOPLGIN_hgridope_dlat * CONST_D2R * CONST_RADIUS * cos(clat)
+
+    dx_coef = 1.0_RP
+    dy_coef = 1.0_RP
+    if( dx_ref / dx_new > 1.0_RP ) dx_coef = dx_ref / dx_new
+    if( dy_ref / dy_new > 1.0_RP ) dy_coef = dy_ref / dy_new
+
+    dxy = sqrt( (dx_new*dx_coef)*(dx_new*dx_coef) + (dy_new*dy_coef)*(dy_new*dy_coef) )
+
+    call INTERP_setup( SNOPLGIN_hgridope_weight, & ! [IN]
+                       search_limit = dxy        ) ! [IN]
 
     call INTERP_factor2d( SNOPLGIN_hgridope_nintrp,   & ! [IN]
                           imax_ref, jmax_ref,         & ! [IN]

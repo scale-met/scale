@@ -796,7 +796,7 @@ contains
 !OCL PREFETCH_SEQUENTIAL(SOFT)
 #ifndef __GFORTRAN__
        !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,A,B,C,F1,F2,F3,PT,pg,advcv) &
+       !$omp private(i,j,k,A,B,C,F1,F2,F3,PT,pg,advcv) &
 #ifdef HIST_TEND
        !$omp shared(lhist,pg_t,advcv_t) &
 #endif

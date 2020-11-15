@@ -18,7 +18,7 @@ FFLAGS_FAST  = -Kfast,parallel,ocl,preex,array_private,noalias=s,mfunc=2 \
                -Kauto,threadsafe                                         \
                -Nfjomplib
 
-FFLAGS_AGGRESSIVE = -Kinstance=12,swp_weak
+FFLAGS_AGGRESSIVE = -Kinstance=12,swp_strong
 
 FFLAGS_QUICKDEBUG = -Nquickdbg -NRtrap
 

@@ -551,7 +551,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Update reference state profile (Horizontal average)
   subroutine ATMOS_REFSTATE_update( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
        DENS, POTT, TEMP, PRES, QV,                          &
        CZ, FZ, FDZ, RCDZ, REAL_CZ, REAL_FZ, REAL_PHI, AREA, &
        nowsec,                                              &
@@ -563,8 +563,8 @@ contains
     implicit none
 
     integer,  intent(in) :: KA, KS, KE
-    integer,  intent(in) :: IA, IS, IE
-    integer,  intent(in) :: JA, JS, JE
+    integer,  intent(in) :: IA, IS, IE, ISB, IEB
+    integer,  intent(in) :: JA, JS, JE, JSB, JEB
     real(RP), intent(in) :: DENS    (KA,IA,JA)
     real(RP), intent(in) :: POTT    (KA,IA,JA)
     real(RP), intent(in) :: TEMP    (KA,IA,JA)
@@ -643,7 +643,7 @@ contains
        call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_pott(:) )
        call ATMOS_REFSTATE_smoothing( KA, KS, KE, FDZ(:), RCDZ(:), ATMOS_REFSTATE1D_qv(:) )
 
-       call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+       call ATMOS_REFSTATE_calc3D( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                                    CZ(:), FZ(:), REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:) )
 
        last_updated = nowsec

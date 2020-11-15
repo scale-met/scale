@@ -611,13 +611,14 @@ contains
     if ( ATMOS_do ) then
        ! calc diagnostics
        call ATMOS_vars_calc_diagnostics
-       call ATMOS_REFSTATE_update( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
+       call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
                                    TIME_NOWDAYSEC,                                                & ! [IN]
                                    force = .true.                                                 )
        call ATMOS_BOUNDARY_driver_set
+       call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_history_setpres
     endif
 

@@ -93,7 +93,7 @@ cat << EOF1 > ./run.sh
 #
 #
 export PARALLEL=12
-export OMP_NUM_THREADS=${PARALLEL}
+export OMP_NUM_THREADS=\${PARALLEL}
 export FORT90L=-Wl,-T
 export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
