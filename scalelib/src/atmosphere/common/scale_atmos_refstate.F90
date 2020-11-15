@@ -861,6 +861,7 @@ contains
   end subroutine ATMOS_REFSTATE_calc3D
 
   !-----------------------------------------------------------------------------
+!OCL SERIAL
   subroutine ATMOS_REFSTATE_smoothing( &
        KA, KS, KE, &
        FDZ, RCDZ, &

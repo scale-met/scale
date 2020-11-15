@@ -1480,6 +1480,7 @@ contains
     real(RP) :: work(KA,IA,JA)
 
     logical :: same_mptype_ = .false.
+    logical :: qnum_flag    = .false.
 
     real(RP) :: one(KA,IA,JA)
 
@@ -1527,16 +1528,7 @@ contains
                                        dims(:),                & ! [IN]
                                        istep                   ) ! [IN]
           same_mptype_ = .false.
-          !$omp parallel do collapse(3)
-          do iq = 1, N_HYD
-          do j  = 1, JA_org
-          do i  = 1, IA_org
-          do k  = 1, KA_org
-             QNUM_org(k,i,j,iq) = 0.0_RP
-          end do
-          end do
-          end do
-          end do
+          qnum_flag    = .false.
        case('WRF-ARW')
           call ParentAtmosInputWRFARW( W_org   (:,:,:),   & ! [OUT]
                                        U_org   (:,:,:),   & ! [OUT]
@@ -1554,6 +1546,7 @@ contains
                                        dims(:),           & ! [IN]
                                        istep              ) ! [IN]
           same_mptype_ = .false.
+          qnum_flag    = .true.
           !$omp parallel do collapse(2)
           do j  = 1, JA_org
           do i  = 1, IA_org
@@ -1586,10 +1579,16 @@ contains
           end do
           end do
           if ( .not. sfc_diagnoses ) then
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 3, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
-                                                 QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
-                                                 QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
-                                                 QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+             if ( qnum_flag ) then
+                call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 3, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                                    QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                    QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                                    QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+             else
+                call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 3, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                                    QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                    QTRC_org(:,:,:,QS_MP:QE_MP)       ) ! [OUT]
+             end if
              !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -1602,10 +1601,16 @@ contains
              end do
              end do
           else
-             call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 1, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
-                                                 QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
-                                                 QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
-                                                 QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+             if ( qnum_flag ) then
+                call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 1, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                                    QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                    QTRC_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                                    QNUM=QNUM_org(:,:,:,:)            ) ! [IN]
+             else
+                call ATMOS_PHY_MP_driver_qhyd2qtrc( KA_org, 1, KA_org, IA_org, 1, IA_org, JA_org, 1, JA_org, &
+                                                    QV_org(:,:,:), QHYD_org(:,:,:,:), & ! [IN]
+                                                    QTRC_org(:,:,:,QS_MP:QE_MP)       ) ! [OUT]
+             end if
           end if
        end if
 

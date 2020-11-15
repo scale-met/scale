@@ -509,6 +509,7 @@ contains
 
             !$omp parallel do &
             !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac, &
+            !$omp         int_sw,lack, &
             !$omp         positive,negative,zerosw,sw)
             do j = JS, JE
             do i = IS, IE
@@ -2554,7 +2555,9 @@ contains
     !--- search grid whose Efield is over threshold of flash inititation
     own_prc_total = 0
     if( flg_eint_hgt == 1.0_RP ) then
-       !$omp parallel do reduction(+:own_prc_total)
+       !$omp parallel do &
+       !$omp reduction(+:own_prc_total) &
+       !$omp private(E_det)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -2570,7 +2573,9 @@ contains
        enddo
        enddo
     else
-       !$omp parallel do reduction(+:own_prc_total)
+       !$omp parallel do &
+       !$omp reduction(+:own_prc_total) &
+       !$omp private(E_det)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE

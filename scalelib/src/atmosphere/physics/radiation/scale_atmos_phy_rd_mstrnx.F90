@@ -1303,7 +1303,7 @@ contains
     ! for optical thickness by particles
     real(RP) :: tauPR   (rd_kmax,MSTRN_ncloud)               ! optical thickness        by Rayleigh/cloud/aerosol
     real(RP) :: omgPR   (rd_kmax,MSTRN_ncloud)               ! single scattering albedo by Rayleigh/cloud/aerosol
-    real(RP) :: optparam(rd_kmax,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
+    real(DP) :: optparam(rd_kmax,MSTRN_nmoment,MSTRN_ncloud) ! optical parameters
     real(RP) :: q_fit, dp_P
 
     ! for planck functions
@@ -1400,19 +1400,15 @@ contains
 
           !$acc loop gang vector
           do k = 1, rd_kmax
-             if ( aerosol_radi(k,i,j,iaero) <= radmode(iptype,1) ) then ! extrapolation
+             ! [Note] Extrapolation sometimes makes unexpected value
+             if ( aerosol_radi(k,i,j,iaero) <= radmode(iptype,1) ) then
 
-                ir = 1
-                indexR(k,iaero) = ir
-                factR (k,iaero) = ( aerosol_radi(k,i,j,iaero) - radmode(iptype,ir) ) &
-                                / ( radmode(iptype,ir+1)      - radmode(iptype,ir) )
+                indexR(k,iaero) = 1
+                factR (k,iaero) = 0.0_RP
 
-             elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,nradius) ) then ! extrapolation
-                ! [Note] Extrapolation sometimes makes unexpected value
-                ! optical thickness is set to zero. This treatment is Ad Hoc.
+             elseif( aerosol_radi(k,i,j,iaero) > radmode(iptype,nradius) ) then
 
-                ir = nradius
-                indexR(k,iaero) = ir
+                indexR(k,iaero) = nradius
                 factR (k,iaero) = 1.0_RP
 
              else
