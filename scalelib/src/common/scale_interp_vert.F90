@@ -122,7 +122,7 @@ contains
                              Z(:,i,j), Xi(:),           & ! (in)
                              INTERP_xi2z_idx (:,:,i,j), & ! (in)
                              INTERP_xi2z_coef(:,  i,j), & ! (out)
-                             flag_extrap = .false.      ) ! (in)
+                             flag_extrap = .true.       ) ! (in)
     enddo
     enddo
 

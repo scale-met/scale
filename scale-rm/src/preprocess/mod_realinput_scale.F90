@@ -304,10 +304,14 @@ contains
     integer  :: xloc, yloc
     integer  :: rank
 
+    logical :: qnum_flag
+
     integer  :: fid
     logical  :: existed, existed_t2, existed_mslp
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
+
+    qnum_flag = .false.
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -420,9 +424,10 @@ contains
                 qnum_org(2,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
 !OCL XFILL
                 qnum_org(1,xs:xe,ys:ye,iq) = qnum_org(3,xs:xe,ys:ye,iq)
+                qnum_flag = .true.
              else
 !OCL XFILL
-                qnum_org(:,:,:,iq) = 0.0_RP
+                qnum_org(:,:,:,iq) = UNDEF
              end if
           end do
 
@@ -524,10 +529,16 @@ contains
     end do
 
     if ( QA_MP > 0 .AND. .NOT. same_mptype ) then
-       call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
-                                           qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
-                                           qtrc_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
-                                           QNUM=qnum_org(:,:,:,:)            ) ! [IN]
+       if ( qnum_flag ) then
+          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                              qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
+                                              qtrc_org(:,:,:,QS_MP:QE_MP),      & ! [OUT]
+                                              QNUM=qnum_org(:,:,:,:)            ) ! [IN]
+       else
+          call ATMOS_PHY_MP_driver_qhyd2qtrc( dims(1)+2, 1, dims(1)+2, dims(2), 1, dims(2), dims(3), 1, dims(3), &
+                                              qv_org(:,:,:), qhyd_org(:,:,:,:), & ! [IN]
+                                              qtrc_org(:,:,:,QS_MP:QE_MP)       ) ! [OUT]
+       end if
     end if
 
     !$omp parallel do default(none) &
