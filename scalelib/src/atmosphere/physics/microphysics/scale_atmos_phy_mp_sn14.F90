@@ -993,7 +993,8 @@ contains
        QTRC,     &
        QNUM      )
     use scale_const, only: &
-       PI => CONST_PI
+       PI    => CONST_PI, &
+       UNDEF => CONST_UNDEF
     use scale_atmos_hydrometeor, only: &
        N_HYD, &
        I_HC,  &
@@ -1079,6 +1080,9 @@ contains
     end do
     end do
 
+
+    piov6 = PI / 6.0_RP
+
     if ( present(QNUM) ) then
 
 !OCL XFILL
@@ -1086,7 +1090,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NC) = QNUM(k,i,j,I_HC)
+          if ( QNUM(k,i,j,I_HC) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NC) = QNUM(k,i,j,I_HC)
+          else
+             QTRC(k,i,j,I_mp_NC) = QTRC(k,i,j,I_mp_QC) / ( (piov6*RHOw) * Dc**b )
+          end if
        end do
        end do
        end do
@@ -1096,7 +1104,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NR) = QNUM(k,i,j,I_HR)
+          if ( QNUM(k,i,j,I_HR) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NR) = QNUM(k,i,j,I_HR)
+          else
+             QTRC(k,i,j,I_mp_NR) = QTRC(k,i,j,I_mp_QR) / ( (piov6*RHOw) * Dr**b )
+          end if
        end do
        end do
        end do
@@ -1106,7 +1118,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NI) = QNUM(k,i,j,I_HI)
+          if ( QNUM(k,i,j,I_HI) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NI) = QNUM(k,i,j,I_HI)
+          else
+             QTRC(k,i,j,I_mp_NI) = QTRC(k,i,j,I_mp_QI) / ( (piov6*RHOf) * Di**b )
+          end if
        end do
        end do
        end do
@@ -1116,7 +1132,11 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NS) = QNUM(k,i,j,I_HS)
+          if ( QNUM(k,i,j,I_HS) .ne. UNDEF ) then
+             QTRC(k,i,j,I_mp_NS) = QNUM(k,i,j,I_HS)
+          else
+             QTRC(k,i,j,I_mp_NS) = QTRC(k,i,j,I_mp_QS) / ( (piov6*RHOf) * Ds**b )
+          end if
        end do
        end do
        end do
@@ -1126,13 +1146,20 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG) + QNUM(k,i,j,I_HH)
+          if ( QNUM(k,i,j,I_HG) .ne. UNDEF ) then
+             if ( QNUM(k,i,j,I_HH) .ne. UNDEF ) then
+                QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG) + QNUM(k,i,j,I_HH)
+             else
+                QTRC(k,i,j,I_mp_NG) = QNUM(k,i,j,I_HG)
+             end if
+          else
+             QTRC(k,i,j,I_mp_NG) = QTRC(k,i,j,I_mp_QG) / ( (piov6*RHOg) * Dg**b )
+          end if
        end do
        end do
        end do
 
     else
-       piov6 = PI / 6.0_RP
 
 !OCL XFILL
        !$omp parallel do
@@ -2333,13 +2360,19 @@ contains
     !$omp          ii_dqi,ii_dni,is_dqi,is_dni,ss_dns,gs_dqs,gs_dns,gg_dng, &
     !$omp          clp_dqc,clp_dnc,clm_dqc,clm_dnc,clp_dqr,clp_dnr,clm_dqr,clm_dnr, &
     !$omp          clp_dqi,clp_dni,clm_dqi,clm_dni,clp_dqs,clp_dns,clm_dqs,clm_dns,clp_dqg,clp_dng,clm_dqg,clm_dng, &
+    !$omp          drhoqcrg_c,drhoqcrg_r,drhoqcrg_i,drhoqcrg_s,drhoqcrg_g, &
+    !$omp          crg_split_s,crg_split_g,crg_split_i,wrm_dnc_crg,wrm_dnr_crg, &
+    !$omp          gc_dnc_crg,sc_dnc_crg,ic_dnc_crg,rg_dng_crg,rg_dnr_crg,rs_dnr_crg,rs_dns_crg,ri_dnr_crg,ri_dni_crg, &
+    !$omp          ii_dni_crg,is_dni_crg,ss_dns_crg,gs_dns_crg,gi_dni_crg,gg_dng_crg, &
+    !$omp          clp_dnc_crg,clm_dnc_crg,clp_dnr_crg,clm_dnr_crg,clp_dni_crg,clm_dni_crg,clp_dns_crg,clm_dns_crg,clp_dng_crg,clm_dng_crg, &
+    !$omp          pco_dni_crg,pco_dns_crg,pco_dng_crg,eml_dnc_crg,eml_dnr_crg,eml_dni_crg,eml_dns_crg,eml_dng_crg,spl_dni_crg,spl_dns_crg,spl_dng_crg, &
     !$omp          fac1,fac3,fac4,fac6,fac7,fac9,fac10, &
     !$omp          pco_dqi,pco_dni,pco_dqs,pco_dns,pco_dqg,pco_dng, &
     !$omp          eml_dqc,eml_dnc,eml_dqr,eml_dnr,eml_dqi,eml_dni,eml_dqs,eml_dns,eml_dqg,eml_dng, &
     !$omp          spl_dqi,spl_dni,spl_dqg,spl_dqs, &
     !$omp          dTdt_equiv_d,sl_PLCdep,sl_PLRdep,sl_PNRdep,qke_d, &
     !$omp          dqv,dql,dqi,dcv,dcp, &
-    !$omp          di2l,dtem,fact,sw )
+    !$omp          di2l,dtem,fact,sw,sw1,sw2)
     do j = JS, JE
     do i = IS, IE
 
@@ -2440,7 +2473,9 @@ contains
           drhoqi = dt * PQ(k,I_LIccn)
           drhoni = dt * PQ(k,I_NIccn)
           drhoqv = max( -rhoq(k,I_QV), -drhoqc-drhoqi )
-          fac1    = drhoqv / min( -drhoqc-drhoqi, -eps ) ! limiting coefficient
+
+          ! limiting coefficient
+          fac1    = drhoqv / min( -drhoqc-drhoqi, -eps ) ! drhoqc and drhoqi must be >= 0, otherwise fac1 can be artificially huge value.
 
           drhoqc = drhoqc * fac1
           drhoqi = drhoqi * fac1
@@ -3245,17 +3280,17 @@ contains
 !    real(RP) :: c_ccn_map(1)   ! c_ccn horizontal distribution
 !    real(RP) :: kappa_map(1)   ! kappa horizontal distribution
 !    real(RP) :: c_in_map(1)    ! c_in  horizontal distribution ! [Add] 11/08/30 T.Mitsui
-    real(RP) :: esw(KA)      ! saturation vapor pressure, water
-    real(RP) :: esi(KA)      !                            ice
-    real(RP) :: ssw(KA)      ! super saturation (water)
-    real(RP) :: ssi(KA)      ! super saturation (ice)
-!    real(RP) :: w_dsswdz(KA) ! w*(d_ssw/ d_z) super saturation(water) flux
-    real(RP) :: w_dssidz(KA) ! w*(d_ssi/ d_z), 09/04/14 T.Mitsui
-!    real(RP) :: ssw_below(KA)! ssw(k-1)
-    real(RP) :: ssi_below(KA)! ssi(k-1), 09/04/14 T.Mitsui
-    real(RP) :: z_below(KA)  ! z(k-1)
-    real(RP) :: dzh                ! z(k)-z(k-1)
-    real(RP) :: pv                 ! vapor pressure
+    real(RP) :: esw(KA)       ! saturation vapor pressure, water
+    real(RP) :: esi(KA)       !                            ice
+    real(RP) :: ssw(KA)       ! super saturation (water)
+    real(RP) :: ssi(KA)       ! super saturation (ice)
+!    real(RP) :: w_dsswdz(KA)  ! w*(d_ssw/ d_z) super saturation(water) flux
+    real(RP) :: w_dssidz(KA)  ! w*(d_ssi/ d_z), 09/04/14 T.Mitsui
+!    real(RP) :: ssw_below(KA) ! ssw(k-1)
+    real(RP) :: ssi_below(KA) ! ssi(k-1), 09/04/14 T.Mitsui
+    real(RP) :: z_below(KA)   ! z(k-1)
+    real(RP) :: dzh           ! z(k)-z(k-1)
+    real(RP) :: pv            ! vapor pressure
     ! work variables for Twomey Equation.
     real(RP) :: qsw(KA)
     real(RP) :: qsi(KA)
@@ -3290,6 +3325,8 @@ contains
     real(RP) :: dlcdt_max, dli_max ! defined by supersaturation
     real(RP) :: dncdt_max, dni_max ! defined by supersaturation
     real(RP) :: rdt
+
+    real(RP) :: tmp
     !
     integer :: k
     !
@@ -3325,7 +3362,7 @@ contains
     do k = KS, KE
        pv     = rhoq(k,I_QV)*Rvap*tem(k)
        ssw(k) = min( MP_ssw_lim, ( pv/esw(k)-1.0_RP ) )*100.0_RP
-       ssi(k) = (pv/esi(k) - 1.00_RP)
+       ssi(k) = ( pv/esi(k) - 1.00_RP )
 !       ssw_below(k+1) = ssw(k)
        ssi_below(k+1) = ssi(k)
        z_below(k+1)   = cz(k)
@@ -3423,10 +3460,11 @@ contains
           ! effective vertical velocity
           if ( flag_nucleation(k) .AND. & ! large scale upward motion region and saturated
                tem(k) > tem_ccn_low ) then
-             dlcdt_max    = (rhoq(k,I_QV) - esw(k)/(Rvap*tem(k)))*rdt
-             dncdt_max    = dlcdt_max/xc_min
-             !               dnc_new      = nc_new(k)-rhoq(k,I_NC)
-             dnc_new      = nc_new(k)
+             dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+             dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
+             dncdt_max     = dlcdt_max/xc_min
+!             dnc_new       = nc_new(k)-rhoq(k,I_NC)
+             dnc_new       = nc_new(k)
              PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
              PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
           else
@@ -3444,9 +3482,10 @@ contains
              if ( flag_nucleation(k) .AND. & ! large scale upward motion region and saturated
                   tem(k) > tem_ccn_low .AND. &
                   nc_new(k) > rhoq(k,I_NC) ) then
-                dlcdt_max    = (rhoq(k,I_QV) - esw(k)/(Rvap*tem(k)))*rdt
-                dncdt_max    = dlcdt_max/xc_min
-                dnc_new      = nc_new(k)-rhoq(k,I_NC)
+                dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+                dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
+                dncdt_max     = dlcdt_max/xc_min
+                dnc_new       = nc_new(k)-rhoq(k,I_NC)
                 PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
                 PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
              else
@@ -3459,9 +3498,10 @@ contains
              ! effective vertical velocity
              if(  tem(k) > tem_ccn_low .AND. &
                   nc_new(k) > rhoq(k,I_NC) ) then
-                dlcdt_max    = (rhoq(k,I_QV) - esw(k)/(Rvap*tem(k)))*rdt
-                dncdt_max    = dlcdt_max/xc_min
-                dnc_new      = nc_new(k)-rhoq(k,I_NC)
+                dlcdt_max     = ( rhoq(k,I_QV) - esw(k) / ( Rvap * tem(k) ) ) * rdt
+                dlcdt_max     = max( dlcdt_max, 0.0_RP ) ! dlcdt_max can be artificially negative due to truncation error in floating point operation
+                dncdt_max     = dlcdt_max/xc_min
+                dnc_new       = nc_new(k)-rhoq(k,I_NC)
                 PQ(k,I_NCccn) = min( dncdt_max, dnc_new*rdt )
                 PQ(k,I_LCccn) = min( dlcdt_max, xc_min*PQ(k,I_NCccn) )
              else
@@ -3486,24 +3526,26 @@ contains
     end do
     velz(KE) = 0.0_RP
     do k = KS, KE
-       dzh            = cz(k) - z_below(k)
-       w_dssidz(k) = velz(k) * (ssi(k) - ssi_below(k))/dzh
+       dzh           = cz(k) - z_below(k)
+       w_dssidz(k)   = velz(k) * (ssi(k) - ssi_below(k))/dzh
        dssidt_rad(k) = -rhoq(k,I_QV)/(rho(k)*qsi(k)*qsi(k))*dqsidtem_rho(k)*dTdt_rad(k)
-       dli_max        = (rhoq(k,I_QV) - esi(k)/(Rvap*tem(k)))*rdt
-       dni_max        = min( dli_max/xi_ccn, (in_max-rhoq(k,I_NI))*rdt )
-       wdssi          = min( w_dssidz(k)+dssidt_rad(k), 0.01_RP)
-       wssi           = min( ssi(k), ssi_max)
+       dli_max       = ( rhoq(k,I_QV) - esi(k) / ( Rvap * tem(k) ) ) * rdt
+       dli_max       = max( dli_max, 0.0_RP ) ! dli_max can be artificially negative due to truncation error in floating point operation
+       dni_max       = min( dli_max/xi_ccn, (in_max-rhoq(k,I_NI))*rdt )
+       wdssi         = min( w_dssidz(k)+dssidt_rad(k), 0.01_RP)
+       wssi          = min( ssi(k), ssi_max)
        ! SB06(34),(35)
        if(  ( wdssi       > eps         ) .AND. & !
             (tem(k)       < 273.15_RP   ) .AND. & !
             (rhoq(k,I_NI) < in_max      ) .AND. &
             (wssi      >= eps       ) )then   !
-!             PNIccn(k) = min(dni_max, c_in_map(1)*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+          tmp = c_in * nm_M92 * exp( 0.3_RP * bm_M92 * ( wssi - 0.1_RP ) )
           if( inucl_w ) then
-             PQ(k,I_NIccn) = min(dni_max, c_in*bm_M92*nm_M92*0.3_RP*exp(0.3_RP*bm_M92*(wssi-0.1_RP))*wdssi)
+             tmp = bm_M92 * 0.3_RP * tmp * wdssi
           else
-             PQ(k,I_NIccn) = min(dni_max, max(c_in*nm_M92*exp(0.3_RP*bm_M92*(wssi-0.1_RP) )-rhoq(k,I_NI),0.0_RP )*rdt )
+             tmp = max( tmp - rhoq(k,I_NI), 0.0_RP ) * rdt
           endif
+          PQ(k,I_NIccn) = min(dni_max, tmp)
           PQ(k,I_LIccn) = min(dli_max, PQ(k,I_NIccn)*xi_ccn )
        else
           PQ(k,I_NIccn) = 0.0_RP

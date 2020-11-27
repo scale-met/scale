@@ -136,7 +136,7 @@ contains
 
        NAME_trim = trim(NAME(n))
 
-       LOG_INFO("TRACER_regist",'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,F6.1,A,L1,A,L1)') &
+       LOG_INFO("TRACER_regist",'(1x,A,I3,A,A,A,F6.1,A,F6.1,A,ES10.3,A,L1,A,L1)') &
                                       '] Register tracer : No.', QA+n,      &
                                                     ', NAME = ', NAME_trim, &
                                                       ', CV = ', CV_   (n),  &

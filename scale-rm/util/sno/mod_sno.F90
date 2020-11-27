@@ -117,7 +117,7 @@ contains
        axisname,        &
        nvars,           &
        varname,         &
-       plugin_hgridope, &
+       isnormalvar,     &
        debug            )
     use mpi
     use scale_file_h, only: &
@@ -159,7 +159,7 @@ contains
     character(len=H_SHORT), intent(out) :: axisname(item_limit)     ! name   of axis variables          (input)
     integer,                intent(out) :: nvars                    ! number of variables               (input)
     character(len=H_SHORT), intent(out) :: varname (item_limit)     ! name   of variables               (input)
-    logical,                intent(in)  :: plugin_hgridope          ! if true, some 2d axis var. is treated as normal var.
+    logical,                intent(in)  :: isnormalvar              ! if true, some 2d axis var. is treated as normal var.
     logical,                intent(in)  :: debug
 
     integer                :: procsize(2)                   ! total process size        (x:y)
@@ -441,7 +441,7 @@ contains
                                       hinfo%minfo_longitude_of_central_meridian        (:) )
           endif
        case('topo','lsmask')
-          if ( plugin_hgridope ) then ! treat as normal variable
+          if ( isnormalvar ) then ! treat as normal variable
              if ( nvars_req == 0 ) then
                 nvars          = nvars + 1
                 varname(nvars) = varname_file(n)
