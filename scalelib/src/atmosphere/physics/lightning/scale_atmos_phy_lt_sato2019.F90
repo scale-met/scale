@@ -409,6 +409,9 @@ contains
 
     if ( LT_DO_Lightning ) then
 
+       d_QCRG_TOT(:,:,:) = 0.0_RP
+       fls_int_p_tot(:,:,:) = 0.0_RP
+       LT_PATH_TOT(:,:,:,:) = 0.0_RP
        call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                      IA, IS, IE,             &   ! [IN]
                                      JA, JS, JE,             &   ! [IN]
