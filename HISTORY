@@ -1,5 +1,13 @@
 = Release History
 
+== 2020-11-27 (5.4.2)
+* Bug fixes:
+  * Fix a bug in the SNO to output topo and lsmask from pp files.
+  * Fix bugs for single precision calculation
+  * Fix wrong openmp directives
+  * Fix wrong number density of the hydrometeors in the real input
+  * Change the calculation of the optical parameters in the mstrnX to avoid extraporation
+
 == 2020-10-22 (5.4.1)
 * Bug fixes:
   * Fix incorrect changes in surface temperature when ATMOS_PHY_SF_TYPE is CONST.
