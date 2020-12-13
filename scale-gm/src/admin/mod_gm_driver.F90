@@ -146,7 +146,7 @@ contains
        embudget_setup, &
        embudget_monitor
     use mod_gm_topography, only: &
-       TOPO_setup
+       TOPOGRAPHY_setup
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
     use mod_atmos_phy_driver, only: &
@@ -267,6 +267,9 @@ contains
     !---< comm module setup >---
     call COMM_setup
 
+    !---< topography module setup >---
+    call TOPOGRAPHY_setup
+
     !---< grid module setup >---
     call GRD_setup
 
@@ -291,9 +294,6 @@ contains
 
     !---< nhm_runconf module setup >---
     call runconf_setup
-
-    !---< topography module setup >---
-    call TOPO_setup
 
     !---< landuse module setup >---
     call LANDUSE_setup( .false., .false., .false. )

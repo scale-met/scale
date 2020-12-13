@@ -7,6 +7,7 @@
 !! @author Team SCALE
 !<
 !-------------------------------------------------------------------------------
+#include "scalelib.h"
 module mod_gm_topography
   !-----------------------------------------------------------------------------
   !
@@ -16,7 +17,6 @@ module mod_gm_topography
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
-
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -24,94 +24,164 @@ module mod_gm_topography
   !
   !++ Public procedure
   !
-  public :: TOPO_setup
-  public :: TOPO_fillhalo
-  public :: TOPO_write
+  public :: TOPOGRAPHY_setup
+  public :: TOPOGRAPHY_fillhalo
+  public :: TOPOGRAPHY_write
+
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  logical, public :: TOPO_exist = .false. !< topography exists?
+  logical,  public :: TOPOGRAPHY_exist    = .false. !< topography exists?
 
-  real(RP), public, allocatable :: TOPO_Zsfc(:,:) !< absolute ground height [m]
+  logical,  public :: TOPOGRAPHY_IN_IDEAL = .false. !< make ideal topo on the fly?
+
+  real(RP), public, allocatable :: TOPOGRAPHY_Zsfc   (:,:,:,:) !< absolute ground height [m]
+  real(RP), public, allocatable :: TOPOGRAPHY_Zsfc_pl(:,:,:,:) !< absolute ground height [m]
 
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
   !
-  private :: TOPO_read
+  private :: TOPOGRAPHY_read
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  character(len=H_LONG),  private :: TOPO_IN_BASENAME  = ''                     !< basename of the input  file
-  logical,                private :: TOPO_IN_CHECK_COORDINATES = .false.        !> switch for check of coordinates
-  character(len=H_LONG),  private :: TOPO_OUT_BASENAME = ''                     !< basename of the output file
-  character(len=H_MID),   private :: TOPO_OUT_TITLE    = 'SCALE-RM TOPOGRAPHY'  !< title    of the output file
-  character(len=H_SHORT), private :: TOPO_OUT_DTYPE    = 'DEFAULT'              !< REAL4 or REAL8
+  character(len=H_LONG),  private :: TOPOGRAPHY_IN_BASENAME  = ''                    !< basename of the input  file
+  character(len=H_LONG),  private :: TOPOGRAPHY_OUT_BASENAME = ''                    !< basename of the output file
+  character(len=H_MID),   private :: TOPOGRAPHY_OUT_TITLE    = 'SCALE-GM TOPOGRAPHY' !< title    of the output file
+  character(len=H_SHORT), private :: TOPOGRAPHY_OUT_DTYPE    = 'DEFAULT'             !< REAL4 or REAL8
 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
   !> Setup
-  subroutine TOPO_setup
+  subroutine TOPOGRAPHY_setup
     use scale_prc, only: &
        PRC_abort
     implicit none
 
-    namelist / PARAM_TOPO / &
-       TOPO_IN_BASENAME,          &
-       TOPO_IN_CHECK_COORDINATES, &
-       TOPO_OUT_BASENAME,         &
-       TOPO_OUT_DTYPE
+    namelist / PARAM_TOPOGRAPHY / &
+       TOPOGRAPHY_IN_IDEAL,     &
+       TOPOGRAPHY_IN_BASENAME,  &
+       TOPOGRAPHY_OUT_BASENAME, &
+       TOPOGRAPHY_OUT_DTYPE
 
     integer :: ierr
     !---------------------------------------------------------------------------
 
-    if( IO_L ) write(IO_FID_LOG,*)
-    if( IO_L ) write(IO_FID_LOG,*) '++++++ Module[TOPOGRAPHY] / Categ[ATMOS-RM GRID] / Origin[SCALElib]'
+    LOG_NEWLINE
+    LOG_INFO("TOPOGRAPHY_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
-    read(IO_FID_CONF,nml=PARAM_TOPO,iostat=ierr)
+    read(IO_FID_CONF,nml=PARAM_TOPOGRAPHY,iostat=ierr)
     if( ierr < 0 ) then !--- missing
-       if( IO_L ) write(IO_FID_LOG,*) '*** Not found namelist. Default used.'
+       LOG_INFO("TOPOGRAPHY_setup",*) 'Not found namelist. Default used.'
     elseif( ierr > 0 ) then !--- fatal error
-       write(*,*) 'xxx Not appropriate names in namelist PARAM_TOPO. Check!'
+       LOG_ERROR("TOPOGRAPHY_setup",*) 'Not appropriate names in namelist PARAM_TOPOGRAPHY. Check!'
        call PRC_abort
     endif
-    if( IO_NML ) write(IO_FID_NML,nml=PARAM_TOPO)
+    LOG_NML(PARAM_TOPOGRAPHY)
 
-    allocate( TOPO_Zsfc(IA,JA) )
-    TOPO_Zsfc(:,:) = 0.0_RP
+    allocate( TOPOGRAPHY_Zsfc   (ADM_gall   ,ADM_KNONE,ADM_lall   ,1) )
+    allocate( TOPOGRAPHY_Zsfc_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,1) )
+    TOPOGRAPHY_Zsfc   (:,:,:,:) = 0.0_RP
+    TOPOGRAPHY_Zsfc_pl(:,:,:,:) = 0.0_RP
 
     ! read from file
-    call TOPO_read
+    call TOPOGRAPHY_read
 
     return
-  end subroutine TOPO_setup
+  end subroutine TOPOGRAPHY_setup
 
   !-----------------------------------------------------------------------------
   !> HALO Communication
-  subroutine TOPO_fillhalo
+  subroutine TOPOGRAPHY_fillhalo
+    use scale_comm_icoA, only: &
+       COMM_var
+    implicit none
+    !---------------------------------------------------------------------------
+
+    call COMM_var( TOPOGRAPHY_Zsfc, TOPOGRAPHY_Zsfc_pl, ADM_KNONE, 1 )
 
     return
-  end subroutine TOPO_fillhalo
+  end subroutine TOPOGRAPHY_fillhalo
 
   !-----------------------------------------------------------------------------
   !> Read topography
-  subroutine TOPO_read
+  subroutine TOPOGRAPHY_read
+    use mod_fio, only: &
+       FIO_input
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("TOPOGRAPHY_read",*) 'Input topography file '
+
+    if ( TOPOGRAPHY_IN_BASENAME /= '' ) then
+
+       call FIO_input(TOPOGRAPHY_Zsfc(:,:,:,1),TOPOGRAPHY_IN_BASENAME,'topo','ZSSFC1',1,1,1)
+
+       call TOPOGRAPHY_fillhalo
+
+       TOPOGRAPHY_exist = .true.
+
+    else
+       LOG_INFO_CONT(*) 'topography file is not specified.'
+
+       TOPOGRAPHY_exist = .false.
+    endif
 
     return
-  end subroutine TOPO_read
+  end subroutine TOPOGRAPHY_read
 
   !-----------------------------------------------------------------------------
   !> Write topography
-  subroutine TOPO_write
+  subroutine TOPOGRAPHY_write
+    use mod_io_param, only: &
+       IO_REAL4, &
+       IO_REAL8
+    use mod_fio, only: &
+       FIO_output
+    implicit none
+
+    integer :: dtype
+    !---------------------------------------------------------------------------
+
+    if ( TOPOGRAPHY_OUT_BASENAME /= '' ) then
+
+       LOG_NEWLINE
+       LOG_INFO("TOPOGRAPHY_write",*) 'Output topography file '
+
+       call TOPOGRAPHY_fillhalo
+
+       ! dtype is used to define the data type of axis variables in file
+       if    ( TOPOGRAPHY_OUT_DTYPE == 'REAL8' ) then
+          dtype = IO_REAL8
+       elseif( TOPOGRAPHY_OUT_DTYPE == 'REAL4' ) then
+          dtype = IO_REAL4
+       else
+          if    ( RP == 8 ) then
+             dtype = IO_REAL8
+          elseif( RP == 4 ) then
+             dtype = IO_REAL4
+          else
+             LOG_ERROR("FILE_CARTESC_create",*) 'unsupported data type. Check!', trim(TOPOGRAPHY_OUT_DTYPE)
+             call PRC_abort
+          endif
+       endif
+
+       call FIO_output( TOPOGRAPHY_Zsfc(:,:,:,1),                          & ! [IN]
+                        TOPOGRAPHY_OUT_BASENAME, TOPOGRAPHY_OUT_TITLE, '', & ! [IN]
+                       'topo', 'topography', '',                           & ! [IN]
+                       'm', dtype, 'ZSSFC1', 1, 1, 1, 0.0_DP, 0.0_DP       ) ! [IN]
+    endif
 
     return
-  end subroutine TOPO_write
+  end subroutine TOPOGRAPHY_write
 
 end module mod_gm_topography
