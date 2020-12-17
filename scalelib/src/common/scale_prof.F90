@@ -75,6 +75,7 @@ module scale_prof
   real(DP),               private            :: PROF_raptstr(PROF_rapnlimit)
   real(DP),               private            :: PROF_rapttot(PROF_rapnlimit)
   integer,                private            :: PROF_rapnstr(PROF_rapnlimit)
+  integer,                private            :: PROF_rapcnt (PROF_rapnlimit)
   integer,                private            :: PROF_rapnend(PROF_rapnlimit)
   integer,                private            :: PROF_raplevel(PROF_rapnlimit)
 
@@ -186,6 +187,10 @@ contains
 
     id = get_rapid( rapname, level_ )
 
+    PROF_rapcnt(id) = PROF_rapcnt(id) + 1
+
+    if ( PROF_rapcnt(id) > 1 ) return
+
     if(PROF_mpi_barrier) call PRC_MPIbarrier
 
     PROF_raptstr(id) = PRC_MPItime()
@@ -233,6 +238,10 @@ contains
     id = get_rapid( rapname, level_ )
 
     if( level_ > PROF_rap_level ) return
+
+    PROF_rapcnt(id) = PROF_rapcnt(id) - 1
+
+    if ( PROF_rapcnt(id) > 0 ) return
 
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
@@ -470,6 +479,7 @@ contains
     PROF_rapnstr(id) = 0
     PROF_rapnend(id) = 0
     PROF_rapttot(id) = 0.0_DP
+    PROF_rapcnt (id) = 0
 
     PROF_grpid   (id) = get_grpid(trapname)
     PROF_raplevel(id) = level
