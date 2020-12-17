@@ -730,7 +730,7 @@ contains
     integer :: k, i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('LND_Update', 2)
+    call PROF_rapstart('LND_Update', 1)
 
     !########## Get Surface Boundary from coupler ##########
     call LAND_SURFACE_GET

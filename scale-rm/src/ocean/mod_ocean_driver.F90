@@ -927,7 +927,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    call PROF_rapstart('OCN_Update', 2)
+    call PROF_rapstart('OCN_Update', 1)
 
     !########## Get Surface Boundary from coupler ##########
     call OCEAN_SURFACE_GET
@@ -1040,7 +1040,7 @@ contains
 
     call OCEAN_vars_check
 
-    call PROF_rapend  ('OCN_Update', 2)
+    call PROF_rapend  ('OCN_Update', 1)
 
     return
   end subroutine OCEAN_driver_update
