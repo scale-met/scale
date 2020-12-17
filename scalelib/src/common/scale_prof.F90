@@ -239,6 +239,7 @@ contains
        rapname = rapname_base
     end if
 
+    level_ = -1
     id = get_rapid( rapname, level_ )
 
     if( level_ > PROF_rap_level ) return
@@ -497,6 +498,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Get item ID or register item
   function get_rapid( rapname, level ) result(id)
+    use scale_prc, only: &
+       PRC_abort
     implicit none
 
     character(len=*), intent(in)    :: rapname !< name of item
@@ -504,6 +507,7 @@ contains
 
     character (len=H_SHORT) :: trapname
 
+    integer :: lev
     integer :: id
     !---------------------------------------------------------------------------
 
@@ -511,7 +515,14 @@ contains
 
     do id = 1, PROF_rapnmax
        if ( trapname == PROF_rapname(id) ) then
-          level = PROF_raplevel(id)
+          lev = PROF_raplevel(id)
+#ifdef QUICKDEBUG
+          if ( level > 0 .and. lev .ne. level ) then
+             LOG_ERROR("PROF_get_rapid",*) 'level is different ', trim(rapname), lev, level
+             call PRC_abort
+          end if
+#endif
+          level = lev
           return
        endif
     enddo
