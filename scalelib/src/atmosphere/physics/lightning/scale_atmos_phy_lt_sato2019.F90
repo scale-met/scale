@@ -130,11 +130,11 @@ module scale_atmos_phy_lt_sato2019
                 'kV/m', &
                 'kV/m', &
                 'V', &
-                'nC/m3', &
-                'num', &
-                'num', &
-                'num', &
-                'num' /
+                'nC/m3/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s' /
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -850,19 +850,59 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
     end if
     if ( HIST_sw(I_Qneut) ) then
-       call FILE_HISTORY_put( HIST_id(I_Qneut), d_QCRG_TOT(:,:,:) )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = d_QCRG_TOT(k,i,j)/dt_LT ![nC/m3/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Qneut), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_LTpath)  ) then
-       call FILE_HISTORY_put( HIST_id(I_LTpath), LT_PATH_TOT(:,:,:,3) )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,3)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_LTpath), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_PosFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_PosFLASH), LT_PATH_TOT(:,:,:,1) )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,1)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_PosFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_NegFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_NegFLASH), LT_PATH_TOT(:,:,:,2) )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,2)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_NegFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_FlashPoint) ) then
-       call FILE_HISTORY_put( HIST_id(I_FlashPoint), fls_int_p_tot(:,:,:) )
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+       do k = KS, KE
+          w3d(k,i,j) = fls_int_p_tot(k,i,j)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_FlashPoint), w3d(:,:,:) )
     end if
 
 
