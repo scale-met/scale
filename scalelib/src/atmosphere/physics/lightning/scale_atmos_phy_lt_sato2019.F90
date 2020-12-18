@@ -72,6 +72,9 @@ module scale_atmos_phy_lt_sato2019
   real(RP), allocatable, private    :: d_QCRG_TOT(:,:,:)
   real(RP), allocatable, private    :: LT_PATH_TOT(:,:,:,:)
   real(RP), allocatable, private    :: fls_int_p_tot(:,:,:)
+  real(RP), allocatable, private    :: B_F2013_TOT(:,:)
+  real(RP), allocatable, private    :: G_F2013(:,:)
+  real(RP),              private    :: C_F2013
 
   !---
   integer,  parameter, private :: nxlut_lt = 200, nylut_lt = 200
@@ -88,7 +91,7 @@ module scale_atmos_phy_lt_sato2019
   integer, private, parameter :: I_lt_abs = 4
 
   !--- For history output
-  integer, private, parameter :: w_nmax = 10
+  integer, private, parameter :: w_nmax = 11
   integer, private, parameter :: I_Ex = 1
   integer, private, parameter :: I_Ey = 2
   integer, private, parameter :: I_Ez = 3
@@ -99,6 +102,7 @@ module scale_atmos_phy_lt_sato2019
   integer, private, parameter :: I_PosFLASH = 8
   integer, private, parameter :: I_NegFLASH = 9
   integer, private, parameter :: I_FlashPoint = 10
+  integer, private, parameter :: I_FOD = 11
   integer,  private              :: HIST_id(w_nmax)
   character(len=H_SHORT), private :: w_name(w_nmax)
   character(len=H_MID),   private :: w_longname(w_nmax)
@@ -112,7 +116,8 @@ module scale_atmos_phy_lt_sato2019
                 'LTpath', &
                 'PosFLASH', &
                 'NegFLASH', &
-                'FlashPoint' /
+                'FlashPoint', &
+                'FOD' /
   data w_longname / &
                 'X component of Electrical Field', &
                 'Y component of Electrical Field', &
@@ -123,18 +128,20 @@ module scale_atmos_phy_lt_sato2019
                 'Cumulative Number of flash path', &
                 'Cumulative Number of Positive flash', &
                 'Cumulative Number of Negative flash', &
-                'Cumulative Number of Flash point' /
+                'Cumulative Number of Flash point', &
+                'Flash Origin Density' /
   data w_unit / &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
                 'kV/m', &
                 'V', &
-                'nC/m3', &
-                'num', &
-                'num', &
-                'num', &
-                'num' /
+                'nC/m3/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s', &
+                'num/grid/s' /
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -156,7 +163,8 @@ contains
     use scale_atmos_grid_cartesC, only: &
        CZ   => ATMOS_GRID_CARTESC_CZ
     use scale_const, only: &
-       T00 => CONST_TEM00
+       T00 => CONST_TEM00, &
+       PI  => CONST_PI
     use scale_file_history, only: &
        FILE_HISTORY_reg
     implicit none
@@ -173,6 +181,7 @@ contains
 
     integer :: n, myu, ip
     integer :: ierr
+    integer :: i, j
 
     namelist / PARAM_ATMOS_PHY_LT_SATO2019 / &
          NUTR_TYPE, &
@@ -260,6 +269,15 @@ contains
     if( NUTR_TYPE == 'F2013' ) then
       LOG_INFO("ATMOS_PHY_LT_sato2019_setup",'(A,F15.7,A)') 'Radius of neutralization is ', R_neut, "[m]"
     endif
+    allocate( B_F2013_TOT(IA,JA) )
+    allocate( G_F2013(IA,JA) )
+    B_F2013_TOT(:,:) = 0.0_RP
+    do i = 1, IA
+    do j = 1, JA
+      G_F2013(i,j) = CDX(i)*CDY(j)*1.0E-6_RP       ! [m2] -> [km2]
+    enddo
+    enddo
+    C_F2013 = PI*R_neut*R_neut*1.0E-6_RP  ! [m2] -> [km2]
 
     flg_eint_hgt = 0.0_RP
     if( Hgt_dependency_Eint .and. NUTR_TYPE == 'MG2001') then
@@ -277,8 +295,13 @@ contains
 !    endif
 
     do ip = 1, w_nmax
-       call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
-                              HIST_id(ip)                             ) ! [OUT]
+       if( ip /= I_FOD ) then
+          call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
+                                 HIST_id(ip)                             ) ! [OUT]
+       elseif( ip == I_FOD ) then
+          call FILE_HISTORY_reg( w_name(ip), w_longname(ip), w_unit(ip), & ! [IN]
+                                 HIST_id(ip), dim_type='XY'              ) ! [OUT]
+       endif
     end do
 
     return
@@ -357,9 +380,11 @@ contains
 
     real(RP) :: diff_qcrg(0:1), lack(0:1), sum_crg(0:1)
     real(RP) :: crg_rate(QA_LT), qcrg_before(QA_LT)
+    real(RP) :: B_F2013(IA,JA)
     integer  :: int_sw
 
     NUM_end(:,:,:,:) = 0.0_RP
+    B_F2013(:,:) = 0.0_RP
 
     !$omp parallel do &
     !$omp private(RHOQ0)
@@ -409,6 +434,10 @@ contains
 
     if ( LT_DO_Lightning ) then
 
+       d_QCRG_TOT(:,:,:) = 0.0_RP
+       fls_int_p_tot(:,:,:) = 0.0_RP
+       LT_PATH_TOT(:,:,:,:) = 0.0_RP
+       B_F2013_TOT(:,:) = 0.0_RP
        call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                      IA, IS, IE,             &   ! [IN]
                                      JA, JS, JE,             &   ! [IN]
@@ -468,7 +497,8 @@ contains
                                              NUM_end  (:,:,:,:), & !  [INOUT]
                                              LT_PATH  (:,:,:),   & !  [INOUT]
                                              fls_int_p(:,:,:),   & !  [OUT]
-                                             d_QCRG   (:,:,:)    ) !  [OUT]
+                                             d_QCRG   (:,:,:),   & !  [OUT]
+                                             B_F2013  (:,:)      ) !  [OUT]
          endif
 
          call COMM_vars8( LT_path(:,:,:),1 )
@@ -714,6 +744,13 @@ contains
             end do
             end do
          end if
+         if ( HIST_id(I_FOD) > 0 ) then
+            do j = JS, JE
+            do i = IS, IE
+               B_F2013_TOT(i,j) = B_F2013_TOT(i,j) + G_F2013(i,j)/C_F2013*B_F2013(i,j)
+            enddo
+            enddo
+         endif
 
          call ATMOS_PHY_LT_judge_absE( KA, KS, KE,             &   ! [IN]
                                        IA, IS, IE,             &   ! [IN]
@@ -847,59 +884,68 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
     end if
     if ( HIST_sw(I_Qneut) ) then
-       call FILE_HISTORY_put( HIST_id(I_Qneut), d_QCRG_TOT(:,:,:) )
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          d_QCRG_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
+          w3d(k,i,j) = d_QCRG_TOT(k,i,j)/dt_LT ![nC/m3/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_Qneut), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_LTpath)  ) then
-       call FILE_HISTORY_put( HIST_id(I_LTpath), LT_PATH_TOT(:,:,:,3) )
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          LT_PATH_TOT(k,i,j,3) = 0.0_RP
-       end do
-       end do
-       end do
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,3)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_LTpath), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_PosFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_PosFLASH), LT_PATH_TOT(:,:,:,1) )
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          LT_PATH_TOT(k,i,j,1) = 0.0_RP
-       end do
-       end do
-       end do
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,1)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_PosFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_NegFLASH) ) then
-       call FILE_HISTORY_put( HIST_id(I_NegFLASH), LT_PATH_TOT(:,:,:,2) )
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          LT_PATH_TOT(k,i,j,2) = 0.0_RP
-       end do
-       end do
-       end do
+          w3d(k,i,j) = LT_PATH_TOT(k,i,j,2)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_NegFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_FlashPoint) ) then
-       call FILE_HISTORY_put( HIST_id(I_FlashPoint), fls_int_p_tot(:,:,:) )
        !$omp parallel do
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          fls_int_p_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
+          w3d(k,i,j) = fls_int_p_tot(k,i,j)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_FlashPoint), w3d(:,:,:) )
+    end if
+    if ( HIST_sw(I_FOD) ) then
+       !$omp parallel do
+       do j = JS, JE
+       do i = IS, IE
+          w3d(1,i,j) = B_F2013_TOT(i,j)/dt_LT ![num/grid/s]
+       enddo
+       enddo
+       call FILE_HISTORY_put( HIST_id(I_FOD), w3d(1,:,:) )
     end if
 
 
@@ -2276,7 +2322,8 @@ contains
        NUM_end,    & ! [INOUT]
        LT_path,    & ! [INOUT]
        fls_int_p,  & ! [OUT]
-       d_QCRG      ) ! [OUT]
+       d_QCRG,     & ! [OUT]
+       B_OUT       ) ! [OUT]
     use scale_const, only: &
        EPS    => CONST_EPS, &
        EPSvac => CONST_EPSvac, &
@@ -2335,6 +2382,7 @@ contains
     real(RP), intent(inout) :: LT_path   (KA,IA,JA)     !-- Number of path
     real(RP), intent(out)   :: fls_int_p(KA,IA,JA)      !-- Flash initiation point (0->no flash, 1->flash start at the point)
     real(RP), intent(out)   :: d_QCRG   (KA,IA,JA)      !-- Charge density [nC/m3]
+    real(RP), intent(out)   :: B_OUT    (IA,JA)         !-- B value for output
 
     real(RP), parameter :: q_thre = 0.1_RP ! threshold of discharge zone (Fierro et al. 2013) [nC/m3]
 
@@ -2510,6 +2558,11 @@ contains
     enddo
     enddo
 
+    do j = JS, JE
+    do i = IS, IE
+       B_OUT(i,j) = B(i,j)
+    enddo
+    enddo
 
     deallocate(E_exce_x)
     deallocate(E_exce_y)
