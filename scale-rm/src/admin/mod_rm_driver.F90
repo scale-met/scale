@@ -468,6 +468,7 @@ contains
 
       ! FPM polling
       if ( FPM_alive .AND. FPM_POLLING_FREQ > 0 ) then
+         call PROF_rapstart('FPM', 1)
          if ( fpm_counter > FPM_POLLING_FREQ ) then
             sign_exit = .false.
             call FPM_Polling( .true., sign_exit )
@@ -479,6 +480,7 @@ contains
          endif
 
          fpm_counter = fpm_counter + 1
+         call PROF_rapend('FPM', 1)
       endif
 
     enddo
@@ -499,18 +501,18 @@ contains
 
     call PROF_setprefx('FIN')
 
-    call PROF_rapstart('All', 1)
+    call PROF_rapstart('All', 0)
 
     if( ATMOS_do ) call ATMOS_driver_finalize
 
     ! check data
     if( ATMOS_RESTART_CHECK ) call ATMOS_vars_restart_check
 
-    call PROF_rapstart('Monit', 2)
+    call PROF_rapstart('Monit', 1)
     call MONITOR_finalize
-    call PROF_rapend  ('Monit', 2)
+    call PROF_rapend  ('Monit', 1)
 
-    call PROF_rapstart('File', 2)
+    call PROF_rapstart('File', 1)
     call FILE_HISTORY_finalize
     ! clean up resource allocated for I/O
     call FILE_CARTESC_cleanup
@@ -518,9 +520,9 @@ contains
     call COMM_cleanup
 
     call FILE_Close_All
-    call PROF_rapend  ('File', 2)
+    call PROF_rapend  ('File', 1)
 
-    call PROF_rapend  ('All', 1)
+    call PROF_rapend  ('All', 0)
 
     call PROF_rapreport
 #ifdef PAPI
@@ -604,12 +606,14 @@ contains
     if ( ATMOS_do ) then
        ! calc diagnostics
        call ATMOS_vars_calc_diagnostics
+       call PROF_rapstart('ATM_Refstate', 2)
        call ATMOS_REFSTATE_update( KA, KS, KE, IA, IS, IE, ISB, IEB, JA, JS, JE, JSB, JEB, &
                                    DENS(:,:,:), POTT(:,:,:), TEMP(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                                    CZ(:), FZ(:), FDZ(:), RCDZ(:),                                 & ! [IN]
                                    REAL_CZ(:,:,:), REAL_FZ(:,:,:), REAL_PHI(:,:,:), AREA(:,:),    & ! [IN]
                                    TIME_NOWDAYSEC,                                                & ! [IN]
                                    force = .true.                                                 )
+       call PROF_rapend('ATM_Refstate', 2)
        call ATMOS_BOUNDARY_driver_set
        call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_history_setpres

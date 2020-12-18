@@ -583,6 +583,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('LND_Restart', 1)
+
     LOG_NEWLINE
     LOG_INFO("LAND_vars_restart_open",*) 'Open restart file (LAND) '
 
@@ -607,6 +609,8 @@ contains
        LOG_INFO("LAND_vars_restart_open",*) 'restart file for land is not specified.'
     endif
 
+    call PROF_rapend('LND_Restart', 1)
+
     return
   end subroutine LAND_vars_restart_open
 
@@ -622,6 +626,8 @@ contains
        FILE_CARTESC_flush
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('LND_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -669,6 +675,8 @@ contains
        LOG_ERROR("LAND_vars_restart_read",*) 'invalid restart file ID for land.'
        call PRC_abort
     endif
+
+    call PROF_rapend('LND_Restart', 1)
 
     return
   end subroutine LAND_vars_restart_read
@@ -1291,6 +1299,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('LND_Restart', 1)
+
     if ( LAND_do .and. LAND_RESTART_OUT_BASENAME /= '' ) then
 
        LOG_NEWLINE
@@ -1312,6 +1322,8 @@ contains
 
     endif
 
+    call PROF_rapend('LND_Restart', 1)
+
     return
   end subroutine LAND_vars_restart_create
 
@@ -1322,9 +1334,13 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
+    call PROF_rapstart('LND_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
+
+    call PROF_rapend('LND_Restart', 1)
 
     return
   end subroutine LAND_vars_restart_enddef
@@ -1337,6 +1353,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('LND_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("LAND_vars_restart_close",*) 'Close restart file (LAND) '
@@ -1345,6 +1363,8 @@ contains
 
        restart_fid = -1
     endif
+
+    call PROF_rapend('LND_Restart', 1)
 
     return
   end subroutine LAND_vars_restart_close
@@ -1357,6 +1377,8 @@ contains
     implicit none
     integer :: i
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('LND_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1387,6 +1409,8 @@ contains
 
     endif
 
+    call PROF_rapend('LND_Restart', 1)
+
     return
   end subroutine LAND_vars_restart_def_var
 
@@ -1397,6 +1421,8 @@ contains
        FILE_CARTESC_write_var
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('LND_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1447,6 +1473,8 @@ contains
        end if
 
     endif
+
+    call PROF_rapend('LND_Restart', 1)
 
     return
   end subroutine LAND_vars_restart_write

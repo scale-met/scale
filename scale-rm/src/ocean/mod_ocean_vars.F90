@@ -595,6 +595,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     LOG_NEWLINE
     LOG_INFO("OCEAN_vars_restart_open",*) 'Open restart file (OCEAN) '
 
@@ -616,6 +618,8 @@ contains
        LOG_INFO_CONT(*) 'restart file for ocean is not specified.'
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_open
 
@@ -636,6 +640,8 @@ contains
        OCEAN_ICE_TYPE
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -696,6 +702,8 @@ contains
        LOG_ERROR("OCEAN_vars_restart_read",*) 'invalid restart file ID for ocean.'
        call PRC_abort
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_read
@@ -1153,6 +1161,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     if ( OCEAN_do .and. OCEAN_RESTART_OUT_BASENAME /= '' ) then
        LOG_NEWLINE
        LOG_INFO("OCEAN_vars_restart_create",*) 'Create restart file (OCEAN) '
@@ -1172,6 +1182,8 @@ contains
                                  aggregate = OCEAN_RESTART_OUT_AGGREGATE ) ! [IN]
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_create
 
@@ -1183,9 +1195,13 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_enddef
@@ -1198,6 +1214,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('OCN_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("OCEAN_vars_restart_close",*) 'Close restart file (OCEAN) '
@@ -1206,6 +1224,8 @@ contains
 
        restart_fid = -1
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_close
@@ -1219,6 +1239,8 @@ contains
 
     integer :: i
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        do i = I_TEMP, I_TEMP
@@ -1246,6 +1268,8 @@ contains
        end if
     endif
 
+    call PROF_rapend('OCN_Restart', 1)
+
     return
   end subroutine OCEAN_vars_restart_def_var
 
@@ -1256,6 +1280,8 @@ contains
        FILE_CARTESC_write_var
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('OCN_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        call OCEAN_vars_check( force = .true. )
@@ -1315,6 +1341,8 @@ contains
                                        VAR_NAME(I_ICE_MASS),        'XY',  fill_halo=.true. ) ! [IN]
        end if
     endif
+
+    call PROF_rapend('OCN_Restart', 1)
 
     return
   end subroutine OCEAN_vars_restart_write
