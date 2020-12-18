@@ -851,58 +851,18 @@ contains
     end if
     if ( HIST_sw(I_Qneut) ) then
        call FILE_HISTORY_put( HIST_id(I_Qneut), d_QCRG_TOT(:,:,:) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          d_QCRG_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
     endif
     if ( HIST_sw(I_LTpath)  ) then
        call FILE_HISTORY_put( HIST_id(I_LTpath), LT_PATH_TOT(:,:,:,3) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,3) = 0.0_RP
-       end do
-       end do
-       end do
     endif
     if ( HIST_sw(I_PosFLASH) ) then
        call FILE_HISTORY_put( HIST_id(I_PosFLASH), LT_PATH_TOT(:,:,:,1) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,1) = 0.0_RP
-       end do
-       end do
-       end do
     endif
     if ( HIST_sw(I_NegFLASH) ) then
        call FILE_HISTORY_put( HIST_id(I_NegFLASH), LT_PATH_TOT(:,:,:,2) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          LT_PATH_TOT(k,i,j,2) = 0.0_RP
-       end do
-       end do
-       end do
     endif
     if ( HIST_sw(I_FlashPoint) ) then
        call FILE_HISTORY_put( HIST_id(I_FlashPoint), fls_int_p_tot(:,:,:) )
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          fls_int_p_tot(k,i,j) = 0.0_RP
-       end do
-       end do
-       end do
     end if
 
 
