@@ -564,6 +564,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('URB_Restart', 1)
+
     LOG_NEWLINE
     LOG_INFO("URBAN_vars_restart_open",*) 'Open restart file (URBAN) '
 
@@ -588,6 +590,8 @@ contains
        LOG_INFO("URBAN_vars_restart_open",*) 'restart file for urban is not specified.'
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_open
 
@@ -603,6 +607,8 @@ contains
        FILE_CARTESC_flush
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -657,6 +663,8 @@ contains
        LOG_ERROR("URBAN_vars_restart_read",*) 'invalid restart file ID for urban.'
        call PRC_abort
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_read
@@ -1138,6 +1146,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( URBAN_do .and. URBAN_RESTART_OUT_BASENAME /= '' ) then
 
        LOG_NEWLINE
@@ -1159,6 +1169,8 @@ contains
 
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_create
 
@@ -1169,9 +1181,13 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        call FILE_CARTESC_enddef( restart_fid ) ! [IN]
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_enddef
@@ -1184,6 +1200,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('URB_Restart', 1)
+
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
        LOG_INFO("URBAN_vars_restart_close",*) 'Close restart file (URBAN) '
@@ -1192,6 +1210,8 @@ contains
 
        restart_fid = -1
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_close
@@ -1205,6 +1225,8 @@ contains
 
     integer :: i
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1223,6 +1245,8 @@ contains
 
     endif
 
+    call PROF_rapend('URB_Restart', 1)
+
     return
   end subroutine URBAN_vars_restart_def_var
 
@@ -1233,6 +1257,8 @@ contains
        FILE_CARTESC_write_var
     implicit none
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('URB_Restart', 1)
 
     if ( restart_fid /= -1 ) then
 
@@ -1290,6 +1316,8 @@ contains
                                     VAR_NAME(I_SFC_ALB_VIS_dif), 'XY',  fill_halo=.true. ) ! [IN]
 
     endif
+
+    call PROF_rapend('URB_Restart', 1)
 
     return
   end subroutine URBAN_vars_restart_write

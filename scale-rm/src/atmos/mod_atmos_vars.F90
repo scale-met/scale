@@ -960,6 +960,8 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_vars_restart_open",*) 'Open restart file (ATMOS) '
 
+    call PROF_rapstart('ATM_Restart', 1)
+
     if ( ATMOS_RESTART_IN_BASENAME /= '' ) then
 
        if ( ATMOS_RESTART_IN_POSTFIX_TIMELABEL ) then
@@ -1001,6 +1003,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_open
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_open
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_open
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_open
@@ -1053,6 +1057,8 @@ contains
 
     integer  :: i, j, iq
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('ATM_Restart', 1)
 
     if ( restart_fid /= -1 ) then
        LOG_NEWLINE
@@ -1126,6 +1132,8 @@ contains
     if ( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_read
     if ( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_read
 
+    call PROF_rapend('ATM_Restart', 1)
+
     return
   end subroutine ATMOS_vars_restart_read
 
@@ -1146,6 +1154,8 @@ contains
     real(RP) :: SFC_PRES(IA,JA)
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_History', 1)
+
     call BOTTOM_estimate( KA, KS, KE, IA, ISB, IEB, JA, JSB, JEB, &
                           DENS_av(:,:,:), PRES(:,:,:), QV(:,:,:), & ! [IN]
                           SFC_TEMP(:,:),                          & ! [IN]
@@ -1155,6 +1165,8 @@ contains
     call FILE_HISTORY_CARTESC_set_pres( PHYD    (:,:,:), & ! [IN]
                                         PHYDH   (:,:,:), & ! [IN]
                                         SFC_PRES(:,:)    ) ! [IN]
+
+    call PROF_rapend('ATM_History', 1)
 
     return
   end subroutine ATMOS_vars_history_setpres
@@ -1641,6 +1653,8 @@ contains
 
     integer :: iq
 
+    call PROF_rapstart('ATM_Diag', 1)
+
     call ATMOS_THERMODYN_specific_heat( &
          KA, KS, KE, IA, 1, IA, JA, 1, JA, QA, &
          QTRC_av(:,:,:,:),                                        & ! (in)
@@ -1681,6 +1695,8 @@ contains
 
     ! reset diagnostic variables
     DV_calculated(:) = .false.
+
+    call PROF_rapend('ATM_Diag', 1)
 
     return
   end subroutine ATMOS_vars_calc_diagnostics
@@ -3311,6 +3327,8 @@ contains
     character(len=H_LONG) :: basename
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        LOG_INFO("ATMOS_vars_restart_create",*) 'Output random number for SDM '
@@ -3350,6 +3368,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_create
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_create
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_create
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_create
@@ -3401,6 +3421,8 @@ contains
 
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_enddef
@@ -3421,6 +3443,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_enddef
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_enddef
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_enddef
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_enddef
@@ -3471,6 +3495,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_close
@@ -3498,6 +3524,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_close
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_close
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_close
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_close
@@ -3550,6 +3578,8 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_def_var
@@ -3590,6 +3620,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_def_var
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_def_var
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_def_var
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_def_var
@@ -3642,6 +3674,8 @@ contains
     integer iq
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('ATM_Restart', 1)
+
 #ifdef SDM
     if( sd_rest_flg_out ) then
        call ATMOS_PHY_MP_sdm_restart_write
@@ -3676,6 +3710,8 @@ contains
     if( ATMOS_sw_phy_bl ) call ATMOS_PHY_BL_vars_restart_write
     if( ATMOS_sw_phy_cp ) call ATMOS_PHY_CP_vars_restart_write
     if( ATMOS_sw_phy_lt ) call ATMOS_PHY_LT_vars_restart_write
+
+    call PROF_rapend('ATM_Restart', 1)
 
     return
   end subroutine ATMOS_vars_restart_write

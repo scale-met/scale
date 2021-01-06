@@ -262,6 +262,9 @@ contains
 
     do reqid = 1, MONITOR_nreqs
        if ( name == MONITOR_reqs(reqid) ) then
+
+          call PROF_rapstart('Monit', 2)
+
           MONITOR_nitems = MONITOR_nitems + 1
           itemid = MONITOR_nitems
 
@@ -326,6 +329,8 @@ contains
           LOG_INFO_CONT(*) 'Dimension type  : ', trim(MONITOR_dims(MONITOR_items(itemid)%dimid)%name)
           LOG_INFO_CONT(*) 'Integ. with dt? : ', MONITOR_items(itemid)%tendency
 
+          call PROF_rapend('Monit', 2)
+
           return
        end if
     end do
@@ -350,6 +355,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return
+
+    call PROF_rapstart('Monit', 2)
 
     dimid = MONITOR_items(itemid)%dimid
 
@@ -381,6 +388,8 @@ contains
        endif
     endif
 
+    call PROF_rapend('Monit', 2)
+
     return
   end subroutine MONITOR_put_2D
 
@@ -401,6 +410,8 @@ contains
     !---------------------------------------------------------------------------
 
     if( itemid <= 0 ) return
+
+    call PROF_rapstart('Monit', 2)
 
     dimid = MONITOR_items(itemid)%dimid
 
@@ -433,6 +444,8 @@ contains
           MONITOR_items(itemid)%var = total ! overwrite by last put
        endif
     endif
+
+    call PROF_rapend('Monit', 2)
 
     return
   end subroutine MONITOR_put_3D
@@ -511,7 +524,7 @@ contains
 
     if( MONITOR_nitems == 0 ) return
 
-    call PROF_rapstart('FILE_O_ASCII', 2)
+    call PROF_rapstart('Monit', 2)
 
     if (firsttime) then
        firsttime = .false.
@@ -532,7 +545,7 @@ contains
 
     endif
 
-    call PROF_rapend  ('FILE_O_ASCII', 2)
+    call PROF_rapend('Monit', 2)
 
     return
   end subroutine MONITOR_write
