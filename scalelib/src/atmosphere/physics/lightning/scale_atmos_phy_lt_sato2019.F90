@@ -1027,7 +1027,7 @@ contains
     integer :: i, j, k, ijk, ierror
     real(RP) :: iprod, buf
 
-    call PROF_rapstart('LT_E_field', 1)
+    call PROF_rapstart('LT_E_field', 2)
 
     iprod = 0.0_RP
     !$omp parallel do reduction(+:iprod)
@@ -1051,6 +1051,8 @@ contains
        end do
        end do
        end do
+
+       call PROF_rapend('LT_E_field', 2)
 
        return
     endif
@@ -1259,7 +1261,7 @@ contains
     enddo
     enddo
 
-    call PROF_rapend('LT_E_field', 1)
+    call PROF_rapend('LT_E_field', 2)
 
     return
   end subroutine ATMOS_PHY_LT_electric_field
