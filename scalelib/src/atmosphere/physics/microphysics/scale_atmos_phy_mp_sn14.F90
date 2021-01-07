@@ -2333,9 +2333,6 @@ contains
     !--- Lightning component is on
     if( flg_lt_l ) then
 !       flg_igcol = 0.0_RP
-       crg_split_i = 0.0_RP
-       crg_split_s = 0.0_RP
-       crg_split_g = 0.0_RP
        d0_crg_l = d0_crg
        v0_crg_l = v0_crg
        Qsplt_in(:,:,:,:) = 0.0_RP
@@ -2350,7 +2347,16 @@ contains
 !      endif
     endif
 
-    !$omp parallel do &
+    !$omp parallel do default(none) &
+    !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
+    !$omp        CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,LHV,LHF,LHF0, &
+    !$omp        MP_doautoconversion, &
+    !$omp        DENS,W,QTRC,TEMP0,PRES0,QTRC0,QDRY,CPtot0,CVtot0,CCN, &
+    !$omp        cz,fz,dt, &
+    !$omp        RHOQ_t,RHOE_t,CPtot_t,CVtot_t,EVAPORATE, &
+    !$omp        c_ccn,gamma_v,nc_uplim_d,a_m,b_m,alpha_v,beta_v,a_rea,b_rea,ntmax_phase_change, &
+    !$omp        QTRC_crg,QSPLT_in,RHOQcrg_t_mp,RHOQcrg0_t,Crs,Sarea, &
+    !$omp        d0_crg_l,v0_crg_l,beta_crg,dqcrg,flg_lt_l) &
     !$omp private (pres,temp,rrho,rhoe,rhoq,rhoq2,cva,cpa,rhoq0_t,rhoe0_t,cptot0_t,cvtot0_t, &
     !$omp          xq,dq_xa,vt_xa,wtemp,esw,esi,rho_fac,rho_fac_q, &
     !$omp          drhoqv,drhoqc,drhonc,drhoqr,drhonr,drhoqi,drhoni,drhoqs,drhons,drhoqg,drhong, &
@@ -2360,6 +2366,7 @@ contains
     !$omp          ii_dqi,ii_dni,is_dqi,is_dni,ss_dns,gs_dqs,gs_dns,gg_dng, &
     !$omp          clp_dqc,clp_dnc,clm_dqc,clm_dnc,clp_dqr,clp_dnr,clm_dqr,clm_dnr, &
     !$omp          clp_dqi,clp_dni,clm_dqi,clm_dni,clp_dqs,clp_dns,clm_dqs,clm_dns,clp_dqg,clp_dng,clm_dqg,clm_dng, &
+    !$omp          rhoq_crg,rhoq2_crg,Pcrg1,Pcrg2, &
     !$omp          drhoqcrg_c,drhoqcrg_r,drhoqcrg_i,drhoqcrg_s,drhoqcrg_g, &
     !$omp          crg_split_s,crg_split_g,crg_split_i,wrm_dnc_crg,wrm_dnr_crg, &
     !$omp          gc_dnc_crg,sc_dnc_crg,ic_dnc_crg,rg_dng_crg,rg_dnr_crg,rs_dnr_crg,rs_dns_crg,ri_dnr_crg,ri_dni_crg, &
@@ -2936,6 +2943,7 @@ contains
              crg_split_g =  dt*Pcrg2(I_CGNGacNS2NG,k)*sw1 &
                          +  dt*Pcrg2(I_CGNGacNI2NG,k)*sw2
              crg_split_s = -dt*Pcrg2(I_CGNGacNS2NG,k)*sw1
+             crg_split_i = 0.0_RP
 !!            crg_split_i = -dt*Pcrg2(I_CGNGacNI2NG,k,i,j)*sw2  !Y.Sato (2018/8/31)
              QSPLT_in(k,i,j,1) = crg_split_g / dt    ! fC/s
              QSPLT_in(k,i,j,3) = crg_split_s / dt    ! fC/s
