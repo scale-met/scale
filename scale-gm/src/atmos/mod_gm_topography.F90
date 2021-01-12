@@ -142,6 +142,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Write topography
   subroutine TOPOGRAPHY_write
+    use scale_prc, only: &
+       PRC_abort
     use mod_io_param, only: &
        IO_REAL4, &
        IO_REAL8

@@ -106,6 +106,8 @@ contains
        BULKFLUX_setup
     use mod_fio, only: &
        FIO_setup
+    use mod_gm_topography, only: &
+       TOPOGRAPHY_setup
     use mod_grd, only: &
        GRD_setup
     use mod_gmtr, only: &
@@ -145,8 +147,6 @@ contains
     use mod_embudget, only: &
        embudget_setup, &
        embudget_monitor
-    use mod_gm_topography, only: &
-       TOPOGRAPHY_setup
     use mod_atmos_vars, only: &
        ATMOS_vars_setup
     use mod_atmos_phy_driver, only: &

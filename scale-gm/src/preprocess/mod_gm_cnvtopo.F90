@@ -189,12 +189,16 @@ contains
     real(RP), intent(inout) :: topo   (ADM_gall   ,ADM_lall   )
     real(RP), intent(inout) :: topo_pl(ADM_gall_pl,ADM_lall_pl)
 
-    character(len=H_LONG) :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
-    character(len=H_LONG) :: GTOPO30_IN_CATALOGUE = ''  !< metadata files for GTOPO30
+    character(len=H_LONG)  :: GTOPO30_IN_DIR       = '.' !< directory contains GTOPO30 files (GrADS format)
+    character(len=H_LONG)  :: GTOPO30_IN_CATALOGUE = ''  !< metadata files for GTOPO30
+    character(len=H_SHORT) :: GTOPO30_INTERP_TYPE  = 'LINEAR'
+    integer                :: GTOPO30_INTERP_LEVEL = 5
 
     namelist / PARAM_CNVTOPO_GTOPO30 / &
        GTOPO30_IN_DIR,       &
-       GTOPO30_IN_CATALOGUE
+       GTOPO30_IN_CATALOGUE, &
+       GTOPO30_INTERP_TYPE,  &
+       GTOPO30_INTERP_LEVEL
 
     ! GTOPO30 data
     real(RP), parameter   :: GTOPO30_DLAT = 30.0_RP / 60.0_RP / 60.0_RP ! 30 arc sec.
@@ -202,6 +206,9 @@ contains
 
     integer :: ierr
     !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("CNVTOPO_GTOPO30",*) 'Setup input data'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -219,7 +226,11 @@ contains
                           GTOPO30_DLON,         & ! [IN]
                           GTOPO30_IN_DIR,       & ! [IN]
                           GTOPO30_IN_CATALOGUE, & ! [IN]
-                          'LINEAR'              ) ! [IN]
+                          GTOPO30_INTERP_TYPE,  & ! [IN]
+                          GTOPO30_INTERP_LEVEL  ) ! [IN]
+
+    LOG_NEWLINE
+    LOG_INFO("CNVTOPO_GTOPO30",*) 'Convert from GTOPO30'
 
     call CNV2D_convert( topo   (:,:),           & ! [OUT]
                         topo_pl(:,:),           & ! [OUT]
@@ -260,7 +271,7 @@ contains
     character(len=H_SHORT) :: USERFILE_GrADS_LATNAME  = 'lat'
     character(len=H_SHORT) :: USERFILE_GrADS_LONNAME  = 'lon'
     character(len=H_SHORT) :: USERFILE_INTERP_TYPE    = 'LINEAR'
-    integer                :: USERFILE_INTERP_level   = 5
+    integer                :: USERFILE_INTERP_LEVEL   = 5
 
     namelist / PARAM_CNVTOPO_USERFILE / &
        USERFILE_TYPE,           &
@@ -308,12 +319,13 @@ contains
           call PRC_abort
        endif
 
-       call CNV2D_tile_init( USERFILE_DTYPE,     & ! [IN]
-                             USERFILE_DLAT,      & ! [IN]
-                             USERFILE_DLON,      & ! [IN]
-                             USERFILE_DIR,       & ! [IN]
-                             USERFILE_CATALOGUE, & ! [IN]
-                             'LINEAR'            ) ! [IN]
+       call CNV2D_tile_init( USERFILE_DTYPE,       & ! [IN]
+                             USERFILE_DLAT,        & ! [IN]
+                             USERFILE_DLON,        & ! [IN]
+                             USERFILE_DIR,         & ! [IN]
+                             USERFILE_CATALOGUE,   & ! [IN]
+                             USERFILE_INTERP_TYPE, & ! [IN]
+                             USERFILE_INTERP_LEVEL ) ! [IN]
 
     case('GrADS')
 
@@ -322,12 +334,12 @@ contains
           call PRC_abort
        endif
 
-       call CNV2D_grads_init( USERFILE_GrADS_FILENAME,             &
-                              USERFILE_GrADS_VARNAME,              &
-                              USERFILE_GrADS_LATNAME,              &
-                              USERFILE_GrADS_LONNAME,              &
-                              USERFILE_INTERP_TYPE,                &
-                              interp_level = USERFILE_INTERP_LEVEL )
+       call CNV2D_grads_init( USERFILE_GrADS_FILENAME, & ! [IN]
+                              USERFILE_GrADS_VARNAME,  & ! [IN]
+                              USERFILE_GrADS_LATNAME,  & ! [IN]
+                              USERFILE_GrADS_LONNAME,  & ! [IN]
+                              USERFILE_INTERP_TYPE,    & ! [IN]
+                              USERFILE_INTERP_LEVEL    ) ! [IN]
 
     case default
        LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_TYPE is invalid: ',trim(USERFILE_TYPE)

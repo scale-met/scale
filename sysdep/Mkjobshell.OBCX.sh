@@ -14,6 +14,19 @@ PROCS=${10}
 eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
+if [ "${SCALE_DEBUG}" = "T" ]; then
+   BINDIR=.
+   PPNAME=${PPNAME}_debug
+   INITNAME=${INITNAME}_debug
+   BINNAME=${BINNAME}_debug
+   N2GNAME=${N2GNAME}_debug
+elif [ "${SCALE_QUICKDEBUG}" = "T" ]; then
+   PPNAME=${PPNAME}_quickdebug
+   INITNAME=${INITNAME}_quickdebug
+   BINNAME=${BINNAME}_quickdebug
+   N2GNAME=${N2GNAME}_quickdebug
+fi
+
 # System specific
 MPIEXEC="mpiexec.hydra -n"
 
@@ -24,7 +37,7 @@ do
    (( n > TPROC )) && TPROC=${n}
 done
 
-if [ ! ${PPCONF} = "NONE" ]; then
+if [ ! "${PPCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -34,7 +47,7 @@ if [ ! ${PPCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${INITCONF} = "NONE" ]; then
+if [ ! "${INITCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -44,7 +57,7 @@ if [ ! ${INITCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${RUNCONF} = "NONE" ]; then
+if [ ! "${RUNCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -54,7 +67,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${N2GCONF} = "NONE" ]; then
+if [ ! "${N2GCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -67,7 +80,7 @@ fi
 NNODE=`expr \( $TPROC - 1 \) / 56 + 1`
 NPROC=`expr $TPROC / $NNODE`
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [ "${BINNAME}" = "scale-gm" -o "${BINNAME}" = "scale-gm_debug" -o "${BINNAME}" = "scale-gm_quickdebug" ]; then
    nc=""
 else
    nc=".nc"
@@ -82,12 +95,12 @@ cat << EOF1 > ./run.sh
 # ------ For Oakbridge-CX -----
 #
 ################################################################################
-#PJM -g gn11
+#PJM -g go41
 #PJM -L rscgrp=regular
 #PJM -L node=${NNODE}
 #PJM --mpi proc=${TPROC}
 #PJM --omp thread=1
-#PJM -L elapse=01:00:00
+#PJM -L elapse=03:00:00
 #PJM -N SCALE
 #PJM -X
 #PJM -j

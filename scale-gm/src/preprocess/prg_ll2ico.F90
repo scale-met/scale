@@ -33,6 +33,10 @@ program ll2ico
   use mod_gm_topography, only: &
      TOPOGRAPHY_setup, &
      TOPOGRAPHY_write
+  use mod_grd, only: &
+     GRD_setup
+  use mod_gmtr, only: &
+     GMTR_setup
   use mod_gm_convert, only: &
      CONVERT_setup, &
      CONVERT
@@ -102,6 +106,12 @@ program ll2ico
 
   !---< topography module setup >---
   call TOPOGRAPHY_setup
+
+  !---< grid module setup >---
+  call GRD_setup
+
+  !---< geometrics module setup >---
+  call GMTR_setup
 
   !---< preprocess converter setup >---
   call CONVERT_setup
