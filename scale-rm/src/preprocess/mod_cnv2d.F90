@@ -207,7 +207,7 @@ contains
     CNV2D_tile_dtype = DTYPE
     CNV2D_tile_dir   = dir
 
-    call CNV2D_init( interp_type, &
+    call CNV2D_init( interp_type,                 &
                      interp_level = interp_level, &
                      ll_struct = .true.           )
 
@@ -238,7 +238,7 @@ contains
     character(len=*), intent(in) :: LAT_NAME
     character(len=*), intent(in) :: LON_NAME
     character(len=*), intent(in) :: INTERP_TYPE
-    integer,          intent(in), optional :: interp_level
+    integer,          intent(in) :: interp_level
     real(RP),         intent(in), optional :: search_limit
     character(len=*), intent(in), optional :: POSTFIX
 
@@ -314,10 +314,10 @@ contains
     CNV2D_GrADS_fid = file_id
     CNV2D_GrADS_vid = var_id
 
-    call CNV2D_init( interp_type, &
+    call CNV2D_init( interp_type,                 &
                      interp_level = interp_level, &
                      search_limit = search_limit, &
-                     ll_struct = .false.          )
+                     ll_struct    = .false.       )
 
     return
   end subroutine CNV2D_grads_init

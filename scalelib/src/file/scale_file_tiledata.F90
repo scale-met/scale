@@ -87,6 +87,7 @@ contains
     real(RP) :: LAT_MIN, LAT_MAX
 
     integer :: DOMAIN_JS, DOMAIN_JE, DOMAIN_IS, DOMAIN_IE
+    !---------------------------------------------------------------------------
 
     call FILE_TILEDATA_get_domain_info( TILE_DLAT, TILE_DLON,                               & ! [IN]
                                         DOMAIN_LATS, DOMAIN_LATE, DOMAIN_LONS, DOMAIN_LONE, & ! [IN]
@@ -95,6 +96,7 @@ contains
 
 
     if ( catalog_fname /= "" ) then
+       LOG_NEWLINE
        LOG_INFO("FILE_TILEDATA_get_info",*) 'Input catalogue file:', trim(catalog_fname)
 
        call FILE_TILEDATA_read_catalog_file( TILE_nlim,                  & ! [IN]
