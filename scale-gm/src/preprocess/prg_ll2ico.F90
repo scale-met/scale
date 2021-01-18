@@ -37,6 +37,8 @@ program ll2ico
      GRD_setup
   use mod_gmtr, only: &
      GMTR_setup
+  use mod_oprt, only: &
+     OPRT_setup
   use mod_gm_convert, only: &
      CONVERT_setup, &
      CONVERT
@@ -112,6 +114,9 @@ program ll2ico
 
   !---< geometrics module setup >---
   call GMTR_setup
+
+  !---< operator module setup >---
+  call OPRT_setup
 
   !---< preprocess converter setup >---
   call CONVERT_setup

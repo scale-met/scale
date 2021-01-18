@@ -51,9 +51,9 @@ module mod_gm_cnvtopo
   logical,  private :: CNVTOPO_UseGTOPO30            = .false.
   logical,  private :: CNVTOPO_UseUSERFILE           = .false.
 
-  integer,  private :: CNVTOPO_smooth_hypdiff_order  = 4
+  integer,  private :: CNVTOPO_smooth_power_factor   = 4
   integer,  private :: CNVTOPO_smooth_itelim         = 10000
-  real(RP), private :: CNVTOPO_smooth_maxslope       = -1.0_RP ! [deg]
+  real(RP), private :: CNVTOPO_smooth_maxslope       = -1.0_RP
   real(RP), private :: CNVTOPO_smooth_maxslope_limit
 
   !-----------------------------------------------------------------------------
@@ -71,7 +71,7 @@ contains
        CNVTOPO_name,                  &
        CNVTOPO_UseGTOPO30,            &
        CNVTOPO_UseUSERFILE,           &
-       CNVTOPO_smooth_hypdiff_order,  &
+       CNVTOPO_smooth_power_factor,  &
        CNVTOPO_smooth_maxslope,       &
        CNVTOPO_smooth_itelim,         &
        CNVTOPO_smooth_type
@@ -360,13 +360,60 @@ contains
   subroutine CNVTOPO_smooth( &
        topo,   &
        topo_pl )
+    use scale_const, only: &
+       EPS => CONST_EPS, &
+       PI  => CONST_PI
     use scale_prc, only: &
        PRC_abort
+    use scale_prc_icoA, only: &
+       PRC_have_pl
+    use scale_comm_icoA, only: &
+       COMM_data_transfer
+    use mod_gmtr, only: &
+       GMTR_area,   &
+       GMTR_area_pl
+    use mod_oprt, only: &
+       OPRT_gradient,     &
+       OPRT_coef_grad,    &
+       OPRT_coef_grad_pl, &
+       OPRT_laplacian,    &
+       OPRT_coef_lap,     &
+       OPRT_coef_lap_pl,  &
+       OPRT_diffusion,    &
+       OPRT_coef_intp,    &
+       OPRT_coef_intp_pl, &
+       OPRT_coef_diff,    &
+       OPRT_coef_diff_pl
+    use mod_gm_statistics, only: &
+       GTL_max, &
+       GTL_min
     implicit none
 
     real(RP), intent(inout) :: topo   (ADM_gall   ,ADM_KNONE,ADM_lall   ,1)
     real(RP), intent(inout) :: topo_pl(ADM_gall_pl,ADM_KNONE,ADM_lall_pl,1)
 
+    integer,  parameter :: nfact   = 10
+    real(RP), parameter :: gamma_h = 1.0_RP / 16.0_RP / 10.0_RP
+
+    real(RP) :: coef        (ADM_gall   ,ADM_KNONE,ADM_lall   )
+    real(RP) :: coef_pl     (ADM_gall_pl,ADM_KNONE,ADM_lall_pl)
+    real(RP) :: zgrad_abs_ij(ADM_gall   ,ADM_KNONE,ADM_lall   ,1)
+    real(RP) :: dv_ij       (ADM_gall   ,ADM_KNONE,ADM_lall   ,1)
+
+    real(RP) :: zsfc        (ADM_iall,ADM_jall,ADM_KNONE,ADM_lall   )
+    real(RP) :: zsfc_pl     (ADM_gall_pl      ,ADM_KNONE,ADM_lall_pl)
+    real(RP) :: zgrad       (ADM_iall,ADM_jall,ADM_KNONE,ADM_lall   ,ADM_nxyz)
+    real(RP) :: zgrad_pl    (ADM_gall_pl      ,ADM_KNONE,ADM_lall_pl,ADM_nxyz)
+    real(RP) :: zgrad_abs   (ADM_iall,ADM_jall,ADM_KNONE,ADM_lall   ,1)
+    real(RP) :: zgrad_abs_pl(ADM_gall_pl      ,ADM_KNONE,ADM_lall_pl,1)
+    real(RP) :: kh          (ADM_iall,ADM_jall,ADM_KNONE,ADM_lall   )
+    real(RP) :: kh_pl       (ADM_gall_pl      ,ADM_KNONE,ADM_lall_pl)
+    real(RP) :: dv          (ADM_iall,ADM_jall,ADM_KNONE,ADM_lall   ,1)
+    real(RP) :: dv_pl       (ADM_gall_pl      ,ADM_KNONE,ADM_lall_pl,1)
+    real(RP) :: maxcoef, mincoef
+    real(RP) :: maxgrad
+
+    integer  :: n, ite
     !---------------------------------------------------------------------------
 
     if ( CNVTOPO_smooth_type == 'OFF' ) then
@@ -376,10 +423,100 @@ contains
        return
     else
        LOG_NEWLINE
-       LOG_INFO("CNVTOPO_smooth",*) 'Apply smoothing.'
-       LOG_INFO_CONT(*) 'Slope limit    = ', CNVTOPO_smooth_maxslope_limit
-       LOG_INFO_CONT(*) 'Smoothing type = ', CNVTOPO_smooth_type
-       LOG_NEWLINE
+       LOG_INFO("CNVTOPO_smooth",*) 'Apply LAPLACIAN smoothing.'
+       LOG_INFO_CONT(*) 'Slope limit = ', CNVTOPO_smooth_maxslope_limit
+
+       coef(:,ADM_KNONE,:) = gamma_h * ( 2.0_RP * sqrt(GMTR_area(:,:)/PI) )**2
+
+       if ( PRC_have_pl ) then
+          coef_pl(:,ADM_KNONE,:) = gamma_h * ( 2.0_RP * sqrt(GMTR_area_pl(:,:)/PI) )**2
+       endif
+
+       mincoef = GTL_min(coef(:,:,:),coef_pl(:,:,:),1,1,1)
+       maxcoef = GTL_max(coef(:,:,:),coef_pl(:,:,:),1,1,1)
+       LOG_INFO_CONT(*) '### coef (min/max) = ', mincoef, maxcoef
+
+       do ite = 1, CNVTOPO_smooth_itelim
+
+          zsfc = reshape(topo,shape(zsfc))
+
+          if ( PRC_have_pl ) then
+             zsfc_pl(:,:,:) = topo_pl(:,:,:,1)
+          endif
+
+          call OPRT_gradient( zgrad         (:,:,:,:,:), zgrad_pl         (:,:,:,:), & ! [OUT]
+                              zsfc          (:,:,:,:),   zsfc_pl          (:,:,:),   & ! [IN]
+                              OPRT_coef_grad(:,:,:,:,:), OPRT_coef_grad_pl(:,:,:)    ) ! [IN]
+
+          zgrad_abs(:,:,:,:,1) = sqrt( zgrad(:,:,:,:,1)**2 &
+                                     + zgrad(:,:,:,:,2)**2 &
+                                     + zgrad(:,:,:,:,3)**2 )
+
+          if ( PRC_have_pl ) then
+             zgrad_abs_pl(:,:,:,1) = sqrt( zgrad_pl(:,:,:,1)**2 &
+                                         + zgrad_pl(:,:,:,2)**2 &
+                                         + zgrad_pl(:,:,:,3)**2 )
+          endif
+
+          zgrad_abs_ij = reshape(zgrad_abs,shape(zgrad_abs_ij))
+
+          call COMM_data_transfer( zgrad_abs_ij, zgrad_abs_pl )
+
+          maxgrad = GTL_max(zgrad_abs_ij(:,:,:,1),zgrad_abs_pl(:,:,:,1),1,1,1)
+
+          zgrad_abs = reshape(zgrad_abs_ij,shape(zgrad_abs))
+
+          kh(:,:,:,:) = ( abs(zgrad_abs(:,:,:,:,1)/maxgrad)+EPS )**CNVTOPO_smooth_power_factor
+
+          if ( PRC_have_pl ) then
+             kh_pl(:,:,:) = ( abs(zgrad_abs_pl(:,:,:,1)/maxgrad)+EPS )**CNVTOPO_smooth_power_factor
+          endif
+
+          do n = 1, nfact
+
+             zsfc = reshape(topo,shape(zsfc))
+
+             if ( PRC_have_pl ) then
+                zsfc_pl(:,:,:) = topo_pl(:,:,:,1)
+             endif
+
+             if ( CNVTOPO_smooth_power_factor /= 0.0_RP ) then
+                call OPRT_diffusion( dv            (:,:,:,:,1),   dv_pl            (:,:,:,1), & ! [OUT]
+                                     zsfc          (:,:,:,:),     zsfc_pl          (:,:,:),   & ! [IN]
+                                     kh            (:,:,:,:),     kh_pl            (:,:,:),   & ! [IN]
+                                     OPRT_coef_intp(:,:,:,:,:,:), OPRT_coef_intp_pl(:,:,:,:), & ! [IN]
+                                     OPRT_coef_diff(:,:,:,:,:),   OPRT_coef_diff_pl(:,:,:)    ) ! [IN]
+             else
+                call OPRT_laplacian( dv           (:,:,:,:,1), dv_pl           (:,:,:,1), & ! [OUT]
+                                     zsfc         (:,:,:,:),   zsfc_pl         (:,:,:),   & ! [IN]
+                                     OPRT_coef_lap(:,:,:,:),   OPRT_coef_lap_pl(:,:)      ) ! [IN]
+             endif
+
+             dv_ij = reshape(dv,shape(dv_ij))
+
+             call COMM_data_transfer( dv_ij, dv_pl )
+
+             topo(:,:,:,1) = max( topo(:,:,:,1) + coef(:,:,:) * dv_ij(:,:,:,1), 0.0_RP )
+
+             if ( PRC_have_pl ) then
+                topo_pl(:,:,:,1) = max( topo_pl(:,:,:,1) + coef_pl(:,:,:) * dv_pl(:,:,:,1), 0.0_RP )
+             endif
+
+             call COMM_data_transfer( topo, topo_pl )
+
+!            minzsfc = GTL_min(zsfc(:,:,:,1),zsfc_pl(:,:,:,1),1,1,1)
+!            maxzsfc = GTL_max(zsfc(:,:,:,1),zsfc_pl(:,:,:,1),1,1,1)
+!            write(IO_FID_LOG,*) '### zsfc (min/max) = ', minzsfc, maxzsfc
+          enddo
+
+          LOG_INFO_CONT('(A,I6,A,ES24.16)') 'ite = ', ite, ', maxgrad = ', maxgrad
+
+          if( maxgrad <= CNVTOPO_smooth_maxslope_limit ) exit
+          if( maxgrad >= 1.E+5     ) exit
+       enddo
+
+       LOG_INFO("CNVTOPO_smooth",*) 'Finish smoothing.'
+
     endif
 
     return
