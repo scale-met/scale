@@ -141,9 +141,12 @@ contains
        TOPOGRAPHY_fillhalo, &
        TOPOGRAPHY_Zsfc,     &
        TOPOGRAPHY_Zsfc_pl
+    use mod_gm_statistics, only: &
+       GTL_max, &
+       GTL_min
     implicit none
 
-    integer :: i, j
+    real(RP) :: mintopo, maxtopo
     !---------------------------------------------------------------------------
 
     if ( CNVTOPO_DoNothing ) then
@@ -169,6 +172,13 @@ contains
        call TOPOGRAPHY_fillhalo
 
        LOG_PROGRESS(*) 'end   convert topography data'
+
+       mintopo = GTL_min(TOPOGRAPHY_Zsfc(:,:,:,1),TOPOGRAPHY_Zsfc_pl(:,:,:,1),1,1,1)
+       maxtopo = GTL_max(TOPOGRAPHY_Zsfc(:,:,:,1),TOPOGRAPHY_Zsfc_pl(:,:,:,1),1,1,1)
+
+       LOG_NEWLINE
+       LOG_INFO_CONT('(A,ES24.16)') 'Minimum topography height = ', mintopo
+       LOG_INFO_CONT('(A,ES24.16)') 'Maximum topography height = ', maxtopo
     endif
 
     return
