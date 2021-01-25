@@ -190,12 +190,12 @@ contains
                              CNVUSER_INTERP_TYPE,                  &
                              interp_level = CNVUSER_INTERP_LEVEL   )
     case ( 'GrADS' )
-       call CNV2D_grads_init( CNVUSER_GrADS_FILENAME,             &
-                              CNVUSER_GrADS_VARNAME,              &
-                              CNVUSER_GrADS_LATNAME,              &
-                              CNVUSER_GrADS_LONNAME,              &
-                              CNVUSER_INTERP_TYPE,                &
-                              interp_level = CNVUSER_INTERP_LEVEL )
+       call CNV2D_grads_init( CNVUSER_GrADS_FILENAME, &
+                              CNVUSER_GrADS_VARNAME,  &
+                              CNVUSER_GrADS_LATNAME,  &
+                              CNVUSER_GrADS_LONNAME,  &
+                              CNVUSER_INTERP_TYPE,    &
+                              CNVUSER_INTERP_LEVEL    )
        if ( CNVUSER_OUT_VARNAME == '' ) CNVUSER_OUT_VARNAME = CNVUSER_GrADS_VARNAME
     case ( 'GrADS-3D' )
        call FILE_GrADS_open( CNVUSER_GrADS_FILENAME, & ! [IN]

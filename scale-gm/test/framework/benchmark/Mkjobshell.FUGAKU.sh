@@ -69,7 +69,7 @@ x=${array[0]}
 y=${array[1]:-1}
 let xy="${x} * ${y}"
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"

@@ -5,10 +5,10 @@
 \section{Preparataion of databases: Horizontal grid}
 %-------------------------------------------------------------------------------
 
-To run the scale-gm, you need to prepare horizontal grid databases. 
-The database for g-level=5, r-level=0, and 10 MPI processes 
+To run the scale-gm, you need to prepare horizontal grid databases.
+The database for g-level=5, r-level=0, and 10 MPI processes
 is included in the tarball, as an example.
-However, if you use a different set of settings, you need to prepare databases 
+However, if you use a different set of settings, you need to prepare databases
 either by donwloading prepared databases or by creating them yourself.
 
 
@@ -25,18 +25,18 @@ The databases for some of the typical settings\footnote{At the time of
     \item scale-gm\_database\_gl07rl02pe160.tar.gz
 \end{itemize}} can be downloaded from \noindent \url{https://scale.riken.jp/ja/download/}
 
-Suppose you use g-level=6, r-level=1, 40 MPI processes, 
-Download and untar scale-gm\_database\_gl06rl01pe40.tar.gz, 
+Suppose you use g-level=6, r-level=1, 40 MPI processes,
+Download and untar scale-gm\_database\_gl06rl01pe40.tar.gz,
  then you have 40 boundary (horizontal grid database)
 files and 41 llmap (LatLon
-grid conversion table) files. 
+grid conversion table) files.
 \begin{verbatim}
   $ tar -zxvf scale-gm_database_gl06rl01pe40.tar.gz
 \end{verbatim}
 
 \noindent Then you need to move each database to appropriate directories.
 
-\noindent First the boundary files are moved to a new directory under 
+\noindent First the boundary files are moved to a new directory under
 \texttt{scale-{\version}/scale-gm/test/data/grid/boundary}
 Suppose we are in the untared directory, use the following commands
 \\
@@ -46,7 +46,7 @@ Suppose we are in the untared directory, use the following commands
 \verb|  $ mv boundary_GL06RL01.* scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl06rl01pe40/|
 \\
 
-\noindent The llmap files are moved to a new directory under 
+\noindent The llmap files are moved to a new directory under
 \texttt{scale-{\version}/scale-gm/test/data/grid/llmap}
 
 \verb|  $ mkdir -p scale-|{\version}\verb|/scale-gm/test/data/grid/llmap/gl06/rl01|
@@ -60,7 +60,7 @@ Suppose we are in the untared directory, use the following commands
 \subsection{Create new databases}
 \textcolor{red}{[要検討: ここで言及するのがいいのか、後(例えば3章)の方がいいのか]}
 
-Creating horizontal grid databases consist of the three steps: Creation of 
+Creating horizontal grid databases consist of the three steps: Creation of
 \begin{enumerate}
   \item Process managing database
   \item Raw grid database
@@ -69,7 +69,7 @@ Creating horizontal grid databases consist of the three steps: Creation of
 
 %\renewcommand{\labelenumi}{(\roman{enumi})}
 %%%% Creation of horizontal grid databases %%%%%%%%%
-\subsubsection{Creation of process managing database} 
+\subsubsection{Creation of process managing database}
 
 If the target directory does not exist, make it \\
 
@@ -216,9 +216,9 @@ created under \verb|scale-|{\version}\verb|/scale-gm/test/data/grid/boundary/gl0
 %%%% Creation of LatLon grid conversion databases %%%%%%%%%
 \subsubsection{Creation of LatLon grid conversion database}
 SCALE-gm outputs are defined at each grid point of the icosahedral grids.
-It is easy to transform the output into some familiar coordinates. 
-This database provides a way to convert the SCALE-gm outputs from its native 
-coordinates to some familiar coordinates.  
+It is easy to transform the output into some familiar coordinates.
+This database provides a way to convert the SCALE-gm outputs from its native
+coordinates to some familiar coordinates.
 
 If the target directory does not exist, make it \\
 \verb|  $ mkdir scale-|{\version}\verb|/scale-gm/test/framework/llmap/gl06rl01pe20_t42| \\
@@ -253,7 +253,6 @@ Edit the mkllmap.cnf
 \verb|  hgrid_io_mode = "ADVANCED", |&\\
 \verb|  hgrid_fname   = "boundary_GL05RL01", |&\\
 \verb|  VGRID_fname   = "NONE", |&\\
-\verb|  topo_fname    = "NONE", |&\\
 \verb|/ |\\
 
 \verb|&LATLONPARAM |&\\
@@ -306,16 +305,16 @@ Execute run.sh  \\
 %-------------------------------------------------------------------------------
 \subsection{Test cases}
 
-Several idealized case studies are prepared under the directory 
-\noindent \texttt{scale-{\version}/scale-gm/test/case} 
+Several idealized case studies are prepared under the directory
+\noindent \texttt{scale-{\version}/scale-gm/test/case}
 For example, table 1 summarizes the DCMIP2016 experiment cases.
 %\textcolor{red}{[英語版未対応-----ここから]}
-The details of these test cases can be found at 
+The details of these test cases can be found at
 \url{https://www.earthsystemcog.org/projects/dcmip-2016/testcases}
 or the Test Case Document that is downloadable from the site.
-Under these test case directories lie some directories with 
-different horizontal grid space and MPI process numbers. 
-You can chose a directory depending on your computational resources 
+Under these test case directories lie some directories with
+different horizontal grid space and MPI process numbers.
+You can chose a directory depending on your computational resources
 and purposes.
 It is also possible to make the databases that are suitable for your needs,
 according to the steps addressed in the previous section.
@@ -335,7 +334,7 @@ according to the steps addressed in the previous section.
 
 \subsection{Execution: scale-gm}
 
-Jobcommands depend on the system you use, but we have a system 
+Jobcommands depend on the system you use, but we have a system
 that creates scripts depending on your computational environments.
 After moving to an arbitrary directory \footnote{for example
   \texttt{scale-{\version}/scale-gm/test/case/DCMIP2016-11/gl06rl01z30pe40}},
@@ -364,7 +363,7 @@ DCMIP2016実験においては、scale-gmを実行したとき、
 
 \section{Post-process: ico2ll}
 %-------------------------------------------------------------------------------
-To ease drawing and analysis of the outputs, you can convert 
+To ease drawing and analysis of the outputs, you can convert
 from the original icosahedral horizontal grid itno LatLon horizotnal grid.
 
 Before executing the post-process, you need to edit \verb|ico2ll.sh|
@@ -386,8 +385,8 @@ according to your experimental setups.
    sh ico2ll.sh
  \end{verbatim}
 
- \noindent The LatLon grid data created by ico2ll is in netcdf format. 
-In this case, the output file name is something like 
+ \noindent The LatLon grid data created by ico2ll is in netcdf format.
+In this case, the output file name is something like
 ``\verb|nicam.161.200.L30.interp_latlon.nc|''
-Also by changing the script settings, you can create output data in 
-grads format. 
+Also by changing the script settings, you can create output data in
+grads format.

@@ -470,7 +470,7 @@ contains
     character(len=H_SHORT) :: USERFILE_GrADS_LATNAME   = 'lat'
     character(len=H_SHORT) :: USERFILE_GrADS_LONNAME   = 'lon'
     character(len=H_SHORT) :: USERFILE_INTERP_TYPE     = 'LINEAR'
-    integer                :: USERFILE_INTERP_level    = 5
+    integer                :: USERFILE_INTERP_LEVEL    = 5
 
 
     namelist / PARAM_CNVTOPO_USERFILE / &
@@ -540,12 +540,12 @@ contains
           call PRC_abort
        endif
 
-       call CNV2D_grads_init( USERFILE_GrADS_FILENAME,             &
-                              USERFILE_GrADS_VARNAME,              &
-                              USERFILE_GrADS_LATNAME,              &
-                              USERFILE_GrADS_LONNAME,              &
-                              USERFILE_INTERP_TYPE,                &
-                              interp_level = USERFILE_INTERP_LEVEL )
+       call CNV2D_grads_init( USERFILE_GrADS_FILENAME, &
+                              USERFILE_GrADS_VARNAME,  &
+                              USERFILE_GrADS_LATNAME,  &
+                              USERFILE_GrADS_LONNAME,  &
+                              USERFILE_INTERP_TYPE,    &
+                              USERFILE_INTERP_LEVEL    )
 
     case default
        LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_TYPE is invalid: ',trim(USERFILE_TYPE)

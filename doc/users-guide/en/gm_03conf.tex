@@ -35,7 +35,7 @@
     \verb|$ vi nhm_driver.cnf | & \\
     \verb| * snip * | & \\
     \\
-    \verb| &RUNCONFPARAM  | & \\ 
+    \verb| &RUNCONFPARAM  | & \\
     \verb|   RUNNAME        = 'DCMIP2016-11',  | &  {\verb| <--|} \\
     \verb|   NDIFF_LOCATION = 'IN_LARGE_STEP2', | & \\
     \verb|   THUBURN_LIM    = .true., | & \\
@@ -48,8 +48,8 @@
     \\
     \verb| &DYCORETESTPARAM | & \\
     \verb|   init_type   = 'Jablonowski-Moist', | & {\verb| <--|} \\
-    \verb|   test_case   = '1',                 | & {\verb| <--|}\\  
-    \verb|   chemtracer  = .true.,              | & {\verb| <--|}\\  
+    \verb|   test_case   = '1',                 | & {\verb| <--|}\\
+    \verb|   chemtracer  = .true.,              | & {\verb| <--|}\\
     \verb|   prs_rebuild = .false.,              | & {\verb| <--|}\\
     \verb| / | & \\
     \\
@@ -107,7 +107,7 @@
    \verb|  /| & \\
    \\
    \verb|  * snip * | & \\
-   \\ 
+   \\
    \verb|  &FORCING_DCMIP_PARAM | & \\
    \verb|    SET_DCMIP2016_12 = .true.,| & {\verb|<--|} \\
    \verb|  / | & \\
@@ -208,7 +208,7 @@
    \\
    \verb|  &FORCING_DCMIP_PARAM | & \\
    \verb|    SET_DCMIP2016_11 = .true., | & \\
-   \verb|    SET_DCMIP2016_LSC = .true.,  | & {\verb|<--|}\\     
+   \verb|    SET_DCMIP2016_LSC = .true.,  | & {\verb|<--|}\\
    \verb|   / | & \\
    \\
    \verb|  * snip *  | & \\
@@ -227,7 +227,7 @@
    \\
    \verb|  &FORCING_DCMIP_PARAM | & \\
    \verb|    SET_DCMIP2016_11 = .true.,   | & \\
-   \verb|    SET_DCMIP2016_DRY = .true.,  | & {\verb|<--|}\\     
+   \verb|    SET_DCMIP2016_DRY = .true.,  | & {\verb|<--|}\\
    \verb|   / | & \\
    \\
    \verb|  * snip * | & \\
@@ -247,7 +247,7 @@
   \\
   \verb|   &FORCING_DCMIP_PARAM | & \\
   \verb|     SET_DCMIP2016_12 = .true., | & \\
-  \verb|     SM_PBL_Bryan     = .true., | & {\verb|<--|}\\      
+  \verb|     SM_PBL_Bryan     = .true., | & {\verb|<--|}\\
   \verb|    / | & \\
   \\
   \verb|   * snip * | & \\
@@ -270,7 +270,7 @@
   \verb|     NDIFF_LOCATION = 'IN_LARGE_STEP2',| & \\
   \verb|     THUBURN_LIM    = .true.,| & \\
   \verb|     RAIN_TYPE      = "WARM",| & \\
-  \verb|     AF_TYPE        = 'NONE',| & {\verb|<--|} \\ 
+  \verb|     AF_TYPE        = 'NONE',| & {\verb|<--|} \\
   \verb|    /| & \\
   \\
   \verb|   * snip *| & \\
@@ -284,13 +284,13 @@
  used in SCLAE-RM.  \\
 
  \editboxtwo{
-   \verb|  &TIMEPARAM| & \\   
-   \verb|  &  DTL         = 600.D0,| & \\      
+   \verb|  &TIMEPARAM| & \\
+   \verb|  &  DTL         = 600.D0,| & \\
    \verb|  &  DTL_rd      = 1800.D0,| & {\verb|<--|}\\
-   \verb|  &  LSTEP_MAX   = 50,| & \\      
-   \verb|  &  INTEG_TYPE  = "RK3",| & \\      
-   \verb|  &  start_date  = 0000,1,1,0,0,0| & \\      
-   \verb|  /| & \\      
+   \verb|  &  LSTEP_MAX   = 50,| & \\
+   \verb|  &  INTEG_TYPE  = "RK3",| & \\
+   \verb|  &  start_date  = 0000,1,1,0,0,0| & \\
+   \verb|  /| & \\
    \verb|   * snip *| & \\
    \verb| $ vi nhm_driver.cnf | & \\
    \verb|  * snip * | & \\
@@ -314,7 +314,7 @@
    \item "DTL\_rd" defines the interval of time integration. If not specified,
      DTL\_rd=DTL is assumed.
    \item If "ATMOS\_PHY\_TYPE" is neither set to ``SIMPLE'' nor ``NONE'',
-     sophisticated parameterizations are used. 
+     sophisticated parameterizations are used.
    \item ``TOMITA08'' has been tested. However, another type of microphisics schemes listed in
      Table V.5.1 could be used.
    \item ``BULK'' scheme can be used as surface flux parameterization.
@@ -355,8 +355,8 @@
  \editboxtwo{
   \verb|  $ vi Makefile |& \\
   \verb|   glevel = 5   |& \\
-  \verb|   rlevel = 1   |& {\verb|<--|}\\   
-  \verb|   nmpi   = 40  |& {\verb|<--|}\\   
+  \verb|   rlevel = 1   |& {\verb|<--|}\\
+  \verb|   nmpi   = 40  |& {\verb|<--|}\\
   \verb|   zlayer = 30  |& \\
   \verb|   vgrid  = vgrid30_stretch_30km_dcmip2016.dat |& \\
  }
@@ -369,7 +369,7 @@
   \verb|   * snip * |&\\
   \verb|   &ADMPARAM |&\\
   \verb|     glevel      = 5, |&\\
-  \verb|     rlevel      = 1, |& {\verb|<--|} \\ 
+  \verb|     rlevel      = 1, |& {\verb|<--|} \\
   \verb|     vlayer      = 30, |&\\
   \verb|     rgnmngfname = "rl01-prc40.info", |& {\verb|<--|} \\
   \verb|    / |&\\
@@ -379,7 +379,6 @@
   \verb|     hgrid_fname   = "boundary_GL05RL01", |& {\verb|<--|} \\
   \verb|     VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat", |&\\
   \verb|     vgrid_scheme  = "LINEAR", |&\\
-  \verb|     topo_fname    = "NONE", |&\\
   \verb|    / |&\\
   \\
   \verb|   * snip * |&\\
@@ -429,9 +428,9 @@
  On the Lines from 17 to 21, edit parameters.
  \editboxtwo{
   \verb|  $ vi Makefile | & \\
-  \verb|   glevel = 6 | & {\verb|<--|}  \\  
-  \verb|   rlevel = 1 | & {\verb|<--|}  \\  
-  \verb|   nmpi   = 40 | & {\verb|<--|}  \\ 
+  \verb|   glevel = 6 | & {\verb|<--|}  \\
+  \verb|   rlevel = 1 | & {\verb|<--|}  \\
+  \verb|   nmpi   = 40 | & {\verb|<--|}  \\
   \verb|   zlayer = 30 | & \\
   \verb|   vgrid  = vgrid30_stretch_30km_dcmip2016.dat | & \\
  }
@@ -460,7 +459,6 @@
    \verb|    hgrid_fname   = "boundary_GL06RL01", | & {\verb|<--|}\\
    \verb|    VGRID_fname   = "vgrid30_stretch_30km_dcmip2016.dat", | & \\
    \verb|    vgrid_scheme  = "LINEAR", | & \\
-   \verb|    topo_fname    = "NONE", | & \\
    \verb|   / | & \\
    \\
    \verb|  &TIMEPARAM | & \\
