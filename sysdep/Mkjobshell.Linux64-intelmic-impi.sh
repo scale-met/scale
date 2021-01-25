@@ -68,7 +68,7 @@ NNODE=`expr \( $TPROC - 1 \) / 70 + 1`
 NPROC=`expr $TPROC / $NNODE`
 NPIN=`expr 287 / \( $NPROC \) + 1`
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"

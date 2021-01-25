@@ -14,19 +14,6 @@ PROCS=${10}
 eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
-if [ "${SCALE_DEBUG}" = "T" ]; then
-   BINDIR=.
-   PPNAME=${PPNAME}_debug
-   INITNAME=${INITNAME}_debug
-   BINNAME=${BINNAME}_debug
-   N2GNAME=${N2GNAME}_debug
-elif [ "${SCALE_QUICKDEBUG}" = "T" ]; then
-   PPNAME=${PPNAME}_quickdebug
-   INITNAME=${INITNAME}_quickdebug
-   BINNAME=${BINNAME}_quickdebug
-   N2GNAME=${N2GNAME}_quickdebug
-fi
-
 # System specific
 MPIEXEC="mpiexec.hydra -n"
 
@@ -80,7 +67,7 @@ fi
 NNODE=`expr \( $TPROC - 1 \) / 56 + 1`
 NPROC=`expr $TPROC / $NNODE`
 
-if [ "${BINNAME}" = "scale-gm" -o "${BINNAME}" = "scale-gm_debug" -o "${BINNAME}" = "scale-gm_quickdebug" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"

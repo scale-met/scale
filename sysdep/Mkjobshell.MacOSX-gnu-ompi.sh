@@ -64,7 +64,7 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"

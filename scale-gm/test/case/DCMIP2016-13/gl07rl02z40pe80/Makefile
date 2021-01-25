@@ -15,7 +15,6 @@ ORG_SRCS    =
 
 # parameters for run
 RUNCONF     = run.conf
-ICO2LLNAME  = gm_fio_ico2ll
 ICO2LLCONF  = ico2ll.conf
 TPROC       = 80
 

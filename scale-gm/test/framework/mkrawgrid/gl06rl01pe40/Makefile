@@ -14,7 +14,7 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = gm_mkrawgrid
+PPNAME      = gm_mkrawgrid$(POSTFIX)
 PPCONF      = pp.conf
 TPROC       = 40
 

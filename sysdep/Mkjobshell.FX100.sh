@@ -72,7 +72,7 @@ let xy="${x} * ${y}"
 # for RICC-FX100
 NNODE=`expr $TPROC / 2`
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"
