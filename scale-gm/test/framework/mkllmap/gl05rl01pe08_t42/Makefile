@@ -14,9 +14,8 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
-PPNAME      = gm_mkllmap
+PPNAME      = gm_mkllmap$(POSTFIX)
 PPCONF      = pp.conf
-ICO2LLNAME  = gm_fio_ico2ll
 ICO2LLCONF  = ico2ll.conf
 TPROC       = 8
 

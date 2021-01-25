@@ -24,7 +24,7 @@ do
    (( n > TPROC )) && TPROC=${n}
 done
 
-if [ ! ${PPCONF} = "NONE" ]; then
+if [ ! "${PPCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -34,7 +34,7 @@ if [ ! ${PPCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${INITCONF} = "NONE" ]; then
+if [ ! "${INITCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -44,7 +44,7 @@ if [ ! ${INITCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${RUNCONF} = "NONE" ]; then
+if [ ! "${RUNCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -54,7 +54,7 @@ if [ ! ${RUNCONF} = "NONE" ]; then
    done
 fi
 
-if [ ! ${N2GCONF} = "NONE" ]; then
+if [ ! "${N2GCONF}" = "NONE" ]; then
    CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
    for n in `seq 1 ${ndata}`
@@ -67,7 +67,7 @@ fi
 NNODE=`expr \( $TPROC - 1 \) / 56 + 1`
 NPROC=`expr $TPROC / $NNODE`
 
-if [ "${BINNAME}" = "scale-gm" ]; then
+if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"
@@ -82,12 +82,12 @@ cat << EOF1 > ./run.sh
 # ------ For Oakbridge-CX -----
 #
 ################################################################################
-#PJM -g gn11
+#PJM -g go41
 #PJM -L rscgrp=regular
 #PJM -L node=${NNODE}
 #PJM --mpi proc=${TPROC}
 #PJM --omp thread=1
-#PJM -L elapse=01:00:00
+#PJM -L elapse=03:00:00
 #PJM -N SCALE
 #PJM -X
 #PJM -j

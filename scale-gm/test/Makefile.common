@@ -44,19 +44,19 @@ else
 endif
 
 ifeq ($(origin PPNAME), undefined)
-   PPNAME = scale-gm_pp
+   PPNAME = scale-gm_pp$(POSTFIX)
 endif
 
 ifeq ($(origin INITNAME), undefined)
-   INITNAME = scale-gm_init
+   INITNAME = scale-gm_init$(POSTFIX)
 endif
 
 ifeq ($(origin BINNAME), undefined)
-   BINNAME = scale-gm
+   BINNAME = scale-gm$(POSTFIX)
 endif
 
 ifeq ($(origin ICO2LLNAME), undefined)
-   ICO2LLNAME = gm_fio_ico2ll
+   ICO2LLNAME = gm_fio_ico2ll$(POSTFIX)
 endif
 
 ifeq ($(origin PPCONF), undefined)
