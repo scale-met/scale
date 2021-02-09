@@ -2193,7 +2193,7 @@ contains
           do j = 1, JA
           do i = 1, IA
           do k = KS, KE
-             DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) * ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
+             DIV(k,i,j) = ( MOMZ_av(k,i,j) - MOMZ_av(k-1,i  ,j  ) ) / ( REAL_FZ(k,i,j)-REAL_FZ(k-1,i,j) ) &
                         + HDIV(k,i,j)
           enddo
           enddo
