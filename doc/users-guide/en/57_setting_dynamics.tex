@@ -96,11 +96,11 @@ This grid-scale flow may be reduced by using \verb|UD3|.
 So, the use of \verb|UD3| is recommended for experiments with steep terrains.
 
 
-\subsection{Numerical Diffusions}
+\subsection{Numerical Diffusions} \label{subsec:numdiff}
 
 The numerical stability depends on schemes used in simulations.
 Numerical diffusion may improve the stability.
-\scalerm has the hyper-diffusion and divergence dumping as the numerical diffusion.
+\scalerm has the hyper-diffusion and divergence dumping as the explicit numerical diffusion.
 The setting for them is the following:
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
@@ -111,15 +111,23 @@ The setting for them is the following:
 \verb|/                  | & \\
 }
 
-
-The number of laplacian operator associated with hyper-diffusion is specified by \\
+The hyper-diffusion of a variable $\phi$ is defined as
+\begin{equation}
+  \nu \Delta^n \rho ( \phi - \phi_0 ),
+\end{equation}
+where $\nu$ is diffusion coefficient, $\phi_0$ is the reference state (See Section \ref{subsec:refstat}), and $\Delta$ is the Laplacian operator,
+\begin{equation}
+  \Delta^n = \nabla^{2n} = \frac{\partial^{2n}}{\partial x^{2n}} + \frac{\partial^{2n}}{\partial y^{2n}} + \frac{\partial^{2n}}{\partial z^{2n}}.
+\end{equation}
+The order of the Laplacian operator is specified by \\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}. 
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
 The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
 The dumping is stronger for larger coefficient.
 The hyper-diffusion itself would be numerically unstable if the coefficient is larger than 1.
-\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} is for the dynamical prognostic variables, such as density, momentum and potential temperature, and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is for the tracer variables, such as specific humidity, hydrometeors, and turbulent kinetic energy.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} is for the dynamical prognostic variables, such as density, momentum and potential temperature, \\
+and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is for the tracer variables, such as specific humidity, hydrometeors, and turbulent kinetic energy.
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using the upwind schemes, such as \verb|UD3, UD5|, which has implicit numerical diffusion.
 
 
@@ -199,4 +207,60 @@ In the absent of meridional geostrophic wind, the periodic boundary in the x-dir
 The nudge lateral boundary conditions at the south and north boundaries might be used for $f$- and $\beta$-plane experiment.
 For the details of the nudging boundary, see Sections \ref{subsec:buffer}.
 The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
+
+
+
+
+\subsection{Setting for Reference State} \label{subsec:refstat}
+%----------------------------------------------------------
+
+The reference state is used in the calculation of dynamical processes.
+As explained in Section \ref{subsec:numdiff}, it is used in the calculate of numerical diffusion.
+It is also used to calculate the pressure gradients in the momentum equations.
+Since the reference state is defined under the hydrostatic balance, the deviation from the reference state can be used to calculate the pressure gradients.
+
+
+
+The settings for the reference state are the following:
+\editboxtwo{
+ \verb|&PARAM_ATMOS_REFSTATE  | & \\
+ \verb|ATMOS_REFSTATE_IN_BASENAME  = "",                 | & ! input file name \\
+ \verb|ATMOS_REFSTATE_OUT_BASENAME = "",                 | & ! output file name \\
+ \verb|ATMOS_REFSTATE_OUT_TITLE    = "SCALE-RM RefState, | & ! title in the output file \\
+ \verb|ATMOS_REFSTATE_OUT_DTYPE    = "DEFAULT",          | & ! data type in the output file \\
+ \verb|ATMOS_REFSTATE_TYPE         = "UNIFORM",          | & ! type of reference state \\
+ \verb|ATMOS_REFSTATE_TEMP_SFC     = 300.0D0,            | & ! surface potential temperature \\
+ \verb|ATMOS_REFSTATE_RH           = 0.0D0,              | & ! relative humidity \\
+ \verb|ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0,            | & ! potential temperature \\
+ \verb|ATMOS_REFSTATE_UPDATE_DT    = -1.0D0,             | & ! update interval [sec] \\
+\verb|/                                                  | & \\
+}
+
+If \nmitem{ATMOS_REFSTATE_IN_BASENAME} is specified, the reference state is read from the file.
+Otherwise, the reference state is generated with the type specified by \nmitem{ATMOS_REFSTATE_TYPE}.
+It can be \verb|"ISA"|, \verb|"UNIFORM"|, \verb|"ZERO"|, or \verb|"INIT"|:
+\begin{description}
+\item[ISA]
+  The international standard atmosphere where the surface potential temperature, \\
+  relative humidity, and the surface pressure are specified by \nmitem{ATMOS_REFSTATE_TEMP_SFC}, \nmitem{ATMOS_REFSTATE_RH}, and \nmitem{CONST_Pstd} (See Section \ref{subsec:const}), respectively.
+\item[UNIFORM]
+  The constant potential temperature and relative humidity profile specified \\
+  by \nmitem{ATMOS_REFSTATE_POTT_UNIFORM} and \nmitem{ATMOS_REFSTATE_RH}, respectively.
+\item[ZERO]
+  The profile with all variables set to zero.
+\item[INIT]
+  The horizontally averaged initial state.
+\end{description}
+
+During simulation, the reference state is updated at an interval of \nmitem{ATMOS_REFSTATE_UPDATE_DT} if it is set to a positive value.
+The unit of \nmitem{ATMOS_REFSTATE_UPDATE_DT} is seconds.
+This setting is valid only when \nmitem{ATMOS_REFSTATE_TYPE} is \verb|"INIT"|.
+
+
+If the reference state is different, the results of the simulations will be different, although their initial difference are quit small.
+Therefore, you need to pay attention to the setting of the reference state, especially when restarting the simulation.
+In order to make the restart simulation result identical to the continuous simulation, the same reference state must be used.
+If you use an \verb|"INIT"|-type reference state, the reference states of the two simulations may be different.
+By updating the reference state at an appropriate interval, the reference state will be identical; \nmitem{ATMOS_REFSTATE_UPDATE_DT} should be a divisor of the restart interval.
+Alternatively, you can use the same reference state by outputing the state to a file specified by \nmitem{ATMOS_REFSTATE_OUT_BASENAME} in the first simulation run and inputing the state from the file by specifing \nmitem{ATMOS_REFSTATE_IN_BASENAME} in the following runs.
 

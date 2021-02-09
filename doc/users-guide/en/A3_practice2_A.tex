@@ -167,6 +167,11 @@ Once the three hours for integration have elapsed, the restart file is created.\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
 \verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
@@ -177,6 +182,7 @@ When \nmitem{TIME_DURATION} is set to more than three hours, it is necessary to 
 \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \\
 \nmitem{TIME_DT_URBAN_RESTART}.
 The values for \nmitem{TIME_DT_ATMOS_RESTART}, \nmitem{TIME_DT_OCEAN_RESTART}, \nmitem{TIME_DT_LAND_RESTART}, and \nmitem{TIME_DT_URBAN_RESTART} must be a divisor of three hours (10800 s) and a multiple of \nmitem{TIME_DT}.
+In order to make the reference state (See Section \ref{subsec:refstat}) in the restart calculation identical to that in the first calculation, the update interval of the reference state is specified to be a divisor of three hours.
 
 
 The configuration for the restart calculation from three to six hours in integration time is as follows:\\
@@ -200,6 +206,11 @@ The configuration for the restart calculation from three to six hours in integra
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
+\verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\

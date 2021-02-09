@@ -91,7 +91,7 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 この格子スケールの流れは、\verb|UD3|を使用することで緩和される。
 そのため、地形の起伏が大きい実験では\verb|UD3|を使用することを推奨する。
 
-\subsection{数値拡散}
+\subsection{数値拡散} \label{subsec:numdiff}
 
 数値安定性は、計算で用いるスキームに依存する。
 数値拡散は安定性を良くするだろう。
@@ -106,7 +106,16 @@ C-grid において、密度・熱力学変数・水蒸気といったスカラ�
 \verb|/                  | & \\
 }
 
-超粘性と関連したラプラス演算子の数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。
+変数 $\phi$ に対する超粘性は以下のように定義されている。
+\begin{equation}
+  \nu \Delta^n \rho ( \phi - \phi_0 ).
+\end{equation}
+ここで、$\nu$ は粘性係数、$\phi_0$ はその変数に対する基準状態 (\ref{subsec:refstat} 節参照)、$\Delta$ はラプラシアン演算子
+\begin{equation}
+  \Delta^n = \nabla^{2n} = \frac{\partial^{2n}}{\partial x^{2n}} + \frac{\partial^{2n}}{\partial y^{2n}} + \frac{\partial^{2n}}{\partial z^{2n}}.
+\end{equation}
+である。
+超粘性の階数は、\nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}で指定する。\\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF}と\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER}は、
 超粘性に対する無次元の係数である。
 この係数の値が大きいほど減衰は強く、
@@ -197,3 +206,57 @@ $f$-面や$\beta$-面による実験においては、南北境界側面境界�
 ナッジングを行う境界の詳細は、第\ref{subsec:buffer}節を参照されたい。\\
 \verb|scale-rm/test/case/rossby_wave/beta-plane|のテストケースは、
 ナッジングを行う南北境界を適用した$\beta$-面上での実験例である。
+
+
+
+\subsection{基準状態} \label{subsec:refstat}
+%----------------------------------------------------------
+
+基準状態は、力学過程の計算で使われる。
+\ref{subsec:numdiff}節で説明したとおり、基準状態は数値粘性の計算で使用される。
+また、運動方程式の気圧傾度力の計算にも使用される。
+基準状態は静水圧バランスが成り立つように定義されるため、基準状態からの偏差で気圧傾度力を計算することができる。
+
+
+基準状態の設定は以下の通りである。
+\editboxtwo{
+ \verb|&PARAM_ATMOS_REFSTATE  | & \\
+ \verb|ATMOS_REFSTATE_IN_BASENAME  = "",                 | & ! 入力ファイル名 \\
+ \verb|ATMOS_REFSTATE_OUT_BASENAME = "",                 | & ! 出力ファイル名 \\
+ \verb|ATMOS_REFSTATE_OUT_TITLE    = "SCALE-RM RefState, | & ! 出力ファイル中のタイトル \\
+ \verb|ATMOS_REFSTATE_OUT_DTYPE    = "DEFAULT",          | & ! 出力ファイル中のデータタイプ \\
+ \verb|ATMOS_REFSTATE_TYPE         = "UNIFORM",          | & ! 基準状態のタイプ \\
+ \verb|ATMOS_REFSTATE_TEMP_SFC     = 300.0D0,            | & ! 地表面温位 \\
+ \verb|ATMOS_REFSTATE_RH           = 0.0D0,              | & ! 相対湿度 \\
+ \verb|ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0,            | & ! 温位 \\
+ \verb|ATMOS_REFSTATE_UPDATE_DT    = -1.0D0,             | & ! 更新間隔 [秒] \\
+\verb|/                                                  | & \\
+}
+
+\nmitem{ATMOS_REFSTATE_IN_BASENAME} が指定された場合、基準状態はそのファイルから読み込まれる。
+そうでなければ、\nmitem{ATMOS_REFSTATE_TYPE} で指定されたタイプに従って基準状態が作られる。
+\nmitem{ATMOS_REFSTATE_TYPE} が取りうる値は \verb|"ISA"|, \verb|"UNIFORM"|, \verb|"ZERO"|, \verb|"INIT"| であり、それぞれの説明は以下の通り。
+\begin{description}
+\item[ISA] 国際標準大気。地表面温位、相対湿度、地表面気圧は、それぞれ \nmitem{ATMOS_REFSTATE_TEMP_SFC}, \nmitem{ATMOS_REFSTATE_RH}, \nmitem{CONST_Pstd} (Section \ref{subsec:const} 節参照) で指定する。
+\item[UNIFORM] 温位と相対湿度が一定のプロファイル。
+  温位と相対湿度は、それぞれ \\
+  \nmitem{ATMOS_REFSTATE_POTT_UNIFORM}, \nmitem{ATMOS_REFSTATE_RH} で指定する。
+\item[ZERO]
+  すべての変数が 0 であるプロファイル。
+\item[INIT]
+  水平平均された初期値。
+\end{description}
+
+\nmitem{ATMOS_REFSTATE_UPDATE_DT} が正の値の場合、基準状態はシミュレーションの間指定された間隔で更新される。
+単位は秒である。
+この設定は、\nmitem{ATMOS_REFSTATE_TYPE} が \verb|"INIT"| のときにのみ有効である。
+
+
+もし基準状態が異なる場合、初期の差は微小ではあるものの、シミュレーションの結果は異なるものになる。
+したがって、特にシミュレーションをリスタートする場合には、基準状態の設定に気をつける必要がある。
+リスタートシミュレーションの結果が継続シミュレーションと一致するためには、同じ基準状態を使用しなければならない。
+\verb|"INIT"| タイプの基準状態を使用している場合、それらのシミュレーションでの基準状態は異なる可能性がある。
+適切な更新間隔で基準状態を更新することにより、それらの基準状態を一致させることができる。
+このためには、更新間隔 \nmitem{ATMOS_REFSTATE_UPDATE_DT} はリスタート間隔の約数である必要がある。
+また別の方法として、最初のシミュレーションランで基準状態をファイルに出力し、次のランでそれをファイルから読み込むことで同じ基準状態を使用することもできる。
+最初のランでの出力ファイル名は \nmitem{ATMOS_REFSTATE_OUT_BASENAME} で、次のランでの入力ファイル名は \nmitem{ATMOS_REFSTATE_IN_BASENAME} で指定する。
