@@ -79,6 +79,7 @@ module mod_mkinit
   !++ Public procedure
   !
   public :: MKINIT_setup
+  public :: MKINIT_finalize
   public :: MKINIT
 
   !-----------------------------------------------------------------------------
@@ -338,6 +339,42 @@ contains
 
     return
   end subroutine MKINIT_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine MKINIT_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("MKINIT_finalize",*) 'Finalize'
+
+    deallocate( pres )
+    deallocate( temp )
+    deallocate( pott )
+    deallocate( qdry )
+    deallocate( qsat )
+    deallocate( qv   )
+    deallocate( qc   )
+    deallocate( nc   )
+    deallocate( velx )
+    deallocate( vely )
+    deallocate( ptrc )
+
+    deallocate( pres_sfc )
+    deallocate( temp_sfc )
+    deallocate( pott_sfc )
+    deallocate( psat_sfc )
+    deallocate( qsat_sfc )
+    deallocate( qv_sfc   )
+    deallocate( qc_sfc   )
+
+    deallocate( rndm   )
+    deallocate( bubble )
+    deallocate( rect   )
+
+    return
+  end subroutine MKINIT_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver

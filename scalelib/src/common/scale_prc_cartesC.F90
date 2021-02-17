@@ -24,6 +24,7 @@ module scale_prc_cartesC
   !++ Public procedure
   !
   public :: PRC_CARTESC_setup
+  public :: PRC_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -244,5 +245,15 @@ contains
 
     return
   end subroutine PRC_CARTESC_setup
+
+  !> Setup Processor topology
+  subroutine PRC_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( PRC_2Drank )
+
+    return
+  end subroutine PRC_CARTESC_finalize
 
 end module scale_prc_cartesC

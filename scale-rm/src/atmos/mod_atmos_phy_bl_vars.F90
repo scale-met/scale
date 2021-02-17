@@ -28,6 +28,7 @@ module mod_atmos_phy_bl_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_BL_vars_setup
+  public :: ATMOS_PHY_BL_vars_finalize
   public :: ATMOS_PHY_BL_vars_fillhalo
   public :: ATMOS_PHY_BL_vars_restart_read
   public :: ATMOS_PHY_BL_vars_restart_write
@@ -174,6 +175,28 @@ contains
 
     return
   end subroutine ATMOS_PHY_BL_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_BL_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_BL_RHOU_t )
+    deallocate( ATMOS_PHY_BL_RHOV_t )
+    deallocate( ATMOS_PHY_BL_RHOT_t )
+    deallocate( ATMOS_PHY_BL_RHOQ_t )
+
+    deallocate( ATMOS_PHY_BL_Zi )
+
+    deallocate( ATMOS_PHY_BL_QL      )
+    deallocate( ATMOS_PHY_BL_cldfrac )
+
+    return
+  end subroutine ATMOS_PHY_BL_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

@@ -55,12 +55,14 @@ module mod_realinput
   !++ Private procedure
   !
   private :: ParentAtmosSetup
+  private :: ParentAtmosFinalize
   private :: ParentAtmosOpen
   private :: ParentAtmosInput
   private :: BoundaryAtmosSetup
   private :: BoundaryAtmosOutput
 
   private :: ParentSurfaceSetup
+  private :: ParentSurfaceFinalize
   private :: ParentSurfaceInput
   private :: ParentSurfaceBoundary
   private :: interp_OceanLand_data
@@ -469,6 +471,9 @@ contains
        enddo ! istep loop
     enddo ! ifile loop
 
+    call ParentAtmosFinalize( FILETYPE_ORG,    & ![IN]
+                              SERIAL_PROC_READ ) ![IN]
+
     return
   end subroutine REALINPUT_atmos
 
@@ -835,21 +840,21 @@ contains
     totaltimesteps = NUMBER_OF_FILES_OCEAN * NUMBER_OF_TSTEPS_OCEAN
 
     if ( multi_land ) then
-       allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
-       allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
-       allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
-       allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_TEMP_org       (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_WATER_org      (LKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_SFC_TEMP_org   (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
+       allocate( LAND_SFC_albedo_org (      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_LAND:totaltimesteps) )
     else
-       allocate( LAND_TEMP_ORG       (LKMAX,IA,JA,                    1) )
-       allocate( LAND_WATER_ORG      (LKMAX,IA,JA,                    1) )
-       allocate( LAND_SFC_TEMP_ORG   (      IA,JA,                    1) )
-       allocate( LAND_SFC_albedo_ORG (      IA,JA,N_RAD_DIR,N_RAD_RGN,1) )
+       allocate( LAND_TEMP_org       (LKMAX,IA,JA,                    1) )
+       allocate( LAND_WATER_org      (LKMAX,IA,JA,                    1) )
+       allocate( LAND_SFC_TEMP_org   (      IA,JA,                    1) )
+       allocate( LAND_SFC_albedo_org (      IA,JA,N_RAD_DIR,N_RAD_RGN,1) )
     end if
 
-    allocate( OCEAN_TEMP_ORG      (OKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
-    allocate( OCEAN_SFC_TEMP_ORG  (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
-    allocate( OCEAN_SFC_albedo_ORG(      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
-    allocate( OCEAN_SFC_Z0_ORG    (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_TEMP_org      (OKMAX,IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_TEMP_org  (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_albedo_org(      IA,JA,N_RAD_DIR,N_RAD_RGN,1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
+    allocate( OCEAN_SFC_Z0_org    (      IA,JA,                    1+NUMBER_OF_SKIP_TSTEPS_OCEAN:totaltimesteps) )
 
     if ( mdlid_ocean == iGrADS ) then
        BASENAME_ORG = ""
@@ -1084,6 +1089,9 @@ contains
     deallocate( OCEAN_SFC_albedo_org )
     deallocate( OCEAN_SFC_Z0_org     )
 
+    call ParentSurfaceFinalize( FILETYPE_LAND,          & ![IN]
+                                FILETYPE_OCEAN          ) ![IN]
+
     return
   end subroutine REALINPUT_surface
 
@@ -1200,6 +1208,81 @@ contains
 
     return
   end subroutine ParentAtmosSetup
+
+  !-----------------------------------------------------------------------------
+  !> Atmos Finalize
+  subroutine ParentAtmosFinalize( &
+       inputtype,           &
+       serial_in            )
+    use mod_realinput_scale, only: &
+       ParentAtmosFinalizeSCALE
+    use mod_realinput_wrfarw, only: &
+       ParentAtmosFinalizeWRFARW
+    implicit none
+
+    character(len=*), intent(in)  :: inputtype
+    logical,          intent(in)  :: serial_in           ! read by a serial process
+    !---------------------------------------------------------------------------
+
+    serial_atmos = serial_in
+    if ( serial_atmos ) then
+       if( PRC_IsMaster ) then
+          read_by_myproc_atmos = .true.
+       else
+          read_by_myproc_atmos = .false.
+       endif
+    else
+       read_by_myproc_atmos = .true.
+    endif
+
+    select case(inputtype)
+    case('SCALE-RM')
+
+       call ParentAtmosFinalizeSCALE
+
+    case('GrADS')
+
+       ! do nothing
+
+    case('WRF-ARW')
+
+       if ( read_by_myproc_atmos ) then
+          call ParentAtmosFinalizeWRFARW
+       endif
+
+    case default
+
+       LOG_ERROR("ParentAtmosSetup",*) 'Unsupported type of input data : ', trim(inputtype)
+       call PRC_abort
+
+    end select
+
+    deallocate( igrd )
+    deallocate( jgrd )
+    deallocate( hfact )
+    deallocate( kgrd  )
+    deallocate( vfact )
+
+    if( allocated( LON_org ) ) deallocate( LON_org )
+    if( allocated( LAT_org ) ) deallocate( LAT_org )
+    if( allocated( CZ_org )  ) deallocate( CZ_org  )
+
+    deallocate( W_org    )
+    deallocate( U_org    )
+    deallocate( V_org    )
+    deallocate( POTT_org )
+    deallocate( TEMP_org )
+    deallocate( PRES_org )
+    deallocate( DENS_org )
+    deallocate( QTRC_org )
+
+    deallocate( QV_org    )
+    deallocate( QHYD_org  )
+    deallocate( QNUM_org  )
+    deallocate( RN222_org )
+
+    return
+  end subroutine ParentAtmosFinalize
 
   !-----------------------------------------------------------------------------
   !> Atmosphere Data Open
@@ -1347,6 +1430,9 @@ contains
     if( .NOT. allocated( QHYD_org  ) ) allocate( QHYD_org ( KA_org, IA_org, JA_org, N_HYD ) )
     if( .NOT. allocated( QNUM_org  ) ) allocate( QNUM_org ( KA_org, IA_org, JA_org, N_HYD ) )
     if( .NOT. allocated( RN222_org ) ) allocate( RN222_org( KA_org, IA_org, JA_org        ) )
+
+    if( allocated( LON_all ) ) deallocate( LON_all )
+    if( allocated( LAT_all ) ) deallocate( LAT_all )
 
     return
   end subroutine ParentAtmosOpen
@@ -2670,6 +2756,110 @@ contains
   end subroutine ParentSurfaceSetup
 
   !-----------------------------------------------------------------------------
+  !> Surface Finalize
+  subroutine ParentSurfaceFinalize( &
+       filetype_land,               &
+       filetype_ocean               )
+    use mod_realinput_scale, only: &
+         ParentLandFinalizeSCALE, &
+         ParentOceanFinalizeSCALE
+    use mod_realinput_wrfarw, only: &
+         ParentLandFinalizeWRFARW, &
+         ParentOceanFinalizeWRFARW
+    implicit none
+
+    character(len=*), intent(in)  :: filetype_land
+    character(len=*), intent(in)  :: filetype_ocean
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ParentSurfaceFinalize",*) 'Finalize'
+
+    ! Land
+
+    if( serial_land ) then
+       if( PRC_IsMaster ) then
+          do_read_land = .true.
+       else
+          do_read_land = .false.
+       endif
+    else
+       do_read_land = .true.
+    endif
+
+    select case(trim(filetype_land))
+    case('SCALE-RM')
+
+       call ParentLandFinalizeSCALE
+
+    case('WRF-ARW')
+
+       if ( do_read_land ) call ParentLandFinalizeWRFARW
+
+    case('GrADS')
+
+       ! do nothing
+
+    case default
+
+       LOG_ERROR("ParentSurfaceFinalize",*) 'Unsupported FILE TYPE:', trim(filetype_land)
+       call PRC_abort
+
+    endselect
+
+
+    ! Ocean
+
+    if( serial_ocean ) then
+       if( PRC_IsMaster ) then
+          do_read_ocean = .true.
+       else
+          do_read_ocean = .false.
+       endif
+    else
+       do_read_ocean = .true.
+    endif
+
+    select case(trim(filetype_ocean))
+    case('SCALE-RM')
+
+       call ParentOceanFinalizeSCALE
+
+    case('WRF-ARW')
+
+       if ( do_read_ocean ) call ParentOceanFinalizeWRFARW
+
+    case('GrADS')
+
+       ! do nothing
+
+    case default
+
+       LOG_ERROR("ParentSurfaceFinalize",*) 'Unsupported FILE TYPE:', trim(filetype_ocean)
+       call PRC_abort
+
+    endselect
+
+
+    deallocate( tw_org   )
+    deallocate( sst_org  )
+    deallocate( albw_org )
+    deallocate( olon_org )
+    deallocate( olat_org )
+    deallocate( omask_org )
+
+    deallocate( oigrd  )
+    deallocate( ojgrd  )
+    deallocate( ohfact )
+
+    deallocate( hfact_ol )
+    deallocate( igrd_ol  )
+    deallocate( jgrd_ol  )
+
+    return
+  end subroutine ParentSurfaceFinalize
+
+  !-----------------------------------------------------------------------------
   !> Surface Data Read
   subroutine ParentSurfaceInput( &
        tg, strg, lst, albg,               &
@@ -3989,6 +4179,7 @@ contains
        end select
 
     end if
+
 
     call INTERP_interp2d( itp_nh_o,      & ! [IN]
                           imax, jmax,    & ! [IN]

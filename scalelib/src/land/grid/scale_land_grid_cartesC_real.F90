@@ -26,6 +26,7 @@ module scale_land_grid_cartesC_real
   !++ Public procedure
   !
   public :: LAND_GRID_CARTESC_REAL_setup
+  public :: LAND_GRID_CARTESC_REAL_finalize
   public :: LAND_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
@@ -57,6 +58,18 @@ contains
 
     return
   end subroutine LAND_GRID_CARTESC_REAL_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LAND_GRID_CARTESC_REAL_finalize
+    implicit none
+
+    deallocate( LAND_GRID_CARTESC_REAL_AREA  )
+    deallocate( LAND_GRID_CARTESC_REAL_VOL   )
+
+    return
+  end subroutine LAND_GRID_CARTESC_REAL_finalize
+  !-----------------------------------------------------------------------------
 
   subroutine LAND_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &

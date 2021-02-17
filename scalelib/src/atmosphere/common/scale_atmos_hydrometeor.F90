@@ -25,6 +25,7 @@ module scale_atmos_hydrometeor
   !++ Public procedure
   !
   public :: ATMOS_HYDROMETEOR_setup
+  public :: ATMOS_HYDROMETEOR_finalize
   public :: ATMOS_HYDROMETEOR_regist
   public :: ATMOS_HYDROMETEOR_LHV
   public :: ATMOS_HYDROMETEOR_LHS
@@ -221,6 +222,20 @@ contains
 
     return
   end subroutine ATMOS_HYDROMETEOR_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_HYDROMETEOR_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_HYDROMETEOR_finalize",*) 'Finalize'
+
+    ATMOS_HYDROMETEOR_dry = .true.
+
+    return
+  end subroutine ATMOS_HYDROMETEOR_finalize
 
   !-----------------------------------------------------------------------------
   !> ATMOS_HYDROMETEOR_regist

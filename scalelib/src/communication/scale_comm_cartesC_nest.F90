@@ -37,6 +37,7 @@ module scale_comm_cartesC_nest
   public :: COMM_CARTESC_NEST_recv_cancel
   public :: COMM_CARTESC_NEST_test
   public :: COMM_CARTESC_NEST_disconnect
+  public :: COMM_CARTESC_NEST_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -2878,5 +2879,50 @@ contains
 
     return
   end subroutine COMM_CARTESC_NEST_disconnect
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine COMM_CARTESC_NEST_finalize
+    implicit none
+
+    if ( allocated( latlon_catalog ) ) deallocate( latlon_catalog )
+    if ( allocated( COMM_CARTESC_NEST_TILE_ID ) )      deallocate( COMM_CARTESC_NEST_TILE_ID )
+    if ( allocated( COMM_CARTESC_NEST_TILE_LIST_p ) )  deallocate( COMM_CARTESC_NEST_TILE_LIST_p )
+    if ( allocated( COMM_CARTESC_NEST_TILE_LIST_d ) )  deallocate( COMM_CARTESC_NEST_TILE_LIST_d )
+    if ( allocated( COMM_CARTESC_NEST_TILE_LIST_YP ) ) deallocate( COMM_CARTESC_NEST_TILE_LIST_YP )
+
+    if ( allocated( ireq_p ) ) deallocate( ireq_p )
+    if ( allocated( ireq_d ) ) deallocate( ireq_d )
+
+    if ( allocated( call_order ) ) deallocate( call_order )
+    if ( allocated( recvbuf_3D ) ) deallocate( recvbuf_3D )
+
+    if ( allocated( buffer_ref_LON ) )   deallocate( buffer_ref_LON )
+    if ( allocated( buffer_ref_LONUY ) ) deallocate( buffer_ref_LONUY )
+    if ( allocated( buffer_ref_LONXV ) ) deallocate( buffer_ref_LONXV )
+    if ( allocated( buffer_ref_LAT ) )   deallocate( buffer_ref_LAT )
+    if ( allocated( buffer_ref_LATUY ) ) deallocate( buffer_ref_LATUY )
+    if ( allocated( buffer_ref_LATXV ) ) deallocate( buffer_ref_LATXV )
+    if ( allocated( buffer_ref_CZ ) )    deallocate( buffer_ref_CZ )
+    if ( allocated( buffer_ref_FZ ) )    deallocate( buffer_ref_FZ )
+    if ( allocated( buffer_ref_3D ) )     deallocate( buffer_ref_3D )
+
+    if ( allocated( org_DENS ) ) deallocate( org_DENS )
+    if ( allocated( org_MOMZ ) ) deallocate( org_MOMZ )
+    if ( allocated( org_MOMX ) ) deallocate( org_MOMX )
+    if ( allocated( org_MOMY ) ) deallocate( org_MOMY )
+    if ( allocated( org_U_ll ) ) deallocate( org_U_ll )
+    if ( allocated( org_V_ll ) ) deallocate( org_V_ll )
+    if ( allocated( org_RHOT ) ) deallocate( org_RHOT )
+    if ( allocated( org_QTRC ) ) deallocate( org_QTRC )
+
+    if ( allocated( igrd ) )  deallocate( igrd )
+    if ( allocated( jgrd ) )  deallocate( jgrd )
+    if ( allocated( hfact ) ) deallocate( hfact )
+    if ( allocated( kgrd ) )  deallocate( kgrd )
+    if ( allocated( vfact ) ) deallocate( vfact )
+
+    return
+  end subroutine COMM_CARTESC_NEST_finalize
 
 end module scale_comm_cartesC_nest

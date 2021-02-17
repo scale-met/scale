@@ -29,6 +29,7 @@ module mod_atmos_dyn_vars
   !++ Public procedure
   !
   public :: ATMOS_DYN_vars_setup
+  public :: ATMOS_DYN_vars_finalize
   public :: ATMOS_DYN_vars_fillhalo
   public :: ATMOS_DYN_vars_restart_read
   public :: ATMOS_DYN_vars_restart_write
@@ -167,6 +168,20 @@ contains
 
     return
   end subroutine ATMOS_DYN_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_DYN_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_DYN_vars_finalize",*) 'Finalize'
+
+    if ( allocated( PROG ) ) deallocate( PROG )
+
+    return
+  end subroutine ATMOS_DYN_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

@@ -29,6 +29,7 @@ module mod_atmos_phy_sf_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_SF_vars_setup
+  public :: ATMOS_PHY_SF_vars_finalize
   public :: ATMOS_PHY_SF_vars_fillhalo
   public :: ATMOS_PHY_SF_vars_restart_read
   public :: ATMOS_PHY_SF_vars_restart_write
@@ -345,6 +346,61 @@ contains
 
     return
   end subroutine ATMOS_PHY_SF_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_SF_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_SF_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_SF_DENS_t        )
+    deallocate( ATMOS_PHY_SF_MOMZ_t        )
+    deallocate( ATMOS_PHY_SF_RHOU_t        )
+    deallocate( ATMOS_PHY_SF_RHOV_t        )
+    deallocate( ATMOS_PHY_SF_RHOH          )
+    deallocate( ATMOS_PHY_SF_RHOQ_t    )
+
+    deallocate( ATMOS_PHY_SF_SFC_TEMP   )
+    deallocate( ATMOS_PHY_SF_SFC_albedo )
+    deallocate( ATMOS_PHY_SF_SFC_Z0M    )
+    deallocate( ATMOS_PHY_SF_SFC_Z0H    )
+    deallocate( ATMOS_PHY_SF_SFC_Z0E    )
+
+    deallocate( ATMOS_PHY_SF_SFC_DENS   )
+    deallocate( ATMOS_PHY_SF_SFC_PRES   )
+
+    deallocate( ATMOS_PHY_SF_PREC_MASS  )
+    deallocate( ATMOS_PHY_SF_PREC_ENGI  )
+
+
+    deallocate( ATMOS_PHY_SF_SFLX_MW    )
+    deallocate( ATMOS_PHY_SF_SFLX_MU    )
+    deallocate( ATMOS_PHY_SF_SFLX_MV    )
+    deallocate( ATMOS_PHY_SF_SFLX_SH    )
+    deallocate( ATMOS_PHY_SF_SFLX_LH    )
+    deallocate( ATMOS_PHY_SF_SFLX_SHEX  )
+    deallocate( ATMOS_PHY_SF_SFLX_QVEX  )
+    deallocate( ATMOS_PHY_SF_SFLX_GH    )
+    deallocate( ATMOS_PHY_SF_SFLX_QTRC  )
+    deallocate( ATMOS_PHY_SF_SFLX_ENGI  )
+
+    deallocate( ATMOS_PHY_SF_Ustar      )
+    deallocate( ATMOS_PHY_SF_Tstar      )
+    deallocate( ATMOS_PHY_SF_Qstar      )
+    deallocate( ATMOS_PHY_SF_Wstar      )
+
+    deallocate( ATMOS_PHY_SF_U10        )
+    deallocate( ATMOS_PHY_SF_V10        )
+    deallocate( ATMOS_PHY_SF_T2         )
+    deallocate( ATMOS_PHY_SF_Q2         )
+    deallocate( ATMOS_PHY_SF_RLmo       )
+
+    if ( allocated( ZERO ) ) deallocate( ZERO )
+    return
+  end subroutine ATMOS_PHY_SF_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

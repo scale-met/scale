@@ -25,11 +25,14 @@ module mod_realinput_scale
   !++ Public procedure
   !
   public :: ParentAtmosSetupSCALE
+  public :: ParentAtmosFinalizeSCALE
   public :: ParentAtmosOpenSCALE
   public :: ParentAtmosInputSCALE
   public :: ParentLandSetupSCALE
+  public :: ParentLandFinalizeSCALE
   public :: ParentLandInputSCALE
   public :: ParentOceanSetupSCALE
+  public :: ParentOceanFinalizeSCALE
   public :: ParentOceanOpenSCALE
   public :: ParentOceanInputSCALE
 
@@ -90,6 +93,22 @@ contains
 
     return
   end subroutine ParentAtmosSetupSCALE
+
+  !-----------------------------------------------------------------------------
+  !> Atmos Finalize
+  subroutine ParentAtmosFinalizeSCALE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_INFO("ParentAtmosFinalizeSCALE",*) 'Real Case/Atmos Input File Type: SCALE-RM'
+
+    deallocate( read2D )
+    deallocate( read3D )
+
+    deallocate( rotc_cos )
+
+    return
+  end subroutine ParentAtmosFinalizeSCALE
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosOpenSCALE( &
@@ -631,6 +650,23 @@ contains
   end subroutine ParentLandSetupSCALE
 
   !-----------------------------------------------------------------------------
+  !> Land Finalize
+  subroutine ParentLandFinalizeSCALE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_INFO("ParentLandFinalizeSCALE",*) 'Real Case/Land Input File Type: SCALE-RM'
+
+    if ( allocated(read2D) ) then
+       deallocate( read2D )
+    endif
+
+    deallocate( read3DL )
+
+    return
+  end subroutine ParentLandFinalizeSCALE
+
+  !-----------------------------------------------------------------------------
   subroutine ParentLandInputSCALE( &
       tg_org,             &
       strg_org,           &
@@ -786,6 +822,23 @@ contains
 
     return
   end subroutine ParentOceanSetupSCALE
+
+  !-----------------------------------------------------------------------------
+  !> Ocean Finalize
+  subroutine ParentOceanFinalizeSCALE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_INFO("ParentOceanFinalizeSCALE",*) 'Real Case/Ocean Input File Type: SCALE-RM'
+
+    if ( allocated(read2D) ) then
+       deallocate( read2D )
+    end if
+
+    deallocate( read3DO )
+
+    return
+  end subroutine ParentOceanFinalizeSCALE
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanOpenSCALE( &

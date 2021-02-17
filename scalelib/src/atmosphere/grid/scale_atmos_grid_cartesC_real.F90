@@ -27,6 +27,7 @@ module scale_atmos_grid_cartesC_real
   public :: ATMOS_GRID_CARTESC_REAL_setup
   public :: ATMOS_GRID_CARTESC_REAL_calc_Z
   public :: ATMOS_GRID_CARTESC_REAL_calc_areavol
+  public :: ATMOS_GRID_CARTESC_REAL_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -804,5 +805,63 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_areavol
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_GRID_CARTESC_REAL_finalize
+    use scale_interp_vert, only: &
+       INTERP_VERT_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_LON   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LAT   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LONUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_LATUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_DLON )
+    deallocate( ATMOS_GRID_CARTESC_REAL_DLAT )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZ   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_CZUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZ   )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZXV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_FZUV )
+    deallocate( ATMOS_GRID_CARTESC_REAL_F2H  )
+    deallocate( ATMOS_GRID_CARTESC_REAL_Z1  )
+    deallocate( ATMOS_GRID_CARTESC_REAL_PHI )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREA      )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAWUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAWXV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAUY    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_Y )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAXV    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZUV_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_AREAZXY_Y )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZUY_X )
+    deallocate( ATMOS_GRID_CARTESC_REAL_TOTAREAZXV_Y )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOL    )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLWXY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLZUY )
+    deallocate( ATMOS_GRID_CARTESC_REAL_VOLZXV )
+
+    deallocate( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE )
+
+    call INTERP_VERT_finalize
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_REAL_finalize
 
 end module scale_atmos_grid_cartesC_real

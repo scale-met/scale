@@ -33,6 +33,7 @@ module scale_interp_vert
   public :: INTERP_VERT_setcoef_pres
   public :: INTERP_VERT_xi2p
   public :: INTERP_VERT_xih2p
+  public :: INTERP_VERT_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -510,5 +511,24 @@ contains
 
     return
   end subroutine INTERP_VERT_xih2p
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine INTERP_VERT_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( INTERP_xi2z_idx  )
+    deallocate( INTERP_xi2z_coef )
+    deallocate( INTERP_z2xi_idx  )
+    deallocate( INTERP_z2xi_coef )
+
+    deallocate( INTERP_xih2zh_idx  )
+    deallocate( INTERP_xih2zh_coef )
+    deallocate( INTERP_zh2xih_idx  )
+    deallocate( INTERP_zh2xih_coef )
+
+    return
+  end subroutine INTERP_VERT_finalize
 
 end module scale_interp_vert

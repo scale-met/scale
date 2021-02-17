@@ -65,13 +65,15 @@ contains
        FPM_Polling,     &
        FPM_POLLING_FREQ
     use scale_prc_cartesC, only: &
-       PRC_CARTESC_setup
+       PRC_CARTESC_setup, &
+       PRC_CARTESC_finalize
     use scale_const, only: &
        CONST_setup
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
-       RANDOM_setup
+       RANDOM_setup, &
+       RANDOM_finalize
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_setup
     use scale_atmos_grid_cartesC_index, only: &
@@ -79,15 +81,18 @@ contains
        IA, JA
     use scale_atmos_grid_cartesC, only: &
        ATMOS_GRID_CARTESC_setup, &
+       ATMOS_GRID_CARTESC_finalize, &
        DOMAIN_CENTER_Y => ATMOS_GRID_CARTESC_DOMAIN_CENTER_Y, &
        CY => ATMOS_GRID_CARTESC_CY, &
        DX, DY
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_setup,        &
+       ATMOS_GRID_CARTESC_REAL_finalize,     &
        ATMOS_GRID_CARTESC_REAL_calc_areavol, &
        REAL_LAT => ATMOS_GRID_CARTESC_REAL_LAT
     use scale_atmos_grid_cartesC_metric, only: &
        ATMOS_GRID_CARTESC_METRIC_setup, &
+       ATMOS_GRID_CARTESC_METRIC_finalize, &
        ATMOS_GRID_CARTESC_METRIC_MAPF
     use scale_ocean_grid_cartesC_index, only: &
        OCEAN_GRID_CARTESC_INDEX_setup
@@ -95,6 +100,7 @@ contains
        OCEAN_GRID_CARTESC_setup
     use scale_ocean_grid_cartesC_real, only: &
        OCEAN_GRID_CARTESC_REAL_setup, &
+       OCEAN_GRID_CARTESC_REAL_finalize, &
        OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_land_grid_cartesC_index, only: &
        LAND_GRID_CARTESC_INDEX_setup
@@ -102,6 +108,7 @@ contains
        LAND_GRID_CARTESC_setup
     use scale_land_grid_cartesC_real, only: &
        LAND_GRID_CARTESC_REAL_setup, &
+       LAND_GRID_CARTESC_REAL_finalize, &
        LAND_GRID_CARTESC_REAL_set_areavol
     use scale_urban_grid_cartesC_index, only: &
        URBAN_GRID_CARTESC_INDEX_setup
@@ -109,6 +116,7 @@ contains
        URBAN_GRID_CARTESC_setup
     use scale_urban_grid_cartesC_real, only: &
        URBAN_GRID_CARTESC_REAL_setup, &
+       URBAN_GRID_CARTESC_REAL_finalize, &
        URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
@@ -117,13 +125,16 @@ contains
        COMM_setup , &
        COMM_cleanup
     use scale_comm_cartesC_nest, only: &
-       COMM_CARTESC_NEST_setup
+       COMM_CARTESC_NEST_setup, &
+       COMM_CARTESC_NEST_finalize
     use scale_topography, only: &
        TOPOGRAPHY_setup, &
-       TOPOGRAPHY_write
+       TOPOGRAPHY_write, &
+       TOPOGRAPHY_finalize
     use scale_landuse, only: &
        LANDUSE_setup, &
-       LANDUSE_write
+       LANDUSE_write, &
+       LANDUSE_finalize
     use scale_statistics, only: &
        STATISTICS_setup
     use scale_time, only: &
@@ -132,7 +143,8 @@ contains
        TIME_NOWSTEP,   &
        TIME_DTSEC
     use scale_coriolis, only: &
-       CORIOLIS_setup
+       CORIOLIS_setup, &
+       CORIOLIS_finalize
     use scale_atmos_hydrostatic, only: &
        ATMOS_HYDROSTATIC_setup
     use scale_atmos_thermodyn, only: &
@@ -177,6 +189,7 @@ contains
        ATMOS_PHY_MP_TYPE
     use mod_atmos_vars, only: &
        ATMOS_vars_setup,           &
+       ATMOS_vars_finalize,        &
        ATMOS_RESTART_CHECK,        &
        ATMOS_vars_restart_check,   &
        ATMOS_vars_history_setpres, &
@@ -521,6 +534,40 @@ contains
 
     call FILE_Close_All
     call PROF_rapend  ('File', 1)
+
+    call ATMOS_GRID_CARTESC_METRIC_finalize
+
+    ! setup variable container
+    if ( ATMOS_do ) call ATMOS_vars_finalize
+
+    ! finalize coriolis parameter
+    call CORIOLIS_finalize
+
+    ! finalize nesting grid
+    call COMM_CARTESC_NEST_finalize
+
+    ! finalize grid coordinates (real world)
+    if ( ATMOS_do ) call ATMOS_GRID_CARTESC_REAL_finalize
+    if ( OCEAN_do ) call OCEAN_GRID_CARTESC_REAL_finalize
+    if ( LAND_do  ) call LAND_GRID_CARTESC_REAL_finalize
+    if ( URBAN_do ) call URBAN_GRID_CARTESC_REAL_finalize
+
+    ! finalize land use category index/fraction
+    call LANDUSE_finalize
+
+    ! finalize topography
+    call TOPOGRAPHY_finalize
+
+    ! finalize horizontal/vertical grid coordinates (cartesian, idealized)
+    if ( ATMOS_do ) then
+       call ATMOS_GRID_CARTESC_finalize
+    end if
+
+    ! finalize process
+    call PRC_CARTESC_finalize
+
+    ! finalize random number
+    call RANDOM_finalize
 
     call PROF_rapend  ('All', 0)
 

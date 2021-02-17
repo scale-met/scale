@@ -27,6 +27,7 @@ module mod_atmos_phy_ae_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_AE_vars_setup
+  public :: ATMOS_PHY_AE_vars_finalize
   public :: ATMOS_PHY_AE_vars_fillhalo
   public :: ATMOS_PHY_AE_vars_restart_read
   public :: ATMOS_PHY_AE_vars_restart_write
@@ -212,6 +213,32 @@ contains
 
     return
   end subroutine ATMOS_PHY_AE_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_AE_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_AE_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_AE_RHOQ_t )
+    deallocate( ATMOS_PHY_AE_CCN )
+    deallocate( ATMOS_PHY_AE_CCN_t )
+    deallocate( ATMOS_PHY_AE_EMIT )
+
+    ! diagnostices
+    deallocate( ATMOS_PHY_AE_Re )
+    deallocate( ATMOS_PHY_AE_Qe )
+
+    ! history
+    deallocate( HIST_Re_id )
+
+    deallocate( HIST_Qe_id )
+
+    return
+  end subroutine ATMOS_PHY_AE_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

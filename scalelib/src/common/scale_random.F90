@@ -25,6 +25,7 @@ module scale_random
   public :: RANDOM_setup
   public :: RANDOM_uniform
   public :: RANDOM_normal
+  public :: RANDOM_finalize
 
   interface RANDOM_uniform
      module procedure RANDOM_uniform_1D
@@ -215,6 +216,16 @@ contains
 
     return
   end subroutine RANDOM_normal_3D
+
+  !> finalize
+  subroutine RANDOM_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( RANDOM_seedvar )
+
+    return
+  end subroutine RANDOM_finalize
 
   ! private
 

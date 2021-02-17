@@ -26,6 +26,7 @@ module scale_land_grid_cartesC
   !++ Public procedure
   !
   public :: LAND_GRID_CARTESC_setup
+  public :: LAND_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -131,6 +132,22 @@ contains
 
     return
   end subroutine LAND_GRID_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LAND_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("LAND_GRID_CARTESC_finalize",*) 'Finalize'
+
+    deallocate( LAND_GRID_CARTESC_CZ  )
+    deallocate( LAND_GRID_CARTESC_FZ  )
+    deallocate( LAND_GRID_CARTESC_CDZ )
+
+    return
+  end subroutine LAND_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Read land grid

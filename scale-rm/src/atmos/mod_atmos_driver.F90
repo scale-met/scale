@@ -26,6 +26,7 @@ module mod_atmos_driver
   !++ Public procedure
   !
   public :: ATMOS_driver_tracer_setup
+  public :: ATMOS_driver_tracer_finalize
   public :: ATMOS_driver_setup
   public :: ATMOS_driver_calc_tendency
   public :: ATMOS_driver_calc_tendency_from_sflux
@@ -104,6 +105,25 @@ contains
 
     return
   end subroutine ATMOS_driver_tracer_setup
+
+  !-----------------------------------------------------------------------------
+  !> Tracer finalize
+  subroutine ATMOS_driver_tracer_finalize
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_tracer_finalize
+    use scale_tracer, only: &
+       QA
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_driver_tracer_finalize",*) 'Finalize'
+
+    call ATMOS_PHY_BL_driver_tracer_finalize
+    QA = 0
+
+    return
+  end subroutine ATMOS_driver_tracer_finalize
 
   !-----------------------------------------------------------------------------
   !> Setup

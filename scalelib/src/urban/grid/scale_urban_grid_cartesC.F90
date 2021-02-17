@@ -27,6 +27,7 @@ module scale_urban_grid_cartesC
   !++ Public procedure
   !
   public :: URBAN_GRID_CARTESC_setup
+  public :: URBAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -132,6 +133,22 @@ contains
 
     return
   end subroutine URBAN_GRID_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("URBAN_GRID_CARTESC_finalize",*) 'Finalize'
+
+    deallocate( URBAN_GRID_CARTESC_CZ  )
+    deallocate( URBAN_GRID_CARTESC_FZ  )
+    deallocate( URBAN_GRID_CARTESC_CDZ )
+
+    return
+  end subroutine URBAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Read urban grid

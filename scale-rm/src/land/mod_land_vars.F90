@@ -28,6 +28,7 @@ module mod_land_vars
   !++ Public procedure
   !
   public :: LAND_vars_setup
+  public :: LAND_vars_finalize
   public :: LAND_vars_restart_read
   public :: LAND_vars_restart_write
   public :: LAND_vars_history
@@ -566,6 +567,107 @@ contains
 
     return
   end subroutine LAND_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LAND_vars_finalize
+    use scale_landuse, only: &
+       LANDUSE_index_PFT, &
+       LANDUSE_PFT_nmin, &
+       LANDUSE_PFT_nmax
+    use mod_land_admin, only: &
+       SNOW_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("LAND_vars_finalize",*) 'Finalize'
+
+    select case ( SNOW_TYPE )
+    case ( 'NONE', 'OFF' )
+       SNOW_flag = .false.
+    case default
+       SNOW_flag = .true.
+    end select
+
+    deallocate( LAND_TEMP       )
+    deallocate( LAND_WATER      )
+    deallocate( LAND_ICE        )
+    deallocate( LAND_SFC_TEMP   )
+    deallocate( LAND_SFC_albedo )
+
+    if ( SNOW_flag ) then
+       deallocate( SNOW_SFC_TEMP  )
+       deallocate( SNOW_SWE       )
+       deallocate( SNOW_Depth     )
+       deallocate( SNOW_Dzero     )
+       deallocate( SNOW_nosnowsec )
+    end if
+
+    deallocate( LAND_TEMP_t  )
+    deallocate( LAND_WATER_t )
+    deallocate( LAND_ICE_t   )
+
+    deallocate( LAND_SFLX_GH    )
+    deallocate( LAND_SFLX_water )
+    deallocate( LAND_SFLX_ENGI  )
+
+    deallocate( LAND_RUNOFF      )
+    deallocate( LAND_RUNOFF_ENGI )
+
+    deallocate( LAND_SFLX_MW   )
+    deallocate( LAND_SFLX_MU   )
+    deallocate( LAND_SFLX_MV   )
+    deallocate( LAND_SFLX_SH   )
+    deallocate( LAND_SFLX_LH   )
+    deallocate( LAND_SFLX_QTRC )
+
+    deallocate( LAND_U10       )
+    deallocate( LAND_V10       )
+    deallocate( LAND_T2        )
+    deallocate( LAND_Q2        )
+
+    deallocate( LAND_Ustar )
+    deallocate( LAND_Tstar )
+    deallocate( LAND_Qstar )
+    deallocate( LAND_Wstar )
+    deallocate( LAND_RLmo  )
+    if ( SNOW_flag ) then
+       deallocate( SOIL_Ustar )
+       deallocate( SOIL_Tstar )
+       deallocate( SOIL_Qstar )
+       deallocate( SOIL_Wstar )
+       deallocate( SOIL_RLmo  )
+    end if
+    if ( SNOW_flag ) then
+       deallocate( SNOW_Ustar )
+       deallocate( SNOW_Tstar )
+       deallocate( SNOW_Qstar )
+       deallocate( SNOW_Wstar )
+       deallocate( SNOW_RLmo  )
+    end if
+
+    deallocate( ATMOS_TEMP        )
+    deallocate( ATMOS_PRES        )
+    deallocate( ATMOS_W           )
+    deallocate( ATMOS_U           )
+    deallocate( ATMOS_V           )
+    deallocate( ATMOS_DENS        )
+    deallocate( ATMOS_QV          )
+    deallocate( ATMOS_PBL         )
+    deallocate( ATMOS_SFC_DENS    )
+    deallocate( ATMOS_SFC_PRES    )
+    deallocate( ATMOS_SFLX_rad_dn )
+    deallocate( ATMOS_cosSZA      )
+    deallocate( ATMOS_SFLX_water  )
+    deallocate( ATMOS_SFLX_ENGI   )
+
+    deallocate( LAND_PROPERTY_table )
+
+    deallocate( LAND_PROPERTY )
+
+    return
+  end subroutine LAND_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Open land restart file for read
