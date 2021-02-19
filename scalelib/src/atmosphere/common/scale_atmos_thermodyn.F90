@@ -183,11 +183,9 @@ contains
     !---------------------------------------------------------------------------
 
     qdry = 1.0_RP
-#ifndef DRY
     do iqw = 1, QA
        qdry = qdry - q(iqw)*q_mass(iqw)
     enddo
-#endif
 
     return
   end subroutine ATMOS_THERMODYN_qdry_0D
@@ -207,15 +205,21 @@ contains
     real(RP), intent(in)  :: q_mass(QA)       !< mass factor 0 or 1
     real(RP), intent(out) :: qdry  (IA,JA)    !< dry mass concentration [kg/kg]
 
-    integer :: i, j
+    integer :: i, j, iqw
     !-----------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,qdry,q,q_mass,QA)
+    !$omp parallel do default(none) OMP_SCHEDULE_ &
+    !$omp private(i,j,iqw) &
+    !$omp shared(IS,IE,JS,JE,QA,qdry,q,q_mass)
     do j = JS, JE
-    do i = IS, IE
-       call ATMOS_THERMODYN_qdry( QA, q(i,j,:), q_mass(:), qdry(i,j) )
-    enddo
+       do i = IS, IE
+          qdry(i,j) = 1.0_RP
+       end do
+       do iqw = 1, QA
+       do i = IS, IE
+          qdry(i,j) = qdry(i,j) - q(i,j,iqw) * q_mass(iqw)
+       enddo
+       enddo
     enddo
 
     return
@@ -237,18 +241,25 @@ contains
     real(RP), intent(in)  :: q_mass(QA)          !< mass factor 0 or 1
     real(RP), intent(out) :: qdry  (KA,IA,JA)    !< dry mass concentration [kg/kg]
 
-    integer :: k, i, j
+    integer :: k, i, j, iqw
     !-----------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,qdry,q,q_mass,QA)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k,iqw) &
+    !$omp shared(KS,KE,IS,IE,JS,JE,QA,qdry,q,q_mass)
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       call ATMOS_THERMODYN_qdry( QA, q(k,i,j,:), q_mass(:), qdry(k,i,j) )
+       do k = KS, KE
+          qdry(k,i,j) = 1.0_RP
+       end do
+       do iqw = 1, QA
+       do k = KS, KE
+          qdry(k,i,j) = qdry(k,i,j) - q(k,i,j,iqw) * q_mass(iqw)
+       enddo
+       enddo
     enddo
     enddo
-    enddo
+
     return
   end subroutine ATMOS_THERMODYN_qdry_3D
 
@@ -273,11 +284,9 @@ contains
     !---------------------------------------------------------------------------
 
     CVtot = qdry * CVdry
-#ifndef DRY
     do iqw = 1, QA
        CVtot = CVtot + q(iqw) * CVq(iqw)
     enddo
-#endif
 
     return
   end subroutine ATMOS_THERMODYN_cv_0D
@@ -300,16 +309,22 @@ contains
 
     real(RP), intent(out) :: CVtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
 
-    integer :: k, i, j
+    integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(JS,JE,IS,IE,KS,KE,cvtot,qdry,q,CVdry,CVq,QA)
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k) &
+    !$omp shared(KS,KE,IS,IE,JS,JE,QA,cvtot,qdry,q,CVdry,CVq)
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       call ATMOS_THERMODYN_cv( QA, q(k,i,j,:), CVq(:), qdry(k,i,j), CVtot(k,i,j) )
-    enddo
+       do k = KS, KE
+          CVtot(k,i,j) = qdry(k,i,j) * CVdry
+       end do
+       do iqw = 1, QA
+       do k = KS, KE
+          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
+       enddo
+       enddo
     enddo
     enddo
 
@@ -337,11 +352,9 @@ contains
     !---------------------------------------------------------------------------
 
     CPtot = qdry * CPdry
-#ifndef DRY
     do iqw = 1, QA
        CPtot = CPtot + q(iqw) * CPq(iqw)
     enddo
-#endif
 
     return
   end subroutine ATMOS_THERMODYN_cp_0D
@@ -364,15 +377,21 @@ contains
 
     real(RP), intent(out) :: CPtot(KA,IA,JA)    !< total specific heat    [J/kg/K]
 
-    integer :: k, i, j
+    integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k,iqw)
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       call ATMOS_THERMODYN_cp( QA, q(k,i,j,:), CPq(:), qdry(k,i,j), CPtot(k,i,j) )
-    enddo
+       do k = KS, KE
+          CPtot(k,i,j) = qdry(k,i,j) * CPdry
+       end do
+       do iqw = 1, QA
+       do k = KS, KE
+          CPtot(k,i,j) = CPtot(k,i,j) + q(k,i,j,iqw) * CPq(iqw)
+       enddo
+       enddo
     enddo
     enddo
 
@@ -400,11 +419,9 @@ contains
     !---------------------------------------------------------------------------
 
     Rtot = qdry * Rdry
-#ifndef DRY
     do iqw = 1, QA
        Rtot = Rtot + q(iqw) * Rq(iqw)
     enddo
-#endif
 
     return
   end subroutine ATMOS_THERMODYN_r_0D
@@ -427,15 +444,21 @@ contains
 
     real(RP), intent(out) :: Rtot(KA,IA,JA)    !< total gas constant     [J/kg/K]
 
-    integer :: k, i, j
+    integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k,iqw)
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       call ATMOS_THERMODYN_r( QA, q(k,i,j,:), Rq(:), qdry(k,i,j), Rtot(k,i,j) )
-    enddo
+       do k = KS, KE
+          Rtot(k,i,j) = qdry(k,i,j) * Rdry
+       end do
+       do iqw = 1, QA
+       do k = KS, KE
+          Rtot(k,i,j) = Rtot(k,i,j) + q(k,i,j,iqw) * Rq(iqw)
+       enddo
+       enddo
     enddo
     enddo
 
@@ -509,13 +532,27 @@ contains
     real(RP), intent(out) :: CVtot(KA) !> total specific heat    [J/kg/K]
     real(RP), intent(out) :: CPtot(KA) !> total specific heat    [J/kg/K]
 
-    integer :: k
+    integer :: k, iqw
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       call ATMOS_THERMODYN_specific_heat( QA, &
-                                           q(k,:), Mq(:), Rq(:), CVq(:), CPq(:), & ! [IN]
-                                           Qdry(k), Rtot(k), CVtot(k), CPtot(k)  ) ! [OUT]
+       qdry (k) = 1.0_RP
+       Rtot (k) = 0.0_RP
+       CVtot(k) = 0.0_RP
+       CPtot(k) = 0.0_RP
+    end do
+    do iqw = 1, QA
+    do k = KS, KE
+       qdry (k) = qdry (k) - q(k,iqw) * Mq(iqw)
+       Rtot (k) = Rtot (k) + q(k,iqw) * Rq(iqw)
+       CVtot(k) = CVtot(k) + q(k,iqw) * CVq(iqw)
+       CPtot(k) = CPtot(k) + q(k,iqw) * CPq(iqw)
+    enddo
+    enddo
+    do k = KS, KE
+       Rtot (k) = Rtot (k) + qdry(k) * Rdry
+       CVtot(k) = CVtot(k) + qdry(k) * CVdry
+       CPtot(k) = CPtot(k) + qdry(k) * CPdry
     end do
 
     return
@@ -545,16 +582,31 @@ contains
     real(RP), intent(out) :: CVtot(IA,JA) !> total specific heat    [J/kg/K]
     real(RP), intent(out) :: CPtot(IA,JA) !> total specific heat    [J/kg/K]
 
-    integer :: i, j
+    integer :: i, j, iqw
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-    !$omp private(i,j)
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private(i,j,iqw)
     do j = JS, JE
-    do i = IS, IE
-       call ATMOS_THERMODYN_specific_heat( QA, q(i,j,:), Mq(:), Rq(:), CVq(:), CPq(:),  & ! [IN]
-                                           Qdry(i,j), Rtot(i,j), CVtot(i,j), CPtot(i,j) ) ! [OUT]
-    end do
+       do i = IS, IE
+          qdry (i,j) = 1.0_RP
+          Rtot (i,j) = 0.0_RP
+          CVtot(i,j) = 0.0_RP
+          CPtot(i,j) = 0.0_RP
+       end do
+       do iqw = 1, QA
+       do i = IS, IE
+          qdry (i,j) = qdry (i,j) - q(i,j,iqw) * Mq(iqw)
+          Rtot (i,j) = Rtot (i,j) + q(i,j,iqw) * Rq(iqw)
+          CVtot(i,j) = CVtot(i,j) + q(i,j,iqw) * CVq(iqw)
+          CPtot(i,j) = CPtot(i,j) + q(i,j,iqw) * CPq(iqw)
+       enddo
+       enddo
+       do i = IS, IE
+          Rtot (i,j) = Rtot (i,j) + qdry(i,j) * Rdry
+          CVtot(i,j) = CVtot(i,j) + qdry(i,j) * CVdry
+          CPtot(i,j) = CPtot(i,j) + qdry(i,j) * CPdry
+       end do
     end do
 
     return
@@ -585,34 +637,34 @@ contains
     real(RP), intent(out) :: CVtot(KA,IA,JA) !> total specific heat    [J/kg/K]
     real(RP), intent(out) :: CPtot(KA,IA,JA) !> total specific heat    [J/kg/K]
 
-    integer :: k, i, j
+    integer :: k, i, j, iqw
     !---------------------------------------------------------------------------
 
-    if ( QA == 0 ) then
-       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k)
-       do j = JS, JE
-       do i = IS, IE
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(i,j,k,iqw)
+    do j = JS, JE
+    do i = IS, IE
        do k = KS, KE
-          Qdry (k,i,j) = 1.0_RP
-          Rtot (k,i,j) = Rdry
-          CVtot(k,i,j) = CVdry
-          CPtot(k,i,j) = CPdry
+          qdry (k,i,j) = 1.0_RP
+          Rtot (k,i,j) = 0.0_RP
+          CVtot(k,i,j) = 0.0_RP
+          CPtot(k,i,j) = 0.0_RP
        end do
-       end do
-       end do
-    else
-       !$omp parallel do OMP_SCHEDULE_ collapse(2) &
-       !$omp private(i,j,k)
-       do j = JS, JE
-       do i = IS, IE
+       do iqw = 1, QA
        do k = KS, KE
-          call ATMOS_THERMODYN_specific_heat( QA, q(k,i,j,:), Mq(:), Rq(:), CVq(:), CPq(:),        & ! [IN]
-                                              Qdry(k,i,j), Rtot(k,i,j), CVtot(k,i,j), CPtot(k,i,j) ) ! [OUT]
+          qdry (k,i,j) = qdry (k,i,j) - q(k,i,j,iqw) * Mq(iqw)
+          Rtot (k,i,j) = Rtot (k,i,j) + q(k,i,j,iqw) * Rq(iqw)
+          CVtot(k,i,j) = CVtot(k,i,j) + q(k,i,j,iqw) * CVq(iqw)
+          CPtot(k,i,j) = CPtot(k,i,j) + q(k,i,j,iqw) * CPq(iqw)
+       enddo
+       enddo
+       do k = KS, KE
+          Rtot (k,i,j) = Rtot (k,i,j) + qdry(k,i,j) * Rdry
+          CVtot(k,i,j) = CVtot(k,i,j) + qdry(k,i,j) * CVdry
+          CPtot(k,i,j) = CPtot(k,i,j) + qdry(k,i,j) * CPdry
        end do
-       end do
-       end do
-    end if
+    end do
+    end do
 
     return
   end subroutine ATMOS_THERMODYN_specific_heat_3D
@@ -663,7 +715,7 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_THERMODYN_rhot2pres( rtot(k,i,j), CVtot(k,i,j), CPtot(k,i,j), Rtot(k,i,j), pres(k,i,j) )
+       call ATMOS_THERMODYN_rhot2pres( rhot(k,i,j), CVtot(k,i,j), CPtot(k,i,j), Rtot(k,i,j), pres(k,i,j) )
     end do
     end do
     end do
@@ -878,7 +930,6 @@ contains
   !-----------------------------------------------------------------------------
   !> calc rho * ein -> temp & pres (0D)
 !OCL SERIAL
-!OCL NOSIMD
   subroutine ATMOS_THERMODYN_rhoe2temp_pres_0D( &
        dens, rhoe, CVtot, Rtot, &
        temp, pres               )
@@ -919,12 +970,14 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ collapse(2) &
+    !$omp parallel do default(none) private(i,j) OMP_SCHEDULE_ &
     !$omp shared(JS,JE,IS,IE,&
     !$omp        dens,rhoe,CVtot,Rtot,temp,pres)
     do j = JS, JE
     do i = IS, IE
-       call ATMOS_THERMODYN_rhoe2temp_pres( dens(i,j), rhoe(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
+!       call ATMOS_THERMODYN_rhoe2temp_pres_0D( dens(i,j), rhoe(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
+       temp(i,j) = rhoe(i,j) / ( dens(i,j) * CVtot(i,j) )
+       pres(i,j) = dens(i,j) * Rtot(i,j) * temp(i,j)
     enddo
     enddo
 
@@ -959,7 +1012,9 @@ contains
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_THERMODYN_rhoe2temp_pres( dens(k,i,j), rhoe(k,i,j), CVtot(k,i,j), Rtot(k,i,j), temp(k,i,j), pres(k,i,j) )
+!       call ATMOS_THERMODYN_rhoe2temp_pres( dens(k,i,j), rhoe(k,i,j), CVtot(k,i,j), Rtot(k,i,j), temp(k,i,j), pres(k,i,j) )
+       temp(k,i,j) = rhoe(k,i,j) / ( dens(k,i,j) * CVtot(k,i,j) )
+       pres(k,i,j) = dens(k,i,j) * Rtot(k,i,j) * temp(k,i,j)
     enddo
     enddo
     enddo
@@ -1009,7 +1064,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do private(i,j) OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do private(i,j) OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
        call ATMOS_THERMODYN_ein2temp_pres( Ein(i,j), dens(i,j), CVtot(i,j), Rtot(i,j), temp(i,j), pres(i,j) )
@@ -1174,7 +1229,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp parallel do OMP_SCHEDULE_ &
     !$omp private(i,j)
     do j = JS, JE
     do i = IS, IE

@@ -242,7 +242,7 @@ contains
                                 var_id,   & ! [IN]
                                 LAT_1d(:) ) ! [OUT]
 
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, nLAT
           do i = 1, nLON
              LAT_org(i,j) = LAT_1d(j) * D2R
@@ -253,7 +253,7 @@ contains
                                 var_id,      & ! [IN]
                                 LAT_org(:,:) ) ! [OUT]
 
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, nLAT
           do i = 1, nLON
              LAT_org(i,j) = LAT_org(i,j) * D2R
@@ -271,7 +271,7 @@ contains
                                 var_id,   & ! [IN]
                                 LON_1d(:) ) ! [OUT]
 
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, nLAT
           do i = 1, nLON
              LON_org(i,j) = LON_1d(i) * D2R
@@ -282,7 +282,7 @@ contains
                                 var_id,      & ! [IN]
                                 LON_org(:,:) ) ! [OUT]
 
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, nLAT
           do i = 1, nLON
              LON_org(i,j) = LON_org(i,j) * D2R
@@ -301,7 +301,7 @@ contains
                                 var_id,   & ! [IN]
                                 LEV_1d(:) ) ! [OUT]
 
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, nLAT
           do i = 1, nLON
           do k = 1, nLEV

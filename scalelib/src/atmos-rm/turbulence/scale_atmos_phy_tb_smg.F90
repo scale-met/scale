@@ -162,7 +162,7 @@ contains
     lambda (:,:,:) = UNDEF
 #endif
     if ( ATMOS_PHY_TB_SMG_horizontal ) then
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
@@ -178,7 +178,7 @@ contains
        ATMOS_PHY_TB_SMG_implicit       = .false. ! flux in the z-direction is not necessary
        ATMOS_PHY_TB_SMG_backscatter    = .false.
     else
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
        do k = KS, KE
@@ -194,7 +194,7 @@ contains
 #endif
 
        if ( ATMOS_PHY_TB_SMG_bottom ) then
-          !$omp parallel do
+          !$omp parallel do collapse(2)
           do j = JS-1, JE+1
           do i = IS-1, IE+1
           do k = KS, KE
@@ -206,7 +206,7 @@ contains
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        else
-          !$omp parallel do
+          !$omp parallel do collapse(2)
           do j = JS-1, JE+1
           do i = IS-1, IE+1
           do k = KS, KE
@@ -400,7 +400,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -422,7 +422,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -444,7 +444,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -466,7 +466,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -488,7 +488,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -510,7 +510,7 @@ contains
 
        call RANDOM_normal( random(:,:,:) )
        ! 1:2:1 filter
-       !$omp parallel do
+       !$omp parallel do collapse(2)
        do j = JS-1, JE+1
        do i = IS-1, IE+1
           do k = KS+1, KE-1
@@ -534,7 +534,7 @@ contains
     end if
 
 
-    !$omp parallel do &
+    !$omp parallel do collapse(2) &
     !$omp private(fm,Rf,lambda_r,leOvleo5,C1,C2,D2,e,et,fact,dz,dx,dy)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
@@ -629,11 +629,16 @@ contains
     IIE = IIS+IBLOCK-1
 
        !##### momentum equation (z) #####
+
+       !$omp parallel private(i,j,k)
+
        ! (cell center)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          !$omp workshare
           qflx_sgs_momz(:,:,:,ZDIR) = 0.0_RP
+          !$omp end workshare nowait
        else
-          !$omp parallel do
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS+1, KE-1
@@ -652,10 +657,11 @@ contains
           enddo
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-          !$omp parallel do
+          !$omp do
           do j = JJS, JJE
           do i = IIS, IIE
              ! momentum will not be conserved
@@ -664,12 +670,13 @@ contains
              ! anti-isotropic stress is calculated by the surface scheme
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        end if
        ! (y edge)
-       !$omp parallel do
+       !$omp do collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE-1
@@ -691,13 +698,12 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        ! (x edge)
-       !$omp parallel do default(none) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,S23_X,nu,qflx_sgs_momz) &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE-1
@@ -719,9 +725,12 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       !$omp end parallel
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
 
@@ -730,7 +739,7 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
-          !$omp parallel do &
+          !$omp parallel do collapse(2) &
           !$omp private (ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -774,11 +783,16 @@ contains
        end if
 
        !##### momentum equation (x) #####
+
+       !$omp parallel private(i,j,k)
+
        ! (y edge)
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          !$omp workshare
           qflx_sgs_momx(:,:,:,ZDIR) = 0.0_RP
+          !$omp end workshare nowait
        else
-          !$omp parallel do
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -800,24 +814,25 @@ contains
           enddo
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-          !$omp parallel do
+          !$omp do
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_momx(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
              qflx_sgs_momx(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        end if
+
        ! (cell center)
-       !$omp parallel do default(none) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,TKE,tke_fact,qflx_sgs_momx) &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do collapse(2)
        do j = JJS, JJE
        do i = IIS, IIE+1
        do k = KS, KE
@@ -836,13 +851,13 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
        ! (z edge)
-       !$omp parallel do default(none) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momx) &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do collapse(2)
        do j = JJS-1, JJE
        do i = IIS,   IIE
        do k = KS, KE
@@ -864,9 +879,12 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       !$omp end parallel
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
           call calc_tend_MOMX( TEND, & ! (out)
@@ -874,7 +892,7 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
-          !$omp parallel do &
+          !$omp parallel do collapse(2) &
           !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -926,10 +944,15 @@ contains
 
        !##### momentum equation (y) #####
        ! (x edge)
+
+       !$omp parallel private(i,j,k)
+
        if ( ATMOS_PHY_TB_SMG_horizontal ) then
+          !$omp workshare
           qflx_sgs_momy(:,:,:,ZDIR) = 0.0_RP
+          !$omp end workshare nowait
        else
-          !$omp parallel do
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE-1
@@ -951,25 +974,25 @@ contains
           enddo
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
-          !$omp parallel do
+          !$omp do
           do j = JJS, JJE
           do i = IIS, IIE
              qflx_sgs_momy(KS-1,i,j,ZDIR) = 0.0_RP ! bottom boundary
              qflx_sgs_momy(KE  ,i,j,ZDIR) = 0.0_RP ! top boundary
           enddo
           enddo
+          !$omp end do nowait
 #ifdef DEBUG
           i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
        end if
 
        ! (z edge)
-       !$omp parallel do default(none) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S12_Z,qflx_sgs_momy) &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do collapse(2)
        do j = JJS,   JJE
        do i = IIS-1, IIE
        do k = KS, KE
@@ -991,14 +1014,13 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
 
        ! (z-x plane)
-       !$omp parallel do default(none) &
-       !$omp shared(JJS,JJE,IIS,IIE,KS,KE,DENS,nu,S11_C,S22_C,S33_C,tke_fact,TKE,qflx_sgs_momy) &
-       !$omp private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       !$omp do collapse(2)
        do j = JJS, JJE+1
        do i = IIS, IIE
        do k = KS, KE
@@ -1017,9 +1039,12 @@ contains
        enddo
        enddo
        enddo
+       !$omp end do nowait
 #ifdef DEBUG
        i = IUNDEF; j = IUNDEF; k = IUNDEF
 #endif
+
+       !$omp end parallel
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
           call calc_tend_MOMY( TEND, & ! (out)
@@ -1027,7 +1052,7 @@ contains
                                GSQRT, J13G, J23G, J33G, MAPF, & ! (in)
                                IIS, IIE, JJS, JJE ) ! (in)
 
-          !$omp parallel do &
+          !$omp parallel do collapse(2) &
           !$omp private(ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1080,9 +1105,11 @@ contains
        if ( ATMOS_PHY_TB_SMG_backscatter ) then
 
 #define f2h(k,i,j,p) ( ( FZ(k+p-1,i,j) - FZ(k+p-2,i,j) ) / ( FZ(k+1,i,j) - FZ(k-1,i,j) ) )
+
+          !$omp parallel private(flxz)
+
           ! MOMZ : dfy/dx - dfx/dy
-          !$omp parallel do &
-          !$omp private(flxz)
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              do k = KS+1, KE-1
@@ -1108,10 +1135,10 @@ contains
              MOMZ_t(KE,i,j) = 0.0_RP
           end do
           end do
+          !$omp end do nowait
 
           ! MOMX : dfz/dy - dfy/dz
-          !$omp parallel do &
-          !$omp private(flxz)
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              do k = KS, KE-1
@@ -1130,10 +1157,10 @@ contains
              end do
           end do
           end do
+          !$omp end do nowait
 
           ! MOMY : dfx/dz - dfz/dx
-          !$omp parallel do &
-          !$omp private(flxz)
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
              do k = KS, KE-1
@@ -1152,11 +1179,16 @@ contains
              end do
           end do
           end do
+          !$omp end do nowait
+
+          !$omp end parallel
 
        else
 
-          !$omp parallel do
+          !$omp parallel
+
 !OCL XFILL
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1164,8 +1196,10 @@ contains
           end do
           end do
           end do
-          !$omp parallel do
+          !$omp end do nowait
+
 !OCL XFILL
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1173,8 +1207,10 @@ contains
           end do
           end do
           end do
-          !$omp parallel do
+          !$omp end do nowait
+
 !OCL XFILL
+          !$omp do collapse(2)
           do j = JJS, JJE
           do i = IIS, IIE
           do k = KS, KE
@@ -1182,6 +1218,9 @@ contains
           end do
           end do
           end do
+          !$omp end do nowait
+
+          !$omp end parallel
 
        end if
 
@@ -1189,7 +1228,7 @@ contains
 
        if ( ATMOS_PHY_TB_SMG_implicit ) then
 
-          !$omp parallel do &
+          !$omp parallel do collapse(2) &
           !$omp private (ap,d)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1228,7 +1267,7 @@ contains
 
        if ( ATMOS_PHY_TB_SMG_backscatter ) then
 
-          !$omp parallel do
+          !$omp parallel do collapse(2)
           do j = JJS-1, JJE+1
           do i = IIS-1, IIE+1
 
@@ -1256,7 +1295,7 @@ contains
           end do
           end do
 
-          !$omp parallel do &
+          !$omp parallel do collapse(2) &
           !$omp private(flxz)
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1278,7 +1317,7 @@ contains
 
        else
 
-          !$omp parallel do
+          !$omp parallel do collapse(2)
 !OCL XFILL
           do j = JJS, JJE
           do i = IIS, IIE
@@ -1315,7 +1354,7 @@ contains
 
           if ( ATMOS_PHY_TB_SMG_backscatter .and. iq == I_QV ) then
 
-             !$omp parallel do
+             !$omp parallel do collapse(2)
              do j = JJS-1, JJE+1
              do i = IIS-1, IIE+1
 
@@ -1343,7 +1382,7 @@ contains
              end do
              end do
 
-             !$omp parallel do &
+             !$omp parallel do collapse(2) &
              !$omp private (flxz)
              do j = JJS, JJE
              do i = IIS, IIE
@@ -1365,7 +1404,7 @@ contains
 
           else
 
-             !$omp parallel do
+             !$omp parallel do collapse(2)
 !OCL XFILL
              do j = JJS, JJE
              do i = IIS, IIE
