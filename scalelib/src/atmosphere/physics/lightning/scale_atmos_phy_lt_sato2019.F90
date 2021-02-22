@@ -59,6 +59,7 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private                 :: fp = 0.3_RP            ! [-]
   real(RP), private                 :: zcg = 0.0_RP           ! lowest grid point of lightning path for MG2001 [m]
   integer,  private                 :: NUTR_ITMAX = 1000
+  integer,  private                 :: FLAG_preprocessing = 2 ! 0-> No preprocessing, 1->Gauss-Seidel, 2->Synmetric Gauss-Sidel(Default),  3->Incomplete LU factorization
   integer,  private                 :: KIJMAXG
   character(len=H_LONG)             :: ATMOS_PHY_LT_LUT_FILENAME !--- LUT file name
   character(len=H_LONG)             :: fname_lut_lt="LUT_TK1978_v.txt" !--- LUT file name
@@ -200,7 +201,8 @@ contains
          zcg, &
          R_neut, &
          Hgt_dependency_Eint, &
-         LT_DO_Lightning
+         LT_DO_Lightning, &
+         FLAG_preprocessing
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -1309,14 +1311,27 @@ contains
     real(RP) :: iprod(2)
     real(RP) :: buf(2)
 
+    real(RP):: diag(KA,IA,JA)
+    real(RP):: z1(KA,IA,JA)
+    real(RP):: z2(KA,IA,JA)
+    real(RP):: Mz1(KA,IA,JA)
+    real(RP):: Mz2(KA,IA,JA)
+
     integer :: k, i, j
     integer :: iis, iie, jjs, jje
     integer :: iter
     integer :: ierror
 
+
     r  => v0
     rn => v1
 
+    if( FLAG_preprocessing == 3 ) then
+       call ILU_decomp(KA, KS, KE, &
+                       IA, IS, IE, &
+                       JA, JS, JE, &
+                       M,  diag)
+    endif
     call mul_matrix( KA, KS, KE, & ! (in)
                      IA, IS, IE, & ! (in)
                      JA, JS, JE, & ! (in)
@@ -1402,17 +1417,48 @@ contains
 
        call COMM_vars8( p, 1 )
        call COMM_wait ( p, 1 )
+
+       if( FLAG_preprocessing == 1 ) then
+
+          call gs( KA, KS, KE, & ! (in)
+                   IA, IS, IE, & ! (in)
+                   JA, JS, JE, & ! (in)
+                   z1, M, p    )
+
+       elseif( FLAG_preprocessing == 2 ) then
+
+          call sgs( KA, KS, KE, & ! (in)
+                    IA, IS, IE, & ! (in)
+                    JA, JS, JE, & ! (in)
+                    z1, M, p    )
+
+       elseif( FLAG_preprocessing == 3 ) then
+
+          call solve_ILU( KA, KS, KE, & ! (in)
+                          IA, IS, IE, & ! (in)
+                          JA, JS, JE, & ! (in)
+                          z1, M, p, diag)
+
+       endif
+
        call mul_matrix( KA, KS, KE, & ! (in)
                         IA, IS, IE, & ! (in)
                         JA, JS, JE, & ! (in)
                         Mp, M, p    )
+
+       call COMM_vars8( z1, 1 )
+       call COMM_wait ( z1, 1 )
+       call mul_matrix( KA, KS, KE, & ! (in)
+                        IA, IS, IE, & ! (in)
+                        JA, JS, JE, & ! (in)
+                        Mz1, M, z1    )
 
        iprod(1) = 0.0_RP
        !$omp parallel do reduction(+:iprod)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          iprod(1) = iprod(1) + r0(k,i,j) * Mp(k,i,j)
+          iprod(1) = iprod(1) + r0(k,i,j) * Mz1(k,i,j)
        enddo
        enddo
        enddo
@@ -1427,25 +1473,49 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          s(k,i,j) = r(k,i,j) - al*Mp(k,i,j)
+          s(k,i,j) = r(k,i,j) - al*Mz1(k,i,j)
        enddo
        enddo
        enddo
 
        call COMM_vars8( s, 1 )
        call COMM_wait ( s, 1 )
-       call mul_matrix( KA, KS, KE, & ! (in)
+       if( FLAG_preprocessing == 1 ) then
+
+          call gs( KA, KS, KE, & ! (in)
+                   IA, IS, IE, & ! (in)
+                   JA, JS, JE, & ! (in)
+                   z2, M, s    )
+
+       elseif( FLAG_preprocessing == 2 ) then
+
+          call sgs( KA, IS, KE, & ! (in)
+                    IA, IS, IE, & ! (in)
+                    JA, JS, JE, & ! (in)
+                    z2, M, s    )
+
+       elseif( FLAG_preprocessing == 3 ) then
+
+          call solve_ILU( KA, KS, KE, & ! (in)
+                          IA, IS, IE, & ! (in)
+                          JA, JS, JE, & ! (in)
+                          z2, M, s, diag)
+       endif
+
+      call COMM_vars8( z2, 1 )
+      call COMM_wait ( z2, 1 )
+      call mul_matrix( KA, KS, KE, & ! (in)
                         IA, IS, IE, & ! (in)
                         JA, JS, JE, & ! (in)
-                        Ms, M, s )
+                        Mz2, M, z2 )
        iprod(1) = 0.0_RP
        iprod(2) = 0.0_RP
        !$omp parallel do reduction(+:iprod)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          iprod(1) = iprod(1) + Ms(k,i,j) *  s(k,i,j)
-          iprod(2) = iprod(2) + Ms(k,i,j) * Ms(k,i,j)
+          iprod(1) = iprod(1) + Mz2(k,i,j) *  s(k,i,j)
+          iprod(2) = iprod(2) + Mz2(k,i,j) * Mz2(k,i,j)
        enddo
        enddo
        enddo
@@ -1460,7 +1530,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          PHI_N(k,i,j) = PHI_N(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
+          PHI_N(k,i,j) = PHI_N(k,i,j) + al*z1(k,i,j) + w*z2(k,i,j)
        enddo
        enddo
        enddo
@@ -1469,7 +1539,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          rn(k,i,j) = s(k,i,j) - w*Ms(k,i,j)
+          rn(k,i,j) = s(k,i,j) - w*Mz2(k,i,j)
        enddo
        enddo
        enddo
@@ -1494,7 +1564,7 @@ contains
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
-          p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mp(k,i,j) )
+          p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mz1(k,i,j) )
        enddo
        enddo
        enddo
@@ -1525,6 +1595,416 @@ contains
 
     return
   end subroutine ATMOS_PHY_LT_solve_bicgstab
+
+  subroutine ILU_decomp(KA, KS, KE, &
+                        IA, IS, IE, &
+                        JA, JS, JE, &
+                        M,  diag)
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(out) :: diag(KA,IA,JA)
+
+    integer :: k, i, j
+
+    !$omp parallel do
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+       diag(k,i,j)=M(k,1,i,j)
+    enddo
+    enddo
+    enddo
+
+    !$omp parallel do
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+       if(k /= KE) then
+          diag(k+1,i,j) = diag(k+1,i,j) + M(k,3,i,j)*M(k+1,2,i,j)/diag(k,i,j)
+          if(i /= IE) then
+             diag(k+1,i+1,j) = diag(k+1,i+1,j) + M(k,13,i,j)*M(k+1,8,i+1,j)/diag(k,i,j)
+          endif
+          if(j /= JE) then
+             diag(k+1,i,j+1) = diag(k+1,i,j+1) + M(k,15,i,j)*M(k+1,10,i,j+1)/diag(k,i,j)
+          endif
+       endif
+       if(i /= IE) then
+          diag(k,i+1,j) = diag(k,i+1,j) +M(k,5,i,j)*M(k,4,i+1,j)/diag(k,i,j)
+          if(k /= KS) then
+             diag(k-1,i+1,j) = diag(k-1,i+1,j) + M(k,9,i,j)*M(k-1,12,i+1,j)/diag(k,i,j)
+          endif
+       endif
+       if(j /= JE) then
+          diag(k,i,j+1)=diag(k,i,j+1) + M(k,7,i,j)*M(k,6,i,j+1)/diag(k,i,j)
+          if(k /= KS) then
+             diag(k-1,i,j+1) = diag(k-1,i,j+1) + M(k,11,i,j)*M(k-1,14,i,j+1)/diag(k,i,j)
+          endif
+       endif
+    enddo
+    enddo
+    enddo
+  return
+
+  end subroutine ILU_decomp
+
+  subroutine solve_ILU( KA,KS,KE, &
+                        IA,IS,IE, &
+                        JA,JS,JE, &
+                        Z, M, V, diag)
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(in)  :: diag(KA,IA,JA)
+    real(RP), intent(in)  :: V(KA,IA,JA)
+    real(RP), intent(out) :: Z(KA,IA,JA)
+
+    real(RP):: Y(KA,IA,JA)
+    integer :: k,i,j
+
+    call gs_ILU(KA, KS, KE, &
+                IA, IS, IE, &
+                JA, JS, JE, &
+                Y,  M,  V,  diag)
+
+    !$omp parallel do
+    do j=JS,JE
+    do i=IS,IE
+    do k=KS,KE
+      Y(k,i,j)=diag(k,i,j)*Y(k,i,j)
+    enddo
+    enddo
+    enddo
+
+    call back_sub_ILU(KA, KS, KE, &
+                      IA, IS, IE, &
+                      JA, JS, JE, &
+                      Z,  M,  Y, diag)
+
+    return
+
+  end subroutine solve_ILU
+
+  subroutine back_sub_ILU( KA, KS, KE, &
+                           IA, IS, IE, &
+                           JA, JS, JE, &
+                           Z,  M,  V,diag)
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(in)  :: diag(KA,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j
+
+   Z(:,:,:)=0.0_RP
+
+   !$omp parallel do
+   do j = JE, JS,-1
+   do i = IE, IS,-1
+
+         Z(KE,i,j) = ( V(KE,i,j) &
+         -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+          + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+          + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+          + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+          + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+          + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+          + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+          + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+          + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/diag(KE,i,j)
+
+         do k = KE-1, KS+1,-1
+            Z(k,i,j) = (V(k,i,j) &
+            -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+             + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+             + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+             + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+             + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+             + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+             + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+             + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+             + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+             + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+             + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+             + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+             + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+             + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/diag(k,i,j)
+         enddo
+
+         Z(KS,i,j) = (V(KS,i,j) &
+         -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+          + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+          + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+          + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+          + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+          + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+          + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+          + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+          + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /diag(KS,i,j)
+
+   enddo
+   enddo
+
+   return
+  end subroutine back_sub_ILU
+
+  subroutine gs_ILU( KA, KS, KE, &
+                     IA, IS, IE, &
+                     JA, JS, JE, &
+                     Z,  M,  V , diag) !M*Z=V -> Z=M^{-1} V
+
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(in)  :: diag(KA,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j
+
+   Z(:,:,:)=0.0_RP
+
+   !$omp parallel do
+   do j = JS, JE
+   do i = IS, IE
+
+         Z(KS,i,j) = (V(KS,i,j) &
+         -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+          + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+          + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+          + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+          + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+          + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+          + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+          + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+          + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /diag(KS,i,j)
+
+         do k = KS+1, KE-1
+            Z(k,i,j) = (V(k,i,j) &
+            -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+             + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+             + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+             + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+             + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+             + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+             + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+             + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+             + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+             + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+             + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+             + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+             + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+             + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/diag(k,i,j)
+         enddo
+
+         Z(KE,i,j) = ( V(KE,i,j) &
+         -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+          + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+          + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+          + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+          + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+          + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+          + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+          + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+          + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/diag(KE,i,j)
+
+   enddo
+   enddo
+
+   return
+  end subroutine gs_ILU
+
+  subroutine sgs( KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  V)
+    use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+    implicit none
+    integer,  intent(in)  :: KA, KS, KE
+    integer,  intent(in)  :: IA, IS, IE
+    integer,  intent(in)  :: JA, JS, JE
+    real(RP), intent(in)  :: M(KA,15,IA,JA)
+    real(RP), intent(in)  :: V(KA,IA,JA)
+    real(RP), intent(out) :: Z(KA,IA,JA)
+    real(RP):: Y(KA,IA,JA)
+    integer :: k,i,j
+  
+    call gs( KA, KS, KE, &
+             IA, IS, IE, &
+             JA, JS, JE, &
+             Y,  M,  V )
+  
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+            Y(k,i,j)=M(k,1,i,j)*Y(k,i,j)
+    enddo
+    enddo
+    enddo
+  
+    call back_sub(KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  Y )
+  
+    return
+  
+  end subroutine sgs
+  
+  subroutine back_sub ( KA, KS, KE, &
+                        IA, IS, IE, &
+                        JA, JS, JE, &
+                        Z,  M,  V   )
+   use scale_prc, only: &
+       PRC_abort, &
+       PRC_IsMaster
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+   integer :: k, i, j
+  
+   Z(:,:,:)=0.0_RP
+  
+   !$omp parallel do
+   do j = JE, JS,-1
+   do i = IE, IS,-1
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+  
+      do k = KE-1, KS+1,-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+  
+      enddo
+  
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+       + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+  
+   enddo
+   enddo
+
+   return
+  end subroutine back_sub
+
+  subroutine gs ( KA, KS, KE, &
+                  IA, IS, IE, &
+                  JA, JS, JE, &
+                  Z,  M,  V   )
+
+   implicit none
+   integer,  intent(in)  :: KA, KS, KE
+   integer,  intent(in)  :: IA, IS, IE
+   integer,  intent(in)  :: JA, JS, JE
+   real(RP), intent(in)  :: V(KA,IA,JA)
+   real(RP), intent(in)  :: M(KA,15,IA,JA)
+   real(RP), intent(out) :: Z(KA,IA,JA)
+
+   integer :: k, i, j
+
+   Z(:,:,:) = 0.0_RP
+
+   !$omp parallel do
+   do j = JS, JE
+   do i = IS, IE
+
+      Z(KS,i,j) = (V(KS,i,j) &
+      -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+       + M(KS,4,i,j) * Z(KS  ,i-1,j  )  &
+       + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+       + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+       + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+       + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+       + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+       + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+       + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+      do k = KS+1, KE-1
+         Z(k,i,j) = (V(k,i,j) &
+         -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+          + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+          + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+          + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+          + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+          + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+          + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+          + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+          + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+          + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+          + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+          + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+          + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+          + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+      enddo
+
+      Z(KE,i,j) = ( V(KE,i,j) &
+      -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+       + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+       + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+       + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+       + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+       + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+       + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+       + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+       + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+   enddo
+   enddo
+
+   return
+  end subroutine gs
 
   subroutine mul_matrix( KA,KS,KE, &
                          IA,IS,IE, &
@@ -1585,6 +2065,7 @@ contains
 
     return
   end subroutine mul_matrix
+
   !-----------------------------------------------------------------------------
   function f2h( k,i,j,p )
 
