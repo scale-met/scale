@@ -6,6 +6,10 @@
 !!
 !! @author Team SCALE
 !!
+!! @par History
+!! @li      2019-03-19 (Y.Sato) [new] Newly created
+!! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine 
+!!
 !<
 !-------------------------------------------------------------------------------
 #include "scalelib.h"
@@ -59,7 +63,7 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private                 :: fp = 0.3_RP            ! [-]
   real(RP), private                 :: zcg = 0.0_RP           ! lowest grid point of lightning path for MG2001 [m]
   integer,  private                 :: NUTR_ITMAX = 1000
-  integer,  private                 :: FLAG_preprocessing = 2 ! 0-> No preprocessing, 1->Gauss-Seidel, 2->Synmetric Gauss-Sidel(Default),  3->Incomplete LU factorization
+  integer,  private                 :: FLAG_preprocessing = 2 ! 1->Gauss-Seidel, 2->Synmetric Gauss-Sidel(Default),  3->Incomplete LU factorization
   integer,  private                 :: KIJMAXG
   character(len=H_LONG)             :: ATMOS_PHY_LT_LUT_FILENAME !--- LUT file name
   character(len=H_LONG)             :: fname_lut_lt="LUT_TK1978_v.txt" !--- LUT file name
@@ -1596,6 +1600,7 @@ contains
     return
   end subroutine ATMOS_PHY_LT_solve_bicgstab
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine ILU_decomp(KA, KS, KE, &
                         IA, IS, IE, &
                         JA, JS, JE, &
@@ -1650,6 +1655,7 @@ contains
 
   end subroutine ILU_decomp
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine solve_ILU( KA,KS,KE, &
                         IA,IS,IE, &
                         JA,JS,JE, &
@@ -1692,6 +1698,7 @@ contains
 
   end subroutine solve_ILU
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine back_sub_ILU( KA, KS, KE, &
                            IA, IS, IE, &
                            JA, JS, JE, &
@@ -1762,6 +1769,7 @@ contains
    return
   end subroutine back_sub_ILU
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine gs_ILU( KA, KS, KE, &
                      IA, IS, IE, &
                      JA, JS, JE, &
@@ -1830,6 +1838,7 @@ contains
    return
   end subroutine gs_ILU
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine sgs( KA, KS, KE, &
                   IA, IS, IE, &
                   JA, JS, JE, &
@@ -1870,6 +1879,7 @@ contains
   
   end subroutine sgs
   
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine back_sub ( KA, KS, KE, &
                         IA, IS, IE, &
                         JA, JS, JE, &
@@ -1939,6 +1949,7 @@ contains
    return
   end subroutine back_sub
 
+  !----- N. Yamashita and T. Iwashita of Hokkaido Univ. created (2021/2/22)-----
   subroutine gs ( KA, KS, KE, &
                   IA, IS, IE, &
                   JA, JS, JE, &
