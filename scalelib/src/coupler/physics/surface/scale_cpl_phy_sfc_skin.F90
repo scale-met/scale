@@ -239,7 +239,7 @@ contains
     enddo
 
     ! update surface temperature
-    !$omp parallel do &
+    !$omp parallel do schedule(dynamic) collapse(2) &
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IO_UNIVERSALRANK,IO_LOCALRANK,IO_JOBID,IO_DOMAINID) &

@@ -399,12 +399,19 @@ contains
     real(RP), intent(in)  :: temp(KA) !< temperature               [K]
     real(RP), intent(out) :: psat(KA) !< saturation vapor pressure [Pa]
 
+    real(RP) :: alpha, psatl, psati
     integer  :: k
     !---------------------------------------------------------------------------
 
     do k = KS, KE
-       call ATMOS_SATURATION_psat_all_0D( temp(k), & ! [IN]
-                                          psat(k)  ) ! [OUT]
+!       call ATMOS_SATURATION_psat_all_0D( temp(k), & ! [IN]
+!                                          psat(k)  ) ! [OUT]
+       call ATMOS_SATURATION_alpha   ( temp(k), alpha )
+       call ATMOS_SATURATION_psat_liq( temp(k), psatl )
+       call ATMOS_SATURATION_psat_ice( temp(k), psati )
+
+       psat(k) = psatl * (          alpha ) &
+               + psati * ( 1.0_RP - alpha )
     enddo
 
     return
@@ -425,14 +432,22 @@ contains
 
     real(RP), intent(out) :: psat(IA,JA) !< saturation vapor pressure [Pa]
 
+    real(RP) :: alpha, psatl, psati
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ &
+    !$omp private(alpha,psatl,psati)
     do j = JS, JE
     do i = IS, IE
-       call ATMOS_SATURATION_psat_all_0D( temp(i,j), & ! [IN]
-                                          psat(i,j)  ) ! [OUT]
+!       call ATMOS_SATURATION_psat_all_0D( temp(i,j), & ! [IN]
+!                                          psat(i,j)  ) ! [OUT]
+       call ATMOS_SATURATION_alpha   ( temp(i,j), alpha )
+       call ATMOS_SATURATION_psat_liq( temp(i,j), psatl )
+       call ATMOS_SATURATION_psat_ice( temp(i,j), psati )
+
+       psat(i,j) = psatl * (          alpha ) &
+                 + psati * ( 1.0_RP - alpha )
     enddo
     enddo
 
@@ -456,15 +471,23 @@ contains
     real(RP), intent(in)  :: temp(KA,IA,JA) !< temperature               [K]
     real(RP), intent(out) :: psat(KA,IA,JA) !< saturation vapor pressure [Pa]
 
+    real(RP) :: alpha, psatl, psati
     integer  :: k, i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_ collapse(2) &
+    !$omp private(alpha,psatl,psati)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
-       call ATMOS_SATURATION_psat_all_0D( temp(k,i,j), & ! [IN]
-                                          psat(k,i,j)  ) ! [OUT]
+!       call ATMOS_SATURATION_psat_all_0D( temp(k,i,j), & ! [IN]
+!                                          psat(k,i,j)  ) ! [OUT]
+       call ATMOS_SATURATION_alpha   ( temp(k,i,j), alpha )
+       call ATMOS_SATURATION_psat_liq( temp(k,i,j), psatl )
+       call ATMOS_SATURATION_psat_ice( temp(k,i,j), psati )
+
+       psat(k,i,j) = psatl * (          alpha ) &
+                   + psati * ( 1.0_RP - alpha )
     enddo
     enddo
     enddo
@@ -483,8 +506,10 @@ contains
     real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
     !---------------------------------------------------------------------------
 
-    psat = PSAT0 * ( temp * RTEM00 )**CPovR_liq             &
-                 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+!    psat = PSAT0 * ( temp * RTEM00 )**CPovR_liq             &
+!                 * exp( LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
+    psat = PSAT0 * exp( log( temp * RTEM00 ) * CPovR_liq    &
+                      + LovR_liq * ( RTEM00 - 1.0_RP/temp ) )
 
     return
   end subroutine ATMOS_SATURATION_psat_liq_0D
@@ -531,7 +556,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_psat_liq_0D( temp(i,j), & ! [IN]
@@ -587,8 +612,10 @@ contains
     real(RP), intent(out) :: psat !< saturation vapor pressure [Pa]
     !---------------------------------------------------------------------------
 
-    psat = PSAT0 * ( temp * RTEM00 )**CPovR_ice             &
-                 * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
+!    psat = PSAT0 * ( temp * RTEM00 )**CPovR_ice             &
+!                 * exp( LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
+    psat = PSAT0 * exp( log( temp * RTEM00 ) * CPovR_ice    &
+                      + LovR_ice * ( RTEM00 - 1.0_RP/temp ) )
 
     return
   end subroutine ATMOS_SATURATION_psat_ice_0D
@@ -635,7 +662,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_psat_ice_0D( temp(i,j), & ! [IN]
@@ -717,6 +744,7 @@ contains
     !---------------------------------------------------------------------------
 
     call ATMOS_SATURATION_psat_all_0D( temp, psat ) ! [IN], [OUT]
+
     call ATMOS_SATURATION_psat2qsat_pres_0D( psat, pres, qdry, & ! [IN]
                                              qsat              ) ! [OUT]
 
@@ -769,7 +797,7 @@ contains
     integer  :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do OMP_SCHEDULE_ collapse(2)
+    !$omp parallel do OMP_SCHEDULE_
     do j = JS, JE
     do i = IS, IE
        call ATMOS_SATURATION_pres2qsat_all_0D( temp(i,j), pres(i,j), qdry(i,j), &
@@ -1421,7 +1449,6 @@ contains
 
     real(RP) :: LHS ! latent heat of sublimation  [J/kg]
     real(RP) :: psat
-
     !---------------------------------------------------------------------------
 
     call HYDROMETEOR_LHS( temp, LHS ) ! [IN], [OUT]

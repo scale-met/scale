@@ -774,7 +774,7 @@ contains
 
        else
 
-          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(3)
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
 !OCL XFILL
           do j = 1, JA
           do i = 1, IA

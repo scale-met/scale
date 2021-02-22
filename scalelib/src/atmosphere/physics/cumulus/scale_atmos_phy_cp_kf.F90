@@ -641,7 +641,7 @@ contains
        if ( hist_flag ) exit
     end do
 
-    !$omp parallel do default(none) &
+    !$omp parallel do default(none) schedule(dynamic) collapse(2) &
     !$omp private(RHOD,tempv,qv_d,qc,qi,PSAT,QSAT,QV,rh, &
     !$omp         dens_nw,theta_nw,qv_nw,qc_nw,qi_nw,qr_nw,qs_nw, &
     !$omp         flux_qr,flux_qs,theta_eu,theta_ee,theta_d,umfnewdold,qvdet,qcdet,qidet, &

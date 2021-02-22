@@ -291,7 +291,7 @@ contains
           if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
              call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                    lon1d(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lon_org(i,j) = lon1d(i) * D2R
@@ -301,7 +301,7 @@ contains
              call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                    lon_org(:,:),                 & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lon_org(i,j) = lon_org(i,j) * D2R
@@ -314,7 +314,7 @@ contains
           if( FILE_GrADS_isOneD( file_id_atm, var_id(ielem,1) ) ) then
              call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                    lat1d(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lat_org(i,j) = lat1d(j) * D2R
@@ -324,7 +324,7 @@ contains
              call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                    lat_org(:,:),                 & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, dims(3)
              do i = 1, dims(2)
                 lat_org(i,j) = lat_org(i,j) * D2R
@@ -432,7 +432,7 @@ contains
     integer  :: i, j, k, iq, ielem
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(3)
+    !$omp parallel do collapse(2)
     do j = 1, JA_org
     do i = 1, IA_org
     do k = 1, KA_org
@@ -474,7 +474,7 @@ contains
              endif
              call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                    work(:,dummy,dummy)           ) ! (out)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
              do k = 1, KA_org-2
@@ -488,7 +488,7 @@ contains
                                    work(:,:,:),                  & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(3)
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
              do k = 1, KA_org-2
@@ -510,7 +510,7 @@ contains
                                 work(:,:,:),                  & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, KA_org-2
@@ -601,7 +601,7 @@ contains
                                 work(:,:,:),                  & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, KA_org-2
@@ -663,7 +663,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -700,7 +700,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -720,7 +720,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -740,7 +740,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -760,7 +760,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -780,7 +780,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -800,7 +800,7 @@ contains
                                 work(:shape(1),:,:),          & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -809,7 +809,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do collapse(3) &
+          !$omp parallel do collapse(2) &
           !$omp private(qm,p_sat)
           do j = 1, JA_org
           do i = 1, IA_org
@@ -827,7 +827,7 @@ contains
           if( KA_org-2 > shape(1) ) then
              select case( upper_qv_type )
              case("COPY")
-                !$omp parallel do &
+                !$omp parallel do collapse(2) &
                 !$omp private(qm,p_sat)
                 do j = 1, JA_org
                 do i = 1, IA_org
@@ -854,7 +854,7 @@ contains
                                 work(dummy,:,:),              & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org
              pres_org(1,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -867,7 +867,7 @@ contains
                                 work(dummy,:,:),              & ! (out)
                                 step = nt,                    & ! (in)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org
              pres_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -881,7 +881,7 @@ contains
                                    work(dummy,:,:),              & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
                 velx_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -896,7 +896,7 @@ contains
                                    work(dummy,:,:),              & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
                 vely_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -911,7 +911,7 @@ contains
                                    work(dummy,:,:),              & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
                 temp_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -926,7 +926,7 @@ contains
                                    work(dummy,:,:),              & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
                 qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -941,13 +941,13 @@ contains
                                    work(dummy,:,:),              & ! (out)
                                    step = nt,                    & ! (in)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, JA_org
              do i = 1, IA_org
                 qv_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
              enddo
              enddo
-             !$omp parallel do collapse(2) &
+             !$omp parallel do &
              !$omp private (qm,p_sat)
              do j = 1, JA_org
              do i = 1, IA_org
@@ -965,7 +965,7 @@ contains
           call FILE_GrADS_read( file_id_atm, var_id(ielem,1), & ! (in)
                                 work(dummy,:,:),              & ! (out)
                                 postfix = basename_num        ) ! (in)
-          !$omp parallel do collapse(2)
+          !$omp parallel do
           do j = 1, JA_org
           do i = 1, IA_org
              cz_org(2,i,j) = work(dummy,i-1+IS_org,j-1+JS_org)
@@ -981,7 +981,7 @@ contains
                                 work(:shape(1),:,:),             & ! (out)
                                 step = nt,                       & ! (in)
                                 postfix = basename_num           ) ! (in)
-          !$omp parallel do collapse(3)
+          !$omp parallel do collapse(2)
           do j = 1, JA_org
           do i = 1, IA_org
           do k = 1, shape(1)
@@ -995,7 +995,7 @@ contains
 
     lm_layer(:,:) = 3
 
-    !$omp parallel do
+    !$omp parallel do collapse(2)
     do j = 1, JA_org
     do i = 1, IA_org
        do k = 3, KA_org
@@ -1011,7 +1011,7 @@ contains
 
     ! density
     if ( var_id(Ia_dens,1) < 0 ) then
-       !$omp parallel do &
+       !$omp parallel do collapse(2) &
        !$omp private (Rtot)
        do j = 1, JA_org
        do i = 1, IA_org
@@ -1027,7 +1027,7 @@ contains
        ! surface
        if ( var_id(Ia_topo,1) > 0 ) then
           if ( .not. under_sfc ) then
-             !$omp parallel do
+             !$omp parallel do collapse(2)
              do j = 1, JA_org
              do i = 1, IA_org
                 do k = lm_layer(i,j), KA_org
@@ -1189,7 +1189,7 @@ contains
 
     ! check verticaly extrapolated data in outer model
     if( pressure_coordinates .and. var_id(Ia_ps,1) > 0 ) then
-       !$omp parallel do private(k)
+       !$omp parallel do private(k) schedule(dynamic) collapse(2)
        do j = 1, JA_org
        do i = 1, IA_org
           if ( under_sfc ) then
@@ -1234,7 +1234,7 @@ contains
        enddo
        enddo
     else if ( var_id(Ia_topo,1) > 0 ) then
-       !$omp parallel do private(k)
+       !$omp parallel do private(k) schedule(dynamic) collapse(2)
        do j = 1, JA_org
        do i = 1, IA_org
           if ( under_sfc ) then
@@ -1443,7 +1443,7 @@ contains
     integer :: i, j, k
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(2)
+    !$omp parallel do
     do j = 1, ldims(3)
     do i = 1, ldims(2)
        lmask_org(i,j) = UNDEF
@@ -1488,7 +1488,7 @@ contains
           if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
              call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
                                    lon1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llon_org(i,j) = lon1D(i) * D2R
@@ -1498,7 +1498,7 @@ contains
              call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
                                    llon_org(:,:),                & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llon_org(i,j) = llon_org(i,j) * D2R
@@ -1529,7 +1529,7 @@ contains
           if ( FILE_GrADS_isOneD( file_id_lnd, var_id(ielem,2) ) ) then
              call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
                                    lat1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llat_org(i,j) = lat1D(j) * D2R
@@ -1539,7 +1539,7 @@ contains
              call FILE_GrADS_read( file_id_lnd, var_id(ielem,2), & ! (in)
                                    llat_org(:,:),                & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, ldims(3)
              do i = 1, ldims(2)
                 llat_org(i,j) = llat_org(i,j) * D2R
@@ -1811,7 +1811,7 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
-    !$omp parallel do collapse(2)
+    !$omp parallel do
     do j = 1, odims(2)
     do i = 1, odims(1)
        omask_org(i,j) = UNDEF
@@ -1864,7 +1864,7 @@ contains
           if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
              call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
                                    lon1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olon_org(i,j) = lon1D(i) * D2R
@@ -1874,7 +1874,7 @@ contains
              call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
                                    olon_org(:,:),                & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olon_org(i,j) = olon_org(i,j) * D2R
@@ -1905,7 +1905,7 @@ contains
           if ( FILE_GrADS_isOneD( file_id_ocn, var_id(ielem,3) ) ) then
              call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
                                    lat1D(:)                      ) ! (out)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olat_org(i,j) = lat1D(j) * D2R
@@ -1915,7 +1915,7 @@ contains
              call FILE_GrADS_read( file_id_ocn, var_id(ielem,3), & ! (in)
                                    olat_org(:,:),                & ! (out)
                                    postfix = basename_num        ) ! (in)
-             !$omp parallel do collapse(2)
+             !$omp parallel do
              do j = 1, odims(2)
              do i = 1, odims(1)
                 olat_org(i,j) = olat_org(i,j) * D2R

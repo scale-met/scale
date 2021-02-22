@@ -168,7 +168,7 @@ contains
     LOG_PROGRESS(*) 'coupler / physics / surface / FIXED-TEMP'
 
     ! calculate surface flux
-    !$omp parallel do &
+    !$omp parallel do schedule(dynamic) collapse(2) &
 #ifndef __GFORTRAN__
     !$omp default(none) &
     !$omp shared(IS,IE,JS,JE,EPS,UNDEF,Rdry,CPdry,bulkflux,dt, &

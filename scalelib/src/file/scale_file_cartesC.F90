@@ -201,6 +201,7 @@ module scale_file_cartesC
 
   logical,  private :: set_coordinates = .false.
 
+  logical,  private :: prof = .false.
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -824,6 +825,7 @@ contains
     integer                :: date_(6)
     !---------------------------------------------------------------------------
 
+    prof = .true.
     call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( present(single) ) then
@@ -935,6 +937,7 @@ contains
     end if
 
     call PROF_rapend  ('FILE_O_NetCDF', 2)
+    prof = .false.
 
     return
   end subroutine FILE_CARTESC_create
@@ -2302,7 +2305,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    if ( .not. prof ) call PROF_rapstart('FILE_O_NetCDF', 2)
 
     call FILE_Set_Attribute( fid, "global", "Conventions", "CF-1.6" ) ! [IN]
 
@@ -2334,7 +2337,7 @@ contains
     call FILE_Set_Attribute( fid, "global", "time_units", tunits )
     call FILE_Set_Attribute( fid, "global", "time_start", (/time/) )
 
-    call PROF_rapend('FILE_O_NetCDF', 2)
+    if ( .not. prof ) call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_put_globalAttributes
@@ -2373,9 +2376,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
-
-    call PROF_rapstart('FILE_O_NetCDF', 2)
-
 
     if ( .not. set_dim ) then
        call set_dimension_informations
@@ -2817,8 +2817,6 @@ contains
     call FILE_Set_Attribute( fid, "grid_model_global", "face_dimensions",     "CXG: FYG (padding: none) CYG: FYG (padding: none)" )
     call FILE_Set_Attribute( fid, "grid_model_global", "vertical_dimensions", "CZ: FZ (padding: none)" )
 
-    call PROF_rapend('FILE_O_NetCDF', 2)
-
     return
   end subroutine FILE_CARTESC_def_axes
 
@@ -2906,8 +2904,6 @@ contains
     !---------------------------------------------------------------------------
 
     if ( .not. FILE_opened(fid) ) return
-
-    call PROF_rapstart('FILE_O_NetCDF', 2)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        ! For parallel I/O, not all variables are written by all processes.
@@ -3279,8 +3275,6 @@ contains
           end if
        end if
     end if
-
-    call PROF_rapend('FILE_O_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_write_axes

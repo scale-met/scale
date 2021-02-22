@@ -1299,9 +1299,10 @@ contains
     enddo
     enddo
 
+    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(3) &
+    !$omp private(iq,i,j,k) &
+    !$omp shared(QS_MP,QE_MP,JS,JE,IS,IE,KS,KE,RHOQ_t,RHOQ_t_MP)
     do iq = QS_MP, QE_MP
-    !$omp parallel do default(none) private(i,j,k) OMP_SCHEDULE_ &
-    !$omp shared(JS,JE,IS,IE,KS,KE,RHOQ_t,iq,RHOQ_t_MP)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE

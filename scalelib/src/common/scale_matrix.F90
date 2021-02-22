@@ -115,7 +115,7 @@ contains
     !---------------------------------------------------------------------------
 
     if ( present(mask) ) then
-       !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
+       !$omp parallel do default(none) schedule(dynamic) collapse(2) &
        !$omp shared(JS,JE,IS,IE,KA,KS,KE,ud,md,ld,iv,ov,mask) &
        !$omp private(i,j)
        do j = JS, JE
