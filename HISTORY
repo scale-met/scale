@@ -1,5 +1,13 @@
 = Release History
 
+== 2021-03-03 (5.4.3)
+* Bug fixes:
+  * Fix wrong OpenMP directives
+  * Fix out-of-array reference in the vertical interpolation
+  * Fix incorrect calculation of the vertical divergence
+  * Fix the horizontal interpolation of zonally cyclic data
+  * Update the sysdef files for FUGAKU
+
 == 2020-11-27 (5.4.2)
 * Bug fixes:
   * Fix a bug in the SNO to output topo and lsmask from pp files.
