@@ -75,6 +75,9 @@ else
    nc=".nc"
 fi
 
+if [ ! -v SPACK_FJVER ]; then
+  SPACK_FJVER=4.3.1
+fi
 
 
 cat << EOF1 > ./run.sh
@@ -84,7 +87,7 @@ cat << EOF1 > ./run.sh
 # ------ For FUGAKU
 #
 ################################################################################
-#PJM -L rscgrp="eap-small"
+#PJM -L rscgrp="small"
 #PJM -L node=$(((TPROC+3)/4))
 #PJM -L elapse=01:00:00
 #PJM --mpi "max-proc-per-node=4"
@@ -99,10 +102,11 @@ export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
 export FLIB_BARRIER=HARD
 
-. /vol0001/apps/oss/spack/share/spack/setup-env.sh
-spack load netcdf-c%fj
-spack load netcdf-fortran%fj
-spack load parallel-netcdf%fj
+SPACK_FJVER=${SPACK_FJVER}
+. /vol0004/apps/oss/spack/share/spack/setup-env.sh
+spack load netcdf-c%fj@\${SPACK_FJVER}
+spack load netcdf-fortran%fj@\${SPACK_FJVER}
+spack load parallel-netcdf%fj@\${SPACK_FJVER}
 
 EOF1
 

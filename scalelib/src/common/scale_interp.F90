@@ -2183,6 +2183,8 @@ contains
 
     if ( spline ) then
 
+       idx(1) = -999
+       kmax = 1
        do k = KS_ref, KE_ref-1
           if ( abs( val_ref(k) - UNDEF ) > EPS ) then
              idx(1) = k
@@ -2190,7 +2192,7 @@ contains
              exit
           end if
        end do
-       kmax = 1
+       if ( idx(1) == -999 ) return ! UNDEF (use linear interpolation)
        FDZ(1) = 1e10 ! dummy
        do k = idx(1)+1, KE_ref
           dz = hgt_ref(k) - hgt_ref(idx(kmax))
