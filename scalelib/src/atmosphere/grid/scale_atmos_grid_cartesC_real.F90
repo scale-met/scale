@@ -538,7 +538,7 @@ contains
        ATMOS_GRID_CARTESC_REAL_FZUV(k,IA,JA) = ( Htop - Zs ) / Htop * ATMOS_GRID_CARTESC_FZ(k) + Zs
     enddo
 
-    !$omp parallel do private(zs) collapse(2)
+    !$omp parallel do private(dz1,dz2) collapse(2)
     do j = 1, JA
     do i = 1, IA
        do k = KS, KE-1
@@ -566,7 +566,9 @@ contains
     ATMOS_GRID_CARTESC_REAL_ASPECT_MAX = -1.E+30_RP
     ATMOS_GRID_CARTESC_REAL_ASPECT_MIN =  1.E+30_RP
 
-    !$omp parallel do private(dfz) collapse(2)
+    !$omp parallel do private(dfz) collapse(2) &
+    !$omp reduction(max:ATMOS_GRID_CARTESC_REAL_ASPECT_MAX) &
+    !$omp reduction(min:ATMOS_GRID_CARTESC_REAL_ASPECT_MIN)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
