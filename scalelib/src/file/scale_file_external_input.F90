@@ -30,6 +30,7 @@ module scale_file_external_input
   public :: FILE_EXTERNAL_INPUT_put_ref
   public :: FILE_EXTERNAL_INPUT_get_ref
   public :: FILE_EXTERNAL_INPUT_query
+  public :: FILE_EXTERNAL_INPUT_finalize
 
   interface FILE_EXTERNAL_INPUT_regist
      module procedure FILE_EXTERNAL_INPUT_regist_file
@@ -326,6 +327,27 @@ contains
     return
   end subroutine FILE_EXTERNAL_INPUT_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine FILE_EXTERNAL_INPUT_finalize
+    implicit none
+
+    integer :: id
+
+    LOG_NEWLINE
+    LOG_INFO("FILE_EXTERNAL_INPUT_finalize",*) 'Finalize'
+
+    do id = 1, FILE_EXTERNAL_INPUT_item_count
+       deallocate( FILE_EXTERNAL_INPUT_item(id)%value )
+       deallocate( FILE_EXTERNAL_INPUT_item(id)%time )
+       if ( allocated( FILE_EXTERNAL_INPUT_item(id)%basename ) ) &
+            deallocate( FILE_EXTERNAL_INPUT_item(id)%basename )
+    end do
+
+    FILE_EXTERNAL_INPUT_item_count = 0
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_finalize
 
   !-----------------------------------------------------------------------------
   !> check variable

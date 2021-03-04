@@ -16,6 +16,7 @@ module scale_spnudge
   !++ Public procedure
   !
   public :: SPNUDGE_setup
+  public :: SPNUDGE_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -260,5 +261,19 @@ contains
 
      return
    end subroutine SPNUDGE_setup
+
+   subroutine SPNUDGE_finalize
+     use scale_dft, only: &
+        DFT_finalize
+
+     call DFT_finalize
+
+     deallocate( SPNUDGE_u_alpha )
+     deallocate( SPNUDGE_v_alpha )
+     deallocate( SPNUDGE_pt_alpha )
+     deallocate( SPNUDGE_qv_alpha )
+
+     return
+   end subroutine SPNUDGE_finalize
 
 end module scale_spnudge

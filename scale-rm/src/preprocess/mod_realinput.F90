@@ -1281,6 +1281,8 @@ contains
     deallocate( QNUM_org  )
     deallocate( RN222_org )
 
+    first_atmos   = .true.
+
     return
   end subroutine ParentAtmosFinalize
 
@@ -2855,6 +2857,8 @@ contains
     deallocate( hfact_ol )
     deallocate( igrd_ol  )
     deallocate( jgrd_ol  )
+
+    first_surface = .true.
 
     return
   end subroutine ParentSurfaceFinalize

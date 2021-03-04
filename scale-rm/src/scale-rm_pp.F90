@@ -93,8 +93,6 @@ program scalerm_pp
 
   integer               :: local_comm                       ! assigned local communicator
   integer               :: ID_DOMAIN                        ! domain ID
-  integer               :: intercomm_parent                 ! inter communicator with parent
-  integer               :: intercomm_child                  ! inter communicator with child
   character(len=H_LONG) :: local_cnf_fname                  ! config file for local domain
 
   integer :: itr
@@ -199,15 +197,13 @@ program scalerm_pp
   endif
 
   ! communicator split for nesting domains
-  call PRC_MPIsplit_nest( global_comm,      & ! [IN]
-                          NUM_DOMAIN,       & ! [IN]
-                          PRC_DOMAINS(:),   & ! [IN]
-                          LOG_SPLIT,        & ! [IN]
-                          COLOR_REORDER,    & ! [IN]
-                          local_comm,       & ! [OUT]
-                          ID_DOMAIN,        & ! [OUT]
-                          intercomm_parent, & ! [OUT]
-                          intercomm_child   ) ! [OUT]
+  call PRC_MPIsplit_nest( global_comm,    & ! [IN]
+                          NUM_DOMAIN,     & ! [IN]
+                          PRC_DOMAINS(:), & ! [IN]
+                          LOG_SPLIT,      & ! [IN]
+                          COLOR_REORDER,  & ! [IN]
+                          local_comm,     & ! [OUT]
+                          ID_DOMAIN       ) ! [OUT]
 
   !--- initialize FPM module & error handler
   call FPM_Init( NUM_FAIL_TOLERANCE, & ! [IN]
@@ -239,16 +235,12 @@ program scalerm_pp
 
      if ( EXECUTE_PREPROCESS ) then
         call rm_prep( local_comm,     & ! [IN]
-                      PRC_COMM_NULL,  & ! [IN]
-                      PRC_COMM_NULL,  & ! [IN]
                       local_cnf_fname ) ! [IN]
      endif
 
      if ( EXECUTE_MODEL ) then
-        call rm_driver( local_comm,       & ! [IN]
-                        intercomm_parent, & ! [IN]
-                        intercomm_child,  & ! [IN]
-                        local_cnf_fname   ) ! [IN]
+        call rm_driver( local_comm,     & ! [IN]
+                        local_cnf_fname ) ! [IN]
      endif
 
      ID_BULKJOB = ID_BULKJOB + NUM_BULKJOB_ONCE

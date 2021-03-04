@@ -39,8 +39,8 @@ module scale_atmos_phy_bl_mynn
   !++ Public procedure
   !
   public :: ATMOS_PHY_BL_mynn_tracer_setup
-  public :: ATMOS_PHY_BL_mynn_tracer_finalize
   public :: ATMOS_PHY_BL_mynn_setup
+  public :: ATMOS_PHY_BL_mynn_finalize
   public :: ATMOS_PHY_BL_mynn_tendency
   public :: ATMOS_PHY_BL_mynn_tendency_tracer
 
@@ -181,20 +181,6 @@ contains
   end subroutine ATMOS_PHY_BL_MYNN_tracer_setup
 
   !-----------------------------------------------------------------------------
-  !! Tracer Finalize
-  !<
-  subroutine ATMOS_PHY_BL_MYNN_tracer_finalize
-    implicit none
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_BL_MYNN_tracer_finalize",*) 'Finalize'
-
-    deallocate( ATMOS_PHY_BL_MYNN_NAME, ATMOS_PHY_BL_MYNN_DESC, ATMOS_PHY_BL_MYNN_UNITS )
-
-    return
-  end subroutine ATMOS_PHY_BL_MYNN_tracer_finalize
-
-  !-----------------------------------------------------------------------------
   !> ATMOS_PHY_BL_MYNN_setup
   !! Setup
   !<
@@ -271,6 +257,17 @@ contains
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_setup
+
+  !-----------------------------------------------------------------------------
+  !! Finalize
+  !<
+  subroutine ATMOS_PHY_BL_MYNN_finalize
+    implicit none
+
+    deallocate( ATMOS_PHY_BL_MYNN_NAME, ATMOS_PHY_BL_MYNN_DESC, ATMOS_PHY_BL_MYNN_UNITS )
+
+    return
+  end subroutine ATMOS_PHY_BL_MYNN_finalize
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_BL_MYNN_tendency

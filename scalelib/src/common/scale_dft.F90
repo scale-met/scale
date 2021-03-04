@@ -17,6 +17,7 @@ module scale_dft
   implicit none
 
   public :: DFT_setup
+  public :: DFT_finalize
   public :: DFT_g2g
   public :: DFT_g2g_divfree
 
@@ -92,6 +93,15 @@ contains
     enddo
 
   end subroutine DFT_setup
+
+  subroutine DFT_finalize
+
+    deallocate( table_x, table_y )
+    deallocate( table_l, table_m )
+    deallocate( work )
+
+    return
+  end subroutine DFT_finalize
 
   subroutine DFT_g2s(KA,KS,KE,IA,IS,IE,JA,JS,JE,LM,MM,f,s)
     ! Grid to spectral transformation

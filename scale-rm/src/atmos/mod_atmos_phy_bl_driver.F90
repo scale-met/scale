@@ -27,8 +27,8 @@ module mod_atmos_phy_bl_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_BL_driver_tracer_setup
-  public :: ATMOS_PHY_BL_driver_tracer_finalize
   public :: ATMOS_PHY_BL_driver_setup
+  public :: ATMOS_PHY_BL_driver_finalize
   public :: ATMOS_PHY_BL_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -90,35 +90,6 @@ contains
   end subroutine ATMOS_PHY_BL_driver_tracer_setup
 
   !-----------------------------------------------------------------------------
-  !> Finalize
-  subroutine ATMOS_PHY_BL_driver_tracer_finalize
-    use scale_prc, only: &
-       PRC_abort
-    use scale_atmos_phy_bl_mynn, only: &
-       ATMOS_PHY_BL_MYNN_tracer_finalize
-    use mod_atmos_admin, only: &
-       ATMOS_PHY_BL_TYPE, &
-       ATMOS_sw_phy_bl
-    implicit none
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_PHY_BL_driver_tracer_finalize",*) 'Finalize'
-
-    if ( ATMOS_sw_phy_bl ) then
-       select case ( ATMOS_PHY_BL_TYPE )
-       case ( 'MYNN' )
-          call ATMOS_PHY_BL_MYNN_tracer_finalize
-       case default
-          LOG_ERROR("ATMOS_PHY_BL_driver_tracer_finalize",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
-          call PRC_abort
-       end select
-    end if
-
-    return
-  end subroutine ATMOS_PHY_BL_driver_tracer_finalize
-
-  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_PHY_BL_driver_setup
     use scale_atmos_phy_bl_mynn, only: &
@@ -150,6 +121,35 @@ contains
 
     return
   end subroutine ATMOS_PHY_BL_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_BL_driver_finalize
+    use scale_prc, only: &
+       PRC_abort
+    use scale_atmos_phy_bl_mynn, only: &
+       ATMOS_PHY_BL_MYNN_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_BL_TYPE, &
+       ATMOS_sw_phy_bl
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_BL_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_bl ) then
+       select case ( ATMOS_PHY_BL_TYPE )
+       case ( 'MYNN' )
+          call ATMOS_PHY_BL_MYNN_finalize
+       case default
+          LOG_ERROR("ATMOS_PHY_BL_driver_finalize",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
+          call PRC_abort
+       end select
+    end if
+
+    return
+  end subroutine ATMOS_PHY_BL_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> calculate tendency

@@ -36,16 +36,12 @@ module scale_comm_cartesC_nest
   public :: COMM_CARTESC_NEST_recvwait_issue
   public :: COMM_CARTESC_NEST_recv_cancel
   public :: COMM_CARTESC_NEST_test
-  public :: COMM_CARTESC_NEST_disconnect
   public :: COMM_CARTESC_NEST_finalize
 
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
   !
-  integer,  public              :: INTERCOMM_PARENT                   ! inter-communicator to parent
-  integer,  public              :: INTERCOMM_DAUGHTER                 ! inter-communicator to daughter
-
   integer,  public              :: COMM_CARTESC_NEST_Filiation(10)    !< index of parent-daughter relation (p>0, d<0)
   integer,  public              :: HANDLING_NUM                       !< handing number of nesting relation
   integer,  public              :: COMM_CARTESC_NEST_TILE_NUM_X       !< parent tile number in x-direction
@@ -255,10 +251,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine COMM_CARTESC_NEST_setup ( &
-       QA_MP,        &
-       MP_TYPE_in,   &
-       inter_parent, &
-       inter_child   )
+       QA_MP,     &
+       MP_TYPE_in )
     use scale_file, only: &
        FILE_open, &
        FILE_get_attribute, &
@@ -266,9 +260,11 @@ contains
     use scale_const, only: &
        D2R => CONST_D2R
     use scale_prc, only: &
-       PRC_abort,         &
-       PRC_GLOBAL_domainID, &
-       PRC_IsMaster
+       PRC_abort,            &
+       PRC_GLOBAL_domainID,  &
+       PRC_IsMaster,         &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_interp, only: &
        INTERP_setup,   &
        INTERP_factor3d
@@ -298,8 +294,6 @@ contains
 
     integer,          intent(in) :: QA_MP
     character(len=*), intent(in) :: MP_TYPE_in
-    integer,          intent(in), optional :: inter_parent
-    integer,          intent(in), optional :: inter_child
 
     character(len=H_SHORT) :: COMM_CARTESC_NEST_INTERP_TYPE = 'LINEAR' ! "LINEAR" or "DIST-WEIGHT"
                                                                        !   LINEAR     : bi-linear interpolation
@@ -347,12 +341,8 @@ contains
     LOG_NEWLINE
     LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Setup'
 
-    if ( present(inter_parent) ) then
-       if( inter_parent /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
-    endif
-    if ( present(inter_child) ) then
-       if( inter_child  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
-    endif
+    if( PRC_INTERCOMM_PARENT /= MPI_COMM_NULL ) flag_child  = .true. ! exist parent, so work as a child
+    if( PRC_INTERCOMM_CHILD  /= MPI_COMM_NULL ) flag_parent = .true. ! exist child, so work as a parent
 
     OFFLINE_PARENT_BASENAME = ""
 
@@ -585,17 +575,14 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM
             COMM_CARTESC_NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = 1
 
-            INTERCOMM_DAUGHTER = inter_child
             LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A,I2,A)') 'Online Nesting - PARENT [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
-            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', INTERCOMM_DAUGHTER
+            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', PRC_INTERCOMM_CHILD
 
             call COMM_CARTESC_NEST_ping( HANDLING_NUM )
-
             call COMM_CARTESC_NEST_parentsize( HANDLING_NUM )
-
             call COMM_CARTESC_NEST_catalogue( HANDLING_NUM )
-            call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+            call MPI_BARRIER(PRC_INTERCOMM_CHILD, ierr)
 
             PARENT_KA(HANDLING_NUM)   = PARENT_KMAX(HANDLING_NUM)   + KHALO * 2
             PARENT_IA(HANDLING_NUM)   = PARENT_IMAX(HANDLING_NUM)   + IHALO * 2
@@ -654,10 +641,9 @@ contains
             INTERCOMM_ID(HANDLING_NUM) = ONLINE_DOMAIN_NUM - 1
             COMM_CARTESC_NEST_Filiation(INTERCOMM_ID(HANDLING_NUM)) = -1
 
-            INTERCOMM_PARENT = inter_parent
             LOG_INFO("COMM_CARTESC_NEST_setup",'(1x,A,I2,A)') 'Online Nesting - DAUGHTER [INTERCOMM_ID:', &
                                                         INTERCOMM_ID(HANDLING_NUM), ' ]'
-            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', INTERCOMM_PARENT
+            LOG_INFO("COMM_CARTESC_NEST_setup",*) 'Online Nesting - INTERCOMM :', PRC_INTERCOMM_PARENT
 
             call COMM_CARTESC_NEST_ping( HANDLING_NUM )
 
@@ -665,7 +651,7 @@ contains
 
             allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),2,2) )
             call COMM_CARTESC_NEST_catalogue( HANDLING_NUM )
-            call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+            call MPI_BARRIER(PRC_INTERCOMM_PARENT, ierr)
 
             call COMM_CARTESC_NEST_domain_relate( HANDLING_NUM )
 
@@ -1116,10 +1102,12 @@ contains
   subroutine COMM_CARTESC_NEST_parentsize( &
        HANDLE )
     use scale_prc, only: &
-       PRC_abort, &
-       PRC_nprocs,  &
-       PRC_myrank,  &
-       PRC_IsMaster
+       PRC_abort,            &
+       PRC_nprocs,           &
+       PRC_myrank,           &
+       PRC_IsMaster,         &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_prc_cartesC, only: &
        PRC_NUM_X,   &
        PRC_NUM_Y
@@ -1172,9 +1160,9 @@ contains
        buffer       = TIME_DTSEC
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq1, ierr1)
-          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq2, ierr2)
-          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq3, ierr3)
+          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, PRC_INTERCOMM_CHILD, ireq1, ierr1)
+          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, PRC_INTERCOMM_CHILD, ireq2, ierr2)
+          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, PRC_INTERCOMM_CHILD, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
@@ -1197,9 +1185,9 @@ contains
 
        ! from daughter to parent
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq1, ierr1)
-          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq2, ierr2)
-          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, INTERCOMM_DAUGHTER, ireq3, ierr3)
+          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, PRC_INTERCOMM_CHILD, ireq1, ierr1)
+          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, PRC_INTERCOMM_CHILD, ireq2, ierr2)
+          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, PRC_INTERCOMM_CHILD, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
@@ -1231,9 +1219,9 @@ contains
 
        ! from parent to daughter
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, INTERCOMM_PARENT, ireq1, ierr1)
-          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
-          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq3, ierr3)
+          call MPI_IRECV(datapack, ileng, MPI_INTEGER, PRC_myrank, tag, PRC_INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_IRECV(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+1, PRC_INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_IRECV(MP_TYPE_OTHERSIDE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+2, PRC_INTERCOMM_PARENT, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
@@ -1276,9 +1264,9 @@ contains
        buffer       = TIME_DTSEC
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq1, ierr1)
-          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, INTERCOMM_PARENT, ireq2, ierr2)
-          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, INTERCOMM_PARENT, ireq3, ierr3)
+          call MPI_ISEND(datapack, ileng, MPI_INTEGER, PRC_myrank, tag+3, PRC_INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_ISEND(buffer, 1, MPI_DOUBLE_PRECISION, PRC_myrank, tag+4, PRC_INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_ISEND(MP_TYPE, H_SHORT, MPI_CHARACTER, PRC_myrank, tag+5, PRC_INTERCOMM_PARENT, ireq3, ierr3)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
@@ -1321,10 +1309,12 @@ contains
   subroutine COMM_CARTESC_NEST_catalogue( &
        HANDLE  )
     use scale_prc, only: &
-       PRC_abort, &
-       PRC_nprocs,  &
-       PRC_myrank,  &
-       PRC_IsMaster
+       PRC_abort,            &
+       PRC_nprocs,           &
+       PRC_myrank,           &
+       PRC_IsMaster,         &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_comm_cartesC, only: &
        COMM_datatype,  &
        COMM_bcast
@@ -1350,7 +1340,7 @@ contains
        ileng = PRC_nprocs * 2 * 2
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE, ileng, COMM_datatype, PRC_myrank, tag, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
@@ -1361,7 +1351,7 @@ contains
        ileng = PARENT_PRC_nprocs(HANDLE) * 2 * 2
 
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 2, 2 )
@@ -1379,9 +1369,11 @@ contains
   subroutine COMM_CARTESC_NEST_ping( &
        HANDLE )
     use scale_prc, only: &
-       PRC_abort, &
-       PRC_myrank,  &
-       PRC_IsMaster
+       PRC_abort,            &
+       PRC_myrank,           &
+       PRC_IsMaster,         &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_comm_cartesC, only: &
        COMM_bcast
     implicit none
@@ -1408,8 +1400,8 @@ contains
        pong = 0
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq1, ierr1)
-          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq2, ierr2)
+          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+1, PRC_INTERCOMM_CHILD, ireq1, ierr1)
+          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+2, PRC_INTERCOMM_CHILD, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
@@ -1426,8 +1418,8 @@ contains
        pong = 0
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq1, ierr1)
-          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq2, ierr2)
+          call MPI_ISEND(ping, 1, MPI_INTEGER, PRC_myrank, tag+2, PRC_INTERCOMM_PARENT, ireq1, ierr1)
+          call MPI_IRECV(pong, 1, MPI_INTEGER, PRC_myrank, tag+1, PRC_INTERCOMM_PARENT, ireq2, ierr2)
           call MPI_WAIT(ireq1, istatus, ierr1)
           call MPI_WAIT(ireq2, istatus, ierr2)
        endif
@@ -1454,9 +1446,11 @@ contains
   subroutine COMM_CARTESC_NEST_setup_nestdown( &
        HANDLE )
     use scale_prc, only: &
-       PRC_abort, &
-       PRC_myrank,  &
-       PRC_IsMaster
+       PRC_abort,            &
+       PRC_myrank,           &
+       PRC_IsMaster,         &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_comm_cartesC, only: &
        COMM_world, &
        COMM_bcast
@@ -1483,7 +1477,7 @@ contains
        !##### parent ####
 
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(COMM_CARTESC_NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_IRECV(COMM_CARTESC_NEST_TILE_ALLMAX_p, 1, MPI_INTEGER, PRC_myrank, tag+1, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(COMM_CARTESC_NEST_TILE_ALLMAX_p)
@@ -1493,7 +1487,7 @@ contains
 
        ileng = COMM_CARTESC_NEST_TILE_ALLMAX_p*DAUGHTER_PRC_nprocs(HANDLE)
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(COMM_CARTESC_NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_IRECV(COMM_CARTESC_NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(COMM_CARTESC_NEST_TILE_LIST_p, COMM_CARTESC_NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nprocs(HANDLE))
@@ -1514,7 +1508,7 @@ contains
        LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(A,I5,A,I5)') "[P]   Num YP =",NUM_YP,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_p
 
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(ONLINE_DAUGHTER_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_IRECV(ONLINE_DAUGHTER_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(ONLINE_DAUGHTER_USE_VELZ)
@@ -1522,7 +1516,7 @@ contains
        LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(1x,A,L2)') 'NEST: ONLINE_DAUGHTER_USE_VELZ =', ONLINE_DAUGHTER_USE_VELZ
 
        if ( PRC_IsMaster ) then
-          call MPI_IRECV(ONLINE_DAUGHTER_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_IRECV(ONLINE_DAUGHTER_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
@@ -1539,11 +1533,11 @@ contains
 
        do i = 1, NUM_YP
           target_rank = COMM_CARTESC_NEST_TILE_LIST_YP(i)
-          call MPI_ISEND(i, 1, MPI_INTEGER, target_rank, tag+5, INTERCOMM_DAUGHTER, ireq, ierr)
+          call MPI_ISEND(i, 1, MPI_INTEGER, target_rank, tag+5, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        enddo
 
-       call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+       call MPI_BARRIER(PRC_INTERCOMM_CHILD, ierr)
 
     elseif( COMM_CARTESC_NEST_Filiation( INTERCOMM_ID(HANDLE) ) < 0 ) then
 
@@ -1560,7 +1554,7 @@ contains
        LOG_INFO("COMM_CARTESC_NEST_setup_nestdown",'(A,I5,A,I5)') "[D]   Num YP =",COMM_CARTESC_NEST_TILE_ALL,"  Num TILE(MAX) =",COMM_CARTESC_NEST_TILE_ALLMAX_d
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(COMM_CARTESC_NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_ISEND(COMM_CARTESC_NEST_TILE_ALLMAX_d, 1, MPI_INTEGER, PRC_myrank, tag+1, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
@@ -1598,17 +1592,17 @@ contains
 
        ileng = COMM_CARTESC_NEST_TILE_ALLMAX_d*DAUGHTER_PRC_nprocs(HANDLE)
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(COMM_CARTESC_NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_ISEND(COMM_CARTESC_NEST_TILE_LIST_d, ileng, MPI_INTEGER, PRC_myrank, tag+2, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(ONLINE_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_ISEND(ONLINE_USE_VELZ, 1, MPI_LOGICAL, PRC_myrank, tag+3, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
 
        if ( PRC_IsMaster ) then
-          call MPI_ISEND(ONLINE_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, INTERCOMM_PARENT, ireq, ierr)
+          call MPI_ISEND(ONLINE_NO_ROTATE, 1, MPI_LOGICAL, PRC_myrank, tag+4, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
        call COMM_bcast(ONLINE_DAUGHTER_NO_ROTATE)
@@ -1617,11 +1611,11 @@ contains
 
        do i = 1, COMM_CARTESC_NEST_TILE_ALL
           target_rank = COMM_CARTESC_NEST_TILE_LIST_d(i,PRC_myrank+1)
-          call MPI_IRECV( call_order(i), 1, MPI_INTEGER, target_rank, tag+5, INTERCOMM_PARENT, ireq, ierr )
+          call MPI_IRECV( call_order(i), 1, MPI_INTEGER, target_rank, tag+5, PRC_INTERCOMM_PARENT, ireq, ierr )
           call MPI_WAIT(ireq, istatus, ierr)
        enddo
 
-       call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+       call MPI_BARRIER(PRC_INTERCOMM_PARENT, ierr)
     else
        LOG_ERROR("COMM_CARTESC_NEST_setup_nestdown",*) 'internal error'
        call PRC_abort
@@ -1643,8 +1637,10 @@ contains
   subroutine COMM_CARTESC_NEST_importgrid_nestdown( &
        HANDLE )
     use scale_prc, only: &
-       PRC_myrank,  &
-       PRC_abort
+       PRC_myrank,           &
+       PRC_abort,            &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_LON,   &
        ATMOS_GRID_CARTESC_REAL_LAT,   &
@@ -1699,47 +1695,47 @@ contains
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lon
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LON, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LON, ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lat
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LAT, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_LAT, ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           sendbuf_2D(:,:,1) = ATMOS_GRID_CARTESC_REAL_LONUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonuy
-          call MPI_ISEND(sendbuf_2D(:,:,1), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,1), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           sendbuf_2D(:,:,2) = ATMOS_GRID_CARTESC_REAL_LATUY(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latuy
-          call MPI_ISEND(sendbuf_2D(:,:,2), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,2), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           sendbuf_2D(:,:,3) = ATMOS_GRID_CARTESC_REAL_LONXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonxv
-          call MPI_ISEND(sendbuf_2D(:,:,3), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,3), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           sendbuf_2D(:,:,4) = ATMOS_GRID_CARTESC_REAL_LATXV(1:IA,1:JA)
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latxv
-          call MPI_ISEND(sendbuf_2D(:,:,4), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_2D(:,:,4), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_cz
-          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_CZ, ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(ATMOS_GRID_CARTESC_REAL_CZ, ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           sendbuf_3D(:,:,:,1) = ATMOS_GRID_CARTESC_REAL_FZ(1:,:,:)
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_ISEND(sendbuf_3D(:,:,:,1), ileng, COMM_datatype, target_rank, tag, INTERCOMM_DAUGHTER, ireq_p(rq), ierr)
+          call MPI_ISEND(sendbuf_3D(:,:,:,1), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_CHILD, ireq_p(rq), ierr)
 
           rq_end = rq
           rq_tot = rq_end - rq_str + 1
@@ -1773,42 +1769,42 @@ contains
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lon
-          call MPI_IRECV(recvbuf_2D(:,:,tag_lon), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lon), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lat
-          call MPI_IRECV(recvbuf_2D(:,:,tag_lat), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lat), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonuy
-          call MPI_IRECV(recvbuf_2D(:,:,tag_lonuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lonuy), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latuy
-          call MPI_IRECV(recvbuf_2D(:,:,tag_latuy), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_latuy), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_lonxv
-          call MPI_IRECV(recvbuf_2D(:,:,tag_lonxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_lonxv), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_latxv
-          call MPI_IRECV(recvbuf_2D(:,:,tag_latxv), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_2D(:,:,tag_latxv), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_cz
-          call MPI_IRECV(recvbuf_3D(:,:,:,tag_cz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_3D(:,:,:,tag_cz), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq = rq + 1
           ileng = PARENT_KA(HANDLE) * PARENT_IA(HANDLE) * PARENT_JA(HANDLE)
           tag   = tagbase + tag_fz
-          call MPI_IRECV(recvbuf_3D(:,:,:,tag_fz), ileng, COMM_datatype, target_rank, tag, INTERCOMM_PARENT, ireq_d(rq), ierr)
+          call MPI_IRECV(recvbuf_3D(:,:,:,tag_fz), ileng, COMM_datatype, target_rank, tag, PRC_INTERCOMM_PARENT, ireq_d(rq), ierr)
 
           rq_end = rq
           rq_tot = rq_end - rq_str + 1
@@ -1867,7 +1863,9 @@ contains
        POTT_recv, &
        QTRC_recv  )
     use scale_prc, only: &
-       PRC_abort
+       PRC_abort, &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_comm_cartesC, only: &
        COMM_vars8, &
        COMM_wait
@@ -2077,7 +2075,7 @@ contains
        if ( ONLINE_AGGRESSIVE_COMM ) then
           ! nothing to do
        else
-          call MPI_BARRIER(INTERCOMM_PARENT, ierr)
+          call MPI_BARRIER(PRC_INTERCOMM_PARENT, ierr)
        endif
 
        call PROF_rapend  ('NEST_wait_C', 2)
@@ -2302,7 +2300,8 @@ contains
        HANDLE, &
        BND_QA  )
     use scale_prc, only: &
-       PRC_abort
+       PRC_abort, &
+       PRC_INTERCOMM_CHILD
     implicit none
 
     integer, intent(in) :: HANDLE !< id number of nesting relation in this process target
@@ -2338,7 +2337,7 @@ contains
        if ( ONLINE_AGGRESSIVE_COMM ) then
           ! nothing to do
        else
-          call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
+          call MPI_BARRIER(PRC_INTERCOMM_CHILD, ierr)
        endif
 
        call PROF_rapend  ('NEST_wait_P', 2)
@@ -2462,7 +2461,9 @@ contains
        isu_tag,  &
        flag_dens )
     use scale_prc, only: &
-       PRC_abort
+       PRC_abort, &
+       PRC_INTERCOMM_PARENT, &
+       PRC_INTERCOMM_CHILD
     use scale_comm_cartesC, only: &
        COMM_datatype
     use scale_interp, only: &
@@ -2536,14 +2537,14 @@ contains
           target_rank = COMM_CARTESC_NEST_TILE_LIST_YP(yp)
           tag         = tagbase + yp
 
-          call MPI_ISEND( pvar,               &
-                          ileng,              &
-                          COMM_datatype,      &
-                          target_rank,        &
-                          tag,                &
-                          INTERCOMM_DAUGHTER, &
-                          ireq_p(rq),         &
-                          ierr                )
+          call MPI_ISEND( pvar,                &
+                          ileng,               &
+                          COMM_datatype,       &
+                          target_rank,         &
+                          tag,                 &
+                          PRC_INTERCOMM_CHILD, &
+                          ireq_p(rq),          &
+                          ierr                 )
 
           dvar(:,:,:) = -1.0_RP  ! input as a dummy value
        enddo
@@ -2660,8 +2661,9 @@ contains
        HANDLE,  &
        isu_tag  )
     use scale_prc, only: &
-       PRC_myrank,  &
-       PRC_abort
+       PRC_myrank, &
+       PRC_abort,  &
+       PRC_INTERCOMM_PARENT
     use scale_comm_cartesC, only: &
        COMM_datatype
     implicit none
@@ -2706,7 +2708,7 @@ contains
                           COMM_datatype,             &
                           target_rank,               &
                           tag,                       &
-                          INTERCOMM_PARENT,          &
+                          PRC_INTERCOMM_PARENT,      &
                           ireq_d(rq),                &
                           ierr                       )
 
@@ -2847,38 +2849,6 @@ contains
 
     return
   end subroutine COMM_CARTESC_NEST_test
-
-  !-----------------------------------------------------------------------------
-  !> [finalize: disconnect] Inter-communication
-  subroutine COMM_CARTESC_NEST_disconnect
-    use scale_prc, only: &
-       PRC_GLOBAL_COMM_WORLD
-    implicit none
-
-    integer :: ierr
-    !---------------------------------------------------------------------------
-
-    if( .NOT. USE_NESTING ) return
-
-    LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes'
-    call MPI_BARRIER(PRC_GLOBAL_COMM_WORLD, ierr)
-
-    if ( ONLINE_IAM_PARENT ) then
-       !LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes as a parent'
-       !call MPI_BARRIER(INTERCOMM_DAUGHTER, ierr)
-       call MPI_COMM_FREE(INTERCOMM_DAUGHTER, ierr)
-       LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Disconnected communication with child'
-    endif
-
-    if ( ONLINE_IAM_DAUGHTER ) then
-       !LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Waiting finish of whole processes as a child'
-       !call MPI_BARRIER(INTERCOMM_PARENT, ierr)
-       call MPI_COMM_FREE(INTERCOMM_PARENT, ierr)
-       LOG_INFO("COMM_CARTESC_NEST_disconnect",'(1x,A)') 'Disconnected communication with parent'
-    endif
-
-    return
-  end subroutine COMM_CARTESC_NEST_disconnect
 
   !-----------------------------------------------------------------------------
   !> finalize

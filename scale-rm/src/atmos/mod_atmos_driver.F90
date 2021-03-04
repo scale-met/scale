@@ -26,12 +26,11 @@ module mod_atmos_driver
   !++ Public procedure
   !
   public :: ATMOS_driver_tracer_setup
-  public :: ATMOS_driver_tracer_finalize
   public :: ATMOS_driver_setup
+  public :: ATMOS_driver_finalize
   public :: ATMOS_driver_calc_tendency
   public :: ATMOS_driver_calc_tendency_from_sflux
   public :: ATMOS_driver_update
-  public :: ATMOS_driver_finalize
   public :: ATMOS_SURFACE_GET
   public :: ATMOS_SURFACE_SET
 
@@ -107,25 +106,6 @@ contains
   end subroutine ATMOS_driver_tracer_setup
 
   !-----------------------------------------------------------------------------
-  !> Tracer finalize
-  subroutine ATMOS_driver_tracer_finalize
-    use mod_atmos_phy_bl_driver, only: &
-       ATMOS_PHY_BL_driver_tracer_finalize
-    use scale_tracer, only: &
-       QA
-    implicit none
-    !---------------------------------------------------------------------------
-
-    LOG_NEWLINE
-    LOG_INFO("ATMOS_driver_tracer_finalize",*) 'Finalize'
-
-    call ATMOS_PHY_BL_driver_tracer_finalize
-    QA = 0
-
-    return
-  end subroutine ATMOS_driver_tracer_finalize
-
-  !-----------------------------------------------------------------------------
   !> Setup
   subroutine ATMOS_driver_setup
     use scale_time, only: &
@@ -137,7 +117,8 @@ contains
     use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_driver_setup
     use mod_atmos_dyn_driver, only: &
-       ATMOS_DYN_driver_setup
+       ATMOS_DYN_driver_setup, &
+       ATMOS_DYN_driver_finalize
     use mod_atmos_phy_mp_driver, only: &
        ATMOS_PHY_MP_driver_setup
     use mod_atmos_phy_mp_vars, only: &
@@ -519,21 +500,47 @@ contains
   !-----------------------------------------------------------------------------
   !> Finalize
   subroutine ATMOS_driver_finalize
+    use scale_atmos_refstate, only: &
+       ATMOS_REFSTATE_finalize
     use mod_atmos_bnd_driver, only: &
        ATMOS_BOUNDARY_UPDATE_FLAG, &
        ATMOS_BOUNDARY_driver_finalize
-    use scale_comm_cartesC_nest, only: &
-       NEST_COMM_disconnect => COMM_CARTESC_NEST_disconnect
+    use mod_atmos_dyn_driver, only: &
+       ATMOS_DYN_driver_finalize
+    use mod_atmos_phy_lt_driver, only: &
+       ATMOS_PHY_LT_driver_finalize
+    use mod_atmos_phy_mp_driver, only: &
+       ATMOS_PHY_MP_driver_finalize
+    use mod_atmos_phy_ae_driver, only: &
+       ATMOS_PHY_AE_driver_finalize
+    use mod_atmos_phy_rd_driver, only: &
+       ATMOS_PHY_RD_driver_finalize
+    use mod_atmos_phy_tb_driver, only: &
+       ATMOS_PHY_TB_driver_finalize
+    use mod_atmos_phy_bl_driver, only: &
+       ATMOS_PHY_BL_driver_finalize
+    use mod_atmos_phy_cp_driver, only: &
+       ATMOS_PHY_CP_driver_finalize
     implicit none
     !---------------------------------------------------------------------------
 
-    !########## Lateral/Top Boundary Condition ###########
-    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
-       ! If this run is parent of online nesting, boundary data must be sent
-       call ATMOS_BOUNDARY_driver_finalize
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_driver_finalize",*) 'Finalize'
 
-       ! Finialize Inter-Communicators
-       call NEST_COMM_disconnect
+    call ATMOS_DYN_driver_finalize
+    call ATMOS_PHY_LT_driver_finalize
+    call ATMOS_PHY_MP_driver_finalize
+    call ATMOS_PHY_AE_driver_finalize
+    call ATMOS_PHY_RD_driver_finalize
+    !call ATMOS_PHY_SF_driver_finalize
+    call ATMOS_PHY_TB_driver_finalize
+    call ATMOS_PHY_BL_driver_finalize
+    call ATMOS_PHY_CP_driver_finalize
+
+    call ATMOS_REFSTATE_finalize
+
+    if ( ATMOS_BOUNDARY_UPDATE_FLAG ) then
+       call ATMOS_BOUNDARY_driver_finalize
     endif
 
     return

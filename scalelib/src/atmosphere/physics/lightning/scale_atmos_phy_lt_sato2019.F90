@@ -30,6 +30,7 @@ module scale_atmos_phy_lt_sato2019
   !++ Public procedure
   !
   public :: ATMOS_PHY_LT_sato2019_setup
+  public :: ATMOS_PHY_LT_sato2019_finalize
   public :: ATMOS_PHY_LT_sato2019_adjustment
   public :: ATMOS_PHY_LT_sato2019_select_dQCRG_from_LUT
 !  public :: ATMOS_PHY_LT_sato2019_mkinit
@@ -464,6 +465,20 @@ contains
 
     return
   end subroutine ATMOS_PHY_LT_sato2019_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_LT_sato2019_finalize
+
+    deallocate( d_QCRG_TOT )
+    deallocate( LT_PATH_TOT )
+    deallocate( fls_int_p_tot )
+
+    deallocate( B_F2013_TOT )
+    deallocate( G_F2013 )
+
+    return
+  end subroutine ATMOS_PHY_LT_sato2019_finalize
 
   !-----------------------------------------------------------------------------
   !> Update of charge density

@@ -31,6 +31,7 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
+  public :: IO_finalize
   public :: IO_set_universalrank
   public :: IO_get_available_fid
   public :: IO_make_idstr
@@ -314,6 +315,26 @@ contains
     return
   end subroutine IO_LOG_setup
 
+  subroutine IO_finalize
+
+    if ( IO_FID_CONF > 0 ) then
+       close( IO_FID_CONF )
+       IO_FID_CONF = -1
+    end if
+
+    if ( IO_FID_LOG /= IO_FID_STDOUT ) then
+       close( IO_FID_LOG )
+       IO_FID_LOG = -1
+    end if
+
+    if ( IO_FID_NML > 0 ) then
+       close( IO_FID_NML )
+       IO_FID_NML = -1
+    end if
+
+    return
+  end subroutine IO_finalize
+
   !-----------------------------------------------------------------------------
   !> search & get available file ID
   !> @return fid
@@ -331,7 +352,7 @@ contains
 
     if ( fid >= IO_MAXFID ) then ! reach limit
        LOG_ERROR("IO_get_available_fid",*) 'Used I/O unit number reached to the limit! STOP'
-       stop 1
+       stop
     endif
 
   end function IO_get_available_fid
@@ -444,7 +465,7 @@ contains
           LOG_ERROR("IO_CNF_open",*) 'Failed to open config file! STOP.'
           LOG_ERROR("IO_CNF_open",*) 'filename : ', trim(fname)
        end if
-       stop 1
+       stop
     endif
 
   end function IO_CNF_open

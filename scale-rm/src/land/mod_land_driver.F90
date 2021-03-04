@@ -31,6 +31,7 @@ module mod_land_driver
   !++ Public procedure
   !
   public :: LAND_driver_setup
+  public :: LAND_driver_finalize
   public :: LAND_driver_calc_tendency
   public :: LAND_driver_update
   public :: LAND_SURFACE_GET
@@ -112,6 +113,36 @@ contains
 
     return
   end subroutine LAND_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine LAND_driver_finalize
+    use mod_land_admin, only: &
+       LAND_do, &
+       LAND_DYN_TYPE, &
+       SNOW_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("LAND_driver_finalize",*) 'Finalize'
+
+    if ( LAND_do ) then
+
+       select case ( LAND_DYN_TYPE )
+       case ( 'BUCKET' )
+       case ( 'INIT' )
+       end select
+
+       select case ( SNOW_TYPE )
+       case ( 'NONE', 'OFF' )
+       case ( 'KY90' )
+       end select
+
+    end if
+
+    return
+  end subroutine LAND_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Calculate tendency

@@ -222,6 +222,8 @@ contains
     implicit none
     !---------------------------------------------------------------------------
 
+    RANDOM_FIX = .false.
+
     deallocate( RANDOM_seedvar )
 
     return

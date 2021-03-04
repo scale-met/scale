@@ -233,6 +233,7 @@ contains
     LOG_INFO("ATMOS_HYDROMETEOR_finalize",*) 'Finalize'
 
     ATMOS_HYDROMETEOR_dry = .true.
+    initialized = .false.
 
     return
   end subroutine ATMOS_HYDROMETEOR_finalize

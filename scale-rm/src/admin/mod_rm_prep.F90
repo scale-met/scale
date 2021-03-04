@@ -53,10 +53,9 @@ contains
   !> Setup
   subroutine rm_prep( &
        comm_world,       &
-       intercomm_parent, &
-       intercomm_child,  &
        cnf_fname         )
     use scale_file, only: &
+       FILE_finalize, &
        FILE_Close_All
     use scale_prc, only: &
        PRC_LOCAL_setup
@@ -64,12 +63,15 @@ contains
        PRC_CARTESC_setup, &
        PRC_CARTESC_finalize
     use scale_const, only: &
-       CONST_setup
+       CONST_setup, &
+       CONST_finalize
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
        RANDOM_setup, &
        RANDOM_finalize
+    use scale_tracer, only: &
+       TRACER_finalize
     use scale_atmos_grid_cartesC_index, only: &
        ATMOS_GRID_CARTESC_INDEX_setup, &
        IA, JA
@@ -111,9 +113,10 @@ contains
        URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_file_cartesC, only: &
        FILE_CARTESC_setup, &
-       FILE_CARTESC_cleanup
+       FILE_CARTESC_finalize
     use scale_comm_cartesC, only: &
-       COMM_setup
+       COMM_setup, &
+       COMM_finalize
     use scale_topography, only: &
        TOPOGRAPHY_setup, &
        TOPOGRAPHY_write, &
@@ -147,8 +150,7 @@ contains
     use scale_atmos_saturation, only: &
        ATMOS_SATURATION_setup
     use mod_atmos_driver, only: &
-       ATMOS_driver_tracer_setup, &
-       ATMOS_driver_tracer_finalize
+       ATMOS_driver_tracer_setup
     use mod_admin_restart, only: &
        ADMIN_restart_setup
     use mod_admin_versioncheck, only: &
@@ -204,7 +206,8 @@ contains
        MKINIT
     use mod_user, only: &
        USER_tracer_setup, &
-       USER_setup, &
+       USER_setup,    &
+       USER_finalize, &
        USER_mkinit
     use mod_atmos_driver, only: &
        ATMOS_SURFACE_GET
@@ -224,8 +227,6 @@ contains
     implicit none
 
     integer,          intent(in) :: comm_world
-    integer,          intent(in) :: intercomm_parent
-    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
 
     integer :: myrank
@@ -330,7 +331,7 @@ contains
     call STATISTICS_setup
 
     ! setup nesting grid
-    call COMM_CARTESC_NEST_setup ( QA_MP, ATMOS_PHY_MP_TYPE, intercomm_parent, intercomm_child )
+    call COMM_CARTESC_NEST_setup( QA_MP, ATMOS_PHY_MP_TYPE )
 
     ! setup coriolis parameter
     call CORIOLIS_setup( IA, JA, REAL_LAT(:,:), CY(:), DOMAIN_CENTER_Y )
@@ -420,10 +421,12 @@ contains
 
     !########## Finalize ##########
 
-    ! finalize file I/O
-    call FILE_CARTESC_cleanup
-
+    ! file I/O
+    call PROF_rapstart('File', 1)
+    call FILE_CARTESC_finalize
     call FILE_Close_All
+    call FILE_finalize
+    call PROF_rapend  ('File', 1)
 
     call ATMOS_GRID_CARTESC_METRIC_finalize
 
@@ -455,9 +458,15 @@ contains
     ! finalize topography
     call TOPOGRAPHY_finalize
 
-    ! finalize tracer index
+    ! finalize communication
+    call COMM_finalize
+
+    ! user module
+    call USER_finalize
+
+    ! finalize tracer
     call ATMOS_HYDROMETEOR_finalize
-    call ATMOS_driver_tracer_finalize
+    call TRACER_finalize
 
     ! finalize horizontal/vertical grid coordinates (cartesian, idealized)
     if ( ATMOS_do ) call ATMOS_GRID_CARTESC_finalize
@@ -465,14 +474,19 @@ contains
     if ( LAND_do  ) call LAND_GRID_CARTESC_finalize
     if ( URBAN_do ) call URBAN_GRID_CARTESC_finalize
 
-
-    ! finalize process
     call PRC_CARTESC_finalize
 
-    ! finalize random number
     call RANDOM_finalize
 
+    call CONST_finalize
+
     call PROF_rapreport
+
+    ! finalize profiler
+    call PROF_finalize
+
+    ! finalize io
+    call IO_finalize
 
     return
   end subroutine rm_prep

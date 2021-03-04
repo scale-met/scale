@@ -34,6 +34,7 @@ module scale_file
   !++ Public procedures
   !
   public :: FILE_setup
+  public :: FILE_finalize
   public :: FILE_open
   public :: FILE_opened
   public :: FILE_create
@@ -181,7 +182,7 @@ module scale_file
   !
   !++ Public parameters & variables
   !
-  logical, public :: FILE_AGGREGATE = .false. !> do parallel I/O through PnetCDF (default setting)
+  logical, public :: FILE_AGGREGATE !> do parallel I/O through PnetCDF (default setting)
 
   !-----------------------------------------------------------------------------
   !
@@ -230,7 +231,9 @@ contains
 
     integer :: ierr
 
-       !--- read namelist
+    FILE_AGGREGATE = .false.
+
+    !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_FILE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -247,6 +250,17 @@ contains
 
     return
   end subroutine FILE_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  !-----------------------------------------------------------------------------
+  subroutine FILE_finalize
+
+    FILE_nfiles = 0
+    FILE_nvars = 0
+
+    return
+  end subroutine FILE_finalize
 
   !-----------------------------------------------------------------------------
   !> create file

@@ -25,6 +25,7 @@ module scale_atmos_sfc_ch_rn222
   !++ Public procedure
   !
   public :: ATMOS_SFC_CH_rn222_setup
+  public :: ATMOS_SFC_CH_rn222_finalize
   public :: ATMOS_SFC_CH_rn222_OCEAN_flux
   public :: ATMOS_SFC_CH_rn222_LAND_flux
 
@@ -260,6 +261,21 @@ contains
 
     return
   end subroutine ATMOS_SFC_CH_rn222_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_SFC_CH_rn222_finalize
+
+    if ( allocated( emission_lon ) ) deallocate( emission_lon )
+    if ( allocated( emission_lat ) ) deallocate( emission_lat )
+    if ( allocated( emission_value ) ) deallocate( emission_value )
+
+    if ( allocated( idx_i ) ) deallocate( idx_i )
+    if ( allocated( idx_j ) ) deallocate( idx_j )
+    if ( allocated( hfact ) ) deallocate( hfact )
+
+    return
+  end subroutine ATMOS_SFC_CH_rn222_finalize
 
   !-----------------------------------------------------------------------------
   !> Emission from the ocean surface

@@ -249,7 +249,13 @@ contains
   !> Setup Processor topology
   subroutine PRC_CARTESC_finalize
     implicit none
+    integer :: ierr
     !---------------------------------------------------------------------------
+
+    PRC_next(:) = -1
+    PRC_PERIODIC_X = .true.
+    PRC_PERIODIC_Y = .true.
+    PRC_TwoD       = .false.
 
     deallocate( PRC_2Drank )
 

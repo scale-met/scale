@@ -25,6 +25,7 @@ module scale_atmos_refstate
   !++ Public procedure
   !
   public :: ATMOS_REFSTATE_setup
+  public :: ATMOS_REFSTATE_finalize
   public :: ATMOS_REFSTATE_read
   public :: ATMOS_REFSTATE_write
   public :: ATMOS_REFSTATE_update
@@ -214,6 +215,23 @@ contains
 
     return
   end subroutine ATMOS_REFSTATE_setup
+
+  subroutine ATMOS_REFSTATE_finalize
+
+    deallocate( ATMOS_REFSTATE_pres )
+    deallocate( ATMOS_REFSTATE_temp )
+    deallocate( ATMOS_REFSTATE_dens )
+    deallocate( ATMOS_REFSTATE_pott )
+    deallocate( ATMOS_REFSTATE_qv   )
+
+    deallocate( ATMOS_REFSTATE1D_pres )
+    deallocate( ATMOS_REFSTATE1D_temp )
+    deallocate( ATMOS_REFSTATE1D_dens )
+    deallocate( ATMOS_REFSTATE1D_pott )
+    deallocate( ATMOS_REFSTATE1D_qv   )
+
+    return
+  end subroutine ATMOS_REFSTATE_finalize
 
   !-----------------------------------------------------------------------------
   !> Read reference state profile

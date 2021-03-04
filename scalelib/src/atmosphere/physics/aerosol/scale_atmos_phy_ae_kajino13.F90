@@ -36,6 +36,7 @@ module scale_atmos_phy_ae_kajino13
   !
   public :: ATMOS_PHY_AE_kajino13_tracer_setup
   public :: ATMOS_PHY_AE_kajino13_setup
+  public :: ATMOS_PHY_AE_kajino13_finalize
   public :: ATMOS_PHY_AE_kajino13_tendency
   public :: ATMOS_PHY_AE_kajino13_effective_radius
   public :: ATMOS_PHY_AE_kajino13_mkinit
@@ -597,6 +598,56 @@ contains
     return
   end subroutine ATMOS_PHY_AE_kajino13_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_AE_kajino13_finalize
+
+    deallocate( NSIZ )
+    deallocate( NKAP )
+
+    deallocate( ATMOS_PHY_AE_kajino13_NAME )
+    deallocate( ATMOS_PHY_AE_kajino13_DESC )
+    deallocate( ATMOS_PHY_AE_kajino13_UNIT )
+
+    deallocate( rnum_out )
+    deallocate( n_siz )
+    deallocate( d_min )
+    deallocate( d_max )
+    deallocate( n_kap )
+    deallocate( k_min )
+    deallocate( k_max )
+    deallocate( ctg_name )
+
+    deallocate( d_lw )
+    deallocate( d_ct )
+    deallocate( d_up )
+    deallocate( k_lw )
+    deallocate( k_ct )
+    deallocate( k_up )
+
+    deallocate( is_i )
+    deallocate( is_j )
+    deallocate( is_k )
+    deallocate( ik_i )
+    deallocate( ik_j )
+    deallocate( ik_k )
+    deallocate( ic_i )
+    deallocate( ic_j )
+    deallocate( ic_k )
+
+    deallocate( it_procs2trans )
+    deallocate( ia_trans2procs )
+    deallocate( is_trans2procs )
+    deallocate( ik_trans2procs )
+    deallocate( ic_trans2procs )
+
+    deallocate( aerosol_procs )
+    deallocate( aerosol_activ )
+    deallocate( emis_procs    )
+    deallocate( emis_gas      )
+
+    return
+  end subroutine ATMOS_PHY_AE_kajino13_finalize
   !-----------------------------------------------------------------------------
   !> Aerosol Microphysics
   subroutine ATMOS_PHY_AE_kajino13_tendency( &

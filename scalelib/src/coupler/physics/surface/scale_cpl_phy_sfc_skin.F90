@@ -26,6 +26,7 @@ module scale_cpl_phy_sfc_skin
   !++ Public procedure
   !
   public :: CPL_PHY_SFC_skin_setup
+  public :: CPL_PHY_SFC_skin_finalize
   public :: CPL_PHY_SFC_skin
 
   !-----------------------------------------------------------------------------
@@ -40,11 +41,11 @@ module scale_cpl_phy_sfc_skin
   !
   !++ Private parameters & variables
   !
-  integer,  private :: CPL_PHY_SFC_SKIN_itr_max = 100 ! maximum iteration number
+  integer,  private :: CPL_PHY_SFC_SKIN_itr_max ! maximum iteration number
 
-  real(RP), private :: CPL_PHY_SFC_SKIN_dTS_max = 5.0E-2_RP ! maximum delta surface temperature [K/s]
-  real(RP), private :: CPL_PHY_SFC_SKIN_res_min = 1.0E+0_RP ! minimum value of residual
-  real(RP), private :: CPL_PHY_SFC_SKIN_err_min = 1.0E-2_RP ! minimum value of error
+  real(RP), private :: CPL_PHY_SFC_SKIN_dTS_max ! maximum delta surface temperature [K/s]
+  real(RP), private :: CPL_PHY_SFC_SKIN_res_min ! minimum value of residual
+  real(RP), private :: CPL_PHY_SFC_SKIN_err_min ! minimum value of error
 
   logical,  private :: initialized = .false.
 
@@ -71,6 +72,12 @@ contains
     LOG_NEWLINE
     LOG_INFO("CPL_PHY_SFC_SKIN_setup",*) 'Setup'
 
+    CPL_PHY_SFC_SKIN_itr_max = 100
+
+    CPL_PHY_SFC_SKIN_dTS_max = 5.0E-2_RP
+    CPL_PHY_SFC_SKIN_res_min = 1.0E+0_RP
+    CPL_PHY_SFC_SKIN_err_min = 1.0E-2_RP
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_CPL_PHY_SFC_SKIN,iostat=ierr)
@@ -86,6 +93,15 @@ contains
 
     return
   end subroutine CPL_PHY_SFC_SKIN_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CPL_PHY_SFC_SKIN_finalize
+
+    initialized = .false.
+
+    return
+  end subroutine CPL_PHY_SFC_SKIN_finalize
 
   !-----------------------------------------------------------------------------
   subroutine CPL_PHY_SFC_skin( &

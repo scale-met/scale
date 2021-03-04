@@ -27,6 +27,7 @@ module mod_ocean_driver
   !++ Public procedure
   !
   public :: OCEAN_driver_setup
+  public :: OCEAN_driver_finalize
   public :: OCEAN_driver_calc_tendency
   public :: OCEAN_driver_update
   public :: OCEAN_SURFACE_GET
@@ -181,6 +182,60 @@ contains
 
     return
   end subroutine OCEAN_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_driver_finalize
+    use mod_ocean_admin, only: &
+       OCEAN_do,       &
+       OCEAN_DYN_TYPE, &
+       OCEAN_ICE_TYPE, &
+       OCEAN_ALB_TYPE, &
+       OCEAN_RGN_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_driver_finalize",*) 'Finalize'
+
+    if ( OCEAN_do ) then
+
+       select case ( OCEAN_DYN_TYPE )
+       case ( 'SLAB' )
+       case ( 'OFFLINE' )
+       case ( 'INIT' )
+       end select
+
+       select case ( OCEAN_ICE_TYPE )
+       case ( 'NONE' )
+       case ( 'SIMPLE' )
+       case ( 'INIT' )
+       end select
+
+       ! surface albedo
+       select case ( OCEAN_ALB_TYPE )
+       case ( 'NAKAJIMA00' )
+       case ( 'CONST' )
+       case ( 'INIT' )
+       end select
+
+       ! surface roughness length
+       select case ( OCEAN_RGN_TYPE )
+       case ( 'MILLER92' )
+       case ( 'MOON07' )
+       case ( 'CONST' )
+       case ( 'INIT' )
+       end select
+
+       deallocate( WSTR    )
+       deallocate( QVEF    )
+       deallocate( SR      )
+       deallocate( ATMOS_W )
+
+    endif
+
+    return
+  end subroutine OCEAN_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Calculate tendency

@@ -62,6 +62,7 @@ module scale_atmos_phy_cp_kf
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_kf_setup
+  public :: ATMOS_PHY_CP_kf_finalize
   public :: ATMOS_PHY_CP_kf_tendency
 
   !-----------------------------------------------------------------------------
@@ -412,6 +413,21 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_kf_setup
+
+  !------------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_CP_kf_finalize
+
+    deallocate( lifetime   )
+    deallocate( I_convflag )
+    deallocate( Z          )
+    deallocate( deltaz     )
+    deallocate( deltax     )
+
+    if ( allocated( HIST_work ) ) deallocate( HIST_work )
+
+    return
+  end subroutine ATMOS_PHY_CP_kf_finalize
 
   !------------------------------------------------------------------------------
   !> CP_kf_param

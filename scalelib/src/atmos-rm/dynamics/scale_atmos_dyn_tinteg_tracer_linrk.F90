@@ -41,6 +41,7 @@ module scale_atmos_dyn_tinteg_tracer_linrk
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tinteg_tracer_linrk_setup
+  public :: ATMOS_DYN_Tinteg_tracer_linrk_finalize
   public :: ATMOS_DYN_Tinteg_tracer_linrk
 
   !-----------------------------------------------------------------------------
@@ -89,6 +90,15 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_linrk_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_Tinteg_tracer_linrk_finalize
+
+    deallocate( QTRC_RK_list )
+
+    return
+  end subroutine ATMOS_DYN_Tinteg_tracer_linrk_finalize
 
   !-----------------------------------------------------------------------------
   !> linear case RK

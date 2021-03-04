@@ -26,6 +26,7 @@ module scale_cpl_phy_sfc_fixed_temp
   !++ Public procedure
   !
   public :: CPL_PHY_SFC_FIXED_TEMP_setup
+  public :: CPL_PHY_SFC_FIXED_TEMP_finalize
   public :: CPL_PHY_SFC_FIXED_TEMP
 
   !-----------------------------------------------------------------------------
@@ -59,6 +60,15 @@ contains
 
     return
   end subroutine CPL_PHY_SFC_FIXED_TEMP_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CPL_PHY_SFC_FIXED_TEMP_finalize
+
+    initialized = .false.
+
+    return
+  end subroutine CPL_PHY_SFC_FIXED_TEMP_finalize
 
   !-----------------------------------------------------------------------------
   subroutine CPL_PHY_SFC_fixed_temp( &

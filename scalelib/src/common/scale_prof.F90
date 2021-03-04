@@ -23,6 +23,7 @@ module scale_prof
   !++ Public procedure
   !
   public :: PROF_setup
+  public :: PROF_finalize
   public :: PROF_setprefx
   public :: PROF_rapstart
   public :: PROF_rapend
@@ -133,6 +134,23 @@ contains
 
     return
   end subroutine PROF_setup
+
+  subroutine PROF_finalize
+
+    PROF_rap_level   = 2
+    PROF_mpi_barrier = .false.
+#ifdef PAPI
+    PROF_PAPI_flops     = 0
+    PORF_PAPI_real_time = 0.0
+    PROF_PAPI_proc_time = 0.0
+    PROF_PAPI_mflops    = 0.0
+#endif
+
+    PROF_rapnmax = 0
+    PROF_grpnmax = 0
+
+    return
+  end subroutine PROF_finalize
 
   !-----------------------------------------------------------------------------
   subroutine PROF_setprefx( &

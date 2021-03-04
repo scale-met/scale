@@ -29,6 +29,7 @@ module scale_atmos_phy_rd_profile
   !
   public :: ATMOS_PHY_RD_PROFILE_setup
   public :: ATMOS_PHY_RD_PROFILE_setup_zgrid
+  public :: ATMOS_PHY_RD_PROFILE_finalize
   public :: ATMOS_PHY_RD_PROFILE_read
 
   !-----------------------------------------------------------------------------
@@ -193,6 +194,22 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_PROFILE_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_RD_PROFILE_finalize
+
+    if ( allocated( CIRA_nd   ) ) deallocate( CIRA_nd   )
+    if ( allocated( CIRA_plog ) ) deallocate( CIRA_plog )
+    if ( allocated( CIRA_lat  ) ) deallocate( CIRA_lat  )
+    if ( allocated( CIRA_temp ) ) deallocate( CIRA_temp )
+    if ( allocated( CIRA_z    ) ) deallocate( CIRA_z    )
+
+    if ( allocated( interp_temp ) ) deallocate( interp_temp )
+    if ( allocated( interp_z    ) ) deallocate( interp_z    )
+
+    return
+  end subroutine ATMOS_PHY_RD_PROFILE_finalize
 
   !-----------------------------------------------------------------------------
   !> Setup CIRA86 climatological data (temperature, pressure)

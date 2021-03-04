@@ -27,6 +27,7 @@ module scale_atmos_phy_mp_tomita08
   !++ Public procedure
   !
   public :: ATMOS_PHY_MP_tomita08_setup
+  public :: ATMOS_PHY_MP_tomita08_finalize
   public :: ATMOS_PHY_MP_tomita08_adjustment
   public :: ATMOS_PHY_MP_tomita08_terminal_velocity
   public :: ATMOS_PHY_MP_tomita08_effective_radius
@@ -232,8 +233,8 @@ module scale_atmos_phy_mp_tomita08
   real(RP), private, parameter   :: Di_a        = 11.9_RP
 
   ! For coalesence coefficient of ice and snow
-  real(RP), private :: Ecoal_GI = 0.0_RP
-  real(RP), private :: Ecoal_GS = 0.0_RP
+  real(RP), private :: Ecoal_GI
+  real(RP), private :: Ecoal_GS
   real(RP), private :: flg_ecoali = 0.0_RP
   real(RP), private :: flg_ecoals = 0.0_RP
 
@@ -436,6 +437,8 @@ contains
 
     allocate( Nc_def(IA,JA) )
 
+    Ecoal_GI = 0.0_RP
+    Ecoal_GS = 0.0_RP
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -573,6 +576,16 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_tomita08_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_MP_tomita08_finalize
+
+    deallocate( w3d )
+    deallocate( Nc_def )
+
+    return
+  end subroutine ATMOS_PHY_MP_tomita08_finalize
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_tomita08_adjustment
@@ -905,7 +918,7 @@ contains
     !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
     !$omp        DENS0,TEMP0,PRES0,QTRC0,CCN,CPtot0,CVtot0,dt, &
     !$omp        RHOE_t, &
-    !$omp        UNDEF,EPS,PI,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
+    !$omp        UNDEF,EPS,PRE00,LHV,LHF,LHF0,CP_VAPOR,CP_WATER,CP_ICE,CV_VAPOR,CV_WATER,CV_ICE,ln10, &
     !$omp        do_couple_aerosol,sw_expice,enable_WDXZ2014,enable_RS2014,enable_KK2000, &
     !$omp        Nc_def,N0r_def,N0s_def,N0g_def, &
     !$omp        Cr,Cs,Cg,Erw,Eri,Eiw,Esw,Esr,Esi,Egw,Egr,Egi,Egs,Ar,As,Ag, &
