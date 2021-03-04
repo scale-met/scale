@@ -51,6 +51,8 @@ program scalerm_pp
   logical               :: EXECUTE_PREPROCESS           = .true.  ! execute preprocess tools?
   logical               :: EXECUTE_MODEL                = .false. ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
+  integer               :: NUM_BULKJOB_ONCE             = 1       ! number of bulk jobs for one iteration
+  integer               :: NUM_ITERATION_BULK           = 1       ! number of iteration for bulk job
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
   integer               :: FREQ_FAIL_CHECK              = 0       ! FPM polling frequency per DT (0: no polling)
@@ -65,6 +67,7 @@ program scalerm_pp
 !      EXECUTE_PREPROCESS, &
 !      EXECUTE_MODEL,      &
      NUM_BULKJOB,        &
+     NUM_ITERATION_BULK, &
      NUM_DOMAIN,         &
      NUM_FAIL_TOLERANCE, &
      FREQ_FAIL_CHECK,    &
@@ -94,6 +97,7 @@ program scalerm_pp
   integer               :: intercomm_child                  ! inter communicator with child
   character(len=H_LONG) :: local_cnf_fname                  ! config file for local domain
 
+  integer :: itr
   integer :: fid, ierr
   !-----------------------------------------------------------
 
@@ -141,18 +145,23 @@ program scalerm_pp
 
   !--- split for bulk jobs
 
-  if ( mod(universal_nprocs,NUM_BULKJOB) /= 0 ) then !--- fatal error
+  if ( NUM_BULKJOB == 1 ) NUM_ITERATION_BULK = 1
+  NUM_BULKJOB_ONCE = ceiling( real(NUM_BULKJOB) / NUM_ITERATION_BULK )
+  if ( mod(universal_nprocs,NUM_BULKJOB_ONCE) /= 0 ) then !--- fatal error
      if( universal_master ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB. Check!'
-     if( universal_master ) write(*,*) 'xxx Total Num of Processes = ', universal_nprocs
-     if( universal_master ) write(*,*) 'xxx            NUM_BULKJOB = ', NUM_BULKJOB
+     if( universal_master ) write(*,*) 'xxx Total Num of Processes           = ', universal_nprocs
+     if( universal_master ) write(*,*) 'xxx NUM_BULKJOB                      = ', NUM_BULKJOB
+     if( universal_master ) write(*,*) 'xxx NUM_ITERATION_BULK               = ', NUM_ITERATION_BULK
+     if( universal_master ) write(*,*) 'xxx NUM_BULKJOB / NUM_ITERATION_BULK = ', NUM_BULKJOB_ONCE
      call PRC_abort
   endif
 
-  global_nprocs = universal_nprocs / NUM_BULKJOB
+  global_nprocs = universal_nprocs / NUM_BULKJOB_ONCE
   PRC_BULKJOB(1:NUM_BULKJOB) = global_nprocs
   if ( NUM_BULKJOB > 1 ) then
-     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
-     if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
+     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL # of BULK JOBS             = ", NUM_BULKJOB
+     if( universal_master ) write(*,'(1x,A,I5)') "*** # of BULK JOB for each iteration = ", NUM_BULKJOB_ONCE
+     if( universal_master ) write(*,'(1x,A,I5)') "*** # of PROCESS of each JOB         = ", global_nprocs
 
      if ( FAILURE_PRC_MANAGE ) then
         if( universal_master ) write(*,'(1x,A)') "*** Available: Failure Process Management"
@@ -164,7 +173,7 @@ program scalerm_pp
         endif
 
         if ( NUM_FAIL_TOLERANCE > NUM_BULKJOB ) then !--- fatal error
-           write(*,*) 'xxx NUM_FAIL_TOLERANCE is bigger than NUM_BLUKJOB number'
+           write(*,*) 'xxx NUM_FAIL_TOLERANCE is bigger than # of NUM_BLUKJOB'
            write(*,*) '    set to be: NUM_FAIL_TOLERANCE <= NUM_BLUKJOB'
            call PRC_abort
         endif
@@ -172,12 +181,12 @@ program scalerm_pp
   endif
 
   ! communicator split for bulk/ensemble
-  call PRC_MPIsplit_bulk( universal_comm, & ! [IN]
-                          NUM_BULKJOB,    & ! [IN]
-                          PRC_BULKJOB(:), & ! [IN]
-                          LOG_SPLIT,      & ! [IN]
-                          global_comm,    & ! [OUT]
-                          ID_BULKJOB      ) ! [OUT]
+  call PRC_MPIsplit_bulk( universal_comm,   & ! [IN]
+                          NUM_BULKJOB_ONCE, & ! [IN]
+                          PRC_BULKJOB(:),   & ! [IN]
+                          LOG_SPLIT,        & ! [IN]
+                          global_comm,      & ! [OUT]
+                          ID_BULKJOB        ) ! [OUT]
 
   call PRC_GLOBAL_setup( ABORT_ALL_JOBS, & ! [IN]
                          global_comm     ) ! [IN]
@@ -212,31 +221,39 @@ program scalerm_pp
 
   call PRC_ERRHANDLER_setup( use_fpm, universal_master )
 
-  call IO_set_universalrank( universal_myrank, & ! [IN]
-                             ID_BULKJOB,       & ! [IN]
-                             ID_DOMAIN         ) ! [IN]
-
   !--- start main routine
 
-  if ( NUM_BULKJOB > 1 ) then
-     write(local_cnf_fname,'(I4.4,2A)') ID_BULKJOB, "/", trim(CONF_FILES(ID_DOMAIN))
-  else
-     local_cnf_fname = trim(CONF_FILES(ID_DOMAIN))
-  endif
+  do itr = 1, NUM_ITERATION_BULK
 
-  if ( EXECUTE_PREPROCESS ) then
-     call rm_prep( local_comm,     & ! [IN]
-                   PRC_COMM_NULL,  & ! [IN]
-                   PRC_COMM_NULL,  & ! [IN]
-                   local_cnf_fname ) ! [IN]
-  endif
+     if ( ID_BULKJOB > NUM_BULKJOB ) exit
 
-  if ( EXECUTE_MODEL ) then
-     call rm_driver( local_comm,       & ! [IN]
-                     intercomm_parent, & ! [IN]
-                     intercomm_child,  & ! [IN]
-                     local_cnf_fname   ) ! [IN]
-  endif
+     call IO_set_universalrank( universal_myrank, & ! [IN]
+                                ID_BULKJOB,       & ! [IN]
+                                ID_DOMAIN         ) ! [IN]
+
+     if ( NUM_BULKJOB > 1 ) then
+        write(local_cnf_fname,'(I4.4,2A)') ID_BULKJOB, "/", trim(CONF_FILES(ID_DOMAIN))
+     else
+        local_cnf_fname = trim(CONF_FILES(ID_DOMAIN))
+     endif
+
+     if ( EXECUTE_PREPROCESS ) then
+        call rm_prep( local_comm,     & ! [IN]
+                      PRC_COMM_NULL,  & ! [IN]
+                      PRC_COMM_NULL,  & ! [IN]
+                      local_cnf_fname ) ! [IN]
+     endif
+
+     if ( EXECUTE_MODEL ) then
+        call rm_driver( local_comm,       & ! [IN]
+                        intercomm_parent, & ! [IN]
+                        intercomm_child,  & ! [IN]
+                        local_cnf_fname   ) ! [IN]
+     endif
+
+     ID_BULKJOB = ID_BULKJOB + NUM_BULKJOB_ONCE
+
+  end do
 
   ! stop MPI
   call PRC_MPIfinish
