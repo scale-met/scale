@@ -1244,6 +1244,8 @@ contains
     integer :: n
     integer :: ierr
 
+    character(len=H_LONG) :: fname
+
     integer :: IO_FID_LAND_PROPERTY
     !---------------------------------------------------------------------------
 
@@ -1261,15 +1263,15 @@ contains
     if( LAND_PROPERTY_IN_FILENAME /= '' ) then
       !--- Open land parameter file
       IO_FID_LAND_PROPERTY = IO_get_available_fid()
-      open( IO_FID_LAND_PROPERTY,                     &
-            file   = trim(LAND_PROPERTY_IN_FILENAME), &
-            form   = 'formatted',                     &
-            status = 'old',                           &
-            iostat = ierr                             )
+      call IO_get_fname(fname, LAND_PROPERTY_IN_FILENAME)
+      open( IO_FID_LAND_PROPERTY, &
+            file   = fname,       &
+            form   = 'formatted', &
+            status = 'old',       &
+            iostat = ierr         )
 
       if ( ierr /= 0 ) then
-         LOG_ERROR("LAND_param_read",*) 'Failed to open land parameter file! :', &
-                    trim(LAND_PROPERTY_IN_FILENAME)
+         LOG_ERROR("LAND_param_read",*) 'Failed to open land parameter file! :', trim(fname)
          call PRC_abort
       else
         LOG_NEWLINE

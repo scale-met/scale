@@ -980,7 +980,7 @@ contains
     integer :: nsfc, nptype, nplkord, nfitPLK      !< aerosol/surface parameters for check
     integer :: nradius
 
-    character(len=H_LONG) :: dummy
+    character(len=H_LONG) :: dummy, fname
 
     integer :: fid, ierr
     integer :: iw, ich, ip, it, igas, icfc, iptype, im
@@ -1006,15 +1006,15 @@ contains
     allocate( acfc_pow(MSTRN_ncfc,MSTRN_nband) )
 
     fid = IO_get_available_fid()
-
-    open( fid,                                    &
-          file   = trim(MSTRN_GASPARA_INPUTFILE), &
-          form   = 'formatted',                   &
-          status = 'old',                         &
-          iostat = ierr                           )
+    call IO_get_fname(fname, MSTRN_GASPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -1128,14 +1128,15 @@ contains
     enddo
 
 
-    open( fid,                                     &
-          file   = trim(MSTRN_AEROPARA_INPUTFILE), &
-          form   = 'formatted',                    &
-          status = 'old',                          &
-          iostat = ierr                            )
+    call IO_get_fname(fname, MSTRN_AEROPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -1214,14 +1215,15 @@ contains
     allocate( hygro_flag(MSTRN_nptype)               )
     allocate( radmode   (MSTRN_nptype,MSTRN_nradius) )
 
-    open( fid,                                      &
-          file   = trim(MSTRN_HYGROPARA_INPUTFILE), &
-          form   = 'formatted',                     &
-          status = 'old',                           &
-          iostat = ierr                             )
+    call IO_get_fname(fname, MSTRN_HYGROPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 

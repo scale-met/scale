@@ -155,6 +155,7 @@ contains
           y = 1
           do m = 1, nmonth
              write(fname,'(A,A,I2.2,A)') trim(ATMOS_SFC_CH_Rn222_SCHERY1998_dirpath), "/fdh3a.", m
+             call IO_get_fname(fname, fname)
              LOG_INFO_CONT(*) 'Read from the ASCII file: ', trim(fname)
 
              fid = IO_get_available_fid()
@@ -208,6 +209,7 @@ contains
           do m = 1, nmonth
              yy = y+ATMOS_SFC_CH_Rn222_HIRAO2010_ystart-1
              write(fname,'(A,A,I4.4,I2.2)') trim(ATMOS_SFC_CH_Rn222_HIRAO2010_dirpath), "/flux-hra-revi", yy, m
+             call IO_get_fname(fname, fname)
              LOG_INFO_CONT(*) 'Read from the ASCII file: ', trim(fname)
 
              fid = IO_get_available_fid()

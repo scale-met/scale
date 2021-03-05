@@ -305,6 +305,8 @@ contains
     real(RP), allocatable :: X_ref(:,:)
     real(RP), allocatable :: Y_ref(:,:)
 
+    character(len=H_LONG) :: fname
+
     integer :: ONLINE_SPECIFIED_MAXRQ = 0
     integer :: i
     integer :: fid, ierr
@@ -513,14 +515,15 @@ contains
 
          !--- read latlon catalogue
          fid = IO_get_available_fid()
-         open( fid,                                    &
-               file   = trim(LATLON_CATALOGUE_FNAME),  &
-               form   = 'formatted',                   &
-               status = 'old',                         &
-               iostat = ierr                           )
+         call IO_get_fname(fname, LATLON_CATALOGUE_FNAME)
+         open( fid,                  &
+               file   = fname,       &
+               form   = 'formatted', &
+               status = 'old',       &
+               iostat = ierr         )
 
          if ( ierr /= 0 ) then
-            LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'cannot open latlon-catalogue file!'
+            LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'cannot open latlon-catalogue file!: ', trim(fname)
             call PRC_abort
          endif
 

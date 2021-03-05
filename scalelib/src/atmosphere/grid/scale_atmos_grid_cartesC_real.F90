@@ -248,6 +248,8 @@ contains
     real(RP) :: mine (2,2)            !< send    buffer of lon-lat [deg]
     real(RP) :: whole(2,2,PRC_nprocs) !< recieve buffer of lon-lat [deg]
 
+    character(len=H_LONG) :: fname
+
     integer  :: i, j
     integer  :: fid, ierr
     !---------------------------------------------------------------------------
@@ -333,11 +335,12 @@ contains
        if ( catalogue_output ) then
 
           fid = IO_get_available_fid()
-          open( fid,                            &
-                file   = trim(catalogue_fname), &
-                form   = 'formatted',           &
-                status = 'replace',             &
-                iostat = ierr                   )
+          call IO_get_fname(fname, catalogue_fname)
+          open( fid,                  &
+                file   = fname,       &
+                form   = 'formatted', &
+                status = 'replace',   &
+                iostat = ierr         )
 
           if ( ierr /= 0 ) then
              LOG_ERROR("ATMOS_GRID_CARTESC_REAL_calc_latlon",*) 'cannot create latlon-catalogue file!'

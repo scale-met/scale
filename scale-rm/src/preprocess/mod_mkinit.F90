@@ -1323,7 +1323,10 @@ contains
 
     real(RP) :: fact1, fact2
     integer :: k, kref
+
     integer :: fid
+    character(len=H_LONG) :: fname
+
     integer :: ierr
 
     namelist / PARAM_MKINIT_SOUNDING / &
@@ -1342,13 +1345,14 @@ contains
     LOG_NML(PARAM_MKINIT_SOUNDING)
 
     !--- prepare sounding profile
-    LOG_INFO("read_sounding",*) 'Input sounding file:', trim(ENV_IN_SOUNDING_file)
     fid = IO_get_available_fid()
-    open( fid,                                 &
-          file   = trim(ENV_IN_SOUNDING_file), &
-          form   = 'formatted',                &
-          status = 'old',                      &
-          iostat = ierr                        )
+    call IO_get_fname(fname, ENV_IN_SOUNDING_file)
+    LOG_INFO("read_sounding",*) 'Input sounding file:', trim(fname)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
           LOG_ERROR("read_sounding",*) '[mod_mkinit/read_sounding] Input file not found!'

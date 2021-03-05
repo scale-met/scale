@@ -201,8 +201,8 @@ contains
 
     ! open 1-dim forcing data
     fid_data = IO_get_available_fid()
-    fdata_name=trim(inbasedir)//'/'//trim(fdata_name)
-    open(fid_data, file=trim(fdata_name), status='old',iostat=ierr)
+    call IO_get_fname(fdata_name, trim(inbasedir)//'/'//trim(fdata_name))
+    open(fid_data, file=fdata_name, status='old',iostat=ierr)
     if ( ierr /= 0 ) then
        LOG_WARN("USER_setup",*) 'Cannot open the data file for forcing. STOP! ', trim(fdata_name)
        call PRC_abort

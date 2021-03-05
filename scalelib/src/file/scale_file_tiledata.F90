@@ -529,19 +529,21 @@ contains
     real(RP),         intent(out) :: TILE_LONS(:)
     real(RP),         intent(out) :: TILE_LONE(:)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     integer :: index
     integer :: t
 
     fid = IO_get_available_fid()
+    call IO_get_fname(name, fname)
     open( fid,                  &
-          file   = fname,       &
+          file   = name,        &
           form   = 'formatted', &
           status = 'old',       &
           iostat = ierr         )
 
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_TILEDATA_read_catalog_file",*) 'catalogue file not found! ', trim(fname)
+       LOG_ERROR("FILE_TILEDATA_read_catalog_file",*) 'catalogue file not found! ', trim(name)
        call PRC_abort
     endif
 
@@ -717,6 +719,7 @@ contains
 
     integer(2) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -740,15 +743,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*2, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_int2_real",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_int2_real",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -796,6 +800,7 @@ contains
 
     integer(4) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -819,15 +824,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*4, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_int4_real",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_int4_real",*) 'data file not found!: ', trim(name)
           call PRC_abort
        end if
     endif
@@ -874,6 +880,7 @@ contains
 
     real(4) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -897,15 +904,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*4, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_real4_real",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_real4_real",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -952,6 +960,7 @@ contains
 
     real(8) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -975,15 +984,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*8, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_real8_real",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_real8_real",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -1030,6 +1040,7 @@ contains
 
     integer(1) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -1053,15 +1064,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*1, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_int1_int",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_int1_int",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -1108,6 +1120,7 @@ contains
 
     integer(2) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -1131,15 +1144,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*2, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_int2_int",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_int2_int",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -1186,6 +1200,7 @@ contains
 
     integer(4) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -1209,15 +1224,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*4, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_int4_int",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_int4_int",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if
@@ -1264,6 +1280,7 @@ contains
 
     real(4) :: buf(isize,jsize)
 
+    character(len=H_LONG) :: name
     integer :: fid, ierr
     logical :: yrevers_
     logical :: lstep
@@ -1287,15 +1304,16 @@ contains
 
     if ( fid < 0 ) then
        fid = IO_get_available_fid()
+       call IO_get_fname(name, fname)
        open( fid,                    &
-             file   = fname,         &
+             file   = name,          &
              form   = 'unformatted', &
              access = 'direct',      &
              status = 'old',         &
              recl   = isize*jsize*4, &
              iostat = ierr            )
        if ( ierr /= 0 ) then
-          LOG_ERROR("FILE_TILEDATA_read_data_real4_int",*) 'data file not found!: ', trim(fname)
+          LOG_ERROR("FILE_TILEDATA_read_data_real4_int",*) 'data file not found!: ', trim(name)
           call PRC_abort
        endif
     end if

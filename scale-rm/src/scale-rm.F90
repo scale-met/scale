@@ -54,6 +54,7 @@ program scalerm
   integer               :: NUM_BULKJOB_ONCE             = 1       ! number of bulk job for one iteration
   integer               :: NUM_ITERATION_BULK           = 1       ! number of iteration for bulk job
   integer               :: BULKJOB_START_DIRNUM         = 0       ! start number of directory for bulk job
+  logical               :: ADD_BULKJOB_PATH             = .false. ! add path of the bulk job to files
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
   integer               :: FREQ_FAIL_CHECK              = 5       ! FPM polling frequency per DT (0: no polling)
@@ -70,6 +71,7 @@ program scalerm
      NUM_BULKJOB,          &
      NUM_ITERATION_BULK,   &
      BULKJOB_START_DIRNUM, &
+     ADD_BULKJOB_PATH,     &
      NUM_DOMAIN,           &
      NUM_FAIL_TOLERANCE,   &
      FREQ_FAIL_CHECK,      &
@@ -97,7 +99,7 @@ program scalerm
   integer               :: ID_DOMAIN                        ! domain ID
   integer               :: intercomm_parent                 ! inter communicator with parent
   integer               :: intercomm_child                  ! inter communicator with child
-  character(len=H_LONG) :: local_cnf_fname                  ! config file for local domain
+  character(len=5)      :: path                             ! path to config file for local domain
 
   integer :: itr
   integer :: fid, ierr
@@ -257,19 +259,23 @@ program scalerm
                                 ID_DOMAIN         ) ! [IN]
 
      if ( NUM_BULKJOB > 1 ) then
-        write(local_cnf_fname,'(I4.4,2A)') ID_BULKJOB + BULKJOB_START_DIRNUM, "/", trim(CONF_FILES(ID_DOMAIN))
+        write(path,'(I4.4,A)') ID_BULKJOB + BULKJOB_START_DIRNUM, "/"
      else
-        local_cnf_fname = trim(CONF_FILES(ID_DOMAIN))
+        path = ""
      endif
 
      if ( EXECUTE_PREPROCESS ) then
-        call rm_prep( local_comm,     & ! [IN]
-                      local_cnf_fname ) ! [IN]
+        call rm_prep( local_comm,            & ! [IN]
+                      CONF_FILES(ID_DOMAIN), & ! [IN]
+                      path,                  & ! [IN]
+                      add_bulkjob_path       ) ! [IN]
      endif
 
      if ( EXECUTE_MODEL ) then
-        call rm_driver( local_comm,     & ! [IN]
-                        local_cnf_fname ) ! [IN]
+        call rm_driver( local_comm,            & ! [IN]
+                        CONF_FILES(ID_DOMAIN), & ! [IN]
+                        path,                  & ! [IN]
+                        add_bulkjob_path       ) ! [IN]
      endif
 
      ID_BULKJOB = ID_BULKJOB + NUM_BULKJOB_ONCE

@@ -1956,19 +1956,21 @@ contains
        TBLEND,     &
        TGLEND
 
+    character(len=H_LONG) :: fname
     integer :: fid
     integer :: ierr
     !---------------------------------------------------------------------------
       fid = IO_get_available_fid()
-      open( fid,                   &
-          file   = trim(INFILENAME),              &
-          form   = 'formatted',                   &
-          status = 'old',                         &
-          iostat = ierr                           )
+      call IO_get_fname(fname, INFILENAME)
+      open( fid,                  &
+            file   = fname,       &
+            form   = 'formatted', &
+            status = 'old',       &
+            iostat = ierr         )
 
       if ( ierr /= 0 ) then
         LOG_NEWLINE
-        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Failed to open a parameter file : ', trim(INFILENAME)
+        LOG_ERROR("URBAN_DYN_kusaka01_setup",*) 'Failed to open a parameter file : ', trim(fname)
         call PRC_abort
       else
         LOG_NEWLINE

@@ -239,18 +239,11 @@ contains
     real(RP), allocatable :: tmp1d(:)
     real(RP), allocatable :: tmp3d(:,:,:)
 
-    logical  :: exist
     integer  :: n, m, t
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("PROFILE_setup_CIRA86",*) 'Read CIRA86 climatology, filename : ', trim(PROFILE_CIRA86_fname)
-
-    inquire( file=trim(PROFILE_CIRA86_fname), exist=exist )
-    if ( .NOT. exist ) then !--- missing
-       LOG_ERROR("PROFILE_setup_CIRA86",*) 'File not found. check!'
-       call PRC_abort
-    endif
 
     ! open CIRA86 datafile (netCDF)
     call FILE_open( PROFILE_CIRA86_fname, & ! (in)
@@ -432,12 +425,12 @@ contains
     MIPAS_lat(5) =  90.0_RP * CONST_D2R
 
     do rgn = I_tropic, I_polarwin
-       fname = trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn)
+       call IO_get_fname(fname, trim(PROFILE_MIPAS2001_dir)//'/'//MIPAS_fname(rgn))
        LOG_INFO("PROFILE_setup_MIPAS2001",*) 'filename : ', trim(fname)
 
        fid = IO_get_available_fid()
        open( unit   = fid,         &
-             file   = trim(fname), &
+             file   = fname,       &
              form   = 'formatted', &
              status = 'old',       &
              iostat = ierr         )
@@ -1236,7 +1229,7 @@ contains
     real(RP) :: plog (kmax)
     real(RP) :: plogh(kmax+1)
 
-    character(len=H_LONG) :: dummy
+    character(len=H_LONG) :: dummy, fname
 
     integer  :: fid, ierr
     integer  :: k
@@ -1247,14 +1240,15 @@ contains
     gas(:,:) = 0.0_RP
     cfc(:,:) = 0.0_RP
 
-    LOG_INFO("PROFILE_read_user",*) 'FILENAME:', trim(PROFILE_USER_fname)
+    call IO_get_fname(fname, PROFILE_USER_fname)
+    LOG_INFO("PROFILE_read_user",*) 'FILENAME:', trim(fname)
 
     fid = IO_get_available_fid()
-    open( unit   = fid,                      &
-          file   = trim(PROFILE_USER_fname), &
-          form   = 'formatted',              &
-          status = 'old',                    &
-          iostat = ierr                      )
+    open( unit   = fid,         &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then !--- missing
           LOG_ERROR("PROFILE_read_user",*) 'File not found. check!'
