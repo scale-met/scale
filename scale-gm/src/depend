@@ -76,7 +76,7 @@ $(BUILD_DIR)/prg_fio_sel.o: tool/prg_fio_sel.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_f
 $(BUILD_DIR)/prg_fio_sub.o: tool/prg_fio_sub.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_io_param.o $(BUILD_DIR)/mod_mnginfo_light.o $(BUILD_DIR)/mod_option.o
 $(BUILD_DIR)/prg_ll2ico.o: preprocess/prg_ll2ico.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_convert.o $(BUILD_DIR)/mod_gm_topography.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_oprt.o
 $(BUILD_DIR)/prg_mkhgrid.o: preprocess/prg_mkhgrid.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gmtr.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_mkgrd.o
-$(BUILD_DIR)/prg_mkllmap.o: preprocess/prg_mkllmap.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_latlon.o
+$(BUILD_DIR)/prg_mkllmap.o: preprocess/prg_mkllmap.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_gm_topography.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_latlon.o
 $(BUILD_DIR)/prg_mkmnginfo.o: preprocess/prg_mkmnginfo.F90 $(DEPENDLIB)
 $(BUILD_DIR)/prg_mkrawgrid.o: preprocess/prg_mkrawgrid.F90 $(DEPENDLIB) $(BUILD_DIR)/mod_fio.o $(BUILD_DIR)/mod_grd.o $(BUILD_DIR)/mod_mkgrd.o
 $(BUILD_DIR)/prg_mkvlayer.o: preprocess/prg_mkvlayer.F90 $(DEPENDLIB)
