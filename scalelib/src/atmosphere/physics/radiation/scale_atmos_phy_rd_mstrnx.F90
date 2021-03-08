@@ -1530,7 +1530,7 @@ contains
                 enddo
                 valsum = valsum * PPM * dz_std(k)
 
-                !$acc loop gang vector
+                !$acc loop seq
                 do ich = 1, chmax
                    tauGAS(k,ich) = tauGAS(k,ich) + valsum
                 enddo
