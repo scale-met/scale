@@ -33,6 +33,7 @@ static void cstr2fstr(       char   *fstr, // (out)
     fstr[i] = ' ';
 }
 
+/*
 void file_open_c_(       int32_t *fid,       // (out)
                    const char    *fname,     // (in)
                    const int32_t *mode,      // (in)
@@ -111,6 +112,8 @@ void file_get_varname_c_( const int32_t *fid,          // (in)
   len = varname_len > File_HSHORT ? File_HSHORT : varname_len;
   cstr2fstr(varname, _varname, len);
 }
+
+*/
 
 void file_get_datainfo_c_(       datainfo_t *dinfo,       // (out)
                            const int32_t    *fid,         // (in)

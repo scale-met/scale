@@ -23,9 +23,12 @@ module scale_file
   use scale_file_h
   use scale_prc, only: &
      PRC_abort
+  use iso_c_binding
   !-----------------------------------------------------------------------------
   implicit none
   private
+
+  include 'scale_file_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ Public procedures
@@ -330,9 +333,9 @@ contains
        call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
     endif
 
-    call file_set_tunits_c( FILE_files(fid)%fid,    & ! [IN]
-                            time_units_, calendar_, & ! [IN]
-                            error                   ) ! [OUT]
+    error = file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
+                               cstr(time_units_),   &
+                               cstr(calendar_ )     ) ! [IN]
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_create",*) 'failed to set time units'
@@ -360,8 +363,8 @@ contains
        call PRC_abort
     end if
 
-    call file_get_nvars_c( FILE_files(fid)%fid, & ! (in)
-                           nvars, error         ) ! (out)
+    error = file_get_nvars_c( nvars,              & ! (out)
+                              FILE_files(fid)%fid ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_num",*) 'failed to get varnum. fid = ', fid
@@ -394,8 +397,9 @@ contains
        call PRC_abort
     end if
 
-    call file_get_varname_c( FILE_files(fid)%fid, cvid, & ! (in)
-                             varname, error             ) ! (out)
+    error = file_get_varname_c( varname, &
+                                FILE_files(fid)%fid, cvid, len(varname) ) ! (in)
+    call fstr(varname)
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_var_name",*) 'failed to get varname. cvid = ', cvid
@@ -418,8 +422,7 @@ contains
        call PRC_abort
     end if
 
-    call file_add_associatedvariable_c( FILE_files(fid)%fid, vname , & ! (in)
-                                        error                        ) ! (out)
+    error = file_add_associatedvariable_c( FILE_files(fid)%fid, cstr(vname) ) ! (in)
 
     if ( present(existed) ) then
        if ( error == FILE_ALREADY_EXISTED_CODE ) then
@@ -453,8 +456,7 @@ contains
        call PRC_abort
     end if
 
-    call file_set_option_c( FILE_files(fid)%fid, filetype, key, val, & ! (in)
-                            error                                    ) ! (out)
+    error = file_set_option_c( FILE_files(fid)%fid, cstr(filetype), cstr(key), cstr(val) ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_set_option",*) 'failed to set option'
        call PRC_abort
@@ -548,8 +550,9 @@ contains
        call PRC_abort
     end if
 
-    call file_get_dim_length_c( FILE_files(fid)%fid, dimname, & ! (in)
-                                len, ierror                   ) ! (out)
+    ierror = file_get_dim_length_c( len,                 & ! (out)
+                                    FILE_files(fid)%fid, & ! (in)
+                                    cstr(dimname)        ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -588,9 +591,10 @@ contains
        call PRC_abort
     end if
 
-    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), SP, & ! (in)
-         error                                                        ) ! (out)
+    error = file_put_axis_SP_c( FILE_files(fid)%fid,                 & ! (in)
+                                     cstr(name), cstr(desc), cstr(units), & ! (in)
+                                     cstr(dim_name), dtype,               & ! (in)
+                                     val(:), size(val), SP           ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_realSP",*) 'failed to put axis'
        call PRC_abort
@@ -619,9 +623,10 @@ contains
        call PRC_abort
     end if
 
-    call file_put_axis_c( FILE_files(fid)%fid,                        & ! (in)
-         name, desc, units, dim_name, dtype, val, size(val), DP, & ! (in)
-         error                                                        ) ! (out)
+    error = file_put_axis_DP_c( FILE_files(fid)%fid,                 & ! (in)
+                                     cstr(name), cstr(desc), cstr(units), & ! (in)
+                                     cstr(dim_name), dtype,               & ! (in)
+                                     val(:), size(val), DP           ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_realDP",*) 'failed to put axis'
        call PRC_abort
@@ -658,9 +663,9 @@ contains
        call PRC_abort
     end if
 
-    call file_def_axis_c( FILE_files(fid)%fid, &
-         name, desc, units, dim_name, dtype, dim_size, bounds_, & ! (in)
-         error                                                  ) ! (out)
+    error = file_def_axis_c( FILE_files(fid)%fid,                     & ! (in)
+                             cstr(name), cstr(desc), cstr(units),     & ! (in)
+                             cstr(dim_name), dtype, dim_size, bounds_ ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_def_axis",*) 'failed to define axis'
        call PRC_abort
@@ -691,13 +696,11 @@ contains
     end if
 
     if ( present(start) ) then
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP, start, shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_SP_c( FILE_files(fid)%fid, cstr(name), & ! (in)
+                                          val, SP, start, shape(val)  ) ! (in)
     else
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP, (/1/), shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_SP_c( FILE_files(fid)%fid, cstr(name), & ! (in)
+                                          val, SP, (/1/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realSP",*) 'failed to write axis: '//trim(name)
@@ -725,13 +728,11 @@ contains
     end if
 
     if ( present(start) ) then
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP, start, shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_DP_c( FILE_files(fid)%fid, cstr(name), & ! (in)
+                                          val, DP, start, shape(val)  ) ! (in)
     else
-       call file_write_axis_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP, (/1/), shape(val),  & ! (in)
-            error                                   ) ! (out)
+       error = file_write_axis_DP_c( FILE_files(fid)%fid, cstr(name), & ! (in)
+                                          val, DP, (/1/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realDP",*) 'failed to write axis: '//trim(name)
@@ -757,18 +758,29 @@ contains
     integer,          intent(in) :: dtype
     real(SP),    intent(in) :: val(:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_SP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, SP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -789,18 +801,29 @@ contains
     integer,          intent(in) :: dtype
     real(DP),    intent(in) :: val(:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_DP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, DP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -821,18 +844,29 @@ contains
     integer,          intent(in) :: dtype
     real(SP),    intent(in) :: val(:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_SP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, SP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -853,18 +887,29 @@ contains
     integer,          intent(in) :: dtype
     real(DP),    intent(in) :: val(:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_DP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, DP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -885,18 +930,29 @@ contains
     integer,          intent(in) :: dtype
     real(SP),    intent(in) :: val(:,:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_SP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, SP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -917,18 +973,29 @@ contains
     integer,          intent(in) :: dtype
     real(DP),    intent(in) :: val(:,:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_DP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, DP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -949,18 +1016,29 @@ contains
     integer,          intent(in) :: dtype
     real(SP),    intent(in) :: val(:,:,:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, SP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_SP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, SP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -981,18 +1059,29 @@ contains
     integer,          intent(in) :: dtype
     real(DP),    intent(in) :: val(:,:,:,:)
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    integer :: i
     integer :: error
-    intrinsic size
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_put_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         val, DP,                                         & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_put_associatedcoordinate_DP_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype,  & ! (in)
+         val, DP                         ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -1012,17 +1101,28 @@ contains
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
 
+    type(c_ptr) :: dim_names_(size(dim_names))
+    character(:,c_char), allocatable, target :: cptr(:)
+
     integer :: error
-    intrinsic size
+    integer :: i
+    intrinsic size, len
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_def_associatedCoordinate",*) 'File is not opened. fid = ', fid
        call PRC_abort
     end if
 
-    call file_def_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-         name, desc, units, dim_names, size(dim_names), dtype, & ! (in)
-         error                                                 ) ! (out)
+    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    do i = 1, size(dim_names)
+       cptr(i) = cstr(dim_names(i))
+       dim_names_(i) = c_loc(cptr(i))
+    end do
+    
+    error = file_def_associatedcoordinate_c( &
+         FILE_files(fid)%fid,                 & ! (in)
+         cstr(name), cstr(desc), cstr(units), & ! (in)
+         dim_names_, size(dim_names), dtype   ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -1058,22 +1158,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, SP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            1, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 1, SP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            1, (/1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 1, SP,                  & ! (in)
+            (/1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1106,22 +1206,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, DP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            1, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 1, DP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            1, (/1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 1, DP,                  & ! (in)
+            (/1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1154,22 +1254,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, SP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            2, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 2, SP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            2, (/1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 2, SP,                  & ! (in)
+            (/1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1202,22 +1302,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, DP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            2, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 2, DP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            2, (/1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 2, DP,                  & ! (in)
+            (/1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1250,22 +1350,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, SP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            3, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 3, SP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            3, (/1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 3, SP,                  & ! (in)
+            (/1,1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1298,22 +1398,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, DP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            3, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 3, DP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            3, (/1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 3, DP,                  & ! (in)
+            (/1,1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1346,22 +1446,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, SP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            4, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 4, SP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, SP,                                     & ! (in)
-            4, (/1,1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_SP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 4, SP,                  & ! (in)
+            (/1,1,1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1394,22 +1494,22 @@ contains
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            ndims, start, count,                                    & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, ndims, DP,             & ! (in)
+            start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            4, start, shape(val),                              & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name), & ! (in)
+            val, 4, DP,            & ! (in)
+            start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       call file_write_associatedcoordinate_c( FILE_files(fid)%fid, & ! (in)
-            name, val, DP,                                     & ! (in)
-            4, (/1,1,1,1/), shape(val),         & ! (in)
-            error                                                   ) ! (out)
+       error = file_write_associatedcoordinate_DP_c( &
+            FILE_files(fid)%fid, cstr(name),       & ! (in)
+            val, 4, DP,                  & ! (in)
+            (/1,1,1,1/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
@@ -1476,9 +1576,13 @@ contains
 
     logical,          intent(in), optional :: time_avg
 
+    type(c_ptr) :: dims_(size(dims))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    logical(c_bool) :: itavg
+
     integer  :: cvid
     integer  :: ndims
-    integer  :: itavg
     integer  :: error
     integer  :: n
 
@@ -1501,16 +1605,23 @@ contains
     if ( vid < 0 ) then ! variable registration
 
        ndims = size(dims)
-       itavg = 0
+       itavg = .false.
 
        if ( present(time_avg) ) then
-          if( time_avg ) itavg = 1
+          if( time_avg ) itavg = .true.
        endif
 
-       call file_add_variable_c( FILE_files(fid)%fid,                 & ! [IN]
-                                 varname, desc, units, standard_name, & ! [IN]
-                                 dims, ndims, dtype, time_int, itavg, & ! [IN]
-                                 cvid, error                          ) ! [OUT]
+       allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       do n = 1, ndims
+          cptr(n) = cstr(dims(n))
+          dims_(n) = c_loc(cptr(n))
+       end do
+    
+       error = file_add_variable_c( cvid,                                & ! [OUT]
+                                    FILE_files(fid)%fid,                 & ! [IN]
+                                    cstr(varname), cstr(desc),           & ! [IN]
+                                    cstr(units), cstr(standard_name),    & ! [IN]
+                                    dims_, ndims, dtype, time_int, itavg ) ! [IN]
 
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_add_variable_with_time",*) 'failed to add variable: '//trim(varname)
@@ -1552,8 +1663,12 @@ contains
     logical,          intent( in), optional :: time_avg
     logical,          intent(out), optional :: existed
 
+    type(c_ptr) :: dims_(size(dims))
+    character(:,c_char), allocatable, target :: cptr(:)
+
+    logical(c_bool) :: itavg
+
     real(DP) :: tint_
-    integer  :: itavg
     integer  :: cvid
     integer  :: error
     integer  :: n
@@ -1580,21 +1695,25 @@ contains
           tint_ = -1.0_DP
        endif
 
+       itavg = .false.
        if ( present(time_avg) ) then
           if ( time_avg ) then
-             itavg = 1
-          else
-             itavg = 0
+             itavg = .true.
           end if
-       else
-          itavg = 0
        end if
 
-       call file_add_variable_c( FILE_files(fid)%fid,                 & ! (in)
-                                 varname, desc, units, standard_name, & ! (in)
-                                 dims, ndims, dtype,                  & ! (in)
-                                 tint_, itavg,                        & ! (in)
-                                 cvid, error                          ) ! (out)
+       allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       do n = 1, ndims
+          cptr(n) = cstr(dims(n))
+          dims_(n) = c_loc(cptr(n))
+       end do
+
+       error = file_add_variable_c( cvid,                             & ! [OUT]
+                                    FILE_files(fid)%fid,              & ! [IN]
+                                    cstr(varname), cstr(desc),        & ! [IN]
+                                    cstr(units), cstr(standard_name), & ! [IN]
+                                    dims_, ndims, dtype, tint_, itavg ) ! [IN]
+
        if ( error /= FILE_SUCCESS_CODE ) then
           LOG_ERROR("FILE_def_variable",*) 'failed to add variable: '//trim(varname)
           call PRC_abort
@@ -1632,7 +1751,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     if ( .not. FILE_opened(fid) ) then
@@ -1641,14 +1760,15 @@ contains
     end if
 
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_text_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, suppress,              & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_text_c( val,                    & ! (out)
+                                       FILE_files(fid)%fid,    & ! (in)
+                                       cstr(vname), cstr(key), & ! (in)
+                                       suppress, len(val)      ) ! (in)
+    call fstr(val)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -1780,7 +1900,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -1791,14 +1911,14 @@ contains
     end if
 
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_int_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_int_c( val(:),                 & ! (out)
+                                      FILE_files(fid)%fid,    & ! (in)
+                                      cstr(vname), cstr(key), & ! (in)
+                                      suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -1906,7 +2026,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -1917,14 +2037,14 @@ contains
     end if
 
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_float_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_float_c( val,                    & ! (out)
+                                            FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -2030,7 +2150,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    integer :: suppress
+    logical(c_bool) :: suppress
     integer :: error
 
     intrinsic size
@@ -2041,14 +2161,14 @@ contains
     end if
 
     if ( present(existed) ) then
-       suppress = 1
+       suppress = .true.
     else
-       suppress = 0
+       suppress = .false.
     end if
-    call file_get_attribute_double_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, size(val), suppress,   & ! (in)
-         val, error                  ) ! (out)
+    error = file_get_attribute_double_c( val,                    & ! (out)
+                                            FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            suppress, size(val)     ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        if ( present(existed) ) then
           existed = .false.
@@ -2162,10 +2282,9 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_text_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val,                   & ! (in)
-         error                       ) ! (out)
+    error = file_set_attribute_text_c( FILE_files(fid)%fid,    & ! (in)
+                                       cstr(vname), cstr(key), & ! (in)
+                                       cstr(val)               ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_text",*) 'failed to set text attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
@@ -2218,10 +2337,9 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_int_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    error = file_set_attribute_int_c( FILE_files(fid)%fid,    & ! (in)
+                                      cstr(vname), cstr(key), & ! (in)
+                                      val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_int",*) 'failed to set integer attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
@@ -2265,10 +2383,9 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_float_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    error = file_set_attribute_float_c( FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_float",*) 'failed to set float attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
@@ -2311,10 +2428,9 @@ contains
        call PRC_abort
     end if
 
-    call file_set_attribute_double_c( &
-         FILE_files(fid)%fid, vname, & ! (in)
-         key, val(:), size(val(:)),  & ! (in)
-         error                       ) ! (out)
+    error = file_set_attribute_double_c( FILE_files(fid)%fid,    & ! (in)
+                                            cstr(vname), cstr(key), & ! (in)
+                                            val(:), size(val(:))    ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_set_attribute_double",*) 'failed to set double attribute for '//trim(vname)//': '//trim(key)
        call PRC_abort
@@ -2387,7 +2503,7 @@ contains
     integer :: ierror
     integer :: n
 
-    logical :: suppress
+    logical(c_bool) :: suppress
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2404,10 +2520,11 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,   & ! (out)
-         FILE_files(fid)%fid, varname, & ! (in)
-         1, suppress,                  & ! (in)
-         ierror                        ) ! (out)
+    ierror = file_get_datainfo_c( dinfo,               & ! (out)
+                                  FILE_files(fid)%fid, & ! (in)
+                                  cstr(varname),       & ! (in)
+                                  1, suppress          ) ! (in)
+
 
     !--- verify
     if ( ierror /= FILE_SUCCESS_CODE ) then
@@ -2454,8 +2571,8 @@ contains
        call PRC_abort
     end if
 
-    call file_get_step_size_c( FILE_files(fid)%fid, varname, & ! (in)
-                               len, ierror                   ) ! (out)
+    ierror = file_get_step_size_c( len,                         & ! (out)
+                                   FILE_files(fid)%fid, varname ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
@@ -2630,23 +2747,23 @@ contains
     integer,          intent(in)  :: fid
     character(len=*), intent(in)  :: varname
 
-    integer,                    intent(in),  optional :: istep
-    logical,                    intent(out), optional :: existed
-    character(len=FILE_HMID),   intent(out), optional :: description
-    character(len=FILE_HSHORT), intent(out), optional :: units
-    character(len=FILE_HMID),   intent(out), optional :: standard_name
-    integer,                    intent(out), optional :: datatype
-    integer,                    intent(out), optional :: dim_rank
-    character(len=FILE_HSHORT), intent(out), optional :: dim_name(:)
-    integer,                    intent(out), optional :: dim_size(:)
-    integer,                    intent(out), optional :: natts
-    character(len=FILE_HSHORT), intent(out), optional :: att_name(:)
-    integer,                    intent(out), optional :: att_type(:)
-    integer,                    intent(out), optional :: att_len (:)
-    real(DP),                   intent(out), optional :: time_start
-    real(DP),                   intent(out), optional :: time_end
-    character(len=FILE_HMID),   intent(out), optional :: time_units
-    character(len=FILE_HSHORT), intent(out), optional :: calendar
+    integer,          intent(in),  optional :: istep
+    logical,          intent(out), optional :: existed
+    character(len=*), intent(out), optional :: description
+    character(len=*), intent(out), optional :: units
+    character(len=*), intent(out), optional :: standard_name
+    integer,          intent(out), optional :: datatype
+    integer,          intent(out), optional :: dim_rank
+    character(len=*), intent(out), optional :: dim_name(:)
+    integer,          intent(out), optional :: dim_size(:)
+    integer,          intent(out), optional :: natts
+    character(len=*), intent(out), optional :: att_name(:)
+    integer,          intent(out), optional :: att_type(:)
+    integer,          intent(out), optional :: att_len (:)
+    real(DP),         intent(out), optional :: time_start
+    real(DP),         intent(out), optional :: time_end
+    character(len=*), intent(out), optional :: time_units
+    character(len=*), intent(out), optional :: calendar
 
     type(datainfo) :: dinfo
 
@@ -2655,8 +2772,10 @@ contains
     integer  :: i
     integer  :: error
 
-    logical :: suppress
+    logical(c_bool) :: suppress
     logical :: existed2
+
+    character(len=FILE_HMID) :: tu
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2679,12 +2798,11 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,               & ! [OUT]
-                              FILE_files(fid)%fid, & ! [IN]
-                              varname,             & ! [IN]
-                              istep_,              & ! [IN]
-                              suppress,            & ! [IN]
-                              error                ) ! [OUT]
+    error = file_get_datainfo_c( dinfo,               & ! [OUT]
+                                 FILE_files(fid)%fid, & ! [IN]
+                                 cstr(varname),       & ! [IN]
+                                 istep_,              & ! [IN]
+                                 suppress             ) ! [IN]
 
     !--- verify and exit
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -2699,15 +2817,15 @@ contains
 
     if ( present(existed) ) existed = .true.
 
-    if ( present(description)   ) description   = dinfo%description
-    if ( present(units)         ) units         = dinfo%units
-    if ( present(standard_name) ) standard_name = dinfo%standard_name
+    if ( present(description)   ) call fstr(description, dinfo%description)
+    if ( present(units)         ) call fstr(units, dinfo%units)
+    if ( present(standard_name) ) call fstr(standard_name, dinfo%standard_name)
     if ( present(datatype)      ) datatype      = dinfo%datatype
     if ( present(dim_rank)      ) dim_rank      = dinfo%rank
 
     if ( present(dim_name) ) then
        do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
-          dim_name(i) = dinfo%dim_name(i)
+          call fstr(dim_name(i), dinfo%dim_name(:,i))
        enddo
     endif
 
@@ -2720,7 +2838,7 @@ contains
     if ( present(natts) ) natts = dinfo%natts
     if ( present(att_name) ) then
        do i = 1, min( dinfo%natts, size(att_name) )
-          att_name(i) = dinfo%att_name(i)
+          call fstr(att_name(i), dinfo%att_name(:,i))
        end do
     end if
     if ( present(att_type) ) then
@@ -2734,25 +2852,27 @@ contains
        end do
     end if
 
+    call fstr(tu, dinfo%time_units)
+
     if ( present(time_units)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_attribute( fid, "global", "time_units", time_units )
        else
-          time_units = dinfo%time_units
+          time_units = tu
        endif
     endif
 
     if ( present(calendar) ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_attribute( fid, "global", "calendar", calendar, existed2 )
           if ( .not. existed2 ) calendar = ""
        else
-          calendar = dinfo%calendar
+          call fstr(calendar, dinfo%calendar)
        end if
     end if
 
     if ( present(time_start)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_Attribute( fid, "global", "time_start", time )
           time_start = time(1)
        else
@@ -2761,7 +2881,7 @@ contains
     endif
 
     if ( present(time_end)  ) then
-       if ( dinfo%time_units == "" ) then
+       if ( tu == "" ) then
           call FILE_get_Attribute( fid, "global", "time_start", time )
           time_end = time(1)
        else
@@ -2846,24 +2966,24 @@ contains
        time_units, calendar                )
     implicit none
 
-    integer,                    intent(in)  :: fid
-    character(len=*),           intent(in)  :: varname
-    integer,                    intent(out) :: step_nmax
-    character(len=FILE_HMID),   intent(out) :: description
-    character(len=FILE_HSHORT), intent(out) :: units
-    character(len=FILE_HMID),   intent(out) :: standard_name
-    integer,                    intent(out) :: datatype
-    integer,                    intent(out) :: dim_rank
-    character(len=FILE_HSHORT), intent(out) :: dim_name  (:)
-    integer,                    intent(out) :: dim_size  (:)
-    integer,                    intent(out) :: natts
-    character(len=FILE_HSHORT), intent(out) :: att_name  (:)
-    integer,                    intent(out) :: att_type  (:)
-    integer,                    intent(out) :: att_len   (:)
-    real(DP),                   intent(out) :: time_start(:)
-    real(DP),                   intent(out) :: time_end  (:)
-    character(len=FILE_HMID),   intent(out) :: time_units
-    character(len=FILE_HSHORT), intent(out) :: calendar
+    integer,          intent(in)  :: fid
+    character(len=*), intent(in)  :: varname
+    integer,          intent(out) :: step_nmax
+    character(len=*), intent(out) :: description
+    character(len=*), intent(out) :: units
+    character(len=*), intent(out) :: standard_name
+    integer,          intent(out) :: datatype
+    integer,          intent(out) :: dim_rank
+    character(len=*), intent(out) :: dim_name  (:)
+    integer,          intent(out) :: dim_size  (:)
+    integer,          intent(out) :: natts
+    character(len=*), intent(out) :: att_name  (:)
+    integer,          intent(out) :: att_type  (:)
+    integer,          intent(out) :: att_len   (:)
+    real(DP),         intent(out) :: time_start(:)
+    real(DP),         intent(out) :: time_end  (:)
+    character(len=*), intent(out) :: time_units
+    character(len=*), intent(out) :: calendar
 
     type(datainfo) :: dinfo
 
@@ -2873,6 +2993,9 @@ contains
     logical  :: existed
 
     integer  :: istep
+
+    logical(c_bool) :: suppress
+    character(len=FILE_HMID) :: tu
 
     intrinsic size
     !---------------------------------------------------------------------------
@@ -2893,14 +3016,13 @@ contains
     time_start(:) = FILE_RMISS
     time_end  (:) = FILE_RMISS
 
+    suppress = .true.
     do istep = 1, min( size(time_start), size(time_end) )
        !--- get data information
-       call file_get_datainfo_c( dinfo,               & ! [OUT]
-                                 FILE_files(fid)%fid, & ! [IN]
-                                 varname,             & ! [IN]
-                                 istep,               & ! [IN]
-                                 .true.,              & ! [IN]
-                                 error                ) ! [OUT]
+       error = file_get_datainfo_c( dinfo,               & ! [OUT]
+                                    FILE_files(fid)%fid, & ! [IN]
+                                    cstr(varname),       & ! [IN]
+                                    istep, suppress      ) ! [IN]
 
        !--- verify and exit
        if ( error /= FILE_SUCCESS_CODE ) then
@@ -2909,25 +3031,26 @@ contains
        endif
 
        if ( istep == 1 ) then
-          description   = dinfo%description
-          units         = dinfo%units
-          standard_name = dinfo%standard_name
+          call fstr(description, dinfo%description)
+          call fstr(units, dinfo%units)
+          call fstr(standard_name, dinfo%standard_name)
           datatype      = dinfo%datatype
           dim_rank      = dinfo%rank
           natts         = dinfo%natts
 
           do i = 1, min( dinfo%rank, size(dim_name) ) ! limit dimension rank
-             dim_name(i) = dinfo%dim_name(i)
+             call fstr(dim_name(i), dinfo%dim_name(:,i))
              dim_size(i) = dinfo%dim_size(i)
           enddo
 
           do i = 1, min( dinfo%natts, size(att_name) )
-             att_name(i) = dinfo%att_name(i)
+             call fstr(att_name(i), dinfo%att_name(:,i))
              att_type(i) = dinfo%att_type(i)
              att_len (i) = dinfo%att_len (i)
           end do
 
-          if ( dinfo%time_units == "" ) then
+          call fstr(tu, dinfo%time_units)
+          if ( tu == "" ) then
              call FILE_get_attribute( fid, "global", "time_units", time_units )
              call FILE_get_attribute( fid, "global", "calendar", calendar, existed )
              if ( .not. existed ) calendar = ""
@@ -2937,10 +3060,10 @@ contains
              step_nmax = 1
              exit
           else
-             time_units    = dinfo%time_units
-             calendar      = dinfo%calendar
+             time_units    = tu
              time_start(1) = dinfo%time_start
              time_end  (1) = dinfo%time_end
+             call fstr(calendar, dinfo%calendar)
           endif
        else
           time_start(istep) = dinfo%time_start
@@ -3265,7 +3388,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3300,9 +3423,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3326,13 +3450,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_SP_c( var(:),         & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_SP_c( var(:), & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3341,9 +3463,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_SP_c( var(:), & ! (out)
+            dinfo, SP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_1D",*) 'failed to get data value: ', trim(varname)
@@ -3374,7 +3495,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3409,9 +3530,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3435,13 +3557,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_DP_c( var(:),         & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_DP_c( var(:), & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 1
@@ -3450,9 +3570,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_DP_c( var(:), & ! (out)
+            dinfo, DP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_1D",*) 'failed to get data value: ', trim(varname)
@@ -3483,7 +3602,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3518,9 +3637,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3544,13 +3664,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_SP_c( var(:,:),         & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_SP_c( var(:,:), & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -3559,9 +3677,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_SP_c( var(:,:), & ! (out)
+            dinfo, SP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_2D",*) 'failed to get data value: ', trim(varname)
@@ -3592,7 +3709,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3627,9 +3744,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3653,13 +3771,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_DP_c( var(:,:),         & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_DP_c( var(:,:), & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 2
@@ -3668,9 +3784,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_DP_c( var(:,:), & ! (out)
+            dinfo, DP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_2D",*) 'failed to get data value: ', trim(varname)
@@ -3701,7 +3816,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3736,9 +3851,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3762,13 +3878,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:),         & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:), & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -3777,9 +3891,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:), & ! (out)
+            dinfo, SP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_3D",*) 'failed to get data value: ', trim(varname)
@@ -3810,7 +3923,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3845,9 +3958,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3871,13 +3985,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:),         & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:), & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 3
@@ -3886,9 +3998,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:), & ! (out)
+            dinfo, DP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_3D",*) 'failed to get data value: ', trim(varname)
@@ -3919,7 +4030,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(SP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -3954,9 +4065,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -3980,13 +4092,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),                   & ! (out)
-            dinfo, SP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:,:),         & ! (out)
+            dinfo, SP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:,:),          & ! (out)
-            dinfo, SP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:,:), & ! (out)
+            dinfo, SP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -3995,9 +4105,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, SP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_SP_c( var(:,:,:,:), & ! (out)
+            dinfo, SP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realSP_4D",*) 'failed to get data value: ', trim(varname)
@@ -4028,7 +4137,7 @@ contains
     integer,          intent( in), optional :: count(:)    !> request sizes to global variable
 
     integer :: step_
-    logical :: allow_missing_
+    logical(c_bool) :: allow_missing_
     real(DP) :: missing_value_
 
     type(datainfo) :: dinfo
@@ -4063,9 +4172,10 @@ contains
     end if
 
     !--- get data information
-    call file_get_datainfo_c( dinfo,                          & ! (out)
-         FILE_files(fid)%fid, varname, step_, allow_missing_, & ! (in)
-         error                                                ) ! (out)
+    error = file_get_datainfo_c( dinfo,                & ! (out)
+                                 FILE_files(fid)%fid,  & ! (in)
+                                 cstr(varname),        & ! (in)
+                                 step_, allow_missing_ ) ! (in)
 
     !--- verify
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -4089,13 +4199,11 @@ contains
     end if
 
     if ( present(ntypes) ) then
-       call file_read_data_c( var(:,:,:,:),                   & ! (out)
-            dinfo, DP, ntypes, dtype, start(:), count(:), & ! (in)
-            error                                              ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:,:),         & ! (out)
+            dinfo, DP, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       call file_read_data_c( var(:,:,:,:),          & ! (out)
-            dinfo, DP, 0, 0, start(:), count(:), & ! (in)
-            error                                     ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:,:), & ! (out)
+            dinfo, DP, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
        do n = 1, 4
@@ -4104,9 +4212,8 @@ contains
              call PRC_abort
           end if
        end do
-       call file_read_data_c( var(:,:,:,:), & ! (out)
-            dinfo, DP, 0, 0, -1, -1,    & ! (in)
-            error                            ) ! (out)
+       error = file_read_data_DP_c( var(:,:,:,:), & ! (out)
+            dinfo, DP, 0, 0, (/0/), (/0/)        ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_realDP_4D",*) 'failed to get data value: ', trim(varname)
@@ -4167,10 +4274,9 @@ contains
           call PRC_abort
        end if
 
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, SP,                             & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_SP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:), ts, te, ndims, SP,   & ! (in)
+                                          start, count                             ) ! (in)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -4178,10 +4284,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, SP,                             & ! (in)
-            1, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_SP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:), ts, te, 1, SP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
@@ -4238,10 +4343,9 @@ contains
           call PRC_abort
        end if
 
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, DP,                             & ! (in)
-            ndims, start, count,                                        & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_DP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:), ts, te, ndims, DP,   & ! (in)
+                                          start, count                             ) ! (in)
     else
        ! this is for restart variable which keeps its original shape
        if ( present(start) ) then
@@ -4249,10 +4353,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:), ts, te, DP,                             & ! (in)
-            1, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_DP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:), ts, te, 1, DP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_1D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
@@ -4298,10 +4401,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:), ts, te, SP,                             & ! (in)
-            2, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_SP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:), ts, te, 2, SP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4346,10 +4448,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:), ts, te, DP,                             & ! (in)
-            2, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_DP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:), ts, te, 2, DP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_2D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4394,10 +4495,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:), ts, te, SP,                             & ! (in)
-            3, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_SP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:,:), ts, te, 3, SP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4442,10 +4542,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:), ts, te, DP,                             & ! (in)
-            3, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_DP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:,:), ts, te, 3, DP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_3D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4490,10 +4589,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:,:), ts, te, SP,                             & ! (in)
-            4, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_SP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:,:,:), ts, te, 4, SP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realSP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4538,10 +4636,9 @@ contains
        else
           start_(:) = 1
        end if
-       call file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-            var(:,:,:,:), ts, te, DP,                             & ! (in)
-            4, start_, shape(var),                                 & ! (in)
-            error                                                       ) ! (out)
+       error = file_write_data_DP_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                          var(:,:,:,:), ts, te, 4, DP,  & ! (in)
+                                          start_, shape(var)                       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_realDP_4D",*) 'failed to write data: ', trim(FILE_vars(vid)%name)
        call PRC_abort
@@ -4562,7 +4659,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call file_enddef_c( FILE_files(fid)%fid, error )
+    error = file_enddef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4590,7 +4687,7 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call file_redef_c( FILE_files(fid)%fid, error )
+    error = file_redef_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4625,7 +4722,7 @@ contains
        call FILE_detach_buffer(fid)
     end if
 
-    call file_attach_buffer_c( FILE_files(fid)%fid, buf_amount, error )
+    error = file_attach_buffer_c( FILE_files(fid)%fid, buf_amount )
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_attach_buffer",*) 'failed to attach buffer in PnetCDF'
@@ -4658,7 +4755,7 @@ contains
 
     if ( FILE_files(fid)%buffer_size < 0 ) return ! not attached
 
-    call file_detach_buffer_c( FILE_files(fid)%fid, error )
+    error = file_detach_buffer_c( FILE_files(fid)%fid )
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_detach_buffer",*) 'failed to detach buffer in PnetCDF'
@@ -4688,7 +4785,7 @@ contains
 
     if ( FILE_files(fid)%fid < 0 ) return  ! already closed
 
-    call file_flush_c( FILE_files(fid)%fid, error )
+    error = file_flush_c( FILE_files(fid)%fid )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4710,7 +4807,7 @@ contains
     integer, intent(in) :: fid
     logical, intent(in), optional :: abort !> true when this is called in the abort process
 
-    logical :: abort_
+    logical(c_bool) :: abort_
     integer :: error
     integer :: n
     !---------------------------------------------------------------------------
@@ -4725,7 +4822,7 @@ contains
        abort_ = .false.
     end if
 
-    call file_close_c( FILE_files(fid)%fid, abort_, error )
+    error = file_close_c( FILE_files(fid)%fid, abort_ )
 
     if ( error == FILE_SUCCESS_CODE ) then
 
@@ -4905,9 +5002,8 @@ contains
        return
     end if
 
-    call file_open_c( cfid,                  & ! (out)
-                      fname, mode, mpi_comm, & ! (in)
-                      error                  ) ! (out)
+    error = file_open_c( cfid,                       & ! (out)
+                         cstr(fname), mode, mpi_comm ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_get_fid",*) 'failed to open file :'//trim(fname)//'.nc'
@@ -4930,7 +5026,6 @@ contains
 
     return
   end subroutine FILE_get_fid
-
 
 end module scale_file
 !-------------------------------------------------------------------------------
