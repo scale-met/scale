@@ -81,6 +81,8 @@ module scale_atmos_phy_lt_sato2019
   real(RP), allocatable, private    :: G_F2013(:,:)
   real(RP),              private    :: C_F2013
 
+  real(RP), allocatable, private    :: A(:,:,:,:) !--- A : Laplasian (Coefficient matrix)
+
   !---
   integer,  parameter, private :: nxlut_lt = 200, nylut_lt = 200
   real(RP), private :: dq_chrg( nxlut_lt,nylut_lt )    !--- charge separation [fC]
@@ -172,6 +174,30 @@ contains
        PI  => CONST_PI
     use scale_file_history, only: &
        FILE_HISTORY_reg
+    use scale_atmos_grid_cartesC, only: &
+       RCDZ => ATMOS_GRID_CARTESC_RCDZ, &
+       RCDX => ATMOS_GRID_CARTESC_RCDX, &
+       RCDY => ATMOS_GRID_CARTESC_RCDY, &
+       RFDZ => ATMOS_GRID_CARTESC_RFDZ, &
+       RFDX => ATMOS_GRID_CARTESC_RFDX, &
+       RFDY => ATMOS_GRID_CARTESC_RFDY
+    use scale_atmos_grid_cartesC_metric, only: &
+       MAPF  => ATMOS_GRID_CARTESC_METRIC_MAPF, &
+       J13G  => ATMOS_GRID_CARTESC_METRIC_J13G, &
+       J23G  => ATMOS_GRID_CARTESC_METRIC_J23G, &
+       J33G  => ATMOS_GRID_CARTESC_METRIC_J33G
+    use scale_atmos_grid_cartesC_index, only: &
+       I_XYZ, &
+       I_XYW, &
+       I_UYW, &
+       I_XVW, &
+       I_UYZ, &
+       I_XVZ, &
+       I_UVZ, &
+       I_XY, &
+       I_UY, &
+       I_XV, &
+       I_UV
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer, intent(in)  :: IA, IS, IE
@@ -186,7 +212,7 @@ contains
 
     integer :: n, myu, ip
     integer :: ierr
-    integer :: i, j
+    integer :: i, j, k
 
     namelist / PARAM_ATMOS_PHY_LT_SATO2019 / &
          NUTR_TYPE, &
@@ -309,6 +335,129 @@ contains
                                  HIST_id(ip), dim_type='XY'              ) ! [OUT]
        endif
     end do
+
+    allocate( A(KA,15,IA,JA) )
+    !---- input vector A
+    !$omp parallel do
+    do j = JS, JE
+    do i = IS, IE
+    do k = KS, KE
+       ! (k,i,j)
+       A(k,1,i,j) = &
+                  - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i  )*RFDX(i) &
+                  - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i-1)*RFDX(i) &
+                  + MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  - MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  - MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  + MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*J13G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j  )*RFDY(j) &
+                  - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j-1)*RFDY(j) &
+                  + MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  - MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  - MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  + MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*J23G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
+                  - J33G*J33G*RFDZ(k)*RCDZ(k) &
+                  - J33G*J33G*RFDZ(k)*RCDZ(k-1)
+
+       ! (k-1,i,j)
+       A(k,2,i,j) = &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k-1,i,j,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
+                  + J33G*J33G*RFDZ(k)*RCDZ(k-1)
+
+       ! (k+1,i,j)
+       A(k,3,i,j) = &
+                    MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*J13G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
+                  + MAPF(i,j,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k,i,j,1)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j,1)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*J23G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
+                  + J33G*J33G*RFDZ(k)*RCDZ(k)
+
+       ! (k,i-1,j)
+       A(k,4,i,j) = &
+                    MAPF(i,j,1,I_XY)*MAPF(i-1,j,1,I_XY)*RFDX(i)*RCDX(i-1) &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
+
+       ! (k,i+1,j)
+       A(k,5,i,j) = &
+                    MAPF(i,j,1,I_XY)*MAPF(i+1,j,1,I_XY)*RFDX(i)*RCDX(i) &
+                  + MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
+
+       ! (k,i,j-1)
+       A(k,6,i,j) = &
+                    MAPF(i,j,2,I_XY)*MAPF(i,j-1,2,I_XY)*RFDY(j)*RCDY(j-1) &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k)
+
+       ! (k,i,j+1)
+       A(k,7,i,j) = &
+                    MAPF(i,j,2,I_XY)*MAPF(i,j+1,2,I_XY)*RFDY(j)*RCDY(j) &
+                  + MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k)
+
+       ! (k-1,i-1,j)
+       A(k,8,i,j) = &
+                    MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
+
+       ! (k-1,i+1,j)
+       A(k,9,i,j) = &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
+
+       ! (k-1,i,j-1)
+       A(k,10,i,j) = &
+                    MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k)
+
+       ! (k-1,i,j+1)
+       A(k,11,i,j) = &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k)
+
+       ! (k+1,i-1,j)
+       A(k,12,i,j) = &
+                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
+
+       ! (k+1,i+1,j)
+       A(k,13,i,j) = &
+                    MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
+                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
+
+       ! (k+1,i,j-1)
+       A(k,14,i,j) = &
+                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k)
+
+       ! (k+1,i,j+1)
+       A(k,15,i,j) = &
+                    MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
+                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k)
+
+    enddo
+    enddo
+    enddo
 
     return
   end subroutine ATMOS_PHY_LT_sato2019_setup
@@ -1026,7 +1175,7 @@ contains
 
     real(RP) :: eps_air(KA,IA,JA)
     !--- A x E_pott = - QCRG/epsiron
-    real(RP) :: A(KA,15,IA,JA)            !--- A : Laplasian
+!    real(RP) :: A(KA,15,IA,JA)            !--- A : Laplasian
     real(RP) :: B(KA,IA,JA)               !--- B : -QCRG*DENS/epsiron
     real(RP) :: E_pot_N(KA,IA,JA)         !--- electrical potential calculated by Bi-CGSTAB
 
@@ -1076,129 +1225,6 @@ contains
     !---- fill halo
     call COMM_vars8( eps_air,1 )
     call COMM_vars8( B,      2 )
-
-    !---- input vector A
-    !$omp parallel do
-    do j = JS, JE
-    do i = IS, IE
-    do k = KS, KE
-       ! (k,i,j)
-       A(k,1,i,j) = &
-                  - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i  )*RFDX(i) &
-                  - MAPF(i,j  ,1,I_XY)*MAPF(i,j  ,1,I_XY)*RCDX(i-1)*RFDX(i) &
-                  + MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - MAPF(i,j  ,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  + MAPF(i,j  ,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*J13G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
-                  - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j  )*RFDY(j) &
-                  - MAPF(i,j  ,2,I_XY)*MAPF(i,j  ,2,I_XY)*RCDY(j-1)*RFDY(j) &
-                  + MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - MAPF(i,j  ,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j,2)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  + MAPF(i,j  ,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j,1)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*J23G(k  ,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RCDZ(k)*RFDZ(k) &
-                  - J33G*J33G*RFDZ(k)*RCDZ(k) &
-                  - J33G*J33G*RFDZ(k)*RCDZ(k-1)
-
-       ! (k-1,i,j)
-       A(k,2,i,j) = &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*J13G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k-1,i,j,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*J23G(k-1,i,j,I_XYW)*RFDZ(k)*RCDZ(k-1) &
-                  + J33G*J33G*RFDZ(k)*RCDZ(k-1)
-
-       ! (k+1,i,j)
-       A(k,3,i,j) = &
-                    MAPF(i,j,1,I_XY)*J13G(k,i  ,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*J13G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
-                  + MAPF(i,j,2,I_XY)*J23G(k,i,j  ,I_XVZ)*f2h(k,i,j,1)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j,1)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*J23G(k,i,j,I_XYW)*RFDZ(k)*RCDZ(k) &
-                  + J33G*J33G*RFDZ(k)*RCDZ(k)
-
-       ! (k,i-1,j)
-       A(k,4,i,j) = &
-                    MAPF(i,j,1,I_XY)*MAPF(i-1,j,1,I_XY)*RFDX(i)*RCDX(i-1) &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i-1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
-
-       ! (k,i+1,j)
-       A(k,5,i,j) = &
-                    MAPF(i,j,1,I_XY)*MAPF(i+1,j,1,I_XY)*RFDX(i)*RCDX(i) &
-                  + MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k  ,i+1,j,2)*0.50_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,1)*0.50_RP*RFDX(i)*RFDZ(k)
-
-       ! (k,i,j-1)
-       A(k,6,i,j) = &
-                    MAPF(i,j,2,I_XY)*MAPF(i,j-1,2,I_XY)*RFDY(j)*RCDY(j-1) &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j-1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,1)*0.50_RP*RFDY(j)*RFDZ(k)
-
-       ! (k,i,j+1)
-       A(k,7,i,j) = &
-                    MAPF(i,j,2,I_XY)*MAPF(i,j+1,2,I_XY)*RFDY(j)*RCDY(j) &
-                  + MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k  ,i,j+1,2)*0.50_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,1)*0.50_RP*RFDY(j)*RFDZ(k)
-
-       ! (k-1,i-1,j)
-       A(k,8,i,j) = &
-                    MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i-1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
-
-       ! (k-1,i+1,j)
-       A(k,9,i,j) = &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k-1,i+1,j,2)*0.5_RP*RFDX(i)*RFDZ(k)
-
-       ! (k-1,i,j-1)
-       A(k,10,i,j) = &
-                    MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j-1,2)*0.5_RP*RFDY(j)*RFDZ(k)
-
-       ! (k-1,i,j+1)
-       A(k,11,i,j) = &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k-1,i,j+1,2)*0.5_RP*RFDY(j)*RFDZ(k)
-
-       ! (k+1,i-1,j)
-       A(k,12,i,j) = &
-                  - MAPF(i,j,1,I_XY)*J13G(k,i-1,j,I_UYZ)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  - J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i-1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
-
-       ! (k+1,i+1,j)
-       A(k,13,i,j) = &
-                    MAPF(i,j,1,I_XY)*J13G(k,i,j,I_UYZ)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k) &
-                  + J13G(k,i,j,I_XYZ)*MAPF(i,j,1,I_XY)*f2h(k,i+1,j,1)*0.5_RP*RFDX(i)*RFDZ(k)
-
-       ! (k+1,i,j-1)
-       A(k,14,i,j) = &
-                  - MAPF(i,j,2,I_XY)*J23G(k,i,j-1,I_XVZ)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  - J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j-1,1)*0.5_RP*RFDY(j)*RFDZ(k)
-
-       ! (k+1,i,j+1)
-       A(k,15,i,j) = &
-                    MAPF(i,j,2,I_XY)*J23G(k,i,j,I_XVZ)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k) &
-                  + J23G(k,i,j,I_XYZ)*MAPF(i,j,2,I_XY)*f2h(k,i,j+1,1)*0.5_RP*RFDY(j)*RFDZ(k)
-
-    enddo
-    enddo
-    enddo
-
 
     !$omp parallel do
     do j = JS, JE
@@ -1422,50 +1448,72 @@ contains
        call COMM_vars8( p, 1 )
        call COMM_wait ( p, 1 )
 
-       if( FLAG_preprocessing == 1 ) then
+       if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
 
-          call gs( KA, KS, KE, & ! (in)
-                   IA, IS, IE, & ! (in)
-                   JA, JS, JE, & ! (in)
-                   z1, M, p    )
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mp, M, p    )
 
-       elseif( FLAG_preprocessing == 2 ) then
+          iprod(1) = 0.0_RP
+          !$omp parallel do reduction(+:iprod)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod(1) = iprod(1) + r0(k,i,j) * Mp(k,i,j)
+          enddo
+          enddo
+          enddo
 
-          call sgs( KA, KS, KE, & ! (in)
-                    IA, IS, IE, & ! (in)
-                    JA, JS, JE, & ! (in)
-                    z1, M, p    )
+       else   !--- Preprocessing
 
-       elseif( FLAG_preprocessing == 3 ) then
+          if( FLAG_preprocessing == 1 ) then !--- Gauss-Seidel preprocessing
 
-          call solve_ILU( KA, KS, KE, & ! (in)
-                          IA, IS, IE, & ! (in)
-                          JA, JS, JE, & ! (in)
-                          z1, M, p, diag)
+             call gs( KA, KS, KE, & ! (in)
+                      IA, IS, IE, & ! (in)
+                      JA, JS, JE, & ! (in)
+                      z1, M, p    )
+
+          elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
+
+             call sgs( KA, KS, KE, & ! (in)
+                       IA, IS, IE, & ! (in)
+                       JA, JS, JE, & ! (in)
+                       z1, M, p    )
+
+          elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
+
+             call solve_ILU( KA, KS, KE, & ! (in)
+                             IA, IS, IE, & ! (in)
+                             JA, JS, JE, & ! (in)
+                             z1, M, p, diag)
+
+          endif
+
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mp, M, p    )
+
+          call COMM_vars8( z1, 1 )
+          call COMM_wait ( z1, 1 )
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mz1, M, z1    )
+
+          iprod(1) = 0.0_RP
+          !$omp parallel do reduction(+:iprod)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod(1) = iprod(1) + r0(k,i,j) * Mz1(k,i,j)
+          enddo
+          enddo
+          enddo
 
        endif
 
-       call mul_matrix( KA, KS, KE, & ! (in)
-                        IA, IS, IE, & ! (in)
-                        JA, JS, JE, & ! (in)
-                        Mp, M, p    )
-
-       call COMM_vars8( z1, 1 )
-       call COMM_wait ( z1, 1 )
-       call mul_matrix( KA, KS, KE, & ! (in)
-                        IA, IS, IE, & ! (in)
-                        JA, JS, JE, & ! (in)
-                        Mz1, M, z1    )
-
-       iprod(1) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          iprod(1) = iprod(1) + r0(k,i,j) * Mz1(k,i,j)
-       enddo
-       enddo
-       enddo
        call MPI_AllReduce(iprod, buf, 1, COMM_datatype, MPI_SUM, COMM_world, ierror)
        if ( buf(1) == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(1) is zero(Bi-CGSTAB) skip:', buf(1), iter
@@ -1473,56 +1521,91 @@ contains
        endif
        al = r0r / buf(1) ! (r0,r) / (r0,Mp)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          s(k,i,j) = r(k,i,j) - al*Mz1(k,i,j)
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then  !-- No preprocessing
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             s(k,i,j) = r(k,i,j) - al*Mp(k,i,j)
+          enddo
+          enddo
+          enddo
+       else  ! Preprocessing
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             s(k,i,j) = r(k,i,j) - al*Mz1(k,i,j)
+          enddo
+          enddo
+          enddo
+       endif
 
        call COMM_vars8( s, 1 )
        call COMM_wait ( s, 1 )
-       if( FLAG_preprocessing == 1 ) then
+       if( FLAG_preprocessing == 0 ) then  !--- No Preprocessing
 
-          call gs( KA, KS, KE, & ! (in)
-                   IA, IS, IE, & ! (in)
-                   JA, JS, JE, & ! (in)
-                   z2, M, s    )
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Ms, M,  s   )
 
-       elseif( FLAG_preprocessing == 2 ) then
+          iprod(1) = 0.0_RP
+          iprod(2) = 0.0_RP
+          !$omp parallel do reduction(+:iprod)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod(1) = iprod(1) + Ms(k,i,j) *  s(k,i,j)
+             iprod(2) = iprod(2) + Ms(k,i,j) * Ms(k,i,j)
+          enddo
+          enddo
+          enddo
 
-          call sgs( KA, IS, KE, & ! (in)
-                    IA, IS, IE, & ! (in)
-                    JA, JS, JE, & ! (in)
-                    z2, M, s    )
+       else  !--- Preprocessing
 
-       elseif( FLAG_preprocessing == 3 ) then
+          if( FLAG_preprocessing == 1 ) then   !--- Gauss-Seidel preprocessing
 
-          call solve_ILU( KA, KS, KE, & ! (in)
-                          IA, IS, IE, & ! (in)
-                          JA, JS, JE, & ! (in)
-                          z2, M, s, diag)
+             call gs( KA, KS, KE, & ! (in)
+                      IA, IS, IE, & ! (in)
+                      JA, JS, JE, & ! (in)
+                      z2, M, s    )
+
+          elseif( FLAG_preprocessing == 2 ) then  !--- Synmetric Gauss-Seidel preprocessing (Default)
+
+             call sgs( KA, IS, KE, & ! (in)
+                       IA, IS, IE, & ! (in)
+                       JA, JS, JE, & ! (in)
+                       z2, M, s    )
+
+          elseif( FLAG_preprocessing == 3 ) then  !--- Incomplete Cholesky Factorization preprocessing
+
+             call solve_ILU( KA, KS, KE, & ! (in)
+                             IA, IS, IE, & ! (in)
+                             JA, JS, JE, & ! (in)
+                             z2, M, s, diag)
+          endif
+
+          call COMM_vars8( z2, 1 )
+          call COMM_wait ( z2, 1 )
+          call mul_matrix( KA, KS, KE, & ! (in)
+                           IA, IS, IE, & ! (in)
+                           JA, JS, JE, & ! (in)
+                           Mz2, M, z2 )
+          iprod(1) = 0.0_RP
+          iprod(2) = 0.0_RP
+          !$omp parallel do reduction(+:iprod)
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             iprod(1) = iprod(1) + Mz2(k,i,j) *  s(k,i,j)
+             iprod(2) = iprod(2) + Mz2(k,i,j) * Mz2(k,i,j)
+          enddo
+          enddo
+          enddo
+
        endif
 
-      call COMM_vars8( z2, 1 )
-      call COMM_wait ( z2, 1 )
-      call mul_matrix( KA, KS, KE, & ! (in)
-                        IA, IS, IE, & ! (in)
-                        JA, JS, JE, & ! (in)
-                        Mz2, M, z2 )
-       iprod(1) = 0.0_RP
-       iprod(2) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          iprod(1) = iprod(1) + Mz2(k,i,j) *  s(k,i,j)
-          iprod(2) = iprod(2) + Mz2(k,i,j) * Mz2(k,i,j)
-       enddo
-       enddo
-       enddo
        call MPI_AllReduce(iprod, buf, 2, COMM_datatype, MPI_SUM, COMM_world, ierror)
        if ( buf(2) == 0.0_RP ) then
          LOG_INFO("ATMOS_PHY_LT_Efield",'(a,1x,e15.7,1x,i10)') 'Buf(2) is zero(Bi-CGSTAB) skip:', buf(2), iter
@@ -1530,23 +1613,49 @@ contains
        endif
        w = buf(1) / buf(2) ! (Ms,s) / (Ms,Ms)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          PHI_N(k,i,j) = PHI_N(k,i,j) + al*z1(k,i,j) + w*z2(k,i,j)
-       enddo
-       enddo
-       enddo
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          rn(k,i,j) = s(k,i,j) - w*Mz2(k,i,j)
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then !--- No preprocessing
+
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             PHI_N(k,i,j) = PHI_N(k,i,j) + al*p(k,i,j) + w*s(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rn(k,i,j) = s(k,i,j) - w*Ms(k,i,j)
+          enddo
+          enddo
+          enddo
+
+
+       else
+
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             PHI_N(k,i,j) = PHI_N(k,i,j) + al*z1(k,i,j) + w*z2(k,i,j)
+          enddo
+          enddo
+          enddo
+
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             rn(k,i,j) = s(k,i,j) - w*Mz2(k,i,j)
+          enddo
+          enddo
+          enddo
+
+       endif
 
        iprod(1) = 0.0_RP
        !$omp parallel do reduction(+:iprod)
@@ -1564,14 +1673,25 @@ contains
 
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-       do k = KS, KE
-          p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mz1(k,i,j) )
-       enddo
-       enddo
-       enddo
+       if( FLAG_preprocessing == 0 ) then !--- No preprocessing
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mp(k,i,j) )
+          enddo
+          enddo
+          enddo
+       else
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+          do k = KS, KE
+             p(k,i,j) = rn(k,i,j) + be * ( p(k,i,j) - w*Mz1(k,i,j) )
+          enddo
+          enddo
+          enddo
+       endif
 
        swap => rn
        rn => r
