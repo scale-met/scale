@@ -9,7 +9,7 @@
 
 #define MIN(a,b) ((a)<(b) ? (a) : (b))
 
-static int32_t ERROR_SUPPRESS = 0;
+static bool ERROR_SUPPRESS = 0;
 
 #define CHECK_ERROR(func)                                       \
   {                                                             \
@@ -132,7 +132,7 @@ static tdim_t *tdims[VAR_MAX];
 static int nt = 0;
 
 
-static inline int32_t file_enddef( const int32_t fid, const int ncid ) // (in)
+static inline int file_enddef( const int fid, const int ncid ) // (in)
 {
 #if defined(NETCDF3) || defined(PNETCDF)
   if (files[fid]->defmode == 1) {
@@ -149,7 +149,7 @@ static inline int32_t file_enddef( const int32_t fid, const int ncid ) // (in)
   return SUCCESS_CODE;
 }
 
-static inline int32_t file_redef( const int32_t fid, const int ncid ) // (in)
+static inline int file_redef( const int fid, const int ncid ) // (in)
 {
 #if defined(NETCDF3) || defined(PNETCDF)
   if (files[fid]->defmode == 0) {
@@ -167,16 +167,17 @@ static inline int32_t file_redef( const int32_t fid, const int ncid ) // (in)
 }
 
 
-int32_t file_open_c(       int32_t  *fid,     // (out)
-		     const char     *fname,   // (in)
-		     const int32_t   mode,    // (in)
-		     const MPI_Comm  comm )   // (in)
+int file_open_c(       int  *fid,      // (out)
+		 const char *fname,    // (in)
+		 const int   mode,     // (in)
+		 const int   icomm )   // (in)
 {
   int ncid;
   int len;
   int shared_mode;
   char _fname[File_HLONG+4];
   int add_suffix;
+  MPI_Comm comm;
 
   if ( nfile >= FILE_MAX ) {
     fprintf(stderr, "exceed max number of file limit\n");
@@ -201,6 +202,7 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
     if (fname[len-3] != '.' || fname[len-2] != 'n' || fname[len-1] != 'c' )
       strcat(_fname, ".nc");
 
+  comm = MPI_Comm_f2c(icomm);
   if ( comm == MPI_COMM_NULL || comm == MPI_COMM_SELF )
     shared_mode = 0;
   else
@@ -253,9 +255,10 @@ int32_t file_open_c(       int32_t  *fid,     // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_dim_length_c( const int32_t  fid,      // (in)
-			       const char*    dimname,  // (in)
-			             int32_t *len     ) // (out)
+int file_get_dim_length_c(       int  *len,     // (out)
+			   const int   fid,     // (in)
+			   const char *dimname) // (in)
+			       
 {
   int ncid, dimid;
 
@@ -277,10 +280,10 @@ int32_t file_get_dim_length_c( const int32_t  fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_option_c( const int32_t fid,    // (in)
-			   const char* filetype, // (in)
-			   const char* key,      // (in)
-			   const char* val)      // (in)
+int file_set_option_c( const int   fid,      // (in)
+		       const char *filetype, // (in)
+		       const char *key,      // (in)
+		       const char *val)      // (in)
 {
   if ( strcmp(filetype, "netcdf") != 0 ) return SUCCESS_CODE;
 
@@ -293,8 +296,8 @@ int32_t file_set_option_c( const int32_t fid,    // (in)
   }
 }
 
-int32_t file_get_nvars_c( const int32_t  fid,   // (in)
-			        int32_t *nvars )// (out)
+int file_get_nvars_c(       int *nvars, // (out)
+		      const int  fid)   // (in)
 {
   int ncid;
   int ndims, ngatts, unlimdim;
@@ -310,10 +313,10 @@ int32_t file_get_nvars_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_varname_c( const int32_t  fid,  // (in)
-			    const int32_t  vid,  // (in)
-			          char    *name, // (out)
-			    const int32_t  len ) // (in)
+int file_get_varname_c(       char *name, // (out)
+		        const int   fid,  // (in)
+			const int   vid,  // (in)
+			const int   len ) // (in)
 {
   int ncid, varid;
   char buf[MAX_NC_NAME+1];
@@ -335,11 +338,11 @@ int32_t file_get_varname_c( const int32_t  fid,  // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
-			     const int32_t     fid,     // (in)
-			     const char*       varname, // (in)
-			     const int32_t     step,    // (in)
-			     const int32_t     suppress)// (in)
+int file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
+			 const int         fid,     // (in)
+			 const char       *varname, // (in)
+			 const int         step,    // (in)
+			 const bool        suppress)// (in)
 {
   int ncid, varid;
   nc_type xtype;
@@ -630,9 +633,9 @@ int32_t file_get_datainfo_c(       datainfo_t *dinfo,   // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_step_size_c( const int32_t  fid,     // (in)
-			      const char*    varname, // (in)
-			            int32_t *len    ) // (out)
+int file_get_step_size_c( int        *len,     // (out)
+			  const int   fid,     // (in)
+			  const char *varname) // (in)
 {
   int ncid, varid;
 
@@ -684,19 +687,20 @@ int32_t file_get_step_size_c( const int32_t  fid,     // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_read_data_c(       void       *var,       // (out)
-			  const datainfo_t *dinfo,     // (in)
-			  const int32_t     precision, // (in)
-			  const MPI_Offset  ntypes,    // (in)
-			  const MPI_Datatype dtype,    // (in)
-			  const int32_t     *start,    // (in)
-			  const int32_t     *count )   // (in)
+int file_read_data_c(       void       *var,       // (out)
+		      const datainfo_t *dinfo,     // (in)
+		      const int         precision, // (in)
+		      const int         ntypes,    // (in)
+		      const int         dtype,    // (in)
+		      const int        *start,    // (in)
+		      const int        *count )   // (in)
 {
   int ncid, varid;
   int rank;
   int i;
   int fid;
   size_t *str, *cnt;
+  MPI_Datatype dtype_;
   MPI_Offset *strp, *cntp;
   size_t size;
 
@@ -715,7 +719,7 @@ int32_t file_read_data_c(       void       *var,       // (out)
   str = (size_t*) malloc(sizeof(size_t)*rank);
   cnt = (size_t*) malloc(sizeof(size_t)*rank);
 
-  if ( start == NULL || count == NULL ) {
+  if ( start==NULL || start[0]<=0 || count==NULL || count[0]<=0 ) {
     for (i=0; i<dinfo->rank; i++) {
       // note: C and Fortran orders are opposite
       str[rank -i-1] = 0;
@@ -744,10 +748,11 @@ int32_t file_read_data_c(       void       *var,       // (out)
     }
     free(str);
     free(cnt);
-    CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, ntypes, dtype, NULL) )
+    dtype_ = dtype == 0 ? MPI_DATATYPE_NULL : MPI_Type_f2c(dtype);
+    CHECK_PNC_ERROR( ncmpi_iget_vara(ncid, varid, strp, cntp, var, (MPI_Offset) ntypes, dtype_, NULL) )
     free(strp);
     free(cntp);
-    if ( dtype == MPI_FLOAT ) {
+    if ( dtype_ == MPI_FLOAT ) {
       float factor, offset, misval;
       int l_rescale = 0;
       if ( ncmpi_get_att_float(ncid, varid, "missing_value", &misval) == NC_NOERR )
@@ -762,7 +767,7 @@ int32_t file_read_data_c(       void       *var,       // (out)
       else
 	l_rescale = 1;
       if ( l_rescale ) for (i=0; i<size; i++) ((float*)var)[i] = ((float*)var)[i] * factor + offset;
-    } else if ( dtype == MPI_DOUBLE ) {
+    } else if ( dtype_ == MPI_DOUBLE ) {
       double factor, offset, misval;
       int l_rescale = 0;
       if ( ncmpi_get_att_double(ncid, varid, "missing_value", &misval) == NC_NOERR )
@@ -849,12 +854,12 @@ int32_t file_read_data_c(       void       *var,       // (out)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_text_c( const int32_t  fid,      // (in)
-				   const char    *vname,    // (in)
-				   const char    *key,      // (in)
-				   const int32_t  suppress, // (in)
-				         char    *value,    // (out)
-				   const int32_t len)       // (in)
+int file_get_attribute_text_c(       char *value,    // (out)
+			       const int   fid,      // (in)
+			       const char *vname,    // (in)
+			       const char *key,      // (in)
+			       const bool  suppress, // (in)
+			       const int   len)      // (in)
 {
   int ncid;
   int varid;
@@ -896,12 +901,12 @@ int32_t file_get_attribute_text_c( const int32_t  fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_int_c( const int32_t  fid,      // (in)
-				  const char    *vname,    // (in)
-				  const char    *key,      // (in)
-				  const int32_t  suppress, // (in)
-				        int     *value,    // (out)
-				  const size_t   len)      // (in)
+int file_get_attribute_int_c(       int  *value,    // (out)
+			      const int   fid,      // (in)
+			      const char *vname,    // (in)
+			      const char *key,      // (in)
+			      const bool  suppress, // (in)
+			      const int   len)      // (in)
 {
   int ncid;
   int varid;
@@ -939,12 +944,12 @@ int32_t file_get_attribute_int_c( const int32_t  fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_float_c( const int32_t  fid,      // (in)
-				    const char    *vname,    // (in)
-				    const char    *key,      // (in)
-				    const int32_t  suppress, // (in)
-				          float   *value,    // (out)
-				    const size_t   len)      // (in)
+int file_get_attribute_float_c(       float *value,    // (out)
+				const int    fid,      // (in)
+				const char  *vname,    // (in)
+				const char  *key,      // (in)
+				const bool   suppress, // (in)
+				const int    len)      // (in)
 {
   int ncid;
   int varid;
@@ -982,12 +987,12 @@ int32_t file_get_attribute_float_c( const int32_t  fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_get_attribute_double_c( const int32_t  fid,      // (in)
-				     const char    *vname,    // (in)
-				     const char    *key,      // (in)
-				     const int32_t  suppress, // (in)
-				           double  *value,    // (out)
-				     const size_t   len)      // (in)
+int file_get_attribute_double_c(       double *value,    // (out)
+				 const int     fid,      // (in)
+				 const char   *vname,    // (in)
+				 const char   *key,      // (in)
+				 const bool    suppress, // (in)
+				 const int     len)      // (in)
 {
   int ncid;
   int varid;
@@ -1025,15 +1030,15 @@ int32_t file_get_attribute_double_c( const int32_t  fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_attribute_text_c( const int32_t  fid,   // (in)
-				   const char    *vname, // (in)
-				   const char    *key,   // (in)
-				   const char    *val)   // (in)
+int file_set_attribute_text_c( const int   fid,   // (in)
+			       const char *vname, // (in)
+			       const char *key,   // (in)
+			       const char *val)   // (in)
 {
   int ncid;
   int varid;
   int attid;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1066,16 +1071,16 @@ int32_t file_set_attribute_text_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_attribute_int_c( const int32_t  fid,   // (in)
-				  const char    *vname, // (in)
-				  const char    *key,   // (in)
-				  const int32_t *value, // (in)
-				  const size_t   len )  // (in)
+int file_set_attribute_int_c( const int   fid,   // (in)
+			      const char *vname, // (in)
+			      const char *key,   // (in)
+			      const int  *value, // (in)
+			      const int   len )  // (in)
 {
   int ncid;
   int varid;
   int attid;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1109,16 +1114,16 @@ int32_t file_set_attribute_int_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_attribute_float_c( const int32_t  fid,   // (in)
-				    const char    *vname, // (in)
-				    const char    *key,   // (in)
-				    const float   *value, // (in)
-				    const size_t   len )  // (in)
+int file_set_attribute_float_c( const int    fid,   // (in)
+				const char  *vname, // (in)
+				const char  *key,   // (in)
+				const float *value, // (in)
+				const int    len )  // (in)
 {
   int ncid;
   int varid;
   int attid;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1151,11 +1156,11 @@ int32_t file_set_attribute_float_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
-				     const char    *vname, // (in)
-				     const char    *key,   // (in)
-				     const double  *value, // (in)
-				     const size_t   len )  // (in)
+int file_set_attribute_double_c( const int     fid,   // (in)
+				 const char   *vname, // (in)
+				 const char   *key,   // (in)
+				 const double *value, // (in)
+				 const int     len )  // (in)
 {
   int ncid;
   int varid;
@@ -1189,11 +1194,11 @@ int32_t file_set_attribute_double_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_add_associatedvariable_c( const int32_t  fid,   // (in)
-				       const char    *vname) // (in)
+int file_add_associatedvariable_c( const int   fid,   // (in)
+				   const char *vname) // (in)
 {
   int ncid, varid;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1212,9 +1217,9 @@ int32_t file_add_associatedvariable_c( const int32_t  fid,   // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_set_tunits_c( const int32_t fid,         // (in)
-			   const char    *time_units, // (in)
-			   const char    *calendar)   // (in)
+int file_set_tunits_c( const int   fid,         // (in)
+		       const char *time_units, // (in)
+		       const char *calendar)   // (in)
 {
   strcpy(files[fid]->time_units, time_units);
   strcpy(files[fid]->calendar, calendar);
@@ -1222,19 +1227,19 @@ int32_t file_set_tunits_c( const int32_t fid,         // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_put_axis_c( const int32_t fid,        // (in)
-			 const char   *name,       // (in)
-			 const char   *desc,       // (in)
-			 const char   *units,      // (in)
-			 const char   *dim_name,   // (in)
-			 const int32_t dtype,      // (in)
-			 const void*   val,        // (in)
-			 const int32_t size,       // (in)
-			 const int32_t precision)  // (in)
+int file_put_axis_c( const int  fid,        // (in)
+		     const char *name,       // (in)
+		     const char *desc,       // (in)
+		     const char *units,      // (in)
+		     const char *dim_name,   // (in)
+		     const int   dtype,      // (in)
+		     const void *val,        // (in)
+		     const int   size,       // (in)
+		     const int   precision)  // (in)
 {
   int ncid, dimid, varid;
   nc_type xtype = -1;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1271,20 +1276,20 @@ int32_t file_put_axis_c( const int32_t fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_def_axis_c( const int32_t fid,      // (in)
-			 const char   *name,     // (in)
-			 const char   *desc,     // (in)
-			 const char   *units,    // (in)
-			 const char   *dim_name, // (in)
-			 const int32_t dtype,    // (in)
-			 const int32_t dim_size, // (in)
-			 const int32_t bounds)   // (in)
+int file_def_axis_c( const int   fid,      // (in)
+		     const char *name,     // (in)
+		     const char *desc,     // (in)
+		     const char *units,    // (in)
+		     const char *dim_name, // (in)
+		     const int   dtype,    // (in)
+		     const int   dim_size, // (in)
+		     const int   bounds)   // (in)
 {
   int ncid, dimid, varid;
   nc_type xtype = -1;
   int dimids[2];
   char buf[File_HSHORT+6];
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1336,15 +1341,16 @@ int32_t file_def_axis_c( const int32_t fid,      // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_axis_c( const int32_t     fid,       // (in)
-			   const char       *name,      // (in)
-			   const void       *val,       // (in)
-			   const int32_t     precision, // (in)
-			   const MPI_Offset *start,     // (in)
-			   const MPI_Offset *count)     // (in)
+int file_write_axis_c( const int     fid,       // (in)
+		       const char *name,      // (in)
+		       const void *val,       // (in)
+		       const int     precision, // (in)
+		       const int *start,     // (in)
+		       const int *count)     // (in)
 {
   int ncid, varid;
-  int32_t ret;
+  int ret;
+  MPI_Offset start_[1], count_[1];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1357,16 +1363,19 @@ int32_t file_write_axis_c( const int32_t     fid,       // (in)
   ret = file_enddef(fid, ncid);
   if ( ret != SUCCESS_CODE ) return ret;
 
+  start_[0] = (MPI_Offset) start[0];
+  count_[0] = (MPI_Offset) count[0];
+
   switch ( precision ) {
   case 8:
     if ( files[fid]->shared_mode )
-      CHECK_PNC_ERROR( ncmpi_iput_vara_double(ncid, varid, start, count, val, NULL) )
+      CHECK_PNC_ERROR( ncmpi_iput_vara_double(ncid, varid, start_, count_, val, NULL) )
     else
       CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) )
     break;
   case 4:
     if ( files[fid]->shared_mode )
-      CHECK_PNC_ERROR( ncmpi_iput_vara_float(ncid, varid, start, count, val, NULL) )
+      CHECK_PNC_ERROR( ncmpi_iput_vara_float(ncid, varid, start_, count_, val, NULL) )
     else
       CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
@@ -1378,20 +1387,20 @@ int32_t file_write_axis_c( const int32_t     fid,       // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_put_associatedcoordinate_c( const int32_t fid,        // (in)
-					 const char   *name,       // (in)
-					 const char   *desc,       // (in)
-					 const char   *units,      // (in)
-					 const char   **dim_names, // (in)
-					 const int32_t ndims,      // (in)
-					 const int32_t dtype,      // (in)
-					 const void*   val,        // (in)
-					 const int32_t precision)  // (in)
+int file_put_associatedcoordinate_c( const int    fid,       // (in)
+				     const char  *name,      // (in)
+				     const char  *desc,      // (in)
+				     const char  *units,     // (in)
+				     const char **dim_names, // (in)
+				     const int    ndims,     // (in)
+				     const int    dtype,     // (in)
+				     const void  *val,       // (in)
+				     const int    precision) // (in)
 {
   int ncid, *dimids, varid;
   nc_type xtype = -1;
   int i;
-  int32_t ret;
+  int ret;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1431,18 +1440,18 @@ int32_t file_put_associatedcoordinate_c( const int32_t fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
-					 const char   *name,       // (in)
-					 const char   *desc,       // (in)
-					 const char   *units,      // (in)
-					 const char   **dim_names, // (in)
-					 const int32_t ndims,      // (in)
-					 const int32_t dtype)      // (in)
+int file_def_associatedcoordinate_c( const int    fid,       // (in)
+				     const char  *name,      // (in)
+				     const char  *desc,      // (in)
+				     const char  *units,     // (in)
+				     const char **dim_names, // (in)
+				     const int    ndims,     // (in)
+				     const int    dtype)     // (in)
 {
   int ncid, varid;
   nc_type xtype = -1;
   int i;
-  int32_t ret;
+  int ret;
   int dimids[ndims];
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
@@ -1481,15 +1490,18 @@ int32_t file_def_associatedcoordinate_c( const int32_t fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_associatedcoordinate_c( const int32_t     fid,        // (in)
-					   const char       *name,       // (in)
-					   const void*       val,        // (in)
-					   const int32_t     precision,  // (in)
-					   const MPI_Offset *start,      // (in)
-					   const MPI_Offset *count)      // (in)
+int file_write_associatedcoordinate_c( const int   fid,       // (in)
+				       const char *name,      // (in)
+				       const void *val,       // (in)
+				       const int   ndims,     // (in)
+				       const int   precision, // (in)
+				       const int  *start,     // (in)
+				       const int  *count)     // (in)
 {
   int ncid, varid;
-  int32_t ret;
+  int ret;
+  MPI_Offset start_[ndims], count_[ndims];
+  int i;
 
   if ( files[fid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = files[fid]->ncid;
@@ -1502,16 +1514,21 @@ int32_t file_write_associatedcoordinate_c( const int32_t     fid,        // (in)
   ret = file_enddef(fid, ncid);
   if ( ret != SUCCESS_CODE ) return ret;
 
+  for (i=0; i<ndims; i++) {
+    start_[i] = (MPI_Offset) start[i];
+    count_[i] = (MPI_Offset) count[i];
+  }
+
   switch ( precision ) {
   case 8:
     if ( files[fid]->shared_mode )
-      CHECK_PNC_ERROR( ncmpi_iput_vara_double(ncid, varid, start, count, (double*)val, NULL) )
+      CHECK_PNC_ERROR( ncmpi_iput_vara_double(ncid, varid, start_, count_, (double*)val, NULL) )
     else
       CHECK_ERROR( nc_put_var_double(ncid, varid, (double*)val) )
     break;
   case 4:
     if ( files[fid]->shared_mode )
-      CHECK_PNC_ERROR( ncmpi_iput_vara_float(ncid, varid, start, count, (float*)val, NULL) )
+      CHECK_PNC_ERROR( ncmpi_iput_vara_float(ncid, varid, start_, count_, (float*)val, NULL) )
     else
       CHECK_ERROR( nc_put_var_float(ncid, varid, (float*)val) )
     break;
@@ -1523,17 +1540,17 @@ int32_t file_write_associatedcoordinate_c( const int32_t     fid,        // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_add_variable_c( const int32_t  fid,     // (in)
-			     const char    *varname, // (in)
-			     const char    *desc,    // (in)
-			     const char    *units,   // (in)
-			     const char    *stdname, // (in)
-			     const char   **dims,    // (in)
-			     const int32_t  ndims,   // (in)
-			     const int32_t  dtype,   // (in)
-			     const real64_t tint,    // (in)
-			     const int32_t  tavg,    // (in)
-			           int32_t *vid)     // (out)
+int file_add_variable_c(       int    *vid,     // (out)
+			 const int     fid,     // (in)
+			 const char   *varname, // (in)
+			 const char   *desc,    // (in)
+			 const char   *units,   // (in)
+			 const char   *stdname, // (in)
+			 const char  **dims,    // (in)
+			 const int     ndims,   // (in)
+			 const int     dtype,   // (in)
+			 const double  tint,    // (in)
+			 const bool    tavg)    // (in)
 {
   int ncid, varid, acid, *acdimids;
   int dimids[NC_MAX_DIMS], dimid;
@@ -1548,7 +1565,7 @@ int32_t file_add_variable_c( const int32_t  fid,     // (in)
   char coord[File_HMID+1];
   int has_assoc;
   int new;
-  int32_t ret;
+  int ret;
 
   if ( nvar >= VAR_MAX ) {
     fprintf(stderr, "exceed max number of variable limit\n");
@@ -1708,7 +1725,7 @@ int32_t file_add_variable_c( const int32_t  fid,     // (in)
     }
   }
   if (nndims != ndims) {
-    fprintf(stderr, "Error: invalid associated coordinates: %d %d\n", ndims_t, nndims);
+    fprintf(stderr, "Error: invalid associated coordinates: %d %d %d\n", ndims_t, nndims, ndims);
     return ERROR_CODE;
   }
 
@@ -1791,7 +1808,7 @@ int32_t file_add_variable_c( const int32_t  fid,     // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_enddef_c( const int32_t fid ) // (in)
+int file_enddef_c( const int fid ) // (in)
 {
   int ncid;
 
@@ -1802,7 +1819,7 @@ int32_t file_enddef_c( const int32_t fid ) // (in)
   return file_enddef(fid, ncid);
 }
 
-int32_t file_redef_c( const int32_t fid ) // (in)
+int file_redef_c( const int fid ) // (in)
 {
   int ncid;
 
@@ -1813,8 +1830,8 @@ int32_t file_redef_c( const int32_t fid ) // (in)
   return file_redef(fid, ncid);
 }
 
-int32_t file_attach_buffer_c( const int32_t fid,         // (in)
-			      const int64_t buf_amount ) // (in)
+int file_attach_buffer_c( const int     fid,         // (in)
+			  const int64_t buf_amount ) // (in)
 {
   int ncid;
 
@@ -1827,7 +1844,7 @@ int32_t file_attach_buffer_c( const int32_t fid,         // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_detach_buffer_c( const int32_t fid ) // (in)
+int file_detach_buffer_c( const int fid ) // (in)
 {
   int ncid;
 
@@ -1840,7 +1857,7 @@ int32_t file_detach_buffer_c( const int32_t fid ) // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_flush_c( const int32_t fid ) // (in)
+int file_flush_c( const int fid ) // (in)
 {
   int ncid;
 
@@ -1855,19 +1872,19 @@ int32_t file_flush_c( const int32_t fid ) // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_write_data_c( const int32_t   fid,       // (in)
-			   const int32_t   vid,       // (in)
-			   const void     *var,       // (in)
-			   const real64_t  t_start,   // (in)
-			   const real64_t  t_end,     // (in)
-			   const int32_t   precision, // (in)
-			   const int32_t   ndims,     // (in)
-			   const int32_t  *start,     // (in)
-			   const int32_t  *count)     // (in)
+int file_write_data_c( const int     fid,       // (in)
+		       const int     vid,       // (in)
+		       const void   *var,       // (in)
+		       const double  t_start,   // (in)
+		       const double  t_end,     // (in)
+		       const int     ndims,     // (in)
+		       const int     precision, // (in)
+		       const int    *start,     // (in)
+		       const int    *count)     // (in)
 {
   int ncid, varid;
   MPI_Offset *str, *cnt;
-  int32_t ret;
+  int ret;
 
   if ( vars[vid] == NULL ) return ALREADY_CLOSED_CODE;
   ncid = vars[vid]->ncid;
@@ -1979,8 +1996,8 @@ int32_t file_write_data_c( const int32_t   fid,       // (in)
   return SUCCESS_CODE;
 }
 
-int32_t file_close_c( const int32_t fid,    // (in)
-		      const int32_t abort ) // (in)
+int file_close_c( const int  fid,    // (in)
+		  const bool abort ) // (in)
 {
   int ncid;
   int i;
