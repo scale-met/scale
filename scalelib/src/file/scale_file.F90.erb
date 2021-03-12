@@ -184,7 +184,7 @@ module scale_file
      character(len=FILE_HLONG) :: name
      integer                   :: fid
      logical                   :: aggregate
-     integer                   :: buffer_size
+     integer(8)                :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
   integer    :: FILE_nfiles = 0
@@ -569,8 +569,9 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_name
     integer,          intent(in) :: dtype
-    real(<%=rp%>),    intent(in) :: val(:)
+    real(<%=rp%>),    intent(in), target :: val(:)
 
+    real(<%=rp%>), pointer :: ptr
     integer :: error
     intrinsic size
 
@@ -579,10 +580,11 @@ contains
        call PRC_abort
     end if
 
-    error = file_put_axis_<%=rp%>_c( FILE_files(fid)%fid,                 & ! (in)
-                                     cstr(name), cstr(desc), cstr(units), & ! (in)
-                                     cstr(dim_name), dtype,               & ! (in)
-                                     val(:), size(val), <%=rp%>           ) ! (in)
+    ptr => val(1)
+    error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
+                             cstr(name), cstr(desc), cstr(units), & ! (in)
+                             cstr(dim_name), dtype,               & ! (in)
+                             c_loc(ptr), size(val), <%=rp%>       ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_real<%=rp%>",*) 'failed to put axis'
        call PRC_abort
@@ -642,9 +644,10 @@ contains
        start )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(<%=rp%>),    intent(in)           :: val(:)
+    real(<%=rp%>),    intent(in), target   :: val(:)
     integer,          intent(in), optional :: start(:)
 
+    real(<%=rp%>), pointer :: ptr
     integer :: error
     intrinsic shape
 
@@ -653,12 +656,13 @@ contains
        call PRC_abort
     end if
 
+    ptr => val(1)
     if ( present(start) ) then
-       error = file_write_axis_<%=rp%>_c( FILE_files(fid)%fid, cstr(name), & ! (in)
-                                          val, <%=rp%>, start, shape(val)  ) ! (in)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
+                                  c_loc(ptr), <%=rp%>, start, shape(val)  ) ! (in)
     else
-       error = file_write_axis_<%=rp%>_c( FILE_files(fid)%fid, cstr(name), & ! (in)
-                                          val, <%=rp%>, (/1/), shape(val)  ) ! (in)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
+                                  c_loc(ptr), <%=rp%>, (/1/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_real<%=rp%>",*) 'failed to write axis: '//trim(name)
@@ -673,6 +677,7 @@ contains
   ! interface FILE_put_associatedCoordinate
   !-----------------------------------------------------------------------------
 % for n in 1..4
+%   idx = ( [":"]*n ).join(",")
 %   ["SP", "DP"].each do |rp|
   subroutine FILE_put_associatedCoordinate_real<%=rp%>_<%=n%>D( &
        fid,                &
@@ -685,10 +690,12 @@ contains
     character(len=*), intent(in) :: units
     character(len=*), intent(in) :: dim_names(:)
     integer,          intent(in) :: dtype
-    real(<%=rp%>),    intent(in) :: val(<%=Array.new(n){":"}.join(",")%>)
+    real(<%=rp%>),    intent(in) :: val(<%=idx%>)
 
     type(c_ptr) :: dim_names_(size(dim_names))
-    character(:,c_char), allocatable, target :: cptr(:)
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
+    real(<%=rp%>), allocatable, target :: vptr(<%=idx%>)
 
     integer :: i
     integer :: error
@@ -699,17 +706,20 @@ contains
        call PRC_abort
     end if
 
-    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
     do i = 1, size(dim_names)
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
-    
-    error = file_put_associatedcoordinate_<%=rp%>_c( &
+    allocate(vptr(<%=(1..n).to_a.map{|nn| "size(val,#{nn})"}.join(",")%>))
+    vptr(<%=idx%>) = val(<%=idx%>)
+
+    error = file_put_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
-         val, <%=rp%>                         ) ! (in)
+         c_loc(vptr), <%=rp%>                 ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_real<%=rp%>_<%=n%>D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -732,7 +742,8 @@ contains
     integer,          intent(in) :: dtype
 
     type(c_ptr) :: dim_names_(size(dim_names))
-    character(:,c_char), allocatable, target :: cptr(:)
+!    character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT+1), allocatable, target :: cptr(:)
 
     integer :: error
     integer :: i
@@ -743,12 +754,13 @@ contains
        call PRC_abort
     end if
 
-    allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    !allocate( character(len=len(dim_names)+1) :: cptr(size(dim_names)) )
+    allocate( cptr(size(dim_names)) )
     do i = 1, size(dim_names)
        cptr(i) = cstr(dim_names(i))
        dim_names_(i) = c_loc(cptr(i))
     end do
-    
+
     error = file_def_associatedcoordinate_c( &
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
@@ -765,6 +777,7 @@ contains
   ! interface FILE_write_associatedCoordinate
   !-----------------------------------------------------------------------------
 % for n in 1..4
+%   idx = ( [":"]*n ).join(",")
 %   ["SP", "DP"].each do |rp|
   subroutine FILE_write_associatedCoordinate_real<%=rp%>_<%=n%>D( &
        fid,          &
@@ -774,11 +787,12 @@ contains
        ndims         )
     integer,          intent(in)           :: fid
     character(len=*), intent(in)           :: name
-    real(<%=rp%>),    intent(in)           :: val(<%=Array.new(n){":"}.join(",")%>)
+    real(<%=rp%>),    intent(in)           :: val(<%=idx%>)
     integer,          intent(in), optional :: start(:)
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    real(<%=rp%>), allocatable, target :: ptr(<%=idx%>)
     integer :: error
     intrinsic shape
 
@@ -787,24 +801,27 @@ contains
        call PRC_abort
     end if
 
+    allocate( ptr(<%=(1..n).to_a.map{|nn| "size(val,#{nn})"}.join(",")%>) )
+    ptr(<%=idx%>) = val(<%=idx%>)
+
     if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_<%=rp%>_c( &
+       error = file_write_associatedcoordinate_c( &
             FILE_files(fid)%fid, cstr(name), & ! (in)
-            val, ndims, <%=rp%>,             & ! (in)
+            c_loc(ptr), ndims, <%=rp%>,      & ! (in)
             start, count                     ) ! (in)
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_<%=rp%>_c( &
+       error = file_write_associatedcoordinate_c( &
             FILE_files(fid)%fid, cstr(name), & ! (in)
-            val, <%=n%>, <%=rp%>,            & ! (in)
+            c_loc(ptr), <%=n%>, <%=rp%>,     & ! (in)
             start, shape(val)                ) ! (in)
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_<%=rp%>_c( &
+       error = file_write_associatedcoordinate_c( &
             FILE_files(fid)%fid, cstr(name),       & ! (in)
-            val, <%=n%>, <%=rp%>,                  & ! (in)
+            c_loc(ptr), <%=n%>, <%=rp%>,           & ! (in)
             (/<%=([1]*n).join(",")%>/), shape(val) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
@@ -875,7 +892,8 @@ contains
     logical,          intent(in), optional :: time_avg
 
     type(c_ptr) :: dims_(size(dims))
-    character(:,c_char), allocatable, target :: cptr(:)
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
 
     logical(c_bool) :: itavg
 
@@ -909,7 +927,8 @@ contains
           if( time_avg ) itavg = .true.
        endif
 
-       allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       !allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       allocate( cptr(ndims) )
        do n = 1, ndims
           cptr(n) = cstr(dims(n))
           dims_(n) = c_loc(cptr(n))
@@ -962,7 +981,8 @@ contains
     logical,          intent(out), optional :: existed
 
     type(c_ptr) :: dims_(size(dims))
-    character(:,c_char), allocatable, target :: cptr(:)
+    !character(:,c_char), allocatable, target :: cptr(:)
+    character(len=H_SHORT), allocatable, target :: cptr(:)
 
     logical(c_bool) :: itavg
 
@@ -1000,7 +1020,8 @@ contains
           end if
        end if
 
-       allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       !allocate( character(len=len(dims)+1) :: cptr(ndims) )
+       allocate( cptr(ndims) )
        do n = 1, ndims
           cptr(n) = cstr(dims(n))
           dims_(n) = c_loc(cptr(n))
@@ -2282,6 +2303,8 @@ contains
 
     type(datainfo) :: dinfo
     integer :: dim_size(<%=d%>)
+
+    real(<%=rp%>), allocatable, target :: ptr(<%=idx%>)
     integer :: error
     integer :: n
 
@@ -2338,11 +2361,14 @@ contains
        end if
     end if
 
+    allocate( ptr(<%=(1..d).to_a.map{|nn| "size(var,#{nn})"}.join(",")%>)  )
+    ptr(<%=idx%>) = var(<%=idx%>)
+
     if ( present(ntypes) ) then
-       error = file_read_data_<%=rp%>_c( var(<%=idx%>),         & ! (out)
+       error = file_read_data_c( c_loc(ptr),                  & ! (out)
             dinfo, <%=rp%>, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
-       error = file_read_data_<%=rp%>_c( var(<%=idx%>), & ! (out)
+       error = file_read_data_c( c_loc(ptr),  & ! (out)
             dinfo, <%=rp%>, 0, 0, start(:), count(:)  ) ! (in)
     else
        dim_size(:) = shape(var)
@@ -2352,13 +2378,14 @@ contains
              call PRC_abort
           end if
        end do
-       error = file_read_data_<%=rp%>_c( var(<%=idx%>), & ! (out)
-            dinfo, <%=rp%>, 0, 0, (/0/), (/0/)        ) ! (in)
+       error = file_read_data_c( c_loc(ptr),   & ! (out)
+            dinfo, <%=rp%>, 0, 0, (/0/), (/0/) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_read_var_real<%=rp%>_<%=d%>D",*) 'failed to get data value: ', trim(varname)
        call PRC_abort
     end if
+    var(<%=idx%>) = ptr(<%=idx%>)
 
     return
   end subroutine FILE_read_var_real<%=rp%>_<%=d%>D
@@ -2394,6 +2421,8 @@ contains
 
     integer :: start_(<%=d%>)
 
+    real(<%=rp%>), allocatable, target :: ptr(<%=idx%>)
+
     integer :: fid
     integer :: error
 
@@ -2410,6 +2439,9 @@ contains
        call PRC_abort
     end if
 
+    allocate( ptr(<%=(1..d).to_a.map{|nn| "size(var,#{nn})"}.join(",")%>) )
+    ptr(<%=idx%>) = var(<%=idx%>)
+
 % if d==1
     if ( present(ndims) ) then
        ! history variable has been reshaped to 1D
@@ -2424,9 +2456,9 @@ contains
           call PRC_abort
        end if
 
-       error = file_write_data_<%=rp%>_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-                                          var(<%=idx%>), ts, te, ndims, <%=rp%>,   & ! (in)
-                                          start, count                             ) ! (in)
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                  c_loc(ptr), ts, te, ndims, <%=rp%>,      & ! (in)
+                                  start, count                             ) ! (in)
     else
 % end
        ! this is for restart variable which keeps its original shape
@@ -2435,9 +2467,9 @@ contains
        else
           start_(:) = 1
        end if
-       error = file_write_data_<%=rp%>_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
-                                          var(<%=idx%>), ts, te, <%=d%>, <%=rp%>,  & ! (in)
-                                          start_, shape(var)                       ) ! (in)
+       error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+                                  c_loc(ptr), ts, te, <%=d%>, <%=rp%>,     & ! (in)
+                                  start_, shape(var)                       ) ! (in)
 % if d==1
     end if
 % end

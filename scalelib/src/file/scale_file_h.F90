@@ -92,17 +92,17 @@ contains
   function cstr(str)
     character(*), intent(in) :: str
     character(:,c_char), allocatable, target :: cstr
-    cstr = trim(str)//C_null_char
+    cstr = trim(str) // c_null_char
   end function cstr
 
   subroutine fstr1(str)
     character(len=*), intent(inout) :: str
-    integer :: i
+    integer :: i, j
     do i = 1, len(str)
-       if ( str(i:i) == c_null_char ) then
-          str(i:i) = " "
-          exit
-       end if
+       if ( str(i:i) == c_null_char ) exit
+    end do
+    do j = i, len(str)
+       str(j:j) = " "
     end do
     return
   end subroutine fstr1
@@ -110,14 +110,13 @@ contains
   subroutine fstr2(fstr, cstr)
     character(len=*),  intent(out) :: fstr
     character(c_char), intent(in)  :: cstr(:)
-    integer :: i
+    integer :: i, j
     do i = 1, len(fstr)
-       if ( cstr(i) == c_null_char ) then
-          fstr(i:i) = " "
-          exit
-       else
-          fstr(i:i) = cstr(i)
-       end if
+       if ( cstr(i) == c_null_char ) exit
+       fstr(i:i) = cstr(i)
+    end do
+    do j = i, len(fstr)
+       fstr(j:j) = " "
     end do
     return
   end subroutine fstr2
