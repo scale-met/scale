@@ -92,7 +92,7 @@ contains
   function cstr(str)
     character(*), intent(in) :: str
     character(:,c_char), allocatable, target :: cstr
-    cstr = trim(str)//C_null_char
+    cstr = trim(str) // c_null_char
   end function cstr
 
   subroutine fstr1(str)
