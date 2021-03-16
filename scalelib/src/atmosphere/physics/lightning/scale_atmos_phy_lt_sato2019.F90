@@ -1238,8 +1238,8 @@ contains
                             ( &
                             ( GSQRT(k,i+1,j,I_XYZ)*E_pot(k,i+1,j) - GSQRT(k,i-1,j,I_XYZ)*E_pot(k,i-1,j) ) &
                             * RCDX(i) * 0.5_RP &
-                            + ( J13G(k+1,i,j,I_UYW)*GSQRT(k+1,i,j,I_UYW)*E_pot(k+1,i,j) &
-                              - J13G(k-1,i,j,I_UYW)*GSQRT(k-1,i,j,I_UYW)*E_pot(k-1,i,j) &
+                            + ( J13G(k+1,i,j,I_XYZ)*GSQRT(k+1,i,j,I_XYZ)*E_pot(k+1,i,j) &
+                              - J13G(k-1,i,j,I_XYZ)*GSQRT(k-1,i,j,I_XYZ)*E_pot(k-1,i,j) &
                               ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
@@ -1247,8 +1247,8 @@ contains
                             ( &
                             ( GSQRT(k,i,j+1,I_XYZ)*E_pot(k,i,j+1) - GSQRT(k,i,j-1,I_XYZ)*E_pot(k,i,j-1) ) &
                             * RCDY(j) * 0.5_RP &
-                            + ( J23G(k+1,i,j,I_XVW)*GSQRT(k+1,i,j,I_XVW)*E_pot(k+1,i,j) &
-                              - J23G(k-1,i,j,I_XVW)*GSQRT(k-1,i,j,I_XVW)*E_pot(k-1,i,j) &
+                            + ( J23G(k+1,i,j,I_XYZ)*GSQRT(k+1,i,j,I_XYZ)*E_pot(k+1,i,j) &
+                              - J23G(k-1,i,j,I_XYZ)*GSQRT(k-1,i,j,I_XYZ)*E_pot(k-1,i,j) &
                               ) &
                             * RFDZ(k) * 0.5_RP  &
                             )
