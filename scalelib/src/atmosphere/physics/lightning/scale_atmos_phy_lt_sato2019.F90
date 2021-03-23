@@ -63,7 +63,10 @@ module scale_atmos_phy_lt_sato2019
   real(RP), private                 :: fp = 0.3_RP            ! [-]
   real(RP), private                 :: zcg = 0.0_RP           ! lowest grid point of lightning path for MG2001 [m]
   integer,  private                 :: NUTR_ITMAX = 1000
-  integer,  private                 :: FLAG_preprocessing = 2 ! 1->Gauss-Seidel, 2->Synmetric Gauss-Sidel(Default),  3->Incomplete LU factorization
+  integer,  private                 :: FLAG_preprocessing = 2 !> 0: Disable
+                                                              !> 1: Gauss-Seidel
+                                                              !> 2: Synmetric Gauss-Sidel (Default)
+                                                              !> 3: Incomplete LU factorization
   integer,  private                 :: KIJMAXG
   character(len=H_LONG)             :: ATMOS_PHY_LT_LUT_FILENAME !--- LUT file name
   character(len=H_LONG)             :: fname_lut_lt="LUT_TK1978_v.txt" !--- LUT file name
