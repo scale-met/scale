@@ -80,7 +80,6 @@ contains
     logical                :: ATMOS_PHY_AE_offline_enable_periodic_month = .false.
     logical                :: ATMOS_PHY_AE_offline_enable_periodic_day   = .false.
     integer                :: ATMOS_PHY_AE_offline_step_fixed            = 0
-    real(RP)               :: ATMOS_PHY_AE_offline_offset                = 0.0_RP
     real(RP)               :: ATMOS_PHY_AE_offline_defval               ! = UNDEF
     logical                :: ATMOS_PHY_AE_offline_check_coordinates     = .true.
     integer                :: ATMOS_PHY_AE_offline_step_limit            = 0
@@ -103,7 +102,6 @@ contains
        ATMOS_PHY_AE_offline_enable_periodic_month, &
        ATMOS_PHY_AE_offline_enable_periodic_day,   &
        ATMOS_PHY_AE_offline_step_fixed,            &
-       ATMOS_PHY_AE_offline_offset,                &
        ATMOS_PHY_AE_offline_defval,                &
        ATMOS_PHY_AE_offline_check_coordinates,     &
        ATMOS_PHY_AE_offline_step_limit,            &
@@ -168,7 +166,6 @@ contains
                                               ATMOS_PHY_AE_offline_enable_periodic_month, & ! [IN]
                                               ATMOS_PHY_AE_offline_enable_periodic_day,   & ! [IN]
                                               ATMOS_PHY_AE_offline_step_fixed,            & ! [IN]
-                                              ATMOS_PHY_AE_offline_offset,                & ! [IN]
                                               ATMOS_PHY_AE_offline_defval,                & ! [IN]
                                               check_coordinates = ATMOS_PHY_AE_offline_check_coordinates, & ! [IN]
                                               step_limit        = ATMOS_PHY_AE_offline_step_limit         ) ! [IN]

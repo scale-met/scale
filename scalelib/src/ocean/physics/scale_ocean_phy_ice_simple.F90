@@ -76,7 +76,6 @@ contains
     logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_month = .false.
     logical                :: OCEAN_PHY_ICE_nudging_enable_periodic_day   = .false.
     integer                :: OCEAN_PHY_ICE_nudging_step_fixed            = 0
-    real(RP)               :: OCEAN_PHY_ICE_nudging_offset                = 0.0_RP
     real(RP)               :: OCEAN_PHY_ICE_nudging_defval                != UNDEF
     logical                :: OCEAN_PHY_ICE_nudging_check_coordinates     = .true.
     integer                :: OCEAN_PHY_ICE_nudging_step_limit            = 0
@@ -97,7 +96,6 @@ contains
 !        OCEAN_PHY_ICE_nudging_enable_periodic_month, &
 !        OCEAN_PHY_ICE_nudging_enable_periodic_day,   &
 !        OCEAN_PHY_ICE_nudging_step_fixed,            &
-!        OCEAN_PHY_ICE_nudging_offset,                &
 !        OCEAN_PHY_ICE_nudging_defval,                &
 !        OCEAN_PHY_ICE_nudging_check_coordinates,     &
 !        OCEAN_PHY_ICE_nudging_step_limit
@@ -152,7 +150,6 @@ contains
                                         OCEAN_PHY_ICE_nudging_enable_periodic_month, & ! [IN]
                                         OCEAN_PHY_ICE_nudging_enable_periodic_day,   & ! [IN]
                                         OCEAN_PHY_ICE_nudging_step_fixed,            & ! [IN]
-                                        OCEAN_PHY_ICE_nudging_offset,                & ! [IN]
                                         OCEAN_PHY_ICE_nudging_defval,                & ! [IN]
                                         check_coordinates = OCEAN_PHY_ICE_nudging_check_coordinates, & ! [IN]
                                         step_limit        = OCEAN_PHY_ICE_nudging_step_limit         ) ! [IN]

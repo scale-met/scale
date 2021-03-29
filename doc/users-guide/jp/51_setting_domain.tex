@@ -382,19 +382,10 @@ MPIプロセス数を変更する場合は、
   \verb| ATMOS_BOUNDARY_IN_BASENAME = '',      | & ; 境界値データのファイル名 (\verb|OFFLINE| または\verb|REAL| type の場合)\\
   \verb| ATMOS_BOUNDARY_IN_CHECK_COORDINATES | \textbackslash \\
   ~~\verb|                   = .true.,| & ; 境界データファイル内の座標変数を確認するかのフラグ \\
-  \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
-  ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; 境界値データの開始時刻(\verb|REAL| type の場合のみ) \\
-  \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; 境界値データの時間間隔(\verb|REAL| type の場合のみ) \\
 %    \\ ({\small\slshape 次のページへ続く})
 %}
 %\editboxtwo{
 %  ({\small\slshape 前のページからの続き}) \\ \\
-  \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
-  ~~\verb|                  = 'lerp_initpoint',| & ; 時間方向の補間の種類 \\
-                                                 &  ~\verb|same_parent|: 最新の時間ステップでの値を使用 (補間なし), \\
-                                                 &  ~\verb|nearest_neighbor|: 最も近い時間ステップでの値を使用, \\
-                                                 &  ~\verb|lerp_initpoint|: 2つの時間ステップでの値を用いて瞬間値として線形補間する,  \\
-                                                 &  ~\verb|lerp_midpoint|: \verb|lerp_initpoint|と同様であるが、境界データの時間ステップ間の時間平均値を使用 \\
   \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; 初期の境界値データを出力するファイル名 \\
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; 出力ファイルに対するタイトル \\
@@ -497,7 +488,7 @@ $\tau$のデフォルトの値は、\nmitem{TIME_DT}の10倍である。
 例えば、シミュレーションにおける全質量が親モデルの質量に比べて小さい場合は、西境界における $\rho u$ および南境界における $\rho v$ を増加、東境界における $\rho u$ および北境界における $\rho v$ を減少させることで、全質量収束を増加させる。
 側面質量フラックス調整は、境界の種類として\verb|REAL|を用いた場合およびオンライン・ネスティングの子領域においてのみ利用可能である。
 質量フラックス調整が有効な場合の密度ナッジングの時定数は \nmitem{ATMOS_BOUNDARY_DEN_ADJUST_TAU} で設定する。
-負の値が設定された場合は、内部で $\nmitemeq{ATMOS_BOUNDARY_UPDATE_DT} / 6.0$ と設定される。
+負の値が設定された場合は、内部で境界値データの $1/6$ と設定される。
 密度ナッジングを弱めるためには、この時定数を \nmitem{ATMOS_BOUNDARY_TAUX} や \nmitem{ATMOS_BOUNDARY_TAUY} よりも大きな値に設定する。
 \scalerm における質量フラックス調整方法は、側面境界における質量フラックスによる全質量変化が、降水や地表面潜熱フラックス等の物理過程による質量変化に比べて十分大きいという仮定のもとで作られている。
 この仮定が妥当であるかどうかは、対象とするドメインや状況による。

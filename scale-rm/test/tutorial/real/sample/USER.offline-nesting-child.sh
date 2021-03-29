@@ -24,7 +24,7 @@ TIME_DURATION="6.0"
 TIME_DURATION_UNIT="HOUR" # unit: DAY / HOUR / MIN / SEC
 
 TIME_DT_RESTART="10800.0"   # unit: SEC only
-TIME_DT_BOUNDARY="900.0"    # unit: SEC only
+TIME_DT_BOUNDARY="900.0"  # unit: SEC only
 TIME_DT_REFSTATE="10800.0"  # unit: SEC only
 TIME_DT_HISTORY_2D="150.0"  # unit: SEC only
 TIME_DT_HISTORY_3D="150.0"  # unit: SEC only

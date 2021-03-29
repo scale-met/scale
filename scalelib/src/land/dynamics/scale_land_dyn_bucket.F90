@@ -54,7 +54,6 @@ module scale_land_dyn_bucket
   logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_month = .false.
   logical,                private :: LAND_DYN_BUCKET_nudging_enable_periodic_day   = .false.
   integer,                private :: LAND_DYN_BUCKET_nudging_step_fixed            = 0
-  real(RP),               private :: LAND_DYN_BUCKET_nudging_offset                = 0.0_RP
   real(RP),               private :: LAND_DYN_BUCKET_nudging_defval                ! = UNDEF
   logical,                private :: LAND_DYN_BUCKET_nudging_check_coordinates     = .true.
   integer,                private :: LAND_DYN_BUCKET_nudging_step_limit            = 0
@@ -98,7 +97,6 @@ contains
        LAND_DYN_BUCKET_nudging_enable_periodic_month, &
        LAND_DYN_BUCKET_nudging_enable_periodic_day,   &
        LAND_DYN_BUCKET_nudging_step_fixed,            &
-       LAND_DYN_BUCKET_nudging_offset,                &
        LAND_DYN_BUCKET_nudging_defval,                &
        LAND_DYN_BUCKET_nudging_check_coordinates,     &
        LAND_DYN_BUCKET_nudging_step_limit,            &
@@ -150,7 +148,6 @@ contains
                                         LAND_DYN_BUCKET_nudging_enable_periodic_month, & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_day,   & ! [IN]
                                         LAND_DYN_BUCKET_nudging_step_fixed,            & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
                                         check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
                                         step_limit        = LAND_DYN_BUCKET_nudging_step_limit,        & ! [IN]
@@ -165,7 +162,6 @@ contains
                                         LAND_DYN_BUCKET_nudging_enable_periodic_month, & ! [IN]
                                         LAND_DYN_BUCKET_nudging_enable_periodic_day,   & ! [IN]
                                         LAND_DYN_BUCKET_nudging_step_fixed,            & ! [IN]
-                                        LAND_DYN_BUCKET_nudging_offset,                & ! [IN]
                                         LAND_DYN_BUCKET_nudging_defval,                & ! [IN]
                                         check_coordinates = LAND_DYN_BUCKET_nudging_check_coordinates, & ! [IN]
                                         step_limit        = LAND_DYN_BUCKET_nudging_step_limit,        & ! [IN]

@@ -320,19 +320,10 @@ The following is the parameters in \namelist{PARAM_ATMOS_BOUNDARY}.
   \verb| ATMOS_BOUNDARY_IN_BASENAME = '',      | & ; File name of the boundary data for \verb|OFFLINE| or \verb|REAL| type \\
   \verb| ATMOS_BOUNDARY_IN_CHECK_COORDINATES | \textbackslash \\
   ~~\verb|                   = .true.,| & ; Flag to check coordinate variables in the boundary data file. \\
-  \verb| ATMOS_BOUNDARY_START_DATE | \textbackslash \\
-  ~~\verb|        = (/ -9999, 0, 0, 0, 0, 0 /),| & ; Start time of the boundary data. Only for \verb|REAL| type. \\
-  \verb| ATMOS_BOUNDARY_UPDATE_DT = 0.0D0,     | & ; Time interval of the boundary data. Only for \verb|REAL| type. \\
   \\ ({\small\slshape continued on next page})
 }
 \editboxtwo{
   ({\small\slshape continued from previous page}) \\ \\
-  \verb| ATMOS_BOUNDARY_INTERP_TYPE | \textbackslash \\
-  ~~\verb|                  = 'lerp_initpoint',| & ; Temporal interpolation type. \\
-                                                 &  ~\verb|same_parent|: use the latest step value (no interpolation), \\
-                                                 &  ~\verb|nearest_neighbor|: use the value of the nearest time step, \\
-                                                 &  ~\verb|lerp_initpoint|: linear interpolation between values at two time steps as the values are snapshot, \\
-                                                 &  ~\verb|lerp_midpoint|: same as \verb|lerp_initpoint| but the values are temporal average during the time step for boundary data. \\
   \verb| ATMOS_BOUNDARY_OUT_BASENAME = '',     | & ; File name to output the initial boundary data. \\
   \verb| ATMOS_BOUNDARY_OUT_TITLE | \textbackslash \\
   ~~\verb|     = 'SCALE-RM BOUNDARY CONDITION',| & ; Title for the output file. \\
@@ -429,7 +420,7 @@ the mass flux at the lateral boundaries is adjusted so that the difference in th
 For example, if the total mass in the simulation is less than that in the parent model, the $\rho u$ at the western boundary and the $\rho v$ at the southern boundary are increased, and the $\rho u$ at the eastern boundary and the $\rho v$ at the northern boundary are decreased to enlarge the total mass convergence.
 The mass flux adjustment is available only for the \verb|REAL| boundary type and child domain of the online nesting.
 When the mass flux adjustment is enabled, the time scale of the density nudging is specified by \nmitem{ATMOS_BOUNDARY_DENS_ADJUSTMENT_TAU}.
-If the value is negative, the time scale is internally determined as $\nmitemeq{ATMOS_BOUNDARY_UPDATE_DT} / 6.0$.
+If the value is negative, the time scale is internally determined as 6 times smaller than the time interval of the boundary data.
 To weaken the density nudging, set the time scale larger than \nmitem{ATMOS_BOUNDARY_TAUX} and \nmitem{ATMOS_BOUNDARY_TAUY}.
 The adjustment method in \scalerm is constructed under the assumption that the total mass change due to convergence of the mass flux at the lateral boundaries is much larger than that due to the physical processes, such as precipitation and surface latent heat flux.
 The validity of the assumption depends on target domain and situation.

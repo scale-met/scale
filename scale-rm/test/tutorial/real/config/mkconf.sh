@@ -108,7 +108,6 @@ SEC=`printf '%1.f' ${RUN_DATE_SEC}`
 MSEC=`printf '%1.f' ${RUN_DATE_MSEC}`
 
 STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
-BND_STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
 
 # set converting variables
 POPSCA_2D=(
@@ -168,9 +167,6 @@ TIME_STARTDATE="${STARTDATE[0]}, ${STARTDATE[1]}, ${STARTDATE[2]}, ${STARTDATE[3
 TIME_STARTMS="${STARTDATE[6]}.0"
 
 TIME_DT_UNIT="SEC" # SEC only
-
-TIME_BND_STARTDATE="${BND_STARTDATE[0]}, ${BND_STARTDATE[1]}, ${BND_STARTDATE[2]}, ${BND_STARTDATE[3]}, ${BND_STARTDATE[4]}, ${BND_STARTDATE[5]}"
-TIME_BND_STARTMS="${BND_STARTDATE[6]}.0"
 
 eval 'STARTDATE[0]=`printf "%04d" ${STARTDATE[0]}`'
 eval 'STARTDATE[1]=`printf "%02d" ${STARTDATE[1]}`'
@@ -241,9 +237,6 @@ do
   NET2G_2D_IO_LOG_BASENAME="net2g_2D_LOG_d${FNUM}"
   NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"
 
-  # copy parameters
-  ATMOS_BOUNDARY_START_DATE="${TIME_BND_STARTDATE}"
-
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then
     IAM_PARENT=".true."
@@ -264,11 +257,8 @@ do
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
     ATMOS_BOUNDARY_IN_BASENAME=""
-    ATMOS_BOUNDARY_START_DATE=""
-    ATMOS_BOUNDARY_UPDATE_DT="0.0"
     ATMOS_BOUNDARY_USE_QHYD=".true."
   else
-    ATMOS_BOUNDARY_UPDATE_DT="${TIME_DT_BOUNDARY}"
     ATMOS_BOUNDARY_USE_QHYD=".false."
   fi
 

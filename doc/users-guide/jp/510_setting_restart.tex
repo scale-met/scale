@@ -74,12 +74,7 @@
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & 現実実験の場合は\verb|"REAL"|。\\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & 境界値データのファイル名の頭。\\
-\verb| ATMOS_BOUNDARY_START_DATE     = 2010, 7, 14, 18, 0, 0,             | & 境界値データの初期時刻。\\
-\verb| ATMOS_BOUNDARY_UPDATE_DT      = 21600.D0,                          | & 境界値データの時間間隔。\\
 \verb|/| & \\
 }
 
 リスタート計算において、境界値データの適切な日時は、境界値ファイル\verb|boundary_***.nc| から読み込まれる。
-境界値データの最初の日時は、
- \namelist{PARAM_ATMOS_BOUNDARY}の\nmitem{ATMOS_BOUNDARY_START_DATE}で指定しなければならない。
-\nmitem{ATMOS_BOUNDARY_START_DATE}を指定しなかった場合は、実際の日時とは異なっていても、境界値ファイルの最初のデータがリスタート計算の最初の日時に設定される。

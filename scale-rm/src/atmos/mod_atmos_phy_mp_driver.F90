@@ -486,7 +486,7 @@ contains
        if ( monit_nf_mass_id > 0 .or. monit_nf_engi_id > 0 .or. &
             do_put_rhoh .or. do_put_dens .or. do_put_engi ) then
           call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, QLA, QIA, &
                MP_limit_negative,                     & ! [IN]
                DENS(:,:,:), TEMP(:,:,:),              & ! [INOUT]
                CVtot(:,:,:), CPtot(:,:,:),            & ! [INOUT]
@@ -495,7 +495,7 @@ contains
                DENS_diff = DENS_d, ENGI_diff = ENGI_d ) ! [OUT, optional]
        else
           call ATMOS_PHY_MP_negative_fixer( &
-               KA, KS, KE, IA, 1, IA, JA, 1, JA, QLA, QIA, &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, QLA, QIA, &
                MP_limit_negative,                    & ! [IN]
                DENS(:,:,:), TEMP(:,:,:),             & ! [INOUT]
                CVtot(:,:,:), CPtot(:,:,:),           & ! [INOUT]

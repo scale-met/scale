@@ -74,7 +74,6 @@ contains
     logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_month = .false.
     logical                :: OCEAN_DYN_SLAB_nudging_enable_periodic_day   = .false.
     integer                :: OCEAN_DYN_SLAB_nudging_step_fixed            = 0
-    real(RP)               :: OCEAN_DYN_SLAB_nudging_offset                = 0.0_RP
     real(RP)               :: OCEAN_DYN_SLAB_nudging_defval                ! = UNDEF
     logical                :: OCEAN_DYN_SLAB_nudging_check_coordinates     = .true.
     integer                :: OCEAN_DYN_SLAB_nudging_step_limit            = 0
@@ -93,7 +92,6 @@ contains
        OCEAN_DYN_SLAB_nudging_enable_periodic_month, &
        OCEAN_DYN_SLAB_nudging_enable_periodic_day,   &
        OCEAN_DYN_SLAB_nudging_step_fixed,            &
-       OCEAN_DYN_SLAB_nudging_offset,                &
        OCEAN_DYN_SLAB_nudging_defval,                &
        OCEAN_DYN_SLAB_nudging_check_coordinates,     &
        OCEAN_DYN_SLAB_nudging_step_limit,            &
@@ -158,7 +156,6 @@ contains
                                         OCEAN_DYN_SLAB_nudging_enable_periodic_month, & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_enable_periodic_day,   & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_step_fixed,            & ! [IN]
-                                        OCEAN_DYN_SLAB_nudging_offset,                & ! [IN]
                                         OCEAN_DYN_SLAB_nudging_defval,                & ! [IN]
                                         check_coordinates = OCEAN_DYN_SLAB_nudging_check_coordinates, & ! [IN]
                                         step_limit        = OCEAN_DYN_SLAB_nudging_step_limit,        & ! [IN]
