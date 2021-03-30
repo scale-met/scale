@@ -92,6 +92,8 @@ other than \verb|run.***.conf|.
 \verb| NUM_DOMAIN  = 2,|    & number of domains\\
 \verb| PRC_DOMAINS = 4, 16,| & MPI processes used for each domain (as many domains as necessary)\\
 \verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & The configuration files for each domain (as many domains as necessary)\\
+\verb| LOG_SPLIT   = .false.,| & log-output for mpi splitting?\\
+\verb| COLOR_REORDER = .true.,| & coloring reorder for mpi splitting?\\
 \verb|/|& \\
 }
 \nmitem{CONF_FILES} must correspond to \nmitem{PRC_DOMAINS} in order.
@@ -102,6 +104,12 @@ and the 16-MPI parallel for the child domain;
 each number of processes in the launch file 
 must correspond to the total number of MPI processes ( \verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y| )
 specified in each configuration file \verb|run.***.conf|.
+
+Log of MPI communicator splitting will be output, when \nmitem{LOG_SPLIT} is \verb|.true.|.
+The default value of \nmitem{LOG_SPLIT} is \verb|.false.|.
+
+Option of \nmitem{COLOR_REORDER} is the switch for job rearrangement in MPI communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
+this would be reasonable to gain the efficient inter-node communication.
 
 At execution, the total number of MPI processes is given, which different from that in the case of single-domain execution. For example, 20 processes are specified in the above case.
 \begin{verbatim}
