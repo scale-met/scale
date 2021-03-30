@@ -115,7 +115,7 @@ contains
 
     if ( IO_L ) then
        LOG_NEWLINE
-       LOG_PROGRESS(*) 'start MPI'
+       LOG_PROGRESS(*) 'start making Cartesian topology'
        LOG_NEWLINE
        LOG_INFO("PRC_CARTESC_setup",*) 'Process information '
        LOG_INFO_CONT('(1x,A,I12)')     'UNIVERSAL_COMM_WORLD        : ', PRC_UNIVERSAL_COMM_WORLD

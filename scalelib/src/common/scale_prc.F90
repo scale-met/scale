@@ -390,9 +390,6 @@ contains
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then
-       LOG_NEWLINE
-       LOG_PROGRESS(*) 'finalize MPI...'
-
        ! free splitted communicator
        if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
           call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
@@ -401,7 +398,6 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       LOG_PROGRESS(*) 'MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile

@@ -328,6 +328,9 @@ contains
 
   subroutine IO_finalize
 
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Closing LOG file'
+
     if ( IO_FID_CONF > 0 ) then
        close( IO_FID_CONF )
        IO_FID_CONF = -1
@@ -342,6 +345,9 @@ contains
        close( IO_FID_NML )
        IO_FID_NML = -1
     end if
+
+    IO_L   = .false.
+    IO_NML = .false.
 
     return
   end subroutine IO_finalize

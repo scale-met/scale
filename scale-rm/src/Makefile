@@ -102,6 +102,7 @@ SUB_OBJS =	\
 #	mod_realinput_nicam.o     \
 
 MAIN_OBJS =	\
+	mod_launcher.o            \
 	mod_rm_driver.o           \
 	mod_rm_prep.o
 
@@ -153,9 +154,9 @@ $(BINDIR)/$(INITNAME)$(POSTFIX) : $(BINDIR)/$(PPNAME)$(POSTFIX)
 
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
-  $(BUILD_DIR)/$(BINNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/$(INITNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/mod_user.o    : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
+  $(BUILD_DIR)/$(BINNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/$(PPNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/mod_user.o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
 endif
 
 
