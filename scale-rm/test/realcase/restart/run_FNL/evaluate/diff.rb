@@ -17,8 +17,10 @@ vars.each do |var|
   v2 = GPhys::IO.open(f2, var).val
 
   unless v1 == v2
-    p v1 - v2
-    p "#{var} is different"
+    diff = v1 - v2
+    i = diff.abs.gt(0.0).where[0]
+    idx = diff.shape.map{|n| r=i%n; i=i/n; r}
+    p "#{var} is different: #{v1[*idx]}, #{v2[*idx]} @ #{idx.map{|n|n+1}.join(',')}"
     flag = false
   end
 end

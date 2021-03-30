@@ -27,12 +27,34 @@ module scale_file_external_input
   public :: FILE_EXTERNAL_INPUT_setup
   public :: FILE_EXTERNAL_INPUT_regist
   public :: FILE_EXTERNAL_INPUT_update
+  public :: FILE_EXTERNAL_INPUT_put_ref
+  public :: FILE_EXTERNAL_INPUT_get_ref
+  public :: FILE_EXTERNAL_INPUT_query
+
+  interface FILE_EXTERNAL_INPUT_regist
+     module procedure FILE_EXTERNAL_INPUT_regist_file
+     module procedure FILE_EXTERNAL_INPUT_regist_external_1D
+     module procedure FILE_EXTERNAL_INPUT_regist_external_2D
+     module procedure FILE_EXTERNAL_INPUT_regist_external_3D
+  end interface FILE_EXTERNAL_INPUT_regist
 
   interface FILE_EXTERNAL_INPUT_update
      module procedure FILE_EXTERNAL_INPUT_update_1D
      module procedure FILE_EXTERNAL_INPUT_update_2D
      module procedure FILE_EXTERNAL_INPUT_update_3D
   end interface FILE_EXTERNAL_INPUT_update
+
+  interface FILE_EXTERNAL_INPUT_put_ref
+     module procedure FILE_EXTERNAL_INPUT_put_ref_1D
+     module procedure FILE_EXTERNAL_INPUT_put_ref_2D
+     module procedure FILE_EXTERNAL_INPUT_put_ref_3D
+  end interface FILE_EXTERNAL_INPUT_put_ref
+
+  interface FILE_EXTERNAL_INPUT_get_ref
+     module procedure FILE_EXTERNAL_INPUT_get_ref_1D
+     module procedure FILE_EXTERNAL_INPUT_get_ref_2D
+     module procedure FILE_EXTERNAL_INPUT_get_ref_3D
+  end interface FILE_EXTERNAL_INPUT_get_ref
 
   abstract interface
      subroutine get_dims1D( &
@@ -148,19 +170,22 @@ module scale_file_external_input
   !
   !++ Public parameters & variables
   !
+  integer, public, parameter :: I_prev = 1 !< [index] previous
+  integer, public, parameter :: I_next = 2 !< [index] next
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedures
   !
+  private :: FILE_EXTERNAL_INPUT_query_Id
   private :: FILE_EXTERNAL_INPUT_time_advance
+  private :: FILE_EXTERNAL_INPUT_init_var
+  private :: FILE_EXTERNAL_INPUT_regist_var
 
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
   !
-  integer, private, parameter :: I_prev = 1 !< [index] previous
-  integer, private, parameter :: I_next = 2 !< [index] next
-
   integer, private, parameter :: I_periodic_year  = 1
   integer, private, parameter :: I_periodic_month = 2
   integer, private, parameter :: I_periodic_day   = 3
@@ -172,6 +197,7 @@ module scale_file_external_input
 
   type, private :: itemcontainer
      character(len=H_SHORT)             :: varname                   !< variable name
+     logical                            :: file                      !< read from file?
      integer                            :: nfile                     !< number of files
      integer                            :: file_current              !< current number of the file
      character(len=H_LONG), allocatable :: basename(:)               !< file names
@@ -179,13 +205,15 @@ module scale_file_external_input
      integer                            :: ndim                      !< number of dimensions
      integer                            :: dim_size(FILE_EXTERNAL_INPUT_dim_limit) !< size of dimension (z,x,y)
      integer                            :: dim_start(FILE_EXTERNAL_INPUT_dim_limit)!< start index
+     integer                            :: dim_max(FILE_EXTERNAL_INPUT_dim_limit)  !< number of valid data
+     integer                            :: var_size(FILE_EXTERNAL_INPUT_dim_limit) !< size of input data
      integer                            :: var_start(FILE_EXTERNAL_INPUT_dim_limit)!< start index
+     integer                            :: var_max(FILE_EXTERNAL_INPUT_dim_limit)  !< number of valid data
      integer                            :: step_limit                !< size limit of time dimension
      integer                            :: step_num                  !< size of time dimension
      real(DP), allocatable              :: time(:)                   !< time of each step [sec]
      logical                            :: fixed_step                !< fix step position?
      integer                            :: flag_periodic             !< treat as periodic data? (0:no 1:yearly 2:monthly 3:daily)
-     real(RP)                           :: offset                    !< offset value (default is set to 0)
      integer                            :: data_step_prev            !< step position to read, previous from current
      integer                            :: data_step_next            !< step position to read, next     to   current
      integer                            :: data_step_offset          !< offset of step position for each file
@@ -222,7 +250,6 @@ contains
     logical                :: enable_periodic_year  ! treat as yearly               periodic data?
     logical                :: enable_periodic_month ! treat as yearly,monthly       periodic data?
     logical                :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP)               :: offset
     real(RP)               :: defval
     logical                :: check_coordinates
     logical                :: file_aggregate
@@ -239,7 +266,6 @@ contains
        enable_periodic_year,  &
        enable_periodic_month, &
        enable_periodic_day,   &
-       offset,                &
        defval,                &
        check_coordinates,     &
        file_aggregate,        &
@@ -266,7 +292,6 @@ contains
        enable_periodic_year  = .false.
        enable_periodic_month = .false.
        enable_periodic_day   = .false.
-       offset                = 0.0_RP
        defval                = UNDEF
        check_coordinates     = .false.
        file_aggregate        = FILE_AGGREGATE_default
@@ -291,7 +316,6 @@ contains
                                         enable_periodic_month,                 & ! [IN]
                                         enable_periodic_day,                   & ! [IN]
                                         step_fixed,                            & ! [IN]
-                                        offset,                                & ! [IN]
                                         defval,                                & ! [IN]
                                         check_coordinates = check_coordinates, & ! [IN]
                                         aggregate         = file_aggregate,    & ! [IN]
@@ -302,9 +326,431 @@ contains
     return
   end subroutine FILE_EXTERNAL_INPUT_setup
 
+
+  !-----------------------------------------------------------------------------
+  !> check variable
+  subroutine FILE_EXTERNAL_INPUT_init_var( &
+       varname,       &
+       axistype,      &
+       aggregate,     &
+       allow_missing  )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    character(len=*), intent(in)  :: varname
+    character(len=*), intent(in)  :: axistype
+    logical,          intent(in),  optional :: aggregate
+    logical,          intent(in),  optional :: allow_missing
+
+    logical :: aggregate_
+    logical :: allow_missing_
+    integer :: nid
+
+    if ( present(aggregate) ) then
+       aggregate_ = aggregate
+    else
+       aggregate_ = .false.
+    end if
+
+    if ( present(allow_missing) ) then
+       allow_missing_ = allow_missing
+    else
+       allow_missing_ = .false.
+    end if
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+    if ( nid > 0 ) then
+       LOG_ERROR("FILE_EXTERNAL_INPUT_init_var",*) 'Data is already registered! varname = ', trim(varname)
+       call PRC_abort
+    endif
+
+    FILE_EXTERNAL_INPUT_item_count = FILE_EXTERNAL_INPUT_item_count + 1
+
+    if ( FILE_EXTERNAL_INPUT_item_count > FILE_EXTERNAL_INPUT_item_limit ) then
+       LOG_ERROR("FILE_EXTERNAL_INPUT_init_var",*) 'Number of EXT data exceedes the limit', FILE_EXTERNAL_INPUT_item_count, FILE_EXTERNAL_INPUT_item_limit
+       call PRC_abort
+    endif
+
+    nid = FILE_EXTERNAL_INPUT_item_count
+
+    ! setup item
+    FILE_EXTERNAL_INPUT_item(nid)%varname        = varname
+    FILE_EXTERNAL_INPUT_item(nid)%axistype       = axistype
+    FILE_EXTERNAL_INPUT_item(nid)%allow_missing  = allow_missing_
+    FILE_EXTERNAL_INPUT_item(nid)%aggregate      = aggregate_
+    FILE_EXTERNAL_INPUT_item(nid)%fixed_step     = .false.
+    FILE_EXTERNAL_INPUT_item(nid)%flag_periodic  = 0
+    FILE_EXTERNAL_INPUT_item(nid)%file           = .false.
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_init_var
+
+  !-----------------------------------------------------------------------------
+  !> Regist variable
+  subroutine FILE_EXTERNAL_INPUT_regist_var( &
+       varname,   &
+       axistype,  &
+       dim_rank,  &
+       dim_size,  &
+       step_num,  &
+       file_num,  &
+       time_now,  &
+       time_step, &
+       defval     )
+    use scale_prc, only: &
+       PRC_abort
+    implicit none
+    character(len=*), intent(in) :: varname
+    character(len=*), intent(in) :: axistype
+    integer,          intent(in) :: dim_rank
+    integer,          intent(in) :: dim_size(dim_rank)
+    integer,          intent(in) :: step_num ! number of steps in single file
+    integer,          intent(in) :: file_num ! number of files
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: time_step
+    real(RP),         intent(in) :: defval
+
+    integer  :: dim1_size, dim1_max, dim1_S
+    integer  :: dim2_size, dim2_max, dim2_S
+    integer  :: dim3_size, dim3_max, dim3_S
+
+    integer :: nid
+    integer :: n
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    select case ( dim_rank )
+    case ( 1 )
+
+       call FILE_EXTERNAL_INPUT_get_dims1D( dim1_size, dim1_max, dim1_S, & ! [OUT]
+                                            varname, axistype            ) ! [IN]
+
+
+       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate &
+            .or. ( .not. FILE_EXTERNAL_INPUT_item(nid)%file ) ) then
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+       else
+          if ( dim1_max /= dim_size(1) ) then
+             LOG_ERROR("FILE_EXTERNAL_INPUT_regist_var",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
+             call PRC_abort
+          endif
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+       end if
+
+       FILE_EXTERNAL_INPUT_item(nid)%transpose    = .false.
+       FILE_EXTERNAL_INPUT_item(nid)%dim_size (1) = dim1_size
+       FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
+       FILE_EXTERNAL_INPUT_item(nid)%dim_max  (1) = dim1_max
+
+    case ( 2 )
+
+       call FILE_EXTERNAL_INPUT_get_dims2D( dim1_size, dim1_max, dim1_S,             & ! [OUT]
+                                            dim2_size, dim2_max, dim2_S,             & ! [OUT]
+                                            FILE_EXTERNAL_INPUT_item(nid)%transpose, & ! [OUT]
+                                            varname, axistype                        ) ! [IN]
+
+       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate &
+            .or. ( .not. FILE_EXTERNAL_INPUT_item(nid)%file ) ) then
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (2) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (2) = dim2_max
+       else
+          if ( dim1_max /= dim_size(1) .OR. dim2_max /= dim_size(2) ) then
+             LOG_ERROR("FILE_EXTERNAL_INPUT_regist_var",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
+             LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
+             call PRC_abort
+          endif
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (2) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (2) = dim2_max
+       end if
+
+       if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (1) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (1) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (2) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (2) = dim1_max
+       else
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (1) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (2) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (2) = dim2_max
+       end if
+
+
+    case ( 3 )
+
+       call FILE_EXTERNAL_INPUT_get_dims3D( dim1_size, dim1_max, dim1_S,             & ! [OUT]
+                                            dim2_size, dim2_max, dim2_S,             & ! [OUT]
+                                            dim3_size, dim3_max, dim3_S,             & ! [OUT]
+                                            FILE_EXTERNAL_INPUT_item(nid)%transpose, & ! [OUT]
+                                            varname, axistype                        ) ! [IN]
+
+       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate &
+            .or. ( .not. FILE_EXTERNAL_INPUT_item(nid)%file ) ) then
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (2) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (2) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (3) = dim3_size
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(3) = dim3_S
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (3) = dim3_max
+       else
+          if ( dim1_max /= dim_size(1) .OR. dim2_max /= dim_size(2) .OR. dim3_max /= dim_size(3) ) then
+             LOG_ERROR("FILE_EXTERNAL_INPUT_regist_var",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
+             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
+             LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
+             LOG_ERROR_CONT(*) 'dim 3 (data,requested)    : ', dim_size(3), dim3_max
+             call PRC_abort
+          endif
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (2) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (2) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_size (3) = dim3_max
+          FILE_EXTERNAL_INPUT_item(nid)%var_start(3) = 1
+          FILE_EXTERNAL_INPUT_item(nid)%var_max  (3) = dim3_max
+       end if
+
+       if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (1) = dim3_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim3_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (1) = dim3_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (2) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (2) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (3) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (3) = dim2_max
+       else
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (1) = dim1_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (1) = dim1_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (2) = dim2_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim2_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (2) = dim2_max
+          FILE_EXTERNAL_INPUT_item(nid)%dim_size (3) = dim3_size
+          FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) = dim3_S
+          FILE_EXTERNAL_INPUT_item(nid)%dim_max  (3) = dim3_max
+       end if
+
+    case default
+       LOG_ERROR("FILE_EXTERNAL_INPUT_regist_var",*) 'Unexpected dim rank: ', dim_rank
+       call PRC_abort
+    end select
+
+    do n = dim_rank+1, 3
+       FILE_EXTERNAL_INPUT_item(nid)%dim_size (n) = 1
+       FILE_EXTERNAL_INPUT_item(nid)%dim_start(n) = 1
+       FILE_EXTERNAL_INPUT_item(nid)%dim_max  (n) = 0
+       FILE_EXTERNAL_INPUT_item(nid)%var_size (n) = 1
+       FILE_EXTERNAL_INPUT_item(nid)%var_start(n) = 1
+       FILE_EXTERNAL_INPUT_item(nid)%var_max  (n) = 0
+    enddo
+
+    FILE_EXTERNAL_INPUT_item(nid)%ndim        = dim_rank
+    FILE_EXTERNAL_INPUT_item(nid)%step_num    = step_num
+
+
+    allocate( FILE_EXTERNAL_INPUT_item(nid)%value(FILE_EXTERNAL_INPUT_item(nid)%dim_size(1),FILE_EXTERNAL_INPUT_item(nid)%dim_size(2),FILE_EXTERNAL_INPUT_item(nid)%dim_size(3),2) )
+    FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,:) = defval
+
+    allocate( FILE_EXTERNAL_INPUT_item(nid)%time(step_num*file_num) )
+    do n = 1, FILE_EXTERNAL_INPUT_item(nid)%step_num*file_num
+       FILE_EXTERNAL_INPUT_item(nid)%time(n) = time_step * ( n - 1 ) + time_now
+    end do
+
+    FILE_EXTERNAL_INPUT_item(nid)%data_step_prev = 1
+    FILE_EXTERNAL_INPUT_item(nid)%data_step_next = 2
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_regist_var
+
+  !-----------------------------------------------------------------------------
+  !> Regist external data
+  subroutine FILE_EXTERNAL_INPUT_regist_external_1D( &
+       varname,      &
+       var,          &
+       axistype,     &
+       step_nmax,    &
+       time_now,     &
+       time_step,    &
+       aggregate,    &
+       allow_missing )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    character(len=*), intent(in) :: varname
+    real(RP),         intent(in) :: var(:)
+    character(len=*), intent(in) :: axistype
+    integer,          intent(in) :: step_nmax
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: time_step
+    logical,          intent(in),  optional :: aggregate
+    logical,          intent(in),  optional :: allow_missing
+
+    integer :: dim_size(1)
+    logical :: error
+    !---------------------------------------------------------------------------
+
+    call FILE_EXTERNAL_INPUT_init_var( &
+         varname,      &
+         axistype,     &
+         aggregate,    &
+         allow_missing )
+
+    dim_size(:) = shape( var )
+
+    call FILE_EXTERNAL_INPUT_regist_var( &
+         varname,     &
+         axistype,    &
+         1,           &
+         dim_size(:), &
+         step_nmax,   &
+         1,           &
+         time_now,    &
+         time_step,   &
+         UNDEF        )
+
+    call FILE_EXTERNAL_INPUT_put_ref_1D( &
+         varname, &
+         var(:),  &
+         error    )
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_regist_external_1D
+
+  !-----------------------------------------------------------------------------
+  !> Regist external data
+  subroutine FILE_EXTERNAL_INPUT_regist_external_2D( &
+       varname,      &
+       var,     &
+       axistype,     &
+       step_nmax,    &
+       time_now,     &
+       time_step,    &
+       aggregate,    &
+       allow_missing )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    character(len=*), intent(in) :: varname
+    real(RP),         intent(in) :: var(:,:)
+    character(len=*), intent(in) :: axistype
+    integer,          intent(in) :: step_nmax
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: time_step
+    logical,          intent(in),  optional :: aggregate
+    logical,          intent(in),  optional :: allow_missing
+
+    integer :: dim_size(2)
+    logical :: error
+    !---------------------------------------------------------------------------
+
+    call FILE_EXTERNAL_INPUT_init_var( &
+         varname,      &
+         axistype,     &
+         aggregate,    &
+         allow_missing )
+
+    dim_size(:) = shape( var )
+
+    call FILE_EXTERNAL_INPUT_regist_var( &
+         varname,     &
+         axistype,    &
+         2,           &
+         dim_size(:), &
+         step_nmax,   &
+         1,           &
+         time_now,    &
+         time_step,   &
+         UNDEF        )
+
+    call FILE_EXTERNAL_INPUT_put_ref_2D( &
+         varname,  &
+         var(:,:), &
+         error     )
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_regist_external_2D
+
+  !-----------------------------------------------------------------------------
+  !> Regist external data
+  subroutine FILE_EXTERNAL_INPUT_regist_external_3D( &
+       varname,      &
+       var,          &
+       axistype,     &
+       step_nmax,    &
+       time_now,     &
+       time_step,    &
+       aggregate,    &
+       allow_missing )
+    use scale_const, only: &
+       UNDEF => CONST_UNDEF
+    implicit none
+    character(len=*), intent(in) :: varname
+    real(RP),         intent(in) :: var(:,:,:)
+    character(len=*), intent(in) :: axistype
+    integer,          intent(in) :: step_nmax
+    real(DP),         intent(in) :: time_now
+    real(DP),         intent(in) :: time_step
+    logical,          intent(in),  optional :: aggregate
+    logical,          intent(in),  optional :: allow_missing
+
+    integer :: dim_size(3)
+    logical :: error
+    !---------------------------------------------------------------------------
+
+    call FILE_EXTERNAL_INPUT_init_var( &
+         varname,      &
+         axistype,     &
+         aggregate,    &
+         allow_missing )
+
+    dim_size(:) = shape( var )
+
+    call FILE_EXTERNAL_INPUT_regist_var( &
+         varname,     &
+         axistype,    &
+         3,           &
+         dim_size(:), &
+         step_nmax,   &
+         1,           &
+         time_now,    &
+         time_step,   &
+         UNDEF        )
+
+    call FILE_EXTERNAL_INPUT_put_ref_3D( &
+         varname,    &
+         var(:,:,:), &
+         error       )
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_regist_external_3D
+
   !-----------------------------------------------------------------------------
   !> Regist data
-  subroutine FILE_EXTERNAL_INPUT_regist( &
+  subroutine FILE_EXTERNAL_INPUT_regist_file( &
        basename,              &
        basename_add_num,      &
        number_of_files,       &
@@ -314,12 +760,12 @@ contains
        enable_periodic_month, &
        enable_periodic_day,   &
        step_fixed,            &
-       offset,                &
        defval,                &
        check_coordinates,     &
        aggregate,             &
        allow_missing,         &
        step_limit,            &
+       update_dt,             &
        exist                  )
     use scale_file_h, only: &
        FILE_FREAD
@@ -357,13 +803,13 @@ contains
     logical,          intent(in)  :: enable_periodic_year  ! treat as yearly               periodic data?
     logical,          intent(in)  :: enable_periodic_month ! treat as yearly,monthly       periodic data?
     logical,          intent(in)  :: enable_periodic_day   ! treat as yearly,monthly,daily periodic data?
-    real(RP),         intent(in)  :: offset
     real(RP),         intent(in)  :: defval
 
     logical,          intent(in),  optional :: check_coordinates
     logical,          intent(in),  optional :: aggregate
     logical,          intent(in),  optional :: allow_missing
     integer,          intent(in),  optional :: step_limit            ! limit number for reading data
+    real(DP),         intent(out), optional :: update_dt
     logical,          intent(out), optional :: exist
 
     integer                :: step_nmax
@@ -390,19 +836,24 @@ contains
     real(DP) :: datasec       !< absolute second
     integer  :: offset_year   !< offset year
 
-    integer  :: dim1_size, dim1_max, dim1_S
-    integer  :: dim2_size, dim2_max, dim2_S
-    integer  :: dim3_size, dim3_max, dim3_S
-
-    integer  :: step_limit_
-    logical  :: aggregate_
-    logical  :: allow_missing_
-
     character(len=H_LONG) :: filename
 
-    integer  :: fid
-    integer  :: nid, n
+    logical :: aggregate_
+    integer :: step_limit_
+
+    real(RP), allocatable :: buf(:,:,:)
+
+    logical :: error
+
+    integer :: fid
+    integer :: nid, n
     !---------------------------------------------------------------------------
+
+    if ( present(aggregate) ) then
+       aggregate_ = aggregate
+    else
+       aggregate_ = FILE_AGGREGATE
+    end if
 
     if ( present(step_limit) ) then
        if ( step_limit > 0 ) then
@@ -414,38 +865,33 @@ contains
        step_limit_ = FILE_EXTERNAL_INPUT_step_limit
     endif
 
-    if ( present(aggregate) ) then
-       aggregate_ = aggregate
-    else
-       aggregate_ = FILE_AGGREGATE
-    end if
+    call FILE_EXTERNAL_INPUT_init_var( &
+         varname,      &
+         axistype,     &
+         aggregate_,   &
+         allow_missing )
 
-    if ( present(allow_missing) ) then
-       allow_missing_ = allow_missing
-    else
-       allow_missing_ = .false.
-    end if
 
-    do nid = 1, FILE_EXTERNAL_INPUT_item_count
-       if ( FILE_EXTERNAL_INPUT_item(nid)%varname  == varname ) then
-          LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Data is already registered! basename,varname = ', trim(basename), ', ', trim(varname)
-          call PRC_abort
-       endif
-    enddo
+    nid = FILE_EXTERNAL_INPUT_item_count
 
-    FILE_EXTERNAL_INPUT_item_count = FILE_EXTERNAL_INPUT_item_count + 1
+    FILE_EXTERNAL_INPUT_item(nid)%file             = .true.
+    FILE_EXTERNAL_INPUT_item(nid)%nfile            = number_of_files
+    FILE_EXTERNAL_INPUT_item(nid)%file_current     = 1
+    FILE_EXTERNAL_INPUT_item(nid)%data_step_offset = 0
+    FILE_EXTERNAL_INPUT_item(nid)%step_limit       = step_limit_
 
-    if ( FILE_EXTERNAL_INPUT_item_count > FILE_EXTERNAL_INPUT_item_limit ) then
-       LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Number of EXT data exceedes the limit', FILE_EXTERNAL_INPUT_item_count, FILE_EXTERNAL_INPUT_item_limit
-       call PRC_abort
-    endif
-
+    allocate( FILE_EXTERNAL_INPUT_item(nid)%basename(number_of_files) )
     if ( number_of_files > 1 .or. basename_add_num ) then
-       filename = trim(basename) // '_00000'
+       do n = 1, number_of_files
+          write(filename,'(A,A,I5.5)') trim(basename), '_', n - 1
+          FILE_EXTERNAL_INPUT_item(nid)%basename(n) = filename
+       enddo
     else
-       filename = basename
+       FILE_EXTERNAL_INPUT_item(nid)%basename(1) = basename
     end if
 
+
+    filename   = FILE_EXTERNAL_INPUT_item(nid)%basename(1)
     call FILE_Open( filename,             & ! [IN]
                     fid,                  & ! [OUT]
                     aggregate=aggregate_, & ! [IN]
@@ -477,137 +923,9 @@ contains
 
     do n = dim_rank+1, 3
        dim_size(n) = 1
-       var_size(n) = 1
     enddo
 
-    nid = FILE_EXTERNAL_INPUT_item_count
-
-    FILE_EXTERNAL_INPUT_item(nid)%nfile            = number_of_files
-    FILE_EXTERNAL_INPUT_item(nid)%file_current     = 1
-    FILE_EXTERNAL_INPUT_item(nid)%data_step_offset = 0
-
-    allocate( FILE_EXTERNAL_INPUT_item(nid)%basename(number_of_files) )
-    if ( number_of_files > 1 .or. basename_add_num ) then
-       do n = 1, number_of_files
-          write(filename,'(A,A,I5.5)') trim(basename), '_', n - 1
-          FILE_EXTERNAL_INPUT_item(nid)%basename(n) = filename
-       enddo
-    else
-       FILE_EXTERNAL_INPUT_item(nid)%basename(1) = basename
-    end if
-
-    ! setup item
     FILE_EXTERNAL_INPUT_item(nid)%fid           = fid
-    FILE_EXTERNAL_INPUT_item(nid)%varname       = varname
-    FILE_EXTERNAL_INPUT_item(nid)%axistype      = axistype
-    FILE_EXTERNAL_INPUT_item(nid)%ndim          = dim_rank
-    FILE_EXTERNAL_INPUT_item(nid)%step_num      = step_nmax
-    FILE_EXTERNAL_INPUT_item(nid)%step_limit    = step_limit_
-    FILE_EXTERNAL_INPUT_item(nid)%allow_missing = allow_missing_
-    FILE_EXTERNAL_INPUT_item(nid)%aggregate     = aggregate_
-
-
-    select case ( dim_rank )
-    case ( 1 )
-
-       call FILE_EXTERNAL_INPUT_get_dims1D( dim1_size, dim1_max, dim1_S, & ! [OUT]
-                                            varname, axistype            ) ! [IN]
-
-       if ( aggregate_ ) then
-          dim_size(1) = dim1_max
-          var_size(1) = dim1_size
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
-       else
-          if ( dim1_max /= dim_size(1) ) then
-             LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
-             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
-             call PRC_abort
-          endif
-          var_size(1) = dim1_max
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
-       end if
-
-       FILE_EXTERNAL_INPUT_item(nid)%transpose    = .false.
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
-
-    case ( 2 )
-
-       call FILE_EXTERNAL_INPUT_get_dims2D( dim1_size, dim1_max, dim1_S,             & ! [OUT]
-                                            dim2_size, dim2_max, dim2_S,             & ! [OUT]
-                                            FILE_EXTERNAL_INPUT_item(nid)%transpose, & ! [OUT]
-                                            varname, axistype                        ) ! [IN]
-
-       if ( aggregate_ ) then
-          dim_size(1) = dim1_max
-          var_size(1) = dim1_size
-          dim_size(2) = dim2_max
-          var_size(2) = dim2_size
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim2_S
-       else
-          if (      dim1_max /= dim_size(1) &
-               .OR. dim2_max /= dim_size(2) ) then
-             LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
-             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
-             LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
-             call PRC_abort
-          endif
-          var_size(1) = dim1_max
-          var_size(2) = dim2_max
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
-       end if
-
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim2_S
-
-    case ( 3 )
-
-       call FILE_EXTERNAL_INPUT_get_dims3D( dim1_size, dim1_max, dim1_S,             & ! [OUT]
-                                            dim2_size, dim2_max, dim2_S,             & ! [OUT]
-                                            dim3_size, dim3_max, dim3_S,             & ! [OUT]
-                                            FILE_EXTERNAL_INPUT_item(nid)%transpose, & ! [OUT]
-                                            varname, axistype                        ) ! [IN]
-
-       if ( aggregate_ ) then
-          dim_size(1) = dim1_max
-          var_size(1) = dim1_size
-          dim_size(2) = dim2_max
-          var_size(2) = dim2_size
-          dim_size(3) = dim3_max
-          var_size(3) = dim3_size
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = dim1_S
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = dim2_S
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(3) = dim3_S
-       else
-          if (      dim1_max /= dim_size(1) &
-               .OR. dim2_max /= dim_size(2) &
-               .OR. dim3_max /= dim_size(3) ) then
-             LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'data length does not match! ', trim(axistype), ' item:', trim(varname)
-             LOG_ERROR_CONT(*) 'dim 1 (data,requested)    : ', dim_size(1), dim1_max
-             LOG_ERROR_CONT(*) 'dim 2 (data,requested)    : ', dim_size(2), dim2_max
-             LOG_ERROR_CONT(*) 'dim 3 (data,requested)    : ', dim_size(3), dim3_max
-             call PRC_abort
-          endif
-          var_size(1) = dim1_max
-          var_size(2) = dim2_max
-          var_size(3) = dim3_max
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(1) = 1
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(2) = 1
-          FILE_EXTERNAL_INPUT_item(nid)%var_start(3) = 1
-       end if
-
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) = dim1_S
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) = dim2_S
-       FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) = dim3_S
-
-    case default
-       LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Unexpected dim rank: ', dim_rank
-       call PRC_abort
-    end select
-
-    FILE_EXTERNAL_INPUT_item(nid)%dim_size(:) = dim_size(:)
-
 
     if ( enable_periodic_day ) then
        FILE_EXTERNAL_INPUT_item(nid)%flag_periodic = I_periodic_day
@@ -615,18 +933,17 @@ contains
        FILE_EXTERNAL_INPUT_item(nid)%flag_periodic = I_periodic_month
     elseif( enable_periodic_year ) then
        FILE_EXTERNAL_INPUT_item(nid)%flag_periodic = I_periodic_year
-    else
-       FILE_EXTERNAL_INPUT_item(nid)%flag_periodic = 0
     endif
 
-    allocate( FILE_EXTERNAL_INPUT_item(nid)%value(var_size(1),var_size(2),var_size(3),2) )
-
-
-    FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,:) = defval
-    FILE_EXTERNAL_INPUT_item(nid)%offset         = offset
-
-    allocate( FILE_EXTERNAL_INPUT_item(nid)%time(step_limit_) )
-    FILE_EXTERNAL_INPUT_item(nid)%time(:) = 0.0_DP
+    call FILE_EXTERNAL_INPUT_regist_var( &
+         varname,         &
+         axistype,        &
+         dim_rank,        &
+         dim_size(:),     &
+         step_nmax,       &
+         number_of_files, &
+         0.0_DP, 0.0_DP,  &
+         defval           )
 
     do n = 1, FILE_EXTERNAL_INPUT_item(nid)%step_num
        FILE_EXTERNAL_INPUT_item(nid)%time(n) = CALENDAR_CFunits2sec( time_end(n), time_units, TIME_OFFSET_year, TIME_STARTDAYSEC )
@@ -645,8 +962,6 @@ contains
        FILE_EXTERNAL_INPUT_item(nid)%data_step_next = step_fixed
 
     else
-
-       FILE_EXTERNAL_INPUT_item(nid)%fixed_step = .false.
 
        ! seek start position
        FILE_EXTERNAL_INPUT_item(nid)%data_step_next = 1
@@ -717,6 +1032,8 @@ contains
     !--- read first data
     LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A15)') 'Initial read of external data : ', trim(varname)
 
+    allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2),FILE_EXTERNAL_INPUT_item(nid)%var_size(3)) )
+
     select case ( dim_rank )
     case ( 1 )
 
@@ -726,17 +1043,21 @@ contains
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_prev), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,1,1),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_prev), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,1,1),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_1D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,1,1),                            &
+                                            error                                  )
 
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
@@ -744,17 +1065,21 @@ contains
                 ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,1,1),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,1,1),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_1D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,1,1),                            &
+                                            error                                  )
 
     case ( 2 )
 
@@ -764,34 +1089,43 @@ contains
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_prev), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,:,1),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_prev), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,:,1),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_2D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,:,1),                            &
+                                            error                                  )
+
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
                   'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,:,1),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,:,1),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_2D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,:,1),                            &
+                                            error                                  )
 
     case ( 3 )
 
@@ -801,17 +1135,21 @@ contains
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_prev, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,:,:),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,:,:),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_prev ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_3D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,:,:),                            &
+                                            error                                  )
 
        ! read next
        LOG_INFO("FILE_EXTERNAL_INPUT_regist",'(1x,A,A,A,I4,A)') &
@@ -819,22 +1157,28 @@ contains
                   ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ')'
 
        if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                            buf(:,:,:),                                       & ! [OUT]
+                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
+          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                          FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                          buf(:,:,:),                                       & ! [OUT]
+                          step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
        end if
+
+       call FILE_EXTERNAL_INPUT_put_ref_3D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                            buf(:,:,:),                            &
+                                            error                                  )
 
     case default
        LOG_ERROR("FILE_EXTERNAL_INPUT_regist",*) 'Unexpected dim rank: ', dim_rank
        call PRC_abort
     end select
+
+    deallocate( buf )
 
     if ( present(check_coordinates) ) then
        if ( check_coordinates ) then
@@ -845,8 +1189,13 @@ contains
     endif
 
 
+    if ( present(update_dt) ) then
+       update_dt = FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_next) &
+                 - FILE_EXTERNAL_INPUT_item(nid)%time(FILE_EXTERNAL_INPUT_item(nid)%data_step_prev)
+    end if
+
     return
-  end subroutine FILE_EXTERNAL_INPUT_regist
+  end subroutine FILE_EXTERNAL_INPUT_regist_file
 
   !-----------------------------------------------------------------------------
   !> Read data
@@ -870,16 +1219,13 @@ contains
     logical  :: do_readfile
     integer  :: step_next
 
+    real(RP), allocatable :: buf(:)
+
     integer  :: n
-    integer  :: n1
-    integer  :: nn1
+    integer  :: n1, nn1
     !---------------------------------------------------------------------------
 
-    ! searching the data ID
-    nid = -1
-    do n = 1, FILE_EXTERNAL_INPUT_item_count
-       if( varname == FILE_EXTERNAL_INPUT_item(n)%varname ) nid = n
-    enddo
+    nid = FILE_EXTERNAL_INPUT_getId(varname)
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'Variable was not registered: ', trim(varname)
@@ -899,46 +1245,61 @@ contains
                                            do_readfile   ) ! [OUT]
 
     if ( do_readfile ) then
-       step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",'(1x,A,A,A,I4,A,I4,A)') &
-                  'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
-                  ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+       if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
 
-       ! next -> prev
-       FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+          ! next -> prev
+          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
-       ! read next
-       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
-       else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,I_next), & ! [OUT]
-                          step=step_next                       ) ! [IN]
+          step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
+
+          LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",'(1x,A,A,A,I4,A,I4,A)') &
+               'Read 1D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+               ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+
+          allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1)) )
+
+          ! read next
+          if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
+             call FILE_EXTERNAL_INPUT_read_1d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                               buf(:),                                           & ! [OUT]
+                                               step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
+          else
+             call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,     & ! [IN]
+                             FILE_EXTERNAL_INPUT_item(nid)%varname, & ! [IN]
+                             buf(:),                                & ! [OUT]
+                             step=step_next                         ) ! [IN]
+          end if
+
+          call FILE_EXTERNAL_INPUT_put_ref_1D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                               buf(:),                                &
+                                               error                                  )
+
+          deallocate( buf )
+
        end if
+
     endif
+
 
     error = .false.
 
     ! store data with weight
-    do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
+    do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
        nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-       if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-            .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-          var(nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_prev) &
-                   + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,1,1,I_next)
+       if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+            .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+          var(nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_prev) &
+                   + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next)
        else
           if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
              var(nn1) = UNDEF
           else
              LOG_INFO("FILE_EXTERNAL_INPUT_update_1D",*) 'missing value is found in ', &
-                  trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,')'
+                  trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,')'
              error = .true.
              exit
           end if
@@ -970,16 +1331,14 @@ contains
     logical  :: do_readfile
     integer  :: step_next
 
-    integer  :: n
-    integer  :: n1, n2
-    integer  :: nn1, nn2
+    real(RP), allocatable :: buf(:,:)
+
+    integer :: n
+    integer :: n1, n2
+    integer :: nn1, nn2
     !---------------------------------------------------------------------------
 
-    ! searching the data ID
-    nid = -1
-    do n = 1, FILE_EXTERNAL_INPUT_item_count
-       if( varname == FILE_EXTERNAL_INPUT_item(n)%varname ) nid = n
-    enddo
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'Variable was not registered: ', trim(varname)
@@ -1000,81 +1359,68 @@ contains
 
     if ( do_readfile ) then
 
-       step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
+       if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
 
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",'(1x,A,A,A,I4,A,I4,A)') &
-                  'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
-                  ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+          ! next -> prev
+          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
-       ! next -> prev
-       FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+          step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       ! read next
-       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
-       else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,I_next), & ! [OUT]
-                          step=step_next                       ) ! [IN]
+          LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",'(1x,A,A,A,I4,A,I4,A)') &
+               'Read 2D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+               ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+
+          allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2)) )
+
+          ! read next
+          if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
+             call FILE_EXTERNAL_INPUT_read_2d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                               buf(:,:),                                         & ! [OUT]
+                                               step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
+          else
+             call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,     & ! [IN]
+                             FILE_EXTERNAL_INPUT_item(nid)%varname, & ! [IN]
+                             buf(:,:),                              & ! [OUT]
+                             step=step_next                         ) ! [IN]
+          end if
+
+          call FILE_EXTERNAL_INPUT_put_ref_2D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                               buf(:,:),                              &
+                                               error                                  )
+
+          deallocate( buf )
+
        end if
+
     endif
 
     error = .false.
 
-    if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
-       ! store data with weight (x,z)->(z,x)
-       do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
+    ! store data with weight
+    do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+       nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+
+       do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
           nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-          do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
-             nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
-
-             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-                var(nn2,nn1) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
-                             + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
+          if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+               .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+             var(nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_prev) &
+                          + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next)
+          else
+             if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                var(nn1,nn2) = UNDEF
              else
-                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                   var(nn2,nn1) = UNDEF
-                else
-                   LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
-                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,')'
-                   error = .true.
-                   exit
-                end if
+                LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
+                     trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,',',nn2,')'
+                error = .true.
+                exit
              end if
-          enddo
+          end if
        enddo
-    else
-       ! store data with weight
-       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
-          nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
-
-          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
-             nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
-
-             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-                var(nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_prev) &
-                             + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,1,I_next)
-             else
-                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                   var(nn1,nn2) = UNDEF
-                else
-                   LOG_INFO("FILE_EXTERNAL_INPUT_update_2D",*) 'missing value is found in ', &
-                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,')'
-                   error = .true.
-                   exit
-                end if
-             end if
-          enddo
-       enddo
-    endif
+    enddo
 
     return
   end subroutine FILE_EXTERNAL_INPUT_update_2D
@@ -1101,16 +1447,14 @@ contains
     logical  :: do_readfile
     integer  :: step_next
 
-    integer  :: n
-    integer  :: n1, n2, n3
-    integer  :: nn1, nn2, nn3
+    real(RP), allocatable :: buf(:,:,:)
+
+    integer :: n
+    integer :: n1, n2, n3
+    integer :: nn1, nn2, nn3
     !---------------------------------------------------------------------------
 
-    ! searching the data ID
-    nid = -1
-    do n = 1, FILE_EXTERNAL_INPUT_item_count
-       if( varname == FILE_EXTERNAL_INPUT_item(n)%varname ) nid = n
-    enddo
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
 
     if ( nid == 0 ) then
        LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
@@ -1131,92 +1475,378 @@ contains
 
     if ( do_readfile ) then
 
-       step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
+       if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
 
-       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",'(1x,A,A,A,I4,A,I4,A)') &
-                  'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
-                  ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+          ! next -> prev
+          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
 
-       ! next -> prev
-       FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+          step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next - FILE_EXTERNAL_INPUT_item(nid)%data_step_offset
 
-       ! read next
-       if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
-          call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%axistype,            & ! [IN]
-                                            FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                                            step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next  ) ! [IN]
-       else
-          call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,                 & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%varname,             & ! [IN]
-                          FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next), & ! [OUT]
-                          step=step_next                       ) ! [IN]
+          LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",'(1x,A,A,A,I4,A,I4,A)') &
+               'Read 3D var           : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname), &
+               ' (step= ', FILE_EXTERNAL_INPUT_item(nid)%data_step_next, ', file step=', step_next, ')'
+
+          allocate( buf(FILE_EXTERNAL_INPUT_item(nid)%var_size(1),FILE_EXTERNAL_INPUT_item(nid)%var_size(2),FILE_EXTERNAL_INPUT_item(nid)%var_size(3)) )
+
+          ! read next
+          if ( FILE_EXTERNAL_INPUT_item(nid)%aggregate ) then
+             call FILE_EXTERNAL_INPUT_read_3d( FILE_EXTERNAL_INPUT_item(nid)%fid,                & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%varname,            & ! [IN]
+                                               FILE_EXTERNAL_INPUT_item(nid)%axistype,           & ! [IN]
+                                               buf(:,:,:),                                       & ! [OUT]
+                                               step=FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ! [IN]
+          else
+             call FILE_Read( FILE_EXTERNAL_INPUT_item(nid)%fid,     & ! [IN]
+                             FILE_EXTERNAL_INPUT_item(nid)%varname, & ! [IN]
+                             buf(:,:,:),                            & ! [OUT]
+                             step=step_next                         ) ! [IN]
+          end if
+
+          call FILE_EXTERNAL_INPUT_put_ref_3D( FILE_EXTERNAL_INPUT_item(nid)%varname, &
+                                               buf(:,:,:),                            &
+                                               error                                  )
+
        end if
+
     endif
 
     error = .false.
 
-    if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
-       ! store data with weight (x,y,z)->(z,x,y)
-       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
+    ! store data with weight
+    do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+       nn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+
+       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
           nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
 
-          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
+          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
              nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
 
-             do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(3)
-                nn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
-
-                if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-                     .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-                   var(nn3,nn1,nn2) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
-                                    + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
+             if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
+                  .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
+                var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_prev) &
+                                 + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next)
+             else
+                if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
+                   var(nn1,nn2,nn3) = UNDEF
                 else
-                   if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                      var(nn3,nn1,nn2) = UNDEF
-                   else
-                      LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
-                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,',',n3,')'
-                      error = .true.
-                      exit
-                   end if
+                   LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
+                        trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',nn1,',',nn2,',',nn3,')'
+                   error = .true.
+                   exit
                 end if
+             end if
+          enddo
+       enddo
+    enddo
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_update_3D
+
+  !-----------------------------------------------------------------------------
+  !> Put reference data
+  subroutine FILE_EXTERNAL_INPUT_put_ref_1D( &
+       varname, &
+       var,     &
+       error    )
+    implicit none
+    character(len=*), intent(in)  :: varname ! item name
+    real(RP),         intent(in)  :: var(:)  ! variable
+    logical,          intent(out) :: error   ! error code
+
+    integer :: nid
+    integer :: n1, nn1, nnn1
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_1D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+
+    do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+       nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+       nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+       FILE_EXTERNAL_INPUT_item(nid)%value(nn1,1,1,I_next) = var(nnn1)
+    enddo
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_put_ref_1D
+
+  subroutine FILE_EXTERNAL_INPUT_put_ref_2D( &
+       varname, &
+       var,     &
+       error    )
+    implicit none
+    character(len=*), intent(in)  :: varname  ! item name
+    real(RP),         intent(in)  :: var(:,:) ! variable
+    logical,          intent(out) :: error    ! error code
+
+    integer :: nid
+    integer :: n1, n2, nn1, nn2, nnn1, nnn2
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_put_var_2D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+
+    if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
+       ! (x,z)->(z,x)
+       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+          nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+          nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+
+          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+             nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+             nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+             FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn2,nnn1)
+          enddo
+       enddo
+    else
+       ! (z,x)->(z,x)
+       do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+          nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+          nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+
+          do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+             nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+             nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+             FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,1,I_next) = var(nnn1,nnn2)
+          enddo
+       enddo
+    endif
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_put_ref_2D
+
+  subroutine FILE_EXTERNAL_INPUT_put_ref_3D( &
+       varname, &
+       var,     &
+       error    )
+    implicit none
+    character(len=*), intent(in)  :: varname    ! item name
+    real(RP),         intent(in)  :: var(:,:,:) ! variable
+    logical,          intent(out) :: error      ! error code
+
+    integer :: nid
+    integer :: n1, n2, n3, nn1, nn2, nn3, nnn1, nnn2, nnn3
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_put_ref_3D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_prev) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,I_next)
+
+    if ( FILE_EXTERNAL_INPUT_item(nid)%transpose ) then
+       ! (x,y,z)->(z,x,y)
+       do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+          nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+          nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
+
+          do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+             nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+             nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+
+             do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+                nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+                nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
+                FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) = var(nnn2,nnn3,nnn1)
              enddo
           enddo
        enddo
     else
-       ! store data with weight (z,x,y)->(z,x,y)
-       do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(3)
-          nn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+       ! (z,x,y)->(z,x,y)
+       do n3 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(3)
+          nn3  = n3 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(3) - 1
+          nnn3 = n3 + FILE_EXTERNAL_INPUT_item(nid)%var_start(3) - 1
 
-          do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(2)
-             nn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+          do n2 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(2)
+             nn2  = n2 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(2) - 1
+             nnn2 = n2 + FILE_EXTERNAL_INPUT_item(nid)%var_start(2) - 1
 
-             do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_size(1)
-                nn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
-
-                if (       abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) - UNDEF ) > abs( UNDEF * 0.1_RP ) &
-                     .and. abs( FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next) - UNDEF ) > abs( UNDEF * 0.1_RP ) ) then
-                   var(nn1,nn2,nn3) = ( 1.0_RP-weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_prev) &
-                                    + (        weight ) * FILE_EXTERNAL_INPUT_item(nid)%value(n1,n2,n3,I_next)
-                else
-                   if ( FILE_EXTERNAL_INPUT_item(nid)%allow_missing ) then
-                      var(nn1,nn2,nn3) = UNDEF
-                   else
-                      LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'missing value is found in ', &
-                           trim(FILE_EXTERNAL_INPUT_item(nid)%varname), ' at (',n1,',',n2,',',n3,')'
-                      error = .true.
-                      exit
-                   end if
-                end if
+             do n1 = 1, FILE_EXTERNAL_INPUT_item(nid)%dim_max(1)
+                nn1  = n1 + FILE_EXTERNAL_INPUT_item(nid)%dim_start(1) - 1
+                nnn1 = n1 + FILE_EXTERNAL_INPUT_item(nid)%var_start(1) - 1
+                FILE_EXTERNAL_INPUT_item(nid)%value(nn1,nn2,nn3,I_next) = var(nnn1,nnn2,nnn3)
              enddo
           enddo
        enddo
     endif
 
     return
-  end subroutine FILE_EXTERNAL_INPUT_update_3D
+  end subroutine FILE_EXTERNAL_INPUT_put_ref_3D
+
+  !-----------------------------------------------------------------------------
+  !> Get reference data
+  subroutine FILE_EXTERNAL_INPUT_get_ref_1D( &
+       varname, &
+       var,     &
+       error,   &
+       i_step   )
+    implicit none
+    character(len=*), intent(in)  :: varname ! item name
+    real(RP),         intent(out) :: var(:)  ! variable
+    logical,          intent(out) :: error   ! error code
+
+    integer, optional, intent(in)  :: i_step
+
+    integer :: i_step_
+    integer :: nid
+
+    if ( present(i_step) ) then
+       i_step_ = i_step
+    else
+       i_step_ = I_next
+    end if
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_get_ref_3D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    var(:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,1,1,i_step_)
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_get_ref_1D
+
+  subroutine FILE_EXTERNAL_INPUT_get_ref_2D( &
+       varname, &
+       var,     &
+       error,   &
+       i_step   )
+    implicit none
+    character(len=*), intent(in)  :: varname  ! item name
+    real(RP),         intent(out) :: var(:,:) ! variable
+    logical,          intent(out) :: error    ! error code
+
+    integer, optional, intent(in)  :: i_step
+
+    integer :: i_step_
+    integer :: nid
+
+    if ( present(i_step) ) then
+       i_step_ = i_step
+    else
+       i_step_ = I_next
+    end if
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    var(:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,1,i_step_)
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_get_ref_2D
+
+  !-----------------------------------------------------------------------------
+  !> Get reference data
+  subroutine FILE_EXTERNAL_INPUT_get_ref_3D( &
+       varname, &
+       var,     &
+       error,   &
+       i_step   )
+    implicit none
+    character(len=*), intent(in)  :: varname    ! item name
+    real(RP),         intent(out) :: var(:,:,:) ! variable
+    logical,          intent(out) :: error      ! error code
+
+    integer, optional, intent(in)  :: i_step
+
+    integer :: i_step_
+    integer :: nid
+
+    if ( present(i_step) ) then
+       i_step_ = i_step
+    else
+       i_step_ = I_next
+    end if
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    if ( nid == 0 ) then
+       LOG_INFO("FILE_EXTERNAL_INPUT_update_3D",*) 'Variable was not registered: ', trim(varname)
+       error = .true.
+       return
+    endif
+
+    error = .false.
+
+    var(:,:,:) = FILE_EXTERNAL_INPUT_item(nid)%value(:,:,:,i_step_)
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_get_ref_3D
+
+  !-----------------------------------------------------------------------------
+  !> Check time to read
+  subroutine FILE_EXTERNAL_INPUT_query( &
+       varname,          &
+       time_current, &
+       do_readdata   )
+    implicit none
+    character(len=*), intent(in)  :: varname      ! variable name
+    real(DP),         intent(in)  :: time_current ! current time
+    logical,          intent(out) :: do_readdata  ! read new data at this time?
+
+    integer :: nid
+
+    nid = FILE_EXTERNAL_INPUT_getId( varname )
+
+    call FILE_EXTERNAL_INPUT_query_Id( nid,          &
+                                       time_current, &
+                                       do_readdata   )
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_query
+
+  subroutine FILE_EXTERNAL_INPUT_query_Id( &
+       nid,          &
+       time_current, &
+       do_readdata   )
+    implicit none
+    integer,  intent(in)  :: nid ! variable id
+    real(DP), intent(in)  :: time_current ! current time
+    logical,  intent(out) :: do_readdata  ! read new data at this time?
+
+    if (       ( .not. FILE_EXTERNAL_INPUT_item(nid)%fixed_step ) &
+         .and. ( time_current > FILE_EXTERNAL_INPUT_item(nid)%time( FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ) &
+         ) then
+       do_readdata = .true.
+    else
+       do_readdata = .false.
+    end if
+
+    return
+  end subroutine FILE_EXTERNAL_INPUT_query_Id
 
   !-----------------------------------------------------------------------------
   !> Check time to read and calc weight
@@ -1224,7 +1854,7 @@ contains
        nid,          &
        time_current, &
        weight,       &
-       do_readfile   )
+       do_readdata   )
     use scale_file_h, only: &
        FILE_FREAD
     use scale_file, only: &
@@ -1250,7 +1880,7 @@ contains
     integer,  intent(in)  :: nid          ! item id
     real(DP), intent(in)  :: time_current ! current time
     real(RP), intent(out) :: weight       ! weight
-    logical,  intent(out) :: do_readfile  ! read new data at this time?
+    logical,  intent(out) :: do_readdata  ! read new data at this time?
 
     integer                :: step_nmax
     character(len=H_MID)   :: description
@@ -1282,21 +1912,19 @@ contains
     integer  :: n, nn
     !---------------------------------------------------------------------------
 
-    do_readfile = .false.
+    call FILE_EXTERNAL_INPUT_query_Id( nid,          & ! [IN]
+                                       time_current, & ! [IN]
+                                       do_readdata   ) ! [OUT]
 
-    if ( FILE_EXTERNAL_INPUT_item(nid)%fixed_step ) then
-       !--- no time-advance
-    else
-       ! time is passed?
-       if ( time_current > FILE_EXTERNAL_INPUT_item(nid)%time( FILE_EXTERNAL_INPUT_item(nid)%data_step_next ) ) then
+    if ( do_readdata ) then
 
-          do_readfile = .true.
+       LOG_INFO("FILE_EXTERNAL_INPUT_time_advance",'(1x,A,A15)') 'Update external input : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
 
-          LOG_INFO("FILE_EXTERNAL_INPUT_time_advance",'(1x,A,A15)') 'Update external input : ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
+       ! update step position
+       FILE_EXTERNAL_INPUT_item(nid)%data_step_prev = FILE_EXTERNAL_INPUT_item(nid)%data_step_next
+       FILE_EXTERNAL_INPUT_item(nid)%data_step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next + 1
 
-          ! update step position
-          FILE_EXTERNAL_INPUT_item(nid)%data_step_prev = FILE_EXTERNAL_INPUT_item(nid)%data_step_prev + 1
-          FILE_EXTERNAL_INPUT_item(nid)%data_step_next = FILE_EXTERNAL_INPUT_item(nid)%data_step_next + 1
+       if ( FILE_EXTERNAL_INPUT_item(nid)%file ) then
 
           if ( FILE_EXTERNAL_INPUT_item(nid)%flag_periodic > 0 ) then ! periodic time step mode
 
@@ -1366,9 +1994,9 @@ contains
                    endif
 
                    do n = 1, dim_rank
-                      if ( FILE_EXTERNAL_INPUT_item(nid)%dim_size(n) /= dim_size(n) ) then
+                      if ( FILE_EXTERNAL_INPUT_item(nid)%var_size(n) /= dim_size(n) ) then
                          LOG_ERROR("FILE_EXTERNAL_INPUT_time_advance",*) 'The size of dimension', n, ' is inconsistent! '
-                         LOG_ERROR_CONT(*) 'size (previous,current) = ', FILE_EXTERNAL_INPUT_item(nid)%dim_size(n), dim_size(n)
+                         LOG_ERROR_CONT(*) 'size (previous,current) = ', FILE_EXTERNAL_INPUT_item(nid)%var_size(n), dim_size(n)
                          LOG_ERROR_CONT(*) 'basename = ', trim(FILE_EXTERNAL_INPUT_item(nid)%basename(FILE_EXTERNAL_INPUT_item(nid)%file_current)), &
                                        ', varname = ', trim(FILE_EXTERNAL_INPUT_item(nid)%varname)
                          call PRC_abort
@@ -1402,9 +2030,10 @@ contains
 
           endif ! periodic or not
 
-       endif ! time is passed?
+       endif ! read from file?
 
-    endif ! fixed step or not
+    endif ! do read?
+
 
     ! calc weight
     if ( FILE_EXTERNAL_INPUT_item(nid)%fixed_step ) then
@@ -1462,5 +2091,23 @@ contains
 
     return
   end subroutine FILE_EXTERNAL_INPUT_time_advance
+
+
+  function FILE_EXTERNAL_INPUT_getId( varname ) result( nid )
+    character(len=*), intent(in) :: varname
+
+    integer nid, n
+
+    ! searching the data ID
+    nid = 0
+    do n = 1, FILE_EXTERNAL_INPUT_item_count
+       if( varname == FILE_EXTERNAL_INPUT_item(n)%varname ) then
+          nid = n
+          exit
+       end if
+    enddo
+
+    return
+  end function FILE_EXTERNAL_INPUT_getId
 
 end module scale_file_external_input

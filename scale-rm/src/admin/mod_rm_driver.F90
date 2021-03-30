@@ -434,7 +434,7 @@ contains
       if( OCEAN_do .AND. TIME_DOOCEAN_step ) call OCEAN_driver_update
       if( LAND_do  .AND. TIME_DOLAND_step  ) call LAND_driver_update
       if( URBAN_do .AND. TIME_DOURBAN_step ) call URBAN_driver_update
-      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update( TIME_DOend )
+      if( ATMOS_do .AND. TIME_DOATMOS_step ) call ATMOS_driver_update
                                              call USER_update
       ! restart & monitor output
       if ( OCEAN_do ) call OCEAN_vars_monitor
@@ -614,7 +614,7 @@ contains
                                    TIME_NOWDAYSEC,                                                & ! [IN]
                                    force = .true.                                                 )
        call PROF_rapend('ATM_Refstate', 2)
-       call ATMOS_BOUNDARY_driver_set
+       call ATMOS_BOUNDARY_driver_set( TIME_NOWDAYSEC )
        call ATMOS_vars_calc_diagnostics
        call ATMOS_vars_history_setpres
     endif
