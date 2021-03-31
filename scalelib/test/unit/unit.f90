@@ -5,7 +5,8 @@ program unit
   use scale_prc_cartesC, only: &
      PRC_CARTESC_setup
   use scale_comm_cartesC, only: &
-     COMM_setup
+     COMM_setup, &
+     COMM_regist
   use scale_atmos_grid_cartesC, only: &
      ATMOS_GRID_CARTESC_allocate, &
      ATMOS_GRID_CARTESC_generate
@@ -19,6 +20,7 @@ program unit
 
   character(len=H_MID), parameter :: APPNAME = "Unit test"
 
+  integer :: gid
   integer :: q0
 
   ! scale setup
@@ -35,6 +37,7 @@ program unit
 
   ! setup mpi communication
   call COMM_setup
+  call COMM_regist( KA, IA, JA, IHALO, JHALO, gid )
 
   ! setup horizontal/veritical grid system
   call ATMOS_GRID_CARTESC_allocate

@@ -1196,7 +1196,7 @@ contains
     end select
 
     if ( serial_atmos ) then
-       call COMM_bcast( dims(:), 6 )
+       call COMM_bcast( 6, dims(:) )
        call COMM_bcast( timelen )
     endif
 
@@ -1361,8 +1361,8 @@ contains
           JS_org = 1
           JE_org = dims(3)
 
-          call COMM_bcast( LON_all, dims(2), dims(3) )
-          call COMM_bcast( LAT_all, dims(2), dims(3) )
+          call COMM_bcast( dims(2), dims(3), LON_all )
+          call COMM_bcast( dims(2), dims(3), LAT_all )
        else
           LON_min = minval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
           LON_max = maxval( ATMOS_GRID_CARTESC_REAL_LON(:,:) )
@@ -1732,18 +1732,18 @@ contains
 
     if ( serial_atmos ) then
        if ( first_atmos .OR. update_coord ) then
-          call COMM_bcast( LON_org,            dims(2), dims(3) )
-          call COMM_bcast( LAT_org,            dims(2), dims(3) )
-          call COMM_bcast( CZ_org,  dims(1)+2, dims(2), dims(3) )
+          call COMM_bcast(            dims(2), dims(3), LON_org )
+          call COMM_bcast(            dims(2), dims(3), LAT_org )
+          call COMM_bcast( dims(1)+2, dims(2), dims(3), CZ_org )
        endif
 
-       call COMM_bcast( W_org   , dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( U_org   , dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( V_org   , dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( POTT_org, dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( PRES_org, dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( DENS_org, dims(1)+2, dims(2), dims(3) )
-       call COMM_bcast( QTRC_org, dims(1)+2, dims(2), dims(3), QA )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     W_org    )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     U_org    )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     V_org    )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     POTT_org )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     PRES_org )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3),     DENS_org )
+       call COMM_bcast( dims(1)+2, dims(2), dims(3), QA, QTRC_org )
 
     endif
 
@@ -2604,7 +2604,7 @@ contains
     endselect
 
     if( serial_land ) then
-       call COMM_bcast( ldims(:), 3 )
+       call COMM_bcast( 3, ldims(:) )
        call COMM_bcast( use_waterratio )
     endif
 
@@ -2703,7 +2703,7 @@ contains
     endselect
 
     if( serial_ocean ) then
-       call COMM_bcast( odims(:), 2 )
+       call COMM_bcast( 2, odims(:) )
        call COMM_bcast( timelen )
     endif
 
@@ -3083,25 +3083,25 @@ contains
        call PROF_rapstart('___SurfaceBcast',3)
 
        if ( serial_land .and. ( first_surface .or. multi_land ) ) then
-          call COMM_bcast( tg_org, ldims(1), ldims(2), ldims(3) )
+          call COMM_bcast( ldims(1), ldims(2), ldims(3), tg_org )
           if ( use_waterratio ) then
-             call COMM_bcast( smds_org, ldims(1), ldims(2), ldims(3) )
+             call COMM_bcast( ldims(1), ldims(2), ldims(3), smds_org )
           else
-             call COMM_bcast( strg_org, ldims(1), ldims(2), ldims(3) )
+             call COMM_bcast( ldims(1), ldims(2), ldims(3), strg_org )
           end if
-          call COMM_bcast( lst_org, ldims(2), ldims(3) )
-          if ( URBAN_do ) call COMM_bcast( ust_org, ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_IR ), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_IR ), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_NIR), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_NIR), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_direct ,I_R_VIS), ldims(2), ldims(3) )
-          call COMM_bcast( albg_org(:,:,I_R_diffuse,I_R_VIS), ldims(2), ldims(3) )
-          call COMM_bcast( topo_org, ldims(2), ldims(3) )
-          call COMM_bcast( lmask_org, ldims(2), ldims(3) )
-          call COMM_bcast( llon_org, ldims(2), ldims(3) )
-          call COMM_bcast( llat_org, ldims(2), ldims(3) )
-          call COMM_bcast( lz_org, ldims(1) )
+          call COMM_bcast( ldims(2), ldims(3), lst_org )
+          if ( URBAN_do ) call COMM_bcast( ldims(2), ldims(3), ust_org )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_direct ,I_R_IR ) )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_diffuse,I_R_IR ) )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_direct ,I_R_NIR) )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_diffuse,I_R_NIR) )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_direct ,I_R_VIS) )
+          call COMM_bcast( ldims(2), ldims(3), albg_org(:,:,I_R_diffuse,I_R_VIS) )
+          call COMM_bcast( ldims(2), ldims(3), topo_org )
+          call COMM_bcast( ldims(2), ldims(3), lmask_org )
+          call COMM_bcast( ldims(2), ldims(3), llon_org )
+          call COMM_bcast( ldims(2), ldims(3), llat_org )
+          call COMM_bcast( ldims(1), lz_org )
        end if
 
        call PROF_rapend  ('___SurfaceBcast',3)
@@ -3160,19 +3160,19 @@ contains
        call PROF_rapstart('___SurfaceBcast',3)
 
        if ( serial_ocean ) then
-          call COMM_bcast( tw_org, odims(1), odims(2) )
-          call COMM_bcast( sst_org, odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_IR ), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_IR ), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_NIR), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_NIR), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_direct ,I_R_VIS), odims(1), odims(2) )
-          call COMM_bcast( albw_org(:,:,I_R_diffuse,I_R_VIS), odims(1), odims(2) )
-          call COMM_bcast( z0w_org, odims(1), odims(2) )
-          call COMM_bcast( omask_org, odims(1), odims(2) )
+          call COMM_bcast( odims(1), odims(2), tw_org )
+          call COMM_bcast( odims(1), odims(2), sst_org )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_direct ,I_R_IR ) )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_diffuse,I_R_IR ) )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_direct ,I_R_NIR) )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_diffuse,I_R_NIR) )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_direct ,I_R_VIS) )
+          call COMM_bcast( odims(1), odims(2), albw_org(:,:,I_R_diffuse,I_R_VIS) )
+          call COMM_bcast( odims(1), odims(2), z0w_org )
+          call COMM_bcast( odims(1), odims(2), omask_org )
           if ( first_surface .or. update_coord ) then
-             call COMM_bcast( olon_org, odims(1), odims(2) )
-             call COMM_bcast( olat_org, odims(1), odims(2) )
+             call COMM_bcast( odims(1), odims(2), olon_org )
+             call COMM_bcast( odims(1), odims(2), olat_org )
           end if
        end if
 
