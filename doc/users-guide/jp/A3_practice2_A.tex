@@ -173,6 +173,11 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
 \verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
+\verb|/| & \\
 \end{tabularx}
 }}}\\
 
@@ -183,6 +188,7 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \nmitem{TIME_DURATION}を3時間以上に設定した場合には、
 \nmitem{TIME_DT_ATMOS_RESTART}、\nmitem{TIME_DT_OCEAN_RESTART}、\\
 \nmitem{TIME_DT_LAND_RESTART}、\nmitem{TIME_DT_URBAN_RESTART}に、3時間(10800秒)の約数かつ\nmitem{TIME_DT}の倍数を指定する必要がある。
+リスタート計算において連続計算と基準状態 (\ref{subsec:refstat}節参照) を一致させるために、\nmitem{ATMOS_REFSTAT_UPDATE_DT} に 3時間の約数を指定する。
 
 
 3時間目から６時間目までのリスタート計算に対する設定は下記である。\\
@@ -206,6 +212,11 @@ MPI並列数も変更している場合は、\verb|&PARAM_ATMOS_GRID_CARTESC|の
 \verb|&PARAM_ATMOS_BOUNDARY| & \\
 \verb| ATMOS_BOUNDARY_TYPE           = "REAL",                            | & \\
 \verb| ATMOS_BOUNDARY_IN_BASENAME    = "../init/output/boundary_d01",     | & \\
+\verb|/| & \\
+\\
+\verb|&PARAM_ATMOS_REFSTAT| & \\
+\verb| ATMOS_REFSTATE_TYPE      = "INIT",  | & \\
+\textcolor{red}{\verb| ATMOS_REFSTART_UPDATE_DT = 10800.D0,|} &\\
 \verb|/| & \\
 \end{tabularx}
 }}}\\
