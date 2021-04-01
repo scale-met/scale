@@ -68,13 +68,14 @@ An criteria to determine the time step is described in Section \ref{sec:timeinti
   \begin{tabularx}{150mm}{lllX} \hline
     \rowcolor[gray]{0.9} & \multicolumn{1}{l}{Scheme name} & \multicolumn{1}{l}{Description of scheme} & \\ \hline
     \multicolumn{3}{l}{Temporal scheme} &  \\ \hline
-    & \multicolumn{1}{l}{\verb|RK3|} & \multicolumn{2}{l}{Heun-type 3 stage and 3rd-order Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK3|}       & \multicolumn{2}{l}{Heun-type 3 stage and 3rd-order Runge--Kutta scheme} \\
     & \multicolumn{1}{l}{\verb|RK3WS2002|} & \multicolumn{2}{l}{3 stage and generraly 2nd-order Runge--Kutta scheme in \citet{Wicker_2002}} \\
-    & \multicolumn{1}{l}{\verb|RK4|} & \multicolumn{2}{l}{4 stage and 4th-order Runge--Kutta scheme} \\
-    & \multicolumn{1}{l}{\verb|RK7s6o|} & \multicolumn{2}{l}{7 stage and 6th-order Runge--Kutta scheme in Lawson (1967) (supported only for HEVE)} \\
-    & \multicolumn{1}{l}{\verb|RK11s8o|} & \multicolumn{2}{l}{11 stage and 8th-order Runge--Kutta scheme in Cooper and Verner (1972) (supported only for HEVE)} \\
+    & \multicolumn{1}{l}{\verb|RK4|}       & \multicolumn{2}{l}{4 stage and 4th-order Runge--Kutta scheme} \\
+    & \multicolumn{1}{l}{\verb|RK7s6o|}    & \multicolumn{2}{l}{7 stage and 6th-order Runge--Kutta scheme in Lawson (1967) (supported only for HEVE)} \\
+    & \multicolumn{1}{l}{\verb|RK11s8o|}   & \multicolumn{2}{l}{11 stage and 8th-order Runge--Kutta scheme in Cooper and Verner (1972)} \\
+    & \multicolumn{1}{l}{}                 & \multicolumn{2}{l}{~~~~~(supported only for HEVE)} \\
     \hline
-    \multicolumn{3}{l}{Spatial scheme} & Minimum number of halos\\ \hline
+    \multicolumn{3}{l}{Spatial scheme} & \multicolumn{1}{l}{Minimum number of halos}\\ \hline
     & \multicolumn{1}{l}{\verb|CD2|} & \multicolumn{1}{l}{2nd-order central flux} & \multicolumn{1}{l}{1}\\
     & \multicolumn{1}{l}{\verb|CD4|} & \multicolumn{1}{l}{4th-order central flux} & \multicolumn{1}{l}{2}\\
     & \multicolumn{1}{l}{\verb|CD6|} & \multicolumn{1}{l}{6th-order central flux} & \multicolumn{1}{l}{3}\\
@@ -96,11 +97,12 @@ This grid-scale flow may be reduced by using \verb|UD3|.
 So, the use of \verb|UD3| is recommended for experiments with steep terrains.
 
 
-\subsection{Numerical Diffusions}
+\subsection{Numerical Diffusions} \label{subsec:numdiff}
 
-The numerical stability depends on schemes used in simulations.
-Numerical diffusion may improve the stability.
-\scalerm has the hyper-diffusion and divergence dumping as the numerical diffusion.
+The numerical stability depends on schemes for the dynamical process used in simulations (Sec. \ref{subsec:atmos_dyn_scheme}).
+The stability would be improved by applying numerical diffusion.
+\scalerm has the hyper-diffusion and divergence dumping as the explicit numerical diffusion.
+
 The setting for them is the following:
 \editboxtwo{
  \verb|&PARAM_ATMOS_DYN  | & \\
@@ -111,20 +113,30 @@ The setting for them is the following:
 \verb|/                  | & \\
 }
 
-
-The number of laplacian operator associated with hyper-diffusion is specified by \\
+The hyper-diffusion reduces the high frequency component of a target variable; it is mainly used to remove numerical noise.
+The hyper-diffusion of a variable $\phi$ is defined as
+\begin{equation}
+  \nu \Delta^n \rho ( \phi - \phi_0 ),
+\end{equation}
+where $\nu$ is diffusion coefficient, $\phi_0$ is the reference state (See Section \ref{subsec:refstat}), and $\Delta$ is the Laplacian operator,
+\begin{equation}
+  \Delta^n = \nabla^{2n} = \frac{\partial^{2n}}{\partial x^{2n}} + \frac{\partial^{2n}}{\partial y^{2n}} + \frac{\partial^{2n}}{\partial z^{2n}}.
+\end{equation}
+The order of the Laplacian operator is specified by \\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM}. 
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} and \\
 \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a non-dimensional coefficient of the hyper-diffusion.
-The two-grid scale noise is dumped to $1/e$ in one time step if the coefficient is unity.
-The dumping is stronger for larger coefficient.
-The hyper-diffusion itself would be numerically unstable if the coefficient is larger than 1.
-\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} is for the dynamical prognostic variables, such as density, momentum and potential temperature, and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is for the tracer variables, such as specific humidity, hydrometeors, and turbulent kinetic energy.
-\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using the upwind schemes, such as \verb|UD3, UD5|, which has implicit numerical diffusion.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} is a coefficient for the dynamical prognostic variables, such as density, momentum and potential temperature, \\
+and \nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF_TRACER} is a coefficient for the tracer variables, such as specific humidity, hydrometeors, and turbulent kinetic energy.
+The two-grid scale noise is dumped to $1/e$ in a one time step if the coefficient is unity.
+The dumping is stronger for a larger coefficient.
+The hyper-diffusion itself may cause numerical instability if the coefficient is larger than 1.
+\nmitem{ATMOS_DYN_NUMERICAL_DIFF_COEF} can be set to zero when using the upwind schemes, such as \verb|UD3, UD5|, because they have implicit numerical diffusion.
 
 
 The divergence dumping can also be available to improve numerical stability.
-Its coefficient can be set with \nmitem{ATMOS_DYN_DIVDMP_COEF}.
+The divergence dumping reduces the three-dimensional divergence component; it is mainly used to remove sound waves.
+Its coefficient can be set by \nmitem{ATMOS_DYN_DIVDMP_COEF}.
 
 
 \subsection{Positive Definite}
@@ -199,4 +211,65 @@ In the absent of meridional geostrophic wind, the periodic boundary in the x-dir
 The nudge lateral boundary conditions at the south and north boundaries might be used for $f$- and $\beta$-plane experiment.
 For the details of the nudging boundary, see Sections \ref{subsec:buffer}.
 The test case of \verb|scale-rm/test/case/rossby_wave/beta-plane| is an example of a simulation on the $\beta$-plane with the south and north nudging boundaries.
+
+
+
+
+\subsection{Setting for Reference State} \label{subsec:refstat}
+%----------------------------------------------------------
+
+As explained in Section \ref{subsec:numdiff}, the reference state is used in the calculation of numerical diffusion in the dynamical processes.
+It is also used to calculate the pressure gradients in the momentum equations.
+Since the reference state is defined under the hydrostatic balance, the deviation from the reference state can be used to calculate the pressure gradients.
+
+
+
+The settings for the reference state are the following:
+\editboxtwo{
+ \verb|&PARAM_ATMOS_REFSTATE  | & \\
+ \verb|ATMOS_REFSTATE_IN_BASENAME  = "",                 | & ! input file name \\
+ \verb|ATMOS_REFSTATE_OUT_BASENAME = "",                 | & ! output file name \\
+ \verb|ATMOS_REFSTATE_OUT_TITLE    = "SCALE-RM RefState, | & ! title in the output file \\
+ \verb|ATMOS_REFSTATE_OUT_DTYPE    = "DEFAULT",          | & ! data type in the output file \\
+ \verb|ATMOS_REFSTATE_TYPE         = "UNIFORM",          | & ! type of reference state \\
+ \verb|ATMOS_REFSTATE_TEMP_SFC     = 300.0D0,            | & ! surface potential temperature \\
+ \verb|ATMOS_REFSTATE_RH           = 0.0D0,              | & ! relative humidity \\
+ \verb|ATMOS_REFSTATE_POTT_UNIFORM = 300.0D0,            | & ! potential temperature \\
+ \verb|ATMOS_REFSTATE_UPDATE_DT    = -1.0D0,             | & ! update interval [sec] \\
+\verb|/                                                  | & \\
+}
+
+If \nmitem{ATMOS_REFSTATE_IN_BASENAME} is specified, the reference state is read from the file.
+Otherwise, the reference state is generated at the initial time of a simulation with the type specified by \nmitem{ATMOS_REFSTATE_TYPE}.
+It can be \verb|"ISA"|, \verb|"UNIFORM"|, \verb|"ZERO"|, or \verb|"INIT"|:
+\begin{description}
+\item[ISA]
+  The international standard atmosphere where the surface potential temperature, \\
+  relative humidity, and the surface pressure are specified by \nmitem{ATMOS_REFSTATE_TEMP_SFC}, \nmitem{ATMOS_REFSTATE_RH}, and \nmitem{CONST_Pstd} (See Section \ref{subsec:const}), respectively.
+\item[UNIFORM]
+  The constant potential temperature and relative humidity profile specified \\
+  by \nmitem{ATMOS_REFSTATE_POTT_UNIFORM} and \nmitem{ATMOS_REFSTATE_RH}, respectively.
+\item[ZERO]
+  The profile with all variables set to zero.
+\item[INIT]
+  The horizontally averaged initial state.
+\end{description}
+
+When \nmitem{ATMOS_REFSTATE_TYPE} is \verb|"INIT"|,
+the reference state can be updated during the simulation.
+The update interval is specified by \nmitem{ATMOS_REFSTATE_UPDATE_DT}. \\The unit of \nmitem{ATMOS_REFSTATE_UPDATE_DT} is seconds.
+The updated reference state is the horizontally averaged value at the update time.
+If \nmitem{ATMOS_REFSTATE_UPDATE_DT} is set to a negative value, the reference state is not updated during the simulation.
+
+
+For a restart simulation, you need to pay attention to the setting of the reference state.
+In order for the result of a restart simulation to be the same as that of the continuous simulation,
+it is necessary to set so that the reference state of both are the same.
+%
+If you use an \verb|"INIT"|-type and update the reference state (\nmitem{ATMOS_REFSTATE_UPDATE_DT} $>$ 0),
+the reference states of the two simulations will be identical
+by setting the update interval (\nmitem{ATMOS_REFSTATE_UPDATE_DT}) to a divisor of the restart interval.
+%
+If you use an \verb|"INIT"|-type and do not update the reference state (\nmitem{ATMOS_REFSTATE_UPDATE_DT} $<$ 0),
+you can use the same reference state by outputting the state to a file specified by \nmitem{ATMOS_REFSTATE_OUT_BASENAME} in the run before the restart and inputting the state from the file by specifying \nmitem{ATMOS_REFSTATE_IN_BASENAME} in the run after the restart.
 
