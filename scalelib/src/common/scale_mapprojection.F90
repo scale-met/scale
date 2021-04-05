@@ -91,7 +91,7 @@ module scale_mapprojection
   real(RP), public :: MAPPROJECTION_basepoint_lat =  34.653_RP ! position of base point in real world [deg]
 
   type, public :: mappinginfo
-     character(len=H_SHORT) :: mapping_name
+     character(len=H_SHORT) :: mapping_name = ""
      real(DP)               :: false_easting
      real(DP)               :: false_northing
      real(DP)               :: longitude_of_central_meridian
@@ -101,7 +101,7 @@ module scale_mapprojection
      real(DP)               :: standard_parallel(2)
      real(DP)               :: rotation
   end type mappinginfo
-  type(mappinginfo), public :: MAPPROJECTION_mappinginfo
+  type(mappinginfo), public, save :: MAPPROJECTION_mappinginfo
 
   type, public :: mappingparam
      real(DP) :: basepoint_x

@@ -125,7 +125,7 @@ contains
     if ( RP == 8 ) then
        EPS_bilinear = 1E-6_RP
     else
-       EPS_bilinear = 1E-2_RP
+       EPS_bilinear = 0.025_RP
     end if
 
     return
