@@ -1721,7 +1721,7 @@ contains
                                         X_org  (:,:),      & ! [OUT]
                                         Y_org  (:,:)       ) ! [OUT]
 
-          zonal = ( maxval(LON_org) - minval(LAT_org) ) > 2.0_RP * PI * 0.9_RP
+          zonal = ( maxval(LON_org) - minval(LON_org) ) > 2.0_RP * PI * 0.9_RP
           pole = ( maxval(LAT_org) > PI * 0.5_RP * 0.9_RP ) .or. ( minval(LAT_org) < - PI * 0.5_RP * 0.9_RP )
           call INTERP_factor3d( KA_org, 1, KA_org,       & ! [IN]
                                 IA_org, JA_org,          & ! [IN]
