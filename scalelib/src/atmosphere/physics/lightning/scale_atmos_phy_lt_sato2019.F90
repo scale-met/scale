@@ -527,7 +527,6 @@ contains
     real(RP), intent(inout) :: Epot(KA,IA,JA) !--- Electrical potential at previous time step [V]
 
     real(RP) :: QHYD_mass(KA,IA,JA)         !--- Mass of total hydrometeor [kg/m3]
-    real(RP) :: RHOQ0                       !--- Tracer after lightning component
     real(RP) :: QCRG(KA,IA,JA)              !--- Total charge density [nC/m3]
     real(RP) :: Efield(KA,IA,JA,I_lt_abs)   !--- Electrical field (1-3 ->x,y,z, 4->abs. )
     real(RP) :: NUM_end(KA,IA,JA,3)         !--- Number of each flash type (1->negative, 2->ground, 3->positive)
@@ -559,8 +558,7 @@ contains
     NUM_end(:,:,:,:) = 0.0_RP
     B_F2013(:,:) = 0.0_RP
 
-    !$omp parallel do &
-    !$omp private(RHOQ0)
+    !$omp parallel do
     do j = JS, JE
     do i = IS, IE
 
@@ -711,9 +709,9 @@ contains
          case ( 'Each_POLARITY', 'Each_POLARITY2' )
 
             !$omp parallel do &
-            !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac, &
-            !$omp         int_sw,lack, &
-            !$omp         positive,negative,zerosw,sw)
+            !$omp private(Total_Sarea,r_totalSarea,flg_chrged,pos_crg,neg_crg,frac,lack, &
+            !$omp         diff_qcrg,crg_rate,sum_crg,qcrg_before, &
+            !$omp         positive,negative,zerosw,sw,int_sw)
             do j = JS, JE
             do i = IS, IE
             do k = KS, KE
@@ -1857,7 +1855,6 @@ contains
 
    Z(:,:,:)=0.0_RP
 
-   !$omp parallel do
    do j = JE, JS,-1
    do i = IE, IS,-1
 
@@ -1926,7 +1923,6 @@ contains
 
    Z(:,:,:)=0.0_RP
 
-   !$omp parallel do
    do j = JS, JE
    do i = IS, IE
 
@@ -2036,7 +2032,6 @@ contains
   
    Z(:,:,:)=0.0_RP
   
-   !$omp parallel do
    do j = JE, JS,-1
    do i = IE, IS,-1
 
@@ -2105,7 +2100,6 @@ contains
 
    Z(:,:,:) = 0.0_RP
 
-   !$omp parallel do
    do j = JS, JE
    do i = IS, IE
 
