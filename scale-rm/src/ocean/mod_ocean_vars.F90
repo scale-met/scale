@@ -29,6 +29,7 @@ module mod_ocean_vars
   !++ Public procedure
   !
   public :: OCEAN_vars_setup
+  public :: OCEAN_vars_finalize
   public :: OCEAN_vars_restart_read
   public :: OCEAN_vars_restart_write
   public :: OCEAN_vars_history
@@ -578,6 +579,108 @@ contains
 
     return
   end subroutine OCEAN_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_vars_finalize
+    use mod_ocean_admin, only: &
+       OCEAN_ICE_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_vars_finalize",*) 'Finalize'
+
+    select case ( OCEAN_ICE_TYPE )
+    case ( 'NONE','OFF' )
+       ICE_flag = .false.
+    case default
+       ICE_flag = .true.
+    end select
+
+    deallocate( OCEAN_TEMP        )
+    deallocate( OCEAN_SALT        )
+    deallocate( OCEAN_UVEL        )
+    deallocate( OCEAN_VVEL        )
+
+    deallocate( OCEAN_OCN_Z0M     )
+
+    deallocate( OCEAN_SFC_TEMP    )
+    deallocate( OCEAN_SFC_albedo  )
+    deallocate( OCEAN_SFC_Z0M     )
+    deallocate( OCEAN_SFC_Z0H     )
+    deallocate( OCEAN_SFC_Z0E     )
+
+    deallocate( OCEAN_TEMP_t      )
+    deallocate( OCEAN_SALT_t      )
+    deallocate( OCEAN_UVEL_t      )
+    deallocate( OCEAN_VVEL_t      )
+
+    if ( ICE_flag ) then
+       deallocate( OCEAN_ICE_TEMP  )
+       deallocate( OCEAN_ICE_MASS  )
+
+       deallocate( OCEAN_ICE_TEMP_t )
+       deallocate( OCEAN_ICE_MASS_t )
+
+    end if
+
+    deallocate( ATMOS_TEMP        )
+    deallocate( ATMOS_PRES        )
+    deallocate( ATMOS_W           )
+    deallocate( ATMOS_U           )
+    deallocate( ATMOS_V           )
+    deallocate( ATMOS_DENS        )
+    deallocate( ATMOS_QV          )
+    deallocate( ATMOS_PBL         )
+    deallocate( ATMOS_SFC_DENS    )
+    deallocate( ATMOS_SFC_PRES    )
+    deallocate( ATMOS_SFLX_rad_dn )
+    deallocate( ATMOS_cosSZA      )
+    deallocate( ATMOS_SFLX_water  )
+    deallocate( ATMOS_SFLX_ENGI   )
+
+    deallocate( OCEAN_SFLX_GH    )
+    deallocate( OCEAN_SFLX_water )
+    deallocate( OCEAN_SFLX_ENGI  )
+    if ( ICE_flag ) then
+       deallocate( OCEAN_OFLX_GH    )
+       deallocate( OCEAN_OFLX_water )
+       deallocate( OCEAN_OFLX_ENGI  )
+    endif
+
+    deallocate( OCEAN_SFLX_MW   )
+    deallocate( OCEAN_SFLX_MU   )
+    deallocate( OCEAN_SFLX_MV   )
+    deallocate( OCEAN_SFLX_SH   )
+    deallocate( OCEAN_SFLX_LH   )
+    deallocate( OCEAN_SFLX_QTRC )
+    deallocate( OCEAN_U10       )
+    deallocate( OCEAN_V10       )
+    deallocate( OCEAN_T2        )
+    deallocate( OCEAN_Q2        )
+
+    deallocate( OCEAN_Ustar )
+    deallocate( OCEAN_Tstar )
+    deallocate( OCEAN_Qstar )
+    deallocate( OCEAN_Wstar )
+    deallocate( OCEAN_RLmo  )
+
+    if ( ICE_flag ) then
+       deallocate( OCEAN_OCN_Ustar )
+       deallocate( OCEAN_OCN_Tstar )
+       deallocate( OCEAN_OCN_Qstar )
+       deallocate( OCEAN_OCN_Wstar )
+       deallocate( OCEAN_OCN_RLmo  )
+    end if
+
+    deallocate( OCEAN_ICE_FRAC )
+
+    deallocate( OCEAN_MASS_SUPL )
+    deallocate( OCEAN_ENGI_SUPL )
+
+    return
+  end subroutine OCEAN_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Open ocean restart file for read

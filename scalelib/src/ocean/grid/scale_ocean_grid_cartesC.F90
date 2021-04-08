@@ -27,6 +27,7 @@ module scale_ocean_grid_cartesC
   !++ Public procedure
   !
   public :: OCEAN_GRID_CARTESC_setup
+  public :: OCEAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -133,6 +134,22 @@ contains
 
     return
   end subroutine OCEAN_GRID_CARTESC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("OCEAN_GRID_CARTESC_finalize",*) 'Finalize'
+
+    deallocate( OCEAN_GRID_CARTESC_CZ  )
+    deallocate( OCEAN_GRID_CARTESC_FZ  )
+    deallocate( OCEAN_GRID_CARTESC_CDZ )
+
+    return
+  end subroutine OCEAN_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Read ocean grid

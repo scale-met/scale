@@ -27,6 +27,7 @@ module mod_atmos_dyn_driver
   !++ Public procedure
   !
   public :: ATMOS_DYN_driver_setup
+  public :: ATMOS_DYN_driver_finalize
   public :: ATMOS_DYN_driver
 
   !-----------------------------------------------------------------------------
@@ -62,25 +63,25 @@ module mod_atmos_dyn_driver
   !++ Private parameters & variables
   !
   ! Numerical filter
-  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef          = 1.0E-4_RP ! nondimensional numerical diffusion
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   = 0.0_RP    ! nondimensional numerical diffusion for tracer
-  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact      = 1.0_RP
-  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate  = .true.
+  integer,  private :: ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef          ! nondimensional numerical diffusion
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   ! nondimensional numerical diffusion for tracer
+  real(RP), private :: ATMOS_DYN_NUMERICAL_DIFF_sfc_fact
+  logical , private :: ATMOS_DYN_NUMERICAL_DIFF_use_refstate
 
-  real(RP), private :: ATMOS_DYN_wdamp_tau                    = -1.0_RP   ! maximum tau for Rayleigh damping of w [s]
-  real(RP), private :: ATMOS_DYN_wdamp_height                 = -1.0_RP   ! height       to start apply Rayleigh damping [m]
-  integer,  private :: ATMOS_DYN_wdamp_layer                  = -1        ! layer number to start apply Rayleigh damping [num]
+  real(RP), private :: ATMOS_DYN_wdamp_tau                    ! maximum tau for Rayleigh damping of w [s]
+  real(RP), private :: ATMOS_DYN_wdamp_height                 ! height       to start apply Rayleigh damping [m]
+  integer,  private :: ATMOS_DYN_wdamp_layer                  ! layer number to start apply Rayleigh damping [num]
 
   ! Divergence damping
-  real(RP), private :: ATMOS_DYN_divdmp_coef                  = 0.0_RP    ! Divergence dumping coef
+  real(RP), private :: ATMOS_DYN_divdmp_coef                  ! Divergence dumping coef
 
   ! Flux-Corrected Transport limiter
-  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND       = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum            = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_T                   = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER              = .false.
-  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream        = .true.
+  logical,  private :: ATMOS_DYN_FLAG_TRACER_SPLIT_TEND
+  logical,  private :: ATMOS_DYN_FLAG_FCT_momentum
+  logical,  private :: ATMOS_DYN_FLAG_FCT_T
+  logical,  private :: ATMOS_DYN_FLAG_FCT_TRACER
+  logical,  private :: ATMOS_DYN_FLAG_FCT_along_stream
 
   !-----------------------------------------------------------------------------
 contains
@@ -149,6 +150,24 @@ contains
 
     if ( ATMOS_sw_dyn ) then
 
+       ATMOS_DYN_NUMERICAL_DIFF_LAPLACIAN_NUM = 2
+       ATMOS_DYN_NUMERICAL_DIFF_coef          = 1.0E-4_RP
+       ATMOS_DYN_NUMERICAL_DIFF_coef_TRACER   = 0.0_RP
+       ATMOS_DYN_NUMERICAL_DIFF_sfc_fact      = 1.0_RP
+       ATMOS_DYN_NUMERICAL_DIFF_use_refstate  = .true.
+
+       ATMOS_DYN_wdamp_tau    = -1.0_RP
+       ATMOS_DYN_wdamp_height = -1.0_RP
+       ATMOS_DYN_wdamp_layer  = -1
+
+       ATMOS_DYN_divdmp_coef = 0.0_RP
+
+       ATMOS_DYN_FLAG_TRACER_SPLIT_TEND = .false.
+       ATMOS_DYN_FLAG_FCT_momentum      = .false.
+       ATMOS_DYN_FLAG_FCT_T             = .false.
+       ATMOS_DYN_FLAG_FCT_TRACER        = .false.
+       ATMOS_DYN_FLAG_FCT_along_stream  = .true.
+
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_DYN,iostat=ierr)
@@ -203,6 +222,16 @@ contains
     return
   end subroutine ATMOS_DYN_driver_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_driver_finalize
+    use scale_atmos_dyn, only: &
+       ATMOS_DYN_finalize
+
+    call ATMOS_DYN_finalize
+
+    return
+  end subroutine ATMOS_DYN_driver_finalize
   !-----------------------------------------------------------------------------
   !> Dynamical Process (Wrapper)
   subroutine ATMOS_DYN_driver( do_flag )

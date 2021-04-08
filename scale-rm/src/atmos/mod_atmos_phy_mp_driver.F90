@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_driver
   !
   public :: ATMOS_PHY_MP_driver_tracer_setup
   public :: ATMOS_PHY_MP_driver_setup
+  public :: ATMOS_PHY_MP_driver_finalize
   public :: ATMOS_PHY_MP_driver_calc_tendency
   public :: ATMOS_PHY_MP_driver_adjustment
   public :: ATMOS_PHY_MP_driver_qhyd2qtrc
@@ -66,12 +67,12 @@ module mod_atmos_phy_mp_driver
   !
   !++ Private parameters & variables
   !
-  logical,  private :: MP_do_precipitation   = .true.  !> apply sedimentation (precipitation)?
-  logical,  private :: MP_do_negative_fixer  = .true.  !> apply negative fixer?
-  real(RP), private :: MP_limit_negative     = 0.1_RP  !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
-  integer,  private :: MP_ntmax_sedimentation = 1      !> number of time step for sedimentation
-  real(RP), private :: MP_max_term_vel = 10.0_RP       !> terminal velocity for calculate dt of sedimentation
-  real(RP), private :: MP_cldfrac_thleshold            !> thleshold for cloud fraction
+  logical,  private :: MP_do_precipitation    !> apply sedimentation (precipitation)?
+  logical,  private :: MP_do_negative_fixer   !> apply negative fixer?
+  real(RP), private :: MP_limit_negative      !> Abort if abs(fixed negative vaue) > abs(MP_limit_negative)
+  integer,  private :: MP_ntmax_sedimentation !> number of time step for sedimentation
+  real(RP), private :: MP_max_term_vel        !> terminal velocity for calculate dt of sedimentation
+  real(RP), private :: MP_cldfrac_thleshold   !> thleshold for cloud fraction
   integer,  private :: MP_NSTEP_SEDIMENTATION
   real(RP), private :: MP_RNSTEP_SEDIMENTATION
   real(DP), private :: MP_DTSEC_SEDIMENTATION
@@ -332,6 +333,12 @@ contains
 
        MP_cldfrac_thleshold = EPS
 
+       MP_do_precipitation    = .true.
+       MP_do_negative_fixer   = .true.
+       MP_limit_negative      = 0.1_RP
+       MP_ntmax_sedimentation = 1
+       MP_max_term_vel        = 10.0_RP
+
        !--- read namelist
        rewind(IO_FID_CONF)
        read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_MP,iostat=ierr)
@@ -435,6 +442,42 @@ contains
     return
   end subroutine ATMOS_PHY_MP_driver_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_MP_driver_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_MP_TYPE, &
+       ATMOS_sw_phy_mp
+    use scale_atmos_phy_mp_tomita08, only: &
+       ATMOS_PHY_MP_Tomita08_finalize
+    use scale_atmos_phy_mp_sn14, only: &
+       ATMOS_PHY_MP_sn14_finalize
+    use scale_atmos_phy_mp_suzuki10, only: &
+       ATMOS_PHY_MP_suzuki10_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_mp ) then
+       select case ( ATMOS_PHY_MP_TYPE )
+       case ( 'KESSLER' )
+       case ( 'TOMITA08' )
+          call ATMOS_PHY_MP_Tomita08_finalize
+       case ( 'SN14' )
+          call ATMOS_PHY_MP_sn14_finalize
+       case ( 'SUZUKI10' )
+          call ATMOS_PHY_MP_suzuki10_finalize
+       end select
+    end if
+
+    if ( allocated(HIST_hyd_id) ) deallocate( HIST_hyd_id )
+    if ( allocated(HIST_crg_id) ) deallocate( HIST_crg_id )
+    if ( allocated(hist_vterm_id) ) deallocate( hist_vterm_id )
+
+    return
+  end subroutine ATMOS_PHY_MP_driver_finalize
   !-----------------------------------------------------------------------------
   !> adjustment
   subroutine ATMOS_PHY_MP_driver_adjustment

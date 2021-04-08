@@ -27,6 +27,7 @@ module scale_ocean_grid_cartesC_real
   !++ Public procedure
   !
   public :: OCEAN_GRID_CARTESC_REAL_setup
+  public :: OCEAN_GRID_CARTESC_REAL_finalize
   public :: OCEAN_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
@@ -51,6 +52,7 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup area and volume
   subroutine OCEAN_GRID_CARTESC_REAL_setup
+    implicit none
 
     ! at this moment, horizontal grid is identical to that of the atmosphere
     allocate( OCEAN_GRID_CARTESC_REAL_AREA(    OIA,OJA) )
@@ -59,6 +61,18 @@ contains
     return
   end subroutine OCEAN_GRID_CARTESC_REAL_setup
 
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine OCEAN_GRID_CARTESC_REAL_finalize
+    implicit none
+
+    deallocate( OCEAN_GRID_CARTESC_REAL_AREA )
+    deallocate( OCEAN_GRID_CARTESC_REAL_VOL )
+
+    return
+  end subroutine OCEAN_GRID_CARTESC_REAL_finalize
+
+  !-----------------------------------------------------------------------------
   subroutine OCEAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA

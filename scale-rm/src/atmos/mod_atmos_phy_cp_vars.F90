@@ -28,6 +28,7 @@ module mod_atmos_phy_cp_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_vars_setup
+  public :: ATMOS_PHY_CP_vars_finalize
   public :: ATMOS_PHY_CP_vars_fillhalo
   public :: ATMOS_PHY_CP_vars_restart_read
   public :: ATMOS_PHY_CP_vars_restart_write
@@ -264,6 +265,42 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Setup
+  subroutine ATMOS_PHY_CP_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CP_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_CP_DENS_t     )
+    deallocate( ATMOS_PHY_CP_MOMZ_t     )
+    deallocate( ATMOS_PHY_CP_RHOT_t     )
+    deallocate( ATMOS_PHY_CP_RHOQV_t      )
+    deallocate( ATMOS_PHY_CP_RHOHYD_t )
+
+    deallocate( ATMOS_PHY_CP_w0mean        )
+    deallocate( ATMOS_PHY_CP_kf_nca        )
+
+    ! for tendency restart
+    deallocate( VAR_t_NAME )
+    deallocate( VAR_t_DESC )
+    deallocate( VAR_t_UNIT )
+    deallocate( VAR_t_ID   )
+
+    deallocate( ATMOS_PHY_CP_MFLX_cloudbase    )
+    deallocate( ATMOS_PHY_CP_SFLX_rain         )
+    deallocate( ATMOS_PHY_CP_SFLX_snow         )
+    deallocate( ATMOS_PHY_CP_SFLX_ENGI         )
+    deallocate( ATMOS_PHY_CP_cloudtop          )
+    deallocate( ATMOS_PHY_CP_cloudbase         )
+    deallocate( ATMOS_PHY_CP_cldfrac_dp    )
+    deallocate( ATMOS_PHY_CP_cldfrac_sh    )
+
+    return
+  end subroutine ATMOS_PHY_CP_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

@@ -102,6 +102,7 @@ SUB_OBJS =	\
 #	mod_realinput_nicam.o     \
 
 MAIN_OBJS =	\
+	mod_launcher.o            \
 	mod_rm_driver.o           \
 	mod_rm_prep.o
 
@@ -118,7 +119,7 @@ build:
 	$(MAKE) makelib
 	@echo;echo "Entering scale-rm...";echo "Current version is " $(VERSION)
 	mkdir -p $(BUILD_DIR)
-	$(MAKE) $(subst $(BINDIR),$(BUILD_DIR),$(BINS))
+	$(MAKE) makebin
 	@echo "Complete making scale-rm."
 
 install:
@@ -134,29 +135,28 @@ info:
 makelib:
 	$(MAKE) -C $(SCALELIBDIR)/src
 
+makebin: $(BUILD_DIR)/$(BINNAME)$(POSTFIX) $(BUILD_DIR)/$(PPNAME)$(POSTFIX)
+
 $(BUILD_DIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME).o  $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BUILD_DIR)/$(INITNAME)$(POSTFIX) : $(BUILD_DIR)/$(INITNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
-	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
-$(BUILD_DIR)/$(PPNAME)$(POSTFIX)   : $(BUILD_DIR)/$(PPNAME).o   $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
+$(BUILD_DIR)/$(PPNAME)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME).o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS) $(CONTRIB_LIBS)
 
 $(BINDIR)/$(BINNAME)$(POSTFIX)  : $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
 	install $< $@
 
-$(BINDIR)/$(INITNAME)$(POSTFIX) : $(BUILD_DIR)/$(INITNAME)$(POSTFIX)
-	install $< $@
-
 $(BINDIR)/$(PPNAME)$(POSTFIX)   : $(BUILD_DIR)/$(PPNAME)$(POSTFIX)
 	install $< $@
+
+$(BINDIR)/$(INITNAME)$(POSTFIX) : $(BINDIR)/$(PPNAME)$(POSTFIX)
+	(cd $(BINDIR); ln -sf `basename $<` $@)
 
 
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
-  $(BUILD_DIR)/$(BINNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/$(INITNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/$(PPNAME).o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
-  $(BUILD_DIR)/mod_user.o    : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
+  $(BUILD_DIR)/$(BINNAME).o : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/$(PPNAME).o  : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(BUILD_DIR)/mod_user.o
+  $(BUILD_DIR)/mod_user.o   : $(LIBS) $(patsubst %,$(BUILD_DIR)/%,$(SUB_OBJS))
 endif
 
 

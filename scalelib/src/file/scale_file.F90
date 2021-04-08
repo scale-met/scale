@@ -34,6 +34,7 @@ module scale_file
   !++ Public procedures
   !
   public :: FILE_setup
+  public :: FILE_finalize
   public :: FILE_open
   public :: FILE_opened
   public :: FILE_create
@@ -62,7 +63,6 @@ module scale_file
   public :: FILE_flush
   public :: FILE_close
   public :: FILE_close_all
-  public :: FILE_make_fname
   public :: FILE_attach_buffer
   public :: FILE_detach_buffer
   public :: FILE_get_CFtunits
@@ -181,7 +181,7 @@ module scale_file
   !
   !++ Public parameters & variables
   !
-  logical, public :: FILE_AGGREGATE = .false. !> do parallel I/O through PnetCDF (default setting)
+  logical, public :: FILE_AGGREGATE !> do parallel I/O through PnetCDF (default setting)
 
   !-----------------------------------------------------------------------------
   !
@@ -230,7 +230,9 @@ contains
 
     integer :: ierr
 
-       !--- read namelist
+    FILE_AGGREGATE = .false.
+
+    !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_FILE,iostat=ierr)
     if( ierr < 0 ) then !--- missing
@@ -247,6 +249,17 @@ contains
 
     return
   end subroutine FILE_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  !-----------------------------------------------------------------------------
+  subroutine FILE_finalize
+
+    FILE_nfiles = 0
+    FILE_nvars = 0
+
+    return
+  end subroutine FILE_finalize
 
   !-----------------------------------------------------------------------------
   !> create file
@@ -5039,34 +5052,6 @@ contains
     return
   end subroutine FILE_close_all
 
-  subroutine FILE_make_fname( &
-       basename, &
-       prefix,   &
-       rankid,   &
-       len,      &
-       fname     )
-    character(len=*), intent( in) :: basename
-    character(len=*), intent( in) :: prefix
-    integer,          intent( in) :: rankid
-    integer,          intent( in) :: len
-    character(len=*), intent(out) :: fname
-
-    !                           12345678901234567
-    character(len=17) :: fmt = "(A, '.', A, I*.*)"
-    !---------------------------------------------------------------------------
-
-    if ( len < 1 .or. len > 9 ) then
-       LOG_ERROR("FILE_make_fname",*) 'len is invalid'
-       call PRC_abort
-    end if
-
-    write(fmt(14:14),'(I1)') len
-    write(fmt(16:16),'(I1)') len
-    write(fname, fmt) trim(basename), trim(prefix), rankid
-
-    return
-  end subroutine FILE_make_fname
-
   !-----------------------------------------------------------------------------
   !> get unit of time
   !-----------------------------------------------------------------------------
@@ -5153,13 +5138,13 @@ contains
     end if
 
     if ( present(postfix) ) then
-       fname = trim(basename)//trim(postfix)
+       call IO_get_fname(fname, trim(basename)//trim(postfix))
     elseif ( aggregate_ ) then
-       fname = basename
+       call IO_get_fname(fname, basename)
     elseif ( single ) then
-       fname = trim(basename)//'.peall'
+       call IO_get_fname(fname, basename, rank=-1)
     else
-       call FILE_make_fname( basename, 'pe', rankid, 6, fname )
+       call IO_get_fname(fname, basename, rank=rankid)
     endif
 
     !--- search existing file

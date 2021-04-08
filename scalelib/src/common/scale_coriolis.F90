@@ -25,6 +25,7 @@ module scale_coriolis
   !++ Public procedure
   !
   public :: CORIOLIS_setup
+  public :: CORIOLIS_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -122,5 +123,16 @@ contains
 
     return
   end subroutine CORIOLIS_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CORIOLIS_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( CORIOLIS_f )
+
+    return
+  end subroutine CORIOLIS_finalize
 
 end module scale_coriolis

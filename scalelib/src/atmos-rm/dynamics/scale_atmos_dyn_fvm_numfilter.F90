@@ -36,6 +36,7 @@ module scale_atmos_dyn_fvm_numfilter
   !++ Public procedure
   !
   public :: ATMOS_DYN_fvm_numfilter_setup
+  public :: ATMOS_DYN_fvm_numfilter_finalize
   public :: ATMOS_DYN_fvm_numfilter_flux
   public :: ATMOS_DYN_fvm_numfilter_flux_q
   public :: ATMOS_DYN_fvm_numfilter_tend
@@ -75,24 +76,24 @@ module scale_atmos_dyn_fvm_numfilter
   real(RP), allocatable :: CNX4(:,:,:)
   real(RP), allocatable :: CNY4(:,:,:)
 
-  integer :: I_COMM_DENS_Z = 1
-  integer :: I_COMM_DENS_X = 2
-  integer :: I_COMM_DENS_Y = 3
-  integer :: I_COMM_MOMZ_Z = 4
-  integer :: I_COMM_MOMZ_X = 5
-  integer :: I_COMM_MOMZ_Y = 6
-  integer :: I_COMM_MOMX_Z = 7
-  integer :: I_COMM_MOMX_X = 8
-  integer :: I_COMM_MOMX_Y = 9
-  integer :: I_COMM_MOMY_Z = 10
-  integer :: I_COMM_MOMY_X = 11
-  integer :: I_COMM_MOMY_Y = 12
-  integer :: I_COMM_RHOT_Z = 13
-  integer :: I_COMM_RHOT_X = 14
-  integer :: I_COMM_RHOT_Y = 15
-  integer :: I_COMM_QTRC_Z = 1
-  integer :: I_COMM_QTRC_X = 2
-  integer :: I_COMM_QTRC_Y = 3
+  integer :: I_COMM_DENS_Z
+  integer :: I_COMM_DENS_X
+  integer :: I_COMM_DENS_Y
+  integer :: I_COMM_MOMZ_Z
+  integer :: I_COMM_MOMZ_X
+  integer :: I_COMM_MOMZ_Y
+  integer :: I_COMM_MOMX_Z
+  integer :: I_COMM_MOMX_X
+  integer :: I_COMM_MOMX_Y
+  integer :: I_COMM_MOMY_Z
+  integer :: I_COMM_MOMY_X
+  integer :: I_COMM_MOMY_Y
+  integer :: I_COMM_RHOT_Z
+  integer :: I_COMM_RHOT_X
+  integer :: I_COMM_RHOT_Y
+  integer :: I_COMM_QTRC_Z
+  integer :: I_COMM_QTRC_X
+  integer :: I_COMM_QTRC_Y
 
 contains
   !-----------------------------------------------------------------------------
@@ -136,6 +137,21 @@ contains
     allocate( CNY4(5,JA,2) )
 
 
+    I_COMM_DENS_Z = 1
+    I_COMM_DENS_X = 2
+    I_COMM_DENS_Y = 3
+    I_COMM_MOMZ_Z = 4
+    I_COMM_MOMZ_X = 5
+    I_COMM_MOMZ_Y = 6
+    I_COMM_MOMX_Z = 7
+    I_COMM_MOMX_X = 8
+    I_COMM_MOMX_Y = 9
+    I_COMM_MOMY_Z = 10
+    I_COMM_MOMY_X = 11
+    I_COMM_MOMY_Y = 12
+    I_COMM_RHOT_Z = 13
+    I_COMM_RHOT_X = 14
+    I_COMM_RHOT_Y = 15
     call COMM_vars8_init( 'num_diff_DENS_Z', num_diff(:,:,:,I_DENS,ZDIR), I_COMM_DENS_Z )
     call COMM_vars8_init( 'num_diff_DENS_X', num_diff(:,:,:,I_DENS,XDIR), I_COMM_DENS_X )
     call COMM_vars8_init( 'num_diff_DENS_Y', num_diff(:,:,:,I_DENS,YDIR), I_COMM_DENS_Y )
@@ -152,6 +168,9 @@ contains
     call COMM_vars8_init( 'num_diff_RHOT_X', num_diff(:,:,:,I_RHOT,XDIR), I_COMM_RHOT_X )
     call COMM_vars8_init( 'num_diff_RHOT_Y', num_diff(:,:,:,I_RHOT,YDIR), I_COMM_RHOT_Y )
 
+    I_COMM_QTRC_Z = 1
+    I_COMM_QTRC_X = 2
+    I_COMM_QTRC_Y = 3
     call COMM_vars8_init( 'num_diff_QTRC_Z', num_diff_q(:,:,:,ZDIR), I_COMM_QTRC_Z )
     call COMM_vars8_init( 'num_diff_QTRC_X', num_diff_q(:,:,:,XDIR), I_COMM_QTRC_X )
     call COMM_vars8_init( 'num_diff_QTRC_Y', num_diff_q(:,:,:,YDIR), I_COMM_QTRC_Y )
@@ -369,6 +388,22 @@ contains
     return
   end subroutine ATMOS_DYN_fvm_numfilter_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_fvm_numfilter_finalize
+
+    deallocate( CNZ1 )
+    deallocate( CNX1 )
+    deallocate( CNY1 )
+    deallocate( CNZ3 )
+    deallocate( CNX3 )
+    deallocate( CNY3 )
+    deallocate( CNZ4 )
+    deallocate( CNX4 )
+    deallocate( CNY4 )
+
+    return
+  end subroutine ATMOS_DYN_fvm_numfilter_finalize
   !-----------------------------------------------------------------------------
   !> Calculate fluxes with numerical filter for prognostic variables of dynamical core
   !

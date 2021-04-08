@@ -49,6 +49,10 @@ program scalegm
   logical               :: EXECUTE_PREPROCESS           = .false. ! execute preprocess tools?
   logical               :: EXECUTE_MODEL                = .true.  ! execute main model?
   integer               :: NUM_BULKJOB                  = 1       ! number of bulk jobs
+  integer               :: NUM_BULKJOB_ONCE             = 1       ! number of bulk job for one iteration
+  integer               :: NUM_ITERATION_BULK           = 1       ! number of iteration for bulk job
+  integer               :: BULKJOB_START_DIRNUM         = 0       ! start number of directory for bulk job
+  logical               :: ADD_BULKJOB_PATH             = .false. ! add path of the bulk job to files
   integer               :: NUM_DOMAIN                   = 1       ! number of domains
   integer               :: NUM_FAIL_TOLERANCE           = 1       ! tolerance number of failure processes
   integer               :: FREQ_FAIL_CHECK              = 5       ! FPM polling frequency per DT (0: no polling)
@@ -62,15 +66,18 @@ program scalegm
   namelist / PARAM_LAUNCHER / &
 !      EXECUTE_PREPROCESS, &
 !      EXECUTE_MODEL,      &
-     NUM_BULKJOB,        &
-     NUM_DOMAIN,         &
-     NUM_FAIL_TOLERANCE, &
-     FREQ_FAIL_CHECK,    &
-     PRC_DOMAINS,        &
-     CONF_FILES,         &
-     ABORT_ALL_JOBS,     &
-     LOG_SPLIT,          &
-     COLOR_REORDER,      &
+     NUM_BULKJOB,          &
+     NUM_ITERATION_BULK,   &
+     BULKJOB_START_DIRNUM, &
+     ADD_BULKJOB_PATH,     &
+     NUM_DOMAIN,           &
+     NUM_FAIL_TOLERANCE,   &
+     FREQ_FAIL_CHECK,      &
+     PRC_DOMAINS,          &
+     CONF_FILES,           &
+     ABORT_ALL_JOBS,       &
+     LOG_SPLIT,            &
+     COLOR_REORDER,        &
      FAILURE_PRC_MANAGE
 
   integer               :: universal_comm                   ! universal communicator
@@ -88,9 +95,7 @@ program scalegm
 
   integer               :: local_comm                       ! assigned local communicator
   integer               :: ID_DOMAIN                        ! domain ID
-  integer               :: intercomm_parent                 ! inter communicator with parent
-  integer               :: intercomm_child                  ! inter communicator with child
-  character(len=H_LONG) :: local_cnf_fname                  ! config file for local domain
+  character(len=5)      :: path                             ! path to config file for local domain
 
   integer :: fid, ierr
   !-----------------------------------------------------------
@@ -148,8 +153,30 @@ program scalegm
   global_nprocs = universal_nprocs / NUM_BULKJOB
   PRC_BULKJOB(1:NUM_BULKJOB) = global_nprocs
   if ( NUM_BULKJOB > 1 ) then
-     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL BULK JOB NUMBER   = ", NUM_BULKJOB
-     if( universal_master ) write(*,'(1x,A,I5)') "*** PROCESS NUM of EACH JOB = ", global_nprocs
+
+     if ( NUM_BULKJOB == 1 ) NUM_ITERATION_BULK = 1
+     NUM_BULKJOB_ONCE = ceiling( real(NUM_BULKJOB) / NUM_ITERATION_BULK )
+     if ( mod(universal_nprocs,NUM_BULKJOB_ONCE) /= 0 ) then !--- fatal error
+        if( universal_master ) write(*,*) 'xxx Total Num of Processes must be divisible by NUM_BULKJOB/NUM_ITERATION_BULK. Check!'
+        if( universal_master ) write(*,*) 'xxx Total Num of Processes           = ', universal_nprocs
+        if( universal_master ) write(*,*) 'xxx NUM_BULKJOB                      = ', NUM_BULKJOB
+        if( universal_master ) write(*,*) 'xxx NUM_ITERATION_BULK               = ', NUM_ITERATION_BULK
+        if( universal_master ) write(*,*) 'xxx NUM_BULKJOB / NUM_ITERATION_BULK = ', NUM_BULKJOB_ONCE
+        call PRC_abort
+     endif
+
+     if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL # of BULK JOBS             = ", NUM_BULKJOB
+     if( universal_master ) write(*,'(1x,A,I5)') "*** # of BULK JOB for each iteration = ", NUM_BULKJOB_ONCE
+     if( universal_master ) write(*,'(1x,A,I5)') "*** # of PROCESS of each JOB         = ", global_nprocs
+
+     if ( BULKJOB_START_DIRNUM < 0 ) then
+        if( universal_master ) write(*,*) 'xxx BULKJOB_START_DIRNUM must >=0'
+        call PRC_abort
+     end if
+     if ( BULKJOB_START_DIRNUM + NUM_BULKJOB -1 > 9999 ) then
+        if( universal_master ) write(*,*) 'xxx BULKJOB_START_DIRNUM + NUM_BULKJOB must <= 9999'
+        call PRC_abort
+     end if
 
      if ( FAILURE_PRC_MANAGE ) then
         if( universal_master ) write(*,'(1x,A)') "*** Available: Failure Process Management"
@@ -203,9 +230,7 @@ program scalegm
                           LOG_SPLIT,        & ! [IN]
                           COLOR_REORDER,    & ! [IN]
                           local_comm,       & ! [OUT]
-                          ID_DOMAIN,        & ! [OUT]
-                          intercomm_parent, & ! [OUT]
-                          intercomm_child   ) ! [OUT]
+                          ID_DOMAIN         ) ! [OUT]
 
   !--- initialize FPM module & error handler
   call FPM_Init( NUM_FAIL_TOLERANCE, & ! [IN]
@@ -226,16 +251,16 @@ program scalegm
   !--- start main routine
 
   if ( NUM_BULKJOB > 1 ) then
-     write(local_cnf_fname,'(I4.4,2A)') ID_BULKJOB, "/", trim(CONF_FILES(ID_DOMAIN))
+     write(path,'(I4.4,A)') ID_BULKJOB + BULKJOB_START_DIRNUM, "/"
   else
-     local_cnf_fname = trim(CONF_FILES(ID_DOMAIN))
+     path = ""
   endif
 
   if ( EXECUTE_MODEL ) then
-     call gm_driver( local_comm,       & ! [IN]
-                     intercomm_parent, & ! [IN]
-                     intercomm_child,  & ! [IN]
-                     local_cnf_fname   ) ! [IN]
+     call gm_driver( local_comm,            & ! [IN]
+                     CONF_FILES(ID_DOMAIN), & ! [IN]
+                     path,                  & ! [IN]
+                     add_bulkjob_path       ) ! [IN]
   endif
 
   ! stop MPI

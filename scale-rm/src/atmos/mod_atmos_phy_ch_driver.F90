@@ -123,9 +123,12 @@ contains
 
     if ( ATMOS_sw_phy_ch ) then
 
-       call ATMOS_PHY_CH_rn222_setup
-       call ATMOS_SFC_CH_rn222_setup( IA, JA,            & ! [IN]
-                                      REAL_LON, REAL_LAT ) ! [IN]
+       select case ( ATMOS_PHY_CH_TYPE )
+       case ( 'RN222' )
+          call ATMOS_PHY_CH_rn222_setup
+          call ATMOS_SFC_CH_rn222_setup( IA, JA,            & ! [IN]
+                                         REAL_LON, REAL_LAT ) ! [IN]
+       end select
 
     else
        LOG_INFO("ATMOS_PHY_CH_driver_setup",*) 'this component is never called.'
@@ -133,6 +136,32 @@ contains
 
     return
   end subroutine ATMOS_PHY_CH_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_CH_driver_finalize
+    use scale_atmos_sfc_ch_rn222, only: &
+       ATMOS_SFC_CH_rn222_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CH_TYPE, &
+       ATMOS_sw_phy_ch
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CH_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_ch ) then
+
+       select case ( ATMOS_PHY_CH_TYPE )
+       case ( 'RN222' )
+          call ATMOS_SFC_CH_rn222_finalize
+       end select
+
+    end if
+
+    return
+  end subroutine ATMOS_PHY_CH_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver

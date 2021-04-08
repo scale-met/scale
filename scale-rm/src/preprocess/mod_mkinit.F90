@@ -79,6 +79,7 @@ module mod_mkinit
   !++ Public procedure
   !
   public :: MKINIT_setup
+  public :: MKINIT_finalize
   public :: MKINIT
 
   !-----------------------------------------------------------------------------
@@ -338,6 +339,42 @@ contains
 
     return
   end subroutine MKINIT_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine MKINIT_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("MKINIT_finalize",*) 'Finalize'
+
+    deallocate( pres )
+    deallocate( temp )
+    deallocate( pott )
+    deallocate( qdry )
+    deallocate( qsat )
+    deallocate( qv   )
+    deallocate( qc   )
+    deallocate( nc   )
+    deallocate( velx )
+    deallocate( vely )
+    deallocate( ptrc )
+
+    deallocate( pres_sfc )
+    deallocate( temp_sfc )
+    deallocate( pott_sfc )
+    deallocate( psat_sfc )
+    deallocate( qsat_sfc )
+    deallocate( qv_sfc   )
+    deallocate( qc_sfc   )
+
+    deallocate( rndm   )
+    deallocate( bubble )
+    deallocate( rect   )
+
+    return
+  end subroutine MKINIT_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver
@@ -1286,7 +1323,10 @@ contains
 
     real(RP) :: fact1, fact2
     integer :: k, kref
+
     integer :: fid
+    character(len=H_LONG) :: fname
+
     integer :: ierr
 
     namelist / PARAM_MKINIT_SOUNDING / &
@@ -1305,13 +1345,14 @@ contains
     LOG_NML(PARAM_MKINIT_SOUNDING)
 
     !--- prepare sounding profile
-    LOG_INFO("read_sounding",*) 'Input sounding file:', trim(ENV_IN_SOUNDING_file)
     fid = IO_get_available_fid()
-    open( fid,                                 &
-          file   = trim(ENV_IN_SOUNDING_file), &
-          form   = 'formatted',                &
-          status = 'old',                      &
-          iostat = ierr                        )
+    call IO_get_fname(fname, ENV_IN_SOUNDING_file)
+    LOG_INFO("read_sounding",*) 'Input sounding file:', trim(fname)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
           LOG_ERROR("read_sounding",*) '[mod_mkinit/read_sounding] Input file not found!'

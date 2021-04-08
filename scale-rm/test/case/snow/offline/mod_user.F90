@@ -354,10 +354,13 @@ contains
     integer :: IO_FID_SNOW_TEST
     integer :: iymd,ihh
 
+    character(len=H_LONG) :: fname
+
     integer :: i, io
 
     IO_FID_SNOW_TEST = IO_get_available_fid()
-    open(IO_FID_SNOW_TEST, file = trim(filename), status = 'OLD')
+    call IO_get_fname(fname, filename)
+    open(IO_FID_SNOW_TEST, file = fname, status = 'OLD')
     do i=1,data_length_max
        read(IO_FID_SNOW_TEST,*,end=100) iymd,ihh,data(i)
        rows = i

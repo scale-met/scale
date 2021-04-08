@@ -154,7 +154,7 @@ module mod_atmos_bnd_driver
   real(RP),              private :: ATMOS_BOUNDARY_EXP_H    = 2.0_RP   ! factor of non-linear profile of relax region
   logical,               private :: ATMOS_BOUNDARY_ONLINE   = .false.  ! boundary online update by communicate inter-domain
   logical,               private :: ATMOS_BOUNDARY_DENS_ADJUST  = .false.
-  real(RP),              private :: ATMOS_BOUNDARY_DENS_ADJUST_tau = -1.0_RP
+  real(RP),              private :: ATMOS_BOUNDARY_DENS_ADJUST_tau
 
   logical,               private :: do_parent_process       = .false.
   logical,               private :: do_daughter_process     = .false.
@@ -268,7 +268,11 @@ contains
     ATMOS_BOUNDARY_IN_AGGREGATE  = FILE_AGGREGATE
     ATMOS_BOUNDARY_OUT_AGGREGATE = FILE_AGGREGATE
 
+    ATMOS_BOUNDARY_DENS_ADJUST  = .false.
+    ATMOS_BOUNDARY_DENS_ADJUST_tau = -1.0_RP
+
     ATMOS_GRID_NUDGING_tau = 10.0_RP * 24.0_RP * 3600.0_RP   ! 10days [s]
+
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -323,6 +327,7 @@ contains
           BND_IQ(iq) = BND_QA
        end do
     endif
+
 
     allocate( ATMOS_BOUNDARY_DENS(KA,IA,JA) )
     allocate( ATMOS_BOUNDARY_VELZ(KA,IA,JA) )
@@ -403,6 +408,7 @@ contains
        if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
           allocate( AREAZUY_W(KA,JA), AREAZUY_E(KA,JA) )
           allocate( MFLUX_OFFSET_X(KA,JA,2,2), MFLUX_OFFSET_Y(KA,IA,2,2) )
+          allocate( zero_x(KA,JA), zero_y(KA,IA) )
 
           !$omp parallel do
           do j = JS, JE
@@ -421,6 +427,19 @@ contains
           do i = IS, IE
           do k = KS, KE
              MFLUX_OFFSET_Y(k,i,:,:) = 0.0_RP
+          end do
+          end do
+
+          !$omp parallel do
+          do j = JS, JE
+          do k = KS, KE
+             zero_x(k,j) = 0.0_RP
+          end do
+          end do
+          !$omp parallel do
+          do i = IS, IE
+          do k = KS, KE
+             zero_y(k,i) = 0.0_RP
           end do
           end do
        end if
@@ -507,22 +526,6 @@ contains
 
     if ( ONLINE_BOUNDARY_DIAGQHYD ) then
        allocate( Q_WORK(KA,IA,JA,NESTQA) )
-    end if
-
-    if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
-       allocate( zero_x(KA,JA), zero_y(KA,IA) )
-       !$omp parallel do
-       do j = JS, JE
-       do k = KS, KE
-          zero_x(k,j) = 0.0_RP
-       end do
-       end do
-       !$omp parallel do
-       do i = IS, IE
-       do k = KS, KE
-          zero_y(k,i) = 0.0_RP
-       end do
-       end do
     end if
 
     return
@@ -779,7 +782,7 @@ contains
 
     !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
     !$omp shared(JA,IA,KS,KE,CBFZ,ATMOS_BOUNDARY_FRACZ,FBFZ,ATMOS_BOUNDARY_LINEAR_V,coef_z,CBFX)            &
-    !$omp shared(ATMOS_BOUNDARY_FRACX,PI,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
+    !$omp shared(ATMOS_BOUNDARY_FRACX,FBFX,ATMOS_BOUNDARY_LINEAR_H,coef_x)     &
     !$omp shared(ATMOS_BOUNDARY_EXP_H,CBFY,ATMOS_BOUNDARY_FRACY,FBFY,coef_y,l_bnd)     &
     !$omp shared(do_daughter_process) &
     !$omp shared(ATMOS_BOUNDARY_USE_VELZ,ATMOS_BOUNDARY_alpha_VELZ,ATMOS_BOUNDARY_ALPHAFACT_VELZ) &
@@ -1489,7 +1492,8 @@ contains
   subroutine ATMOS_BOUNDARY_driver_finalize
     use scale_comm_cartesC_nest, only: &
        COMM_CARTESC_NEST_recvwait_issue, &
-       COMM_CARTESC_NEST_recv_cancel, &
+       COMM_CARTESC_NEST_recv_cancel,    &
+       ONLINE_BOUNDARY_DIAGQHYD,         &
        NESTQA => COMM_CARTESC_NEST_BND_QA
     use scale_file_cartesC, only: &
        FILE_CARTESC_close
@@ -1508,6 +1512,48 @@ contains
        handle = 2
        call COMM_CARTESC_NEST_recv_cancel( handle )
     endif
+
+    deallocate( BND_IQ )
+    deallocate( ATMOS_BOUNDARY_DENS )
+    deallocate( ATMOS_BOUNDARY_VELZ )
+    deallocate( ATMOS_BOUNDARY_VELX )
+    deallocate( ATMOS_BOUNDARY_VELY )
+    deallocate( ATMOS_BOUNDARY_POTT )
+    deallocate( ATMOS_BOUNDARY_QTRC )
+
+    deallocate( ATMOS_BOUNDARY_alpha_DENS )
+    deallocate( ATMOS_BOUNDARY_alpha_VELZ )
+    deallocate( ATMOS_BOUNDARY_alpha_VELX )
+    deallocate( ATMOS_BOUNDARY_alpha_VELY )
+    deallocate( ATMOS_BOUNDARY_alpha_POTT )
+    deallocate( ATMOS_BOUNDARY_alpha_QTRC )
+
+    deallocate( ATMOS_BOUNDARY_MFLUX_OFFSET_X )
+    deallocate( ATMOS_BOUNDARY_MFLUX_OFFSET_Y )
+
+    if ( l_bnd ) then
+       deallocate( DENS_ref )
+       deallocate( VELX_ref )
+       deallocate( VELY_ref )
+       deallocate( POTT_ref )
+       deallocate( QTRC_ref )
+
+       if ( ATMOS_BOUNDARY_USE_VELZ ) then
+          deallocate( VELZ_ref )
+       end if
+
+       if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
+          deallocate( AREAZUY_W, AREAZUY_E )
+          deallocate( MFLUX_OFFSET_X, MFLUX_OFFSET_Y )
+          deallocate( zero_x )
+          deallocate( zero_y )
+       end if
+    end if
+
+    if ( ONLINE_BOUNDARY_DIAGQHYD ) then
+       deallocate( Q_WORK )
+    end if
+
 
     return
   end subroutine ATMOS_BOUNDARY_driver_finalize

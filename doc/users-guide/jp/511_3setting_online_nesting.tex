@@ -113,12 +113,22 @@ $N$番目の境界データは$N-1$番の領域番号をもった親から受け
 \verb| NUM_DOMAIN  = 2,|    & 領域の数\\
 \verb| PRC_DOMAINS = 4, 16,| & それぞれの領域で使用するMPIプロセス数 (領域の数だけ必要)\\
 \verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & それぞれの領域の設定ファイル (領域の数だけ必要)\\
+\verb| LOG_SPLIT   = .false.,| & MPI 分割に関するログを出力するか?\\
+\verb| COLOR_REORDER = .true.,| & MPI 分割におけるプロセス番号の再割り当てを行うか?\\
 \verb|/|& \\
 }
 \nmitem{PRC_DOMAINS}と\nmitem{CONF_FILES}の記載順は対応している必要がある。
 上記の例の場合は、親領域は4-MPI並列、子領域は16-MPI並列で実行するように指定されている。
 \verb|launch.conf|で指定するMPIプロセス数は、各々の領域の設定ファイル (\verb|run.***.conf|)
 で指定された総MPIプロセス数(\verb|PRC_NUM_X|$\times$\verb|PRC_NUM_Y|)と一致させなければならない。
+
+
+\nmitem{LOG_SPLIT}を\verb|.true.|にした場合は、
+MPI のコミュニケータの分割のログが出力される。
+\nmitem{LOG_SPLIT}のデフォルト値は\verb|.false.|である。
+
+\nmitem{COLOR_REORDER}というオプションは、ジョブのプロセス数に応じて MPI のコミュニケータのグループ内のジョブの再配置を行うためのスイッチである。最も大きなプロセス数を持つジョブは最前列に配置される。効率的であるノード内通信が用いられる点で、この方法は合理的である。
+
 
 実行時には、シングル領域計算の場合とは異なり、計算全体で使用するMPIプロセス数を指定する。
 例えば、上記の場合だと20プロセスを指定する。

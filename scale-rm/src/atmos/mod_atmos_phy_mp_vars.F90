@@ -28,6 +28,7 @@ module mod_atmos_phy_mp_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_MP_vars_setup
+  public :: ATMOS_PHY_MP_vars_finalize
   public :: ATMOS_PHY_MP_vars_fillhalo
   public :: ATMOS_PHY_MP_vars_restart_read
   public :: ATMOS_PHY_MP_vars_restart_write
@@ -262,6 +263,42 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_MP_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_MP_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_MP_DENS_t     )
+    deallocate( ATMOS_PHY_MP_MOMZ_t     )
+    deallocate( ATMOS_PHY_MP_RHOU_t     )
+    deallocate( ATMOS_PHY_MP_RHOV_t     )
+    deallocate( ATMOS_PHY_MP_RHOT_t     )
+    deallocate( ATMOS_PHY_MP_RHOQ_t     )
+    deallocate( ATMOS_PHY_MP_RHOH       )
+    deallocate( ATMOS_PHY_MP_EVAPORATE  )
+
+    deallocate( ATMOS_PHY_MP_SFLX_rain )
+    deallocate( ATMOS_PHY_MP_SFLX_snow )
+    deallocate( ATMOS_PHY_MP_SFLX_ENGI )
+
+    ! diagnostices
+    deallocate( ATMOS_PHY_MP_CLDFRAC )
+    deallocate( ATMOS_PHY_MP_Re      )
+    deallocate( ATMOS_PHY_MP_Qe      )
+    deallocate( ATMOS_PHY_MP_Ne      )
+
+    ! history
+    deallocate( HIST_Re_id )
+    deallocate( HIST_Qe_id )
+    deallocate( HIST_Ne_id )
+
+    return
+  end subroutine ATMOS_PHY_MP_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

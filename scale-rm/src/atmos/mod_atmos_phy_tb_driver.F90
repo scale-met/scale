@@ -28,6 +28,7 @@ module mod_atmos_phy_tb_driver
   !
   public :: ATMOS_PHY_TB_driver_tracer_setup
   public :: ATMOS_PHY_TB_driver_setup
+  public :: ATMOS_PHY_TB_driver_finalize
   public :: ATMOS_PHY_TB_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -165,6 +166,34 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_TB_driver_finalize
+    use scale_atmos_phy_tb_smg, only: &
+       ATMOS_PHY_TB_smg_finalize
+    use scale_atmos_phy_tb_d1980, only: &
+       ATMOS_PHY_TB_d1980_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_TB_TYPE, &
+       ATMOS_sw_phy_tb
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_TB_driver_finalize",*) 'Finalize'
+
+    if ( .not. ATMOS_sw_phy_tb ) return
+
+    select case( ATMOS_PHY_TB_TYPE )
+    case( 'SMAGORINSKY' )
+       call ATMOS_PHY_TB_smg_finalize
+    case( 'D1980' )
+       call ATMOS_PHY_TB_d1980_finalize
+    end select
+
+    return
+  end subroutine ATMOS_PHY_TB_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> calclate tendency

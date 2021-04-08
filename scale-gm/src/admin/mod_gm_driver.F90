@@ -51,10 +51,10 @@ contains
   !-----------------------------------------------------------------------------
   !> Setup
   subroutine gm_driver( &
-       comm_world,       &
-       intercomm_parent, &
-       intercomm_child,  &
-       cnf_fname         )
+       comm_world, &
+       cnf_fname,  &
+       path,       &
+       add_path    )
     use scale_file, only: &
        FILE_Close_All
     use scale_prc, only: &
@@ -181,9 +181,9 @@ contains
     implicit none
 
     integer,          intent(in) :: comm_world
-    integer,          intent(in) :: intercomm_parent
-    integer,          intent(in) :: intercomm_child
     character(len=*), intent(in) :: cnf_fname
+    character(len=*), intent(in) :: path
+    logical,          intent(in) :: add_path
 
     integer :: myrank
     integer :: fpm_counter
@@ -197,7 +197,11 @@ contains
     !########## Initial setup ##########
 
     ! setup standard I/O
-    call IO_setup( MODELNAME, cnf_fname )
+    if ( add_path .and. path /= "" ) then
+       call IO_setup( MODELNAME, trim(path)//cnf_fname, prefix=path )
+    else
+       call IO_setup( MODELNAME, trim(path)//cnf_fname )
+    end if
 
     ! setup MPI
     call PRC_LOCAL_setup( comm_world, & ! [IN]

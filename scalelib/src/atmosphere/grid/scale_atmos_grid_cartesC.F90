@@ -28,6 +28,7 @@ module scale_atmos_grid_cartesC
   public :: ATMOS_GRID_CARTESC_setup
   public :: ATMOS_GRID_CARTESC_allocate
   public :: ATMOS_GRID_CARTESC_generate
+  public :: ATMOS_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -208,6 +209,58 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_setup
+
+  subroutine ATMOS_GRID_CARTESC_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    ! local domain
+    deallocate( ATMOS_GRID_CARTESC_CZ )
+    deallocate( ATMOS_GRID_CARTESC_CX )
+    deallocate( ATMOS_GRID_CARTESC_CY )
+    deallocate( ATMOS_GRID_CARTESC_FZ )
+    deallocate( ATMOS_GRID_CARTESC_FX )
+    deallocate( ATMOS_GRID_CARTESC_FY )
+
+    deallocate( ATMOS_GRID_CARTESC_CDZ )
+    deallocate( ATMOS_GRID_CARTESC_CDX )
+    deallocate( ATMOS_GRID_CARTESC_CDY )
+    deallocate( ATMOS_GRID_CARTESC_FDZ )
+    deallocate( ATMOS_GRID_CARTESC_FDX )
+    deallocate( ATMOS_GRID_CARTESC_FDY )
+
+    deallocate( ATMOS_GRID_CARTESC_RCDZ )
+    deallocate( ATMOS_GRID_CARTESC_RCDX )
+    deallocate( ATMOS_GRID_CARTESC_RCDY )
+    deallocate( ATMOS_GRID_CARTESC_RFDZ )
+    deallocate( ATMOS_GRID_CARTESC_RFDX )
+    deallocate( ATMOS_GRID_CARTESC_RFDY )
+
+    deallocate( ATMOS_GRID_CARTESC_CBFZ )
+    deallocate( ATMOS_GRID_CARTESC_CBFX )
+    deallocate( ATMOS_GRID_CARTESC_CBFY )
+    deallocate( ATMOS_GRID_CARTESC_FBFZ )
+    deallocate( ATMOS_GRID_CARTESC_FBFX )
+    deallocate( ATMOS_GRID_CARTESC_FBFY )
+
+    ! global domain
+    deallocate( ATMOS_GRID_CARTESC_CXG )
+    deallocate( ATMOS_GRID_CARTESC_CYG )
+    deallocate( ATMOS_GRID_CARTESC_FXG )
+    deallocate( ATMOS_GRID_CARTESC_FYG )
+
+    deallocate( ATMOS_GRID_CARTESC_CDXG )
+    deallocate( ATMOS_GRID_CARTESC_CDYG )
+    deallocate( ATMOS_GRID_CARTESC_FDXG )
+    deallocate( ATMOS_GRID_CARTESC_FDYG )
+
+    deallocate( ATMOS_GRID_CARTESC_CBFXG )
+    deallocate( ATMOS_GRID_CARTESC_CBFYG )
+    deallocate( ATMOS_GRID_CARTESC_FBFXG )
+    deallocate( ATMOS_GRID_CARTESC_FBFYG )
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   ! private

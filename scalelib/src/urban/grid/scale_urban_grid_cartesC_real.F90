@@ -27,6 +27,7 @@ module scale_urban_grid_cartesC_real
   !++ Public procedure
   !
   public :: URBAN_GRID_CARTESC_REAL_setup
+  public :: URBAN_GRID_CARTESC_REAL_finalize
   public :: URBAN_GRID_CARTESC_REAL_set_areavol
 
   !-----------------------------------------------------------------------------
@@ -59,6 +60,18 @@ contains
     return
   end subroutine URBAN_GRID_CARTESC_REAL_setup
 
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_GRID_CARTESC_REAL_finalize
+    implicit none
+
+    deallocate( URBAN_GRID_CARTESC_REAL_AREA )
+    deallocate( URBAN_GRID_CARTESC_REAL_VOL  )
+
+    return
+  end subroutine URBAN_GRID_CARTESC_REAL_finalize
+
+  !-----------------------------------------------------------------------------
   subroutine URBAN_GRID_CARTESC_REAL_set_areavol
     use scale_atmos_grid_cartesC_real, only: &
        ATMOS_GRID_CARTESC_REAL_AREA

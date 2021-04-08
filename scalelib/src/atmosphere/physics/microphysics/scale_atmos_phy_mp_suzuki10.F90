@@ -38,6 +38,7 @@ module scale_atmos_phy_mp_suzuki10
   !
   public :: ATMOS_PHY_MP_suzuki10_tracer_setup
   public :: ATMOS_PHY_MP_suzuki10_setup
+  public :: ATMOS_PHY_MP_suzuki10_finalize
   public :: ATMOS_PHY_MP_suzuki10_tendency
   public :: ATMOS_PHY_MP_suzuki10_terminal_velocity
   public :: ATMOS_PHY_MP_suzuki10_cloud_fraction
@@ -874,6 +875,50 @@ contains
     return
   end subroutine ATMOS_PHY_MP_suzuki10_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_MP_suzuki10_finalize
+
+    deallocate( ATMOS_PHY_MP_suzuki10_tracer_names        )
+    deallocate( ATMOS_PHY_MP_suzuki10_tracer_descriptions )
+    deallocate( ATMOS_PHY_MP_suzuki10_tracer_units        )
+
+    deallocate( xctr )
+    deallocate( xbnd )
+    deallocate( radc )
+    deallocate( cctr )
+    deallocate( cbnd )
+    deallocate( ck )
+    deallocate( vt )
+    deallocate( br )
+    deallocate( ifrsl )
+    deallocate( expxctr )
+    deallocate( expxbnd )
+    deallocate( rexpxctr )
+    deallocate( rexpxbnd )
+    if ( nccn /= 0 ) then
+      deallocate( xactr )
+      deallocate( xabnd )
+      deallocate( rada )
+      deallocate( expxactr )
+      deallocate( expxabnd )
+      deallocate( rexpxactr )
+      deallocate( rexpxabnd )
+    endif
+
+    deallocate( flg_noninduct )
+    deallocate( ecoll )
+    deallocate( rcoll )
+
+    deallocate ( ncld )
+
+    deallocate( vterm )
+
+    deallocate( kindx )
+
+
+    return
+  end subroutine ATMOS_PHY_MP_suzuki10_finalize
   !-----------------------------------------------------------------------------
   !> Cloud Microphysics
   subroutine ATMOS_PHY_MP_suzuki10_tendency( &

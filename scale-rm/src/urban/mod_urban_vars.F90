@@ -29,6 +29,7 @@ module mod_urban_vars
   !++ Public procedure
   !
   public :: URBAN_vars_setup
+  public :: URBAN_vars_finalize
   public :: URBAN_vars_restart_read
   public :: URBAN_vars_restart_write
   public :: URBAN_vars_history
@@ -547,6 +548,90 @@ contains
 
     return
   end subroutine URBAN_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("URBAN_vars_finalize",*) 'Finalize'
+
+    deallocate( URBAN_TRL   )
+    deallocate( URBAN_TBL   )
+    deallocate( URBAN_TGL   )
+    deallocate( URBAN_TR    )
+    deallocate( URBAN_TB    )
+    deallocate( URBAN_TG    )
+    deallocate( URBAN_TC    )
+    deallocate( URBAN_QC    )
+    deallocate( URBAN_UC    )
+    deallocate( URBAN_RAINR )
+    deallocate( URBAN_RAINB )
+    deallocate( URBAN_RAING )
+    deallocate( URBAN_ROFF  )
+
+    deallocate( URBAN_SFC_TEMP   )
+    deallocate( URBAN_SFC_albedo )
+
+    deallocate( URBAN_TR_t    )
+    deallocate( URBAN_TB_t    )
+    deallocate( URBAN_TG_t    )
+    deallocate( URBAN_TC_t    )
+    deallocate( URBAN_QC_t    )
+    deallocate( URBAN_UC_t    )
+    deallocate( URBAN_TRL_t   )
+    deallocate( URBAN_TBL_t   )
+    deallocate( URBAN_TGL_t   )
+    deallocate( URBAN_RAINR_t )
+    deallocate( URBAN_RAINB_t )
+    deallocate( URBAN_RAING_t )
+
+    deallocate( URBAN_SFLX_MW   )
+    deallocate( URBAN_SFLX_MU   )
+    deallocate( URBAN_SFLX_MV   )
+    deallocate( URBAN_SFLX_SH   )
+    deallocate( URBAN_SFLX_LH   )
+    deallocate( URBAN_SFLX_SHEX )
+    deallocate( URBAN_SFLX_QVEX )
+    deallocate( URBAN_SFLX_GH   )
+    deallocate( URBAN_SFLX_QTRC )
+
+    deallocate( URBAN_Z0M   )
+    deallocate( URBAN_Z0H   )
+    deallocate( URBAN_Z0E   )
+    deallocate( URBAN_ZD    )
+    deallocate( URBAN_AH    )
+    deallocate( URBAN_AHL   )
+    deallocate( URBAN_Ustar )
+    deallocate( URBAN_Tstar )
+    deallocate( URBAN_Qstar )
+    deallocate( URBAN_Wstar )
+    deallocate( URBAN_RLmo  )
+    deallocate( URBAN_U10   )
+    deallocate( URBAN_V10   )
+    deallocate( URBAN_T2    )
+    deallocate( URBAN_Q2    )
+
+    deallocate( ATMOS_TEMP       )
+    deallocate( ATMOS_PRES       )
+    deallocate( ATMOS_W          )
+    deallocate( ATMOS_U          )
+    deallocate( ATMOS_V          )
+    deallocate( ATMOS_DENS       )
+    deallocate( ATMOS_QV         )
+    deallocate( ATMOS_PBL        )
+    deallocate( ATMOS_SFC_DENS   )
+    deallocate( ATMOS_SFC_PRES   )
+    deallocate( ATMOS_SFLX_LW    )
+    deallocate( ATMOS_SFLX_SW    )
+    deallocate( ATMOS_cosSZA     )
+    deallocate( ATMOS_SFLX_water )
+    deallocate( ATMOS_SFLX_ENGI  )
+
+    return
+  end subroutine URBAN_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Open urban restart file for read

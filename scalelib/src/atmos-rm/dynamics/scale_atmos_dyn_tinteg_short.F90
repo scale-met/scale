@@ -105,9 +105,14 @@ module scale_atmos_dyn_tinteg_short
 
        real(RP), intent(in)    :: dt
      end subroutine short
+
+     subroutine finalize
+     end subroutine finalize
   end interface
   procedure(short), pointer :: ATMOS_DYN_Tinteg_short => NULL()
   public :: ATMOS_DYN_Tinteg_short
+  procedure(finalize), pointer :: ATMOS_DYN_Tinteg_short_finalize => NULL()
+  public :: ATMOS_DYN_Tinteg_short_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -134,10 +139,12 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_dyn_tinteg_short_rk3, only: &
-       ATMOS_DYN_Tinteg_short_rk3_setup, &
+       ATMOS_DYN_Tinteg_short_rk3_setup,    &
+       ATMOS_DYN_Tinteg_short_rk3_finalize, &
        ATMOS_DYN_Tinteg_short_rk3
     use scale_atmos_dyn_tinteg_short_rk4, only: &
-       ATMOS_DYN_Tinteg_short_rk4_setup, &
+       ATMOS_DYN_Tinteg_short_rk4_setup,    &
+       ATMOS_DYN_Tinteg_short_rk4_finalize, &
        ATMOS_DYN_Tinteg_short_rk4
     use scale_atmos_dyn_tinteg_short_rk7s6o, only: &
        ATMOS_DYN_Tinteg_short_rk7s6o_setup, &
@@ -151,15 +158,19 @@ contains
     character(len=*), intent(in)  :: ATMOS_DYN_Tstep_short_TYPE
     !---------------------------------------------------------------------------
 
+    ATMOS_DYN_Tinteg_short_finalize => DYN_Tinteg_short_finalize
+
     select case( ATMOS_DYN_Tinteg_short_TYPE )
     case( 'RK3', 'RK3WS2002' )
        call ATMOS_DYN_Tinteg_short_rk3_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk3
+       ATMOS_DYN_Tinteg_short_finalize => ATMOS_DYN_Tinteg_short_rk3_finalize
     case( 'RK4' )
        call ATMOS_DYN_Tinteg_short_rk4_setup( &
             ATMOS_DYN_Tinteg_short_TYPE )
        ATMOS_DYN_Tinteg_short => ATMOS_DYN_Tinteg_short_rk4
+       ATMOS_DYN_Tinteg_short_finalize => ATMOS_DYN_Tinteg_short_rk4_finalize
     case( 'RK7s6o', 'RK7s6oLawson1967', 'RK7s6oButcher1964' )
        if ( .not. (ATMOS_DYN_Tstep_short_TYPE == 'HEVE' .or. ATMOS_DYN_Tstep_short_TYPE == 'FVM-HEVE') ) then
          LOG_ERROR("ATMOS_DYN_Tinteg_short_setup",*) "ATMOS_DYN_TINTEG_SHORT_TYPE is now supported only for 'HEVE',", ATMOS_DYN_Tinteg_short_TYPE
@@ -183,5 +194,10 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tinteg_short_setup
+
+  subroutine DYN_Tinteg_short_finalize
+
+    return
+  end subroutine DYN_Tinteg_short_finalize
 
 end module scale_atmos_dyn_tinteg_short

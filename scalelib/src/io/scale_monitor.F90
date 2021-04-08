@@ -590,9 +590,9 @@ contains
        !--- Open logfile
        MONITOR_FID = IO_get_available_fid()
        if ( MONITOR_GLOBAL_SUM ) then
-          fname = trim(MONITOR_OUT_BASENAME) // '.peall'
+          call IO_get_fname(fname, MONITOR_OUT_BASENAME, rank=-1)
        else
-          call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
+          call IO_get_fname(fname, MONITOR_OUT_BASENAME, rank=PRC_myrank)
        end if
        open( unit   = MONITOR_FID,  &
              file   = trim(fname),  &
@@ -630,10 +630,8 @@ contains
     !---------------------------------------------------------------------------
 
     if ( MONITOR_FID > 0 ) then
-       call IO_make_idstr(fname,trim(MONITOR_OUT_BASENAME),'pe',PRC_myrank)
-
        LOG_NEWLINE
-       LOG_INFO('MONITOR_finalize',*) 'Close ASCII file for monitor, name : ', trim(fname)
+       LOG_INFO('MONITOR_finalize',*) 'Close monitor file'
 
        close(MONITOR_FID)
     endif

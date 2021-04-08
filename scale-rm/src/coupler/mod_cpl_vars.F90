@@ -29,6 +29,7 @@ module mod_cpl_vars
   !++ Public procedure
   !
   public :: CPL_vars_setup
+  public :: CPL_vars_finalize
 
   public :: CPL_putATM
   public :: CPL_putOCN
@@ -441,6 +442,119 @@ contains
 
     return
   end subroutine CPL_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine CPL_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("CPL_vars_finalize",*) 'Finalize'
+
+    deallocate( OCN_SFC_TEMP   )
+    deallocate( OCN_SFC_albedo )
+    deallocate( OCN_SFC_Z0M    )
+    deallocate( OCN_SFC_Z0H    )
+    deallocate( OCN_SFC_Z0E    )
+    deallocate( OCN_SFLX_MU    )
+    deallocate( OCN_SFLX_MV    )
+    deallocate( OCN_SFLX_MW    )
+    deallocate( OCN_SFLX_SH    )
+    deallocate( OCN_SFLX_LH    )
+    deallocate( OCN_SFLX_GH    )
+    deallocate( OCN_SFLX_QTRC  )
+    deallocate( OCN_SFLX_ENGI  )
+    deallocate( OCN_U10        )
+    deallocate( OCN_V10        )
+    deallocate( OCN_T2         )
+    deallocate( OCN_Q2         )
+
+    deallocate( LND_SFC_TEMP   )
+    deallocate( LND_SFC_albedo )
+    deallocate( LND_SFC_Z0M    )
+    deallocate( LND_SFC_Z0H    )
+    deallocate( LND_SFC_Z0E    )
+    deallocate( LND_SFLX_MU    )
+    deallocate( LND_SFLX_MV    )
+    deallocate( LND_SFLX_MW    )
+    deallocate( LND_SFLX_SH    )
+    deallocate( LND_SFLX_LH    )
+    deallocate( LND_SFLX_GH    )
+    deallocate( LND_SFLX_QTRC  )
+    deallocate( LND_SFLX_ENGI  )
+    deallocate( LND_U10        )
+    deallocate( LND_V10        )
+    deallocate( LND_T2         )
+    deallocate( LND_Q2         )
+
+    deallocate( URB_SFC_TEMP   )
+    deallocate( URB_SFC_albedo )
+    deallocate( URB_SFC_Z0M    )
+    deallocate( URB_SFC_Z0H    )
+    deallocate( URB_SFC_Z0E    )
+    deallocate( URB_SFLX_MU    )
+    deallocate( URB_SFLX_MV    )
+    deallocate( URB_SFLX_MW    )
+    deallocate( URB_SFLX_SH    )
+    deallocate( URB_SFLX_LH    )
+    deallocate( URB_SFLX_SHEX  )
+    deallocate( URB_SFLX_QVEX  )
+    deallocate( URB_SFLX_GH    )
+    deallocate( URB_SFLX_QTRC  )
+    deallocate( URB_SFLX_ENGI  )
+    deallocate( URB_U10        )
+    deallocate( URB_V10        )
+    deallocate( URB_T2         )
+    deallocate( URB_Q2         )
+
+    deallocate( OCN_ATM_TEMP        )
+    deallocate( OCN_ATM_PRES        )
+    deallocate( OCN_ATM_W           )
+    deallocate( OCN_ATM_U           )
+    deallocate( OCN_ATM_V           )
+    deallocate( OCN_ATM_DENS        )
+    deallocate( OCN_ATM_QV          )
+    deallocate( OCN_ATM_PBL         )
+    deallocate( OCN_ATM_SFC_DENS    )
+    deallocate( OCN_ATM_SFC_PRES    )
+    deallocate( OCN_ATM_SFLX_rad_dn )
+    deallocate( OCN_ATM_cosSZA      )
+    deallocate( OCN_ATM_SFLX_water  )
+    deallocate( OCN_ATM_SFLX_ENGI   )
+
+    deallocate( LND_ATM_TEMP        )
+    deallocate( LND_ATM_PRES        )
+    deallocate( LND_ATM_W           )
+    deallocate( LND_ATM_U           )
+    deallocate( LND_ATM_V           )
+    deallocate( LND_ATM_DENS        )
+    deallocate( LND_ATM_QV          )
+    deallocate( LND_ATM_PBL         )
+    deallocate( LND_ATM_SFC_DENS    )
+    deallocate( LND_ATM_SFC_PRES    )
+    deallocate( LND_ATM_SFLX_rad_dn )
+    deallocate( LND_ATM_cosSZA      )
+    deallocate( LND_ATM_SFLX_water  )
+    deallocate( LND_ATM_SFLX_ENGI   )
+
+    deallocate( URB_ATM_TEMP        )
+    deallocate( URB_ATM_PRES        )
+    deallocate( URB_ATM_W           )
+    deallocate( URB_ATM_U           )
+    deallocate( URB_ATM_V           )
+    deallocate( URB_ATM_DENS        )
+    deallocate( URB_ATM_QV          )
+    deallocate( URB_ATM_PBL         )
+    deallocate( URB_ATM_SFC_DENS    )
+    deallocate( URB_ATM_SFC_PRES    )
+    deallocate( URB_ATM_SFLX_rad_dn )
+    deallocate( URB_ATM_cosSZA      )
+    deallocate( URB_ATM_SFLX_water  )
+    deallocate( URB_ATM_SFLX_ENGI   )
+
+    return
+  end subroutine CPL_vars_finalize
 
   !-----------------------------------------------------------------------------
   subroutine CPL_putATM( &

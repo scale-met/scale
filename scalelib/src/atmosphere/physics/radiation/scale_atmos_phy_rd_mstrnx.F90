@@ -40,6 +40,7 @@ module scale_atmos_phy_rd_mstrnx
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_mstrnx_setup
+  public :: ATMOS_PHY_RD_mstrnx_finalize
   public :: ATMOS_PHY_RD_mstrnx_flux
 
   !-----------------------------------------------------------------------------
@@ -246,8 +247,8 @@ contains
     integer               :: ATMOS_PHY_RD_MSTRN_nband
     integer               :: ATMOS_PHY_RD_MSTRN_nptype
     integer               :: ATMOS_PHY_RD_MSTRN_nradius
-    integer               :: ATMOS_PHY_RD_MSTRN_nradius_cloud = -1
-    integer               :: ATMOS_PHY_RD_MSTRN_nradius_aero  = -1
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius_cloud
+    integer               :: ATMOS_PHY_RD_MSTRN_nradius_aero
 
     namelist / PARAM_ATMOS_PHY_RD_MSTRN / &
        ATMOS_PHY_RD_MSTRN_TOA,                   &
@@ -282,6 +283,8 @@ contains
     ATMOS_PHY_RD_MSTRN_nband                 = MSTRN_nband
     ATMOS_PHY_RD_MSTRN_nptype                = MSTRN_nptype
     ATMOS_PHY_RD_MSTRN_nradius               = MSTRN_nradius
+    ATMOS_PHY_RD_MSTRN_nradius_cloud         = -1
+    ATMOS_PHY_RD_MSTRN_nradius_aero          = -1
 
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_PHY_RD_MSTRN,iostat=ierr)
@@ -428,6 +431,55 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_mstrnx_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_RD_mstrnx_finalize
+
+    deallocate( ptype_nradius )
+    deallocate( RD_zh    )
+    deallocate( RD_z     )
+
+    deallocate( RD_rhodz )
+    deallocate( RD_pres  )
+    deallocate( RD_presh )
+    deallocate( RD_temp  )
+    deallocate( RD_temph )
+
+    deallocate( RD_gas          )
+    deallocate( RD_cfc          )
+    deallocate( RD_aerosol_conc )
+    deallocate( RD_aerosol_radi )
+    deallocate( RD_cldfrac      )
+
+    deallocate( waveh   )
+    deallocate( logfitP )
+    deallocate( fitT    )
+    deallocate( logfitT )
+
+    deallocate( iflgb   )
+    deallocate( nch     )
+    deallocate( wgtch   )
+    deallocate( ngasabs )
+    deallocate( igasabs )
+
+    deallocate( akd      )
+    deallocate( skd      )
+    deallocate( acfc_pow )
+
+    deallocate( fitPLK   )
+    deallocate( fsol     )
+    deallocate( sfc      )
+    deallocate( rayleigh )
+
+    deallocate( qmol )
+    deallocate( q    )
+
+    deallocate( hygro_flag )
+    deallocate( radmode    )
+
+    return
+  end subroutine ATMOS_PHY_RD_mstrnx_finalize
 
   !-----------------------------------------------------------------------------
   !> Radiation main
@@ -928,7 +980,7 @@ contains
     integer :: nsfc, nptype, nplkord, nfitPLK      !< aerosol/surface parameters for check
     integer :: nradius
 
-    character(len=H_LONG) :: dummy
+    character(len=H_LONG) :: dummy, fname
 
     integer :: fid, ierr
     integer :: iw, ich, ip, it, igas, icfc, iptype, im
@@ -954,15 +1006,15 @@ contains
     allocate( acfc_pow(MSTRN_ncfc,MSTRN_nband) )
 
     fid = IO_get_available_fid()
-
-    open( fid,                                    &
-          file   = trim(MSTRN_GASPARA_INPUTFILE), &
-          form   = 'formatted',                   &
-          status = 'old',                         &
-          iostat = ierr                           )
+    call IO_get_fname(fname, MSTRN_GASPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_GASPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -1076,14 +1128,15 @@ contains
     enddo
 
 
-    open( fid,                                     &
-          file   = trim(MSTRN_AEROPARA_INPUTFILE), &
-          form   = 'formatted',                    &
-          status = 'old',                          &
-          iostat = ierr                            )
+    call IO_get_fname(fname, MSTRN_AEROPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_AEROPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 
@@ -1162,14 +1215,15 @@ contains
     allocate( hygro_flag(MSTRN_nptype)               )
     allocate( radmode   (MSTRN_nptype,MSTRN_nradius) )
 
-    open( fid,                                      &
-          file   = trim(MSTRN_HYGROPARA_INPUTFILE), &
-          form   = 'formatted',                     &
-          status = 'old',                           &
-          iostat = ierr                             )
+    call IO_get_fname(fname, MSTRN_HYGROPARA_INPUTFILE)
+    open( fid,                  &
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          iostat = ierr         )
 
        if ( ierr /= 0 ) then
-          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(MSTRN_HYGROPARA_INPUTFILE)
+          LOG_ERROR("RD_MSTRN_setup",*) 'Input data file does not found! ', trim(fname)
           call PRC_abort
        endif
 

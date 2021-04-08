@@ -7,13 +7,17 @@ This function is useful for the parameter-sweep experiment, the ensemble experim
 
 The bulk job function can be used not only for model simulation (\verb|scale-rm|), but also for the generation of topographical data, land-use data, and initial/boundary data. Note that the generation of topographical/land-use data by this function is limited to the case without a topography copy function (See \ref{subsec:nest_topo}).
 
-In the following explanation, an independent execution in the bulk job is called a ``sub-job.'' Three two-domain nesting experiments are taken up as an example. This set of experiments is imaged as three sub-jobs with different integration periods and centers of calculation domain. \nmitem{NUM_DOMAIN, PRC_DOMAINS, CONF_FILES} in \namelist{PARAM_LAUNCHER} in the file \verb|launch.conf| (refer to Section \ref{subsubsec:launch} ) must be the same in all configurations. The other settings, such as integration time, the scheme used, and the number of grids per MPI process, do not need to be the same among the sub-jobs.
+In the following explanation, an independent execution in the bulk job is called a ``sub-job''.
+Three two-domain nesting experiments are taken up as an example.
+This set of experiments consists of three sub-jobs with different integration periods and calculation domain.
+\nmitem{NUM_DOMAIN, PRC_DOMAINS, CONF_FILES} in \namelist{PARAM_LAUNCHER} in the file \verb|launch.conf| (refer to Section \ref{subsubsec:launch} ) must be the same in all configurations.
+The other settings, such as integration time, the scheme used, and the number of grids per MPI process, do not need to be the same among the sub-jobs.
 
 \begin{figure}[t]
 \begin{center}
   \includegraphics[width=0.6\hsize]{./../../figure/bulkjob_directory_structure.pdf}\\
   \caption{Structure of directories at the execution of \scalerm with bulk job.
-Numbers such as ``0000'' are the directory names corresponding to job number, and called the job directory.   All necessary configuration files to execute sub jobs must be prepared in each job directory.
+Numbers such as ``0000'' are the directory names and called the job directory.   All necessary configuration files to execute sub jobs must be prepared in each job directory.
 }
   \label{fig_bulkjob}
 \end{center}
@@ -22,11 +26,14 @@ Numbers such as ``0000'' are the directory names corresponding to job number, an
 
 
 \section{Settings for Bulk Job}
-Since the bulk job function is an extension of the division and redistribution of MPI processes used in online nesting, file \verb|launch.conf| is required to launch the job. Even in case online nesting and bulk job functions are used together, only one file \verb|launch.conf| is prepared.
+Since the bulk job function is an extension of the division and redistribution of MPI processes used in online nesting, file \verb|launch.conf| is required to launch the job. Even in case online nesting and bulk job functions are used together, only one file \verb|launch.conf| is required.
 Below is an example of such a case.
 \editboxtwo{
 \verb|&PARAM_LAUNCHER|       & \\
 \verb| NUM_BULKJOB = 3,|     & number of sub-jobs\\
+\verb| NUM_ITERATION_BULK = 1,| & number of iterations to execute sub-jobs\\
+\verb| BULKJOB_START_DIRNUM = 0,| & start number of the job directory\\
+\verb| ADD_BULKJOB_PATH = .false.,| & add job directory to file names\\
 \verb| NUM_DOMAIN  = 2,|     & number of nesting domains\\
 \verb| PRC_DOMAINS = 9, 36,|  & number of total process in each domain\\
 \verb| CONF_FILES  = run.d01.conf, run.d02.conf,| & name of configulation files\\
@@ -37,13 +44,20 @@ Below is an example of such a case.
 \verb| FREQ_FAIL_CHECK    = 5, | & FPM polling frequency per DT\\
 \verb|/| \\
 }
-It is sufficient to add item \nmitem{NUM_BULKJOB} to the \verb|launch.conf|. The other configurations are similar to those in Section \ref{subsubsec:launch}. In case of a single-domain experiment (no nesting), specify \nmitem{NUM_DOMAIN} $=$ 1 and assign a file name to \nmitem{CONF_FILES}.
+The number of sub-jobs is specified by \nmitem{NUM_BULKJOB}.
+For single-domain experiments (no nesting), specify \nmitem{NUM_DOMAIN} $=$ 1.
 
-Log of MPI communicator splitting will be output, when \nmitem{LOG_SPLIT} is \verb|.true.|.
-The default value of \nmitem{LOG_SPLIT} is \verb|.false.|.
+The job directory name is a four-degit number, which by default corresponds to a job ID starting with 0.
+You can change the starting number by specifing \nmitem{BULKJOB_START_DIRNUM}.
 
-Option of \nmitem{COLOR_REORDER} is the switch for job rearrangement in MPI communicator groups following the process size of the job. The job which has the largest process size is arranged at the front row;
-this would be reasonable to gain the efficient inter-node communication.
+By default, the file names in the sub-job configuration files, such as \verb|init.conf| and \verb|run.conf|, must contain the job directory (e.g., \verb|0000/history.nc|).
+If \nmitem{ADD_BULJJOB_PATH} is specified as \verb|.true.|, the job directory name will be added to all file names in the configuration files except the absolute path.
+
+If your computer does not have enough resources to run all the sub-jobs at once, you can divide the sub-jobs into multiple groups.
+The number of sub-jobs to be executed at one time will be \nmitem{NUM_BULKJOB} / \nmitem{NUM_ITERATION_BULK}.
+
+
+The other configurations are described in Section \ref{subsubsec:launch}.
 
 
 \section{Failure Process Management}
@@ -115,7 +129,7 @@ At the execution of bulk jobs, the total number of MPI processes is specified as
 \end{verbatim}
 In this example, the number of processes per sub-job is 45 ($=9 + 36$) and the total number of processes used for three sub-jobs is 135. The message providing information regarding the division of MPI processes is written to the LOG files after the \scalelib logo. The following example is the log output for process 0 of Domain 1:
 \msgboxtwo{
-\verb| +++++ start MPI|  & \\
+\verb| +++++ start making Cartesian topology|  & \\
 \verb| *** UNIVERSAL_COMM_WORLD        :        0| &; different by execution environment\\
 \verb| *** total process [UNIVERSAL]   :      135| &\\
 \verb| *** my process ID [UNIVERSAL]   :       36| &\\

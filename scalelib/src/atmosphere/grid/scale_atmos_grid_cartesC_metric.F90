@@ -26,6 +26,7 @@ module scale_atmos_grid_cartesC_metric
   !++ Public procedure
   !
   public :: ATMOS_GRID_CARTESC_METRIC_setup
+  public :: ATMOS_GRID_CARTESC_METRIC_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -155,6 +156,38 @@ contains
 
     return
   end subroutine ATMOS_GRID_CARTESC_METRIC_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_GRID_CARTESC_METRIC_finalize
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_GRID_CARTESC_METRIC_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_GRID_CARTESC_METRIC_MAPF )
+
+    deallocate( ATMOS_GRID_CARTESC_METRIC_ROTC )
+
+    if ( PRC_TwoD ) then
+       deallocate( ATMOS_GRID_CARTESC_METRIC_GSQRT )
+       deallocate( ATMOS_GRID_CARTESC_METRIC_J13G  )
+       deallocate( ATMOS_GRID_CARTESC_METRIC_J23G  )
+    else
+       deallocate( ATMOS_GRID_CARTESC_METRIC_GSQRT )
+       deallocate( ATMOS_GRID_CARTESC_METRIC_J13G  )
+       deallocate( ATMOS_GRID_CARTESC_METRIC_J23G  )
+    end if
+
+    deallocate( ATMOS_GRID_CARTESC_METRIC_LIMYZ )
+    deallocate( ATMOS_GRID_CARTESC_METRIC_LIMXZ )
+    deallocate( ATMOS_GRID_CARTESC_METRIC_LIMXY )
+
+    return
+  end subroutine ATMOS_GRID_CARTESC_METRIC_finalize
 
   !-----------------------------------------------------------------------------
   !> Calculate map factor
