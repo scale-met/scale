@@ -215,6 +215,14 @@ module mod_atmos_bnd_driver
   real(RP), allocatable, private, target :: zero_x(:,:), zero_y(:,:)
 
 
+  integer,parameter,     private :: ATMOS_BOUNDARY_NFILES_MAX = 24
+  integer,               private :: ATMOS_BOUNDARY_NFILES = 1
+  integer,               private :: ifile
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAMES(ATMOS_BOUNDARY_NFILES_MAX) 
+  integer,               private :: ATMOS_BOUNDARY_START_DATES(6, ATMOS_BOUNDARY_NFILES_MAX) 
+
+  character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME_OPENED = '' 
+ 
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -295,7 +303,10 @@ contains
        ATMOS_GRID_NUDGING_uv,         &
        ATMOS_GRID_NUDGING_pt,         &
        ATMOS_GRID_NUDGING_qv,         &
-       ATMOS_GRID_NUDGING_tau
+       ATMOS_GRID_NUDGING_tau,        &
+       ATMOS_BOUNDARY_NFILES,         &
+       ATMOS_BOUNDARY_IN_BASENAMES,   &
+       ATMOS_BOUNDARY_START_DATES
 
     integer :: k, i, j, iq
     integer :: ierr
@@ -314,6 +325,11 @@ contains
 
     ATMOS_GRID_NUDGING_tau = 10.0_RP * 24.0_RP * 3600.0_RP   ! 10days [s]
 
+    do i = 1, ATMOS_BOUNDARY_NFILES_MAX 
+      ATMOS_BOUNDARY_IN_BASENAMES(i) = ""
+      ATMOS_BOUNDARY_START_DATES(:, i) = (/ -9999, 0, 0, 0, 0, 0 /)
+    end do
+
     !--- read namelist
     rewind(IO_FID_CONF)
     read(IO_FID_CONF,nml=PARAM_ATMOS_BOUNDARY,iostat=ierr)
@@ -326,6 +342,11 @@ contains
     LOG_NML(PARAM_ATMOS_BOUNDARY)
 
     call IO_filename_replace( ATMOS_BOUNDARY_IN_BASENAME, 'ATMOS_BOUNDARY_IN_BASENAME' )
+    if ( ATMOS_BOUNDARY_NFILES > 1 ) then
+      do ifile = 1, ATMOS_BOUNDARY_NFILES
+        call IO_filename_replace( ATMOS_BOUNDARY_IN_BASENAMES(ifile), 'ATMOS_BOUNDARY_IN_BASENAMES' )
+      end do 
+    end if
 
     ! setting switches
     if( .NOT. USE_NESTING ) then
@@ -573,6 +594,13 @@ contains
        LOG_INFO_CONT(*) 'Density relaxation time                        : ', ATMOS_BOUNDARY_DENS_ADJUST_tau
     end if
 
+    if (ATMOS_BOUNDARY_NFILES > 1)then
+       LOG_INFO_CONT(*) ' *** Multiple boundary files *** # of files : ', ATMOS_BOUNDARY_NFILES
+       do ifile = 1, ATMOS_BOUNDARY_NFILES 
+          LOG_INFO_CONT(*) 'Atmospheric boundary start date             # ', ifile ,' : ' ,ATMOS_BOUNDARY_START_DATES(:,ifile)
+       end do
+    endif
+
     if ( ONLINE_BOUNDARY_DIAGQHYD ) then
        allocate( Q_WORK(KA,IA,JA,NESTQA) )
     end if
@@ -625,7 +653,8 @@ contains
           call ATMOS_BOUNDARY_set_online
        else
           if ( ATMOS_BOUNDARY_IN_BASENAME /= '' ) then
-             call ATMOS_BOUNDARY_set_file
+              call ATMOS_BOUNDARY_initialize_file
+              call ATMOS_BOUNDARY_set_file
           endif
        endif
 
@@ -1360,14 +1389,19 @@ contains
   !-----------------------------------------------------------------------------
   !> Initialize boundary value for real case experiment
   subroutine ATMOS_BOUNDARY_initialize_file
-    use scale_calendar, only: &
+    use scale_prc, only: &
+       PRC_abort
+     use scale_calendar, only: &
        CALENDAR_date2daysec,    &
        CALENDAR_combine_daysec, &
        CALENDAR_date2char
     use scale_time, only: &
        TIME_NOWDATE
+    use scale_file, only: &
+       FILE_opened
     use scale_file_cartesC, only: &
        FILE_CARTESC_open, &
+       FILE_CARTESC_close, &
        FILE_CARTESC_check_coordinates
     implicit none
 
@@ -1376,6 +1410,50 @@ contains
     real(DP)          :: boundary_time_startms
     integer           :: boundary_time_offset_year
     character(len=27) :: boundary_chardate
+
+    real(DP) :: nowsec, bdysec, bdysecb
+    integer  :: ifile, ifileb
+
+    if ( ATMOS_BOUNDARY_NFILES > 1 ) then
+      call CALENDAR_date2daysec( boundary_time_startday,       & ! [OUT]
+                                 boundary_time_startsec,       & ! [OUT]
+                                 TIME_NOWDATE(:),              & ! [IN]
+                                 0.0D0,                        & ! [IN]
+                                 0                             ) ! [IN]
+      nowsec  = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec )
+      bdysec = 0.0D0
+      do ifile = 1, ATMOS_BOUNDARY_NFILES
+        bdysecb = bdysec
+        call CALENDAR_date2daysec( boundary_time_startday,              & ! [OUT]
+                                   boundary_time_startsec,              & ! [OUT]
+                                   ATMOS_BOUNDARY_START_DATES(:,ifile), & ! [IN]
+                                   0.0D0,                               & ! [IN]
+                                   0                                    ) ! [IN]
+        bdysec = CALENDAR_combine_daysec( boundary_time_startday, boundary_time_startsec ) 
+        if ( nowsec >= bdysecb .and. nowsec < bdysec ) then
+          if ( ifile == 1 ) then
+            LOG_ERROR("ATMOS_BOUNDARY_initialize_file",*) 'BOUNDARY TIME mismatch'
+            call PRC_abort
+          else
+            ifileb = ifile - 1
+            exit
+          end if
+        end if 
+        if ( ifile == ATMOS_BOUNDARY_NFILES .and. nowsec < bdysec  ) then
+          LOG_ERROR("ATMOS_BOUNDARY_initialize_file",*) 'BOUNDARY TIME mismatch'
+          call PRC_abort
+        end if
+        ifileb = ifile
+      end do
+
+
+    ATMOS_BOUNDARY_START_DATE = ATMOS_BOUNDARY_START_DATES(:,ifileb)
+    ATMOS_BOUNDARY_IN_BASENAME = ATMOS_BOUNDARY_IN_BASENAMES(ifileb)
+
+    LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'NOWDATE', TIME_NOWDATE
+    LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'BOUNDARY_START_DATE', ATMOS_BOUNDARY_START_DATE
+    LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'BOUNDARY_IN_BASENAME', ATMOS_BOUNDARY_IN_BASENAME
+     end if
 
     if ( ATMOS_BOUNDARY_START_DATE(1) == -9999 ) then
        ATMOS_BOUNDARY_START_DATE = TIME_NOWDATE
@@ -1398,7 +1476,13 @@ contains
 
     LOG_INFO("ATMOS_BOUNDARY_initialize_file",'(1x,A,A)') 'BOUNDARY START Date     : ', boundary_chardate
 
-    call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, ATMOS_BOUNDARY_fid )
+    if ( ATMOS_BOUNDARY_IN_BASENAME /= ATMOS_BOUNDARY_IN_BASENAME_OPENED ) then
+       LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'close old BOUNDARY file : ', ATMOS_BOUNDARY_IN_BASENAME_OPENED
+       if ( ATMOS_BOUNDARY_fid /= -1 .and. FILE_opened(ATMOS_BOUNDARY_fid) ) call FILE_CARTESC_close( ATMOS_BOUNDARY_fid )    
+       LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'try to open BOUNDARY file : ', ATMOS_BOUNDARY_IN_BASENAME 
+       call FILE_CARTESC_open( ATMOS_BOUNDARY_IN_BASENAME, ATMOS_BOUNDARY_fid )
+       ATMOS_BOUNDARY_IN_BASENAME_OPENED = ATMOS_BOUNDARY_IN_BASENAME
+    endif
 
     if ( ATMOS_BOUNDARY_IN_CHECK_COORDINATES ) then
        call FILE_CARTESC_check_coordinates( ATMOS_BOUNDARY_fid, atmos=.true. )
@@ -1745,6 +1829,11 @@ contains
 
     integer :: handle
     !---------------------------------------------------------------------------
+
+    if ( ATMOS_BOUNDARY_NFILES > 1 ) then
+       call ATMOS_BOUNDARY_initialize_file
+       call ATMOS_BOUNDARY_set_file
+    end if
 
     if ( l_bnd ) then
 
