@@ -39,6 +39,7 @@ module mod_atmos_vars
   public :: ATMOS_vars_calc_diagnostics
   public :: ATMOS_vars_get_diagnostic
   public :: ATMOS_vars_monitor
+  public :: ATMOS_vars_finalize
 
   public :: ATMOS_vars_restart_create
   public :: ATMOS_vars_restart_open
@@ -3273,6 +3274,117 @@ contains
 
     return
   end subroutine ATMOS_vars_monitor
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_vars_finalize
+    use scale_atmos_hydrometeor, only: &
+       ATMOS_HYDROMETEOR_dry
+    use mod_atmos_admin, only: &
+       ATMOS_USE_AVERAGE
+    use mod_atmos_dyn_vars, only: &
+       ATMOS_DYN_vars_finalize
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_vars_finalize
+    use mod_atmos_phy_ae_vars, only: &
+       ATMOS_PHY_AE_vars_finalize
+    use mod_atmos_phy_ch_vars, only: &
+       ATMOS_PHY_CH_vars_finalize
+    use mod_atmos_phy_rd_vars, only: &
+       ATMOS_PHY_RD_vars_finalize
+    use mod_atmos_phy_sf_vars, only: &
+       ATMOS_PHY_SF_vars_finalize
+    use mod_atmos_phy_tb_vars, only: &
+       ATMOS_PHY_TB_vars_finalize
+    use mod_atmos_phy_bl_vars, only: &
+       ATMOS_PHY_BL_vars_finalize
+    use mod_atmos_phy_cp_vars, only: &
+       ATMOS_PHY_CP_vars_finalize
+    use mod_atmos_phy_lt_vars, only: &
+       ATMOS_PHY_LT_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_vars_finalize",*) 'Finalize'
+
+    if ( ATMOS_USE_AVERAGE ) then
+       deallocate( DENS_avw )
+       deallocate( MOMZ_avw )
+       deallocate( MOMX_avw )
+       deallocate( MOMY_avw )
+       deallocate( RHOT_avw )
+       deallocate( QTRC_avw )
+    endif
+
+    deallocate( DENS )
+    deallocate( MOMZ )
+    deallocate( MOMX )
+    deallocate( MOMY )
+    deallocate( RHOT )
+    deallocate( QTRC )
+
+    deallocate( DENS_tp )
+    deallocate( MOMZ_tp )
+    deallocate( RHOU_tp )
+    deallocate( RHOV_tp )
+    deallocate( RHOT_tp )
+    deallocate( RHOH_p  )
+    deallocate( RHOQ_tp )
+
+    deallocate( W )
+    deallocate( U )
+    deallocate( V )
+
+    deallocate( POTT  )
+    deallocate( TEMP  )
+    deallocate( PRES  )
+    deallocate( EXNER )
+    deallocate( PHYD  )
+    deallocate( PHYDH )
+
+    deallocate( Qdry )
+    deallocate( Rtot )
+    deallocate( CVtot)
+    deallocate( CPtot)
+
+    deallocate( PREC      )
+    deallocate( PREC_ENGI )
+
+    ! obsolute
+    deallocate( MOMX_tp )
+    deallocate( MOMY_tp )
+
+    deallocate( WORK3D )
+    deallocate( WORK2D )
+    deallocate( WORK1D )
+
+    call ATMOS_DYN_vars_finalize
+    call ATMOS_PHY_MP_vars_finalize
+    call ATMOS_PHY_AE_vars_finalize
+    call ATMOS_PHY_CH_vars_finalize
+    call ATMOS_PHY_RD_vars_finalize
+    call ATMOS_PHY_SF_vars_finalize
+    call ATMOS_PHY_TB_vars_finalize
+    call ATMOS_PHY_BL_vars_finalize
+    call ATMOS_PHY_CP_vars_finalize
+    call ATMOS_PHY_LT_vars_finalize
+
+
+    ! water content
+    if ( ATMOS_HYDROMETEOR_dry ) then
+       deallocate( ZERO )
+
+    else
+       deallocate( Qe )
+    end if
+
+    !-----< history output finalize >-----
+    deallocate( QP_HIST_id  )
+    deallocate( QP_MONIT_id )
+
+    return
+  end subroutine ATMOS_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> Create atmospheric restart file

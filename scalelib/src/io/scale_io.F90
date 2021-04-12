@@ -31,9 +31,10 @@ module scale_io
   !
   public :: IO_setup
   public :: IO_LOG_setup
+  public :: IO_finalize
   public :: IO_set_universalrank
   public :: IO_get_available_fid
-  public :: IO_make_idstr
+  public :: IO_get_fname
   public :: IO_ARG_getfname
   public :: IO_CNF_open
 
@@ -66,7 +67,7 @@ module scale_io
   logical,               public            :: IO_LOG_ALLNODE      = .false. !< output log for each node?
   integer,               public            :: IO_STEP_TO_STDOUT   = -1      !< interval for output current step to STDOUT (negative is off)
 
-  character(len=6),      public            :: IO_UNIVERSALRANK       = "UNKNWN"!< universal rank    for error log
+  character(len=6),      public            :: IO_UNIVERSALRANK    = "UNKNWN"!< universal rank    for error log
   character(len=6),      public            :: IO_JOBID            = "UNKNWN"!< bulk job id       for error log
   character(len=6),      public            :: IO_DOMAINID         = "UNKNWN"!< nesting domain id for error log
   character(len=6),      public            :: IO_LOCALRANK        = "UNKNWN"!< local     rank    for error log
@@ -82,6 +83,8 @@ module scale_io
   integer, private, parameter :: IO_MINFID    =  10 !< minimum available fid
   integer, private, parameter :: IO_MAXFID    = 256 !< maximum available fid
 
+  character(len=H_LONG), private            :: IO_prefix
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -89,6 +92,7 @@ contains
   subroutine IO_setup( &
        APPNAME,     &
        conf_name,   &
+       prefix,      &
        allow_noconf )
 
     implicit none
@@ -105,6 +109,7 @@ contains
 
     character(len=*), intent(in) :: APPNAME                !< name of the application
     character(len=*), intent(in), optional :: conf_name    !< name of config file for each process
+    character(len=*), intent(in), optional :: prefix       !< prefix for files
     logical,          intent(in), optional :: allow_noconf !< if true, allow program to run without configure file
 
     character(len=H_LONG) :: fname
@@ -118,6 +123,12 @@ contains
        fname = IO_ARG_getfname( is_master=.true., allow_noconf=allow_noconf )
        IO_LOG_BASENAME = IO_STDOUT
     endif
+
+    if ( present(prefix) ) then
+       IO_prefix = prefix
+    else
+       IO_prefix = ""
+    end if
 
     !--- Open config file till end
     IO_FID_CONF = IO_CNF_open( fname,           & ! [IN]
@@ -187,7 +198,7 @@ contains
           IO_FID_LOG = IO_FID_STDOUT
        else
           IO_FID_LOG = IO_get_available_fid()
-          call IO_make_idstr(fname,trim(IO_LOG_BASENAME),'pe',myrank)
+          call IO_get_fname(fname, IO_LOG_BASENAME, rank=myrank)
           open( unit   = IO_FID_LOG,  &
                 file   = trim(fname), &
                 form   = 'formatted', &
@@ -270,18 +281,19 @@ contains
     endif
 
     if ( IO_NML_FILENAME /= '' ) then
+       call IO_get_fname(fname, IO_NML_FILENAME)
        LOG_INFO("IO_LOG_setup",*) 'The used configurations are output to the file.'
-       LOG_INFO("IO_LOG_setup",*) 'filename of used config file   = ', trim(IO_NML_FILENAME)
+       LOG_INFO("IO_LOG_setup",*) 'filename of used config file   = ', trim(fname)
 
        if ( is_master ) then ! write from master node only
           IO_NML     = .true. ! force on
           IO_FID_NML = IO_get_available_fid()
-          open( unit   = IO_FID_NML,            &
-                file   = trim(IO_NML_FILENAME), &
-                form   = 'formatted',           &
-                iostat = ierr                   )
+          open( unit   = IO_FID_NML,  &
+                file   = fname,       &
+                form   = 'formatted', &
+                iostat = ierr         )
           if ( ierr /= 0 ) then
-             LOG_ERROR('IO_LOG_setup',*) 'File open error! :', trim(IO_NML_FILENAME)
+             LOG_ERROR('IO_LOG_setup',*) 'File open error! :', trim(fname)
              stop 1
           endif
 
@@ -314,6 +326,32 @@ contains
     return
   end subroutine IO_LOG_setup
 
+  subroutine IO_finalize
+
+    LOG_NEWLINE
+    LOG_PROGRESS(*) 'Closing LOG file'
+
+    if ( IO_FID_CONF > 0 ) then
+       close( IO_FID_CONF )
+       IO_FID_CONF = -1
+    end if
+
+    if ( IO_FID_LOG /= IO_FID_STDOUT ) then
+       close( IO_FID_LOG )
+       IO_FID_LOG = -1
+    end if
+
+    if ( IO_FID_NML > 0 ) then
+       close( IO_FID_NML )
+       IO_FID_NML = -1
+    end if
+
+    IO_L   = .false.
+    IO_NML = .false.
+
+    return
+  end subroutine IO_finalize
+
   !-----------------------------------------------------------------------------
   !> search & get available file ID
   !> @return fid
@@ -331,7 +369,7 @@ contains
 
     if ( fid >= IO_MAXFID ) then ! reach limit
        LOG_ERROR("IO_get_available_fid",*) 'Used I/O unit number reached to the limit! STOP'
-       stop 1
+       stop
     endif
 
   end function IO_get_available_fid
@@ -358,33 +396,54 @@ contains
 
   !-----------------------------------------------------------------------------
   !> generate process specific filename
-  subroutine IO_make_idstr( &
+  subroutine IO_get_fname( &
        outstr, &
        instr,  &
-       ext,    &
        rank,   &
-       isrgn   )
+       ext,    &
+       len     )
     implicit none
 
-    character(len=H_LONG), intent(out) :: outstr !< generated string
-    character(len=*),      intent(in)  :: instr  !< strings
-    character(len=*),      intent(in)  :: ext    !< extention
-    integer,               intent(in)  :: rank   !< number
-    logical,               intent(in), optional :: isrgn !< for region? (8 digits)
+    character(len=*), intent(out) :: outstr !< generated string
+    character(len=*), intent(in)  :: instr  !< strings
+    integer,          intent(in), optional :: rank
+    character(len=*), intent(in), optional :: ext    !< extention
+    integer,          intent(in), optional :: len
 
-    character(len=H_SHORT) :: srank
+    integer :: len_
+    character(len=H_SHORT) :: ext_
+    character(len=8) :: srank
+    character(len=6) :: fmt
     !---------------------------------------------------------------------------
 
-    write(srank,'(I6.6)') rank
+    if ( present(rank) ) then
+       if ( present(ext) ) then
+          ext_ = ext
+       else
+          ext_ = "pe"
+       end if
+       if ( rank >= 0 ) then
+          if ( present(len) ) then
+             len_ = len
+          else
+             len_ = 6
+          end if
+          write(fmt,'(A,I1,A,I1,A)') '(I', len_, '.', len_, ')'
+          write(srank, fmt) rank
+          outstr = trim(instr)//'.'//trim(ext_)//trim(srank)
+       else
+          outstr = trim(instr)//'.'//trim(ext_)//"all"
+       end if
+    else
+       outstr = instr
+    end if
 
-    if ( present(isrgn) ) then
-       if(isrgn) write(srank,'(I8.8)') rank-1
-    endif
-
-    outstr = trim(instr)//'.'//trim(ext)//trim(srank)
+    if ( IO_prefix /= "" .and. outstr(1:1) /= "/" ) then
+       outstr = trim(IO_prefix) // trim(outstr)
+    end if
 
     return
-  end subroutine IO_make_idstr
+  end subroutine IO_get_fname
 
   !-----------------------------------------------------------------------------
   !> get config filename from argument
@@ -444,7 +503,7 @@ contains
           LOG_ERROR("IO_CNF_open",*) 'Failed to open config file! STOP.'
           LOG_ERROR("IO_CNF_open",*) 'filename : ', trim(fname)
        end if
-       stop 1
+       stop
     endif
 
   end function IO_CNF_open

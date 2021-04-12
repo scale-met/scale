@@ -27,6 +27,7 @@ module mod_atmos_phy_lt_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_LT_vars_setup
+  public :: ATMOS_PHY_LT_vars_finalize
   public :: ATMOS_PHY_LT_vars_fillhalo
   public :: ATMOS_PHY_LT_vars_restart_read
   public :: ATMOS_PHY_LT_vars_restart_write
@@ -162,6 +163,25 @@ contains
 
     return
   end subroutine ATMOS_PHY_LT_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_LT_vars_finalize
+    use mod_atmos_phy_mp_vars, only: &
+       ATMOS_PHY_MP_RHOC_t
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_LT_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_LT_Epot )
+
+    ! for cloud microphysics
+    deallocate( ATMOS_PHY_MP_RHOC_t )
+
+    return
+  end subroutine ATMOS_PHY_LT_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

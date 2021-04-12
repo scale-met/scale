@@ -29,6 +29,7 @@ module mod_atmos_phy_rd_vars
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_vars_setup
+  public :: ATMOS_PHY_RD_vars_finalize
   public :: ATMOS_PHY_RD_vars_fillhalo
   public :: ATMOS_PHY_RD_vars_restart_read
   public :: ATMOS_PHY_RD_vars_restart_write
@@ -210,6 +211,35 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_vars_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine ATMOS_PHY_RD_vars_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_vars_finalize",*) 'Finalize'
+
+    deallocate( ATMOS_PHY_RD_RHOH )
+
+    deallocate( ATMOS_PHY_RD_SFLX_LW_up )
+    deallocate( ATMOS_PHY_RD_SFLX_LW_dn )
+    deallocate( ATMOS_PHY_RD_SFLX_SW_up )
+    deallocate( ATMOS_PHY_RD_SFLX_SW_dn )
+
+    deallocate( ATMOS_PHY_RD_TOMFLX_LW_up )
+    deallocate( ATMOS_PHY_RD_TOMFLX_LW_dn )
+    deallocate( ATMOS_PHY_RD_TOMFLX_SW_up )
+    deallocate( ATMOS_PHY_RD_TOMFLX_SW_dn )
+
+    deallocate( ATMOS_PHY_RD_SFLX_down )
+
+    deallocate( ATMOS_PHY_RD_solins )
+    deallocate( ATMOS_PHY_RD_cosSZA )
+
+    return
+  end subroutine ATMOS_PHY_RD_vars_finalize
 
   !-----------------------------------------------------------------------------
   !> HALO Communication

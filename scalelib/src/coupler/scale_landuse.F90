@@ -36,6 +36,7 @@ module scale_landuse
   public :: LANDUSE_calc_fact
   public :: LANDUSE_fillhalo
   public :: LANDUSE_write
+  public :: LANDUSE_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -565,5 +566,34 @@ contains
 
     return
   end subroutine LANDUSE_write
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine LANDUSE_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("LANDUSE_finalize",*) 'Finalize'
+
+    deallocate( LANDUSE_frac_land  )
+    deallocate( LANDUSE_frac_urban )
+    deallocate( LANDUSE_frac_lake  )
+
+    deallocate( LANDUSE_index_PFT )
+    deallocate( LANDUSE_frac_PFT  )
+
+    deallocate( LANDUSE_fact_ocean )
+    deallocate( LANDUSE_fact_land  )
+    deallocate( LANDUSE_fact_urban )
+    deallocate( LANDUSE_fact_lake  )
+
+    deallocate( LANDUSE_exists_ocean )
+    deallocate( LANDUSE_exists_land  )
+    deallocate( LANDUSE_exists_urban )
+    deallocate( LANDUSE_exists_lake  )
+
+    return
+  end subroutine LANDUSE_finalize
 
 end module scale_landuse

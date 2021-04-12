@@ -1723,8 +1723,53 @@ contains
   !> finalization
   !-----------------------------------------------------------------------------
   subroutine FILE_HISTORY_Finalize
+    implicit none
+    integer :: id
 
     call FILE_HISTORY_Close
+
+    laststep_write = -1
+    list_outputed  = .false.
+
+    do id = 1, FILE_HISTORY_nitems
+       deallocate( FILE_HISTORY_vars(id)%varsum )
+    end do
+    FILE_HISTORY_nitems = 0
+
+    do id = 1, FILE_HISTORY_ndims
+       deallocate( FILE_HISTORY_dims(id)%dims )
+       deallocate( FILE_HISTORY_dims(id)%start )
+       deallocate( FILE_HISTORY_dims(id)%count )
+       deallocate( FILE_HISTORY_dims(id)%zcoords )
+       deallocate( FILE_HISTORY_dims(id)%size )
+    end do
+    FILE_HISTORY_ndims = 0
+
+    do id = 1, FILE_HISTORY_naxes
+       deallocate( FILE_HISTORY_axes(id)%var )
+       if ( associated( FILE_HISTORY_axes(id)%bounds ) ) &
+            deallocate( FILE_HISTORY_axes(id)%bounds )
+    end do
+    FILE_HISTORY_naxes = 0
+
+    do id = 1, FILE_HISTORY_nassocs
+       deallocate( FILE_HISTORY_assocs(id)%var )
+    end do
+    FILE_HISTORY_nassocs   =  0
+
+    do id = 1, FILE_HISTORY_nattrs
+       if ( associated(FILE_HISTORY_attrs(id)%int ) ) &
+          deallocate( FILE_HISTORY_attrs(id)%int )
+       if ( associated(FILE_HISTORY_attrs(id)%float ) ) &
+            deallocate( FILE_HISTORY_attrs(id)%float )
+       if ( associated(FILE_HISTORY_attrs(id)%double ) ) &
+            deallocate( FILE_HISTORY_attrs(id)%double )
+    end do
+    FILE_HISTORY_nattrs   = 0
+
+    deallocate( FILE_HISTORY_req )
+    deallocate( FILE_HISTORY_vars )
+    deallocate( FILE_HISTORY_var_inputs )
 
     return
   end subroutine FILE_HISTORY_Finalize

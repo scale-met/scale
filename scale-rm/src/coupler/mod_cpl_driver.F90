@@ -24,6 +24,7 @@ module mod_cpl_driver
   !++ Public procedure
   !
   public :: CPL_driver_setup
+  public :: CPL_driver_finalize
   public :: CPL_driver
 
   !-----------------------------------------------------------------------------
@@ -48,6 +49,22 @@ contains
 
     return
   end subroutine CPL_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine CPL_driver_finalize
+    use scale_cpl_phy_sfc_fixed_temp, only: &
+       CPL_PHY_SFC_FIXED_TEMP_finalize
+    use scale_cpl_phy_sfc_skin, only: &
+       CPL_PHY_SFC_SKIN_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    call CPL_PHY_SFC_FIXED_TEMP_finalize
+    call CPL_PHY_SFC_SKIN_finalize
+
+    return
+  end subroutine CPL_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> CPL calcuration

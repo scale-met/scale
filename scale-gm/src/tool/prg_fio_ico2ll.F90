@@ -342,7 +342,7 @@ program fio_ico2ll
 
      do l = 1, PRC_RGN_local
         rgnid = PRC_RGN_lp2r(l,p-1)
-        call IO_make_idstr(fname,trim(llmap_base),'rgn',rgnid,isrgn=.true.)
+        call IO_get_fname(fname, llmap_base, rank=rgnid, ext='rgn', len=8)
         LOG_INFO("fio_ico2ll",*) 'p=', p, 'l=', l, 'rgnid=', rgnid
 
         fid = IO_get_available_fid()

@@ -169,15 +169,16 @@ contains
 
 
     fid = IO_get_available_fid()
+    call IO_get_fname(fname, file_name)
     !--- open namelist
     open( fid, &
-          file   = trim(file_name), &
-          form   = 'formatted',    &
-          status = 'old',          &
-          action = 'read',         &
-          iostat = ierr            )
+          file   = fname,       &
+          form   = 'formatted', &
+          status = 'old',       &
+          action = 'read',      &
+          iostat = ierr         )
     if ( ierr /= 0 ) then
-       LOG_ERROR("FILE_GrADS_open",*) 'Input file is not found! ', trim(file_name)
+       LOG_ERROR("FILE_GrADS_open",*) 'Input file is not found! ', trim(fname)
        call PRC_abort
     endif
 
@@ -186,7 +187,7 @@ contains
     !--- read namelist dims
     read(fid,nml=GrADS_DIMS,iostat=ierr)
     if( ierr /= 0 ) then !--- missing or fatal error
-       LOG_ERROR("FILE_GrADS_open",*) 'Not appropriate names in GrADS_DIMS in ', trim(file_name),'. Check!'
+       LOG_ERROR("FILE_GrADS_open",*) 'Not appropriate names in GrADS_DIMS in ', trim(fname),'. Check!'
        call PRC_abort
     endif
     LOG_NML(GrADS_DIMS)
@@ -776,7 +777,7 @@ contains
           files(fid)%fid     = -1
        end if
 
-       gfile = trim(var_info%fname)//trim(postfix_)//'.grd'
+       call IO_get_fname(gfile, trim(var_info%fname)//trim(postfix_)//'.grd')
 
        if ( files(fid)%postfix == postfix_ .and. files(fid)%fid > 0 ) then
           fid = files(fid)%fid

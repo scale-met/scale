@@ -94,6 +94,7 @@ module scale_atmos_phy_mp_sn14
   !++ Public procedure
   !
   public :: ATMOS_PHY_MP_sn14_setup
+  public :: ATMOS_PHY_MP_sn14_finalize
   public :: ATMOS_PHY_MP_sn14_tendency
   public :: ATMOS_PHY_MP_sn14_terminal_velocity
   public :: ATMOS_PHY_MP_sn14_effective_radius
@@ -638,6 +639,15 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_sn14_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_MP_sn14_finalize
+
+    deallocate(nc_uplim_d)
+
+    return
+  end subroutine ATMOS_PHY_MP_sn14_finalize
 
   !-----------------------------------------------------------------------------
   !> ATMOS_PHY_MP_sn14_tendency

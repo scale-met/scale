@@ -42,6 +42,7 @@ module scale_atmos_phy_tb_d1980
   !
   public :: ATMOS_PHY_TB_d1980_config
   public :: ATMOS_PHY_TB_d1980_setup
+  public :: ATMOS_PHY_TB_d1980_finalize
   public :: ATMOS_PHY_TB_d1980
 
   !-----------------------------------------------------------------------------
@@ -159,6 +160,15 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_d1980_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_TB_d1980_finalize
+
+    deallocate( delta )
+
+    return
+  end subroutine ATMOS_PHY_TB_d1980_finalize
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_d1980( &

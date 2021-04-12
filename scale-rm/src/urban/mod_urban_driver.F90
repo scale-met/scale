@@ -27,6 +27,7 @@ module mod_urban_driver
   !++ Public procedure
   !
   public :: URBAN_driver_setup
+  public :: URBAN_driver_finalize
   public :: URBAN_driver_calc_tendency
   public :: URBAN_driver_update
   public :: URBAN_SURFACE_GET
@@ -107,6 +108,37 @@ contains
 
     return
   end subroutine URBAN_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalize
+  subroutine URBAN_driver_finalize
+    use mod_urban_admin, only: &
+       URBAN_do, &
+       URBAN_DYN_TYPE, &
+       URBAN_SFC_TYPE
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("URBAN_driver_finalize",*) 'Finalize'
+
+    if ( URBAN_do ) then
+
+       select case ( URBAN_DYN_TYPE )
+       case ( 'KUSAKA01' )
+       end select
+
+       select case ( URBAN_SFC_TYPE )
+       case ( 'KUSAKA01' )
+       end select
+
+       deallocate( AH_URB  )
+       deallocate( AHL_URB )
+
+    end if
+
+    return
+  end subroutine URBAN_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Calclate tendency

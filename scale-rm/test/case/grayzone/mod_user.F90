@@ -271,7 +271,7 @@ contains
     allocate( shf_in (mstep) )
 
     fid_data = IO_get_available_fid()
-    fdata_name_sst = trim(inbasedir)//'/'//trim(fdata_name_sst)
+    call IO_get_fname(fdata_name_sst, trim(inbasedir)//'/'//trim(fdata_name_sst))
     open(fid_data, file=trim(fdata_name_sst), status='old',iostat=ierr)
     if(ierr /= 0) then
       LOG_WARN("USER_setup",*) 'Msg : Sub[mod_user_setup]/Mod[uset_setup]'
@@ -289,7 +289,7 @@ contains
 
     if( GIVEN_HEAT_FLUX )then
       fid_data_sf = IO_get_available_fid()
-      fdata_name_sf=trim(inbasedir)//'/'//trim(fdata_name_sf)
+      call IO_get_fname(fdata_name_sf, trim(inbasedir)//'/'//trim(fdata_name_sf))
       open(fid_data_sf, file=trim(fdata_name_sf), status='old',iostat=ierr)
       if(ierr /= 0) then
         LOG_WARN("USER_setup",*) 'Msg : Sub[SF_GRAYZONE_setup]/Mod[sf_grayzone]'
@@ -475,7 +475,7 @@ contains
       !
       ! open 1-dim forcing data
       fid_data = IO_get_available_fid()
-      fdata_name_atm=trim(inbasedir)//'/'//trim(fdata_name_atm)
+      call IO_get_fname(fdata_name_atm, trim(inbasedir)//'/'//trim(fdata_name_atm))
       open(fid_data, file=trim(fdata_name_atm), status='old',iostat=ierr)
       if(ierr /= 0) then
         LOG_WARN("USER_calc_tendency",*) 'Msg : Sub[mod_user_setup]/Mod[user_setup]'

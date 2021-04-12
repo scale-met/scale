@@ -189,6 +189,12 @@ contains
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    KMAX = -1
+    IMAX = -1
+    JMAX = -1
+    IBLOCK = -1
+    JBLOCK = -1
+
     if ( present(KMAX_in)  ) KMAX   = KMAX_in
     if ( present(IMAXG_in) ) IMAXG  = IMAXG_in
     if ( present(JMAXG_in) ) JMAXG  = JMAXG_in

@@ -179,55 +179,55 @@ contains
 
     logical, intent(in) :: setup_TimeIntegration
 
-    real(DP)               :: TIME_DURATION                = UNDEF8
-    character(len=H_SHORT) :: TIME_DURATION_UNIT           = "SEC"
-    real(DP)               :: TIME_DT                      = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_UNIT                 = "SEC"
+    real(DP)               :: TIME_DURATION
+    character(len=H_SHORT) :: TIME_DURATION_UNIT
+    real(DP)               :: TIME_DT
+    character(len=H_SHORT) :: TIME_DT_UNIT
 
-    real(DP)               :: TIME_DT_ATMOS_DYN            = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT       = "SEC"
-    integer                :: TIME_NSTEP_ATMOS_DYN         = -1
-    real(DP)               :: TIME_DT_ATMOS_PHY_CP         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_MP         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_RD         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_SF         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_TB         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_BL         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_BL_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_CH         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_AE         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_PHY_LT         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_LT_UNIT    = ""
-    real(DP)               :: TIME_DT_ATMOS_RESTART        = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT   = ""
+    real(DP)               :: TIME_DT_ATMOS_DYN
+    character(len=H_SHORT) :: TIME_DT_ATMOS_DYN_UNIT
+    integer                :: TIME_NSTEP_ATMOS_DYN
+    real(DP)               :: TIME_DT_ATMOS_PHY_CP
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CP_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_MP
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_MP_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_RD
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_RD_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_SF
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_SF_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_TB
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_TB_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_BL
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_BL_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_CH
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_CH_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_AE
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_AE_UNIT
+    real(DP)               :: TIME_DT_ATMOS_PHY_LT
+    character(len=H_SHORT) :: TIME_DT_ATMOS_PHY_LT_UNIT
+    real(DP)               :: TIME_DT_ATMOS_RESTART
+    character(len=H_SHORT) :: TIME_DT_ATMOS_RESTART_UNIT
 
-    real(DP)               :: TIME_DT_OCEAN                = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT           = ""
-    real(DP)               :: TIME_DT_OCEAN_RESTART        = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT   = ""
+    real(DP)               :: TIME_DT_OCEAN
+    character(len=H_SHORT) :: TIME_DT_OCEAN_UNIT
+    real(DP)               :: TIME_DT_OCEAN_RESTART
+    character(len=H_SHORT) :: TIME_DT_OCEAN_RESTART_UNIT
 
-    real(DP)               :: TIME_DT_LAND                 = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_LAND_UNIT            = ""
-    real(DP)               :: TIME_DT_LAND_RESTART         = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT    = ""
+    real(DP)               :: TIME_DT_LAND
+    character(len=H_SHORT) :: TIME_DT_LAND_UNIT
+    real(DP)               :: TIME_DT_LAND_RESTART
+    character(len=H_SHORT) :: TIME_DT_LAND_RESTART_UNIT
 
-    real(DP)               :: TIME_DT_URBAN                = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_URBAN_UNIT           = ""
-    real(DP)               :: TIME_DT_URBAN_RESTART        = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT   = ""
+    real(DP)               :: TIME_DT_URBAN
+    character(len=H_SHORT) :: TIME_DT_URBAN_UNIT
+    real(DP)               :: TIME_DT_URBAN_RESTART
+    character(len=H_SHORT) :: TIME_DT_URBAN_RESTART_UNIT
 
-    real(DP)               :: TIME_DT_RESUME               = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_RESUME_UNIT          = ""
+    real(DP)               :: TIME_DT_RESUME
+    character(len=H_SHORT) :: TIME_DT_RESUME_UNIT
 
-    real(DP)               :: TIME_DT_WALLCLOCK_CHECK      = UNDEF8
-    character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT = ""
+    real(DP)               :: TIME_DT_WALLCLOCK_CHECK
+    character(len=H_SHORT) :: TIME_DT_WALLCLOCK_CHECK_UNIT
 
     namelist / PARAM_TIME / &
        TIME_STARTDATE,               &
@@ -295,6 +295,57 @@ contains
     LOG_INFO("ADMIN_TIME_setup",*) 'Setup'
 
     TIME_NSTEP_ATMOS_DYN = -1
+
+    TIME_DURATION                = UNDEF8
+    TIME_DURATION_UNIT           = "SEC"
+    TIME_DT                      = UNDEF8
+    TIME_DT_UNIT                 = "SEC"
+
+    TIME_DT_ATMOS_DYN            = UNDEF8
+    TIME_DT_ATMOS_DYN_UNIT       = "SEC"
+    TIME_NSTEP_ATMOS_DYN         = -1
+    TIME_DT_ATMOS_PHY_CP         = UNDEF8
+    TIME_DT_ATMOS_PHY_CP_UNIT    = ""
+    TIME_DT_ATMOS_PHY_MP         = UNDEF8
+    TIME_DT_ATMOS_PHY_MP_UNIT    = ""
+    TIME_DT_ATMOS_PHY_RD         = UNDEF8
+    TIME_DT_ATMOS_PHY_RD_UNIT    = ""
+    TIME_DT_ATMOS_PHY_SF         = UNDEF8
+    TIME_DT_ATMOS_PHY_SF_UNIT    = ""
+    TIME_DT_ATMOS_PHY_TB         = UNDEF8
+    TIME_DT_ATMOS_PHY_TB_UNIT    = ""
+    TIME_DT_ATMOS_PHY_BL         = UNDEF8
+    TIME_DT_ATMOS_PHY_BL_UNIT    = ""
+    TIME_DT_ATMOS_PHY_CH         = UNDEF8
+    TIME_DT_ATMOS_PHY_CH_UNIT    = ""
+    TIME_DT_ATMOS_PHY_AE         = UNDEF8
+    TIME_DT_ATMOS_PHY_AE_UNIT    = ""
+    TIME_DT_ATMOS_PHY_LT         = UNDEF8
+    TIME_DT_ATMOS_PHY_LT_UNIT    = ""
+    TIME_DT_ATMOS_RESTART        = UNDEF8
+    TIME_DT_ATMOS_RESTART_UNIT   = ""
+
+    TIME_DT_OCEAN                = UNDEF8
+    TIME_DT_OCEAN_UNIT           = ""
+    TIME_DT_OCEAN_RESTART        = UNDEF8
+    TIME_DT_OCEAN_RESTART_UNIT   = ""
+
+    TIME_DT_LAND                 = UNDEF8
+    TIME_DT_LAND_UNIT            = ""
+    TIME_DT_LAND_RESTART         = UNDEF8
+    TIME_DT_LAND_RESTART_UNIT    = ""
+
+    TIME_DT_URBAN                = UNDEF8
+    TIME_DT_URBAN_UNIT           = ""
+    TIME_DT_URBAN_RESTART        = UNDEF8
+    TIME_DT_URBAN_RESTART_UNIT   = ""
+
+    TIME_DT_RESUME               = UNDEF8
+    TIME_DT_RESUME_UNIT          = ""
+
+    TIME_DT_WALLCLOCK_CHECK      = UNDEF8
+    TIME_DT_WALLCLOCK_CHECK_UNIT = ""
+
 
     !--- read namelist
     rewind(IO_FID_CONF)

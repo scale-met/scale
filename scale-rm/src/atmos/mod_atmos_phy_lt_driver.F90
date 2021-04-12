@@ -28,6 +28,7 @@ module mod_atmos_phy_lt_driver
   !
   public :: ATMOS_PHY_LT_driver_tracer_setup
   public :: ATMOS_PHY_LT_driver_setup
+  public :: ATMOS_PHY_LT_driver_finalize
   public :: ATMOS_PHY_LT_driver_adjustment
 
   !-----------------------------------------------------------------------------
@@ -245,6 +246,36 @@ contains
     return
   end subroutine ATMOS_PHY_LT_driver_setup
 
+  !-----------------------------------------------------------------------------
+  subroutine ATMOS_PHY_LT_driver_finalize
+    use scale_atmos_phy_lt_sato2019, only: &
+       ATMOS_PHY_LT_sato2019_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_LT_TYPE, &
+       ATMOS_sw_phy_lt
+    use mod_atmos_phy_lt_vars, only: &
+       flg_lt, &
+       ATMOS_PHY_LT_Sarea
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_LT_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_lt ) then
+       select case ( ATMOS_PHY_LT_TYPE )
+       case ( 'OFF', 'NONE' )
+       case ( 'SATO2019' )
+          call ATMOS_PHY_LT_sato2019_finalize
+       end select
+    end if
+
+    if ( flg_lt ) then
+       deallocate( ATMOS_PHY_LT_Sarea )
+    end if
+
+    return
+  end subroutine ATMOS_PHY_LT_driver_finalize
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_LT_driver_adjustment

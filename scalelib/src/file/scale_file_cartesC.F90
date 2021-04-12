@@ -30,7 +30,7 @@ module scale_file_cartesC
   !++ Public procedure
   !
   public :: FILE_CARTESC_setup
-  public :: FILE_CARTESC_cleanup
+  public :: FILE_CARTESC_finalize
   public :: FILE_CARTESC_set_coordinates_atmos
   public :: FILE_CARTESC_set_areavol_atmos
   public :: FILE_CARTESC_set_coordinates_ocean
@@ -311,7 +311,7 @@ contains
 
   !-----------------------------------------------------------------------------
   !> deallocate buffers
-  subroutine FILE_CARTESC_cleanup
+  subroutine FILE_CARTESC_finalize
     implicit none
     !---------------------------------------------------------------------------
 
@@ -355,8 +355,10 @@ contains
 
     call closeall
 
+    set_coordinates = .false.
+
     return
-  end subroutine FILE_CARTESC_cleanup
+  end subroutine FILE_CARTESC_finalize
 
   !-----------------------------------------------------------------------------
   !> Get dimension information from file

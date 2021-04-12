@@ -43,6 +43,7 @@ module scale_atmos_dyn_tinteg_short_rk4
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tinteg_short_rk4_setup
+  public :: ATMOS_DYN_Tinteg_short_rk4_finalize
   public :: ATMOS_DYN_Tinteg_short_rk4
 
   !-----------------------------------------------------------------------------
@@ -147,6 +148,11 @@ contains
     allocate( I_COMM_PROG_RK2(max(VA,1)) )
     allocate( I_COMM_PROG_RK3(max(VA,1)) )
 
+    I_COMM_DENS_RK1 = 1
+    I_COMM_MOMZ_RK1 = 2
+    I_COMM_MOMX_RK1 = 3
+    I_COMM_MOMY_RK1 = 4
+    I_COMM_RHOT_RK1 = 5
     call COMM_vars8_init( 'DENS_RK1', DENS_RK1, I_COMM_DENS_RK1 )
     call COMM_vars8_init( 'MOMZ_RK1', MOMZ_RK1, I_COMM_MOMZ_RK1 )
     call COMM_vars8_init( 'MOMX_RK1', MOMX_RK1, I_COMM_MOMX_RK1 )
@@ -157,6 +163,11 @@ contains
        call COMM_vars8_init( 'PROG_RK1', PROG_RK1(:,:,:,iv), I_COMM_PROG_RK1(iv) )
     enddo
 
+    I_COMM_DENS_RK2 = 1
+    I_COMM_MOMZ_RK2 = 2
+    I_COMM_MOMX_RK2 = 3
+    I_COMM_MOMY_RK2 = 4
+    I_COMM_RHOT_RK2 = 5
     call COMM_vars8_init( 'DENS_RK2', DENS_RK2, I_COMM_DENS_RK2 )
     call COMM_vars8_init( 'MOMZ_RK2', MOMZ_RK2, I_COMM_MOMZ_RK2 )
     call COMM_vars8_init( 'MOMX_RK2', MOMX_RK2, I_COMM_MOMX_RK2 )
@@ -167,6 +178,11 @@ contains
        call COMM_vars8_init( 'PROG_RK2', PROG_RK2(:,:,:,iv), I_COMM_PROG_RK2(iv) )
     enddo
 
+    I_COMM_DENS_RK3 = 1
+    I_COMM_MOMZ_RK3 = 2
+    I_COMM_MOMX_RK3 = 3
+    I_COMM_MOMY_RK3 = 4
+    I_COMM_RHOT_RK3 = 5
     call COMM_vars8_init( 'DENS_RK3', DENS_RK3, I_COMM_DENS_RK3 )
     call COMM_vars8_init( 'MOMZ_RK3', MOMZ_RK3, I_COMM_MOMZ_RK3 )
     call COMM_vars8_init( 'MOMX_RK3', MOMX_RK3, I_COMM_MOMX_RK3 )
@@ -201,6 +217,37 @@ contains
     return
   end subroutine ATMOS_DYN_Tinteg_short_rk4_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_tinteg_short_rk4_finalize
+
+    deallocate( DENS_RK1 )
+    deallocate( MOMZ_RK1 )
+    deallocate( MOMX_RK1 )
+    deallocate( MOMY_RK1 )
+    deallocate( RHOT_RK1 )
+
+    deallocate( DENS_RK2 )
+    deallocate( MOMZ_RK2 )
+    deallocate( MOMX_RK2 )
+    deallocate( MOMY_RK2 )
+    deallocate( RHOT_RK2 )
+
+    deallocate( DENS_RK3 )
+    deallocate( MOMZ_RK3 )
+    deallocate( MOMX_RK3 )
+    deallocate( MOMY_RK3 )
+    deallocate( RHOT_RK3 )
+
+    deallocate( PROG_RK1 )
+    deallocate( PROG_RK2 )
+    deallocate( PROG_RK3 )
+    deallocate( I_COMM_PROG_RK1 )
+    deallocate( I_COMM_PROG_RK2 )
+    deallocate( I_COMM_PROG_RK3 )
+
+    return
+  end subroutine ATMOS_DYN_tinteg_short_rk4_finalize
   !-----------------------------------------------------------------------------
   !> RK3
   subroutine ATMOS_DYN_tinteg_short_rk4( &

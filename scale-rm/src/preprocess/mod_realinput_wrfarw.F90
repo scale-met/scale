@@ -29,11 +29,14 @@ module mod_realinput_wrfarw
   !++ Public procedure
   !
   public :: ParentAtmosSetupWRFARW
+  public :: ParentAtmosFinalizeWRFARW
   public :: ParentAtmosOpenWRFARW
   public :: ParentAtmosInputWRFARW
   public :: ParentLandSetupWRFARW
+  public :: ParentLandFinalizeWRFARW
   public :: ParentLandInputWRFARW
   public :: ParentOceanSetupWRFARW
+  public :: ParentOceanFinalizeWRFARW
   public :: ParentOceanOpenWRFARW
   public :: ParentOceanInputWRFARW
 
@@ -144,6 +147,27 @@ contains
 
     return
   end subroutine ParentAtmosSetupWRFARW
+
+  !-----------------------------------------------------------------------------
+  !> Atmos Finalize
+  subroutine ParentAtmosFinalizeWRFARW
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ParentAtmosFinalizeWRFARW",*) 'Finalize'
+
+    deallocate( read_xy   )
+    deallocate( read_xyz  )
+    deallocate( read_xyw  )
+
+    deallocate( p_org   )
+    deallocate( pb_org  )
+    deallocate( ph_org  )
+    deallocate( phb_org )
+
+    return
+  end subroutine ParentAtmosFinalizeWRFARW
 
   !-----------------------------------------------------------------------------
   subroutine ParentAtmosOpenWRFARW
@@ -668,6 +692,24 @@ contains
   end subroutine ParentLandSetupWRFARW
 
   !-----------------------------------------------------------------------------
+  !> Land Finalize
+  subroutine ParentLandFinalizeWRFARW
+    implicit none
+
+    !---------------------------------------------------------------------------
+
+    LOG_INFO("ParentLandFinalizeWRFARW",*) 'Real Case/Atmos Input File Type: WRF-ARW'
+
+    if ( allocated(read_xy) ) then
+       deallocate( read_xy )
+    end if
+
+    deallocate( read_xyl )
+
+    return
+  end subroutine ParentLandFinalizeWRFARW
+
+  !-----------------------------------------------------------------------------
   subroutine ParentLandInputWRFARW( &
       tg_org,             &
       sh2o_org,           &
@@ -882,6 +924,21 @@ contains
 
     return
   end subroutine ParentOceanSetupWRFARW
+
+  !-----------------------------------------------------------------------------
+  !> Ocean Finalize
+  subroutine ParentOceanFinalizeWRFARW
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_INFO("ParentOceanFinalizeWRFARW",*) 'Real Case/Ocean Input File Type: WRF-ARW'
+
+    if ( allocated(read_xy) ) then
+       deallocate( read_xy )
+    end if
+
+    return
+  end subroutine ParentOceanFinalizeWRFARW
 
   !-----------------------------------------------------------------------------
   subroutine ParentOceanOpenWRFARW

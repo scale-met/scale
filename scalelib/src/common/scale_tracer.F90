@@ -26,6 +26,7 @@ module scale_tracer
   !
   public :: TRACER_regist
   public :: TRACER_inq_id
+  public :: TRACER_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -166,6 +167,12 @@ contains
 
     return
   end subroutine TRACER_regist
+
+  subroutine TRACER_finalize
+    QA = 0
+
+    return
+  end subroutine TRACER_finalize
 
   !-----------------------------------------------------------------------------
   !> Inquire tracer ID

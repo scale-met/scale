@@ -70,9 +70,13 @@ module scale_atmos_dyn_tinteg_tracer
        logical,  intent(in)    :: FLAG_FCT_TRACER
        logical,  intent(in)    :: FLAG_FCT_ALONG_STREAM
      end subroutine tinteg
+     subroutine finalize
+     end subroutine finalize
   end interface
   procedure(tinteg), pointer :: ATMOS_DYN_Tinteg_tracer => NULL()
   public :: ATMOS_DYN_Tinteg_tracer
+  procedure(finalize), pointer :: ATMOS_DYN_Tinteg_tracer_finalize => NULL()
+  public :: ATMOS_DYN_Tinteg_tracer_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -102,10 +106,12 @@ contains
        ATMOS_DYN_Tinteg_tracer_euler_setup, &
        ATMOS_DYN_Tinteg_tracer_euler
     use scale_atmos_dyn_tinteg_tracer_rk3, only: &
-       ATMOS_DYN_Tinteg_tracer_rk3_setup, &
+       ATMOS_DYN_Tinteg_tracer_rk3_setup,    &
+       ATMOS_DYN_Tinteg_tracer_rk3_finalize, &
        ATMOS_DYN_Tinteg_tracer_rk3
     use scale_atmos_dyn_tinteg_tracer_linrk, only: &
-       ATMOS_DYN_Tinteg_tracer_linrk_setup, &
+       ATMOS_DYN_Tinteg_tracer_linrk_setup,    &
+       ATMOS_DYN_Tinteg_tracer_linrk_finalize, &
        ATMOS_DYN_Tinteg_tracer_linrk       
     implicit none
     character(len=*), intent(in)  :: ATMOS_DYN_Tinteg_tracer_TYPE
@@ -115,10 +121,12 @@ contains
 
     
     if (ATMOS_DYN_Tinteg_tracer_TYPE(1:5) == 'LINRK') then
-      Tinteg_type = 'LINRK'
+       Tinteg_type = 'LINRK'
     else
-      Tinteg_type = ATMOS_DYN_Tinteg_tracer_TYPE
-   end if
+       Tinteg_type = ATMOS_DYN_Tinteg_tracer_TYPE
+    end if
+
+    ATMOS_DYN_Tinteg_tracer_finalize => DYN_Tinteg_tracer_finalize
 
     select case( Tinteg_type )
     case( 'EULER' )
@@ -129,10 +137,12 @@ contains
        call ATMOS_DYN_Tinteg_tracer_rk3_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_rk3
+       ATMOS_DYN_Tinteg_tracer_finalize => ATMOS_DYN_Tinteg_tracer_rk3_finalize
     case( 'LINRK' )
        call ATMOS_DYN_Tinteg_tracer_linrk_setup( &
             ATMOS_DYN_Tinteg_tracer_TYPE )
        ATMOS_DYN_Tinteg_tracer => ATMOS_DYN_Tinteg_tracer_linrk       
+       ATMOS_DYN_Tinteg_tracer_finalize => ATMOS_DYN_Tinteg_tracer_linrk_finalize
     case( 'OFF', 'NONE' )
        ! do nothing
     case default
@@ -142,5 +152,10 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_setup
+
+  subroutine DYN_Tinteg_tracer_finalize
+
+    return
+  end subroutine DYN_Tinteg_tracer_finalize
 
 end module scale_atmos_dyn_tinteg_tracer

@@ -27,6 +27,7 @@ module mod_atmos_phy_cp_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_CP_driver_setup
+  public :: ATMOS_PHY_CP_driver_finalize
   public :: ATMOS_PHY_CP_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -92,6 +93,32 @@ contains
 
     return
   end subroutine ATMOS_PHY_CP_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_CP_driver_finalize
+    use scale_atmos_phy_cp_kf, only: &
+       ATMOS_PHY_CP_kf_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_CP_TYPE, &
+       ATMOS_sw_phy_cp
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_CP_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_cp ) then
+
+       select case ( ATMOS_PHY_CP_TYPE )
+       case ( 'KF' )
+          call ATMOS_PHY_CP_kf_finalize
+       end select
+
+    endif
+
+    return
+  end subroutine ATMOS_PHY_CP_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver

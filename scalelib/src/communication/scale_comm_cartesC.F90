@@ -51,7 +51,7 @@ module scale_comm_cartesC
   public :: COMM_wait
   public :: COMM_gather
   public :: COMM_bcast
-  public :: COMM_cleanup
+  public :: COMM_finalize
 
   interface COMM_vars
      module procedure COMM_vars_2D
@@ -130,6 +130,8 @@ module scale_comm_cartesC
   integer,  private, allocatable :: preq_list(:,:)      !< request ID set of each variables for MPI PC
   integer,  private, allocatable :: pseqid(:)           !< sequential ID of each variables for MPI PC
 
+  logical, private :: initialized = .false.
+
   !-----------------------------------------------------------------------------
 contains
 
@@ -147,8 +149,6 @@ contains
        COMM_USE_MPI_PC
 
     integer :: nreq_NS, nreq_WE, nreq_4C
-
-    logical, save :: initialized = .false.
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3474,7 +3474,7 @@ contains
     return
   end subroutine copy_boundary_2D
 
-  subroutine COMM_cleanup
+  subroutine COMM_finalize
     use mpi
     implicit none
 
@@ -3503,6 +3503,11 @@ contains
        deallocate( preq_list )
        deallocate( pseqid )
     end if
-  end subroutine COMM_cleanup
+
+    COMM_vars_id = 0
+    initialized = .false.
+
+    return
+  end subroutine COMM_finalize
 
 end module scale_comm_cartesC

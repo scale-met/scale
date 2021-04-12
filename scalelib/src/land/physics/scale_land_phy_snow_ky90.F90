@@ -935,14 +935,22 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
   real(RP)             :: ts_r1,ts_r2,zn_r1,zn_r2
   character(len=3)     :: ttt = ""
 
-  real(RP)               :: a,b,c,d,e,f,g
+  real(RP)             :: a,b,c,d,e,f,g
+
+  character(len=H_LONG) :: fname
+  integer :: fid
 
   ts0 = -50.0_RP + T0   ! -25 to + 25
   zn0 = -10.0_RP        ! -50 to + 50
 
   !write(ttt,'(i3.3)') t
 
-  open(70,file='check_R1-R2_zn-base'//ttt//'.dat',status='unknown')
+
+  if ( debug ) then
+     fid = IO_get_available_fid()
+     call IO_get_fname(fname, 'check_R1-R2_zn-base'//ttt//'.dat')
+     open(fid, file=fname, status='unknown')
+  end if
   do j=1,10000
      ZN2 = zn0 + 9.0_RP*0.0001_RP*real((j-1),kind=RP)
 
@@ -952,7 +960,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
         ts_r2 = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
              + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
      endif
-     if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
+     if ( debug ) write(fid,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
   do j=1,100000
      ZN2 = -1.0_RP + 2.0_RP*0.00001_RP*real((j-1),kind=RP)
@@ -963,7 +971,7 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
         ts_r2 = ((LAMBDAS*T0) + (TA*C2*ZN2) - (ZN2*LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT) &
              + ZN2*epsilon*( LW - (sigma*(TA**4))))/ (LAMBDAS + (C2*ZN2))
      endif
-     if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
+     if ( debug ) write(fid,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
   do j=2,10000
      ZN2 = 1.0_RP + 9.0_RP*0.0001_RP*real((j-1),kind=RP)
@@ -976,7 +984,9 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
      endif
      if ( debug ) write(70,'(3f15.5)') ZN2, ts_r1, ts_r2
   enddo
-  close(70)
+  if ( debug ) then
+     close(fid)
+  end if
 
   a=T0+C3/C1
   b=-1.0_RP * (C1*ZN1*(T0-TS1) + C3*ZN1 - GFLUX*time)
@@ -988,20 +998,22 @@ subroutine cal_R1R2(ZN1, TS1, GFLUX, TA, UA, RH, rhoair, LW, time)
 
 
   if ( debug ) then
-     open(71,file='check_R1-R2-grad'//ttt//'.dat',status='unknown')
-     write(71,'(5f15.5)') b/c, d,e,LAMBDAS,C2
-     close(71)
+     call IO_get_fname(fname, 'check_R1-R2-grad'//ttt//'.dat')
+     open(fid, file=fname, status='unknown')
+     write(fid,'(5f15.5)') b/c, d,e,LAMBDAS,C2
+     close(fid)
 
-     open(70,file='check_R1-R2_ts-base'//ttt//'.dat',status='unknown')
+     call IO_get_fname(fname, 'check_R1-R2_ts-base'//ttt//'.dat')
+     open(fid, file=fname, status='unknown')
      do i=1,100000
         TS2 = ts0 + 150.0_RP*0.00001_RP*real((i-1),kind=RP)
 
         zn_r1 = (C1*ZN1*(T0-TS1) + C3*ZN1 - GFLUX*time)/(C1*(T0-TS2)+C3)
         zn_r2 = -1.0_RP*LAMBDAS*(T0-TS2)/(LW*epsilon-epsilon*sigma*(TA**4) - (C2*(TS2-TA)) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))
 
-        write(70,'(3f15.5)') TS2, zn_r1, zn_r2
+        write(fid,'(3f15.5)') TS2, zn_r1, zn_r2
      enddo
-     close(70)
+     close(fid)
   end if
 
   !LOG_INFO("cal_R1R2",*) "aa",(LINFLUX-epsilon*sigma*(TA**4) + (C2*TA) - (LV*RHOAIR*CE*UA*(1.0_RP-RH)*QSAT))/C2

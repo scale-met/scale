@@ -44,6 +44,7 @@ module scale_atmos_phy_tb_smg
   !++ Public procedure
   !
   public :: ATMOS_PHY_TB_smg_setup
+  public :: ATMOS_PHY_TB_smg_finalize
   public :: ATMOS_PHY_TB_smg
 
   !-----------------------------------------------------------------------------
@@ -112,8 +113,8 @@ contains
     logical,  intent(in), optional :: horizontal
 
     real(RP) :: ATMOS_PHY_TB_SMG_Cs
-    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
-    logical  :: ATMOS_PHY_TB_SMG_consistent_tke = .true.
+    real(RP) :: ATMOS_PHY_TB_SMG_filter_fact
+    logical  :: ATMOS_PHY_TB_SMG_consistent_tke
 
     namelist / PARAM_ATMOS_PHY_TB_SMG / &
        ATMOS_PHY_TB_SMG_Cs,             &
@@ -133,7 +134,9 @@ contains
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_TB_smg_setup",*) 'Smagorinsky-type Eddy Viscocity Model'
 
-    ATMOS_PHY_TB_SMG_Cs = Cs
+    ATMOS_PHY_TB_SMG_Cs             = Cs
+    ATMOS_PHY_TB_SMG_filter_fact    = 2.0_RP
+    ATMOS_PHY_TB_SMG_consistent_tke = .true.
 
     if ( present(horizontal) ) ATMOS_PHY_TB_SMG_horizontal = horizontal
 
@@ -229,6 +232,16 @@ contains
 
     return
   end subroutine ATMOS_PHY_TB_smg_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_TB_smg_finalize
+
+    deallocate( lambda0 )
+    deallocate( lambda  )
+
+    return
+  end subroutine ATMOS_PHY_TB_smg_finalize
 
   !-----------------------------------------------------------------------------
   subroutine ATMOS_PHY_TB_smg( &

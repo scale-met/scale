@@ -90,6 +90,10 @@ module scale_prc
   integer, public :: PRC_myrank               = 0       !< process num    in local communicator
   logical, public :: PRC_IsMaster             = .false. !< master process in local communicator?
 
+  ! inter-domain world
+  integer, public :: PRC_INTERCOMM_parent     = MPI_COMM_NULL !< communicator between this rank and parent domain
+  integer, public :: PRC_INTERCOMM_child      = MPI_COMM_NULL !< communicator between this rank and child  domain
+
   ! error handling
   logical, public :: PRC_mpi_alive = .false.            !< MPI is alive?
   integer, public :: PRC_UNIVERSAL_handler              !< error handler  in universal communicator
@@ -362,6 +366,12 @@ contains
     logical :: sign_exit
     !---------------------------------------------------------------------------
 
+    call MPI_BARRIER(PRC_GLOBAL_COMM_WORLD, ierr)
+    if ( PRC_INTERCOMM_child /= MPI_COMM_NULL ) &
+         call MPI_Comm_free(PRC_INTERCOMM_child, ierr)
+    if ( PRC_INTERCOMM_parent /= MPI_COMM_NULL ) &
+         call MPI_Comm_free(PRC_INTERCOMM_PARENT, ierr)
+
     ! FPM polling
     if ( FPM_alive ) then
        sign_status = .false.
@@ -380,9 +390,6 @@ contains
 
     ! Stop MPI
     if ( PRC_mpi_alive ) then
-       LOG_NEWLINE
-       LOG_PROGRESS(*) 'finalize MPI...'
-
        ! free splitted communicator
        if ( PRC_LOCAL_COMM_WORLD  /= PRC_GLOBAL_COMM_WORLD ) then
           call MPI_Comm_free(PRC_LOCAL_COMM_WORLD,ierr)
@@ -391,7 +398,6 @@ contains
        call MPI_Barrier(PRC_UNIVERSAL_COMM_WORLD,ierr)
 
        call MPI_Finalize(ierr)
-       LOG_PROGRESS(*) 'MPI is peacefully finalized'
     endif
 
     ! Close logfile, configfile
@@ -514,9 +520,7 @@ contains
       debug,            &
       color_reorder,    &
       SUB_COMM_WORLD,   &
-      ID_DOMAIN,        &
-      INTERCOMM_parent, &
-      INTERCOMM_child   )
+      ID_DOMAIN         )
     implicit none
 
     integer,               intent(in)  :: ORG_COMM_WORLD   ! communicator (original group)
@@ -526,8 +530,6 @@ contains
     logical,               intent(in)  :: color_reorder    ! reorder
     integer,               intent(out) :: SUB_COMM_WORLD   ! communicator (new subgroup)
     integer,               intent(out) :: ID_DOMAIN        ! domain id
-    integer,               intent(out) :: INTERCOMM_parent ! communicator between this rank and parent domain
-    integer,               intent(out) :: INTERCOMM_child  ! communicator between this rank and child  domain
 
     integer :: ORG_myrank ! my rank         in the original communicator
     integer :: ORG_nrank  ! number of ranks in the original communicator
@@ -543,9 +545,6 @@ contains
     integer :: i, color
     integer :: itag, ierr
     !---------------------------------------------------------------------------
-
-    INTERCOMM_parent = MPI_COMM_NULL
-    INTERCOMM_child  = MPI_COMM_NULL
 
     if ( NUM_DOMAIN == 1 ) then ! single domain run
 
@@ -618,13 +617,13 @@ contains
 
                 call MPI_INTERCOMM_CREATE( SUB_COMM_WORLD, PRC_masterrank,    &
                                            ORG_COMM_WORLD, COL_master(color), &
-                                           itag, INTERCOMM_child, ierr        )
+                                           itag, PRC_INTERCOMM_child, ierr    )
 
              elseif( prc2color(ORG_myrank) == color ) then ! as a child
 
                 call MPI_INTERCOMM_CREATE( SUB_COMM_WORLD, PRC_masterrank,                &
                                            ORG_COMM_WORLD, COL_master(COL_parent(color)), &
-                                           itag, INTERCOMM_parent, ierr                   )
+                                           itag, PRC_INTERCOMM_parent, ierr               )
 
              endif
 

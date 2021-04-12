@@ -28,6 +28,7 @@ module mod_atmos_phy_rd_driver
   !++ Public procedure
   !
   public :: ATMOS_PHY_RD_driver_setup
+  public :: ATMOS_PHY_RD_driver_finalize
   public :: ATMOS_PHY_RD_driver_calc_tendency
 
   !-----------------------------------------------------------------------------
@@ -127,6 +128,35 @@ contains
 
     return
   end subroutine ATMOS_PHY_RD_driver_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_PHY_RD_driver_finalize
+    use scale_atmos_phy_rd_mstrnx, only: &
+       ATMOS_PHY_RD_MSTRNX_finalize
+    use scale_atmos_phy_rd_profile, only: &
+       ATMOS_PHY_RD_PROFILE_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_PHY_RD_TYPE, &
+       ATMOS_sw_phy_rd
+    implicit none
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("ATMOS_PHY_RD_driver_finalize",*) 'Finalize'
+
+    if ( ATMOS_sw_phy_rd ) then
+       select case ( ATMOS_PHY_RD_TYPE )
+       case ( "MSTRNX" )
+          call ATMOS_PHY_RD_MSTRNX_finalize
+       case ( "OFFLINE" )
+       end select
+    end if
+
+    call ATMOS_PHY_RD_PROFILE_finalize
+
+    return
+  end subroutine ATMOS_PHY_RD_driver_finalize
 
   !-----------------------------------------------------------------------------
   !> Driver

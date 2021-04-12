@@ -46,16 +46,22 @@ MPIプロセスを分割・分配する機能を拡張したものである。
 \verb| FREQ_FAIL_CHECK    = 5, | & DT ごとの FPM による調査頻度 \\
 \verb|/| \\
 }
-\verb|launch.conf|に、\nmitem{NUM_BULKJOB}の項目を付け加えれば十分である。
+
+サブジョブの数は \nmitem{NUM_BULKJOB} で指定します。
+シングルドメインの実験 (ネスティングは使用しない) の場合は、\nmitem{NUM_DOMAIN} $=$ 1 を指定する。
+
+ジョブディレクトリ名は4桁の数字で、デフォルトでは0から始まるジョブIDに対応します。
+\nmitem{BULKJOB_START_DIRNUM}を指定することで、開始番号を変更することができます。
+
+デフォルトでは、サブジョブの設定ファイル (init.conf、run.conf など) 中のファイル名には、ジョブのディレクトリ名が含まれていなければなりません(例：0000/history.nc)。
+\nmitem{ADDD_BULJJOB_PATH}を \verb|.true.| に指定すると、絶対パス以外のすべてのファイル名にジョブディレクトリ名が追加されます。
+
+利用する計算機においてサブジョブを一度に実行できるだけのリソースがない場合は、サブジョブを複数のグループに分けることができます。
+一度に実行されるサブジョブの数は \nmitem{NUM_BULKJOB} / \nmitem{NUM_ITERATION_BULK} 個になります。
+
+
 他の設定は、第\ref{subsubsec:launch}節における設定と同様である。
-シングルドメイン実験(ネスティングを使用しない)の場合は、
-\nmitem{NUM_DOMAIN = 1}と指定し、\nmitem{CONF_FILES}に設定ファイルを1つ指定すればよい。
 
-\nmitem{LOG_SPLIT}を\verb|.true.|にした場合は、
-MPI のコミュニケータの分割のログが出力される。
-\nmitem{LOG_SPLIT}のデフォルト値は\verb|.false.|である。
-
-\nmitem{COLOR_REORDER}というオプションは、ジョブのプロセス数に応じて MPI のコミュニケータのグループ内のジョブの再配置を行うためのスイッチである。最も大きなプロセス数を持つジョブは最前列に配置される。効率的であるノード内通信が用いられる点で、この方法は合理的である。
 
 
 \section{失敗プロセスの管理}
@@ -127,7 +133,7 @@ FPM ツールの現版では、単一領域に対してのみ使用でき、オ�
 3つのジョブで使用するプロセスの総数は 135 である。
 MPI のプロセス分割に関する情報を与えるメッセージは、LOG ファイルの中の \scalelib のロゴの後に書き込まれる。下記は、ドメイン1のプロセス0からのログの出力例である。\\
 \msgboxtwo{
-\verb| +++++ start MPI|  & \\
+\verb| +++++ start making Cartesian topology|  & \\
 \verb| *** UNIVERSAL_COMM_WORLD        :        0| &; 実行環境によって値が異なる\\
 \verb| *** total process [UNIVERSAL]   :      135| &\\
 \verb| *** my process ID [UNIVERSAL]   :       36| &\\

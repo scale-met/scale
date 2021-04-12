@@ -36,6 +36,7 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tstep_large_fvm_heve_setup
+  public :: ATMOS_DYN_Tstep_large_fvm_heve_finalize
   public :: ATMOS_DYN_Tstep_large_fvm_heve
 
   !-----------------------------------------------------------------------------
@@ -66,27 +67,27 @@ module scale_atmos_dyn_tstep_large_fvm_heve
   real(RP), private, allocatable, target :: mflx(:,:,:,:) ! rho * vel(x,y,z) * GSQRT / mapf
 
   ! for communication
-  integer :: I_COMM_DENS = 1
-  integer :: I_COMM_MOMZ = 2
-  integer :: I_COMM_MOMX = 3
-  integer :: I_COMM_MOMY = 4
-  integer :: I_COMM_RHOT = 5
+  integer :: I_COMM_DENS
+  integer :: I_COMM_MOMZ
+  integer :: I_COMM_MOMX
+  integer :: I_COMM_MOMY
+  integer :: I_COMM_RHOT
   integer, allocatable :: I_COMM_PROG(:)
 
-  integer :: I_COMM_DENS_t = 1
-  integer :: I_COMM_MOMZ_t = 2
-  integer :: I_COMM_MOMX_t = 3
-  integer :: I_COMM_MOMY_t = 4
-  integer :: I_COMM_RHOT_t = 5
+  integer :: I_COMM_DENS_t
+  integer :: I_COMM_MOMZ_t
+  integer :: I_COMM_MOMX_t
+  integer :: I_COMM_MOMY_t
+  integer :: I_COMM_RHOT_t
 
-  integer :: I_COMM_DENS_damp = 6
+  integer :: I_COMM_DENS_damp
 
   integer, allocatable :: I_COMM_RHOQ_t(:)
   integer, allocatable :: I_COMM_QTRC(:)
 
-  integer :: I_COMM_mflx_z = 1
-  integer :: I_COMM_mflx_x = 2
-  integer :: I_COMM_mflx_y = 3
+  integer :: I_COMM_mflx_z
+  integer :: I_COMM_mflx_x
+  integer :: I_COMM_mflx_y
 
   ! for history
   integer :: HIST_mflx(3)
@@ -192,6 +193,11 @@ contains
     allocate( I_COMM_QTRC(QA) )
     allocate( I_COMM_RHOQ_t(QA) )
 
+    I_COMM_DENS = 1
+    I_COMM_MOMZ = 2
+    I_COMM_MOMX = 3
+    I_COMM_MOMY = 4
+    I_COMM_RHOT = 5
     call COMM_vars8_init( 'DENS', DENS, I_COMM_DENS )
     call COMM_vars8_init( 'MOMZ', MOMZ, I_COMM_MOMZ )
     call COMM_vars8_init( 'MOMX', MOMX, I_COMM_MOMX )
@@ -202,11 +208,18 @@ contains
        call COMM_vars8_init( 'PROG', PROG(:,:,:,iv), I_COMM_PROG(iv) )
     end do
 
+    I_COMM_DENS_t = 1
+    I_COMM_MOMZ_t = 2
+    I_COMM_MOMX_t = 3
+    I_COMM_MOMY_t = 4
+    I_COMM_RHOT_t = 5
+    I_COMM_DENS_damp = 6
     call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_t )
     call COMM_vars8_init( 'MOMZ_t', MOMZ_t, I_COMM_MOMZ_t )
     call COMM_vars8_init( 'MOMX_t', MOMX_t, I_COMM_MOMX_t )
     call COMM_vars8_init( 'MOMY_t', MOMY_t, I_COMM_MOMY_t )
     call COMM_vars8_init( 'RHOT_t', RHOT_t, I_COMM_RHOT_t )
+    call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_damp )
 
     do iq = 1, QA
        I_COMM_RHOQ_t(iq) = 5 + VA + iq
@@ -216,8 +229,9 @@ contains
        call COMM_vars8_init( 'QTRC',   QTRC  (:,:,:,iq), I_COMM_QTRC(iq) )
     end do
 
-    call COMM_vars8_init( 'DENS_t', DENS_t, I_COMM_DENS_damp )
-
+    I_COMM_mflx_z = 1
+    I_COMM_mflx_x = 2
+    I_COMM_mflx_y = 3
     call COMM_vars8_init( 'mflx_Z', mflx(:,:,:,ZDIR), I_COMM_mflx_z )
     call COMM_vars8_init( 'mflx_X', mflx(:,:,:,XDIR), I_COMM_mflx_x )
     call COMM_vars8_init( 'mflx_Y', mflx(:,:,:,YDIR), I_COMM_mflx_y )
@@ -372,6 +386,37 @@ contains
 
     return
   end subroutine ATMOS_DYN_Tstep_large_fvm_heve_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_Tstep_large_fvm_heve_finalize
+
+    deallocate( DENS_t )
+    deallocate( MOMZ_t )
+    deallocate( MOMX_t )
+    deallocate( MOMY_t )
+    deallocate( RHOT_t )
+    deallocate( RHOQ_t )
+
+    deallocate( DENS_damp )
+
+    deallocate( mflx )
+
+    deallocate( I_COMM_PROG )
+    deallocate( I_COMM_QTRC )
+    deallocate( I_COMM_RHOQ_t )
+
+    deallocate( ZERO )
+
+    deallocate( HIST_qflx )
+    deallocate( HIST_phys_QTRC )
+    deallocate( HIST_damp_QTRC )
+
+    deallocate( zero_x )
+    deallocate( zero_y )
+
+    return
+  end subroutine ATMOS_DYN_Tstep_large_fvm_heve_finalize
 
   !-----------------------------------------------------------------------------
   !> Dynamical Process

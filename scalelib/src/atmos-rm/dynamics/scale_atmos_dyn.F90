@@ -36,6 +36,7 @@ module scale_atmos_dyn
   !++ Public procedure
   !
   public :: ATMOS_DYN_setup
+  public :: ATMOS_DYN_finalize
   public :: ATMOS_DYN
 
   !-----------------------------------------------------------------------------
@@ -228,6 +229,41 @@ contains
     return
   end subroutine ATMOS_DYN_setup
 
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_finalize
+    use scale_atmos_dyn_tstep_large, only: &
+       ATMOS_DYN_Tstep_large_finalize
+    use scale_atmos_dyn_tinteg_short, only: &
+       ATMOS_DYN_Tinteg_short_finalize
+    use scale_atmos_dyn_tinteg_tracer, only: &
+       ATMOS_DYN_Tinteg_tracer_finalize
+    use scale_atmos_dyn_fvm_numfilter, only: &
+       ATMOS_DYN_FVM_numfilter_finalize
+    use scale_spnudge, only: &
+       SPNUDGE_finalize
+
+    call ATMOS_DYN_Tstep_large_finalize
+
+    call ATMOS_DYN_Tinteg_short_finalize
+
+    call ATMOS_DYN_Tinteg_tracer_finalize
+
+    call ATMOS_DYN_FVM_numfilter_finalize
+
+    call SPNUDGE_finalize
+
+    deallocate( I_COMM_PROG )
+    deallocate( I_COMM_QTRC )
+
+    if ( .NOT. DYN_NONE ) then
+       deallocate( num_diff   )
+       deallocate( num_diff_q )
+       deallocate( wdamp_coef )
+    end if
+
+    return
+  end subroutine ATMOS_DYN_finalize
   !-----------------------------------------------------------------------------
   !> Dynamical Process
   subroutine ATMOS_DYN( &

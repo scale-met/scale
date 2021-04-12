@@ -28,6 +28,7 @@ module scale_topography
   public :: TOPOGRAPHY_fillhalo
   public :: TOPOGRAPHY_write
   public :: TOPOGRAPHY_calc_tan_slope
+  public :: TOPOGRAPHY_finalize
 
   !-----------------------------------------------------------------------------
   !
@@ -138,6 +139,19 @@ contains
 
     return
   end subroutine TOPOGRAPHY_fillhalo
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine TOPOGRAPHY_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( TOPOGRAPHY_Zsfc    )
+    deallocate( TOPOGRAPHY_TanSL_X )
+    deallocate( TOPOGRAPHY_TanSL_Y )
+
+    return
+  end subroutine TOPOGRAPHY_finalize
 
   !-----------------------------------------------------------------------------
   !> Read topography

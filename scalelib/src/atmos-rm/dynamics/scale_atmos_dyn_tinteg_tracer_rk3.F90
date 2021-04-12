@@ -37,6 +37,7 @@ module scale_atmos_dyn_tinteg_tracer_rk3
   !++ Public procedure
   !
   public :: ATMOS_DYN_Tinteg_tracer_rk3_setup
+  public :: ATMOS_DYN_Tinteg_tracer_rk3_finalize
   public :: ATMOS_DYN_Tinteg_tracer_rk3
 
   !-----------------------------------------------------------------------------
@@ -53,8 +54,8 @@ module scale_atmos_dyn_tinteg_tracer_rk3
   !
   real(RP), allocatable :: QTRC_RK1(:,:,:)
   real(RP), allocatable :: QTRC_RK2(:,:,:)
-  integer :: I_COMM_RK1 = 1
-  integer :: I_COMM_RK2 = 1
+  integer :: I_COMM_RK1
+  integer :: I_COMM_RK2
   !-----------------------------------------------------------------------------
 contains
 
@@ -85,11 +86,24 @@ contains
     QTRC_RK1(:,:,:) = UNDEF
     QTRC_RK2(:,:,:) = UNDEF
 
+    I_COMM_RK1 = 1
     call COMM_vars8_init( 'QTRC_RK1', QTRC_RK1, I_COMM_RK1 )
+
+    I_COMM_RK2 = 1
     call COMM_vars8_init( 'QTRC_RK2', QTRC_RK2, I_COMM_RK2 )
 
     return
   end subroutine ATMOS_DYN_Tinteg_tracer_rk3_setup
+
+  !-----------------------------------------------------------------------------
+  !> finalize
+  subroutine ATMOS_DYN_Tinteg_tracer_rk3_finalize
+
+    deallocate( QTRC_RK1 )
+    deallocate( QTRC_RK2 )
+
+    return
+  end subroutine ATMOS_DYN_Tinteg_tracer_rk3_finalize
 
   !-----------------------------------------------------------------------------
   !> RK3
