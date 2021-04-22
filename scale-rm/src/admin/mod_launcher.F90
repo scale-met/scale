@@ -162,8 +162,7 @@ contains
 
     !--- split for bulk jobs
 
-    global_nprocs = universal_nprocs / NUM_BULKJOB_ONCE
-    PRC_BULKJOB(1:NUM_BULKJOB) = global_nprocs
+    global_nprocs = universal_nprocs
     if ( NUM_BULKJOB > 1 ) then
 
        if ( NUM_BULKJOB == 1 ) NUM_ITERATION_BULK = 1
@@ -177,8 +176,11 @@ contains
           call PRC_abort
        endif
 
+       global_nprocs = universal_nprocs / NUM_BULKJOB_ONCE
+
        if( universal_master ) write(*,'(1x,A,I5)') "*** TOTAL # of BULK JOBS             = ", NUM_BULKJOB
        if( universal_master ) write(*,'(1x,A,I5)') "*** # of BULK JOB for each iteration = ", NUM_BULKJOB_ONCE
+       if( universal_master ) write(*,'(1x,A,I5)') "*** Total # of PROCESS               = ", universal_nprocs
        if( universal_master ) write(*,'(1x,A,I5)') "*** # of PROCESS of each JOB         = ", global_nprocs
 
        if ( BULKJOB_START_DIRNUM < 0 ) then
@@ -216,6 +218,7 @@ contains
           endif
        endif
     endif
+    PRC_BULKJOB(1:NUM_BULKJOB) = global_nprocs
 
     ! communicator split for bulk/ensemble
     call PRC_MPIsplit_bulk( universal_comm,   & ! [IN]
