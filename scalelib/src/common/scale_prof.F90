@@ -141,7 +141,7 @@ contains
     PROF_mpi_barrier = .false.
 #ifdef PAPI
     PROF_PAPI_flops     = 0
-    PORF_PAPI_real_time = 0.0
+    PROF_PAPI_real_time = 0.0
     PROF_PAPI_proc_time = 0.0
     PROF_PAPI_mflops    = 0.0
 #endif
