@@ -88,6 +88,13 @@ The solar constant can also be changed. These are configured in \namelist{PARAM_
 \verb|/                                                 | & \\
 }\\
 
+The position of the earth on the orbital period is calculated based on the vernal equinox.
+However, the Gregorian calendar has leap years, and the vernal equinox days are not the same each year.
+Therefore, we set 7:35 on March 20, 2000, as the reference time to match the calendar with the vernal equinox passing point.
+We set the solar year to 365.2425 days.
+Since this value is larger than the average solar year of 365.24219,
+it causes a deviation of 3 hours in the revolution orbit in about 400 years, but it is almost negligible.
+%
 When \nmitem{ATMOS_SOLARINS_set_ideal} is \verb|.true.|,
 the solar insolation is calculated using obliquity(deg.) and eccentricity
 specified at \nmitem{ATMOS_SOLARINS_obliquity}, \\
@@ -105,13 +112,13 @@ Refer to Section \ref{subsec:adv_mapproj} for the explanation of \namelist{PARAM
 When \nmitem{ATMOS_SOLARINS_fixeddate} is \verb|.true.|,
 the solar insolation is calculated according to date and time (Y,M,D,H,M,S) specified at \nmitem{ATMOS_SOLARINS_date}.
 The date and time are not fixed if the negative values are specified.
-For example, when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|1950,3,21,-1,-1,-1|,
-the date is fixed to March 21, 1950 (the vernal equinox)
+For example, when configuring \nmitem{ATMOS_SOLARINS_date} to \verb|2000,3,20,-1,-1,-1|,
+the date is fixed to March 20, 2000 (the vernal equinox)
 and diurnal variations of the solar insolation are considered in the simulation.
 %
 When \nmitem{ATMOS_SOLARINS_set_ve} is \verb|.true.|,
 the multiple configurations of ideal vernal equinox is automatically set.
-This option sets obliquity and eccentricity to zero, both longitude and latitude to zero deg., and the date and time to 12UTC, March 21, 1950.
+This option sets obliquity and eccentricity to zero, both longitude and latitude to zero deg., and the date and time to 12UTC, March 20, 2000.
 If the values are specified by using \nmitem{ATMOS_SOLARINS_set_ideal, ATMOS_SOLARINS_fixedlatlon, ATMOS_SOLARINS_fixeddate} as described above,
 those settings are given priority.
 
