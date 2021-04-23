@@ -715,11 +715,11 @@ contains
 
     ptr => val(1)
     if ( present(start) ) then
-       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), SP, start, shape(val)  ) ! (in)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+                                  c_loc(ptr), SP, start-1, shape(val) ) ! (in)
     else
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), SP, (/1/), shape(val)  ) ! (in)
+                                  c_loc(ptr), SP, (/0/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realSP",*) 'failed to write axis: '//trim(name)
@@ -749,11 +749,11 @@ contains
 
     ptr => val(1)
     if ( present(start) ) then
-       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), DP, start, shape(val)  ) ! (in)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+                                  c_loc(ptr), DP, start-1, shape(val) ) ! (in)
     else
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), DP, (/1/), shape(val)  ) ! (in)
+                                  c_loc(ptr), DP, (/0/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_realDP",*) 'failed to write axis: '//trim(name)
@@ -1187,7 +1187,7 @@ contains
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype   ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to define associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1210,9 +1210,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(SP), allocatable, target :: ptr(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'File is not opened. fid = ', fid
@@ -1223,27 +1226,40 @@ contains
     ptr(:) = val(:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 1
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, SP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 1, SP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(1-i+1) - 1
+          count_(i) = size(val, 1-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 1, SP,           & ! (in)
-            (/1/), shape(val) ) ! (in)
+       do i = 1, 1
+          start_(i) = 0
+          count_(i) = size(val, 1-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1262,9 +1278,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(DP), allocatable, target :: ptr(:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'File is not opened. fid = ', fid
@@ -1275,27 +1294,40 @@ contains
     ptr(:) = val(:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 1
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, DP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 1, DP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(1-i+1) - 1
+          count_(i) = size(val, 1-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 1, DP,           & ! (in)
-            (/1/), shape(val) ) ! (in)
+       do i = 1, 1
+          start_(i) = 0
+          count_(i) = size(val, 1-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_1D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1314,9 +1346,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(SP), allocatable, target :: ptr(:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'File is not opened. fid = ', fid
@@ -1327,27 +1362,40 @@ contains
     ptr(:,:) = val(:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 2
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, SP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 2, SP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(2-i+1) - 1
+          count_(i) = size(val, 2-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 2, SP,           & ! (in)
-            (/1,1/), shape(val) ) ! (in)
+       do i = 1, 2
+          start_(i) = 0
+          count_(i) = size(val, 2-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1366,9 +1414,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(DP), allocatable, target :: ptr(:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'File is not opened. fid = ', fid
@@ -1379,27 +1430,40 @@ contains
     ptr(:,:) = val(:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 2
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, DP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 2, DP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(2-i+1) - 1
+          count_(i) = size(val, 2-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 2, DP,           & ! (in)
-            (/1,1/), shape(val) ) ! (in)
+       do i = 1, 2
+          start_(i) = 0
+          count_(i) = size(val, 2-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_2D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1418,9 +1482,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(SP), allocatable, target :: ptr(:,:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'File is not opened. fid = ', fid
@@ -1431,27 +1498,40 @@ contains
     ptr(:,:,:) = val(:,:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 3
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, SP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 3, SP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(3-i+1) - 1
+          count_(i) = size(val, 3-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 3, SP,           & ! (in)
-            (/1,1,1/), shape(val) ) ! (in)
+       do i = 1, 3
+          start_(i) = 0
+          count_(i) = size(val, 3-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1470,9 +1550,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(DP), allocatable, target :: ptr(:,:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'File is not opened. fid = ', fid
@@ -1483,27 +1566,40 @@ contains
     ptr(:,:,:) = val(:,:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 3
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, DP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 3, DP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(3-i+1) - 1
+          count_(i) = size(val, 3-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 3, DP,           & ! (in)
-            (/1,1,1/), shape(val) ) ! (in)
+       do i = 1, 3
+          start_(i) = 0
+          count_(i) = size(val, 3-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_3D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1522,9 +1618,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(SP), allocatable, target :: ptr(:,:,:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'File is not opened. fid = ', fid
@@ -1535,27 +1634,40 @@ contains
     ptr(:,:,:,:) = val(:,:,:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 4
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, SP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 4, SP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(4-i+1) - 1
+          count_(i) = size(val, 4-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 4, SP,           & ! (in)
-            (/1,1,1,1/), shape(val) ) ! (in)
+       do i = 1, 4
+          start_(i) = 0
+          count_(i) = size(val, 4-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, SP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realSP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -1574,9 +1686,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(DP), allocatable, target :: ptr(:,:,:,:)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'File is not opened. fid = ', fid
@@ -1587,27 +1702,40 @@ contains
     ptr(:,:,:,:) = val(:,:,:,:)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = 4
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, DP,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), 4, DP,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(4-i+1) - 1
+          count_(i) = size(val, 4-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), 4, DP,           & ! (in)
-            (/1,1,1,1/), shape(val) ) ! (in)
+       do i = 1, 4
+          start_(i) = 0
+          count_(i) = size(val, 4-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, DP,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_realDP_4D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
