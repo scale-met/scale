@@ -69,7 +69,7 @@ module scale_atmos_solarins
 
   integer,  private, parameter :: year_ref = 1950              ! reference year [year]
   integer,  private            :: ve_date(6)                   ! reference date of vernal equinox
-  data ve_date / 1950, 3, 21, 0, 0, 0 /
+  data ve_date / 2000, 3, 20, 7, 35, 0 /
 
   real(RP), private, parameter :: obliquity_ref = 23.320556_RP ! initial condition of obliquity (epsilon_star)
   real(RP), private, parameter :: psi_bar       = 50.439273_RP ! parameter for general precession [second of arc]
@@ -788,7 +788,6 @@ contains
     use scale_const, only: &
        PI => CONST_PI
     use scale_calendar, only: &
-       CALENDAR_getDayOfYear,  &
        CALENDAR_ymd2absday,    &
        CALENDAR_hms2abssec,    &
        I_year, I_month, I_day, &
@@ -805,11 +804,12 @@ contains
     integer  :: date(6)
     integer  :: oyear
     integer  :: absday, absday_ve
-    real(DP) :: DayOfYear, abssec
+    real(DP) :: abssec, abssec_ve
+    real(DP) :: diffday, diffyr
 
-    real(RP) :: lambda_m ! mean   longitude from vernal equinox
-    real(RP) :: lambda   ! actual longitude from vernal equinox
-    real(RP) :: nu
+    real(DP) :: lambda_m ! mean   longitude from vernal equinox
+    real(DP) :: lambda   ! actual longitude from vernal equinox
+    real(DP) :: nu
     !---------------------------------------------------------------------------
 
     date(:) = now_date(:)
@@ -825,18 +825,10 @@ contains
        if( ATMOS_SOLARINS_date(6) >= 0 ) date(6) = ATMOS_SOLARINS_date(6)
     endif
 
-    call CALENDAR_getDayOfYear( DayOfYear, date(I_year) )
-
     call CALENDAR_ymd2absday( absday,           & ! [OUT]
                               date(I_year),     & ! [IN]
                               date(I_month),    & ! [IN]
                               date(I_day),      & ! [IN]
-                              oyear             ) ! [IN]
-
-    call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
-                              date   (I_year),  & ! [IN]
-                              ve_date(I_month), & ! [IN]
-                              ve_date(I_day),   & ! [IN]
                               oyear             ) ! [IN]
 
     call CALENDAR_hms2abssec( abssec,           & ! [OUT]
@@ -845,29 +837,44 @@ contains
                               date(I_sec),      & ! [IN]
                               0.0_DP            ) ! [IN]
 
-    lambda_m = lambda_m0 + 2.0_RP * PI * real(absday-absday_ve,kind=RP) / DayOfYear
+    call CALENDAR_ymd2absday( absday_ve,        & ! [OUT]
+                              ve_date(I_year),  & ! [IN]
+                              ve_date(I_month), & ! [IN]
+                              ve_date(I_day),   & ! [IN]
+                              oyear             ) ! [IN]
+
+    call CALENDAR_hms2abssec( abssec_ve,        & ! [OUT]
+                              ve_date(I_hour),  & ! [IN]
+                              ve_date(I_min),   & ! [IN]
+                              ve_date(I_sec),   & ! [IN]
+                              0.0_DP            ) ! [IN]
+
+    diffday = real(absday-absday_ve,kind=DP) + (abssec-abssec_ve) / 86400.0_DP
+    diffyr  = diffday / 365.2425_RP - real( nint( diffday / 365.2425_RP ),kind=RP)
+
+    lambda_m = lambda_m0 + 2.0_RP * PI * diffyr
 
     nu = lambda_m - omega
 
     ! 1 / (rho*rho)
-    Re_factor = 1.0_RP                          &
-              + 2.0_RP*E     * cos(        nu ) &
-              + 0.5_RP*E*E   * cos( 2.0_RP*nu ) &
-              + 2.5_RP*E*E                      &
-              + 4.0_RP*E*E*E * cos( 3.0_RP*nu )
+    Re_factor = 1.0_DP                          &
+              + 2.0_DP*E     * cos(        nu ) &
+              + 0.5_DP*E*E   * cos( 2.0_DP*nu ) &
+              + 2.5_DP*E*E                      &
+              + 4.0_DP*E*E*E * cos( 3.0_DP*nu )
 
     ! actual longitude from vernal equinox
     lambda = lambda_m &
-           + ( 2.0_RP*E -  1.0_RP/ 4.0_RP*E*E*E ) * sin(        nu ) &
-           + (             5.0_RP/ 4.0_RP*E*E   ) * sin( 2.0_RP*nu ) &
-           + (            13.0_RP/12.0_RP*E*E*E ) * sin( 3.0_RP*nu )
+           + ( 2.0_DP*E -  1.0_DP/ 4.0_DP*E*E*E ) * sin(        nu ) &
+           + (             5.0_DP/ 4.0_DP*E*E   ) * sin( 2.0_DP*nu ) &
+           + (            13.0_DP/12.0_DP*E*E*E ) * sin( 3.0_DP*nu )
 
     ! solar declination
     sinDEC = sin(lambda) * sin(obliquity)
     cosDEC = sqrt( 1.0_RP - sinDEC*sinDEC )
 
     ! hour angle
-    hourangle = 2.0_RP * PI * abssec / (24.0_RP*60.0_RP*60.0_RP)
+    hourangle = 2.0_RP * PI * abssec / 86400.0_DP
 
     if ( debug ) then
        LOG_INFO("ATMOS_SOLARINS_ecliptic_longitude",*) lambda_m, nu, lambda
