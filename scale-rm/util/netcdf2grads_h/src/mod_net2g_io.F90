@@ -340,6 +340,8 @@ contains
         DY=cy(2)-cy(1)
         DLON=1.
         DLAT=1.
+     case default
+        return
      end select
 
      call cal_dlondlat(DX, DY, DLON, DLAT)
