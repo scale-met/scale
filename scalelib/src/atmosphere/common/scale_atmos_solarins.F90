@@ -847,7 +847,7 @@ contains
                               ve_date(I_hour),  & ! [IN]
                               ve_date(I_min),   & ! [IN]
                               ve_date(I_sec),   & ! [IN]
-                              0.0_RP            ) ! [IN]
+                              0.0_DP            ) ! [IN]
 
     diffday = real(absday-absday_ve,kind=DP) + (abssec-abssec_ve) / 86400.0_DP
     diffyr  = diffday / 365.2425_RP - real( nint( diffday / 365.2425_RP ),kind=RP)
