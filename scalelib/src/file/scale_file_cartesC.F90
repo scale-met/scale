@@ -1011,13 +1011,13 @@ contains
 
     if ( .not. FILE_opened(fid) ) return
 
-    call PROF_rapstart('FILE_O_NetCDF', 2)
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     if ( FILE_get_AGGREGATE(fid) ) then
        call FILE_Flush( fid ) ! flush all pending read/write requests
     end if
 
-    call PROF_rapend  ('FILE_O_NetCDF', 2)
+    call PROF_rapend  ('FILE_I_NetCDF', 2)
 
     return
   end subroutine FILE_CARTESC_flush
