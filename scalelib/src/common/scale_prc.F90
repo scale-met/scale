@@ -400,12 +400,6 @@ contains
        call MPI_Finalize(ierr)
     endif
 
-    ! Close logfile, configfile
-    if ( IO_L ) then
-       if( IO_FID_LOG /= IO_FID_STDOUT ) close(IO_FID_LOG)
-    endif
-    close(IO_FID_CONF)
-
     return
   end subroutine PRC_MPIfinish
 
