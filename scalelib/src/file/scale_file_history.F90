@@ -1767,9 +1767,13 @@ contains
     end do
     FILE_HISTORY_nattrs   = 0
 
-    deallocate( FILE_HISTORY_req )
-    deallocate( FILE_HISTORY_vars )
-    deallocate( FILE_HISTORY_var_inputs )
+
+    if ( FILE_HISTORY_nreqs > 0 ) then
+       deallocate( FILE_HISTORY_req )
+       deallocate( FILE_HISTORY_vars )
+       deallocate( FILE_HISTORY_var_inputs )
+    end if
+    FILE_HISTORY_nreqs = 0
 
     return
   end subroutine FILE_HISTORY_Finalize

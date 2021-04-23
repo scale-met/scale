@@ -336,7 +336,7 @@ contains
        IO_FID_CONF = -1
     end if
 
-    if ( IO_FID_LOG /= IO_FID_STDOUT ) then
+    if ( IO_FID_LOG > 0 .and. IO_FID_LOG /= IO_FID_STDOUT ) then
        close( IO_FID_LOG )
        IO_FID_LOG = -1
     end if
