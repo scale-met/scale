@@ -671,11 +671,11 @@ contains
 
     ptr => val(1)
     if ( present(start) ) then
-       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), <%=rp%>, start, shape(val)  ) ! (in)
+       error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+                                  c_loc(ptr), <%=rp%>, start-1, shape(val) ) ! (in)
     else
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),        & ! (in)
-                                  c_loc(ptr), <%=rp%>, (/1/), shape(val)  ) ! (in)
+                                  c_loc(ptr), <%=rp%>, (/0/), shape(val)  ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_real<%=rp%>",*) 'failed to write axis: '//trim(name)
@@ -779,7 +779,7 @@ contains
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype   ) ! (in)
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_def_associatedCoordinate",*) 'failed to define associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
@@ -805,9 +805,12 @@ contains
     integer,          intent(in), optional :: count(:)  ! in case val has been reshaped
     integer,          intent(in), optional :: ndims     ! in case val has been reshaped
 
+    integer :: ndims_
+    integer, allocatable :: start_(:), count_(:)
     real(<%=rp%>), allocatable, target :: ptr(<%=idx%>)
     integer :: error
-    intrinsic shape
+    integer :: i
+    intrinsic shape, size
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_write_associatedCoordinate_real<%=rp%>_<%=n%>D",*) 'File is not opened. fid = ', fid
@@ -818,27 +821,40 @@ contains
     ptr(<%=idx%>) = val(<%=idx%>)
 
     if ( present(ndims) ) then
+       ndims_ = ndims
+    else
+       ndims_ = <%=n%>
+    end if
+    allocate( start_(ndims_), count_(ndims_) )
+
+    if ( present(ndims) ) then
        ! Note this is called for history coordinates which have been reshaped
        ! from 2D/3D into 1D array. In this case, start and count must be also present
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), ndims, <%=rp%>,      & ! (in)
-            start, count                     ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(ndims_-i+1) - 1
+          count_(i) = count(ndims_-i+1)
+       end do
     else if ( present(start) ) then
        ! Note this is called for restart coordinates
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name), & ! (in)
-            c_loc(ptr), <%=n%>, <%=rp%>,     & ! (in)
-            start, shape(val)                ) ! (in)
+       do i = 1, ndims_
+          start_(i) = start(<%=n%>-i+1) - 1
+          count_(i) = size(val, <%=n%>-i+1)
+       end do
     else
        ! Note this is for the one-file-per-process I/O method
-       error = file_write_associatedcoordinate_c( &
-            FILE_files(fid)%fid, cstr(name),       & ! (in)
-            c_loc(ptr), <%=n%>, <%=rp%>,           & ! (in)
-            (/<%=([1]*n).join(",")%>/), shape(val) ) ! (in)
+       do i = 1, <%=n%>
+          start_(i) = 0
+          count_(i) = size(val, <%=n%>-i+1)
+       end do
     end if
+
+    error = file_write_associatedcoordinate_c( &
+         FILE_files(fid)%fid, cstr(name), & ! (in)
+         c_loc(ptr), ndims_, <%=rp%>,     & ! (in)
+         start_, count_                   ) ! (in)
+
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
-       LOG_ERROR("FILE_write_associatedCoordinate_real<%=rp%>_<%=n%>D",*) 'failed to put associated coordinate: '//trim(name)
+       LOG_ERROR("FILE_write_associatedCoordinate_real<%=rp%>_<%=n%>D",*) 'failed to write associated coordinate: '//trim(name)
        call PRC_abort
     end if
 
