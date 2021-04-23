@@ -2904,6 +2904,7 @@ contains
     real(RP) :: uz_bnds(2,UKA), uzh_bnds(2,0:UKA)
     real(RP) :: x_bnds(2,IA), xh_bnds(2,0:IA)
     real(RP) :: y_bnds(2,JA), yh_bnds(2,0:JA)
+    integer  :: start_(2)
 
     real(RP) :: FDXG(0:IAG), FDYG(0:JAG)
     real(RP) :: FDX(0:IA), FDY(0:JA)
@@ -2935,20 +2936,23 @@ contains
     end if
 
     if ( haszcoord .and. put_z ) then
+       start_(1) = 1
+       start_(2) = start(1)
+
        ! atmos
        call FILE_Write_Axis( fid, 'z', ATMOS_GRID_CARTESC_CZ(KS:KE), start(1:1) )
        do k = KS, KE
           z_bnds(1,k) = ATMOS_GRID_CARTESC_FZ(k-1)
           z_bnds(2,k) = ATMOS_GRID_CARTESC_FZ(k  )
        end do
-       call FILE_Write_AssociatedCoordinate( fid, 'z_bnds', z_bnds(:,KS:KE), start(1:1) )
+       call FILE_Write_AssociatedCoordinate( fid, 'z_bnds', z_bnds(:,KS:KE), start_(:) )
 
        call FILE_Write_Axis( fid, 'zh', ATMOS_GRID_CARTESC_FZ(KS-1:KE)  , start(1:1) )
        do k = KS-1, KE
           zh_bnds(1,k) = ATMOS_GRID_CARTESC_CZ(k  )
           zh_bnds(2,k) = ATMOS_GRID_CARTESC_CZ(k+1)
        end do
-       call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start(1:1) )
+       call FILE_Write_AssociatedCoordinate( fid, 'zh_bnds', zh_bnds(:,KS-1:KE), start_(:) )
 
        ! ocean
        if ( OKMAX > 0 ) then
@@ -2957,7 +2961,7 @@ contains
              oz_bnds(1,k) = OCEAN_GRID_CARTESC_FZ(k-1)
              oz_bnds(2,k) = OCEAN_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'oz_bnds', oz_bnds(:,OKS:OKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'ozh', OCEAN_GRID_CARTESC_FZ(OKS-1:OKE), start(1:1) )
           ozh_bnds(1,OKS-1) = OCEAN_GRID_CARTESC_FZ(OKS-1)
@@ -2966,7 +2970,7 @@ contains
              ozh_bnds(1,k+1) = OCEAN_GRID_CARTESC_CZ(k+1)
           end do
           ozh_bnds(2,OKE) = OCEAN_GRID_CARTESC_FZ(OKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'ozh_bnds', ozh_bnds(:,OKS-1:OKE), start_(:) )
        end if
 
        ! land
@@ -2976,7 +2980,7 @@ contains
              lz_bnds(1,k) = LAND_GRID_CARTESC_FZ(k-1)
              lz_bnds(2,k) = LAND_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'lz_bnds', lz_bnds(:,LKS:LKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'lzh', LAND_GRID_CARTESC_FZ(LKS-1:LKE), start(1:1) )
           lzh_bnds(1,LKS-1) = LAND_GRID_CARTESC_FZ(LKS-1)
@@ -2985,7 +2989,7 @@ contains
              lzh_bnds(1,k+1) = LAND_GRID_CARTESC_CZ(k+1)
           end do
           lzh_bnds(2,LKE) = LAND_GRID_CARTESC_FZ(LKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'lzh_bnds', lzh_bnds(:,LKS-1:LKE), start_(:) )
        end if
 
        ! urban
@@ -2995,7 +2999,7 @@ contains
              uz_bnds(1,k) = URBAN_GRID_CARTESC_FZ(k-1)
              uz_bnds(2,k) = URBAN_GRID_CARTESC_FZ(k  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'uz_bnds', uz_bnds(:,UKS:UKE), start_(:) )
 
           call FILE_Write_Axis( fid, 'uzh', URBAN_GRID_CARTESC_FZ(UKS-1:UKE), start(1:1) )
           uzh_bnds(1,UKS-1) = URBAN_GRID_CARTESC_FZ(UKS-1)
@@ -3004,18 +3008,21 @@ contains
              uzh_bnds(1,k+1) = URBAN_GRID_CARTESC_CZ(k+1)
           end do
           uzh_bnds(2,UKE) = URBAN_GRID_CARTESC_FZ(UKE)
-          call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start(1:1) )
+          call FILE_Write_AssociatedCoordinate( fid, 'uzh_bnds', uzh_bnds(:,UKS-1:UKE), start_(:) )
        end if
     end if
 
     if ( put_x ) then
+       start_(1) = 1
+       start_(2) = start(2)
+
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB2:IEB2),  start(2:2) )
           do i = ISB2, IEB2
              x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
              x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB2:IEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB2:IEB2), start_(:) )
 
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB2:IEB2),  start(2:2) )
           do i = ISB2, IEB2-1
@@ -3028,14 +3035,14 @@ contains
           else
              xh_bnds(2,IEB2) = ATMOS_GRID_CARTESC_CX(IEB2+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB2:IEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB2:IEB2), start_(:) )
        else
           call FILE_Write_Axis( fid, 'x' ,  ATMOS_GRID_CARTESC_CX(ISB:IEB),  start(2:2) )
           do i = ISB2, IEB
              x_bnds(1,i) = ATMOS_GRID_CARTESC_FX(i-1)
              x_bnds(2,i) = ATMOS_GRID_CARTESC_FX(i  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB:IEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'x_bnds', x_bnds(:,ISB:IEB), start_(:) )
 
           call FILE_Write_Axis( fid, 'xh',  ATMOS_GRID_CARTESC_FX(ISB:IEB),  start(2:2) )
           do i = ISB, IEB-1
@@ -3048,18 +3055,21 @@ contains
           else
              xh_bnds(2,IEB) = ATMOS_GRID_CARTESC_CX(IEB+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB:IEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'xh_bnds', xh_bnds(:,ISB:IEB), start_(:) )
        end if
     end if
 
     if ( put_y ) then
+       start_(1) = 1
+       start_(2) = start(3)
+
        if ( FILE_get_aggregate(fid) ) then
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB2:JEB2),  start(3:3) )
           do j = JSB2, JEB2
              y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
              y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB2:JEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB2:JEB2), start_(:) )
 
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB2:JEB2),  start(3:3) )
           do j = JSB2, JEB2-1
@@ -3072,14 +3082,14 @@ contains
           else
              yh_bnds(2,JEB2) = ATMOS_GRID_CARTESC_CY(JEB2+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB2:JEB2), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB2:JEB2), start_(:) )
        else
           call FILE_Write_Axis( fid, 'y' ,  ATMOS_GRID_CARTESC_CY(JSB:JEB),  start(3:3) )
           do j = JSB, JEB
              y_bnds(1,j) = ATMOS_GRID_CARTESC_FY(j-1)
              y_bnds(2,j) = ATMOS_GRID_CARTESC_FY(j  )
           end do
-          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB:JEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'y_bnds', y_bnds(:,JSB:JEB), start_(:) )
 
           call FILE_Write_Axis( fid, 'yh',  ATMOS_GRID_CARTESC_FY(JSB:JEB),  start(3:3) )
           do j = JSB, JEB-1
@@ -3092,7 +3102,7 @@ contains
           else
              yh_bnds(2,JEB) = ATMOS_GRID_CARTESC_CY(JEB+1)
           end if
-          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB:JEB), (/1,start(2)/) )
+          call FILE_Write_AssociatedCoordinate( fid, 'yh_bnds', yh_bnds(:,JSB:JEB), start_(:) )
        end if
     end if
 
@@ -3258,14 +3268,14 @@ contains
           call FILE_Write_AssociatedCoordinate( fid, 'height'    , AXIS_HGT   (:,XSB:XEB,YSB:YEB), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'height_wxy', AXIS_HGTWXY(:,XSB:XEB,YSB:YEB), start(1:3) )
 
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuy_x', AXIS_AREAZUY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxv_y', AXIS_AREAZXV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wuy_x', AXIS_AREAWUY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wxv_y', AXIS_AREAWXV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_x', AXIS_AREAZXY_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_y', AXIS_AREAZUV_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_x', AXIS_AREAZUV_X(:,XSB:XEB,YSB:YEB), start(2:3) )
-          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_y', AXIS_AREAZXY_Y(:,XSB:XEB,YSB:YEB), start(2:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuy_x', AXIS_AREAZUY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxv_y', AXIS_AREAZXV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wuy_x', AXIS_AREAWUY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_wxv_y', AXIS_AREAWXV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_x', AXIS_AREAZXY_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_y', AXIS_AREAZUV_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zuv_x', AXIS_AREAZUV_X(:,XSB:XEB,YSB:YEB), start(1:3) )
+          call FILE_Write_AssociatedCoordinate( fid, 'cell_area_zxy_y', AXIS_AREAZXY_Y(:,XSB:XEB,YSB:YEB), start(1:3) )
 
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume',     AXIS_VOL   (:,XSB:XEB,YSB:YEB), start(1:3) )
           call FILE_Write_AssociatedCoordinate( fid, 'cell_volume_wxy', AXIS_VOLWXY(:,XSB:XEB,YSB:YEB), start(1:3) )
