@@ -39,6 +39,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_finalize
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
@@ -175,6 +176,21 @@ contains
 
     return
   end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalization
+  subroutine USER_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    allocate( DENS_INIT )
+    allocate( POTT_INIT )
+    allocate( VELX_INIT )
+    allocate( DENS_tend )
+    allocate( U_tend )
+
+    return
+  end subroutine USER_finalize
 
   !-----------------------------------------------------------------------------
   !> Make initial state

@@ -180,10 +180,13 @@ contains
 
     VAR_t_NAME(I_cp_rain_sf) = 'SFLX_RAIN_CP'
     VAR_t_DESC(I_cp_rain_sf) = 'surface rain flux in CP'
+    VAR_t_UNIT(I_cp_rain_sf) = 'kg/m2/s'
     VAR_t_NAME(I_cp_snow_sf) = 'SFLX_SNOW_CP'
     VAR_t_DESC(I_cp_snow_sf) = 'surface snow flux in CP'
+    VAR_t_UNIT(I_cp_snow_sf) = 'kg/m2/s'
     VAR_t_NAME(I_cp_engi_sf) = 'SFLX_ENGI_CP'
     VAR_t_DESC(I_cp_engi_sf) = 'surface internal energy flux in CP'
+    VAR_t_UNIT(I_cp_engi_sf) = 'J/m2/s'
 
     VAR_t_NAME(I_cp_dens_t) = 'DENS_t_CP'
     VAR_t_DESC(I_cp_dens_t) = 'tendency DENS in CP'
