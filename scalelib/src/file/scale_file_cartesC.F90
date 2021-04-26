@@ -1822,7 +1822,10 @@ contains
 
     if ( present( existed ) ) then
        existed = existed2
-       if ( .not. existed2 ) return
+       if ( .not. existed2 ) then
+          call PROF_rapend  ('FILE_I_NetCDF', 2)
+          return
+       end if
     end if
 
     if ( .not. existed2 ) then
@@ -1906,7 +1909,10 @@ contains
 
     if ( present(existed) ) then
        existed = existed2
-       if ( .not. existed2 ) return
+       if ( .not. existed2 ) then
+          call PROF_rapend  ('FILE_I_NetCDF', 2)
+          return
+       end if
     end if
 
     if ( .not. existed2 ) then
