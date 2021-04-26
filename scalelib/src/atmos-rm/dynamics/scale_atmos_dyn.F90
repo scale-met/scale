@@ -243,20 +243,21 @@ contains
     use scale_spnudge, only: &
        SPNUDGE_finalize
 
-    call ATMOS_DYN_Tstep_large_finalize
-
-    call ATMOS_DYN_Tinteg_short_finalize
-
-    call ATMOS_DYN_Tinteg_tracer_finalize
-
-    call ATMOS_DYN_FVM_numfilter_finalize
-
-    call SPNUDGE_finalize
-
     deallocate( I_COMM_PROG )
     deallocate( I_COMM_QTRC )
 
     if ( .NOT. DYN_NONE ) then
+
+       call ATMOS_DYN_Tstep_large_finalize
+
+       call ATMOS_DYN_Tinteg_short_finalize
+
+       call ATMOS_DYN_Tinteg_tracer_finalize
+
+       call ATMOS_DYN_FVM_numfilter_finalize
+
+       call SPNUDGE_finalize
+
        deallocate( num_diff   )
        deallocate( num_diff_q )
        deallocate( wdamp_coef )

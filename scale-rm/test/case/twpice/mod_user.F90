@@ -28,6 +28,7 @@ module mod_user
   !
   public :: USER_tracer_setup
   public :: USER_setup
+  public :: USER_finalize
   public :: USER_mkinit
   public :: USER_calc_tendency
   public :: USER_update
@@ -237,6 +238,31 @@ contains
 
     return
   end subroutine USER_setup
+
+  !-----------------------------------------------------------------------------
+  !> Finalization
+  subroutine USER_finalize
+    implicit none
+    !---------------------------------------------------------------------------
+
+    deallocate( MOMZ_LS )
+    deallocate( MOMZ_LS_DZ )
+    deallocate( U_GEOS )
+    deallocate( V_GEOS )
+    deallocate( QV_LS )
+
+    deallocate( var1 )
+    deallocate( var2 )
+
+    deallocate( momz_ls_t )
+    deallocate( momz_ls_dz_t )
+    deallocate( u_geos_t )
+    deallocate( v_geos_t )
+    deallocate( qv_ls_t )
+    deallocate( pott_ls_t )
+
+    return
+  end subroutine USER_finalize
 
   !-----------------------------------------------------------------------------
   !> Make initial state

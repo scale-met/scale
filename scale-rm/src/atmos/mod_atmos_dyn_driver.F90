@@ -227,8 +227,12 @@ contains
   subroutine ATMOS_DYN_driver_finalize
     use scale_atmos_dyn, only: &
        ATMOS_DYN_finalize
+    use mod_atmos_admin, only: &
+       ATMOS_sw_dyn
 
-    call ATMOS_DYN_finalize
+    if ( ATMOS_sw_dyn ) then
+       call ATMOS_DYN_finalize
+    end if
 
     return
   end subroutine ATMOS_DYN_driver_finalize
