@@ -910,7 +910,9 @@ contains
     deallocate( ecoll )
     deallocate( rcoll )
 
-    deallocate ( ncld )
+    if ( nccn /= 0 ) then
+       deallocate ( ncld )
+    end if
 
     deallocate( vterm )
 
