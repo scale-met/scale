@@ -1754,8 +1754,8 @@ contains
        call PRC_abort
     end if
 
-    ierror = file_get_step_size_c( len,                         & ! (out)
-                                   FILE_files(fid)%fid, varname ) ! (in)
+    ierror = file_get_step_size_c( len,                               & ! (out)
+                                   FILE_files(fid)%fid, cstr(varname) ) ! (in)
     if ( ierror /= FILE_SUCCESS_CODE .and. ierror /= FILE_ALREADY_EXISTED_CODE ) then
        if ( present(error) ) then
           error = .true.
