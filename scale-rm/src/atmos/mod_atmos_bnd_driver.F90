@@ -222,7 +222,8 @@ module mod_atmos_bnd_driver
   integer,               private :: ATMOS_BOUNDARY_START_DATES(6, ATMOS_BOUNDARY_NFILES_MAX) 
 
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAME_OPENED = '' 
- 
+  integer,               private :: boundary_timestep_max = -999         
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -1436,6 +1437,8 @@ contains
             call PRC_abort
           else
             ifileb = ifile - 1
+            boundary_timestep_max = ( bdysec - bdysecb ) / ATMOS_BOUNDARY_UPDATE_DT  + 1
+            LOG_INFO("ATMOS_BOUNDARY_initialize_file",*) 'ifileb=', ifileb, "boundary_timestep_max=", boundary_timestep_max  
             exit
           end if
         end if 
@@ -1444,6 +1447,7 @@ contains
           call PRC_abort
         end if
         ifileb = ifile
+        boundary_timestep_max = -999 
       end do
 
 
@@ -1830,11 +1834,6 @@ contains
     integer :: handle
     !---------------------------------------------------------------------------
 
-    if ( ATMOS_BOUNDARY_NFILES > 1 ) then
-       call ATMOS_BOUNDARY_initialize_file
-       call ATMOS_BOUNDARY_set_file
-    end if
-
     if ( l_bnd ) then
 
        ! step boundary
@@ -1852,7 +1851,15 @@ contains
           if ( do_daughter_process ) then !online [daughter]
              call ATMOS_BOUNDARY_update_online_daughter( ref_new )
           else
-             call ATMOS_BOUNDARY_update_file( ref_new )
+             
+             if ( boundary_timestep_max > 0 .and.  boundary_timestep > boundary_timestep_max ) then
+                LOG_INFO("ATMOS_BOUNDARY_update",*) 'call initialize_fie and set_file to replace source files.', boundary_timestep, boundary_timestep_max
+                call ATMOS_BOUNDARY_initialize_file
+                call ATMOS_BOUNDARY_set_file
+             else
+                LOG_INFO("ATMOS_BOUNDARY_update",*) 'simply update data.', boundary_timestep, boundary_timestep_max
+                call ATMOS_BOUNDARY_update_file( ref_new )
+             end if
           end if
 
           if ( ATMOS_BOUNDARY_DENS_ADJUST ) then
