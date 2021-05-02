@@ -15,6 +15,7 @@ module mod_realinput_scale
   !
   use scale_precision
   use scale_io
+  use scale_prof
   use scale_tracer
   use scale_cpl_sfc_index
   !-----------------------------------------------------------------------------
@@ -159,6 +160,8 @@ contains
     integer :: i, j
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -209,6 +212,8 @@ contains
        end if
 
     end do
+
+    call PROF_rapend('FILE_I_NetCDF', 2)
 
     cz_org(1,:,:) = 0.0_RP
 
@@ -331,6 +336,8 @@ contains
     !---------------------------------------------------------------------------
 
     qnum_flag = .false.
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -456,6 +463,8 @@ contains
 !       qv_org(2,xs:xe,ys:ye) = read2D(:,:)
 
     end do
+
+    call PROF_rapend('FILE_I_NetCDF', 2)
 
     ! convert from momentum to velocity
 !OCL XFILL
@@ -723,6 +732,8 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -791,6 +802,8 @@ contains
     end do
 
     call FILE_read( fid, "lz", lz_org(:) )
+
+    call PROF_rapend('FILE_I_NetCDF', 2)
 
     return
   end subroutine ParentLandInputSCALE
@@ -872,6 +885,8 @@ contains
     integer :: i
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart('FILE_I_NetCDF', 2)
+
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
        rank = NEST_TILE_ID(i)
@@ -898,6 +913,8 @@ contains
        omask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
+
+    call PROF_rapend('FILE_I_NetCDF', 2)
 
     return
   end subroutine ParentOceanOpenSCALE
@@ -940,6 +957,8 @@ contains
     integer :: xs, xe
     integer :: ys, ye
     !---------------------------------------------------------------------------
+
+    call PROF_rapstart('FILE_I_NetCDF', 2)
 
     do i = 1, size( NEST_TILE_ID(:) )
        ! read data from split files
@@ -995,6 +1014,8 @@ contains
        omask_org(xs:xe,ys:ye) = read2D(:,:)
 
     end do
+
+    call PROF_rapend('FILE_I_NetCDF', 2)
 
     return
   end subroutine ParentOceanInputSCALE
