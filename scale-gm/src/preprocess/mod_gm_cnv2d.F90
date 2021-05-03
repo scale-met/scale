@@ -17,6 +17,9 @@ module mod_gm_cnv2d
   use scale_io
   use scale_prof
   use scale_atmos_grid_icoA_index
+  use mod_netcdf, only: &
+     netcdf_handler
+     
   !-----------------------------------------------------------------------------
   implicit none
   private
@@ -26,6 +29,7 @@ module mod_gm_cnv2d
   !
   public :: CNV2D_tile_init
   public :: CNV2D_GRADS_init
+  public :: CNV2D_NetCDF_init
   public :: CNV2D_convert
 
   !-----------------------------------------------------------------------------
@@ -47,6 +51,7 @@ module mod_gm_cnv2d
   integer,  private               :: CNV2D_ftype
   integer,  private, parameter    :: I_TILE  = 1
   integer,  private, parameter    :: I_GrADS = 2
+  integer,  private, parameter    :: I_NetCDF= 3
 
   ! TILE data
   character(len=H_SHORT), private :: CNV2D_tile_dtype
@@ -73,7 +78,14 @@ module mod_gm_cnv2d
   integer,  private               :: CNV2D_GRADS_fid
   integer,  private               :: CNV2D_GRADS_vid
 
+  ! NetCDF data
+  type(netcdf_handler), private, save   :: CNV2D_NC
+  logical,  private               :: NC_LON_reverse = .false.
+  logical,  private               :: NC_LAT_reverse = .false.
+
+
   real(RP), private, allocatable  :: DATA_org(:,:)
+  real(4),  private, allocatable  :: DATA_org_r4(:,:)
   real(RP), private, allocatable  :: LAT_org (:,:)
   real(RP), private, allocatable  :: LON_org (:,:)
   integer,  private               :: CNV2D_nlat
@@ -128,9 +140,6 @@ contains
     real(RP)              :: DOMAIN_LONS, DOMAIN_LONE
     real(RP)              :: lon_swap
     character(len=H_LONG) :: fname
-
-    real(RP), allocatable :: LAT_1d(:)
-    real(RP), allocatable :: LON_1d(:)
 
     integer :: ij, l, i, j
     !---------------------------------------------------------------------------
@@ -211,28 +220,16 @@ contains
     LOG_INFO("CNV2D_tile_init",*) 'CNV2D_nlat = ', CNV2D_nlat
     LOG_INFO("CNV2D_tile_init",*) 'CNV2D_nlon = ', CNV2D_nlon
 
-    allocate( LAT_org (CNV2D_nlon,CNV2D_nlat) )
-    allocate( LON_org (CNV2D_nlon,CNV2D_nlat) )
+    allocate( LAT_org (         1,CNV2D_nlat) )
+    allocate( LON_org (CNV2D_nlon,         1) )
     allocate( DATA_org(CNV2D_nlon,CNV2D_nlat) )
-
-    allocate( LAT_1d(CNV2D_nlat) )
-    allocate( LON_1d(CNV2D_nlon) )
 
     ! read lat, lon
     call FILE_TILEDATA_get_latlon( CNV2D_nlat, CNV2D_nlon,                 & ! [IN]
                                    TILEDATA_DOMAIN_JS, TILEDATA_DOMAIN_IS, & ! [IN]
                                    CNV2D_TILE_dlat, CNV2D_TILE_dlon,       & ! [IN]
-                                   LAT_1d(:), LON_1d(:)                    ) ! [OUT]
+                                   LAT_org(1,:), LON_org(:,1)              ) ! [OUT]
 
-    do j = 1, CNV2D_nlat
-    do i = 1, CNV2D_nlon
-       LAT_org(i,j) = LAT_1d(j)
-       LON_org(i,j) = LON_1d(i)
-    enddo
-    enddo
-
-    deallocate( LAT_1d )
-    deallocate( LON_1d )
 
     call CNV2D_init( interp_type, interp_level )
 
@@ -271,9 +268,6 @@ contains
     integer :: file_id, var_id
     integer :: shape(2)
 
-    real(RP), allocatable :: LAT_1d(:)
-    real(RP), allocatable :: LON_1d(:)
-
     integer :: i, j
     !---------------------------------------------------------------------------
 
@@ -298,27 +292,22 @@ contains
     LOG_INFO("CNV2D_GRADS_init",*) 'CNV2D_nlat = ', CNV2D_nlat
     LOG_INFO("CNV2D_GRADS_init",*) 'CNV2D_nlon = ', CNV2D_nlon
 
-    allocate( LAT_org (CNV2D_nlon,CNV2D_nlat) )
-    allocate( LON_org (CNV2D_nlon,CNV2D_nlat) )
     allocate( DATA_org(CNV2D_nlon,CNV2D_nlat) )
-
-    allocate( LAT_1d(CNV2D_nlat) )
-    allocate( LON_1d(CNV2D_nlon) )
 
     ! read lat
     call FILE_GrADS_varid( file_id, LAT_NAME, & ! [IN]
                            var_id             ) ! [OUT]
 
     if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       allocate( LAT_org (1,CNV2D_nlat) )
        call FILE_GrADS_read( file_id, var_id, & ! [IN]
-                             LAT_1d(:)        ) ! [OUT]
+                             LAT_org(1,:)     ) ! [OUT]
 
        do j = 1, CNV2D_nlat
-       do i = 1, CNV2D_nlon
-          LAT_org(i,j) = LAT_1d(j) * D2R
-       enddo
+          LAT_org(1,j) = LAT_org(1,j) * D2R
        enddo
     else
+       allocate( LAT_org (CNV2D_nlon,CNV2D_nlat) )        
        call FILE_GrADS_read( file_id, var_id,  & ! [IN]
                              LAT_org(:,:),     & ! [OUT]
                              postfix = POSTFIX ) ! [IN]
@@ -335,15 +324,15 @@ contains
                            var_id             ) ! [OUT]
 
     if ( FILE_GrADS_isOneD( file_id, var_id ) ) then
+       allocate( LON_org (CNV2D_nlon,1) )
        call FILE_GrADS_read( file_id, var_id, & ! [IN]
-                             LON_1d(:)        ) ! [OUT]
+                             LON_org(:,1)     ) ! [OUT]
 
-       do j = 1, CNV2D_nlat
        do i = 1, CNV2D_nlon
-          LON_org(i,j) = LON_1d(i) * D2R
-       enddo
+          LON_org(i,1) = LON_org(i,1) * D2R
        enddo
     else
+       allocate( LON_org (CNV2D_nlon,CNV2D_nlat) )        
        call FILE_GrADS_read( file_id, var_id,  & ! [IN]
                              LON_org(:,:),     & ! [OUT]
                              postfix = POSTFIX ) ! [IN]
@@ -355,13 +344,94 @@ contains
        enddo
     endif
 
-    deallocate( LAT_1d )
-    deallocate( LON_1d )
-
     call CNV2D_init( interp_type, interp_level )
 
     return
   end subroutine CNV2D_GRADS_init
+
+  !-----------------------------------------------------------------------------
+  subroutine CNV2D_NETCDF_init( &
+       FILE_NAME,    &
+       interp_type,  &
+       interp_level  )
+    use mod_netcdf, only: &
+       netcdf_open_for_read, &
+       netcdf_read_dim       
+    use scale_const, only: &
+       D2R => CONST_D2R
+    implicit none
+
+    character(len=*), intent(in) :: FILE_NAME
+    character(len=*), intent(in) :: interp_type
+    integer,          intent(in) :: interp_level
+
+    real(RP), allocatable        :: LAT_work (:)
+    real(RP), allocatable        :: LON_work (:)
+
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    LOG_NEWLINE
+    LOG_INFO("CNV2D_NETCDF_init",*) 'Setup NetCDF format data'
+
+    call netcdf_open_for_read( CNV2D_NC,        & ! [OUT]
+                               FILE_NAME,       & ! [IN]
+                               imax=CNV2D_nlon, & ! [OUT]
+                               jmax=CNV2D_nlat  ) ! [OUT]
+
+
+    CNV2D_ftype     = I_NetCDF
+
+    LOG_INFO("CNV2D_NETCDF_init",*) 'CNV2D_nlat = ', CNV2D_nlat
+    LOG_INFO("CNV2D_NETCDF_init",*) 'CNV2D_nlon = ', CNV2D_nlon
+
+    allocate( DATA_org    (CNV2D_nlon,CNV2D_nlat) )
+    allocate( DATA_org_r4 (CNV2D_nlon,CNV2D_nlat) )
+    allocate( LON_org     (CNV2D_nlon,1) )
+    allocate( LAT_org     (1,CNV2D_nlat) )
+
+    ! read lon, lat
+    call netcdf_read_dim( CNV2D_NC,         & ! [IN]
+                          lon=LON_org(:,1), & ! [OUT]
+                          lat=LAT_org(1,:)  ) ! [OUT]
+
+    do i = 1, CNV2D_nlon
+       LON_org(i,1) = LON_org(i,1) * D2R
+    enddo
+    do j = 1, CNV2D_nlat
+       LAT_org(1,j) = LAT_org(1,j) * D2R
+    enddo
+
+    if ( interp_type == "LINEAR") then
+      if ( LON_org(1,1) > LON_org(CNV2D_nlon,1) ) then 
+         allocate( LON_work (CNV2D_nlon) )
+         do i = 1, CNV2D_nlon
+            LON_work(i) = LON_org(i,1)
+         enddo
+         do i = 1, CNV2D_nlon
+            LON_org(CNV2D_nlon-i+1,1) = LON_work(i)
+         enddo
+         deallocate( LON_work )
+         NC_LON_reverse = .true.
+      endif 
+      if ( LAT_org(1,1) > LAT_org(1,CNV2D_nlat) ) then 
+         allocate( LAT_work (CNV2D_nlat) )
+         do j = 1, CNV2D_nlat
+            LAT_work(j) = LAT_org(1,j)
+         enddo
+         do j = 1, CNV2D_nlat
+            LAT_org(1,CNV2D_nlat-j+1) = LAT_work(j)
+         enddo
+         deallocate( LAT_work )
+         NC_LAT_reverse = .true.
+      endif
+    endif 
+
+    call CNV2D_init( interp_type, interp_level )
+
+    return
+  end subroutine CNV2D_NETCDF_init
 
   !-----------------------------------------------------------------------------
   subroutine CNV2D_init( &
@@ -440,10 +510,14 @@ contains
        do i = ADM_gmin, ADM_gmax
           ij = suf(i,j)
 
-          if ( GRD_LON(ij,l) < 0.0_RP ) then
-             lon_swap = GRD_LON(ij,l) + 2.0_RP * PI
-          else
+          if (LON_org(1,1) < 0.0_RP ) then 
              lon_swap = GRD_LON(ij,l)
+          else
+             if ( GRD_LON(ij,l) < 0.0_RP ) then
+                lon_swap = GRD_LON(ij,l) + 2.0_RP * PI
+             else
+                lon_swap = GRD_LON(ij,l)
+             endif
           endif
 
           if ( GRD_LAT(ij,l) <= LAT_org(1,1) ) then
@@ -618,38 +692,75 @@ contains
           idxi_list(:) = -1
           idxj_list(:) = -1
 
-          do jj = 1, CNV2D_nlat
-          do ii = 1, CNV2D_nlon
-             dlat = GRD_LAT(ij,l) - LAT_org(ii,jj)
-             dlon = GRD_LON(ij,l) - LON_org(ii,jj) + 4.0_RP * PI
-             if    ( dlon >= 4.0_RP * PI ) then
-                dlon = dlon - 4.0_RP * PI
-             elseif( dlon >= 2.0_RP * PI ) then
-                dlon = dlon - 2.0_RP * PI
-             endif
+          if ( size(LAT_org,1) == 1 ) then 
+              do jj = 1, CNV2D_nlat
+                dlat = GRD_LAT(ij,l) - LAT_org(1,jj)
+                if( abs( dlat ) > ref_dist ) cycle
 
-             if( abs( dlat ) > ref_dist ) cycle
-             if( abs( dlon ) > ref_dist ) cycle
-
-             wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT(ij,l)) * cos(LAT_org(ii,jj)) * sin(0.5_RP*dlon)**2
-
-             dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
-
-             if ( dist <= ref_dist ) then
-                if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
-                   dist_list(npoints) = dist
-                   idxi_list(npoints) = ii
-                   idxj_list(npoints) = jj
-
-                   ! sort by ascending order
-                   call SORT_exec( npoints,      & ! [IN]
-                                   dist_list(:), & ! [INOUT]
-                                   idxi_list(:), & ! [INOUT]
-                                   idxj_list(:)  ) ! [INOUT]
+              do ii = 1, CNV2D_nlon
+                dlon = GRD_LON(ij,l) - LON_org(ii,1) + 4.0_RP * PI
+                if    ( dlon >= 4.0_RP * PI ) then
+                   dlon = dlon - 4.0_RP * PI
+                elseif( dlon >= 2.0_RP * PI ) then
+                   dlon = dlon - 2.0_RP * PI
                 endif
-             endif
-          enddo
-          enddo
+
+                if( abs( dlon ) > ref_dist ) cycle
+
+                wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT(ij,l)) * cos(LAT_org(1,jj)) * sin(0.5_RP*dlon)**2
+
+                dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
+
+                if ( dist <= ref_dist ) then
+                   if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
+                      dist_list(npoints) = dist
+                      idxi_list(npoints) = ii
+                      idxj_list(npoints) = jj
+
+                      ! sort by ascending order
+                      call SORT_exec( npoints,      & ! [IN]
+                                      dist_list(:), & ! [INOUT]
+                                      idxi_list(:), & ! [INOUT]
+                                      idxj_list(:)  ) ! [INOUT]
+                   endif
+                endif
+             enddo
+             enddo
+
+          else
+             do jj = 1, CNV2D_nlat
+             do ii = 1, CNV2D_nlon
+                dlat = GRD_LAT(ij,l) - LAT_org(ii,jj)
+                dlon = GRD_LON(ij,l) - LON_org(ii,jj) + 4.0_RP * PI
+                if    ( dlon >= 4.0_RP * PI ) then
+                   dlon = dlon - 4.0_RP * PI
+                elseif( dlon >= 2.0_RP * PI ) then
+                   dlon = dlon - 2.0_RP * PI
+                endif
+
+                if( abs( dlat ) > ref_dist ) cycle
+                if( abs( dlon ) > ref_dist ) cycle
+
+                wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT(ij,l)) * cos(LAT_org(ii,jj)) * sin(0.5_RP*dlon)**2
+
+                dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
+
+                if ( dist <= ref_dist ) then
+                   if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
+                      dist_list(npoints) = dist
+                      idxi_list(npoints) = ii
+                      idxj_list(npoints) = jj
+
+                      ! sort by ascending order
+                      call SORT_exec( npoints,      & ! [IN]
+                                      dist_list(:), & ! [INOUT]
+                                      idxi_list(:), & ! [INOUT]
+                                      idxj_list(:)  ) ! [INOUT]
+                   endif
+                endif
+             enddo
+             enddo
+          endif 
 
           do n = 1, npoints
              idx_i(ij,l,n) = idxi_list(n)
@@ -685,38 +796,75 @@ contains
           idxi_list(:) = -1
           idxj_list(:) = -1
 
-          do jj = 1, CNV2D_nlat
-          do ii = 1, CNV2D_nlon
-             dlat = GRD_LAT_pl(ij,l) - LAT_org(ii,jj)
-             dlon = GRD_LON_pl(ij,l) - LON_org(ii,jj) + 4.0_RP * PI
-             if    ( dlon >= 4.0_RP * PI ) then
-                dlon = dlon - 4.0_RP * PI
-             elseif( dlon >= 2.0_RP * PI ) then
-                dlon = dlon - 2.0_RP * PI
-             endif
+          if (size(LAT_org,1) == 1 ) then 
+             do jj = 1, CNV2D_nlat
+                dlat = GRD_LAT_pl(ij,l) - LAT_org(1,jj) 
+                if( abs( dlat ) > ref_dist ) cycle
 
-             if( abs( dlat ) > ref_dist ) cycle
-             if( abs( dlon ) > ref_dist ) cycle
-
-             wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT_pl(ij,l)) * cos(LAT_org(ii,jj)) * sin(0.5_RP*dlon)**2
-
-             dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
-
-             if ( dist <= ref_dist ) then
-                if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
-                   dist_list(npoints) = dist
-                   idxi_list(npoints) = ii
-                   idxj_list(npoints) = jj
-
-                   ! sort by ascending order
-                   call SORT_exec( npoints,      & ! [IN]
-                                   dist_list(:), & ! [INOUT]
-                                   idxi_list(:), & ! [INOUT]
-                                   idxj_list(:)  ) ! [INOUT]
+             do ii = 1, CNV2D_nlon
+                dlon = GRD_LON_pl(ij,l) - LON_org(ii,1) + 4.0_RP * PI
+                if    ( dlon >= 4.0_RP * PI ) then
+                   dlon = dlon - 4.0_RP * PI
+                elseif( dlon >= 2.0_RP * PI ) then
+                   dlon = dlon - 2.0_RP * PI
                 endif
-             endif
-          enddo
-          enddo
+
+                if( abs( dlon ) > ref_dist ) cycle
+
+                wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT_pl(ij,l)) * cos(LAT_org(1,jj)) * sin(0.5_RP*dlon)**2
+
+                dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
+
+                if ( dist <= ref_dist ) then
+                   if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
+                      dist_list(npoints) = dist
+                      idxi_list(npoints) = ii
+                      idxj_list(npoints) = jj
+
+                      ! sort by ascending order
+                      call SORT_exec( npoints,      & ! [IN]
+                                      dist_list(:), & ! [INOUT]
+                                      idxi_list(:), & ! [INOUT]
+                                      idxj_list(:)  ) ! [INOUT]
+                   endif
+                endif
+             enddo
+             enddo
+
+          else
+             do jj = 1, CNV2D_nlat
+             do ii = 1, CNV2D_nlon
+                dlat = GRD_LAT_pl(ij,l) - LAT_org(ii,jj)
+                dlon = GRD_LON_pl(ij,l) - LON_org(ii,jj) + 4.0_RP * PI
+                if    ( dlon >= 4.0_RP * PI ) then
+                   dlon = dlon - 4.0_RP * PI
+                elseif( dlon >= 2.0_RP * PI ) then
+                   dlon = dlon - 2.0_RP * PI
+                endif
+
+                if( abs( dlat ) > ref_dist ) cycle
+                if( abs( dlon ) > ref_dist ) cycle
+
+                wk = sin(0.5_RP*dlat)**2 + cos(GRD_LAT_pl(ij,l)) * cos(LAT_org(ii,jj)) * sin(0.5_RP*dlon)**2
+
+                dist = 2.0_RP * asin( min(sqrt(wk),1.0_RP) )
+
+                if ( dist <= ref_dist ) then
+                   if ( dist <= dist_list(npoints) ) then ! replace last(=longest) value
+                      dist_list(npoints) = dist
+                      idxi_list(npoints) = ii
+                      idxj_list(npoints) = jj
+
+                      ! sort by ascending order
+                      call SORT_exec( npoints,      & ! [IN]
+                                      dist_list(:), & ! [INOUT]
+                                      idxi_list(:), & ! [INOUT]
+                                      idxj_list(:)  ) ! [INOUT]
+                   endif
+                endif
+             enddo
+             enddo
+          endif
 
           do n = 1, npoints
              idx_i_pl(ij,l,n) = idxi_list(n)
@@ -749,6 +897,9 @@ contains
 
     end select
 
+    deallocate( LAT_org )
+    deallocate( LON_org )
+
     return
   end subroutine CNV2D_init
 
@@ -768,6 +919,9 @@ contains
        FILE_TILEDATA_get_data
     use scale_file_grads, only: &
        FILE_GrADS_read
+    use mod_netcdf, only: &
+       netcdf_read, &
+       netcdf_close
     implicit none
 
     real(RP), intent(out) :: var   (ADM_gall   ,ADM_lall   )
@@ -811,6 +965,25 @@ contains
                              CNV2D_GRADS_vid, & ! [IN]
                              DATA_org(:,:),   & ! [OUT]
                              step = step      ) ! [IN]
+
+    case(I_NetCDF)
+       call netcdf_read( CNV2D_NC,         & ! [IN]
+                         DATA_org_r4(:,:), & ! [OUT]
+                         1, 1)               ! [IN]
+       do j = 1, CNV2D_nlat
+       do i = 1, CNV2D_nlon
+          if ( NC_LON_reverse .and. NC_LAT_reverse ) then
+             DATA_org(CNV2D_nlon-i+1, CNV2D_nlat-j+1) = real(DATA_org_r4(i,j), RP)
+          elseif ( NC_LON_reverse .and. .not.NC_LAT_reverse ) then
+             DATA_org(CNV2D_nlon+i-1,j)               = real(DATA_org_r4(i,j), RP)
+          elseif ( .not.NC_LON_reverse .and. NC_LAT_reverse ) then
+             DATA_org(i,CNV2D_nlat-j+1)               = real(DATA_org_r4(i,j), RP)
+          else
+             DATA_org(i,j)                            = real(DATA_org_r4(i,j), RP)
+          endif
+       enddo
+       enddo
+       call netcdf_close( CNV2D_NC ) ! [INOUT]
 
     end select
 
