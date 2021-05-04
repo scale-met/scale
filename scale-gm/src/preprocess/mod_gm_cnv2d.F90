@@ -83,11 +83,19 @@ module mod_gm_cnv2d
   logical,  private               :: NC_LON_reverse = .false.
   logical,  private               :: NC_LAT_reverse = .false.
 
-
+#ifdef SINGLE
   real(RP), private, allocatable  :: DATA_org(:,:)
-  real(4),  private, allocatable  :: DATA_org_r4(:,:)
+  real(RP), private, allocatable  :: DATA_tmp(:,:)
   real(RP), private, allocatable  :: LAT_org (:,:)
   real(RP), private, allocatable  :: LON_org (:,:)
+  real(8),  private, allocatable  :: LAT_1dr8(:)
+  real(8),  private, allocatable  :: LON_1dr8(:)
+#else
+  real(RP), private, allocatable  :: DATA_org(:,:)
+  real(4),  private, allocatable  :: DATA_tmp(:,:)
+  real(RP), private, allocatable  :: LAT_org (:,:)
+  real(RP), private, allocatable  :: LON_org (:,:)
+#endif
   integer,  private               :: CNV2D_nlat
   integer,  private               :: CNV2D_nlon
 
@@ -386,15 +394,35 @@ contains
     LOG_INFO("CNV2D_NETCDF_init",*) 'CNV2D_nlat = ', CNV2D_nlat
     LOG_INFO("CNV2D_NETCDF_init",*) 'CNV2D_nlon = ', CNV2D_nlon
 
-    allocate( DATA_org    (CNV2D_nlon,CNV2D_nlat) )
-    allocate( DATA_org_r4 (CNV2D_nlon,CNV2D_nlat) )
-    allocate( LON_org     (CNV2D_nlon,1) )
-    allocate( LAT_org     (1,CNV2D_nlat) )
 
+#ifdef SINGLE
+    allocate( DATA_org    (CNV2D_nlon,CNV2D_nlat) )
+    allocate( DATA_tmp    (CNV2D_nlon,CNV2D_nlat) )
+    allocate( LON_org     (CNV2D_nlon,1) )
+    allocate( LAT_org     (1,CNV2D_nlat) )        
+    allocate( LON_1dr8    (CNV2D_nlon)   )
+    allocate( LAT_1dr8    (CNV2D_nlat)   )        
     ! read lon, lat
     call netcdf_read_dim( CNV2D_NC,         & ! [IN]
-                          lon=LON_org(:,1), & ! [OUT]
-                          lat=LAT_org(1,:)  ) ! [OUT]
+                          lon=LON_1dr8(:), & ! [OUT]
+                          lat=LAT_1dr8(:)  ) ! [OUT]
+    do i = 1, CNV2D_nlon
+      LON_org(i,1) = real(LON_1dr8(i),8)
+    enddo
+    do j = 1, CNV2D_nlat
+      LAT_org(1,j) = real(LAT_1dr8(j),8)
+    enddo
+#else
+    allocate( DATA_org    (CNV2D_nlon,CNV2D_nlat) )
+    allocate( DATA_tmp    (CNV2D_nlon,CNV2D_nlat) )
+    allocate( LON_org     (CNV2D_nlon,1) )
+    allocate( LAT_org     (1,CNV2D_nlat) )
+    ! read lon, lat
+    call netcdf_read_dim( CNV2D_NC,           & ! [IN]
+                          lon=LON_org(:,1),   & ! [OUT]
+                          lat=LAT_org(1,:)    ) ! [OUT]
+#endif
+
 
     do i = 1, CNV2D_nlon
        LON_org(i,1) = LON_org(i,1) * D2R
@@ -967,19 +995,20 @@ contains
                              step = step      ) ! [IN]
 
     case(I_NetCDF)
+
        call netcdf_read( CNV2D_NC,         & ! [IN]
-                         DATA_org_r4(:,:), & ! [OUT]
+                         DATA_tmp(:,:),    & ! [OUT]
                          1, 1)               ! [IN]
        do j = 1, CNV2D_nlat
        do i = 1, CNV2D_nlon
           if ( NC_LON_reverse .and. NC_LAT_reverse ) then
-             DATA_org(CNV2D_nlon-i+1, CNV2D_nlat-j+1) = real(DATA_org_r4(i,j), RP)
+             DATA_org(CNV2D_nlon-i+1, CNV2D_nlat-j+1) = real(DATA_tmp(i,j), RP)
           elseif ( NC_LON_reverse .and. .not.NC_LAT_reverse ) then
-             DATA_org(CNV2D_nlon+i-1,j)               = real(DATA_org_r4(i,j), RP)
+             DATA_org(CNV2D_nlon+i-1,j)               = real(DATA_tmp(i,j), RP)
           elseif ( .not.NC_LON_reverse .and. NC_LAT_reverse ) then
-             DATA_org(i,CNV2D_nlat-j+1)               = real(DATA_org_r4(i,j), RP)
+             DATA_org(i,CNV2D_nlat-j+1)               = real(DATA_tmp(i,j), RP)
           else
-             DATA_org(i,j)                            = real(DATA_org_r4(i,j), RP)
+             DATA_org(i,j)                            = real(DATA_tmp(i,j), RP)
           endif
        enddo
        enddo
