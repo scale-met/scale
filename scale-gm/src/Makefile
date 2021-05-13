@@ -21,6 +21,8 @@ PPNAME07 = gm_fio_cat
 PPNAME08 = gm_fio_sel
 PPNAME09 = gm_fio_ico2ll
 PPNAME10 = gm_ll2ico
+PPNAME11 = gm_mkiimap
+PPNAME12 = gm_fio_ico2ico
 
 BINS = $(BINDIR)/$(BINNAME)$(POSTFIX)  \
        $(BINDIR)/$(PPNAME01)$(POSTFIX) \
@@ -32,7 +34,10 @@ BINS = $(BINDIR)/$(BINNAME)$(POSTFIX)  \
        $(BINDIR)/$(PPNAME07)$(POSTFIX) \
        $(BINDIR)/$(PPNAME08)$(POSTFIX) \
        $(BINDIR)/$(PPNAME09)$(POSTFIX) \
-       $(BINDIR)/$(PPNAME10)$(POSTFIX)
+       $(BINDIR)/$(PPNAME10)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME11)$(POSTFIX) \
+       $(BINDIR)/$(PPNAME12)$(POSTFIX)
+
 LIBS = $(LIBDIR)/libscale$(POSTFIX).a
 
 ifneq ($(SCALE_IGNORE_SRCDEP),T)
@@ -140,7 +145,8 @@ OBJS =	\
 	mod_gm_cnv2d.o       \
 	mod_mnginfo_light.o  \
 	mod_option.o         \
-	mod_netcdf.o
+	mod_netcdf.o         \
+	mod_mkiimap.o
 
 all:
 	$(MAKE) build
@@ -189,6 +195,11 @@ $(BUILD_DIR)/$(PPNAME09)$(POSTFIX) : $(BUILD_DIR)/prg_fio_ico2ll.o $(patsubst %,
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
 $(BUILD_DIR)/$(PPNAME10)$(POSTFIX) : $(BUILD_DIR)/prg_ll2ico.o     $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
 	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
+$(BUILD_DIR)/$(PPNAME11)$(POSTFIX) : $(BUILD_DIR)/prg_mkiimap.o     $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
+$(BUILD_DIR)/$(PPNAME12)$(POSTFIX) : $(BUILD_DIR)/prg_fio_ico2ico.o $(patsubst %,$(BUILD_DIR)/%,$(OBJS)) $(LIBS)
+	$(LD) $(LDFLAGS) $(ADDITIONAL_FFLAGS) -o $@ $^ $(SCALE_NETCDF_LIBS) $(SCALE_MATHLIB_LIBS) $(SCALE_PAPI_LIBS)
+
 
 $(BINDIR)/$(BINNAME)$(POSTFIX) : $(BUILD_DIR)/$(BINNAME)$(POSTFIX)
 	install $< $@
@@ -212,20 +223,25 @@ $(BINDIR)/$(PPNAME09)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME09)$(POSTFIX)
 	install $< $@
 $(BINDIR)/$(PPNAME10)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME10)$(POSTFIX)
 	install $< $@
+$(BINDIR)/$(PPNAME11)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME11)$(POSTFIX)
+	install $< $@
+$(BINDIR)/$(PPNAME12)$(POSTFIX) : $(BUILD_DIR)/$(PPNAME12)$(POSTFIX)
+	install $< $@
 
 
-$(BUILD_DIR)/scale-gm.o       : scale-gm.F90       $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkmnginfo.o  : prg_mkmnginfo.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkrawgrid.o  : prg_mkrawgrid.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkhgrid.o    : prg_mkhgrid.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkvlayer.o   : prg_mkvlayer.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_mkllmap.o    : prg_mkllmap.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_dump.o   : prg_fio_dump.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_cat.o    : prg_fio_cat.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_sel.o    : prg_fio_sel.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_fio_ico2ll.o : prg_fio_ico2ll.F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-$(BUILD_DIR)/prg_ll2ico.o     : prg_ll2ico.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
-
+$(BUILD_DIR)/scale-gm.o        : scale-gm.F90        $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkmnginfo.o   : prg_mkmnginfo.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkrawgrid.o   : prg_mkrawgrid.F90   $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkhgrid.o     : prg_mkhgrid.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkvlayer.o    : prg_mkvlayer.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkllmap.o     : prg_mkllmap.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_dump.o    : prg_fio_dump.F90    $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_cat.o     : prg_fio_cat.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_sel.o     : prg_fio_sel.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_ico2ll.o  : prg_fio_ico2ll.F90  $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_ll2ico.o      : prg_ll2ico.F90      $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_mkiimap.o     : prg_mkiimap.F90     $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
+$(BUILD_DIR)/prg_fio_ico2ico.o : prg_fio_ico2ico.F90 $(patsubst %,$(BUILD_DIR)/%,$(OBJS))
 
 
 allclean: distclean
@@ -241,6 +257,8 @@ allclean: distclean
 	rm -f $(BINDIR)/$(PPNAME08)*
 	rm -f $(BINDIR)/$(PPNAME09)*
 	rm -f $(BINDIR)/$(PPNAME10)*
+	rm -f $(BINDIR)/$(PPNAME11)*
+	rm -f $(BINDIR)/$(PPNAME12)*
 
 
 distclean: clean
@@ -255,6 +273,8 @@ distclean: clean
 	rm -f $(BINDIR)/$(PPNAME08)$(POSTFIX)
 	rm -f $(BINDIR)/$(PPNAME09)$(POSTFIX)
 	rm -f $(BINDIR)/$(PPNAME10)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME11)$(POSTFIX)
+	rm -f $(BINDIR)/$(PPNAME12)$(POSTFIX)
 	rm -rf ./libs*
 
 clean:
