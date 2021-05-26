@@ -2153,7 +2153,7 @@ contains
        if( tder*ddinc > total_prec ) then
           ddinc = total_prec / tder ! rate of prcp/evap
        end if
-       tder = tder*ddinc
+       tder = min(tder*ddinc, total_prec)
        do kk = k_ldb,k_lfs
           dmf(kk)     = dmf(kk)*ddinc
           downent(kk) = downent(kk)*ddinc
