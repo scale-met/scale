@@ -134,9 +134,9 @@ module scale_comm_cartesC
 
   end type ginfo_t
 
-  integer, private, parameter :: COMM_gid_max = 20
-  integer, private            :: COMM_gid
-  type(ginfo_t), private      :: ginfo(COMM_gid_max)
+  integer, private, parameter  :: COMM_gid_max = 20
+  integer, private             :: COMM_gid
+  type(ginfo_t), private, save :: ginfo(COMM_gid_max)
 
   logical, private :: initialized = .false.
 
