@@ -285,9 +285,9 @@ contains
         endif
     endif
 
-    call COMM_bcast( dq_chrg, nxlut_lt,nylut_lt )
-    call COMM_bcast( grid_lut_t,nxlut_lt )
-    call COMM_bcast( grid_lut_l,nylut_lt )
+    call COMM_bcast( nxlut_lt, nylut_lt, dq_chrg )
+    call COMM_bcast( nxlut_lt, grid_lut_t )
+    call COMM_bcast( nxlut_lt, grid_lut_l )
 
 !    KIJMAXG = (IEG-ISG+1)*(JEG-JSG+1)*(KE-KS+1)
     KIJMAXG = IMAXG*JMAXG*KMAX
@@ -2396,7 +2396,7 @@ contains
           ibuf(2) = grid_initpoint
        endif
 
-       call COMM_bcast( ibuf, 2 )
+       call COMM_bcast( 2, ibuf )
 
        rank_initpoint = ibuf(1)
        grid_initpoint = ibuf(2)
