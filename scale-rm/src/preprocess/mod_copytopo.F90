@@ -516,9 +516,9 @@ contains
     end select
 
     if ( single ) then
-       call COMM_bcast( LON_org (:,:), IA_org, JA_org )
-       call COMM_bcast( LAT_org (:,:), IA_org, JA_org )
-       call COMM_bcast( TOPO_org(:,:), IA_org, JA_org )
+       call COMM_bcast( IA_org, JA_org, LON_org (:,:) )
+       call COMM_bcast( IA_org, JA_org, LAT_org (:,:) )
+       call COMM_bcast( IA_org, JA_org, TOPO_org(:,:) )
     end if
 
     call INTERP_domain_compatibility( LON_org(:,:), LAT_org(:,:), dummy(:,:),             &

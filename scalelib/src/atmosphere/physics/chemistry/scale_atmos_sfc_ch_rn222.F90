@@ -241,9 +241,9 @@ contains
     select case( ATMOS_SFC_CH_RN222_emission_type )
     case( 'SCHERY1998', 'HIRAO2010' )
 
-       call COMM_bcast( emission_lon  (:,:),     nlon, nlat )
-       call COMM_bcast( emission_lat  (:,:),     nlon, nlat )
-       call COMM_bcast( emission_value(:,:,:,:), nlon, nlat, nmonth, nyear )
+       call COMM_bcast( nlon, nlat, emission_lon  (:,:) )
+       call COMM_bcast( nlon, nlat, emission_lat  (:,:) )
+       call COMM_bcast( nlon, nlat, nmonth, nyear, emission_value(:,:,:,:) )
 
        allocate( idx_i(IA,JA,ATMOS_SFC_CH_Rn222_nintrp) )
        allocate( idx_j(IA,JA,ATMOS_SFC_CH_Rn222_nintrp) )

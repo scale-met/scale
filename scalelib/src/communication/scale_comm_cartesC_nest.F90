@@ -1195,7 +1195,7 @@ contains
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
        endif
-       call COMM_bcast(datapack, ileng)
+       call COMM_bcast(ileng, datapack)
        call COMM_bcast(buffer)
        call COMM_bcast(MP_TYPE_OTHERSIDE)
 
@@ -1229,7 +1229,7 @@ contains
           call MPI_WAIT(ireq2, istatus, ierr2)
           call MPI_WAIT(ireq3, istatus, ierr3)
        endif
-       call COMM_bcast(datapack, ileng)
+       call COMM_bcast(ileng, datapack)
        call COMM_bcast(buffer)
        call COMM_bcast(MP_TYPE_OTHERSIDE)
 
@@ -1357,7 +1357,7 @@ contains
           call MPI_IRECV(latlon_catalog, ileng, COMM_datatype, PRC_myrank, tag, PRC_INTERCOMM_PARENT, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
-       call COMM_bcast( latlon_catalog, PARENT_PRC_nprocs(HANDLE), 2, 2 )
+       call COMM_bcast( PARENT_PRC_nprocs(HANDLE), 2, 2, latlon_catalog )
 
     else
        LOG_ERROR("COMM_CARTESC_NEST_catalogue",*) 'internal error'
@@ -1493,7 +1493,7 @@ contains
           call MPI_IRECV(COMM_CARTESC_NEST_TILE_LIST_p, ileng, MPI_INTEGER, PRC_myrank, tag+2, PRC_INTERCOMM_CHILD, ireq, ierr)
           call MPI_WAIT(ireq, istatus, ierr)
        endif
-       call COMM_bcast(COMM_CARTESC_NEST_TILE_LIST_p, COMM_CARTESC_NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nprocs(HANDLE))
+       call COMM_bcast(COMM_CARTESC_NEST_TILE_ALLMAX_p, DAUGHTER_PRC_nprocs(HANDLE), COMM_CARTESC_NEST_TILE_LIST_p)
 
        COMM_CARTESC_NEST_TILE_LIST_YP(:) = -1
 

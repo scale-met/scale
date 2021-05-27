@@ -329,7 +329,7 @@ contains
     mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
     mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
 
-    call COMM_gather( whole(:,:,:), mine(:,:), 2, 2 ) ! everytime do for online nesting
+    call COMM_gather( 2, 2, mine(:,:), whole(:,:,:)  ) ! everytime do for online nesting
 
     if ( PRC_IsMaster ) then
        if ( catalogue_output ) then
@@ -365,7 +365,7 @@ contains
        enddo
     endif
 
-    call COMM_bcast( ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:), PRC_nprocs, 2, 2 )
+    call COMM_bcast( PRC_nprocs, 2, 2, ATMOS_GRID_CARTESC_REAL_DOMAIN_CATALOGUE(:,:,:) )
 
     return
   end subroutine ATMOS_GRID_CARTESC_REAL_calc_latlon

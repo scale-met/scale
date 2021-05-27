@@ -18,6 +18,7 @@ module mod_rm_prep
   !
   use scale_precision
   use scale_io
+  use scale_atmos_grid_cartesC_index
   use scale_prof
   !-----------------------------------------------------------------------------
   implicit none
@@ -117,7 +118,8 @@ contains
        FILE_CARTESC_setup, &
        FILE_CARTESC_finalize
     use scale_comm_cartesC, only: &
-       COMM_setup, &
+       COMM_setup,  &
+       COMM_regist, &
        COMM_finalize
     use scale_topography, only: &
        TOPOGRAPHY_setup, &
@@ -237,6 +239,8 @@ contains
     logical :: ismaster
 
     logical :: output
+
+    integer :: id
     !---------------------------------------------------------------------------
 
     !########## Initial setup ##########
@@ -319,6 +323,7 @@ contains
 
     ! setup mpi communication
     call COMM_setup
+    call COMM_regist( KA, IA, JA, IHALO, JHALO, id )
 
     ! setup topography
     call TOPOGRAPHY_setup
