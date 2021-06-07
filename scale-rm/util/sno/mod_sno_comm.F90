@@ -58,6 +58,10 @@ contains
        ismaster,      &
        nprocs_x_out,  &
        nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        hinfo,         &
        naxis,         &
        ainfo,         &
@@ -75,6 +79,10 @@ contains
     logical,          intent(in)    :: ismaster                              ! master rank process?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology
+    integer,          intent(in)    :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     type(commoninfo), intent(in)    :: hinfo                                 ! common information
     integer,          intent(in)    :: naxis                                 ! number of axis variables
     type(axisinfo),   intent(in)    :: ainfo(:)                              ! axis information (input)
@@ -85,7 +93,8 @@ contains
     integer  :: D1, D2, D3
     integer  :: GD1, GD2, GD3
     integer  :: xhalo, yhalo
-    integer  :: n
+    integer  :: xbnds, ybnds
+    integer  :: n, nn
     integer  :: ierr
 
     logical  :: bcast_
@@ -140,8 +149,11 @@ contains
 
           case('xh','lon')
 
+             xbnds = 0
+             if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+
              if ( ismaster ) then
-                GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
              endif
              call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
@@ -153,7 +165,7 @@ contains
                             ainfo_all(n)%datatype,  &
                             nprocs_x_out,           &
                             nprocs_y_out,           &
-                            D1, 1, 0, 0,            &
+                            D1, xbnds, 0, 0,        &
                             ainfo(n)%AXIS_1d(:),    &
                             ainfo_all(n)%AXIS_1d(:) )
 
@@ -178,8 +190,11 @@ contains
 
           case('yh','lat')
 
+             ybnds = 0
+             if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
              if ( ismaster ) then
-                GD1 = ( D1 - 1 ) * nprocs_y_out + 1
+                GD1 = ( D1 - ybnds ) * nprocs_y_out + ybnds
              endif
              call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
 
@@ -191,85 +206,21 @@ contains
                             ainfo_all(n)%datatype,  &
                             nprocs_x_out,           &
                             nprocs_y_out,           &
-                            D1, 1, 0, 0,            &
+                            D1, ybnds, 0, 0,        &
                             ainfo(n)%AXIS_1d(:),    &
                             ainfo_all(n)%AXIS_1d(:) )
 
-          case('CX','CDX','CBFX')
+          case('CX','CDX','CBFX','FX','FDX','FBFX','CY','CDY','CBFY','FY','FDY','FBFY')
 
-             if ( ismaster ) then
-                GD1 = ( D1 - 2*xhalo ) * nprocs_x_out + 2*xhalo
-             endif
-             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
+             do nn = 1, naxis
+                if ( trim(ainfo(nn)%varname) == trim(ainfo_all(n)%varname)//'G' ) then
+                   GD1 = size( ainfo(nn)%AXIS_1d(:) )
+                   allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
+                   ainfo_all(n)%dim_size(1) = GD1
 
-             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-             ainfo_all(n)%dim_size(1) = GD1
-
-             call gather_x( ismaster,               &
-                            bcast_,                 &
-                            ainfo_all(n)%datatype,  &
-                            nprocs_x_out,           &
-                            nprocs_y_out,           &
-                            D1, 0, xhalo, 0,        &
-                            ainfo(n)%AXIS_1d(:),    &
-                            ainfo_all(n)%AXIS_1d(:) )
-
-          case('FX','FDX','FBFX')
-
-             if ( ismaster ) then
-                GD1 = ( D1 - 2*xhalo - 1 ) * nprocs_x_out + 2*xhalo + 1
-             endif
-             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-             ainfo_all(n)%dim_size(1) = GD1
-
-             call gather_x( ismaster,               &
-                            bcast_,                 &
-                            ainfo_all(n)%datatype,  &
-                            nprocs_x_out,           &
-                            nprocs_y_out,           &
-                            D1, 0, xhalo, 1,        &
-                            ainfo(n)%AXIS_1d(:),    &
-                            ainfo_all(n)%AXIS_1d(:) )
-
-          case('CY','CDY','CBFY')
-
-             if ( ismaster ) then
-                GD1 = ( D1 - 2*yhalo ) * nprocs_y_out + 2*yhalo
-             endif
-             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-             ainfo_all(n)%dim_size(1) = GD1
-
-             call gather_y( ismaster,               &
-                            bcast_,                 &
-                            ainfo_all(n)%datatype,  &
-                            nprocs_x_out,           &
-                            nprocs_y_out,           &
-                            D1, 0, yhalo, 0,        &
-                            ainfo(n)%AXIS_1d(:),    &
-                            ainfo_all(n)%AXIS_1d(:) )
-
-          case('FY','FDY','FBFY')
-
-             if ( ismaster ) then
-                GD1 = ( D1 - 2*yhalo - 1 ) * nprocs_y_out + 2*yhalo + 1
-             endif
-             call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
-
-             allocate( ainfo_all(n)%AXIS_1d( GD1 ) )
-             ainfo_all(n)%dim_size(1) = GD1
-
-             call gather_y( ismaster,               &
-                            bcast_,                 &
-                            ainfo_all(n)%datatype,  &
-                            nprocs_x_out,           &
-                            nprocs_y_out,           &
-                            D1, 0, yhalo, 1,        &
-                            ainfo(n)%AXIS_1d(:),    &
-                            ainfo_all(n)%AXIS_1d(:) )
+                   ainfo_all(n)%AXIS_1d(:) = ainfo(nn)%AXIS_1d(:)
+                endif
+             enddo
 
           case default
 
@@ -290,8 +241,11 @@ contains
              select case( ainfo_all(n)%varname )
              case('lon_uy','lat_uy','cell_area_uy')
 
+                xbnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+
                 if ( ismaster ) then
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
                    GD2 = D2 * nprocs_y_out
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -306,16 +260,19 @@ contains
                                 ainfo_all(n)%datatype,    &
                                 nprocs_x_out,             &
                                 nprocs_y_out,             &
-                                D1, 1, 0, 0,              &
-                                D2, 0, 0, 0,              &
+                                D1, xbnds, 0, 0,          &
+                                D2,     0, 0, 0,          &
                                 ainfo(n)%AXIS_2d(:,:),    &
                                 ainfo_all(n)%AXIS_2d(:,:) )
 
              case('lon_xv','lat_xv','cell_area_xv')
 
+                ybnds = 0
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1 * nprocs_x_out
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -329,16 +286,20 @@ contains
                                 ainfo_all(n)%datatype,    &
                                 nprocs_x_out,             &
                                 nprocs_y_out,             &
-                                D1, 0, 0, 0,              &
-                                D2, 1, 0, 0,              &
+                                D1,     0, 0, 0,          &
+                                D2, ybnds, 0, 0,          &
                                 ainfo(n)%AXIS_2d(:,:),    &
                                 ainfo_all(n)%AXIS_2d(:,:) )
 
              case('lon_uv','lat_uv')
 
+                xbnds = 0; ybnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
+                   GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -352,8 +313,8 @@ contains
                                 ainfo_all(n)%datatype,    &
                                 nprocs_x_out,             &
                                 nprocs_y_out,             &
-                                D1, 1, 0, 0,              &
-                                D2, 1, 0, 0,              &
+                                D1, xbnds, 0, 0,          &
+                                D2, ybnds, 0, 0,          &
                                 ainfo(n)%AXIS_2d(:,:),    &
                                 ainfo_all(n)%AXIS_2d(:,:) )
 
@@ -410,9 +371,12 @@ contains
 
              case('xh_bnds')
 
+                xbnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   GD2 = ( D2 - xbnds ) * nprocs_x_out + xbnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -427,7 +391,7 @@ contains
                                 nprocs_x_out,             &
                                 nprocs_y_out,             &
                                 D1,                       &
-                                D2, 1, 0, 0,              &
+                                D2, xbnds, 0, 0,          &
                                 ainfo(n)%AXIS_2d(:,:),    &
                                 ainfo_all(n)%AXIS_2d(:,:) )
 
@@ -456,9 +420,12 @@ contains
 
              case('yh_bnds')
 
+                ybnds = 0
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -473,7 +440,7 @@ contains
                                 nprocs_x_out,             &
                                 nprocs_y_out,             &
                                 D1,                       &
-                                D2, 1, 0, 0,              &
+                                D2, ybnds, 0, 0,          &
                                 ainfo(n)%AXIS_2d(:,:),    &
                                 ainfo_all(n)%AXIS_2d(:,:) )
 
@@ -500,9 +467,12 @@ contains
              select case( ainfo_all(n)%varname )
              case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
 
+                xbnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
+                   GD2 = ( D2 - xbnds ) * nprocs_x_out + xbnds
                    GD3 = D3 * nprocs_y_out
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -520,17 +490,20 @@ contains
                                  nprocs_x_out,               &
                                  nprocs_y_out,               &
                                  D1,                         &
-                                 D2, 1, 0, 0,                &
-                                 D3, 0, 0, 0,                &
+                                 D2, xbnds, 0, 0,            &
+                                 D3,     0, 0, 0,            &
                                  ainfo(n)%AXIS_3d(:,:,:),    &
                                  ainfo_all(n)%AXIS_3d(:,:,:) )
 
              case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
 
+                ybnds = 0
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1
                    GD2 = D2 * nprocs_x_out
-                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   GD3 = ( D3 - ybnds ) * nprocs_y_out + ybnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -547,17 +520,21 @@ contains
                                  nprocs_x_out,               &
                                  nprocs_y_out,               &
                                  D1,                         &
-                                 D2, 0, 0, 0,                &
-                                 D3, 1, 0, 0,                &
+                                 D2,     0, 0, 0,            &
+                                 D3, ybnds, 0, 0,            &
                                  ainfo(n)%AXIS_3d(:,:,:),    &
                                  ainfo_all(n)%AXIS_3d(:,:,:) )
 
              case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
 
+                xbnds = 0; ybnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1
-                   GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-                   GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+                   GD2 = ( D2 - xbnds ) * nprocs_x_out + xbnds
+                   GD3 = ( D3 - ybnds ) * nprocs_y_out + ybnds
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
                 call MPI_BCAST( GD2, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -574,8 +551,8 @@ contains
                                  nprocs_x_out,               &
                                  nprocs_y_out,               &
                                  D1,                         &
-                                 D2, 1, 0, 0,                &
-                                 D3, 1, 0, 0,                &
+                                 D2, xbnds, 0, 0,            &
+                                 D3, ybnds, 0, 0,            &
                                  ainfo(n)%AXIS_3d(:,:,:),    &
                                  ainfo_all(n)%AXIS_3d(:,:,:) )
 
@@ -613,8 +590,11 @@ contains
              select case( ainfo_all(n)%varname )
              case('height_uyz','height_uyw','cell_area_uyz_x','cell_area_uyw_x','cell_volume_uyz')
 
+                xbnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+
                 if ( ismaster ) then
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
+                   GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
                    GD2 = D2 * nprocs_y_out
                    GD3 = D3
                 endif
@@ -640,9 +620,12 @@ contains
 
              case('height_xvz','height_xvw','cell_area_xvz_y','cell_area_xvw_y','cell_volume_xvz')
 
+                ybnds = 0
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
                    GD1 = D1 * nprocs_x_out
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
                    GD3 = D3
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -659,17 +642,21 @@ contains
                                  ainfo_all(n)%datatype,      &
                                  nprocs_x_out,               &
                                  nprocs_y_out,               &
-                                 D1, 0, 0, 0,                &
-                                 D2, 1, 0, 0,                &
+                                 D1,     0, 0, 0,            &
+                                 D2, ybnds, 0, 0,            &
                                  D3,                         &
                                  ainfo(n)%AXIS_3d(:,:,:),    &
                                  ainfo_all(n)%AXIS_3d(:,:,:) )
 
              case('height_uvz','height_uvw','cell_area_uvz_y','cell_area_uvz_x')
 
+                xbnds = 0; ybnds = 0
+                if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+                if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
                 if ( ismaster ) then
-                   GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-                   GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+                   GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
+                   GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
                    GD3 = D3
                 endif
                 call MPI_BCAST( GD1, 1, MPI_INTEGER, PRC_masterrank, PRC_LOCAL_COMM_WORLD, ierr )
@@ -686,8 +673,8 @@ contains
                                  ainfo_all(n)%datatype,      &
                                  nprocs_x_out,               &
                                  nprocs_y_out,               &
-                                 D1, 1, 0, 0,                &
-                                 D2, 1, 0, 0,                &
+                                 D1, xbnds, 0, 0,            &
+                                 D2, ybnds, 0, 0,            &
                                  D3,                         &
                                  ainfo(n)%AXIS_3d(:,:,:),    &
                                  ainfo_all(n)%AXIS_3d(:,:,:) )
@@ -734,6 +721,10 @@ contains
        ismaster,      &
        nprocs_x_out,  &
        nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        dinfo,         &
        dinfo_all,     &
        bcast          )
@@ -744,6 +735,10 @@ contains
     logical,          intent(in)    :: ismaster                              ! master rank process?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (input)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (input)
+    integer,          intent(in)    :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     type(iteminfo),   intent(in)    :: dinfo                                 ! variable information               (input)
     type(iteminfo),   intent(out)   :: dinfo_all                             ! variable information               (output)
 
@@ -751,6 +746,7 @@ contains
 
     integer  :: D1, D2, D3
     integer  :: GD1, GD2, GD3
+    integer  :: xbnds, ybnds
     integer  :: t
 
     logical  :: bcast_
@@ -840,8 +836,12 @@ contains
        if ( dinfo_all%dim_name(1) == 'lon' .AND. &
             dinfo_all%dim_name(2) == 'lat'       ) then
 
-          GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-          GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+          xbnds = 0; ybnds = 0
+          if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+          if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
+          GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
+          GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
 
           allocate( dinfo_all%VAR_2d( GD1, GD2) )
           dinfo_all%dim_size(1) = GD1
@@ -852,8 +852,8 @@ contains
                           dinfo_all%datatype,   &
                           nprocs_x_out,         &
                           nprocs_y_out,         &
-                          D1, 1, 0, 0,          &
-                          D2, 1, 0, 0,          &
+                          D1, xbnds, 0, 0,      &
+                          D2, ybnds, 0, 0,      &
                           dinfo%VAR_2d(:,:),    &
                           dinfo_all%VAR_2d(:,:) )
 
@@ -889,9 +889,13 @@ contains
           if ( dinfo_all%dim_name(1) == 'lon' .AND. &
                dinfo_all%dim_name(2) == 'lat'       ) then
 
+             xbnds = 0; ybnds = 0
+             if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+             if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
              GD1 = D1
-             GD2 = ( D2 - 1 ) * nprocs_x_out + 1
-             GD3 = ( D3 - 1 ) * nprocs_y_out + 1
+             GD2 = ( D2 - xbnds ) * nprocs_x_out + xbnds
+             GD3 = ( D3 - ybnds ) * nprocs_y_out + ybnds
 
              allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
              dinfo_all%dim_size(1) = GD1
@@ -904,8 +908,8 @@ contains
                               nprocs_x_out,           &
                               nprocs_y_out,           &
                               D1,                     &
-                              D2, 1, 0, 0,            &
-                              D3, 1, 0, 0,            &
+                              D2, xbnds, 0, 0,        &
+                              D3, ybnds, 0, 0,        &
                               dinfo%VAR_3d(:,:,:),    &
                               dinfo_all%VAR_3d(:,:,:) )
 
@@ -938,8 +942,12 @@ contains
           if ( dinfo_all%dim_name(1) == 'lon' .AND. &
                dinfo_all%dim_name(2) == 'lat'       ) then
 
-             GD1 = ( D1 - 1 ) * nprocs_x_out + 1
-             GD2 = ( D2 - 1 ) * nprocs_y_out + 1
+             xbnds = 0; ybnds = 0
+             if ( ngrids_x_out /= ngrids_xh_out ) xbnds = 1 ! non-periodic
+             if ( ngrids_y_out /= ngrids_yh_out ) ybnds = 1 ! non-periodic
+
+             GD1 = ( D1 - xbnds ) * nprocs_x_out + xbnds
+             GD2 = ( D2 - ybnds ) * nprocs_y_out + ybnds
              GD3 = D3
 
              allocate( dinfo_all%VAR_3d( GD1, GD2, GD3 ) )
@@ -952,8 +960,8 @@ contains
                               dinfo_all%datatype,     &
                               nprocs_x_out,           &
                               nprocs_y_out,           &
-                              D1, 1, 0, 0,            &
-                              D2, 1, 0, 0,            &
+                              D1, xbnds, 0, 0,        &
+                              D2, ybnds, 0, 0,        &
                               D3,                     &
                               dinfo%VAR_3d(:,:,:),    &
                               dinfo_all%VAR_3d(:,:,:) )

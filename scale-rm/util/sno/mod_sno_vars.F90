@@ -890,6 +890,10 @@ contains
        add_rm_attr,   &
        nprocs_x_out,  &
        nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        nhalos_x,      &
        nhalos_y,      &
        hinfo,         &
@@ -922,6 +926,10 @@ contains
     logical,          intent(in)    :: add_rm_attr                           ! add SCALE-RM specific attributes?
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
+    integer,          intent(in)    :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
     integer,          intent(in)    :: nhalos_y                              ! number of y-axis halo grids        (global domain)
     type(commoninfo), intent(in)    :: hinfo                                 ! common information                 (input)
@@ -954,18 +962,26 @@ contains
           writerank = PRC_masterrank
 
           if ( update_axis ) then
-             call SNO_comm_globalaxis( ismaster,     & ! [IN]
-                                       nprocs_x_out, & ! [IN]
-                                       nprocs_y_out, & ! [IN]
-                                       hinfo,        & ! [IN]
-                                       naxis,        & ! [IN]
-                                       ainfo    (:), & ! [IN]
-                                       ainfo_out(:)  ) ! [OUT]
+             call SNO_comm_globalaxis( ismaster,      & ! [IN]
+                                       nprocs_x_out,  & ! [IN]
+                                       nprocs_y_out,  & ! [IN]
+                                       ngrids_x_out,  & ! [IN]
+                                       ngrids_y_out,  & ! [IN]
+                                       ngrids_xh_out, & ! [IN]
+                                       ngrids_yh_out, & ! [IN]
+                                       hinfo,         & ! [IN]
+                                       naxis,         & ! [IN]
+                                       ainfo    (:),  & ! [IN]
+                                       ainfo_out(:)   ) ! [OUT]
           endif
 
           call SNO_comm_globalvars( ismaster,      & ! [IN]
                                     nprocs_x_out,  & ! [IN]
                                     nprocs_y_out,  & ! [IN]
+                                    ngrids_x_out,  & ! [IN]
+                                    ngrids_y_out,  & ! [IN]
+                                    ngrids_xh_out, & ! [IN]
+                                    ngrids_yh_out, & ! [IN]
                                     dinfo,         & ! [IN]
                                     dinfo_out      ) ! [OUT]
        else
@@ -1117,7 +1133,7 @@ contains
                                dinfo%datatype,      & ! [IN]
                                vid,                 & ! [OUT]
                                time_int = dinfo%dt, & ! [IN]
-                               existed = varexisted     ) ! [OUT]
+                               existed = varexisted ) ! [OUT]
     else
        call FILE_def_variable( fid,                 & ! [IN]
                                dinfo%varname,       & ! [IN]

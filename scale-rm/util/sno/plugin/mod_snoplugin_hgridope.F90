@@ -225,6 +225,8 @@ contains
        nprocs_y_out,  &
        ngrids_x_out,  &
        ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        nowrank_x,     &
        nowrank_y,     &
        hinfo,         &
@@ -252,6 +254,8 @@ contains
     integer,          intent(in)  :: nprocs_y_out                          ! y length of 2D processor topology (output)
     integer,          intent(in)  :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
     integer,          intent(in)  :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)  :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     integer,          intent(in)  :: nowrank_x                             ! current process number at x-axis
     integer,          intent(in)  :: nowrank_y                             ! current process number at y-axis
     type(commoninfo), intent(in)  :: hinfo                                 ! common information                 (input)
@@ -373,6 +377,10 @@ contains
        call SNO_comm_globalaxis( ismaster,      & ! [IN]
                                  nprocs_x_out,  & ! [IN]
                                  nprocs_y_out,  & ! [IN]
+                                 ngrids_x_out,  & ! [IN]
+                                 ngrids_y_out,  & ! [IN]
+                                 ngrids_xh_out, & ! [IN]
+                                 ngrids_yh_out, & ! [IN]
                                  hinfo,         & ! [IN]
                                  naxis,         & ! [IN]
                                  ainfo    (:),  & ! [IN]
@@ -507,6 +515,10 @@ contains
        nowstep,       &
        nprocs_x_out,  &
        nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        nhalos_x,      &
        nhalos_y,      &
        hinfo,         &
@@ -533,6 +545,10 @@ contains
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
+    integer,          intent(in)    :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
     integer,          intent(in)    :: nhalos_y                              ! number of y-axis halo grids        (global domain)
     type(commoninfo), intent(in)    :: hinfo                                 ! common information                 (input)
@@ -577,6 +593,10 @@ contains
           call SNO_comm_globalvars( ismaster,      & ! [IN]
                                     nprocs_x_out,  & ! [IN]
                                     nprocs_y_out,  & ! [IN]
+                                    ngrids_x_out,  & ! [IN]
+                                    ngrids_y_out,  & ! [IN]
+                                    ngrids_xh_out, & ! [IN]
+                                    ngrids_yh_out, & ! [IN]
                                     dinfo,         & ! [IN]
                                     dinfo_out,     & ! [OUT]
                                     bcast = .true. ) ! [IN]
@@ -614,6 +634,10 @@ contains
           call SNO_comm_globalvars( ismaster,      & ! [IN]
                                     nprocs_x_out,  & ! [IN]
                                     nprocs_y_out,  & ! [IN]
+                                    ngrids_x_out,  & ! [IN]
+                                    ngrids_y_out,  & ! [IN]
+                                    ngrids_xh_out, & ! [IN]
+                                    ngrids_yh_out, & ! [IN]
                                     dinfo,         & ! [IN]
                                     dinfo_out,     & ! [OUT]
                                     bcast = .true. ) ! [IN]
@@ -641,23 +665,25 @@ contains
        finalize    = ( nowstep == dinfo_ll%step_nmax )
        add_rm_attr = .false.
 
-       call SNO_vars_write( ismaster,                   & ! [IN] from MPI
-                            dirpath,                    & ! [IN] from namelist
-                            basename,                   & ! [IN] from namelist
-                            output_single,              & ! [IN] from namelist
-                            output_grads,               & ! [IN] from namelist
-                            update_axis,                & ! [IN]
-                            nowrank,                    & ! [IN]
-                            nowstep,                    & ! [IN]
-                            finalize,                   & ! [IN]
-                            add_rm_attr,                & ! [IN]
-                            nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
-                            nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
-                            hinfo,                      & ! [IN] from SNO_file_getinfo
-                            naxis_ll,                   & ! [IN] from SNO_file_getinfo
-                            ainfo_ll(1:naxis_ll),       & ! [IN] from SNO_axis_getinfo
-                            dinfo_ll,                   & ! [IN] from SNO_vars_getinfo
-                            debug                       ) ! [IN]
+       call SNO_vars_write( ismaster,                     & ! [IN] from MPI
+                            dirpath,                      & ! [IN] from namelist
+                            basename,                     & ! [IN] from namelist
+                            output_single,                & ! [IN] from namelist
+                            output_grads,                 & ! [IN] from namelist
+                            update_axis,                  & ! [IN]
+                            nowrank,                      & ! [IN]
+                            nowstep,                      & ! [IN]
+                            finalize,                     & ! [IN]
+                            add_rm_attr,                  & ! [IN]
+                            nprocs_x_out , nprocs_y_out,  & ! [IN] from namelist
+                            ngrids_x_out,  ngrids_y_out,  & ! [IN] from SNO_map_getsize_local
+                            ngrids_xh_out, ngrids_yh_out, & ! [IN] from SNO_map_getsize_local
+                            nhalos_x,      nhalos_y,      & ! [IN] from SNO_file_getinfo
+                            hinfo,                        & ! [IN] from SNO_file_getinfo
+                            naxis_ll,                     & ! [IN] from SNO_file_getinfo
+                            ainfo_ll(1:naxis_ll),         & ! [IN] from SNO_axis_getinfo
+                            dinfo_ll,                     & ! [IN] from SNO_vars_getinfo
+                            debug                         ) ! [IN]
     endif
 
     return
