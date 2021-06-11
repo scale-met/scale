@@ -258,8 +258,8 @@ contains
                 elseif( tmp(kk-1) <= UNDEF+EPS ) then
                    var(g,k,l) = tmp(kk)
                 else
-                   var(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                 tmp(kk), tmp(kk-1)  )
+                   var(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                  tmp(kk), tmp(kk-1)  )
                 endif
              endif
           enddo
@@ -292,8 +292,8 @@ contains
                    elseif( tmp(kk-1) <= UNDEF+EPS ) then
                       var_pl(g,k,l) = tmp(kk)
                    else
-                      var_pl(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                       tmp(kk), tmp(kk-1)  )
+                      var_pl(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                        tmp(kk), tmp(kk-1)  )
                    endif
                 endif
              enddo
