@@ -234,6 +234,7 @@ contains
        ainfo,         &
        debug          )
     use scale_file_h, only: &
+       FILE_REAL4, &
        FILE_REAL8
     use scale_const, only: &
        CONST_D2R,   &
@@ -282,61 +283,65 @@ contains
     LOG_NEWLINE
     LOG_INFO("SNOPLGIN_hgridope_setcoef",*) 'Setup remapping coefficient'
 
-    ! set new axis set
+    ! set new axis (lon)
+    naxis_ll = 1
 
-    ainfo_ll(1)%varname     = 'lon'
-    ainfo_ll(1)%description = 'longitude'
-    ainfo_ll(1)%units       = 'degree'
-    ainfo_ll(1)%datatype    = FILE_REAL8
-    ainfo_ll(1)%dim_rank    = 1
-    ainfo_ll(1)%dim_name(1) = 'lon'
-    ainfo_ll(1)%transpose   = .false.
-    ainfo_ll(1)%regrid      = .false.
-    ainfo_ll(1)%has_bounds  = .false.
-    ainfo_ll(1)%is_bounds   = .false.
+    ainfo_ll(naxis_ll)%varname     = 'lon'
+    ainfo_ll(naxis_ll)%description = 'longitude'
+    ainfo_ll(naxis_ll)%units       = 'degrees_east'
+    if ( RP == SP ) ainfo_ll(naxis_ll)%datatype = FILE_REAL4
+    if ( RP == DP ) ainfo_ll(naxis_ll)%datatype = FILE_REAL8
+    ainfo_ll(naxis_ll)%dim_rank    = 1
+    ainfo_ll(naxis_ll)%dim_name(1) = 'lon'
+    ainfo_ll(naxis_ll)%transpose   = .false.
+    ainfo_ll(naxis_ll)%regrid      = .false.
+    ainfo_ll(naxis_ll)%has_bounds  = .false.
+    ainfo_ll(naxis_ll)%is_bounds   = .false.
 
     if ( nowrank_x == 1 ) then
-       ainfo_ll(1)%dim_size(1) = lon_num + 1
-       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
-       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start &
-                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+       ainfo_ll(naxis_ll)%dim_size(1) = lon_num + 1
+       allocate( ainfo_ll(naxis_ll)%AXIS_1d(ainfo_ll(naxis_ll)%dim_size(1)) )
+       ainfo_ll(naxis_ll)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start &
+                                     + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
     else
-       ainfo_ll(1)%dim_size(1) = lon_num
-       allocate( ainfo_ll(1)%AXIS_1d(ainfo_ll(1)%dim_size(1)) )
-       ainfo_ll(1)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start + SNOPLGIN_hgridope_dlon &
-                              + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
+       ainfo_ll(naxis_ll)%dim_size(1) = lon_num
+       allocate( ainfo_ll(naxis_ll)%AXIS_1d(ainfo_ll(naxis_ll)%dim_size(1)) )
+       ainfo_ll(naxis_ll)%AXIS_1d(1) = SNOPLGIN_hgridope_lon_start + SNOPLGIN_hgridope_dlon &
+                                     + lon_rng / nprocs_x_out * ( nowrank_x - 1 )
     endif
-    do i = 2, ainfo_ll(1)%dim_size(1)
-       ainfo_ll(1)%AXIS_1d(i) = ainfo_ll(1)%AXIS_1d(i-1) + SNOPLGIN_hgridope_dlon
+    do i = 2, ainfo_ll(naxis_ll)%dim_size(1)
+       ainfo_ll(naxis_ll)%AXIS_1d(i) = ainfo_ll(naxis_ll)%AXIS_1d(i-1) + SNOPLGIN_hgridope_dlon
     enddo
 
-    ainfo_ll(2)%varname     = 'lat'
-    ainfo_ll(2)%description = 'latitude'
-    ainfo_ll(2)%units       = 'degree'
-    ainfo_ll(2)%datatype    = FILE_REAL8
-    ainfo_ll(2)%dim_rank    = 1
-    ainfo_ll(2)%dim_name(1) = 'lat'
-    ainfo_ll(2)%transpose   = .false.
-    ainfo_ll(2)%regrid      = .false.
-    ainfo_ll(2)%has_bounds  = .false.
-    ainfo_ll(2)%is_bounds   = .false.
+    ! set new axis (lat)
+    naxis_ll = naxis_ll + 1
+
+    ainfo_ll(naxis_ll)%varname     = 'lat'
+    ainfo_ll(naxis_ll)%description = 'latitude'
+    ainfo_ll(naxis_ll)%units       = 'degrees_north'
+    if ( RP == SP ) ainfo_ll(naxis_ll)%datatype = FILE_REAL4
+    if ( RP == DP ) ainfo_ll(naxis_ll)%datatype = FILE_REAL8
+    ainfo_ll(naxis_ll)%dim_rank    = 1
+    ainfo_ll(naxis_ll)%dim_name(1) = 'lat'
+    ainfo_ll(naxis_ll)%transpose   = .false.
+    ainfo_ll(naxis_ll)%regrid      = .false.
+    ainfo_ll(naxis_ll)%has_bounds  = .false.
+    ainfo_ll(naxis_ll)%is_bounds   = .false.
 
     if ( nowrank_y == 1 ) then
-       ainfo_ll(2)%dim_size(1) = lat_num + 1
-       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
-       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start &
-                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+       ainfo_ll(naxis_ll)%dim_size(1) = lat_num + 1
+       allocate( ainfo_ll(naxis_ll)%AXIS_1d(ainfo_ll(naxis_ll)%dim_size(1)) )
+       ainfo_ll(naxis_ll)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start &
+                                     + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
     else
-       ainfo_ll(2)%dim_size(1) = lat_num
-       allocate( ainfo_ll(2)%AXIS_1d(ainfo_ll(2)%dim_size(1)) )
-       ainfo_ll(2)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start + SNOPLGIN_hgridope_dlat &
-                              + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
+       ainfo_ll(naxis_ll)%dim_size(1) = lat_num
+       allocate( ainfo_ll(naxis_ll)%AXIS_1d(ainfo_ll(naxis_ll)%dim_size(1)) )
+       ainfo_ll(naxis_ll)%AXIS_1d(1) = SNOPLGIN_hgridope_lat_start + SNOPLGIN_hgridope_dlat &
+                                     + lat_rng / nprocs_y_out * ( nowrank_y - 1 )
     endif
-    do j = 2, ainfo_ll(2)%dim_size(1)
-       ainfo_ll(2)%AXIS_1d(j) = ainfo_ll(2)%AXIS_1d(j-1) + SNOPLGIN_hgridope_dlat
+    do j = 2, ainfo_ll(naxis_ll)%dim_size(1)
+       ainfo_ll(naxis_ll)%AXIS_1d(j) = ainfo_ll(naxis_ll)%AXIS_1d(j-1) + SNOPLGIN_hgridope_dlat
     enddo
-
-    naxis_ll = 2
 
     do n = 1, naxis
        select case(ainfo(n)%varname)
@@ -660,7 +665,6 @@ contains
     endif
 
     ! output
-
     if ( do_output ) then
        finalize    = ( nowstep == dinfo_ll%step_nmax )
        add_rm_attr = .false.

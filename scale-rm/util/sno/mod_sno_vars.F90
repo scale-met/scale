@@ -1117,6 +1117,18 @@ contains
                                      hinfo,        & ! [IN]
                                      debug         ) ! [IN]
        endif
+
+       ! add 1D range
+       do i = 1, naxis
+          if ( allocated( ainfo(i)%AXIS_1d ) ) then
+             call FILE_set_attribute( fid,                              &
+                                      ainfo(i)%varname,                 &
+                                      "actual_range",                   &
+                                      (/ minval(ainfo(i)%AXIS_1d(:)),   &
+                                         maxval(ainfo(i)%AXIS_1d(:)) /) )
+          endif
+       enddo
+
     endif
 
     if ( dinfo%dim_rank == 0 ) then
