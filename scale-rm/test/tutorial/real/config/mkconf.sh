@@ -109,16 +109,6 @@ MSEC=`printf '%1.f' ${RUN_DATE_MSEC}`
 
 STARTDATE=( ${YEAR} ${MON} ${DAY} ${HOUR} ${MIN} ${SEC} ${MSEC} )
 
-# set converting variables
-POPSCA_2D=(
-  ${HIST_ITEMS_SNAPSHOT_2D[*]}
-  ${HIST_ITEMS_AVERAGE_2D[*]}
-)
-POPSCA_3D=(
-  ${HIST_ITEMS_SNAPSHOT_3D[*]}
-  ${HIST_ITEMS_AVERAGE_3D[*]}
-)
-
 # set number of files for boundary
 case ${TIME_DURATION_UNIT} in
   "DAY"  ) TIME_DURATION_UNIT_SEC=86400 ;;
@@ -159,7 +149,7 @@ PP_CONF="${INPUT_CONFIGDIR}/base.pp.conf.sh"
 INIT_CONF="${INPUT_CONFIGDIR}/base.init.conf.sh"
 RUN_CONF="${INPUT_CONFIGDIR}/base.run.conf.sh"
 PARAM_CONF="${INPUT_CONFIGDIR}/param.conf.sh"
-NET2G_CONF="${INPUT_CONFIGDIR}/base.net2g.conf.sh"
+SNO_CONF="${INPUT_CONFIGDIR}/base.sno.conf.sh"
 LAUNCH_CONF="${INPUT_CONFIGDIR}/base.launch.conf.sh"
 
 # set time parameters
@@ -201,7 +191,8 @@ do
   eval 'PP_CONF_FILES[$D]="pp.d${FNUM}.conf"'
   eval 'INIT_CONF_FILES[$D]="init.d${FNUM}.conf"'
   eval 'RUN_CONF_FILES[$D]="run.d${FNUM}.conf"'
-  eval 'N2G_CONF_FILES[$D]="net2g.2D.d${FNUM}.conf,net2g.3D.d${FNUM}.conf"'
+  eval 'SNO_CONF_FILES[$D]="sno.vgridope.d${FNUM}.conf,sno.hgridope.d${FNUM}.conf"'
+  eval 'PRC_SNO[$D]="${PRC_DOMAINS[$D]},${PRC_DOMAINS[$D]}"'
 
   # set vertical axis
   LINE_Z="${DEF_Z[$D]}"
@@ -234,9 +225,6 @@ do
   RESTART_OUT_BASENAME="restart_d${FNUM}"
   FILE_HISTORY_DEFAULT_BASENAME="history_d${FNUM}"
 
-  NET2G_2D_IO_LOG_BASENAME="net2g_2D_LOG_d${FNUM}"
-  NET2G_3D_IO_LOG_BASENAME="net2g_3D_LOG_d${FNUM}"
-
   # set nesting parameters
   if [ $DNUM -lt $NUM_DOMAIN ]; then
     IAM_PARENT=".true."
@@ -251,8 +239,6 @@ do
   else
     IAM_DAUGHTER=".false."
   fi
-
-
 
   # set boundary parameters
   if [ $DNUM -gt 1 ]; then
@@ -271,7 +257,7 @@ do
   mkdir -p ${OUTPUT_CONFIGDIR}/pp
   mkdir -p ${OUTPUT_CONFIGDIR}/init
   mkdir -p ${OUTPUT_CONFIGDIR}/run
-  mkdir -p ${OUTPUT_CONFIGDIR}/net2g
+  mkdir -p ${OUTPUT_CONFIGDIR}/sno
 
   source ${PP_CONF}
 
@@ -284,13 +270,12 @@ do
   source ${INIT_CONF}
   source ${RUN_CONF}
   source ${PARAM_CONF}
-  source ${NET2G_CONF}
+  source ${SNO_CONF}
 
   cat base.pp.conf \
       param.region.conf \
       param.admin.conf \
   > ${OUTPUT_CONFIGDIR}/pp/pp.d${FNUM}.conf
-
 
   cat base.init.conf \
       param.region.conf \
@@ -304,8 +289,8 @@ do
       param.history.conf \
   > ${OUTPUT_CONFIGDIR}/run/run.d${FNUM}.conf
 
-  cat base.net2g.2D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.2D.d${FNUM}.conf
-  cat base.net2g.3D.conf > ${OUTPUT_CONFIGDIR}/net2g/net2g.3D.d${FNUM}.conf
+  cat base.sno.vgridope.conf > ${OUTPUT_CONFIGDIR}/sno/sno.vgridope.d${FNUM}.conf
+  cat base.sno.hgridope.conf > ${OUTPUT_CONFIGDIR}/sno/sno.hgridope.d${FNUM}.conf
 
   rm -f base.*.conf param.*.conf
 
@@ -323,7 +308,7 @@ IFS="," eval 'LIST_PRC_DOMAINS="${PRC_DOMAINS[*]}"'
 IFS="," eval 'LIST_PP_CONF_FILES="${PP_CONF_FILES[*]}"'
 IFS="," eval 'LIST_INIT_CONF_FILES="${INIT_CONF_FILES[*]}"'
 IFS="," eval 'LIST_RUN_CONF_FILES="${RUN_CONF_FILES[*]}"'
-IFS="," eval 'LIST_N2G_CONF_FILES="${N2G_CONF_FILES[*]}"'
+IFS="," eval 'LIST_SNO_CONF_FILES="${SNO_CONF_FILES[*]}"'
 
 LIST_INIT_CONF_FILES=`echo ${LIST_INIT_CONF_FILES} | sed -e "s/,/\",\"/g"`
 LIST_RUN_CONF_FILES=`echo ${LIST_RUN_CONF_FILES} | sed -e "s/,/\",\"/g"`
@@ -354,18 +339,6 @@ if [ ${FILETYPE_ORG} = "SCALE-RM" ]; then
 else
   DATPARAM="\" [../../data/${BASENAME_ORG} ${BASENAME_ORG}] \""
 fi
-
-DNUM=1
-while [ $DNUM -le $NUM_DOMAIN ]
-do
-  D=`expr $DNUM - 1`
-  DD1=`expr $D \* 2`
-  DD2=`expr $DD1 + 1`
-  eval 'N2G_PRC_DOMAINS[${DD1}]=${PRC_DOMAINS[$D]}'
-  eval 'N2G_PRC_DOMAINS[${DD2}]=${PRC_DOMAINS[$D]}'
-  DNUM=`expr $DNUM + 1`
-done
-IFS="," eval 'LIST_N2G_PRC_DOMAINS="${N2G_PRC_DOMAINS[*]}"'
 
 source ${INPUT_CONFIGDIR}/mklink.sh
 
