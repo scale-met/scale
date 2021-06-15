@@ -1224,6 +1224,7 @@ contains
     call FILE_set_attribute( fid, "x" , "halo_global" , ainfo(1)%halo_global (:) )
     call FILE_set_attribute( fid, "x" , "halo_local"  , ainfo(1)%halo_local  (:) )
     call FILE_set_attribute( fid, "x" , "periodic"    , ainfo(1)%periodic        )
+    call FILE_set_attribute( fid, "x" , "axis"        , "X"                      )
 
     call FILE_set_attribute( fid, "xh", "size_global" , ainfo(2)%size_global (:) )
     call FILE_set_attribute( fid, "xh", "start_global", ainfo(2)%start_global(:) )
@@ -1236,6 +1237,7 @@ contains
     call FILE_set_attribute( fid, "y" , "halo_global" , ainfo(3)%halo_global (:) )
     call FILE_set_attribute( fid, "y" , "halo_local"  , ainfo(3)%halo_local  (:) )
     call FILE_set_attribute( fid, "y" , "periodic"    , ainfo(3)%periodic        )
+    call FILE_set_attribute( fid, "y" , "axis"        , "Y"                      )
 
     call FILE_set_attribute( fid, "yh", "size_global" , ainfo(4)%size_global (:) )
     call FILE_set_attribute( fid, "yh", "start_global", ainfo(4)%start_global(:) )

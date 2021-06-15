@@ -1127,6 +1127,9 @@ contains
                                       (/ minval(ainfo(i)%AXIS_1d(:)),   &
                                          maxval(ainfo(i)%AXIS_1d(:)) /) )
           endif
+
+          if( ainfo(i)%varname == "lon" ) call FILE_set_attribute( fid, ainfo(i)%varname, "axis", "X" )
+          if( ainfo(i)%varname == "lat" ) call FILE_set_attribute( fid, ainfo(i)%varname, "axis", "Y" )
        enddo
 
     endif

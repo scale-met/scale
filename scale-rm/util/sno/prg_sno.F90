@@ -568,4 +568,6 @@ program sno
   ! stop MPI
   call PRC_MPIfinish
 
+  if( ismaster ) write(*,*) '*** End   SCALE-NetCDF Operator'
+
 end program sno
