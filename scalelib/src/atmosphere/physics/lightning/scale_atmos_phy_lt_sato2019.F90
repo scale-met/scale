@@ -9,6 +9,7 @@
 !! @par History
 !! @li      2019-03-19 (Y.Sato) [new] Newly created
 !! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine 
+!! @li      2021-06-24 (T. Iwashita) [add] Add OpenMP option for preprocessing subroutine 
 !!
 !<
 !-------------------------------------------------------------------------------
