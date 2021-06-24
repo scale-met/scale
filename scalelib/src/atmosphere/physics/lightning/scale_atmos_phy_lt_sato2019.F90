@@ -350,11 +350,9 @@ contains
     !$omp parallel
     !$ num_thre = omp_get_num_threads()
     if( FLAG_preprocessing /= 0 .and. num_thre >= PRC_NUM_Y ) then
-      LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'xxx Number of threads for OpenMP should be smaller than PRC_NUM_Y '
-      LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'for FLAG_preprocessing > 0, stop !! '
-      LOG_ERROR("ATMOS_PHY_LT_sato2019_setup",*) 'Current setting is (FLAG_preprocessing,OMP_NUM_THREADS,PRC_NUM_Y)=( ', &
+      LOG_WARN("ATMOS_PHY_LT_sato2019_setup",*) 'To attain a good parallel speedup by OpenMP, PRC_NUM_Y should be sufficiently larger than the number of threads.'
+      LOG_WARN("ATMOS_PHY_LT_sato2019_setup",*) 'Current setting is (FLAG_preprocessing,OMP_NUM_THREADS,PRC_NUM_Y)=( ', &
                                                   FLAG_preprocessing,num_thre,PRC_NUM_Y, ' )'
-      call PRC_abort
     endif
     !$omp end parallel
 
