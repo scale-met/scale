@@ -218,8 +218,6 @@ contains
     real(RP),         intent(in)  :: CDX(IA)
     real(RP),         intent(in)  :: CDY(JA)
 
-    integer :: num_thre
-
     integer :: n, myu, ip
     integer :: ierr
     integer :: i, j, k
@@ -345,16 +343,6 @@ contains
                                  HIST_id(ip), dim_type='XY'              ) ! [OUT]
        endif
     end do
-
-    num_thre = 0
-    !$omp parallel
-    !$ num_thre = omp_get_num_threads()
-    if( FLAG_preprocessing /= 0 .and. num_thre >= PRC_NUM_Y ) then
-      LOG_WARN("ATMOS_PHY_LT_sato2019_setup",*) 'To attain a good parallel speedup by OpenMP, PRC_NUM_Y should be sufficiently larger than the number of threads.'
-      LOG_WARN("ATMOS_PHY_LT_sato2019_setup",*) 'Current setting is (FLAG_preprocessing,OMP_NUM_THREADS,PRC_NUM_Y)=( ', &
-                                                  FLAG_preprocessing,num_thre,PRC_NUM_Y, ' )'
-    endif
-    !$omp end parallel
 
     allocate( A(KA,15,IA,JA) )
     !---- input vector A
