@@ -203,9 +203,6 @@ contains
        I_UY, &
        I_XV, &
        I_UV
-    use scale_prc_cartesC, only: &
-       PRC_NUM_Y
-    !$ use omp_lib
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer, intent(in)  :: IA, IS, IE
@@ -1333,7 +1330,6 @@ contains
        COMM_world, &
        COMM_vars8, &
        COMM_wait
-    !$ use omp_lib
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
@@ -1984,7 +1980,6 @@ contains
     use scale_prc, only: &
        PRC_abort, &
        PRC_IsMaster
-    !$ use omp_lib
     implicit none
     integer,  intent(in)  :: KA, KS, KE
     integer,  intent(in)  :: IA, IS, IE
