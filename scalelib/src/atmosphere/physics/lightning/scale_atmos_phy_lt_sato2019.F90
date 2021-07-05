@@ -9,6 +9,7 @@
 !! @par History
 !! @li      2019-03-19 (Y.Sato) [new] Newly created
 !! @li      2021-02-22 (N. Yamashita, T. Iwashita) [add] Add preprocessing subroutine 
+!! @li      2021-06-24 (T. Iwashita) [add] Add OpenMP option for preprocessing subroutine 
 !!
 !<
 !-------------------------------------------------------------------------------
@@ -991,7 +992,7 @@ contains
 
     else
 
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1008,7 +1009,7 @@ contains
     end do
 
     if ( HIST_sw(I_Ex  ) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1019,7 +1020,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Ex  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Ey  ) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1030,7 +1031,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Ey  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Ez  ) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1041,7 +1042,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Ez  ), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_Eabs) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1055,7 +1056,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Epot), Epot(:,:,:) )
     end if
     if ( HIST_sw(I_Qneut) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1066,7 +1067,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_Qneut), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_LTpath)  ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1077,7 +1078,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_LTpath), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_PosFLASH) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1088,7 +1089,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_PosFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_NegFLASH) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1099,7 +1100,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_NegFLASH), w3d(:,:,:) )
     endif
     if ( HIST_sw(I_FlashPoint) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j,k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1110,7 +1111,7 @@ contains
        call FILE_HISTORY_put( HIST_id(I_FlashPoint), w3d(:,:,:) )
     end if
     if ( HIST_sw(I_FOD) ) then
-       !$omp parallel do
+       !$omp parallel do private(i,j)
        do j = JS, JE
        do i = IS, IE
           w3d(1,i,j) = B_F2013_TOT(i,j)/dt_LT ![num/grid/s]
@@ -1201,7 +1202,7 @@ contains
     call PROF_rapstart('LT_E_field', 2)
 
     iprod = 0.0_RP
-    !$omp parallel do reduction(+:iprod)
+    !$omp parallel do reduction(+:iprod) private(i,j,k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1228,7 +1229,7 @@ contains
        return
     endif
 
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1242,7 +1243,7 @@ contains
     call COMM_vars8( eps_air,1 )
     call COMM_vars8( B,      2 )
 
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1269,7 +1270,7 @@ contains
     call COMM_vars8( E_pot, 1 )
     call COMM_wait ( E_pot, 1, .true. )
 
-    !$omp parallel do
+    !$omp parallel do private(i,j)
     do j = 1, JA
     do i = 1, IA
        E_pot(1:KS-1,i,j) = 0.0_RP
@@ -1278,7 +1279,7 @@ contains
     enddo
 
     !---- Calculate Electrical Field
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1384,7 +1385,7 @@ contains
                      v1, M, PHI  ) ! v1 = M x0
 
     norm = 0.0_RP
-    !$omp parallel do reduction(+:norm)
+    !$omp parallel do reduction(+:norm) private(i, j, k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1394,7 +1395,7 @@ contains
     enddo
 
     ! r = b - M x0
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1403,7 +1404,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1414,7 +1415,7 @@ contains
     enddo
 
     r0r  = 0.0_RP
-    !$omp parallel do reduction(+:r0r)
+    !$omp parallel do reduction(+:r0r) private(i, j, k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -1423,7 +1424,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j = JS-1, JE+1
     do i = IS-1, IE+1
     do k = KS, KE
@@ -1431,7 +1432,6 @@ contains
     end do
     end do
     end do
-
 
     iprod(1) = r0r
     iprod(2) = norm
@@ -1444,7 +1444,7 @@ contains
     do iter = 1, ITMAX
 
        error = 0.0_RP
-       !$omp parallel do reduction(+:error)
+       !$omp parallel do reduction(+:error) private(i, j, k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1472,7 +1472,7 @@ contains
                            Mp, M, p    )
 
           iprod(1) = 0.0_RP
-          !$omp parallel do reduction(+:iprod)
+          !$omp parallel do reduction(+:iprod) private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1519,7 +1519,7 @@ contains
                            Mz1, M, z1    )
 
           iprod(1) = 0.0_RP
-          !$omp parallel do reduction(+:iprod)
+          !$omp parallel do reduction(+:iprod)  private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1547,7 +1547,7 @@ contains
           enddo
           enddo
        else  ! Preprocessing
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1610,7 +1610,7 @@ contains
                            Mz2, M, z2 )
           iprod(1) = 0.0_RP
           iprod(2) = 0.0_RP
-          !$omp parallel do reduction(+:iprod)
+          !$omp parallel do reduction(+:iprod) private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1632,7 +1632,7 @@ contains
 
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
 
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1641,7 +1641,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1653,7 +1653,7 @@ contains
 
        else
 
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1662,7 +1662,7 @@ contains
           enddo
           enddo
 
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1674,7 +1674,7 @@ contains
        endif
 
        iprod(1) = 0.0_RP
-       !$omp parallel do reduction(+:iprod)
+       !$omp parallel do reduction(+:iprod) private(i, j, k)
        do j = JS, JE
        do i = IS, IE
        do k = KS, KE
@@ -1690,7 +1690,7 @@ contains
        be = be * r0r ! al/w * (r0,rn)/(r0,r)
 
        if( FLAG_preprocessing == 0 ) then !--- No preprocessing
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1699,7 +1699,7 @@ contains
           enddo
           enddo
        else
-          !$omp parallel do
+          !$omp parallel do private(i, j, k)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -1750,7 +1750,7 @@ contains
 
     integer :: k, i, j
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j=JS,JE
     do i=IS,IE
     do k=KS,KE
@@ -1759,7 +1759,7 @@ contains
     enddo
     enddo
 
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j=JS,JE
     do i=IS,IE
     do k=KS,KE
@@ -1995,7 +1995,7 @@ contains
              JA, JS, JE, &
              Y,  M,  V )
   
-    !$omp parallel do
+    !$omp parallel do private(i, j, k)
     do j = JS, JE
     do i = IS, IE
     do k = KS, KE
@@ -2021,6 +2021,7 @@ contains
    use scale_prc, only: &
        PRC_abort, &
        PRC_IsMaster
+   !$ use omp_lib
    implicit none
    integer,  intent(in)  :: KA, KS, KE
    integer,  intent(in)  :: IA, IS, IE
@@ -2029,10 +2030,30 @@ contains
    real(RP), intent(in)  :: M(KA,15,IA,JA)
    real(RP), intent(out) :: Z(KA,IA,JA)
    integer :: k, i, j
+   integer :: myid, nth
+   integer :: jst, jen, jinc, flgomp
   
    Z(:,:,:)=0.0_RP
+
+   !$omp parallel private(i, j, k, myid)
+
+   flgomp = 0
+   !$ flgomp = 1  !---for openmp
+
+   !$ myid = omp_get_thread_num()
+   !$ nth = omp_get_num_threads()
+
+   if( flgomp == 0 ) then
+     jst = JE
+     jen = JS
+     jinc = -1
+   elseif( flgomp == 1 ) then
+     jst = JE-2*myid
+     jen = JS
+     jinc = -2*nth
+   endif 
   
-   do j = JE, JS,-1
+   do j = jst, jen, jinc
    do i = IE, IS,-1
 
       Z(KE,i,j) = ( V(KE,i,j) &
@@ -2079,6 +2100,59 @@ contains
    enddo
    enddo
 
+   if( flgomp == 1 ) then
+     !$omp barrier
+
+     do j = JE-2*myid-1, JS,-2*nth
+        do i = IE, IS,-1
+
+           Z(KE,i,j) = ( V(KE,i,j) &
+           -( M(KE,2,i,j) * Z(KE-1,i  ,j  ) &
+           + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+           + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+           + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+           + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+           + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+           + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+           + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+           + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+           do k = KE-1, KS+1,-1
+           Z(k,i,j) = (V(k,i,j) &
+           -( M(k,2,i,j) * Z(k-1,i  ,j  ) &
+           + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+           + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+           + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+           + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+           + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+           + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+           + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+           + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+           + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+           + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+           + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+           + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+           + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+
+           enddo
+
+           Z(KS,i,j) = (V(KS,i,j) &
+           -( M(KS,3,i,j) * Z(KS+1,i  ,j  ) &
+           + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+           + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+           + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+           + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+           + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+           + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+           + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+           + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+        enddo
+     enddo
+   endif
+
+   !$omp end parallel
+
    return
   end subroutine back_sub
 
@@ -2087,7 +2161,7 @@ contains
                   IA, IS, IE, &
                   JA, JS, JE, &
                   Z,  M,  V   )
-
+   !$ use omp_lib
    implicit none
    integer,  intent(in)  :: KA, KS, KE
    integer,  intent(in)  :: IA, IS, IE
@@ -2097,10 +2171,29 @@ contains
    real(RP), intent(out) :: Z(KA,IA,JA)
 
    integer :: k, i, j
+   integer :: myid, nth
+   integer :: jst, jen, jinc, flgomp
 
    Z(:,:,:) = 0.0_RP
 
-   do j = JS, JE
+   !$omp parallel private(i, j, k, myid)
+
+   flgomp = 0
+   !$ flgomp = 1  !---for openmp
+
+   !$ myid =  omp_get_thread_num()
+   !$ nth = omp_get_num_threads()
+   if( flgomp == 0 ) then
+      jst = JS
+      jen = JE
+      jinc = 1
+   elseif( flgomp == 1 ) then
+      jst = JS+2*myid
+      jen = JE
+      jinc = 2*nth
+   endif
+
+   do j = jst, jen, jinc
    do i = IS, IE
 
       Z(KS,i,j) = (V(KS,i,j) &
@@ -2146,6 +2239,58 @@ contains
    enddo
    enddo
 
+   if( flgomp == 1 ) then
+      !$omp barrier
+
+      do j = JS+2*myid+1, JE, 2*nth
+      do i = IS, IE
+
+        Z(KS,i,j) = (V(KS,i,j) &
+        -( M(KS,3,i,j)* Z(KS+1,i  ,j  ) &
+        + M(KS,4,i,j) * Z(KS  ,i-1,j  ) &
+        + M(KS,5,i,j) * Z(KS  ,i+1,j  ) &
+        + M(KS,6,i,j) * Z(KS  ,i  ,j-1) &
+        + M(KS,7,i,j) * Z(KS  ,i  ,j+1) &
+        + M(KS,12,i,j)* Z(KS+1,i-1,j  ) &
+        + M(KS,13,i,j)* Z(KS+1,i+1,j  ) &
+        + M(KS,14,i,j)* Z(KS+1,i  ,j-1) &
+        + M(KS,15,i,j)* Z(KS+1,i  ,j+1) ) ) /M(KS,1,i,j)
+
+        do k = KS+1, KE-1
+        Z(k,i,j) = (V(k,i,j) &
+        -( M(k,2,i,j)* Z(k-1,i  ,j  ) &
+        + M(k,3,i,j) * Z(k+1,i  ,j  ) &
+        + M(k,4,i,j) * Z(k  ,i-1,j  ) &
+        + M(k,5,i,j) * Z(k  ,i+1,j  ) &
+        + M(k,6,i,j) * Z(k  ,i  ,j-1) &
+        + M(k,7,i,j) * Z(k  ,i  ,j+1) &
+        + M(k,8,i,j) * Z(k-1,i-1,j  ) &
+        + M(k,9,i,j) * Z(k-1,i+1,j  ) &
+        + M(k,10,i,j)* Z(k-1,i  ,j-1) &
+        + M(k,11,i,j)* Z(k-1,i  ,j+1) &
+        + M(k,12,i,j)* Z(k+1,i-1,j  ) &
+        + M(k,13,i,j)* Z(k+1,i+1,j  ) &
+        + M(k,14,i,j)* Z(k+1,i  ,j-1) &
+        + M(k,15,i,j)* Z(k+1,i  ,j+1) ) )/M(k,1,i,j)
+        enddo
+
+        Z(KE,i,j) = ( V(KE,i,j) &
+        -( M(KE,2,i,j)* Z(KE-1,i  ,j  ) &
+        + M(KE,4,i,j) * Z(KE  ,i-1,j  ) &
+        + M(KE,5,i,j) * Z(KE  ,i+1,j  ) &
+        + M(KE,6,i,j) * Z(KE  ,i  ,j-1) &
+        + M(KE,7,i,j) * Z(KE  ,i  ,j+1) &
+        + M(KE,8,i,j) * Z(KE-1,i-1,j  ) &
+        + M(KE,9,i,j) * Z(KE-1,i+1,j  ) &
+        + M(KE,10,i,j)* Z(KE-1,i  ,j-1) &
+        + M(KE,11,i,j)* Z(KE-1,i  ,j+1) ) )/M(KE,1,i,j)
+
+      enddo
+      enddo
+
+   endif
+   !$omp end parallel
+
    return
   end subroutine gs
 
@@ -2163,7 +2308,7 @@ contains
 
     integer :: k, i, j
 
-    !$omp parallel do
+    !$omp parallel do private(i,j,k)
     do j = JS, JE
     do i = IS, IE
        do k = KS+1, KE-1
