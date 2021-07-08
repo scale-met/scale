@@ -169,15 +169,15 @@ contains
                 elseif( tmp(kk-1) <= UNDEF+EPS ) then
                    var(g,k,l) = tmp(kk)
                 elseif( kk == ADM_kmin ) then
-                   var(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                 tmp(kk), tmp(kk-1)  )
+                   var(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                  tmp(kk), tmp(kk-1)  )
                 else
                    if ( tmp(kk-2) <= UNDEF+EPS ) then
-                      var(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                    tmp(kk), tmp(kk-1)  )
+                      var(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                     tmp(kk), tmp(kk-1)  )
                    else
-                      var(g,k,l) = lagrange3( Z(k), Xi (kk), Xi (kk-1), Xi (kk-2), &
-                                                    tmp(kk), tmp(kk-1), tmp(kk-2)  )
+                      var(g,k,l) = lagrange3( Xi(k), Z  (kk), Z  (kk-1), Z  (kk-2), &
+                                                     tmp(kk), tmp(kk-1), tmp(kk-2)  )
                    endif
                 endif
              endif
@@ -211,15 +211,15 @@ contains
                    elseif( tmp(kk-1) <= UNDEF+EPS ) then
                       var_pl(g,k,l) = tmp(kk)
                    elseif( kk == ADM_kmin ) then
-                      var_pl(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                       tmp(kk), tmp(kk-1)  )
+                      var_pl(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                        tmp(kk), tmp(kk-1)  )
                    else
                       if ( tmp(kk-2) <= UNDEF+EPS ) then
-                         var_pl(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                          tmp(kk), tmp(kk-1)  )
+                         var_pl(g,k,l) = lagrange2( Xi(k), Z (kk),  Z  (kk-1), &
+                                                           tmp(kk), tmp(kk-1)  )
                       else
-                         var_pl(g,k,l) = lagrange3( Z(k), Xi (kk), Xi (kk-1), Xi (kk-2), &
-                                                          tmp(kk), tmp(kk-1), tmp(kk-2)  )
+                         var_pl(g,k,l) = lagrange3( Xi(k), Z  (kk), Z  (kk-1), Z  (kk-2), &
+                                                           tmp(kk), tmp(kk-1), tmp(kk-2)  )
                       endif
                    endif
                 endif
@@ -258,8 +258,8 @@ contains
                 elseif( tmp(kk-1) <= UNDEF+EPS ) then
                    var(g,k,l) = tmp(kk)
                 else
-                   var(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                 tmp(kk), tmp(kk-1)  )
+                   var(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                  tmp(kk), tmp(kk-1)  )
                 endif
              endif
           enddo
@@ -292,8 +292,8 @@ contains
                    elseif( tmp(kk-1) <= UNDEF+EPS ) then
                       var_pl(g,k,l) = tmp(kk)
                    else
-                      var_pl(g,k,l) = lagrange2( Z(k), Xi (kk), Xi (kk-1), &
-                                                       tmp(kk), tmp(kk-1)  )
+                      var_pl(g,k,l) = lagrange2( Xi(k), Z  (kk), Z  (kk-1), &
+                                                        tmp(kk), tmp(kk-1)  )
                    endif
                 endif
              enddo
