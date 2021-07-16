@@ -56,6 +56,8 @@ module mod_atmos_phy_bl_vars
   character(len=H_MID),   public :: ATMOS_PHY_BL_RESTART_OUT_TITLE             = 'ATMOS_PHY_BL restart' !< title    of the output file
   character(len=H_SHORT), public :: ATMOS_PHY_BL_RESTART_OUT_DTYPE             = 'DEFAULT'              !< REAL4 or REAL8
 
+  logical,                public :: ATMOS_PHY_BL_MIX_TRACERS                   = .true.
+
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOU_t(:,:,:)   ! tendency RHOU [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOV_t(:,:,:)   ! tendency RHOV [kg/m2/s2]
   real(RP), public, allocatable :: ATMOS_PHY_BL_RHOT_t(:,:,:)   ! tendency RHOT [K*kg/m3/s]
@@ -110,7 +112,8 @@ contains
        ATMOS_PHY_BL_RESTART_OUT_AGGREGATE,         &
        ATMOS_PHY_BL_RESTART_OUT_POSTFIX_TIMELABEL, &
        ATMOS_PHY_BL_RESTART_OUT_TITLE,             &
-       ATMOS_PHY_BL_RESTART_OUT_DTYPE
+       ATMOS_PHY_BL_RESTART_OUT_DTYPE,             &
+       ATMOS_PHY_BL_MIX_TRACERS
 
     integer :: ierr
     integer :: iv

@@ -42,8 +42,9 @@ def parse(deps, pros, srcdir, dir=".")
         pros[mod] = pro
       when /^\s*use (\w+)/
         mod = $1
-#        next if (/(mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
         next if (/(iso_c_binding|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
+        # JMA pp library
+        next if /pbl_(const|coupler|grid|parm|mym_const|mym_main|mym_option|mym_parm)/ =~ mod
 
         dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end

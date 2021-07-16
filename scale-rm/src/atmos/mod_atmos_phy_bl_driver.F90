@@ -58,6 +58,11 @@ contains
        ATMOS_PHY_BL_MYNN_NAME, &
        ATMOS_PHY_BL_MYNN_DESC, &
        ATMOS_PHY_BL_MYNN_UNITS
+    use scale_atmos_phy_bl_mynn_jmapplib, only: &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_NTRACER, &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_NAME, &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_DESC, &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_UNITS
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -80,6 +85,14 @@ contains
                ATMOS_PHY_BL_MYNN_DESC,    &
                ATMOS_PHY_BL_MYNN_UNITS    )
           QE = QS + ATMOS_PHY_BL_MYNN_NTRACER - 1
+       case ( 'MYNN-JMAPPLIB' )
+          call TRACER_regist( &
+               QS, &
+               ATMOS_PHY_BL_MYNN_JMAPPLIB_NTRACER, &
+               ATMOS_PHY_BL_MYNN_JMAPPLIB_NAME,    &
+               ATMOS_PHY_BL_MYNN_JMAPPLIB_DESC,    &
+               ATMOS_PHY_BL_MYNN_JMAPPLIB_UNITS    )
+          QE = QS + ATMOS_PHY_BL_MYNN_JMAPPLIB_NTRACER - 1
        case default
           LOG_ERROR("ATMOS_PHY_BL_driver_tracer_setup",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
           call PRC_abort
@@ -94,6 +107,10 @@ contains
   subroutine ATMOS_PHY_BL_driver_setup
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_setup
+    use scale_atmos_phy_bl_mynn_jmapplib, only: &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_setup
+    use scale_atmos_grid_cartesC, only: &
+       CZ => ATMOS_GRID_CARTESC_CZ
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -101,6 +118,8 @@ contains
        ATMOS_PHY_BL_Zi
     use scale_bulkflux, only: &
        BULKFLUX_type
+    use scale_time, only: &
+       dt_BL => TIME_DTSEC_ATMOS_PHY_BL
     implicit none
     !---------------------------------------------------------------------------
 
@@ -113,6 +132,11 @@ contains
           call ATMOS_PHY_BL_MYNN_setup( &
                KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                BULKFLUX_type ) ! (in)
+       case ( 'MYNN-JMAPPLIB' )
+          call ATMOS_PHY_BL_MYNN_JMAPPLIB_setup( &
+               KA, KS, KE, &
+               CZ(:), &
+               dt_BL )
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
@@ -129,6 +153,8 @@ contains
        PRC_abort
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_finalize
+    use scale_atmos_phy_bl_mynn_jmapplib, only: &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_finalize
     use mod_atmos_admin, only: &
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
@@ -142,6 +168,8 @@ contains
        select case ( ATMOS_PHY_BL_TYPE )
        case ( 'MYNN' )
           call ATMOS_PHY_BL_MYNN_finalize
+       case ( 'MYNN-JMAPPLIB' )
+          call ATMOS_PHY_BL_MYNN_JMAPPLIB_finalize
        case default
           LOG_ERROR("ATMOS_PHY_BL_driver_finalize",*) 'ATMOS_PHY_BL_TYPE is invalid: ', trim(ATMOS_PHY_BL_TYPE)
           call PRC_abort
@@ -164,6 +192,8 @@ contains
     use scale_atmos_phy_bl_mynn, only: &
        ATMOS_PHY_BL_MYNN_tendency, &
        ATMOS_PHY_BL_MYNN_tendency_tracer
+    use scale_atmos_phy_bl_mynn_jmapplib, only: &
+       ATMOS_PHY_BL_MYNN_JMAPPLIB_tendency
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
@@ -195,6 +225,7 @@ contains
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
        QS, QE, &
+       ATMOS_PHY_BL_MIX_TRACERS, &
        RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
        RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
        RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
@@ -204,6 +235,7 @@ contains
        cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS,  &
+       SFC_PRES => ATMOS_PHY_SF_SFC_PRES,  &
        SFLX_MU  => ATMOS_PHY_SF_SFLX_MU,   &
        SFLX_MV  => ATMOS_PHY_SF_SFLX_MV,   &
        SFLX_SH  => ATMOS_PHY_SF_SFLX_SH,   &
@@ -269,6 +301,29 @@ contains
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
                QL(:,:,:), cldfrac(:,:,:), Zi(:,:)                      ) ! (out)
           if ( I_QV <= 0 ) deallocate( RHOQV_t )
+       case ( 'MYNN-JMAPPLIB' )
+          if ( I_QV > 0 ) then
+             RHOQV_t => RHOQ_t_BL(:,:,:,I_QV)
+          else
+             allocate( RHOQV_t(KA,IA,JA) )
+          end if
+          call ATMOS_PHY_BL_MYNN_JMAPPLIB_tendency( &
+               KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+               DENS(:,:,:), U(:,:,:), V(:,:,:),                        & ! (in)
+               POTT(:,:,:), QTRC(:,:,:,QS:QE),                         & ! (in)
+               PRES(:,:,:), EXNER(:,:,:),                              & ! (in)
+               QDRY(:,:,:), QV(:,:,:), QC(:,:,:), QI(:,:,:),           & ! (in)
+               SFC_DENS(:,:), SFC_PRES(:,:),                           & ! (in)
+               SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
+               Ustar(:,:), RLmo(:,:),                                  & ! (in)
+               CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), dt_BL,              & ! (in)
+               RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
+               RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
+               Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)
+          if ( I_QV <= 0 ) deallocate( RHOQV_t )
+       end select
+
+       if ( ATMOS_PHY_BL_MIX_TRACERS ) then
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
              call ATMOS_PHY_BL_MYNN_tendency_tracer( &
@@ -281,7 +336,7 @@ contains
                   dt_BL, TRACER_NAME(iq),      & ! (in)
                   RHOQ_t_BL(:,:,:,iq)          ) ! (out)
           end do
-       end select
+       end if
 
        call FILE_HISTORY_in( Nu   (:,:,:),     'Nu_BL',     'eddy viscosity',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )
        call FILE_HISTORY_in( Kh   (:,:,:),     'Kh_BL',     'eddy diffusion',                         'm2/s',      fill_halo=.true., dim_type="ZHXY" )

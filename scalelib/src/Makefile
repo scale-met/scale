@@ -158,6 +158,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_phy_ae_kajino13.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_offline.o	\
 	$(BUILD_DIR)/scale_atmos_phy_bl_mynn.o	\
+	$(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_common.o	\
@@ -282,6 +283,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) overridesdm
 	$(MAKE) makesdm
 endif
+	$(MAKE) objs
 	@echo "Complete making scalelib."
 
 install:
@@ -296,6 +298,8 @@ info:
 	@echo "SCALElib"
 	@$(MAKE) --no-print-directory conflog
 
+
+objs: $(OBJS)
 
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
