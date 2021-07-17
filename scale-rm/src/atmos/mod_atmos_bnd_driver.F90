@@ -215,7 +215,7 @@ module mod_atmos_bnd_driver
   real(RP), allocatable, private, target :: zero_x(:,:), zero_y(:,:)
 
 
-  integer,parameter,     private :: ATMOS_BOUNDARY_NFILES_MAX = 24
+  integer,parameter,     private :: ATMOS_BOUNDARY_NFILES_MAX = 36
   integer,               private :: ATMOS_BOUNDARY_NFILES = 1
   integer,               private :: ifile
   character(len=H_LONG), private :: ATMOS_BOUNDARY_IN_BASENAMES(ATMOS_BOUNDARY_NFILES_MAX) 
