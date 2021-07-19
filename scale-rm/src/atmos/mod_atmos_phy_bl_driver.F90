@@ -189,14 +189,16 @@ contains
        FILE_HISTORY_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
+    use scale_atmos_phy_bl_common, only: &
+       ATMOS_PHY_BL_tendency_tracer
     use scale_atmos_phy_bl_mynn, only: &
-       ATMOS_PHY_BL_MYNN_tendency, &
-       ATMOS_PHY_BL_MYNN_tendency_tracer
+       ATMOS_PHY_BL_MYNN_tendency
     use scale_atmos_phy_bl_mynn_jmapplib, only: &
        ATMOS_PHY_BL_MYNN_JMAPPLIB_tendency
     use scale_atmos_grid_cartesC_real, only: &
        CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ, &
+       F2H => ATMOS_GRID_CARTESC_REAL_F2H, &
        ATMOS_GRID_CARTESC_REAL_VOL, &
        ATMOS_GRID_CARTESC_REAL_TOTVOL
     use scale_atmos_hydrometeor, only: &
@@ -294,7 +296,7 @@ contains
                SFC_DENS(:,:),                                          & ! (in)
                SFLX_MU(:,:), SFLX_MV(:,:), SFLX_SH(:,:), SFLX_QV(:,:), & ! (in)
                Ustar(:,:), Tstar(:,:), Qstar(:,:), RLmo(:,:),          & ! (in)
-               CZ(:,:,:), FZ(:,:,:), dt_BL,                            & ! (in)
+               CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), dt_BL,              & ! (in)
                BULKFLUX_type,                                          & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
@@ -319,22 +321,23 @@ contains
                CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), dt_BL,              & ! (in)
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
-               Nu(:,:,:), Kh(:,:,:)                                    ) ! (out)
+               Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
+               Zi = Zi(:,:)                                            ) ! (out)
           if ( I_QV <= 0 ) deallocate( RHOQV_t )
        end select
 
        if ( ATMOS_PHY_BL_MIX_TRACERS ) then
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
-             call ATMOS_PHY_BL_MYNN_tendency_tracer( &
+             call ATMOS_PHY_BL_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                  DENS(:,:,:), QTRC(:,:,:,iq), & ! (in)
-                  SFLX_Q(:,:,iq),              & ! (in)
-                  Kh(:,:,:),                   & ! (in)
-                  TRACER_MASS(iq),             & ! (in)
-                  CZ(:,:,:), FZ(:,:,:),        & ! (in)
-                  dt_BL, TRACER_NAME(iq),      & ! (in)
-                  RHOQ_t_BL(:,:,:,iq)          ) ! (out)
+                  DENS(:,:,:), QTRC(:,:,:,iq),        & ! (in)
+                  SFLX_Q(:,:,iq),                     & ! (in)
+                  Kh(:,:,:),                          & ! (in)
+                  TRACER_MASS(iq),                    & ! (in)
+                  CZ(:,:,:), FZ(:,:,:), F2H(:,:,:,:), & ! (in)
+                  dt_BL, TRACER_NAME(iq),             & ! (in)
+                  RHOQ_t_BL(:,:,:,iq)                 ) ! (out)
           end do
        end if
 

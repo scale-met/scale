@@ -300,12 +300,9 @@ contains
     real(RP) :: dz_f(KS:KE_PBL)
     real(RP) :: rdz_f(KS:KE_PBL)
     real(RP) :: rdz_h(KS:KE_PBL)
-    real(RP) :: f2h_m(KS:KE_PBL)
-    real(RP) :: f2h_p(KS:KE_PBL)
     real(RP) :: h2f_m(KS:KE_PBL)
     real(RP) :: h2f_p(KS:KE_PBL)
     real(RP) :: fb_surf
-    real(RP) :: dz1, dz2
     real(RP) :: rho_ov_rhoa
     real(RP) :: SFLX_U
     real(RP) :: SFLX_V
@@ -341,10 +338,6 @@ contains
           dz_f(k) = FZ(k,i,j) - FZ(k-1,i,j)
           rdz_f(k) = 1.0_RP / dz_f(k)
           rdz_h(k) = 1.0_RP / ( CZ(k+1,i,j) - CZ(k,i,j) )
-          dz1 = FZ(k+1,i,j) - FZ(k,i,j)
-          dz2 = dz_f(k)
-          f2h_m(k) = dz2 / ( dz1 + dz2 )
-          f2h_p(k) = dz1 / ( dz1 + dz2 )
        end do
 
        SFLX_U  = SFLX_MU(i,j) / SFC_DENS(i,j)
@@ -442,7 +435,6 @@ contains
     diss(KS:KE_PBL,:,:) = - diss(KS:KE_PBL,:,:)
     diss(KE_PBL+1:KE,:,:) = UNDEF
     call FILE_HISTORY_in(diss(:,:,:), 'TKE_diss_MYNN', 'TKE dissipation', 'm2/s3', fill_halo=.true.)
-
 #endif
 
     return

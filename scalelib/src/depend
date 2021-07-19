@@ -49,6 +49,7 @@ $(BUILD_DIR)/scale_atmos_hydrometeor.o: ./atmosphere/common/scale_atmos_hydromet
 $(BUILD_DIR)/scale_atmos_hydrostatic.o: ./atmosphere/common/scale_atmos_hydrostatic.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_statistics.o
 $(BUILD_DIR)/scale_atmos_phy_ae_kajino13.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_kajino13.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_aerosol.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_ae_offline.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_offline.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_aerosol.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_external_input.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_phy_bl_common.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_matrix.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_bl_mynn.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_mynn.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_matrix.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_mynn_jmapplib.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_ch_rn222.o: ./atmosphere/physics/chemistry/scale_atmos_phy_ch_rn222.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
@@ -205,6 +206,7 @@ MODS =	\
 	$(BUILD_DIR)/scale_atmos_hydrostatic.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_kajino13.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_offline.mod	\
+	$(BUILD_DIR)/scale_atmos_phy_bl_common.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_bl_mynn.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.mod	\

@@ -42,7 +42,6 @@ module scale_atmos_phy_bl_mynn
   public :: ATMOS_PHY_BL_mynn_setup
   public :: ATMOS_PHY_BL_mynn_finalize
   public :: ATMOS_PHY_BL_mynn_tendency
-  public :: ATMOS_PHY_BL_mynn_tendency_tracer
 
   !-----------------------------------------------------------------------------
   !
@@ -280,7 +279,7 @@ contains
        QDRY, QV, Qw, POTL, POTV, SFC_DENS, &
        SFLX_MU, SFLX_MV, SFLX_SH, SFLX_QV, &
        us, ts, qs, RLmo,                   &
-       CZ, FZ, dt_DP,                      &
+       CZ, FZ, F2H, dt_DP,                 &
        BULKFLUX_type,                      &
        RHOU_t, RHOV_t, RHOT_t, RHOQV_t,    &
        RPROG_t,                            &
@@ -330,6 +329,7 @@ contains
 
     real(RP), intent(in)  :: CZ(  KA,IA,JA)
     real(RP), intent(in)  :: FZ(0:KA,IA,JA)
+    real(RP), intent(in)  :: F2H(KA,2,IA,JA)
     real(DP), intent(in)  :: dt_DP
 
     character(len=*), intent(in) :: BULKFLUX_type
@@ -414,7 +414,6 @@ contains
 
     real(RP) :: FDZ(KA)
     real(RP) :: CDZ(KA)
-    real(RP) :: f2h(KA,2)
     real(RP) :: z1
 
     logical :: mynn_level3
@@ -452,13 +451,13 @@ contains
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
     !$omp        mynn_level3,initialize, &
-    !$omp        CZ,FZ,dt, &
+    !$omp        CZ,FZ,F2H,dt, &
     !$omp        BULKFLUX_type, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
     !$omp private(N2_new,lq,sm25,smp,sh25,shpgh,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
     !$omp         SFLX_PT,SFLX_PTV,RHO,RHONu,RHOKh, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma,wtl,wqw, &
-    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,f2h,z1, &
+    !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z1, &
     !$omp         dummy, &
     !$omp         tsq,qsq,cov, &
     !$omp         prod_t,prod_q,prod_c,diss_p, &
@@ -493,15 +492,10 @@ contains
           CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
        end do
 
-       call get_f2h( &
-            KA, KS, KE_PBL, &
-            CDZ(:),  & ! (in)
-            f2h(:,:) ) ! (out)
-
        call calc_vertical_differece( KA, KS, KE_PBL, &
                                      i, j, &
                                      U(:,i,j), V(:,i,j), POTL(:,i,j), Qw(:,i,j), & ! (in)
-                                     CDZ(:), FDZ(:), f2h(:,:),                   & ! (in)
+                                     CDZ(:), FDZ(:), F2H(:,:,i,j),               & ! (in)
                                      dudz2(:,i,j), dtldz(:), dqwdz(:)            ) ! (out)
 
        do k = KS, KE_PBL
@@ -685,9 +679,9 @@ contains
           end if
 
           do k = KS, KE_PBL-1
-             Nu(k,i,j) = min( f2h(k,1) * Nu_f(k+1) + f2h(k,2) * Nu_f(k), &
+             Nu(k,i,j) = min( F2H(k,1,i,j) * Nu_f(k+1) + F2H(k,2,i,j) * Nu_f(k), &
                               ATMOS_PHY_BL_MYNN_NU_MAX )
-             Kh(k,i,j) = min( f2h(k,1) * Kh_f(k+1) + f2h(k,2) * Kh_f(k), &
+             Kh(k,i,j) = min( F2H(k,1,i,j) * Kh_f(k+1) + F2H(k,2,i,j) * Kh_f(k), &
                               ATMOS_PHY_BL_MYNN_KH_MAX )
           end do
 
@@ -703,7 +697,7 @@ contains
           end do
 
           do k = KS, KE_PBL-1
-             rho_h(k) = f2h(k,1) * RHO(k+1) + f2h(k,2) * RHO(k)
+             rho_h(k) = F2H(k,1,i,j) * RHO(k+1) + F2H(k,2,i,j) * RHO(k)
              RHONu(k) = rho_h(k) * Nu(k,i,j)
              RHOKh(k) = rho_h(k) * Kh(k,i,j)
           end do
@@ -749,7 +743,7 @@ contains
           if ( it == nit ) then
 
              do k = KS, KE_PBL-1
-                rlqsm_h(k) = rho_h(k) * ( f2h(k,1) * lq(k+1) * smp(k+1) + f2h(k,2) * lq(k) * smp(k) )
+                rlqsm_h(k) = rho_h(k) * ( F2H(k,1,i,j) * lq(k+1) * smp(k+1) + F2H(k,2,i,j) * lq(k) * smp(k) )
              end do
 
              ! dens * u
@@ -838,7 +832,7 @@ contains
 
              ! countergradient flux
              do k = KS, KE_PBL-1
-                flx(k) = - ( f2h(k,1) * lq(k+1) * gammat(k+1) + f2h(k,2) * lq(k) * gammat(k) ) &
+                flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammat(k+1) + F2H(k,2,i,j) * lq(k) * gammat(k) ) &
                        * rho_h(k)
              end do
 
@@ -899,7 +893,7 @@ contains
 
              ! countergradient flux
              do k = KS, KE_PBL-1
-                flx(k) = - ( f2h(k,1) * lq(k+1) * gammaq(k+1) + f2h(k,2) * lq(k) * gammaq(k) ) &
+                flx(k) = - ( F2H(k,1,i,j) * lq(k+1) * gammaq(k+1) + F2H(k,2,i,j) * lq(k) * gammaq(k) ) &
                        * rho_h(k)
              end do
 
@@ -1132,153 +1126,16 @@ contains
     call FILE_HISTORY_in(dudz2(:,:,:), 'dUdZ2_MYNN', 'dudz2', 'm2/s2', fill_halo=.true.)
     call FILE_HISTORY_in(l(:,:,:), 'L_mix_MYNN', 'minxing length', 'm', fill_halo=.true.)
 
-    call FILE_HISTORY_in(flxU(:,:,:), 'ZFLX_RHOU_MYNN', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxV(:,:,:), 'ZFLX_RHOV_MYNN', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxT(:,:,:), 'ZFLX_RHOT_MYNN', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
-    call FILE_HISTORY_in(flxQ(:,:,:), 'ZFLX_QV_MYNN',   'Z FLUX of RHOQV (MYNN)', 'kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_in(flxU(:,:,:), 'ZFLX_RHOU_BL', 'Z FLUX of RHOU (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_in(flxV(:,:,:), 'ZFLX_RHOV_BL', 'Z FLUX of RHOV (MYNN)', 'kg/m/s2', fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_in(flxT(:,:,:), 'ZFLX_RHOT_BL', 'Z FLUX of RHOT (MYNN)', 'K kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
+    call FILE_HISTORY_in(flxQ(:,:,:), 'ZFLX_QV_BL',   'Z FLUX of RHOQV (MYNN)', 'kg/m2/s', fill_halo=.true., dim_type="ZHXY" )
 
 
     initialize = .false.
 
     return
   end subroutine ATMOS_PHY_BL_MYNN_tendency
-
-  !-----------------------------------------------------------------------------
-  !> ATMOS_PHY_BL_MYNN_tendency_tracer
-  !! calculate tendency of tracers by the eddy viscosity
-  !<
-  subroutine ATMOS_PHY_BL_MYNN_tendency_tracer( &
-       KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-       DENS, QTRC, SFLX_Q, &
-       Kh, MASS,           &
-       CZ, FZ, DDT,        &
-       TRACER_NAME,        &
-       RHOQ_t              )
-    use scale_matrix, only: &
-       MATRIX_SOLVER_tridiagonal
-    use scale_file_history, only: &
-       FILE_HISTORY_in
-    integer, intent(in) :: KA, KS, KE
-    integer, intent(in) :: IA, IS, IE
-    integer, intent(in) :: JA, JS, JE
-
-    real(RP),         intent(in) :: DENS  (KA,IA,JA) !> density
-    real(RP),         intent(in) :: QTRC  (KA,IA,JA) !> tracers
-    real(RP),         intent(in) :: SFLX_Q(   IA,JA) !> surface flux
-    real(RP),         intent(in) :: Kh    (KA,IA,JA) !> eddy diffusion coefficient @ half-level
-    real(RP),         intent(in) :: MASS             !> mass
-    real(RP),         intent(in) :: CZ (  KA,IA,JA)  !> z at the full level
-    real(RP),         intent(in) :: FZ (0:KA,IA,JA)  !> z at the half level
-    real(DP),         intent(in) :: DDT              !> time step
-    character(len=*), intent(in) :: TRACER_NAME      !> name of tracer (for history output)
-
-    real(RP), intent(out) :: RHOQ_t(KA,IA,JA) !> tendency of tracers
-
-    real(RP) :: QTRC_n(KA) !> value at the next time step
-    real(RP) :: RHO   (KA)
-    real(RP) :: RHOKh (KA)
-    real(RP) :: a(KA)
-    real(RP) :: b(KA)
-    real(RP) :: c(KA)
-    real(RP) :: d(KA)
-    real(RP) :: rho_h
-    real(RP) :: ap
-    real(RP) :: sf_t
-
-    real(RP) :: flx(KA,IA,JA)
-
-    real(RP) :: CDZ(KA)
-    real(RP) :: FDZ(KA)
-    real(RP) :: f2h(KA,2) !> coefficient to convert from full to half level
-
-    real(RP) :: dt
-
-    integer :: KE_PBL
-    integer :: k, i, j
-
-    dt = real( DDT, kind=RP )
-
-!OCL INDEPENDENT
-    !$omp parallel do default(none) OMP_SCHEDULE_ collapse(2) &
-    !$omp shared(KA,KS,KE,IS,IE,JS,JE) &
-    !$omp shared(ATMOS_PHY_BL_MYNN_PBL_MAX) &
-    !$omp shared(RHOQ_t,DENS,QTRC,SFLX_Q,Kh,MASS,CZ,FZ,DT,flx) &
-    !$omp private(QTRC_n,RHO,RHOKh,rho_h,a,b,c,d,ap,sf_t,CDZ,FDZ,f2h) &
-    !$omp private(KE_PBL,k,i,j)
-    do j = JS, JE
-    do i = IS, IE
-
-       KE_PBL = KS+1
-       do k = KS+2, KE-1
-          if ( ATMOS_PHY_BL_MYNN_PBL_MAX >= CZ(k,i,j) - FZ(KS-1,i,j) ) then
-             KE_PBL = k
-          else
-             exit
-          end if
-       end do
-
-       do k = KS, KE_PBL
-          CDZ(k) = FZ(k  ,i,j) - FZ(k-1,i,j)
-          FDZ(k) = CZ(k+1,i,j) - CZ(k  ,i,j)
-       end do
-
-       call get_f2h( &
-            KA, KS, KE_PBL-1, &
-            CDZ(:),  & ! (in)
-            f2h(:,:) ) ! (out)
-
-       sf_t = SFLX_Q(i,j) / CDZ(KS)
-
-       RHO(KS) = DENS(KS,i,j) + dt * sf_t * MASS
-       do k = KS+1, KE_PBL
-          RHO(k) = DENS(k,i,j)
-       end do
-
-       ! dens * coefficient at the half level
-       do k = KS, KE_PBL-1
-          rho_h = f2h(k,1) * DENS(k+1,i,j) + f2h(k,2) * DENS(k,i,j)
-          RHOKh(k) = rho_h * Kh(k,i,j)
-       end do
-
-       d(KS) = ( QTRC(KS,i,j) * DENS(KS,i,j) + dt * sf_t ) / RHO(KS)
-       do k = KS+1, KE_PBL
-          d(k) = QTRC(k,i,j)
-       end do
-
-       c(KS) = 0.0_RP
-       do k = KS, KE_PBL-1
-          ap = - dt * RHOKh(k) / FDZ(k)
-          a(k) = ap / ( RHO(k) * CDZ(k) )
-          b(k) = - a(k) - c(k) + 1.0_RP
-          c(k+1) = ap / ( RHO(k+1) * CDZ(k+1) )
-       end do
-       a(KE_PBL) = 0.0_RP
-       b(KE_PBL) = - c(KE_PBL) + 1.0_RP
-
-       call MATRIX_SOLVER_tridiagonal( &
-               KA, KS, KE_PBL, &
-               a(:), b(:), c(:), d(:), & ! (in)
-               QTRC_n(:)               ) ! (out)
-
-       RHOQ_t(KS,i,j) = ( QTRC_n(KS) * RHO(KS) - QTRC(KS,i,j) * DENS(KS,i,j) ) / dt - sf_t
-       do k = KS+1, KE_PBL
-          RHOQ_t(k,i,j) = ( QTRC_n(k) - QTRC(k,i,j) ) * RHO(k) / dt
-       end do
-       do k = KE_PBL+1, KE
-          RHOQ_t(k,i,j) = 0.0_RP
-       end do
-
-       do k = KS, KE_PBL-1
-          flx(k,i,j) = - RHOKh(k) * ( QTRC_n(k+1) - QTRC_n(k) ) / FDZ(k)
-       end do
-
-    end do
-    end do
-
-    call FILE_HISTORY_in(flx(:,:,:), 'ZFLX_'//trim(TRACER_NAME)//'_MYNN', 'Z FLUX of DENS * '//trim(TRACER_NAME)//' (MYNN)', 'kg/m2/s', fill_halo=.true.)
-
-    return
-  end subroutine ATMOS_PHY_BL_MYNN_tendency_tracer
 
   !-----------------------------------------------------------------------------
   ! private routines
@@ -1844,27 +1701,5 @@ contains
 
     return
   end subroutine partial_condensation
-
-!OCL SERIAL
-  subroutine get_f2h( &
-       KA, KS, KE, &
-       CDZ, &
-       f2h )
-    integer,  intent(in)  :: KA, KS, KE
-    real(RP), intent(in)  :: CDZ(KA)
-    real(RP), intent(out) :: f2h(KA,2)
-
-    real(RP) :: dz1, dz2
-    integer :: k
-
-    do k = KS, KE
-       dz1 = CDZ(k+1)
-       dz2 = CDZ(k)
-       f2h(k,1) = dz2 / ( dz1 + dz2 )
-       f2h(k,2) = dz1 / ( dz1 + dz2 )
-    end do
-
-    return
-  end subroutine get_f2h
 
 end module scale_atmos_phy_bl_mynn
