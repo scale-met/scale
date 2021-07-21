@@ -260,6 +260,7 @@ contains
     use mod_gm_cnv2d, only: &
        CNV2D_tile_init,  &
        CNV2D_grads_init, &
+       CNV2D_NETCDF_init,&
        CNV2D_convert
     implicit none
 
@@ -280,8 +281,13 @@ contains
     character(len=H_SHORT) :: USERFILE_GrADS_VARNAME  = 'topo'
     character(len=H_SHORT) :: USERFILE_GrADS_LATNAME  = 'lat'
     character(len=H_SHORT) :: USERFILE_GrADS_LONNAME  = 'lon'
+
+    ! NetCDF data
+    character(len=H_LONG)  :: USERFILE_NetCDF_FILENAME = ''      ! single data file (NetCDF format)
+
     character(len=H_SHORT) :: USERFILE_INTERP_TYPE    = 'LINEAR'
     integer                :: USERFILE_INTERP_LEVEL   = 5
+
 
     namelist / PARAM_CNVTOPO_USERFILE / &
        USERFILE_TYPE,           &
@@ -296,6 +302,7 @@ contains
        USERFILE_GrADS_VARNAME,  &
        USERFILE_GrADS_LATNAME,  &
        USERFILE_GrADS_LONNAME,  &
+       USERFILE_NetCDF_FILENAME,&
        USERFILE_INTERP_TYPE,    &
        USERFILE_INTERP_LEVEL
 
@@ -351,9 +358,19 @@ contains
                               USERFILE_INTERP_TYPE,    & ! [IN]
                               USERFILE_INTERP_LEVEL    ) ! [IN]
 
+    case('NetCDF')
+       if ( USERFILE_NetCDF_FILENAME == '' ) then
+          LOG_ERROR("CNVTOPO_USERFILE",*) 'NetCDF file name does not specified. Check!'
+          call PRC_abort
+       endif
+
+       call CNV2D_NETCDF_init( USERFILE_NetCDF_FILENAME, & ! [IN]
+                               USERFILE_INTERP_TYPE,    & ! [IN]
+                               USERFILE_INTERP_LEVEL    ) ! [IN]
+
     case default
        LOG_ERROR("CNVTOPO_USERFILE",*) 'USERFILE_TYPE is invalid: ',trim(USERFILE_TYPE)
-       LOG_ERROR_CONT(*) 'It must be "TILE" or "GrADS"'
+       LOG_ERROR_CONT(*) 'It must be "TILE" or "GrADS" or "NetCDF"'
        call PRC_abort
     end select
 

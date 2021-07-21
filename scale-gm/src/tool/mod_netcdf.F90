@@ -727,7 +727,6 @@ contains
     call check( nf90_get_att( &
          nc%id_nc, NF90_GLOBAL, "title", nc%title ) )
     if( present( title ) ) title = nc%title
-
     call check( nf90_get_att( &
          nc%id_nc, NF90_GLOBAL, "history", nc%history ) )
     if( present( history ) ) history = nc%history
@@ -1230,7 +1229,9 @@ contains
        call check( nf90_get_var( &
             nc%id_nc, nc%id_var, wrk_var_real4, &
             start=start, count=nc%count ) )
-
+    elseif(nc%nf90_type == NF90_DOUBLE) then
+       write (*,*) "Reading DOUBLE is not supported yet by mod_netcdf.f90"
+       stop 1
     else                                  ! as 2-byte integer
        allocate( wrk_var_int2(  nc%count(1), nc%count(2), nc%count(3), nc%count(4) ) )
 
@@ -1488,6 +1489,12 @@ contains
     integer, intent(in) :: status
 
     if( status == NF90_NOERR ) return
+    if( status == NF90_ENOTATT ) then 
+       write(*,*) 'Warning: Netcdf error number = ', status
+       write(*,*) 'Warning: Error Message: ', trim( NF90_STRERROR(status) )
+       write(*,*) 'Warning: This Error is ignored.'
+       return
+    endif
 
     write(*,*) 'Netcdf error number = ', status
     write(*,*) 'Error Message: ', trim( NF90_STRERROR(status) )
