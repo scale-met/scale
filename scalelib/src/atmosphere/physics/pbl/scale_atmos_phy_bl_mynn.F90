@@ -76,6 +76,8 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: C1
   real(RP), private, parameter :: C2 = 0.75_RP
   real(RP), private, parameter :: C3 = 0.352_RP
+!  real(RP), private, parameter :: C2 = 0.70_RP  ! MYNN2004
+!  real(RP), private, parameter :: C3 = 0.323_RP ! MYNN2004
   real(RP), private, parameter :: C5 = 0.2_RP
   real(RP), private, parameter :: G1 = 0.235_RP
   real(RP), private            :: G2
@@ -96,14 +98,14 @@ module scale_atmos_phy_bl_mynn
 
   logical,  private            :: initialize
 
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 4.E+3_RP !> maximum height of the PBL
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+99_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MAX     =  1.E4_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MIN     = -1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_KH_MAX     =  1.E4_RP
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX     =   700.0_RP ! ~ 0.23 * 3 km
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_Lt_MAX     =  2000.0_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_Sq_fact    = 3.0_RP
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
@@ -283,7 +285,8 @@ contains
        BULKFLUX_type,                      &
        RHOU_t, RHOV_t, RHOT_t, RHOQV_t,    &
        RPROG_t,                            &
-       Nu, Kh, Qlp, cldfrac, Zi            )
+       Nu, Kh, Qlp, cldfrac,               &
+       Zi, SFLX_BUOY                       )
     use scale_const, only: &
        EPS     => CONST_EPS,    &
        GRAV    => CONST_GRAV,   &
@@ -343,7 +346,8 @@ contains
     real(RP), intent(out) :: Kh     (KA,IA,JA) !> eddy diffusion coefficient @ half-level
     real(RP), intent(out) :: Qlp    (KA,IA,JA) !> liquid-water content in partial condensation
     real(RP), intent(out) :: cldfrac(KA,IA,JA) !> cloud fraction in partial condensation
-    real(RP), intent(out) :: Zi     (IA,JA)    !> depth of the boundary layer (not exact)
+    real(RP), intent(out) :: Zi        (IA,JA) !> depth of the boundary layer (not exact)
+    real(RP), intent(out) :: SFLX_BUOY (IA,JA) !> surface flux of buoyancy: g / \Theta_0 <w \theta_v> @ surface
 
     real(RP) :: Ri   (KA,IA,JA) !> Richardson number
     real(RP) :: Pr   (KA,IA,JA) !> Plandtle number
@@ -363,11 +367,8 @@ contains
     real(RP) :: RHOKh (KA) !> dens * Kh at the half level for level 2.5
     real(RP) :: N2_new(KA) !> squared Brunt-Baisala frequency
     real(RP) :: SFLX_PT    !> surface potential temperature flux * density
-    real(RP) :: SFLX_PTV   !> g / \Theta_0 <w \theta_v> @ surface
     real(RP) :: sm25  (KA) !> stability function for velocity for level 2.5
-    real(RP) :: smp   (KA) !> stability function for velocity for the countergradient
     real(RP) :: sh25  (KA) !> stability function for scalars for level 2.5
-    real(RP) :: shpgh (KA) !> stability function for scalars for the countergradient
     real(RP) :: Nu_f  (KA) !> Nu at the full level
     real(RP) :: Kh_f  (KA) !> Kh at the full level
     real(RP) :: q     (KA) !> q
@@ -379,25 +380,37 @@ contains
     real(RP) :: tsq   (KA)
     real(RP) :: qsq   (KA)
     real(RP) :: cov   (KA)
-    real(RP) :: wtl
-    real(RP) :: wqw
+    real(RP) :: dtsq  (KA)
+    real(RP) :: dqsq  (KA)
+    real(RP) :: dcov  (KA)
     real(RP) :: prod_t(KA)
     real(RP) :: prod_q(KA)
     real(RP) :: prod_c(KA)
     real(RP) :: diss_p(KA)
-
     real(RP) :: dtldz(KA)
     real(RP) :: dqwdz(KA)
     real(RP) :: betat(KA)
     real(RP) :: betaq(KA)
-
+    real(RP) :: smp    (KA) !> stability function for velocity for the countergradient
+    real(RP) :: f_smp  (KA) !> stability function for velocity for the countergradient (factor)
+    real(RP) :: shpgh  (KA) !> stability function for scalars for the countergradient
+    real(RP) :: f_shpgh(KA) !> stability function for scalars for the countergradient (factor)
+    real(RP) :: tltv
+    real(RP) :: qwtv
+    real(RP) :: tvsq
+    real(RP) :: tltv25 (KA)
+    real(RP) :: qwtv25 (KA)
+    real(RP) :: tvsq25 (KA)
+    real(RP) :: tvsq_up(KA) !> upper limit of <\theta_v^2> - <\theta_v^2>2.5
+    real(RP) :: tvsq_lo(KA) !> lower limit
+    real(RP) :: wtl
+    real(RP) :: wqw
     real(RP) :: gammat (KA)
     real(RP) :: gammaq (KA)
     real(RP) :: f_gamma(KA) !> - E_H / q^2 * GRAV / Theta_0
-
     real(RP) :: rlqsm_h(KA) !> DENS * L * q * SM' @ half level
 
-    real(RP) :: flx(KA)
+    real(RP) :: flx(0:KA)
     real(RP) :: a(KA)
     real(RP) :: b(KA)
     real(RP) :: c(KA)
@@ -447,19 +460,20 @@ contains
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_Sq_fact,ATMOS_PHY_BL_MYNN_similarity, &
     !$omp        ATMOS_PHY_BL_MYNN_PBL_MAX, &
-    !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi, &
+    !$omp        RHOU_t,RHOV_t,RHOT_t,RHOQV_t,RPROG_t,Nu,Kh,Qlp,cldfrac,Zi,SFLX_BUOY, &
     !$omp        DENS,PROG,U,V,POTT,PRES,QDRY,QV,Qw,POTV,POTL,EXNER,N2, &
     !$omp        SFC_DENS,SFLX_MU,SFLX_MV,SFLX_SH,SFLX_QV,us,ts,qs,RLmo, &
     !$omp        mynn_level3,initialize, &
     !$omp        CZ,FZ,F2H,dt, &
     !$omp        BULKFLUX_type, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
-    !$omp private(N2_new,lq,sm25,smp,sh25,shpgh,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
-    !$omp         SFLX_PT,SFLX_PTV,RHO,RHONu,RHOKh, &
-    !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma,wtl,wqw, &
+    !$omp private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
+    !$omp         SFLX_PT,RHO,RHONu,RHOKh, &
+    !$omp         smp,f_smp,shpgh,f_shpgh,tltv,qwtv,tvsq,tltv25,qwtv25,tvsq25,tvsq_up,tvsq_lo,wtl,wqw, &
+    !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma, &
     !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z1, &
     !$omp         dummy, &
-    !$omp         tsq,qsq,cov, &
+    !$omp         tsq,qsq,cov,dtsq,dqsq,dcov, &
     !$omp         prod_t,prod_q,prod_c,diss_p, &
     !$omp         fmin,kmin, &
     !$omp         sw,tmp, &
@@ -476,14 +490,45 @@ contains
           end if
        end do
 
-       if ( initialize ) then
-          nit = KE_PBL - 1
-       else
-          nit = 1
+       if ( ATMOS_PHY_BL_MYNN_similarity ) then
+
+          z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
+
+          zeta = min( max( z1 * RLmo(i,j), zeta_min ), zeta_max )
+
+          select case ( BULKFLUX_type )
+!!$          case ( 'B71' )
+!!$             ! Businger et al. (1971)
+!!$             if ( zeta >= 0 ) then
+!!$                phi_m = 4.7_RP * zeta + 1.0_RP
+!!$                phi_h = 4.7_RP * zeta + 0.74_RP
+!!$             else
+!!$                phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
+!!$                phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
+!!$             end if
+          case ( 'B91', 'B91W01' )
+             ! Beljaars and Holtslag (1991)
+             if ( zeta >= 0 ) then
+                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
+                phi_m = tmp * zeta + zeta + 1.0_RP
+                phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
+             else
+                if ( BULKFLUX_type == 'B91W01' ) then
+                   ! Wilson (2001)
+                   !tmp = (-zeta)**(2.0_RP/3.0_RP)
+                   tmp = abs(zeta)**(2.0_RP/3.0_RP)
+                   phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
+                   phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
+                else
+                   !                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
+                   tmp = sqrt( 1.0_RP + 16.0_RP * abs(zeta) )
+                   phi_m = 1.0_RP / sqrt(tmp)
+                   phi_h = 1.0_RP / tmp
+                end if
+             end if
+          end select
+
        end if
-
-
-       z1 = CZ(KS,i,j) - FZ(KS-1,i,j)
 
        do k = KS, KE_PBL
           FDZ(k) = CZ(k+1,i,j) - CZ(k  ,i,j)
@@ -498,55 +543,45 @@ contains
                                      CDZ(:), FDZ(:), F2H(:,:,i,j),               & ! (in)
                                      dudz2(:,i,j), dtldz(:), dqwdz(:)            ) ! (out)
 
-       do k = KS, KE_PBL
-          n2_new(k) = min( max( N2(k,i,j), - ATMOS_PHY_BL_MYNN_N2_MAX ), ATMOS_PHY_BL_MYNN_N2_MAX )
-!          n2_new(k) = GRAV * POTV(k,i,j) * dtldz(k)
-          Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
-       end do
+       us3 = us(i,j)**3
+       SFLX_PT = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
 
-       do k = KS, KE_PBL
-          q(k) = sqrt( max( PROG(k,i,j,I_TKE), ATMOS_PHY_BL_MYNN_TKE_MIN ) * 2.0_RP )
-       end do
-
-       if ( mynn_level3 ) then
+       if ( initialize ) then
           do k = KS, KE_PBL
-             tsq(k) = max( PROG(k,i,j,I_TSQ), 0.0_RP )
-             qsq(k) = max( PROG(k,i,j,I_QSQ), 0.0_RP )
-             cov(k) = PROG(k,i,j,I_COV)
-             cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k) * qsq(k))), cov(k) )
+             q(k) = 1e10_RP
+          end do
+       else
+          do k = KS, KE_PBL
+             q(k) = sqrt( max( PROG(k,i,j,I_TKE), ATMOS_PHY_BL_MYNN_TKE_MIN ) * 2.0_RP )
           end do
        end if
 
+       if ( initialize .or. (.not. mynn_level3) ) then
+          ! estimate tsq, qsq, and cov
 
-       flx(KS-1  ) = 0.0_RP
-       flx(KE_PBL) = 0.0_RP
+          do k = KS, KE_PBL
+             n2_new(k) = min( max( N2(k,i,j), - ATMOS_PHY_BL_MYNN_N2_MAX ), ATMOS_PHY_BL_MYNN_N2_MAX )
+             !n2_new(k) = GRAV * POTV(k,i,j) * dtldz(k)
+             Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
+          end do
 
-       do it = 1, nit
-
-          if ( initialize .and. it==1 ) then
-             do k = KS, KE_PBL
-                q(k) = 1e10_RP
-             end do
-          end if
+          SFLX_BUOY(i,j) = - us3 * RLmo(i,j) / KARMAN
 
           ! length
-          us3 = us(i,j)**3
-          SFLX_PTV = - us3 * RLmo(i,j) / KARMAN
           call get_length( &
                KA, KS, KE_PBL, &
                i, j,           &
-               q(:), n2_new(:),     & ! (in)
-               SFLX_PTV, RLmo(i,j), & ! (in)
-               CZ(:,i,j),           & ! (in)
-               FZ(:,i,j),           & ! (in)
-               l(:,i,j)             ) ! (out)
+               q(:), n2_new(:),           & ! (in)
+               SFLX_BUOY(i,j), RLmo(i,j), & ! (in)
+               CZ(:,i,j), FZ(:,i,j),      & ! (in)
+               l(:,i,j)                   ) ! (out)
 
           call get_q2_level2( &
                KA, KS, KE_PBL, &
                dudz2(:,i,j), Ri(:,i,j), l(:,i,j), & ! (in)
                q2_2(:)                            ) ! (out)
 
-          if ( initialize .and. it==1 ) then
+          if ( initialize ) then
              do k = KS, KE_PBL
                 q(k) = sqrt( q2_2(k) )
              end do
@@ -563,63 +598,46 @@ contains
                l(:,i,j), n2_new(:),       & ! (in)
                POTV(:,i,j), dudz2(:,i,j), & ! (in)
                dtldz(:), dqwdz(:),        & ! (in)
-               betat(:), betaq(:),        & ! (in)
+               betat(:), betaq(:),        & ! (in) ! dummy
                .false., .false.,          & ! (in)
                tsq(:), qsq(:), cov(:),    & ! (inout)
-               sm25(:), smp(:),           & ! (out)
-               sh25(:), shpgh(:),         & ! (out) ! dummy
-               gammat(:), gammaq(:),      & ! (out) ! dummy
-               f_gamma(:)                 ) ! (out) ! dummy
+               sm25(:), f_smp(:),         & ! (out) ! dummy
+               sh25(:), f_shpgh(:),       & ! (out) ! dymmy
+               f_gamma(:),                & ! (out) ! dummy
+               tltv25(:), qwtv25(:),      & ! (out) ! dummy
+               tvsq25(:),                 & ! (out) ! dummy
+               tvsq_up(:), tvsq_lo(:)     ) ! (out) ! dummy
 
+       else
+
+          do k = KS, KE_PBL
+             tsq(k) = max( PROG(k,i,j,I_TSQ), 0.0_RP )
+             qsq(k) = max( PROG(k,i,j,I_QSQ), 0.0_RP )
+             cov(k) = PROG(k,i,j,I_COV)
+             cov(k) = sign( min( abs(cov(k)), sqrt(tsq(k) * qsq(k))), cov(k) )
+          end do
+
+       end if
+
+
+       flx(KS-1  ) = 0.0_RP
+       flx(KE_PBL) = 0.0_RP
+
+       if ( initialize ) then
+          nit = KE_PBL - 1
+       else
+          nit = 1
+       end if
+
+       do it = 1, nit
 
           call partial_condensation( KA, KS, KE_PBL, &
                                      PRES(:,i,j), POTT(:,i,j),  & ! (in)
                                      POTL(:,i,j), Qw(:,i,j),    & ! (in)
                                      Qdry(:,i,j), EXNER(:,i,j), & ! (in)
-                                     dtldz(:), dqwdz(:),        & ! (in)
-                                     l(:,i,j), sh25(:), ac(:),  & ! (in)
                                      tsq(:), qsq(:), cov(:),    & ! (in)
-                                     mynn_level3,               & ! (in)
                                      betat(:), betaq(:),        & ! (out)
                                      Qlp(:,i,j), cldfrac(:,i,j) ) ! (out)
-
-          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-
-             zeta = min( max( z1 * RLmo(i,j), zeta_min ), zeta_max )
-
-             select case ( BULKFLUX_type )
-!!$             case ( 'B71' )
-!!$                ! Businger et al. (1971)
-!!$                if ( zeta >= 0 ) then
-!!$                   phi_m = 4.7_RP * zeta + 1.0_RP
-!!$                   phi_h = 4.7_RP * zeta + 0.74_RP
-!!$                else
-!!$                   phi_m = 1.0_RP / sqrt(sqrt( 1.0_RP - 15.0_RP * zeta ))
-!!$                   phi_h = 0.47_RP / sqrt( 1.0_RP - 9.0_RP * zeta )
-!!$                end if
-             case ( 'B91', 'B91W01' )
-                ! Beljaars and Holtslag (1991)
-                if ( zeta >= 0 ) then
-                   tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
-                   phi_m = tmp * zeta + zeta + 1.0_RP
-                   phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
-                else
-                   if ( BULKFLUX_type == 'B91W01' ) then
-                      ! Wilson (2001)
-!                      tmp = (-zeta)**(2.0_RP/3.0_RP)
-                      tmp = abs(zeta)**(2.0_RP/3.0_RP)
-                      phi_m = 1.0_RP / sqrt( 1.0_RP + 3.6_RP * tmp )
-                      phi_h = 0.95_RP / sqrt( 1.0_RP + 7.9_RP * tmp )
-                   else
-!                      tmp = sqrt( 1.0_RP - 16.0_RP * zeta )
-                      tmp = sqrt( 1.0_RP + 16.0_RP * abs(zeta) )
-                      phi_m = 1.0_RP / sqrt(tmp)
-                      phi_h = 1.0_RP / tmp
-                   end if
-                end if
-             end select
-
-          end if
 
           ! update N2
           do k = KS, KE_PBL
@@ -631,17 +649,16 @@ contains
              Ri(k,i,j) = n2_new(k) / dudz2(k,i,j)
           end do
 
+          SFLX_BUOY(i,j) = GRAV / POTV(KS,i,j) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV(i,j) ) / SFC_DENS(i,j)
+
           ! length
-          SFLX_PT  = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
-          SFLX_PTV = GRAV / POTV(KS,i,j) * ( betat(KS) * SFLX_PT + betaq(KS) * SFLX_QV(i,j) ) / SFC_DENS(i,j)
           call get_length( &
                KA, KS, KE_PBL, &
                i, j,           &
-               q(:), n2_new(:),     & ! (in)
-               SFLX_PTV, RLmo(i,j), & ! (in)
-               CZ(:,i,j),           & ! (in)
-               FZ(:,i,j),           & ! (in)
-               l(:,i,j)             ) ! (out)
+               q(:), n2_new(:),           & ! (in)
+               SFLX_BUOY(i,j), RLmo(i,j), & ! (in)
+               CZ(:,i,j), FZ(:,i,j),      & ! (in)
+               l(:,i,j)                   ) ! (out)
 
           call get_q2_level2( &
                KA, KS, KE_PBL, &
@@ -663,20 +680,22 @@ contains
                mynn_level3,               & ! (in)
                initialize .and. it==1,    & ! (in)
                tsq(:), qsq(:), cov(:),    & ! (inout)
-               sm25(:), smp(:),           & ! (out)
-               sh25(:), shpgh(:),         & ! (out)
-               gammat(:), gammaq(:),      & ! (out)
-               f_gamma(:)                 ) ! (out)
+               sm25(:), f_smp(:),         & ! (out)
+               sh25(:), f_shpgh(:),       & ! (out)
+               f_gamma(:),                & ! (out)
+               tltv25(:), qwtv25(:),      & ! (out)
+               tvsq25(:),                 & ! (out)
+               tvsq_up(:), tvsq_lo(:)     ) ! (out)
 
           do k = KS, KE_PBL
              lq(k) = l(k,i,j) * q(k)
              Nu_f(k) = lq(k) * sm25(k)
              Kh_f(k) = lq(k) * sh25(k)
           end do
-          if ( ATMOS_PHY_BL_MYNN_similarity ) then
+!          if ( ATMOS_PHY_BL_MYNN_similarity ) then
 !             Nu_f(KS) = KARMAN * z1 * us(i,j) / phi_m
 !             Kh_f(KS) = KARMAN * z1 * us(i,j) / phi_h
-          end if
+!          end if
 
           do k = KS, KE_PBL-1
              Nu(k,i,j) = min( F2H(k,1,i,j) * Nu_f(k+1) + F2H(k,2,i,j) * Nu_f(k), &
@@ -707,11 +726,49 @@ contains
 
              ! production term calculated by explicit scheme
              do k = KS, KE_PBL
+                tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
+                qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
+                gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
+                gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
+
                 wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
                 wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
                 prod_t(k) = - 2.0_RP * wtl * dtldz(k)
                 prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
                 prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
+             end do
+
+!!$          if ( ATMOS_PHY_BL_MYNN_similarity ) then
+!!$             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z1 )
+!!$             tmp = tmp * ( zeta / ( z1 * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
+!!$             ! TSQ
+!!$             prod_t(KS) = tmp * ts(i,j)**2
+!!$             ! QSQ
+!!$             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
+!!$             ! COV
+!!$             prod_c(KS) = tmp * qs(i,j)**2
+!!$          end if
+
+             ! diffusion (explicit)
+             flx(KS-1)   = 0.0_RP
+             flx(KE_PBL) = 0.0_RP
+             do k = KS, KE_PBL-1
+                flx(k) = RHONu(k) * ( tsq(k+1) - tsq(k) ) / FDZ(k)
+             end do
+             do k = KS, KE_PBL
+                prod_t(k) = prod_t(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
+             end do
+             do k = KS, KE_PBL-1
+                flx(k) = RHONu(k) * ( qsq(k+1) - qsq(k) ) / FDZ(k)
+             end do
+             do k = KS, KE_PBL
+                prod_q(k) = prod_q(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
+             end do
+             do k = KS, KE_PBL-1
+                flx(k) = RHONu(k) * ( cov(k+1) - cov(k) ) / FDZ(k)
+             end do
+             do k = KS, KE_PBL
+                prod_c(k) = prod_c(k) + ( flx(k) - flx(k-1) ) / CDZ(k)
              end do
 
              call get_gamma_implicit( &
@@ -723,15 +780,35 @@ contains
                   betat(:), betaq(:),              & ! (in)
                   f_gamma(:), l(:,i,j), q(:),      & ! (in)
                   dt,                              & ! (in)
-                  gammat(:), gammaq(:)             ) ! (inout)
+                  dtsq(:), dqsq(:), dcov(:)        ) ! (out)
 
-             ! update production terms
+             ! update
              do k = KS, KE_PBL
+                tltv = betat(k) * ( tsq(k) + dtsq(k) ) + betaq(k) * ( cov(k) + dcov(k) )
+                qwtv = betat(k) * ( cov(k) + dcov(k) ) + betaq(k) * ( qsq(k) + dqsq(k) )
+                gammat(k) = f_gamma(k) * ( tltv - tltv25(k) )
+                gammaq(k) = f_gamma(k) * ( qwtv - qwtv25(k) )
+
+                tvsq = max( betat(k) * tltv + betaq(k) * qwtv, 0.0_RP )
+                tvsq = tvsq - tvsq25(k)
+                tvsq = min( max( tvsq, tvsq_lo(k) ), tvsq_up(k) )
+                smp  (k) = f_smp  (k) * tvsq
+                shpgh(k) = f_shpgh(k) * tvsq
+
                 wtl = - lq(k) * ( sh25(k) * dtldz(k) + gammat(k) )
                 wqw = - lq(k) * ( sh25(k) * dqwdz(k) + gammaq(k) )
                 prod_t(k) = - 2.0_RP * wtl * dtldz(k)
                 prod_q(k) = - 2.0_RP * wqw * dqwdz(k)
                 prod_c(k) = - wtl * dqwdz(k) - wqw * dtldz(k)
+             end do
+
+          else
+
+             do k = KS, KE_PBL
+                smp   (k) = 0.0_RP
+                shpgh (k) = 0.0_RP
+                gammat(k) = 0.0_RP
+                gammaq(k) = 0.0_RP
              end do
 
           end if
@@ -937,7 +1014,8 @@ contains
                                    - ( sh25(k) * n2_new(k) - shpgh(k) ) )
           end do
           if ( ATMOS_PHY_BL_MYNN_similarity ) then
-             prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta )
+             prod(KS,i,j) = us3 / ( KARMAN * z1 ) * ( phi_m - zeta ) &
+                          + lq(KS) * ( smp(KS) * dudz2(KS,i,j) + shpgh(KS) )
           end if
 
           do k = KS, KE_PBL
@@ -951,7 +1029,7 @@ contains
           end do
 
           do k = KS, KE_PBL-1
-             d(k) = ( tke_p(k) * DENS(k,i,j) + dt * prod(k,i,j) * RHO(k) ) / RHO(k)
+             d(k) = tke_p(k) * DENS(k,i,j) / RHO(k) + dt * prod(k,i,j)
           end do
           d(KE_PBL) = 0.0_RP
 
@@ -993,24 +1071,13 @@ contains
 
           if ( .not. mynn_level3 ) cycle
 
-!!$          if ( ATMOS_PHY_BL_MYNN_similarity ) then
-!!$             tmp = 2.0_RP * us(i,j) * phi_h / ( KARMAN * z1 )
-!!$             tmp = tmp * ( zeta / ( z1 * RLmo(i,j) ) )**2 ! correspoindint to the limitter for zeta
-!!$             ! TSQ
-!!$             prod_t(KS) = tmp * ts(i,j)**2
-!!$             ! QSQ
-!!$             prod_q(KS) = tmp * ts(i,j) * qs(i,j)
-!!$             ! COV
-!!$             prod_c(KS) = tmp * qs(i,j)**2
-!!$          end if
-
           ! dens * tsq
 
           do k = KS, KE_PBL
              diss_p(k) = dt * 2.0_RP * q(k) / ( B2 * l(k,i,j) )
           end do
           do k = KS, KE_PBL-1
-             d(k) = ( tsq(k) * DENS(k,i,j) + dt * prod_t(k) * RHO(k) ) / RHO(k)
+             d(k) = tsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_t(k)
           end do
           d(KE_PBL) = 0.0_RP
           c(KS) = 0.0_RP
@@ -1046,7 +1113,7 @@ contains
           ! dens * qsq
 
           do k = KS, KE_PBL-1
-             d(k) = ( qsq(k) * DENS(k,i,j) + dt * prod_q(k) * RHO(k) ) / RHO(k)
+             d(k) = qsq(k) * DENS(k,i,j) / RHO(k) + dt * prod_q(k)
           end do
           d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
@@ -1074,7 +1141,7 @@ contains
           ! dens * cov
 
           do k = KS, KE_PBL-1
-             d(k) = ( cov(k) * DENS(k,i,j) + dt * prod_c(k) * RHO(k) ) / RHO(k)
+             d(k) = cov(k) * DENS(k,i,j) / RHO(k) + dt * prod_c(k)
           end do
           d(KE_PBL) = 0.0_RP
           ! a, b, c are same as those for tsq
@@ -1145,11 +1212,10 @@ contains
   subroutine get_length( &
        KA, KS, KE_PBL, &
        i, j,           &
-       q, n2,          &
-       SFLX_PTV, RLmo, &
-       CZ,             &
-       FZ,             &
-       l               )
+       q, n2,           &
+       SFLX_BUOY, RLmo, &
+       CZ, FZ,          &
+       l                )
     use scale_const, only: &
        GRAV   => CONST_GRAV, &
        KARMAN => CONST_KARMAN, &
@@ -1160,8 +1226,8 @@ contains
 
     real(RP), intent(in) :: q(KA)
     real(RP), intent(in) :: n2(KA)
-    real(RP), intent(in) :: SFLX_PTV !> g/T0 <w Tv> @ surface
-    real(RP), intent(in) :: RLmo     !> inverse of Obukhov length
+    real(RP), intent(in) :: SFLX_BUOY !> g/T0 <w Tv> @ surface
+    real(RP), intent(in) :: RLmo      !> inverse of Obukhov length
     real(RP), intent(in) :: CZ(KA)
     real(RP), intent(in) :: FZ(0:KA)
 
@@ -1200,7 +1266,7 @@ contains
                   ATMOS_PHY_BL_MYNN_Lt_MAX )
     rlt = 1.0_RP / lt
 
-    qc = ( lt * max(SFLX_PTV,0.0_RP) )**OneOverThree ! qc=0 if SFLX_PTV<0
+    qc = ( lt * max(SFLX_BUOY,0.0_RP) )**OneOverThree ! qc=0 if SFLX_BUOY<0
 
     do k = KS, KE_PBL
        z = CZ(k) - FZ(KS-1)
@@ -1261,21 +1327,24 @@ contains
 !OCL SERIAL
   subroutine get_smsh( &
        KA, KS, KE_PBL, &
-       i, j,           &
-       q, ac,          &
-       l, n2,          &
-       potv, dudz2,    &
-       dtldz, dqwdz,   &
-       betat, betaq,   &
-       mynn_level3,    &
-       initialize,     &
-       tsq, qsq, cov,  &
-       sm25, smp,      &
-       sh25, shpgh,    &
-       gammat, gammaq, &
-       f_gamma         )
+       i, j,            &
+       q, ac,           &
+       l, n2,           &
+       potv, dudz2,     &
+       dtldz, dqwdz,    &
+       betat, betaq,    &
+       mynn_level3,     &
+       initialize,      &
+       tsq, qsq, cov,   &
+       sm25, f_smp,     &
+       sh25, f_shpgh,   &
+       f_gamma,         &
+       tltv25, qwtv25,  &
+       tvsq25,          &
+       tvsq_up, tvsq_lo )
     use scale_const, only: &
        EPS  => CONST_EPS, &
+       HUGE => CONST_HUGE, &
        GRAV => CONST_GRAV
     implicit none
     integer,  intent(in)  :: KA, KS, KE_PBL
@@ -1299,42 +1368,44 @@ contains
     real(RP), intent(inout)  :: cov(KA)
 
     real(RP), intent(out) :: sm25   (KA) ! S_M2.5
-    real(RP), intent(out) :: smp    (KA) ! S_M'
+    real(RP), intent(out) :: f_smp  (KA) ! S_M' / ( <\theta_v^2> - <\theta_v^2>2.5 )
     real(RP), intent(out) :: sh25   (KA) ! S_H2.5
-    real(RP), intent(out) :: shpgh  (KA) ! S_H' G_H * (q/L)^2
-    real(RP), intent(out) :: gammat (KA) ! \Gamma_\theta
-    real(RP), intent(out) :: gammaq (KA) ! \Gamma_q
+    real(RP), intent(out) :: f_shpgh(KA) ! S_H' G_H * (q/L)^2 / ( <\theta_v^2> - <\theta_v^2>2.5 )
     real(RP), intent(out) :: f_gamma(KA) ! - E_H / q^2 * GRAV / Theta_0
+    real(RP), intent(out) :: tltv25 (KA) !> <\theta_l \theta_v> for level 2.5
+    real(RP), intent(out) :: qwtv25 (KA) !> <q_w \theta_v> for level 2.5
+    real(RP), intent(out) :: tvsq25 (KA) !> <\theta_v^2> for level 2.5
+    real(RP), intent(out) :: tvsq_up(KA)
+    real(RP), intent(out) :: tvsq_lo(KA)
 
-    real(RP) :: l2   !> L^2
-    real(RP) :: q2   !> q^2
-    real(RP) :: ac2  !> \alpha_c^2
-    real(RP) :: p1q2 !> \Phi_1 * q^2
-    real(RP) :: p2q2 !> \Phi_2 * q^2
-    real(RP) :: p3q2 !> \Phi_3 * q^2
-    real(RP) :: p4q2 !> \Phi_4 * q^2
-    real(RP) :: p5q2 !> \Phi_5 * q^2
-    real(RP) :: rd25 !> 1 / ( D_2.5 * q^2 )
-    real(RP) :: ghq2 !> G_H * q^2
-    real(RP) :: gmq2 !> G_M * q^2
+    real(RP) :: l2     !> L^2
+    real(RP) :: q2     !> q^2
+    real(RP) :: l2q2   !> l^2 / q^2
+    real(RP) :: ac2    !> \alpha_c^2
+    real(RP) :: p1q2   !> \Phi_1 * q^2
+    real(RP) :: p2q2   !> \Phi_2 * q^2
+    real(RP) :: p3q2   !> \Phi_3 * q^2
+    real(RP) :: p4q2   !> \Phi_4 * q^2
+    real(RP) :: p5q2   !> \Phi_5 * q^2
+    real(RP) :: rd25q2 !> q2 / D_2.5
+    real(RP) :: ghq2   !> G_H * q^2
+    real(RP) :: gmq2   !> G_M * q^2
     real(RP) :: f1, f2, f3, f4
 
     ! for level 3
     real(RP) :: tvsq   !> <\theta_v^2>
-    real(RP) :: tvsq25 !> <\theta_v^2> for level 2.5
     real(RP) :: tltv
-    real(RP) :: tltv25
     real(RP) :: qwtv
-    real(RP) :: qwtv25
     real(RP) :: tsq25
     real(RP) :: qsq25
     real(RP) :: cov25
     real(RP) :: emq2   !> E_M * G_H / q^2
     real(RP) :: eh     !> E_H
     real(RP) :: ew     !> E_w
-    real(RP) :: rdp    !> 1 / ( D' * q^2 )
-    real(RP) :: cw25q2 !> Cw2.5 * q^2
+    real(RP) :: rdpq2  !> q2 / D'
+    real(RP) :: cw25   !> Cw2.5
     real(RP) :: fact
+    real(RP) :: tmp1, tmp2
 
     integer :: k
 
@@ -1350,77 +1421,89 @@ contains
        f3 =    9.0_RP * ac2 * A2**2   * ( 1.0_RP - C2 ) * ( 1.0_RP - C5 )
        f4 = - 12.0_RP * ac2 * A1 * A2 * ( 1.0_RP - C2 )
 
-       ghq2 = max( - n2(k) * l2, -q2 ) ! L/q <= 1/N for N^2>0
-
+       ghq2 = - n2(k) * l2
+!       ghq2 = max( - n2(k) * l2, -q2 ) ! L/q <= 1/N for N^2>0
        gmq2 = dudz2(k) * l2
 
-       p1q2 = q2 + f1 * ghq2
-       p2q2 = q2 + f2 * ghq2
-       p3q2 = q2 + ( f1 + f3 ) * ghq2
-       p4q2 = q2 + ( f1 + f4 ) * ghq2
-       p5q2 = 6.0_RP * ac2 * A1**2 * gmq2
-       rd25 = q2 / max( p2q2 * p4q2 + p5q2 * p3q2, 1e-20_RP )
+       p1q2   = q2 + f1 * ghq2
+       p2q2   = q2 + f2 * ghq2
+       p3q2   = q2 + ( f1 + f3 ) * ghq2
+       p4q2   = q2 + ( f1 + f4 ) * ghq2
+       p5q2   = 6.0_RP * ac2 * A1**2 * gmq2
+       rd25q2 = q2 / max( p2q2 * p4q2 + p5q2 * p3q2, 1e-20_RP )
 
-       sm25(k) = ac(k) * A1 * ( p3q2 - 3.0_RP * C1 * p4q2 ) * rd25
-       sh25(k) = ac(k) * A2 * ( p2q2 + 3.0_RP * C1 * p5q2 ) * rd25
+       sm25(k) = ac(k) * A1 * ( p3q2 - 3.0_RP * C1 * p4q2 ) * rd25q2
+       sh25(k) = ac(k) * A2 * ( p2q2 + 3.0_RP * C1 * p5q2 ) * rd25q2
 
+       fact = ac(k) * B2 * l2 * sh25(k)
+       tsq25 = fact * dtldz(k)**2
+       qsq25 = fact * dqwdz(k)**2
+       cov25 = fact * dtldz(k) * dqwdz(k)
+
+       if ( initialize .or. (.not. mynn_level3 ) ) then
+          tsq(k) = tsq25
+          qsq(k) = qsq25
+          cov(k) = cov25
+       end if
 
        if ( mynn_level3 ) then ! level 3
 
-          fact = ac(k) * B2 * l2 * sh25(k)
-          tsq25 = fact * dtldz(k)**2
-          qsq25 = fact * dqwdz(k)**2
-          cov25 = fact * dtldz(k) * dqwdz(k)
-
-          ! initialize tsq, qsq, and cov with those of level 2.5
-          if ( initialize ) then
-             tsq(k) = tsq25
-             qsq(k) = qsq25
-             cov(k) = cov25
-          end if
-
           if ( q2 <= 1e-10_RP ) then
-             smp    (k) = 0.0_RP
-             shpgh  (k) = 0.0_RP
+             tltv25 (k) = 0.0_RP
+             qwtv25 (k) = 0.0_RP
+             tvsq25 (k) = 0.0_RP
+             tvsq_up(k) = 0.0_RP
+             tvsq_lo(k) = 0.0_RP
+             f_smp  (k) = 0.0_RP
+             f_shpgh(k) = 0.0_RP
              f_gamma(k) = 0.0_RP
-             gammat (k) = 0.0_RP
-             gammaq (k) = 0.0_RP
           else
-             tltv25 = betat(k) * tsq25 + betaq(k) * cov25
-             qwtv25 = betat(k) * cov25 + betaq(k) * qsq25
-             tvsq25 = betat(k) * tltv25 + betaq(k) * qwtv25
+             tltv25(k) = betat(k) * tsq25 + betaq(k) * cov25
+             qwtv25(k) = betat(k) * cov25 + betaq(k) * qsq25
+             tvsq25(k) = max(betat(k) * tltv25(k) + betaq(k) * qwtv25(k), 0.0_RP)
+             cw25 = p1q2 * ( p2q2 + 3.0_RP * C1 * p5q2 ) * rd25q2 / ( 3.0_RP * q2 )
+
+             rdpq2  = q2 / max( p2q2 * ( f4 * ghq2 + q2 ) + p5q2 * ( f3 * ghq2 + q2 ), 1e-20_RP )
+
+!             l2q2 = l2 / q2
+             l2q2 = min( l2q2, 1.0_RP / max(n2(k), EPS) )
 
              tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
              qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
-             tvsq = betat(k) * tltv + betaq(k) * qwtv
+             tvsq = max(betat(k) * tltv + betaq(k) * qwtv, 0.0_RP)
 
-             rdp  = q2 / max( p2q2 * ( f4 * ghq2 + q2 ) + p5q2 * ( f3 * ghq2 + q2 ), 1e-20_RP )
-
-             fact = l2 / q2 * (  GRAV / POTV(k) )**2 * ( tvsq - tvsq25 )
-
-             ew = ( 1.0_RP - C3 ) * ( - p2q2 * f4 - p5q2 * f3 ) * rdp ! (p1-p4)/gh = -f4, (p1-p3)/gh = -f3
-             if ( abs(ew) > 1e-20_RP ) then
-                cw25q2 = p1q2 * ( p2q2 + 3.0_RP * C1 * p5q2 ) * rd25 / 3.0_RP
-                fact = fact * ew
-                fact = min( max( fact, 0.12_RP * q2 - cw25q2 ), 0.76_RP * q2 - cw25q2 )
-                fact = fact / ew
+             ew = ( 1.0_RP - C3 ) * ( - p2q2 * f4 - p5q2 * f3 ) * rdpq2 ! (p1-p4)/gh = -f4, (p1-p3)/gh = -f3
+             if ( abs(ew) > EPS ) then
+                fact = q2 * POTV(k)**2 / ( ew * l2q2 * GRAV**2 )
+                if ( fact > 0.0_RP ) then
+                   tmp1 = 0.76_RP
+                   tmp2 = 0.12_RP
+                else
+                   tmp1 = 0.12_RP
+                   tmp2 = 0.76_RP
+                end if
+                tvsq_up(k) = ( tmp1 - cw25 ) * fact
+                tvsq_lo(k) = ( tmp2 - cw25 ) * fact
+             else
+                tvsq_up(k) =  HUGE
+                tvsq_lo(k) = -HUGE
              end if
 
-             emq2 = 3.0_RP * ac(k) * A1 * ( 1.0_RP - C3 ) * ( f3 - f4 ) * rdp ! (p3-p4)/gh = (f3-f4)
-             eh   = 3.0_RP * ac(k) * A2 * ( 1.0_RP - C3 ) * ( p2q2 + p5q2 ) * rdp
+             emq2 = 3.0_RP * ac(k) * A1 * ( 1.0_RP - C3 ) * ( f3 - f4 ) * rdpq2 ! (p3-p4)/gh = (f3-f4)
+             eh   = 3.0_RP * ac(k) * A2 * ( 1.0_RP - C3 ) * ( p2q2 + p5q2 ) * rdpq2
 
-             smp    (k) = emq2 * fact
-             shpgh  (k) = eh   * fact / l2
-             f_gamma(k) = - eh * GRAV / ( q2 * POTV(k) )
-             gammat (k) = ( tltv - tltv25 ) * f_gamma(k)
-             gammaq (k) = ( qwtv - qwtv25 ) * f_gamma(k)
+!             q2 = l2 / l2q2
+             fact = GRAV / POTV(k)
+             f_smp  (k) = emq2 * fact**2 * l2q2
+             f_shpgh(k) = eh   * fact**2 / q2
+             f_gamma(k) = - eh * fact / q2
           end if
        else ! level 2.5
-          smp    (k) = 0.0_RP
-          shpgh  (k) = 0.0_RP
+          tvsq_up(k) = 0.0_RP
+          tvsq_lo(k) = 0.0_RP
+          f_smp  (k) = 0.0_RP
+          f_shpgh(k) = 0.0_RP
           f_gamma(k) = 0.0_RP
-          gammat (k) = 0.0_RP
-          gammaq (k) = 0.0_RP
        end if
 
     end do
@@ -1438,7 +1521,7 @@ contains
        betat, betaq,           &
        f_gamma, l, q,          &
        dt,                     &
-       gammat, gammaq          )
+       dtsq, dqsq, dcov        )
     use scale_const, only: &
        GRAV => CONST_GRAV
     implicit none
@@ -1461,12 +1544,10 @@ contains
     real(RP), intent(in) :: q      (KA)
     real(RP), intent(in) :: dt
 
-    real(RP), intent(inout) :: gammat(KA)
-    real(RP), intent(inout) :: gammaq(KA)
+    real(RP), intent(out) :: dtsq(KA)
+    real(RP), intent(out) :: dqsq(KA)
+    real(RP), intent(out) :: dcov(KA)
 
-    real(RP) :: dtsq
-    real(RP) :: dqsq
-    real(RP) :: dcov
     real(RP) :: a11, a12, a21, a22, a23, a32, a33
     real(RP) :: v1, v2, v3
     real(RP) :: f1, f2
@@ -1498,9 +1579,9 @@ contains
           ! solve matrix
           f1 = a21 / a11
           f2 = a23 / a33
-          dcov = ( v2 - f1 * v1 - f2 * v3 ) / ( a22 - f1 * a12 - f2 * a32 )
-          dtsq = ( v1 - a12 * dcov ) / a11
-          dqsq = ( v3 - a32 * dcov ) / a33
+          dcov(k) = ( v2 - f1 * v1 - f2 * v3 ) / ( a22 - f1 * a12 - f2 * a32 )
+          dtsq(k) = ( v1 - a12 * dcov(k) ) / a11
+          dqsq(k) = ( v3 - a32 * dcov(k) ) / a33
        else
           ! consider change in q
           ! dq = - L * G / Theta0 * ( betat * dgammat + betaq * dgammaq )
@@ -1519,14 +1600,11 @@ contains
           a33 = a33 - f2 * v3
           ! solve matrix by Cramer's fomula
           det = a11 * ( a22 * a33 - a23 * a32 ) + a12 * ( a23 * a31 - a21 * a33 ) + a13 * ( a21 * a32 - a22 * a31 )
-          dtsq = ( v1 * ( a22 * a33 - a23 * a32 ) + a12 * ( a23 * v3 - v2 * a33 ) + a13 * ( v2 * a32 - a22 * v3 ) ) / det
-          dcov = ( a11 * ( v2 * a33 - a23 * v3 ) + v1 * ( a23 * a31 - a21 * a33 ) + a13 * ( a21 * v3 - v2 * a31 ) ) / det
-          dqsq = ( a11 * ( a22 * v3 - v2 * a32 ) + a12 * ( v2 * a31 - a21 * v3 ) + v3 * ( a21 * a32 - a22 * a31 ) ) / det
+          dtsq(k) = ( v1 * ( a22 * a33 - a23 * a32 ) + a12 * ( a23 * v3 - v2 * a33 ) + a13 * ( v2 * a32 - a22 * v3 ) ) / det
+          dcov(k) = ( a11 * ( v2 * a33 - a23 * v3 ) + v1 * ( a23 * a31 - a21 * a33 ) + a13 * ( a21 * v3 - v2 * a31 ) ) / det
+          dqsq(k) = ( a11 * ( a22 * v3 - v2 * a32 ) + a12 * ( v2 * a31 - a21 * v3 ) + v3 * ( a21 * a32 - a22 * a31 ) ) / det
        end if
 
-       ! modifiy the explicit solution
-       gammat(k) = gammat(k) + f_gamma(k) * ( betat(k) * dtsq + betaq(k) * dcov )
-       gammaq(k) = gammaq(k) + f_gamma(k) * ( betat(k) * dcov + betaq(k) * dqsq )
     end do
 
     return
@@ -1571,6 +1649,10 @@ contains
     dudz2(KS) = max( dudz2(KS), 1e-20_RP )
     do k = KS+1, KE
        dudz2(k) = ( ( Uh(k) - Uh(k-1) )**2 + ( Vh(k) - Vh(k-1) )**2 ) / CDZ(k)**2
+!       dudz2(k) = ( &
+!              ( U(k+1) * FDZ(k-1)**2 - U(k-1) * FDZ(k)**2 + U(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) )**2 &
+!            + ( V(k+1) * FDZ(k-1)**2 - V(k-1) * FDZ(k)**2 + V(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) )**2 &
+!            ) / ( FDZ(k-1) * FDZ(k) * ( FDZ(k-1) + FDZ(k) ) )**2
        dudz2(k) = max( dudz2(k), 1e-20_RP )
     end do
 
@@ -1582,6 +1664,8 @@ contains
 !    dtldz(KS) = ( POTL(KS+1) - POTL(KS) ) / FDZ(KS)
     do k = KS+1, KE
        dtldz(k) = ( qh(k) - qh(k-1) ) / CDZ(k)
+!       dtldz(k) = ( POTL(k+1) * FDZ(k-1)**2 - POTL(k-1) * FDZ(k)**2 + POTL(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) ) &
+!            / ( FDZ(k-1) * FDZ(k) * ( FDZ(k-1) + FDZ(k) ) )
     end do
 
     do k = KS, KE
@@ -1591,6 +1675,8 @@ contains
 !    dqwdz(KS) = ( Qw(KS+1) - Qw(KS) ) / FDZ(KS)
     do k = KS+1, KE
        dqwdz(k) = ( qh(k) - qh(k-1) ) / CDZ(k)
+!       dqwdz(k) = ( Qw(k+1) * FDZ(k-1)**2 - Qw(k-1) * FDZ(k)**2 + Qw(k) * ( FDZ(k)**2 - FDZ(k-1)**2 ) ) &
+!            / ( FDZ(k-1) * FDZ(k) * ( FDZ(k-1) + FDZ(k) ) )
     end do
 
     return
@@ -1600,9 +1686,7 @@ contains
   subroutine partial_condensation( &
        KA, KS, KE, &
        PRES, POTT, POTL, Qw, Qdry, EXNER, &
-       dtldz, dqwdz, l, sh25, ac,         &
        tsq, qsq, cov,                     &
-       mynn_level3,                       &
        betat, betaq, Qlp, cldfrac         )
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
@@ -1621,15 +1705,9 @@ contains
     real(RP), intent(in)  :: Qw   (KA)
     real(RP), intent(in)  :: Qdry (KA)
     real(RP), intent(in)  :: EXNER(KA)
-    real(RP), intent(in)  :: dtldz(KA)
-    real(RP), intent(in)  :: dqwdz(KA)
-    real(RP), intent(in)  :: l    (KA)
-    real(RP), intent(in)  :: sh25 (KA)
-    real(RP), intent(in)  :: ac   (KA)
     real(RP), intent(in)  :: tsq  (KA)
     real(RP), intent(in)  :: qsq  (KA)
     real(RP), intent(in)  :: cov  (KA)
-    logical,  intent(in)  :: mynn_level3
 
     real(RP), intent(out) :: betat  (KA)
     real(RP), intent(out) :: betaq  (KA)
@@ -1669,14 +1747,9 @@ contains
        aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
        bb = EXNER(k) * dQsl
 
-       if ( mynn_level3 ) then
-          sigma_s = 0.5_RP * aa * sqrt( max( qsq(k) - 2.0_RP * bb * cov(k) + bb**2 * tsq(k), 1.0e-20_RP ) )
-       else
-          ! level 2.5
-          sigma_s = max( 0.5_RP * aa * l(k) * sqrt( ac(k) * B2 * sh25(k) ) * abs( dqwdz(k) - bb * dtldz(k) ), &
-                         1.0e-10_RP )
-       end if
-
+       sigma_s = min( max( &
+            0.5_RP * aa * sqrt( max( qsq(k) - 2.0_RP * bb * cov(k) + bb**2 * tsq(k), 1.0e-20_RP ) ), &
+            aa * Qsl(k) * 0.09_RP), aa * Qsl(k) )
        Q1 = aa * ( Qw(k) - Qsl(k) ) * 0.5_RP / sigma_s
        cldfrac(k) = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
        Qlp(k) = min( max( 2.0_RP * sigma_s * ( cldfrac(k) * Q1 + rsqrt_2pi &

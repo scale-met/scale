@@ -64,10 +64,11 @@ module mod_atmos_phy_bl_vars
 
   real(RP), public, allocatable, target :: ATMOS_PHY_BL_RHOQ_t(:,:,:,:) ! tendency rho*QTRC [kg/kg/s]
 
-  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi    (:,:)     ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_Zi       (:,:)  ! depth of the PBL
+  real(RP), public, allocatable :: ATMOS_PHY_BL_SFLX_BUOY(:,:)  ! surface flux of buoyancy
 
   real(RP), public, allocatable :: ATMOS_PHY_BL_QL    (:,:,:)   ! liquid water content in partial condensation
-  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:)   ! cloud fraction in partial condensation
+  real(RP), public, allocatable :: ATMOS_PHY_BL_cldfrac(:,:,:)  ! cloud fraction in partial condensation
 
   !-----------------------------------------------------------------------------
   !
@@ -131,8 +132,11 @@ contains
     ATMOS_PHY_BL_RHOT_t(:,:,:)   = UNDEF
     ATMOS_PHY_BL_RHOQ_t(:,:,:,:) = UNDEF
 
-    allocate( ATMOS_PHY_BL_Zi(IA,JA) )
-    ATMOS_PHY_BL_Zi(:,:) = UNDEF
+    allocate( ATMOS_PHY_BL_Zi      (IA,JA) )
+    ATMOS_PHY_BL_Zi      (:,:) = UNDEF
+
+    allocate( ATMOS_PHY_BL_SFLX_BUOY(IA,JA) )
+    ATMOS_PHY_BL_SFLX_BUOY(:,:) = UNDEF
 
     allocate( ATMOS_PHY_BL_QL     (KA,IA,JA) )
     allocate( ATMOS_PHY_BL_cldfrac(KA,IA,JA) )
@@ -194,6 +198,8 @@ contains
     deallocate( ATMOS_PHY_BL_RHOQ_t )
 
     deallocate( ATMOS_PHY_BL_Zi )
+
+    deallocate( ATMOS_PHY_BL_SFLX_BUOY )
 
     deallocate( ATMOS_PHY_BL_QL      )
     deallocate( ATMOS_PHY_BL_cldfrac )
@@ -329,9 +335,9 @@ contains
        FILE_CARTESC_enddef
     implicit none
 
-!    if ( restart_fid /= -1 ) then
-!       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
-!    endif
+    if ( restart_fid /= -1 ) then
+       call FILE_CARTESC_enddef( restart_fid ) ! [IN]
+    endif
 
     return
   end subroutine ATMOS_PHY_BL_vars_restart_enddef
@@ -362,14 +368,17 @@ contains
     use scale_file_cartesC, only: &
        FILE_CARTESC_def_var
     implicit none
+    integer :: iv
     !---------------------------------------------------------------------------
 
     if ( restart_fid /= -1 ) then
 
-       call FILE_CARTESC_def_var( restart_fid,     & ! [IN]
-            VAR_NAME(1), VAR_DESC(1), VAR_UNIT(1), & ! [IN]
-            'XY', ATMOS_PHY_BL_RESTART_OUT_DTYPE,  & ! [IN]
-            VAR_ID(1)                              ) ! [OUT]
+       do iv = 1, VMAX
+          call FILE_CARTESC_def_var( restart_fid,        & ! [IN]
+               VAR_NAME(iv), VAR_DESC(iv), VAR_UNIT(iv), & ! [IN]
+               'XY', ATMOS_PHY_BL_RESTART_OUT_DTYPE,     & ! [IN]
+               VAR_ID(iv)                                ) ! [OUT]
+       end do
 
     endif
 

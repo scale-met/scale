@@ -115,7 +115,8 @@ contains
        ATMOS_PHY_BL_TYPE, &
        ATMOS_sw_phy_bl
     use mod_atmos_phy_bl_vars, only: &
-       ATMOS_PHY_BL_Zi
+       ATMOS_PHY_BL_Zi, &
+       ATMOS_PHY_BL_SFLX_BUOY
     use scale_bulkflux, only: &
        BULKFLUX_type
     use scale_time, only: &
@@ -140,7 +141,8 @@ contains
        end select
     else
        LOG_INFO("ATMOS_PHY_BL_driver_setup",*) 'this component is never called.'
-       ATMOS_PHY_BL_Zi(:,:) = 0.0_RP
+       ATMOS_PHY_BL_Zi       (:,:) = 0.0_RP
+       ATMOS_PHY_BL_SFLX_BUOY(:,:) = 0.0_RP
     endif
 
     return
@@ -228,12 +230,13 @@ contains
     use mod_atmos_phy_bl_vars, only: &
        QS, QE, &
        ATMOS_PHY_BL_MIX_TRACERS, &
-       RHOU_t_BL => ATMOS_PHY_BL_RHOU_t, &
-       RHOV_t_BL => ATMOS_PHY_BL_RHOV_t, &
-       RHOT_t_BL => ATMOS_PHY_BL_RHOT_t, &
-       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t, &
-       Zi        => ATMOS_PHY_BL_Zi,     &
-       QL        => ATMOS_PHY_BL_QL,     &
+       RHOU_t_BL => ATMOS_PHY_BL_RHOU_t,    &
+       RHOV_t_BL => ATMOS_PHY_BL_RHOV_t,    &
+       RHOT_t_BL => ATMOS_PHY_BL_RHOT_t,    &
+       RHOQ_t_BL => ATMOS_PHY_BL_RHOQ_t,    &
+       Zi        => ATMOS_PHY_BL_Zi,        &
+       SFLX_BUOY => ATMOS_PHY_BL_SFLX_BUOY, &
+       QL        => ATMOS_PHY_BL_QL,        &
        cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS,  &
@@ -301,7 +304,7 @@ contains
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
-               QL(:,:,:), cldfrac(:,:,:), Zi(:,:)                      ) ! (out)
+               QL(:,:,:), cldfrac(:,:,:), Zi(:,:), SFLX_BUOY(:,:)      ) ! (out)
           if ( I_QV <= 0 ) deallocate( RHOQV_t )
        case ( 'MYNN-JMAPPLIB' )
           if ( I_QV > 0 ) then
@@ -322,7 +325,7 @@ contains
                RHOU_t_BL(:,:,:), RHOV_t_BL(:,:,:), RHOT_t_BL(:,:,:),   & ! (out)
                RHOQV_t(:,:,:), RHOQ_t_BL(:,:,:,QS:QE),                 & ! (out)
                Nu(:,:,:), Kh(:,:,:),                                   & ! (out)
-               Zi = Zi(:,:)                                            ) ! (out)
+               Zi = Zi(:,:), SFLX_BUOY = SFLX_BUOY(:,:)                ) ! (out)
           if ( I_QV <= 0 ) deallocate( RHOQV_t )
        end select
 
