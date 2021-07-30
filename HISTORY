@@ -1,5 +1,9 @@
 = Release History
 
+== 2021-07-30 (5.4.4)
+* Bug fix:
+  * Fix a bug in the SN14 scheme (thanks to @slayoo)
+
 == 2021-03-03 (5.4.3)
 * Bug fixes:
   * Fix wrong OpenMP directives

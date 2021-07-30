@@ -4857,22 +4857,18 @@ contains
        temc = max( tem(k) - T00, temc_min )
        ! These cause from aerosol-droplet interaction.
        ! Bigg(1953) formula, Khain etal.(2000) eq.(4.5), Pruppacher and Klett(1997) eq.(9-48)
+       Jhet =  a_het*(exp( -b_het*temc) - 1.0_RP )
        ! These cause in nature.
        ! Cotton and Field 2002, QJRMS. (12)
-       if( temc < -65.0_RP )then
-          jhom = 10.0_RP**(24.37236_RP)*1.E+3_RP
-          Jhet =  a_het*exp( 65.0_RP*b_het - 1.0_RP ) ! 09/04/14 [Add], fixer T.Mitsui
-       else if( temc < -30.0_RP ) then
+       if( temc < -30.0_RP ) then
           temc2 = temc*temc
           temc3 = temc*temc2
           temc4 = temc2*temc2
           jhom = 10.0_RP**(&
                - 243.40_RP - 14.75_RP*temc - 0.307_RP*temc2 &
                - 0.00287_RP*temc3 - 0.0000102_RP*temc4 ) *1.E+3_RP
-          Jhet =  a_het*exp( -b_het*temc - 1.0_RP )
        else if( temc < 0.0_RP) then
           jhom = 10._RP**(-7.63_RP-2.996_RP*(temc+30.0_RP))*1.E+3_RP
-          Jhet =  a_het*exp( -b_het*temc - 1.0_RP )
        else
           Jhom = 0.0_RP
           Jhet = 0.0_RP
