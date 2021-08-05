@@ -254,7 +254,8 @@ contains
        QA_MP,     &
        MP_TYPE_in )
     use scale_file, only: &
-       FILE_open, &
+       FILE_open,          &
+       FILE_read,          &
        FILE_get_attribute, &
        FILE_get_shape
     use scale_const, only: &
@@ -300,20 +301,27 @@ contains
                                                                        !   DIST-WEIGHT: distance-weighted mean of the nearest N-neighbors
 
     !< metadata files for lat-lon domain for all processes
-    character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = 'latlon_domain_catalogue.txt'
+    character(len=H_LONG)  :: LATLON_CATALOGUE_FNAME = ''
 
     real(RP), allocatable :: X_ref(:,:)
     real(RP), allocatable :: Y_ref(:,:)
 
+    real(RP), allocatable :: work(:,:)
+
     character(len=H_LONG) :: fname
 
     integer :: ONLINE_SPECIFIED_MAXRQ = 0
-    integer :: i
+    integer :: n, i, j
     integer :: fid, ierr
     integer :: parent_id
+    integer :: parent_xh
+    integer :: parent_yh
+    integer :: prc_reference, prc_target
 
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.
+    logical :: parent_periodic_x
+    logical :: parent_periodic_y
 
     integer :: imaxg(1), jmaxg(1)
     integer :: pnum_x(1), pnum_y(1)
@@ -450,6 +458,20 @@ contains
              endif
           end if
 
+          call FILE_get_attribute( fid, "global", "scale_cartesC_prc_periodic_x", &
+                                   parent_periodic_x, existed=existed             )
+          if ( .not. existed ) then
+             ! for old file (imcompatible)
+             parent_periodic_x = .false.
+          end if
+
+          call FILE_get_attribute( fid, "global", "scale_cartesC_prc_periodic_y", &
+                                   parent_periodic_y, existed=existed             )
+          if ( .not. existed ) then
+             ! for old file (imcompatible)
+             parent_periodic_y = .false.
+          end if
+
        endif
        call COMM_Bcast( OFFLINE_PARENT_IMAX  )
        call COMM_Bcast( OFFLINE_PARENT_JMAX  )
@@ -514,30 +536,88 @@ contains
          allocate( latlon_catalog(PARENT_PRC_nprocs(HANDLING_NUM),2,2) )
 
          !--- read latlon catalogue
-         fid = IO_get_available_fid()
-         call IO_get_fname(fname, LATLON_CATALOGUE_FNAME)
-         open( fid,                  &
-               file   = fname,       &
-               form   = 'formatted', &
-               status = 'old',       &
-               iostat = ierr         )
+         if ( LATLON_CATALOGUE_FNAME /= "" ) then
 
-         if ( ierr /= 0 ) then
-            LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'cannot open latlon-catalogue file!: ', trim(fname)
-            call PRC_abort
-         endif
+            fid = IO_get_available_fid()
+            call IO_get_fname(fname, LATLON_CATALOGUE_FNAME)
+            open( fid,                  &
+                  file   = fname,       &
+                  form   = 'formatted', &
+                  status = 'old',       &
+                  iostat = ierr         )
 
-         do i = 1, PARENT_PRC_nprocs(HANDLING_NUM)
-            read(fid,'(i8,4f32.24)',iostat=ierr) parent_id, &
-                                                 latlon_catalog(i,I_MIN,I_LON), latlon_catalog(i,I_MAX,I_LON), & ! LON: MIN, MAX
-                                                 latlon_catalog(i,I_MIN,I_LAT), latlon_catalog(i,I_MAX,I_LAT)    ! LAT: MIN, MAX
-            if ( i /= parent_id ) then
-               LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'internal error: parent mpi id'
+            if ( ierr /= 0 ) then
+               LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'cannot open latlon-catalogue file!: ', trim(fname)
                call PRC_abort
             endif
-            if ( ierr /= 0 ) exit
-         enddo
-         close(fid)
+
+            do i = 1, PARENT_PRC_nprocs(HANDLING_NUM)
+               read(fid,'(i8,4f32.24)',iostat=ierr) parent_id, &
+                                                    latlon_catalog(i,I_MIN,I_LON), latlon_catalog(i,I_MAX,I_LON), & ! LON: MIN, MAX
+                                                    latlon_catalog(i,I_MIN,I_LAT), latlon_catalog(i,I_MAX,I_LAT)    ! LAT: MIN, MAX
+               if ( i /= parent_id ) then
+                  LOG_ERROR("COMM_CARTESC_NEST_setup",*) 'internal error: parent mpi id'
+                  call PRC_abort
+               endif
+               if ( ierr /= 0 ) exit
+            enddo
+            close(fid)
+
+         else
+
+            if ( PRC_IsMaster ) then
+               n = 1
+               do j = 1, PARENT_PRC_NUM_Y(HANDLING_NUM)
+               do i = 1, PARENT_PRC_NUM_X(HANDLING_NUM)
+                  call FILE_open( OFFLINE_PARENT_BASENAME, & ! (in)
+                                  fid,                     & ! (out)
+                                  aggregate = .false.,     & ! (in)
+                                  rankid    = n-1          ) ! (in)
+
+                  call FILE_get_shape( fid, "xh", dims(:) )
+                  parent_xh = dims(1)
+                  call FILE_get_shape( fid, "yh", dims(:) )
+                  parent_yh = dims(1)
+
+                  allocate( work( parent_xh, parent_yh ) )
+
+                  call FILE_read( fid, "lon_uv", work(:,:) )
+                  latlon_catalog(n,I_MIN,I_LON) = minval( work(:,:) )
+                  latlon_catalog(n,I_MAX,I_LON) = maxval( work(:,:) )
+
+                  call FILE_read( fid, "lat_uv", work(:,:) )
+                  latlon_catalog(n,I_MIN,I_LAT) = minval( work(:,:) )
+                  latlon_catalog(n,I_MAX,I_LAT) = maxval( work(:,:) )
+
+                  deallocate( work )
+
+                  if ( i > 1 ) latlon_catalog(n,I_MIN,I_LON) = latlon_catalog(n - 1,                             I_MAX,I_LON)
+                  if ( j > 1 ) latlon_catalog(n,I_MIN,I_LAT) = latlon_catalog(n - PARENT_PRC_NUM_X(HANDLING_NUM),I_MAX,I_LAT)
+
+                  n = n + 1
+               enddo
+               enddo
+
+               if ( parent_periodic_x ) then
+                  do j = 1, PARENT_PRC_NUM_Y(HANDLING_NUM)
+                     prc_target    = 1 + ( j - 1 ) * PARENT_PRC_NUM_X(HANDLING_NUM)
+                     prc_reference = j * PARENT_PRC_NUM_X(HANDLING_NUM)
+                     latlon_catalog(prc_target,I_MIN,I_LON) = latlon_catalog(prc_reference,I_MAX,I_LON)
+                  enddo
+               endif
+               if ( parent_periodic_y ) then
+                  do i = 1, PARENT_PRC_NUM_X(HANDLING_NUM)
+                     prc_target    = i
+                     prc_reference = i + ( PARENT_PRC_NUM_Y(HANDLING_NUM) - 1 ) * PARENT_PRC_NUM_X(HANDLING_NUM)
+                     latlon_catalog(prc_target,I_MIN,I_LAT) = latlon_catalog(prc_reference,I_MAX,I_LAT)
+                  enddo
+               endif
+
+            endif
+
+            call COMM_Bcast( PARENT_PRC_nprocs(HANDLING_NUM), 2, 2, latlon_catalog(:,:,:) )
+
+         endif
 
          call COMM_CARTESC_NEST_domain_relate(HANDLING_NUM)
 
