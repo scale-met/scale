@@ -324,10 +324,10 @@ contains
                                'SW(',ATMOS_GRID_CARTESC_REAL_LON(IS,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IS,JS)/D2R,')', &
                             ' - SE(',ATMOS_GRID_CARTESC_REAL_LON(IE,JS)/D2R,',',ATMOS_GRID_CARTESC_REAL_LAT(IE,JS)/D2R,')'
 
-    mine(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
-    mine(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(:,:)) / D2R
-    mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
-    mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(:,:)) / D2R
+    mine(I_MIN,I_LON) = minval(ATMOS_GRID_CARTESC_REAL_LONUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MAX,I_LON) = maxval(ATMOS_GRID_CARTESC_REAL_LONUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MIN,I_LAT) = minval(ATMOS_GRID_CARTESC_REAL_LATUV(IS-1:IE,JS-1:JE)) / D2R
+    mine(I_MAX,I_LAT) = maxval(ATMOS_GRID_CARTESC_REAL_LATUV(IS-1:IE,JS-1:JE)) / D2R
 
     call COMM_gather( 2, 2, mine(:,:), whole(:,:,:)  ) ! everytime do for online nesting
 
