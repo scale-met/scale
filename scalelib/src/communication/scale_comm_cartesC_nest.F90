@@ -306,7 +306,7 @@ contains
     real(RP), allocatable :: X_ref(:,:)
     real(RP), allocatable :: Y_ref(:,:)
 
-    real(RP), allocatable :: work(:,:)
+    real(RP), allocatable :: work(:,:), work_uv(:,:), prevmax(:,:)
 
     character(len=H_LONG) :: fname
 
@@ -314,9 +314,8 @@ contains
     integer :: n, i, j
     integer :: fid, ierr
     integer :: parent_id
-    integer :: parent_xh
-    integer :: parent_yh
-    integer :: prc_reference, prc_target
+    integer :: parent_x, parent_xh
+    integer :: parent_y, parent_yh
 
     logical :: flag_parent = .false.
     logical :: flag_child  = .false.
@@ -566,6 +565,9 @@ contains
          else
 
             if ( PRC_IsMaster ) then
+
+               allocate( prevmax(PARENT_PRC_nprocs(HANDLING_NUM),2) )
+
                n = 1
                do j = 1, PARENT_PRC_NUM_Y(HANDLING_NUM)
                do i = 1, PARENT_PRC_NUM_X(HANDLING_NUM)
@@ -578,40 +580,62 @@ contains
                   parent_xh = dims(1)
                   call FILE_get_shape( fid, "yh", dims(:) )
                   parent_yh = dims(1)
+                  allocate( work_uv( parent_xh, parent_yh ) )
 
-                  allocate( work( parent_xh, parent_yh ) )
+                  if ( parent_periodic_x .or. parent_periodic_y ) then
+                     call FILE_get_shape( fid, "x", dims(:) )
+                     parent_x = dims(1)
+                     call FILE_get_shape( fid, "y", dims(:) )
+                     parent_y = dims(1)
+                  end if
 
-                  call FILE_read( fid, "lon_uv", work(:,:) )
-                  latlon_catalog(n,I_MIN,I_LON) = minval( work(:,:) )
-                  latlon_catalog(n,I_MAX,I_LON) = maxval( work(:,:) )
+                  call FILE_read( fid, "lon_uv", work_uv(:,:) )
+                  latlon_catalog(n,I_MIN,I_LON) = minval( work_uv(:,:) )
+                  latlon_catalog(n,I_MAX,I_LON) = maxval( work_uv(:,:) )
 
-                  call FILE_read( fid, "lat_uv", work(:,:) )
-                  latlon_catalog(n,I_MIN,I_LAT) = minval( work(:,:) )
-                  latlon_catalog(n,I_MAX,I_LAT) = maxval( work(:,:) )
+                  if ( i > 1 ) then
+                     latlon_catalog(n,I_MIN,I_LON) = min( latlon_catalog(n,I_MIN,I_LON), prevmax(n-1,I_LON) )
+                  else
+                     if ( parent_periodic_x ) then
+                        allocate( work( parent_x, parent_yh ) )
+                        call FILE_read( fid, "lon_xv", work(:,:) )
 
-                  deallocate( work )
+                        ! This assumes an equally spaced grid
+                        work(1,:) = work(1,:) * 2.0_RP - work_uv(1,:)
+                        latlon_catalog(n,I_MIN,I_LON) = min( latlon_catalog(n,I_MIN,I_LON), minval( work ) )
 
-                  if ( i > 1 ) latlon_catalog(n,I_MIN,I_LON) = latlon_catalog(n - 1,                             I_MAX,I_LON)
-                  if ( j > 1 ) latlon_catalog(n,I_MIN,I_LAT) = latlon_catalog(n - PARENT_PRC_NUM_X(HANDLING_NUM),I_MAX,I_LAT)
+                        deallocate( work )
+                     end if
+                  end if
+                  prevmax(n,I_LON) = maxval( work_uv(parent_xh,:) )
+
+                  call FILE_read( fid, "lat_uv", work_uv(:,:) )
+                  latlon_catalog(n,I_MIN,I_LAT) = minval( work_uv(:,:) )
+                  latlon_catalog(n,I_MAX,I_LAT) = maxval( work_uv(:,:) )
+
+                  if ( j > 1 ) then
+                     latlon_catalog(n,I_MIN,I_LAT) = min( latlon_catalog(n,I_MIN,I_LAT), prevmax(n-PARENT_PRC_NUM_X(HANDLING_NUM),I_LAT) )
+                  else
+                     if ( parent_periodic_y ) then
+                        allocate( work( parent_xh, parent_y ) )
+                        call FILE_read( fid, "lat_uy", work(:,:) )
+
+                        ! This assumes an equally spaced grid
+                        work(:,1) = work(:,1) * 2.0_RP - work_uv(:,1)
+                        latlon_catalog(n,I_MIN,I_LAT) = min( latlon_catalog(n,I_MIN,I_LAT), minval( work(:,1) ) )
+
+                        deallocate( work )
+                     end if
+                  end if
+                  prevmax(n,I_LAT) = maxval( work_uv(:,parent_yh) )
+
+                  deallocate( work_uv )
 
                   n = n + 1
                enddo
                enddo
 
-               if ( parent_periodic_x ) then
-                  do j = 1, PARENT_PRC_NUM_Y(HANDLING_NUM)
-                     prc_target    = 1 + ( j - 1 ) * PARENT_PRC_NUM_X(HANDLING_NUM)
-                     prc_reference = j * PARENT_PRC_NUM_X(HANDLING_NUM)
-                     latlon_catalog(prc_target,I_MIN,I_LON) = latlon_catalog(prc_reference,I_MAX,I_LON)
-                  enddo
-               endif
-               if ( parent_periodic_y ) then
-                  do i = 1, PARENT_PRC_NUM_X(HANDLING_NUM)
-                     prc_target    = i
-                     prc_reference = i + ( PARENT_PRC_NUM_Y(HANDLING_NUM) - 1 ) * PARENT_PRC_NUM_X(HANDLING_NUM)
-                     latlon_catalog(prc_target,I_MIN,I_LAT) = latlon_catalog(prc_reference,I_MAX,I_LAT)
-                  enddo
-               endif
+               deallocate( prevmax )
 
             endif
 
