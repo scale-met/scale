@@ -306,7 +306,7 @@ contains
     real(RP), allocatable :: X_ref(:,:)
     real(RP), allocatable :: Y_ref(:,:)
 
-    real(RP), allocatable :: work(:,:), work_uv(:,:), prevmax(:,:)
+    real(RP), allocatable :: work(:,:), work_uv(:,:), minmax(:,:,:)
 
     character(len=H_LONG) :: fname
 
@@ -566,7 +566,7 @@ contains
 
             if ( PRC_IsMaster ) then
 
-               allocate( prevmax(PARENT_PRC_nprocs(HANDLING_NUM),2) )
+               allocate( minmax(PARENT_PRC_nprocs(HANDLING_NUM),2,2) )
 
                n = 1
                do j = 1, PARENT_PRC_NUM_Y(HANDLING_NUM)
@@ -594,7 +594,8 @@ contains
                   latlon_catalog(n,I_MAX,I_LON) = maxval( work_uv(:,:) )
 
                   if ( i > 1 ) then
-                     latlon_catalog(n,I_MIN,I_LON) = min( latlon_catalog(n,I_MIN,I_LON), prevmax(n-1,I_LON) )
+                     latlon_catalog(n,I_MIN,I_LON) = min( latlon_catalog(n,I_MIN,I_LON), minmax(n-1,I_MIN,I_LON) )
+                     latlon_catalog(n,I_MAX,I_LON) = max( latlon_catalog(n,I_MAX,I_LON), minmax(n-1,I_MAX,I_LON) )
                   else
                      if ( parent_periodic_x ) then
                         allocate( work( parent_x, parent_yh ) )
@@ -603,18 +604,21 @@ contains
                         ! This assumes an equally spaced grid
                         work(1,:) = work(1,:) * 2.0_RP - work_uv(1,:)
                         latlon_catalog(n,I_MIN,I_LON) = min( latlon_catalog(n,I_MIN,I_LON), minval( work ) )
+                        latlon_catalog(n,I_MAX,I_LON) = max( latlon_catalog(n,I_MAX,I_LON), maxval( work ) )
 
                         deallocate( work )
                      end if
                   end if
-                  prevmax(n,I_LON) = maxval( work_uv(parent_xh,:) )
+                  minmax(n,I_MIN,I_LON) = minval( work_uv(parent_xh,:) )
+                  minmax(n,I_MAX,I_LON) = maxval( work_uv(parent_xh,:) )
 
                   call FILE_read( fid, "lat_uv", work_uv(:,:) )
                   latlon_catalog(n,I_MIN,I_LAT) = minval( work_uv(:,:) )
                   latlon_catalog(n,I_MAX,I_LAT) = maxval( work_uv(:,:) )
 
                   if ( j > 1 ) then
-                     latlon_catalog(n,I_MIN,I_LAT) = min( latlon_catalog(n,I_MIN,I_LAT), prevmax(n-PARENT_PRC_NUM_X(HANDLING_NUM),I_LAT) )
+                     latlon_catalog(n,I_MIN,I_LAT) = min( latlon_catalog(n,I_MIN,I_LAT), minmax(n-PARENT_PRC_NUM_X(HANDLING_NUM),I_MIN,I_LAT) )
+                     latlon_catalog(n,I_MAX,I_LAT) = max( latlon_catalog(n,I_MAX,I_LAT), minmax(n-PARENT_PRC_NUM_X(HANDLING_NUM),I_MAX,I_LAT) )
                   else
                      if ( parent_periodic_y ) then
                         allocate( work( parent_xh, parent_y ) )
@@ -623,11 +627,13 @@ contains
                         ! This assumes an equally spaced grid
                         work(:,1) = work(:,1) * 2.0_RP - work_uv(:,1)
                         latlon_catalog(n,I_MIN,I_LAT) = min( latlon_catalog(n,I_MIN,I_LAT), minval( work(:,1) ) )
+                        latlon_catalog(n,I_MAX,I_LAT) = max( latlon_catalog(n,I_MAX,I_LAT), maxval( work(:,1) ) )
 
                         deallocate( work )
                      end if
                   end if
-                  prevmax(n,I_LAT) = maxval( work_uv(:,parent_yh) )
+                  minmax(n,I_MIN,I_LAT) = minval( work_uv(:,parent_yh) )
+                  minmax(n,I_MAX,I_LAT) = maxval( work_uv(:,parent_yh) )
 
                   deallocate( work_uv )
 
@@ -635,7 +641,7 @@ contains
                enddo
                enddo
 
-               deallocate( prevmax )
+               deallocate( minmax )
 
             endif
 
