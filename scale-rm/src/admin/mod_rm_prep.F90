@@ -241,6 +241,8 @@ contains
        TIME_DOURBAN_restart,  &
        TIME_DOOCEAN_restart
 #ifdef JMAPPLIB
+    use pp_print_parm, only: &
+       pp_print_parm_set_flg_out_msg
     use pp_phys_const, only: &
        pp_phys_const_set
 #endif
@@ -371,6 +373,7 @@ contains
     call ATMOS_SATURATION_setup
 
 #ifdef JMAPPLIB
+    call pp_print_parm_set_flg_out_msg( 0 )
     call pp_phys_const_set( &
          tkelvn_in = TEM00, &
          hlatnt_in = LHV0, &
