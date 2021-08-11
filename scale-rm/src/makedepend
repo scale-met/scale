@@ -41,7 +41,7 @@ def parse(deps, pros, srcdir, dir="")
           mod = $1
           next if /(dc_types|dc_log|mpi|netcdf|scale_|gadg|rng|NAME)/ =~ mod
           # JMA pp library
-          next if /pp_phys_const/ =~ mod
+          next if /pp_phys_const|pp_print_parm/ =~ mod
 
           dep[:depends].push(mod) unless dep[:depends].include?(mod)
         end

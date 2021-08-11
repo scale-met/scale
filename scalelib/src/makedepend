@@ -45,7 +45,7 @@ def parse(deps, pros, srcdir, dir=".")
         next if (/(iso_c_binding|mpi|MPI|netcdf|gadg|rng|mt|NAME)/ =~ mod)
         # JMA pp library
         next if /pbl_(const|coupler|grid|parm|diag|mym_const|mym_option|mym_parm|mym_main)/ =~ mod
-        next if /conv_(grid|kf_const|kf_parm|kf_main)/ =~ mod
+        next if /conv_(grid|kf_const|kf_parm|kf_main|kf_lut)/ =~ mod
 
         dep[:depends].push(mod) unless dep[:depends].include?(mod)
       end
