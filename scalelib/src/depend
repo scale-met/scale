@@ -55,6 +55,7 @@ $(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.o: ./atmosphere/physics/pbl/scale_
 $(BUILD_DIR)/scale_atmos_phy_ch_rn222.o: ./atmosphere/physics/chemistry/scale_atmos_phy_ch_rn222.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_cp_common.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_cp_kf.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_kf.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_phy_cp_kf_jmapplib.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_kf_jmapplib.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_lt_sato2019.o: ./atmosphere/physics/lightning/scale_atmos_phy_lt_sato2019.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_grid_cartesC.o $(BUILD_DIR)/scale_atmos_grid_cartesC_index.o $(BUILD_DIR)/scale_atmos_grid_cartesC_metric.o $(BUILD_DIR)/scale_comm_cartesC.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_prc_cartesC.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_random.o
 $(BUILD_DIR)/scale_atmos_phy_mp_common.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_grid_cartesC_index.o $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_kessler.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
@@ -212,6 +213,7 @@ MODS =	\
 	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_common.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_kf.mod	\
+	$(BUILD_DIR)/scale_atmos_phy_cp_kf_jmapplib.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_lt_sato2019.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_common.mod	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_kessler.mod	\

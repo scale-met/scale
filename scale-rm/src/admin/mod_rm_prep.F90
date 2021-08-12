@@ -370,6 +370,21 @@ contains
     call ATMOS_THERMODYN_setup
     call ATMOS_SATURATION_setup
 
+#ifdef JMAPPLIB
+    call pp_phys_const_set( &
+         tkelvn_in = TEM00, &
+         hlatnt_in = LHV0, &
+         hlf_in    = LHF0, &
+         rd_in     = Rdry, &
+         rv_in     = Rvap, &
+         cwater_in = CL, &
+         cice_in   = CI, &
+         vkman_in  = KARMAN, &
+         grav_in   = GRAV, &
+         stb_in    = STB, &
+         sc0_in    = SOLARINS_constant)
+#endif
+
     ! setup variable container
     if ( ATMOS_do ) call ATMOS_vars_setup
     if ( OCEAN_do ) call OCEAN_vars_setup
@@ -388,21 +403,6 @@ contains
 
     ! setup mod_user
     call USER_setup
-
-#ifdef JMAPPLIB
-    call pp_phys_const_set( &
-         tkelvn_in = TEM00, &
-         hlatnt_in = LHV0, &
-         hlf_in    = LHF0, &
-         rd_in     = Rdry, &
-         rv_in     = Rvap, &
-         cwater_in = CL, &
-         cice_in   = CI, &
-         vkman_in  = KARMAN, &
-         grav_in   = GRAV, &
-         stb_in    = STB, &
-         sc0_in    = SOLARINS_constant)
-#endif
 
     call PROF_rapend('Initialize',0)
 

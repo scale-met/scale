@@ -443,19 +443,6 @@ contains
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
 
-    ! setup driver
-    if ( ATMOS_do ) call ATMOS_driver_setup
-    if ( OCEAN_do ) call OCEAN_driver_setup
-    if ( LAND_do  ) call LAND_driver_setup
-    if ( URBAN_do ) call URBAN_driver_setup
-    if ( CPL_sw   ) call CPL_driver_setup
-
-    call USER_setup
-
-    ! output
-    call TOPOGRAPHY_write
-    call LANDUSE_write
-
 #ifdef JMAPPLIB
     call pp_phys_const_set( &
          tkelvn_in = TEM00, &
@@ -470,6 +457,19 @@ contains
          stb_in    = STB, &
          sc0_in    = SOLARINS_constant)
 #endif
+
+    ! setup driver
+    if ( ATMOS_do ) call ATMOS_driver_setup
+    if ( OCEAN_do ) call OCEAN_driver_setup
+    if ( LAND_do  ) call LAND_driver_setup
+    if ( URBAN_do ) call URBAN_driver_setup
+    if ( CPL_sw   ) call CPL_driver_setup
+
+    call USER_setup
+
+    ! output
+    call TOPOGRAPHY_write
+    call LANDUSE_write
 
     call PROF_rapend('Initialize', 0)
 

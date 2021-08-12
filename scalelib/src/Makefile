@@ -164,6 +164,7 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_kf.o	\
+	$(BUILD_DIR)/scale_atmos_phy_cp_kf_jmapplib.o	\
 	$(BUILD_DIR)/scale_atmos_phy_lt_sato2019.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_kessler.o	\
