@@ -63,7 +63,9 @@ contains
   !-----------------------------------------------------------------------------
   subroutine bsstate_setup
     use scale_prc, only: &
-       PRC_abort
+       PRC_abort,     &
+       PRC_myrank,    &
+       PRC_masterrank 
     use scale_const, only: &
        Rdry  => CONST_Rdry,  &
        Rvap  => CONST_Rvap,  &
@@ -130,11 +132,12 @@ contains
        call bsstate_generate  ( pre_ref(:), & ! [OUT]
                                 tem_ref(:), & ! [OUT]
                                 qv_ref (:)  ) ! [OUT]
-
-       call bsstate_output_ref( ref_fname,  & ! [IN]
-                                pre_ref(:), & ! [IN]
-                                tem_ref(:), & ! [IN]
-                                qv_ref (:)  ) ! [IN]
+       if (PRC_myrank == PRC_masterrank) then 
+          call bsstate_output_ref( ref_fname,  & ! [IN]
+                                   pre_ref(:), & ! [IN]
+                                   tem_ref(:), & ! [IN]
+                                   qv_ref (:)  ) ! [IN]
+       endif 
 
     endif
 
@@ -232,7 +235,7 @@ contains
           file   = trim(fname),   &
           form   = 'unformatted', &
           access = 'sequential',  &
-          status = 'new'          )
+          status = 'replace'      )
 
        write(fid) pre_ref_DP(:)
        write(fid) tem_ref_DP(:)
@@ -374,12 +377,16 @@ contains
     call VINTRPL_Z2Xi( tem_bs(:,:,:), tem_bs_pl(:,:,:) )
     call VINTRPL_Z2Xi( qv_bs (:,:,:), qv_bs_pl (:,:,:) )
 
-    rho_bs(:,:,l) = pre_bs(:,:,l) / tem_bs(:,:,l) / ( ( 1.0_RP-qv_bs(:,:,l) ) * Rdry &
-                                                    + (        qv_bs(:,:,l) ) * Rvap )
+    do l = 1, ADM_lall
+       rho_bs(:,:,l) = pre_bs(:,:,l) / tem_bs(:,:,l) / ( ( 1.0_RP-qv_bs(:,:,l) ) * Rdry &
+                                                       + (        qv_bs(:,:,l) ) * Rvap )
+    enddo 
 
     if ( PRC_have_pl ) then
-       rho_bs_pl(:,:,l) = pre_bs_pl(:,:,l) / tem_bs_pl(:,:,l) / ( ( 1.0_RP-qv_bs_pl(:,:,l) ) * Rdry &
-                                                                + (        qv_bs_pl(:,:,l) ) * Rvap )
+       do l = 1, ADM_lall_pl
+          rho_bs_pl(:,:,l) = pre_bs_pl(:,:,l) / tem_bs_pl(:,:,l) / ( ( 1.0_RP-qv_bs_pl(:,:,l) ) * Rdry &
+                                                                   + (        qv_bs_pl(:,:,l) ) * Rvap )
+       enddo
     endif
 
     !--- set boundary conditions of basic state
