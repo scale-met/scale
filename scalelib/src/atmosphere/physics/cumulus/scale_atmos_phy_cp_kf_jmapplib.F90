@@ -85,6 +85,8 @@ contains
     real(RP), intent(in) :: dx
     real(DP), intent(in) :: dt
 
+#ifdef JMAPPLIB
+
     integer  :: ATMOS_PHY_CP_KF_JMAPPLIB_radius_type   = 3         !> 3 for KF1701
                                                                    !> 2 for KF Narita and Moriyasu (2010)
                                                                    !> 1 for Narita (2008)
@@ -115,8 +117,6 @@ contains
     LOG_NEWLINE
     LOG_INFO("ATMOS_PHY_CP_KF_JMAPPLIB_setup",*) 'Setup'
     LOG_INFO("ATMOS_PHY_CP_KF_JMAPPLIB_setup",*) 'KF scheme implemented in the JMA Physics Process Library'
-
-#ifdef JMAPPLIB
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -171,17 +171,16 @@ contains
 
     call conv_kf_lut_ini
 
+    allocate( ishall_counter(IA,JA), ideep_counter(IA,JA) )
+    ishall_counter(:,:) = 0.0_RP
+    ideep_counter (:,:) = 0.0_RP
+
 #else
 
     LOG_ERROR("ATMOS_PHY_CP_KF_JMAPPLIB_setup",*) 'To use "KF-JMAPPLIB", compile SCALE with "SCALE_ENABLE_JMAPPLIB=T" option.'
     call PRC_abort
 
 #endif
-
-    allocate( ishall_counter(IA,JA), ideep_counter(IA,JA) )
-    ishall_counter(:,:) = 0.0_RP
-    ideep_counter (:,:) = 0.0_RP
-
 
     return
   end subroutine ATMOS_PHY_CP_KF_JMAPPLIB_setup
@@ -192,7 +191,9 @@ contains
   subroutine ATMOS_PHY_CP_KF_JMAPPLIB_finalize
     implicit none
 
+#ifdef JMAPPLIB
     deallocate( ishall_counter, ideep_counter )
+#endif
 
     return
   end subroutine ATMOS_PHY_CP_KF_JMAPPLIB_finalize
