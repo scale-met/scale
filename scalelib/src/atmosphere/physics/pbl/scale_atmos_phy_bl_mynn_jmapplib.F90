@@ -282,6 +282,7 @@ contains
     real(RP) :: qv_lc(KS:KE_PBL)
     real(RP) :: qc_lc(KS:KE_PBL)
     real(RP) :: qi_lc(KS:KE_PBL)
+    real(RP) :: dens_lc(KS:KE_PBL)
     real(RP) :: dfm(KS:KE_PBL)
     real(RP) :: dfh(KS:KE_PBL)
     real(RP) :: taux_ex(KS:KE_PBL)
@@ -321,7 +322,7 @@ contains
     h2f_p(:) = 0.5_RP
 
     !$omp parallel do &
-    !$omp private(qke,qv_lc,qc_lc,qi_lc,taux_ex,tauy_ex,ftl_ex,fqw_ex,&
+    !$omp private(qke,qv_lc,qc_lc,qi_lc,dens_lc,taux_ex,tauy_ex,ftl_ex,fqw_ex,&
     !$omp         tend_qke,tend_tsq,tend_qsq,tend_cov,tend_u,tend_v,tend_pt,tend_qv, &
     !$omp         z_f,dz_f,rdz_f,rdz_h, &
     !$omp         rho_ov_rhoa,SFLX_U,SFLX_V,SFLX_PT,SFLX_Q)
@@ -330,7 +331,7 @@ contains
 
        do k = KS, KE_PBL
           qke(k) = PROG(k,i,j,I_TKE) * 2.0_RP
-          rho_ov_rhoa = 1.0_RP / QDRY(k,i,j)
+          rho_ov_rhoa = 1.0_RP / ( QDRY(k,i,j) + QV(k,i,j) )
           qv_lc(k) = QV(k,i,j) * rho_ov_rhoa
           qc_lc(k) = QC(k,i,j) * rho_ov_rhoa
           qi_lc(k) = QI(k,i,j) * rho_ov_rhoa
@@ -377,9 +378,13 @@ contains
           end do
        end select
 
+       do k = KS, KE_PBL
+          dens_lc(k) = DENS(k,i,j) * ( QDRY(k,i,j) + QV(k,i,j) )
+       end do
+
        call pbl_coupler_flx_force_tend_run( &
             SFC_DENS(i,j), SFLX_U, SFLX_V, SFLX_PT, SFLX_Q, & ! (in)
-            dfm(:), dfh(:), DENS(KS:KE,i,j), & ! (in)
+            dfm(:), dfh(:), dens_lc(:),       & ! (in)
             taux_ex, tauy_ex, ftl_ex, fqw_ex, & ! (in)
             F2H(KS:KE_PBL,2,i,j), F2H(KS:KE_PBL,1,i,j), rdz_f, rdz_h, & ! (in)
             tend_u, tend_v, tend_pt, tend_qv ) ! (out)
@@ -388,7 +393,7 @@ contains
           RHOU_t(k,i,j) = tend_u(k) * DENS(k,i,j)
           RHOV_t(k,i,j) = tend_v(k) * DENS(k,i,j)
           RHOT_t(k,i,j) = tend_pt(k) * DENS(k,i,j)
-          RHOQV_t(k,i,j) = tend_qv(k) * QDRY(k,i,j) * DENS(k,i,j)
+          RHOQV_t(k,i,j) = tend_qv(k) * DENS(k,i,j) * ( QDRY(k,i,j) + QV(k,i,j) )
           RPROG_t(k,i,j,I_TKE) = tend_qke(k) * DENS(k,i,j) * 0.5_RP
           RPROG_t(k,i,j,I_TSQ) = tend_tsq(k) * DENS(k,i,j)
           RPROG_t(k,i,j,I_QSQ) = tend_qsq(k) * DENS(k,i,j)

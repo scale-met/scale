@@ -89,8 +89,8 @@ module scale_atmos_phy_bl_mynn
   real(RP), private            :: AF12 !> A1 F1 / A2 F2
   real(RP), private, parameter :: PrN = 0.74_RP
 
-  real(RP), private, parameter :: zeta_min = -3.0_RP
-  real(RP), private, parameter :: zeta_max =  1.0_RP
+  real(RP), private, parameter :: zeta_min = -5.0_RP
+  real(RP), private, parameter :: zeta_max =  2.0_RP
 
   real(RP), private            :: SQRT_2PI
   real(RP), private            :: RSQRT_2PI
@@ -110,7 +110,7 @@ module scale_atmos_phy_bl_mynn
   logical,  private            :: ATMOS_PHY_BL_MYNN_init_TKE   = .false.
   logical,  private            :: ATMOS_PHY_BL_MYNN_similarity = .true.
 
-  character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "2.5" ! "2.5" or "3", level 3 is under experimental yet.
+  character(len=H_SHORT), private  :: ATMOS_PHY_BL_MYNN_LEVEL = "3" ! "2.5" or "3"
 
   namelist / PARAM_ATMOS_PHY_BL_MYNN / &
        ATMOS_PHY_BL_MYNN_PBL_MAX,  &
@@ -242,10 +242,6 @@ contains
     SQRT_2PI  = sqrt( 2.0_RP * PI )
     RSQRT_2PI = 1.0_RP / SQRT_2PI
     RSQRT_2   = 1.0_RP / sqrt( 2.0_RP )
-
-    if ( ATMOS_PHY_BL_MYNN_LEVEL == "3" ) then
-       LOG_WARN("ATMOS_PHY_BL_MYNN_setup", *) "At this moment, level 3 is still experimental"
-    end if
 
     initialize = ATMOS_PHY_BL_MYNN_init_TKE
 
@@ -539,9 +535,10 @@ contains
 
        call calc_vertical_differece( KA, KS, KE_PBL, &
                                      i, j, &
-                                     U(:,i,j), V(:,i,j), POTL(:,i,j), Qw(:,i,j), & ! (in)
-                                     CDZ(:), FDZ(:), F2H(:,:,i,j),               & ! (in)
-                                     dudz2(:,i,j), dtldz(:), dqwdz(:)            ) ! (out)
+                                     U(:,i,j), V(:,i,j), POTL(:,i,j), & ! (in)
+                                     Qw(:,i,j), QDRY(:,i,j),          & ! (in)
+                                     CDZ(:), FDZ(:), F2H(:,:,i,j),    & ! (in)
+                                     dudz2(:,i,j), dtldz(:), dqwdz(:) ) ! (out)
 
        us3 = us(i,j)**3
        SFLX_PT = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
@@ -634,7 +631,7 @@ contains
           call partial_condensation( KA, KS, KE_PBL, &
                                      PRES(:,i,j), POTT(:,i,j),  & ! (in)
                                      POTL(:,i,j), Qw(:,i,j),    & ! (in)
-                                     Qdry(:,i,j), EXNER(:,i,j), & ! (in)
+                                     QDRY(:,i,j), EXNER(:,i,j), & ! (in)
                                      tsq(:), qsq(:), cov(:),    & ! (in)
                                      betat(:), betaq(:),        & ! (out)
                                      Qlp(:,i,j), cldfrac(:,i,j) ) ! (out)
@@ -717,8 +714,10 @@ contains
 
           do k = KS, KE_PBL-1
              rho_h(k) = F2H(k,1,i,j) * RHO(k+1) + F2H(k,2,i,j) * RHO(k)
-             RHONu(k) = rho_h(k) * Nu(k,i,j)
-             RHOKh(k) = rho_h(k) * Kh(k,i,j)
+             RHONu(k) = Nu(k,i,j) * rho_h(k)
+             RHOKh(k) = Kh(k,i,j) * rho_h(k)
+!             RHONu(k) = F2H(k,1,i,j) * RHO(k+1) * Nu_f(k+1) + F2H(k,2,i,j) * RHO(k) * Nu_f(k)
+!             RHOKh(k) = F2H(k,1,i,j) * RHO(k+1) * Kh_f(k+1) + F2H(k,2,i,j) * RHO(k) * Kh_f(k)
           end do
 
 
@@ -1421,8 +1420,11 @@ contains
        f3 =    9.0_RP * ac2 * A2**2   * ( 1.0_RP - C2 ) * ( 1.0_RP - C5 )
        f4 = - 12.0_RP * ac2 * A1 * A2 * ( 1.0_RP - C2 )
 
-       ghq2 = - n2(k) * l2
-!       ghq2 = max( - n2(k) * l2, -q2 ) ! L/q <= 1/N for N^2>0
+       if ( mynn_level3 ) then ! level 3
+          ghq2 = max( - n2(k) * l2, -q2 ) ! L/q <= 1/N for N^2>0
+       else
+          ghq2 = - n2(k) * l2
+       end if
        gmq2 = dudz2(k) * l2
 
        p1q2   = q2 + f1 * ghq2
@@ -1465,8 +1467,8 @@ contains
 
              rdpq2  = q2 / max( p2q2 * ( f4 * ghq2 + q2 ) + p5q2 * ( f3 * ghq2 + q2 ), 1e-20_RP )
 
-!             l2q2 = l2 / q2
-             l2q2 = min( l2q2, 1.0_RP / max(n2(k), EPS) )
+             l2q2 = l2 / q2
+!             l2q2 = min( l2q2, 1.0_RP / max(n2(k), EPS) )
 
              tltv = betat(k) * tsq(k) + betaq(k) * cov(k)
              qwtv = betat(k) * cov(k) + betaq(k) * qsq(k)
@@ -1614,9 +1616,9 @@ contains
   subroutine calc_vertical_differece( &
        KA, KS, KE, &
        i, j,       &
-       U, V, POTL, Qw,     &
-       CDZ, FDZ, F2H,      &
-       dudz2, dtldz, dqwdz )
+       U, V, POTL, Qw, QDRY, &
+       CDZ, FDZ, F2H,        &
+       dudz2, dtldz, dqwdz   )
     use scale_const, only: &
        EPS => CONST_EPS
     integer,  intent(in)  :: KA, KS, KE
@@ -1626,6 +1628,7 @@ contains
     real(RP), intent(in) :: V   (KA)
     real(RP), intent(in) :: POTL(KA)
     real(RP), intent(in) :: Qw  (KA)
+    real(RP), intent(in) :: QDRY(KA)
     real(RP), intent(in) :: CDZ (KA)
     real(RP), intent(in) :: FDZ (KA)
     real(RP), intent(in) :: F2H (KA,2)
@@ -1635,6 +1638,7 @@ contains
     real(RP), intent(out) :: dqwdz(KA)
 
     real(RP) :: Uh(KA), Vh(KA)
+    real(RP) :: qw2(KA)
     real(RP) :: qh(KA)
 
     integer :: k
@@ -1669,9 +1673,14 @@ contains
     end do
 
     do k = KS, KE
-       qh(k) = f2h(k,1) * Qw(k+1) + f2h(k,2) * Qw(k)
+       qw2(k) = Qw(k) / ( QDRY(k) + Qw(k) )
     end do
-    dqwdz(KS) = ( qh(KS) - Qw(KS) ) / ( CDZ(KS) * 0.5_RP )
+    do k = KS, KE
+!       qh(k) = f2h(k,1) * Qw(k+1) + f2h(k,2) * Qw(k)
+       qh(k) = f2h(k,1) * qw2(k+1) + f2h(k,2) * qw2(k)
+    end do
+    dqwdz(KS) = ( qh(KS) - qw2(KS) ) / ( CDZ(KS) * 0.5_RP )
+!    dqwdz(KS) = ( qh(KS) - Qw(KS) ) / ( CDZ(KS) * 0.5_RP )
 !    dqwdz(KS) = ( Qw(KS+1) - Qw(KS) ) / FDZ(KS)
     do k = KS+1, KE
        dqwdz(k) = ( qh(k) - qh(k-1) ) / CDZ(k)
@@ -1691,13 +1700,16 @@ contains
     use scale_const, only: &
        CPdry   => CONST_CPdry,  &
        Rvap    => CONST_Rvap,   &
-       CPvap   => CONST_CPvap,  &
        EPSvap  => CONST_EPSvap, &
        EPSTvap => CONST_EPSTvap
     use scale_atmos_saturation, only: &
-       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_liq
+       ATMOS_SATURATION_psat => ATMOS_SATURATION_psat_liq
+!       ATMOS_SATURATION_pres2qsat => ATMOS_SATURATION_pres2qsat_liq
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       LHV,      &
+       CP_VAPOR, &
+       CP_WATER
     integer,  intent(in)  :: KA, KS, KE
     real(RP), intent(in)  :: PRES (KA)
     real(RP), intent(in)  :: POTT (KA)
@@ -1715,8 +1727,9 @@ contains
     real(RP), intent(out) :: cldfrac(KA)
 
     real(RP) :: TEML(KA)
-    real(RP) :: Qsl (KA)
     real(RP) :: LHVL(KA)
+    real(RP) :: psat(KA)
+    real(RP) :: Qsl
     real(RP) :: dQsl
     real(RP) :: CPtot
     real(RP) :: aa, bb, cc
@@ -1730,10 +1743,14 @@ contains
        TEML(k) = POTL(k) * EXNER(k)
     end do
 
-    call ATMOS_SATURATION_pres2qsat( &
+!!$    call ATMOS_SATURATION_pres2qsat( &
+!!$         KA, KS, KE, &
+!!$         TEML(:), PRES(:), Qdry(:), & ! (in)
+!!$         Qsl(:)                     ) ! (out)
+    call ATMOS_SATURATION_psat( &
          KA, KS, KE, &
-         TEML(:), PRES(:), Qdry(:), & ! (in)
-         Qsl(:)                     ) ! (out)
+         TEML(:), & ! (in)
+         psat(:)  ) ! (out)
 
     call HYDROMETEOR_LHV( &
          KA, KS, KE, & ! (in)
@@ -1742,15 +1759,19 @@ contains
 
     do k = KS, KE
 
-       dQsl = ( 1.0_RP + Qsl(k) / ( Qdry(k) * EPSvap ) ) * Qsl(k) * LHVL(k) / ( Rvap * TEML(k)**2 )
-       CPtot = Qdry(k) * CPdry + Qsl(k) * CPvap
+       Qsl = EPSvap * psat(k) / ( PRES(k) - ( 1.0_RP - EPSvap ) * psat(k) )
+       dQsl = PRES(k) * Qsl**2 / ( EPSvap * psat(k) ) * ( ( CP_VAPOR - CP_WATER ) + LHV / TEML(k) ) / ( Rvap * TEML(k) )
+
+       !dQsl = ( 1.0_RP + Qsl / ( Qdry(k) * EPSvap ) ) * Qsl * LHVL(k) / ( Rvap * TEML(k)**2 )
+
+       CPtot = Qdry(k) * CPdry + Qsl * CP_VAPOR
        aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
        bb = EXNER(k) * dQsl
 
        sigma_s = min( max( &
             0.5_RP * aa * sqrt( max( qsq(k) - 2.0_RP * bb * cov(k) + bb**2 * tsq(k), 1.0e-20_RP ) ), &
-            aa * Qsl(k) * 0.09_RP), aa * Qsl(k) )
-       Q1 = aa * ( Qw(k) - Qsl(k) ) * 0.5_RP / sigma_s
+            aa * Qsl * 0.09_RP), aa * Qsl )
+       Q1 = aa * ( Qw(k) - Qsl ) * 0.5_RP / sigma_s
        cldfrac(k) = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
        Qlp(k) = min( max( 2.0_RP * sigma_s * ( cldfrac(k) * Q1 + rsqrt_2pi &
 #if defined(NVIDIA) || defined(SX)
