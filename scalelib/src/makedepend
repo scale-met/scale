@@ -70,11 +70,4 @@ File.open( File.join(srcdir, "depend"), "w" ) do |file|
     file.print "\n"
   end
   file.print "\n"
-  mods = Array.new
-
-  pros.keys.sort.map{|mod|
-     mod = mod.downcase
-     mods.push "$(BUILD_DIR)/#{mod}.mod"
-  }
-  file.print "MODS =\t\\\n\t", mods.join("\t\\\n\t"), "\n"
 end
