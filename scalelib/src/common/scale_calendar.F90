@@ -49,6 +49,11 @@ module scale_calendar
   integer, public, parameter :: I_min   = 5 !< [index] minute
   integer, public, parameter :: I_sec   = 6 !< [index] second
 
+  real(DP), public :: CALENDAR_DOI  = 365.0_DP !< days of year
+  real(DP), public :: CALENDAR_HOUR = 24.0_DP  !< hours   of day
+  real(DP), public :: CALENDAR_MIN  = 60.0_DP  !< minutes of hour
+  real(DP), public :: CALENDAR_SEC  = 60.0_DP  !< seconds of minute
+
   !-----------------------------------------------------------------------------
   !
   !++ Private procedure
@@ -65,20 +70,21 @@ module scale_calendar
   !
   logical,  private :: CALENDAR_360DAYS = .false.
   logical,  private :: CALENDAR_365DAYS = .false.
-
-  real(DP), private :: CALENDAR_DOI  = 365.0_DP !< days of year
-  real(DP), private :: CALENDAR_HOUR = 24.0_DP  !< hours   of day
-  real(DP), private :: CALENDAR_MIN  = 60.0_DP  !< minutes of hour
-  real(DP), private :: CALENDAR_SEC  = 60.0_DP  !< seconds of minute
+  logical,  private :: CALENDAR_USER    = .false.
 
   integer,  private, parameter :: I_nonleapyear = 1   !< [index] non leap year
   integer,  private, parameter :: I_leapyear    = 2   !< [index] leap year
   integer,  private, parameter :: I_360days     = 3   !< [index] 360 days
-  integer,  private            :: dayofmonth(12,3)    !< days of each month
+  integer,  private, parameter :: I_USER        = 4   !< [index] user defined calendar
+
+  integer,  private            :: dayofmonth(12,4)    !< days of each month
   data dayofmonth / 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! non-leap year
                     31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31, & ! leap year
-                    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30  / ! 360 days
+                    30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, 30, & ! 360 days
+                    -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 /  ! for CALENDAR_USER_DEFINED
 
+  integer,  private :: CALENDAR_USER_DEFINED(12)
+  integer,  private :: CALENDAR_MONTH = 12
   logical,  private :: debug = .false.
 
   !-----------------------------------------------------------------------------
@@ -91,15 +97,21 @@ contains
     implicit none
 
     namelist / PARAM_CALENDAR / &
-       CALENDAR_360DAYS, &
-       CALENDAR_365DAYS, &
+       CALENDAR_360DAYS,        &
+       CALENDAR_365DAYS,        &
+       CALENDAR_HOUR,           &
+       CALENDAR_MIN,            &
+       CALENDAR_SEC,            &
+       CALENDAR_USER_DEFINED,   &
        debug
 
-    integer :: ierr
+    integer :: ierr, i
     !---------------------------------------------------------------------------
 
     LOG_NEWLINE
     LOG_INFO("CALENDAR_setup",*) 'Setup'
+
+    CALENDAR_USER_DEFINED(:) = 0
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -112,21 +124,42 @@ contains
     endif
     LOG_NML(PARAM_CALENDAR)
 
-    if    ( CALENDAR_360DAYS ) then
-       CALENDAR_DOI = 360.0_DP
-    elseif( CALENDAR_365DAYS ) then
-       CALENDAR_DOI = 365.0_DP
-    endif
-
     LOG_NEWLINE
     LOG_INFO("CALENDAR_setup",*) 'Calendar settings'
-    if    ( CALENDAR_360DAYS ) then
+    if ( maxval(CALENDAR_USER_DEFINED) > 0 ) then
+       dayofmonth(:,I_USER) = CALENDAR_USER_DEFINED(:)
+       CALENDAR_DOI  = sum(CALENDAR_USER_DEFINED)
+       CALENDAR_USER = .true.
+       LOG_INFO_CONT(*) 'DayOfYear = ', int(CALENDAR_DOI), ' : user defined calendar'
+       do i = 1, 12
+          if ( CALENDAR_USER_DEFINED(i) > 0 ) then
+             LOG_INFO_CONT(*) 'month #', i, ': ', CALENDAR_USER_DEFINED(i), "days"
+          else
+             CALENDAR_MONTH = i - 1
+             exit
+          endif
+       enddo
+    elseif( CALENDAR_360DAYS ) then
+       CALENDAR_DOI = 360.0_DP
        LOG_INFO_CONT(*) 'DayOfYear = 360 : ideal setting'
     elseif( CALENDAR_365DAYS ) then
+       CALENDAR_DOI = 365.0_DP
        LOG_INFO_CONT(*) 'DayOfYear = 365 : ideal setting'
     else
        LOG_INFO_CONT(*) 'DayOfYear = 365 or 366 : Gregorian calendar'
     endif
+
+    if (int(CALENDAR_SEC) /= CALENDAR_SEC .or. int(CALENDAR_SEC) == 0 ) then
+       LOG_ERROR("CALENDAR_setup",*) 'CALENDAR_SEC must be a natural number!'
+       call abort
+    elseif (int(CALENDAR_MIN) /= CALENDAR_MIN .or. int(CALENDAR_MIN) == 0 ) then
+       LOG_ERROR("CALENDAR_setup",*) 'CALENDAR_MIN must be a natural number!'
+       call abort
+    elseif (int(CALENDAR_HOUR) /= CALENDAR_HOUR .or. int(CALENDAR_HOUR) == 0 ) then
+       LOG_ERROR("CALENDAR_setup",*) 'CALENDAR_HOUR must be a natural number!'
+       call abort
+    endif
+
 
     return
   end subroutine CALENDAR_setup
@@ -163,7 +196,38 @@ contains
     integer,  intent(in)  :: ymdhms(6)   !< date
     real(DP), intent(in)  :: subsec      !< subsecond
     integer,  intent(in)  :: offset_year !< offset year
+    integer               :: ileap
+    logical               :: date_error = .false.
     !---------------------------------------------------------------------------
+
+    ! check date
+    if ( ymdhms(I_month) < 1 .or. CALENDAR_MONTH < ymdhms(I_month) ) then
+       LOG_ERROR("CALENDAR_date2daysec",*) 'Inputted month does not match to the calendar.'
+       date_error = .true.
+    endif
+
+    ileap = I_nonleapyear
+    if( checkleap(ymdhms(I_year)+offset_year) ) ileap = I_leapyear
+    if( CALENDAR_360DAYS     ) ileap = I_360days
+    if( CALENDAR_USER        ) ileap = I_USER
+
+    if ( ymdhms(I_day ) < 1 .or. dayofmonth(ymdhms(I_month),ileap) < ymdhms(I_day) ) then
+       LOG_ERROR("CALENDAR_date2daysec",*) 'Inputted day does not match to the calendar.'
+       date_error = .true.
+    endif
+    if ( ymdhms(I_hour) < 0 .or. (int(CALENDAR_HOUR)-1) < ymdhms(I_hour) ) then
+       LOG_ERROR("CALENDAR_date2daysec",*) 'Inputted hour does not match to the calendar.'
+       date_error = .true.
+    endif
+    if ( ymdhms(I_min ) < 0 .or. (int(CALENDAR_MIN )-1) < ymdhms(I_min ) ) then
+       LOG_ERROR("CALENDAR_date2daysec",*) 'Inputted minute does not match to the calendar.'
+       date_error = .true.
+    endif
+    if ( ymdhms(I_sec ) < 0 .or. (int(CALENDAR_SEC )-1) < ymdhms(I_sec ) ) then
+       LOG_ERROR("CALENDAR_date2daysec",*) 'Inputted second does not match to the calendar.'
+       date_error = .true.
+    endif
+    if( date_error ) call abort
 
     call CALENDAR_ymd2absday( absday,          & ! [OUT]
                               ymdhms(I_year),  & ! [IN]
@@ -233,10 +297,10 @@ contains
     integer :: m, ileap
     !---------------------------------------------------------------------------
 
-    gmonth_mod = mod( gmonth-1, 12 ) + 1
-    gyear_mod  = gyear + ( gmonth-gmonth_mod ) / 12
+    gmonth_mod = mod( gmonth-1, CALENDAR_MONTH ) + 1
+    gyear_mod  = gyear + ( gmonth-gmonth_mod ) / CALENDAR_MONTH
 
-    if ( CALENDAR_360DAYS .OR. CALENDAR_365DAYS ) then
+    if ( CALENDAR_360DAYS .OR. CALENDAR_365DAYS .or. CALENDAR_USER) then
        yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) )
     else
        yearday = int( CALENDAR_DOI * ( gyear_mod - oyear ) ) &
@@ -251,6 +315,7 @@ contains
     ileap = I_nonleapyear
     if( checkleap(gyear_mod) ) ileap = I_leapyear
     if( CALENDAR_360DAYS     ) ileap = I_360days
+    if( CALENDAR_USER        ) ileap = I_USER
 
     monthday = 0
     do m = 1, gmonth_mod-1
@@ -282,11 +347,7 @@ contains
     integer :: i, ileap
     !---------------------------------------------------------------------------
 
-    if ( CALENDAR_360DAYS ) then
-       gyear = int( real(absday,kind=DP) / 361.0_DP ) + oyear ! first guess
-    else
-       gyear = int( real(absday,kind=DP) / 366.0_DP ) + oyear ! first guess
-    endif
+    gyear = int( real(absday,kind=DP) / (CALENDAR_DOI+1.0_DP) ) + oyear ! first guess
 
     do i = 1, 1000
        call CALENDAR_ymd2absday( checkday, gyear+1, 1, 1, oyear )
@@ -297,6 +358,7 @@ contains
     ileap = I_nonleapyear
     if( checkleap(gyear) ) ileap = I_leapyear
     if( CALENDAR_360DAYS ) ileap = I_360days
+    if( CALENDAR_USER    ) ileap = I_USER
 
     gmonth = 1
     do i = 1, 1000
@@ -605,9 +667,37 @@ contains
     character(len=27), intent(out) :: chardate    !< formatted date character
     integer,           intent(in)  :: ymdhms(6)   !< date
     real(DP),          intent(in)  :: subsec      !< subsecond
-    !---------------------------------------------------------------------------
 
-    write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &
+    character(len=4)               :: seclen      !< length of seconds
+    character(len=4)               :: minlen      !< length of minutes
+    character(len=4)               :: hourlen     !< length of hours
+    character(len=4)               :: daylen      !< length of days
+    character(len=4)               :: monthlen    !< length of months
+
+
+    !---------------------------------------------------------------------------
+    if ( CALENDAR_USER) then
+       write(daylen, '(A1,I1.1,A1,I1.1)') 'I', int(log10(real(maxval(CALENDAR_USER_DEFINED))))+1, &
+                                          '.', int(log10(real(maxval(CALENDAR_USER_DEFINED))))+1
+       if( CALENDAR_MONTH < 10 ) then
+          write(monthlen, '(A4)') 'I1.1'
+       else
+          write(monthlen, '(A4)') 'I2.2'
+       endif
+    else
+       write(daylen,   '(A4)') 'I2.2'
+       write(monthlen, '(A4)') 'I2.2'
+    endif
+
+    write(seclen, '(A1,I1.1,A1,I1.1)') 'I', int(log10(max(CALENDAR_SEC -1.0_DP, 1.0_DP)))+1, &
+                                       '.', int(log10(max(CALENDAR_SEC -1.0_DP, 1.0_DP)))+1
+    write(minlen, '(A1,I1.1,A1,I1.1)') 'I', int(log10(max(CALENDAR_MIN -1.0_DP, 1.0_DP)))+1, &
+                                       '.', int(log10(max(CALENDAR_MIN -1.0_DP, 1.0_DP)))+1
+    write(hourlen,'(A1,I1.1,A1,I1.1)') 'I', int(log10(max(CALENDAR_HOUR-1.0_DP, 1.0_DP)))+1, &
+                                       '.', int(log10(max(CALENDAR_HOUR-1.0_DP, 1.0_DP)))+1
+
+!    write(chardate,'(I4.4,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A1,I2.2,A2,F6.3)')   &
+    write(chardate,'(I4.4,A1,'//monthlen//',A1,'//daylen//',A1,'//hourlen//',A1,'//minlen//',A1,'//seclen//',A2,F6.3)') &
                        ymdhms(1),'/',ymdhms(2),'/',ymdhms(3),' ',  &
                        ymdhms(4),':',ymdhms(5),':',ymdhms(6),' +', &
                        subsec
@@ -638,6 +728,7 @@ contains
 
     if( CALENDAR_360DAYS ) checkleap = .false.
     if( CALENDAR_365DAYS ) checkleap = .false.
+    if( CALENDAR_USER    ) checkleap = .false.
 
   end function checkleap
 
@@ -703,10 +794,10 @@ contains
             + ymdhms(I_day)                         & ! day
             + 678912                                ! constant
 
-    mjd     = real(mjd_day,kind=DP)       & ! day
-            + ymdhms(I_hour) /    24.0_DP & ! hour
-            + ymdhms(I_min)  /  1440.0_DP & ! min
-            + ymdhms(I_sec)  / 86400.0_DP   ! sec
+    mjd     = real(mjd_day,kind=DP)                                      & ! day
+            + ymdhms(I_hour) / (CALENDAR_HOUR                          ) & ! hour
+            + ymdhms(I_min)  / (CALENDAR_HOUR*CALENDAR_MIN             ) & ! min
+            + ymdhms(I_sec)  / (CALENDAR_HOUR*CALENDAR_MIN*CALENDAR_SEC)   ! sec
 
     return
   end subroutine CALENDAR_ymdhms2mjd
@@ -718,6 +809,8 @@ contains
        name = "360_day"
     elseif( CALENDAR_365DAYS ) then
        name = "365_day"
+    elseif( CALENDAR_USER    ) then
+       name = "USER_DEFINED"
     else
        name = "gregorian"
     endif
