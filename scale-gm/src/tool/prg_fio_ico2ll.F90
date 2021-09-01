@@ -32,8 +32,13 @@ program fio_ico2ll
      CONST_UNDEF, &
      CONST_UNDEF4
   use scale_calendar, only: &
+     CALENDAR_setup,         &
      CALENDAR_daysec2date,   &
-     CALENDAR_adjust_daysec
+     CALENDAR_adjust_daysec, &
+     CALENDAR_DOI,           &
+     CALENDAR_HOUR,          &
+     CALENDAR_MIN,           &
+     CALENDAR_SEC
   use mod_netcdf, only: &
      NETCDF_handler,        &
      NETCDF_set_logfid,     &
@@ -51,8 +56,8 @@ program fio_ico2ll
   !++ param & variable
   !
   integer, parameter :: max_nvar   = 500
-  integer, parameter :: max_nstep  = 1500
-  integer, parameter :: max_nlayer = 200
+  integer, parameter :: max_nstep  = 3000
+  integer, parameter :: max_nlayer = 500
 
   !--- NAMELIST
   integer                :: glevel              = -1
@@ -77,6 +82,10 @@ program fio_ico2ll
   character(len=H_SHORT) :: selectvar(max_nvar) = ''
   integer                :: nlim_llgrid         = 10000000  ! limit number of lat-lon grid in 1 ico region
   logical                :: dcmip2016           = .false.   ! CF mode for dcmip2016
+  character(len=H_SHORT) :: time_units          = 'minutes' ! unit of time: seconds, minutes, hours, days
+  logical                :: use_calendar        = .true.    ! use calendar for time unit (e.g., minutes since: 0000-01-01 00:00:00)
+  integer                :: offset_year         = 0
+
 
   logical                :: help = .false.
 
@@ -103,6 +112,9 @@ program fio_ico2ll
      selectvar,           &
      nlim_llgrid,         &
      dcmip2016,           &
+     time_units,          &
+     use_calendar,        &
+     offset_year,         &
      help
 
   !-----------------------------------------------------------------------------
@@ -185,13 +197,17 @@ program fio_ico2ll
   character(len=6) :: rankstr
   integer          :: pstr, pend, pp
 
+  ! for time
+  real(8), allocatable :: time_axis(:)
+  real(8)              :: sec_in_timeunit
+
   character(len=H_LONG) :: fname
   character(len=20)     :: tmpl
   integer(8)            :: nowsec
   integer(8)            :: recsize ! [mod] 12-04-19 H.Yashiro
   integer               :: kmax, num_of_step, step, date_str(6)
 
-  integer :: histday, offset_year
+  integer :: histday
   real(8) :: histsec, histms
 
   logical :: addvar
@@ -227,6 +243,8 @@ program fio_ico2ll
   call IO_LOG_setup( myrank, ismaster )
 
   call PROF_rapstart('FIO_ICO2LL_MPI')
+
+  call CALENDAR_setup
 
   !--- read namelist
   rewind(IO_FID_CONF)
@@ -689,7 +707,6 @@ program fio_ico2ll
   do v = 1, nvar
      histday     = 0
      histsec     = real(var_time_str(v),kind=RP)
-     offset_year = 0
 
      call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
 
@@ -760,7 +777,6 @@ program fio_ico2ll
 
            histday     = 0
            histsec     = real(var_time_str(v),kind=RP)
-           offset_year = 0
 
            call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
 
@@ -769,13 +785,25 @@ program fio_ico2ll
                                       histday,     & ! [IN]
                                       histsec,     & ! [IN]
                                       offset_year  ) ! [IN]
-
-           write( nc_time_units,'(A14,I4.4,5(A,I2.2))') "minutes since ", date_str(1), &
-                                                                     "-", date_str(2), &
-                                                                     "-", date_str(3), &
-                                                                     " ", date_str(4), &
-                                                                     ":", date_str(5), &
-                                                                     ":", date_str(6)
+           if ( use_calendar ) then
+              write( nc_time_units,'(A7,A7,I4.4,5(A,I2.2))') trim(time_units), " since ", date_str(1), &
+                                                                                     "-", date_str(2), &
+                                                                                     "-", date_str(3), &
+                                                                                     " ", date_str(4), &
+                                                                                     ":", date_str(5), &
+                                                                                     ":", date_str(6)
+           else
+              if ( trim(time_units) == "days" ) then
+                 write( nc_time_units, '(A5)') trim(time_units)
+              elseif ( trim(time_units) == "hours" ) then
+                 write( nc_time_units, '(A6)') trim(time_units)
+              elseif ( trim(time_units) == "minutes" .or. trim(time_units) == "seconds" ) then
+                 write( nc_time_units, '(A7)') trim(time_units)
+              else
+                 LOG_ERROR("fio_ico2ll",*) 'time_units must be days, hours, minutes, or seconds'
+               call PRC_abort
+              endif
+           endif
 
            LOG_INFO("fio_ico2ll",*) '  nc_time_units = ', trim(nc_time_units)
 
@@ -799,6 +827,30 @@ program fio_ico2ll
               var_unit_nc = trim(var_unit(v))
            endif
 
+           allocate( time_axis(num_of_step))
+           if ( trim(time_units) == "days" ) then
+              sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR
+           elseif ( trim(time_units) == "hours" ) then
+              sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN
+           elseif ( trim(time_units) == "minutes" ) then
+              sec_in_timeunit = CALENDAR_SEC
+           elseif ( trim(time_units) == "seconds" ) then
+              sec_in_timeunit = 1.0_RP
+           endif
+           if ( use_calendar ) then
+              do t = 1, num_of_step
+                time_axis(t) = real(t-1,8)*real(var_dt(v),8)/real(sec_in_timeunit,8)
+              enddo
+           else
+            do t = 1, num_of_step
+               time_axis(t) = ( real(histsec,8)                                                          &
+                              + real(histday,8)    *CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR              &
+                              + real(offset_year,8)*CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR*CALENDAR_DOI &
+                              + real(t-1,8)*real(var_dt(v),8) )                                          &
+                              / real(sec_in_timeunit,8)
+             enddo
+           endif
+
            call netcdf_open_for_write( nc,                                       & ! [OUT]
                                        ncfile      = trim(outbase)//'.nc',       & ! [IN]
                                        count       = (/  imax, jmax, kmax, 1 /), & ! [IN]
@@ -810,7 +862,8 @@ program fio_ico2ll
                                        lon         = lon_tmp,                    & ! [IN]
                                        lat         = (/ ( lat(j)*180.D0/pi, j=1, jmax ) /), & ! [IN]
                                        lev         = var_zgrid(1:kmax,v),        & ! [IN]
-                                       time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
+!                                       time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
+                                       time        = time_axis,                  & ! [IN]
                                        lev_units   ='m',                         & ! [IN]
                                        time_units  = trim(nc_time_units),        & ! [IN]
                                        var_name    = trim(var_name_nc),          & ! [IN]
@@ -820,6 +873,8 @@ program fio_ico2ll
                                        netcdf_comp_level = netcdf_comp_level    )  ! [IN]
 
            deallocate(lon_tmp)
+           deallocate( time_axis)
+
            call PROF_rapend  ('+FILE O NETCDF')
 
         endif
@@ -1167,7 +1222,6 @@ contains
 
     histday     = 0
     histsec     = real(datesec,kind=RP)
-    offset_year = 0
 
     call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
 
@@ -1192,7 +1246,7 @@ contains
     character(len=18) :: tmp
     !---------------------------------------------------------------------------
 
-    write(tmp,*) max(isec/60, 1)
+    write(tmp,*) max(isec/int(CALENDAR_SEC), 1)
 
     template = trim(tmp)//'mn'
 
