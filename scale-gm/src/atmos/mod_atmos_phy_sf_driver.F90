@@ -280,7 +280,7 @@ contains
           dz = FZ(KS,i,j,l) - FZ(KS-1,i,j,l)
           RHOU(KS,i,j,l) = RHOU(KS,i,j,l) + SFLX_MU(i,j,l) / dz * dt_SF
           RHOV(KS,i,j,l) = RHOV(KS,i,j,l) + SFLX_MV(i,j,l) / dz * dt_SF
-          RHOE(KS,i,j,l) = RHOE(KS,i,j,l) + SFLX_SH(i,j,l) / ( CPdry * dz ) * dt_SF
+          RHOE(KS,i,j,l) = RHOE(KS,i,j,l) + SFLX_SH(i,j,l) / dz * dt_SF
        enddo
        enddo
 
