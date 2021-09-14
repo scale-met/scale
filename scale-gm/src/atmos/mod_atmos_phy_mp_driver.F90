@@ -107,7 +107,7 @@ contains
        ATMOS_PHY_MP_SN14_nices,               &
        ATMOS_PHY_MP_SN14_tracer_names,        &
        ATMOS_PHY_MP_SN14_tracer_descriptions, &
-       ATMOS_PHY_MP_SN14_tracer_units    
+       ATMOS_PHY_MP_SN14_tracer_units
     use scale_atmos_phy_mp_suzuki10, only: &
        ATMOS_PHY_MP_suzuki10_tracer_setup,        &
        ATMOS_PHY_MP_suzuki10_ntracers,            &
@@ -237,7 +237,7 @@ contains
        QS_MP, &
        QE_MP
     implicit none
-    
+
     namelist / PARAM_ATMOS_PHY_MP / &
        MP_do_precipitation,     &
        MP_do_negative_fixer,    &
@@ -545,7 +545,7 @@ contains
                                                DENS(:,:,:,l),  PRES(:,:,:,l), TEMP(:,:,:,l), & ! [IN]
                                                QTRC(:,:,:,QS_MP:QE_MP,l), QDRY(:,:,:,l),   & ! [IN]
                                                CPtot(:,:,:,l), CVtot(:,:,:,l),             & ! [IN]
-                                               CCN(:,:,:,l),                             & ! [IN] 
+                                               CCN(:,:,:,l),                             & ! [IN]
                                                RHOQ_t(:,:,:,QS_MP:QE_MP),           & ! [OUT]
                                                RHOE_t(:,:,:,l),                          & ! [OUT]
                                                CPtot_t(:,:,:), CVtot_t(:,:,:),         & ! [OUT]
@@ -635,7 +635,7 @@ contains
                 select case ( ATMOS_PHY_MP_TYPE )
                 case ( 'KESSLER' )
                    do k = KS, KE
-                      ij = i + ADM_imin - 1 + ( j - 1 ) * ADM_iall
+                      ij = i + ADM_imin - 1 + j * ADM_iall
                       REFSTATE_dens(k) = rho_bs(ij,k,l)
                    end do
                    call ATMOS_PHY_MP_kessler_terminal_velocity( &
