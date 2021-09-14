@@ -610,8 +610,8 @@ contains
     integer  :: year  ! used year
     integer  :: d
     integer  :: date(6)
-    real(RP) :: Re_factor, sinDEC, cosDEC, hourangle, subsec
-    real(DP) :: lambda
+    real(RP) :: Re_factor, sinDEC, cosDEC, hourangle
+    real(DP) :: lambda, subsec
     character(len=27) :: datechar
 
     integer  :: ierr
