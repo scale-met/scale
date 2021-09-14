@@ -390,8 +390,10 @@ contains
   subroutine ATMOS_PHY_MP_driver_step
     use scale_time, only: &
        dt_MP => TIME_DTSEC_ATMOS_PHY_MP
-    use scale_file_history, only: &
-       FILE_HISTORY_in
+   !  use scale_file_history, only: &
+   !     FILE_HISTORY_in
+    use mod_history, only: &
+      history_in
     use scale_atmos_hydrometeor, only: &
        I_QV,  &
        N_HYD, &
@@ -734,10 +736,16 @@ contains
     end do
     end do
 
-    call FILE_HISTORY_in( SFLX_rain(:,:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_snow(:,:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  fill_halo=.true. )
-    call FILE_HISTORY_in( precip   (:,:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  fill_halo=.true. )
-    call FILE_HISTORY_in( EVAPORATE(:,:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rain(:,:,:),   'RAIN_MP',   'surface rain rate by MP',          'kg/m2/s',  fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_snow(:,:,:),   'SNOW_MP',   'surface snow rate by MP',          'kg/m2/s',  fill_halo=.true. )
+   !  call FILE_HISTORY_in( precip   (:,:,:),   'PREC_MP',   'surface precipitation rate by MP', 'kg/m2/s',  fill_halo=.true. )
+   !  call FILE_HISTORY_in( EVAPORATE(:,:,:,:), 'EVAPORATE', 'evaporated cloud number',          'num/m3/s', fill_halo=.true. )
+    do l = 1, ADM_lall
+       call history_in(  'RAIN_MP',     var_g ( SFLX_rain(:,:,l)   ) )  ! 'surface rain rate by MP',          'kg/m2/s',
+       call history_in(  'SNOW_MP',     var_g ( SFLX_snow(:,:,l)   ) )  ! 'surface snow rate by MP',          'kg/m2/s',
+       call history_in(  'PREC_MP',     var_g ( precip   (:,:,l)   ) )  ! 'surface precipitation rate by MP', 'kg/m2/s',
+       call history_in(  'EVAPORATE',   var_gk( EVAPORATE(:,:,:,l) ) )  ! 'evaporated cloud number',          'num/m3/s'
+    enddo
 
 
     call ATMOS_vars_calc_diagnostics
@@ -844,5 +852,34 @@ contains
 
     return
   end subroutine ATMOS_PHY_MP_driver_qhyd2qtrc
+
+  ! the following two functions are conversion to use history_in(), which will be replaced by FILE_HISTOTY_in in future.
+  function var_g(var_ij)
+     implicit none
+     real(RP) :: var_ij (IA,JA)
+     real(RP) :: var_g  (ADM_gall_in, ADM_KNONE)
+     integer  :: i, j, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        var_g(g,ADM_KNONE) = var_ij(i,j)
+     enddo
+     enddo
+  end function var_g
+
+  function var_gk(var_kij)
+     implicit none
+     real(RP) :: var_kij (KA, IA, JA)
+     real(RP) :: var_gk  (ADM_gall_in, ADM_Kall)
+     integer  :: i, j, k, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        do k = 1, KA
+           var_gk(g,k) = var_kij(k,i,j)
+        enddo
+     enddo
+     enddo
+  end function var_gk
 
 end module mod_atmos_phy_mp_driver
