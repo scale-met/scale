@@ -353,10 +353,10 @@ contains
     real(RP) :: l    (KA,IA,JA) !> length scale L
     real(RP) :: rho_h(KA)       !> dens at the half level
 
-    real(RP) :: flxU(KA,IA,JA) !> dens * w * u
-    real(RP) :: flxV(KA,IA,JA) !> dens * w * v
-    real(RP) :: flxT(KA,IA,JA) !> dens * w * pt
-    real(RP) :: flxQ(KA,IA,JA) !> dens * w * qv
+    real(RP) :: flxU(0:KA,IA,JA) !> dens * w * u
+    real(RP) :: flxV(0:KA,IA,JA) !> dens * w * v
+    real(RP) :: flxT(0:KA,IA,JA) !> dens * w * pt
+    real(RP) :: flxQ(0:KA,IA,JA) !> dens * w * qv
 
     real(RP) :: RHO   (KA) !> dens after updated
     real(RP) :: RHONu (KA) !> dens * Nu at the half level for level 2.5
@@ -545,7 +545,7 @@ contains
 
        if ( initialize ) then
           do k = KS, KE_PBL
-             q(k) = 1e10_RP
+             q(k) = 1e-10_RP
           end do
        else
           do k = KS, KE_PBL
@@ -1006,8 +1006,6 @@ contains
           ! dens * TKE
 
           ! production
-          Nu  (KS-1,i,j) = 0.0_RP
-          Kh  (KS-1,i,j) = 0.0_RP
           do k = KS, KE_PBL
              prod(k,i,j) = lq(k) * ( ( sm25(k) + smp(k) ) * dudz2(k,i,j) &
                                    - ( sh25(k) * n2_new(k) - shpgh(k) ) )
@@ -1166,6 +1164,8 @@ contains
 
        end do
 
+       Nu(KS-1,i,j) = 0.0_RP
+       Kh(KS-1,i,j) = 0.0_RP
        do k = KE_PBL, KE
           Nu   (k,i,j) = 0.0_RP
           Kh   (k,i,j) = 0.0_RP
@@ -1672,7 +1672,7 @@ contains
 !            / ( FDZ(k-1) * FDZ(k) * ( FDZ(k-1) + FDZ(k) ) )
     end do
 
-    do k = KS, KE
+    do k = KS, KE+1
        qw2(k) = Qw(k) / ( QDRY(k) + Qw(k) )
     end do
     do k = KS, KE
@@ -1760,11 +1760,9 @@ contains
     do k = KS, KE
 
        Qsl = EPSvap * psat(k) / ( PRES(k) - ( 1.0_RP - EPSvap ) * psat(k) )
-       dQsl = PRES(k) * Qsl**2 / ( EPSvap * psat(k) ) * ( ( CP_VAPOR - CP_WATER ) + LHV / TEML(k) ) / ( Rvap * TEML(k) )
+       dQsl = PRES(k) * Qsl**2 * LHVL(k) / ( EPSvap * psat(k) * Rvap * TEML(k)**2 )
 
-       !dQsl = ( 1.0_RP + Qsl / ( Qdry(k) * EPSvap ) ) * Qsl * LHVL(k) / ( Rvap * TEML(k)**2 )
-
-       CPtot = Qdry(k) * CPdry + Qsl * CP_VAPOR
+       CPtot = ( 1.0_RP - Qsl ) * CPdry + Qsl * CP_VAPOR
        aa = 1.0_RP / ( 1.0_RP + LHVL(k)/CPtot * dQsl )
        bb = EXNER(k) * dQsl
 
