@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 ifndef PREPDIR
    PREPDIR = ../pp
@@ -25,15 +27,15 @@ RUNCONF     = run.conf
 TPROC       = 400
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/rad/PARAG.29           PARAG.29         ] \
-                [${TESTDIR}/data/rad/PARAPC.29          PARAPC.29        ] \
-                [${TESTDIR}/data/rad/VARDATA.RM29       VARDATA.RM29     ] \
-                [${TESTDIR}/data/rad/cira.nc            cira.nc          ] \
-                [${TESTDIR}/data/rad/MIPAS/day.atm      day.atm          ] \
-                [${TESTDIR}/data/rad/MIPAS/equ.atm      equ.atm          ] \
-                [${TESTDIR}/data/rad/MIPAS/sum.atm      sum.atm          ] \
-                [${TESTDIR}/data/rad/MIPAS/win.atm      win.atm          ] \
-                [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
+DATPARAM    = " [${DATADIR}/rad/PARAG.29           PARAG.29         ] \
+                [${DATADIR}/rad/PARAPC.29          PARAPC.29        ] \
+                [${DATADIR}/rad/VARDATA.RM29       VARDATA.RM29     ] \
+                [${DATADIR}/rad/cira.nc            cira.nc          ] \
+                [${DATADIR}/rad/MIPAS/day.atm      day.atm          ] \
+                [${DATADIR}/rad/MIPAS/equ.atm      equ.atm          ] \
+                [${DATADIR}/rad/MIPAS/sum.atm      sum.atm          ] \
+                [${DATADIR}/rad/MIPAS/win.atm      win.atm          ] \
+                [${DATADIR}/land/param.bucket.conf param.bucket.conf] "
 DATDISTS    = " [${TPROC} $(PREPDIR)/topo     topo    ] \
                 [${TPROC} $(PREPDIR)/landuse  landuse ] \
                 [${TPROC} $(INITDIR)/boundary boundary] \

@@ -125,8 +125,10 @@ contains
   subroutine ATMOS_PHY_BL_driver_step
     use scale_const, only: &
        PRE00 => CONST_PRE00
-    use scale_file_history, only: &
-       FILE_HISTORY_in
+   !  use scale_file_history, only: &
+   !     FILE_HISTORY_in
+    use mod_history, only: &
+       history_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
     use scale_atmos_phy_bl_mynn, only: &
@@ -270,12 +272,33 @@ contains
        end do
     end select
 
-    call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
-    call FILE_HISTORY_in( Kh(:,:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+   !  call FILE_HISTORY_in( Nu(:,:,:,:),        'Nu_BL',     'eddy viscosity',     'm2/s',      fill_halo=.true. )
+   !  call FILE_HISTORY_in( Kh(:,:,:,:),        'Kh_BL',     'eddy diffusion',     'm2/s',      fill_halo=.true. )
+    do l = 1, ADM_lall
+       call history_in( 'Nu_BL',    var_gk(  Nu(:,:,:,l) ) )  !  'eddy viscosity',     'm2/s'
+       call history_in( 'Kh_BL',    var_gk(  Kh(:,:,:,l) ) )  !  'eddy diffusion',     'm2/s'
+    enddo
 
     call ATMOS_vars_calc_diagnostics
 
     return
   end subroutine ATMOS_PHY_BL_driver_step
+
+  ! the following function is conversion to use history_in(), which will be replaced by FILE_HISTOTY_in in future.
+  function var_gk(var_kij)
+     implicit none
+     real(RP) :: var_kij (KA, IA, JA)
+     real(RP) :: var_gk  (ADM_gall_in, ADM_Kall)
+     integer  :: i, j, k, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        do k = 1, KA
+           var_gk(g,k) = var_kij(k,i,j)
+        enddo
+     enddo
+     enddo
+  end function var_gk
+
 
 end module mod_atmos_phy_bl_driver

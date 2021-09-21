@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,7 +21,7 @@ RUNCONF     = run.conf
 TPROC       = 6
 
 # required data (look-up table for charge split)
-DATPARAM    = " [${TESTDIR}/data/lightning/LUT_TK1978_v.txt LUT_TK1978_v.txt] "
+DATPARAM    = " [${DATADIR}/lightning/LUT_TK1978_v.txt LUT_TK1978_v.txt] "
 DATDISTS    =
 
 

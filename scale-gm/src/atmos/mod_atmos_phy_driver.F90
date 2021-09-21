@@ -15,6 +15,7 @@ module mod_atmos_phy_driver
   !
   use scale_precision
   use scale_io
+  use scale_prof
   use scale_atmos_grid_icoA_index
   use scale_tracer
 
@@ -135,6 +136,7 @@ contains
 
     !---------------------------------------------------------------------------
 
+    call PROF_rapstart  ('__Physics',1)
 
     call prgvar_get_in( &
        rhog(:,:,:),                                               & ! [OUT]
@@ -151,21 +153,29 @@ contains
 
 
     if( atmos_sw_phy_mp ) then
+       call PROF_rapstart  ('___Microphysics',1)
        call atmos_phy_mp_driver_step
        call atmos_phy_mp_driver_adjustment
        call atmos_vars_calc_diagnostics
+       call PROF_rapend    ('___Microphysics',1)
     end if
     if( atmos_sw_phy_rd ) then
+       call PROF_rapstart  ('___Radiation',1)
        call atmos_phy_rd_driver_step
        call atmos_vars_calc_diagnostics
+       call PROF_rapend    ('___Radiation',1)
     end if
     if( atmos_sw_phy_sf ) then
+       call PROF_rapstart  ('___Surfacefluxes',1)
        call atmos_phy_sf_driver_step
        call atmos_vars_calc_diagnostics
+       call PROF_rapend    ('___Surfacefluxes',1)
     end if
     if( atmos_sw_phy_bl ) then
+       call PROF_rapstart  ('___Boundarylayer',1)
        call atmos_phy_bl_driver_step
        call atmos_vars_calc_diagnostics
+       call PROF_rapend    ('___Boundarylayer',1)
     end if
 
 
@@ -180,6 +190,8 @@ contains
        rhog(:,:,:),                                               & ! [IN]
        rhogvx(:,:,:), rhogvy(:,:,:), rhogvz(:,:,:), rhogw(:,:,:), & ! [IN]
        rhoge(:,:,:), rhogq(:,:,:,:)                               ) ! [IN]
+
+    call PROF_rapend  ('__Physics',1)
 
     return
   end subroutine atmos_phy_driver

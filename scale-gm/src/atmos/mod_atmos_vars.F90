@@ -637,7 +637,7 @@ contains
     do l = 1, ADM_lall
     do j = 1, JA
     do i = 1, IA
-       ij = i + ADM_imin - 1 + ( j - 1 ) * ADM_imax
+       ij = i + ADM_imin - 1 + j * ADM_iall
        do k = 1, KA
           CZ(k,i,j,l) = GRD_vz(ij,k,l,GRD_Z)
        end do
@@ -664,7 +664,7 @@ contains
     do l = 1, ADM_lall
     do j = 1, JA
     do i = 1, IA
-       ij = i + ADM_imin - 1 + ( j - 1 ) * ADM_iall
+       ij = i + ADM_imin - 1 + j * ADM_iall
        LON(i,j,l) = GRD_s(ij,ADM_KNONE,l,I_LON)
        LAT(i,j,l) = GRD_s(ij,ADM_KNONE,l,I_LAT)
     end do
@@ -677,7 +677,7 @@ contains
     do l = 1, ADM_lall
     do j = 1, JA
     do i = 1, IA
-       ij = i + ADM_imin - 1 + ( j - 1 ) * ADM_iall
+       ij = i + ADM_imin - 1 + j * ADM_iall
        TOPO_Zsfc(i,j,l) = GRD_zs(ij,ADM_KNONE,l,GRD_ZSFC)
        Z1       (i,j,l) = CZ(KS,i,j,l) - TOPO_Zsfc(i,j,l)
     end do

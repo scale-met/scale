@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_GM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,7 +21,7 @@ ICO2LLCONF  = ico2ll.conf
 TPROC       = 10
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid40_cnst_20km_dcmip2016.dat vgrid40_cnst_20km_dcmip2016.dat] \
+DATPARAM    = " [${DATADIR_GM}/grid/vgrid/vgrid40_cnst_20km_dcmip2016.dat vgrid40_cnst_20km_dcmip2016.dat] \
                 [$(SCALE_DB)/grid/llmap/gl05rl00pe10_i180j90 llmap] "
 DATDISTS    = " [${TPROC} $(SCALE_DB)/grid/boundary/gl05rl00pe10/boundary_GL05RL00 boundary_GL05RL00] "
 
