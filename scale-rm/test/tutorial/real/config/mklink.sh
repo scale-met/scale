@@ -3,7 +3,7 @@
 TOPDIR="../../../../../.."
 
 RPATH_BIN="${TOPDIR}/bin"
-RPATH_DAT="${TOPDIR}/scale-rm/test/data"
+RPATH_DAT="${TOPDIR}/data"
 RPATH_N2G="${TOPDIR}/scale-rm/util/netcdf2grads_h"
 
 # symbolic link for database

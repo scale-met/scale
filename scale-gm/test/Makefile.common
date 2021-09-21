@@ -75,8 +75,6 @@ ifeq ($(origin ICO2LLCONF), undefined)
    ICO2LLCONF = NONE
 endif
 
-
-
 include $(SYSDEP_DIR)/Makedef.$(SCALE_SYS)
 include $(TOPDIR)/Mkinclude
 

@@ -7,7 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
-TESTDIR_RM  = ${TOPDIR}/scale-rm/test/
+DATADIR     = ${TOPDIR}/data
+DATADIR_GM  = ${TESTDIR}/data
 
 # user-defined source files
 CODE_DIR    = .
@@ -19,16 +20,16 @@ ICO2LLCONF  = ico2ll.conf
 TPROC       = 10
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/grid/vgrid/vgrid40_600m_24km.dat vgrid40_600m_24km.dat] \
-                [$(SCALE_DB)/grid/llmap/gl05rl00pe10_i180j90 llmap]                      \
-		[${TESTDIR_RM}/data/rad/PARAG.29      PARAG.29    ]                      \
-                [${TESTDIR_RM}/data/rad/PARAPC.29     PARAPC.29   ]                      \
-                [${TESTDIR_RM}/data/rad/VARDATA.RM29  VARDATA.RM29]                      \
-                [${TESTDIR_RM}/data/rad/cira.nc       cira.nc     ]                      \
-                [${TESTDIR_RM}/data/rad/MIPAS/day.atm day.atm     ]                      \
-                [${TESTDIR_RM}/data/rad/MIPAS/equ.atm equ.atm     ]                      \
-                [${TESTDIR_RM}/data/rad/MIPAS/sum.atm sum.atm     ]                      \
-                [${TESTDIR_RM}/data/rad/MIPAS/win.atm win.atm     ]                      \
+DATPARAM    = " [${DATADIR_GM}/grid/vgrid/vgrid40_600m_24km.dat vgrid40_600m_24km.dat] \
+		[${DATADIR}/rad/PARAG.29      PARAG.29    ]                            \
+                [${DATADIR}/rad/PARAPC.29     PARAPC.29   ]                            \
+                [${DATADIR}/rad/VARDATA.RM29  VARDATA.RM29]                            \
+                [${DATADIR}/rad/cira.nc       cira.nc     ]                            \
+                [${DATADIR}/rad/MIPAS/day.atm day.atm     ]                            \
+                [${DATADIR}/rad/MIPAS/equ.atm equ.atm     ]                            \
+                [${DATADIR}/rad/MIPAS/sum.atm sum.atm     ]                            \
+                [${DATADIR}/rad/MIPAS/win.atm win.atm     ]                            \
+                [$(SCALE_DB)/grid/llmap/gl05rl00pe10_i180j90 llmap]                    \
 "
 DATDISTS    = " [${TPROC} $(SCALE_DB)/grid/boundary/gl05rl00pe10/boundary_GL05RL00 boundary_GL05RL00] "
 
