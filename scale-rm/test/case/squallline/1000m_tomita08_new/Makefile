@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,7 +21,7 @@ RUNCONF     = run.conf
 TPROC       = 8
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/input_sounding/squallline.txt squallline.txt] "
+DATPARAM    = " [${DATADIR_RM}/input_sounding/squallline.txt squallline.txt] "
 DATDISTS    =
 
 

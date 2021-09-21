@@ -123,8 +123,10 @@ contains
        TIME_NOWDATE,                     &
        TIME_NOWDAYSEC,                   &
        TIME_OFFSET_YEAR
-    use scale_file_history, only: &
-       FILE_HISTORY_in
+   !  use scale_file_history, only: &
+   !     FILE_HISTORY_in
+    use mod_history, only: &
+       history_in
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use scale_atmos_aerosol, only: &
@@ -347,72 +349,168 @@ contains
     end do
 
 
-    call FILE_HISTORY_in( solins(:,:,:), 'SOLINS', 'solar insolation',        'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( cosSZA(:,:,:), 'COSZ',   'cos(solar zenith angle)', '1',    fill_halo=.true. )
+   !  call FILE_HISTORY_in( solins(:,:,:), 'SOLINS', 'solar insolation',        'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( cosSZA(:,:,:), 'COSZ',   'cos(solar zenith angle)', '1',    fill_halo=.true. )
 
-    call FILE_HISTORY_in( SFCFLX_LW_up_c(:,:,:),      'SFLX_LW_up_c',   'SFC upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_LW_dn_c(:,:,:),      'SFLX_LW_dn_c',   'SFC downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_SW_up_c(:,:,:),      'SFLX_SW_up_c',   'SFC upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_SW_dn_c(:,:,:),      'SFLX_SW_dn_c',   'SFC downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_LW_up_c(:,:,:),      'SFLX_LW_up_c',   'SFC upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_LW_dn_c(:,:,:),      'SFLX_LW_dn_c',   'SFC downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_SW_up_c(:,:,:),      'SFLX_SW_up_c',   'SFC upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_SW_dn_c(:,:,:),      'SFLX_SW_dn_c',   'SFC downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( SFCFLX_LW_up  (:,:,:),      'SFLX_LW_up',     'SFC upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_LW_dn  (:,:,:),      'SFLX_LW_dn',     'SFC downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_SW_up  (:,:,:),      'SFLX_SW_up',     'SFC upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFCFLX_SW_dn  (:,:,:),      'SFLX_SW_dn',     'SFC downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_LW_up  (:,:,:),      'SFLX_LW_up',     'SFC upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_LW_dn  (:,:,:),      'SFLX_LW_dn',     'SFC downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_SW_up  (:,:,:),      'SFLX_SW_up',     'SFC upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFCFLX_SW_dn  (:,:,:),      'SFLX_SW_dn',     'SFC downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( flux_net_sfc  (:,:,:,I_LW), 'SFLX_LW_net',    'SFC net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_net_sfc  (:,:,:,I_SW), 'SFLX_SW_net',    'SFC net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_sfc  (:,:,:,I_LW), 'SFLX_LW_net',    'SFC net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_sfc  (:,:,:,I_SW), 'SFLX_SW_net',    'SFC net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( TOAFLX_LW_up_c(:,:,:),      'TOAFLX_LW_up_c', 'TOA upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_LW_dn_c(:,:,:),      'TOAFLX_LW_dn_c', 'TOA downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_SW_up_c(:,:,:),      'TOAFLX_SW_up_c', 'TOA upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_SW_dn_c(:,:,:),      'TOAFLX_SW_dn_c', 'TOA downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_LW_up_c(:,:,:),      'TOAFLX_LW_up_c', 'TOA upward   longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_LW_dn_c(:,:,:),      'TOAFLX_LW_dn_c', 'TOA downward longwave  radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_SW_up_c(:,:,:),      'TOAFLX_SW_up_c', 'TOA upward   shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_SW_dn_c(:,:,:),      'TOAFLX_SW_dn_c', 'TOA downward shortwave radiation flux (clr)', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( TOAFLX_LW_up  (:,:,:),      'TOAFLX_LW_up',   'TOA upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_LW_dn  (:,:,:),      'TOAFLX_LW_dn',   'TOA downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_SW_up  (:,:,:),      'TOAFLX_SW_up',   'TOA upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_SW_dn  (:,:,:),      'TOAFLX_SW_dn',   'TOA downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_LW_up  (:,:,:),      'TOAFLX_LW_up',   'TOA upward   longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_LW_dn  (:,:,:),      'TOAFLX_LW_dn',   'TOA downward longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_SW_up  (:,:,:),      'TOAFLX_SW_up',   'TOA upward   shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_SW_dn  (:,:,:),      'TOAFLX_SW_dn',   'TOA downward shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( flux_net_toa  (:,:,:,I_LW), 'TOAFLX_LW_net',  'TOA net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_net_toa  (:,:,:,I_SW), 'TOAFLX_SW_net',  'TOA net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_toa  (:,:,:,I_LW), 'TOAFLX_LW_net',  'TOA net      longwave  radiation flux',       'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_toa  (:,:,:,I_SW), 'TOAFLX_SW_net',  'TOA net      shortwave radiation flux',       'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( flux_net_sfc(:,:,:,I_LW),   'SLR',          'SFC net longwave  radiation flux',  'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_net_sfc(:,:,:,I_SW),   'SSR',          'SFC net shortwave radiation flux',  'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_LW_up(:,:,:),        'OLR',          'outgoing longwave  radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( TOAFLX_SW_up(:,:,:),        'OSR',          'outgoing shortwave radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_sfc(:,:,:,I_LW),   'SLR',          'SFC net longwave  radiation flux',  'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net_sfc(:,:,:,I_SW),   'SSR',          'SFC net shortwave radiation flux',  'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_LW_up(:,:,:),        'OLR',          'outgoing longwave  radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( TOAFLX_SW_up(:,:,:),        'OSR',          'outgoing shortwave radiation flux', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( flux_up     (:,:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_dn     (:,:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_net    (:,:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_up     (:,:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_dn     (:,:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_net    (:,:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_up     (:,:,:,:,I_LW), 'RADFLUX_LWUP', 'upward   longwave  radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_dn     (:,:,:,:,I_LW), 'RADFLUX_LWDN', 'downward longwave  radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net    (:,:,:,:,I_LW), 'RADFLUX_LW',   'net      longwave  radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_up     (:,:,:,:,I_SW), 'RADFLUX_SWUP', 'upward   shortwave radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_dn     (:,:,:,:,I_SW), 'RADFLUX_SWDN', 'downward shortwave radiation flux', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_net    (:,:,:,:,I_SW), 'RADFLUX_SW',   'net      shortwave radiation flux', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ,:), 'SFLX_IR_dn_dir',  'SFC downward radiation flux (direct ,IR )', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ,:), 'SFLX_IR_dn_dif',  'SFC downward radiation flux (diffuse,IR )', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR,:), 'SFLX_NIR_dn_dir', 'SFC downward radiation flux (direct ,NIR)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR,:), 'SFLX_NIR_dn_dif', 'SFC downward radiation flux (diffuse,NIR)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS,:), 'SFLX_VIS_dn_dir', 'SFC downward radiation flux (direct ,VIS)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS,:), 'SFLX_VIS_dn_dif', 'SFC downward radiation flux (diffuse,VIS)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ,:), 'SFLX_IR_dn_dir',  'SFC downward radiation flux (direct ,IR )', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ,:), 'SFLX_IR_dn_dif',  'SFC downward radiation flux (diffuse,IR )', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR,:), 'SFLX_NIR_dn_dir', 'SFC downward radiation flux (direct ,NIR)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR,:), 'SFLX_NIR_dn_dif', 'SFC downward radiation flux (diffuse,NIR)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS,:), 'SFLX_VIS_dn_dir', 'SFC downward radiation flux (direct ,VIS)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS,:), 'SFLX_VIS_dn_dif', 'SFC downward radiation flux (diffuse,VIS)', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( TEMP_t   (:,:,:,I_LW,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)',  'K/day',     fill_halo=.true. )
-    call FILE_HISTORY_in( TEMP_t   (:,:,:,I_SW,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)',  'K/day',     fill_halo=.true. )
-    call FILE_HISTORY_in( TEMP_t   (:,:,:,3   ,:), 'TEMP_t_rd',    'tendency of temp in rd',      'K/day',     fill_halo=.true. )
-    call FILE_HISTORY_in( RHOH     (:,:,:,:),      'RHOH_RD',      'diabatic heating rate in rd', 'J/m3/s',    fill_halo=.true. )
+   !  call FILE_HISTORY_in( TEMP_t   (:,:,:,I_LW,:), 'TEMP_t_rd_LW', 'tendency of temp in rd(LW)',  'K/day',     fill_halo=.true. )
+   !  call FILE_HISTORY_in( TEMP_t   (:,:,:,I_SW,:), 'TEMP_t_rd_SW', 'tendency of temp in rd(SW)',  'K/day',     fill_halo=.true. )
+   !  call FILE_HISTORY_in( TEMP_t   (:,:,:,3   ,:), 'TEMP_t_rd',    'tendency of temp in rd',      'K/day',     fill_halo=.true. )
+   !  call FILE_HISTORY_in( RHOH     (:,:,:,:),      'RHOH_RD',      'diabatic heating rate in rd', 'J/m3/s',    fill_halo=.true. )
 
-    ! output of raw data, for offline output
-    call FILE_HISTORY_in( flux_rad(:,:,:,I_LW,I_up,2,:), 'RFLX_LW_up', 'upward   longwave  radiation flux (cell face)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_rad(:,:,:,I_LW,I_dn,2,:), 'RFLX_LW_dn', 'downward longwave  radiation flux (cell face)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_rad(:,:,:,I_SW,I_up,2,:), 'RFLX_SW_up', 'upward   shortwave radiation flux (cell face)', 'W/m2', fill_halo=.true. )
-    call FILE_HISTORY_in( flux_rad(:,:,:,I_SW,I_dn,2,:), 'RFLX_SW_dn', 'downward shortwave radiation flux (cell face)', 'W/m2', fill_halo=.true. )
+   !  ! output of raw data, for offline output
+   !  call FILE_HISTORY_in( flux_rad(:,:,:,I_LW,I_up,2,:), 'RFLX_LW_up', 'upward   longwave  radiation flux (cell face)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_rad(:,:,:,I_LW,I_dn,2,:), 'RFLX_LW_dn', 'downward longwave  radiation flux (cell face)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_rad(:,:,:,I_SW,I_up,2,:), 'RFLX_SW_up', 'upward   shortwave radiation flux (cell face)', 'W/m2', fill_halo=.true. )
+   !  call FILE_HISTORY_in( flux_rad(:,:,:,I_SW,I_dn,2,:), 'RFLX_SW_dn', 'downward shortwave radiation flux (cell face)', 'W/m2', fill_halo=.true. )
 
-    call FILE_HISTORY_in( dtau_s(:,:,:,:), 'dtau_s', '0.67 micron cloud optical depth', '1', fill_halo=.true. )
-    call FILE_HISTORY_in( dem_s (:,:,:,:), 'dem_s',  '10.5 micron cloud emissivity',    '1', fill_halo=.true. )
+   !  call FILE_HISTORY_in( dtau_s(:,:,:,:), 'dtau_s', '0.67 micron cloud optical depth', '1', fill_halo=.true. )
+   !  call FILE_HISTORY_in( dem_s (:,:,:,:), 'dem_s',  '10.5 micron cloud emissivity',    '1', fill_halo=.true. )
+
+    do l = 1, ADM_lall
+
+       call history_in( 'SOLINS',         var_g(  solins(:,:,l)             ) )  ! 'solar insolation',        'W/m2'
+       call history_in( 'COSZ'  ,         var_g(  cosSZA(:,:,l)             ) )  ! 'cos(solar zenith angle)', '1'
+
+       call history_in( 'SFLX_LW_up_c',   var_g(  SFCFLX_LW_up_c(:,:,l)     ) )  ! 'SFC upward   longwave  radiation flux (clr)', 'W/m2'
+       call history_in( 'SFLX_LW_dn_c',   var_g(  SFCFLX_LW_dn_c(:,:,l)     ) )  ! 'SFC downward longwave  radiation flux (clr)', 'W/m2'
+       call history_in( 'SFLX_SW_up_c',   var_g(  SFCFLX_SW_up_c(:,:,l)     ) )  ! 'SFC upward   shortwave radiation flux (clr)', 'W/m2'
+       call history_in( 'SFLX_SW_dn_c',   var_g(  SFCFLX_SW_dn_c(:,:,l)     ) )  ! 'SFC downward shortwave radiation flux (clr)', 'W/m2'
+
+       call history_in( 'SFLX_LW_up',     var_g(  SFCFLX_LW_up  (:,:,l)     ) )  ! 'SFC upward   longwave  radiation flux',       'W/m2'
+       call history_in( 'SFLX_LW_dn',     var_g(  SFCFLX_LW_dn  (:,:,l)     ) )  ! 'SFC downward longwave  radiation flux',       'W/m2'
+       call history_in( 'SFLX_SW_up',     var_g(  SFCFLX_SW_up  (:,:,l)     ) )  ! 'SFC upward   shortwave radiation flux',       'W/m2'
+       call history_in( 'SFLX_SW_dn',     var_g(  SFCFLX_SW_dn  (:,:,l)     ) )  ! 'SFC downward shortwave radiation flux',       'W/m2'
+
+       call history_in( 'SFLX_LW_net',    var_g(  flux_net_sfc  (:,:,l,I_LW) ) ) ! 'SFC net      longwave  radiation flux',       'W/m2'
+       call history_in( 'SFLX_SW_net',    var_g(  flux_net_sfc  (:,:,l,I_SW) ) ) ! 'SFC net      shortwave radiation flux',       'W/m2'
+
+       call history_in( 'TOAFLX_LW_up_c', var_g(  TOAFLX_LW_up_c(:,:,l)      ) )  ! 'TOA upward   longwave  radiation flux (clr)', 'W/m2'
+       call history_in( 'TOAFLX_LW_dn_c', var_g(  TOAFLX_LW_dn_c(:,:,l)      ) )  ! 'TOA downward longwave  radiation flux (clr)', 'W/m2'
+       call history_in( 'TOAFLX_SW_up_c', var_g(  TOAFLX_SW_up_c(:,:,l)      ) )  ! 'TOA upward   shortwave radiation flux (clr)', 'W/m2'
+       call history_in( 'TOAFLX_SW_dn_c', var_g(  TOAFLX_SW_dn_c(:,:,l)      ) )  ! 'TOA downward shortwave radiation flux (clr)', 'W/m2'
+
+       call history_in( 'TOAFLX_LW_up',   var_g(  TOAFLX_LW_up  (:,:,l)      ) )  ! 'TOA upward   longwave  radiation flux',       'W/m2'
+       call history_in( 'TOAFLX_LW_dn',   var_g(  TOAFLX_LW_dn  (:,:,l)      ) )  ! 'TOA downward longwave  radiation flux',       'W/m2'
+       call history_in( 'TOAFLX_SW_up',   var_g(  TOAFLX_SW_up  (:,:,l)      ) )  ! 'TOA upward   shortwave radiation flux',       'W/m2'
+       call history_in( 'TOAFLX_SW_dn',   var_g(  TOAFLX_SW_dn  (:,:,l)      ) )  ! 'TOA downward shortwave radiation flux',       'W/m2'
+
+       call history_in( 'TOAFLX_LW_net',  var_g(  flux_net_toa  (:,:,l,I_LW) ) )  ! 'TOA net      longwave  radiation flux',       'W/m2'
+       call history_in( 'TOAFLX_SW_net',  var_g(  flux_net_toa  (:,:,l,I_SW) ) )  ! 'TOA net      shortwave radiation flux',       'W/m2'
+
+       call history_in( 'SLR',            var_g(  flux_net_sfc  (:,:,l,I_LW) ) )  ! 'SFC net longwave  radiation flux',            'W/m2'
+       call history_in( 'SSR',            var_g(  flux_net_sfc  (:,:,l,I_SW) ) )  ! 'SFC net shortwave radiation flux',            'W/m2'
+       call history_in( 'OLR',            var_g(  TOAFLX_LW_up  (:,:,l)      ) )  ! 'outgoing longwave  radiation flux',           'W/m2'
+       call history_in( 'OSR',            var_g(  TOAFLX_SW_up  (:,:,l)      ) )  ! 'outgoing shortwave radiation flux',           'W/m2'
+
+       call history_in( 'RADFLUX_LWUP',   var_gk( flux_up     (:,:,:,l,I_LW) ) )  ! 'upward   longwave  radiation flux',           'W/m2'
+       call history_in( 'RADFLUX_LWDN',   var_gk( flux_dn     (:,:,:,l,I_LW) ) )  ! 'downward longwave  radiation flux',           'W/m2'
+       call history_in( 'RADFLUX_LW',     var_gk( flux_net    (:,:,:,l,I_LW) ) )  ! 'net      longwave  radiation flux',           'W/m2'
+       call history_in( 'RADFLUX_SWUP',   var_gk( flux_up     (:,:,:,l,I_SW) ) )  ! 'upward   shortwave radiation flux',           'W/m2'
+       call history_in( 'RADFLUX_SWDN',   var_gk( flux_dn     (:,:,:,l,I_SW) ) )  ! 'downward shortwave radiation flux',           'W/m2'
+       call history_in( 'RADFLUX_SW',     var_gk( flux_net    (:,:,:,l,I_SW) ) )  ! 'net      shortwave radiation flux',           'W/m2'
+
+       call history_in( 'SFLX_IR_dn_dir', var_g(  SFLX_rad_dn(:,:,I_R_direct ,I_R_IR ,l) ) ) ! 'SFC downward radiation flux (direct ,IR )', 'W/m2'
+       call history_in( 'SFLX_IR_dn_dif', var_g(  SFLX_rad_dn(:,:,I_R_diffuse,I_R_IR ,l) ) ) ! 'SFC downward radiation flux (diffuse,IR )', 'W/m2'
+       call history_in( 'SFLX_NIR_dn_dir',var_g(  SFLX_rad_dn(:,:,I_R_direct ,I_R_NIR,l) ) ) ! 'SFC downward radiation flux (direct ,NIR)', 'W/m2'
+       call history_in( 'SFLX_NIR_dn_dif',var_g(  SFLX_rad_dn(:,:,I_R_diffuse,I_R_NIR,l) ) ) ! 'SFC downward radiation flux (diffuse,NIR)', 'W/m2'
+       call history_in( 'SFLX_VIS_dn_dir',var_g(  SFLX_rad_dn(:,:,I_R_direct ,I_R_VIS,l) ) ) ! 'SFC downward radiation flux (direct ,VIS)', 'W/m2'
+       call history_in( 'SFLX_VIS_dn_dif',var_g(  SFLX_rad_dn(:,:,I_R_diffuse,I_R_VIS,l) ) ) ! 'SFC downward radiation flux (diffuse,VIS)', 'W/m2'
+
+       call history_in( 'TEMP_t_rd_LW',   var_gk( TEMP_t   (:,:,:,I_LW,l)    ) ) !  'tendency of temp in rd(LW)',                    'K/day'
+       call history_in( 'TEMP_t_rd_SW',   var_gk( TEMP_t   (:,:,:,I_SW,l)    ) ) !  'tendency of temp in rd(SW)',                    'K/day'
+       call history_in( 'TEMP_t_rd',      var_gk( TEMP_t   (:,:,:,3   ,l)    ) ) !  'tendency of temp in rd',                        'K/day'
+       call history_in( 'RHOH_RD',        var_gk( RHOH     (:,:,:,l)         ) ) !  'diabatic heating rate in rd',                   'J/m3/s'
+
+       ! output of raw data, for offline output
+       call history_in( 'RFLX_LW_up',     var_gk( flux_rad(:,:,:,I_LW,I_up,2,l) ) ) ! 'upward   longwave  radiation flux (cell face)', 'W/m2'
+       call history_in( 'RFLX_LW_dn',     var_gk( flux_rad(:,:,:,I_LW,I_dn,2,l) ) ) ! 'downward longwave  radiation flux (cell face)', 'W/m2'
+       call history_in( 'RFLX_SW_up',     var_gk( flux_rad(:,:,:,I_SW,I_up,2,l) ) ) ! 'upward   shortwave radiation flux (cell face)', 'W/m2'
+       call history_in( 'RFLX_SW_dn',     var_gk( flux_rad(:,:,:,I_SW,I_dn,2,l) ) ) ! 'downward shortwave radiation flux (cell face)', 'W/m2'
+
+       call history_in( 'dtau_s',         var_gk( dtau_s(:,:,:,l)            ) ) ! '0.67 micron cloud optical depth',                 '1'
+       call history_in( 'dem_s',          var_gk( dem_s (:,:,:,l)            ) ) ! '10.5 micron cloud emissivity',                    '1'
+
+    enddo
 
 
     call ATMOS_vars_calc_diagnostics
 
     return
   end subroutine ATMOS_PHY_RD_driver_step
+
+  ! the following two functions are conversion to use history_in(), which will be replaced by FILE_HISTOTY_in in future.
+  function var_g(var_ij)
+     implicit none
+     real(RP) :: var_ij (IA,JA)
+     real(RP) :: var_g  (ADM_gall_in, ADM_KNONE)
+     integer  :: i, j, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        var_g(g,ADM_KNONE) = var_ij(i,j)
+     enddo
+     enddo
+  end function var_g
+
+  function var_gk(var_kij)
+     implicit none
+     real(RP) :: var_kij (KA, IA, JA)
+     real(RP) :: var_gk  (ADM_gall_in, ADM_Kall)
+     integer  :: i, j, k, g
+     do j = 1, JA
+     do i = 1, IA
+        g = i + ( j - 1 ) * ADM_imax
+        do k = 1, KA
+           var_gk(g,k) = var_kij(k,i,j)
+        enddo
+     enddo
+     enddo
+  end function var_gk
+
 
 end module mod_atmos_phy_rd_driver

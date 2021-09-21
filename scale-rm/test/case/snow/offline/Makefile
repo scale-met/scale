@@ -7,6 +7,8 @@
 PWD         = $(shell pwd)
 TOPDIR      = $(abspath ../../../../..)
 TESTDIR     = ../../..
+DATADIR     = ${TOPDIR}/data
+DATADIR_RM  = ${TESTDIR}/data
 
 
 # user-defined source files
@@ -19,7 +21,7 @@ RUNCONF     = run.conf
 TPROC       = 1
 
 # required data (parameters,distributed files)
-DATPARAM    = " [${TESTDIR}/data/land/param.bucket.conf param.bucket.conf] "
+DATPARAM    = " [${DATADIR}/land/param.bucket.conf param.bucket.conf] "
 DATDISTS    =
 
 
