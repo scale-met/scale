@@ -47,10 +47,12 @@ program fio_ico2ll
      NETCDF_close
   use mod_io_param
   use mod_fio, only: &
-     headerinfo, &
-     datainfo
+       cstr, fstr
+  use iso_c_binding
   !-----------------------------------------------------------------------------
   implicit none
+
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ param & variable
@@ -146,8 +148,8 @@ program fio_ico2ll
   ! ico data information
   integer, allocatable :: ifid(:)
   integer, allocatable :: prc_tab_C(:)
-  type(headerinfo) hinfo
-  type(datainfo)   dinfo
+  type(headerinfo) :: hinfo
+  type(datainfo)   :: dinfo
 
   ! topography data information
   integer, allocatable :: ifid_topo(:)
@@ -182,8 +184,8 @@ program fio_ico2ll
   integer, allocatable :: PRC_RGN_edge_tab(:,:,:) !< region link information (for 4 edges)
   integer, allocatable :: PRC_RGN_lp2r    (:,:)   !< l,prc       => rgn
 
-  real(4), allocatable :: data4allrgn(:)
-  real(8), allocatable :: data8allrgn(:)
+  real(4), allocatable, target :: data4allrgn(:)
+  real(8), allocatable, target :: data8allrgn(:)
   real(4), allocatable :: icodata4   (:,:,:)
   real(4), allocatable :: icodata4_z (:,:)
 
@@ -206,6 +208,8 @@ program fio_ico2ll
   integer(8)            :: nowsec
   integer(8)            :: recsize ! [mod] 12-04-19 H.Yashiro
   integer               :: kmax, num_of_step, step, date_str(6)
+
+  character(len=IO_HSHORT) :: vname, lname
 
   integer :: histday
   real(8) :: histsec, histms
@@ -317,7 +321,7 @@ program fio_ico2ll
   LOG_INFO("fio_ico2ll",*) "*** file ID to pack                : ", pstr-1, " - ", pend-1
 
   !--- setup
-  call fio_syscheck()
+  ierr = fio_syscheck()
 
   !#########################################################
 
@@ -438,28 +442,28 @@ program fio_ico2ll
      pp = p - pstr + 1
      LOG_INFO("fio_ico2ll",*) 'p=', pp
 
-     call fio_mk_fname(infname,trim(infile),'pe',p-1,6)
+     call fio_mk_fname(infname,cstr(infile),cstr('pe'),p-1,6)
      prc_tab_C(1:PRC_RGN_local) = PRC_RGN_lp2r(1:PRC_RGN_local,p-1)-1
 
      if ( pp == 1 ) then
-        call fio_put_commoninfo( IO_SPLIT_FILE,  &
-                                 IO_BIG_ENDIAN,  &
-                                 IO_ICOSAHEDRON, &
-                                 glevel,         &
-                                 rlevel,         &
-                                 PRC_RGN_local,  &
-                                 prc_tab_C       )
+        ierr = fio_put_commoninfo( IO_SPLIT_FILE,  &
+                                   IO_BIG_ENDIAN,  &
+                                   IO_ICOSAHEDRON, &
+                                   glevel,         &
+                                   rlevel,         &
+                                   PRC_RGN_local,  &
+                                   prc_tab_C       )
      endif
 
-     call fio_register_file(ifid(pp),trim(infname))
-     call fio_fopen(ifid(pp),IO_FREAD)
+     ifid(pp) = fio_register_file(cstr(infname))
+     ierr = fio_fopen(ifid(pp),IO_FREAD)
 
      if ( datainfo_nodep_pe .AND. pp > 1 ) then ! assume that datainfo do not depend on pe.
-        call fio_read_pkginfo          ( ifid(pp) )
-        call fio_valid_pkginfo_validrgn( ifid(pp), prc_tab_C )
-        call fio_copy_datainfo         ( ifid(pp), ifid(1)   )
+        ierr = fio_read_pkginfo          ( ifid(pp) )
+        ierr = fio_valid_pkginfo_validrgn( ifid(pp), prc_tab_C )
+        ierr = fio_copy_datainfo         ( ifid(pp), ifid(1)   )
      else ! normal way to read pkginfo and datainfo
-        call fio_read_allinfo_validrgn ( ifid(pp), prc_tab_C )
+        ierr = fio_read_allinfo_validrgn ( ifid(pp), prc_tab_C )
      endif
 
   enddo
@@ -473,8 +477,6 @@ program fio_ico2ll
   call PROF_rapstart('CHECK HEADER')
 
   !--- check all header
-  allocate( hinfo%rgnid(PRC_RGN_local) )
-
   allocate( var_nstep    (max_nvar) )
   allocate( var_name     (max_nvar) )
   allocate( var_desc     (max_nvar) )
@@ -490,12 +492,14 @@ program fio_ico2ll
 
   pp = 1 ! only for first file
 
-  call fio_get_pkginfo(ifid(pp),hinfo)
+  ierr = fio_get_pkginfo(hinfo, ifid(pp))
   num_of_data = hinfo%num_of_data
 
   nvar = 0
   do did = 0, num_of_data-1
-     call fio_get_datainfo(ifid(pp),did,dinfo)
+     ierr = fio_get_datainfo(dinfo,ifid(pp),did)
+     call fstr(vname, dinfo%varname)
+     call fstr(lname, dinfo%layername)
 
      if (allvar) then ! output all variables
         addvar = .true.
@@ -503,17 +507,17 @@ program fio_ico2ll
         addvar = .false.
 
         do v = 1, max_nvar
-           if ( trim(selectvar(v)) == trim(dinfo%varname) ) then
+           if ( selectvar(v) == vname ) then
               addvar = .true.
               exit
-           elseif( trim(selectvar(v)) == '' ) then
+           elseif( selectvar(v) == '' ) then
               exit
            endif
         enddo
      endif
 
      do v = 1, nvar
-        if ( trim(var_name(v)) == trim(dinfo%varname) ) then
+        if ( var_name(v) == vname ) then
            var_nstep(v) = var_nstep(v) + 1
 
            if( var_nstep(v) == 2 ) var_dt(v) = dinfo%time_start - var_time_str(v)
@@ -528,10 +532,10 @@ program fio_ico2ll
      if (addvar) then
         nvar = nvar + 1
         var_nstep    (nvar) = 1
-        var_name     (nvar) = dinfo%varname
-        var_desc     (nvar) = dinfo%description
-        var_unit     (nvar) = dinfo%unit
-        var_layername(nvar) = dinfo%layername
+        var_name     (nvar) = vname
+        call fstr(var_desc(nvar),      dinfo%description)
+        call fstr(var_unit(nvar),      dinfo%unit)
+        call fstr(var_layername(nvar), dinfo%layername)
         var_datatype (nvar) = dinfo%datatype
         var_nlayer   (nvar) = dinfo%num_of_layer
         var_time_str (nvar) = dinfo%time_start
@@ -542,12 +546,12 @@ program fio_ico2ll
 
         if ( myrank == 0 ) then ! ##### only for master process
 
-        if ( dinfo%layername == 'LAYERNM' ) then ! generate dummy
+        if ( lname == 'LAYERNM' ) then ! generate dummy
            do k = 1, dinfo%num_of_layer
               var_zgrid(k,nvar) = real(k,kind=8)
            enddo
         else ! read from file
-           layerfile = trim(layerfile_dir)//'/'//trim(dinfo%layername)//'.txt'
+           layerfile = trim(layerfile_dir)//'/'//trim(lname)//'.txt'
 
            fid = IO_get_available_fid()
            open(fid,file=trim(layerfile),form='formatted',status='old',iostat=ierr)
@@ -561,13 +565,13 @@ program fio_ico2ll
                  read(fid,'(F16.4)') var_zgrid(k,nvar)
               enddo
 
-              if ( dinfo%layername(1:5) == 'ZSALL' ) then ! check Xi2Z
-                 LOG_INFO("fio_ico2ll",*) '*** Try to convert Xi -> Z : ', dinfo%varname
+              if ( lname(1:5) == 'ZSALL' ) then ! check Xi2Z
+                 LOG_INFO("fio_ico2ll",*) '*** Try to convert Xi -> Z : ', vname
                  var_xi2z(nvar) = .true.
                  var_ztop(nvar) = 0.5D0 * ( var_zgrid(kmax-1,nvar) + var_zgrid(kmax,nvar) )
 
                  if ( kmax == dinfo%num_of_layer+2 ) then ! trim HALO
-                    LOG_INFO("fio_ico2ll",*) '*** trim HALO: ', trim(dinfo%layername)
+                    LOG_INFO("fio_ico2ll",*) '*** trim HALO: ', trim(lname)
                     do k = 1, kmax-2
                        var_zgrid(k,nvar) = var_zgrid(k+1,nvar)
                     enddo
@@ -646,37 +650,37 @@ program fio_ico2ll
 
         prc_tab_C(1:PRC_RGN_local) = PRC_RGN_lp2r(1:PRC_RGN_local,p-1)-1
 
-        call fio_mk_fname(infname,trim(topo_base),'pe',p-1,6)
-        call fio_register_file(ifid_topo(pp),trim(infname))
-        call fio_fopen(ifid_topo(pp),IO_FREAD)
+        call fio_mk_fname(infname,cstr(topo_base),cstr('pe'),p-1,6)
+        ifid_topo(pp) = fio_register_file(cstr(infname))
+        ierr = fio_fopen(ifid_topo(pp),IO_FREAD)
 
         if ( datainfo_nodep_pe .AND. pp > 1 ) then ! assume that datainfo do not depend on pe.
-           call fio_read_pkginfo          ( ifid_topo(pp) )
-           call fio_valid_pkginfo_validrgn( ifid_topo(pp), prc_tab_C    )
-           call fio_copy_datainfo         ( ifid_topo(pp), ifid_topo(1) )
+           ierr = fio_read_pkginfo          ( ifid_topo(pp) )
+           ierr = fio_valid_pkginfo_validrgn( ifid_topo(pp), prc_tab_C    )
+           ierr = fio_copy_datainfo         ( ifid_topo(pp), ifid_topo(1) )
         else ! normal way to read pkginfo and datainfo
-           call fio_read_allinfo_validrgn ( ifid_topo(pp), prc_tab_C )
+           ierr = fio_read_allinfo_validrgn ( ifid_topo(pp), prc_tab_C )
         endif
 
-        call fio_get_pkginfo(ifid_topo(pp),hinfo)
+        ierr = fio_get_pkginfo(hinfo,ifid_topo(pp))
         num_of_data = hinfo%num_of_data
 
         exist_topo = .false.
         do did = 0, num_of_data-1
-           call fio_get_datainfo(ifid_topo(pp),did,dinfo)
+           ierr = fio_get_datainfo(dinfo,ifid_topo(pp),did)
 
-           if ( dinfo%varname == 'topo' ) then
+           if ( vname == 'topo' ) then
               exist_topo = .true.
 
               !--- read from pe000xx file
               if ( dinfo%datatype == IO_REAL4 ) then
 
-                 call fio_read_data(ifid_topo(pp),did,data4allrgn(:))
+                 ierr = fio_read_data(ifid_topo(pp),did,c_loc(data4allrgn))
                  data8allrgn(:) = real(data4allrgn(:),kind=8)
 
               elseif( dinfo%datatype == IO_REAL8 ) then
 
-                 call fio_read_data(ifid_topo(pp),did,data8allrgn(:))
+                 ierr = fio_read_data(ifid_topo(pp),did,c_loc(data8allrgn))
 
               endif
               topo(:,:,pp) = reshape( data8allrgn(:), shape(topo(:,:,pp)) )
@@ -689,7 +693,8 @@ program fio_ico2ll
            call PRC_abort
         endif
 
-        call fio_fclose(ifid_topo(pp))
+        ierr = fio_fclose(ifid_topo(pp))
+        call free( hinfo%rgnid )
      enddo
 
      deallocate( ifid_topo )
@@ -897,7 +902,7 @@ program fio_ico2ll
 
            call PROF_rapstart('+FILE I FIO')
            !--- seek data ID and get information
-           call fio_seek_datainfo(did,ifid(pp),var_name(v),step)
+           did = fio_seek_datainfo(ifid(pp),cstr(var_name(v)),step)
            !--- verify
            if ( did == -1 ) then
               LOG_ERROR("fio_ico2ll",*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
@@ -907,11 +912,11 @@ program fio_ico2ll
            !--- read from pe000xx file
            if ( var_datatype(v) == IO_REAL4 ) then
 
-              call fio_read_data(ifid(pp),did,data4allrgn(:))
+              ierr = fio_read_data(ifid(pp),did,c_loc(data4allrgn))
 
            elseif( var_datatype(v) == IO_REAL8 ) then
 
-              call fio_read_data(ifid(pp),did,data8allrgn(:))
+              ierr = fio_read_data(ifid(pp),did,c_loc(data8allrgn))
 
               data4allrgn(:) = real(data8allrgn(:),kind=4)
               where( data8allrgn(:) < CONST_UNDEF*0.1 )
@@ -1099,8 +1104,10 @@ program fio_ico2ll
 
   do p = pstr, pend
      pp = p - pstr + 1
-     call fio_fclose(ifid(pp))
+     ierr = fio_fclose(ifid(pp))
   enddo ! PE LOOP
+
+  call free( hinfo%rgnid )
 
   call PROF_rapend('CONVERT')
   LOG_INFO("fio_ico2ll",*) '*** convert finished! '

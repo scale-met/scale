@@ -18,14 +18,16 @@ program fio_sel
   use mod_io_param
   use scale_io
   use mod_fio, only: &
-     headerinfo, &
-     datainfo
+       cstr, fstr
   use mod_mnginfo_light, only : &
      MNG_mnginfo_input,   &
      MNG_PALL,            &
      MNG_prc_rnum
+  use iso_c_binding
   !-----------------------------------------------------------------------------
   implicit none
+
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ param & variable
@@ -82,14 +84,16 @@ program fio_sel
   integer                :: GALL
   integer                :: KALL
   integer                :: LALL
-  real(4), allocatable   :: data4_1D(:)
-  real(8), allocatable   :: data8_1D(:)
+  real(4), allocatable, target :: data4_1D(:)
+  real(8), allocatable, target :: data8_1D(:)
 
   ! for MPI
   integer                :: pe_all
   integer                :: prc_nall, prc_nlocal
   integer                :: prc_myrank, pstr, pend
   character(len=6)       :: rankstr
+
+  character(len=IO_HSHORT) :: vname
 
   logical :: addvar
   integer :: p, v, vid
@@ -159,7 +163,7 @@ program fio_sel
   write(IO_FID_LOG,*) "*** file ID to pack                : ", pstr-1, " - ", pend-1
 
   !--- setup
-  call fio_syscheck()
+  ierr = fio_syscheck()
 
   write(IO_FID_LOG,*) '*** combine start : PaNDa format to PaNDa format data'
 
@@ -167,32 +171,32 @@ program fio_sel
      write(IO_FID_LOG,*) '+pe:', p-1
      LALL = MNG_prc_rnum(p)
 
-     call fio_mk_fname(infname, trim(infile(1)),'pe',p-1,6)
-     call fio_mk_fname(outfname,trim(outfile),  'pe',p-1,6)
+     call fio_mk_fname(infname, cstr(infile(1)),cstr('pe'),p-1,6)
+     call fio_mk_fname(outfname,cstr(outfile),  cstr('pe'),p-1,6)
      write(IO_FID_LOG,*) '++output : ', trim(outfname)
 
-     call fio_register_file(ifid,trim(infname))
-     call fio_fopen(ifid,IO_FREAD)
+     ifid = fio_register_file(cstr(infname))
+     ierr = fio_fopen(ifid,IO_FREAD)
      ! put information from 1st input file
-     call fio_put_commoninfo_fromfile(ifid,IO_BIG_ENDIAN)
+     ierr = fio_put_commoninfo_fromfile(ifid,IO_BIG_ENDIAN)
 
-     call fio_read_allinfo(ifid)
-     allocate( hinfo%rgnid(LALL) )
-     call fio_get_pkginfo(ifid,hinfo)
-     pkg_desc  = hinfo%description
-     pkg_note  = hinfo%note
+     ierr = fio_read_allinfo(ifid)
+     ierr = fio_get_pkginfo(hinfo,ifid)
+     call fstr(pkg_desc, hinfo%description)
+     call fstr(pkg_note, hinfo%note)
      nmax_data = hinfo%num_of_data
      write(IO_FID_LOG,*) '++input', 1, ' : ', trim(infname), "(n=", nmax_data, ")"
 
-     call fio_register_file(ofid,trim(outfname))
-     call fio_fopen(ofid,IO_FWRITE)
-     call fio_put_write_pkginfo(ofid,pkg_desc,pkg_note)
+     ofid = fio_register_file(cstr(outfname))
+     ierr = fio_fopen(ofid,IO_FWRITE)
+     ierr = fio_put_write_pkginfo(ofid,cstr(pkg_desc),cstr(pkg_note))
 
      nvar = 0
      do idid = 0, nmax_data-1
         ! get datainfo from input file
-        call fio_get_datainfo(ifid,idid,dinfo)
+        ierr = fio_get_datainfo(dinfo,ifid,idid)
         KALL = dinfo%num_of_layer
+        call fstr(vname, dinfo%varname)
 
         if (allvar) then ! output all variables
            addvar = .true.
@@ -200,7 +204,7 @@ program fio_sel
            addvar = .false.
 
            do v = 1, max_nvar
-              if ( selectvar(v) == dinfo%varname ) then
+              if ( selectvar(v) == vname ) then
                  addvar = .true.
                  exit
               elseif( selectvar(v) == '' ) then
@@ -211,7 +215,7 @@ program fio_sel
 
        vid = -1
        do v = 1, nvar
-           if ( var_name(v) == dinfo%varname ) then
+           if ( var_name(v) == vname ) then
               vid = v
 
               addvar = .false.
@@ -223,7 +227,7 @@ program fio_sel
            nvar = nvar + 1
            vid  = nvar
            var_nstep(vid) = 0
-           var_name (vid) = dinfo%varname
+           var_name (vid) = vname
         endif
 
         if (       vid        >= 1        &
@@ -237,13 +241,13 @@ program fio_sel
            ! read->write data
            if ( dinfo%datatype == IO_REAL4 ) then
               allocate( data4_1D(GALL*KALL*LALL) )
-              call fio_read_data(ifid,idid,data4_1D)
-              call fio_put_write_datainfo_data(odid,ofid,dinfo,data4_1D)
+              ierr = fio_read_data(ifid,idid,c_loc(data4_1D))
+              odid = fio_put_write_datainfo_data(ofid,dinfo,c_loc(data4_1D))
               deallocate( data4_1D )
            elseif( dinfo%datatype == IO_REAL8 ) then
               allocate( data8_1D(GALL*KALL*LALL) )
-              call fio_read_data(ifid,idid,data8_1D)
-              call fio_put_write_datainfo_data(odid,ofid,dinfo,data8_1D)
+              ierr = fio_read_data(ifid,idid,c_loc(data8_1D))
+              odid = fio_put_write_datainfo_data(ofid,dinfo,c_loc(data8_1D))
               deallocate( data8_1D )
            endif
 
@@ -251,10 +255,10 @@ program fio_sel
 
      enddo
 
-     call fio_fclose(ifid)
-     call fio_fclose(ofid)
+     ierr = fio_fclose(ifid)
+     ierr = fio_fclose(ofid)
 
-     deallocate( hinfo%rgnid )
+     call free( hinfo%rgnid )
   enddo ! PE loop
 
   if ( use_mpi ) then
