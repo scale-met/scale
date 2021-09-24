@@ -33,10 +33,12 @@ program fio_ico2ico
      UNDEF8 => CONST_UNDEF8
   use mod_io_param
   use mod_fio, only: &
-     headerinfo, &
-     datainfo
+       cstr, fstr
+  use iso_c_binding
   !-----------------------------------------------------------------------------
   implicit none
+
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ param & variable
@@ -102,10 +104,10 @@ program fio_ico2ico
   integer,  allocatable :: src_prc_tab(:)
   integer,  allocatable :: src_prc_flag(:,:)
   integer,  allocatable :: src_fid     (:)
-  real(SP), allocatable :: src_data4_1D(:)
-  real(DP), allocatable :: src_data8_1D(:)
-  real(SP), allocatable :: src_data4_3D(:,:,:)
-  real(DP), allocatable :: src_data8_3D(:,:,:)
+  real(SP), allocatable, target :: src_data4_1D(:)
+  real(DP), allocatable, target :: src_data8_1D(:)
+  real(SP), allocatable, target :: src_data4_3D(:,:,:)
+  real(DP), allocatable, target :: src_data8_3D(:,:,:)
   integer               :: src_p, src_rgnid, src_g, src_l
 
   integer               :: dst_PRC_nprocs = -1
@@ -121,8 +123,8 @@ program fio_ico2ico
   integer               :: dst_ADM_gmax
   integer,  allocatable :: dst_prc_tab(:)
   integer               :: dst_fid, dst_did
-  real(SP), allocatable :: dst_data4_3D(:,:,:)
-  real(DP), allocatable :: dst_data8_3D(:,:,:)
+  real(SP), allocatable, target :: dst_data4_3D(:,:,:)
+  real(DP), allocatable, target :: dst_data8_3D(:,:,:)
   integer               :: dst_p, dst_rgnid, dst_g, dst_l
 
   character(len=H_MID)  :: pkg_desc
@@ -143,11 +145,14 @@ program fio_ico2ico
   integer,  parameter   :: I_w3       = 7
   integer               :: g1, g2, g3
   real(DP)              :: weight
+  real(DP), allocatable, target :: iibuf(:,:,:)
 
 
   ! for MPI
   integer :: prc_nlocal
   integer :: pstr, pend, pp
+
+  character(len=IO_HSHORT) :: vname
 
   integer :: ierr
   integer :: k0 = 1
@@ -266,7 +271,7 @@ program fio_ico2ico
   LOG_INFO("fio_ico2ico",*) "*** file ID to pack                              : ", pstr-1, " - ", pend-1
 
   !--- setup
-  call fio_syscheck()
+  ierr = fio_syscheck()
 
   !#########################################################
 
@@ -274,6 +279,7 @@ program fio_ico2ico
   call PROF_rapstart('READ IIMAP')
 
   allocate( iimap(dst_ADM_gall,k0,dst_ADM_lall,iimap_nmax,prc_nlocal) )
+  allocate( iibuf(dst_ADM_gall,k0,dst_ADM_lall) )
 
   allocate( dst_prc_tab(dst_PRC_RGN_local) )
 
@@ -283,46 +289,53 @@ program fio_ico2ico
      dst_prc_tab(:) = dst_PRC_RGN_lp2r(:,dst_p-1)-1
 
      if ( pp == 1 ) then
-        call fio_put_commoninfo( IO_SPLIT_FILE,     &
-                                 IO_BIG_ENDIAN,     &
-                                 IO_ICOSAHEDRON,    &
-                                 dst_glevel,        &
-                                 dst_rlevel,        &
-                                 dst_PRC_RGN_local, &
-                                 dst_prc_tab        )
+        ierr = fio_put_commoninfo( IO_SPLIT_FILE,     &
+                                   IO_BIG_ENDIAN,     &
+                                   IO_ICOSAHEDRON,    &
+                                   dst_glevel,        &
+                                   dst_rlevel,        &
+                                   dst_PRC_RGN_local, &
+                                   dst_prc_tab        )
      endif
 
-     call fio_mk_fname(infname,trim(iimap_fname),'pe',dst_p-1,6)
-     call fio_register_file(dst_fid,trim(infname))
-     call fio_fopen(dst_fid,IO_FREAD)
-     call fio_read_allinfo_validrgn(dst_fid,dst_prc_tab)
+     call fio_mk_fname(infname,cstr(iimap_fname),cstr('pe'),dst_p-1,6)
+     dst_fid = fio_register_file(cstr(infname))
+     ierr = fio_fopen(dst_fid,IO_FREAD)
+     ierr = fio_read_allinfo_validrgn(dst_fid,dst_prc_tab)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_rgnid",1)
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_rgnid"),1)
      if ( did == -1 ) then
         write(*,*) 'xxx data not found! : iimap_rgnid'
         call PRC_abort
      endif
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_rgnid,pp))
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_rgnid,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_g1",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_g1,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_g1"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_g1,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_g2",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_g2,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_g2"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_g2,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_g3",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_g3,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_g3"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_g3,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_w1",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_w1,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_w1"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_w1,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_w2",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_w2,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_w2"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_w2,pp) = iibuf(:,:,:)
 
-     call fio_seek_datainfo(did,dst_fid,"iimap_w3",1)
-     call fio_read_data(dst_fid,did,iimap(:,:,:,I_w3,pp))
+     did = fio_seek_datainfo(dst_fid,cstr("iimap_w3"),1)
+     ierr = fio_read_data(dst_fid,did,c_loc(iibuf))
+     iimap(:,:,:,I_w3,pp) = iibuf(:,:,:)
 
-     call fio_fclose(dst_fid)
+     ierr = fio_fclose(dst_fid)
   enddo
 
   call PROF_rapend('READ IIMAP')
@@ -354,7 +367,6 @@ program fio_ico2ico
 
   allocate( src_fid    (src_PRC_nprocs)    )
   allocate( src_prc_tab(src_PRC_RGN_local) )
-  allocate( hinfo%rgnid(src_PRC_RGN_local) )
   src_fid(:) = -1
   firstfile  = -1
 
@@ -364,24 +376,24 @@ program fio_ico2ico
      src_prc_tab(:) = src_PRC_RGN_lp2r(:,src_p-1)-1
 
      if ( firstfile < 0 ) then
-        call fio_put_commoninfo( IO_SPLIT_FILE,     &
-                                 IO_BIG_ENDIAN,     &
-                                 IO_ICOSAHEDRON,    &
-                                 src_glevel,        &
-                                 src_rlevel,        &
-                                 src_PRC_RGN_local, &
-                                 src_prc_tab        )
+        ierr = fio_put_commoninfo( IO_SPLIT_FILE,     &
+                                   IO_BIG_ENDIAN,     &
+                                   IO_ICOSAHEDRON,    &
+                                   src_glevel,        &
+                                   src_rlevel,        &
+                                   src_PRC_RGN_local, &
+                                   src_prc_tab        )
      endif
 
-     call fio_mk_fname(infname,trim(src_fname),'pe',src_p-1,6)
-     call fio_register_file(src_fid(src_p),trim(infname))
-     call fio_fopen(src_fid(src_p),IO_FREAD)
-     call fio_read_allinfo_validrgn(src_fid(src_p),src_prc_tab)
+     call fio_mk_fname(infname,cstr(src_fname),cstr('pe'),src_p-1,6)
+     src_fid(src_p) = fio_register_file(cstr(infname))
+     ierr = fio_fopen(src_fid(src_p),IO_FREAD)
+     ierr = fio_read_allinfo_validrgn(src_fid(src_p),src_prc_tab)
 
      if ( firstfile < 0 ) then
-        call fio_get_pkginfo(src_fid(src_p),hinfo)
-        pkg_desc  = hinfo%description
-        pkg_note  = hinfo%note
+        ierr = fio_get_pkginfo(hinfo,src_fid(src_p))
+        call fstr(pkg_desc, hinfo%description)
+        call fstr(pkg_note, hinfo%note)
         nmax_data = hinfo%num_of_data
 
         firstfile = src_p
@@ -402,18 +414,18 @@ program fio_ico2ico
 
      dst_prc_tab(:) = dst_PRC_RGN_lp2r(:,dst_p-1)-1
 
-     call fio_put_commoninfo( IO_SPLIT_FILE,     &
-                              IO_BIG_ENDIAN,     &
-                              IO_ICOSAHEDRON,    &
-                              dst_glevel,        &
-                              dst_rlevel,        &
-                              dst_PRC_RGN_local, &
-                              dst_prc_tab        )
+     ierr = fio_put_commoninfo( IO_SPLIT_FILE,     &
+                                IO_BIG_ENDIAN,     &
+                                IO_ICOSAHEDRON,    &
+                                dst_glevel,        &
+                                dst_rlevel,        &
+                                dst_PRC_RGN_local, &
+                                dst_prc_tab        )
 
-     call fio_mk_fname(infname,trim(dst_fname),'pe',dst_p-1,6)
-     call fio_register_file(dst_fid,trim(infname))
-     call fio_fopen(dst_fid,IO_FWRITE)
-     call fio_put_write_pkginfo(dst_fid,pkg_desc,pkg_note)
+     call fio_mk_fname(infname,cstr(dst_fname),cstr('pe'),dst_p-1,6)
+     dst_fid = fio_register_file(cstr(infname))
+     ierr = fio_fopen(dst_fid,IO_FWRITE)
+     ierr = fio_put_write_pkginfo(dst_fid,cstr(pkg_desc),cstr(pkg_note))
 
      LOG_INFO("fio_ico2ico",*) 'p(dst)=', dst_p, dst_fid
 
@@ -424,17 +436,18 @@ program fio_ico2ico
 
            src_prc_tab(:) = src_PRC_RGN_lp2r(:,src_p-1)-1
 
-           call fio_put_commoninfo( IO_SPLIT_FILE,     &
-                                    IO_BIG_ENDIAN,     &
-                                    IO_ICOSAHEDRON,    &
-                                    src_glevel,        &
-                                    src_rlevel,        &
-                                    src_PRC_RGN_local, &
-                                    src_prc_tab        )
+           ierr = fio_put_commoninfo( IO_SPLIT_FILE,     &
+                                      IO_BIG_ENDIAN,     &
+                                      IO_ICOSAHEDRON,    &
+                                      src_glevel,        &
+                                      src_rlevel,        &
+                                      src_PRC_RGN_local, &
+                                      src_prc_tab        )
 
            if ( src_p == firstfile ) then
-              call fio_get_datainfo(src_fid(src_p),did,dinfo)
+              ierr = fio_get_datainfo(dinfo,src_fid(src_p),did)
               ADM_kall = dinfo%num_of_layer
+              call fstr(vname, dinfo%varname)
 
               if ( dinfo%datatype == IO_REAL4 ) then
                  allocate( src_data4_1D(src_ADM_gall*ADM_kall*src_ADM_lall) )
@@ -454,7 +467,7 @@ program fio_ico2ico
 
            if ( dinfo%datatype == IO_REAL4 ) then
 
-              call fio_read_data(src_fid(src_p),did,src_data4_1D)
+              ierr = fio_read_data(src_fid(src_p),did,c_loc(src_data4_1D))
               src_data4_3D(:,:,:) = reshape( src_data4_1D(:), shape(src_data4_3D) )
 
               do dst_l = 1, dst_ADM_lall
@@ -498,7 +511,7 @@ program fio_ico2ico
 
            elseif( dinfo%datatype == IO_REAL8 ) then
 
-              call fio_read_data(src_fid(src_p),did,src_data8_1D)
+              ierr = fio_read_data(src_fid(src_p),did,c_loc(src_data8_1D))
               src_data8_3D(:,:,:) = reshape( src_data8_1D(:), shape(src_data8_3D) )
 
               do dst_l = 1, dst_ADM_lall
@@ -543,19 +556,19 @@ program fio_ico2ico
            endif
         enddo
 
-        call fio_put_commoninfo( IO_SPLIT_FILE,     &
-                                 IO_BIG_ENDIAN,     &
-                                 IO_ICOSAHEDRON,    &
-                                 dst_glevel,        &
-                                 dst_rlevel,        &
-                                 dst_PRC_RGN_local, &
-                                 dst_prc_tab        )
+        ierr = fio_put_commoninfo( IO_SPLIT_FILE,     &
+                                   IO_BIG_ENDIAN,     &
+                                   IO_ICOSAHEDRON,    &
+                                   dst_glevel,        &
+                                   dst_rlevel,        &
+                                   dst_PRC_RGN_local, &
+                                   dst_prc_tab        )
 
         dinfo%datasize = int( dst_ADM_gall * dst_ADM_lall * ADM_kall * preclist(dinfo%datatype), kind=DP )
 
         if ( dinfo%datatype == IO_REAL4 ) then
 
-           call fio_put_write_datainfo_data(dst_did,dst_fid,dinfo,dst_data4_3D(:,:,:))
+           dst_did = fio_put_write_datainfo_data(dst_fid,dinfo,c_loc(dst_data4_3D))
 
            deallocate( src_data4_1D )
            deallocate( src_data4_3D )
@@ -563,7 +576,7 @@ program fio_ico2ico
 
         elseif( dinfo%datatype == IO_REAL8 ) then
 
-           call fio_put_write_datainfo_data(dst_did,dst_fid,dinfo,dst_data8_3D(:,:,:))
+           dst_did = fio_put_write_datainfo_data(dst_fid,dinfo,c_loc(dst_data8_3D))
 
            deallocate( src_data8_1D )
            deallocate( src_data8_3D )
@@ -573,15 +586,17 @@ program fio_ico2ico
 
      enddo
 
-     call fio_fclose(dst_fid)
+     ierr = fio_fclose(dst_fid)
 
   enddo
 
   do src_p = 1, src_PRC_nprocs
      if( sum(src_prc_flag(src_p,:)) < 1 ) cycle
 
-     call fio_fclose(src_fid(src_p))
+     ierr = fio_fclose(src_fid(src_p))
   enddo
+
+  call free( hinfo%rgnid )
 
   call PROF_rapend('CONVERT')
   LOG_INFO("fio_ico2ico",*) '*** convert finished! '

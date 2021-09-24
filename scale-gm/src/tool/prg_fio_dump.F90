@@ -15,9 +15,15 @@ program prg_fio_dump
   !
   use mpi
   use mod_io_param
+  use scale_precision
   use scale_io
+  use iso_c_binding
+  use mod_fio, only: &
+       cstr
   !-----------------------------------------------------------------------------
   implicit none
+
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ parameters & variables
@@ -90,11 +96,11 @@ program prg_fio_dump
      endif
   enddo
 
-  call fio_syscheck()
+  ierr = fio_syscheck()
 
-  call fio_register_file(fid,trim(fname))
+  fid = fio_register_file(cstr(fname))
 
-  call fio_dump_finfo(fid,endian,mode)
+  ierr = fio_dump_finfo(fid,endian,mode)
 
   call MPI_Finalize(ierr)
 

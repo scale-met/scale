@@ -17,6 +17,8 @@ module mod_mkiimap
   use scale_io
   use scale_atmos_grid_icoA_index
   use mod_io_param
+  use iso_c_binding
+  use mod_fio, only: cstr
 
   !-----------------------------------------------------------------------------
   implicit none
@@ -40,6 +42,7 @@ module mod_mkiimap
   private :: MKIIMAP_input_src_hgrid
   private :: MKIIMAP_output_iimap
 
+  include 'fio_c.inc'
   !-----------------------------------------------------------------------------
   !
   !++ Private parameters & variables
@@ -534,8 +537,6 @@ contains
        PRC_RGN_l2r
     use scale_vector, only: &
        VECTR_xyz2latlon
-    use mod_fio, only: &
-       datainfo
     use mod_grd, only: &
        GRD_XDIR, &
        GRD_YDIR, &
@@ -548,10 +549,11 @@ contains
     integer, allocatable  :: prc_tab(:)
     type(datainfo) dinfo
 
-    real(SP) :: var4(src_ADM_gall,ADM_KNONE,src_ADM_lall)
-    real(DP) :: var8(src_ADM_gall,ADM_KNONE,src_ADM_lall)
+    real(SP), target :: var4(src_ADM_gall,ADM_KNONE,src_ADM_lall)
+    real(DP), target :: var8(src_ADM_gall,ADM_KNONE,src_ADM_lall)
 
     integer :: did, fid
+    integer :: ierr
     integer :: g, k, l
     !---------------------------------------------------------------------------
 
@@ -562,66 +564,66 @@ contains
        allocate( prc_tab(src_PRC_RGN_local) )
        prc_tab(:) = src_PRC_RGN_lp2r(:,prcid)-1
 
-       call fio_mk_fname(infname,trim(src_hgrid_fname),'pe',prcid,6)
+       call fio_mk_fname(infname,cstr(src_hgrid_fname),cstr('pe'),prcid,6)
 
        if ( prcid == 0 ) then
-          call fio_put_commoninfo( IO_SPLIT_FILE,      & ! [IN]
-                                   IO_BIG_ENDIAN,      & ! [IN]
-                                   IO_ICOSAHEDRON,     & ! [IN]
-                                   src_GRID_LEVEL,     & ! [IN]
-                                   src_PRC_RGN_level,  & ! [IN]
-                                   src_PRC_RGN_local,  & ! [IN]
-                                   prc_tab             ) ! [IN]
+          ierr = fio_put_commoninfo( IO_SPLIT_FILE,      & ! [IN]
+                                     IO_BIG_ENDIAN,      & ! [IN]
+                                     IO_ICOSAHEDRON,     & ! [IN]
+                                     src_GRID_LEVEL,     & ! [IN]
+                                     src_PRC_RGN_level,  & ! [IN]
+                                     src_PRC_RGN_local,  & ! [IN]
+                                     prc_tab             ) ! [IN]
        endif
 
-       call fio_register_file(fid,trim(infname))
-       call fio_fopen(fid,IO_FREAD)
-       call fio_read_allinfo_validrgn(fid,prc_tab)
+       fid = fio_register_file(cstr(infname))
+       ierr = fio_fopen(fid,IO_FREAD)
+       ierr = fio_read_allinfo_validrgn(fid,prc_tab)
 
        deallocate( prc_tab )
 
-       call fio_seek_datainfo(did,fid,"grd_x_x",1)
+       did = fio_seek_datainfo(fid,cstr("grd_x_x"),1)
        if ( did == -1 ) then
           write(*,*) 'xxx data not found! : grd_x_x'
           call PRC_abort
        endif
-       call fio_get_datainfo(fid,did,dinfo)
+       ierr = fio_get_datainfo(dinfo,fid,did)
 
        if ( dinfo%datatype == IO_REAL4 ) then
-          call fio_read_data(fid,did,var4(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var4))
           src_GRD_x(:,k,:,GRD_XDIR) = real( var4(:,k,:), kind=RP )
        elseif( dinfo%datatype == IO_REAL8 ) then
-          call fio_read_data(fid,did,var8(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var8))
           src_GRD_x(:,k,:,GRD_XDIR) = real( var8(:,k,:), kind=RP )
        endif
 
-       call fio_seek_datainfo(did,fid,"grd_x_y",1)
+       did = fio_seek_datainfo(fid,cstr("grd_x_y"),1)
        if ( did == -1 ) then
           write(*,*) 'xxx data not found! : grd_x_y'
           call PRC_abort
        endif
-       call fio_get_datainfo(fid,did,dinfo)
+       ierr = fio_get_datainfo(dinfo,fid,did)
 
        if ( dinfo%datatype == IO_REAL4 ) then
-          call fio_read_data(fid,did,var4(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var4))
           src_GRD_x(:,k,:,GRD_YDIR) = real( var4(:,k,:), kind=RP )
        elseif( dinfo%datatype == IO_REAL8 ) then
-          call fio_read_data(fid,did,var8(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var8))
           src_GRD_x(:,k,:,GRD_YDIR) = real( var8(:,k,:), kind=RP )
        endif
 
-       call fio_seek_datainfo(did,fid,"grd_x_z",1)
+       did = fio_seek_datainfo(fid,cstr("grd_x_z"),1)
        if ( did == -1 ) then
           write(*,*) 'xxx data not found! : grd_x_z'
           call PRC_abort
        endif
-       call fio_get_datainfo(fid,did,dinfo)
+       ierr = fio_get_datainfo(dinfo,fid,did)
 
        if ( dinfo%datatype == IO_REAL4 ) then
-          call fio_read_data(fid,did,var4(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var4))
           src_GRD_x(:,k,:,GRD_ZDIR) = real( var4(:,k,:), kind=RP )
        elseif( dinfo%datatype == IO_REAL8 ) then
-          call fio_read_data(fid,did,var8(:,:,:))
+          ierr = fio_read_data(fid,did,c_loc(var8))
           src_GRD_x(:,k,:,GRD_ZDIR) = real( var8(:,k,:), kind=RP )
        endif
 
@@ -635,7 +637,7 @@ contains
        enddo
        enddo
 
-       call fio_fclose(fid)
+       ierr = fio_fclose(fid)
     else
        if( IO_L ) write(IO_FID_LOG,*) 'Invalid io_mode!'
        call PRC_abort
@@ -659,19 +661,21 @@ contains
     integer, allocatable :: prc_tab(:)
 
     character(len=H_MID) :: desc = 'IIMAP FILE'
+
+    integer :: ierr
     !---------------------------------------------------------------------------
 
     ! reset fio parameters
     allocate( prc_tab(PRC_RGN_local) )
     prc_tab(1:PRC_RGN_local) = PRC_RGN_l2r(1:PRC_RGN_local)-1
 
-    call fio_put_commoninfo( IO_SPLIT_FILE,  & ! [IN]
-                             IO_BIG_ENDIAN,  & ! [IN]
-                             IO_ICOSAHEDRON, & ! [IN]
-                             ADM_glevel,     & ! [IN]
-                             PRC_RGN_level,  & ! [IN]
-                             PRC_RGN_local,  & ! [IN]
-                             prc_tab         ) ! [IN]
+    ierr = fio_put_commoninfo( IO_SPLIT_FILE,  & ! [IN]
+                               IO_BIG_ENDIAN,  & ! [IN]
+                               IO_ICOSAHEDRON, & ! [IN]
+                               ADM_glevel,     & ! [IN]
+                               PRC_RGN_level,  & ! [IN]
+                               PRC_RGN_local,  & ! [IN]
+                               prc_tab         ) ! [IN]
 
     deallocate(prc_tab)
 

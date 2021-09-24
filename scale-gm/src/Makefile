@@ -73,7 +73,6 @@ endif
 
 OBJS =	\
 	fio.o                \
-	fiof.o               \
 	mod_io_param.o       \
 	mod_fio.o            \
 	mod_ideal_topo.o     \
