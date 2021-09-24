@@ -182,6 +182,7 @@ contains
     integer :: id
     integer :: level_
     integer :: tn
+    integer :: i
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
 
@@ -218,7 +219,12 @@ contains
     !call flush(IO_FID_LOG)
 
 #ifdef FAPP
-    call FAPP_START( trim(PROF_grpname(get_grpid(rapname))), id, level_ )
+    i = index(rapname," ")
+    if ( i == 0 .or. i > len_trim(rapname)) then
+       call FAPP_START( rapname, id, level_ )
+    else
+       call FAPP_START( rapname(1:i-1)//"_"//trim(rapname(i+1:)), id, level_ )
+    end if
 #endif
 
     return
@@ -240,6 +246,7 @@ contains
     integer :: id
     integer :: level_
     integer :: tn
+    integer :: i
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
 
@@ -272,7 +279,12 @@ contains
     if(PROF_mpi_barrier) call PRC_MPIbarrier
 
 #ifdef FAPP
-    call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
+    i = index(rapname," ")
+    if ( i == 0 .or. i > len_trim(rapname)) then
+       call FAPP_STOP( rapname, id, level_ )
+    else
+       call FAPP_STOP( rapname(1:i-1)//"_"//trim(rapname(i+1:)), id, level_ )
+    end if
 #endif
 
     return
@@ -573,7 +585,7 @@ contains
     integer :: idx
     !---------------------------------------------------------------------------
 
-    idx = index(rapname,"_")
+    idx = index(rapname," ")
     if ( idx > 1 ) then
        grpname = rapname(1:idx-1)
     else
