@@ -320,92 +320,91 @@ static int32_t fio_new_datainfo( int32_t fid )
 
 /** put package information (full) ************************************/
 int32_t fio_put_pkginfo( int32_t fid,
-                         headerinfo_t hinfo )
+                         headerinfo_t *hinfo )
 {
   int32_t i;
 
-  fio_set_str( finfo[fid].header.description,hinfo.description,FIO_HMID-1  );
-  fio_set_str( finfo[fid].header.note,       hinfo.note,       FIO_HLONG-1 );
-  finfo[fid].header.num_of_data   = hinfo.num_of_data;
-  finfo[fid].header.fmode         = hinfo.fmode;
-  finfo[fid].header.endiantype    = hinfo.endiantype;
-  finfo[fid].header.grid_topology = hinfo.grid_topology;
-  finfo[fid].header.glevel        = hinfo.glevel;
-  finfo[fid].header.rlevel        = hinfo.rlevel;
-  finfo[fid].header.num_of_rgn    = hinfo.num_of_rgn;
+  fio_set_str( finfo[fid].header.description,hinfo->description,FIO_HMID-1  );
+  fio_set_str( finfo[fid].header.note,       hinfo->note,       FIO_HLONG-1 );
+  finfo[fid].header.num_of_data   = hinfo->num_of_data;
+  finfo[fid].header.fmode         = hinfo->fmode;
+  finfo[fid].header.endiantype    = hinfo->endiantype;
+  finfo[fid].header.grid_topology = hinfo->grid_topology;
+  finfo[fid].header.glevel        = hinfo->glevel;
+  finfo[fid].header.rlevel        = hinfo->rlevel;
+  finfo[fid].header.num_of_rgn    = hinfo->num_of_rgn;
 
   finfo[fid].header.rgnid = (int32_t *)realloc(finfo[fid].header.rgnid,
                             sizeof(int32_t)*finfo[fid].header.num_of_rgn);
   for( i=0; i<finfo[fid].header.num_of_rgn; i++ ) {
-    finfo[fid].header.rgnid[i] = hinfo.rgnid[i];
+    finfo[fid].header.rgnid[i] = hinfo->rgnid[i];
   }
 
   return(SUCCESS_CODE);
 }
 
 /** get package information (full) ************************************/
-headerinfo_t fio_get_pkginfo( int32_t fid )
+int32_t fio_get_pkginfo( headerinfo_t *hinfo, int32_t fid )
 {
-  headerinfo_t hinfo;
   int32_t i;
 
-  fio_trim_str( hinfo.description,finfo[fid].header.description,FIO_HMID-1  );
-  fio_trim_str( hinfo.note,       finfo[fid].header.note,FIO_HLONG-1 );
-  hinfo.num_of_data   = finfo[fid].header.num_of_data;
-  hinfo.fmode         = finfo[fid].header.fmode;
-  hinfo.endiantype    = finfo[fid].header.endiantype;
-  hinfo.grid_topology = finfo[fid].header.grid_topology;
-  hinfo.glevel        = finfo[fid].header.glevel;
-  hinfo.rlevel        = finfo[fid].header.rlevel;
-  hinfo.num_of_rgn    = finfo[fid].header.num_of_rgn;
+  fio_trim_str( hinfo->description,finfo[fid].header.description,FIO_HMID-1  );
+  fio_trim_str( hinfo->note,       finfo[fid].header.note,FIO_HLONG-1 );
+  hinfo->num_of_data   = finfo[fid].header.num_of_data;
+  hinfo->fmode         = finfo[fid].header.fmode;
+  hinfo->endiantype    = finfo[fid].header.endiantype;
+  hinfo->grid_topology = finfo[fid].header.grid_topology;
+  hinfo->glevel        = finfo[fid].header.glevel;
+  hinfo->rlevel        = finfo[fid].header.rlevel;
+  hinfo->num_of_rgn    = finfo[fid].header.num_of_rgn;
 
-  hinfo.rgnid = (int32_t *)malloc(sizeof(int32_t)*hinfo.num_of_rgn);
-  for( i=0; i<hinfo.num_of_rgn; i++ ) {
-    hinfo.rgnid[i] = finfo[fid].header.rgnid[i];
+  hinfo->rgnid = (int32_t *)malloc(sizeof(int32_t)*hinfo->num_of_rgn);
+  for( i=0; i<hinfo->num_of_rgn; i++ ) {
+    hinfo->rgnid[i] = finfo[fid].header.rgnid[i];
   }
 
-  return(hinfo);
+  return(SUCCESS_CODE);
 }
 
 /** put data information (full) ***************************************/
 int32_t fio_put_datainfo( int32_t fid,
                           int32_t did,
-                          datainfo_t ditem )
+                          datainfo_t *ditem )
 {
-  fio_set_str( finfo[fid].dinfo[did].varname,    ditem.varname,    FIO_HSHORT-1 );
-  fio_set_str( finfo[fid].dinfo[did].description,ditem.description,FIO_HMID-1   );
-  fio_set_str( finfo[fid].dinfo[did].unit,       ditem.unit,       FIO_HSHORT-1 );
-  fio_set_str( finfo[fid].dinfo[did].layername,  ditem.layername,  FIO_HSHORT-1 );
-  fio_set_str( finfo[fid].dinfo[did].note,       ditem.note,       FIO_HLONG-1  );
-  finfo[fid].dinfo[did].datasize     = ditem.datasize;
-  finfo[fid].dinfo[did].datatype     = ditem.datatype;
-  finfo[fid].dinfo[did].num_of_layer = ditem.num_of_layer;
-  finfo[fid].dinfo[did].step         = ditem.step;
-  finfo[fid].dinfo[did].time_start   = ditem.time_start;
-  finfo[fid].dinfo[did].time_end     = ditem.time_end;
+  fio_set_str( finfo[fid].dinfo[did].varname,    ditem->varname,    FIO_HSHORT-1 );
+  fio_set_str( finfo[fid].dinfo[did].description,ditem->description,FIO_HMID-1   );
+  fio_set_str( finfo[fid].dinfo[did].unit,       ditem->unit,       FIO_HSHORT-1 );
+  fio_set_str( finfo[fid].dinfo[did].layername,  ditem->layername,  FIO_HSHORT-1 );
+  fio_set_str( finfo[fid].dinfo[did].note,       ditem->note,       FIO_HLONG-1  );
+  finfo[fid].dinfo[did].datasize     = ditem->datasize;
+  finfo[fid].dinfo[did].datatype     = ditem->datatype;
+  finfo[fid].dinfo[did].num_of_layer = ditem->num_of_layer;
+  finfo[fid].dinfo[did].step         = ditem->step;
+  finfo[fid].dinfo[did].time_start   = ditem->time_start;
+  finfo[fid].dinfo[did].time_end     = ditem->time_end;
 
   return(SUCCESS_CODE);
 }
 
 /** get data information (full) ***************************************/
-datainfo_t fio_get_datainfo( int32_t fid,
-                             int32_t did  )
+int32_t fio_get_datainfo( datainfo_t *ditem,
+			  int32_t fid,
+			  int32_t did  )
 {
-  datainfo_t ditem;
 
-  fio_trim_str( ditem.varname,    finfo[fid].dinfo[did].varname,    FIO_HSHORT-1 );
-  fio_trim_str( ditem.description,finfo[fid].dinfo[did].description,FIO_HMID-1   );
-  fio_trim_str( ditem.unit,       finfo[fid].dinfo[did].unit,       FIO_HSHORT-1 );
-  fio_trim_str( ditem.layername,  finfo[fid].dinfo[did].layername,  FIO_HSHORT-1 );
-  fio_trim_str( ditem.note,       finfo[fid].dinfo[did].note,       FIO_HLONG-1  );
-  ditem.datasize     = finfo[fid].dinfo[did].datasize;
-  ditem.datatype     = finfo[fid].dinfo[did].datatype;
-  ditem.num_of_layer = finfo[fid].dinfo[did].num_of_layer;
-  ditem.step         = finfo[fid].dinfo[did].step;
-  ditem.time_start   = finfo[fid].dinfo[did].time_start;
-  ditem.time_end     = finfo[fid].dinfo[did].time_end;
+  fio_trim_str( ditem->varname,    finfo[fid].dinfo[did].varname,    FIO_HSHORT-1 );
+  fio_trim_str( ditem->description,finfo[fid].dinfo[did].description,FIO_HMID-1   );
+  fio_trim_str( ditem->unit,       finfo[fid].dinfo[did].unit,       FIO_HSHORT-1 );
+  fio_trim_str( ditem->layername,  finfo[fid].dinfo[did].layername,  FIO_HSHORT-1 );
+  fio_trim_str( ditem->note,       finfo[fid].dinfo[did].note,       FIO_HLONG-1  );
+  ditem->datasize     = finfo[fid].dinfo[did].datasize;
+  ditem->datatype     = finfo[fid].dinfo[did].datatype;
+  ditem->num_of_layer = finfo[fid].dinfo[did].num_of_layer;
+  ditem->step         = finfo[fid].dinfo[did].step;
+  ditem->time_start   = finfo[fid].dinfo[did].time_start;
+  ditem->time_end     = finfo[fid].dinfo[did].time_end;
 
-  return(ditem);
+  return(SUCCESS_CODE);
 }
 
 /** seek data id by varname and step **********************************/
@@ -1187,7 +1186,7 @@ int32_t fio_valid_datainfo( int32_t fid )
 
 /** put & write data information and write data ***********************/
 int32_t fio_put_write_datainfo_data( int32_t fid,
-                                     datainfo_t ditem,
+                                     datainfo_t *ditem,
                                      void *data        )
 {
   int32_t did;
@@ -1205,7 +1204,7 @@ int32_t fio_put_write_datainfo_data( int32_t fid,
 
 /** put & write data information **************************************/
 int32_t fio_put_write_datainfo( int32_t fid,
-                                datainfo_t ditem )
+                                datainfo_t *ditem )
 {
   int32_t did;
 
