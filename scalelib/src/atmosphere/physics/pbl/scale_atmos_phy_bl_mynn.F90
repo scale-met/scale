@@ -1823,7 +1823,7 @@ contains
        Q1 = aa * ( Qw(k) - Qsl(k) ) * 0.5_RP / sigma_s
        cldfrac(k) = min( max( 0.5_RP * ( 1.0_RP + erf(Q1*rsqrt_2) ), 0.0_RP ), 1.0_RP )
        Qlp(k) = min( max( 2.0_RP * sigma_s * ( cldfrac(k) * Q1 + rsqrt_2pi &
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
                * exp( -min( 0.5_RP*Q1**2, 1.E+3_RP ) ) & ! apply exp limiter
 #else
                * exp(-0.5_RP*Q1**2) &
@@ -1832,7 +1832,7 @@ contains
        cc = ( 1.0_RP + EPSTvap * Qw(k) - Qlp(k) / EPSvap ) / EXNER(k) * LHVL(k) / CPtot &
              - POTT(k) / EPSvap
        Rt = cldfrac(k) - Qlp(k) / (2.0_RP*sigma_s*sqrt_2pi) &
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
                * exp( -min( Q1**2 * 0.5_RP, 1.E+3_RP ) ) ! apply exp limiter
 #else
                * exp(-Q1**2 * 0.5_RP)
