@@ -103,11 +103,10 @@ export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
 export FLIB_BARRIER=HARD
 
-SPACK_FJVER=${SPACK_FJVER}
 . /vol0004/apps/oss/spack/share/spack/setup-env.sh
-spack load netcdf-c%fj@\${SPACK_FJVER}
-spack load netcdf-fortran%fj@\${SPACK_FJVER}
-spack load parallel-netcdf%fj@\${SPACK_FJVER}
+spack load --first netcdf-c%fj
+spack load --first netcdf-fortran%fj
+spack load --first parallel-netcdf%fj
 
 EOF1
 
