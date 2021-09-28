@@ -24,43 +24,52 @@ do
    (( n > TPROC )) && TPROC=${n}
 done
 
+FILES_LLIO=""
 if [ ! ${PPCONF} = "NONE" ]; then
    CONFLIST=(`echo ${PPCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
+   FILES_LLIO=`echo -e ${FILES_LLIO} ${BINDIR}/${PPNAME}`
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
       RUN_PP=`echo -e "${RUN_PP}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${PPNAME} ${CONFLIST[i]} "|| exit 1"`
+      FILES_LLIO=`echo -e ${FILES_LLIO} ${CONFLIST[i]}`
    done
 fi
 
 if [ ! ${INITCONF} = "NONE" ]; then
    CONFLIST=(`echo ${INITCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
+   FILES_LLIO=`echo -e ${FILES_LLIO} ${BINDIR}/${INITNAME}`
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
       RUN_INIT=`echo -e "${RUN_INIT}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${INITNAME} ${CONFLIST[i]} "|| exit 1"`
+      FILES_LLIO=`echo -e ${FILES_LLIO} ${CONFLIST[i]}`
    done
 fi
 
 if [ ! ${RUNCONF} = "NONE" ]; then
    CONFLIST=(`echo ${RUNCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
+   FILES_LLIO=`echo -e ${FILES_LLIO} ${BINDIR}/${BINNAME}`
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
       RUN_MAIN=`echo -e "${RUN_MAIN}\n"fipp -C -Sregion -Icpupa -d prof ${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${BINNAME} ${CONFLIST[i]} "|| exit 1"`
+      FILES_LLIO=`echo -e ${FILES_LLIO} ${CONFLIST[i]}`
    done
 fi
 
 if [ ! ${N2GCONF} = "NONE" ]; then
    CONFLIST=(`echo ${N2GCONF} | tr -s ',' ' '`)
    ndata=${#CONFLIST[@]}
+   FILES_LLIO=`echo -e ${FILES_LLIO} ${BINDIR}/${N2GNAME}`
    for n in `seq 1 ${ndata}`
    do
       let i="n - 1"
       RUN_N2G=`echo -e "${RUN_N2G}\n"${MPIEXEC} ${PROCLIST[i]} ${BINDIR}/${N2GNAME} ${CONFLIST[i]} "|| exit 1"`
+      FILES_LLIO=`echo -e ${FILES_LLIO} ${CONFLIST[i]}`
    done
 fi
 
@@ -75,11 +84,6 @@ else
    nc=".nc"
 fi
 
-if [ ! -v SPACK_FJVER ]; then
-    SPACK_FJVER=4.3.1
-fi
-
-
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
@@ -89,12 +93,14 @@ cat << EOF1 > ./run.sh
 ################################################################################
 #PJM -L rscgrp="small"
 #PJM -L node=$(((TPROC+3)/4))
-#PJM -L elapse=1:00:00
+#PJM -L elapse=01:00:00
 #PJM --mpi "max-proc-per-node=4"
 #PJM -j
 #PJM -s
 #
+#PJM -x PJM_LLIO_GFSCACHE=/vol0004
 #
+
 export PARALLEL=12
 export OMP_NUM_THREADS=\${PARALLEL}
 export FORT90L=-Wl,-T
@@ -102,11 +108,12 @@ export PLE_MPI_STD_EMPTYFILE=off
 export OMP_WAIT_POLICY=active
 export FLIB_BARRIER=HARD
 
-SPACK_FJVER=${SPACK_FJVER}
 . /vol0004/apps/oss/spack/share/spack/setup-env.sh
-spack load netcdf-c%fj@\${SPACK_FJVER}
-spack load netcdf-fortran%fj@\${SPACK_FJVER}
-spack load parallel-netcdf%fj@\${SPACK_FJVER}
+spack load --first netcdf-c%fj
+spack load --first netcdf-fortran%fj
+spack load --first parallel-netcdf%fj
+
+export LD_LIBRARY_PATH=/lib64:/usr/lib64:/opt/FJSVxtclanga/tcsds-latest/lib64:/opt/FJSVxtclanga/tcsds-latest/lib:\$LD_LIBRARY_PATH
 
 EOF1
 
@@ -168,14 +175,25 @@ fi
 
 cat << EOF2 >> ./run.sh
 
-rm -rf ./prof
-mkdir -p ./prof
+# stage-in
 
-# run
+llio_transfer ${FILES_LLIO}
+
+DIRS_LLIO=\`echo \$LD_LIBRARY_PATH | sed -e 's/:/\n/g' | grep '^/vol0004/apps/oss/spack' | sort -u\`
+echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer
+
+#run
+rm -rf ./prof
+
 ${RUN_PP}
 ${RUN_INIT}
 ${RUN_MAIN}
 ${RUN_N2G}
+
+# clean up
+
+llio_transfer --purge ${FILES_LLIO}
+echo \${DIRS_LLIO} | xargs /home/system/tool/dir_transfer -p
 
 ################################################################################
 EOF2
