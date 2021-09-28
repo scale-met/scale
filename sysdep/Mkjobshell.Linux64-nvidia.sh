@@ -15,7 +15,7 @@ eval DATPARAM=(`echo ${11} | tr -s '[' '"' | tr -s ']' '"'`)
 eval DATDISTS=(`echo ${12} | tr -s '[' '"' | tr -s ']' '"'`)
 
 # System specific
-MPIEXEC="mpiexec -np"
+MPIEXEC="mpirun --oversubscribe -np"
 
 PROCLIST=(`echo ${PROCS} | tr -s ',' ' '`)
 TPROC=${PROCLIST[0]}
@@ -64,48 +64,23 @@ if [ ! ${N2GCONF} = "NONE" ]; then
    done
 fi
 
-array=( `echo ${TPROC} | tr -s 'x' ' '`)
-x=${array[0]}
-y=${array[1]:-1}
-let xy="${x} * ${y}"
-
 if [[ ${BINNAME} =~ ^scale-gm ]]; then
    nc=""
 else
    nc=".nc"
 fi
 
-if [ ! -v SPACK_FJVER ]; then
-  SPACK_FJVER=4.3.1
-fi
 
 
 cat << EOF1 > ./run.sh
 #! /bin/bash -x
 ################################################################################
 #
-# ------ For FUGAKU
+# ------ For Linux64 & NVIDIA HPC SDK
 #
 ################################################################################
-#PJM -L rscgrp="small"
-#PJM -L node=$(((TPROC+3)/4))
-#PJM -L elapse=01:00:00
-#PJM --mpi "max-proc-per-node=4"
-#PJM -j
-#PJM -s
-#
-#
-export PARALLEL=12
-export OMP_NUM_THREADS=\${PARALLEL}
-export FORT90L=-Wl,-T
-export PLE_MPI_STD_EMPTYFILE=off
-export OMP_WAIT_POLICY=active
-export FLIB_BARRIER=HARD
+export FORT_FMT_RECL=500
 
-. /vol0004/apps/oss/spack/share/spack/setup-env.sh
-spack load --first netcdf-c%fj
-spack load --first netcdf-fortran%fj
-spack load --first parallel-netcdf%fj
 
 EOF1
 

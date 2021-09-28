@@ -1146,7 +1146,7 @@ contains
     R = max( Z * IL, 0.0_DP )
 
     ! Holtslag and DeBruin (1988)
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
     fm_stable = - a*R - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
 #else
     fm_stable = - a*R - b*( R - c/d )*exp( -d*R ) - b*c/d
@@ -1181,7 +1181,7 @@ contains
        fmm_stable = - 0.5_DP * ( a + b * c + d ) * R
     else
        fmm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
     ! apply exp limiter
                     * exp( -min( d*R, 1.E+3_DP ) ) &
 #else
@@ -1219,7 +1219,7 @@ contains
     R = max( Z * IL, 0.0_DP )
 
     ! Beljaars and Holtslag (1991)
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
     fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -min( d*R, 1.E+3_RP ) ) - b*c/d ! apply exp limiter
 #else
     fh_stable = 1.0_DP - ( 1.0_DP + 2.0_DP/3.0_DP * a*R )**1.5_DP - b*( R - c/d )*exp( -d*R ) - b*c/d
@@ -1254,7 +1254,7 @@ contains
        fhm_stable = - 0.5_DP * ( a + b*c + b ) * R
     else
        fhm_stable = b * ( d*R - c + 1.0_DP ) / ( d**2 * R ) &
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
                     * exp( -min( d*R, 1.E+3_DP) ) &
 #else
                     * exp( -d*R ) &

@@ -4876,7 +4876,7 @@ contains
        Jh(k) = ( Jhet + Jhom ) * dt
     end do
     do k = KS, KE
-#if defined(PGI) || defined(SX)
+#if defined(NVIDIA) || defined(SX)
        tmp = min( xq(k,I_mp_QC)*Jh(k), 1.E+3_RP) ! apply exp limiter
        PQ(k,I_LChet) = -rdt*rhoq(k,I_QC)*( 1.0_RP - exp( -coef_m2_c*tmp ) )
        PQ(k,I_NChet) = -rdt*rhoq(k,I_NC)*( 1.0_RP - exp( -          tmp ) )
