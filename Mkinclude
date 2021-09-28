@@ -69,7 +69,7 @@ include $(TOPDIR)/utils/make/Make_checknetcdf
 ifeq ($(SCALE_ENABLE_PNETCDF),T)
    SCALE_NETCDF_INCLUDE += -DPNETCDF
    ifeq ($(shell pnetcdf-config --help > /dev/null 2>&1 && echo yes),yes)
-      SCALE_NETCDF_INCLUDE += $(shell pnetcdf-config --cppflags) -I$(shell pnetcdf-config --includedir)
+      SCALE_NETCDF_INCLUDE += -I$(shell pnetcdf-config --includedir)
       SCALE_NETCDF_LIBS := -L$(shell pnetcdf-config --libdir) -lpnetcdf $(SCALE_NETCDF_LIBS)
    endif
 endif

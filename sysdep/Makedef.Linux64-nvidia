@@ -1,6 +1,6 @@
 ################################################################################
 #
-# ------ For Linux64 & pgi fortran&C & openmpi -----
+# ------ For Linux64 & NVIDIA HPC SDK
 #
 ################################################################################
 
@@ -8,7 +8,7 @@
 #FFLAGS is set in Mkinclude. FFLAGS_DEBUG is used if SCALE_DEBUG=T
 
 FC  = mpif90
-SFC = pgfortran
+SFC = nvfortran
 MODDIROPT = -module
 
 FFLAGS_FAST  = -Mpreprocess -m64 -fast                \
@@ -25,7 +25,8 @@ FFLAGS_DYN   = $(FFLAGS)
 FFLAGS_DEBUG = -Mpreprocess -m64 -O0  \
                -Mbyteswapio -Mneginfo \
                -Mflushz -Ktrap=fp     \
-               -Mbounds -Mstandard    \
+#               -Mbounds -Mstandard    \
+               -Mbounds \
                -g -traceback
 
 
@@ -64,8 +65,8 @@ LDFLAGS = $(FFLAGS)
 # Settings are inquired by using nf-config & nc-config command (see scale/Mkinclude)
 # Or, please set environment variable
 # example:
-# export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-pgi/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-pgi/netcdf4/include"
-# export SCALE_NETCDF_LIBS="-L/opt/netcdf4-pgi/netcdf4/lib -lnetcdff -lnetcdf"
+# export SCALE_NETCDF_INCLUDE="-I/opt/netcdf4-nvidia/netcdf4/include -DNDEBUG -DpgiFortran -fPIC /opt/netcdf4-nvidia/netcdf4/include"
+# export SCALE_NETCDF_LIBS="-L/opt/netcdf4-nvidia/netcdf4/lib -lnetcdff -lnetcdf"
 
 ###### Math library
 # Please set environment variable

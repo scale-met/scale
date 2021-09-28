@@ -82,7 +82,7 @@ LDFLAGS = $(FFLAGS)
 # example:
 # export SCALE_NETCDF_INCLUDE="-I/home/user/tool/cross-K/include"
 # export SCALE_NETCDF_LIBS="-L/home/user/tool/cross-K/lib -lnetcdff -lnetcdf -lhdf5_hl -lhdf5 -lsz -lz"
-SPACK_VER ?= 4.3.1
+SPACK_VER ?= 4.6.1
 SCALE_NETCDF_C = $(shell spack location --install-dir netcdf-c%fj@$(SPACK_VER))
 SCALE_NETCDF_F = $(shell spack location --install-dir netcdf-fortran%fj@$(SPACK_VER))
 SCALE_PNETCDF = $(shell spack location --install-dir parallel-netcdf%fj@$(SPACK_VER))
