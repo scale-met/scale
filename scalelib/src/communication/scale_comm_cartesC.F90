@@ -199,6 +199,9 @@ contains
     LOG_INFO_CONT(*)         'Maximum number of vars for one communication: ', COMM_vsize_max
     LOG_INFO_CONT(*)         'All side is periodic?                       : ', COMM_IsAllPeriodic
 
+
+    COMM_gid = 0
+
     initialized = .true.
 
     return
