@@ -908,6 +908,7 @@ contains
     !$omp do OMP_SCHEDULE_
     do j = JJS, JJE
     do k = KS<%=nh%>, KE<%=-nh-1%>
+       i = IIS
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i,j) )
 <% (nh+1).times do |k| %>
@@ -915,7 +916,6 @@ contains
        call CHECK( __LINE__, val(k<%=k+1%>,i,j) )
 <% end %>
 #endif
-       i = IIS
        vel = <%= interp("mom", "XYW", "XYW") %> &
            / <%= interp("DENS", "XYZ", "XYW") %>
        flux(k,i,j) = J33G * vel &
@@ -929,6 +929,7 @@ contains
 
     !$omp do OMP_SCHEDULE_
     do j = JJS, JJE
+       i = IIS
 #ifdef DEBUG
 <% nh.times do |k| %>
        call CHECK( __LINE__, mom(KS<%=k%>,i  ,j) )
@@ -936,7 +937,6 @@ contains
        call CHECK( __LINE__, val(KS<%=k*2%>,i,j) )
 <% end %>
 #endif
-       i = IIS
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
        ! The flux at KS-1 can be non-zero.
        ! To reduce calculations, all the fluxes are set to zero.
