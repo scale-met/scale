@@ -978,6 +978,7 @@ contains
     !$omp do OMP_SCHEDULE_
     do j = JJS, JJE
     do k = KS+2, KE-3
+       i = IIS
 #ifdef DEBUG
        call CHECK( __LINE__, mom(k,i,j) )
 
@@ -991,7 +992,6 @@ contains
        call CHECK( __LINE__, val(k+3,i,j) )
 
 #endif
-       i = IIS
        vel = ( mom(k,i,j) ) &
            / ( F2H(k,1,I_XYZ) &
              * DENS(k+1,i,j) &
@@ -1014,6 +1014,7 @@ contains
 
     !$omp do OMP_SCHEDULE_
     do j = JJS, JJE
+       i = IIS
 #ifdef DEBUG
 
        call CHECK( __LINE__, mom(KS,i  ,j) )
@@ -1025,7 +1026,6 @@ contains
        call CHECK( __LINE__, val(KS+2,i,j) )
 
 #endif
-       i = IIS
        ! The boundary condition is qflx_hi + qflxJ13 + qfluxJ23 = 0 at KS-1.
        ! The flux at KS-1 can be non-zero.
        ! To reduce calculations, all the fluxes are set to zero.
