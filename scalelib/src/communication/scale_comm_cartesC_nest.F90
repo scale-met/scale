@@ -1191,20 +1191,20 @@ contains
     pye   = tilej
 
     if ( xlocg == 1 ) then ! BND_W
-       tilei = tilei + 2
-       pxs = pxs + 2
-       pxe = pxe + 2
+       tilei = tilei + IHALO
+       pxs = pxs + IHALO
+       pxe = pxe + IHALO
     endif
     if ( xlocg == OFFLINE_PARENT_PRC_NUM_X ) then ! BND_E
-       tilei = tilei + 2
+       tilei = tilei + IHALO
     endif
     if ( ylocg == 1 ) then ! BND_S
-       tilej = tilej + 2
-       pys = pys + 2
-       pye = pye + 2
+       tilej = tilej + JHALO
+       pys = pys + JHALO
+       pye = pye + JHALO
     endif
     if ( ylocg == OFFLINE_PARENT_PRC_NUM_Y ) then ! BND_N
-       tilej = tilej + 2
+       tilej = tilej + JHALO
     endif
 
     return
