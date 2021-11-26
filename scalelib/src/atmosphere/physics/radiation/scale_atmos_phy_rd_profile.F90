@@ -739,9 +739,6 @@ contains
                                  gas     (:,:), & ! [OUT]
                                  cfc     (:,:)  ) ! [OUT]
 
-    ! no vapor
-    gas(:,1) = 0.0_RP
-
     return
   end subroutine PROFILE_read_climatology
 
