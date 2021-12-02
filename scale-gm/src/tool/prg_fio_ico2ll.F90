@@ -242,6 +242,7 @@ program fio_ico2ll
   integer, allocatable :: group_ranks(:,:)
   integer, allocatable :: group_nums(:)
   logical, allocatable :: group_flags(:,:)
+  logical, allocatable :: output_flags(:)
   character(len=4)     :: group_name
 
 
@@ -475,6 +476,9 @@ program fio_ico2ll
   group_ranks   = -999
   allocate( group_flags(0:nprocs-1, group_div_num))
   group_flags   = .false.
+  allocate( output_flags(0:nprocs-1))
+  output_flags  = .false.
+
   allocate( local_groups      (group_div_num) )
   allocate( local_comms       (group_div_num) )
   allocate( output_ranks      (group_div_num) )
@@ -559,16 +563,23 @@ program fio_ico2ll
   enddo
 
   ! set which process will output netcdf files of each group
-  output_ranks(1)      = group_ranks(1,1)
-  output_localranks(1) = 0
-  do i = 2, group_div_num
-     output_ranks(i)      = group_ranks(1,i)
-     output_localranks(i) = 0
-     if ( output_ranks(i) == output_ranks(i-1) ) then
-        output_ranks(i) = output_ranks(i) + 1
-        output_localranks(i) = 1
-     endif
+  do i = group_div_num, 1, -1
+     do j = 1, group_nums(i)
+        if ( output_flags(group_ranks(j,i)) .eqv. .false. ) then
+           output_ranks(i) = group_ranks(j,i)
+           output_localranks(i) = j-1
+           output_flags(group_ranks(j,i)) = .true.
+           exit
+        elseif ( j == group_nums(i)) then
+           LOG_ERROR("fio_ico2ll",*) "group_div_num is too large; try less value."
+           call PRC_abort
+        endif
+     enddo
   enddo
+  if ( myrank == 0 ) then
+     LOG_INFO("fio_ico2ll",*) "Files are outputted from np:", output_ranks
+  endif
+
   !-------end of preparation for group division----------
 
   call PROF_rapend('READ LLMAP')
@@ -915,7 +926,7 @@ program fio_ico2ll
      do i = 1, group_div_num
         if ( myrank == output_ranks(i) ) then ! ##### only for output processes
            if ( group_div_num > 1 ) then
-              write(group_name, '(A1,I3.3)') "_",i
+              write(group_name, '(A1,I3.3)') "_",i-1
            else
               group_name = ""
            endif
