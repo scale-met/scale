@@ -87,6 +87,10 @@ program fio_ico2ll
   character(len=H_SHORT) :: time_units          = 'minutes' ! unit of time: seconds, minutes, hours, days
   logical                :: use_calendar        = .true.    ! use calendar for time unit (e.g., minutes since: 0000-01-01 00:00:00)
   integer                :: offset_year         = 0
+  character(len=H_SHORT) :: memory_usage        = "high"    ! high  : read all layers and convert at once
+                                                            ! medium: read all layers and convert layer by layer
+                                                            ! low   : read and convert layer by layer
+  integer                :: group_div_num       = 1         ! number of division in lat direction for netcdf output
 
 
   logical                :: help = .false.
@@ -117,6 +121,8 @@ program fio_ico2ll
      time_units,          &
      use_calendar,        &
      offset_year,         &
+     memory_usage,        &
+     group_div_num,       &
      help
 
   !-----------------------------------------------------------------------------
@@ -136,7 +142,7 @@ program fio_ico2ll
   ! ll grid coordinate
   integer              :: imax, jmax
   real(8), allocatable :: lon(:), lat(:)
-  real(8), allocatable :: lon_tmp(:)
+  real(8), allocatable :: lon_tmp(:), lat_tmp(:)
 
   ! ico2ll weight mapping
   integer              :: num_llgrid
@@ -186,8 +192,8 @@ program fio_ico2ll
 
   real(4), allocatable, target :: data4allrgn(:)
   real(8), allocatable, target :: data8allrgn(:)
-  real(4), allocatable :: icodata4   (:,:,:)
-  real(4), allocatable :: icodata4_z (:,:)
+  real(4), allocatable :: icodata4   (:,:,:,:)
+  real(4), allocatable :: icodata4_z (:,:,:,:)
 
   ! ll data
   real(4), allocatable :: lldata(:,:,:)
@@ -221,6 +227,24 @@ program fio_ico2ll
   integer :: fid, did, ofid, irec, ierr
   integer :: v, t, p, l, k, n, i, j, rgnid
   real(8) :: pi
+
+  ! for group division
+  integer :: np
+  integer :: lat_idx_min
+  integer :: lat_idx_max
+  integer :: world_group
+  integer, allocatable :: lat_idx_min_all(:)
+  integer, allocatable :: lat_idx_max_all(:)
+  integer, allocatable :: local_comms(:)
+  integer, allocatable :: local_groups(:)
+  integer, allocatable :: output_ranks(:)
+  integer, allocatable :: output_localranks(:)
+  integer, allocatable :: group_ranks(:,:)
+  integer, allocatable :: group_nums(:)
+  logical, allocatable :: group_flags(:,:)
+  character(len=4)     :: group_name
+
+
   !=============================================================================
 
   pi = 4.D0 * atan( 1.D0 )
@@ -274,6 +298,12 @@ program fio_ico2ll
   endif
 
   if ( output_netcdf ) then
+     call MPI_Bcast( IO_FID_LOG,             &
+                     1,                      &
+                     MPI_INTEGER,            &
+                     0,                      &
+                     comm,                   &
+                     ierr                    )
      call NETCDF_set_logfid( IO_FID_LOG )
      output_grads = .false.
      outfile_rec  = 1
@@ -424,6 +454,122 @@ program fio_ico2ll
         endif
      enddo
   enddo
+
+  !-------preparation for group division-------------
+  if ( mod(jmax,group_div_num) /= 0 ) then
+     LOG_ERROR("fio_ico2ll",*) "ERROR: group_div_num must be a divisor of jmax: ", jmax
+     call PRC_abort
+  endif
+  if ( group_div_num > nprocs ) then
+     LOG_ERROR("fio_ico2ll",*) "ERROR: group_div_num must be less than or equal to number of MPI processes:", nprocs
+     call PRC_abort
+  endif
+  if ( group_div_num > 1 .and. output_grads ) then
+     LOG_ERROR("fio_ico2ll",*) "ERROR: group_div_num > 1 cannot be used with grads output; use netcdf output."
+     call PRC_abort
+  endif
+
+  allocate( group_nums(group_div_num) )
+  group_nums    = 0
+  allocate( group_ranks(nprocs, group_div_num) )
+  group_ranks   = -999
+  allocate( group_flags(0:nprocs-1, group_div_num))
+  group_flags   = .false.
+  allocate( local_groups      (group_div_num) )
+  allocate( local_comms       (group_div_num) )
+  allocate( output_ranks      (group_div_num) )
+  allocate( output_localranks (group_div_num) )
+  allocate( lat_idx_max_all   (0:nprocs-1)    )
+  allocate( lat_idx_min_all   (0:nprocs-1)    )
+
+  ! find max and min lat_idx amoung the regions of this process.
+  lat_idx_max = 1
+  lat_idx_min = jmax
+  do p = pstr, pend
+     pp = p - pstr + 1
+     do l = 1, PRC_RGN_local
+        do n = 1, nmax_llgrid(l,pp)
+           if ( lat_idx(n,l,pp) > 0 ) then
+              lat_idx_max = max( lat_idx_max, lat_idx(n,l,pp) )
+              lat_idx_min = min( lat_idx_min, lat_idx(n,l,pp) )
+           endif
+        enddo
+     enddo
+  enddo
+  call MPI_Gather( lat_idx_max,        &
+                   1,                  &
+                   MPI_INTEGER,        &
+                   lat_idx_max_all(0), &
+                   1,             &
+                   MPI_INTEGER,        &
+                   0,                  &
+                   comm,               &
+                   ierr                )
+  call MPI_Gather( lat_idx_min,        &
+                   1,                  &
+                   MPI_INTEGER,        &
+                   lat_idx_min_all(0), &
+                   1,             &
+                   MPI_INTEGER,        &
+                   0,                  &
+                   comm,               &
+                   ierr                )
+
+  ! grouping processes by whether the regions of the process includes the divided lat range
+  if ( myrank == 0 ) then
+     do i = 1, group_div_num
+        n = 0
+        do np = 0, nprocs-1
+           if ( jmax/group_div_num*(i-1) <= lat_idx_max_all(np)  .and. &
+                lat_idx_min_all(np)      <= jmax/group_div_num*i       ) then
+              n = n + 1
+              group_ranks(n,i) = np
+              group_flags(np,i) = .true.
+           endif
+        enddo
+        group_nums(i) = n
+        LOG_INFO("fio_ico2ll",*) "group #", i, ": ", jmax/group_div_num*(i-1)+1, " <= j <= ", jmax/group_div_num*i
+        LOG_INFO("fio_ico2ll",*) "   np #", group_ranks(1:n,i)
+     enddo
+  endif
+  call MPI_Bcast( group_ranks(1,1),       &
+                  nprocs*group_div_num,   &
+                  MPI_INTEGER,            &
+                  0,                      &
+                  comm,                   &
+                  ierr                    )
+  call MPI_Bcast( group_nums(1),          &
+                  group_div_num,          &
+                  MPI_INTEGER,            &
+                  0,                      &
+                  comm,                   &
+                  ierr                    )
+  call MPI_Bcast( group_flags(0,1),       &
+                  nprocs*group_div_num,   &
+                  MPI_LOGICAL,            &
+                  0,                      &
+                  comm,                   &
+                  ierr                    )
+
+  ! create communicater for each group
+  call MPI_COMM_GROUP(comm, world_group, ierr)
+  do i = 1, group_div_num
+     call MPI_Group_incl(world_group, group_nums(i), group_ranks(1:group_nums(i),i), local_groups(i), ierr)
+     call MPI_Comm_create_group(comm, local_groups(i), 0, local_comms(i), ierr)
+  enddo
+
+  ! set which process will output netcdf files of each group
+  output_ranks(1)      = group_ranks(1,1)
+  output_localranks(1) = 0
+  do i = 2, group_div_num
+     output_ranks(i)      = group_ranks(1,i)
+     output_localranks(i) = 0
+     if ( output_ranks(i) == output_ranks(i-1) ) then
+        output_ranks(i) = output_ranks(i) + 1
+        output_localranks(i) = 1
+     endif
+  enddo
+  !-------end of preparation for group division----------
 
   call PROF_rapend('READ LLMAP')
   LOG_INFO("fio_ico2ll",*) '*** llmap read end'
@@ -735,362 +881,713 @@ program fio_ico2ll
   do v = 1, nvar
 
      kmax    = var_nlayer(v)
-     recsize = int(imax,kind=8)*int(jmax,kind=8)*int(kmax,kind=8)*4_8 ! [mod] 12-04-19 H.Yashiro
-
      num_of_step = min(step_end,var_nstep(v)) - step_str + 1
 
-     allocate( data4allrgn(GALL*kmax*PRC_RGN_local) )
-     allocate( data8allrgn(GALL*kmax*PRC_RGN_local) )
-     allocate( icodata4   (GALL,kmax,PRC_RGN_local) )
-     allocate( icodata4_z (GALL,kmax)            )
+     if ( memory_usage == "low" ) then
+        recsize = int(imax,kind=8)*int(jmax,kind=8)*4_8
+        allocate( data4allrgn (GALL)          )
+        allocate( data8allrgn (GALL)          )
+        allocate( icodata4    (GALL,1,1,1)    )
+        allocate( icodata4_z  (GALL,1,1,1)    )
+        allocate( lldata      (imax,jmax,1)   )
+        allocate( lldata_total(imax,jmax,1)   )
+     elseif ( memory_usage == "medium" ) then
+        recsize = int(imax,kind=8)*int(jmax,kind=8)*4_8
+        allocate( data4allrgn (GALL*kmax*PRC_RGN_local)            )
+        allocate( data8allrgn (GALL*kmax*PRC_RGN_local)            )
+        allocate( icodata4    (GALL,kmax,PRC_RGN_local,prc_nlocal) )
+        allocate( icodata4_z  (GALL,kmax,PRC_RGN_local,prc_nlocal) )
+        allocate( lldata      (imax,jmax,1)                        )
+        allocate( lldata_total(imax,jmax,1)                        )
+     elseif ( memory_usage == "high") then
+        recsize = int(imax,kind=8)*int(jmax,kind=8)*int(kmax,kind=8)*4_8
+        allocate( data4allrgn (GALL*kmax*PRC_RGN_local)   )
+        allocate( data8allrgn (GALL*kmax*PRC_RGN_local)   )
+        allocate( icodata4    (GALL,kmax,PRC_RGN_local,1) )
+        allocate( icodata4_z  (GALL,kmax,1,1)             )
+        allocate( lldata      (imax,jmax,kmax)            ) ! all node have large pallet
+        allocate( lldata_total(imax,jmax,kmax)            ) ! reduced
+     else
+        LOG_ERROR("fio_ico2ll.",*) 'memory_usage must be low, medium, or high.'
+        call PRC_abort
+     endif
 
-     allocate( lldata(imax,jmax,kmax) ) ! all node have large pallet
-
-     allocate( lldata_total(imax,jmax,kmax) ) ! reduced
-
-     if ( myrank == 0 ) then ! ##### only for master process
-
-        !--- open output file
-        outbase = trim(outfile_dir)//'/'//trim(outfile_prefix)//trim(var_name(v))
-        ofid    = IO_get_available_fid()
-
-        if (output_grads) then ! GrADS Format
-
-           call PROF_rapstart('+FILE O GRADS')
-           LOG_INFO("fio_ico2ll",*)
-           LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, kmax
-
-           open( unit   = ofid,                  &
-                 file   = trim(outbase)//'.grd', &
-                 form   = 'unformatted',         &
-                 access = 'direct',              &
-                 recl   = recsize,               &
-                 status = 'unknown'              )
-           irec = 1
-
-           if ( outfile_rec > 1 ) then
-              LOG_INFO("fio_ico2ll",*) 'Change output record position : start from step ', outfile_rec
-              irec = outfile_rec
-           endif
-           call PROF_rapend  ('+FILE O GRADS')
-
-        elseif(output_netcdf) then ! NetCDF format [add] 13-04-18 C.Kodama
-
-           call PROF_rapstart('+FILE O NETCDF')
-           LOG_INFO("fio_ico2ll",*)
-           LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.nc'
-
-           histday     = 0
-           histsec     = real(var_time_str(v),kind=RP)
-
-           call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
-
-           call CALENDAR_daysec2date( date_str(:), & ! [OUT]
-                                      histms,      & ! [OUT]
-                                      histday,     & ! [IN]
-                                      histsec,     & ! [IN]
-                                      offset_year  ) ! [IN]
-           if ( use_calendar ) then
-              write( nc_time_units,'(A7,A7,I4.4,5(A,I2.2))') trim(time_units), " since ", date_str(1), &
-                                                                                     "-", date_str(2), &
-                                                                                     "-", date_str(3), &
-                                                                                     " ", date_str(4), &
-                                                                                     ":", date_str(5), &
-                                                                                     ":", date_str(6)
+     do i = 1, group_div_num
+        if ( myrank == output_ranks(i) ) then ! ##### only for output processes
+           if ( group_div_num > 1 ) then
+              write(group_name, '(A1,I3.3)') "_",i
            else
-              if ( trim(time_units) == "days" ) then
-                 write( nc_time_units, '(A5)') trim(time_units)
-              elseif ( trim(time_units) == "hours" ) then
-                 write( nc_time_units, '(A6)') trim(time_units)
-              elseif ( trim(time_units) == "minutes" .or. trim(time_units) == "seconds" ) then
-                 write( nc_time_units, '(A7)') trim(time_units)
-              else
-                 LOG_ERROR("fio_ico2ll",*) 'time_units must be days, hours, minutes, or seconds'
-               call PRC_abort
+              group_name = ""
+           endif
+
+           !--- open output file
+           outbase = trim(outfile_dir)//'/'//trim(outfile_prefix)//trim(var_name(v))//trim(group_name)
+           ofid    = IO_get_available_fid()
+
+           if (output_grads) then ! GrADS Format
+
+              call PROF_rapstart('+FILE O GRADS')
+              LOG_INFO("fio_ico2ll",*)
+              LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, kmax
+
+              open( unit   = ofid,                  &
+                    file   = trim(outbase)//'.grd', &
+                    form   = 'unformatted',         &
+                    access = 'direct',              &
+                    recl   = recsize,               &
+                    status = 'unknown'              )
+              irec = 1
+
+              if ( outfile_rec > 1 ) then
+                 LOG_INFO("fio_ico2ll",*) 'Change output record position : start from step ', outfile_rec
+                 irec = outfile_rec
               endif
-           endif
+              call PROF_rapend  ('+FILE O GRADS')
 
-           LOG_INFO("fio_ico2ll",*) '  nc_time_units = ', trim(nc_time_units)
+           elseif(output_netcdf) then ! NetCDF format [add] 13-04-18 C.Kodama
 
-           allocate( lon_tmp(imax) )
+              call PROF_rapstart('+FILE O NETCDF')
+              LOG_INFO("fio_ico2ll",*)
+              LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.nc'
 
-           if ( lon_swap ) then ! low_swap == .true. is not checked yet.
-              lon_tmp(1:imax/2)      = ( lon(imax/2+1:imax)   ) * 180.D0 / pi
-              lon_tmp(imax/2+1:imax) = ( lon(1:imax/2) + 2*pi ) * 180.D0 / pi
-           else
-              lon_tmp(:) = lon(:) * 180.D0 / pi
-           endif
+              histday     = 0
+              histsec     = real(var_time_str(v),kind=RP)
 
-           if ( dcmip2016 ) then
-              call cf_desc_unit( var_name_nc, & ! [OUT]
-                                 var_desc_nc, & ! [OUT]
-                                 var_unit_nc, & ! [OUT]
-                                 var_name(v)  ) ! [IN]
-           else
-              var_name_nc = trim(var_name(v))
-              var_desc_nc = trim(var_desc(v))
-              var_unit_nc = trim(var_unit(v))
-           endif
+              call CALENDAR_adjust_daysec( histday, histsec ) ! [INOUT]
 
-           allocate( time_axis(num_of_step))
-           if ( trim(time_units) == "days" ) then
-              sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR
-           elseif ( trim(time_units) == "hours" ) then
-              sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN
-           elseif ( trim(time_units) == "minutes" ) then
-              sec_in_timeunit = CALENDAR_SEC
-           elseif ( trim(time_units) == "seconds" ) then
-              sec_in_timeunit = 1.0_RP
-           endif
-           if ( use_calendar ) then
-              do t = 1, num_of_step
-                time_axis(t) = real(t-1,8)*real(var_dt(v),8)/real(sec_in_timeunit,8)
+              call CALENDAR_daysec2date( date_str(:), & ! [OUT]
+                                         histms,      & ! [OUT]
+                                         histday,     & ! [IN]
+                                         histsec,     & ! [IN]
+                                         offset_year  ) ! [IN]
+              if ( use_calendar ) then
+                 write( nc_time_units,'(A7,A7,I4.4,5(A,I2.2))') trim(time_units), " since ", date_str(1), &
+                                                                                        "-", date_str(2), &
+                                                                                        "-", date_str(3), &
+                                                                                        " ", date_str(4), &
+                                                                                        ":", date_str(5), &
+                                                                                        ":", date_str(6)
+              else
+                 if ( trim(time_units) == "days" ) then
+                    write( nc_time_units, '(A5)') trim(time_units)
+                 elseif ( trim(time_units) == "hours" ) then
+                    write( nc_time_units, '(A6)') trim(time_units)
+                 elseif ( trim(time_units) == "minutes" .or. trim(time_units) == "seconds" ) then
+                    write( nc_time_units, '(A7)') trim(time_units)
+                 else
+                    LOG_ERROR("fio_ico2ll",*) 'time_units must be days, hours, minutes, or seconds'
+                  call PRC_abort
+                 endif
+              endif
+
+              LOG_INFO("fio_ico2ll",*) '  nc_time_units = ', trim(nc_time_units)
+
+              allocate( lon_tmp(imax) )
+              allocate( lat_tmp(jmax) )
+
+              if ( lon_swap ) then ! low_swap == .true. is not checked yet.
+                 lon_tmp(1:imax/2)      = ( lon(imax/2+1:imax)   ) * 180.D0 / pi
+                 lon_tmp(imax/2+1:imax) = ( lon(1:imax/2) + 2*pi ) * 180.D0 / pi
+              else
+                 lon_tmp(:) = lon(:) * 180.D0 / pi
+              endif
+              do n = 1, imax
+                 lon_tmp(n) = round8(lon_tmp(n))
               enddo
-           else
-            do t = 1, num_of_step
-               time_axis(t) = ( real(histsec,8)                                                          &
-                              + real(histday,8)    *CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR              &
-                              + real(offset_year,8)*CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR*CALENDAR_DOI &
-                              + real(t-1,8)*real(var_dt(v),8) )                                          &
-                              / real(sec_in_timeunit,8)
-             enddo
-           endif
+              lat_tmp(1:jmax) = lat(1:jmax) * 180.D0 / pi
+              do n = 1, jmax
+                 lat_tmp(n) = round8(lat_tmp(n))
+              enddo
 
-           call netcdf_open_for_write( nc,                                       & ! [OUT]
-                                       ncfile      = trim(outbase)//'.nc',       & ! [IN]
-                                       count       = (/  imax, jmax, kmax, 1 /), & ! [IN]
-                                       title       = 'SCALE-GM data output',     & ! [IN]
-                                       imax        = imax,                       & ! [IN]
-                                       jmax        = jmax,                       & ! [IN]
-                                       kmax        = kmax,                       & ! [IN]
-                                       tmax        = num_of_step,                & ! [IN]
-                                       lon         = lon_tmp,                    & ! [IN]
-                                       lat         = (/ ( lat(j)*180.D0/pi, j=1, jmax ) /), & ! [IN]
-                                       lev         = var_zgrid(1:kmax,v),        & ! [IN]
-!                                       time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
-                                       time        = time_axis,                  & ! [IN]
-                                       lev_units   ='m',                         & ! [IN]
-                                       time_units  = trim(nc_time_units),        & ! [IN]
-                                       var_name    = trim(var_name_nc),          & ! [IN]
-                                       var_desc    = trim(var_desc_nc),          & ! [IN]
-                                       var_units   = trim(var_unit_nc),          & ! [IN]
-                                       var_missing = CONST_UNDEF4,               & ! [IN]
-                                       netcdf_comp_level = netcdf_comp_level    )  ! [IN]
 
-           deallocate(lon_tmp)
-           deallocate( time_axis)
+              if ( dcmip2016 ) then
+                 call cf_desc_unit( var_name_nc, & ! [OUT]
+                                    var_desc_nc, & ! [OUT]
+                                    var_unit_nc, & ! [OUT]
+                                    var_name(v)  ) ! [IN]
+              else
+                 var_name_nc = trim(var_name(v))
+                 var_desc_nc = trim(var_desc(v))
+                 var_unit_nc = trim(var_unit(v))
+              endif
 
-           call PROF_rapend  ('+FILE O NETCDF')
+              allocate( time_axis(num_of_step))
+              if ( trim(time_units) == "days" ) then
+                 sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR
+              elseif ( trim(time_units) == "hours" ) then
+                 sec_in_timeunit = CALENDAR_SEC*CALENDAR_MIN
+              elseif ( trim(time_units) == "minutes" ) then
+                 sec_in_timeunit = CALENDAR_SEC
+              elseif ( trim(time_units) == "seconds" ) then
+                 sec_in_timeunit = 1.0_RP
+              endif
+              if ( use_calendar ) then
+                 do t = 1, num_of_step
+                   time_axis(t) = real(t-1,8)*real(var_dt(v),8)/real(sec_in_timeunit,8)
+                 enddo
+              else
+                 do t = 1, num_of_step
+                    time_axis(t) = ( real(histsec,8)                                                          &
+                                   + real(histday,8)    *CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR              &
+                                   + real(offset_year,8)*CALENDAR_SEC*CALENDAR_MIN*CALENDAR_HOUR*CALENDAR_DOI &
+                                   + real(t-1,8)*real(var_dt(v),8) )                                          &
+                                   / real(sec_in_timeunit,8)
+                 enddo
+              endif
 
-        endif
+              if ( memory_usage == "low" .or. memory_usage == "medium"  ) then
+                 call netcdf_open_for_write( nc,                                       & ! [OUT]
+                                             ncfile      = trim(outbase)//'.nc',       & ! [IN]
+                                             count       = (/  imax, jmax/group_div_num, 1, 1 /),    & ! [IN]
+                                             title       = 'SCALE-GM data output',     & ! [IN]
+                                             imax        = imax,                       & ! [IN]
+                                             jmax        = jmax/group_div_num,         & ! [IN]
+                                             kmax        = kmax,                       & ! [IN]
+                                             tmax        = num_of_step,                & ! [IN]
+                                             lon         = lon_tmp,                    & ! [IN]
+                                             lat         = lat_tmp((jmax/group_div_num*(i-1)+1):(jmax/group_div_num*i)), & ! [IN]
+                                             lev         = var_zgrid(1:kmax,v),        & ! [IN]
+ !                                            time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
+                                             time        = time_axis,                  & ! [IN]
+                                             lev_units   ='m',                         & ! [IN]
+                                             time_units  = trim(nc_time_units),        & ! [IN]
+                                             var_name    = trim(var_name_nc),          & ! [IN]
+                                             var_desc    = trim(var_desc_nc),          & ! [IN]
+                                             var_units   = trim(var_unit_nc),          & ! [IN]
+                                             var_missing = CONST_UNDEF4,               & ! [IN]
+                                             netcdf_comp_level = netcdf_comp_level    )  ! [IN]
+              elseif ( memory_usage == "high" ) then
+                 call netcdf_open_for_write( nc,                                       & ! [OUT]
+                                             ncfile      = trim(outbase)//'.nc',       & ! [IN]
+                                             count       = (/  imax, jmax/group_div_num, kmax, 1 /), & ! [IN]
+                                             title       = 'SCALE-GM data output',     & ! [IN]
+                                             imax        = imax,                       & ! [IN]
+                                             jmax        = jmax/group_div_num,         & ! [IN]
+                                             kmax        = kmax,                       & ! [IN]
+                                             tmax        = num_of_step,                & ! [IN]
+                                             lon         = lon_tmp,                    & ! [IN]
+                                             lat         = lat_tmp((jmax/group_div_num*(i-1)+1):(jmax/group_div_num*i)), & ! [IN]
+                                             lev         = var_zgrid(1:kmax,v),        & ! [IN]
+ !                                            time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
+                                             time        = time_axis,                  & ! [IN]
+                                             lev_units   ='m',                         & ! [IN]
+                                             time_units  = trim(nc_time_units),        & ! [IN]
+                                             var_name    = trim(var_name_nc),          & ! [IN]
+                                             var_desc    = trim(var_desc_nc),          & ! [IN]
+                                             var_units   = trim(var_unit_nc),          & ! [IN]
+                                             var_missing = CONST_UNDEF4,               & ! [IN]
+                                             netcdf_comp_level = netcdf_comp_level    )  ! [IN]
+              endif
 
-     endif ! ##### master?
+              deallocate(lon_tmp)
+              deallocate(lat_tmp)
+              deallocate(time_axis)
 
+              call PROF_rapend  ('+FILE O NETCDF')
+
+           endif ! netcdf or grads
+        endif ! output processes?
+     enddo ! group number loop
+
+   !--------------------------------------------------------------------------------------
      do t = 1, num_of_step
 
         nowsec = var_time_str(v) + (t-1)*var_dt(v)
         step   = t-1 + step_str
 
-        lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
+        !-------------------------------------------------------------------------------
+        if ( memory_usage == "low" ) then ! convert layer by layer. low memory usage.
+           do k = 1, kmax
+              lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
+              do p = pstr, pend
+                 pp = p - pstr + 1
 
-        do p = pstr, pend
-           pp = p - pstr + 1
+                 data4allrgn(:)    = CONST_UNDEF4
+                 data8allrgn(:)    = CONST_UNDEF
+                 icodata4(:,:,:,:) = CONST_UNDEF4
 
-           data4allrgn(:)  = CONST_UNDEF4
-           data8allrgn(:)  = CONST_UNDEF
-           icodata4(:,:,:) = CONST_UNDEF4
-
-           call PROF_rapstart('+FILE I FIO')
-           !--- seek data ID and get information
-           did = fio_seek_datainfo(ifid(pp),cstr(var_name(v)),step)
-           !--- verify
-           if ( did == -1 ) then
-              LOG_ERROR("fio_ico2ll",*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
-              call PRC_abort
-           endif
-
-           !--- read from pe000xx file
-           if ( var_datatype(v) == IO_REAL4 ) then
-
-              ierr = fio_read_data(ifid(pp),did,c_loc(data4allrgn))
-
-           elseif( var_datatype(v) == IO_REAL8 ) then
-
-              ierr = fio_read_data(ifid(pp),did,c_loc(data8allrgn))
-
-              data4allrgn(:) = real(data8allrgn(:),kind=4)
-              where( data8allrgn(:) < CONST_UNDEF*0.1 )
-                 data4allrgn(:) = CONST_UNDEF4
-              endwhere
-
-           endif
-           icodata4(:,:,:) = reshape( data4allrgn(:), shape(icodata4) )
-           call PROF_rapend('+FILE I FIO')
-
-           do l = 1, PRC_RGN_local
-              if ( t == 1 ) then
-                 if ( mod(l,10) == 0 ) then
-                    LOG_INFO("fio_ico2ll",'(1x,I6.6)') PRC_RGN_lp2r(l,p-1)
-                    LOG_INFO_CONTNA('(A)')             '          '
-                 else
-                    LOG_INFO_CONTNA('(1x,I6.6)')       PRC_RGN_lp2r(l,p-1)
-                 endif
-              endif
-
-              !--- Zstar(Xi) -> Z coordinate
-              if ( var_xi2z(v) ) then
-                 call PROF_rapstart('+Xi2Z')
-
-                 if ( var_ztop(v) < 0.D0 ) then
-                    LOG_INFO("fio_ico2ll",*) '*** Ztop is not specified.'
-                    LOG_INFO("fio_ico2ll",*) '*** It will be determined by the vertical axis info in ZSALL**.txt.'
+                 call PROF_rapstart('+FILE I FIO')
+                 !--- seek data ID and get information
+                 did = fio_seek_datainfo(ifid(pp),cstr(var_name(v)),step)
+                 !--- verify
+                 if ( did == -1 ) then
+                    LOG_ERROR("fio_ico2ll",*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
                     call PRC_abort
                  endif
+                 call PROF_rapend('+FILE I FIO')
 
-                 call VINTRPL_Xi2Z ( GALL,               & ! [IN]
-                                     kmax,               & ! [IN]
-                                     var_zgrid (:,v),    & ! [IN]
-                                     var_ztop  (v),      & ! [IN]
-                                     topo      (:,l,pp), & ! [IN]
-                                     CONST_UNDEF4,        & ! [IN]
-                                     icodata4  (:,:,l),  & ! [IN]
-                                     icodata4_z(:,:)     ) ! [OUT]
+                 do l = 1, PRC_RGN_local
 
-                 call PROF_rapend('+Xi2Z')
-              else
-                 icodata4_z(:,:) = icodata4(:,:,l)
+                    call PROF_rapstart('+FILE I FIO')
+                    !--- read from pe000xx file
+                    if ( var_datatype(v) == IO_REAL4 ) then
+                       ierr = fio_read_data_1layer(ifid(pp),did,k,kmax,l,PRC_RGN_local,c_loc(data4allrgn))
+                    elseif( var_datatype(v) == IO_REAL8 ) then
+                       ierr = fio_read_data_1layer(ifid(pp),did,k,kmax,l,PRC_RGN_local,c_loc(data8allrgn))
+                       data4allrgn(:) = real(data8allrgn(:),kind=4)
+                       where( data8allrgn(:) < CONST_UNDEF*0.1 )
+                          data4allrgn(:) = CONST_UNDEF4
+                       endwhere
+                    endif
+                    icodata4_z(:,:,:,:) = reshape( data4allrgn(:), shape(icodata4_z) )
+                    call PROF_rapend('+FILE I FIO')
+
+                    if ( t == 1 ) then
+                       if ( mod(l,10) == 0 ) then
+                          LOG_INFO("fio_ico2ll",'(1x,I6.6)') PRC_RGN_lp2r(l,p-1)
+                          LOG_INFO_CONTNA('(A)')             '          '
+                       else
+                          LOG_INFO_CONTNA('(1x,I6.6)')       PRC_RGN_lp2r(l,p-1)
+                       endif
+                    endif
+
+                    !--- Zstar(Xi) -> Z coordinate (cannot be used with low_memory)
+                    if ( var_xi2z(v) ) then
+                       LOG_ERROR("fio_ico2ll",*) 'Zstar(Xi) -> Z conversion cannot be used with memory_usage = high '
+                       call PRC_abort
+                    endif
+
+                    call PROF_rapstart('+Interpolation')
+                    !--- ico -> lat-lon
+                    if ( nmax_llgrid(l,pp) /= 0 ) then
+                       if ( use_NearestNeighbor ) then ! nearest neighbor
+                          do n = 1, nmax_llgrid(l,pp)
+                             if    ( icodata4_z(n1(n,l,pp),1,1,1) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n1(n,l,pp),1,1,1)
+
+                             elseif( icodata4_z(n2(n,l,pp),1,1,1) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n2(n,l,pp),1,1,1)
+
+                             elseif( icodata4_z(n3(n,l,pp),1,1,1) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n3(n,l,pp),1,1,1)
+                             else
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = CONST_UNDEF4
+                             endif
+                          enddo
+                       else
+                          do n = 1, nmax_llgrid(l,pp)
+                             if (      icodata4_z(n1(n,l,pp),1,1,1) < CONST_UNDEF4*0.1 &
+                                  .OR. icodata4_z(n2(n,l,pp),1,1,1) < CONST_UNDEF4*0.1 &
+                                  .OR. icodata4_z(n3(n,l,pp),1,1,1) < CONST_UNDEF4*0.1 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = CONST_UNDEF4
+
+                              else
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = w1(n,l,pp) * icodata4_z(n1(n,l,pp),1,1,1) &
+                                                                          + w2(n,l,pp) * icodata4_z(n2(n,l,pp),1,1,1) &
+                                                                          + w3(n,l,pp) * icodata4_z(n3(n,l,pp),1,1,1)
+                             endif
+                          enddo
+                       endif
+                    endif
+                    call PROF_rapend('+Interpolation')
+
+                 enddo ! region LOOP
+              enddo ! PE LOOP
+
+              !--- swap longitude
+              if (lon_swap) then
+                 temp(1:imax/2,     :) = lldata(imax/2+1:imax,:,1)
+                 temp(imax/2+1:imax,:) = lldata(1:imax/2     ,:,1)
+                 lldata(:,:,1)         = temp(:,:)
               endif
 
-              call PROF_rapstart('+Interpolation')
-              !--- ico -> lat-lon
-              if ( nmax_llgrid(l,pp) /= 0 ) then
-                 if ( use_NearestNeighbor ) then ! nearest neighbor
-                    do k = 1, kmax
-                    do n = 1, nmax_llgrid(l,pp)
-                       if    ( icodata4_z(n1(n,l,pp),k) /= CONST_UNDEF4 ) then
-
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n1(n,l,pp),k)
-
-                       elseif( icodata4_z(n2(n,l,pp),k) /= CONST_UNDEF4 ) then
-
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n2(n,l,pp),k)
-
-                       elseif( icodata4_z(n3(n,l,pp),k) /= CONST_UNDEF4 ) then
-
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n3(n,l,pp),k)
-
-                       else
-
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = CONST_UNDEF4
-
-                       endif
-                    enddo
-                    enddo
-                 else
-                    do k = 1, kmax
-                    do n = 1, nmax_llgrid(l,pp)
-                       if (      icodata4_z(n1(n,l,pp),k) < CONST_UNDEF4*0.1 &
-                            .OR. icodata4_z(n2(n,l,pp),k) < CONST_UNDEF4*0.1 &
-                            .OR. icodata4_z(n3(n,l,pp),k) < CONST_UNDEF4*0.1 ) then
-
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = CONST_UNDEF4
-                       else
-                          lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = w1(n,l,pp) * icodata4_z(n1(n,l,pp),k) &
-                                                                    + w2(n,l,pp) * icodata4_z(n2(n,l,pp),k) &
-                                                                    + w3(n,l,pp) * icodata4_z(n3(n,l,pp),k)
-                       endif
-                    enddo
-                    enddo
+              !--- Gather Lat-Lon data
+              call PROF_rapstart('+Communication')
+              do i = 1, group_div_num
+                 if ( group_flags(myrank,i) ) then
+                    call MPI_reduce( lldata      (1,jmax/group_div_num*(i-1)+1,1), &
+                                     lldata_total(1,jmax/group_div_num*(i-1)+1,1), &
+                                     imax*jmax/group_div_num,        &
+                                     MPI_REAL,                       &
+                                     MPI_SUM,                        &
+                                     output_localranks(i),           &
+                                     local_comms(i),                 &
+                                     ierr                 )
                  endif
+              enddo
+              call PROF_rapend  ('+Communication')
+
+              do i = 1, group_div_num
+                 if ( myrank == output_ranks(i) ) then ! ##### only for output processes
+
+                    !--- output lat-lon data file
+                    if (output_grads) then
+                       call PROF_rapstart('+FILE O GRADS')
+                       write(ofid,rec=irec) lldata_total(:,:,1)
+                       irec = irec + 1
+                       call PROF_rapend  ('+FILE O GRADS')
+
+                    elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
+                       call PROF_rapstart('+FILE O NETCDF')
+                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1), k=k, t=t )
+                       call PROF_rapend  ('+FILE O NETCDF')
+                    endif
+                 endif
+              enddo
+
+
+           enddo ! k LOOP
+           LOG_INFO("fio_ico2ll",*) ' +append step:', step
+
+
+        !---------------------------------------------------------------------------
+        elseif ( memory_usage == "medium" ) then ! read all layers and convert layer by layer. medium memory usage.
+           lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
+
+           do p = pstr, pend
+              pp = p - pstr + 1
+
+              data4allrgn(:)    = CONST_UNDEF4
+              data8allrgn(:)    = CONST_UNDEF
+              icodata4(:,:,:,:) = CONST_UNDEF4
+
+              call PROF_rapstart('+FILE I FIO')
+              !--- seek data ID and get information
+              did = fio_seek_datainfo(ifid(pp),cstr(var_name(v)),step)
+              !--- verify
+              if ( did == -1 ) then
+                 LOG_ERROR("fio_ico2ll",*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
+                 call PRC_abort
               endif
+              !--- read from pe000xx file
+              if ( var_datatype(v) == IO_REAL4 ) then
+                 ierr = fio_read_data(ifid(pp),did,c_loc(data4allrgn))
+              elseif( var_datatype(v) == IO_REAL8 ) then
+                 ierr = fio_read_data(ifid(pp),did,c_loc(data8allrgn))
+                 data4allrgn(:) = real(data8allrgn(:),kind=4)
+                 where( data8allrgn(:) < CONST_UNDEF*0.1 )
+                    data4allrgn(:) = CONST_UNDEF4
+                 endwhere
+              endif
+              icodata4(:,:,:,pp) = reshape( data4allrgn(:), shape(icodata4(:,:,:,pp)) )
+              call PROF_rapend('+FILE I FIO')
+
+              do l = 1, PRC_RGN_local
+                 if ( t == 1 ) then
+                    if ( mod(l,10) == 0 ) then
+                       LOG_INFO("fio_ico2ll",'(1x,I6.6)') PRC_RGN_lp2r(l,p-1)
+                       LOG_INFO_CONTNA('(A)')             '          '
+                    else
+                       LOG_INFO_CONTNA('(1x,I6.6)')       PRC_RGN_lp2r(l,p-1)
+                    endif
+                 endif
+
+                 !--- Zstar(Xi) -> Z coordinate
+                 if ( var_xi2z(v) ) then
+                    call PROF_rapstart('+Xi2Z')
+
+                    if ( var_ztop(v) < 0.D0 ) then
+                       LOG_INFO("fio_ico2ll",*) '*** Ztop is not specified.'
+                       LOG_INFO("fio_ico2ll",*) '*** It will be determined by the vertical axis info in ZSALL**.txt.'
+                       call PRC_abort
+                    endif
+
+                    call VINTRPL_Xi2Z ( GALL,                & ! [IN]
+                                        kmax,                & ! [IN]
+                                        var_zgrid (:,v),     & ! [IN]
+                                        var_ztop  (v),       & ! [IN]
+                                        topo      (:,l,pp),  & ! [IN]
+                                        CONST_UNDEF4,        & ! [IN]
+                                        icodata4  (:,:,l,pp),& ! [IN]
+                                        icodata4_z(:,:,l,pp) ) ! [OUT]
+
+                    call PROF_rapend('+Xi2Z')
+                 else
+                    icodata4_z(:,:,l,pp) = icodata4(:,:,l,pp)
+                 endif
+
+              enddo ! region LOOP
+           enddo ! PE LOOP
+
+           do k = 1, kmax
+              !--- ico -> lat-lon
+              call PROF_rapstart('+Interpolation')
+              lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
+              do p = pstr, pend
+                 pp = p - pstr + 1
+                 do l = 1, PRC_RGN_local
+                    if ( nmax_llgrid(l,pp) /= 0 ) then
+                       if ( use_NearestNeighbor ) then ! nearest neighbor
+                          do n = 1, nmax_llgrid(l,pp)
+                             if    ( icodata4_z(n1(n,l,pp),k,l,pp) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n1(n,l,pp),k,l,pp)
+
+                             elseif( icodata4_z(n2(n,l,pp),1,l,pp) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n2(n,l,pp),k,l,pp)
+
+                             elseif( icodata4_z(n3(n,l,pp),1,l,pp) /= CONST_UNDEF4 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = icodata4_z(n3(n,l,pp),k,l,pp)
+                             else
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = CONST_UNDEF4
+                             endif
+                          enddo
+                       else
+                          do n = 1, nmax_llgrid(l,pp)
+                             if (      icodata4_z(n1(n,l,pp),k,l,pp) < CONST_UNDEF4*0.1 &
+                                  .OR. icodata4_z(n2(n,l,pp),k,l,pp) < CONST_UNDEF4*0.1 &
+                                  .OR. icodata4_z(n3(n,l,pp),k,l,pp) < CONST_UNDEF4*0.1 ) then
+
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = CONST_UNDEF4
+                             else
+                                lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),1) = w1(n,l,pp) * icodata4_z(n1(n,l,pp),k,l,pp) &
+                                                                          + w2(n,l,pp) * icodata4_z(n2(n,l,pp),k,l,pp) &
+                                                                          + w3(n,l,pp) * icodata4_z(n3(n,l,pp),k,l,pp)
+                             endif
+                          enddo
+                       endif
+                    endif
+                 enddo ! region LOOP
+              enddo ! PE LOOP
               call PROF_rapend('+Interpolation')
 
-           enddo ! region LOOP
+              !--- swap longitude
+              if (lon_swap) then
+                 temp(1:imax/2,     :) = lldata(imax/2+1:imax,:,1)
+                 temp(imax/2+1:imax,:) = lldata(1:imax/2     ,:,1)
+                 lldata(:,:,1)         = temp(:,:)
+              endif
 
-           if ( t==1 ) then
-              LOG_INFO("fio_ico2ll",*)
+              !--- Gather Lat-Lon data
+              call PROF_rapstart('+Communication')
+              do i = 1, group_div_num
+                 if ( group_flags(myrank,i) ) then
+                    call MPI_reduce( lldata      (1,jmax/group_div_num*(i-1)+1,1), &
+                                     lldata_total(1,jmax/group_div_num*(i-1)+1,1), &
+                                     imax*jmax/group_div_num,        &
+                                     MPI_REAL,                       &
+                                     MPI_SUM,                        &
+                                     output_localranks(i),           &
+                                     local_comms(i),                 &
+                                     ierr                 )
+                 endif
+              enddo
+              call PROF_rapend  ('+Communication')
+
+              do i = 1, group_div_num
+                 if ( myrank == output_ranks(i) ) then ! ##### only for output processes
+
+                    !--- output lat-lon data file
+                    if (output_grads) then
+                       call PROF_rapstart('+FILE O GRADS')
+                       write(ofid,rec=irec) lldata_total(:,:,1)
+                       irec = irec + 1
+                       call PROF_rapend  ('+FILE O GRADS')
+
+                    elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
+                       call PROF_rapstart('+FILE O NETCDF')
+                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1), k=k, t=t )
+                       call PROF_rapend  ('+FILE O NETCDF')
+                    endif
+
+                 endif ! ##### output processes?
+              enddo ! group number LOOP
+
+           enddo ! k LOOP
+           LOG_INFO("fio_ico2ll",*) ' +append step:', step
+
+
+        !------------------------------------------------------------------------------
+        elseif ( memory_usage == "high" ) then ! convert all layers at once. high memory usage.
+           lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
+
+           do p = pstr, pend
+              pp = p - pstr + 1
+
+              data4allrgn(:)    = CONST_UNDEF4
+              data8allrgn(:)    = CONST_UNDEF
+              icodata4(:,:,:,:) = CONST_UNDEF4
+
+              call PROF_rapstart('+FILE I FIO')
+              !--- seek data ID and get information
+              did = fio_seek_datainfo(ifid(pp),cstr(var_name(v)),step)
+              !--- verify
+              if ( did == -1 ) then
+                 LOG_ERROR("fio_ico2ll",*) 'xxx data not found! varname:',trim(var_name(v)),", step : ",step
+                 call PRC_abort
+              endif
+              !--- read from pe000xx file
+              if ( var_datatype(v) == IO_REAL4 ) then
+                 ierr = fio_read_data(ifid(pp),did,c_loc(data4allrgn))
+              elseif( var_datatype(v) == IO_REAL8 ) then
+                 ierr = fio_read_data(ifid(pp),did,c_loc(data8allrgn))
+                 data4allrgn(:) = real(data8allrgn(:),kind=4)
+                 where( data8allrgn(:) < CONST_UNDEF*0.1 )
+                    data4allrgn(:) = CONST_UNDEF4
+                 endwhere
+              endif
+              icodata4(:,:,:,:) = reshape( data4allrgn(:), shape(icodata4) )
+              call PROF_rapend('+FILE I FIO')
+
+              do l = 1, PRC_RGN_local
+                 if ( t == 1 ) then
+                    if ( mod(l,10) == 0 ) then
+                       LOG_INFO("fio_ico2ll",'(1x,I6.6)') PRC_RGN_lp2r(l,p-1)
+                       LOG_INFO_CONTNA('(A)')             '          '
+                    else
+                       LOG_INFO_CONTNA('(1x,I6.6)')       PRC_RGN_lp2r(l,p-1)
+                    endif
+                 endif
+
+                 !--- Zstar(Xi) -> Z coordinate
+                 if ( var_xi2z(v) ) then
+                    call PROF_rapstart('+Xi2Z')
+
+                    if ( var_ztop(v) < 0.D0 ) then
+                       LOG_INFO("fio_ico2ll",*) '*** Ztop is not specified.'
+                       LOG_INFO("fio_ico2ll",*) '*** It will be determined by the vertical axis info in ZSALL**.txt.'
+                       call PRC_abort
+                    endif
+
+                    call VINTRPL_Xi2Z ( GALL,               & ! [IN]
+                                        kmax,               & ! [IN]
+                                        var_zgrid (:,v),    & ! [IN]
+                                        var_ztop  (v),      & ! [IN]
+                                        topo      (:,l,pp), & ! [IN]
+                                        CONST_UNDEF4,       & ! [IN]
+                                        icodata4  (:,:,l,1),& ! [IN]
+                                        icodata4_z(:,:,1,1) ) ! [OUT]
+
+                    call PROF_rapend('+Xi2Z')
+                 else
+                    icodata4_z(:,:,1,1) = icodata4(:,:,l,1)
+                 endif
+
+                 call PROF_rapstart('+Interpolation')
+                 !--- ico -> lat-lon
+                 if ( nmax_llgrid(l,pp) /= 0 ) then
+                    if ( use_NearestNeighbor ) then ! nearest neighbor
+                       do k = 1, kmax
+                       do n = 1, nmax_llgrid(l,pp)
+                          if    ( icodata4_z(n1(n,l,pp),k,1,1) /= CONST_UNDEF4 ) then
+
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n1(n,l,pp),k,1,1)
+
+                          elseif( icodata4_z(n2(n,l,pp),k,1,1) /= CONST_UNDEF4 ) then
+
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n2(n,l,pp),k,1,1)
+
+                          elseif( icodata4_z(n3(n,l,pp),k,1,1) /= CONST_UNDEF4 ) then
+
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = icodata4_z(n3(n,l,pp),k,1,1)
+                          else
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = CONST_UNDEF4
+                          endif
+                       enddo
+                       enddo
+                    else
+                       do k = 1, kmax
+                       do n = 1, nmax_llgrid(l,pp)
+                          if (      icodata4_z(n1(n,l,pp),k,1,1) < CONST_UNDEF4*0.1 &
+                               .OR. icodata4_z(n2(n,l,pp),k,1,1) < CONST_UNDEF4*0.1 &
+                               .OR. icodata4_z(n3(n,l,pp),k,1,1) < CONST_UNDEF4*0.1 ) then
+
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = CONST_UNDEF4
+                          else
+                             lldata(lon_idx(n,l,pp),lat_idx(n,l,pp),k) = w1(n,l,pp) * icodata4_z(n1(n,l,pp),k,1,1) &
+                                                                       + w2(n,l,pp) * icodata4_z(n2(n,l,pp),k,1,1) &
+                                                                       + w3(n,l,pp) * icodata4_z(n3(n,l,pp),k,1,1)
+                          endif
+                       enddo
+                       enddo
+                    endif
+                 endif
+                 call PROF_rapend('+Interpolation')
+              enddo ! region LOOP
+           enddo ! PE LOOP
+
+           !--- swap longitude
+           if (lon_swap) then
+              do k = 1, kmax
+                 temp(1:imax/2,     :) = lldata(imax/2+1:imax,:,k)
+                 temp(imax/2+1:imax,:) = lldata(1:imax/2     ,:,k)
+                 lldata(:,:,k)         = temp(:,:)
+              enddo
            endif
 
-        enddo ! PE LOOP
-
-        !--- swap longitude
-        if (lon_swap) then
+           !--- Gather Lat-Lon data
+           call PROF_rapstart('+Communication')
            do k = 1, kmax
-              temp(1:imax/2,     :) = lldata(imax/2+1:imax,:,k)
-              temp(imax/2+1:imax,:) = lldata(1:imax/2     ,:,k)
-              lldata(:,:,k)         = temp(:,:)
+              do i = 1, group_div_num
+                 if ( group_flags(myrank,i) ) then
+                    call MPI_reduce( lldata      (1,jmax/group_div_num*(i-1)+1,k), &
+                                     lldata_total(1,jmax/group_div_num*(i-1)+1,k), &
+                                     imax*jmax/group_div_num,        &
+                                     MPI_REAL,                       &
+                                     MPI_SUM,                        &
+                                     output_localranks(i),           &
+                                     local_comms(i),                 &
+                                     ierr                 )
+                 endif
+              enddo
            enddo
-        endif
+           call PROF_rapend  ('+Communication')
 
-        !--- Gather Lat-Lon data
-        call PROF_rapstart('+Communication')
-        do k = 1, kmax
-           call MPI_Allreduce( lldata      (1,1,k), &
-                               lldata_total(1,1,k), &
-                               imax*jmax,           &
-                               MPI_REAL,            &
-                               MPI_SUM,             &
-                               comm,                &
-                               ierr                 )
-        enddo
-        call PROF_rapend  ('+Communication')
+           do i = 1, group_div_num
+              if ( myrank == output_ranks(i) ) then ! ##### only for output processes
 
-        if ( myrank == 0 ) then ! ##### only for master process
+                 !--- output lat-lon data file
+                 if (output_grads) then
+                    call PROF_rapstart('+FILE O GRADS')
+                    write(ofid,rec=irec) lldata_total(:,:,:)
+                    irec = irec + 1
+                    call PROF_rapend  ('+FILE O GRADS')
 
-        !--- output lat-lon data file
-        if (output_grads) then
+                 elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
+                    call PROF_rapstart('+FILE O NETCDF')
+                    call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,:), t=t )
+                    call PROF_rapend  ('+FILE O NETCDF')
+                 endif
 
-           call PROF_rapstart('+FILE O GRADS')
-           write(ofid,rec=irec) lldata_total(:,:,:)
-           irec = irec + 1
-           call PROF_rapend  ('+FILE O GRADS')
+              endif ! output processes?
+           enddo ! group number LOOP
+           LOG_INFO("fio_ico2ll",*) ' +append step:', step
 
-        elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
+        endif ! ##### memory usage: low, medium, or high
 
-           call PROF_rapstart('+FILE O NETCDF')
-           call netcdf_write( nc, lldata_total(:,:,:), t=t )
-           call PROF_rapend  ('+FILE O NETCDF')
-
-        endif
-
-        LOG_INFO("fio_ico2ll",*) ' +append step:', step
-
-        endif ! ##### master?
 
      enddo ! step LOOP
 
-     if ( myrank == 0 ) then ! ##### only for master process
+     do i = 1, group_div_num
+        if ( myrank == output_ranks(i) ) then ! ##### only for output processes
 
-     !--- close output file
-     close(ofid)
+           !--- close output file
+           close(ofid)
 
-     if (output_grads) then
+           if (output_grads) then
 
-        call PROF_rapstart('+FILE O GRADS')
-        call makegradsctl( outfile_dir,         &
-                           outfile_prefix,      &
-                           var_name(v),         &
-                           imax,                &
-                           jmax,                &
-                           kmax,                &
-                           lon,                 &
-                           lat,                 &
-                           var_zgrid(1:kmax,v), &
-                           num_of_step,         &
-                           var_time_str(v),     &
-                           var_dt(v),           &
-                           lon_swap             )
-        call PROF_rapend  ('+FILE O GRADS')
+              call PROF_rapstart('+FILE O GRADS')
+              call makegradsctl( outfile_dir,         &
+                                 outfile_prefix,      &
+                                 var_name(v),         &
+                                 imax,                &
+                                 jmax,                &
+                                 kmax,                &
+                                 lon,                 &
+                                 lat,                 &
+                                 var_zgrid(1:kmax,v), &
+                                 num_of_step,         &
+                                 var_time_str(v),     &
+                                 var_dt(v),           &
+                                 lon_swap             )
+              call PROF_rapend  ('+FILE O GRADS')
 
-     elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
+           elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
 
-        call PROF_rapstart('+FILE O NETCDF')
-        call netcdf_close( nc )
-        call PROF_rapend  ('+FILE O NETCDF')
+              call PROF_rapstart('+FILE O NETCDF')
+              call netcdf_close( nc )
+              call PROF_rapend  ('+FILE O NETCDF')
 
-     endif
+           endif
 
-     endif ! ##### master?
+        endif ! output processes?
+     enddo ! group number LOOP
 
      deallocate( data4allrgn )
      deallocate( data8allrgn )
@@ -1118,6 +1615,13 @@ program fio_ico2ll
   call PROF_rapreport
 
   !--- finalize all process
+  call MPI_Group_free(world_group, ierr)
+  do i = 1, group_div_num
+     if ( group_flags(myrank,i)) then
+        call MPI_Group_free(local_groups(i), ierr)
+        call MPI_Comm_free(local_comms(i), ierr)
+     endif
+  enddo
   call PRC_MPIfinish
 
   !-----------------------------------------------------------------------------
@@ -1525,5 +2029,30 @@ contains
     end select
 
   end subroutine cf_desc_unit
+
+  function round8(x) ! round the last digit of double float
+     implicit none
+     real(8) :: x
+     real(8) :: round8
+     character(len=16) :: tmp
+
+     if     ( x >= 100.0_8 ) then
+        write(tmp, '(F15.11)') x
+     elseif ( x >= 10.0_8  ) then
+        write(tmp, '(F15.12)') x
+     elseif ( x >= 0.0_8   ) then
+        write(tmp, '(F15.13)') x
+     elseif ( x > -10.0_8  ) then
+        write(tmp, '(F16.13)') x
+     elseif ( x > -100.0_8 ) then
+        write(tmp, '(F16.12)') x
+     else
+        write(tmp, '(F16.11)') x
+     endif
+
+     read(tmp,*) round8
+
+  end function round8
+
 
 end program fio_ico2ll

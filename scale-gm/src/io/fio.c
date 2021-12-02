@@ -49,6 +49,7 @@
  *int32_t        fio_write_data               : write data array
  *int32_t        fio_write_data_1rgn          : write data array (1 region)
  *int32_t        fio_read_data                : read data array
+ *int32_t        fio_read_data_1layer         : read data array for 1 layer
  *int32_t        fio_read_data_tmpdata        : read data array from tmpdata
  *<function suite for fortran program>
  *int32_t        fio_register_file            : register new file
@@ -875,6 +876,42 @@ int32_t fio_read_data( int32_t fid,
   return(SUCCESS_CODE);
 }
 
+/** read data array (1 layer) ***************************************/
+int32_t fio_read_data_1layer( int32_t fid,
+                              int32_t did,
+                              int32_t k,
+                              int32_t kmax,
+                              int32_t l,
+                              int32_t lmax,
+                              void *data   )
+{
+  int64_t i;
+  int64_t pos;
+  int64_t ijall;
+
+  ijall = finfo[fid].dinfo[did].datasize
+        / precision[finfo[fid].dinfo[did].datatype]/(kmax*lmax);
+
+  fsetpos(finfo[fid].status.fp, &(finfo[fid].status.eoh));
+  pos = 0;
+  for( i=0; i<did; i++ ) {
+    pos += dinfosize + finfo[fid].dinfo[i].datasize;
+  }
+  pos += dinfosize;
+  pos += finfo[fid].dinfo[i].datasize*(l-1)/lmax ;
+  pos += finfo[fid].dinfo[i].datasize/lmax*(k-1)/kmax ;
+
+  fseek(finfo[fid].status.fp,pos,SEEK_CUR);
+
+  fread(data,finfo[fid].dinfo[did].datasize/(kmax*lmax),1,finfo[fid].status.fp);
+  if(system_ednchg){
+    fio_ednchg(data,precision[finfo[fid].dinfo[did].datatype],ijall);
+  }
+
+  return(SUCCESS_CODE);
+}
+
+
 /** read data array from tmpdata **************************************/
 /* [add] C.Kodama 13-04-18 */
 int32_t fio_read_data_tmpdata( int32_t fid,
@@ -1548,4 +1585,3 @@ int32_t fio_dump_finfo( int32_t fid,
 
   return(SUCCESS_CODE);
 }
-
