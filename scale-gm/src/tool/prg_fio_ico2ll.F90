@@ -72,6 +72,8 @@ program fio_ico2ll
   character(len=H_LONG)  :: infile              = ''
   integer                :: step_str            = 1
   integer                :: step_end            = max_nstep
+  integer                :: layer_str           = 1
+  integer                :: layer_end           = max_nlayer
   character(len=H_LONG)  :: outfile_dir         = '.'
   character(len=H_SHORT) :: outfile_prefix      = ''
   integer                :: outfile_rec         = 1
@@ -106,6 +108,8 @@ program fio_ico2ll
      infile,              &
      step_str,            &
      step_end,            &
+     layer_str,           &
+     layer_end,           &
      outfile_dir,         &
      outfile_prefix,      &
      outfile_rec,         &
@@ -214,6 +218,7 @@ program fio_ico2ll
   integer(8)            :: nowsec
   integer(8)            :: recsize ! [mod] 12-04-19 H.Yashiro
   integer               :: kmax, num_of_step, step, date_str(6)
+  integer, allocatable  :: ks(:), ke(:)
 
   character(len=IO_HSHORT) :: vname, lname
 
@@ -295,6 +300,14 @@ program fio_ico2ll
      call PRC_abort
   elseif( step_str > step_end ) then
      LOG_ERROR("fio_ico2ll",*) "xxx step_str must be < step_end. STOP"
+     call PRC_abort
+  endif
+
+  if ( layer_str < 1 .or. layer_end < 1 ) then
+     LOG_ERROR("fio_ico2ll",*) "xxx layer must be >= 1. STOP"
+     call PRC_abort
+  elseif( layer_str > layer_end ) then
+     LOG_ERROR("fio_ico2ll",*) "xxx layer_str must be < layer_end. STOP"
      call PRC_abort
   endif
 
@@ -646,6 +659,9 @@ program fio_ico2ll
   allocate( var_xi2z     (max_nvar) )
   allocate( var_ztop     (max_nvar) )
   allocate( var_zgrid    (max_nlayer, max_nvar) )
+  allocate( ks           (max_nvar) )
+  allocate( ke           (max_nvar) )
+
 
   pp = 1 ! only for first file
 
@@ -735,6 +751,14 @@ program fio_ico2ll
                  endif
               endif
 
+              if ( kmax == 1 ) then
+                 ks(nvar) = 1
+                 ke(nvar) = 1
+              else
+                 ks(nvar) = layer_str
+                 ke(nvar) = min(layer_end, kmax)
+              endif
+
            close(fid)
         endif
 
@@ -763,7 +787,7 @@ program fio_ico2ll
   call PROF_rapstart('READ TOPOGRAPHY')
 
   call PROF_rapstart('+Communication')
-  ! broadcast var_xi2z, var_ztop and var_zgrid from master process
+  ! broadcast var_xi2z, var_ztop, var_zgrid, ks, and ke from master process
   call MPI_Bcast( var_xi2z(1),          &
                   max_nvar,             &
                   MPI_LOGICAL,          &
@@ -782,6 +806,18 @@ program fio_ico2ll
                   max_nlayer*max_nvar,  &
                   MPI_DOUBLE_PRECISION, &
                   PRC_masterrank,       &
+                  comm,                 &
+                  ierr                  )
+  call MPI_Bcast( ks(1),                &
+                  max_nvar,             &
+                  MPI_INTEGER,          &
+                  0,                    &
+                  comm,                 &
+                  ierr                  )
+  call MPI_Bcast( ke(1),                &
+                  max_nvar,             &
+                  MPI_INTEGER,          &
+                  0,                    &
                   comm,                 &
                   ierr                  )
   call PROF_rapend  ('+Communication')
@@ -911,7 +947,7 @@ program fio_ico2ll
         allocate( lldata      (imax,jmax,1)                        )
         allocate( lldata_total(imax,jmax,1)                        )
      elseif ( memory_usage == "high") then
-        recsize = int(imax,kind=8)*int(jmax,kind=8)*int(kmax,kind=8)*4_8
+        recsize = int(imax,kind=8)*int(jmax,kind=8)*int(ke(v)-ks(v)+1,kind=8)*4_8
         allocate( data4allrgn (GALL*kmax*PRC_RGN_local)   )
         allocate( data8allrgn (GALL*kmax*PRC_RGN_local)   )
         allocate( icodata4    (GALL,kmax,PRC_RGN_local,1) )
@@ -939,7 +975,7 @@ program fio_ico2ll
 
               call PROF_rapstart('+FILE O GRADS')
               LOG_INFO("fio_ico2ll",*)
-              LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, kmax
+              LOG_INFO("fio_ico2ll",*) 'Output: ', trim(outbase)//'.grd', recsize, imax, jmax, ke(v)-ks(v)+1
 
               open( unit   = ofid,                  &
                     file   = trim(outbase)//'.grd', &
@@ -1053,11 +1089,11 @@ program fio_ico2ll
                                              title       = 'SCALE-GM data output',     & ! [IN]
                                              imax        = imax,                       & ! [IN]
                                              jmax        = jmax/group_div_num,         & ! [IN]
-                                             kmax        = kmax,                       & ! [IN]
+                                             kmax        = ke(v)-ks(v)+1,              & ! [IN]
                                              tmax        = num_of_step,                & ! [IN]
                                              lon         = lon_tmp,                    & ! [IN]
                                              lat         = lat_tmp((jmax/group_div_num*(i-1)+1):(jmax/group_div_num*i)), & ! [IN]
-                                             lev         = var_zgrid(1:kmax,v),        & ! [IN]
+                                             lev         = var_zgrid(ks(v):ke(v),v),   & ! [IN]
  !                                            time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
                                              time        = time_axis,                  & ! [IN]
                                              lev_units   ='m',                         & ! [IN]
@@ -1070,15 +1106,15 @@ program fio_ico2ll
               elseif ( memory_usage == "high" ) then
                  call netcdf_open_for_write( nc,                                       & ! [OUT]
                                              ncfile      = trim(outbase)//'.nc',       & ! [IN]
-                                             count       = (/  imax, jmax/group_div_num, kmax, 1 /), & ! [IN]
+                                             count       = (/  imax, jmax/group_div_num, ke(v)-ks(v)+1, 1 /), & ! [IN]
                                              title       = 'SCALE-GM data output',     & ! [IN]
                                              imax        = imax,                       & ! [IN]
                                              jmax        = jmax/group_div_num,         & ! [IN]
-                                             kmax        = kmax,                       & ! [IN]
+                                             kmax        = ke(v)-ks(v)+1,              & ! [IN]
                                              tmax        = num_of_step,                & ! [IN]
                                              lon         = lon_tmp,                    & ! [IN]
                                              lat         = lat_tmp((jmax/group_div_num*(i-1)+1):(jmax/group_div_num*i)), & ! [IN]
-                                             lev         = var_zgrid(1:kmax,v),        & ! [IN]
+                                             lev         = var_zgrid(ks(v):ke(v),v),   & ! [IN]
  !                                            time        = (/ (real(t-1,8)*real(var_dt(v),8)/real(60,8),t=1,num_of_step) /), & ! [IN]
                                              time        = time_axis,                  & ! [IN]
                                              lev_units   ='m',                         & ! [IN]
@@ -1108,7 +1144,7 @@ program fio_ico2ll
 
         !-------------------------------------------------------------------------------
         if ( memory_usage == "low" ) then ! convert layer by layer. low memory usage.
-           do k = 1, kmax
+           do k = ks(v), ke(v)
               lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
               do p = pstr, pend
                  pp = p - pstr + 1
@@ -1234,7 +1270,8 @@ program fio_ico2ll
 
                     elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
                        call PROF_rapstart('+FILE O NETCDF')
-                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1), k=k, t=t )
+                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1),&
+                                                           k=k-ks(v)+1, t=t )
                        call PROF_rapend  ('+FILE O NETCDF')
                     endif
                  endif
@@ -1314,7 +1351,7 @@ program fio_ico2ll
               enddo ! region LOOP
            enddo ! PE LOOP
 
-           do k = 1, kmax
+           do k = ks(v), ke(v)
               !--- ico -> lat-lon
               call PROF_rapstart('+Interpolation')
               lldata(:,:,:) = 0.D0 ! cannot be filled by UNDEF because of reducing process
@@ -1393,7 +1430,8 @@ program fio_ico2ll
 
                     elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
                        call PROF_rapstart('+FILE O NETCDF')
-                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1), k=k, t=t )
+                       call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,1), &
+                                                           k=k-ks(v)+1, t=t )
                        call PROF_rapend  ('+FILE O NETCDF')
                     endif
 
@@ -1474,7 +1512,7 @@ program fio_ico2ll
                  !--- ico -> lat-lon
                  if ( nmax_llgrid(l,pp) /= 0 ) then
                     if ( use_NearestNeighbor ) then ! nearest neighbor
-                       do k = 1, kmax
+                       do k = ks(v), ke(v)
                        do n = 1, nmax_llgrid(l,pp)
                           if    ( icodata4_z(n1(n,l,pp),k,1,1) /= CONST_UNDEF4 ) then
 
@@ -1493,7 +1531,7 @@ program fio_ico2ll
                        enddo
                        enddo
                     else
-                       do k = 1, kmax
+                       do k = ks(v), ke(v)
                        do n = 1, nmax_llgrid(l,pp)
                           if (      icodata4_z(n1(n,l,pp),k,1,1) < CONST_UNDEF4*0.1 &
                                .OR. icodata4_z(n2(n,l,pp),k,1,1) < CONST_UNDEF4*0.1 &
@@ -1515,7 +1553,7 @@ program fio_ico2ll
 
            !--- swap longitude
            if (lon_swap) then
-              do k = 1, kmax
+              do k = ks(v), ke(v)
                  temp(1:imax/2,     :) = lldata(imax/2+1:imax,:,k)
                  temp(imax/2+1:imax,:) = lldata(1:imax/2     ,:,k)
                  lldata(:,:,k)         = temp(:,:)
@@ -1524,7 +1562,7 @@ program fio_ico2ll
 
            !--- Gather Lat-Lon data
            call PROF_rapstart('+Communication')
-           do k = 1, kmax
+           do k = ks(v), ke(v)
               do i = 1, group_div_num
                  if ( group_flags(myrank,i) ) then
                     call MPI_reduce( lldata      (1,jmax/group_div_num*(i-1)+1,k), &
@@ -1546,13 +1584,13 @@ program fio_ico2ll
                  !--- output lat-lon data file
                  if (output_grads) then
                     call PROF_rapstart('+FILE O GRADS')
-                    write(ofid,rec=irec) lldata_total(:,:,:)
+                    write(ofid,rec=irec) lldata_total(:,:,ks(v):ke(v))
                     irec = irec + 1
                     call PROF_rapend  ('+FILE O GRADS')
 
                  elseif(output_netcdf) then ! [add] 13.04.18 C.Kodama
                     call PROF_rapstart('+FILE O NETCDF')
-                    call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,:), t=t )
+                    call netcdf_write( nc, lldata_total(:,(jmax/group_div_num*(i-1)+1):jmax/group_div_num*i,ks(v):ke(v)), t=t )
                     call PROF_rapend  ('+FILE O NETCDF')
                  endif
 
@@ -1579,10 +1617,10 @@ program fio_ico2ll
                                  var_name(v),         &
                                  imax,                &
                                  jmax,                &
-                                 kmax,                &
+                                 ke(v)-ks(v)+1,       &
                                  lon,                 &
                                  lat,                 &
-                                 var_zgrid(1:kmax,v), &
+                                 var_zgrid(ks(v):ke(v),v),  &
                                  num_of_step,         &
                                  var_time_str(v),     &
                                  var_dt(v),           &
