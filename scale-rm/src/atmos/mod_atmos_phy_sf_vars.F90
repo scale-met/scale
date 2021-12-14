@@ -341,6 +341,7 @@ contains
        ATMOS_PHY_SF_SFLX_QV => ATMOS_PHY_SF_SFLX_QTRC(:,:,I_QV)
     else
        allocate( ZERO(IA,JA) )
+       ZERO(:,:) = 0.0_RP
        ATMOS_PHY_SF_SFLX_QV => ZERO
     end if
 
