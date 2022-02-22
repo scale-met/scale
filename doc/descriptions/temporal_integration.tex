@@ -19,7 +19,7 @@ the $p$ step Runge-Kutta scheme.
 && k_2 = f(\phi^t + k_1 \Delta t \alpha_1) \\
 &&  \cdot \cdot \cdot\nonumber\\
 && k_p = f(\phi^t + k_{p-1} \Delta t \alpha_{p-1}) \\
-&& \phi^{t+\Delta t} = \phi^t + \Delta t\sum_p \beta_p k_p.
+&& \phi^{t+\Delta t} = \phi^t + \Delta t\sum_p \beta_p k_p. \label{eq:rkscheme_last_stage}
 \end{eqnarray}
 The 3 and 4 step Runge-Kutta scheme are implemented.
 
@@ -85,14 +85,14 @@ The continuous and momentum equations is the followings:
 \end{align}
 here the potential temperature $\theta$ is assumed to be constant.
 
-In order to analize the numerical stability of equation, the equation of the state is linearized.
+In order to analyze the numerical stability of equation, the equation of the state is linearized.
 \begin{equation}
   p \approx \bar{p} + c^2 \rho',
 \end{equation}
 where $c$ is the sound speed: $c^2=\frac{c_p\bar{p}}{c_v\bar{\rho}}$.
 
 
-We descritize the governing equation with the 2th order central difference.
+We discritize the governing equation with the 2nd order central difference.
 \begin{align}
   \left. \frac{\partial \rho}{\partial t}\right|_{i,j,k} &=
   -\frac{U_{i+1/2}-U_{i-1/2}}{\Delta x}
@@ -105,9 +105,9 @@ We descritize the governing equation with the 2th order central difference.
   \left. \frac{\partial W}{\partial t}\right|_{i+1/2} &=
   -c^2\frac{\rho_{k+1}-\rho_k}{\Delta z},
 \end{align}
-where $U, V$, and $W$ is the momentum at the stagared grid point in $x, y$, and $z$ direction, respectively.
+where $U, V$, and $W$ is the momentum at the staggared grid point in $x, y$, and $z$ direction, respectively.
 
-The error of the spatial differenece of a wavenumber $k$ component $\hat{\phi}_k$ is $\left\{\exp(ik\Delta x)-1\right\}\hat{\phi}$, and the error of 2-grid mode is the largest: $\exp(i\pi)-1 = -2$.
+The error of the spatial difference of a wavenumber $k$ component $\hat{\phi}_k$ is $\left\{\exp(ik\Delta x)-1\right\}\hat{\phi}$, and the error of 2-grid mode is the largest: $\exp(i\pi)-1 = -2$.
 
 The temporal differential of the 2-grid mode is
 \begin{align}
@@ -164,7 +164,7 @@ The $A$ is the matrix representing the time step, then
     \frac{2c^2\Delta t}{\Delta x} & 1
     \end{pmatrix}.
 \end{align}
-The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
+The eigen value of $A$ is larger than 1, and the Euler scheme is unstable for any $\Delta t$.
 
 
 \subsubsection{The second step Runge-Kutta scheme}
@@ -188,7 +188,7 @@ After all,
     \end{pmatrix},
 \end{equation}
 where $\nu$ is the Courant number for the sound speed: $\frac{c\Delta t}{\Delta x}$.
-The eigen value of $A$ is larger than 1, and the Euler scheme is instable for any $\Delta t$.
+The eigen value of $A$ is larger than 1, and the Euler scheme is unstable for any $\Delta t$.
 
 
 
@@ -258,13 +258,13 @@ The condition for stability is
   \nu \le \frac{\sqrt{6}}{3}.
 \end{equation}
 
-The number of floating opint operations with the four step Runge-Kutta scheme is about $4/3$ times larger than that with the three step scheme.
-Howere, the time step can be $2\sqrt{6}/3$ larger than that in the three step scheme.
+The number of floating point operations with the four step Runge-Kutta scheme is about $4/3$ times larger than that with the three step scheme.
+However, the time step can be $2\sqrt{6}/3$ larger than that in the three step scheme.
 Since $2\sqrt{6}/3 > 4/3$, the four step Runge-Kutta scheme is more cost effective than the three step scheme in terms of numerical stability.
 
 
 \subsubsection{The forward-backward scheme}
-The stabitlity condition is
+The stability condition is
 \begin{equation}
   \nu \le \frac{1}{\sqrt{3}}.
 \end{equation}
