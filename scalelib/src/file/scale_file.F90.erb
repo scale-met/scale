@@ -330,7 +330,7 @@ contains
 
     if ( ( .not. present(aggregate) ) .or. .not. aggregate ) then
        ! for shared-file parallel I/O, skip attributes related to MPI processes
-       call FILE_set_attribute( fid, "global", "rankid"  , (/rankid/)  ) ! [IN]
+       call FILE_set_attribute( fid, "global", "rankid"  , (/rankid_/)  ) ! [IN]
     endif
 
     error = file_set_tunits_c( FILE_files(fid)%fid, & ! [IN]
