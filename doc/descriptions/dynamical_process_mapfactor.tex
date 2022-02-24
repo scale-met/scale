@@ -45,14 +45,14 @@ The reverse transform after the transform of the transform after the reverse tra
 where index which appares upper and lower suffix in a single term implies summation of the term over set ${1,2,3}$ (Einstein notation).
 
 
-Spatial parial derivative is tranformed with the Jacobian matrix (covariant transform);
+Spatial partial derivative is transformed with the Jacobian matrix (covariant transform);
 \begin{align}
   \pd{}{\xi^k} &= \pd{x^i}{\xi^k}\pd{}{x^i}, \\
   \pd{}{x^i} &= \pd{\xi^k}{x^i}\pd{}{\xi^k}.
 \end{align}
 
 
-Velocity is transformed with the inverse of the Jacobian matrix (cotravariant transform);
+Velocity is transformed with the inverse of the Jacobian matrix (contravariant transform);
 \begin{align}
   d\xi^k &= \pd{\xi^k}{x^i} dx^i, \\
   dx^i &= \pd{x^i}{\xi^k} d\xi^k.
@@ -102,7 +102,7 @@ That is
 
 \section{Governing equations}
 
-\subsection{Continuous equiation}
+\subsection{Continuous equation}
 
 Divergence of $\rho \bm{u}$ is
 \begin{align}
@@ -249,7 +249,7 @@ This equation can also be written as
   \pd{\rho w}{t} &+ mn\pd{}{\xi}\frac{\rho uw}{n} + mn\pd{}{\eta}\frac{\rho vw}{m} + \pd{}{\zeta}\rho ww = -\pd{p}{\zeta} -\rho g.
 \end{align}
 
-The thermodynamical and tracer equations
+The thermodynamic and tracer equations
 \begin{equation}
   \pd{\rho \phi}{t} + mn\pd{}{\xi}\frac{\rho \hat{u}\phi}{n} + mn\pd{}{\eta}\frac{\rho \hat{v}\phi}{m} + \pd{\rho \hat{w}\phi}{\zeta} = 0.
 \end{equation}

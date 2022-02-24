@@ -42,9 +42,9 @@ where
      - \frac{\partial J_{13}G^{\frac{1}{2}}u\rho\theta+J_{23}G^{\frac{1}{2}}v\rho\theta}{\partial \xi}.
 \end{align}
 
-\section{Descritization}
+\section{Discretization}
 
-For the temporal discritization, backward temporal integrations are employed for the terms related to acoustic wave in vertical direction.
+For the temporal discretization, backward temporal integrations are employed for the terms related to acoustic wave in vertical direction.
 \begin{align}
   \frac{\rho^{n+1}-\rho^n}{\Delta t}
   &= -G^{-\frac{1}{2}}\frac{\partial}{\partial \xi}\{J_{33}G^{\frac{1}{2}}(\rho w)^{n+1}\} + S_\rho^n, \\
@@ -69,7 +69,7 @@ Eliminating $p^{n+1}, (\rho\theta)^{n+1}$, and $\rho^{n+1}$, the Helmholtz equat
   + \Delta t S_{\rho w}^n.
 \end{align}
 
-Vertical differencials are discritized as follows:
+Vertical differentials are discretized as follows:
 \begin{align}
 &
   (\rho w)_{k+1/2}^{n+1}
@@ -95,7 +95,7 @@ where
   \hat{\theta}_{k+1/2} = \frac{1}{12}\left(-\theta_{k+2}+7\theta_{k+1}+7\theta_k-\theta_{k-1}\right).
 \end{equation}
 
-Finally we obtained
+Finally, we obtained
 \begin{align}
   &-\frac{1}{G^{\frac{1}{2}}_{k+1/2}}\left\{
     \frac{\hat{\theta}_{k+3/2}}{\Delta z_{k+1/2}}A_{k+1} + B_{k+1/2}

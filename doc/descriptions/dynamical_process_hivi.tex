@@ -84,7 +84,7 @@ For the temporal discritization, backward temporal integrations are employed for
 where $\kappa = c_p/c_v$.
 Note that the potential temperature at previous step, $\theta^n$, is used.
 
-In order to obtain Helmholtz equation, a linearlized equation for the density is used instead of Eq. \ref{eq: hivi rho}.
+In order to obtain Helmholtz equation, a linearized equation for the density is used instead of Eq. \ref{eq: hivi rho}.
 \begin{align}
   \rho'^{n+1} &\sim
   \rho'^n + \frac{1}{\kappa^n} \frac{\rho^n}{p^n} \left\{p'^{n+1}-p'^n\right\}.
@@ -113,7 +113,7 @@ where
   C_s^2 &= \kappa\frac{p}{\rho}.
 \end{align}
 
-Spatial differentials are descritized.
+Spatial differentials are discretized.
 \begin{align}
   & \frac{1}{\Delta x_i}\left(
    \hat{\theta}_{i+1/2}\frac{(G^{\frac{1}{2}}p'^{n+1})_{i+1}-G^{\frac{1}{2}}p'^{n+1}}{\Delta x_{i+1/2}}
