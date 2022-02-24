@@ -6,16 +6,16 @@
 \end{tabular}
 }
 
-\section{Spatial descretization}
+\section{Spatial discretization}
 We employ the Arakawa-C staggered grid with the 3-dimensional momentum
-($\rho u, \rho v, \rho w$), density ($\rho$) and mass-weighted potentail temperature($\rho \theta$)
+($\rho u, \rho v, \rho w$), density ($\rho$) and mass-weighted potential temperature($\rho \theta$)
 as the prognostic variables.
 Figure \ref{fig:cntrl-volume}(a) shows the structure of the control volume for the mass,
 indicating the location of each of prognostic variables.
 Conceptually, we use the 4th order central difference scheme
 for the advection or convection terms and
 the 2nd order central difference scheme for the other terms.
-Before the descretization of differential equations,
+Before the discretization of differential equations,
 we should diagnose several quantities from the prognostic variables.
 \begin{description}
 \item[Full-level pressure and potential temperature]
@@ -58,7 +58,7 @@ we should diagnose several quantities from the prognostic variables.
 \subsection{Momentum equations}
 Figure \ref{fig:cntrl-volume}(a) shows the structure of the control volume for the momentum
 in the x direction.
-The momentum equation is descretized as
+The momentum equation is discretized as
 \begin{eqnarray}
 %%
 \left(\frac{\partial \rho u}{\partial t}\right)_{i+\frac{1}{2},j,k}
@@ -124,10 +124,10 @@ in the same way:
 \end{eqnarray}
 
 \subsubsection{Pressure}
-Since the pressure pertubation is much smaller than the absolute value of the pressure,
+Since the pressure perturbation is much smaller than the absolute value of the pressure,
 truncation error of floating point value is relatively large and its precision could become smaller.
-Therefore, the pressure gradient terms are calculated from the deviation from reference pressure field satisfing the hydrostatic balance.
-Additionally, the calculation of the pressure (eq. \ref{eq: pressure}) is linearlized avoiding a power calculation, which numerically costs expensive.
+Therefore, the pressure gradient terms are calculated from the deviation from reference pressure field satisfying the hydrostatic balance.
+Additionally, the calculation of the pressure (Eq.\ref{eq: pressure}) is linearized avoiding a power calculation, which numerically costs expensive.
 \begin{align}
 % p = p_{00}\left(\frac{\rho \theta R^*}{p_{00}} \right)^{\frac{c_{p}^*}{c_{p}^*- R^*}}
   p
@@ -176,8 +176,9 @@ should be conserved along the trajectory.
 It is, at least, necessary that
 the spatially constant mass concentration should be kept
 in any motion of fluid.
-In order to satisfy this condition, we use the same mass flux at the last Runge-Kutta
-process of Eqs.() and () for integration of tracers:
+In order to satisfy this condition, we need to mass flux 
+consistent with that at the last Runge-Kutta process of Eq.(\ref{eq:rkscheme_last_stage}) 
+for integration of tracers:
 \begin{eqnarray}
 %%
 \frac{\left(\rho q\right)^{n+1}_{i,j,k} - \left(\rho q\right)^{n}_{i,j,k}}{\Delta t}
@@ -194,10 +195,10 @@ process of Eqs.() and () for integration of tracers:
 \end{eqnarray}
 \item[Monotonicity]
 In order to satisfy the monotonicity of tracer advection,
-we employ the Flux Corrected Trasport scheme, which is a hybrid scheme
+we employ the Flux Corrected Transport scheme, which is a hybrid scheme
 with the 4th order central difference scheme and 1st order upwind scheme.
 If The 4th order central difference is applied,
-$\overline{q}$ is descritized as
+$\overline{q}$ is discretized as
 \begin{eqnarray}
 && \overline{q}_{i+\frac{1}{2},j,k}^{high} =
 \frac{-q_{i+2,j,k}+7q_{i+1,j,k}+7q_{i,j,k}-q_{i-1,j,k}}{12}\\
@@ -239,12 +240,12 @@ The actual $\overline{q}$ is described as
 &=& C_{i,j,k+\frac{1}{2}} \overline{q}_{i,j,k+\frac{1}{2}}^{high}
 + \left( 1 - C_{i,j,k+\frac{1}{2}}\right) \overline{q}_{i,j,k+\frac{1}{2}}^{low}
 \end{eqnarray}
-See the appedix for the method to determine the flux limter.
+See the appendix for the method to determine the flux limiter.
 \end{description}
 
 
 
-\section{boundary condition}
+\section{Boundary condition}
 The boundary condition only for the vertical velocity at the top and bottom
 boundaries is needed:
 \begin{eqnarray}
@@ -266,11 +267,18 @@ In this subsection, we describe the numerical filters used in this model, and di
 
 
 In order to damp the higher wavenumber component selectively, we adopt the hyperviscosity and diffusion in the traditional way.
-The hyperviscosity and diffusion of the $n$th order is defined as
+The hyperviscosity and diffusion of the $n$th order are defined as
 \begin{align}
-&\frac{\partial }{\partial x}\left[\nu \rho \frac{\partial^{n-1} f}{\partial x^{n-1}}\right], \label{eq:num-diff-def}
+&\frac{\partial }{\partial x}\left[\nu \rho \frac{\partial^{n-1} f}{\partial x^{n-1}}\right] \label{eq:num-diff-def}
 \end{align}
-where $f$ is an arbitrary variable $(f \in \rho, u, v, w, \theta, q)$.
+for arbitrary variables $(f \in u, v, w, \theta, q)$ except the density. 
+For the density, 
+it is defined as
+$$
+  \frac{\partial }{\partial x}\left[\nu \frac{\partial^{n-1} \rho}{\partial x^{n-1}}\right]. 
+$$
+%%
+
 
 The Laplacian of $f$ is discretized as
 \begin{align}

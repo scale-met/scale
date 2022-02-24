@@ -88,7 +88,7 @@ The unit is [m].
 \verb|/|\\
 }
 
-An arbitrary non-uniform grid can be specify in the vertical direction.
+An arbitrary non-uniform grid can be specified in the vertical direction.
 Since the model employs the C-grid system, the points of definition for the velocity vector and other scalars are staggered, deviating by a half grid.
 In this document, the scalar location is called the center point and the half-grid-deviated location the face point.
 Refer to Figure \ref{fig:scale_grid} for the details.
@@ -284,7 +284,7 @@ where $n$ denotes the index of grids in the buffer region, in the order directed
 
 Finally, the width of the buffer region $\verb|BUFFER|_{\verb|X|}$ is as follows:
 \begin{eqnarray}
-  \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times \frac{ \nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1}{ \nmitemeq{BUFFFACT}-1 }
+  \verb|BUFFER|_{\verb|X|} = \nmitemeq{DX} \times  \frac{\nmitemeq{BUFFFACT} \, (\nmitemeq{BUFFFACT}^{\texttt{\detokenize{ibuff}}}-1)}{ \nmitemeq{BUFFFACT}-1 }
 \end{eqnarray}
 Even if the same width of buffer region \nmitem{BUFFER_DX} is specified, the number of grids in the buffer region decreases with increasing \nmitem{BUFFFACT}.
 When given by \nmitem{BUFFER_NX}, only the width of buffer region is changed.

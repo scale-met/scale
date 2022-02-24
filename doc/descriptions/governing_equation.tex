@@ -1,7 +1,7 @@
 {\bf \Large
 \begin{tabular}{ccc}
 \hline
-  Correnspoinding author & : & Hirofumi Tomita\\
+  Corresponding author & : & Hirofumi Tomita\\
 \hline
 \end{tabular}
 }
@@ -99,7 +99,7 @@ gives the total momentum equation as
 \end{eqnarray}
 Note that the drag forces by water loading does not appear
 in Eq.(\ref{eq:momtot}),
-because those term are cancelled out through the summation.
+because those terms are cancelled out through the summation.
 
 \section{Thermodynamics equations}
 
@@ -148,20 +148,20 @@ and the total diabatic heating is described as
 &&  Q = Q_d + Q_v + Q_l + Q_s.
 \end{eqnarray}
 
-\section{Conseptual seperation for solving the set of equations}
+\section{Conceptual separation for solving the set of equations}
 
 Eqs.(\ref{eq:rho_v})-(\ref{eq:rho_s}),(\ref{eq:rhotot}),(\ref{eq:momtot}),
 and (\ref{eq:state}) with Eq.(\ref{eq:etot}) are the complete set of equations.
-For solving them easily, we seperate the set of equations conceptually as
+For solving them easily, we separate the set of equations conceptually as
 \begin{eqnarray}
 &&  \frac{\partial \phi}{\partial t} =
 \left(\frac{\partial \phi}{\partial t}\right)_{dynamics}
 +\left(\frac{\partial \phi}{\partial t}\right)_{physics}
 \end{eqnarray}
-The falling proccess of liquid and solid waters,
+The falling process of liquid and solid waters,
 the source and sink process of water vapor, and
 the diabatic heating process for energy equations are treated
-as physical process, the others are treated as dynamical proccess.
+as physical process, the others are treated as dynamical process.
 
 According to this scheme,
 the dynamical process can be written as
@@ -235,7 +235,7 @@ is used as a conserved quantity it is conserved along the Lagrange trajectory
 $c_{pd}$ $R_d$ are the specific heats at constant pressure and
 However, it is no longer satisfied when the water substances are included.
 
-Sinece Eq.(\ref{eq:rhotot_d}) is equivallent to
+Since Eq.(\ref{eq:rhotot_d}) is equivallent to
 \begin{eqnarray}
   \frac{d \rho}{dt}+\rho \nabla \cdot {\bf u} = 0,
 \end{eqnarray}
@@ -352,10 +352,10 @@ Therefore, $\rho \theta$ can be employed for the prognostic varaiable!
 
 Figure \ref{fig:fig1}(a) gives the vertical profile of the temperature
 in the U.S.standard atmosphere and Fig.\ref{fig:fig1}(b) shows
-the vetical profiles of $\theta/\theta_d$ under this temperature condition
+the vertical profiles of $\theta/\theta_d$ under this temperature condition
 when we assume that $q_v$ is mass concentration of water vapor at the saturation,
 $q_l+q_s$ gives 0.0, 0.01, 0.02, and 0.04.
-The differnce between $\theta$ and $\theta_d$ becomes
+The difference between $\theta$ and $\theta_d$ becomes
 larger with the height and it may not be negligible.
 
 \section{Diabatic heating in the physical process}
@@ -452,7 +452,7 @@ where
   \includegraphics{./../figure/us_std_atm_profile.eps}\\
   (b)\\
   \includegraphics{./../figure/theta_theta_d_profile.eps}\\
-  \caption{Thee vertical profile of (a) U.S. standard atmosphere,
+  \caption{The vertical profile of (a) U.S. standard atmosphere,
   (b) Several profiles of $\theta/\theta_d$.}
   \label{fig:fig1}
 \end{figure}
