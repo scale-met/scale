@@ -121,6 +121,18 @@ interface
      integer(c_int) :: ierr
    end function fio_read_data
 
+   function fio_read_data_1layer(fid, did, k, kmax, l, lmax, data) result(ierr) BIND(C)
+     import c_int, c_ptr
+     integer(c_int), intent(in), VALUE :: fid
+     integer(c_int), intent(in), VALUE :: did
+     integer(c_int), intent(in), VALUE :: k
+     integer(c_int), intent(in), VALUE :: kmax
+     integer(c_int), intent(in), VALUE :: l
+     integer(c_int), intent(in), VALUE :: lmax
+     type(c_ptr),    intent(in), VALUE :: data
+     integer(c_int) :: ierr
+   end function fio_read_data_1layer
+
    function fio_register_file(fname) result(fid) BIND(C)
      import c_int, c_char
      character(c_char), intent(in) :: fname(*)

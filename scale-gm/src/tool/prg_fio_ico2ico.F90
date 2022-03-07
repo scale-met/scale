@@ -56,6 +56,10 @@ program fio_ico2ico
   integer                :: dst_rlevel          = -1
 !  integer                :: dst_npe             = -1
   character(len=H_LONG)  :: iimap_fname         = ''
+  integer                :: src_PRC_nprocs = -1
+  integer                :: src_PRC_RGN_ndiamond = 10
+  integer                :: dst_PRC_nprocs = -1
+  integer                :: dst_PRC_RGN_ndiamond = 10
 
   logical                :: help = .false.
 
@@ -89,10 +93,8 @@ program fio_ico2ico
   type(datainfo)   dinfo
 
   ! ico data
-  integer               :: src_PRC_nprocs = -1
   integer               :: src_PRC_RGN_total
   integer               :: src_PRC_RGN_local
-  integer               :: src_PRC_RGN_ndiamond = 10
   integer,  allocatable :: src_PRC_RGN_edge_tab(:,:,:) !< region link information (for 4 edges)
   integer,  allocatable :: src_PRC_RGN_lp2r    (:,:)   !< l,prc => rgn
   integer,  allocatable :: src_PRC_RGN_r2lp    (:,:)   !< rgn => l,prc
@@ -110,10 +112,8 @@ program fio_ico2ico
   real(DP), allocatable, target :: src_data8_3D(:,:,:)
   integer               :: src_p, src_rgnid, src_g, src_l
 
-  integer               :: dst_PRC_nprocs = -1
   integer               :: dst_PRC_RGN_total
   integer               :: dst_PRC_RGN_local
-  integer               :: dst_PRC_RGN_ndiamond = 10  
   integer,  allocatable :: dst_PRC_RGN_edge_tab(:,:,:) !< region link information (for 4 edges)
   integer,  allocatable :: dst_PRC_RGN_lp2r    (:,:)   !< l,prc => rgn
   integer               :: dst_ADM_lall
@@ -218,7 +218,7 @@ program fio_ico2ico
   allocate( src_PRC_RGN_r2lp    (2,src_PRC_RGN_total) )
 
   call PRC_ICOA_RGN_generate( src_rlevel,                  & ! [IN]
-                              src_PRC_RGN_ndiamond,        & ! [IN] 
+                              src_PRC_RGN_ndiamond,        & ! [IN]
                               src_PRC_nprocs,              & ! [IN]
                               src_PRC_RGN_total,           & ! [IN]
                               src_PRC_RGN_local,           & ! [IN]

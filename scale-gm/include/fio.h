@@ -193,6 +193,15 @@ extern int32_t fio_read_data( int32_t fid,
                               int32_t did,
                               void *data   );
 
+/** read data array (1 layer) ***************************************/
+extern int32_t fio_read_data_1layer( int32_t fid,
+                                     int32_t did,
+                                     int32_t k,
+                                     int32_t kmax,
+                                     int32_t l,
+                                     int32_t lmax,
+                                     void *data   );
+
 /** read data array from tmpdata **************************************/
 extern int32_t fio_read_data_tmpdata( int32_t fid,
                                       int32_t did,
