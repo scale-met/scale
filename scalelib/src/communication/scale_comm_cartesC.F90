@@ -74,11 +74,16 @@ module scale_comm_cartesC
   end interface COMM_gather
 
   interface COMM_bcast
-     module procedure COMM_bcast_SCR
-     module procedure COMM_bcast_1D
-     module procedure COMM_bcast_2D
-     module procedure COMM_bcast_3D
-     module procedure COMM_bcast_4D
+     module procedure COMM_bcast_SCR_SP
+     module procedure COMM_bcast_SCR_DP
+     module procedure COMM_bcast_1D_SP
+     module procedure COMM_bcast_1D_DP
+     module procedure COMM_bcast_2D_SP
+     module procedure COMM_bcast_2D_DP
+     module procedure COMM_bcast_3D_SP
+     module procedure COMM_bcast_3D_DP
+     module procedure COMM_bcast_4D_SP
+     module procedure COMM_bcast_4D_DP
      module procedure COMM_bcast_INT_SCR
      module procedure COMM_bcast_INT_1D
      module procedure COMM_bcast_INT_2D
@@ -641,12 +646,12 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in scalar field
-  subroutine COMM_bcast_SCR( var )
+  subroutine COMM_bcast_SCR_SP( var )
     use scale_prc, only: &
        PRC_masterrank
     implicit none
 
-    real(RP), intent(inout) :: var  !< broadcast buffer (gIA)
+    real(SP), intent(inout) :: var  !< broadcast buffer (gIA)
 
     integer :: counts
     integer :: ierr
@@ -666,16 +671,42 @@ contains
     call PROF_rapend('COMM_Bcast', 2)
 
     return
-  end subroutine COMM_bcast_SCR
-
-  !-----------------------------------------------------------------------------
-  !> Broadcast data for whole process value in 1D field
-  subroutine COMM_bcast_1D( var, gIA )
+  end subroutine COMM_bcast_SCR_SP
+  subroutine COMM_bcast_SCR_DP( var )
     use scale_prc, only: &
        PRC_masterrank
     implicit none
 
-    real(RP), intent(inout) :: var(:)  !< broadcast buffer (gIA)
+    real(DP), intent(inout) :: var  !< broadcast buffer (gIA)
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = 1
+
+    call MPI_BCAST( var,            &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_SCR_DP
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 1D field
+  subroutine COMM_bcast_1D_SP( var, gIA )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    real(SP), intent(inout) :: var(:)  !< broadcast buffer (gIA)
     integer,  intent(in)    :: gIA       !< dimension size of x
 
     integer :: counts
@@ -696,16 +727,43 @@ contains
     call PROF_rapend('COMM_Bcast', 2)
 
     return
-  end subroutine COMM_bcast_1D
-
-  !-----------------------------------------------------------------------------
-  !> Broadcast data for whole process value in 2D field
-  subroutine COMM_bcast_2D( var, gIA, gJA )
+  end subroutine COMM_bcast_1D_SP
+  subroutine COMM_bcast_1D_DP( var, gIA )
     use scale_prc, only: &
        PRC_masterrank
     implicit none
 
-    real(RP), intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
+    real(DP), intent(inout) :: var(:)  !< broadcast buffer (gIA)
+    integer,  intent(in)    :: gIA       !< dimension size of x
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = gIA
+
+    call MPI_BCAST( var(:),         &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_1D_DP
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 2D field
+  subroutine COMM_bcast_2D_SP( var, gIA, gJA )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    real(SP), intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
     integer,  intent(in)    :: gIA       !< dimension size of x
     integer,  intent(in)    :: gJA       !< dimension size of y
 
@@ -727,16 +785,44 @@ contains
     call PROF_rapend('COMM_Bcast', 2)
 
     return
-  end subroutine COMM_bcast_2D
-
-  !-----------------------------------------------------------------------------
-  !> Broadcast data for whole process value in 3D field
-  subroutine COMM_bcast_3D( var, gIA, gJA, gKA )
+  end subroutine COMM_bcast_2D_SP
+  subroutine COMM_bcast_2D_DP( var, gIA, gJA )
     use scale_prc, only: &
        PRC_masterrank
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:)  !< broadcast buffer(gIA,gJA,gKA)
+    real(DP), intent(inout) :: var(:,:)  !< broadcast buffer (gIA,gJA)
+    integer,  intent(in)    :: gIA       !< dimension size of x
+    integer,  intent(in)    :: gJA       !< dimension size of y
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = gIA * gJA
+
+    call MPI_BCAST( var(:,:),       &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_2D_DP
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 3D field
+  subroutine COMM_bcast_3D_SP( var, gIA, gJA, gKA )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    real(SP), intent(inout) :: var(:,:,:)  !< broadcast buffer(gIA,gJA,gKA)
     integer,  intent(in)    :: gIA         !< dimension size of x
     integer,  intent(in)    :: gJA         !< dimension size of y
     integer,  intent(in)    :: gKA         !< dimension size of z
@@ -759,16 +845,45 @@ contains
     call PROF_rapend('COMM_Bcast', 2)
 
     return
-  end subroutine COMM_bcast_3D
-
-  !-----------------------------------------------------------------------------
-  !> Broadcast data for whole process value in 4D field
-  subroutine COMM_bcast_4D( var, gIA, gJA, gKA, gTime )
+  end subroutine COMM_bcast_3D_SP
+  subroutine COMM_bcast_3D_DP( var, gIA, gJA, gKA )
     use scale_prc, only: &
        PRC_masterrank
     implicit none
 
-    real(RP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
+    real(DP), intent(inout) :: var(:,:,:)  !< broadcast buffer(gIA,gJA,gKA)
+    integer,  intent(in)    :: gIA         !< dimension size of x
+    integer,  intent(in)    :: gJA         !< dimension size of y
+    integer,  intent(in)    :: gKA         !< dimension size of z
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = gIA * gJA * gKA
+
+    call MPI_BCAST( var(:,:,:),     &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_3D_DP
+
+  !-----------------------------------------------------------------------------
+  !> Broadcast data for whole process value in 4D field
+  subroutine COMM_bcast_4D_SP( var, gIA, gJA, gKA, gTime )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    real(SP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
     integer,  intent(in)    :: gIA          !< dimension size of x
     integer,  intent(in)    :: gJA          !< dimension size of y
     integer,  intent(in)    :: gKA          !< dimension size of z
@@ -797,7 +912,42 @@ contains
     call PROF_rapend('COMM_Bcast', 2)
 
     return
-  end subroutine COMM_bcast_4D
+  end subroutine COMM_bcast_4D_SP
+  subroutine COMM_bcast_4D_DP( var, gIA, gJA, gKA, gTime )
+    use scale_prc, only: &
+       PRC_masterrank
+    implicit none
+
+    real(DP), intent(inout) :: var(:,:,:,:) !< broadcast buffer(gIA,gJA,gKA,gTime)
+    integer,  intent(in)    :: gIA          !< dimension size of x
+    integer,  intent(in)    :: gJA          !< dimension size of y
+    integer,  intent(in)    :: gKA          !< dimension size of z
+    integer,  intent(in)    :: gTime        !< dimension size of time
+
+    integer :: counts
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_Bcast', 2)
+
+    counts = gIA * gJA * gKA * gTime
+    if ( gIA>0 .AND. gJA>0 .AND. gKA>0 .AND. gTime>0 .AND. &
+         counts < 0 ) then
+       LOG_ERROR("COMM_bcast_4D",*) 'counts overflow'
+       call PRC_abort
+    end if
+
+    call MPI_BCAST( var(:,:,:,:),   &
+                    counts,         &
+                    COMM_datatype,  &
+                    PRC_masterrank, &
+                    COMM_world,     &
+                    ierr            )
+
+    call PROF_rapend('COMM_Bcast', 2)
+
+    return
+  end subroutine COMM_bcast_4D_DP
 
   !-----------------------------------------------------------------------------
   !> Broadcast data for whole process value in scalar (integer)
