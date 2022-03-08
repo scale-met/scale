@@ -33,6 +33,7 @@ module scale_file
   public :: FILE_setup
   public :: FILE_open
   public :: FILE_opened
+  public :: FILE_single
   public :: FILE_create
   public :: FILE_get_dimLength
   public :: FILE_set_option
@@ -194,6 +195,7 @@ module scale_file
      character(len=FILE_HLONG) :: name
      integer                   :: fid
      logical                   :: aggregate
+     logical                   :: single
      integer                   :: buffer_size
   end type file
   type(file) :: FILE_files(FILE_FILE_MAX)
@@ -225,6 +227,7 @@ contains
     namelist / PARAM_FILE / &
          FILE_AGGREGATE
 
+    integer :: fid
     integer :: ierr
 
        !--- read namelist
@@ -241,6 +244,11 @@ contains
     mpi_myrank = myrank
 
     call PRC_set_file_closer( FILE_CLOSE_ALL )
+
+    do fid = 1, FILE_FILE_MAX
+      FILE_files(fid)%fid  = -1
+      FILE_files(fid)%name = ""
+    end do
 
     return
   end subroutine FILE_setup
@@ -311,7 +319,11 @@ contains
        if( append ) mode = FILE_FAPPEND
     endif
 
-    if ( single_ .and. rankid_ /= 0 ) return
+    if ( single_ .and. rankid_ /= 0 ) then
+       fid = -1
+       existed = .false.
+       return
+    end if
 
     call FILE_get_fid( basename, mode,     & ! [IN]
                        rankid_, single_,   & ! [IN]
@@ -525,6 +537,23 @@ contains
 
     return
   end function FILE_opened
+
+  !-----------------------------------------------------------------------------
+  !> check if the file is single
+  function FILE_single( fid )
+    implicit none
+
+    integer, intent( in) :: fid
+    logical :: FILE_single
+
+    if ( fid < 1 ) then
+       FILE_single = .false.
+    else
+       FILE_single = FILE_files(fid)%single
+    end if
+
+    return
+  end function FILE_single
 
   !-----------------------------------------------------------------------------
   !> get length of dimension
@@ -4920,6 +4949,7 @@ contains
     FILE_files(fid)%name      = fname
     FILE_files(fid)%fid       = cfid
     FILE_files(fid)%aggregate = aggregate_
+    FILE_files(fid)%single    = single
     FILE_files(fid)%buffer_size = -1
 
     LOG_NEWLINE
