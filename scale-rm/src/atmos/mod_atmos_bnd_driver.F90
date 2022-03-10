@@ -1042,19 +1042,20 @@ contains
              end if
           end do
 
-          ! internal grid nudging
-          if ( ATMOS_GRID_NUDGING_uv ) then
-             ATMOS_BOUNDARY_alpha_VELX(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELX(k,i,j), alpha_nug )
-             ATMOS_BOUNDARY_alpha_VELY(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELY(k,i,j), alpha_nug )
-          endif
-          if ( ATMOS_GRID_NUDGING_pt ) then
-             ATMOS_BOUNDARY_alpha_POTT(k,i,j)   = max( ATMOS_BOUNDARY_alpha_POTT(k,i,j), alpha_nug )
-          endif
-          if ( ATMOS_GRID_NUDGING_qv ) then
-             ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1), alpha_nug )
-          endif
-
        end if
+
+       ! internal grid nudging
+       if ( ATMOS_GRID_NUDGING_uv ) then
+          ATMOS_BOUNDARY_alpha_VELX(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELX(k,i,j), alpha_nug )
+          ATMOS_BOUNDARY_alpha_VELY(k,i,j)   = max( ATMOS_BOUNDARY_alpha_VELY(k,i,j), alpha_nug )
+       endif
+       if ( ATMOS_GRID_NUDGING_pt ) then
+          ATMOS_BOUNDARY_alpha_POTT(k,i,j)   = max( ATMOS_BOUNDARY_alpha_POTT(k,i,j), alpha_nug )
+       endif
+       if ( ATMOS_GRID_NUDGING_qv ) then
+          ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1) = max( ATMOS_BOUNDARY_alpha_QTRC(k,i,j,1), alpha_nug )
+       endif
+
     enddo
     enddo
     enddo
