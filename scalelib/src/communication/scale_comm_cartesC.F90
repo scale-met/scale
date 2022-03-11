@@ -14,6 +14,7 @@ module scale_comm_cartesC
   !++ used modules
   !
   use mpi
+  use iso_c_binding
   use scale_precision
   use scale_io
   use scale_prof
@@ -108,43 +109,49 @@ module scale_comm_cartesC
   !++ Private parameters & variables
   !
   integer,  private              :: COMM_vsize_max      !< # limit of communication variables at once
-  integer,  private              :: COMM_vsize_max_pc      !< # limit of total communication variables for MPI PC
+  integer,  private              :: COMM_vsize_max_pc   !< # limit of total communication variables for MPI PC
 
   logical,  private              :: COMM_IsAllPeriodic  !< periodic boundary condition?
 
-  logical,  private              :: COMM_USE_MPI_PC = .true.
+  logical,  private              :: COMM_USE_MPI_PC       = .true.  !< MPI persistent communication
+  logical,  private              :: COMM_USE_MPI_ONESIDED = .false. !< MPI one-sided communication
 
   type ginfo_t
-     integer           :: KA
-     integer           :: IA, IS, IE, IHALO
-     integer           :: JA, JS, JE, JHALO
-     integer           :: nreq_max          !< # limit of communication request at once
-     integer           :: size2D_NS4        !< 2D data size (W/E    HALO, 4/8-direction comm.)
-     integer           :: size2D_NS8        !< 2D data size (N/S    HALO,   4-direction comm.)
-     integer           :: size2D_WE         !< 2D data size (N/S    HALO,   8-direction comm.)
-     integer           :: size2D_4C         !< 2D data size (corner HALO,   8-direction comm.)
-     integer           :: vars_id = 0       !< id of variables for persistent comm.
-     real(RP), pointer :: recvpack_W2P(:,:) !< packing packet (receive, from W)
-     real(RP), pointer :: recvpack_E2P(:,:) !< packing packet (receive, from E)
-     real(RP), pointer :: sendpack_P2W(:,:) !< packing packet (send,    to W  )
-     real(RP), pointer :: sendpack_P2E(:,:) !< packing packet (send,    to E  )
-     integer,  pointer :: req_cnt (:)       !< request ID of each MPI send/recv
-     integer,  pointer :: req_list(:,:)     !< request ID set of each variables
-     integer,  pointer :: preq_cnt (:)      !< request ID of each MPI PC
-     integer,  pointer :: preq_list(:,:)    !< request ID set of each variables for MPI PC
-     integer,  pointer :: pseqid(:)         !< sequential ID of each variables for MPI PC
+     integer              :: KA
+     integer              :: IA, IS, IE, IHALO
+     integer              :: JA, JS, JE, JHALO
+     integer              :: nreq_max             !< # limit of communication request at once
+     integer              :: size2D_NS4           !< 2D data size (W/E    HALO, 4/8-direction comm.)
+     integer              :: size2D_NS8           !< 2D data size (N/S    HALO,   4-direction comm.)
+     integer              :: size2D_WE            !< 2D data size (N/S    HALO,   8-direction comm.)
+     integer              :: size2D_4C            !< 2D data size (corner HALO,   8-direction comm.)
+     integer              :: vars_num = 0         !< numbers of variables for persistent comm.
+     real(RP),    pointer :: recvpack_WE2P(:,:,:) !< packing packet (receive, from W and E)
+     real(RP),    pointer :: sendpack_P2WE(:,:,:) !< packing packet (send,    to   W and E)
+     type(c_ptr), pointer :: recvbuf_WE(:)        !< receive buffer for MPI_Put (from W and E)
+     type(c_ptr), pointer :: recvbuf_NS(:)        !< receive buffer for MPI_Put (from N and S)
+     integer,     pointer :: req_cnt (:)          !< request ID of each MPI send/recv
+     integer,     pointer :: req_list(:,:)        !< request ID set of each variables
+     integer,     pointer :: preq_cnt (:)         !< request ID of each MPI PC
+     integer,     pointer :: preq_list(:,:)       !< request ID set of each variables for MPI PC
+     integer,     pointer :: packid(:)            !< ID of pack
+     integer,     pointer :: win_packWE(:)        !< window ID for MPI onesided
+     integer,     pointer :: win_packNS(:)        !< window ID for MPI onesided
 #ifdef DEBUG
-     logical,  pointer :: use_packbuf(:)    !< using flag for packing buffer
+     logical,  pointer :: use_packbuf(:)       !< using flag for packing buffer
 #endif
-
-
   end type ginfo_t
 
   integer, private, parameter  :: COMM_gid_max = 20
   integer, private             :: COMM_gid
   type(ginfo_t), private, save :: ginfo(COMM_gid_max)
 
-  logical, private :: initialized = .false.
+  integer, private             :: group_packWE !< MPI_Group for pack
+  integer, private             :: group_packNS !< MPI_Group for vars
+  logical, private             :: group_packWE_created = .false.
+  logical, private             :: group_packNS_created = .false.
+
+  logical, private             :: initialized = .false.
 
   !-----------------------------------------------------------------------------
 contains
@@ -154,12 +161,18 @@ contains
   subroutine COMM_setup
     use scale_prc, only: &
        PRC_LOCAL_COMM_WORLD
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
     implicit none
 
     namelist / PARAM_COMM_CARTESC / &
        COMM_vsize_max, &
        COMM_vsize_max_pc, &
-       COMM_USE_MPI_PC
+       COMM_USE_MPI_PC, &
+       COMM_USE_MPI_ONESIDED
+
+    integer :: group, ranks(8)
+    integer :: n, m
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -199,14 +212,163 @@ contains
     endif
 
     COMM_world = PRC_LOCAL_COMM_WORLD
+    COMM_gid = 0
+
+    if ( COMM_USE_MPI_ONESIDED ) then
+
+       COMM_USE_MPI_PC = .false.
+
+       call MPI_Comm_group( COMM_world, group, ierr )
+
+       n = 0
+       if ( PRC_HAS_S ) then
+          n = 1
+          ranks(n) = PRC_next(PRC_S)
+       end if
+       if ( PRC_HAS_N ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_N) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_N)
+          end if
+       end if
+       if ( PRC_HAS_N .and. PRC_HAS_W ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_NW) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_NW)
+          end if
+       else if ( PRC_HAS_N ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_N) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_N)
+          end if
+       else if ( PRC_HAS_W ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_W) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_W)
+          end if
+       end if
+       if ( PRC_HAS_N .and. PRC_HAS_E ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_NE) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_NE)
+          end if
+       else if ( PRC_HAS_N ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_N) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_N)
+          end if
+       else if ( PRC_HAS_E ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_E) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_E)
+          end if
+       end if
+       if ( PRC_HAS_S .and. PRC_HAS_W ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_SW) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_SW)
+          end if
+       else if ( PRC_HAS_S ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_S) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_S)
+          end if
+       else if ( PRC_HAS_W ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_W) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_W)
+          end if
+       end if
+       if ( PRC_HAS_S .and. PRC_HAS_E ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_SE) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_SE)
+          end if
+       else if ( PRC_HAS_S ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_S) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_S)
+          end if
+       else if ( PRC_HAS_E ) then
+          do m = 1, n
+             if ( ranks(m) == PRC_next(PRC_E) ) exit
+          end do
+          if ( m == n + 1 ) then
+             n = n + 1
+             ranks(n) = PRC_next(PRC_E)
+          end if
+       end if
+       if ( n > 0 ) then
+          call MPI_Group_incl( group, n, ranks, group_packNS, ierr )
+          group_packNS_created = .true.
+       else
+          group_packNS_created = .false.
+       end if
+
+       n = 0
+       if ( .not. PRC_TwoD ) then
+          if ( PRC_HAS_W ) then
+             n = 1
+             ranks(n) = PRC_next(PRC_W)
+          end if
+          if ( PRC_HAS_E ) then
+             if ( n == 0 .or. ranks(1) .ne. PRC_next(PRC_E) ) then
+                n = n + 1
+                ranks(n) = PRC_next(PRC_E)
+             end if
+          end if
+       end if
+       if ( n > 0 ) then
+          call MPI_Group_incl( group, n, ranks, group_packWE, ierr )
+          group_packWE_created = .true.
+       else
+          group_packWE_created = .false.
+       end if
+
+       call MPI_Group_free( group, ierr )
+    end if
 
     LOG_NEWLINE
     LOG_INFO("COMM_setup",*) 'Communication information'
     LOG_INFO_CONT(*)         'Maximum number of vars for one communication: ', COMM_vsize_max
     LOG_INFO_CONT(*)         'All side is periodic?                       : ', COMM_IsAllPeriodic
 
-
-    COMM_gid = 0
 
     initialized = .true.
 
@@ -225,6 +387,12 @@ contains
 
     integer :: IMAX, JMAX
     integer :: nreq_NS, nreq_WE, nreq_4C
+
+    integer :: win_info
+    integer(kind=MPI_ADDRESS_KIND) :: size
+
+    integer :: ierr
+    integer :: n
 
     if ( .not. initialized ) then
        LOG_ERROR("COMM_regist",*) 'COMM_setup must be called before calling COMM_regist'
@@ -275,31 +443,68 @@ contains
     ginfo(gid)%size2D_WE  = JMAX * IHALO
     ginfo(gid)%size2D_4C  =        IHALO
 
-    allocate( ginfo(gid)%recvpack_W2P(ginfo(gid)%size2D_WE * KA, COMM_vsize_max) )
-    allocate( ginfo(gid)%recvpack_E2P(ginfo(gid)%size2D_WE * KA, COMM_vsize_max) )
-    allocate( ginfo(gid)%sendpack_P2W(ginfo(gid)%size2D_WE * KA, COMM_vsize_max) )
-    allocate( ginfo(gid)%sendpack_P2E(ginfo(gid)%size2D_WE * KA, COMM_vsize_max) )
-
+    allocate( ginfo(gid)%sendpack_P2WE(ginfo(gid)%size2D_WE * KA, 2, COMM_vsize_max) )
 
 #ifdef DEBUG
     allocate( ginfo(gid)%use_packbuf(COMM_vsize_max) )
     ginfo(gid)%use_packbuf(:) = .false.
 #endif
 
-    allocate( ginfo(gid)%req_cnt (                     COMM_vsize_max) )
-    allocate( ginfo(gid)%req_list(ginfo(gid)%nreq_MAX, COMM_vsize_max) )
-    ginfo(gid)%req_cnt (:)   = -1
-    ginfo(gid)%req_list(:,:) = MPI_REQUEST_NULL
+    if ( COMM_USE_MPI_ONESIDED ) then
 
-    if ( COMM_USE_MPI_PC ) then
-       ginfo(gid)%vars_id = 0
-       allocate( ginfo(gid)%preq_cnt (                      COMM_vsize_max_pc) )
-       allocate( ginfo(gid)%preq_list(ginfo(gid)%nreq_MAX+1,COMM_vsize_max_pc) )
-       ginfo(gid)%preq_cnt (:)   = -1
-       ginfo(gid)%preq_list(:,:) = MPI_REQUEST_NULL
+       allocate( ginfo(gid)%recvbuf_WE(COMM_vsize_max) )
+       allocate( ginfo(gid)%recvbuf_NS(COMM_vsize_max) )
 
-       allocate( ginfo(gid)%pseqid(COMM_vsize_max_pc) )
+       allocate( ginfo(gid)%win_packWE(COMM_vsize_max) )
+       allocate( ginfo(gid)%win_packNS(COMM_vsize_max) )
+
+       call MPI_Info_create(win_info, ierr)
+       call MPI_Info_set(win_info, "no_locks", "true", ierr)
+       call MPI_Info_set(win_info, "same_size", "true", ierr)
+       call MPI_Info_set(win_info, "same_disp_unit", "true", ierr)
+
+       do n = 1, COMM_vsize_max
+          size = ginfo(gid)%size2D_WE * KA * 2 * RP
+          call MPI_Win_allocate(size, ginfo(gid)%size2D_WE*KA*RP, &
+                                win_info, COMM_world, &
+                                ginfo(gid)%recvbuf_WE(n), ginfo(gid)%win_packWE(n), ierr)
+          size = ginfo(gid)%size2D_NS4 * KA * 2 * RP
+          call MPI_Win_allocate(size, RP, &
+                                win_info, COMM_world, &
+                                ginfo(gid)%recvbuf_NS(n), ginfo(gid)%win_packNS(n), ierr)
+       end do
+
+       call MPI_Info_free(win_info, ierr)
+
+       do n = 1, COMM_vsize_max
+          call MPI_Win_post( group_packWE, MPI_MODE_NOSTORE, ginfo(gid)%win_packWE(n), ierr )
+          call MPI_Win_post( group_packNS, MPI_MODE_NOSTORE, ginfo(gid)%win_packNS(n), ierr )
+       end do
+
+       ginfo(gid)%vars_num = 0
+       allocate( ginfo(gid)%packid(COMM_vsize_max_pc) )
+
+    else
+
+       allocate( ginfo(gid)%recvpack_WE2P(ginfo(gid)%size2D_WE * KA, 2, COMM_vsize_max) )
+
+       allocate( ginfo(gid)%req_cnt (                     COMM_vsize_max) )
+       allocate( ginfo(gid)%req_list(ginfo(gid)%nreq_MAX, COMM_vsize_max) )
+       ginfo(gid)%req_cnt (:)   = -1
+       ginfo(gid)%req_list(:,:) = MPI_REQUEST_NULL
+
+       if ( COMM_USE_MPI_PC ) then
+          ginfo(gid)%vars_num = 0
+          allocate( ginfo(gid)%packid(COMM_vsize_max_pc) )
+          allocate( ginfo(gid)%preq_cnt (                      COMM_vsize_max_pc) )
+          allocate( ginfo(gid)%preq_list(ginfo(gid)%nreq_MAX+1,COMM_vsize_max_pc) )
+          ginfo(gid)%preq_cnt (:)   = -1
+          ginfo(gid)%preq_list(:,:) = MPI_REQUEST_NULL
+       end if
+
     end if
+
+
 
     LOG_NEWLINE
     LOG_INFO("COMM_regist",*) 'Register grid: id=', gid
@@ -321,31 +526,81 @@ contains
     !---------------------------------------------------------------------------
 
     do gid = 1, COMM_gid
-       deallocate( ginfo(gid)%recvpack_W2P )
-       deallocate( ginfo(gid)%recvpack_E2P )
-       deallocate( ginfo(gid)%sendpack_P2W )
-       deallocate( ginfo(gid)%sendpack_P2E )
+
+       if ( COMM_USE_MPI_ONESIDED ) then
+
+          do i = 1, COMM_vsize_max
+             call MPI_Win_start( group_packWE, 0, ginfo(gid)%win_packWE(i), ierr )
+             call MPI_Win_start( group_packNS, 0, ginfo(gid)%win_packNS(i), ierr )
+         end do
+
+          do i = 1, COMM_vsize_max
+             call MPI_Win_complete( ginfo(gid)%win_packWE(i), ierr )
+             call MPI_Win_complete( ginfo(gid)%win_packNS(i), ierr )
+          end do
+
+          do i = 1, COMM_vsize_max
+             call MPI_Win_wait( ginfo(gid)%win_packWE(i), ierr )
+             call MPI_Win_wait( ginfo(gid)%win_packNS(i), ierr )
+          end do
+
+          do i = 1, COMM_vsize_max
+             call MPI_Win_free(ginfo(gid)%win_packWE(i), ierr)
+             call MPI_Win_free(ginfo(gid)%win_packNS(i), ierr)
+          end do
+
+          deallocate( ginfo(gid)%packid )
+          ginfo(gid)%vars_num = 0
+
+          deallocate( ginfo(gid)%win_packWE )
+          deallocate( ginfo(gid)%win_packNS )
+
+          deallocate( ginfo(gid)%recvbuf_WE )
+          deallocate( ginfo(gid)%recvbuf_NS )
+
+       else
+
+          if ( COMM_USE_MPI_PC ) then
+
+             do j = 1, COMM_vsize_max_pc
+                do i = 1, ginfo(gid)%nreq_MAX+1
+                   if (ginfo(gid)%preq_list(i,j) .NE. MPI_REQUEST_NULL) &
+                        call MPI_REQUEST_FREE(ginfo(gid)%preq_list(i,j), ierr)
+                enddo
+             enddo
+             deallocate( ginfo(gid)%preq_cnt )
+             deallocate( ginfo(gid)%preq_list )
+             deallocate( ginfo(gid)%packid )
+             ginfo(gid)%vars_num = 0
+
+          end if
+
+          deallocate( ginfo(gid)%req_cnt )
+          deallocate( ginfo(gid)%req_list )
+
+          deallocate( ginfo(gid)%recvpack_WE2P )
+
+       end if
+
+
+       deallocate( ginfo(gid)%sendpack_P2WE )
 #ifdef DEBUG
        deallocate( ginfo(gid)%use_packbuf )
 #endif
 
-       deallocate( ginfo(gid)%req_cnt )
-       deallocate( ginfo(gid)%req_list )
-
-       if ( COMM_USE_MPI_PC ) then
-          do j = 1, COMM_vsize_max_pc
-             do i = 1, ginfo(gid)%nreq_MAX+1
-                if (ginfo(gid)%preq_list(i,j) .NE. MPI_REQUEST_NULL) &
-                     call MPI_REQUEST_FREE(ginfo(gid)%preq_list(i,j), ierr)
-             enddo
-          enddo
-          deallocate( ginfo(gid)%preq_cnt )
-          deallocate( ginfo(gid)%preq_list )
-          deallocate( ginfo(gid)%pseqid )
-          ginfo(gid)%vars_id = 0
-       end if
-
     end do
+
+    if ( COMM_USE_MPI_ONESIDED ) then
+       if ( group_packWE_created ) then
+          call MPI_Group_free(group_packWE, ierr)
+          group_packWE_created = .false.
+       end if
+       if ( group_packNS_created ) then
+          call MPI_Group_free(group_packNS, ierr)
+          group_packNS_created = .false.
+       end if
+    end if
+
 
     COMM_gid = 0
 
@@ -370,7 +625,12 @@ contains
     integer,          intent(in), optional :: gid
 
     integer :: gid_
+    integer :: vars_id
     !---------------------------------------------------------------------------
+
+    if ( .not. COMM_USE_MPI_PC ) return
+
+    call PROF_rapstart('COMM_init_pers', 2)
 
     gid_ = 1
     if ( present(gid) ) gid_ = gid
@@ -384,24 +644,23 @@ contains
        call PRC_abort
     end if
 
-    if ( COMM_USE_MPI_PC ) then
+    ginfo(gid_)%vars_num = ginfo(gid_)%vars_num + 1
+    if ( ginfo(gid_)%vars_num > COMM_vsize_max_pc ) then
+       LOG_ERROR("COMM_vars_init",*) 'number of variable for MPI PC exceeds max', ginfo(gid_)%vars_num, COMM_vsize_max_pc
+       call PRC_abort
+    end if
 
-       ginfo(gid_)%vars_id = ginfo(gid_)%vars_id + 1
-       if ( ginfo(gid_)%vars_id > COMM_vsize_max_pc ) then
-          LOG_ERROR("COMM_vars_init",*) 'number of variable for MPI PC exceeds max', ginfo(gid_)%vars_id, COMM_vsize_max_pc
-          call PRC_abort
-       end if
+    vars_id = ginfo(gid_)%vars_num
+    ginfo(gid_)%packid(vars_id) = vid
 
-       call PROF_rapstart('COMM_init_pers', 2)
-       call vars_init_mpi_pc(var, gid_, ginfo(gid_)%vars_id, vid)
-       call PROF_rapend  ('COMM_init_pers', 2)
+    call vars_init_mpi_pc(var, gid_, vars_id, vid)
 
-       vid = ginfo(gid_)%vars_id + COMM_vsize_max
+    vid = vars_id + COMM_vsize_max
 
-       LOG_INFO("COMM_vars_init",'(1x,A,I3.3,A,I3.3,2A)') 'Initialize variable (grid ID = ', gid_, '): ID = ', vid, &
+    LOG_INFO("COMM_vars_init",'(1x,A,I3.3,A,I3.3,2A)') 'Initialize variable (grid ID = ', gid_, '): ID = ', vid, &
                                                                                        ', name = ', trim(varname)
 
-    end if
+    call PROF_rapend  ('COMM_init_pers', 2)
 
     return
   end subroutine COMM_vars_init
@@ -423,7 +682,12 @@ contains
     integer,          intent(in), optional :: gid
 
     integer :: gid_
+    integer :: vars_id
     !---------------------------------------------------------------------------
+
+    if ( .not. COMM_USE_MPI_PC ) return
+
+    call PROF_rapstart('COMM_init_pers', 2)
 
     gid_ = 1
     if ( present(gid) ) gid_ = gid
@@ -437,24 +701,23 @@ contains
        call PRC_abort
     end if
 
-    if ( COMM_USE_MPI_PC ) then
+    ginfo(gid_)%vars_num = ginfo(gid_)%vars_num + 1
+    if ( ginfo(gid_)%vars_num > COMM_vsize_max_pc ) then
+       LOG_ERROR("COMM_vars8_init",*) 'number of variable for MPI PC exceeds max', ginfo(gid_)%vars_num, COMM_vsize_max_pc
+       call PRC_abort
+    end if
 
-       ginfo(gid_)%vars_id = ginfo(gid_)%vars_id + 1
-       if ( ginfo(gid_)%vars_id > COMM_vsize_max_pc ) then
-          LOG_ERROR("COMM_vars8_init",*) 'number of variable for MPI PC exceeds max', ginfo(gid_)%vars_id, COMM_vsize_max_pc
-          call PRC_abort
-       end if
+    vars_id = ginfo(gid_)%vars_num
+    ginfo(gid_)%packid(vars_id) = vid
 
-       call PROF_rapstart('COMM_init_pers', 2)
-       call vars8_init_mpi_pc(var, gid_, ginfo(gid_)%vars_id, vid)
-       call PROF_rapend  ('COMM_init_pers', 2)
+    call vars8_init_mpi_pc(var, gid_, vars_id, vid)
 
-       vid = ginfo(gid_)%vars_id + COMM_vsize_max
+    vid = vars_id + COMM_vsize_max
 
-       LOG_INFO("COMM_vars8_init",'(1x,A,I3.3,A,I3.3,2A)') 'Initialize variable (grid ID = ', gid_, '): ID = ', vid, &
+    LOG_INFO("COMM_vars8_init",'(1x,A,I3.3,A,I3.3,2A)') 'Initialize variable (grid ID = ', gid_, '): ID = ', vid, &
                                                                                        ', name = ', trim(varname)
 
-    end if
+    call PROF_rapend  ('COMM_init_pers', 2)
 
     return
   end subroutine COMM_vars8_init
@@ -485,7 +748,11 @@ contains
        call PROF_rapend  ('COMM_vars_pers', 2)
     else
        call PROF_rapstart('COMM_vars', 2)
-       call vars_3D_mpi(var, gid_, vid)
+       if ( COMM_USE_MPI_ONESIDED ) then
+          call vars_3D_mpi_onesided(var, gid_, vid)
+       else
+          call vars_3D_mpi(var, gid_, vid)
+       end if
        call PROF_rapend  ('COMM_vars', 2)
     end if
 
@@ -518,7 +785,11 @@ contains
        call PROF_rapend  ('COMM_vars_pers', 2)
     else
        call PROF_rapstart('COMM_vars', 2)
-       call vars8_3D_mpi(var, gid_, vid)
+       if ( COMM_USE_MPI_ONESIDED ) then
+          call vars8_3D_mpi_onesided(var, gid_, vid)
+       else
+          call vars8_3D_mpi(var, gid_, vid)
+       end if
        call PROF_rapend  ('COMM_vars', 2)
     end if
 
@@ -556,7 +827,11 @@ contains
        call PROF_rapend  ('COMM_wait_pers', 2)
     else
        call PROF_rapstart('COMM_wait', 2)
-       call wait_3D_mpi(var, gid_, vid)
+       if ( COMM_USE_MPI_ONESIDED ) then
+          call wait_3D_mpi_onesided(var, gid_, vid)
+       else
+          call wait_3D_mpi(var, gid_, vid)
+       end if
        call PROF_rapend  ('COMM_wait', 2)
     end if
 
@@ -591,7 +866,11 @@ contains
     end if
 
     call PROF_rapstart('COMM_vars', 2)
-    call vars_2D_mpi(var, gid_, vid)
+    if ( COMM_USE_MPI_ONESIDED ) then
+       call vars_2D_mpi_onesided(var, gid_, vid)
+    else
+       call vars_2D_mpi(var, gid_, vid)
+    end if
     call PROF_rapend  ('COMM_vars', 2)
 
     return
@@ -618,7 +897,11 @@ contains
     end if
 
     call PROF_rapstart('COMM_vars', 2)
-    call vars8_2D_mpi(var, gid_, vid)
+    if ( COMM_USE_MPI_ONESIDED ) then
+       call vars8_2D_mpi_onesided(var, gid_, vid)
+    else
+       call vars8_2D_mpi(var, gid_, vid)
+    end if
     call PROF_rapend  ('COMM_vars', 2)
 
     return
@@ -650,7 +933,11 @@ contains
     end if
 
     call PROF_rapstart('COMM_wait', 2)
-    call wait_2D_mpi(var, gid_, vid)
+    if ( COMM_USE_MPI_ONESIDED ) then
+       call wait_2D_mpi_onesided(var, gid_, vid)
+    else
+       call wait_2D_mpi(var, gid_, vid)
+    end if
     call PROF_rapend  ('COMM_wait', 2)
 
     if( .NOT. COMM_IsAllPeriodic ) then
@@ -1361,46 +1648,61 @@ contains
 
     !--- From 4-Direction HALO communicate
     ! From S
-    call MPI_RECV_INIT( var(:,:,1:JS-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,                &
-                        PRC_next(PRC_S), tag+1, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
-    ireq = ireq + 1
+    if ( PRC_HAS_S ) then
+       call MPI_RECV_INIT( var(:,:,1:JS-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,                &
+                           PRC_next(PRC_S), tag+1, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    end if
     ! From N
-    call MPI_RECV_INIT( var(:,:,JE+1:JA), ginfo(gid)%size2D_NS4*KA, COMM_datatype,               &
-                        PRC_next(PRC_N), tag+2, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
-    ireq = ireq + 1
+    if ( PRC_HAS_N ) then
+       call MPI_RECV_INIT( var(:,:,JE+1:JA), ginfo(gid)%size2D_NS4*KA, COMM_datatype,               &
+                           PRC_next(PRC_N), tag+2, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    end if
     if ( .not. PRC_TwoD ) then
        ! From E
-       call MPI_RECV_INIT( ginfo(gid)%recvpack_E2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,&
-                           PRC_next(PRC_E), tag+3, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
-       ireq = ireq + 1
+       if ( PRC_HAS_E ) then
+          call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                              PRC_next(PRC_E), tag+3, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
+          ireq = ireq + 1
+       end if
        ! From W
-       call MPI_RECV_INIT( ginfo(gid)%recvpack_W2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                           PRC_next(PRC_W), tag+4, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
-       ireq = ireq + 1
+       if ( PRC_HAS_W ) then
+          call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                              PRC_next(PRC_W), tag+4, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
+          ireq = ireq + 1
+       end if
     end if
 
     !--- To 4-Direction HALO communicate
     if ( .not. PRC_TwoD ) then
        ! To W HALO
-       call MPI_SEND_INIT( ginfo(gid)%sendpack_P2W(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                           PRC_next(PRC_W), tag+3, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
-       ireq = ireq + 1
+       if ( PRC_HAS_W ) then
+          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                              PRC_next(PRC_W), tag+3, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
+          ireq = ireq + 1
+       end if
        ! To E HALO
-       call MPI_SEND_INIT( ginfo(gid)%sendpack_P2E(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                           PRC_next(PRC_E), tag+4, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
-       ireq = ireq + 1
+       if ( PRC_HAS_E ) then
+          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                              PRC_next(PRC_E), tag+4, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr  )
+          ireq = ireq + 1
+       end if
     end if
     ! To N HALO
-    call MPI_SEND_INIT( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,         &
-                        PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
-    ireq = ireq + 1
+    if ( PRC_HAS_N ) then
+       call MPI_SEND_INIT( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,         &
+                           PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    end if
     ! To S HALO
-    call MPI_SEND_INIT( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,         &
-                        PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
-    ireq = ireq + 1
+    if ( PRC_HAS_S ) then
+       call MPI_SEND_INIT( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,         &
+                           PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    end if
 
     ginfo(gid)%preq_cnt(vid) = ireq - 1
-    ginfo(gid)%pseqid(vid) = seqid
 
     ! to finish initial processes of MPI
     nreq = ginfo(gid)%preq_cnt(vid)
@@ -1490,12 +1792,12 @@ contains
           enddo
           ! From E
           tagc = 60
-          call MPI_RECV_INIT( ginfo(gid)%recvpack_E2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+          call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                               PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! From W
           tagc = 70
-          call MPI_RECV_INIT( ginfo(gid)%recvpack_W2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+          call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                               PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
           ireq = ireq + 1
        end if
@@ -1536,12 +1838,12 @@ contains
        if ( .not. PRC_TwoD ) then
           ! To W HALO
           tagc = 60
-          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2W(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                               PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! To E HALO
           tagc = 70
-          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2E(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+          call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                               PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! To NW HALO
@@ -1689,14 +1991,14 @@ contains
           ! From E
           if ( PRC_HAS_E ) then
              tagc = 60
-             call MPI_RECV_INIT( ginfo(gid)%recvpack_E2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+             call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                                  PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
           ! From W
           if ( PRC_HAS_W ) then
              tagc = 70
-             call MPI_RECV_INIT( ginfo(gid)%recvpack_W2P(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+             call MPI_RECV_INIT( ginfo(gid)%recvpack_WE2P(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                                  PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
@@ -1747,14 +2049,14 @@ contains
           ! To W HALO
           if ( PRC_HAS_W ) then
              tagc = 60
-             call MPI_SEND_INIT( ginfo(gid)%sendpack_P2W(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+             call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,1,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                                  PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
           ! To E HALO
           if ( PRC_HAS_E ) then
              tagc = 70
-             call MPI_SEND_INIT( ginfo(gid)%sendpack_P2E(:,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
+             call MPI_SEND_INIT( ginfo(gid)%sendpack_P2WE(:,2,seqid), ginfo(gid)%size2D_WE*KA, COMM_datatype,   &
                                  PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%preq_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
@@ -1867,7 +2169,6 @@ contains
     endif
 
     ginfo(gid)%preq_cnt(vid) = ireq - 1
-    ginfo(gid)%pseqid(vid) = seqid
 
     ! to finish initial processes of MPI
     nreq = ginfo(gid)%preq_cnt(vid)
@@ -1894,7 +2195,9 @@ contains
     integer :: ireq, tag
 
     integer :: KA
-    integer :: JA, JS, JE, JHALO
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -1903,9 +2206,13 @@ contains
     ireq = 1
 
     KA    = ginfo(gid)%KA
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
     JA    = ginfo(gid)%JA
     JS    = ginfo(gid)%JS
     JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
     JHALO = ginfo(gid)%JHALO
 
 #ifdef DEBUG
@@ -1916,117 +2223,148 @@ contains
     ginfo(gid)%use_packbuf(vid) = .true.
 #endif
 
-    if ( COMM_IsAllPeriodic ) then ! periodic condition
-
-       !--- From 4-Direction HALO communicate
-       ! From S
+    !--- From 4-Direction HALO communicate
+    ! From S
+    if ( PRC_HAS_S ) then
        call MPI_IRECV( var(:,:,1:JS-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,               &
                        PRC_next(PRC_S), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
        ireq = ireq + 1
-       ! From N
-       call MPI_IRECV( var(:,:,JE+1:1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,               &
+    endif
+    ! From N
+    if ( PRC_HAS_N ) then
+       call MPI_IRECV( var(:,:,JE+1:JA), ginfo(gid)%size2D_NS4*KA, COMM_datatype,              &
                        PRC_next(PRC_N), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
        ireq = ireq + 1
-       if ( .not. PRC_TwoD ) then
-          ! From E
-          call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+    endif
+    if ( .not. PRC_TwoD ) then
+       ! From E
+       if ( PRC_HAS_E ) then
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
                           PRC_next(PRC_E), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
-          ! From W
-          call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+       endif
+       ! From W
+       if ( PRC_HAS_W ) then
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
                           PRC_next(PRC_W), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
-       end if
+       endif
+    end if
 
-       !--- To 4-Direction HALO communicate
-       if ( .not. PRC_TwoD ) then
-          call pack_3D(var, gid, vid)
+    !--- To 4-Direction HALO communicate
+    if ( .not. PRC_TwoD ) then
 
-          ! To W HALO
-          call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+       call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                       IHALO, &
+                       var, gid, vid)
+
+       ! To W HALO
+       if ( PRC_HAS_W ) then
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
                           PRC_next(PRC_W), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
-          ! To E HALO
-          call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+       endif
+       ! To E HALO
+       if ( PRC_HAS_E ) then
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
                           PRC_next(PRC_E), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
-       end if
-       ! To N HALO
+       endif
+    end if
+    ! To N HALO
+    if ( PRC_HAS_N ) then
        call MPI_ISEND( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
                        PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
        ireq = ireq + 1
-       ! To S HALO
+    endif
+    ! To S HALO
+    if ( PRC_HAS_S ) then
        call MPI_ISEND( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
                        PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
        ireq = ireq + 1
-
-    else ! non-periodic condition
-
-       !--- From 4-Direction HALO communicate
-       ! From S
-       if ( PRC_HAS_S ) then
-          call MPI_IRECV( var(:,:,1:JS-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,               &
-                          PRC_next(PRC_S), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          ireq = ireq + 1
-       endif
-       ! From N
-       if ( PRC_HAS_N ) then
-          call MPI_IRECV( var(:,:,JE+1:JA), ginfo(gid)%size2D_NS4*KA, COMM_datatype,              &
-                          PRC_next(PRC_N), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          ireq = ireq + 1
-       endif
-       if ( .not. PRC_TwoD ) then
-          ! From E
-          if ( PRC_HAS_E ) then
-             call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                             PRC_next(PRC_E), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-          ! From W
-          if ( PRC_HAS_W ) then
-             call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                             PRC_next(PRC_W), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-       end if
-
-       !--- To 4-Direction HALO communicate
-       if ( .not. PRC_TwoD ) then
-
-          call pack_3D(var, gid, vid)
-
-          ! To W HALO
-          if ( PRC_HAS_W ) then
-             call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                             PRC_next(PRC_W), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-          ! To E HALO
-          if ( PRC_HAS_E ) then
-             call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
-                             PRC_next(PRC_E), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-             ireq = ireq + 1
-          endif
-       end if
-       ! To N HALO
-       if ( PRC_HAS_N ) then
-          call MPI_ISEND( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
-                          PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          ireq = ireq + 1
-       endif
-       ! To S HALO
-       if ( PRC_HAS_S ) then
-          call MPI_ISEND( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype,        &
-                          PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-          ireq = ireq + 1
-       endif
-
     endif
 
     ginfo(gid)%req_cnt(vid) = ireq - 1
 
     return
   end subroutine vars_3D_mpi
+
+  subroutine vars_3D_mpi_onesided(var, gid, vid)
+    use scale_prc, only: &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:,:) !< atmospheric 3D variable to communication
+    integer,  intent(in)    :: gid        !< grid ID
+    integer,  intent(in)    :: vid        !< request ID
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
+
+    integer(kind=MPI_ADDRESS_KIND) :: disp
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    KA    = ginfo(gid)%KA
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
+    JA    = ginfo(gid)%JA
+    JS    = ginfo(gid)%JS
+    JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_start( group_packWE, 0, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_start( group_packNS, 0, ginfo(gid)%win_packNS(vid), ierr )
+
+    !--- To 4-Direction HALO communicate
+    if ( .not. PRC_TwoD ) then
+
+       call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                       IHALO, &
+                       var, gid, vid)
+
+       ! To W HALO
+       if ( PRC_HAS_W ) then
+          disp = 1
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+       endif
+       ! To E HALO
+       if ( PRC_HAS_E ) then
+          disp = 0
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+       endif
+    end if
+    ! To N HALO
+    if ( PRC_HAS_N ) then
+       disp = 0
+       call MPI_PUT( var(:,:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+    ! To S HALO
+    if ( PRC_HAS_S ) then
+       disp = KA * IA * JHALO
+       call MPI_PUT( var(:,:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS4*KA, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+
+    call MPI_Win_complete( ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_complete( ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine vars_3D_mpi_onesided
 
   subroutine vars8_3D_mpi(var, gid, vid)
     use scale_prc, only: &
@@ -2042,8 +2380,9 @@ contains
     integer :: ireq, tag, tagc
 
     integer :: KA
-    integer :: IS, IE, IHALO
-    integer :: JA, JS, JE, JHALO
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
 
     integer :: ierr
     integer :: j
@@ -2054,12 +2393,13 @@ contains
     ireq = 1
 
     KA    = ginfo(gid)%KA
+    IA    = ginfo(gid)%IA
     IS    = ginfo(gid)%IS
     IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
     JA    = ginfo(gid)%JA
     JS    = ginfo(gid)%JS
     JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
     JHALO = ginfo(gid)%JHALO
 
 #ifdef DEBUG
@@ -2108,12 +2448,12 @@ contains
           enddo
           ! From E
           tagc = 60
-          call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                           PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! From W
           tagc = 70
-          call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                           PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
        end if
@@ -2153,16 +2493,18 @@ contains
        enddo
        if ( .not. PRC_TwoD ) then
 
-          call pack_3D(var, gid, vid)
+          call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
 
           ! To W HALO
           tagc = 60
-          call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                           PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! To E HALO
           tagc = 70
-          call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                           PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
           ireq = ireq + 1
           ! To NW HALO
@@ -2310,14 +2652,14 @@ contains
           ! From E
           if ( PRC_HAS_E ) then
              tagc = 60
-             call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+             call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                              PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
           ! From W
           if ( PRC_HAS_W ) then
              tagc = 70
-             call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+             call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                              PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
@@ -2366,19 +2708,21 @@ contains
        endif
        if ( .not. PRC_TwoD ) then
 
-          call pack_3D(var, gid, vid)
+          call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
 
           ! To W HALO
           if ( PRC_HAS_W ) then
              tagc = 60
-             call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                              PRC_next(PRC_W), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
           ! To E HALO
           if ( PRC_HAS_E ) then
              tagc = 70
-             call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
+             call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype,    &
                              PRC_next(PRC_E), tag+tagc, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
              ireq = ireq + 1
           endif
@@ -2496,6 +2840,248 @@ contains
     return
   end subroutine vars8_3D_mpi
 
+  subroutine vars8_3D_mpi_onesided(var, gid, vid)
+    use scale_prc, only: &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:,:)
+    integer,  intent(in)    :: gid
+    integer,  intent(in)    :: vid
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
+
+    integer(kind=MPI_ADDRESS_KIND) :: disp
+
+    integer :: ierr
+    integer :: j
+    !---------------------------------------------------------------------------
+
+    KA    = ginfo(gid)%KA
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
+    JA    = ginfo(gid)%JA
+    JS    = ginfo(gid)%JS
+    JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_start( group_packWE, 0, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_start( group_packNS, 0, ginfo(gid)%win_packNS(vid), ierr )
+
+    if ( COMM_IsAllPeriodic ) then ! periodic condition
+
+       !--- To 8-Direction HALO communicate
+       ! To N HALO
+       do j = JE-JHALO+1, JE
+          disp = KA * ( IHALO + IA * ( j - JE+JHALO-1 ) )
+          call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                        PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                        ginfo(gid)%win_packNS(vid), ierr )
+       enddo
+       ! To S HALO
+       do j = JS, JS+JHALO-1
+          disp = KA * ( IHALO + IA * ( j - JS + JHALO ) )
+          call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                        PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                        ginfo(gid)%win_packNS(vid), ierr )
+       enddo
+       if ( .not. PRC_TwoD ) then
+
+          call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
+
+          ! To W HALO
+          disp = 1
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+          ! To E HALO
+          disp = 0
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+          ! To NW HALO
+          do j = JE-JHALO+1, JE
+             disp = KA * ( IE + IA * ( j - JE+JHALO-1 ) )
+             call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           PRC_next(PRC_NW), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To NE HALO
+          do j = JE-JHALO+1, JE
+             disp = KA * ( IA * ( j - JE+JHALO-1 ) )
+             call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           PRC_next(PRC_NE), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To SW HALO
+          do j = JS, JS+JHALO-1
+             disp = KA * ( IE + IA * ( j - JS + JHALO ) )
+             call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           PRC_next(PRC_SW), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To SE HALO
+          do j = JS, JS+JHALO-1
+             disp = KA * ( IA * ( j - JS + JHALO ) )
+             call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           PRC_next(PRC_SE), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       end if
+
+    else ! non-periodic condition
+
+       !--- To 8-Direction HALO communicate
+       ! To N HALO
+       if ( PRC_HAS_N ) then
+          do j = JE-JHALO+1, JE
+             disp = KA * ( IHALO + IA * ( j - JE+JHALO-1 ) )
+             call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                           PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       endif
+       ! To S HALO
+       if ( PRC_HAS_S ) then
+          do j = JS, JS+JHALO-1
+             disp = KA * ( IHALO + IA * ( j - JS + JHALO ) )
+             call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                           PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS8*KA, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       endif
+       if ( .not. PRC_TwoD ) then
+
+          call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
+
+          ! To W HALO
+          if ( PRC_HAS_W ) then
+             disp = 1
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
+          ! To E HALO
+          if ( PRC_HAS_E ) then
+             disp = 0
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE*KA, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
+
+          ! To NW HALO
+          if ( PRC_HAS_N .AND. PRC_HAS_W ) then
+             do j = JE-JHALO+1, JE
+                disp = KA * ( IE + IA * ( j - JE+JHALO-1 ) )
+                call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_NW), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_N ) then
+             do j = JE-JHALO+1, JE
+                disp = KA * ( IA * ( j - JE+JHALO-1 ) )
+                call MPI_PUT( var(1,1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_N), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_W ) then
+             do j = JE+1, JA
+                disp = KA * ( IE + IA * ( j - JE-1 + JHALO ) )
+                call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_W), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To NE HALO
+          if ( PRC_HAS_N .AND. PRC_HAS_E ) then
+             do j = JE-JHALO+1, JE
+                disp = KA * ( IA * ( j - JE+JHALO-1 ) )
+                call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_NE), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_N ) then
+             do j = JE-JHALO+1, JE
+                disp = KA * ( IE + IA * ( j - JE+JHALO-1 ) )
+                call MPI_PUT( var(1,IE+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_N), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_E ) then
+             do j = JE+1, JA
+                disp = KA * IA * ( j - JE-1 + JHALO )
+                call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_E), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To SW HALO
+          if ( PRC_HAS_S .AND. PRC_HAS_W ) then
+             do j = JS, JS+JHALO-1
+                disp = KA * ( IE + IA * ( j - JS + JHALO ) )
+                call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_SW), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_S ) then
+             do j = JS, JS+JHALO-1
+                disp = KA * ( IA * ( j - JS + JHALO ) )
+                call MPI_PUT( var(1,1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_S), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_W ) then
+             do j = 1, JS-1
+                disp = KA * ( IE + IA * (j-1) )
+                call MPI_PUT( var(1,IS,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_W), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To SE HALO
+          if ( PRC_HAS_S .AND. PRC_HAS_E ) then
+             do j = JS, JS+JHALO-1
+                disp = KA * ( IA * ( j - JS + JHALO ) )
+                call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_SE), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_S ) then
+             do j = JS, JS+JHALO-1
+                disp = KA * ( IE + IA * ( j - JS + JHALO ) )
+                call MPI_PUT( var(1,IE+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_S), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_E ) then
+             do j = 1, JS-1
+                disp = KA * ( IA * ( j - 1 ) )
+                call MPI_PUT( var(1,IE-IHALO+1,j), ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              PRC_next(PRC_E), disp, ginfo(gid)%size2D_4C*KA, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+       end if
+
+    endif
+
+    call MPI_Win_complete( ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_complete( ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine vars8_3D_mpi_onesided
+
   subroutine vars_2D_mpi(var, gid, vid)
     use scale_prc, only: &
        PRC_abort
@@ -2507,15 +3093,21 @@ contains
     integer, intent(in)     :: gid
     integer, intent(in)     :: vid
 
-    integer :: JA, JS, JE, JHALO
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
 
     integer :: ireq, tag
     integer :: ierr
     !---------------------------------------------------------------------------
 
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
     JA    = ginfo(gid)%JA
     JS    = ginfo(gid)%JS
     JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
     JHALO = ginfo(gid)%JHALO
 
     tag  = ( (gid - 1) * COMM_vsize_max + vid ) * 100
@@ -2529,150 +3121,149 @@ contains
     ginfo(gid)%use_packbuf(vid) = .true.
 #endif
 
-    if ( COMM_IsAllPeriodic ) then
-    !--- periodic condition
-        !--- From 4-Direction HALO communicate
-        ! From S
-        call MPI_IRECV( var(:,1:JS-1), ginfo(gid)%size2D_NS4,           &
-                        COMM_datatype, PRC_next(PRC_S), tag+1,          &
-                        COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-        ireq = ireq + 1
+    !--- From 4-Direction HALO communicate
+    ! From S
+    if ( PRC_HAS_S ) then
+       call MPI_IRECV( var(:,1:JS-1), ginfo(gid)%size2D_NS4, COMM_datatype, &
+                       PRC_next(PRC_S), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    endif
+    ! From N
+    if ( PRC_HAS_N ) then
+       call MPI_IRECV( var(:,JE+1:JA), ginfo(gid)%size2D_NS4, COMM_datatype, &
+                       PRC_next(PRC_N), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    endif
 
-        ! From N
-        call MPI_IRECV( var(:,JE+1:JA), ginfo(gid)%size2D_NS4,          &
-                        COMM_datatype, PRC_next(PRC_N), tag+2,          &
-                        COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-        ireq = ireq + 1
+    if ( .not. PRC_TwoD ) then
+       ! From E
+       if ( PRC_HAS_E ) then
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                          PRC_next(PRC_E), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          ireq = ireq + 1
+       endif
+       ! From W
+       if ( PRC_HAS_W ) then
+          call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                          PRC_next(PRC_W), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          ireq = ireq + 1
+       endif
+    end if
 
-        if ( .not. PRC_TwoD ) then
-           ! From E
-           call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE, &
-                           COMM_datatype, PRC_next(PRC_E), tag+3,                &
-                           COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-           ireq = ireq + 1
+    !--- To 4-Direction HALO communicate
+    if ( .not. PRC_TwoD ) then
 
-           ! From W
-           call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE, &
-                           COMM_datatype, PRC_next(PRC_W), tag+4,                &
-                           COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-           ireq = ireq + 1
-        end if
+       call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                       IHALO, &
+                       var, gid, vid)
 
-
-        !--- To 4-Direction HALO communicate
-
-        if ( .not. PRC_TwoD ) then
-
-           call pack_2D(var, gid, vid)
-
-           ! To W HALO communicate
-           call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE, &
-                           COMM_datatype, PRC_next(PRC_W), tag+3,                &
-                           COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-           ireq = ireq + 1
-
-           ! To E HALO communicate
-           call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE, &
-                           COMM_datatype, PRC_next(PRC_E), tag+4,                &
-                           COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-           ireq = ireq + 1
-        end if
-
-        ! To N HALO communicate
-        call MPI_ISEND( var(:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4,    &
-                        COMM_datatype, PRC_next(PRC_N), tag+1,          &
-                        COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-        ireq = ireq + 1
-
-        ! To S HALO communicate
-        call MPI_ISEND( var(:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4,    &
-                        COMM_datatype, PRC_next(PRC_S), tag+2,          &
-                        COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-        ireq = ireq + 1
-
-    else
-    !--- non-periodic condition
-        !--- From 4-Direction HALO communicate
-        ! From S
-        if ( PRC_HAS_S ) then
-            call MPI_IRECV( var(:,1:JS-1), ginfo(gid)%size2D_NS4,           &
-                            COMM_datatype, PRC_next(PRC_S), tag+1,          &
-                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-            ireq = ireq + 1
-        endif
-
-        ! From N
-        if ( PRC_HAS_N ) then
-            call MPI_IRECV( var(:,JE+1:JA), ginfo(gid)%size2D_NS4,          &
-                            COMM_datatype, PRC_next(PRC_N), tag+2,          &
-                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-            ireq = ireq + 1
-        endif
-
-        if ( .not. PRC_TwoD ) then
-           ! From E
-           if ( PRC_HAS_E ) then
-              call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE, &
-                              COMM_datatype, PRC_next(PRC_E), tag+3,                &
-                              COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-              ireq = ireq + 1
-           endif
-
-           ! From W
-           if ( PRC_HAS_W ) then
-              call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE, &
-                              COMM_datatype, PRC_next(PRC_W), tag+4,                &
-                              COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-              ireq = ireq + 1
-           endif
-        end if
-
-
-        !--- To 4-Direction HALO communicate
-
-        if ( .not. PRC_TwoD ) then
-
-           call pack_2D(var, gid, vid)
-
-           ! To W HALO communicate
-           if ( PRC_HAS_W ) then
-              call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE, &
-                              COMM_datatype, PRC_next(PRC_W), tag+3,                &
-                              COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-              ireq = ireq + 1
-           endif
-
-           ! To E HALO communicate
-           if ( PRC_HAS_E ) then
-              call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE, &
-                              COMM_datatype, PRC_next(PRC_E), tag+4,                &
-                              COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
-              ireq = ireq + 1
-           endif
-        end if
-
-        ! To N HALO communicate
-        if ( PRC_HAS_N ) then
-            call MPI_ISEND( var(:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4,    &
-                            COMM_datatype, PRC_next(PRC_N), tag+1,          &
-                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-            ireq = ireq + 1
-        endif
-
-        ! To S HALO communicate
-        if ( PRC_HAS_S ) then
-            call MPI_ISEND( var(:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4,    &
-                            COMM_datatype, PRC_next(PRC_S), tag+2,          &
-                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
-            ireq = ireq + 1
-        endif
-
+       ! To W HALO communicate
+       if ( PRC_HAS_W ) then
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                          PRC_next(PRC_W), tag+3, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          ireq = ireq + 1
+       endif
+       ! To E HALO communicate
+       if ( PRC_HAS_E ) then
+          call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                          PRC_next(PRC_E), tag+4, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+          ireq = ireq + 1
+       endif
+    end if
+    ! To N HALO communicate
+    if ( PRC_HAS_N ) then
+       call MPI_ISEND( var(:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4, COMM_datatype, &
+                     PRC_next(PRC_N), tag+1, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
+    endif
+    ! To S HALO communicate
+    if ( PRC_HAS_S ) then
+       call MPI_ISEND( var(:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4, COMM_datatype, &
+            PRC_next(PRC_S), tag+2, COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
+       ireq = ireq + 1
     endif
 
     ginfo(gid)%req_cnt(vid) = ireq - 1
 
     return
   end subroutine vars_2D_mpi
+
+  subroutine vars_2D_mpi_onesided(var, gid, vid)
+    use scale_prc, only: &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+
+    real(RP), intent(inout) :: var(:,:)
+    integer, intent(in)     :: gid
+    integer, intent(in)     :: vid
+
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
+
+    integer(kind=MPI_ADDRESS_KIND) :: disp
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
+    JA    = ginfo(gid)%JA
+    JS    = ginfo(gid)%JS
+    JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_start( group_packWE, 0, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_start( group_packNS, 0, ginfo(gid)%win_packNS(vid), ierr )
+
+    !--- To 4-Direction HALO communicate
+
+    if ( .not. PRC_TwoD ) then
+
+       call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                       IHALO, &
+                       var, gid, vid)
+
+       ! To W HALO communicate
+       if ( PRC_HAS_W ) then
+          disp = 1
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+       endif
+       ! To E HALO communicate
+       if ( PRC_HAS_E ) then
+          disp = 0
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                        PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+       endif
+    end if
+
+    ! To N HALO communicate
+    if ( PRC_HAS_N ) then
+       disp = 0
+       call MPI_PUT( var(:,JE-JHALO+1:JE), ginfo(gid)%size2D_NS4, COMM_datatype, &
+                     PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS4, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+    ! To S HALO communicate
+    if ( PRC_HAS_S ) then
+       disp = IA * JHALO
+       call MPI_PUT( var(:,JS:JS+JHALO-1), ginfo(gid)%size2D_NS4, COMM_datatype, &
+                     PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS4, COMM_datatype, &
+                     ginfo(gid)%win_packNS(vid), ierr )
+    endif
+
+    call MPI_Win_complete( ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_complete( ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine vars_2D_mpi_onesided
 
   subroutine vars8_2D_mpi(var, gid, vid)
     use scale_prc, only: &
@@ -2685,8 +3276,9 @@ contains
     integer,  intent(in)    :: gid
     integer,  intent(in)    :: vid
 
-    integer :: IS, IE, IHALO
-    integer :: JA, JS, JE, JHALO
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
 
     integer :: ireq, tag, tagc
 
@@ -2694,12 +3286,13 @@ contains
     integer :: j
     !---------------------------------------------------------------------------
 
+    IA    = ginfo(gid)%IA
     IS    = ginfo(gid)%IS
     IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
     JA    = ginfo(gid)%JA
     JS    = ginfo(gid)%JS
     JE    = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
     JHALO = ginfo(gid)%JHALO
 
     tag  = ( (gid - 1) * COMM_vsize_max + vid ) * 100
@@ -2754,12 +3347,12 @@ contains
               tagc = tagc + 1
            enddo
            ! From E
-           call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE, &
+           call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE, &
                            COMM_datatype, PRC_next(PRC_E), tag+60,               &
                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
            ireq = ireq + 1
            ! From W
-           call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE, &
+           call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE, &
                            COMM_datatype, PRC_next(PRC_W), tag+70,               &
                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
            ireq = ireq + 1
@@ -2808,16 +3401,18 @@ contains
 
         if ( .not. PRC_TwoD ) then
 
-           call pack_2D(var, gid, vid)
+           call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                           IHALO, &
+                           var, gid, vid)
 
            ! To W HALO communicate
-           call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE, &
+           call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, &
                            COMM_datatype, PRC_next(PRC_W), tag+60,               &
                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
            ireq = ireq + 1
 
            ! To E HALO communicate
-           call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE, &
+           call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, &
                            COMM_datatype, PRC_next(PRC_E), tag+70,               &
                            COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
            ireq = ireq + 1
@@ -2988,7 +3583,7 @@ contains
 
            ! From E
            if ( PRC_HAS_E ) then
-              call MPI_IRECV( ginfo(gid)%recvpack_E2P(:,vid), ginfo(gid)%size2D_WE, &
+              call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,2,vid), ginfo(gid)%size2D_WE, &
                               COMM_datatype, PRC_next(PRC_E), tag+60,               &
                               COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
               ireq = ireq + 1
@@ -2996,7 +3591,7 @@ contains
 
            ! From W
            if ( PRC_HAS_W ) then
-              call MPI_IRECV( ginfo(gid)%recvpack_W2P(:,vid), ginfo(gid)%size2D_WE, &
+              call MPI_IRECV( ginfo(gid)%recvpack_WE2P(:,1,vid), ginfo(gid)%size2D_WE, &
                               COMM_datatype, PRC_next(PRC_W), tag+70,               &
                               COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
               ireq = ireq + 1
@@ -3057,11 +3652,13 @@ contains
 
         if ( .not. PRC_TwoD ) then
 
-           call pack_2D(var, gid, vid)
+           call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                           IHALO, &
+                           var, gid, vid)
 
            ! To W HALO communicate
            if ( PRC_HAS_W ) then
-              call MPI_ISEND( ginfo(gid)%sendpack_P2W(:,vid), ginfo(gid)%size2D_WE, &
+              call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, &
                               COMM_datatype, PRC_next(PRC_W), tag+60,               &
                               COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
               ireq = ireq + 1
@@ -3069,7 +3666,7 @@ contains
 
            ! To E HALO communicate
            if ( PRC_HAS_E ) then
-              call MPI_ISEND( ginfo(gid)%sendpack_P2E(:,vid), ginfo(gid)%size2D_WE, &
+              call MPI_ISEND( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, &
                               COMM_datatype, PRC_next(PRC_E), tag+70,               &
                               COMM_world, ginfo(gid)%req_list(ireq,vid), ierr       )
               ireq = ireq + 1
@@ -3088,7 +3685,7 @@ contains
            else if ( PRC_HAS_N ) then
               tagc = 10
               do j = JE-JHALO+1, JE
-                 call MPI_ISEND( var(IS,j), ginfo(gid)%size2D_4C,                &
+                 call MPI_ISEND( var(1,j), ginfo(gid)%size2D_4C,                &
                                  COMM_datatype, PRC_next(PRC_N), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
                  ireq = ireq + 1
@@ -3096,7 +3693,7 @@ contains
               enddo
            else if ( PRC_HAS_W ) then
               tagc = 20
-              do j = JE-JHALO+1, JE
+              do j = JE+1, JA
                  call MPI_ISEND( var(IS,j), ginfo(gid)%size2D_4C,                &
                                  COMM_datatype, PRC_next(PRC_W), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
@@ -3118,7 +3715,7 @@ contains
            else if ( PRC_HAS_N ) then
               tagc = 0
               do j = JE-JHALO+1, JE
-                 call MPI_ISEND( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C,        &
+                 call MPI_ISEND( var(IE+1,j), ginfo(gid)%size2D_4C,        &
                                  COMM_datatype, PRC_next(PRC_N), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
                  ireq = ireq + 1
@@ -3126,7 +3723,7 @@ contains
               enddo
            else if ( PRC_HAS_E ) then
               tagc = 30
-              do j = JE-JHALO+1, JE
+              do j = JE+1, JA
                  call MPI_ISEND( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C,        &
                                  COMM_datatype, PRC_next(PRC_E), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
@@ -3148,7 +3745,7 @@ contains
            else if ( PRC_HAS_S ) then
               tagc = 30
               do j = JS, JS+JHALO-1
-                 call MPI_ISEND( var(IS,j), ginfo(gid)%size2D_4C,                &
+                 call MPI_ISEND( var(1,j), ginfo(gid)%size2D_4C,                &
                                  COMM_datatype, PRC_next(PRC_S), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
                  ireq = ireq + 1
@@ -3156,7 +3753,7 @@ contains
               enddo
            else if ( PRC_HAS_W ) then
               tagc = 0
-              do j = JS, JS+JHALO-1
+              do j = 1, JS-1
                  call MPI_ISEND( var(IS,j), ginfo(gid)%size2D_4C,                &
                                  COMM_datatype, PRC_next(PRC_W), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
@@ -3178,7 +3775,7 @@ contains
            else if ( PRC_HAS_S ) then
               tagc = 20
               do j = JS, JS+JHALO-1
-                 call MPI_ISEND( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C,        &
+                 call MPI_ISEND( var(IE+1,j), ginfo(gid)%size2D_4C,        &
                                  COMM_datatype, PRC_next(PRC_S), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
                  ireq = ireq + 1
@@ -3186,7 +3783,7 @@ contains
               enddo
            else if ( PRC_HAS_E ) then
               tagc = 10
-              do j = JS, JS+JHALO-1
+              do j = 1, JS-1
                  call MPI_ISEND( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C,        &
                                  COMM_datatype, PRC_next(PRC_E), tag+tagc,       &
                                  COMM_world, ginfo(gid)%req_list(ireq,vid), ierr )
@@ -3203,28 +3800,286 @@ contains
     return
   end subroutine vars8_2D_mpi
 
-  subroutine vars_3D_mpi_pc(var, gid, vid)
+  subroutine vars8_2D_mpi_onesided(var, gid, vid)
     use scale_prc, only: &
        PRC_abort
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
 
+    real(RP), intent(inout) :: var(:,:)
+    integer,  intent(in)    :: gid
+    integer,  intent(in)    :: vid
+
+    integer :: IA, IS, IE, IHALO
+    integer :: JA, JS, JE, JHALO
+
+    integer(kind=MPI_ADDRESS_KIND) :: disp
+
+    integer :: ierr
+    integer :: j
+    !---------------------------------------------------------------------------
+
+    IA    = ginfo(gid)%IA
+    IS    = ginfo(gid)%IS
+    IE    = ginfo(gid)%IE
+    IHALO = ginfo(gid)%IHALO
+    JA    = ginfo(gid)%JA
+    JS    = ginfo(gid)%JS
+    JE    = ginfo(gid)%JE
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_start( group_packWE, 0, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_start( group_packNS, 0, ginfo(gid)%win_packNS(vid), ierr )
+
+    if ( COMM_IsAllPeriodic ) then
+    !--- periodic condition
+
+       !--- To 8-Direction HALO communicate
+
+       ! To N HALO communicate
+       do j = JE-JHALO+1, JE
+          disp = IHALO + IA * ( j - JE+JHALO-1 )
+          call MPI_PUT( var(IS,j), ginfo(gid)%size2D_NS8, COMM_datatype, &
+                        PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS8, COMM_datatype, &
+                        ginfo(gid)%win_packNS(vid), ierr )
+       enddo
+       ! To S HALO communicate
+       do j = JS, JS+JHALO-1
+          disp = IHALO + IA * ( j - JS + JHALO )
+          call MPI_PUT( var(IS,j), ginfo(gid)%size2D_NS8, COMM_datatype, &
+               PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS8, COMM_datatype, &
+               ginfo(gid)%win_packNS(vid), ierr )
+       enddo
+
+       if ( .not. PRC_TwoD ) then
+
+          call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
+
+          ! To W HALO communicate
+          disp = 1
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                        PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+                        ginfo(gid)%win_packWE(vid), ierr )
+          ! To E HALO communicate
+          disp = 0
+          call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+               PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+               ginfo(gid)%win_packWE(vid), ierr )
+          ! To NW HALO communicate
+          do j = JE-JHALO+1, JE
+             disp = IE + IA * ( j - JE+JHALO-1 )
+             call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                           PRC_next(PRC_NW), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To NE HALO communicate
+          do j = JE-JHALO+1, JE
+             disp = IA * ( j - JE+JHALO-1 )
+             call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                           PRC_next(PRC_NE), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To SW HALO communicate
+          do j = JS, JS+JHALO-1
+             disp = IE + IA * ( j - JS + JHALO )
+             call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                           PRC_next(PRC_SW), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+          ! To SE HALO communicate
+          do j = JS, JS+JHALO-1
+             disp = IA * ( j - JS + JHALO )
+             call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                           PRC_next(PRC_SE), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       end if
+    else
+    !--- non-periodic condition
+
+       ! To N HALO communicate
+       if ( PRC_HAS_N ) then
+          do j = JE-JHALO+1, JE
+             disp = IHALO + IA * ( j - JE+JHALO-1 )
+             call MPI_PUT( var(IS,j), ginfo(gid)%size2D_NS8, COMM_datatype, &
+                           PRC_next(PRC_N), disp, ginfo(gid)%size2D_NS8, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       endif
+       ! To S HALO communicate
+       if ( PRC_HAS_S ) then
+          do j = JS, JS+JHALO-1
+             disp = IHALO + IA * ( j - JS + JHALO )
+             call MPI_PUT( var(IS,j), ginfo(gid)%size2D_NS8, COMM_datatype, &
+                           PRC_next(PRC_S), disp, ginfo(gid)%size2D_NS8, COMM_datatype, &
+                           ginfo(gid)%win_packNS(vid), ierr )
+          enddo
+       endif
+
+       if ( .not. PRC_TwoD ) then
+
+          call packWE_2D( IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, gid, vid)
+
+          ! To W HALO communicate
+          if ( PRC_HAS_W ) then
+             disp = 1
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,1,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                           PRC_next(PRC_W), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
+          ! To E HALO communicate
+          if ( PRC_HAS_E ) then
+             disp = 0
+             call MPI_PUT( ginfo(gid)%sendpack_P2WE(:,2,vid), ginfo(gid)%size2D_WE, COMM_datatype, &
+                           PRC_next(PRC_E), disp, ginfo(gid)%size2D_WE, COMM_datatype, &
+                           ginfo(gid)%win_packWE(vid), ierr )
+          endif
+          ! To NW HALO communicate
+          if ( PRC_HAS_N .AND. PRC_HAS_W ) then
+             do j = JE-JHALO+1, JE
+                disp = IE + IA * ( j - JE+JHALO-1 )
+                call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_NW), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_N ) then
+             do j = JE-JHALO+1, JE
+                disp = IA * ( j - JE+JHALO-1 )
+                call MPI_PUT( var(1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_N), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_W ) then
+             do j = JE+1, JA
+                disp = IE + IA * ( j - JE-1 + JHALO )
+                call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_W), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To NE HALO communicate
+          if ( PRC_HAS_N .AND. PRC_HAS_E ) then
+             do j = JE-JHALO+1, JE
+                disp = IA * ( j - JE+JHALO-1 )
+                call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_NE), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_N ) then
+             do j = JE-JHALO+1, JE
+                disp = IE + IA * ( j - JE+JHALO-1 )
+                call MPI_PUT( var(IE+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_N), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_E ) then
+             do j = JE+1, JA
+                disp = IA * ( j - JE-1 + JHALO )
+                call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_E), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To SW HALO communicate
+          if ( PRC_HAS_S .AND. PRC_HAS_W ) then
+             do j = JS, JS+JHALO-1
+                disp = IE + IA * ( j - JS + JHALO )
+                call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_SW), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_S ) then
+             do j = JS, JS+JHALO-1
+                disp = IA * ( j - JS + JHALO )
+                call MPI_PUT( var(1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_S), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_W ) then
+             do j = 1, JS-1
+                disp = IE + IA * ( j - 1 )
+                call MPI_PUT( var(IS,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_W), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+          ! To SE HALO communicate
+          if ( PRC_HAS_S .AND. PRC_HAS_E ) then
+             do j = JS, JS+JHALO-1
+                disp = IA * ( j - JS + JHALO )
+                call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_SE), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_S ) then
+             do j = JS, JS+JHALO-1
+                disp = IE + IA * ( j - JS + JHALO )
+                call MPI_PUT( var(IE+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_S), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          else if ( PRC_HAS_E ) then
+             do j = 1, JS-1
+                disp = IA * ( j - 1 )
+                call MPI_PUT( var(IE-IHALO+1,j), ginfo(gid)%size2D_4C, COMM_datatype, &
+                              PRC_next(PRC_E), disp, ginfo(gid)%size2D_4C, COMM_datatype, &
+                              ginfo(gid)%win_packNS(vid), ierr )
+             enddo
+          endif
+       end if
+
+    endif
+
+    call MPI_Win_complete( ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_complete( ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine vars8_2D_mpi_onesided
+
+  subroutine vars_3D_mpi_pc(var, gid, vid)
+    use scale_prc, only: &
+       PRC_abort
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
     real(RP), intent(inout) :: var(:,:,:)
     integer, intent(in)     :: gid
     integer, intent(in)     :: vid
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
 #ifdef DEBUG
-    if ( ginfo(gid)%use_packbuf(ginfo(gid)%pseqid(vid)) ) then
-       LOG_ERROR("vars_3D_mpi_pc",*) 'packing buffer is already used', vid, ginfo(gid)%pseqid(vid)
+    if ( ginfo(gid)%use_packbuf(ginfo(gid)%packid(vid)) ) then
+       LOG_ERROR("vars_3D_mpi_pc",*) 'packing buffer is already used', vid, ginfo(gid)%packid(vid)
        call PRC_abort
     end if
-    ginfo(gid)%use_packbuf(ginfo(gid)%pseqid(vid)) = .true.
+    ginfo(gid)%use_packbuf(ginfo(gid)%packid(vid)) = .true.
 #endif
 
-    if ( .not. PRC_TwoD ) call pack_3D(var, gid, ginfo(gid)%pseqid(vid))
+    if ( .not. PRC_TwoD ) then
+       KA = ginfo(gid)%KA
+       IA = ginfo(gid)%IA
+       IS = ginfo(gid)%IS
+       IE = ginfo(gid)%IE
+       JA = ginfo(gid)%JA
+       JS = ginfo(gid)%JS
+       JE = ginfo(gid)%JE
+       IHALO = ginfo(gid)%IHALO
+       call packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                       IHALO, &
+                       var, gid, ginfo(gid)%packid(vid))
+    end if
 
     call MPI_STARTALL(ginfo(gid)%preq_cnt(vid), ginfo(gid)%preq_list(1:ginfo(gid)%preq_cnt(vid),vid), ierr)
 
@@ -3239,6 +4094,11 @@ contains
     integer, intent(in)     :: gid
     integer, intent(in)     :: vid
 
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO
+
     integer :: ierr
     !---------------------------------------------------------------------------
 
@@ -3247,7 +4107,19 @@ contains
                       ginfo(gid)%req_list(1:ginfo(gid)%req_cnt(vid),vid), &
                       MPI_STATUSES_IGNORE,                                &
                       ierr                                                )
-    if ( .not. PRC_TwoD ) call unpack_3D(var, gid, vid)
+    if ( .not. PRC_TwoD ) then
+       KA = ginfo(gid)%KA
+       IA = ginfo(gid)%IA
+       IS = ginfo(gid)%IS
+       IE = ginfo(gid)%IE
+       JA = ginfo(gid)%JA
+       JS = ginfo(gid)%JS
+       JE = ginfo(gid)%JE
+       IHALO = ginfo(gid)%IHALO
+       call unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                         IHALO, &
+                         var, ginfo(gid)%recvpack_WE2P(:,:,vid) )
+    end if
 
 #ifdef DEBUG
     ginfo(gid)%use_packbuf(vid) = .false.
@@ -3256,14 +4128,66 @@ contains
     return
   end subroutine wait_3D_mpi
 
+  subroutine wait_3D_mpi_onesided(var, gid, vid)
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+    real(RP), intent(inout) :: var(:,:,:)
+    integer, intent(in)     :: gid
+    integer, intent(in)     :: vid
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
+
+    real(RP), pointer :: pack(:)
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    KA = ginfo(gid)%KA
+    IA = ginfo(gid)%IA
+    IS = ginfo(gid)%IS
+    IE = ginfo(gid)%IE
+    JA = ginfo(gid)%JA
+    JS = ginfo(gid)%JS
+    JE = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_wait( ginfo(gid)%win_packWE(vid), ierr )
+    if ( .not. PRC_TwoD ) then
+       call C_F_pointer( ginfo(gid)%recvbuf_WE(vid), pack, (/ginfo(gid)%size2D_WE*KA*2/) )
+       call unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                         IHALO, &
+                         var, pack )
+    end if
+
+    call MPI_Win_wait( ginfo(gid)%win_packNS(vid), ierr )
+    call C_F_pointer( ginfo(gid)%recvbuf_NS(vid), pack, (/ginfo(gid)%size2D_NS4*KA*2/) )
+    call unpackNS_3D( KA, IA, IS, IE, JA, JS, JE, &
+                      JHALO, &
+                      var, pack )
+
+    call MPI_Win_post( group_packWE, MPI_MODE_NOSTORE, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_post( group_packNS, MPI_MODE_NOSTORE, ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine wait_3D_mpi_onesided
+
   subroutine wait_2D_mpi(var, gid, vid)
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
-
     real(RP), intent(inout) :: var(:,:)
     integer,  intent(in)    :: gid
     integer,  intent(in)    :: vid
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO
 
     integer :: ierr
     !---------------------------------------------------------------------------
@@ -3273,7 +4197,19 @@ contains
                       ginfo(gid)%req_list(1:ginfo(gid)%req_cnt(vid),vid), &
                       MPI_STATUSES_IGNORE,                                &
                       ierr                                                )
-    if ( .not. PRC_TwoD ) call unpack_2D(var, gid, vid)
+    if ( .not. PRC_TwoD ) then
+       KA = ginfo(gid)%KA
+       IA = ginfo(gid)%IA
+       IS = ginfo(gid)%IS
+       IE = ginfo(gid)%IE
+       JA = ginfo(gid)%JA
+       JS = ginfo(gid)%JS
+       JE = ginfo(gid)%JE
+       IHALO = ginfo(gid)%IHALO
+       call unpackWE_2D( KA, IA, IS, IE, JA, JS, JE, &
+                         IHALO, &
+                         var, ginfo(gid)%recvpack_WE2P(:,:,vid) )
+    end if
 
 #ifdef DEBUG
     ginfo(gid)%use_packbuf(vid) = .false.
@@ -3282,15 +4218,68 @@ contains
     return
   end subroutine wait_2D_mpi
 
+  subroutine wait_2D_mpi_onesided(var, gid, vid)
+    use scale_prc_cartesC, only: &
+       PRC_TwoD
+    implicit none
+    real(RP), intent(inout) :: var(:,:)
+    integer,  intent(in)    :: gid
+    integer,  intent(in)    :: vid
+
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO, JHALO
+
+    real(RP), pointer :: pack(:)
+
+    integer :: ierr
+    !---------------------------------------------------------------------------
+
+    KA = ginfo(gid)%KA
+    IA = ginfo(gid)%IA
+    IS = ginfo(gid)%IS
+    IE = ginfo(gid)%IE
+    JA = ginfo(gid)%JA
+    JS = ginfo(gid)%JS
+    JE = ginfo(gid)%JE
+    IHALO = ginfo(gid)%IHALO
+    JHALO = ginfo(gid)%JHALO
+
+    call MPI_Win_wait( ginfo(gid)%win_packWE(vid), ierr )
+    if ( .not. PRC_TwoD ) then
+       call C_F_pointer( ginfo(gid)%recvbuf_WE(vid), pack, (/ginfo(gid)%size2D_WE*KA*2/)  )
+       call unpackWE_2D( KA, IA, IS, IE, JA, JS, JE, &
+                         IHALO, &
+                         var, pack )
+    end if
+
+    call MPI_Win_wait( ginfo(gid)%win_packNS(vid), ierr )
+    call C_F_pointer( ginfo(gid)%recvbuf_NS(vid), pack, (/ginfo(gid)%size2D_NS4*KA*2/)  )
+    call unpackNS_2D( IA, IS, IE, JA, JS, JE, &
+                      JHALO, &
+                      var, pack )
+
+    call MPI_Win_post( group_packWE, MPI_MODE_NOSTORE, ginfo(gid)%win_packWE(vid), ierr )
+    call MPI_Win_post( group_packNS, MPI_MODE_NOSTORE, ginfo(gid)%win_packNS(vid), ierr )
+
+    return
+  end subroutine wait_2D_mpi_onesided
+
   subroutine wait_3D_mpi_pc(var, gid, vid)
     use scale_prc_cartesC, only: &
        PRC_TwoD
     implicit none
-
     real(RP), intent(inout) :: var(:,:,:)
     integer,  intent(in)    :: gid
     integer,  intent(in)    :: vid
 
+    integer :: KA
+    integer :: IA, IS, IE
+    integer :: JA, JS, JE
+    integer :: IHALO
+
+    integer :: pid
     integer :: ierr
 
     !--- wait packets
@@ -3298,39 +4287,45 @@ contains
                       ginfo(gid)%preq_list(1:ginfo(gid)%preq_cnt(vid),vid), &
                       MPI_STATUSES_IGNORE,                                  &
                       ierr                                                  )
-    if ( .not. PRC_TwoD ) call unpack_3D(var, gid, ginfo(gid)%pseqid(vid))
+    if ( .not. PRC_TwoD ) then
+       KA = ginfo(gid)%KA
+       IA = ginfo(gid)%IA
+       IS = ginfo(gid)%IS
+       IE = ginfo(gid)%IE
+       JA = ginfo(gid)%JA
+       JS = ginfo(gid)%JS
+       JE = ginfo(gid)%JE
+       IHALO = ginfo(gid)%IHALO
+       pid = ginfo(gid)%packid(vid)
+       call unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                         IHALO, &
+                         var, ginfo(gid)%recvpack_WE2P(:,:,pid) )
+    end if
 
 #ifdef DEBUG
-    ginfo(gid)%use_packbuf(ginfo(gid)%pseqid(vid)) = .false.
+    ginfo(gid)%use_packbuf(ginfo(gid)%packid(vid)) = .false.
 #endif
 
     return
   end subroutine wait_3D_mpi_pc
 
-  subroutine pack_3D( var, gid, vid )
+  subroutine packWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                        IHALO, &
+                        var, gid, vid)
     implicit none
-
-    real(RP), intent(in) :: var(:,:,:)
+    integer, intent(in) :: KA
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: IHALO
+    real(RP), intent(in) :: var(KA,IA,JA)
     integer,  intent(in) :: gid
     integer,  intent(in) :: vid
-
-    integer :: KA
-    integer :: IS, IE, IHALO
-    integer :: JS, JE
 
     integer :: k, i, j, n
 
     call PROF_rapstart('COMM_pack', 3)
 
-    KA    = ginfo(gid)%KA
-    IS    = ginfo(gid)%IS
-    IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
-    JS    = ginfo(gid)%JS
-    JE    = ginfo(gid)%JE
-
-    if ( COMM_IsAllPeriodic ) then ! periodic condition
-
+    if ( PRC_HAS_W ) then
        !--- packing packets to West
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -3339,10 +4334,13 @@ contains
           n = (j-JS) * KA * IHALO &
             + (i-IS) * KA         &
             + k
-          ginfo(gid)%sendpack_P2W(n,vid) = var(k,i,j)
+          ginfo(gid)%sendpack_P2WE(n,1,vid) = var(k,i,j)
        enddo
        enddo
        enddo
+    end if
+
+    if ( PRC_HAS_E ) then
        !--- packing packets to East
        !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
@@ -3351,296 +4349,316 @@ contains
           n = (j-JS)         * KA * IHALO &
             + (i-IE+IHALO-1) * KA         &
             + k
-          ginfo(gid)%sendpack_P2E(n,vid) = var(k,i,j)
+          ginfo(gid)%sendpack_P2WE(n,2,vid) = var(k,i,j)
        enddo
        enddo
        enddo
-
-    else
-
-       if ( PRC_HAS_W ) then
-          !--- packing packets to West
-          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JS,JE,IS,IHALO,KA,var,ginfo,gid,vid)
-          do j = JS, JE
-          do i = IS, IS+IHALO-1
-          do k = 1, KA
-             n = (j-JS) * KA * IHALO &
-               + (i-IS) * KA         &
-               + k
-             ginfo(gid)%sendpack_P2W(n,vid) = var(k,i,j)
-          enddo
-          enddo
-          enddo
-       endif
-       if ( PRC_HAS_E ) then
-          !--- packing packets to East
-          !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
-          !$omp shared(JS,JE,IE,IHALO,KA,var,ginfo,gid,vid)
-          do j = JS, JE
-          do i = IE-IHALO+1, IE
-          do k = 1, KA
-             n = (j-JS)         * KA * IHALO &
-               + (i-IE+IHALO-1) * KA         &
-               + k
-             ginfo(gid)%sendpack_P2E(n,vid) = var(k,i,j)
-          enddo
-          enddo
-          enddo
-       endif
-
     end if
 
     call PROF_rapend('COMM_pack', 3)
 
     return
-  end subroutine pack_3D
+  end subroutine packWE_3D
 
-  subroutine pack_2D(var, gid, vid)
+  subroutine packWE_2D( IA, IS, IE, JA, JS, JE, &
+                        IHALO, &
+                        var, gid, vid)
     implicit none
-
-    real(RP), intent(in) :: var(:,:)
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: IHALO
+    real(RP), intent(in) :: var(IA,JA)
     integer,  intent(in) :: vid
     integer,  intent(in) :: gid
-
-    integer :: IS, IE, IHALO
-    integer :: JS, JE
 
     integer :: i, j, n
 
     call PROF_rapstart('COMM_pack', 3)
 
-    IS    = ginfo(gid)%IS
-    IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
-    JS    = ginfo(gid)%JS
-    JE    = ginfo(gid)%JE
-
-    if ( COMM_IsAllPeriodic ) then ! periodic condition
-
+    if ( PRC_HAS_W ) then
        !--- To 4-Direction HALO communicate
        !--- packing packets to West
-       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,n) OMP_SCHEDULE_
        do j = JS, JE
        do i = IS, IS+IHALO-1
           n = (j-JS) * IHALO &
             + (i-IS) + 1
-          ginfo(gid)%sendpack_P2W(n,vid) = var(i,j)
+          ginfo(gid)%sendpack_P2WE(n,1,vid) = var(i,j)
        enddo
        enddo
+    end if
 
+    if ( PRC_HAS_E ) then
        !--- packing packets to East
-       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,n) OMP_SCHEDULE_
        do j = JS, JE
        do i = IE-IHALO+1, IE
           n = (j-JS)         * IHALO &
             + (i-IE+IHALO-1) + 1
-          ginfo(gid)%sendpack_P2E(n,vid) = var(i,j)
+          ginfo(gid)%sendpack_P2WE(n,2,vid) = var(i,j)
        enddo
        enddo
-
-    else
-
-       !--- To 4-Direction HALO communicate
-       !--- packing packets to West
-       if ( PRC_HAS_W ) then
-       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do i = IS, IS+IHALO-1
-             n = (j-JS) * IHALO &
-               + (i-IS) + 1
-             ginfo(gid)%sendpack_P2W(n,vid) = var(i,j)
-          enddo
-          enddo
-       endif
-
-       !--- packing packets to East
-       if ( PRC_HAS_E ) then
-       !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do i = IE-IHALO+1, IE
-             n = (j-JS)         * IHALO &
-               + (i-IE+IHALO-1) + 1
-             ginfo(gid)%sendpack_P2E(n,vid) = var(i,j)
-          enddo
-          enddo
-       endif
-
     end if
 
     call PROF_rapend('COMM_pack', 3)
 
     return
-  end subroutine pack_2D
+  end subroutine packWE_2D
 
-  subroutine unpack_3D(var, gid, vid)
+  subroutine unpackWE_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, buf )
     implicit none
+    integer, intent(in) :: KA
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: IHALO
+    real(RP), intent(inout) :: var(KA,IA,JA)
+    real(RP), intent(in)    :: buf(KA,IHALO,JS:JE,2)
 
-    real(RP), intent(inout) :: var(:,:,:)
-    integer,  intent(in)    :: gid
-    integer,  intent(in)    :: vid
-
-    integer :: KA
-    integer :: IS, IE, IHALO
-    integer :: JS, JE
-    integer :: i, j, k, n
+    integer :: i, j, k
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('COMM_unpack', 3)
 
-    KA    = ginfo(gid)%KA
-    IS    = ginfo(gid)%IS
-    IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
-    JS    = ginfo(gid)%JS
-    JE    = ginfo(gid)%JE
-
-    if ( COMM_IsAllPeriodic ) then ! periodic condition
-
+    if ( PRC_HAS_E ) then
        !--- unpacking packets from East
-       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
-       do i = IE+1, IE+IHALO
+       do i = IE+1, IA
        do k = 1, KA
-          n = (j-JS)   * KA * IHALO &
-            + (i-IE-1) * KA         &
-            + k
-          var(k,i,j) = ginfo(gid)%recvpack_E2P(n,vid)
+          var(k,i,j) = buf(k,i-IE,j,2)
        enddo
        enddo
        enddo
+    end if
 
+    if ( PRC_HAS_W ) then
        !--- unpacking packets from West
-       !$omp parallel do private(i,j,k,n) OMP_SCHEDULE_ collapse(2)
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
        do j = JS, JE
-       do i = IS-IHALO, IS-1
+       do i = 1, IS-1
        do k = 1, KA
-          n = (j-JS)       * KA * IHALO &
-            + (i-IS+IHALO) * KA         &
-            + k
-          var(k,i,j) = ginfo(gid)%recvpack_W2P(n,vid)
+          var(k,i,j) = buf(k,i,j,1)
        enddo
        enddo
        enddo
-
-    else ! non-periodic condition
-
-        if ( PRC_HAS_E ) then
-           !--- unpacking packets from East
-           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
-           !$omp shared(JS,JE,IE,IHALO,KA,var,ginfo,gid,vid)
-           do j = JS, JE
-           do i = IE+1, IE+IHALO
-           do k = 1, KA
-              n = (j-JS)   * KA * IHALO &
-                + (i-IE-1) * KA         &
-                + k
-              var(k,i,j) = ginfo(gid)%recvpack_E2P(n,vid)
-           enddo
-           enddo
-           enddo
-        endif
-
-        if ( PRC_HAS_W ) then
-           !--- unpacking packets from West
-           !$omp parallel do default(none) private(i,j,k,n) OMP_SCHEDULE_ collapse(2) &
-           !$omp shared(JS,JE,IS,IHALO,KA,var,ginfo,gid,vid)
-           do j = JS, JE
-           do i = IS-IHALO, IS-1
-           do k = 1, KA
-              n = (j-JS)       * KA * IHALO &
-                + (i-IS+IHALO) * KA         &
-                + k
-              var(k,i,j) = ginfo(gid)%recvpack_W2P(n,vid)
-           enddo
-           enddo
-           enddo
-        endif
-
     end if
 
     call PROF_rapend('COMM_unpack', 3)
 
     return
-  end subroutine unpack_3D
+  end subroutine unpackWE_3D
 
-  subroutine unpack_2D(var, gid, vid)
+  subroutine unpackWE_2D( KA, IA, IS, IE, JA, JS, JE, &
+                          IHALO, &
+                          var, buf )
     implicit none
+    integer, intent(in) :: KA
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: IHALO
+    real(RP), intent(inout) :: var(IA,JA)
+    real(RP), intent(in)    :: buf(IHALO,JS:JE,KA,2)
 
-    real(RP), intent(inout) :: var(:,:)
-    integer,  intent(in)    :: gid
-    integer,  intent(in)    :: vid
-
-    integer :: IS, IE, IHALO
-    integer :: JS, JE
-
-    integer :: i, j, n
+    integer :: i, j
     !---------------------------------------------------------------------------
 
     call PROF_rapstart('COMM_unpack', 3)
 
-    IS    = ginfo(gid)%IS
-    IE    = ginfo(gid)%IE
-    IHALO = ginfo(gid)%IHALO
-    JS    = ginfo(gid)%JS
-    JE    = ginfo(gid)%JE
-
-    if( COMM_IsAllPeriodic ) then
-    !--- periodic condition
+    if( PRC_HAS_E ) then
         !--- unpacking packets from East
-        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
+        !$omp parallel do private(i,j) OMP_SCHEDULE_
         do j = JS, JE
         do i = IE+1, IE+IHALO
-           n = (j-JS)   * IHALO &
-             + (i-IE-1) + 1
-           var(i,j) = ginfo(gid)%recvpack_E2P(n,vid)
+           var(i,j) = buf(i-IE,j,1,2)
         enddo
         enddo
+     end if
 
+     if( PRC_HAS_W ) then
         !--- unpacking packets from West
-        !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
+        !$omp parallel do private(i,j) OMP_SCHEDULE_
         do j = JS, JE
         do i = IS-IHALO, IS-1
-           n = (j-JS)       * IHALO &
-             + (i-IS+IHALO) + 1
-           var(i,j) = ginfo(gid)%recvpack_W2P(n,vid)
+           var(i,j) = buf(i,j,1,1)
         enddo
         enddo
-
-    else
-    !--- non-periodic condition
-
-       !--- unpacking packets from East / copy inner data to HALO(East)
-       if( PRC_HAS_E ) then
-          !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do i = IE+1, IE+IHALO
-             n = (j-JS)   * IHALO &
-               + (i-IE-1) + 1
-             var(i,j) = ginfo(gid)%recvpack_E2P(n,vid)
-          enddo
-          enddo
-       end if
-
-
-       !--- unpacking packets from West / copy inner data to HALO(West)
-       if( PRC_HAS_W ) then
-          !$omp parallel do private(i,j,n) OMP_SCHEDULE_ collapse(2)
-          do j = JS, JE
-          do i = IS-IHALO, IS-1
-             n = (j-JS)       * IHALO &
-               + (i-IS+IHALO) + 1
-             var(i,j) = ginfo(gid)%recvpack_W2P(n,vid)
-          enddo
-          enddo
-       end if
-
     end if
 
     call PROF_rapend('COMM_unpack', 3)
 
     return
-  end subroutine unpack_2D
+  end subroutine unpackWE_2D
+
+  subroutine unpackNS_3D( KA, IA, IS, IE, JA, JS, JE, &
+                          JHALO, &
+                          var, buf )
+    implicit none
+    integer, intent(in) :: KA
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: JHALO
+    real(RP), intent(inout) :: var(KA,IA,JA)
+    real(RP), intent(in)    :: buf(KA,IA,JHALO,2)
+
+    integer :: i, j, k
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_unpack', 3)
+
+    if ( PRC_HAS_S ) then
+       !--- unpacking packets from S, SW, and SE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = 1, JS-1
+       do i = 1, IA
+       do k = 1, KA
+          var(k,i,j) = buf(k,i,j,1)
+       enddo
+       enddo
+       enddo
+    else
+       if ( PRC_HAS_W ) then
+          !--- unpacking packets from SW
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JS-1
+          do i = 1, IS-1
+          do k = 1, KA
+             var(k,i,j) = buf(k,i,j,1)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( PRC_HAS_E ) then
+          !--- unpacking packets from SE
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = 1, JS-1
+          do i = IE+1, IA
+          do k = 1, KA
+             var(k,i,j) = buf(k,i,j,1)
+          enddo
+          enddo
+          enddo
+       end if
+    end if
+
+    if ( PRC_HAS_N ) then
+       !--- unpacking packets from N, NW, and NE
+       !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+       do j = JE+1, JA
+       do i = 1, IA
+       do k = 1, KA
+          var(k,i,j) = buf(k,i,j-JE,2)
+       enddo
+       enddo
+       enddo
+    else
+       if ( PRC_HAS_W ) then
+          !--- unpacking packets from NW
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JE+1, JA
+          do i = 1, IS-1
+          do k = 1, KA
+             var(k,i,j) = buf(k,i,j-JE,2)
+          enddo
+          enddo
+          enddo
+       end if
+       if ( PRC_HAS_E ) then
+          !--- unpacking packets from NE
+          !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
+          do j = JE+1, JA
+          do i = IE+1, IA
+          do k = 1, KA
+             var(k,i,j) = buf(k,i,j-JE,2)
+          enddo
+          enddo
+          enddo
+       end if
+    end if
+
+    call PROF_rapend('COMM_unpack', 3)
+
+    return
+  end subroutine unpackNS_3D
+
+  subroutine unpackNS_2D( IA, IS, IE, JA, JS, JE, &
+                          JHALO, &
+                          var, buf )
+    implicit none
+    integer, intent(in) :: IA, IS, IE
+    integer, intent(in) :: JA, JS, JE
+    integer, intent(in) :: JHALO
+    real(RP), intent(inout) :: var(IA,JA)
+    real(RP), intent(in)    :: buf(IA,JHALO,2)
+
+    integer :: i, j
+    !---------------------------------------------------------------------------
+
+    call PROF_rapstart('COMM_unpack', 3)
+
+    if ( PRC_HAS_S ) then
+       !--- unpacking packets from S, SW, and SE
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = 1, JS-1
+       do i = 1, IA
+          var(i,j) = buf(i,j,1)
+       enddo
+       enddo
+    else
+       if ( PRC_HAS_W ) then
+          !--- unpacking packets from SW
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = 1, JS-1
+          do i = 1, IS-1
+             var(i,j) = buf(i,j,1)
+          enddo
+          enddo
+       end if
+       if ( PRC_HAS_E ) then
+          !--- unpacking packets from SE
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = 1, JS-1
+          do i = IE+1, IA
+             var(i,j) = buf(i,j,1)
+          enddo
+          enddo
+       end if
+    end if
+
+    if ( PRC_HAS_N ) then
+       !--- unpacking packets from N, NW, and NE
+       !$omp parallel do private(i,j) OMP_SCHEDULE_
+       do j = JE+1, JA
+       do i = 1, IA
+          var(i,j) = buf(i,j-JE,2)
+       enddo
+       enddo
+    else
+       if ( PRC_HAS_W ) then
+          !--- unpacking packets from NW
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JE+1, JA
+          do i = 1, IS-1
+             var(i,j) = buf(i,j-JE,2)
+          enddo
+          enddo
+       end if
+       if ( PRC_HAS_E ) then
+          !--- unpacking packets from NE
+          !$omp parallel do private(i,j) OMP_SCHEDULE_
+          do j = JE+1, JA
+          do i = IE+1, IA
+             var(i,j) = buf(i,j-JE,2)
+          enddo
+          enddo
+       end if
+    end if
+
+    call PROF_rapend('COMM_unpack', 3)
+
+    return
+  end subroutine unpackNS_2D
 
   subroutine copy_boundary_3D(var, gid)
     use scale_prc_cartesC, only: &
