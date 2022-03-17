@@ -25,6 +25,13 @@ def parse_line(line)
   line_org = line.dup
   line.sub!(/^\s*&/, "") # ignore '&' at top of line
 
+  if /^#/ =~ line
+    comment = nil
+    cont = true
+    reg = ""
+    return [comment, cont, reg]
+  end
+
   # get comment
   if /["'][^"']*![^"']*["']/ !~ line && /^([^!]*)!(.*)$/ =~ line
     line = $1
@@ -114,6 +121,7 @@ files.each do |fname|
   fnames.each do |fn|
     File.open(fn) do |file|
       while line = file.gets
+        next if /^#/ =~ line # pre-processor
         cont = true
         comments = Array.new
         line_new = ""
