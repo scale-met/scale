@@ -164,6 +164,14 @@ module scale_file
      module procedure FILE_set_attribute_double
   end interface FILE_set_attribute
 
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+  interface cloc
+% %w(SP DP).each do |rp|
+    module procedure cloc_<%=rp%>
+% end
+  end interface cloc
+#endif
+
   !-----------------------------------------------------------------------------
   !
   !++ Public parameters & variables
@@ -595,7 +603,11 @@ contains
     error = file_put_axis_c( FILE_files(fid)%fid,                 & ! (in)
                              cstr(name), cstr(desc), cstr(units), & ! (in)
                              cstr(dim_name), dtype,               & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                             cloc(val(1)), size(val), <%=rp%>       ) ! (in)
+#else
                              c_loc(val), size(val), <%=rp%>       ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_axis_real<%=rp%>",*) 'failed to put axis'
        call PRC_abort
@@ -668,10 +680,18 @@ contains
 
     if ( present(start) ) then
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),         & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), <%=rp%>, start-1, shape(val) ) ! (in)
+#else
                                   c_loc(val), <%=rp%>, start-1, shape(val) ) ! (in)
+#endif
     else
        error = file_write_axis_c( FILE_files(fid)%fid, cstr(name),       & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(val(1)), <%=rp%>, (/0/), shape(val) ) ! (in)
+#else
                                   c_loc(val), <%=rp%>, (/0/), shape(val) ) ! (in)
+#endif
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
        LOG_ERROR("FILE_write_axis_real<%=rp%>",*) 'failed to write axis: '//trim(name)
@@ -725,7 +745,11 @@ contains
          FILE_files(fid)%fid,                 & ! (in)
          cstr(name), cstr(desc), cstr(units), & ! (in)
          dim_names_, size(dim_names), dtype,  & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(<%=(["1"]*n).join(",")%>)), <%=rp%>                  ) ! (in)
+#else
          c_loc(val), <%=rp%>                  ) ! (in)
+#endif
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
        LOG_ERROR("FILE_put_associatedCoordinate_real<%=rp%>_<%=n%>D",*) 'failed to put associated coordinate: '//trim(name)
        call PRC_abort
@@ -839,7 +863,11 @@ contains
 
     error = file_write_associatedcoordinate_c( &
          FILE_files(fid)%fid, cstr(name), & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+         cloc(val(<%=(["1"]*n).join(",")%>)), ndims_, <%=rp%>,     & ! (in)
+#else
          c_loc(val), ndims_, <%=rp%>,     & ! (in)
+#endif
          start_, count_                   ) ! (in)
 
     if ( error /= FILE_SUCCESS_CODE .and. error /= FILE_ALREADY_EXISTED_CODE ) then
@@ -2379,10 +2407,18 @@ contains
     end if
 
     if ( present(ntypes) ) then
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(<%=(["1"]*d).join(",")%>)),                  & ! (out)
+#else
        error = file_read_data_c( c_loc(var),                  & ! (out)
+#endif
             dinfo, <%=rp%>, ntypes, dtype, start(:), count(:) ) ! (in)
     else if ( present(start) .and. present(count) ) then
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(<%=(["1"]*d).join(",")%>)),         & ! (out)
+#else
        error = file_read_data_c( c_loc(var),         & ! (out)
+#endif
             dinfo, <%=rp%>, 0, 0, start(:), count(:) ) ! (in)
     else
        dim_size(:) = shape(var)
@@ -2392,7 +2428,11 @@ contains
              call PRC_abort
           end if
        end do
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+       error = file_read_data_c( cloc(var(<%=(["1"]*d).join(",")%>)),   & ! (out)
+#else
        error = file_read_data_c( c_loc(var),   & ! (out)
+#endif
             dinfo, <%=rp%>, 0, 0, (/0/), (/0/) ) ! (in)
     end if
     if ( error /= FILE_SUCCESS_CODE ) then
@@ -2465,7 +2505,11 @@ contains
        end if
 
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(1)), ts, te, ndims, <%=rp%>,      & ! (in)
+#else
                                   c_loc(var), ts, te, ndims, <%=rp%>,      & ! (in)
+#endif
                                   start, count                             ) ! (in)
     else
 % end
@@ -2476,7 +2520,11 @@ contains
           start_(:) = 1
        end if
        error = file_write_data_c( FILE_files(fid)%fid, FILE_vars(vid)%vid, & ! (in)
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+                                  cloc(var(<%=(["1"]*d).join(",")%>)), ts, te, <%=d%>, <%=rp%>,     & ! (in)
+#else
                                   c_loc(var), ts, te, <%=d%>, <%=rp%>,     & ! (in)
+#endif
                                   start_, shape(var)                       ) ! (in)
 % if d==1
     end if
@@ -2842,6 +2890,19 @@ contains
 
     return
   end subroutine FILE_get_fid
+
+#if defined(__GFORTRAN__) && __GNUC__ < 7
+% %w(SP DP).each do |rp|
+  function cloc_<%=rp%>( x )
+    use iso_c_binding
+    implicit none
+    real(<%=rp%>), target, intent(in) :: x
+    type(c_ptr) :: cloc_<%=rp%>
+    cloc_<%=rp%> = c_loc(x)
+    return
+  end function cloc_<%=rp%>
+% end
+#endif
 
 end module scale_file
 !-------------------------------------------------------------------------------
