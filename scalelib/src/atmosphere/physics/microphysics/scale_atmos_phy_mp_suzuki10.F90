@@ -257,7 +257,6 @@ module scale_atmos_phy_mp_suzuki10
   integer, parameter :: ndat = 33, icemax = 3
   integer, parameter :: kdeg = 4, ldeg = 4, nspc_mk = 7
 
-  real(RP) :: dxmic1(1)
   real(DP) :: dxmic_mk
 
   real(DP), allocatable :: radc_mk( : ), xctr_mk( : ), xbnd_mk( : )
@@ -399,8 +398,7 @@ contains
        DWATR => CONST_DWATR, &
        DICE => CONST_DICE
     use scale_comm_cartesC, only: &
-       COMM_world,    &
-       COMM_datatype
+       COMM_bcast
     use scale_atmos_hydrometeor, only: &
        I_HC, &
        I_HR, &
@@ -667,17 +665,15 @@ contains
 
     endif
 
-    call MPI_BCAST( radc, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( xctr, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    dxmic1(1) = dxmic
-    call MPI_BCAST( dxmic1,1,                        COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    dxmic = dxmic1(1)
-    call MPI_BCAST( xbnd, nbin+1,                    COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cctr, nbin*nspc_mk,              COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk,          COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( ck,   nspc_mk*nspc_mk*nbin*nbin, COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( br, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( vt, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call COMM_BCAST( nbin, radc(:) )
+    call COMM_BCAST( nbin, xctr(:) )
+    call COMM_BCAST( dxmic )
+    call COMM_BCAST( nbin+1, xbnd(:) )
+    call COMM_BCAST( nbin, nspc_mk, cctr(:,:) )
+    call COMM_BCAST( nbin+1, nspc_mk, cbnd(:,:) )
+    call COMM_BCAST( nspc_mk, nspc_mk, nbin, nbin, ck(:,:,:,:) )
+    call COMM_BCAST( nspc_mk, nbin, br(:,:) )
+    call COMM_BCAST( nspc_mk, nbin, vt(:,:) )
 
     allocate( flg_noninduct( nspc,nspc ) )
     allocate( ecoll( nspc,nspc,nbin,nbin ) )

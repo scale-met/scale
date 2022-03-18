@@ -514,14 +514,15 @@ contains
 
        ! internal energy flux
        do k = KS-1, KE-1
-          eflx(k) = qflx(k) * TEMP(k+1) * CV &
-                  + qflx(k) * FDZ(k) * GRAV    ! potential energy
+          eflx(k) = qflx(k) * TEMP(k+1) * CV
        end do
        esflx = esflx + eflx(KS-1)
 
        !--- update internal energy
        do k = KS, KE
-          RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
+          RHOE(k) = RHOE(k) - ( ( eflx(k) - eflx(k-1) )  & ! contribution with the transport of internal energy
+                              + qflx(k) * FDZ(k) * GRAV  & ! contribution with the release of potential energy
+                              ) * RCDZ(k) * dt
        end do
 
     end do
@@ -688,8 +689,6 @@ contains
              qflx(k_dst) = qflx(k_dst) - flx                            ! sum column mass rhoq*dz
              eflx(k_dst) = eflx(k_dst) -flx * TEMP(k_src(k_dst)+1) * CV ! internal energy flux
           end if
-
-          eflx(k_dst) = eflx(k_dst) + qflx(k_dst) * FDZ(k_dst) * GRAV ! potential energy
        enddo
 
 !        LOG_INFO_CONT(*) "flux", iq
@@ -730,7 +729,9 @@ contains
 
        !--- update internal energy
        do k = KS, KE
-          RHOE(k) = RHOE(k) - ( eflx(k) - eflx(k-1) ) * RCDZ(k) * dt
+          RHOE(k) = RHOE(k) - ( ( eflx(k) - eflx(k-1) )  & ! contribution with the transport of internal energy
+                              + qflx(k) * FDZ(k) * GRAV  & ! contribution with the release of potential energy
+                              ) * RCDZ(k) * dt
        end do
        esflx = eflx(KS-1)
 
