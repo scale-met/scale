@@ -1,5 +1,14 @@
 = Release History
 
+== 2022-03-18 (5.4.5)
+* Buf fixes:
+  * Fix precipitation calculation for energy conservation
+  * Fix the grid nudging for REAL-type boundary
+  * Fix a stalling problem at single file output
+  * Fix for the newer versions of GNU compiler
+* Changes
+  * update sysdep files for FUGAKU
+
 == 2021-07-30 (5.4.4)
 * Bug fix:
   * Fix a bug in the SN14 scheme (thanks to @slayoo)

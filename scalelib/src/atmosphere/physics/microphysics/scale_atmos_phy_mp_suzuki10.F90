@@ -397,8 +397,7 @@ contains
        DWATR => CONST_DWATR, &
        DICE => CONST_DICE
     use scale_comm_cartesC, only: &
-       COMM_world,    &
-       COMM_datatype
+       COMM_bcast
     use scale_atmos_hydrometeor, only: &
        I_HC, &
        I_HR, &
@@ -665,15 +664,15 @@ contains
 
     endif
 
-    call MPI_BCAST( radc, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( xctr, nbin,                      COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( dxmic,1,                         COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( xbnd, nbin+1,                    COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cctr, nbin*nspc_mk,              COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( cbnd, (nbin+1)*nspc_mk,          COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( ck,   nspc_mk*nspc_mk*nbin*nbin, COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( br, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
-    call MPI_BCAST( vt, nbin*nspc_mk,                COMM_datatype, PRC_masterrank, COMM_world, ierr )
+    call COMM_BCAST( radc(:), nbin )
+    call COMM_BCAST( xctr(:), nbin )
+    call COMM_BCAST( dxmic )
+    call COMM_BCAST( xbnd(:), nbin+1 )
+    call COMM_BCAST( cctr(:,:), nbin, nspc_mk )
+    call COMM_BCAST( cbnd(:,:), nbin+1, nspc_mk )
+    call COMM_BCAST( ck(:,:,:,:), nspc_mk, nspc_mk, nbin, nbin )
+    call COMM_BCAST( br(:,:), nspc_mk, nbin )
+    call COMM_BCAST( vt(:,:), nspc_mk, nbin )
 
     allocate( flg_noninduct( nspc,nspc ) )
     allocate( ecoll( nspc,nspc,nbin,nbin ) )

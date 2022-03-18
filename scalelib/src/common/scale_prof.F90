@@ -96,6 +96,8 @@ module scale_prof
   real(DP),               private            :: PROF_min
   real(DP),               private            :: PROF_sum
 
+  logical,                private            :: PROF_barrier_flag
+
   !-----------------------------------------------------------------------------
 contains
   !-----------------------------------------------------------------------------
@@ -111,7 +113,7 @@ contains
     integer :: ierr
 
     LOG_NEWLINE
-    LOG_INFO("PRF_setup",*) 'Setup'
+    LOG_INFO("PROF_setup",*) 'Setup'
 
     !--- read namelist
     rewind(IO_FID_CONF)
@@ -153,20 +155,22 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Start raptime
-  subroutine PROF_rapstart( rapname_base, level )
+  subroutine PROF_rapstart( rapname_base, level, disable_barrier )
     use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in)           :: rapname_base !< name  of item
-    integer,          intent(in), optional :: level        !< level of item
+    character(len=*), intent(in)           :: rapname_base    !< name  of item
+    integer,          intent(in), optional :: level           !< level of item
+    logical,          intent(in), optional :: disable_barrier !< disable barrier if .true.
 
     character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
     integer :: tn
+    logical :: disable_barrier_
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
 
@@ -180,13 +184,19 @@ contains
        level_ = PROF_default_rap_level
     endif
 
+    if ( present(disable_barrier) ) then
+       disable_barrier_ = disable_barrier
+    else
+       disable_barrier_ = .false.
+    endif
+
     if( level_ > PROF_rap_level ) return
 
     rapname = trim(PROF_prefix)//trim(rapname_base)
 
     id = get_rapid( rapname, level_ )
 
-    if(PROF_mpi_barrier) call PRC_MPIbarrier
+    if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
 
     PROF_raptstr(id) = PRC_MPItime()
     PROF_rapnstr(id) = PROF_rapnstr(id) + 1
@@ -203,20 +213,23 @@ contains
 
   !-----------------------------------------------------------------------------
   !> Save raptime
-  subroutine PROF_rapend( rapname_base, level )
+  subroutine PROF_rapend( rapname_base, level, disable_barrier )
     use scale_prc, only: &
        PRC_MPIbarrier, &
        PRC_MPItime
     implicit none
 
-    character(len=*), intent(in)           :: rapname_base !< name  of item
-    integer,          intent(in), optional :: level        !< level of item
+    character(len=*), intent(in)           :: rapname_base    !< name  of item
+    integer,          intent(in), optional :: level           !< level of item
+    logical,          intent(in), optional :: disable_barrier !< disable barrier if .true.
 
     character(len=H_SHORT) :: rapname !< name of item with prefix
 
     integer :: id
     integer :: level_
     integer :: tn
+    logical :: disable_barrier_
+
     !$ integer :: omp_get_thread_num
     !---------------------------------------------------------------------------
 
@@ -228,6 +241,12 @@ contains
        if( level > PROF_rap_level ) return
     endif
 
+    if ( present(disable_barrier) ) then
+       disable_barrier_ = disable_barrier
+    else
+       disable_barrier_ = .false.
+    endif
+
     rapname = trim(PROF_prefix)//trim(rapname_base)
 
     id = get_rapid( rapname, level_ )
@@ -237,7 +256,7 @@ contains
     PROF_rapttot(id) = PROF_rapttot(id) + ( PRC_MPItime()-PROF_raptstr(id) )
     PROF_rapnend(id) = PROF_rapnend(id) + 1
 
-    if(PROF_mpi_barrier) call PRC_MPIbarrier
+    if ( ( .not. disable_barrier_ ) .and. PROF_mpi_barrier ) call PRC_MPIbarrier
 
 #ifdef FAPP
     call FAPP_STOP( trim(PROF_grpname(PROF_grpid(id))), id, level_ )
