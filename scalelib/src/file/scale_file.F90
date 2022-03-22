@@ -5203,7 +5203,7 @@ contains
   end subroutine FILE_detach_buffer
 
   !-----------------------------------------------------------------------------
-  ! This subroutine is used when PnetCDF I/O method is enabled
+  ! flush data
   subroutine FILE_flush( fid )
     implicit none
 
@@ -5225,7 +5225,7 @@ contains
 !!$            'Flush : No.', fid, ', name = ', trim(FILE_files(fid)%name)
 
     else
-       LOG_ERROR("FILE_flush",*) 'failed to flush PnetCDF pending requests'
+       LOG_ERROR("FILE_flush",*) 'failed to flush data to netcdf file'
        call PRC_abort
     end if
 
