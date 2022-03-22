@@ -3280,6 +3280,7 @@ contains
     logical  :: existed
 
     integer  :: istep
+    integer  :: istep_max
 
     logical(c_bool) :: suppress
     character(len=FILE_HMID) :: tu
@@ -3304,7 +3305,8 @@ contains
     time_end  (:) = FILE_RMISS
 
     suppress = .true.
-    do istep = 1, min( size(time_start), size(time_end) )
+    istep_max = min( size(time_start), size(time_end) )
+    do istep = 1, istep_max
        !--- get data information
        error = file_get_datainfo_c( dinfo,               & ! [OUT]
                                     FILE_files(fid)%fid, & ! [IN]
@@ -3357,6 +3359,15 @@ contains
           time_end  (istep) = dinfo%time_end
        endif
     enddo
+
+    if ( istep == istep_max + 1 ) then
+       if ( error /= FILE_SUCCESS_CODE ) then
+          LOG_ERROR("FILE_get_all_dataInfo_fid",*) 'size of time is not enough: ', istep_max
+          call PRC_abort
+       else
+          step_nmax = istep - 1
+       end if
+    end if
 
     return
   end subroutine FILE_get_all_dataInfo_fid
