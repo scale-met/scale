@@ -983,7 +983,7 @@ contains
 
              MOMZ_t(k,IS,j) = MOMZ_tp(k,IS,j) & ! tendency from physical step
                            + damp &
-                           + ( DENS_damp(k,IS,j) + DENS_damp(k+1,IS,j) ) * MOMZ(k,IS,j) / ( DENS(k,IS,j) + DENS(k,IS,j) )
+                           + ( DENS_damp(k,IS,j) + DENS_damp(k+1,IS,j) ) * MOMZ(k,IS,j) / ( DENS(k,IS,j) + DENS(k+1,IS,j) )
              if ( do_put ) damp_t_MOMZ(k,IS,j) = damp_t_MOMZ(k,IS,j) + damp / nstep
           enddo
           enddo
@@ -1005,7 +1005,7 @@ contains
 
              MOMZ_t(k,i,j) = MOMZ_tp(k,i,j) & ! tendency from physical step
                            + damp &
-                           + ( DENS_damp(k,i,j) + DENS_damp(k+1,i,j) ) * MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k,i,j) )
+                           + ( DENS_damp(k,i,j) + DENS_damp(k+1,i,j) ) * MOMZ(k,i,j) / ( DENS(k,i,j) + DENS(k+1,i,j) )
              if ( do_put ) damp_t_MOMZ(k,i,j) = damp_t_MOMZ(k,i,j) + damp / nstep
           enddo
           enddo
