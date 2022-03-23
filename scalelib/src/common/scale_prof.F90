@@ -412,7 +412,7 @@ contains
              end do
              do i = 1, cnt
                 id = idx(i)
-                write(fid,'(1x,2A,I2,A,F10.3,2(A,F10.3,A,I5,A),A,I9)') &
+                write(fid,'(1x,2A,I2,A,F10.3,2(A,F10.3,A,I6,A),A,I9)') &
                      PROF_rapname(id), ' lev=', PROF_raplevel(id), &
                      ': T(avg)=',avgvar(id), &
                      ', T(max)=',maxvar(id),'[',maxidx(id),']', &
@@ -498,13 +498,13 @@ contains
 
        LOG_NEWLINE
        LOG_INFO("PROF_PAPI_rapreport",*) 'PAPI Report'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
-       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+       LOG_INFO("PROF_PAPI_rapreport",'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   'FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
        LOG_NEWLINE
@@ -520,13 +520,13 @@ contains
           if ( PRC_IsMaster ) then ! master node
              write(*,*)
              write(*,*) '*** PAPI Report'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** Real time [sec]',' T(avg)=',avgvar(1), &
                   ', T(max)=',maxvar(1),'[',maxidx(1),']',', T(min)=',minvar(1),'[',minidx(1),']'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** CPU  time [sec]',' T(avg)=',avgvar(2), &
                   ', T(max)=',maxvar(2),'[',maxidx(2),']',', T(min)=',minvar(2),'[',minidx(2),']'
-             write(*,'(1x,A,A,F10.3,A,F10.3,A,I5,A,A,F10.3,A,I5,A,A,I7)') &
+             write(*,'(1x,A,A,F10.3,A,F10.3,A,I6,A,A,F10.3,A,I6,A)') &
                   '*** FLOP    [GFLOP]',' N(avg)=',avgvar(3), &
                   ', N(max)=',maxvar(3),'[',maxidx(3),']',', N(min)=',minvar(3),'[',minidx(3),']'
              write(*,*)
