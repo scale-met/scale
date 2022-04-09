@@ -913,7 +913,7 @@ contains
     real(RP), intent(out) :: Re_factor   ! factor of the distance of Earth from the sun (1/rho2)
     real(RP), intent(out) :: sinDEC      ! sin/cos(solar declination)
     real(RP), intent(out) :: cosDEC      ! sin/cos(solar declination)
-    real(RP), intent(out) :: hourangle   ! hour angle: relative longitude of subsolar point
+    real(RP), intent(out) :: hourangle   ! hour angle: relative longitude of subsolar point (noon=0deg)
     integer,  intent(in)  :: now_date(6) ! date(yyyy,mm,dd,hh,mm,ss)
     integer,  intent(in)  :: offset_year ! year offset
     real(DP), intent(out), optional :: lambda_out   ! actual longitude from vernal equinox (for output)
@@ -999,11 +999,11 @@ contains
 
     ! hour angle
     if ( day_calender_synced ) then
-       hourangle = 2.0_RP * PI * abssec / caldaysec
+       hourangle = PI + 2.0_RP * PI * abssec / caldaysec
     else
-       hourangle = 2.0_RP * PI                                                                     &
-                 * ( (absday*caldaysec + abssec) / ATMOS_SOLARINS_diurnal_sec                         &
-                     - real( nint((absday*caldaysec + abssec)/ soldaysec ),kind=DP) )
+       hourangle = PI + 2.0_RP * PI                                                    &
+                      * ( (absday*caldaysec + abssec) / ATMOS_SOLARINS_diurnal_sec     &
+                        - real( nint((absday*caldaysec + abssec)/ soldaysec ),kind=DP) )
     endif
 
     if ( debug ) then
@@ -1036,7 +1036,7 @@ contains
 
     real(RP) :: Re_factor      ! factor of the distance of Earth from the sun (1/rho2)
     real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
-    real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point
+    real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point (noon=0deg)
 
     real(RP) :: lon
     real(RP) :: lat
@@ -1057,7 +1057,7 @@ contains
        lat = real_lat
     endif
 
-    cosSZA = sin(lat)*sinDEC - cos(lat)*cosDEC*cos(lon+hourangle)
+    cosSZA = sin(lat)*sinDEC + cos(lat)*cosDEC*cos(lon+hourangle)
     solins = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA-EPS) )
 
     if ( present( Re_factor_out ) ) then
@@ -1090,7 +1090,7 @@ contains
 
     real(RP) :: Re_factor      ! factor of the distance of Earth from the sun (1/rho2)
     real(RP) :: sinDEC, cosDEC ! sin/cos(solar declination)
-    real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point
+    real(RP) :: hourangle      ! hour angle: relative longitude of subsolar point (noon=0deg)
 
     real(RP) :: lon(IA,JA)
     real(RP) :: lat(IA,JA)
@@ -1126,7 +1126,7 @@ contains
     !$omp parallel do OMP_SCHEDULE_ collapse(2)
     do j = JS, JE
     do i = IS, IE
-       cosSZA(i,j) = sin(lat(i,j))*sinDEC - cos(lat(i,j))*cosDEC*cos(lon(i,j)+hourangle)
+       cosSZA(i,j) = sin(lat(i,j))*sinDEC + cos(lat(i,j))*cosDEC*cos(lon(i,j)+hourangle)
        solins(i,j) = ATMOS_SOLARINS_constant * Re_factor * ( 0.5_RP + sign(0.5_RP,cosSZA(i,j)-EPS) )
     enddo
     enddo
