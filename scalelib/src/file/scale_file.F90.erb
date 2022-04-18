@@ -1223,7 +1223,7 @@ contains
 
     logical, intent(out), optional :: existed
 
-    character(len=5) :: buf
+    character(len=6) :: buf ! max length is for "false\0"
 
     if ( .not. FILE_opened(fid) ) then
        LOG_ERROR("FILE_get_attribute_logical_fid",*) 'File is not opened. fid = ', fid

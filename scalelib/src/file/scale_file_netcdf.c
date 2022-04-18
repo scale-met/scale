@@ -877,7 +877,7 @@ int file_get_attribute_text_c(       char *value,    // (out)
       CHECK_PNC_ERROR( ncmpi_inq_varid(ncid, vname, &varid) )
 
     CHECK_PNC_ERROR( ncmpi_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len-1 < l ) return ERROR_CODE;
 
     CHECK_PNC_ERROR( ncmpi_get_att_text(ncid, varid, key, value) )
     value[l] = '\0';
@@ -890,7 +890,7 @@ int file_get_attribute_text_c(       char *value,    // (out)
       CHECK_ERROR( nc_inq_varid(ncid, vname, &varid) )
 
     CHECK_ERROR( nc_inq_attlen(ncid, varid, key, &l) )
-    if ( len < l ) return ERROR_CODE;
+    if ( len-1 < l ) return ERROR_CODE;
 
     CHECK_ERROR( nc_get_att_text(ncid, varid, key, value) )
     value[l] = '\0';
