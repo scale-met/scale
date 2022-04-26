@@ -5,8 +5,8 @@ options template big_endian yrev
 xdef 360 linear    0.000000 1.000000
 ydef 181 linear  -90.000000 1.000000
 zdef   1 levels 1
-tdef 25452 linear 00Z01aug1999 6hr
-VARS 9
+tdef 5000 linear 12Z22mar2021 6hr
+VARS 10
 PRMSLmsl 0 99 mean sea level Pressure Reduced to MSL [Pa]
 PRESsfc  0 99 surface Pressure [Pa]
 TMPsfc   0 99 surface Temperature [K]
@@ -16,4 +16,5 @@ UGRD10m  0 99 10 m above ground U-Component of Wind [m/s]
 VGRD10m  0 99 10 m above ground V-Component of Wind [m/s]
 TMP2m    0 99 2 m above ground Temperature [K]
 RH2m     0 99 2 m above ground Relative Humidity [%]
+SPFH2m   0 99 2 m above ground Specific Humidity [kg/kg]
 ENDVARS
