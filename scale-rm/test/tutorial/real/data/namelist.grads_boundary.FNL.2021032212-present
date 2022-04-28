@@ -12,7 +12,7 @@
 #
 &GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.0d0,  dd=1.0d0  /
 &GrADS_ITEM  name='lat',     dtype='linear',  swpoint=90.0d0, dd=-1.0d0 /
-&GrADS_ITEM  name='plev',    dtype='levels',  lnum=31, lvars=100000,97500,95000,92500,90000,85000,80000,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,20000,15000,10000,7000,5000,4000,3000,1500,2000,1000,700,500,300,200,100,70,40,20,10,7,4,2,1 /
+&GrADS_ITEM  name='plev',    dtype='levels',  lnum=41, lvars=100000,97500,95000,92500,90000,85000,80000,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,20000,15000,10000,7000,5000,4000,3000,1500,2000,1000,700,500,300,200,100,70,40,20,10,7,4,2,1 /
 &GrADS_ITEM  name='HGT',     dtype='map',     fname='ATM', startrec=1,   totalrec=246 /
 &GrADS_ITEM  name='U',       dtype='map',     fname='ATM', startrec=42,  totalrec=246 /
 &GrADS_ITEM  name='V',       dtype='map',     fname='ATM', startrec=83,  totalrec=246 /
