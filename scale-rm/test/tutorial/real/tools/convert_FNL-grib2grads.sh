@@ -86,13 +86,16 @@ CHECK_DATE1="2007-12-06 06:00:00"
 CHECK_DATE2="2009-12-15 06:00:00"
 # change the name of soil temperature
 CHECK_DATE3="2015-01-14 00:00:00"
-# change the number of layers
+# change the number of layers for 3D HGT & TMP
 CHECK_DATE4="2019-06-12 06:00:00"
+# change the number of layers for 3D variables
+CHECK_DATE5="2021-03-22 06:00:00"
 
 UNIX_CHECK1=$(unix_time "$CHECK_DATE1")
 UNIX_CHECK2=$(unix_time "$CHECK_DATE2")
 UNIX_CHECK3=$(unix_time "$CHECK_DATE3")
 UNIX_CHECK4=$(unix_time "$CHECK_DATE4")
+UNIX_CHECK5=$(unix_time "$CHECK_DATE5")
 
 YEAR=${START_YEAR}
 while [ ${YEAR} -le ${END_YEAR} ]
@@ -178,8 +181,10 @@ do
         fi
         if [ $UNIX_NOW -le $UNIX_CHECK4 ]; then
           LEVS="dummy"
-        else
+        elif [ $UNIX_NOW -le $UNIX_CHECK5 ]; then
           LEVS="0.4 mb|15 mb|40 mb"
+        else
+          LEVS="dummy"
         fi
 
         RFILE=${RDIR}/${FTYPE}/${YYYY}/fnl_${YYYY}${MM}${DD}_${HH}_00.${FTYPE}
@@ -216,7 +221,7 @@ do
           wgrib ${RFILE} | grep ":TMP:"   | grep "down:" | wgrib -i ${RFILE} -nh -ieee -o TSOIL.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
           wgrib ${RFILE} | grep ":SOILW:" | grep "down:" | wgrib -i ${RFILE} -nh -ieee -o SOILW.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
         else
-          # 3D: 26-layer atmosphere until 2016/05/11-06UTC
+          # 3D: 26-layer atmosphere until 2016/05/11-06UTC, 31-layer atmosphere until 2021/03/22-06UTC, 41-layer atmosphere after 2021/03/22-12UTC
           wgrib2 ${RFILE} -match ":HGT:"  -match "mb:anl:" | sort -n $ZREV | grep -vE "${LEVS}" | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee HGTprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
           wgrib2 ${RFILE} -match ":TMP:"  -match "mb:anl:" | sort -n $ZREV | grep -vE "${LEVS}" | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee TMPprs.${YYYY}${MM}${DD}${HH}.grd  > /dev/null 2>&1
           wgrib2 ${RFILE} -match ":UGRD:" -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee UGRDprs.${YYYY}${MM}${DD}${HH}.grd > /dev/null 2>&1
@@ -235,6 +240,12 @@ do
           # Land
           wgrib2 ${RFILE} -match ":$TSOIL:" -match "below ground:" -order "we:ns" -no_header -ieee TSOIL.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
           wgrib2 ${RFILE} -match ":SOILW:"  -match "below ground:" -order "we:ns" -no_header -ieee SOILW.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
+
+          # QV: 2021/03/22-12UTC or later
+          if [ $UNIX_NOW -gt $UNIX_CHECK5 ]; then
+            wgrib2 ${RFILE} -match ":SPFH:"   -match "mb:anl:" | sort -n $ZREV | wgrib2 -i ${RFILE} -order "we:ns" -no_header -ieee SPFHprs.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
+            wgrib2 ${RFILE} -match ":SPFH:"   -match ":2 m above ground:"                           -order "we:ns" -no_header -ieee SPFH2m.${YYYY}${MM}${DD}${HH}.grd >/dev/null 2>&1
+          fi
         fi
 
         # check file size
@@ -254,7 +265,10 @@ do
         if [ ! -s RH2m.${YYYY}${MM}${DD}${HH}.grd     ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: RH2m.${YYYY}${MM}${DD}${HH}.grd    "; exit 1; fi
         if [ ! -s TSOIL.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: TSOIL.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
         if [ ! -s SOILW.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: SOILW.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
-
+        if [ $UNIX_NOW -gt $UNIX_CHECK5 ]; then
+          if [ ! -s SPFHprs.${YYYY}${MM}${DD}${HH}.grd    ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: SPFHprs.${YYYY}${MM}${DD}${HH}.grd   "; exit 1; fi
+          if [ ! -s SPFH2m.${YYYY}${MM}${DD}${HH}.grd     ]; then echo "ERROR: Temporary file is no data. Variable name may be wrong: SPFH2m.${YYYY}${MM}${DD}${HH}.grd    "; exit 1; fi
+	fi
         rm -f ${WFILE_ATM} ${WFILE_SFC} ${WFILE_LND}
 
         cat HGTprs.${YYYY}${MM}${DD}${HH}.grd  \
@@ -277,6 +291,11 @@ do
             SOILW.${YYYY}${MM}${DD}${HH}.grd \
         >> ${WFILE_LND}
 
+        if [ $UNIX_NOW -gt $UNIX_CHECK5 ]; then
+          cat SPFHprs.${YYYY}${MM}${DD}${HH}.grd >> ${WFILE_ATM}
+          cat SPFH2m.${YYYY}${MM}${DD}${HH}.grd  >> ${WFILE_SFC}
+        fi
+
         rm -f HGTprs.${YYYY}${MM}${DD}${HH}.grd   \
               UGRDprs.${YYYY}${MM}${DD}${HH}.grd  \
               VGRDprs.${YYYY}${MM}${DD}${HH}.grd  \
@@ -293,6 +312,11 @@ do
               RH2m.${YYYY}${MM}${DD}${HH}.grd     \
               TSOIL.${YYYY}${MM}${DD}${HH}.grd    \
               SOILW.${YYYY}${MM}${DD}${HH}.grd
+
+        if [ $UNIX_NOW -gt $UNIX_CHECK5 ]; then
+	  rm -f SPFHprs.${YYYY}${MM}${DD}${HH}.grd \
+                SPFH2m.${YYYY}${MM}${DD}${HH}.grd
+	fi
 
         HOUR=`expr $HOUR + 6`
       done 

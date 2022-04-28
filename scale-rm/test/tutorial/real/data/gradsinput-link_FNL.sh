@@ -70,7 +70,9 @@ while [ ${iyear} -le ${eyear} ] ; do
 
             iyyyymmdd=`printf "%4.4d%2.2d%2.2d" $iyear $imonth $iday`
 
-            if [ ${iyyyymmdd} -eq ${syyyymmdd} ] ; then
+            if [ ${syyyymmdd} -eq ${eyyyymmdd} ] ; then
+                hour_list=`seq -s" " ${shour} 6 ${ehour}`
+            elif [ ${iyyyymmdd} -eq ${syyyymmdd} ] ; then
                 hour_list=`seq -s" " ${shour} 6 18`
             elif [ ${iyyyymmdd} -eq ${eyyyymmdd} ] ; then
                 hour_list=`seq -s" " 0 6 ${ehour}`

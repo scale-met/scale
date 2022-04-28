@@ -9,7 +9,7 @@ zdef  31 levels
   600 550 500 450 400 350 300 250 200 150
   100  70  50  30  20  10   7   5   3   2
     1
-tdef 938 linear 12Z11may2016 6hr
+tdef 7104 linear 12Z11may2016 6hr
 VARS 5
 HGTprs  31 99  Geopotential Height [gpm]
 UGRDprs 31 99  U-Component of Wind [m/s]
