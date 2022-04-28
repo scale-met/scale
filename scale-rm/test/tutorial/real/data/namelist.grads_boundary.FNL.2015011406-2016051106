@@ -1,5 +1,5 @@
 #
-# Dimension 
+# Dimension
 #
 &GrADS_DIMS
  nx = 360
@@ -13,11 +13,11 @@
 &GrADS_ITEM  name='lon',     dtype='linear',  swpoint=0.0d0,  dd=1.0d0  /
 &GrADS_ITEM  name='lat',     dtype='linear',  swpoint=90.0d0, dd=-1.0d0 /
 &GrADS_ITEM  name='plev',    dtype='levels',  lnum=26, lvars=100000,97500,95000,92500,90000,85000,80000,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,20000,15000,10000,7000,5000,3000,2000,1000, /
-&GrADS_ITEM  name='HGT',     dtype='map',     fname='ATM', startrec=1,   totalrec=125 /
-&GrADS_ITEM  name='U',       dtype='map',     fname='ATM', startrec=27,  totalrec=125 /
-&GrADS_ITEM  name='V',       dtype='map',     fname='ATM', startrec=53,  totalrec=125 /
-&GrADS_ITEM  name='T',       dtype='map',     fname='ATM', startrec=79,  totalrec=125 /
-&GrADS_ITEM  name='RH',      dtype='map',     fname='ATM', startrec=105, totalrec=125, nz=21 /
+&GrADS_ITEM  name='HGT',     dtype='map',     fname='ATM', startrec=1,   totalrec=130 /
+&GrADS_ITEM  name='U',       dtype='map',     fname='ATM', startrec=27,  totalrec=130 /
+&GrADS_ITEM  name='V',       dtype='map',     fname='ATM', startrec=53,  totalrec=130 /
+&GrADS_ITEM  name='T',       dtype='map',     fname='ATM', startrec=79,  totalrec=130 /
+&GrADS_ITEM  name='RH',      dtype='map',     fname='ATM', startrec=105, totalrec=130 /
 &GrADS_ITEM  name='MSLP',    dtype='map',     fname='SFC', startrec=1, totalrec=9 /
 &GrADS_ITEM  name='PSFC',    dtype='map',     fname='SFC', startrec=2, totalrec=9 /
 &GrADS_ITEM  name='SKINT',   dtype='map',     fname='SFC', startrec=3, totalrec=9 /
