@@ -129,7 +129,7 @@ module scale_atmos_phy_mp_sn14
        'Ratio of Cloud Water mass to total mass                    ', &
        'Ratio of Rain Water mass to total mass                     ', &
        'Ratio of Cloud Ice mass ratio to total mass                ', &
-       'Ratio of Snow miass ratio to total mass                    ', &
+       'Ratio of Snow mass ratio to total mass                     ', &
        'Ratio of Graupel mass ratio to total mass                  ', &
        'Cloud Water Number Density                                 ', &
        'Rain Water Number Density                                  ', &
