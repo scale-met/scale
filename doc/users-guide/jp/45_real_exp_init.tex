@@ -37,7 +37,7 @@
 \verb|&PARAM_MKINIT_REAL_ATMOS| & \\
 \verb| NUMBER_OF_FILES      = 2,|                                   & {\small ← 読み込むファイルの数} \\
 \verb| FILETYPE_ORG         = "GrADS",|                             & {\small ← 表\ref{tab:inputdata_format}から選択する} \\
-\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.grib1",| & \\
+\verb| BASENAME_ORG         = "namelist.grads_boundary.FNL.2005053112-2015011400",| & \\
 \verb| BASENAME_BOUNDARY    = "boundary_d01",|                      & {\small ← 境界値データの出力名} \\
 \verb| BOUNDARY_UPDATE_DT   = 21600.0,|                             & {\small ← 入力データの時間間隔} \\
 \verb| PARENT_MP_TYPE       = 3,|                                   & \\
@@ -82,7 +82,7 @@
 次に、{\grads}形式のバイナリデータを{\scalelib}で読み込むためのネームリストファイルを、
 ディレクトリ\verb|init|へリンクする。
 \begin{verbatim}
-  $ ln -s ../../data/namelist.grads_boundary.FNL.2005053112-2016051106 ./
+  $ ln -s ../../data/namelist.grads_boundary.FNL.2005053112-2015011400 ./
 \end{verbatim}
 %
 上記の準備が完了したら、4つのMPIプロセスを使用して\verb|scale-rm_init|を実行する。

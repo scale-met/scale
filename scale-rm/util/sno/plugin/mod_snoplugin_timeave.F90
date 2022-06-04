@@ -295,6 +295,10 @@ contains
        nowstep,       &
        nprocs_x_out,  &
        nprocs_y_out,  &
+       ngrids_x_out,  &
+       ngrids_y_out,  &
+       ngrids_xh_out, &
+       ngrids_yh_out, &
        nhalos_x,      &
        nhalos_y,      &
        hinfo,         &
@@ -329,6 +333,10 @@ contains
     integer,          intent(in)    :: nowstep                               ! current step                       (output)
     integer,          intent(in)    :: nprocs_x_out                          ! x length of 2D processor topology  (output)
     integer,          intent(in)    :: nprocs_y_out                          ! y length of 2D processor topology  (output)
+    integer,          intent(in)    :: ngrids_x_out                          ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_y_out                          ! number of y-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_xh_out                         ! number of x-axis grids per process (output,sometimes including halo)
+    integer,          intent(in)    :: ngrids_yh_out                         ! number of y-axis grids per process (output,sometimes including halo)
     integer,          intent(in)    :: nhalos_x                              ! number of x-axis halo grids        (global domain)
     integer,          intent(in)    :: nhalos_y                              ! number of y-axis halo grids        (global domain)
     type(commoninfo), intent(in)    :: hinfo                                 ! common information                 (input)
@@ -608,23 +616,25 @@ contains
        finalize    = ( nowstep == dinfo%step_nmax )
        add_rm_attr = .true.
 
-       call SNO_vars_write( ismaster,                   & ! [IN] from MPI
-                            dirpath,                    & ! [IN] from namelist
-                            basename,                   & ! [IN] from namelist
-                            output_single,              & ! [IN] from namelist
-                            output_grads,               & ! [IN] from namelist
-                            update_axis,                & ! [IN]
-                            nowrank,                    & ! [IN]
-                            avgdinfo%step_nmax,         & ! [IN]
-                            finalize,                   & ! [IN]
-                            add_rm_attr,                & ! [IN]
-                            nprocs_x_out, nprocs_y_out, & ! [IN] from namelist
-                            nhalos_x,     nhalos_y,     & ! [IN] from SNO_file_getinfo
-                            hinfo,                      & ! [IN] from SNO_file_getinfo
-                            naxis,                      & ! [IN] from SNO_file_getinfo
-                            ainfo(:),                   & ! [IN] from SNO_axis_getinfo
-                            avgdinfo,                   & ! [IN] from SNO_vars_getinfo
-                            debug                       ) ! [IN]
+       call SNO_vars_write( ismaster,                     & ! [IN] from MPI
+                            dirpath,                      & ! [IN] from namelist
+                            basename,                     & ! [IN] from namelist
+                            output_single,                & ! [IN] from namelist
+                            output_grads,                 & ! [IN] from namelist
+                            update_axis,                  & ! [IN]
+                            nowrank,                      & ! [IN]
+                            avgdinfo%step_nmax,           & ! [IN]
+                            finalize,                     & ! [IN]
+                            add_rm_attr,                  & ! [IN]
+                            nprocs_x_out,  nprocs_y_out,  & ! [IN] from namelist
+                            ngrids_x_out,  ngrids_y_out,  & ! [IN] from SNO_map_getsize_local
+                            ngrids_xh_out, ngrids_yh_out, & ! [IN] from SNO_map_getsize_local
+                            nhalos_x,      nhalos_y,      & ! [IN] from SNO_file_getinfo
+                            hinfo,                        & ! [IN] from SNO_file_getinfo
+                            naxis,                        & ! [IN] from SNO_file_getinfo
+                            ainfo(:),                     & ! [IN] from SNO_axis_getinfo
+                            avgdinfo,                     & ! [IN] from SNO_vars_getinfo
+                            debug                         ) ! [IN]
 
        ! reset data buffer
        if ( dinfo%dim_rank == 1 ) then
