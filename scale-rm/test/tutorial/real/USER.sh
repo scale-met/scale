@@ -172,11 +172,3 @@ SMOOTH_LOCAL=( ".true."  ) # required parameters for each domain
 SMOOTH_ITELIM="10000"
 MAXSLOPE_RATIO="5.0"
 LIMIT_URBAN_FRACTION="0.3"
-
-#################################################
-#
-# &INFO  (net2g config)
-#
-#################################################
-
-POPSCA_PLEV=( 850 500 200 )

@@ -108,7 +108,7 @@ all: run
 
 EOF
 
-cat << EOF > ${OUTPUT_CONFIGDIR}/net2g/Makefile
+cat << EOF > ${OUTPUT_CONFIGDIR}/sno/Makefile
 ################################################################################
 #
 # Makefile for each test program
@@ -125,11 +125,9 @@ CODE_DIR    = .
 ORG_SRCS    =
 
 # parameters for run
+SNOCONF     = ${LIST_SNO_CONF_FILES}
 
-N2GCONF     = ${LIST_N2G_CONF_FILES}
-
-TPROC       = ${LIST_N2G_PRC_DOMAINS}
-
+TPROC       = ${PRC_SNO}
 
 # required data (parameters,distributed files)
 DATDIR      =
