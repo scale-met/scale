@@ -1988,7 +1988,6 @@ contains
 
              !---< calculate R, T, e+, e- >---
              sw = 0.5_RP + sign(0.5_RP,tau_new-RD_EPS)
-             tau_new = max( tau_new, RD_EPS )
 
              !--- X, Y
              X     =  ( 1.0_RP - W_irgn * ( Ppls - Pmns ) ) / M_irgn
