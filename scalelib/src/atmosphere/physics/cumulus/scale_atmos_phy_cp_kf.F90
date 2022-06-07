@@ -1762,14 +1762,14 @@ contains
           qcdet(kkp1)      = qc(kkp1)*updet(kkp1)
           qidet(kkp1)      = qi(kkp1)*updet(kkp1)
           qvdet(kkp1)      = qv_u(kkp1)
-          qold             = qv_u(kkp1) + qc(kkp1) + qi(kkp1) + qrout(kkp1) + qsout(kkp1)
+          qold             = qv_u(kkp1)
           ! below layer updraft qv and entrain q /new updraft massflux
           qv_u(kkp1)       = ( umfold*qv_u(kkp1) + upent(kkp1)*qv(kkp1) ) / umfnew
           qc(kkp1)         = qc(kkp1)*umfold/umfnew
           qi(kkp1)         = qi(kkp1)*umfold/umfnew
           theta_eu(kkp1)   = ( umfold * ( 1.0_RP + qold ) * theta_eu(kkp1) &
                              + upent(kkp1) * ( 1.0_RP + qv(kkp1) ) * theta_ee(kkp1) &
-                             ) / ( umfnew * ( 1.0_RP + qv_u(kkp1) + qc(kkp1) + qi(kkp1) ) )
+                             ) / ( umfnew * ( 1.0_RP + qv_u(kkp1) ) )
           ! flux_qr is ratio of generation of liquid fallout(RAIN)
           ! flux_qi is ratio of generation of ice fallout(SNOW)
           flux_qr(kkp1)    = qrout(kkp1)*umf(kk)
