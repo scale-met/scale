@@ -131,9 +131,10 @@ contains
        history_in
     use scale_time, only: &
        dt_BL => TIME_DTSEC_ATMOS_PHY_BL
+    use scale_atmos_phy_bl_common, only: &
+       ATMOS_PHY_BL_tendency_tracer
     use scale_atmos_phy_bl_mynn, only: &
-       ATMOS_PHY_BL_MYNN_tendency, &
-       ATMOS_PHY_BL_MYNN_tendency_tracer
+       ATMOS_PHY_BL_MYNN_tendency
     use scale_atmos_hydrometeor, only: &
        I_QV
     use scale_bulkflux, only: &
@@ -165,9 +166,10 @@ contains
        ATMOS_vars_get_diagnostic
     use mod_atmos_phy_bl_vars, only: &
        QS, QE, &
-       Zi      => ATMOS_PHY_BL_Zi,     &
-       QL      => ATMOS_PHY_BL_QL,     &
-       cldfrac => ATMOS_PHY_BL_cldfrac
+       Zi        => ATMOS_PHY_BL_Zi,     &
+       SFLX_BUOY => ATMOS_PHY_BL_SFLX_BUOY, &
+       QL        => ATMOS_PHY_BL_QL,     &
+       cldfrac   => ATMOS_PHY_BL_cldfrac
     use mod_atmos_phy_sf_vars, only: &
        SFC_DENS => ATMOS_PHY_SF_SFC_DENS, &
        SFLX_MU  => ATMOS_PHY_SF_SFLX_MU, &
@@ -181,7 +183,8 @@ contains
        RLmo     => ATMOS_PHY_SF_RLmo
     use mod_atmos_vars, only: &
        CZ, &
-       FZ
+       FZ, &
+       F2H
     implicit none
 
     real(RP) :: Nu   (KA,IA,JA,ADM_lall) !> eddy viscosity
@@ -225,12 +228,12 @@ contains
                SFC_DENS(:,:,l),                                                & ! (in)
                SFLX_MU(:,:,l), SFLX_MV(:,:,l), SFLX_SH(:,:,l), SFLX_QV(:,:,l), & ! (in)
                Ustar(:,:,l), Tstar(:,:,l), Qstar(:,:,l), RLmo(:,:,l),          & ! (in)
-               CZ(:,:,:,l), FZ(:,:,:,l), dt_BL,                                & ! (in)
+               CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l), dt_BL,                & ! (in)
                BULKFLUX_type,                                                  & ! (in)
                RHOU_t(:,:,:), RHOV_t(:,:,:), RHOT_t(:,:,:),                    & ! (out)
                RHOQV_t(:,:,:), RHOQ_t(:,:,:,QS:QE),                            & ! (out)
                Nu(:,:,:,l), Kh(:,:,:,l),                                       & ! (out)
-               QL(:,:,:,l), cldfrac(:,:,:,l), Zi(:,:,l)                        ) ! (out)
+               QL(:,:,:,l), cldfrac(:,:,:,l), Zi(:,:,l), SFLX_BUOY(:,:,l)      ) ! (out)
           do j = JS, JE
           do i = IS, IE
           do k = KS, KE
@@ -253,11 +256,11 @@ contains
 
           do iq = 1, QA
              if ( ( .not. TRACER_ADVC(iq) ) .or. iq==I_QV .or. (iq>=QS .and. iq<=QE) ) cycle
-             call ATMOS_PHY_BL_MYNN_tendency_tracer( &
+             call ATMOS_PHY_BL_tendency_tracer( &
                   KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                   DENS(:,:,:,l), QTRC(:,:,:,iq,l), SFLX_Q(:,:,iq,l), & ! (in)
                   Kh(:,:,:,l), TRACER_MASS(iq),                      & ! (in)
-                  CZ(:,:,:,l), FZ(:,:,:,l),                          & ! (in)
+                  CZ(:,:,:,l), FZ(:,:,:,l), F2H(:,:,:,:,l),          & ! (in)
                   dt_BL, TRACER_NAME(iq),                            & ! (in)
                   RHOQ_t(:,:,:,iq)                                   ) ! (out)
              do j = JS, JE

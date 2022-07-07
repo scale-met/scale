@@ -98,7 +98,7 @@ module scale_atmos_phy_bl_mynn
 
   logical,  private            :: initialize
 
-  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+99_RP !> maximum height of the PBL
+  real(RP), private            :: ATMOS_PHY_BL_MYNN_PBL_MAX    = 1.E+30_RP !> maximum height of the PBL
   real(RP), private            :: ATMOS_PHY_BL_MYNN_TKE_MIN    =  1.E-20_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_N2_MAX     =  1.E1_RP
   real(RP), private            :: ATMOS_PHY_BL_MYNN_NU_MIN     = -1.E1_RP
