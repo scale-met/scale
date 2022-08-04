@@ -223,6 +223,8 @@ contains
        Zi, SFLX_BUOY                       )
     use scale_const, only: &
        CPdry => CONST_CPdry
+    use scale_atmos_hydrometeor, only: &
+       CP_VAPOR
     use scale_file_history, only: &
        FILE_HISTORY_in
 #ifdef JMAPPLIB
@@ -269,7 +271,7 @@ contains
     real(RP), intent(out) :: RHOV_t (KA,IA,JA) !> tendency of dens * v
     real(RP), intent(out) :: RHOT_t (KA,IA,JA) !> tendency of dens * pt
     real(RP), intent(out) :: RHOQV_t(KA,IA,JA) !> tendency of dens * qv
-    real(RP), intent(out) :: RPROG_t(KA,IA,JA,ATMOS_PHY_BL_MYNN_JMAPPLIB_ntracer) !> tenddency of dens * prognostic variables (TKE, TSQ, QSQ, COV)
+    real(RP), intent(out) :: RPROG_t(KA,IA,JA,ATMOS_PHY_BL_MYNN_JMAPPLIB_ntracer) !> tendency of dens * prognostic variables (TKE, TSQ, QSQ, COV)
     real(RP), intent(out) :: Nu     (KA,IA,JA) !> eddy viscosity coefficient @ half-level
     real(RP), intent(out) :: Kh     (KA,IA,JA) !> eddy diffusion coefficient @ half-level
     real(RP), intent(out) :: Zi        (IA,JA) !> PBL height
@@ -309,6 +311,7 @@ contains
     real(RP) :: SFLX_V
     real(RP) :: SFLX_PT
     real(RP) :: SFLX_Q
+    real(RP) :: CPtot
 
     real(RP) :: diss(KA,IA,JA) !> TKE dissipation term
     real(RP) :: dummy(KA,IA,JA)
@@ -325,7 +328,7 @@ contains
     !$omp private(qke,qv_lc,qc_lc,qi_lc,dens_lc,taux_ex,tauy_ex,ftl_ex,fqw_ex,&
     !$omp         tend_qke,tend_tsq,tend_qsq,tend_cov,tend_u,tend_v,tend_pt,tend_qv, &
     !$omp         z_f,dz_f,rdz_f,rdz_h, &
-    !$omp         rho_ov_rhoa,SFLX_U,SFLX_V,SFLX_PT,SFLX_Q)
+    !$omp         rho_ov_rhoa,SFLX_U,SFLX_V,SFLX_PT,SFLX_Q,CPtot)
     do j = JS, JE
     do i = IS, IE
 
@@ -341,9 +344,11 @@ contains
           rdz_h(k) = 1.0_RP / ( CZ(k+1,i,j) - CZ(k,i,j) )
        end do
 
+       CPtot = CPdry + SFLX_QV(i,j) * ( CP_VAPOR - CPdry )
+
        SFLX_U  = SFLX_MU(i,j) / SFC_DENS(i,j)
        SFLX_V  = SFLX_MV(i,j) / SFC_DENS(i,j)
-       SFLX_PT = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) * SFC_DENS(i,j) )
+       SFLX_PT = SFLX_SH(i,j) / ( CPtot * EXNER(KS,i,j) * SFC_DENS(i,j) )
        SFLX_Q  = SFLX_QV(i,j) / SFC_DENS(i,j)
 
        select case ( ATMOS_PHY_BL_MYNN_JMAPPLIB_LEVEL )

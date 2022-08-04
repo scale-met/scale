@@ -292,7 +292,8 @@ contains
     use scale_prc, only: &
        PRC_abort
     use scale_atmos_hydrometeor, only: &
-       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV
+       HYDROMETEOR_LHV => ATMOS_HYDROMETEOR_LHV, &
+       CP_VAPOR
     use scale_matrix, only: &
        MATRIX_SOLVER_tridiagonal
     use scale_file_history, only: &
@@ -416,6 +417,8 @@ contains
     real(RP) :: tke_P(KA)
     real(RP) :: dummy(KA)
 
+    real(RP) :: CPtot
+
     real(RP) :: sf_t
     real(RP) :: us3
     real(RP) :: zeta
@@ -450,7 +453,7 @@ contains
     !$omp parallel do default(none) &
     !$omp OMP_SCHEDULE_ collapse(2) &
     !$omp shared(KA,KS,KE,IS,IE,JS,JE, &
-    !$omp        EPS,GRAV,CPdry,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
+    !$omp        EPS,GRAV,CPdry,CP_VAPOR,EPSTvap,UNDEF,RSQRT_2,SQRT_2PI,RSQRT_2PI, &
     !$omp        ATMOS_PHY_BL_MYNN_N2_MAX,ATMOS_PHY_BL_MYNN_TKE_MIN, &
     !$omp        ATMOS_PHY_BL_MYNN_NU_MIN,ATMOS_PHY_BL_MYNN_NU_MAX, &
     !$omp        ATMOS_PHY_BL_MYNN_KH_MIN,ATMOS_PHY_BL_MYNN_KH_MAX, &
@@ -464,7 +467,7 @@ contains
     !$omp        BULKFLUX_type, &
     !$omp        Ri,Pr,prod,diss,dudz2,l,flxU,flxV,flxT,flxQ) &
     !$omp private(N2_new,lq,sm25,sh25,rlqsm_h,Nu_f,Kh_f,q,q2_2,ac, &
-    !$omp         SFLX_PT,RHO,RHONu,RHOKh, &
+    !$omp         SFLX_PT,CPtot,RHO,RHONu,RHOKh, &
     !$omp         smp,f_smp,shpgh,f_shpgh,tltv,qwtv,tvsq,tltv25,qwtv25,tvsq25,tvsq_up,tvsq_lo,wtl,wqw, &
     !$omp         dtldz,dqwdz,betat,betaq,gammat,gammaq,f_gamma, &
     !$omp         flx,a,b,c,d,ap,rho_h,phi_n,tke_P,sf_t,zeta,phi_m,phi_h,us3,CDZ,FDZ,z1, &
@@ -505,8 +508,8 @@ contains
           case ( 'B91', 'B91W01' )
              ! Beljaars and Holtslag (1991)
              if ( zeta >= 0 ) then
-                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta)
-                phi_m = tmp * zeta + zeta + 1.0_RP
+                tmp = - 2.0_RP / 3.0_RP * ( 0.35_RP * zeta - 6.0_RP ) * exp(-0.35_RP*zeta) * zeta
+                phi_m = tmp + zeta + 1.0_RP
                 phi_h = tmp + zeta * sqrt( 1.0_RP + 2.0_RP * zeta / 3.0_RP ) + 1.0_RP
              else
                 if ( BULKFLUX_type == 'B91W01' ) then
@@ -541,7 +544,8 @@ contains
                                      dudz2(:,i,j), dtldz(:), dqwdz(:) ) ! (out)
 
        us3 = us(i,j)**3
-       SFLX_PT = SFLX_SH(i,j) / ( CPdry * EXNER(KS,i,j) )
+       CPtot = CPdry + SFLX_QV(i,j) * ( CP_VAPOR - CPdry )
+       SFLX_PT = SFLX_SH(i,j) / ( CPtot * EXNER(KS,i,j) )
 
        if ( initialize ) then
           do k = KS, KE_PBL
