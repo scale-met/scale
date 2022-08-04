@@ -73,10 +73,9 @@ module mod_user
   real(RP), private, allocatable :: divf(:)  ! large scale divergence (full level)
   real(RP), private, allocatable :: divh(:)  ! large scale divergence (half level)
 
-  integer,                private, parameter :: QA = 3
-  character(len=H_SHORT), private            :: QNAME(QA)
-  character(len=H_MID),   private            :: QDESC(QA)
-  character(len=H_SHORT), private            :: QUNIT(QA)
+  character(len=H_SHORT), private            :: QNAME(3)
+  character(len=H_MID),   private            :: QDESC(3)
+  character(len=H_SHORT), private            :: QUNIT(3)
 
   data QNAME / 'QV', &
                'QC', &
@@ -136,10 +135,10 @@ contains
        call ATMOS_HYDROMETEOR_regist( 1, 1,                & ! (in)
                                       QNAME, QDESC, QUNIT, & ! (in)
                                       QS_MP                ) ! (out)
+       QA_MP = 3
+       QE_MP = QS_MP + 2
     end if
 
-    QA_MP = 3
-    QE_MP = QS_MP + 2
 
     ATMOS_PHY_MP_USER_qhyd2qtrc => USER_qhyd2qtrc
 
@@ -295,6 +294,8 @@ contains
   !-----------------------------------------------------------------------------
   !> Calculate tendency
   subroutine USER_calc_tendency
+    use scale_tracer, only: &
+       QA
     use scale_time, only: &
        NOWDAYSEC => TIME_NOWDAYSEC, &
        dt     => TIME_DTSEC

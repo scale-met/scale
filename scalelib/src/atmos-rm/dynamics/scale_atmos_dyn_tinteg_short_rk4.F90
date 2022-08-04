@@ -689,6 +689,12 @@ contains
     enddo
 
 
+    call ATMOS_DYN_Copy_boundary( DENS, MOMZ, MOMX, MOMY, RHOT,      & ! [INOUT]
+                                  PROG,                              & ! [INOUT]
+                                  DENS0, MOMZ0, MOMX0, MOMY0, RHOT0, & ! [IN]
+                                  PROG0,                             & ! [IN]
+                                  BND_W, BND_E, BND_S, BND_N, TwoD   ) ! [IN]
+
     do n = 1, 3
     do j = JS, JE
     do i = IS, IE

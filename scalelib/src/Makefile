@@ -157,11 +157,14 @@ OBJS = \
 	$(BUILD_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_kajino13.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ae_offline.o	\
+	$(BUILD_DIR)/scale_atmos_phy_bl_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_bl_mynn.o	\
+	$(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.o	\
 	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_cp_kf.o	\
+	$(BUILD_DIR)/scale_atmos_phy_cp_kf_jmapplib.o	\
 	$(BUILD_DIR)/scale_atmos_phy_lt_sato2019.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_common.o	\
 	$(BUILD_DIR)/scale_atmos_phy_mp_kessler.o	\
@@ -270,6 +273,11 @@ OBJS_FOR_SDM = \
 	$(BUILD_DIR)/scale_gridtrans.o	\
 	$(BUILD_DIR)/scale_rm_process.o
 
+MODS = $(shell echo $(patsubst $(BUILD_DIR)/%.o,$(BUILD_DIR)/%.mod, \
+	$(filter-out $(BUILD_DIR)/scale_sys_sigvars.o, \
+	$(filter-out $(BUILD_DIR)/scale_file_netcdf.o, \
+	$(OBJS)))) | tr A-Z a-z)
+
 all:
 	$(MAKE) build
 	$(MAKE) install
@@ -282,6 +290,7 @@ ifeq ($(SCALE_ENABLE_SDM),T)
 	$(MAKE) overridesdm
 	$(MAKE) makesdm
 endif
+	$(MAKE) objs
 	@echo "Complete making scalelib."
 
 install:
@@ -297,6 +306,8 @@ info:
 	@$(MAKE) --no-print-directory conflog
 
 
+objs: $(OBJS)
+
 $(LIBDIR)/$(LIBNAME): $(BUILD_DIR)/$(LIBNAME)
 	install $< $@
 
@@ -304,12 +315,8 @@ $(BUILD_DIR)/$(LIBNAME): $(OBJS)
 	$(AR) $(ARFLAGS) $@ $?
 	$(RANLIB) $@
 
-ifeq ($(SCALE_IGNORE_SRCDEP),T)
-modules:
-else
-modules: $(OBJS)
-	install $(MODS) $(MODDIR)
-endif
+modules: $(MODS)
+	install $? $(MODDIR)
 
 makesdm: $(OBJS_FOR_SDM)
 	$(MAKE) -C $(MTDIR)
@@ -374,16 +381,10 @@ dependency:
 
 
 .SUFFIXES:
-.SUFFIXES: .o .F90 .c .erb .mod
+.SUFFIXES: .o .F90 .c .erb
 
 %.F90 : %.F90.erb
 	erb $< > $@
-
-%.mod: %.F90
-	make $(patsubst %.F90,%.o,$<)
-
-$(MODDIR)/%.mod : %.mod
-	install $< $@
 
 file/scale_file.F90 : scale_file.F90.erb
 

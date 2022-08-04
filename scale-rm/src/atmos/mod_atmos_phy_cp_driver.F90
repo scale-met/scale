@@ -53,15 +53,18 @@ contains
        ATMOS_PHY_CP_common_setup
     use scale_atmos_phy_cp_kf, only: &
        ATMOS_PHY_CP_kf_setup
+    use scale_atmos_phy_cp_kf_jmapplib, only: &
+       ATMOS_PHY_CP_KF_JMAPPLIB_setup
     use mod_atmos_admin, only: &
        ATMOS_PHY_CP_TYPE, &
        ATMOS_sw_phy_cp
     use scale_time , only :&
-       TIME_DTSEC,             &
-       TIME_DTSEC_ATMOS_PHY_CP
+       dt => TIME_DTSEC_ATMOS_PHY_CP
+    use scale_atmos_grid_cartesC, only: &
+       DX
     use scale_atmos_grid_cartesC_real, only: &
-       ATMOS_GRID_CARTESC_REAL_CZ, &
-       ATMOS_GRID_CARTESC_REAL_AREA
+       CZ   => ATMOS_GRID_CARTESC_REAL_CZ, &
+       AREA => ATMOS_GRID_CARTESC_REAL_AREA
     use scale_atmos_hydrometeor, only: &
        ATMOS_HYDROMETEOR_ice_phase
     implicit none
@@ -80,8 +83,11 @@ contains
        case ( 'KF' )
           warmrain = ( .not. ATMOS_HYDROMETEOR_ice_phase )
           call ATMOS_PHY_CP_kf_setup( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                      ATMOS_GRID_CARTESC_REAL_CZ, ATMOS_GRID_CARTESC_REAL_AREA, &
-                                      warmrain                                                  )
+                                      CZ, AREA, &
+                                      warmrain  )
+       case ( 'KF-JMAPPLIB' )
+          call ATMOS_PHY_CP_KF_JMAPPLIB_setup( KA, KS, KE, IA, JA, &
+                                               dx, dt )
        case default
           LOG_ERROR("ATMOS_PHY_CP_driver_setup",*) 'ATMOS_PHY_CP_TYPE (', trim(ATMOS_PHY_CP_TYPE), ') is invalid. Check!'
           call PRC_abort
@@ -123,8 +129,6 @@ contains
   !-----------------------------------------------------------------------------
   !> Driver
   subroutine ATMOS_PHY_CP_driver_calc_tendency( update_flag )
-    use scale_const, only: &
-       PRE00 => CONST_PRE00
     use scale_statistics, only: &
        STATISTICS_checktotal, &
        STATISTICS_total
@@ -143,12 +147,17 @@ contains
        TIME_DTSEC, &
        TIME_DTSEC_ATMOS_PHY_CP
     use scale_atmos_grid_cartesC_real, only: &
+       CZ => ATMOS_GRID_CARTESC_REAL_CZ, &
        FZ => ATMOS_GRID_CARTESC_REAL_FZ
     use scale_atmos_hydrometeor, only: &
        HYD_NAME, &
-       CV_WATER
+       CV_WATER, &
+       CV_ICE,   &
+       LHF
     use scale_atmos_phy_cp_kf, only: &
        ATMOS_PHY_CP_kf_tendency
+    use scale_atmos_phy_cp_kf_jmapplib, only: &
+       ATMOS_PHY_CP_KF_JMAPPLIB_tendency
     use scale_atmos_phy_cp_common, only: &
        ATMOS_PHY_CP_common_wmean
     use mod_atmos_phy_mp_vars, only: &
@@ -175,9 +184,13 @@ contains
        V,                 &
        W,                 &
        TEMP,              &
+       POTT,              &
        PRES,              &
+       EXNER,             &
        QDRY,              &
-       QV
+       QV,                &
+       QC,                &
+       QI
     use scale_atmos_hydrometeor, only: &
        N_HYD
     use mod_atmos_phy_cp_vars, only: &
@@ -195,6 +208,11 @@ contains
        cldfrac_sh     => ATMOS_PHY_CP_cldfrac_sh,     &  ! cloud fraction (shallow convection) (0-1)
        w0mean         => ATMOS_PHY_CP_w0mean,         &  ! running mean vertical wind velocity [m/s]
        kf_nca         => ATMOS_PHY_CP_kf_nca             ! advection/cumulus convection timescale/dt for KF [step]
+    use mod_atmos_phy_bl_vars, only: &
+       PBLH      => ATMOS_PHY_BL_Zi, &
+       SFLX_BUOY => ATMOS_PHY_BL_SFLX_BUOY
+    use mod_atmos_phy_sf_vars, only: &
+       us => ATMOS_PHY_SF_Ustar
     implicit none
 
     logical, intent(in) :: update_flag
@@ -206,16 +224,20 @@ contains
     integer  :: k, i, j, iq
     !---------------------------------------------------------------------------
 
-    ! temporal running mean of vertical velocity
-    call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
-                                    W(:,:,:),                            & ! [IN]
-                                    TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
-                                    w0mean(:,:,:)                        ) ! [INOUT]
-    call FILE_HISTORY_in( w0mean(:,:,:), 'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
+    if ( ATMOS_PHY_CP_TYPE /= "KF-JMAPPLIB" ) then
+
+       ! temporal running mean of vertical velocity
+       call ATMOS_PHY_CP_common_wmean( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                       W(:,:,:),                            & ! [IN]
+                                       TIME_DTSEC, TIME_DTSEC_ATMOS_PHY_CP, & ! [IN]
+                                       w0mean(:,:,:)                        ) ! [INOUT]
+    end if
+
 
     if ( update_flag ) then ! update
        select case ( ATMOS_PHY_CP_TYPE )
        case ( 'KF' )
+
           call ATMOS_PHY_CP_kf_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
                                          DENS(:,:,:),                              & ! [IN]
                                          U(:,:,:), V(:,:,:),                       & ! [IN]
@@ -233,6 +255,40 @@ contains
                                          cloudtop(:,:), cloudbase(:,:),            & ! [INOUT]
                                          cldfrac_dp(:,:,:), cldfrac_sh(:,:,:)      ) ! [INOUT]
 
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
+          end do
+          end do
+
+       case ( 'KF-JMAPPLIB' )
+
+          call ATMOS_PHY_CP_KF_JMAPPLIB_tendency( KA, KS, KE, IA, IS, IE, JA, JS, JE, &
+                                                  DENS(:,:,:),                             & ! [IN]
+                                                  U(:,:,:), V(:,:,:), W(:,:,:),            & ! [IN]
+                                                  TEMP(:,:,:), POTT(:,:,:),                & ! [IN]
+                                                  PRES(:,:,:), EXNER(:,:,:),               & ! [IN]
+                                                  QDRY(:,:,:), QV(:,:,:),                  & ! [IN]
+                                                  QC(:,:,:), QI(:,:,:),                    & ! [IN]
+                                                  us(:,:), PBLH(:,:), SFLX_BUOY(:,:),      & ! [IN]
+                                                  CZ(:,:,:), FZ(:,:,:),                    & ! [IN]
+                                                  DENS_t_CP(:,:,:),                        & ! [OUT]
+                                                  RHOT_t_CP(:,:,:),                        & ! [INOUT]
+                                                  RHOQV_t_CP(:,:,:), RHOHYD_t_CP(:,:,:,:), & ! [INOUT]
+                                                  w0mean(:,:,:), kf_nca(:,:),              & ! [INOUT]
+                                                  SFLX_rain(:,:), SFLX_snow(:,:),          & ! [INOUT]
+                                                  SFLX_prec(:,:),                          & ! [INOUT]
+                                                  cloudtop(:,:), cloudbase(:,:)            ) ! [INOUT]
+          !$omp parallel do
+          do j = JS, JE
+          do i = IS, IE
+             ! assume that temperature of precipitation is the same as that at the lowest layer
+             SFLX_engi(i,j) = SFLX_rain(i,j) * CV_WATER * TEMP(KS,i,j) &
+                            + SFLX_snow(i,j) * ( CV_ICE * TEMP(KS,i,j) - LHF )
+          end do
+          end do
+
        end select
 
 !OCL XFILL
@@ -245,13 +301,7 @@ contains
 
        ! diagnose tendency of number concentration
 
-       !$omp parallel do
-       do j = JS, JE
-       do i = IS, IE
-          SFLX_prec(i,j) = SFLX_rain(i,j) + SFLX_snow(i,j)
-       end do
-       end do
-
+       call FILE_HISTORY_in( w0mean(:,:,:),         'w0mean', 'running mean vertical wind velocity', 'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( MFLX_cloudbase(:,:),   'CBMFX',     'cloud base mass flux',             'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_rain     (:,:),   'RAIN_CP',   'surface rain rate by CP',          'kg/m2/s', fill_halo=.true. )
        call FILE_HISTORY_in( SFLX_snow     (:,:),   'SNOW_CP',   'surface snow rate by CP',          'kg/m2/s', fill_halo=.true. )
@@ -274,8 +324,8 @@ contains
     endif ! update
 
     !$omp parallel do private(i,j,k) OMP_SCHEDULE_ collapse(2)
-    do j = JSB, JEB
-    do i = ISB, IEB
+    do j = JS, JE
+    do i = IS, IE
     do k = KS, KE
        DENS_t(k,i,j) = DENS_t(k,i,j) + DENS_t_CP(k,i,j)
        RHOT_t(k,i,j) = RHOT_t(k,i,j) + RHOT_t_CP(k,i,j)

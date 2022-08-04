@@ -10,6 +10,7 @@ DCUTILSDIR  = $(TOPDIR)/dc_utils
 SCALELIBDIR = $(TOPDIR)/scalelib
 SCALERMDIR  = $(TOPDIR)/scale-rm
 SCALEGMDIR  = $(TOPDIR)/scale-gm
+CONTRIBDIR  = $(TOPDIR)/contrib
 
 ifeq ($(SCALE_DEBUG),T)
    FFLAGS = $(FFLAGS_DEBUG) $(FFLAGS_SYSDEPEND) -DDEBUG -DQUICKDEBUG
@@ -90,18 +91,27 @@ ifeq ($(SCALE_ENABLE_PAPI),T)
    FFLAGS += -DPAPI
 endif
 
+CONTRIB_LIBS    =
+CONTRIB_INCLUDE =
+
 # Super Droplet Method (SDM)
 ifeq ($(SCALE_ENABLE_SDM),T)
-   FFLAGS         += -DSDM $(ADDITIONAL_FFLAGS_SDM)
-   GAGETRYDIR      = $(TOPDIR)/contrib/Gadgetry
-   MTDIR           = $(TOPDIR)/contrib/mt
-   SDMDIR          = $(TOPDIR)/contrib/SDM
-   CONTRIB_LIBS    = $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(LIBDIR)/libsdm.a
-   CONTRIB_INCLUDE = -I$(GAGETRYDIR) -I$(MTDIR) -I$(SDMDIR)
+   FFLAGS          += -DSDM $(ADDITIONAL_FFLAGS_SDM)
+   GAGETRYDIR       = $(TOPDIR)/contrib/Gadgetry
+   MTDIR            = $(TOPDIR)/contrib/mt
+   SDMDIR           = $(TOPDIR)/contrib/SDM
+   CONTRIB_LIBS    += $(LIBDIR)/libgagetry.a $(LIBDIR)/libmt.a $(LIBDIR)/libsdm.a
+   CONTRIB_INCLUDE += -I$(GAGETRYDIR) -I$(MTDIR) -I$(SDMDIR)
 else
    GAGETRYDIR      =
    MTDIR           =
    SDMDIR          =
-   CONTRIB_LIBS    =
-   CONTRIB_INCLUDE =
+endif
+
+
+# JMA Physic Process Library
+ifeq ($(SCALE_ENABLE_JMAPPLIB),T)
+   JMAPPLIB_DIR      = $(CONTRIBDIR)/JMA/physlib/pp/src
+   FFLAGS          += -DJMAPPLIB -I$(JMAPPLIB_DIR)
+   CONTRIB_LIBS    += -L$(JMAPPLIB_DIR) -lpp
 endif

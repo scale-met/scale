@@ -49,10 +49,13 @@ $(BUILD_DIR)/scale_atmos_hydrometeor.o: ./atmosphere/common/scale_atmos_hydromet
 $(BUILD_DIR)/scale_atmos_hydrostatic.o: ./atmosphere/common/scale_atmos_hydrostatic.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_statistics.o
 $(BUILD_DIR)/scale_atmos_phy_ae_kajino13.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_kajino13.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_aerosol.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_ae_offline.o: ./atmosphere/physics/aerosol/scale_atmos_phy_ae_offline.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_aerosol.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_external_input.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_phy_bl_common.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_matrix.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_bl_mynn.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_mynn.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_debug.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_matrix.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_phy_bl_mynn_jmapplib.o: ./atmosphere/physics/pbl/scale_atmos_phy_bl_mynn_jmapplib.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_ch_rn222.o: ./atmosphere/physics/chemistry/scale_atmos_phy_ch_rn222.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_cp_common.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_cp_kf.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_kf.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_phy_cp_kf_jmapplib.o: ./atmosphere/physics/cumulus/scale_atmos_phy_cp_kf_jmapplib.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_phy_lt_sato2019.o: ./atmosphere/physics/lightning/scale_atmos_phy_lt_sato2019.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_grid_cartesC.o $(BUILD_DIR)/scale_atmos_grid_cartesC_index.o $(BUILD_DIR)/scale_atmos_grid_cartesC_metric.o $(BUILD_DIR)/scale_comm_cartesC.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_prc_cartesC.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_random.o
 $(BUILD_DIR)/scale_atmos_phy_mp_common.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_common.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_grid_cartesC_index.o $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_tracer.o
 $(BUILD_DIR)/scale_atmos_phy_mp_kessler.o: ./atmosphere/physics/microphysics/scale_atmos_phy_mp_kessler.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_atmos_phy_mp_common.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_history.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
@@ -73,7 +76,7 @@ $(BUILD_DIR)/scale_atmos_profile.o: ./atmosphere/common/scale_atmos_profile.F90 
 $(BUILD_DIR)/scale_atmos_refstate.o: ./atmosphere/common/scale_atmos_refstate.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrostatic.o $(BUILD_DIR)/scale_atmos_profile.o $(BUILD_DIR)/scale_atmos_saturation.o $(BUILD_DIR)/scale_comm_cartesC.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_file_cartesC.o $(BUILD_DIR)/scale_interp_vert.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_statistics.o
 $(BUILD_DIR)/scale_atmos_saturation.o: ./atmosphere/common/scale_atmos_saturation.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_hydrometeor.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_atmos_sfc_ch_rn222.o: ./atmosphere/physics/chemistry/scale_atmos_sfc_ch_rn222.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_comm_cartesC.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_interp.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
-$(BUILD_DIR)/scale_atmos_solarins.o: ./atmosphere/common/scale_atmos_solarins.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_calendar.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
+$(BUILD_DIR)/scale_atmos_solarins.o: ./atmosphere/common/scale_atmos_solarins.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_calendar.o $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o $(BUILD_DIR)/scale_time.o
 $(BUILD_DIR)/scale_atmos_thermodyn.o: ./atmosphere/common/scale_atmos_thermodyn.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_bulkflux.o: ./coupler/scale_bulkflux.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_calendar.o: ./common/scale_calendar.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o
@@ -152,157 +155,3 @@ $(BUILD_DIR)/scale_urban_grid_icoA.o: ./urban/grid/scale_urban_grid_icoA.F90 $(D
 $(BUILD_DIR)/scale_urban_grid_icoA_index.o: ./urban/grid/scale_urban_grid_icoA_index.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_atmos_grid_icoA_index.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_prc.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 $(BUILD_DIR)/scale_vector.o: ./common/scale_vector.F90 $(DEPENDLIB) $(BUILD_DIR)/scale_const.o $(BUILD_DIR)/scale_io.o $(BUILD_DIR)/scale_precision.o $(BUILD_DIR)/scale_prof.o
 
-MODS =	\
-	$(BUILD_DIR)/scale.mod	\
-	$(BUILD_DIR)/scale_atmos_adiabat.mod	\
-	$(BUILD_DIR)/scale_atmos_aerosol.mod	\
-	$(BUILD_DIR)/scale_atmos_bottom.mod	\
-	$(BUILD_DIR)/scale_atmos_diagnostic.mod	\
-	$(BUILD_DIR)/scale_atmos_diagnostic_cartesc.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_common.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_fct.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd2.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd4.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd6.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_cd8.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud1.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud3koren1993.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud5.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_flux_ud7.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_fvm_numfilter.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_euler.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_large_rk3.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_rkcommon.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk11s8o.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk3.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk4.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_short_rk7s6o.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_euler.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_linrk.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tinteg_tracer_rk3.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_large.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_large_fvm_heve.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_short.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_short_fvm_heve.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_short_fvm_hevi.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_short_fvm_hivi.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_tracer.mod	\
-	$(BUILD_DIR)/scale_atmos_dyn_tstep_tracer_fvm_heve.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_cartesc.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_cartesc_index.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_cartesc_metric.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_cartesc_real.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_icoa.mod	\
-	$(BUILD_DIR)/scale_atmos_grid_icoa_index.mod	\
-	$(BUILD_DIR)/scale_atmos_hydrometeor.mod	\
-	$(BUILD_DIR)/scale_atmos_hydrostatic.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_ae_kajino13.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_ae_offline.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_bl_mynn.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_ch_rn222.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_cp_common.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_cp_kf.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_lt_sato2019.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_mp_common.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_mp_kessler.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_mp_sn14.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_mp_suzuki10.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_mp_tomita08.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_rd_common.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_rd_mstrnx.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_rd_offline.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_rd_profile.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_sf_bulk.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_sf_const.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_tb_common.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_tb_d1980.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_tb_dns.mod	\
-	$(BUILD_DIR)/scale_atmos_phy_tb_smg.mod	\
-	$(BUILD_DIR)/scale_atmos_profile.mod	\
-	$(BUILD_DIR)/scale_atmos_refstate.mod	\
-	$(BUILD_DIR)/scale_atmos_saturation.mod	\
-	$(BUILD_DIR)/scale_atmos_sfc_ch_rn222.mod	\
-	$(BUILD_DIR)/scale_atmos_solarins.mod	\
-	$(BUILD_DIR)/scale_atmos_thermodyn.mod	\
-	$(BUILD_DIR)/scale_bulkflux.mod	\
-	$(BUILD_DIR)/scale_calendar.mod	\
-	$(BUILD_DIR)/scale_comm_cartesc.mod	\
-	$(BUILD_DIR)/scale_comm_cartesc_nest.mod	\
-	$(BUILD_DIR)/scale_comm_icoa.mod	\
-	$(BUILD_DIR)/scale_const.mod	\
-	$(BUILD_DIR)/scale_coriolis.mod	\
-	$(BUILD_DIR)/scale_cpl_phy_sfc_fixed_temp.mod	\
-	$(BUILD_DIR)/scale_cpl_phy_sfc_skin.mod	\
-	$(BUILD_DIR)/scale_cpl_sfc_index.mod	\
-	$(BUILD_DIR)/scale_debug.mod	\
-	$(BUILD_DIR)/scale_dft.mod	\
-	$(BUILD_DIR)/scale_file.mod	\
-	$(BUILD_DIR)/scale_file_cartesc.mod	\
-	$(BUILD_DIR)/scale_file_external_input.mod	\
-	$(BUILD_DIR)/scale_file_external_input_cartesc.mod	\
-	$(BUILD_DIR)/scale_file_grads.mod	\
-	$(BUILD_DIR)/scale_file_h.mod	\
-	$(BUILD_DIR)/scale_file_history.mod	\
-	$(BUILD_DIR)/scale_file_history_cartesc.mod	\
-	$(BUILD_DIR)/scale_file_tiledata.mod	\
-	$(BUILD_DIR)/scale_filter.mod	\
-	$(BUILD_DIR)/scale_fpm.mod	\
-	$(BUILD_DIR)/scale_index.mod	\
-	$(BUILD_DIR)/scale_interp.mod	\
-	$(BUILD_DIR)/scale_interp_vert.mod	\
-	$(BUILD_DIR)/scale_io.mod	\
-	$(BUILD_DIR)/scale_land_dyn_bucket.mod	\
-	$(BUILD_DIR)/scale_land_grid_cartesc.mod	\
-	$(BUILD_DIR)/scale_land_grid_cartesc_index.mod	\
-	$(BUILD_DIR)/scale_land_grid_cartesc_real.mod	\
-	$(BUILD_DIR)/scale_land_grid_icoa.mod	\
-	$(BUILD_DIR)/scale_land_grid_icoa_index.mod	\
-	$(BUILD_DIR)/scale_land_phy_matsiro.mod	\
-	$(BUILD_DIR)/scale_land_phy_snow_diagnos.mod	\
-	$(BUILD_DIR)/scale_land_phy_snow_ky90.mod	\
-	$(BUILD_DIR)/scale_landuse.mod	\
-	$(BUILD_DIR)/scale_mapprojection.mod	\
-	$(BUILD_DIR)/scale_matrix.mod	\
-	$(BUILD_DIR)/scale_monitor.mod	\
-	$(BUILD_DIR)/scale_monitor_cartesc.mod	\
-	$(BUILD_DIR)/scale_ocean_dyn_offline.mod	\
-	$(BUILD_DIR)/scale_ocean_dyn_slab.mod	\
-	$(BUILD_DIR)/scale_ocean_grid_cartesc.mod	\
-	$(BUILD_DIR)/scale_ocean_grid_cartesc_index.mod	\
-	$(BUILD_DIR)/scale_ocean_grid_cartesc_real.mod	\
-	$(BUILD_DIR)/scale_ocean_grid_icoa.mod	\
-	$(BUILD_DIR)/scale_ocean_grid_icoa_index.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_albedo.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_albedo_nakajima00.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_ice_simple.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_roughness.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_roughness_miller92.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_roughness_moon07.mod	\
-	$(BUILD_DIR)/scale_ocean_phy_tc.mod	\
-	$(BUILD_DIR)/scale_prc.mod	\
-	$(BUILD_DIR)/scale_prc_cartesc.mod	\
-	$(BUILD_DIR)/scale_prc_icoa.mod	\
-	$(BUILD_DIR)/scale_precision.mod	\
-	$(BUILD_DIR)/scale_prof.mod	\
-	$(BUILD_DIR)/scale_random.mod	\
-	$(BUILD_DIR)/scale_sigvars.mod	\
-	$(BUILD_DIR)/scale_sort.mod	\
-	$(BUILD_DIR)/scale_specfunc.mod	\
-	$(BUILD_DIR)/scale_spnudge.mod	\
-	$(BUILD_DIR)/scale_statistics.mod	\
-	$(BUILD_DIR)/scale_time.mod	\
-	$(BUILD_DIR)/scale_topography.mod	\
-	$(BUILD_DIR)/scale_tracer.mod	\
-	$(BUILD_DIR)/scale_urban_dyn_kusaka01.mod	\
-	$(BUILD_DIR)/scale_urban_grid_cartesc.mod	\
-	$(BUILD_DIR)/scale_urban_grid_cartesc_index.mod	\
-	$(BUILD_DIR)/scale_urban_grid_cartesc_real.mod	\
-	$(BUILD_DIR)/scale_urban_grid_icoa.mod	\
-	$(BUILD_DIR)/scale_urban_grid_icoa_index.mod	\
-	$(BUILD_DIR)/scale_vector.mod

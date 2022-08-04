@@ -388,7 +388,7 @@ contains
                                                            converged                   ) ! [OUT]
 
           if ( .NOT. converged ) then
-             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j
+             LOG_ERROR("ATMOS_PHY_MP_saturation_adjustment_3D",*) 'moist_conversion not converged! ', k,i,j, DENS(k,i,j), Emoist, TEMP(k,i,j), QV(k,i,j), QC(k,i,j), QI(k,i,j), CPtot(k,i,j), CVtot(k,i,j)
              error = .true.
              exit
           endif
