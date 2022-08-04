@@ -277,12 +277,12 @@ contains
     deltaz(:,:,:) = 0.0_RP
     do j = JS, JE
     do i = IS, IE
-    do k = KS, KE
-       deltaz(k,i,j) = CZ(k+1,i,j) - CZ(k,i,j)
+       do k = KS, KE-1
+          deltaz(k,i,j) = CZ(k+1,i,j) - CZ(k,i,j)
+       enddo
+       deltaz(KE,i,j) = 0.0_RP
     enddo
     enddo
-    enddo
-    deltaz(KE,:,:) = 0.0_RP
 
     allocate( deltax(IA,JA) )
     do j = JS, JE
@@ -2382,7 +2382,7 @@ contains
     real(RP) :: evac                              !< shallow convection TKE factor (temporaly vars)
     real(RP) :: ainc,ainctmp, aincmx,aincold      !< factors ainctmp is tmpvariable; aincmx is max of ainc (temporaly vars)
     real(RP) :: aincfin                           !< finl ainc factor
-    real(RP) :: omg(KA)                           !< pressure velocity (temporaly vars)
+    real(RP) :: omg(0:KA)                         !< pressure velocity (temporaly vars)
     real(RP) :: topomg                            !< cloud top omg calc by updraft (temporaly vars)
     real(RP) :: fbfrc                             !< precpitation  to be fedback 0.0 -1.0 shallo-> 1.0(no rain) deep->0.0 (temporaly vars)
     real(RP) :: dfda                              !< (temporaly vars)
@@ -2390,12 +2390,12 @@ contains
     real(RP) :: absomgtc,absomg                   !< (temporaly vars)
     real(RP) :: f_dp                              !< (temporaly vars)
 
-    real(RP) :: theta_fx(KA)                      !< compensational subsidence flux form
-    real(RP) ::    qv_fx(KA)                      !< compensational subsidence flux form
-    real(RP) ::    qc_fx(KA)                      !< compensational subsidence flux form
-    real(RP) ::    qi_fx(KA)                      !< compensational subsidence flux form
-    real(RP) ::    qr_fx(KA)                      !< compensational subsidence flux form
-    real(RP) ::    qs_fx(KA)                      !< compensational subsidence flux form
+    real(RP) :: theta_fx(0:KA)                    !< compensational subsidence flux form
+    real(RP) ::    qv_fx(0:KA)                    !< compensational subsidence flux form
+    real(RP) ::    qc_fx(0:KA)                    !< compensational subsidence flux form
+    real(RP) ::    qi_fx(0:KA)                    !< compensational subsidence flux form
+    real(RP) ::    qr_fx(0:KA)                    !< compensational subsidence flux form
+    real(RP) ::    qs_fx(0:KA)                    !< compensational subsidence flux form
     real(RP) ::   rainfb(KA), snowfb(KA)          !< rain and snow fall
 
     real(RP) :: err                               !< error (tmp var)
@@ -2427,7 +2427,7 @@ contains
     end if
     ! time scale of adjustment
     vconv = 0.5_RP*(wspd(1) + wspd(2)) ! k_lcl + k_z5
-    timecp = deltax/vconv
+    timecp = deltax/max(vconv, KF_EPS)
     time_advec = timecp ! advection time sclale (30 minutes < timecp < 60 minutes)
     timecp = max(DEEPLIFETIME, timecp)
     timecp = min(3600._RP, timecp)

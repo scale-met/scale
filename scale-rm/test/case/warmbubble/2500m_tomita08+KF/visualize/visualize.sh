@@ -44,18 +44,18 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},y=6000:26000,x=6000:26000,z=0:15000 --nocont --mean x,y ${eddy} --exch --wsn 2 || exit
-   convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
+   gpview history.pe\*.nc@${var},y=6000:26000,x=6000:26000,z=0:15000 --nocont --mean x,y ${eddy} --exch --wsn 2 -sw:ifl=1 || exit
+   mv dcl_0001.png slice_${var}.png
    rm -f dcl.pdf
-   gpview history.pe\*.nc@${var},y=16000,z=0:15000 --nocont --mean z ${eddy} --exch --wsn 2 || exit
-   convert -density 150 -rotate 90 +antialias dcl.pdf column_${var}.png
+   gpview history.pe\*.nc@${var},y=16000,z=0:15000 --nocont --mean z ${eddy} --exch --wsn 2 -sw:ifl=1 || exit
+   mv dcl_0001.png column_${var}.png
    rm -f dcl.pdf
 
    # snapshot
    for sec in ${time_set[@]}
    do
-       gpview history.pe\*.nc@${var},y=16000,z=0:15000,time=${sec} --nocont ${range} --wsn 2 || exit
-       convert -density 150 -rotate 90 +antialias dcl.pdf ${var}${sec}sec.png
+       gpview history.pe\*.nc@${var},y=16000,z=0:15000,time=${sec} --nocont ${range} --wsn 2 -sw:ifl=1 || exit
+       mv dcl_0001.png ${var}${sec}sec.png
        rm -f dcl.pdf
    done
 
@@ -81,11 +81,11 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var},y=6000:26000,x=6000:26000,z=0:15000 --nocont --mean x,y ${eddy} --exch --wsn 2 || exit
-   convert -density 150 -rotate 90 +antialias dcl.pdf slice_${var}.png
+   gpview history.pe\*.nc@${var},y=6000:26000,x=6000:26000,z=0:15000 --nocont --mean x,y ${eddy} --exch --wsn 2 -sw:ifl=1 || exit
+   mv dcl_0001.png slice_${var}.png
    rm -f dcl.pdf
-   gpview history.pe\*.nc@${var},y=16000,z=0:15000 --nocont --mean z ${eddy} --exch --wsn 2 || exit
-   convert -density 150 -rotate 90 +antialias dcl.pdf column_${var}.png
+   gpview history.pe\*.nc@${var},y=16000,z=0:15000 --nocont --mean z ${eddy} --exch --wsn 2 -sw:ifl=1 || exit
+   mv dcl_0001.png column_${var}.png
    rm -f dcl.pdf
 
    let i="${i} + 1"
@@ -106,8 +106,8 @@ do
    fi
 
    # time series
-   gpview history.pe\*.nc@${var} --nocont --mean y ${eddy} --wsn 2 || exit
-   convert -density 150 -rotate 90 +antialias dcl.pdf hov_${var}.png
+   gpview history.pe\*.nc@${var} --nocont --mean y ${eddy} --wsn 2 -sw:ifl=1 || exit
+   mv dcl_0001.png hov_${var}.png
    rm -f dcl.pdf
 
    let i="${i} + 1"

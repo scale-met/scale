@@ -70,8 +70,20 @@ contains
        PRC_CARTESC_setup, &
        PRC_CARTESC_finalize
     use scale_const, only: &
+       TEM00  => CONST_TEM00, &
+       LHV0   => CONST_LHV0, &
+       LHF0   => CONST_LHF0, &
+       Rdry   => CONST_Rdry, &
+       Rvap   => CONST_Rvap, &
+       CL     => CONST_CL, &
+       CI     => CONST_CI, &
+       KARMAN => CONST_KARMAN, &
+       GRAV   => CONST_GRAV, &
+       STB    => CONST_STB, &
        CONST_setup, &
        CONST_finalize
+    use scale_atmos_solarins, only: &
+       SOLARINS_constant => ATMOS_SOLARINS_constant
     use scale_calendar, only: &
        CALENDAR_setup
     use scale_random, only: &
@@ -273,6 +285,12 @@ contains
        USER_finalize,      &
        USER_calc_tendency, &
        USER_update
+#ifdef JMAPPLIB
+    use pp_print_parm, only: &
+       pp_print_parm_set_flg_out_msg
+    use pp_phys_const, only: &
+       pp_phys_const_set
+#endif
     implicit none
 
     integer,          intent(in) :: comm_world
@@ -426,6 +444,22 @@ contains
     if ( LAND_do  ) call LAND_vars_setup
     if ( URBAN_do ) call URBAN_vars_setup
     if ( CPL_sw   ) call CPL_vars_setup
+
+#ifdef JMAPPLIB
+    call pp_print_parm_set_flg_out_msg( 0 )
+    call pp_phys_const_set( &
+         tkelvn_in = TEM00, &
+         hlatnt_in = LHV0, &
+         hlf_in    = LHF0, &
+         rd_in     = Rdry, &
+         rv_in     = Rvap, &
+         cwater_in = CL, &
+         cice_in   = CI, &
+         vkman_in  = KARMAN, &
+         grav_in   = GRAV, &
+         stb_in    = STB, &
+         sc0_in    = SOLARINS_constant)
+#endif
 
     ! setup driver
     if ( ATMOS_do ) call ATMOS_driver_setup
