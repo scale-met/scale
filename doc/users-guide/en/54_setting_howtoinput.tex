@@ -9,7 +9,7 @@
  \rowcolor[gray]{0.9} Data type   & \verb|FILETYPE_ORG|  & Note \\ \hline
  SCALE format   & \verb|SCALE-RM|     & History and restart files are supported. The latitude-longitude catalog is needed. \\ \hline
  Binary format  & \verb|GrADS|        & Another namelist for data input is required.    \\ \hline
- WRF format     & \verb|WRF-ARW|      & Both ``wrfout''  and``wrfrst'' are supported.\\ \hline
+% WRF format     & \verb|WRF-ARW|      & Both ``wrfout''  and``wrfrst'' are supported.\\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
@@ -24,8 +24,8 @@ The ``SCALE format'' is mainly used for offline nesting experiments (Sec. \ref{s
 The ``Binary format'' is defined as binary format with single-precision floating point values that FORTRAN can directly access.
 The example of practical usage of binary format data is described in Sec. \ref{sec:tutorial_real_data}.
 
-The ``WRF data format'' is available; WRF model output data can be read directly.
-Note that the file should contain all data required to generate the boundary data for \scalerm.
+%The ``WRF data format'' is available; WRF model output data can be read directly.
+%Note that the file should contain all data required to generate the boundary data for \scalerm.
 
 Other format data, such as GRIB/GRIB2 data, can be read in \scale by converting the data to the binary format data.
 Note that the format of output files in the latest version is different from that in the version 5.3 or older.

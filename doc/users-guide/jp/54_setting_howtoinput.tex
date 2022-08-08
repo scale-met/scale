@@ -10,7 +10,7 @@
  SCALEデータ形式   & \verb|SCALE-RM|     &  ヒストリファイルのみ対応。latlonカタログを必要とする。 \\ \hline
  バイナリ形式 & \verb|GrADS|        & データ読み込み用のネームリストを別途必要とする。       \\ \hline
 % NICAMデータ   & \verb|NICAM-NETCDF| & NetCDF形式の緯度経度格子に変換されたデータに対応する。 \\ \hline
- WRFデータ形式     & \verb|WRF-ARW|      & 「wrfout」、「wrfrst」の両方に対応する。          \\ \hline
+% WRFデータ形式     & \verb|WRF-ARW|      & 「wrfout」、「wrfrst」の両方に対応する。          \\ \hline
 \end{tabularx}
 \label{tab:inputdata_format}
 \end{center}
@@ -26,8 +26,8 @@
 「バイナリ形式」は、Fortran が直接アクセスできる単精度浮動小数点数のバイナリ形式データである。
 具体的な実行例については、チュートリアル(第\ref{sec:tutorial_real_data}節)に記載がある。
 
-「WRFデータ形式」では、WRFによるモデル出力データを直接読み込める。
-ただし、そのファイルは、{\scalerm}の境界値データを作成するために必要な全てのデータを含んでいる必要がある。
+%「WRFデータ形式」では、WRFによるモデル出力データを直接読み込める。
+%ただし、そのファイルは、{\scalerm}の境界値データを作成するために必要な全てのデータを含んでいる必要がある。
 
 その他の形式のデータ（例えば、GRIB/GRIB2 データなど）は、バイナリ形式に変換することで {\scalerm} で読み込むことができる。
 {\scalelib}の最新版の出力ファイル形式は、バージョン5.3以前の形式とは異なる。
