@@ -27,6 +27,8 @@ The format in the parentheses indicates the supported format which \sno output.
 \begin{itemize}
  \item Combine the decomposed multiple files into a single file (\scalenetcdf).
  \item Convert a single file or multiple files into multiple files with different number of decomposition (\scalenetcdf).
+ \item Regrid data from the model-level to the different model-level coordinate (\scalenetcdf).
+ \item Regrid data from the model-level to the actual height-level coordinate (\scalenetcdf).
  \item Regrid data from the model-level to the pressure-level coordinate (\scalenetcdf).
  \item Regrid data from the model grid to the geodesic (latitude-longitude) grid coordinate (NetCDF, but NOT \scalenetcdf !).
  \item Average history data over multiple steps (\scalenetcdf).
@@ -337,10 +339,55 @@ You can set the lat-lon domain larger than the original domain size used in the 
 In remapping process, extrapolation is not allowed.
 Therefore, a missing value is set at the grid, which has no interpolated value.
 
+\subsubsection{Regrid data to different model-level coordinate}
+
+The settings for regrid of data on other vertical coordinate are specified by \namelist{PARAM_SNOPLGIN_VGRIDOPE}.
+This plugin operator is available even when the output file is multiple.
+
+%
+\editbox{
+\verb|&PARAM_SNO                                                        | \\
+\verb| basename_in  = 'input/history_d02',                              | \\
+\verb| basename_out = 'output/history_d02',                             | \\
+\verb|/                                                                 | \\
+\verb|                                                                  | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                          | \\
+\verb| SNOPLGIN_vgridope_type     = 'MDL',                              | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 5,                                  | \\
+\verb| SNOPLGIN_vgridope_lev_data = 80.0, 160.0, 400.0, 1000.0, 2000.0, | \\
+\verb|/                                                                 | \\
+}
+
+When \nmitem{SNOPLGIN_vgridope_type} in \namelist{PARAM_SNOPLGIN_VGRIDOPE}
+is set to \verb|'MDL'|, vertical remapping to the different model-coordinate system is applied.
+\nmitem{SNOPLGIN_vgridope_lev_num} is the number of vertical layers,
+and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the vertical levels at which you want to convert data.
+The unit of the pressure level is [m].
+
+\subsubsection{Regrid data to actual height-level coordinate}
+
+%
+\editbox{
+\verb|&PARAM_SNO                                               | \\
+\verb| basename_in  = 'input/history_d02',                     | \\
+\verb| basename_out = 'output/history_d02',                    | \\
+\verb|/                                                        | \\
+\verb|                                                         | \\
+\verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
+\verb| SNOPLGIN_vgridope_type     = 'ZLEV',                    | \\
+\verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
+\verb| SNOPLGIN_vgridope_lev_data = 100.0, 300.0, 500.0,       | \\
+\verb|/                                                        | \\
+}
+
+When \nmitem{SNOPLGIN_vgridope_type} in \namelist{PARAM_SNOPLGIN_VGRIDOPE}
+is set to \verb|'ZLEV'|, vertical remapping to the actual height-coordinate system is applied.
+\nmitem{SNOPLGIN_vgridope_lev_num} is the number of vertical layers,
+and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the vertical levels at which you want to convert data.
+The unit of the pressure level is [m].
 
 \subsubsection{Regrid data to pressure-level coordinate}
 
-The settings for regrid of data on pressure-level coordinate are specified by \namelist{PARAM_SNOPLGIN_VGRIDOPE}.
 %
 \editbox{
 \verb|&PARAM_SNO                                               | \\
@@ -358,7 +405,6 @@ The settings for regrid of data on pressure-level coordinate are specified by \n
 When \nmitem{SNOPLGIN_vgridope_type} in \namelist{PARAM_SNOPLGIN_VGRIDOPE}
 is set to \verb|'PLEV'|, vertical remapping to the pressure-coordinate system is applied.
 \nmitem{SNOPLGIN_vgridope_lev_num} is the number of vertical layers,
-and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the pressure levels at which you want to convert data.
+and \nmitem{SNOPLGIN_vgridope_lev_data} specifies the vertical levels at which you want to convert data.
 The unit of the pressure level is [Pa].
 Note that pressure data (\verb|PRES|) must be included in the input file.
-This plugin operator is available even when the output file is multiple.
