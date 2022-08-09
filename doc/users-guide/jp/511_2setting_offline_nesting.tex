@@ -26,23 +26,23 @@
 \begin{itemize}
  \item 子領域の計算に必要な変数全てが、親領域の計算によってヒストリ/リスタート出力として作成されている。
  \item ヒストリ/リスタート出力の間隔が十分に短い。
- \item 親領域の計算領域の情報を子領域に与える「カタログファイル」を出力する。
+% \item 親領域の計算領域の情報を子領域に与える「カタログファイル」を出力する。
  \item ヒストリファイルを用いる場合は、親領域のヒストリデータはモデル面で出力させる。
  \item 子領域の計算開始時刻が親領域と同じ場合は、 親領域におけるt=0のヒストリ出力データが必要である。
 \end{itemize}
 
-「カタログファイル」を出力するためには、前処理・初期化・計算実行のいずれかの設定ファイルが、
-以下のよう設定されていなければならない。
-\editboxtwo{
-\verb|&PARAM_DOMAIN_CATALOGUE| & \\
-\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & カタログファイルのファイル名\\
-\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
-\verb|/| &\\
-}
-カタログファイルの出力が\verb|.true.|であれば、 (この例の場合には)
-\verb|latlon_domain_catalogue_d01.txt|が出力される。
-「\makeconftool」を用いる場合は、これと同じ名前のファイルがディレクトリ \verb|pp|の中に生成される。
-このファイルの中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度経度が記述されている。
+%「カタログファイル」を出力するためには、前処理・初期化・計算実行のいずれかの設定ファイルが、
+%以下のよう設定されていなければならない。
+%\editboxtwo{
+%\verb|&PARAM_DOMAIN_CATALOGUE| & \\
+%\verb| DOMAIN_CATALOGUE_FNAME  = "latlon_domain_catalogue_d01.txt",| & カタログファイルのファイル名\\
+%\textcolor{blue}{\verb| DOMAIN_CATALOGUE_OUTPUT = .true.,|} & カタログファイルを出力。\\
+%\verb|/| &\\
+%}
+%カタログファイルの出力が\verb|.true.|であれば、 (この例の場合には)
+%\verb|latlon_domain_catalogue_d01.txt|が出力される。
+%「\makeconftool」を用いる場合は、これと同じ名前のファイルがディレクトリ \verb|pp|の中に生成される。
+%このファイルの中には、親領域の計算で各MPIプロセスが担当する計算領域の四隅の緯度経度が記述されている。
 
 ヒストリファイルを用いたければ、次のような設定が必要である。
 \editboxtwo{
@@ -123,8 +123,8 @@
 \textcolor{blue}{\verb| OFFLINE_PARENT_BASENAME   = "history_d01",|}  & 親領域のファイル名 \\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_X  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_X|\\
 \textcolor{blue}{\verb| OFFLINE_PARENT_PRC_NUM_Y  = 2,|}  & \verb|run.d01.conf|の\verb|PRC_NUM_Y|\\
-\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    =| \textbackslash} &\\
-\textcolor{blue}{\hspace{1cm}\verb| "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル \\
+%\textcolor{blue}{\verb| LATLON_CATALOGUE_FNAME    =| \textbackslash} &\\
+%\textcolor{blue}{\hspace{1cm}\verb| "latlon_domain_catalogue_d01.txt",|} & 親領域を実行した時に作成したカタログファイル \\
  & \\
 \verb|&PARAM_MKINIT_REAL_ATMOS| &\\
 \textcolor{blue}{\verb| NUMBER_OF_TSTEPS    = 25,|}         & historyファイル内の時間ステップ数\\
