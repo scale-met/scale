@@ -37,7 +37,7 @@ The other parameters are the same as usual.
 
 To use the parent topography for the topography-copy function, edit file \verb|pp.d02.conf| for the child domain as follows.
 Here, the output data of topography in the parent domain is assumed to be saved as file \verb|topo_d01.pe***.nc| in SCALE netCDF file format.
-As other file formats, GrADS and WRF-ARW formats are supported (Sec. \ref{sec:adv_datainput}).
+As other file formats, GrADS format is supported (Sec. \ref{sec:adv_datainput}).
 \editboxtwo{
 \verb|&PARAM_COMM_CARTESC_NEST| & \\
 \verb| OFFLINE_PARENT_BASENAME   = "topo_d01", | & base name of the file of the parent domain \\
@@ -53,7 +53,7 @@ As other file formats, GrADS and WRF-ARW formats are supported (Sec. \ref{sec:ad
  & \\
 \verb|&PARAM_COPYTOPO| & \\
 \verb| COPYTOPO_IN_BASENAME   = "topo_d01",| & base name of the file of parent topography data \\
-\verb| COPYTOPO_IN_FILETYPE   = "SCALE",   | & type of the file of parent topography data (SCALE, GrADS, or WRF-ARW) \\
+\verb| COPYTOPO_IN_FILETYPE   = "SCALE",   | & type of the file of parent topography data (SCALE, GrADS) \\
 \verb| COPYTOPO_TRANSITION_DX = -1,        | & Width of transition area in x-direction \\
 \verb| COPYTOPO_TRANSITION_DY = -1,        | & Width of transition area in y-direction \\
 \verb| COPYTOPO_ENTIRE_REGION = .false.,|    & whether the parent’s topography is copied over the entire child domain\\
