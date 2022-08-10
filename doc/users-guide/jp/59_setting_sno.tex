@@ -327,15 +327,15 @@ ctlファイルを作成しなくとも\grads のsdfopenコマンドで読み込
 \verb|/                                                                 | \\
 \verb|                                                                  | \\
 \verb|&PARAM_SNOPLGIN_VGRIDOPE                                          | \\
-\verb| SNOPLGIN_vgridope_type     = 'MDL',                              | \\
+\verb| SNOPLGIN_vgridope_type     = 'model',                            | \\
 \verb| SNOPLGIN_vgridope_lev_num  = 5,                                  | \\
 \verb| SNOPLGIN_vgridope_lev_data = 80.0, 160.0, 400.0, 1000.0, 2000.0, | \\
 \verb|/                                                                 | \\
 }
 
-\nmitem{SNOPLGIN_vgridope_type}を\verb|'MDL'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'model'|に設定した場合は、モデル高度座標系への鉛直方向のリマッピングが行われる。
 \nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
-座標の単位は [m] で設定する。
+座標単位は [m] で設定する。
 
 \subsubsection{実高度座標への変換}
 
@@ -347,15 +347,15 @@ ctlファイルを作成しなくとも\grads のsdfopenコマンドで読み込
 \verb|/                                                        | \\
 \verb|                                                         | \\
 \verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
-\verb| SNOPLGIN_vgridope_type     = 'ZLEV',                    | \\
+\verb| SNOPLGIN_vgridope_type     = 'z',                       | \\
 \verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
 \verb| SNOPLGIN_vgridope_lev_data = 100.0, 300.0, 500.0,       | \\
 \verb|/                                                        | \\
 }
 
-\nmitem{SNOPLGIN_vgridope_type}を\verb|'ZLEV'|に設定した場合は、実高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'z'|に設定した場合は、実高度座標系への鉛直方向のリマッピングが行われる。
 \nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
-気圧高度座標の単位は [m] で設定する。
+座標単位は [m] で設定する。
 
 \subsubsection{気圧高度座標への変換}
 
@@ -367,13 +367,13 @@ ctlファイルを作成しなくとも\grads のsdfopenコマンドで読み込
 \verb|/                                                        | \\
 \verb|                                                         | \\
 \verb|&PARAM_SNOPLGIN_VGRIDOPE                                 | \\
-\verb| SNOPLGIN_vgridope_type     = 'PLEV',                    | \\
+\verb| SNOPLGIN_vgridope_type     = 'pressure',                | \\
 \verb| SNOPLGIN_vgridope_lev_num  = 3,                         | \\
 \verb| SNOPLGIN_vgridope_lev_data = 850.e+2, 500.e+2, 200.e+2, | \\
 \verb|/                                                        | \\
 }
 
-\nmitem{SNOPLGIN_vgridope_type}を\verb|'PLEV'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
+\nmitem{SNOPLGIN_vgridope_type}を\verb|'pressure'|に設定した場合は、気圧高度座標系への鉛直方向のリマッピングが行われる。
 \nmitem{SNOPLGIN_vgridope_lev_num}で鉛直層の数を設定し、\nmitem{SNOPLGIN_vgridope_lev_data}で座標情報を与える必要がある。
-気圧高度座標の単位は [Pa] で設定する。
+座標単位は [Pa] で設定する。
 ただし、気圧高度の情報を必要とするため、入力ファイルに気圧データ（\verb|PRES|）が含まれていなければなければならない。

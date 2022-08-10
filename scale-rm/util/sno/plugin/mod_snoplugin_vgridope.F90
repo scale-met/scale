@@ -49,11 +49,11 @@ module mod_snoplugin_vgridope
   !
   !++ Private parameters & variables
   !
-  character(len=H_SHORT), private              :: SNOPLGIN_vgridope_type        = 'OFF'   ! type of average
-                                                                                ! 'OFF'    : disable
-                                                                                ! 'MDL'    : remap to model grid
-                                                                                ! 'ZLEV'   : remap to z-level grid
-                                                                                ! 'PLEV'   : remap to pressure-level grid
+  character(len=H_SHORT), private              :: SNOPLGIN_vgridope_type        = 'OFF'
+                                                                                ! 'OFF'               : disable
+                                                                                ! 'model','MDL'       : remap to model grid
+                                                                                ! 'z','ZLEV'          : remap to z-level grid
+                                                                                ! 'pressure','PLEV'   : remap to pressure-level grid
   integer,                private              :: SNOPLGIN_vgridope_lev_num             = -1
   real(RP),               private              :: SNOPLGIN_vgridope_lev_data(lev_limit) = -1.0_RP
 
@@ -146,7 +146,7 @@ contains
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : OFF'
        enable_plugin = .false.
 
-    case('MDL')
+    case('model','MDL')
 
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to model-level'
        enable_plugin = .true.
@@ -160,7 +160,7 @@ contains
           call PRC_abort
        endif
 
-    case('ZLEV')
+    case('z','ZLEV')
 
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to z-level'
        enable_plugin = .true.
@@ -174,7 +174,7 @@ contains
           call PRC_abort
        endif
 
-    case('PLEV')
+    case('pressure','PLEV')
 
        LOG_INFO("SNOPLGIN_vgridope_setup",*) 'SNOPLGIN_vgridope_type     : remap to pressure-level'
        enable_plugin = .true.
@@ -190,7 +190,7 @@ contains
 
     case default
        LOG_ERROR("SNOPLGIN_vgridope_setup",*) 'the name of SNOPLGIN_vgridope_type is not appropriate : ', trim(SNOPLGIN_vgridope_type)
-       LOG_ERROR_CONT(*) 'you can choose OFF, MDL, ZLEV, PLEV'
+       LOG_ERROR_CONT(*) 'you can choose OFF, model (MDL), z (ZLEV), pressure (PLEV).'
        call PRC_abort
     end select
 
@@ -245,7 +245,7 @@ contains
     kmax_new = SNOPLGIN_vgridope_lev_num
 
     select case( trim(SNOPLGIN_vgridope_type ) )
-    case('MDL')
+    case('model','MDL')
 
        LOG_NEWLINE
        LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (model height)'
@@ -302,7 +302,7 @@ contains
                              Zhfact(:),                 & ! [OUT]
                              flag_extrap = .false.      ) ! [IN]
 
-    case('ZLEV')
+    case('z','ZLEV')
 
        LOG_NEWLINE
        LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (actual height)'
@@ -372,7 +372,7 @@ contains
        enddo
        enddo
 
-    case('PLEV')
+    case('pressure','PLEV')
 
        LOG_NEWLINE
        LOG_INFO("SNOPLGIN_vgridope_setcoef",*) 'Setup remapping coefficient (pressure)'
@@ -588,7 +588,7 @@ contains
     endif
 
     select case( trim(SNOPLGIN_vgridope_type) )
-    case('PLEV')
+    case('pressure','PLEV')
 
        ! update PRES and SFC_PRES
        do v = 1, nvars
@@ -818,7 +818,7 @@ contains
 
        select case( trim(SNOPLGIN_vgridope_type) )
 
-       case('MDL')
+       case('model','MDL')
 
           select case( trim(zaxis_orgname) )
           case('z')
@@ -868,7 +868,7 @@ contains
 
           end select
 
-       case('ZLEV')
+       case('z','ZLEV')
 
           select case( trim(zaxis_orgname) )
           case('z')
@@ -918,7 +918,7 @@ contains
 
           end select
 
-       case('PLEV')
+       case('pressure','PLEV')
 
           select case( trim(zaxis_orgname) )
           case('z')
